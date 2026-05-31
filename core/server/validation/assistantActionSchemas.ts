@@ -209,16 +209,7 @@ const runtimeSnapshotSchema = {
 
 const activeSurfaceBlockSchema = {
   type: "object",
-  required: [
-    "id",
-    "type",
-    "label",
-    "path",
-    "childCount",
-    "slotKeys",
-    "templateId",
-    "templateName",
-  ],
+  required: ["id", "type", "label", "path", "childCount", "slotKeys", "templateId", "templateName"],
   additionalProperties: false,
   properties: {
     id: { type: "string", minLength: 1, maxLength: 120 },
@@ -405,6 +396,61 @@ const activeSurfaceSchema = {
         },
       },
     },
+    {
+      type: "object",
+      required: ["kind", "detailPage", "sampleEntryId", "selectedBlockId", "blocks", "warnings"],
+      additionalProperties: false,
+      properties: {
+        kind: { enum: ["detail-page"] },
+        detailPage: {
+          type: "object",
+          required: ["id", "name", "status", "contentTypeId", "contentTypeSlug", "titlePattern"],
+          additionalProperties: false,
+          properties: {
+            id: { type: "string", minLength: 1, maxLength: 160 },
+            name: { type: "string", minLength: 1, maxLength: 240 },
+            status: { type: "string", minLength: 1, maxLength: 80 },
+            contentTypeId: { type: "string", minLength: 1, maxLength: 160 },
+            contentTypeSlug: { type: "string", minLength: 1, maxLength: 240 },
+            titlePattern: { type: "string", minLength: 1, maxLength: 240 },
+          },
+        },
+        sampleEntryId: {
+          anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
+        },
+        selectedBlockId: {
+          anyOf: [{ type: "string", minLength: 1, maxLength: 120 }, { type: "null" }],
+        },
+        blocks: {
+          type: "array",
+          maxItems: 80,
+          items: activeSurfaceBlockSchema,
+        },
+        warnings: {
+          type: "array",
+          maxItems: 20,
+          items: { type: "string", minLength: 1, maxLength: 160 },
+          uniqueItems: true,
+        },
+      },
+    },
+    { type: "null" },
+  ],
+} as const;
+
+const collectionWorkspaceHintSchema = {
+  anyOf: [
+    {
+      type: "object",
+      required: ["contentTypeId"],
+      additionalProperties: false,
+      properties: {
+        contentTypeId: { type: "string", minLength: 1, maxLength: 160 },
+        activeDetailPageId: {
+          anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
+        },
+      },
+    },
     { type: "null" },
   ],
 } as const;
@@ -461,6 +507,7 @@ export const assistantActionPlanRequestSchema = {
         includeResourceCatalog: { type: "boolean" },
         runtimeSnapshot: runtimeSnapshotSchema,
         activeSurface: activeSurfaceSchema,
+        collectionWorkspaceHint: collectionWorkspaceHintSchema,
         planningState: {
           anyOf: [planningStateSchema, { type: "null" }],
         },

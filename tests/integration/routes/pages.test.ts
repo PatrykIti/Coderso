@@ -3,13 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import {
-  auditLogs,
-  pageRevisions,
-  pages,
-  previewTokens,
-  users,
-} from "../../../core/db/schema";
+import { auditLogs, pageRevisions, pages, previewTokens, users } from "../../../core/db/schema";
 import {
   registerPageRoutes,
   type RouteContext,
@@ -250,9 +244,7 @@ test("mutating and preview page routes validate payloads before service work", a
     ).rejects.toThrow("validation_stop");
   }
 
-  expect(validateCalls.map((call) => call.payload)).toEqual(
-    cases.map((item) => item.body)
-  );
+  expect(validateCalls.map((call) => call.payload)).toEqual(cases.map((item) => item.body));
 });
 
 test("autosave and publish require an authenticated actor after validation", async () => {
@@ -295,13 +287,34 @@ testIfDb(
         slug,
         data: {
           blocks: [],
-          settings: { template: "landing", showInNav: true },
+          settings: {
+            template: "landing",
+            showInNav: true,
+            collectionLink: {
+              contentTypeId: "content-type-1",
+              pageRole: "canonical-list-page",
+              listingQueryId: "query-1",
+              listingTemplateId: "template-1",
+            },
+          },
         },
       },
     })) as typeof pages.$inferSelect;
     trackPage(created.id);
     expect(created.title).toBe("Route Page");
     expect(created.authorId).toBe(actor.id);
+    expect(
+      (
+        created.currentData as {
+          settings?: { collectionLink?: Record<string, unknown> };
+        }
+      ).settings?.collectionLink
+    ).toEqual({
+      contentTypeId: "content-type-1",
+      pageRole: "canonical-list-page",
+      listingQueryId: "query-1",
+      listingTemplateId: "template-1",
+    });
 
     const detail = (await runRoute(routes, "GET", "/pages/:id", {
       params: { id: created.id },
@@ -310,9 +323,34 @@ testIfDb(
 
     const updated = (await runRoute(routes, "PATCH", "/pages/:id", {
       params: { id: created.id },
-      body: { title: "Route Page Updated" },
+      body: {
+        title: "Route Page Updated",
+        data: {
+          blocks: [],
+          settings: {
+            collectionLink: {
+              contentTypeId: "content-type-1",
+              pageRole: "canonical-list-page",
+              listingQueryId: "query-2",
+              listingTemplateId: "template-2",
+            },
+          },
+        },
+      },
     })) as typeof pages.$inferSelect;
     expect(updated.title).toBe("Route Page Updated");
+    expect(
+      (
+        updated.currentData as {
+          settings?: { collectionLink?: Record<string, unknown> };
+        }
+      ).settings?.collectionLink
+    ).toEqual({
+      contentTypeId: "content-type-1",
+      pageRole: "canonical-list-page",
+      listingQueryId: "query-2",
+      listingTemplateId: "template-2",
+    });
 
     const autosave = (await runRoute(routes, "POST", "/pages/:id/autosave", {
       params: { id: created.id },
@@ -329,7 +367,20 @@ testIfDb(
     const publish = await runRoute(routes, "POST", "/pages/:id/publish", {
       params: { id: created.id },
       user: { id: actor.id },
-      body: { data: { blocks: [], settings: { showInNav: true } } },
+      body: {
+        data: {
+          blocks: [],
+          settings: {
+            showInNav: true,
+            collectionLink: {
+              contentTypeId: "content-type-1",
+              pageRole: "canonical-list-page",
+              listingQueryId: "query-2",
+              listingTemplateId: "template-2",
+            },
+          },
+        },
+      },
     });
     expect(publish).toEqual({ ok: true });
 
@@ -354,30 +405,36 @@ testIfDb(
     expect(revisions.map((revision) => revision.kind)).toContain("publish");
     expect(revisions.map((revision) => revision.kind)).toContain("autosave");
 
-    const restore = (await runRoute(
-      routes,
-      "POST",
-      "/pages/:id/revisions/:revisionId/restore",
-      {
-        params: { id: created.id, revisionId: autosave.revision.id },
-        user: { id: actor.id },
-        body: {},
-      }
-    )) as { ok: boolean; restored: boolean; page: { title: string } };
+    const publishedDetail = (await runRoute(routes, "GET", "/pages/:id", {
+      params: { id: created.id },
+    })) as typeof pages.$inferSelect;
+    expect(
+      (
+        publishedDetail.publishedData as {
+          settings?: { collectionLink?: Record<string, unknown> };
+        }
+      ).settings?.collectionLink
+    ).toEqual({
+      contentTypeId: "content-type-1",
+      pageRole: "canonical-list-page",
+      listingQueryId: "query-2",
+      listingTemplateId: "template-2",
+    });
+
+    const restore = (await runRoute(routes, "POST", "/pages/:id/revisions/:revisionId/restore", {
+      params: { id: created.id, revisionId: autosave.revision.id },
+      user: { id: actor.id },
+      body: {},
+    })) as { ok: boolean; restored: boolean; page: { title: string } };
     expect(restore.ok).toBe(true);
     expect(restore.restored).toBe(true);
     expect(restore.page.title).toBe("Route Page Autosave");
 
-    const discard = await runRoute(
-      routes,
-      "DELETE",
-      "/pages/:id/revisions/:revisionId",
-      {
-        params: { id: created.id, revisionId: autosave.revision.id },
-        user: { id: actor.id },
-        body: {},
-      }
-    );
+    const discard = await runRoute(routes, "DELETE", "/pages/:id/revisions/:revisionId", {
+      params: { id: created.id, revisionId: autosave.revision.id },
+      user: { id: actor.id },
+      body: {},
+    });
     expect(discard).toEqual({ ok: true });
 
     const clone = (await runRoute(routes, "POST", "/pages/:id/duplicate", {
@@ -453,12 +510,15 @@ testIfDb("page preview route returns sanitized probe metadata", async () => {
       };
     };
 
+    const previewTarget = new URL(preview.previewUrl);
+
     expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0]).toBe(preview.previewUrl);
     expect(preview.probe).toEqual({
       ok: false,
       status: 503,
       reason: "http_error",
-      targetLabel: "https://cms.example.test/preview",
+      targetLabel: `${previewTarget.origin}${previewTarget.pathname}`,
     });
     expect(preview.previewUrl).toContain("token=");
     expect(JSON.stringify(preview.probe)).not.toContain(preview.token);
@@ -553,9 +613,7 @@ testIfDb("page route handlers surface not-found and revision guard errors", asyn
   const publishRevisions = (await runRoute(routes, "GET", "/pages/:id/revisions", {
     params: { id: page.id },
   })) as Array<{ id: string; kind: string }>;
-  const publishRevision = publishRevisions.find(
-    (revision) => revision.kind === "publish"
-  );
+  const publishRevision = publishRevisions.find((revision) => revision.kind === "publish");
   expect(typeof publishRevision?.id).toBe("string");
 
   await expect(

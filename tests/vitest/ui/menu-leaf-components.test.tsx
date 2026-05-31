@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -209,14 +209,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -255,13 +255,13 @@ test("MenuCreateDialog validates, creates trimmed payloads, and reports async er
 
     expect(view.container.textContent).toContain("Theme slot identifier such as");
 
-    await act(async () => {
+    await React.act(async () => {
       buttons.find((button) => button.textContent?.includes("Create Menu"))?.click();
     });
     expect(view.container.textContent).toContain("Menu name is required.");
     expect(onCreateError).not.toHaveBeenCalled();
 
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(inputs[0], "  Main Menu  ");
       setInputValue(inputs[1], "  primary  ");
       buttons.find((button) => button.textContent?.includes("Create Menu"))?.click();
@@ -273,7 +273,7 @@ test("MenuCreateDialog validates, creates trimmed payloads, and reports async er
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
 
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(inputs[0], "Footer");
       setInputValue(inputs[1], "");
       buttons.find((button) => button.textContent?.includes("Create Menu"))?.click();
@@ -288,7 +288,7 @@ test("MenuCreateDialog validates, creates trimmed payloads, and reports async er
       expect.objectContaining({ message: "Failed to create menu." })
     );
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "Cancel")?.click();
       buttons
         .find((button) => button.getAttribute("aria-label") === "Close create menu dialog")
@@ -352,21 +352,21 @@ test("MenuItemDrawer handles empty helper, validation, save normalization, and d
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "invalidate")?.click();
     });
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Update Item"))?.click();
     });
 
     expect(view.container.textContent).toContain("Navigation label is required.");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "make-valid")?.click();
     });
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Update Item"))?.click();
       buttons.find((button) => button.textContent?.includes("Delete Item"))?.click();
       buttons.find((button) => button.textContent === "×")?.click();
@@ -437,22 +437,22 @@ test("MenuTree suppresses post-drag click selection and forwards edit/delete/mov
         .find((button) => button.textContent === label)
         ?.click();
 
-    act(() => {
+    React.act(() => {
       click("select-item-1");
       click("edit-item-2");
       click("delete-item-2");
     });
 
-    act(() => {
+    React.act(() => {
       click("drag-start-item-1");
     });
 
-    act(() => {
+    React.act(() => {
       click("select-item-1");
       click("drag-over-child-item-2");
     });
 
-    act(() => {
+    React.act(() => {
       click("drop-item-2");
     });
 

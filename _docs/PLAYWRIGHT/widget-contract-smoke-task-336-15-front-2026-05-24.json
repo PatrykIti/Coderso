@@ -1,0 +1,588 @@
+{
+  "generatedAt": "2026-05-24T14:07:02.226Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-15-front --skip-admin --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-15-front-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-15-front-2026-05-24.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": [
+      "section",
+      "template-section",
+      "grid-columns",
+      "split-layout",
+      "tabs",
+      "accordion",
+      "toggle-block",
+      "spacer",
+      "divider",
+      "stack",
+      "hero",
+      "feature-grid",
+      "testimonials",
+      "pricing-plans",
+      "faq-accordion",
+      "cta-banner",
+      "logo-cloud",
+      "gallery-mosaic",
+      "stats-kpi",
+      "team",
+      "rich-text-section",
+      "content-list",
+      "posts-feed",
+      "entry-teaser",
+      "product-gallery",
+      "product-compare",
+      "product-table",
+      "listing-filters",
+      "search-box",
+      "timeline",
+      "compare-timeline",
+      "newsletter",
+      "booking-calendar",
+      "appointment-form",
+      "form-embed",
+      "contact",
+      "navigation",
+      "footer"
+    ]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": null,
+    "frontReachable": true,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": true,
+    "loginAttempted": false,
+    "authenticated": null,
+    "results": []
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "section",
+        "publicPath": "/section-widget-test",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "template-section",
+        "status": "fixture-gap",
+        "publicPath": null,
+        "error": "public_fixture_missing"
+      },
+      {
+        "widgetType": "grid-columns",
+        "publicPath": "/test-grid-columns-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-grid-columns.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "split-layout",
+        "publicPath": "/test-split-layout-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-split-layout.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "tabs",
+        "publicPath": "/test-tabs-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "accordion",
+        "publicPath": "/test-accordion-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "toggle-block",
+        "publicPath": "/test-toggle-block-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "spacer",
+        "publicPath": "/test-spacer-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "divider",
+        "publicPath": "/test-divider-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "stack",
+        "publicPath": "/test-stack-0516",
+        "statusCode": 200,
+        "status": "fixture-gap",
+        "emptyFixture": true,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-stack.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_fixture_empty"
+      },
+      {
+        "widgetType": "hero",
+        "publicPath": "/homepage",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-hero.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "feature-grid",
+        "publicPath": "/featuregridtest",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-feature-grid.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "testimonials",
+        "publicPath": "/test-testimonials-0516",
+        "statusCode": 200,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-testimonials.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [
+          {
+            "tag": "div",
+            "className": "flex overflow-x-auto snap-x snap-mandatory pb-2 gap-5",
+            "text": "★★★★★\"We launched our marketing site in two days and kept full control over future edits.\"AAnna KowalskaProduct Marketin",
+            "scrollWidth": 1649,
+            "clientWidth": 928
+          }
+        ],
+        "error": "card_overflow_unmarked"
+      },
+      {
+        "widgetType": "pricing-plans",
+        "publicPath": "/test-pricing-plans-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-pricing-plans.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "faq-accordion",
+        "publicPath": "/test-faq-accordion-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "cta-banner",
+        "publicPath": "/test-cta-banner-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "logo-cloud",
+        "publicPath": "/test-logo-cloud-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "gallery-mosaic",
+        "publicPath": "/gallery-mosaic-test-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "stats-kpi",
+        "publicPath": "/stats-kpi-audit-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "team",
+        "publicPath": "/test-team-0516",
+        "statusCode": 200,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-team.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [
+          {
+            "tag": "article",
+            "className": "border p-4 rounded-lg space-y-3",
+            "text": "Marek NowakEngineering LeadOwns platform reliability and release workflows across environments.LinkedIn",
+            "scrollWidth": 104,
+            "clientWidth": 90
+          },
+          {
+            "tag": "div",
+            "className": "min-w-0",
+            "text": "Marek NowakEngineering LeadOwns platform reliability and release workflows across environments.LinkedIn",
+            "scrollWidth": 88,
+            "clientWidth": 58
+          },
+          {
+            "tag": "p",
+            "className": "text-sm text-[var(--color-text)]/75",
+            "text": "Engineering Lead",
+            "scrollWidth": 75,
+            "clientWidth": 58
+          },
+          {
+            "tag": "p",
+            "className": "mt-2 text-sm text-[var(--color-text)]/80",
+            "text": "Owns platform reliability and release workflows across environments.",
+            "scrollWidth": 88,
+            "clientWidth": 58
+          },
+          {
+            "tag": "ul",
+            "className": "mt-3 flex flex-wrap gap-2 text-xs",
+            "text": "LinkedIn",
+            "scrollWidth": 63,
+            "clientWidth": 58
+          },
+          {
+            "tag": "article",
+            "className": "border p-4 rounded-lg space-y-3",
+            "text": "Ewa ZielinskaContent OperationsTurns strategy into clear, conversion-focused content systems.LinkedIn",
+            "scrollWidth": 93,
+            "clientWidth": 90
+          },
+          {
+            "tag": "div",
+            "className": "min-w-0",
+            "text": "Ewa ZielinskaContent OperationsTurns strategy into clear, conversion-focused content systems.LinkedIn",
+            "scrollWidth": 77,
+            "clientWidth": 58
+          },
+          {
+            "tag": "h4",
+            "className": "font-semibold text-[var(--color-text)] text-lg",
+            "text": "Ewa Zielinska",
+            "scrollWidth": 77,
+            "clientWidth": 58
+          },
+          {
+            "tag": "p",
+            "className": "text-sm text-[var(--color-text)]/75",
+            "text": "Content Operations",
+            "scrollWidth": 68,
+            "clientWidth": 58
+          },
+          {
+            "tag": "p",
+            "className": "mt-2 text-sm text-[var(--color-text)]/80",
+            "text": "Turns strategy into clear, conversion-focused content systems.",
+            "scrollWidth": 72,
+            "clientWidth": 58
+          },
+          {
+            "tag": "ul",
+            "className": "mt-3 flex flex-wrap gap-2 text-xs",
+            "text": "LinkedIn",
+            "scrollWidth": 63,
+            "clientWidth": 58
+          }
+        ],
+        "error": "card_overflow_unmarked"
+      },
+      {
+        "widgetType": "rich-text-section",
+        "publicPath": "/richtextsectiontest",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "content-list",
+        "publicPath": "/test-content-list-0516",
+        "statusCode": 200,
+        "status": "fixture-gap",
+        "emptyFixture": true,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-content-list.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_fixture_empty"
+      },
+      {
+        "widgetType": "posts-feed",
+        "publicPath": "/posts-feed-test-page",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "entry-teaser",
+        "publicPath": "/test-entry-teaser-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "product-gallery",
+        "publicPath": "/test-product-gallery-widget",
+        "statusCode": 200,
+        "status": "fixture-gap",
+        "emptyFixture": true,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-product-gallery.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_fixture_empty"
+      },
+      {
+        "widgetType": "product-compare",
+        "publicPath": "/test-product-compare-0516",
+        "statusCode": 200,
+        "status": "fixture-gap",
+        "emptyFixture": true,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-product-compare.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_fixture_empty"
+      },
+      {
+        "widgetType": "product-table",
+        "publicPath": "/producttabletestproducttabletest",
+        "statusCode": 200,
+        "status": "fixture-gap",
+        "emptyFixture": true,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-product-table.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_fixture_empty"
+      },
+      {
+        "widgetType": "listing-filters",
+        "publicPath": "/test-listing-filters-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-listing-filters.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "search-box",
+        "status": "fixture-gap",
+        "publicPath": null,
+        "error": "public_fixture_missing"
+      },
+      {
+        "widgetType": "timeline",
+        "status": "fixture-gap",
+        "publicPath": null,
+        "error": "public_fixture_missing"
+      },
+      {
+        "widgetType": "compare-timeline",
+        "publicPath": "/test-compare-timeline-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "newsletter",
+        "publicPath": "/test-newsletter-widget-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "booking-calendar",
+        "publicPath": "/test-booking-calendar-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "appointment-form",
+        "publicPath": "/test-appointment-form-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "form-embed",
+        "publicPath": "/ctr-form-embed-2305",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "contact",
+        "publicPath": "/contact-audit-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "navigation",
+        "publicPath": "/homepage",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      },
+      {
+        "widgetType": "footer",
+        "publicPath": "/test-footer-widget-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 2,
+    "fixtureGaps": 8,
+    "metadataGaps": 0
+  }
+}

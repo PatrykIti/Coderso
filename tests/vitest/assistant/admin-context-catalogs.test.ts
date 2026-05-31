@@ -75,6 +75,27 @@ const createDeps = (overrides: Partial<AssistantResourceCatalogDeps> = {}) => {
         },
       ];
     },
+    listDetailPages: async () => {
+      calls.push("detailPages");
+      return [
+        {
+          id: "detail-page-products",
+          name: "Products Detail",
+          status: "published",
+          contentTypeId: "ct-products",
+          contentTypeSlug: "products",
+          linkedRouteType: "products",
+          updatedAt: "2026-04-20T11:00:00.000Z",
+          blockCount: 4,
+          bindingCount: 3,
+          currentDocument: {
+            blocks: [{ id: "hero-1" }],
+            bindings: [{ id: "title" }],
+            secretToken: "never expose",
+          },
+        },
+      ];
+    },
     listListingQueries: async () => {
       calls.push("listingQueries");
       return [
@@ -243,6 +264,7 @@ test("buildAssistantResourceCatalogSnapshot aggregates injected deps", async () 
     "commerceProducts",
     "contentTypes",
     "customScreens",
+    "detailPages",
     "entries:ct-products",
     "forms",
     "listingQueries",
@@ -258,6 +280,15 @@ test("buildAssistantResourceCatalogSnapshot aggregates injected deps", async () 
   expect(snapshot.generatedAt).toBe("2026-04-11T10:00:00.000Z");
   expect(snapshot.contentTypes[0]?.slug).toBe("products");
   expect(snapshot.pages?.[0]?.slug).toBe("/products");
+  expect(snapshot.detailPages?.[0]).toMatchObject({
+    id: "detail-page-products",
+    contentTypeId: "ct-products",
+    contentTypeSlug: "products",
+    linkedRouteType: "products",
+    blockCount: 4,
+    bindingCount: 3,
+  });
+  expect(JSON.stringify(snapshot.detailPages)).not.toContain("never expose");
   expect(snapshot.posts?.[0]?.slug).toBe("published-post");
   expect(snapshot.entries?.[0]?.slug).toBe("product-entry");
   expect(snapshot.forms[0]?.fields[0]?.name).toBe("email");

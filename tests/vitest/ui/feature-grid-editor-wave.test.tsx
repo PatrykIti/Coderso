@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -116,6 +116,22 @@ vi.mock("@/components/ui/select", () => {
   };
 });
 
+vi.mock("@/components/ui/switch", () => ({
+  Switch: ({
+    checked,
+    onCheckedChange,
+  }: {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <input
+      type="checkbox"
+      checked={Boolean(checked)}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+    />
+  ),
+}));
+
 vi.mock("@/components/ui/textarea", () => ({
   Textarea: ({
     value,
@@ -147,19 +163,110 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+vi.mock("@/services/mediaClient", () => ({
+  listMediaCached: vi.fn(async () => [
+    {
+      id: "media-1",
+      url: "/media/feature.jpg",
+      alt: "Feature media alt",
+      title: "Feature media",
+      caption: null,
+      originalName: "feature.jpg",
+    },
+  ]),
+}));
+
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "page-features",
+      title: "Features",
+      slug: "features",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-automation",
+      title: "Automation",
+      slug: "automation",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) => (
+    <div>
+      <button type="button" onClick={() => onChange("media-1")}>
+        pick-media
+      </button>
+      {value ? (
+        <button type="button" onClick={() => onChange(null)}>
+          clear-media
+        </button>
+      ) : null}
+    </div>
+  ),
+}));
+
+vi.mock("@/ui/posts/editor/richtext/PostRichTextAdapter", () => ({
+  PostRichTextAdapter: ({
+    value,
+    onChange,
+    placeholder,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+  }) => (
+    <textarea
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      data-rich-text-adapter="true"
+    />
+  ),
+}));
+
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    onConfirm: () => void;
+  }) =>
+    open ? (
+      <div data-confirm-dialog="true">
+        <p>{title}</p>
+        <p>{description}</p>
+        <button type="button" onClick={onConfirm}>
+          confirm-remove
+        </button>
+      </div>
+    ) : null,
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -170,7 +277,7 @@ const mount = (node: React.ReactNode) => {
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -180,7 +287,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -190,7 +297,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -203,8 +310,39 @@ const clickByText = (container: ParentNode, text: string, index = 0) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text} (${index})`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
+  });
+};
+
+const createDataTransfer = (initial: Record<string, string> = {}) => {
+  const store = new Map(Object.entries(initial));
+  return {
+    effectAllowed: "move",
+    dropEffect: "move",
+    setData: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    getData: (key: string) => store.get(key) ?? "",
+  };
+};
+
+const dispatchDragEvent = (
+  node: Element,
+  type: "dragstart" | "dragover" | "drop" | "dragend",
+  dataTransfer = createDataTransfer()
+) => {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "dataTransfer", { value: dataTransfer });
+  React.act(() => {
+    node.dispatchEvent(event);
+  });
+  return dataTransfer;
+};
+
+const flush = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
   });
 };
 
@@ -220,6 +358,14 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
     (element) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
+
+const getDestinationSelect = (container: ParentNode, fieldId: string) => {
+  const select = container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error(`Missing destination select "${fieldId}"`);
+  }
+  return select;
+};
 
 const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).filter(
@@ -238,8 +384,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(section.querySelectorAll("h3, p")).some(
+      (candidate) => normalizeText(candidate.textContent) === normalizeText(title)
     )
   );
 
@@ -248,7 +394,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("FeatureGrid editors cover variant changes, card editing, style tokens, and advanced normalization", async () => {
+test("FeatureGrid editors cover variant changes, card editing, swatch colors, and read-only advanced summaries", async () => {
   const { FeatureGridAdvancedEditor, FeatureGridVisualEditor, FeatureGridWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
 
@@ -319,7 +465,9 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
 
   try {
     expect(view.container.textContent).toContain("Feature grid style");
-    expect(view.container.textContent).toContain("Raw payload snapshot");
+    expect(view.container.textContent).toContain("Layout summary");
+    expect(view.container.textContent).not.toContain("Raw payload snapshot");
+    expect(view.container.textContent).not.toContain("Normalize full payload");
 
     const variantSelect = findSelectsByOptions(view.container, [
       "cards-3",
@@ -329,20 +477,41 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     expect((variantSelect as HTMLSelectElement | null | undefined)?.value).toBe("cards-3");
     setSelectValue(variantSelect, "cards-4");
     expect(currentVariant).toBe("cards-4");
-
-    setInputValue(
-      findInputByPlaceholder(view.container, "Everything your team needs"),
-      "Core feature set"
-    );
-    setTextareaValue(
+    const wizardRoot = view.container.querySelector(
+      '[data-widget-editor-mode="wizard"]'
+    ) as ParentNode | null;
+    expect(
+      findInputByPlaceholder(wizardRoot ?? view.container, "Everything your team needs")
+    ).toBeUndefined();
+    expect(
       findTextareasByPlaceholder(
-        view.container,
+        wizardRoot ?? view.container,
         "Use focused cards to explain your strongest product capabilities."
-      )[0],
-      "Short proof of platform value."
-    );
+      )[0]
+    ).toBeUndefined();
+    expect(
+      findSelectsByOptions(wizardRoot ?? view.container, ["1", "2", "3", "4", "5", "6", "7", "8"])
+    ).toHaveLength(0);
 
-    const countSelect = findSelectsByOptions(view.container, [
+    const layoutSection = findSectionByTitle(view.container, "Variant and layout structure");
+    const headerSection = findSectionByTitle(view.container, "Header copy");
+    const featureCardsSection = findSectionByTitle(view.container, "Feature cards and actions");
+    const cardLayoutSection = findSectionByTitle(view.container, "Card layout and density");
+    const colorsSection = findSectionByTitle(view.container, "Colors and borders");
+    const sectionStyleSection = findSectionByTitle(
+      view.container,
+      "Section typography and container"
+    );
+    const advancedSection = findSectionByTitle(view.container, "Layout summary");
+
+    expect(layoutSection).toBeTruthy();
+    expect(headerSection).toBeTruthy();
+    expect(featureCardsSection).toBeTruthy();
+    expect(cardLayoutSection).toBeTruthy();
+    expect(colorsSection).toBeTruthy();
+    expect(sectionStyleSection).toBeTruthy();
+    expect(advancedSection).toBeTruthy();
+    const countSelect = findSelectsByOptions(layoutSection as ParentNode, [
       "1",
       "2",
       "3",
@@ -354,19 +523,22 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     ])[0];
     setSelectValue(countSelect, "4");
     expect(latestValue.items).toHaveLength(4);
-    setInputValue(findInputsByPlaceholder(view.container, "Feature 1")[0], "Wizard automation");
-
-    const layoutSection = findSectionByTitle(view.container, "Variant and layout structure");
-    const headerSection = findSectionByTitle(view.container, "Header copy");
-    const featureCardsSection = findSectionByTitle(view.container, "Feature cards and actions");
-    const colorsSection = findSectionByTitle(view.container, "Colors and borders");
-    const advancedSection = findSectionByTitle(view.container, "Layout tokens");
-
-    expect(layoutSection).toBeTruthy();
-    expect(headerSection).toBeTruthy();
-    expect(featureCardsSection).toBeTruthy();
-    expect(colorsSection).toBeTruthy();
-    expect(advancedSection).toBeTruthy();
+    expect(findInputsByPlaceholder(wizardRoot ?? view.container, "Feature 1")[0]).toBeUndefined();
+    expect(
+      view.container
+        .querySelector('[data-widget-control="feature-grid-variant-preview-cards-3"]')
+        ?.getAttribute("data-widget-control-ownership")
+    ).toBe("preview");
+    expect(
+      view.container
+        .querySelector('[data-widget-control="feature-grid-variant-preview-cards-4"]')
+        ?.getAttribute("data-widget-control-ownership")
+    ).toBe("preview");
+    expect(
+      view.container
+        .querySelector('[data-widget-control="feature-grid-variant-preview-highlight-first"]')
+        ?.getAttribute("data-widget-control-ownership")
+    ).toBe("preview");
 
     clickByText(layoutSection as ParentNode, "Highlight First");
     expect(currentVariant).toBe("highlight-first");
@@ -392,7 +564,7 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       "7",
       "8",
     ])[0];
-    setSelectValue(visualColumnsSelect, "2");
+    expect((visualColumnsSelect as HTMLSelectElement | null | undefined)?.disabled).toBe(true);
     setSelectValue(visualGapSelect, "lg");
     setSelectValue(visualCountSelect, "6");
     expect(latestValue.items).toHaveLength(6);
@@ -425,28 +597,70 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       "Automates repeatable delivery tasks."
     );
     setInputValue(findInputByPlaceholder(featureCardsSection as ParentNode, "⚡"), "🤖");
-    setInputValue(
-      findInputByPlaceholder(
-        featureCardsSection as ParentNode,
-        "https://cdn.example.com/feature.jpg"
-      ),
-      "https://cdn.example.com/automation.jpg"
-    );
+    clickByText(featureCardsSection as ParentNode, "pick-media");
+    await flush();
     setInputValue(
       findInputByPlaceholder(featureCardsSection as ParentNode, "Learn more"),
       "See automation"
     );
-    setInputValue(
-      findInputByPlaceholder(featureCardsSection as ParentNode, "/features"),
-      "/automation"
+    setSelectValue(
+      getDestinationSelect(
+        featureCardsSection as ParentNode,
+        "feature-grid-card-1-cta-destination"
+      ),
+      "page-automation"
     );
 
     clickByText(featureCardsSection as ParentNode, "Add card");
     expect(latestValue.items).toHaveLength(7);
     clickByText(featureCardsSection as ParentNode, "Move down", 0);
     clickByText(featureCardsSection as ParentNode, "Move up", 1);
+
+    const dragHandle = view.container.querySelector('[aria-label="Drag card 1"]');
+    const featureCards = Array.from(
+      featureCardsSection?.querySelectorAll(".space-y-3.rounded-lg.border.p-3") ?? []
+    );
+    const dataTransfer = dispatchDragEvent(dragHandle as Element, "dragstart");
+    dispatchDragEvent(
+      (featureCards[1] as Element) ?? (featureCardsSection as Element),
+      "dragover",
+      dataTransfer
+    );
+    dispatchDragEvent(
+      (featureCards[1] as Element) ?? (featureCardsSection as Element),
+      "drop",
+      dataTransfer
+    );
+    expect(latestValue.items[1]?.title).toBe("Automation");
+
     clickByText(featureCardsSection as ParentNode, "Remove", 6);
+    expect(view.container.textContent).toContain("Remove feature card");
+    clickByText(view.container, "confirm-remove");
     expect(latestValue.items).toHaveLength(6);
+
+    const cardLayoutSelect = findSelectsByOptions(cardLayoutSection as ParentNode, [
+      "vertical",
+      "horizontal",
+    ])[0];
+    const textAlignSelect = findSelectsByOptions(cardLayoutSection as ParentNode, [
+      "left",
+      "center",
+      "right",
+    ])[0];
+    const cardPaddingSelect = findSelectsByOptions(cardLayoutSection as ParentNode, [
+      "compact",
+      "default",
+      "spacious",
+    ])[0];
+    const mediaSizeSelect = findSelectsByOptions(cardLayoutSection as ParentNode, [
+      "sm",
+      "md",
+      "lg",
+    ])[0];
+    setSelectValue(cardLayoutSelect, "horizontal");
+    setSelectValue(textAlignSelect, "center");
+    setSelectValue(cardPaddingSelect, "spacious");
+    setSelectValue(mediaSizeSelect, "lg");
 
     const borderWidthSelect = findSelectsByOptions(colorsSection as ParentNode, [
       "0",
@@ -468,45 +682,40 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     );
     setInputValue(colorInputs[0], "#111111");
     setInputValue(colorInputs[1], "#222222");
-    setInputValue(
-      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)"),
-      "var(--surface-strong)"
-    );
-    setInputValue(
-      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)"),
-      "var(--border-strong)"
-    );
+    expect(findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)")).toBeUndefined();
+    expect(
+      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)")
+    ).toBeUndefined();
 
-    const advancedColumnsSelect = findSelectsByOptions(advancedSection as ParentNode, [
-      "2",
-      "3",
-      "4",
+    const maxWidthSelect = findSelectsByOptions(sectionStyleSection as ParentNode, [
+      "5xl",
+      "6xl",
+      "7xl",
+      "full",
     ])[0];
-    const advancedGapSelect = findSelectsByOptions(advancedSection as ParentNode, [
-      "none",
+    const headerSizeSelect = findSelectsByOptions(sectionStyleSection as ParentNode, [
       "sm",
       "md",
       "lg",
     ])[0];
-    const advancedBorderWidthSelect = findSelectsByOptions(advancedSection as ParentNode, [
-      "0",
-      "1",
-      "2",
-      "3",
-    ])[0];
-    const advancedRadiusSelect = findSelectsByOptions(advancedSection as ParentNode, [
-      "none",
+    const cardTitleSizeSelect = findSelectsByOptions(sectionStyleSection as ParentNode, [
+      "sm",
       "md",
       "lg",
-      "xl",
+    ])[1];
+    const hoverEffectSelect = findSelectsByOptions(sectionStyleSection as ParentNode, [
+      "none",
+      "lift",
+      "border",
     ])[0];
-    setSelectValue(advancedColumnsSelect, "4");
-    setSelectValue(advancedGapSelect, "sm");
-    setSelectValue(advancedBorderWidthSelect, "2");
-    setSelectValue(advancedRadiusSelect, "none");
-
-    clickByText(view.container, "Normalize items to variant baseline");
-    clickByText(view.container, "Normalize full payload");
+    setSelectValue(maxWidthSelect, "7xl");
+    setSelectValue(headerSizeSelect, "lg");
+    setSelectValue(cardTitleSizeSelect, "lg");
+    setSelectValue(hoverEffectSelect, "lift");
+    const sectionColorInputs = Array.from(
+      (sectionStyleSection as ParentNode).querySelectorAll("input[type='color']")
+    );
+    setInputValue(sectionColorInputs[0], "#333333");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(currentVariant).toBe("highlight-first");
@@ -515,35 +724,112 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       title: "Feature grid overview",
       description: "Concise visual summary.",
     });
-    expect(latestValue.items).toHaveLength(4);
+    expect(latestValue.items).toHaveLength(6);
     expect(latestValue.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           title: "Automation",
           description: "Automates repeatable delivery tasks.",
           icon: "🤖",
-          image: "https://cdn.example.com/automation.jpg",
+          image: "/media/feature.jpg",
+          imageAlt: "Feature media alt",
           ctaLabel: "See automation",
           ctaHref: "/automation",
         }),
       ])
     );
     expect(latestValue.style).toMatchObject({
-      columns: "4",
-      gap: "sm",
-      borderWidth: "2",
-      radius: "none",
-      surfaceColor: "var(--surface-strong)",
-      borderColor: "var(--border-strong)",
+      columns: "3",
+      gap: "lg",
+      borderWidth: "3",
+      radius: "xl",
+      textAlign: "center",
+      cardPadding: "spacious",
+      mediaSize: "lg",
+      cardLayout: "horizontal",
+      maxWidth: "7xl",
+      headerSize: "lg",
+      cardTitleSize: "lg",
+      hoverEffect: "lift",
+      surfaceColor: "#111111",
+      sectionBackground: "#333333",
+      borderColor: "#222222",
     });
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"eyebrow": "Why teams switch"');
-    expect(snapshot?.textContent).toContain('"title": "Feature grid overview"');
-    expect(snapshot?.textContent).toContain('"columns": "4"');
-    expect(snapshot?.textContent).toContain('"borderWidth": "2"');
-    expect(snapshot?.textContent).toContain('"surfaceColor": "var(--surface-strong)"');
-    expect(snapshot?.textContent).toContain('"ctaHref": "/automation"');
+    const advancedWritablePaths = Array.from(
+      view.container.querySelectorAll(
+        '[data-widget-editor-section^="feature-grid.advanced"] [data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    );
+    expect(advancedWritablePaths).toHaveLength(0);
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain("Use Visual for card copy");
+    expect(view.container.textContent).toContain("6 cards");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FeatureGrid visual editor keeps media picker selection attached to stable item ids", async () => {
+  const { FeatureGridVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+
+  let latestValue: FeatureGridData = {
+    ...featureGridDefaults,
+    items: featureGridDefaults.items.map((item) => ({ ...item })),
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<FeatureGridData>(latestValue);
+
+    return (
+      <FeatureGridVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards-3"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const getFeatureCardsSection = () =>
+      findSectionByTitle(view.container, "Feature cards and actions") as ParentNode;
+    const getFeatureCards = () =>
+      Array.from(getFeatureCardsSection().querySelectorAll(".space-y-3.rounded-lg.border.p-3"));
+
+    clickByText(getFeatureCards()[0] as ParentNode, "pick-media");
+    await flush();
+
+    expect(latestValue.items[0]?.image).toBe("/media/feature.jpg");
+    expect(getFeatureCards()[0]?.textContent).toContain("clear-media");
+
+    const dragHandle = view.container.querySelector('[aria-label="Drag card 1"]');
+    const dataTransfer = dispatchDragEvent(dragHandle as Element, "dragstart");
+    const cardsBeforeDrop = getFeatureCards();
+    dispatchDragEvent(cardsBeforeDrop[1] as Element, "dragover", dataTransfer);
+    dispatchDragEvent(cardsBeforeDrop[1] as Element, "drop", dataTransfer);
+    await flush();
+
+    const cardsAfterDrop = getFeatureCards();
+    expect(latestValue.items[1]?.id).toBe(featureGridDefaults.items[0]?.id);
+    expect(cardsAfterDrop[0]?.textContent).not.toContain("clear-media");
+    expect(cardsAfterDrop[1]?.textContent).toContain("clear-media");
+
+    clickByText(getFeatureCardsSection(), "Remove", 1);
+    clickByText(view.container, "confirm-remove");
+    await flush();
+
+    expect(latestValue.items.some((item) => item.id === featureGridDefaults.items[0]?.id)).toBe(
+      false
+    );
+    expect(getFeatureCards().every((card) => !card.textContent?.includes("clear-media"))).toBe(
+      true
+    );
   } finally {
     view.cleanup();
   }
@@ -564,29 +850,21 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
   );
 
   try {
+    expect(wizardView.container.textContent).toContain("Wizard is one-time starter setup.");
     expect(
-      (
-        findInputByPlaceholder(wizardView.container, "Everything your team needs") as
-          | HTMLInputElement
-          | undefined
-      )?.value
-    ).toBe(featureGridDefaults.header?.title);
+      findInputByPlaceholder(wizardView.container, "Everything your team needs")
+    ).toBeUndefined();
     expect(
-      (
-        findTextareasByPlaceholder(
-          wizardView.container,
-          "Use focused cards to explain your strongest product capabilities."
-        )[0] as HTMLTextAreaElement | null | undefined
-      )?.value
-    ).toBe(featureGridDefaults.header?.description);
+      findTextareasByPlaceholder(
+        wizardView.container,
+        "Use focused cards to explain your strongest product capabilities."
+      )[0]
+    ).toBeUndefined();
+    expect(wizardView.container.textContent).toContain("Cards count");
+    expect(wizardView.container.textContent).toContain("1 card");
     expect(
-      (
-        findSelectsByOptions(wizardView.container, ["1", "2", "3", "4", "5", "6", "7", "8"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("1");
+      findSelectsByOptions(wizardView.container, ["1", "2", "3", "4", "5", "6", "7", "8"])
+    ).toHaveLength(0);
   } finally {
     wizardView.cleanup();
   }
@@ -660,22 +938,11 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
           | undefined
       )?.value
     ).toBe("");
+    expect(findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)")).toBeUndefined();
     expect(
-      (
-        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe(featureGridDefaults.style?.borderColor);
+      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)")
+    ).toBeUndefined();
+    expect(colorsSection?.textContent).toContain("Theme default");
   } finally {
     visualView.cleanup();
   }
@@ -685,39 +952,14 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
   );
 
   try {
-    const layoutSection = findSectionByTitle(advancedView.container, "Layout tokens");
+    const layoutSection = findSectionByTitle(advancedView.container, "Layout summary");
+    const presentationSection = findSectionByTitle(advancedView.container, "Presentation summary");
+    expect(layoutSection?.textContent).toContain("Desktop rhythm");
+    expect(layoutSection?.textContent).toContain("Card spacing");
+    expect(presentationSection?.textContent).toContain("Border");
     expect(
-      (
-        findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("3");
-    expect(
-      (
-        findSelectsByOptions(layoutSection as ParentNode, ["none", "sm", "md", "lg"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("md");
-    expect(
-      (
-        findSelectsByOptions(layoutSection as ParentNode, ["0", "1", "2", "3"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("1");
-    expect(
-      (
-        findSelectsByOptions(layoutSection as ParentNode, ["none", "md", "lg", "xl"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("lg");
+      advancedView.container.querySelector('[data-widget-control-ownership="writable"]')
+    ).toBeNull();
   } finally {
     advancedView.cleanup();
   }
@@ -785,29 +1027,15 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
       )?.value
     ).toBe("cards-3");
     expect(
-      (
-        findInputByPlaceholder(wizardView.container, "Everything your team needs") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+      findInputByPlaceholder(wizardView.container, "Everything your team needs")
+    ).toBeUndefined();
     expect(
-      (
-        findTextareasByPlaceholder(
-          wizardView.container,
-          "Use focused cards to explain your strongest product capabilities."
-        )[0] as HTMLTextAreaElement | null | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findInputsByPlaceholder(wizardView.container, "Feature 1")[0] as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+      findTextareasByPlaceholder(
+        wizardView.container,
+        "Use focused cards to explain your strongest product capabilities."
+      )[0]
+    ).toBeUndefined();
+    expect(findInputsByPlaceholder(wizardView.container, "Feature 1")[0]).toBeUndefined();
   } finally {
     wizardView.cleanup();
   }
@@ -867,22 +1095,10 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
           | undefined
       )?.value
     ).toBe("");
+    expect(findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)")).toBeUndefined();
     expect(
-      (
-        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)")
+    ).toBeUndefined();
     const colorInputs = Array.from(
       (colorsSection as ParentNode).querySelectorAll("input[type='color']")
     );
@@ -901,42 +1117,331 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
   );
 
   try {
-    const advancedSection = findSectionByTitle(advancedView.container, "Layout tokens");
+    const advancedSection = findSectionByTitle(advancedView.container, "Layout summary");
+    const presentationSection = findSectionByTitle(advancedView.container, "Presentation summary");
+    expect(advancedSection?.textContent).toContain("Desktop rhythm");
+    expect(advancedSection?.textContent).toContain("Card spacing");
+    expect(presentationSection?.textContent).toContain("Border");
     expect(
-      (
-        findSelectsByOptions(advancedSection as ParentNode, ["2", "3", "4"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("3");
-    expect(
-      (
-        findSelectsByOptions(advancedSection as ParentNode, ["none", "sm", "md", "lg"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("md");
-    expect(
-      (
-        findSelectsByOptions(advancedSection as ParentNode, ["0", "1", "2", "3"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("1");
-    expect(
-      (
-        findSelectsByOptions(advancedSection as ParentNode, ["none", "md", "lg", "xl"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("lg");
+      advancedView.container.querySelector('[data-widget-control-ownership="writable"]')
+    ).toBeNull();
   } finally {
     advancedView.cleanup();
     vi.doUnmock("../../../core/widgets/core/featureGrid");
     vi.resetModules();
+  }
+});
+
+test("FeatureGrid editor hides raw image URL and CTA URL editing while keeping destination feedback", async () => {
+  const { FeatureGridVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+
+  let latestValue: FeatureGridData = {
+    ...featureGridDefaults,
+    items: [
+      {
+        id: "feature-1",
+        title: "Security",
+        image: "javascript:alert(1)",
+        ctaLabel: "Open",
+        ctaHref: "ftp://blocked.invalid",
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<FeatureGridData>(latestValue);
+
+    return (
+      <FeatureGridVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards-3"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const featureCardsSection = findSectionByTitle(view.container, "Feature cards and actions");
+    expect(
+      findInputByPlaceholder(
+        featureCardsSection as ParentNode,
+        "https://cdn.example.com/feature.jpg"
+      )
+    ).toBeUndefined();
+    expect(findInputByPlaceholder(featureCardsSection as ParentNode, "/features")).toBeUndefined();
+
+    expect(featureCardsSection?.textContent).toContain(
+      "Saved feature image is not public-safe and will not render. Clear it or pick a Media Library image."
+    );
+    expect(featureCardsSection?.textContent).toContain(
+      "Saved destination is not public-safe and will not render publicly."
+    );
+    await flush();
+    setSelectValue(
+      getDestinationSelect(
+        featureCardsSection as ParentNode,
+        "feature-grid-card-1-cta-destination"
+      ),
+      "page-features"
+    );
+
+    expect(latestValue.items[0]?.image).toBe("javascript:alert(1)");
+    expect(latestValue.items[0]?.ctaHref).toBe("/features");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FeatureGrid editor integrates media picker, emoji presets, alt text, and image priority guidance", async () => {
+  const { FeatureGridVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+
+  let latestValue: FeatureGridData = {
+    ...featureGridDefaults,
+    items: [
+      {
+        id: "feature-1",
+        title: "Feature media",
+        icon: "",
+        image: "",
+        imageAlt: "",
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<FeatureGridData>(latestValue);
+
+    return (
+      <FeatureGridVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards-3"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const featureCardsSection = findSectionByTitle(view.container, "Feature cards and actions");
+    clickByText(featureCardsSection as ParentNode, "pick-media");
+    await flush();
+
+    expect(latestValue.items[0]?.image).toBe("/media/feature.jpg");
+    expect(latestValue.items[0]?.imageAlt).toBe("Feature media alt");
+    expect(featureCardsSection?.textContent).toContain(
+      "If both image and icon are set, the image is used in preview and runtime."
+    );
+
+    clickByText(featureCardsSection as ParentNode, "🚀");
+    expect(latestValue.items[0]?.icon).toBe("🚀");
+
+    setInputValue(
+      findInputByPlaceholder(
+        featureCardsSection as ParentNode,
+        "Describe image for screen readers"
+      ),
+      "Accessible screenshot"
+    );
+    expect(latestValue.items[0]?.imageAlt).toBe("Accessible screenshot");
+
+    clickByText(featureCardsSection as ParentNode, "clear-media");
+    await flush();
+    expect(latestValue.items[0]?.image).toBeUndefined();
+    expect(latestValue.items[0]?.icon).toBe("🚀");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FeatureGrid visual editor keeps emoji presets clickable and confirms destructive count reduction", async () => {
+  const { FeatureGridVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+
+  let latestValue: FeatureGridData = {
+    ...featureGridDefaults,
+    items: [
+      {
+        id: "feature-1",
+        title: "Feature one",
+        icon: "⚡",
+        description: "First card copy",
+      },
+      {
+        id: "feature-2",
+        title: "Feature two",
+        icon: "🧩",
+        description: "Second card copy",
+      },
+      {
+        id: "feature-3",
+        title: "Feature three",
+        icon: "📈",
+        description: "Third card copy",
+      },
+      {
+        id: "feature-4",
+        title: "Feature four",
+        icon: "🔒",
+        description: "Fourth card copy",
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<FeatureGridData>(latestValue);
+
+    return (
+      <FeatureGridVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards-4"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const getLayoutSection = () =>
+      findSectionByTitle(view.container, "Variant and layout structure") as ParentNode;
+    const featureCardsSection = findSectionByTitle(
+      view.container,
+      "Feature cards and actions"
+    ) as ParentNode;
+    const firstCard = Array.from(
+      featureCardsSection.querySelectorAll(".space-y-3.rounded-lg.border.p-3")
+    )[0] as ParentNode;
+    const cardFieldGrid = firstCard.querySelector(
+      '[data-feature-grid-card-fields="single-column"]'
+    );
+    const rocketPreset = firstCard.querySelector('[data-feature-grid-emoji-preset="🚀"]');
+    const getCountSelect = () =>
+      findSelectsByOptions(getLayoutSection(), ["1", "2", "3", "4", "5", "6", "7", "8"])[0];
+
+    expect(cardFieldGrid?.className).toBe("grid gap-3");
+    expect(cardFieldGrid?.className).not.toContain("sm:grid-cols-2");
+    expect(rocketPreset).toBeInstanceOf(HTMLButtonElement);
+    expect((rocketPreset as HTMLButtonElement).getAttribute("aria-label")).toBe(
+      "Set card 1 icon to 🚀"
+    );
+
+    React.act(() => {
+      (rocketPreset as HTMLButtonElement).click();
+    });
+    expect(latestValue.items[0]?.icon).toBe("🚀");
+
+    clickByText(getLayoutSection(), "Cards 3");
+    expect(latestValue.items).toHaveLength(4);
+    expect(view.container.textContent).toContain(
+      "Switching to Cards 3 reduces this grid from 4 cards to 3"
+    );
+    clickByText(view.container, "confirm-remove");
+    expect(latestValue.items).toHaveLength(3);
+
+    setSelectValue(getCountSelect(), "2");
+    expect(latestValue.items).toHaveLength(3);
+    expect(view.container.textContent).toContain("Reduce feature cards");
+    expect(view.container.textContent).toContain(
+      "Reducing this grid from 3 cards to 2 removes 1 card"
+    );
+
+    clickByText(view.container, "confirm-remove");
+    expect(latestValue.items).toHaveLength(2);
+    expect(latestValue.items.some((item) => item.title === "Feature three")).toBe(false);
+    expect(latestValue.items.some((item) => item.title === "Feature four")).toBe(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FeatureGrid editor supports CTA toggle, target selection, and rich descriptions", async () => {
+  const { FeatureGridVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+
+  let latestValue: FeatureGridData = {
+    ...featureGridDefaults,
+    items: [
+      {
+        id: "feature-1",
+        title: "Automation",
+        description: "Plain description",
+        descriptionMode: "plain",
+        ctaEnabled: true,
+        ctaLabel: "Learn more",
+        ctaHref: "/automation",
+        ctaTarget: "same-tab",
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<FeatureGridData>(latestValue);
+
+    return (
+      <FeatureGridVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards-3"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const featureCardsSection = findSectionByTitle(view.container, "Feature cards and actions");
+    const descriptionModeSelect = findSelectsByOptions(featureCardsSection as ParentNode, [
+      "plain",
+      "rich",
+    ])[0];
+    setSelectValue(descriptionModeSelect, "rich");
+    setTextareaValue(
+      findTextareasByPlaceholder(
+        featureCardsSection as ParentNode,
+        "Write concise rich card copy..."
+      )[0],
+      "<p><strong>Rich</strong> copy</p>"
+    );
+    expect(latestValue.items[0]?.descriptionMode).toBe("rich");
+    expect(latestValue.items[0]?.description).toBe("<p><strong>Rich</strong> copy</p>");
+
+    const targetSelect = findSelectsByOptions(featureCardsSection as ParentNode, [
+      "same-tab",
+      "new-tab",
+    ])[0];
+    setSelectValue(targetSelect, "new-tab");
+    expect(latestValue.items[0]?.ctaTarget).toBe("new-tab");
+
+    const ctaToggle = featureCardsSection?.querySelector('input[type="checkbox"]');
+    React.act(() => {
+      (ctaToggle as HTMLInputElement).click();
+    });
+    expect(latestValue.items[0]?.ctaEnabled).toBe(false);
+    expect(featureCardsSection?.textContent).toContain(
+      "CTA copy and URL stay stored while the action is disabled."
+    );
+  } finally {
+    view.cleanup();
   }
 });

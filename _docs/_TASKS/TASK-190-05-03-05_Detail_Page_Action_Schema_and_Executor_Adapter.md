@@ -4,8 +4,8 @@
 **Priority:** High
 **Category:** Assistant/Core + Typed Actions
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-05-03-01, TASK-190-05-03-02, TASK-190-05-03-03
-**Status:** To Do
+**Dependencies:** TASK-190-05-03-01, TASK-190-05-03-02, TASK-190-05-03-03, TASK-190-05-03-04
+**Status:** Done (2026-05-08)
 
 ---
 
@@ -14,6 +14,19 @@
 Promote detail page documents into strict typed assistant actions. The composer
 must be able to assemble reviewed plans that create or update detail page
 documents through existing dry-run/review/execute flow.
+
+Current slice note:
+- `detail-page.upsert` is now part of the strict executable assistant action
+  registry, action family contracts, and action plan schema.
+- `actionExecutorService.ts` now dry-runs and executes detail-page upserts
+  through `core/services/content/detailPageDocumentService.ts` instead of
+  writing directly from the planner/executor layer into the DB tables.
+- Execute refreshes advisory `contentTypeSlug` from the canonical linked
+  content type, respects `DetailPageDocument.status` as the only publish-state
+  owner, and keeps route-link ownership deferred to
+  `setting.content-route.upsert`.
+- Review/result UI now labels `detail-page.upsert` as `Detail Template`, and
+  executor/DB coverage now proves one canonical detail-page document per id.
 
 ## Sub-Tasks
 
@@ -62,7 +75,7 @@ Required integration points in this leaf:
   into `TASK-190-05-03-08`,
 - admin cached-client wrappers, cache keys, and assistant-side cache
   invalidation for `detail-page` are explicitly deferred to
-  `TASK-190-05-03-07`,
+  `TASK-190-05-03-07-03`,
 - Resource catalog transport and active-surface hydration for `detail-page`
   remain owned by `TASK-190-07-02` and `TASK-190-06-03-03`; this leaf must not
   replace those seams with ad-hoc lookups.
@@ -145,6 +158,26 @@ Policy metadata for this resource family should use the technical kind
 layer, but generic policy registration itself is deferred to
 `TASK-190-05-03-08`.
 
+## Pseudocode
+
+```ts
+export const executeDetailPageUpsert = async (action, deps) => {
+  const document = normalizeDetailPageDocument(action.input.document);
+  const contentType = await deps.getContentTypeById(document.contentTypeId);
+  assertDetailPageIdOwnership(document.id, contentType.id, action.input.expectedExistingId);
+
+  const persisted = await deps.upsertDetailPageDocument(document);
+  deps.invalidateDetailPagePublicCache(persisted);
+
+  return {
+    detailPageId: persisted.id,
+    contentTypeId: persisted.contentTypeId,
+    contentTypeSlug: contentType.slug,
+    status: persisted.status,
+  };
+};
+```
+
 ## Security Contract
 
 - Visibility: internal assistant action flow.
@@ -194,7 +227,7 @@ layer, but generic policy registration itself is deferred to
   `TASK-190-05-03-07`.
 - Admin cache key registration, cached-client hydration, and assistant-side
   cache invalidation for `detail-page` are explicitly deferred to
-  `TASK-190-05-03-07` so the tree stays implementable in dependency order.
+  `TASK-190-05-03-07-03` so the tree stays implementable in dependency order.
 
 ## Documentation Updates Required
 

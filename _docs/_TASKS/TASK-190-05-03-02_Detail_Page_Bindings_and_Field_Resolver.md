@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Runtime Binding
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03-01, TASK-190-04-01
-**Status:** To Do
+**Status:** Done (2026-05-08)
 
 ---
 
@@ -14,6 +14,16 @@
 Implement safe binding resolution from content entries to detail page widget
 props. This lets one detail page document render many entries without copying
 entry data into page blocks.
+
+Current slice note:
+- shared safe dot-path helpers now live under `core/services/utils/bindingPath.ts`
+  and remain compatible with the current custom-screen binding contract,
+- `detailPageBindingResolver.ts` now resolves strict `entry-field`,
+  `entry-meta`, `detailHref`, `formContext`, and `relatedItems` bindings under
+  the content-domain owner seam,
+- `relatedItems` stays on the current collection/listing runtime owners through
+  the existing content-list resolver path, and `formContext` stays on
+  `resolveFormRuntimeData(...)` rather than introducing a second form runtime.
 
 This leaf should reuse the existing binding path semantics already used by
 custom screens. Do not invent a separate array-path DSL for detail pages if the
@@ -100,6 +110,25 @@ Rules:
   contracts above; they do not become hidden owners of route resolution, nonce
   issuance, form access policy, or listing-query semantics.
 
+## Pseudocode
+
+```ts
+export const resolveBindingValue = (source, entry, deps) => {
+  if (source.kind === "entry-field") return readEntryField(entry, source.field);
+  if (source.kind === "entry-meta") return readEntryMeta(entry, source.field);
+  if (source.kind === "computed" && source.resolver === "detailHref") {
+    return deps.resolveDetailHref(entry);
+  }
+  if (source.kind === "computed" && source.resolver === "relatedItems") {
+    return deps.resolveRelatedItems(entry);
+  }
+  if (source.kind === "computed" && source.resolver === "formContext") {
+    return deps.resolveFormContext(entry);
+  }
+  throw new Error("detail_page_binding_invalid");
+};
+```
+
 ## Security Contract
 
 - Visibility: internal resolver and public read rendering.
@@ -117,7 +146,8 @@ Rules:
 - Entry meta binding writes title/slug/publishedAt.
 - Missing required binding returns machine-readable error.
 - Missing optional binding uses fallback.
-- Secret-like field binding rejects.
+- Secret-like field binding rejects through the detail-page document contract
+  before runtime resolution.
 - Shared dot-path helpers stay compatible with current custom-screen binding
   behavior.
 - `detailHref` stays aligned with the current content-route/detail-path

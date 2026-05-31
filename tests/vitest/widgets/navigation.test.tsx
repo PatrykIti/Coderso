@@ -5,7 +5,9 @@ import { renderToString } from "react-dom/server";
 
 import {
   createNavigationWidget,
+  navigationEditorContract,
   navigationDefaults,
+  normalizeNavigationData,
   NavigationBlock,
   type NavigationData,
 } from "../../../core/widgets/core/navigation";
@@ -23,6 +25,63 @@ import type { MenuItemNode } from "../../../core/admin/services/menusClient";
 
 const StubEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 
+test("navigation exposes the current v2 editor contract for hero-style section ownership", () => {
+  const widget = createNavigationWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+
+  expect(widget.editorContract).toBe(navigationEditorContract);
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "navigation.visual.variant-structure"
+    )?.writablePaths
+  ).toEqual(expect.arrayContaining(["linksSource", "menuKey", "variant"]));
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "navigation.visual.navigation-links"
+    )?.writablePaths
+  ).toEqual(expect.arrayContaining(["behavior.activeLinkMode", "items"]));
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "navigation.visual.cta-right-actions"
+    )?.writablePaths
+  ).toEqual(expect.arrayContaining(["cta.label", "cta.href"]));
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "navigation.visual.colors-borders-typography"
+    )?.writablePaths
+  ).toEqual(
+    expect.arrayContaining([
+      "style.surfaceColor",
+      "style.borderColor",
+      "style.textColor",
+      "style.logoColor",
+      "style.linkColor",
+      "style.linkHoverColor",
+      "style.linkActiveColor",
+      "style.borderWidth",
+      "style.fontSize",
+      "style.fontWeight",
+      "style.textTransform",
+      "style.letterSpacing",
+    ])
+  );
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "navigation.advanced.layout-token-summary"
+    )?.readOnlyPaths
+  ).toEqual(
+    expect.arrayContaining([
+      "layout.alignment",
+      "layout.maxWidth",
+      "layout.paddingY",
+      "layout.itemGap",
+    ])
+  );
+});
+
 test("navigation renders defaults", () => {
   const html = renderToString(<NavigationBlock data={navigationDefaults} variant="simple" />);
 
@@ -30,6 +89,8 @@ test("navigation renders defaults", () => {
   expect(html).toContain("Home");
   expect(html).toContain("About");
   expect(html).toContain("justify-end");
+  expect(html).toContain('aria-label="Primary navigation"');
+  expect(html).toContain('href="/"');
 });
 
 test("navigation reflects sticky and transparent behavior in runtime output", () => {
@@ -42,16 +103,21 @@ test("navigation reflects sticky and transparent behavior in runtime output", ()
           transparent: true,
           collapseOnScroll: true,
           mobileMode: "drawer",
+          activeLinkMode: "pathname",
         },
         style: {
           surfaceColor: "#ffffff",
           borderColor: "#123456",
           borderWidth: "2",
           linkColor: "#334155",
+          linkHoverColor: "#0f172a",
+          linkActiveColor: "#1d4ed8",
           ctaBackgroundColor: "#1d4ed8",
           ctaTextColor: "#ffffff",
           fontSize: "lg",
           textTransform: "uppercase",
+          shadow: "md",
+          backdropBlur: "sm",
         },
       }}
       variant="split"
@@ -59,12 +125,55 @@ test("navigation reflects sticky and transparent behavior in runtime output", ()
   );
 
   expect(html).toContain("sticky top-0 z-40");
+  expect(html).toContain('data-navigation-widget="1"');
   expect(html).toContain('data-mobile-mode="drawer"');
   expect(html).toContain('data-collapse-on-scroll="true"');
+  expect(html).toContain('data-navigation-active-mode="pathname"');
   expect(html).toContain("border-bottom-width:2px");
   expect(html).toContain("text-lg");
   expect(html).toContain("uppercase");
   expect(html).toContain("Menu");
+  expect(html).toContain("data-navigation-mobile-toggle");
+  expect(html).toContain("data-navigation-mobile-panel");
+  expect(html).toContain('aria-expanded="false"');
+  expect(html).toContain('aria-controls="navigation-mobile-panel"');
+  expect(html).toContain("shadow-md");
+  expect(html).toContain("backdrop-blur-sm");
+});
+
+test("navigation renders bounded visual-token classes, variables, and dropdown direction markers", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        items: [
+          {
+            label: "Docs",
+            href: "/docs",
+            children: [{ label: "API", href: "/docs/api" }],
+          },
+        ],
+        style: {
+          linkHoverColor: "#112233",
+          linkActiveColor: "#334455",
+          linkUnderline: "always",
+          letterSpacing: "wider",
+          dropdownDirection: "top",
+          motion: "standard",
+        },
+      }}
+      variant="simple"
+      blockId="tokens"
+    />
+  );
+
+  expect(html).toContain("--navigation-link-hover-color:#112233");
+  expect(html).toContain("--navigation-link-active-color:#334455");
+  expect(html).toContain("tracking-wider");
+  expect(html).toContain("underline underline-offset-4");
+  expect(html).toContain("duration-200");
+  expect(html).toContain('data-navigation-direction="top"');
+  expect(html).toContain('data-navigation-position="top"');
 });
 
 test("navigation cleared surface and CTA background omit background styles", () => {
@@ -83,7 +192,7 @@ test("navigation cleared surface and CTA background omit background styles", () 
   );
 
   expect(html).toContain("Coderso");
-  expect(html).not.toContain("background-color:");
+  expect(html).toContain("background-color:var(--color-bg)");
 });
 
 test("navigation schema accepts submenu children and image logo metadata", () => {
@@ -148,6 +257,54 @@ test("navigation schema accepts submenu children and image logo metadata", () =>
   ).not.toThrow();
 });
 
+test("navigation schema rejects unknown nested keys", () => {
+  clearWidgets();
+  registerWidget(
+    createNavigationWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "nav-invalid-behavior",
+      type: "navigation",
+      variant: "split",
+      data: {
+        ...navigationDefaults,
+        behavior: {
+          ...navigationDefaults.behavior,
+          extra: true,
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "nav-invalid-item",
+      type: "navigation",
+      variant: "split",
+      data: {
+        ...navigationDefaults,
+        style: {
+          ...navigationDefaults.style,
+          extra: "#000000",
+        },
+        items: [
+          {
+            label: "Home",
+            href: "/",
+            extra: "nope",
+          },
+        ],
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
 test("navigation schema accepts pages links source", () => {
   clearWidgets();
   registerWidget(
@@ -182,6 +339,216 @@ test("navigation widget exposes right slot and visual variant ownership", () => 
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("navigation normalizes unsafe item, child, CTA, and logo hrefs before render", () => {
+  const normalized = normalizeNavigationData({
+    ...navigationDefaults,
+    logo: {
+      ...navigationDefaults.logo,
+      href: "javascript:alert(1)",
+    },
+    items: [
+      { label: "Safe", href: "/safe" },
+      {
+        label: "Unsafe",
+        href: "javascript:alert(2)",
+        target: "blank",
+        children: [{ label: "Child unsafe", href: "//evil.example", target: "blank" }],
+      },
+    ],
+    cta: {
+      label: "Start",
+      href: "data:text/html,boom",
+    },
+  });
+
+  expect(normalized.logo.href).toBe("/");
+  expect(normalized.items).toEqual([{ label: "Safe", href: "/safe", target: "self" }]);
+  expect(normalized.cta).toBeUndefined();
+
+  const html = renderToString(<NavigationBlock data={normalized} variant="with-cta" />);
+  expect(html).toContain('href="/safe"');
+  expect(html).not.toContain("javascript:alert");
+  expect(html).not.toContain("//evil.example");
+  expect(html).not.toContain("data:text/html");
+});
+
+test("navigation minimal mode skips the mobile drawer toggle and panel", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        cta: undefined,
+        behavior: {
+          ...navigationDefaults.behavior,
+          mobileMode: "minimal",
+        },
+      }}
+      variant="simple"
+      blockId="panel"
+    />
+  );
+
+  expect(html).not.toContain("data-navigation-mobile-toggle");
+  expect(html).not.toContain("data-navigation-mobile-panel");
+});
+
+test("navigation renders metadata, target rel, and drawer-only mobile CTA contract", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        items: [
+          {
+            label: "Docs",
+            href: "/docs",
+            target: "blank",
+            meta: {
+              visibility: "all",
+              badge: { label: "New", tone: "accent" },
+              description: "Latest writing",
+              icon: "spark",
+            },
+            children: [
+              {
+                label: "API",
+                href: "/docs/api",
+                meta: {
+                  visibility: "all",
+                  badge: null,
+                  description: "Reference",
+                  icon: "api",
+                },
+              },
+            ],
+          },
+        ],
+        behavior: {
+          ...navigationDefaults.behavior,
+          mobileMode: "drawer",
+        },
+        style: {
+          ...navigationDefaults.style,
+          logoHeight: "lg",
+          ctaBorderRadius: "full",
+          ctaSeparator: "line",
+        },
+      }}
+      variant="with-cta"
+      blockId="meta"
+    />
+  );
+
+  expect(html).toContain("Latest writing");
+  expect(html).toContain("spark");
+  expect(html).toContain("New");
+  expect(html).toContain("Reference");
+  expect(html).toContain('target="_blank"');
+  expect(html).toContain('rel="noopener noreferrer"');
+  expect(html).toContain("rounded-full");
+  expect(html).toContain("border-l");
+  expect(html).toContain("h-8");
+  expect(html).toContain('data-navigation-submenu-toggle="1"');
+});
+
+test("navigation injects submenu runtime in expanded mode and uses image alt for the logo link name", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        logo: {
+          type: "image",
+          value: "https://cdn.example.com/logo.png",
+          alt: "Northwind",
+          href: "/brand",
+          source: "external",
+        },
+        items: [
+          {
+            label: "Docs",
+            href: "/docs",
+            children: [{ label: "API", href: "/docs/api" }],
+          },
+        ],
+        behavior: {
+          ...navigationDefaults.behavior,
+          mobileMode: "expanded",
+          collapseOnScroll: false,
+          activeLinkMode: "none",
+        },
+      }}
+      variant="simple"
+      blockId="submenu"
+    />
+  );
+
+  expect(html).toContain('aria-label="Northwind home"');
+  expect(html).toContain('data-navigation-submenu-toggle="1"');
+  expect(html).toContain("__nextlessNavigationBound");
+});
+
+test("navigation image logo clear falls back to text without a broken Coderso image src", () => {
+  const normalized = normalizeNavigationData({
+    ...navigationDefaults,
+    logo: {
+      type: "image",
+      value: "",
+      href: "/",
+      alt: "",
+      source: "external",
+    },
+  });
+
+  expect(normalized.logo).toMatchObject({
+    type: "image",
+    value: "",
+  });
+
+  const html = renderToString(<NavigationBlock data={normalized} variant="simple" />);
+
+  expect(html).not.toContain('src="Coderso"');
+  expect(html).not.toContain("<img");
+  expect(html).toContain('data-navigation-logo-missing-image="true"');
+  expect(html).toContain('aria-label="Logo home"');
+});
+
+test("navigation keeps cleared saved links hidden without replacing them with starter defaults", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        items: [
+          { label: "Docs", href: "" },
+          { label: "Pricing", href: "javascript:alert(1)" },
+        ],
+      }}
+      variant="simple"
+    />
+  );
+
+  expect(html).toContain("Coderso");
+  expect(html).not.toContain("Docs");
+  expect(html).not.toContain("Pricing");
+  expect(html).not.toContain("Home");
+  expect(html).not.toContain("About");
+  expect(html).not.toContain("javascript:alert");
+});
+
+test("navigation renders resolved empty item lists without restoring starter defaults", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        items: [],
+      }}
+      variant="simple"
+    />
+  );
+
+  expect(html).toContain("Coderso");
+  expect(html).not.toContain("Home");
+  expect(html).not.toContain("About");
+});
+
 test("navigation wizard shows CTA fields only for CTA variants", () => {
   const simpleHtml = renderToString(
     <NavigationWizardEditor
@@ -202,7 +569,9 @@ test("navigation wizard shows CTA fields only for CTA variants", () => {
 
   expect(simpleHtml).toContain("Simple variant hides CTA in runtime output.");
   expect(simpleHtml).not.toContain("Primary CTA");
-  expect(withCtaHtml).toContain("Primary CTA");
+  expect(withCtaHtml).not.toContain("Primary CTA");
+  expect(withCtaHtml).toContain("Set its label and destination in Visual");
+  expect(withCtaHtml).not.toContain("pick-media");
 });
 
 test("navigation visual editor renders section-based IA", () => {
@@ -222,6 +591,16 @@ test("navigation visual editor renders section-based IA", () => {
   expect(html).toContain("Mobile Behavior");
   expect(html).toContain("Colors, Borders, Typography");
   expect(html).toContain("Surface and Runtime Behavior");
+  expect(html).toContain('data-widget-editor-section="navigation.visual.variant-structure"');
+  expect(html).toContain('data-widget-editor-section="navigation.visual.brand-logo"');
+  expect(html).toContain('data-widget-editor-section="navigation.visual.navigation-links"');
+  expect(html).toContain('data-widget-editor-section="navigation.visual.cta-right-actions"');
+  expect(html).toContain('data-widget-editor-section="navigation.visual.mobile-behavior"');
+  expect(html).toContain(
+    'data-widget-editor-section="navigation.visual.colors-borders-typography"'
+  );
+  expect(html).toContain('data-widget-editor-section="navigation.visual.surface-runtime-behavior"');
+  expect(html).not.toContain("Surface color value");
 });
 
 test("navigation advanced editor keeps technical-only controls", () => {
@@ -234,8 +613,19 @@ test("navigation advanced editor keeps technical-only controls", () => {
     />
   );
 
-  expect(html).toContain("Layout Tokens");
-  expect(html).toContain("Runtime Behavior");
+  expect(html).toContain("Layout token summary");
+  expect(html).toContain("Runtime behavior summary");
+  expect(html).toContain("Configured");
+  expect(html).toContain('data-widget-editor-section="navigation.advanced.runtime-summary"');
+  expect(html).toContain('data-widget-editor-section="navigation.advanced.layout-token-summary"');
+  expect(html).toContain(
+    'data-widget-editor-section="navigation.advanced.runtime-behavior-summary"'
+  );
+  expect(html).toContain("Transparent surface");
+  expect(html).toContain("Mobile mode");
+  expect(html).toContain("Hide CTA on mobile");
+  expect(html).toContain("Active link mode");
+  expect(html).toContain("Admin preview runtime");
   expect(html).not.toContain("Navigation Links");
   expect(html).not.toContain("CTA and Right Actions");
 });
@@ -262,8 +652,8 @@ test("navigation maps selected menu nodes to widget items", () => {
         {
           id: "item-2-1",
           label: "CMS",
-          href: "/products/cms",
-          pageId: null,
+          href: null,
+          pageId: "page-cms",
           parentId: "item-2",
           orderIndex: 0,
           children: [],
@@ -272,7 +662,7 @@ test("navigation maps selected menu nodes to widget items", () => {
     },
   ];
 
-  const mapped = mapMenuNodesToNavigationItems(nodes);
+  const mapped = mapMenuNodesToNavigationItems(nodes, new Map([["page-cms", "products/cms/"]]));
 
   expect(mapped).toEqual([
     {

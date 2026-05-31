@@ -7,7 +7,6 @@ import { SecuritySettingsPage } from "../../../core/admin/ui/settings/SecuritySe
 test("SecuritySettingsPage renders sections and cards", () => {
   const html = renderAdminUi(<SecuritySettingsPage />);
 
-  expect(html).toContain("Security Settings");
   expect(html).toContain("Auth protection");
   expect(html).toContain("Rate limits");
   expect(html).toContain("CSRF");

@@ -1,18 +1,25 @@
 import type {
   Block,
+  ContainerToken,
+  DeviceTarget,
   LayoutValue,
+  SpacingToken,
+  WidgetBlockPatch,
   WidgetDefinition,
   WidgetEditorState,
+  WidgetLayoutDefaults,
   WidgetVisibility,
 } from "./types";
 import { containerTokens, spacingTokens } from "./types";
 import { getRegisteredWidget } from "@/ui/widgets/registry";
+import type { WidgetRepeatableSlotSyncAdapter } from "../../../../widgets/types";
 import {
   buildRepeatableSlotId,
   getNextRepeatableSlotInstanceId,
   getRepeatableSlotIds,
   getWidgetSlotKind,
   parseRepeatableSlotId,
+  reorderRepeatableSlotMap,
 } from "../../../../widgets/slots";
 
 const defaultLayout: LayoutValue = {
@@ -26,9 +33,20 @@ const defaultVisibility: WidgetVisibility = {
   devices: ["desktop", "tablet", "mobile"],
   enabled: true,
 };
+const defaultLayoutEffective: WidgetLayoutDefaults = {
+  container: "default",
+  padding: { top: "xl", bottom: "xl" },
+  margin: { top: "none", bottom: "none" },
+};
+const deviceTargets: DeviceTarget[] = ["desktop", "tablet", "mobile"];
 const defaultEditor: WidgetEditorState = {
   mode: "wizard",
   wizardCompleted: false,
+};
+
+const completedDefaultEditor: WidgetEditorState = {
+  mode: "visual",
+  wizardCompleted: true,
 };
 
 const isContainerToken = (value: unknown): value is (typeof containerTokens)[number] =>
@@ -36,6 +54,15 @@ const isContainerToken = (value: unknown): value is (typeof containerTokens)[num
 
 const isSpacingToken = (value: unknown): value is (typeof spacingTokens)[number] =>
   typeof value === "string" && spacingTokens.includes(value as (typeof spacingTokens)[number]);
+
+const isInheritableContainerToken = (value: unknown): value is LayoutValue["container"] =>
+  value === "inherit" || isContainerToken(value);
+
+const isInheritableSpacingToken = (value: unknown): value is LayoutValue["padding"]["top"] =>
+  value === "inherit" || isSpacingToken(value);
+
+const isDeviceTarget = (value: unknown): value is DeviceTarget =>
+  typeof value === "string" && deviceTargets.includes(value as DeviceTarget);
 
 const resolveDefinition = (input: WidgetDefinition | string) =>
   typeof input === "string" ? getRegisteredWidget(input) : input;
@@ -52,6 +79,30 @@ type BlockLocation = {
   path: BlockPath;
   parentListPath: BlockPath;
   index: number;
+};
+
+export type SharedBlockValueState<Saved, Effective = Saved> =
+  | { source: "inherited"; effective: Effective }
+  | { source: "saved"; saved: Saved; effective: Effective };
+
+export type SharedBlockLayoutState = {
+  container: SharedBlockValueState<LayoutValue["container"], ContainerToken>;
+  padding: {
+    top: SharedBlockValueState<LayoutValue["padding"]["top"], SpacingToken>;
+    bottom: SharedBlockValueState<LayoutValue["padding"]["bottom"], SpacingToken>;
+  };
+  margin: {
+    top: SharedBlockValueState<LayoutValue["margin"]["top"], SpacingToken>;
+    bottom: SharedBlockValueState<LayoutValue["margin"]["bottom"], SpacingToken>;
+  };
+};
+
+export type SharedBlockVisibilityState = {
+  enabled: boolean;
+  devices: DeviceTarget[];
+  visibleDevices: DeviceTarget[];
+  hiddenOnAllDevices: boolean;
+  summary: string;
 };
 
 const normalizeSlotId = (slotId?: string | null) => {
@@ -81,6 +132,12 @@ const getSlotBlocks = (block: Block, slotId?: string | null) => {
   return slots[key] ?? [];
 };
 
+const getRepeatableSlotSyncAdapter = (
+  widget: WidgetDefinition | null | undefined,
+  definitionId: string
+): WidgetRepeatableSlotSyncAdapter | undefined =>
+  widget?.repeatableSlotSync?.find((adapter) => adapter.definitionId === definitionId);
+
 const setSlotBlocks = (block: Block, slotId: string, nextBlocks: Block[]) => {
   const slots = { ...getSlotMap(block), [slotId]: nextBlocks };
   return {
@@ -104,10 +161,7 @@ const findBlockLocation = (
     const slots = getSlotMap(block);
     for (const [slotId, slotBlocks] of Object.entries(slots)) {
       if (slotBlocks.length === 0) continue;
-      const found = findBlockLocation(slotBlocks, id, [
-        ...listPath,
-        { index, slotId },
-      ]);
+      const found = findBlockLocation(slotBlocks, id, [...listPath, { index, slotId }]);
       if (found) return found;
     }
   }
@@ -117,14 +171,15 @@ const findBlockLocation = (
 const cloneBlockTree = (block: Block): Block => {
   const editorState = block.editor ?? { mode: "visual", wizardCompleted: true };
   const children = Array.isArray(block.children) ? block.children : [];
-  const slots = block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
-    ? Object.fromEntries(
-        Object.entries(block.slots).map(([key, value]) => [
-          key,
-          Array.isArray(value) ? (value as Block[]).map(cloneBlockTree) : [],
-        ])
-      )
-    : undefined;
+  const slots =
+    block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
+      ? Object.fromEntries(
+          Object.entries(block.slots).map(([key, value]) => [
+            key,
+            Array.isArray(value) ? (value as Block[]).map(cloneBlockTree) : [],
+          ])
+        )
+      : undefined;
   return {
     ...block,
     id: crypto.randomUUID(),
@@ -207,11 +262,7 @@ export function findBlockById(blocks: Block[], id?: string | null) {
   return location?.block ?? null;
 }
 
-export function updateBlockById(
-  blocks: Block[],
-  id: string,
-  updater: (block: Block) => Block
-) {
+export function updateBlockById(blocks: Block[], id: string, updater: (block: Block) => Block) {
   const location = findBlockLocation(blocks, id);
   if (!location) return blocks;
   return updateBlockListAtPath(blocks, location.parentListPath, (items) => {
@@ -219,6 +270,10 @@ export function updateBlockById(
     next[location.index] = updater(items[location.index]);
     return next;
   });
+}
+
+export function applyWidgetBlockPatch(block: Block, patch: WidgetBlockPatch): Block {
+  return typeof patch === "function" ? patch(block) : { ...block, ...patch };
 }
 
 export function deleteBlockById(blocks: Block[], id: string) {
@@ -260,66 +315,124 @@ export function appendChildBlock(blocks: Block[], parentId: string, child: Block
   return appendSlotBlock(blocks, parentId, "default", child);
 }
 
-export function addRepeatableSlotInstance(
-  blocks: Block[],
-  parentId: string,
+export function addRepeatableSlotInstanceForWidget(
+  block: Block,
+  widget: WidgetDefinition | null | undefined,
   definitionId: string
 ) {
+  const slot = widget?.slots?.find((item) => item.id === definitionId);
+  if (!slot || getWidgetSlotKind(slot) !== "repeatable") return block;
+
+  const slots = getSlotMap(block);
+  const existing = getRepeatableSlotIds(slot, slots);
+  if (Number.isFinite(slot.maxItems) && existing.length >= Math.floor(slot.maxItems ?? 0)) {
+    return block;
+  }
+
+  const nextInstanceId = getNextRepeatableSlotInstanceId(definitionId, slots);
+  const nextSlotId = buildRepeatableSlotId(definitionId, nextInstanceId);
+  if (slots[nextSlotId]) return block;
+
+  const syncAdapter = getRepeatableSlotSyncAdapter(widget, definitionId);
+  const nextItem = syncAdapter?.buildDefaultItem?.(nextInstanceId, existing.length);
+
+  return {
+    ...block,
+    slots: {
+      ...slots,
+      [nextSlotId]: [],
+    },
+    data:
+      nextItem !== undefined && syncAdapter?.appendItem
+        ? syncAdapter.appendItem(block.data, nextItem)
+        : block.data,
+    children: undefined,
+  };
+}
+
+export function addRepeatableSlotInstance(blocks: Block[], parentId: string, definitionId: string) {
   return updateBlockById(blocks, parentId, (block) => {
-    const definition = getRegisteredWidget(block.type);
-    const slot = definition?.slots?.find((item) => item.id === definitionId);
-    if (!slot || getWidgetSlotKind(slot) !== "repeatable") return block;
-
-    const slots = getSlotMap(block);
-    const existing = getRepeatableSlotIds(slot, slots);
-    if (
-      Number.isFinite(slot.maxItems) &&
-      existing.length >= Math.floor(slot.maxItems ?? 0)
-    ) {
-      return block;
-    }
-
-    const nextInstanceId = getNextRepeatableSlotInstanceId(definitionId, slots);
-    const nextSlotId = buildRepeatableSlotId(definitionId, nextInstanceId);
-    if (slots[nextSlotId]) return block;
-
-    return {
-      ...block,
-      slots: { ...slots, [nextSlotId]: [] },
-      children: undefined,
-    };
+    const definition = getRegisteredWidget(block.type) ?? undefined;
+    return addRepeatableSlotInstanceForWidget(block, definition, definitionId);
   });
 }
 
-export function removeRepeatableSlotInstance(
-  blocks: Block[],
-  parentId: string,
+export function removeRepeatableSlotInstanceForWidget(
+  block: Block,
+  widget: WidgetDefinition | null | undefined,
   slotId: string
 ) {
+  const parsed = parseRepeatableSlotId(slotId);
+  if (!parsed) return block;
+
+  const slot = widget?.slots?.find((item) => item.id === parsed.definitionId);
+  if (!slot || getWidgetSlotKind(slot) !== "repeatable") return block;
+
+  const slots = getSlotMap(block);
+  if (!(slotId in slots)) return block;
+
+  const existing = getRepeatableSlotIds(slot, slots);
+  const minimum = Number.isFinite(slot.minItems) ? Math.max(0, Math.floor(slot.minItems ?? 0)) : 0;
+  if (existing.length <= minimum) return block;
+
+  const nextSlots = { ...slots };
+  delete nextSlots[slotId];
+  const syncAdapter = getRepeatableSlotSyncAdapter(widget, parsed.definitionId);
+
+  return {
+    ...block,
+    slots: nextSlots,
+    data: syncAdapter?.removeItemByInstanceId
+      ? syncAdapter.removeItemByInstanceId(block.data, parsed.instanceId)
+      : block.data,
+    children: undefined,
+  };
+}
+
+export function reorderRepeatableSlotInstancesForWidget(
+  block: Block,
+  widget: WidgetDefinition | null | undefined,
+  definitionId: string,
+  orderedInstanceIds: string[]
+) {
+  const slot = widget?.slots?.find((item) => item.id === definitionId);
+  if (!slot || getWidgetSlotKind(slot) !== "repeatable") return block;
+
+  const slots = getSlotMap(block);
+  const nextSlots = reorderRepeatableSlotMap(slots, definitionId, orderedInstanceIds);
+  const syncAdapter = getRepeatableSlotSyncAdapter(widget, definitionId);
+
+  return {
+    ...block,
+    slots: nextSlots,
+    data: syncAdapter?.reorderItemsByInstanceIds
+      ? syncAdapter.reorderItemsByInstanceIds(block.data, orderedInstanceIds)
+      : block.data,
+    children: undefined,
+  };
+}
+
+export function removeRepeatableSlotInstance(blocks: Block[], parentId: string, slotId: string) {
   return updateBlockById(blocks, parentId, (block) => {
-    const parsed = parseRepeatableSlotId(slotId);
-    if (!parsed) return block;
+    const definition = getRegisteredWidget(block.type) ?? undefined;
+    return removeRepeatableSlotInstanceForWidget(block, definition, slotId);
+  });
+}
 
-    const definition = getRegisteredWidget(block.type);
-    const slot = definition?.slots?.find((item) => item.id === parsed.definitionId);
-    if (!slot || getWidgetSlotKind(slot) !== "repeatable") return block;
-
-    const slots = getSlotMap(block);
-    if (!(slotId in slots)) return block;
-
-    const existing = getRepeatableSlotIds(slot, slots);
-    const minimum = Number.isFinite(slot.minItems)
-      ? Math.max(0, Math.floor(slot.minItems ?? 0))
-      : 0;
-    if (existing.length <= minimum) return block;
-
-    const nextSlots = { ...slots };
-    delete nextSlots[slotId];
-    return {
-      ...block,
-      slots: nextSlots,
-      children: undefined,
-    };
+export function reorderRepeatableSlotInstances(
+  blocks: Block[],
+  parentId: string,
+  definitionId: string,
+  orderedInstanceIds: string[]
+) {
+  return updateBlockById(blocks, parentId, (block) => {
+    const definition = getRegisteredWidget(block.type) ?? undefined;
+    return reorderRepeatableSlotInstancesForWidget(
+      block,
+      definition,
+      definitionId,
+      orderedInstanceIds
+    );
   });
 }
 
@@ -368,9 +481,7 @@ export function reorderBlocksAtPath(
   fromIndex: number,
   toIndex: number
 ) {
-  return updateBlockListAtPath(blocks, path, (items) =>
-    reorderBlocks(items, fromIndex, toIndex)
-  );
+  return updateBlockListAtPath(blocks, path, (items) => reorderBlocks(items, fromIndex, toIndex));
 }
 
 export function flattenBlocks(blocks: Block[]) {
@@ -412,6 +523,31 @@ export function stripEditor(blocks: Block[]): BlockWithoutEditor[] {
   });
 }
 
+export function resolveWidgetEditorState(block: Pick<Block, "editor"> | null | undefined) {
+  const editor = block?.editor;
+  if (!editor?.wizardCompleted) {
+    return { ...defaultEditor };
+  }
+  return {
+    ...completedDefaultEditor,
+    mode: editor.mode === "advanced" ? "advanced" : "visual",
+  } satisfies WidgetEditorState;
+}
+
+export function resolveLoadedWidgetEditorState(
+  editor: WidgetEditorState | null | undefined
+): WidgetEditorState {
+  if (!editor) return { ...completedDefaultEditor };
+  return resolveWidgetEditorState({ editor });
+}
+
+export function reopenWidgetSetup(block: Block): Block {
+  return {
+    ...block,
+    editor: { mode: "wizard", wizardCompleted: false },
+  };
+}
+
 export function applyWizardSelection(block: Block, variant?: string): Block {
   return {
     ...block,
@@ -430,15 +566,107 @@ export function sanitizeLayout(layout?: LayoutValue | null): LayoutValue {
   };
   return {
     ...resolved,
-    container: isContainerToken(resolved.container) ? resolved.container : "default",
+    container: isInheritableContainerToken(resolved.container) ? resolved.container : "default",
     padding: {
-      top: isSpacingToken(resolved.padding.top) ? resolved.padding.top : "md",
-      bottom: isSpacingToken(resolved.padding.bottom) ? resolved.padding.bottom : "md",
+      top: isInheritableSpacingToken(resolved.padding.top) ? resolved.padding.top : "md",
+      bottom: isInheritableSpacingToken(resolved.padding.bottom) ? resolved.padding.bottom : "md",
     },
     margin: {
-      top: isSpacingToken(resolved.margin.top) ? resolved.margin.top : "none",
-      bottom: isSpacingToken(resolved.margin.bottom) ? resolved.margin.bottom : "none",
+      top: isInheritableSpacingToken(resolved.margin.top) ? resolved.margin.top : "none",
+      bottom: isInheritableSpacingToken(resolved.margin.bottom) ? resolved.margin.bottom : "none",
     },
+  };
+}
+
+const resolveEffectiveDefaults = (
+  pageDefaults: WidgetLayoutDefaults | undefined
+): WidgetLayoutDefaults => ({
+  container: isContainerToken(pageDefaults?.container)
+    ? pageDefaults.container
+    : defaultLayoutEffective.container,
+  padding: {
+    top: isSpacingToken(pageDefaults?.padding.top)
+      ? pageDefaults.padding.top
+      : defaultLayoutEffective.padding.top,
+    bottom: isSpacingToken(pageDefaults?.padding.bottom)
+      ? pageDefaults.padding.bottom
+      : defaultLayoutEffective.padding.bottom,
+  },
+  margin: {
+    top: isSpacingToken(pageDefaults?.margin.top)
+      ? pageDefaults.margin.top
+      : defaultLayoutEffective.margin.top,
+    bottom: isSpacingToken(pageDefaults?.margin.bottom)
+      ? pageDefaults.margin.bottom
+      : defaultLayoutEffective.margin.bottom,
+  },
+});
+
+const resolveContainerState = (
+  value: LayoutValue["container"],
+  defaults: WidgetLayoutDefaults
+): SharedBlockLayoutState["container"] =>
+  value === "inherit"
+    ? { source: "inherited", effective: defaults.container }
+    : { source: "saved", saved: value, effective: value };
+
+const resolveSpacingState = <T extends LayoutValue["padding"]["top"]>(
+  value: T,
+  effective: SpacingToken
+): SharedBlockValueState<T, SpacingToken> =>
+  value === "inherit"
+    ? { source: "inherited", effective }
+    : { source: "saved", saved: value, effective: value };
+
+export function resolveSharedBlockLayoutState(
+  layout?: LayoutValue | null,
+  pageDefaults?: WidgetLayoutDefaults
+): SharedBlockLayoutState {
+  const normalized = sanitizeLayout(layout);
+  const effectiveDefaults = resolveEffectiveDefaults(pageDefaults);
+
+  return {
+    container: resolveContainerState(normalized.container, effectiveDefaults),
+    padding: {
+      top: resolveSpacingState(normalized.padding.top, effectiveDefaults.padding.top),
+      bottom: resolveSpacingState(normalized.padding.bottom, effectiveDefaults.padding.bottom),
+    },
+    margin: {
+      top: resolveSpacingState(normalized.margin.top, effectiveDefaults.margin.top),
+      bottom: resolveSpacingState(normalized.margin.bottom, effectiveDefaults.margin.bottom),
+    },
+  };
+}
+
+export function sanitizeVisibility(visibility?: WidgetVisibility | null): WidgetVisibility {
+  const rawDevices = Array.isArray(visibility?.devices)
+    ? visibility.devices.filter(isDeviceTarget)
+    : defaultVisibility.devices;
+  const devices = Array.from(new Set(rawDevices));
+
+  return {
+    enabled: visibility?.enabled ?? defaultVisibility.enabled,
+    devices,
+  };
+}
+
+export function resolveSharedBlockVisibilityState(
+  visibility?: WidgetVisibility | null
+): SharedBlockVisibilityState {
+  const normalized = sanitizeVisibility(visibility);
+  const visibleDevices = normalized.enabled ? normalized.devices : [];
+  const hiddenOnAllDevices = visibleDevices.length === 0;
+  const labels = [
+    visibleDevices.includes("desktop") ? "Desktop" : null,
+    visibleDevices.includes("tablet") ? "Tablet" : null,
+    visibleDevices.includes("mobile") ? "Mobile" : null,
+  ].filter((item): item is string => Boolean(item));
+
+  return {
+    ...normalized,
+    visibleDevices,
+    hiddenOnAllDevices,
+    summary: hiddenOnAllDevices ? "Hidden on all devices" : labels.join(", "),
   };
 }
 

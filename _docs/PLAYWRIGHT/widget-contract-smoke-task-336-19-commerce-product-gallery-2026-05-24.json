@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-05-24T21:18:52.570Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --widget=product-gallery --output-json=_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-gallery-2026-05-24.json --output-md=_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-gallery-2026-05-24.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["product-gallery"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "product-gallery",
+        "modes": [
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 8,
+            "visibleSectionCount": 8,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "1edd10a5-7626-4630-aa47-87c6604fcc62",
+        "adminPath": "http://localhost:5173/admin/pages/1edd10a5-7626-4630-aa47-87c6604fcc62",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "product-gallery",
+        "publicPath": "/test-product-gallery-widget",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-product-gallery.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

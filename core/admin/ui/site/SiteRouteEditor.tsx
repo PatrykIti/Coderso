@@ -21,8 +21,7 @@ type SiteRouteEditorProps = {
   onUseSuggested: () => void;
 };
 
-const labelClassName =
-  "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
+const labelClassName = "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 
 export function SiteRouteEditor({
   name,
@@ -36,7 +35,7 @@ export function SiteRouteEditor({
   onUseSuggested,
 }: SiteRouteEditorProps) {
   return (
-    <Card className={cn("border-border/60", missing && "border-dashed")}> 
+    <Card className={cn("border-border/60", missing && "border-dashed")}>
       <CardHeader className="border-b">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -60,9 +59,7 @@ export function SiteRouteEditor({
             </span>
             <Switch
               checked={route.enabled}
-              onCheckedChange={(checked) =>
-                onChange({ ...route, enabled: checked })
-              }
+              onCheckedChange={(checked) => onChange({ ...route, enabled: checked })}
               disabled={disabled}
             />
           </div>
@@ -78,9 +75,7 @@ export function SiteRouteEditor({
               id={`list-${slug}`}
               value={route.listPath}
               placeholder={suggested.listPath}
-              onChange={(event) =>
-                onChange({ ...route, listPath: event.target.value })
-              }
+              onChange={(event) => onChange({ ...route, listPath: event.target.value })}
               disabled={disabled || !route.enabled}
               aria-invalid={errors?.listPath ? true : undefined}
             />
@@ -99,9 +94,7 @@ export function SiteRouteEditor({
               id={`detail-${slug}`}
               value={route.detailPath}
               placeholder={suggested.detailPath}
-              onChange={(event) =>
-                onChange({ ...route, detailPath: event.target.value })
-              }
+              onChange={(event) => onChange({ ...route, detailPath: event.target.value })}
               disabled={disabled || !route.enabled}
               aria-invalid={errors?.detailPath ? true : undefined}
             />
@@ -112,6 +105,30 @@ export function SiteRouteEditor({
               <p className="text-xs text-destructive">{errors.detailPath}</p>
             ) : null}
           </div>
+        </div>
+        <div className="space-y-2">
+          <label className={labelClassName} htmlFor={`detail-page-id-${slug}`}>
+            Detail page ID
+          </label>
+          <Input
+            id={`detail-page-id-${slug}`}
+            value={route.detailPageId ?? ""}
+            placeholder="Optional UUID for a composed detail page document"
+            onChange={(event) =>
+              onChange({
+                ...route,
+                detailPageId: event.target.value.trim().length > 0 ? event.target.value : null,
+              })
+            }
+            disabled={disabled || !route.enabled}
+            aria-invalid={errors?.detailPageId ? true : undefined}
+          />
+          <p className="text-xs text-muted-foreground">
+            Leave empty to keep the legacy content-detail renderer for this route.
+          </p>
+          {errors?.detailPageId ? (
+            <p className="text-xs text-destructive">{errors.detailPageId}</p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">

@@ -84,9 +84,7 @@ export function PopupEditorPage() {
       })
       .catch((error) => {
         if (!active) return;
-        setError(
-          isApiClientError(error) ? error.message : "Failed to load popup editor."
-        );
+        setError(isApiClientError(error) ? error.message : "Failed to load popup editor.");
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -153,15 +151,7 @@ export function PopupEditorPage() {
   return (
     <AdminShell
       activeHref="/admin/advanced/popups"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span>Popups</span>
-          <span>/</span>
-          <span className="text-foreground">{isCreateMode ? "New popup" : draft.name || "Editor"}</span>
-        </div>
-      }
+      breadcrumbs={["Coderso", "Popups", isCreateMode ? "New popup" : draft.name || "Editor"]}
     >
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <PageHeader
@@ -170,11 +160,18 @@ export function PopupEditorPage() {
           actions={
             <div className="flex flex-wrap items-center gap-2">
               {popup ? (
-                <Badge variant={popup.status === "published" ? "default" : "outline"} className="capitalize">
+                <Badge
+                  variant={popup.status === "published" ? "default" : "outline"}
+                  className="capitalize"
+                >
                   {popup.status}
                 </Badge>
               ) : null}
-              <Button variant="outline" className="gap-2" onClick={() => navigate("/advanced/popups")}>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => navigate("/advanced/popups")}
+              >
                 <ArrowLeft className="h-4 w-4" />
                 Back to list
               </Button>

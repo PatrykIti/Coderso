@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Content Schema
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03
-**Status:** To Do
+**Status:** Done (2026-05-07)
 
 ---
 
@@ -13,6 +13,15 @@
 
 Merge content schema fields contributed by multiple capabilities into one valid
 content type schema.
+
+Delivered slice note:
+- Added `blueprintSchemaMerger.ts` as the schema owner for composed
+  `content-type.upsert` payloads.
+- Compatible field additions, required keys, and enum extensions now merge into
+  one strict schema action instead of collapsing into a duplicate-resource
+  conflict.
+- Secret-like defaults and incompatible field types still fail closed before
+  the composed plan becomes executable.
 
 ## Sub-Tasks
 

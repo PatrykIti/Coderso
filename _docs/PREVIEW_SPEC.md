@@ -9,6 +9,10 @@ public rendering.
 - Wbudowany w edytor.
 - Edytowalny.
 - Stylowany tokenami Admin UI.
+- Selected widget settings now also render a shared read-only live preview row
+  through the real `WidgetRenderer` contract in `editor-preview` mode. The row
+  can consume transient `previewState.dataPatch` data without mutating saved
+  widget JSON by itself.
 
 2. Runtime preview
 - Read-only.
@@ -32,6 +36,7 @@ Dotyczy:
 - Page editor
 - Content entry editor
 - Widget template editor
+- Detail page editor / internal detail-page preview route
 
 ## Runtime token flow
 
@@ -49,11 +54,29 @@ Dotyczy:
 8. Render korzysta z tego samego pipeline co public site, ale dla stron preview
    czyta `currentData`; publiczny runtime bez tokena czyta `publishedData`.
 
+Detail-page variant:
+- `POST /admin/api/detail-pages/:id/preview` issue only the dedicated
+  `type=detail-page` preview token.
+- Request body must include `sampleEntryId`; runtime preview stores that value
+  server-side in `preview_tokens.context` and does not trust raw query params.
+- `type=detail-page` preview renders `current_document`; published
+  `type=content&detailPageId=...` preview remains the separate path for
+  previewing a specific entry against a published detail template.
+
 ## Preview URL contract
 
 - `GET /preview?type=page&token=<token>`
-- `GET /preview?type=content&token=<token>`
+- `GET /preview?type=content&token=<token>&detailPageId=<detail-page-id>`
+- `GET /preview?type=detail-page&token=<token>`
 - `GET /preview?type=widget-template&token=<token>`
+
+Uwaga: `site.contentRoutes` moze teraz przenosic opcjonalne `detailPageId`
+jako structural link do canonical detail-page document. `type=content` preview
+moze uzyc tego linku albo jawnego `detailPageId`, ale tylko dla published
+detail-page document zgodnego z previewed content type. Dedykowany
+`type=detail-page` preview czyta `current_document` i wybiera sample entry
+wylacznie z server-side `preview_tokens.context.sampleEntryId`; runtime nie ufa
+surowym `sampleEntryId` query params.
 
 Resolver policy dla `previewUrl` zwracanego przez Admin API:
 1. `settings["site.publicBaseUrl"]`

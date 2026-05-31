@@ -1,0 +1,172 @@
+# TASK-256-06-01: Feature Grid and Stats KPI Truthful Controls
+
+# FileName: TASK-256-06-01_Feature_Grid_and_Stats_KPI_Truthful_Controls.md
+
+**Priority:** High
+**Category:** Widgets + Marketing Content + Admin UI + Runtime Render
+**Estimated Effort:** Medium
+**Dependencies:** TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06, TASK-256-06-02
+**Status:** Done (2026-05-17)
+
+---
+
+## Overview
+
+Repair truthful-control drift in `feature-grid` and `stats-kpi`. Both reports
+show controls that are visible and persisted but not honored by the renderer, or
+runtime output that is semantically incomplete.
+
+## Drift Evidence
+
+- `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:72-83,157-176` for columns
+  control drift and variant/card-count desync.
+- `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md:177-189,247-276,289-294` for
+  CTA link security, image URL feedback, missing clear, and ARIA/performance.
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:42-58,170-187` for divider
+  controls without effect, fixed cards grid, and limited Wizard content.
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:63-74,90-101,181-206` for
+  value-size/layout/split-grid, section and
+  article ARIA, emoji semantics, and heading hierarchy.
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:3` is now marked `Zakończony`;
+  this leaf may use the current report ranges for planning, while TASK-256-08
+  must still refresh fixed/deferred status after implementation.
+
+## Scope Decision Matrix
+
+| Finding | TASK-256 action | Owner | Follow-up policy |
+|---|---|---|---|
+| Feature Grid columns dropdown has no runtime effect | Hide/disable the no-effect columns control outside supported variants and add explicit variant explanation | `FeatureGridEditors.tsx`, `featureGrid.tsx` | None |
+| Feature Grid variant/card count desync | Fix through TASK-256-01 atomic variant+data update | `FeatureGridEditors.tsx` | None |
+| Feature Grid external CTA missing rel | Fix through TASK-256-06-02 safe link renderer | `featureGrid.tsx`, `widgetSafeHref.ts`, `widgetSafeHref.test.ts` | None |
+| Feature Grid image media picker, drag/drop, rich text | Product scope in TASK-267; TASK-256 only fixes current broken image URL feedback and link safety | `TASK-267` family | TASK-256-08 references TASK-267 instead of creating duplicate Feature Grid follow-ups |
+| Stats KPI divider toggle only affects inline | Hide/disable the divider toggle outside inline and keep runtime output aligned with the visible control | `StatsKpiEditors.tsx`, `statsKpi.tsx` | None |
+| Stats KPI cards grid holes | Fix deterministic grid class for current metric counts | `statsKpi.tsx` | None |
+| Stats KPI value-size, split secondary grid, section/article ARIA, and emoji semantics | Fix section/article ARIA, emoji semantics, and current split-grid truthfulness here; value-size typography controls route to TASK-287 | `statsKpi.tsx`, `StatsKpiEditors.tsx` | TASK-256-08 references TASK-287 for typography product scope |
+| Stats KPI count-up/trend/per-item accent/CTA | Future product scope | `TASK-287` family | TASK-256-08 references TASK-287 instead of creating duplicate Stats KPI follow-ups |
+
+## Sub-Tasks
+
+- [ ] Align feature-grid variant, visible item count, and columns controls with
+  renderer behavior.
+- [ ] Add missing `borderColor` clear behavior for feature-grid.
+- [ ] Keep blocked feature-grid CTA URLs visible as editor validation errors
+  rather than silently disappearing.
+- [ ] Add safe external-link attributes where feature-grid renders external CTA
+  links.
+- [ ] Make stats-kpi divider controls variant-aware and truthful.
+- [ ] Fix stats-kpi cards grid classes for non-4 item counts or expose a real
+  columns control.
+- [ ] Add stats-kpi section/article/emoji accessibility semantics.
+
+## Files to Change
+
+| File | Lines | Required change |
+|---|---:|---|
+| `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` | 435-467, 619-684 | Variant/count sync, truthful columns control, image URL validation feedback, and `borderColor` clear. |
+| `core/widgets/core/featureGrid.tsx` | 266-347, 410-418 | Deterministic columns behavior, safe CTA link output, image fallback/lazy/alt semantics. |
+| `core/widgets/core/widgetSafeHref.ts` | shared helper | Reuse the TASK-256-06-02 `resolveWidgetLinkAttrs` helper for Feature Grid CTA output; do not duplicate target/rel logic in `featureGrid.tsx`. |
+| `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` | 315-624 | Wizard content additions required for truthful setup, divider variant gating, and clearer color/token controls. |
+| `core/widgets/core/statsKpi.tsx` | 299-450 | Dynamic grid behavior, section/article labels, emoji `aria-hidden`, and divider semantics. |
+| `tests/vitest/ui/feature-grid-editor-wave.test.tsx` | existing suite | Add variant/count, columns, URL validation, and clear regressions. |
+| `tests/vitest/widgets/featureGrid.test.tsx` | existing suite | Add columns/link/alt/lazy regressions. |
+| `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | existing suite | Add divider variant and Wizard content regressions. |
+| `tests/vitest/widgets/statsKpi.test.tsx` | existing suite | Add grid/ARIA/emoji regressions. |
+
+## Implementation Pseudocode
+
+```tsx
+function handleFeatureGridVariantChange(nextVariant: FeatureGridVariantId) {
+  const nextData = normalizeFeatureGridData({
+    ...value,
+    items: normalizeFeatureGridItems(value.items, visibleItemCountForVariant(nextVariant)),
+    style: {
+      ...value.style,
+      columns: columnsForVariant(nextVariant),
+    },
+  });
+  applyVariantDataPatch(nextVariant, nextData);
+}
+
+function shouldShowStatsDividerControl(variant: StatsKpiVariantId) {
+  return variant === "inline";
+}
+```
+
+`applyVariantDataPatch` must use the TASK-256-01 atomic block patch helper when
+the editor receives it, then fall back to one-argument `onVariantChange` plus
+`onChange(nextData)`.
+
+Stats KPI runtime shape:
+
+```tsx
+function getStatsKpiCardsGridClass(count: number) {
+  if (count <= 2) return "lg:grid-cols-2";
+  if (count === 3) return "lg:grid-cols-3";
+  if (count <= 6) return "lg:grid-cols-3";
+  return "lg:grid-cols-4";
+}
+```
+
+Error handling:
+
+- Do not delete hidden feature-grid items silently. Preserve extras until the
+  editor user explicitly normalizes to the active variant.
+- Invalid CTA/image URLs show editor feedback and remain normalized safely at
+  runtime.
+- Stats KPI divider values saved on non-inline variants remain in data but are
+  marked inactive in the editor.
+
+## Git Scope Safeguards
+
+- Run `git status --short --branch` before implementation, before staging, and before closure.
+- For non-trivial or parallel leaf work, prefer a dedicated branch or worktree.
+- Stage only the owner files listed in this task plus required docs/reports/changelog files.
+- Verify `git diff --name-only --cached` before every commit so unrelated report or code edits stay out of scope.
+
+## Security Contract
+
+No API routes are added.
+
+- Endpoint visibility: none.
+- Auth/RBAC/CSRF/rate limit: unchanged.
+- Reject-unknown validation: update schema/validator tests if fields change.
+- Anti-abuse: external CTA links must use existing safe-href normalization and
+  safe `rel` behavior; no user-authored scripts.
+- Secret handling: no secrets in widget payloads, DOM datasets, or reports.
+
+## Testing Requirements
+
+- `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/featureGrid.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/statsKpi.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` when link
+  semantics change.
+- `bun test tests/unit/widgets/validator.test.ts` if schemas/defaults change.
+- `bun test tests/unit/widgets/registry.test.ts` if registry/default wiring changes.
+- Run `bun --cwd core lint` and `bun --cwd core lint:types`.
+- Run `bun run gates:coderso` for the completed implementation leaf.
+- Run `bun run scan:security:strict`.
+- Run `bun run precommit` before any manual commit or task closure commit.
+
+## Documentation Updates Required
+
+- Update `_docs/PLAYWRIGHT/REPORT_FEATURE_GRID_WIDGET.md` and
+  `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md`.
+- Update `_docs/_WIDGETS/FEATURE_GRID.md` and `_docs/_WIDGETS/STATS_KPI.md`
+  when behavior changes.
+- Update `_docs/WIDGETS.md` only if shared truthful-control contracts change.
+
+## Changelog Policy
+
+- This task must not move to `Done` until it is covered by a changelog entry and `_docs/_CHANGELOG/README.md` is updated.
+- A leaf may create its own changelog entry, or TASK-256-08 may create the final umbrella changelog entry that explicitly lists this task ID.
+
+## Acceptance Criteria
+
+- Feature Grid controls either affect runtime or are disabled with truthful
+  variant context.
+- Feature Grid card count and renderer output cannot diverge after variant
+  changes.
+- Stats KPI divider and cards grid behavior are truthful.
+- Both widgets have accessibility and safe-link regressions covered.

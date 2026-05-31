@@ -5,7 +5,7 @@ import { desc, eq, sql } from "drizzle-orm";
 
 import { expandDocsTokens, normalizeDocsText, tokenizeDocsText } from "./docsIndexService";
 
-const DEFAULT_INTERNAL_DOCS_ROOT = "docs";
+const DEFAULT_INTERNAL_DOCS_ROOT = "docs/guide";
 const DEFAULT_MAX_CHUNK_CHARS = 1200;
 const DEFAULT_MAX_DOC_BODY_CHARS = 120_000;
 const DEFAULT_MAX_CHUNKS_PER_DOC = 240;
@@ -23,12 +23,7 @@ const LEGACY_REQUIRED_SECTIONS = [
   "examples",
   "common mistakes",
 ] as const;
-const MULTI_LEVEL_REQUIRED_SECTIONS = [
-  "basic",
-  "medium",
-  "instruction",
-  "advanced",
-] as const;
+const MULTI_LEVEL_REQUIRED_SECTIONS = ["basic", "medium", "instruction", "advanced"] as const;
 
 export type InternalDocsMeta = {
   title: string;
@@ -382,9 +377,7 @@ export const validateInternalDocContract = (
   }
 
   const hasLegacyPack = LEGACY_REQUIRED_SECTIONS.every((section) => headings.has(section));
-  const hasMultiLevelPack = MULTI_LEVEL_REQUIRED_SECTIONS.every((section) =>
-    headings.has(section)
-  );
+  const hasMultiLevelPack = MULTI_LEVEL_REQUIRED_SECTIONS.every((section) => headings.has(section));
 
   if (!hasLegacyPack && !hasMultiLevelPack) {
     for (const section of MULTI_LEVEL_REQUIRED_SECTIONS) {
@@ -546,8 +539,7 @@ export const buildInternalDocChunks = (
     throw new Error("assistant_doc_chunk_limit_invalid");
   }
 
-  const fallbackHeading =
-    parsed.meta.title || "Internal Documentation";
+  const fallbackHeading = parsed.meta.title || "Internal Documentation";
   const sections = parseSections(parsed.body, parsed.bodyStartLine, fallbackHeading);
   const chunks: InternalDocChunkInput[] = [];
   for (const section of sections) {
@@ -566,8 +558,7 @@ export const buildInternalDocChunks = (
   return chunks;
 };
 
-const toChecksum = (raw: string) =>
-  createHash("sha256").update(raw).digest("hex");
+const toChecksum = (raw: string) => createHash("sha256").update(raw).digest("hex");
 
 const toIso = (value: Date | string | null | undefined) => {
   if (!value) return null;
@@ -596,8 +587,7 @@ export const ingestInternalDocsToDb = async (
   const cwd = input.cwd ?? process.cwd();
   const sourceRootConfigured = input.sourceRoot ?? DEFAULT_INTERNAL_DOCS_ROOT;
 
-  const { db, assistantDocs, assistantDocChunks, assistantDocIngestRuns } =
-    await loadDbModules();
+  const { db, assistantDocs, assistantDocChunks, assistantDocIngestRuns } = await loadDbModules();
 
   const [runRow] = await db
     .insert(assistantDocIngestRuns)
@@ -651,10 +641,7 @@ export const ingestInternalDocsToDb = async (
           errors.push({
             path: sourcePath,
             code: "parse_failed",
-            message:
-              error instanceof Error
-                ? error.message
-                : "assistant_doc_parse_failed",
+            message: error instanceof Error ? error.message : "assistant_doc_parse_failed",
           });
           return null;
         }
@@ -674,10 +661,7 @@ export const ingestInternalDocsToDb = async (
           errors.push({
             path: sourcePath,
             code: "chunk_build_failed",
-            message:
-              error instanceof Error
-                ? error.message
-                : "assistant_doc_chunk_build_failed",
+            message: error instanceof Error ? error.message : "assistant_doc_chunk_build_failed",
           });
           return null;
         }
@@ -722,9 +706,7 @@ export const ingestInternalDocsToDb = async (
 
       if (!docRow?.id) continue;
 
-      await db
-        .delete(assistantDocChunks)
-        .where(eq(assistantDocChunks.docId, docRow.id));
+      await db.delete(assistantDocChunks).where(eq(assistantDocChunks.docId, docRow.id));
 
       if (chunks.length > 0) {
         await db.insert(assistantDocChunks).values(
@@ -823,8 +805,7 @@ export const ingestInternalDocsToDb = async (
 
 export const getAssistantDocsDbStatus = async (): Promise<AssistantDocsDbStatus> => {
   try {
-    const { db, assistantDocs, assistantDocChunks, assistantDocIngestRuns } =
-      await loadDbModules();
+    const { db, assistantDocs, assistantDocChunks, assistantDocIngestRuns } = await loadDbModules();
     const [docCountRow] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(assistantDocs);

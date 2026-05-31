@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -66,7 +66,10 @@ vi.mock("@/components/ui/sheet", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-sheet-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -79,7 +82,9 @@ vi.mock("@/components/ui/tabs", () => ({
   Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
 }));
 
 vi.mock("@/components/ui/textarea", () => ({
@@ -111,14 +116,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -138,18 +143,14 @@ const setInputValue = (
       ? HTMLTextAreaElement.prototype
       : HTMLInputElement.prototype;
   const descriptor = Object.getOwnPropertyDescriptor(prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
 };
 
-const findColorTextInputByLabel = (
-  container: HTMLElement,
-  labelText: string,
-  index = 0
-) => {
+const findColorTextInputByLabel = (container: HTMLElement, labelText: string, index = 0) => {
   const labels = Array.from(container.querySelectorAll("label")).filter((element) =>
     element.textContent?.includes(labelText)
   );
@@ -171,7 +172,7 @@ const clickButtonByText = (container: HTMLElement, text: string) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
 };
@@ -237,22 +238,15 @@ afterEach(() => {
 });
 
 test("ThemeTemplateDrawer saves focus ring and navigation token text-input updates", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onSave = vi.fn(async () => undefined);
   const view = mount(
-    <ThemeTemplateDrawer
-      open
-      onOpenChange={() => undefined}
-      template={template}
-      onSave={onSave}
-    />
+    <ThemeTemplateDrawer open onOpenChange={() => undefined} template={template} onSave={onSave} />
   );
 
   try {
-    act(() => {
+    React.act(() => {
       setInputValue(findColorTextInputByLabel(view.container, "Focus Ring"), "123abc");
       setInputValue(findColorTextInputByLabel(view.container, "Sidebar Text"), "224466");
       setInputValue(findColorTextInputByLabel(view.container, "Active Background"), "335577");
@@ -289,15 +283,13 @@ test("ThemeTemplateDrawer saves focus ring and navigation token text-input updat
 });
 
 test("ThemeTemplateDrawer create mode tolerates missing onSave handler", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onOpenChange = vi.fn();
   const view = mount(<ThemeTemplateDrawer open onOpenChange={onOpenChange} />);
 
   try {
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Admin Pro"), "No handler");
     });
 

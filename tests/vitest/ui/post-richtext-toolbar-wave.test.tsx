@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -58,9 +58,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -96,13 +94,9 @@ vi.mock("@/components/ui/select", () => {
     SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     SelectValue: ({ children }: { children?: React.ReactNode }) => <>{children ?? null}</>,
     SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    SelectItem: ({
-      children,
-      value,
-    }: {
-      children: React.ReactNode;
-      value: string;
-    }) => <option value={value}>{children}</option>,
+    SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
+      <option value={value}>{children}</option>
+    ),
   };
 });
 
@@ -111,14 +105,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -133,7 +127,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -145,17 +139,14 @@ const clickByAriaLabel = (container: HTMLElement, label: string) => {
   if (!button) {
     throw new Error(`Missing button aria-label: ${label}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -235,7 +226,7 @@ test("PostRichTextToolbar typography selects normalize invalid values", () => {
   try {
     const selects = Array.from(view.container.querySelectorAll("select"));
 
-    act(() => {
+    React.act(() => {
       setSelectValue(selects[0], "serif");
       setSelectValue(selects[0], "weird-font");
       setSelectValue(selects[1], "xl");
@@ -253,9 +244,7 @@ test("PostRichTextToolbar typography selects normalize invalid values", () => {
 
 test("PostRichTextToolbar hides advanced row when profile has no advanced actions and respects disabled state", () => {
   const onCommand = vi.fn();
-  const view = mount(
-    <PostRichTextToolbar profile="callout" onCommand={onCommand} disabled />
-  );
+  const view = mount(<PostRichTextToolbar profile="callout" onCommand={onCommand} disabled />);
 
   try {
     const boldButton = Array.from(view.container.querySelectorAll("button")).find(
@@ -371,9 +360,9 @@ test("PostRichTextToolbar disables typography controls when disabled", () => {
     const buttons = Array.from(view.container.querySelectorAll("button"));
     const boldButton = buttons.find((button) => button.getAttribute("aria-label") === "Bold");
     expect(
-      buttons.find((button) => button.textContent?.includes("More formatting"))?.hasAttribute(
-        "disabled"
-      )
+      buttons
+        .find((button) => button.textContent?.includes("More formatting"))
+        ?.hasAttribute("disabled")
     ).toBe(true);
     expect(boldButton?.hasAttribute("disabled")).toBe(true);
 
@@ -399,15 +388,13 @@ test("PostRichTextToolbar shows typography-only row without advanced toggle when
   );
 
   try {
-    expect(view.container.textContent).toContain(
-      "Typography follows the selected block style."
-    );
+    expect(view.container.textContent).toContain("Typography follows the selected block style.");
     expect(view.container.textContent).not.toContain("More formatting");
     expect(view.container.textContent).not.toContain("Code");
     expect(view.container.textContent).not.toContain("List");
 
     const selects = Array.from(view.container.querySelectorAll("select"));
-    act(() => {
+    React.act(() => {
       setSelectValue(selects[0], "sans");
       setSelectValue(selects[1], "sm");
     });
@@ -435,14 +422,12 @@ test("PostRichTextToolbar falls back to writing-canvas defaults and supports par
     expect(view.container.textContent).toContain("List");
     expect(view.container.textContent).toContain("Code");
     expect(view.container.textContent).toContain("More formatting");
-    expect(view.container.textContent).toContain(
-      "Typography follows the selected block style."
-    );
+    expect(view.container.textContent).toContain("Typography follows the selected block style.");
 
     const selects = Array.from(view.container.querySelectorAll("select"));
     expect(selects).toHaveLength(1);
 
-    act(() => {
+    React.act(() => {
       setSelectValue(selects[0], "serif");
     });
 
@@ -463,17 +448,17 @@ test("PostRichTextToolbar keeps grouped controls inert when disabled", () => {
   );
 
   try {
-    const typeButton = Array.from(view.container.querySelectorAll("button")).find(
-      (button) => button.textContent?.includes("Type")
+    const typeButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Type")
     ) as HTMLButtonElement | null | undefined;
-    const textButton = Array.from(view.container.querySelectorAll("button")).find(
-      (button) => button.textContent?.includes("Text")
+    const textButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Text")
     ) as HTMLButtonElement | null | undefined;
-    const listButton = Array.from(view.container.querySelectorAll("button")).find(
-      (button) => button.textContent?.includes("List")
+    const listButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("List")
     ) as HTMLButtonElement | null | undefined;
-    const codeButton = Array.from(view.container.querySelectorAll("button")).find(
-      (button) => button.textContent?.includes("Code")
+    const codeButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Code")
     ) as HTMLButtonElement | null | undefined;
 
     expect(typeButton?.disabled).toBe(true);
@@ -481,7 +466,7 @@ test("PostRichTextToolbar keeps grouped controls inert when disabled", () => {
     expect(listButton?.disabled).toBe(true);
     expect(codeButton?.disabled).toBe(true);
 
-    act(() => {
+    React.act(() => {
       typeButton?.click();
       textButton?.click();
       listButton?.click();
@@ -509,16 +494,11 @@ test("PostRichTextToolbar supports base-text-scale-only controls and prevents mo
   try {
     const selects = Array.from(view.container.querySelectorAll("select"));
     expect(selects).toHaveLength(1);
-    expect(view.container.textContent).toContain(
-      "Typography follows the selected block style."
-    );
+    expect(view.container.textContent).toContain("Typography follows the selected block style.");
     expect(view.container.textContent).toContain("More formatting");
 
     const typeMouseDown = dispatchMouseDownByText(view.container, "Type");
-    const moreFormattingMouseDown = dispatchMouseDownByText(
-      view.container,
-      "More formatting"
-    );
+    const moreFormattingMouseDown = dispatchMouseDownByText(view.container, "More formatting");
     const boldMouseDown = dispatchMouseDownByAriaLabel(view.container, "Bold");
 
     expect(typeMouseDown.result).toBe(false);
@@ -528,7 +508,7 @@ test("PostRichTextToolbar supports base-text-scale-only controls and prevents mo
     expect(boldMouseDown.result).toBe(false);
     expect(boldMouseDown.event.defaultPrevented).toBe(true);
 
-    act(() => {
+    React.act(() => {
       setSelectValue(selects[0], "sm");
       setSelectValue(selects[0], "bad-scale");
     });

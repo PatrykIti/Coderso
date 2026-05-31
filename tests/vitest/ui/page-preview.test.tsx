@@ -1,19 +1,13 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import { PagePreview } from "../../../core/admin/ui/pages/PagePreview";
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({
-    children,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-  }) => (
+  Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
     <button type="button" onClick={onClick}>
       {children}
     </button>
@@ -31,14 +25,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -94,7 +88,7 @@ test("PagePreview defaults to page type and closes the preview window", () => {
       (button) => normalizeText(button) === "Close preview"
     );
 
-    act(() => {
+    React.act(() => {
       closeButton?.click();
     });
 

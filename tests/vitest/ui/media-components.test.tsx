@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -25,7 +25,7 @@ const click = async (element: Element | null) => {
   if (!element) {
     throw new Error("Expected element to exist before clicking");
   }
-  await act(async () => {
+  await React.act(async () => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await Promise.resolve();
   });
@@ -36,14 +36,14 @@ const mountMediaGrid = async (props: React.ComponentProps<typeof MediaGrid>) => 
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  await act(async () => {
+  await React.act(async () => {
     root.render(<MediaGrid {...props} />);
   });
 
   return {
     container,
     cleanup: async () => {
-      await act(async () => {
+      await React.act(async () => {
         root.unmount();
       });
       container.remove();

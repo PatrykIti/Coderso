@@ -20,10 +20,7 @@ type SettingsValues = {
 type SettingsPageProps = {
   values: SettingsValues;
   tokens: TokenOverrides;
-  onSave: (input: {
-    values: SettingsValues;
-    tokens: TokenOverrides;
-  }) => Promise<void> | void;
+  onSave: (input: { values: SettingsValues; tokens: TokenOverrides }) => Promise<void> | void;
   onResetTokens: () => Promise<void> | void;
   isLoading?: boolean;
   isSaving?: boolean;
@@ -48,8 +45,7 @@ export function SettingsPage({
   const [localSaving, setLocalSaving] = useState(false);
 
   const form = values;
-  const tokenOverrides =
-    tokenState.source === tokens ? tokenState.overrides : tokens;
+  const tokenOverrides = tokenState.source === tokens ? tokenState.overrides : tokens;
   const setTokenOverrides = (
     next: TokenOverrides | ((previous: TokenOverrides) => TokenOverrides)
   ) => {
@@ -114,13 +110,7 @@ export function SettingsPage({
           <DesignTokensPreview />
         </div>
       }
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Settings</span>
-          <span>/</span>
-          <span className="text-foreground">Design Tokens</span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Design Tokens"]}
       topbarActions={
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleReset} disabled={busy}>

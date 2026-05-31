@@ -5,15 +5,16 @@
 **Category:** Assistant/Core + Provider Planning
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-02-01
-**Status:** To Do
+**Status:** Done (2026-05-06)
 
 ---
 
 ## Overview
 
 Prepare a provider-side capability context for blueprint/setup prompts and allow
-an optional shadow-only capability suggestion draft that uses capability ids
-only. Provider output remains untrusted and cannot include actions.
+an optional shadow/dev-only capability suggestion draft schema that uses
+capability ids only. Provider output remains untrusted and cannot include
+actions.
 
 This leaf must not replace the current production `cms_operation_draft`
 contract used by generic CMS/admin planning. The existing provider response
@@ -31,6 +32,7 @@ No child task files.
 - Update `core/services/assistant/providerPlanningContext.ts`
 - Update `core/services/assistant/actionPlannerService.ts`
 - Add `tests/vitest/assistant/blueprint-provider-context.test.ts`
+- Update `tests/vitest/assistant/provider-planning-context.test.ts`
 
 Owner rule:
 
@@ -44,8 +46,8 @@ Scope guard:
 
 - production `/assistant/actions/plan` provider routing continues to request
   `cms_operation_draft` for the generic CMS/admin path,
-- any provider capability-id suggestion added here is shadow-only or
-  blueprint-setup-only behind an explicit allowlist/feature flag,
+- any provider capability-id draft added here remains a strict schema/validation
+  primitive for shadow/dev use only,
 - no production planner path may silently switch from `cms_operation_draft` to a
   new response contract in this leaf.
 
@@ -78,7 +80,6 @@ type ProviderBlueprintCompositionDraft = {
   primaryCapabilityId: string;
   adjunctCapabilityIds: string[];
   gatedCapabilityIds: string[];
-  notes?: string[];
 };
 
 const normalizeProviderBlueprintCompositionDraft = (value, registry) => {
@@ -110,6 +111,7 @@ const normalizeProviderBlueprintCompositionDraft = (value, registry) => {
 
 - Valid provider draft normalizes.
 - Unknown capability id rejects.
+- Free-form provider notes reject as unknown fields.
 - Provider action arrays reject.
 - Provider cannot invent page sections.
 - Fallback uses deterministic local candidates.

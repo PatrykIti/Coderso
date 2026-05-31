@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -185,19 +185,62 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+vi.mock("../../../core/admin/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    onOpenChange,
+    onConfirm,
+    children,
+  }: {
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    confirmLabel: string;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void | Promise<void>;
+    children?: React.ReactNode;
+  }) =>
+    open ? (
+      <div data-faq-confirm-dialog={title}>
+        <p>{title}</p>
+        <p>{description}</p>
+        {children ? <div>{children}</div> : null}
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Cancel
+        </button>
+        <button type="button" onClick={() => void onConfirm()}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
+}));
+
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+const findSectionByTitle = (container: ParentNode, title: string) =>
+  Array.from(container.querySelectorAll("section")).find((section) =>
+    Array.from(section.querySelectorAll("h3, p")).some(
+      (candidate) => normalizeText(candidate.textContent) === normalizeText(title)
+    )
+  );
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -208,7 +251,7 @@ const mount = (node: React.ReactNode) => {
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -218,7 +261,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -228,7 +271,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -237,15 +280,34 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 const toggleCheckbox = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
 
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const dispatchDragEvent = (target: Element | null | undefined, type: string) => {
+  if (!target || typeof DragEvent === "undefined") return;
+  React.act(() => {
+    const event = new DragEvent(type, {
+      bubbles: true,
+      cancelable: true,
+    });
+    Object.defineProperty(event, "dataTransfer", {
+      configurable: true,
+      value: {
+        effectAllowed: "",
+        setDragImage: vi.fn(),
+        setData: vi.fn(),
+      },
+    });
+    target.dispatchEvent(event);
   });
 };
 
@@ -278,6 +340,11 @@ const findButtonsByText = (container: HTMLElement, text: string) =>
     (element.textContent ?? "").includes(text)
   );
 
+const findButtonsByTitle = (container: HTMLElement, title: string) =>
+  Array.from(container.querySelectorAll("button")).filter(
+    (element) => element.getAttribute("title") === title
+  );
+
 const findSelectByOptions = (container: HTMLElement, values: string[]) =>
   Array.from(container.querySelectorAll("select")).find((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
@@ -285,23 +352,43 @@ const findSelectByOptions = (container: HTMLElement, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
+const findSelectByControl = (container: HTMLElement, id: string) => {
+  const control = container.querySelector(`[data-widget-control="${id}"]`);
+  return control?.querySelector("select");
+};
+
+const findSelectByFieldText = (container: HTMLElement, text: string) => {
+  const fieldLabel = Array.from(container.querySelectorAll("p, span")).find(
+    (element) => normalizeText(element.textContent) === normalizeText(text)
+  );
+  return fieldLabel?.parentElement?.querySelector("select");
+};
+
 const findAllInputsByPlaceholder = (container: HTMLElement, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).filter(
     (element) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
-const findColorInputForPlaceholder = (container: HTMLElement, placeholder: string, index = 0) => {
-  const textInput = findAllInputsByPlaceholder(container, placeholder)[index];
-  if (!(textInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
+const findColorInputByControl = (container: HTMLElement, controlId: string) => {
+  const input = container.querySelector(
+    `[data-widget-control="${controlId}"] input[type="color"]`
+  ) as HTMLInputElement | null;
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing color input for control "${controlId}"`);
   }
-  const colorInput = textInput.parentElement?.querySelector('input[type="color"]');
-  if (!(colorInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing color input for placeholder "${placeholder}" (${index})`);
-  }
-  return colorInput;
+  return input;
 };
+
+const findCheckboxesWithAriaLabel = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll("input[type='checkbox']")).filter(
+    (element) => element instanceof HTMLInputElement && element.hasAttribute("aria-label")
+  );
+
+const findUnnamedCheckboxes = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll("input[type='checkbox']")).filter(
+    (element) => element instanceof HTMLInputElement && !element.hasAttribute("aria-label")
+  );
 
 type EditorKind = "wizard" | "visual" | "advanced";
 
@@ -367,7 +454,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("FaqAccordion wizard editor updates variant, title, and onboarding questions across the full wizard scope", async () => {
+test("FaqAccordion wizard editor seeds layout and starter question count", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialValue: faqAccordionDefaults,
@@ -375,38 +462,38 @@ test("FaqAccordion wizard editor updates variant, title, and onboarding question
   });
 
   try {
-    const variantSelect = findSelectByOptions(view.container, [
-      "single-column",
-      "two-column",
-      "compact",
-    ]);
+    expect(findInputByPlaceholder(view.container, "Frequently asked questions")).toBeUndefined();
+    expect(
+      findTextareaByPlaceholder(view.container, "Address objections with short and clear answers.")
+    ).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "⭐")).toBeUndefined();
+    expect(findInputsByPlaceholderPrefix(view.container, "Question ")).toHaveLength(0);
 
-    expect(variantSelect).toBeInstanceOf(HTMLSelectElement);
-    expect((variantSelect as HTMLSelectElement).value).toBe("single-column");
-
-    const questionInputs = findInputsByPlaceholderPrefix(view.container, "Question ");
-    expect(questionInputs).toHaveLength(faqAccordionDefaults.items.length);
-
-    setSelectValue(variantSelect, "compact");
-    setInputValue(
-      findInputByPlaceholder(view.container, "Frequently asked questions"),
-      "Billing FAQ"
-    );
-    setInputValue(questionInputs[0], "How fast is launch?");
-    setInputValue(questionInputs[1], "Can I edit content myself?");
-
-    expect(view.getVariant()).toBe("compact");
-    expect(view.onVariantChangeSpy).toHaveBeenCalledWith("compact");
-    expect(view.getValue().header?.title).toBe("Billing FAQ");
+    expect(view.getVariant()).toBe("unexpected");
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
     expect(view.getValue().items).toHaveLength(faqAccordionDefaults.items.length);
-    expect(view.getValue().items[0]?.question).toBe("How fast is launch?");
-    expect(view.getValue().items[1]?.question).toBe("Can I edit content myself?");
+    expect(view.container.textContent).toContain("Single Column");
+    expect(view.container.textContent).toContain("Two Column");
+    expect(view.container.textContent).toContain("Compact");
+    expect(view.container.textContent).toContain(
+      "Use Visual to write the section heading, questions, answers, answer format, icons, default-open behavior, style, and search visibility after this starter setup."
+    );
+
+    clickElement(findButtonByText(view.container, "Two Column"));
+    expect(view.getVariant()).toBe("two-column");
+    expect(view.onVariantChangeSpy).toHaveBeenCalledWith("two-column");
+
+    setSelectValue(
+      findSelectByOptions(view.container, ["1", "2", "3", String(faqAccordionItemMax)]),
+      "5"
+    );
+    expect(view.getValue().items).toHaveLength(5);
   } finally {
     view.cleanup();
   }
 });
 
-test("FaqAccordion visual editor covers item-count normalization, add and reorder flows, open-state controls, and style updates", async () => {
+test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-state labels, style controls, and SEO", async () => {
   const view = await renderEditor({
     editor: "visual",
     initialVariant: "compact",
@@ -416,8 +503,20 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
         description: "Old description",
       },
       items: [
-        { id: "first", question: "First question", answer: "First answer" },
-        { id: "second", question: "Second question", answer: "Second answer" },
+        {
+          id: "first",
+          question: "First question",
+          answer: "First answer",
+          answerFormat: "plain",
+          icon: "1",
+        },
+        {
+          id: "second",
+          question: "Second question",
+          answer: "Second answer",
+          answerFormat: "plain",
+          icon: "2",
+        },
       ],
       options: {
         allowMultipleOpen: false,
@@ -426,17 +525,89 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
       style: {
         surface: "surface-token",
         border: "border-token",
-        divider: undefined,
+        divider: "divider-token",
+        questionTextColor: "question-token",
+        answerTextColor: "answer-token",
+        headerTitleColor: "header-title-token",
+        headerDescriptionColor: "header-description-token",
         spacing: "md",
+        maxWidth: "xl",
+        headerAlign: "center",
+        sectionPaddingX: "md",
+        sectionPaddingY: "md",
+        panelRadius: "lg",
+        borderWidth: "1",
+        headerTitleSize: "auto",
+        motion: "none",
+      },
+      seo: {
+        emitFaqJsonLd: false,
       },
     },
   });
 
   try {
+    const variantSection = findSectionByTitle(view.container, "Variant and layout structure");
+    expect(variantSection?.getAttribute("data-widget-editor-section")).toBe(
+      "faq-accordion.visual.variant-layout"
+    );
+    expect(
+      findSectionByTitle(view.container, "Header copy")?.getAttribute("data-widget-editor-section")
+    ).toBe("faq-accordion.visual.header-copy");
+    expect(
+      findSectionByTitle(view.container, "Questions and answers")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.visual.questions");
+    expect(
+      findSectionByTitle(view.container, "Display behavior")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.visual.display-behavior");
+    expect(
+      findSectionByTitle(view.container, "Layout and typography")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.visual.layout-typography");
+    expect(findSelectByControl(view.container, "faq-accordion.style.spacing")).toBeInstanceOf(
+      HTMLSelectElement
+    );
+    expect(
+      findSectionByTitle(view.container, "Colors and panel style")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.visual.colors-panel-style");
+    expect(
+      findSectionByTitle(view.container, "Search visibility")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.visual.search-visibility");
+    const colorsSection = findSectionByTitle(view.container, "Colors and panel style");
+    expect(colorsSection?.textContent).toContain("FAQ palettes");
+    expect(colorsSection?.textContent).toContain("Contrast guidance");
+    expect(colorsSection?.textContent).not.toContain("Spacing");
+
     const colorInputs = Array.from(view.container.querySelectorAll("input[type='color']"));
     expect((colorInputs[0] as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
     expect((colorInputs[1] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
     expect((colorInputs[2] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
+    expect(view.container.textContent).toContain("Saved custom color");
+    expect(findInputByPlaceholder(view.container, "var(--color-bg)")).toBeUndefined();
+    expect(findAllInputsByPlaceholder(view.container, "var(--color-border)")).toHaveLength(0);
+    expect(findAllInputsByPlaceholder(view.container, "var(--color-text)")).toHaveLength(0);
+
+    clickElement(findButtonByText(view.container, "Dark"));
+    expect(view.getValue().style).toEqual(
+      expect.objectContaining({
+        surface: "#0f172a",
+        border: "#334155",
+        divider: "#1e293b",
+        questionTextColor: "#f8fafc",
+        answerTextColor: "#cbd5e1",
+        headerTitleColor: "#f8fafc",
+        headerDescriptionColor: "#cbd5e1",
+      })
+    );
 
     clickElement(findButtonByText(view.container, "Two Column"));
     expect(view.getVariant()).toBe("two-column");
@@ -448,7 +619,7 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     );
     expect(view.getValue().items).toHaveLength(1);
 
-    const removeButtonsWhenSingle = findButtonsByText(view.container, "Remove");
+    const removeButtonsWhenSingle = findButtonsByTitle(view.container, "Remove");
     expect((removeButtonsWhenSingle[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(
       true
     );
@@ -459,6 +630,7 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
       expect.objectContaining({
         question: "Question 2",
         answer: "Answer 2",
+        answerFormat: "plain",
       })
     );
 
@@ -473,6 +645,8 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
 
     const questionInputs = findInputsByPlaceholderPrefix(view.container, "Question ");
     setInputValue(questionInputs[0], "What is included?");
+    setInputValue(findInputByPlaceholder(view.container, "⭐"), "📌");
+    setSelectValue(findSelectByOptions(view.container, ["plain", "markdown"]), "markdown");
 
     const answerAreas = Array.from(view.container.querySelectorAll("textarea")).filter(
       (element) =>
@@ -481,31 +655,79 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     );
     setTextareaValue(answerAreas[0], "Setup and support.");
 
-    clickElement(findButtonsByText(view.container, "Move down")[0]);
+    const draggableItems = view.container.querySelectorAll("[data-faq-drag-item]");
+    dispatchDragEvent(draggableItems[0], "dragstart");
+    dispatchDragEvent(draggableItems[1], "dragover");
+    dispatchDragEvent(draggableItems[1], "drop");
     expect(view.getValue().items[0]?.question).toBe("Question 2");
     expect(view.getValue().items[1]?.question).toBe("What is included?");
-    expect(view.getValue().items[1]?.answer).toBe("Setup and support.");
 
-    clickElement(findButtonsByText(view.container, "Move up")[1]);
+    clickElement(findButtonsByTitle(view.container, "Move up")[1]);
     expect(view.getValue().items[0]?.question).toBe("What is included?");
-    expect(view.getValue().items[1]?.question).toBe("Question 2");
+    expect(view.getValue().items[0]?.answerFormat).toBe("markdown");
+    expect(view.getValue().items[0]?.icon).toBe("📌");
 
-    const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
-    toggleCheckbox(checkboxes[0], true);
+    clickElement(findButtonsByTitle(view.container, "Remove")[1]);
+    expect(view.container.textContent).toContain("Remove FAQ item?");
+    clickElement(findButtonByText(view.container, "Cancel"));
+    expect(view.container.textContent).not.toContain("Remove FAQ item?");
 
-    setSelectValue(findSelectByOptions(view.container, ["-1", "0", "1"]), "-1");
-    setInputValue(colorInputs[0], "#111111");
-    setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "#123456");
-    const borderInputs = findAllInputsByPlaceholder(view.container, "var(--color-border)");
-    setInputValue(borderInputs[0], "#654321");
-    setInputValue(borderInputs[1], "#abcdef");
-    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
-    clickElement(findButtonsByText(view.container, "Remove")[1]);
+    const defaultOpenSelect = findSelectByOptions(view.container, ["-1", "0", "1"]);
+    expect(
+      Array.from((defaultOpenSelect as HTMLSelectElement).options).some((option) =>
+        option.textContent?.includes("What is included?")
+      )
+    ).toBe(true);
+    setSelectValue(defaultOpenSelect, "-1");
 
-    const removeButtonsAfterDelete = findButtonsByText(view.container, "Remove");
-    expect((removeButtonsAfterDelete[0] as HTMLButtonElement | null | undefined)?.disabled).toBe(
-      true
+    const unnamedCheckboxes = findUnnamedCheckboxes(view.container);
+    toggleCheckbox(unnamedCheckboxes[0], true);
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.surface"),
+      "#123456"
     );
+    setInputValue(findColorInputByControl(view.container, "faq-accordion.style.border"), "#654321");
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.divider"),
+      "#abcdef"
+    );
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.questionTextColor"),
+      "#0a0a0a"
+    );
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.answerTextColor"),
+      "#1a1a1a"
+    );
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.headerTitleColor"),
+      "#2a2a2a"
+    );
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.headerDescriptionColor"),
+      "#3a3a3a"
+    );
+    clickElement(findButtonsByText(view.container, "Clear")[1]);
+    clickElement(findButtonsByText(view.container, "Clear")[2]);
+    clickElement(findButtonsByText(view.container, "Clear")[3]);
+    clickElement(findButtonsByText(view.container, "Clear")[4]);
+    clickElement(findButtonsByText(view.container, "Clear")[5]);
+    clickElement(findButtonsByText(view.container, "Clear")[6]);
+    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "xl", "full"]), "full");
+    setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "left");
+    setSelectValue(findSelectByOptions(view.container, ["auto", "sm", "md", "lg", "xl"]), "xl");
+    setSelectValue(findSelectByOptions(view.container, ["none", "smooth"]), "smooth");
+    setSelectValue(findSelectByControl(view.container, "faq-accordion.style.spacing"), "lg");
+    setSelectValue(findSelectByFieldText(view.container, "Horizontal padding"), "lg");
+    setSelectValue(findSelectByOptions(view.container, ["0", "1", "2", "3"]), "2");
+    toggleCheckbox(unnamedCheckboxes[1], true);
+
+    const selectionCheckboxes = findCheckboxesWithAriaLabel(view.container);
+    toggleCheckbox(selectionCheckboxes[1], true);
+    clickElement(findButtonByText(view.container, "Delete selected"));
+    expect(view.container.textContent).toContain("Delete selected FAQ items?");
+    clickElement(findButtonsByText(view.container, "Delete selected").at(-1));
+    expect(view.getValue().items).toHaveLength(1);
 
     expect(view.getValue()).toEqual(
       expect.objectContaining({
@@ -517,6 +739,8 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
           expect.objectContaining({
             question: "What is included?",
             answer: "Setup and support.",
+            answerFormat: "markdown",
+            icon: "📌",
           }),
         ],
         options: expect.objectContaining({
@@ -525,9 +749,22 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
         }),
         style: expect.objectContaining({
           surface: "#123456",
-          border: "#654321",
-          divider: "#abcdef",
+          border: undefined,
+          divider: undefined,
+          questionTextColor: undefined,
+          answerTextColor: undefined,
+          headerTitleColor: undefined,
+          headerDescriptionColor: undefined,
+          maxWidth: "full",
+          headerAlign: "left",
+          headerTitleSize: "xl",
           spacing: "lg",
+          motion: "smooth",
+          borderWidth: "2",
+          sectionPaddingX: "lg",
+        }),
+        seo: expect.objectContaining({
+          emitFaqJsonLd: true,
         }),
       })
     );
@@ -569,7 +806,7 @@ test("FaqAccordion visual editor keeps item count capped when add item is used a
   }
 });
 
-test("FaqAccordion advanced editor normalizes malformed payloads, applies technical overrides, and resets to defaults", async () => {
+test("FaqAccordion advanced editor keeps diagnostics read-only and confirm-gates normalization", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialVariant: "compact",
@@ -586,60 +823,77 @@ test("FaqAccordion advanced editor normalizes malformed payloads, applies techni
         surface: "surface-token",
         border: "border-token",
         divider: "divider-token",
-        spacing: "invalid" as "md",
+        spacing: "lg",
+      },
+      seo: {
+        emitFaqJsonLd: false,
       },
     },
   });
 
   try {
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"defaultOpenIndex": 1');
-    expect(snapshot?.textContent).toContain('"spacing": "md"');
-    expect(snapshot?.textContent).toContain('"id": "faq-2"');
-
-    const numberInput = view.container.querySelector("input[type='number']");
-    expect((numberInput as HTMLInputElement | null)?.max).toBe("1");
-
-    clickElement(findButtonByText(view.container, "Normalize now"));
-    expect(view.getValue().items[0]?.question).toBe("How long does setup take?");
-    expect(view.getValue().items[1]?.id).toBe("faq-2");
-    expect(view.getValue().options?.defaultOpenIndex).toBe(1);
-    expect(view.getValue().style?.spacing).toBe("md");
-
-    const checkbox = view.container.querySelector("input[type='checkbox']");
-    toggleCheckbox(checkbox, true);
-
-    setInputValue(view.container.querySelector("input[type='number']"), "-1");
-
-    const surfaceInput = findInputByPlaceholder(view.container, "var(--color-bg)");
-    const borderAndDividerInputs = findAllInputsByPlaceholder(
-      view.container,
-      "var(--color-border)"
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain(
+      "Advanced mode is read-only. Use Visual for public-facing FAQ copy, layout, behavior, colors, and search visibility changes."
     );
-
-    setInputValue(surfaceInput, "var(--faq-surface)");
-    setInputValue(borderAndDividerInputs[0], "var(--faq-border)");
-    setInputValue(borderAndDividerInputs[1], "var(--faq-divider)");
-    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
-
-    expect(view.getValue()).toEqual(
-      expect.objectContaining({
-        options: expect.objectContaining({
-          allowMultipleOpen: true,
-          defaultOpenIndex: -1,
-        }),
-        style: expect.objectContaining({
-          surface: "var(--faq-surface)",
-          border: "var(--faq-border)",
-          divider: "var(--faq-divider)",
-          spacing: "lg",
-        }),
-      })
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain("Style summary");
+    expect(view.container.textContent).toContain("Accessibility diagnostics");
+    expect(view.container.textContent).toContain("Contract summary");
+    expect(view.container.textContent).toContain("Saved data status");
+    expect(
+      findSectionByTitle(view.container, "Runtime summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.advanced.runtime-summary");
+    expect(
+      findSectionByTitle(view.container, "Style summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.advanced.style-summary");
+    expect(
+      findSectionByTitle(view.container, "Saved data status")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.advanced.normalization-support");
+    expect(
+      findSectionByTitle(view.container, "Accessibility diagnostics")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.advanced.accessibility-diagnostics");
+    expect(
+      findSectionByTitle(view.container, "Contract summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.advanced.contract-summary");
+    expect(view.container.textContent).toContain("Default open item");
+    expect(view.container.textContent).toContain("Item 2: Keep this");
+    expect(view.container.textContent).toContain("Questions");
+    expect(view.container.textContent).toContain("2/12 questions configured");
+    expect(view.container.textContent).toContain("Saved custom color");
+    expect(view.container.textContent).toContain("Extra wide · Center · Spacious");
+    expect(view.container.textContent).toContain("Header title");
+    expect(view.container.textContent).toContain("Header description");
+    expect(view.container.textContent).toContain("Wizard owns");
+    expect(view.container.textContent).toContain("Visual owns");
+    expect(view.container.textContent).toContain("Advanced owns");
+    expect(view.container.textContent).toContain(
+      "Saved FAQ data will be repaired automatically when the page is saved."
     );
+    expect(view.container.textContent).not.toContain("Raw payload snapshot");
+    expect(view.container.textContent).not.toContain('"defaultOpenIndex"');
+    expect(view.container.textContent).not.toContain('"id": "faq-2"');
+    expect(view.container.textContent).not.toContain("Review repair");
+    expect(view.container.textContent).not.toContain("Confirm repair");
 
-    clickElement(findButtonByText(view.container, "Reset to defaults"));
-    expect(view.getValue()).toEqual(faqAccordionDefaults);
-    expect(view.container.textContent).toContain("Frequently asked questions");
+    expect(view.container.querySelector("input[type='number']")).toBeNull();
+    expect(findSelectByOptions(view.container, ["-1", "0", "1"])).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "var(--color-bg)")).toBeUndefined();
+    expect(findAllInputsByPlaceholder(view.container, "var(--color-border)")).toHaveLength(0);
+    expect(findButtonByText(view.container, "Reset to defaults")).toBeUndefined();
+
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -711,13 +965,7 @@ test("FaqAccordion editors fall back to default UI values when normalized payloa
   );
 
   try {
-    expect(
-      (
-        findSelectByOptions(view.container, ["single-column", "two-column", "compact"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("single-column");
+    expect(view.container.textContent).toContain("Single Column");
     expect(
       (
         findInputByPlaceholder(view.container, "Frequently asked questions") as
@@ -755,18 +1003,20 @@ test("FaqAccordion editors fall back to default UI values when normalized payloa
       )?.value
     ).toBe("md");
     expect(
-      (view.container.querySelector("input[type='number']") as HTMLInputElement | null)?.value
-    ).toBe("0");
-    expect(
-      (view.container.querySelector("input[type='checkbox']") as HTMLInputElement | null)?.checked
-    ).toBe(false);
-    expect(findColorInputForPlaceholder(view.container, "var(--color-bg)").value).toBe("#ffffff");
-    expect(findColorInputForPlaceholder(view.container, "var(--color-border)", 0).value).toBe(
-      "#e2e8f0"
+      (
+        findSelectByOptions(view.container, ["sm", "md", "lg", "xl", "full"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
+    ).toBe("xl");
+    const advancedSection = Array.from(view.container.querySelectorAll("section")).find((section) =>
+      section.textContent?.includes("Style summary")
     );
-    expect(findColorInputForPlaceholder(view.container, "var(--color-border)", 1).value).toBe(
-      "#e2e8f0"
-    );
+    if (!advancedSection) throw new Error("Missing Advanced style summary");
+    expect(advancedSection.querySelector("input[type='number']")).toBeNull();
+    expect(advancedSection.querySelectorAll("input[type='checkbox']")).toHaveLength(0);
+    expect(advancedSection.textContent).toContain("Theme default");
+    expect(advancedSection.querySelectorAll("input[type='color']")).toHaveLength(0);
   } finally {
     view.cleanup();
     vi.doUnmock("../../../core/widgets/core/faqAccordion");

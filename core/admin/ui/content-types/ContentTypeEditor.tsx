@@ -1,4 +1,4 @@
-import { Copy, Save, Send, Trash2 } from "lucide-react";
+import { Copy, PanelsTopLeft, Save, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -7,12 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
@@ -39,10 +34,7 @@ import {
   validateFieldName,
   type ContentField,
 } from "./SchemaBuilder";
-import {
-  buildSchemaFromFields,
-  fieldsFromSchema,
-} from "./schemaMapping";
+import { buildSchemaFromFields, fieldsFromSchema } from "./schemaMapping";
 import { resolveContentTypeIdFromPath } from "./pathResolvers";
 
 const defaultFields: ContentField[] = [
@@ -73,8 +65,7 @@ export function ContentTypeEditor() {
     return getCachedContentTypes()?.find((type) => type.id === typeId) ?? null;
   }, [typeId]);
   const initialFields = useMemo(
-    () =>
-      initialCachedType ? fieldsFromSchema(initialCachedType.schema) : defaultFields,
+    () => (initialCachedType ? fieldsFromSchema(initialCachedType.schema) : defaultFields),
     [initialCachedType]
   );
   const initialRelationTargets = useMemo(
@@ -101,9 +92,9 @@ export function ContentTypeEditor() {
     setHasUnsavedChanges(value);
   };
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
-  const [relationTargets, setRelationTargets] = useState<
-    Array<{ slug: string; name: string }>
-  >(() => initialRelationTargets);
+  const [relationTargets, setRelationTargets] = useState<Array<{ slug: string; name: string }>>(
+    () => initialRelationTargets
+  );
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
     () => initialFields[0]?.id ?? null
   );
@@ -124,16 +115,24 @@ export function ContentTypeEditor() {
   });
   const [isTaxonomySaving, setIsTaxonomySaving] = useState(false);
 
-  const applyContentType = useCallback((result: { name: string; slug: string; schema: ContentSchema; status?: "draft" | "published" }) => {
-    setName(result.name);
-    setSlug(result.slug);
-    setStatus(result.status ?? "draft");
-    const mappedFields = fieldsFromSchema(result.schema);
-    setFields(mappedFields);
-    setUnsavedChanges(false);
-    setRemoteUpdatePending(false);
-    setSelectedFieldId(mappedFields[0]?.id ?? null);
-  }, []);
+  const applyContentType = useCallback(
+    (result: {
+      name: string;
+      slug: string;
+      schema: ContentSchema;
+      status?: "draft" | "published";
+    }) => {
+      setName(result.name);
+      setSlug(result.slug);
+      setStatus(result.status ?? "draft");
+      const mappedFields = fieldsFromSchema(result.schema);
+      setFields(mappedFields);
+      setUnsavedChanges(false);
+      setRemoteUpdatePending(false);
+      setSelectedFieldId(mappedFields[0]?.id ?? null);
+    },
+    []
+  );
 
   const refreshContentType = useCallback(
     async (options?: { allowUnsaved?: boolean; setLoading?: boolean }) => {
@@ -226,7 +225,7 @@ export function ContentTypeEditor() {
   const activeSelectedFieldId =
     selectedFieldId && fields.some((field) => field.id === selectedFieldId)
       ? selectedFieldId
-      : fields[0]?.id ?? null;
+      : (fields[0]?.id ?? null);
 
   const schema = useMemo(() => buildSchemaFromFields(fields), [fields]);
 
@@ -304,9 +303,7 @@ export function ContentTypeEditor() {
       setFields(fieldsFromSchema(updated.schema));
       setUnsavedChanges(false);
       setRemoteUpdatePending(false);
-      toast.success(
-        nextStatus === "published" ? "Content type published." : "Draft saved."
-      );
+      toast.success(nextStatus === "published" ? "Content type published." : "Draft saved.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -333,9 +330,7 @@ export function ContentTypeEditor() {
       toast.success(`Duplicated "${duplicated.name}".`);
       navigate(`/content-types/${encodeURIComponent(duplicated.id)}`);
     } catch (err) {
-      const message = isApiClientError(err)
-        ? err.message
-        : "Failed to duplicate content type.";
+      const message = isApiClientError(err) ? err.message : "Failed to duplicate content type.";
       setError(message);
       toast.error(message);
     } finally {
@@ -353,9 +348,7 @@ export function ContentTypeEditor() {
       setDeleteDialogOpen(false);
       navigate("/content-types");
     } catch (err) {
-      const message = isApiClientError(err)
-        ? err.message
-        : "Failed to delete content type.";
+      const message = isApiClientError(err) ? err.message : "Failed to delete content type.";
       setError(message);
       toast.error(message);
     } finally {
@@ -393,10 +386,7 @@ export function ContentTypeEditor() {
     setLastRemovedField(null);
   };
 
-  const handleTaxonomyToggle = async (
-    key: "categories" | "tags",
-    enabled: boolean
-  ) => {
+  const handleTaxonomyToggle = async (key: "categories" | "tags", enabled: boolean) => {
     if (!typeId) return;
     const previous = taxonomyConfig;
     setTaxonomyConfig((prev) => ({ ...prev, [key]: enabled }));
@@ -419,8 +409,7 @@ export function ContentTypeEditor() {
     }
   };
 
-  const selectedField =
-    fields.find((field) => field.id === activeSelectedFieldId) ?? null;
+  const selectedField = fields.find((field) => field.id === activeSelectedFieldId) ?? null;
   const nameError = useMemo(() => {
     if (!selectedField) return null;
     const names = fields.map((field) => ({ id: field.id, name: field.name }));
@@ -454,13 +443,7 @@ export function ContentTypeEditor() {
         )
       }
       rightPanelClassName="p-0"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span className="text-foreground">Content Types</span>
-        </div>
-      }
+      breadcrumbs={["Content", "Content Types"]}
     >
       <>
         <div className="border-b px-6 py-6">
@@ -502,9 +485,7 @@ export function ContentTypeEditor() {
             <Alert className="mt-4">
               <AlertTitle>Field removed</AlertTitle>
               <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <span>
-                  {lastRemovedField.field.label} was removed from the local draft.
-                </span>
+                <span>{lastRemovedField.field.label} was removed from the local draft.</span>
                 <Button variant="outline" size="sm" onClick={undoFieldRemoval}>
                   Undo
                 </Button>
@@ -523,6 +504,19 @@ export function ContentTypeEditor() {
               {previewHidden ? "Show preview" : "Hide preview"}
             </Button>
             <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  if (!typeId) return;
+                  navigate(`/advanced/engine/${encodeURIComponent(typeId)}/collection`);
+                }}
+                disabled={!typeId || isLoading}
+              >
+                <PanelsTopLeft className="h-4 w-4" />
+                Collection workspace
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -575,11 +569,7 @@ export function ContentTypeEditor() {
             >
               Field details
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPreviewSheetOpen(true)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setPreviewSheetOpen(true)}>
               Schema preview
             </Button>
           </div>
@@ -587,9 +577,7 @@ export function ContentTypeEditor() {
         <div className="flex flex-col gap-6 px-6 py-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Name
-              </label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Name</label>
               <Input
                 value={name}
                 onChange={(event) => {
@@ -600,9 +588,7 @@ export function ContentTypeEditor() {
               />
             </div>
             <div>
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Slug
-              </label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Slug</label>
               <Input
                 value={slug}
                 onChange={(event) => {
@@ -645,9 +631,7 @@ export function ContentTypeEditor() {
                 </div>
                 <Switch
                   checked={taxonomyConfig.tags}
-                  onCheckedChange={(checked) =>
-                    void handleTaxonomyToggle("tags", checked === true)
-                  }
+                  onCheckedChange={(checked) => void handleTaxonomyToggle("tags", checked === true)}
                   disabled={isLoading || isTaxonomySaving}
                 />
               </div>
@@ -674,9 +658,7 @@ export function ContentTypeEditor() {
                 relationTargets={relationTargets}
                 existingNames={fields.map((field) => ({ id: field.id, name: field.name }))}
                 onChange={(next) => {
-                  handleFieldChange(
-                    fields.map((field) => (field.id === next.id ? next : field))
-                  );
+                  handleFieldChange(fields.map((field) => (field.id === next.id ? next : field)));
                 }}
                 onRemove={requestFieldRemoval}
                 className="hidden lg:flex h-auto overflow-visible"
@@ -690,8 +672,8 @@ export function ContentTypeEditor() {
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm text-muted-foreground">
-                    This action is blocked by the server if entries, screens, routes,
-                    taxonomies, or listings still reference this type.
+                    This action is blocked by the server if entries, screens, routes, taxonomies, or
+                    listings still reference this type.
                   </div>
                   <Button
                     variant="destructive"
@@ -710,9 +692,7 @@ export function ContentTypeEditor() {
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent side="right" className="w-full p-0 sm:max-w-md">
           <SheetTitle className="sr-only">Field details</SheetTitle>
-          <SheetDescription className="sr-only">
-            Edit the selected field details.
-          </SheetDescription>
+          <SheetDescription className="sr-only">Edit the selected field details.</SheetDescription>
           <div className="flex h-full flex-col overflow-y-auto p-6">
             <FieldSettingsPanel
               field={selectedField}
@@ -722,9 +702,7 @@ export function ContentTypeEditor() {
               relationTargets={relationTargets}
               existingNames={fields.map((field) => ({ id: field.id, name: field.name }))}
               onChange={(next) => {
-                handleFieldChange(
-                  fields.map((field) => (field.id === next.id ? next : field))
-                );
+                handleFieldChange(fields.map((field) => (field.id === next.id ? next : field)));
               }}
               onRemove={requestFieldRemoval}
             />
@@ -734,9 +712,7 @@ export function ContentTypeEditor() {
       <Sheet open={previewSheetOpen} onOpenChange={setPreviewSheetOpen}>
         <SheetContent side="right" className="w-full p-0 sm:max-w-md">
           <SheetTitle className="sr-only">Schema preview</SheetTitle>
-          <SheetDescription className="sr-only">
-            View the generated JSON schema.
-          </SheetDescription>
+          <SheetDescription className="sr-only">View the generated JSON schema.</SheetDescription>
           <div className="flex h-full min-h-0 flex-col overflow-hidden p-6">
             <ContentTypePreviewPanel name={name} slug={slug} fields={fields} />
           </div>
@@ -748,8 +724,8 @@ export function ContentTypeEditor() {
         title="Delete content type?"
         description={
           <>
-            <span className="font-medium text-foreground">{name}</span> ({slug})
-            will be removed only if no entries or dependent owners reference it.
+            <span className="font-medium text-foreground">{name}</span> ({slug}) will be removed
+            only if no entries or dependent owners reference it.
           </>
         }
         confirmLabel="Delete type"
@@ -757,8 +733,8 @@ export function ContentTypeEditor() {
         isConfirming={isDeleting}
         onConfirm={handleDelete}
       >
-        The server blocks deletion for entries, custom screens, taxonomies,
-        content routes, and listings. This cannot be undone after it succeeds.
+        The server blocks deletion for entries, custom screens, taxonomies, content routes, and
+        listings. This cannot be undone after it succeeds.
       </ConfirmActionDialog>
       <ConfirmActionDialog
         open={Boolean(pendingFieldRemoval)}
@@ -768,19 +744,16 @@ export function ContentTypeEditor() {
         title="Remove field?"
         description={
           <>
-            <span className="font-medium text-foreground">
-              {pendingFieldRemoval?.label}
-            </span>{" "}
-            ({pendingFieldRemoval?.name}) will be removed from this local schema
-            draft.
+            <span className="font-medium text-foreground">{pendingFieldRemoval?.label}</span> (
+            {pendingFieldRemoval?.name}) will be removed from this local schema draft.
           </>
         }
         confirmLabel="Remove field"
         tone="warning"
         onConfirm={confirmFieldRemoval}
       >
-        Removing a field can affect existing entries after you save the schema.
-        You can undo the local removal before saving.
+        Removing a field can affect existing entries after you save the schema. You can undo the
+        local removal before saving.
       </ConfirmActionDialog>
     </EditorShell>
   );

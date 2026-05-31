@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
@@ -19,10 +19,12 @@ import {
   removeRepeatableSlotInstance,
   reorderBlocks,
   reorderBlocksAtPath,
+  reorderRepeatableSlotInstances,
   stripEditor,
   updateBlockById,
 } from "../../../core/admin/ui/pages/builder/blockUtils";
 import type { Block } from "../../../core/admin/ui/pages/builder/types";
+import { createSectionWidget } from "../../../core/widgets/core/section";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import type { WidgetDefinition } from "../../../core/widgets/types";
 
@@ -114,9 +116,7 @@ const repeatableDefinition: WidgetDefinition<{ headline: string }> = {
   audience: "advanced",
   module: "layout",
   variants: [{ id: "equal", label: "Equal" }],
-  slots: [
-    { id: "column", label: "Column", kind: "repeatable", minItems: 1, maxItems: 2 },
-  ],
+  slots: [{ id: "column", label: "Column", kind: "repeatable", minItems: 1, maxItems: 2 }],
   schema: {
     type: "object",
     required: ["headline"],
@@ -139,14 +139,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -193,7 +193,7 @@ const dispatchDragEvent = (
 ) => {
   const event = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperty(event, "dataTransfer", { value: dataTransfer });
-  act(() => {
+  React.act(() => {
     node.dispatchEvent(event);
   });
   return dataTransfer;
@@ -291,6 +291,8 @@ test("BlockList renders widget labels", () => {
 
   expect(html).toContain("Hero");
   expect(html).toContain("Newsletter");
+  expect(html).toContain('data-block-widget-type="hero"');
+  expect(html).toContain('data-block-widget-type="newsletter"');
   expect(html).toContain("bg-muted/5");
   expect(html).toContain("border-t");
 });
@@ -342,10 +344,8 @@ test("BlockList selects from the keyboard and ignores drops from another list to
     expect(heroRow).not.toBeNull();
     expect(newsletterRow).not.toBeNull();
 
-    act(() => {
-      heroRow?.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
-      );
+    React.act(() => {
+      heroRow?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
 
     expect(onSelect).toHaveBeenCalledWith("a");
@@ -357,11 +357,7 @@ test("BlockList selects from the keyboard and ignores drops from another list to
     dispatchDragEvent(newsletterRow!, "dragover");
     expect(newsletterRow?.className).toContain("border-primary/40");
 
-    dispatchDragEvent(
-      newsletterRow!,
-      "drop",
-      createDataTransfer({ "text/plain": "0:default:0" })
-    );
+    dispatchDragEvent(newsletterRow!, "drop", createDataTransfer({ "text/plain": "0:default:0" }));
 
     expect(onMove).not.toHaveBeenCalled();
     expect(newsletterRow?.className).not.toContain("border-primary/40");
@@ -398,21 +394,13 @@ test("BlockList forwards slot insert and move-to-slot drops", () => {
     expect(slotContainer).not.toBeNull();
     expect(normalizeText(slotContainer)).toContain("Add widget to Main");
 
-    dispatchDragEvent(
-      slotContainer!,
-      "drop",
-      createDataTransfer({ "widget-type": "newsletter" })
-    );
+    dispatchDragEvent(slotContainer!, "drop", createDataTransfer({ "widget-type": "newsletter" }));
     expect(onInsert).toHaveBeenCalledWith("slot-parent", "main", "newsletter");
 
-    dispatchDragEvent(
-      slotContainer!,
-      "drop",
-      createDataTransfer({ "block-id": "child-block" })
-    );
+    dispatchDragEvent(slotContainer!, "drop", createDataTransfer({ "block-id": "child-block" }));
     expect(onMoveToSlot).toHaveBeenCalledWith("child-block", "slot-parent", "main");
 
-    act(() => {
+    React.act(() => {
       Array.from(slotContainer!.querySelectorAll("button"))
         .find((button) => normalizeText(button).includes("Add widget to Main"))
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -421,6 +409,60 @@ test("BlockList forwards slot insert and move-to-slot drops", () => {
       parentId: "slot-parent",
       slotId: "main",
       slotLabel: "Main",
+      allowedTypes: undefined,
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockList applies section region labels to slot headers and insert payloads", () => {
+  registerWidget(
+    createSectionWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    }) as unknown as WidgetDefinition<{ headline: string }>
+  );
+
+  const onOpenSlotInsert = vi.fn();
+  const parent: Block = {
+    ...createBlock("section"),
+    id: "section-parent",
+    data: {
+      regions: [{ id: "2", label: "Supporting proof" }],
+    },
+    slots: {
+      "region:1": [],
+      "region:2": [],
+    },
+  };
+  const view = mount(
+    <BlockList
+      blocks={[parent]}
+      selectedId={null}
+      onSelect={() => {}}
+      onMove={() => {}}
+      onDuplicate={() => {}}
+      onDelete={() => {}}
+      onOpenSlotInsert={onOpenSlotInsert}
+    />
+  );
+
+  try {
+    const slotContainer = getSlotContainer(view.container, "Supporting proof");
+    expect(slotContainer).not.toBeNull();
+    expect(normalizeText(slotContainer)).toContain("Add widget to Supporting proof");
+
+    React.act(() => {
+      Array.from(slotContainer!.querySelectorAll("button"))
+        .find((button) => normalizeText(button).includes("Add widget to Supporting proof"))
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onOpenSlotInsert).toHaveBeenCalledWith({
+      parentId: "section-parent",
+      slotId: "region:2",
+      slotLabel: "Supporting proof",
       allowedTypes: undefined,
     });
   } finally {
@@ -455,14 +497,14 @@ test("BlockList routes inner select, toolbar actions, slot dragover, and drag re
   try {
     expect(view.container.textContent).toContain("Nested 1");
 
-    const parentSelectButton = Array.from(view.container.querySelectorAll("button")).find((element) =>
-      normalizeText(element).includes("Slot Layout")
+    const parentSelectButton = Array.from(view.container.querySelectorAll("button")).find(
+      (element) => normalizeText(element).includes("Slot Layout")
     );
     if (!(parentSelectButton instanceof HTMLButtonElement)) {
       throw new Error("missing slot layout button");
     }
 
-    act(() => {
+    React.act(() => {
       parentSelectButton.click();
     });
     expect(onSelect).toHaveBeenCalledWith("slot-parent");
@@ -481,7 +523,7 @@ test("BlockList routes inner select, toolbar actions, slot dragover, and drag re
     const toolbarDuplicate = getButtonByText(newsletterRow, "toolbar-duplicate");
     const toolbarDelete = getButtonByText(newsletterRow, "toolbar-delete");
 
-    act(() => {
+    React.act(() => {
       (toolbarUp as HTMLButtonElement | null)?.click();
       (toolbarDown as HTMLButtonElement | null)?.click();
       (toolbarDuplicate as HTMLButtonElement | null)?.click();
@@ -515,7 +557,7 @@ test("BlockList routes inner select, toolbar actions, slot dragover, and drag re
       value: createDataTransfer({ "widget-type": "newsletter" }),
     });
 
-    act(() => {
+    React.act(() => {
       slotContainer.dispatchEvent(dragOverEvent);
     });
 
@@ -551,19 +593,11 @@ test("repeatable slot helpers enforce min and max limits", () => {
   const blockedByMax = addRepeatableSlotInstance(withSecondSlot, "parent", "column");
   expect(blockedByMax[0]?.slots?.["column:3"]).toBeUndefined();
 
-  const removedFirst = removeRepeatableSlotInstance(
-    blockedByMax,
-    "parent",
-    "column:1"
-  );
+  const removedFirst = removeRepeatableSlotInstance(blockedByMax, "parent", "column:1");
   expect(removedFirst[0]?.slots?.["column:1"]).toBeUndefined();
   expect(removedFirst[0]?.slots?.["column:2"]).toEqual([]);
 
-  const blockedByMin = removeRepeatableSlotInstance(
-    removedFirst,
-    "parent",
-    "column:2"
-  );
+  const blockedByMin = removeRepeatableSlotInstance(removedFirst, "parent", "column:2");
   expect(blockedByMin[0]?.slots?.["column:2"]).toEqual([]);
 });
 
@@ -577,6 +611,28 @@ test("repeatable slot helpers ignore invalid definitions and slot ids", () => {
   expect(removeRepeatableSlotInstance(original, "missing", "column:1")).toBe(original);
   expect(removeRepeatableSlotInstance(original, "parent", "not-repeatable")).toEqual(original);
   expect(removeRepeatableSlotInstance(original, "parent", "column:9")).toEqual(original);
+});
+
+test("repeatable slot reorder preserves nested child arrays and unmatched slots", () => {
+  registerWidget(repeatableDefinition);
+  const firstChildren = [{ ...createBlock("hero"), id: "column-child-1" }];
+  const secondChildren = [{ ...createBlock("newsletter"), id: "column-child-2" }];
+  const legacyChildren = [{ ...createBlock("timeline"), id: "column-child-legacy" }];
+  const parent: Block = {
+    ...createBlock("layout-columns"),
+    id: "parent",
+    slots: {
+      "column:1": firstChildren,
+      "column:2": secondChildren,
+      "column:legacy": legacyChildren,
+    },
+  };
+
+  const reordered = reorderRepeatableSlotInstances([parent], "parent", "column", ["2", "1"]);
+  expect(Object.keys(reordered[0]?.slots ?? {})).toEqual(["column:2", "column:1", "column:legacy"]);
+  expect(reordered[0]?.slots?.["column:2"]).toBe(secondChildren);
+  expect(reordered[0]?.slots?.["column:1"]).toBe(firstChildren);
+  expect(reordered[0]?.slots?.["column:legacy"]).toBe(legacyChildren);
 });
 
 test("moveBlockIntoSlot blocks moving a parent into its own descendant", () => {
@@ -601,10 +657,7 @@ test("flattenBlocks and stripEditor traverse nested slots and legacy children", 
     children: [legacyChild],
   };
 
-  expect(flattenBlocks([parent]).map((block) => block.id)).toEqual([
-    "parent",
-    "slot-child",
-  ]);
+  expect(flattenBlocks([parent]).map((block) => block.id)).toEqual(["parent", "slot-child"]);
 
   const stripped = stripEditor([parent]);
   expect("editor" in stripped[0]).toBe(false);
@@ -624,21 +677,11 @@ test("grid columns supports nested insert and reorder per repeatable column slot
     childB
   );
 
-  const reordered = reorderBlocksAtPath(
-    withChildren,
-    [{ index: 0, slotId: "column:1" }],
-    0,
-    1
-  );
+  const reordered = reorderBlocksAtPath(withChildren, [{ index: 0, slotId: "column:1" }], 0, 1);
   expect(reordered[0]?.slots?.["column:1"]?.[0]?.id).toBe("grid-child-b");
   expect(reordered[0]?.slots?.["column:1"]?.[1]?.id).toBe("grid-child-a");
 
-  const moved = moveBlockIntoSlot(
-    reordered,
-    "grid-child-a",
-    "grid-parent",
-    "column:2"
-  );
+  const moved = moveBlockIntoSlot(reordered, "grid-child-a", "grid-parent", "column:2");
   expect(moved[0]?.slots?.["column:1"]?.[0]?.id).toBe("grid-child-b");
   expect(moved[0]?.slots?.["column:2"]?.[0]?.id).toBe("grid-child-a");
 });

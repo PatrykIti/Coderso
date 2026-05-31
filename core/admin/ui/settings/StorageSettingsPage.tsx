@@ -45,10 +45,7 @@ import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
 import { SettingsSidebar } from "./SettingsSidebar";
-import {
-  StorageProviderCard,
-  type StorageProviderId,
-} from "./StorageProviderCard";
+import { StorageProviderCard, type StorageProviderId } from "./StorageProviderCard";
 
 type StorageProviderDefinition = {
   id: StorageProviderId;
@@ -171,8 +168,7 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
       },
     ],
     noteTitle: "Filesystem permissions",
-    noteDescription:
-      "Ensure the uploads directory is writable by the server process.",
+    noteDescription: "Ensure the uploads directory is writable by the server process.",
   },
   s3: {
     title: "Amazon S3 Configuration",
@@ -221,8 +217,7 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
       },
     ],
     noteTitle: "IAM permissions",
-    noteDescription:
-      "Grant s3:PutObject, s3:GetObject, and s3:DeleteObject for this bucket.",
+    noteDescription: "Grant s3:PutObject, s3:GetObject, and s3:DeleteObject for this bucket.",
   },
   azure: {
     title: "Azure Blob Configuration",
@@ -271,8 +266,7 @@ const globalFields: StorageField[] = [
     type: "text",
     placeholder: "https://cdn.example.com",
     icon: Link2,
-    helper:
-      "Leave blank to auto-generate (S3/Azure endpoint or your public site URL + /media).",
+    helper: "Leave blank to auto-generate (S3/Azure endpoint or your public site URL + /media).",
   },
   {
     id: "maxSizeValue",
@@ -291,8 +285,7 @@ const globalFields: StorageField[] = [
   },
 ];
 
-const labelClassName =
-  "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
+const labelClassName = "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 
 const emptyFormState: StorageFormState = {
   driver: "local",
@@ -343,7 +336,8 @@ const resolveSizeFromBytes = (
     }
   }
   const fallbackUnit: StorageSizeUnit = value >= 1024 ** 2 ? "MB" : "KB";
-  const multiplier = STORAGE_SIZE_UNITS.find((entry) => entry.value === fallbackUnit)?.multiplier ?? 1;
+  const multiplier =
+    STORAGE_SIZE_UNITS.find((entry) => entry.value === fallbackUnit)?.multiplier ?? 1;
   const rounded = Math.round((value / multiplier) * 100) / 100;
   return { value: String(rounded), unit: fallbackUnit };
 };
@@ -360,16 +354,14 @@ const normalizeMaxSize = (value: string, unit: StorageSizeUnit) => {
 };
 
 export function StorageSettingsPage() {
-  const [activeProvider, setActiveProvider] =
-    useState<StorageProviderId>("local");
+  const [activeProvider, setActiveProvider] = useState<StorageProviderId>("local");
   const [form, setForm] = useState<StorageFormState>(emptyFormState);
   const [secrets, setSecrets] = useState<SecretFlags>(emptySecrets);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
-    useSettingsAutoSave();
+  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
 
   const activeConfig = providerConfigs[activeProvider];
   const ActiveIcon = activeConfig.icon;
@@ -564,19 +556,14 @@ export function StorageSettingsPage() {
               </SelectContent>
             </Select>
           </div>
-          {field.helper ? (
-            <p className="text-xs text-muted-foreground">{field.helper}</p>
-          ) : null}
+          {field.helper ? <p className="text-xs text-muted-foreground">{field.helper}</p> : null}
         </div>
       );
     }
 
     if (field.type === "select" && field.options) {
       return (
-        <Select
-          value={value}
-          onValueChange={(next) => handleFieldChange(field.id, next)}
-        >
+        <Select value={value} onValueChange={(next) => handleFieldChange(field.id, next)}>
           <SelectTrigger className="bg-muted/40">
             <SelectValue placeholder="Choose an option" />
           </SelectTrigger>
@@ -600,9 +587,7 @@ export function StorageSettingsPage() {
           onChange={(event) => handleFieldChange(field.id, event.target.value)}
           className="bg-muted/30"
         />
-        {field.helper ? (
-          <p className="text-xs text-muted-foreground">{field.helper}</p>
-        ) : null}
+        {field.helper ? <p className="text-xs text-muted-foreground">{field.helper}</p> : null}
       </div>
     );
   };
@@ -612,13 +597,7 @@ export function StorageSettingsPage() {
       activeHref="/admin/settings"
       showSearch={false}
       sidebar={<SettingsSidebar activeId="storage" />}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Settings</span>
-          <span className="text-muted-foreground/50">/</span>
-          <span className="text-foreground">Storage</span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Storage"]}
     >
       <div className="flex min-h-full flex-col">
         <div className="flex-1">
@@ -678,12 +657,7 @@ export function StorageSettingsPage() {
                         <CardDescription>{activeConfig.description}</CardDescription>
                       </div>
                       <CardAction>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          disabled={isLoading}
-                        >
+                        <Button variant="outline" size="sm" className="gap-2" disabled={isLoading}>
                           <Wifi className="h-4 w-4" />
                           Test Connection
                         </Button>
@@ -698,9 +672,7 @@ export function StorageSettingsPage() {
                           <label className={labelClassName}>{field.label}</label>
                           <div className="relative">
                             <FieldIcon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <div className="pl-7">
-                              {renderField(field)}
-                            </div>
+                            <div className="pl-7">{renderField(field)}</div>
                           </div>
                         </div>
                       );
@@ -710,9 +682,7 @@ export function StorageSettingsPage() {
                       <div className="flex items-start gap-3">
                         <Info className="mt-0.5 h-4 w-4 text-primary" />
                         <div>
-                          <p className="font-medium text-foreground">
-                            {activeConfig.noteTitle}
-                          </p>
+                          <p className="font-medium text-foreground">{activeConfig.noteTitle}</p>
                           <p className="text-xs text-muted-foreground">
                             {activeConfig.noteDescription}
                           </p>
@@ -728,9 +698,7 @@ export function StorageSettingsPage() {
                       <ShieldCheck className="h-5 w-5 text-primary" />
                       Upload Policies
                     </CardTitle>
-                    <CardDescription>
-                      Defaults used for all uploads across the CMS.
-                    </CardDescription>
+                    <CardDescription>Defaults used for all uploads across the CMS.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
                     {globalFields.map((field) => (
@@ -738,19 +706,16 @@ export function StorageSettingsPage() {
                         <label className={labelClassName}>{field.label}</label>
                         <div className="relative">
                           <field.icon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <div className="pl-7">
-                            {renderField(field)}
-                          </div>
+                          <div className="pl-7">{renderField(field)}</div>
                         </div>
                       </div>
                     ))}
                     <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-xs text-muted-foreground">
-                      Changing the storage driver does not migrate existing files.
-                      New uploads will use the selected provider immediately.
+                      Changing the storage driver does not migrate existing files. New uploads will
+                      use the selected provider immediately.
                     </div>
                   </CardContent>
                 </Card>
-
               </div>
 
               <div className="space-y-6">
@@ -785,11 +750,7 @@ export function StorageSettingsPage() {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span>Azure Connection String</span>
-                      <Badge
-                        variant={
-                          secrets.azureConnectionString ? "default" : "secondary"
-                        }
-                      >
+                      <Badge variant={secrets.azureConnectionString ? "default" : "secondary"}>
                         {secrets.azureConnectionString ? "Configured" : "Missing"}
                       </Badge>
                     </div>

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -76,13 +76,13 @@ const mount = (node: React.ReactNode) => {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
   return {
     host,
     cleanup: () => {
-      act(() => root.unmount());
+      React.act(() => root.unmount());
       host.remove();
     },
   };
@@ -90,10 +90,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -116,14 +113,12 @@ test("ContentTypeCreateDrawer keeps local duplicate validation inline-only", asy
   );
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(view.host.querySelector('input[placeholder="Blog Post"]'), "Articles");
       await Promise.resolve();
     });
 
-    expect(view.host.textContent).toContain(
-      "This name is already used by another content type."
-    );
+    expect(view.host.textContent).toContain("This name is already used by another content type.");
     expect(drawerState.createContentType).not.toHaveBeenCalled();
     expect(onCreateError).not.toHaveBeenCalled();
   } finally {
@@ -150,12 +145,12 @@ test("ContentTypeCreateDrawer reports rejected create mutations locally and thro
   );
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(view.host.querySelector('input[placeholder="Blog Post"]'), "Article");
       await Promise.resolve();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       Array.from(view.host.querySelectorAll("button"))
         .find((button) => button.textContent === "Create Collection")
         ?.click();

@@ -51,8 +51,10 @@ export function SearchPage() {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [recentError, setRecentError] = useState<string | null>(null);
   const [categorySelection, setCategorySelection] = useState<string[]>([]);
-  const { normalizedQuery, shouldSearch, items, categories, loading, error } =
-    useSearchResults(query, 50);
+  const { normalizedQuery, shouldSearch, items, categories, loading, error } = useSearchResults(
+    query,
+    50
+  );
 
   const refreshRecent = useCallback(async () => {
     try {
@@ -86,15 +88,10 @@ export function SearchPage() {
   const filteredItems = useMemo(() => {
     if (!shouldSearch) return [];
     if (categorySelection.length === 0) return items;
-    return items.filter(
-      (item) => item.categoryId && categorySelection.includes(item.categoryId)
-    );
+    return items.filter((item) => item.categoryId && categorySelection.includes(item.categoryId));
   }, [items, categorySelection, shouldSearch]);
 
-  const filteredGroups = useMemo(
-    () => groupResults(filteredItems),
-    [filteredItems]
-  );
+  const filteredGroups = useMemo(() => groupResults(filteredItems), [filteredItems]);
 
   const handlePrefetch = (item: SearchGroup["items"][number]) => {
     const destination = resolveSearchDestination(item);
@@ -114,9 +111,7 @@ export function SearchPage() {
     if (!shouldSearch) {
       return (
         <Card className="items-center border-dashed py-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            Type at least 2 characters to search.
-          </p>
+          <p className="text-sm text-muted-foreground">Type at least 2 characters to search.</p>
         </Card>
       );
     }
@@ -147,11 +142,7 @@ export function SearchPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/search"
-      showSearch={false}
-      breadcrumbs={<span className="text-sm text-muted-foreground">Search</span>}
-    >
+    <AdminShell activeHref="/admin/search" showSearch={false} breadcrumbs={["Search"]}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
           <Card className="gap-4 py-5">
@@ -162,13 +153,9 @@ export function SearchPage() {
                 </p>
                 <div className="max-h-40 overflow-y-auto pr-2">
                   <div className="space-y-2">
-                    {recentError ? (
-                      <p className="text-xs text-destructive">{recentError}</p>
-                    ) : null}
+                    {recentError ? <p className="text-xs text-destructive">{recentError}</p> : null}
                     {recentSearches.length === 0 && !recentError ? (
-                      <p className="text-xs text-muted-foreground">
-                        No recent searches yet.
-                      </p>
+                      <p className="text-xs text-muted-foreground">No recent searches yet.</p>
                     ) : null}
                     {recentSearches.map((item) => (
                       <button
@@ -192,11 +179,7 @@ export function SearchPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                     Filters
                   </p>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => setCategorySelection([])}
-                  >
+                  <Button variant="ghost" size="xs" onClick={() => setCategorySelection([])}>
                     Clear
                   </Button>
                 </div>

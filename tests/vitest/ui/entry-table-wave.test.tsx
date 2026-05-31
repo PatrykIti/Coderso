@@ -1,24 +1,18 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 vi.mock("@/components/ui/avatar", () => ({
   Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AvatarFallback: ({ children }: { children: React.ReactNode }) => (
-    <span>{children}</span>
-  ),
+  AvatarFallback: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 
 vi.mock("@/components/ui/badge", () => ({
-  Badge: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <span data-class-name={className}>{children}</span>,
+  Badge: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span data-class-name={className}>{children}</span>
+  ),
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -158,14 +152,14 @@ function mount(node: React.ReactNode) {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -280,7 +274,7 @@ test("EntryTable forwards select, edit, duplicate, and delete callbacks", () => 
 
   expect(selectAll.getAttribute("data-checked")).toBe("indeterminate");
 
-  act(() => {
+  React.act(() => {
     selectAll.click();
     selectEntry.click();
     editButton.click();

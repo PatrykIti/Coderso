@@ -4,7 +4,18 @@ import { Eye, History, Save, Settings2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { isApiClientError } from "@/services/apiClient";
+import { isApiClientError, isSessionExpiredApiError } from "@/services/apiClient";
+import {
+  getCachedBookingResources,
+  getCachedBookingServices,
+  listBookingResourcesCached,
+  listBookingServiceResourcesCached,
+  listBookingServicesCached,
+} from "@/services/bookingClient";
+import {
+  buildBookingCalendarPreviewResolved,
+  type BookingCalendarPreviewResolved,
+} from "@/services/bookingCalendarPreview";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
   autosavePage,
@@ -30,13 +41,19 @@ import {
   clearActiveAssistantSurfaceContext,
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
+import {
+  buildActiveWidgetPreviewStates,
+  widgetSupportsPreviewState,
+} from "@/ui/widgets/previewStateSupport";
 
 import { BlockList } from "./builder/BlockList";
 import { BlockSettings } from "./builder/BlockSettings";
 import { LibraryPanel } from "./builder/LibraryPanel";
 import { PageRevisionDrawer } from "./PageRevisionDrawer";
 import { PageSettingsDrawer, type PageSettingsValue } from "./PageSettingsDrawer";
+import { collectBookingFlowSummaries } from "./builder/bookingFlowContext";
 import {
+  applyWidgetBlockPatch,
   applyWizardSelection,
   appendSlotBlock,
   createBlock,
@@ -46,6 +63,7 @@ import {
   getFirstBlockId,
   moveBlockIntoSlot,
   reorderBlocksAtPath,
+  resolveLoadedWidgetEditorState,
   shouldWarnOnNavigate,
   updateBlockById,
   type BlockPath,
@@ -58,7 +76,12 @@ import {
   type PageMaxWidthToken,
 } from "../../../services/pages/layoutSettings";
 import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
-import { type ContainerToken, type SpacingToken } from "../../../widgets/types";
+import {
+  type ContainerToken,
+  type SpacingToken,
+  type WidgetEditorContext,
+  type WidgetPreviewState,
+} from "../../../widgets/types";
 
 const heroBlockDefaults = createBlock("hero");
 const defaultBlocks: Block[] = [
@@ -95,6 +118,83 @@ const resolvePageId = (pathname: string) => {
   const pageIndex = parts.findIndex((segment) => segment === "pages");
   if (pageIndex === -1) return null;
   return parts[pageIndex + 1] ?? null;
+};
+
+const pageEditorSessionExpiredMessage = (
+  action:
+    | "saveDraft"
+    | "publish"
+    | "settingsSave"
+    | "autosaveSettings"
+    | "loadPage"
+    | "loadTemplateOptions"
+    | "loadRevisions"
+    | "restoreRevision"
+    | "discardRevision"
+    | "generatePreview"
+) => {
+  switch (action) {
+    case "publish":
+      return "Your admin session expired. Sign in again before publishing.";
+    case "loadPage":
+      return "Your admin session expired. Sign in again before loading this page.";
+    case "loadTemplateOptions":
+      return "Your admin session expired. Sign in again before loading page settings.";
+    case "loadRevisions":
+      return "Your admin session expired. Sign in again before loading page history.";
+    case "restoreRevision":
+      return "Your admin session expired. Sign in again before restoring this revision.";
+    case "discardRevision":
+      return "Your admin session expired. Sign in again before discarding this autosave.";
+    case "generatePreview":
+      return "Your admin session expired. Sign in again before generating preview.";
+    case "settingsSave":
+      return "Your admin session expired. Sign in again before updating page settings.";
+    case "autosaveSettings":
+      return "Your admin session expired. Sign in again before autosaving page settings.";
+    case "saveDraft":
+    default:
+      return "Your admin session expired. Sign in again before saving.";
+  }
+};
+
+const asSessionExpiredToastError = (error: unknown, message: string) => ({
+  ...(typeof error === "object" && error !== null ? error : {}),
+  name: "ApiClientError",
+  code: "session_expired",
+  status: 401,
+  message,
+});
+
+const resolvePageEditorMutationError = (action: "saveDraft" | "publish", error: unknown) => {
+  if (isSessionExpiredApiError(error)) {
+    const message = pageEditorSessionExpiredMessage(action);
+    pageEditorActionToasts.error(action, asSessionExpiredToastError(error, message));
+    return message;
+  }
+  return pageEditorActionToasts.error(action, error);
+};
+
+const resolvePageEditorInlineError = (
+  action:
+    | "settingsSave"
+    | "autosaveSettings"
+    | "loadPage"
+    | "loadTemplateOptions"
+    | "loadRevisions"
+    | "restoreRevision"
+    | "discardRevision"
+    | "generatePreview",
+  error: unknown,
+  fallbackMessage: string
+) => {
+  if (isSessionExpiredApiError(error)) {
+    return pageEditorSessionExpiredMessage(action);
+  }
+  if (isApiClientError(error)) {
+    return error.message;
+  }
+  return fallbackMessage;
 };
 
 const readBlockDataText = (block: Block, key: string) => {
@@ -188,7 +288,7 @@ const normalizeBlocks = (data?: Record<string, unknown> | null) => {
         children,
         layout: normalized.layout ?? base.layout,
         visibility: normalized.visibility ?? base.visibility,
-        editor: normalized.editor ?? base.editor,
+        editor: resolveLoadedWidgetEditorState(normalized.editor),
       };
     };
 
@@ -277,6 +377,131 @@ const applyPageSettings = (
   };
 };
 
+const normalizePageData = (data?: Record<string, unknown> | null): Record<string, unknown> => {
+  const source = isRecord(data) ? data : {};
+  return {
+    ...source,
+    blocks: normalizeBlocks(source),
+  };
+};
+
+const blockContainsType = (block: Block, type: string): boolean => {
+  if (block.type === type) return true;
+
+  if (
+    Array.isArray(block.children) &&
+    block.children.some((child) => blockContainsType(child, type))
+  ) {
+    return true;
+  }
+
+  if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
+    return Object.values(block.slots).some(
+      (items) =>
+        Array.isArray(items) && items.some((child) => blockContainsType(child as Block, type))
+    );
+  }
+
+  return false;
+};
+
+const blocksContainType = (blocks: Block[], type: string) =>
+  blocks.some((block) => blockContainsType(block, type));
+
+const supportsTransientWidgetPreview = (type: string | undefined) =>
+  type === "entry-teaser" || type === "newsletter" || type === "posts-feed";
+
+const previewDataPatchEquals = (
+  left: WidgetPreviewState["dataPatch"],
+  right: WidgetPreviewState["dataPatch"]
+) => {
+  if (left === right) return true;
+  if (!left || !right) return !left && !right;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
+};
+
+const widgetPreviewStatesEqual = (
+  left: WidgetPreviewState | null | undefined,
+  right: WidgetPreviewState | null | undefined
+) =>
+  left?.status === right?.status &&
+  left?.message === right?.message &&
+  left?.requestKey === right?.requestKey &&
+  previewDataPatchEquals(left?.dataPatch, right?.dataPatch);
+
+export const applyWidgetPreviewStateUpdate = (
+  current: Record<string, WidgetPreviewState | undefined>,
+  blockId: string,
+  state: WidgetPreviewState | null
+) => {
+  const hasExistingState = Object.prototype.hasOwnProperty.call(current, blockId);
+  const currentState = current[blockId] ?? null;
+
+  if (!state) {
+    if (!hasExistingState) return current;
+    const { [blockId]: _removed, ...remaining } = current;
+    return remaining;
+  }
+
+  if (widgetPreviewStatesEqual(currentState, state)) {
+    return current;
+  }
+
+  return {
+    ...current,
+    [blockId]: state,
+  };
+};
+
+const hydrateBookingCalendarPreviewBlocks = (
+  blocks: Block[],
+  resolved: BookingCalendarPreviewResolved | null
+): Block[] => {
+  if (!resolved) return blocks;
+
+  const mapBlock = (block: Block): Block => {
+    const nextChildren = Array.isArray(block.children)
+      ? block.children.map(mapBlock)
+      : block.children;
+    const nextSlots =
+      block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
+        ? Object.fromEntries(
+            Object.entries(block.slots).map(([key, value]) => [
+              key,
+              Array.isArray(value) ? (value as Block[]).map(mapBlock) : [],
+            ])
+          )
+        : block.slots;
+
+    if (block.type !== "booking-calendar") {
+      if (nextChildren === block.children && nextSlots === block.slots) {
+        return block;
+      }
+      return {
+        ...block,
+        ...(nextChildren !== block.children ? { children: nextChildren } : {}),
+        ...(nextSlots !== block.slots ? { slots: nextSlots } : {}),
+      };
+    }
+
+    return {
+      ...block,
+      data: {
+        ...(isRecord(block.data) ? block.data : {}),
+        resolved,
+      },
+      ...(nextChildren !== block.children ? { children: nextChildren } : {}),
+      ...(nextSlots !== block.slots ? { slots: nextSlots } : {}),
+    };
+  };
+
+  return blocks.map(mapBlock);
+};
+
 export type PageEditorProps = {
   pageId?: string;
   initialPage?: PageDetail | null;
@@ -300,14 +525,17 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     [initialPage, pageId]
   );
   const initialPageDetail = initialPage ?? initialCachedPage;
-  const [page, setPage] = useState<PageDetail | null>(initialPageDetail ?? null);
-  const [pageData, setPageData] = useState<Record<string, unknown>>(
-    initialPageDetail?.currentData ?? { blocks: defaultBlocks }
+  const initialPageData = useMemo(
+    () => normalizePageData(initialPageDetail?.currentData as Record<string, unknown> | null),
+    [initialPageDetail]
   );
-  const [blocks, setBlocks] = useState<Block[]>(normalizeBlocks(initialPageDetail?.currentData));
+  const [page, setPage] = useState<PageDetail | null>(initialPageDetail ?? null);
+  const [pageData, setPageData] = useState<Record<string, unknown>>(initialPageData);
+  const [blocks, setBlocks] = useState<Block[]>(initialPageData.blocks as Block[]);
   const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasUnsavedChangesRef = useRef(false);
+  const blocksRef = useRef(blocks);
   const setUnsavedChanges = (value: boolean) => {
     hasUnsavedChangesRef.current = value;
     setHasUnsavedChanges(value);
@@ -341,13 +569,95 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [slotInsertTarget, setSlotInsertTarget] = useState<SlotInsertTarget | null>(null);
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
   const [pendingScrollBlockId, setPendingScrollBlockId] = useState<string | null>(null);
+  const [widgetPreviewStates, setWidgetPreviewStates] = useState<
+    Record<string, WidgetPreviewState | undefined>
+  >({});
   const [error, setError] = useState<string | null>(null);
+  const [bookingCalendarPreviewResolved, setBookingCalendarPreviewResolved] =
+    useState<BookingCalendarPreviewResolved | null>(null);
+
+  useEffect(() => {
+    blocksRef.current = blocks;
+  }, [blocks]);
 
   const selectedBlock = findBlockById(blocks, selectedId);
+  const hasBookingCalendar = useMemo(() => blocksContainType(blocks, "booking-calendar"), [blocks]);
   const selectedWidget = useMemo(() => {
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
   }, [selectedBlock]);
+  const previewBlocks = useMemo(
+    () =>
+      hasBookingCalendar
+        ? hydrateBookingCalendarPreviewBlocks(blocks, bookingCalendarPreviewResolved)
+        : blocks,
+    [blocks, bookingCalendarPreviewResolved, hasBookingCalendar]
+  );
+  const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
+  const selectedWidgetSupportsPreviewState = useMemo(
+    () => widgetSupportsPreviewState(selectedWidget),
+    [selectedWidget]
+  );
+  const previewEnabled = useMemo(
+    () =>
+      Boolean(selectedBlock) &&
+      (supportsTransientWidgetPreview(selectedBlock?.type) || selectedWidgetSupportsPreviewState),
+    [selectedBlock, selectedWidgetSupportsPreviewState]
+  );
+  const selectedPreviewBlockId = previewEnabled ? (selectedBlock?.id ?? null) : null;
+  const setSelectedWidgetPreviewState = useCallback(
+    (state: WidgetPreviewState | null) => {
+      if (!selectedPreviewBlockId) return;
+      setWidgetPreviewStates((current) =>
+        applyWidgetPreviewStateUpdate(current, selectedPreviewBlockId, state)
+      );
+    },
+    [selectedPreviewBlockId]
+  );
+  const pageEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
+    if (!selectedBlock) return undefined;
+
+    return {
+      surface: "page-builder",
+      blockId: selectedBlock.id,
+      editorMode: selectedBlock.editor?.mode ?? "wizard",
+      bookingFlows,
+      previewState: previewEnabled ? (widgetPreviewStates[selectedBlock.id] ?? null) : null,
+      setPreviewState: previewEnabled ? setSelectedWidgetPreviewState : undefined,
+      ...(selectedBlock.type === "booking-calendar" && bookingCalendarPreviewResolved
+        ? {
+            widgetPreviewData: {
+              bookingCalendarResolved: bookingCalendarPreviewResolved,
+            },
+          }
+        : {}),
+    };
+  }, [
+    bookingCalendarPreviewResolved,
+    bookingFlows,
+    previewEnabled,
+    selectedBlock,
+    setSelectedWidgetPreviewState,
+    widgetPreviewStates,
+  ]);
+  const activeWidgetPreviewStates = useMemo(() => {
+    if (!selectedBlock || !previewEnabled) {
+      return {} as Record<string, WidgetPreviewState | undefined>;
+    }
+    if (selectedWidgetSupportsPreviewState) {
+      return buildActiveWidgetPreviewStates(selectedBlock.id, selectedWidget, widgetPreviewStates);
+    }
+    const previewState = widgetPreviewStates[selectedBlock.id];
+    return previewState
+      ? { [selectedBlock.id]: previewState }
+      : ({} as Record<string, WidgetPreviewState | undefined>);
+  }, [
+    previewEnabled,
+    selectedBlock,
+    selectedWidget,
+    selectedWidgetSupportsPreviewState,
+    widgetPreviewStates,
+  ]);
   const pageSettings = useMemo(() => resolvePageSettings(pageData), [pageData]);
   const pageLayout = pageSettings.layout;
   const wrapperPaddingClass = joinClasses(
@@ -401,9 +711,10 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
   const applyPage = useCallback((result: PageDetail, options?: { preserveSelection?: boolean }) => {
     setPage(result);
-    const nextData = result.currentData ?? { blocks: defaultBlocks };
-    setPageData(nextData as Record<string, unknown>);
-    const nextBlocks = normalizeBlocks(result.currentData as Record<string, unknown>);
+    const nextData = normalizePageData(result.currentData as Record<string, unknown> | null);
+    setPageData(nextData);
+    const nextBlocks = nextData.blocks as Block[];
+    blocksRef.current = nextBlocks;
     setBlocks(nextBlocks);
     setSelectedId((current) => {
       if (options?.preserveSelection && current) {
@@ -463,11 +774,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         }
         applyPage(result, { preserveSelection: true });
       } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load page.");
-        }
+        setError(resolvePageEditorInlineError("loadPage", err, "Failed to load page."));
       } finally {
         if (shouldSetLoading) setIsLoading(false);
       }
@@ -490,11 +797,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       })
       .catch((err) => {
         if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load page.");
-        }
+        setError(resolvePageEditorInlineError("loadPage", err, "Failed to load page."));
       })
       .finally(() => {
         if (active && !initialCachedPage) setIsLoading(false);
@@ -512,6 +815,80 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     });
   }, [pageId, refreshPage]);
 
+  useEffect(() => {
+    let active = true;
+
+    if (!hasBookingCalendar) {
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadPreview = async (force = false) => {
+      try {
+        const [services, resources] = await Promise.all([
+          listBookingServicesCached({ force }),
+          listBookingResourcesCached({ force }),
+        ]);
+        let catalogError: string | undefined;
+        const serviceResourcesEntries = await Promise.all(
+          services
+            .filter((service) => service.status === "active")
+            .map(async (service) => {
+              try {
+                return [
+                  service.id,
+                  await listBookingServiceResourcesCached(service.id, { force }),
+                ] as const;
+              } catch {
+                catalogError = "booking_preview_catalog_unavailable";
+                return [service.id, []] as const;
+              }
+            })
+        );
+
+        if (!active) return;
+
+        setBookingCalendarPreviewResolved(
+          buildBookingCalendarPreviewResolved({
+            services,
+            resources,
+            serviceResourcesByServiceId: Object.fromEntries(serviceResourcesEntries),
+            ...(catalogError ? { error: catalogError } : {}),
+          })
+        );
+      } catch {
+        if (!active) return;
+
+        setBookingCalendarPreviewResolved(
+          buildBookingCalendarPreviewResolved({
+            services: getCachedBookingServices() ?? [],
+            resources: getCachedBookingResources() ?? [],
+            serviceResourcesByServiceId: {},
+            error: "booking_preview_catalog_unavailable",
+          })
+        );
+      }
+    };
+
+    void loadPreview(false);
+
+    const unsubscribe = subscribeCacheEvents((event) => {
+      if (
+        event.key === cacheKeys.bookingResourcesList ||
+        event.key === cacheKeys.bookingServicesList ||
+        (event.key.startsWith("booking:services:") && event.key.endsWith(":resources"))
+      ) {
+        void loadPreview(true);
+      }
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [hasBookingCalendar]);
+
   const loadTemplateOptions = useCallback(async () => {
     setTemplateOptionsLoading(true);
     setTemplateOptionsError(null);
@@ -519,11 +896,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       const payload = await getPageTemplateOptions();
       setTemplateOptions(payload);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setTemplateOptionsError(err.message);
-      } else {
-        setTemplateOptionsError("Failed to load template options.");
-      }
+      setTemplateOptionsError(
+        resolvePageEditorInlineError("loadTemplateOptions", err, "Failed to load template options.")
+      );
     } finally {
       setTemplateOptionsLoading(false);
     }
@@ -539,11 +914,13 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       })
       .catch((err) => {
         if (!active) return;
-        if (isApiClientError(err)) {
-          setTemplateOptionsError(err.message);
-        } else {
-          setTemplateOptionsError("Failed to load template options.");
-        }
+        setTemplateOptionsError(
+          resolvePageEditorInlineError(
+            "loadTemplateOptions",
+            err,
+            "Failed to load template options."
+          )
+        );
       })
       .finally(() => {
         if (active) setTemplateOptionsLoading(false);
@@ -561,11 +938,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       const items = await listPageRevisions(pageId);
       setRevisions(items);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setRevisionsError(err.message);
-      } else {
-        setRevisionsError("Failed to load page history.");
-      }
+      setRevisionsError(
+        resolvePageEditorInlineError("loadRevisions", err, "Failed to load page history.")
+      );
     } finally {
       setRevisionsLoading(false);
     }
@@ -597,11 +972,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       })
       .catch((err) => {
         if (!active) return;
-        if (isApiClientError(err)) {
-          setRevisionsError(err.message);
-        } else {
-          setRevisionsError("Failed to load page history.");
-        }
+        setRevisionsError(
+          resolvePageEditorInlineError("loadRevisions", err, "Failed to load page history.")
+        );
       })
       .finally(() => {
         if (active) setRevisionsLoading(false);
@@ -622,6 +995,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   }, [hasUnsavedChanges]);
 
   const updateBlocks = (next: Block[]) => {
+    blocksRef.current = next;
     setBlocks(next);
     setPageData((prev) => ({ ...prev, blocks: next }));
     setUnsavedChanges(true);
@@ -742,6 +1116,17 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     updateBlocks(updateBlockById(blocks, next.id, () => next));
   };
 
+  const handlePatchBlock = (
+    blockId: string,
+    patch: Parameters<typeof applyWidgetBlockPatch>[1]
+  ) => {
+    updateBlocks(
+      updateBlockById(blocksRef.current, blockId, (current) =>
+        applyWidgetBlockPatch(current, patch)
+      )
+    );
+  };
+
   const handleSaveDraft = async () => {
     if (!pageId) return;
     if (pageMutationInFlightRef.current) return;
@@ -757,7 +1142,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       setRemoteUpdatePending(false);
       pageEditorActionToasts.success("saveDraft");
     } catch (err) {
-      const message = pageEditorActionToasts.error("saveDraft", err);
+      const message = resolvePageEditorMutationError("saveDraft", err);
       setError(message);
     } finally {
       pageMutationInFlightRef.current = false;
@@ -782,7 +1167,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       }
       pageEditorActionToasts.success("publish");
     } catch (err) {
-      const message = pageEditorActionToasts.error("publish", err);
+      const message = resolvePageEditorMutationError("publish", err);
       setError(message);
     } finally {
       pageMutationInFlightRef.current = false;
@@ -820,11 +1205,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       setPreviewUrl(previewUrl);
       setPreviewProbe(probe ?? null);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setPreviewError(err.message);
-      } else {
-        setPreviewError("Failed to generate preview.");
-      }
+      setPreviewError(
+        resolvePageEditorInlineError("generatePreview", err, "Failed to generate preview.")
+      );
       setPreviewUrl(null);
       setPreviewProbe(null);
     } finally {
@@ -843,8 +1226,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setIsUpdatingMeta(true);
     try {
       const persistedData = isRecord(page?.currentData)
-        ? (page.currentData as Record<string, unknown>)
-        : { blocks: defaultBlocks };
+        ? normalizePageData(page.currentData as Record<string, unknown>)
+        : normalizePageData(null);
       const nextPersistedData = applyPageSettings(persistedData, payload.settings);
       const updated = await updatePage(pageId, {
         title: payload.title,
@@ -860,11 +1243,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       await refreshRevisions();
       return true;
     } catch (err) {
-      if (isApiClientError(err)) {
-        setMetaError(err.message);
-      } else {
-        setMetaError("Failed to update page settings.");
-      }
+      setMetaError(
+        resolvePageEditorInlineError("settingsSave", err, "Failed to update page settings.")
+      );
       return false;
     } finally {
       setIsUpdatingMeta(false);
@@ -881,8 +1262,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setIsAutosavingSettings(true);
     try {
       const persistedData = isRecord(page?.currentData)
-        ? (page.currentData as Record<string, unknown>)
-        : { blocks: defaultBlocks };
+        ? normalizePageData(page.currentData as Record<string, unknown>)
+        : normalizePageData(null);
       const nextPersistedData = applyPageSettings(persistedData, payload.settings);
       await autosavePage(pageId, {
         title: payload.title,
@@ -891,11 +1272,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       });
       await refreshRevisions();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setMetaError(err.message);
-      } else {
-        setMetaError("Failed to autosave page settings.");
-      }
+      setMetaError(
+        resolvePageEditorInlineError("autosaveSettings", err, "Failed to autosave page settings.")
+      );
     } finally {
       setIsAutosavingSettings(false);
     }
@@ -912,11 +1291,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       }
       await refreshRevisions();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setRevisionsError(err.message);
-      } else {
-        setRevisionsError("Failed to restore revision.");
-      }
+      setRevisionsError(
+        resolvePageEditorInlineError("restoreRevision", err, "Failed to restore revision.")
+      );
     } finally {
       setRestoringRevisionId(null);
     }
@@ -930,11 +1307,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       await discardPageRevision(pageId, revisionId);
       await refreshRevisions();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setRevisionsError(err.message);
-      } else {
-        setRevisionsError("Failed to discard autosave.");
-      }
+      setRevisionsError(
+        resolvePageEditorInlineError("discardRevision", err, "Failed to discard autosave.")
+      );
     } finally {
       setDiscardingRevisionId(null);
     }
@@ -967,14 +1342,21 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       activeHref="/admin/pages"
       leftPanel={renderLibraryPanel()}
       rightPanel={
-        <BlockSettings block={selectedBlock} widget={selectedWidget} onChange={handleChangeBlock} />
+        <BlockSettings
+          block={selectedBlock}
+          widget={selectedWidget}
+          onChange={handleChangeBlock}
+          onBlockPatch={
+            selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
+          }
+          editorContext={pageEditorWidgetContext}
+          pageDefaults={pageLayout.sections.defaults}
+        />
       }
       rightPanelClassName="p-6"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Pages</span>
-          <span>/</span>
-          <span className="text-foreground">{title}</span>
+      breadcrumbs={["Pages", title]}
+      topbarActions={
+        <div className="flex items-center gap-2">
           <span className={pageEditorStatusBadgeClassName(status)}>
             {status === "published" ? "Published" : "Draft"}
           </span>
@@ -1120,7 +1502,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               )}
             >
               <BlockList
-                blocks={blocks}
+                blocks={previewBlocks}
                 className={spacingTokenToListSpaceClassMap[pageLayout.sections.gap]}
                 pageDefaults={pageLayout.sections.defaults}
                 selectedId={selectedId}
@@ -1132,6 +1514,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 onInsert={handleInsertIntoSlot}
                 onMoveToSlot={handleMoveIntoSlot}
                 onOpenSlotInsert={handleOpenSlotInsert}
+                previewStatesByBlockId={activeWidgetPreviewStates}
               />
             </div>
           </div>
@@ -1208,6 +1591,11 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               block={selectedBlock}
               widget={selectedWidget}
               onChange={handleChangeBlock}
+              onBlockPatch={
+                selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
+              }
+              editorContext={pageEditorWidgetContext}
+              pageDefaults={pageLayout.sections.defaults}
             />
           </div>
         </SheetContent>

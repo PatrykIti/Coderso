@@ -8,6 +8,7 @@ import type {
   SpacingToken,
   WidgetBlock,
   WidgetLayoutDefaults,
+  WidgetRenderContext,
 } from "../types";
 
 const containerClassMap: Record<ContainerToken, string> = {
@@ -95,6 +96,22 @@ const resolveSpacingToken = (
     : fallback;
 };
 
+export function createNestedRowFlowRenderContext(
+  renderContext: WidgetRenderContext | undefined,
+  previewDevice?: DeviceTarget
+): WidgetRenderContext {
+  const baseRenderContext = renderContext ?? {
+    mode: "public" as const,
+    previewDevice,
+  };
+
+  return {
+    ...baseRenderContext,
+    previewDevice: baseRenderContext.previewDevice ?? previewDevice,
+    nestedSurface: "row-flow-item",
+  };
+}
+
 export function MissingWidget({ type, message }: { type: string; message?: string }) {
   return (
     <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
@@ -107,12 +124,14 @@ export function WidgetRenderer({
   block,
   pageDefaults,
   previewDevice,
+  renderContext: incomingRenderContext,
   renderBlock,
 }: {
   block: WidgetBlock;
   pageDefaults?: WidgetRendererPageDefaults;
   previewDevice?: DeviceTarget;
-  renderBlock?: (block: WidgetBlock) => ReactNode;
+  renderContext?: WidgetRenderContext;
+  renderBlock?: (block: WidgetBlock, context?: WidgetRenderContext) => ReactNode;
 }) {
   const def = getWidget(block.type);
   if (!def) {
@@ -133,13 +152,9 @@ export function WidgetRenderer({
     );
   }
   if (normalized.visibility?.enabled === false) return null;
-  if (
-    previewDevice &&
-    Array.isArray(normalized.visibility?.devices) &&
-    (normalized.visibility.devices.length === 0 ||
-      !normalized.visibility.devices.includes(previewDevice))
-  ) {
-    return null;
+  if (Array.isArray(normalized.visibility?.devices)) {
+    if (normalized.visibility.devices.length === 0) return null;
+    if (previewDevice && !normalized.visibility.devices.includes(previewDevice)) return null;
   }
 
   const layout = normalized.layout ?? defaultLayout;
@@ -187,37 +202,63 @@ export function WidgetRenderer({
   const wrapperClass = joinClasses(containerClassMap[container]);
 
   const WidgetComponent = def.render;
+  const renderContext = incomingRenderContext ?? {
+    mode: "public",
+    previewDevice,
+  };
+  const renderSurface = renderContext?.nestedSurface ?? "default-block";
+  const renderBlockWithContext = (
+    child: WidgetBlock,
+    nextRenderContext: WidgetRenderContext = renderContext
+  ) =>
+    renderBlock ? (
+      renderBlock(child, nextRenderContext)
+    ) : (
+      <WidgetRenderer
+        block={child}
+        pageDefaults={pageDefaults}
+        previewDevice={previewDevice}
+        renderContext={nextRenderContext}
+      />
+    );
+
+  const widgetNode = (
+    <>
+      <WidgetComponent
+        data={normalized.data}
+        variant={normalized.variant ?? def.variants[0].id}
+        slots={slots}
+        previewDevice={previewDevice}
+        pageDefaults={pageDefaults}
+        blockId={normalized.id}
+        renderContext={renderContext}
+        renderBlock={renderBlockWithContext}
+      />
+      {!hasSlotDefinitions && legacyChildren.length ? (
+        <div className="mt-6 flex flex-col gap-6">
+          {legacyChildren.map((child) => (
+            <div key={child.id}>{renderBlockWithContext(child)}</div>
+          ))}
+        </div>
+      ) : null}
+    </>
+  );
+
+  if (renderSurface === "row-flow-item") {
+    return (
+      <div
+        className="min-w-0 max-w-full"
+        data-widget-surface="row-flow-item"
+        data-widget-type={normalized.type}
+      >
+        {widgetNode}
+      </div>
+    );
+  }
 
   return (
     <section className={sectionClass} style={backgroundStyle}>
-      <div className={wrapperClass}>
-        <WidgetComponent
-          data={normalized.data}
-          variant={normalized.variant ?? def.variants[0].id}
-          slots={slots}
-          previewDevice={previewDevice}
-          pageDefaults={pageDefaults}
-          blockId={normalized.id}
-          renderBlock={renderBlock}
-        />
-        {!hasSlotDefinitions && legacyChildren.length ? (
-          <div className="mt-6 flex flex-col gap-6">
-            {legacyChildren.map((child) => (
-              <div key={child.id}>
-                {renderBlock ? (
-                  renderBlock(child)
-                ) : (
-                  <WidgetRenderer
-                    block={child}
-                    pageDefaults={pageDefaults}
-                    previewDevice={previewDevice}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      <div className={wrapperClass}>{widgetNode}</div>
     </section>
   );
 }

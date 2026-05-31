@@ -1,12 +1,27 @@
-import type { ComponentType, CSSProperties } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
+
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { DeviceTarget, WidgetDefinition, WidgetEditorProps } from "../types";
-import type { WidgetBlock } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorContract,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
+
+export type NavigationLinkTarget = "self" | "blank";
+
+export type NavigationBadgeTone = "default" | "accent" | "success" | "warning" | "danger";
+
+export type NavigationActiveLinkMode = "none" | "pathname" | "exact";
 
 export type NavigationItem = {
   label: string;
   href: string;
+  target?: NavigationLinkTarget;
   meta?: NavigationItemMeta;
   children?: NavigationItem[];
 };
@@ -15,7 +30,7 @@ export type NavigationItemMeta = {
   visibility: "all" | "logged_in" | "logged_out";
   badge: {
     label: string;
-    tone: "default" | "accent" | "success" | "warning" | "danger";
+    tone: NavigationBadgeTone;
   } | null;
   description: string | null;
   icon: string | null;
@@ -41,6 +56,33 @@ export type NavigationBehavior = {
   collapseOnScroll?: boolean;
   mobileMode?: "expanded" | "drawer" | "minimal";
   hideCtaOnMobile?: boolean;
+  activeLinkMode?: NavigationActiveLinkMode;
+};
+
+export type NavigationStyle = {
+  textColor?: string;
+  logoColor?: string;
+  linkColor?: string;
+  linkHoverColor?: string;
+  linkActiveColor?: string;
+  linkUnderline?: "none" | "hover" | "always";
+  surfaceColor?: string;
+  borderColor?: string;
+  borderWidth?: "0" | "1" | "2" | "3";
+  ctaTextColor?: string;
+  ctaBackgroundColor?: string;
+  ctaBorderColor?: string;
+  fontSize?: "none" | "xs" | "sm" | "base" | "lg";
+  fontWeight?: "none" | "normal" | "medium" | "semibold" | "bold";
+  textTransform?: "none" | "uppercase" | "capitalize";
+  letterSpacing?: "none" | "wide" | "wider";
+  shadow?: "none" | "sm" | "md" | "lg";
+  backdropBlur?: "none" | "sm" | "md";
+  dropdownDirection?: "bottom" | "top" | "auto";
+  motion?: "none" | "subtle" | "standard";
+  logoHeight?: "sm" | "md" | "lg" | "xl";
+  ctaBorderRadius?: "sm" | "md" | "lg" | "full";
+  ctaSeparator?: "none" | "line" | "spacing";
 };
 
 export type NavigationData = {
@@ -56,20 +98,7 @@ export type NavigationData = {
     paddingY?: "none" | "2" | "3" | "4" | "5";
     itemGap?: "none" | "2" | "3" | "4" | "6";
   };
-  style?: {
-    textColor?: string;
-    logoColor?: string;
-    linkColor?: string;
-    surfaceColor?: string;
-    borderColor?: string;
-    borderWidth?: "0" | "1" | "2" | "3";
-    ctaTextColor?: string;
-    ctaBackgroundColor?: string;
-    ctaBorderColor?: string;
-    fontSize?: "none" | "xs" | "sm" | "base" | "lg";
-    fontWeight?: "none" | "normal" | "medium" | "semibold" | "bold";
-    textTransform?: "none" | "uppercase" | "capitalize";
-  };
+  style?: NavigationStyle;
 };
 
 export const navigationSchema = {
@@ -100,6 +129,7 @@ export const navigationSchema = {
         properties: {
           label: { type: "string" },
           href: { type: "string" },
+          target: { enum: ["self", "blank"] },
           meta: {
             type: "object",
             additionalProperties: false,
@@ -128,6 +158,7 @@ export const navigationSchema = {
               properties: {
                 label: { type: "string" },
                 href: { type: "string" },
+                target: { enum: ["self", "blank"] },
                 meta: {
                   type: "object",
                   additionalProperties: false,
@@ -140,9 +171,7 @@ export const navigationSchema = {
                       required: ["label", "tone"],
                       properties: {
                         label: { type: "string" },
-                        tone: {
-                          enum: ["default", "accent", "success", "warning", "danger"],
-                        },
+                        tone: { enum: ["default", "accent", "success", "warning", "danger"] },
                       },
                     },
                     description: { type: ["string", "null"] },
@@ -175,6 +204,7 @@ export const navigationSchema = {
         collapseOnScroll: { type: "boolean" },
         mobileMode: { enum: ["expanded", "drawer", "minimal"] },
         hideCtaOnMobile: { type: "boolean" },
+        activeLinkMode: { enum: ["none", "pathname", "exact"] },
       },
     },
     layout: {
@@ -194,6 +224,9 @@ export const navigationSchema = {
         textColor: { type: "string" },
         logoColor: { type: "string" },
         linkColor: { type: "string" },
+        linkHoverColor: { type: "string" },
+        linkActiveColor: { type: "string" },
+        linkUnderline: { enum: ["none", "hover", "always"] },
         surfaceColor: { type: "string" },
         borderColor: { type: "string" },
         borderWidth: { enum: ["0", "1", "2", "3"] },
@@ -203,6 +236,14 @@ export const navigationSchema = {
         fontSize: { enum: ["none", "xs", "sm", "base", "lg"] },
         fontWeight: { enum: ["none", "normal", "medium", "semibold", "bold"] },
         textTransform: { enum: ["none", "uppercase", "capitalize"] },
+        letterSpacing: { enum: ["none", "wide", "wider"] },
+        shadow: { enum: ["none", "sm", "md", "lg"] },
+        backdropBlur: { enum: ["none", "sm", "md"] },
+        dropdownDirection: { enum: ["bottom", "top", "auto"] },
+        motion: { enum: ["none", "subtle", "standard"] },
+        logoHeight: { enum: ["sm", "md", "lg", "xl"] },
+        ctaBorderRadius: { enum: ["sm", "md", "lg", "full"] },
+        ctaSeparator: { enum: ["none", "line", "spacing"] },
       },
     },
   },
@@ -223,6 +264,7 @@ export const navigationDefaults: NavigationData = {
     collapseOnScroll: false,
     mobileMode: "expanded",
     hideCtaOnMobile: false,
+    activeLinkMode: "none",
   },
   layout: { alignment: "right", maxWidth: "6xl", paddingY: "4", itemGap: "4" },
   style: {
@@ -230,11 +272,174 @@ export const navigationDefaults: NavigationData = {
     ctaBackgroundColor: "var(--color-primary)",
     ctaTextColor: "var(--color-bg)",
     ctaBorderColor: "transparent",
+    linkUnderline: "none",
+    shadow: "none",
+    backdropBlur: "none",
+    dropdownDirection: "bottom",
+    motion: "subtle",
+    logoHeight: "md",
+    ctaBorderRadius: "md",
+    ctaSeparator: "none",
   },
+};
+
+export const navigationEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "navigation.wizard.starter-menu",
+      title: "Starter menu",
+      role: "setup",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "logo.type", "logo.value", "linksSource", "menuKey"],
+    },
+    {
+      mode: "visual",
+      id: "navigation.visual.variant-structure",
+      title: "Variant and Structure",
+      role: "layout",
+      writablePaths: ["variant", "linksSource", "menuKey"],
+    },
+    {
+      mode: "visual",
+      id: "navigation.visual.brand-logo",
+      title: "Brand and Logo",
+      role: "content",
+      writablePaths: [
+        "logo.type",
+        "logo.value",
+        "logo.href",
+        "logo.alt",
+        "logo.source",
+        "logo.assetId",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "navigation.visual.navigation-links",
+      title: "Navigation Links",
+      role: "content",
+      writablePaths: ["behavior.activeLinkMode", "items"],
+    },
+    {
+      mode: "visual",
+      id: "navigation.visual.cta-right-actions",
+      title: "CTA and Right Actions",
+      role: "content",
+      writablePaths: ["cta.label", "cta.href"],
+    },
+    {
+      mode: "visual",
+      id: "navigation.visual.mobile-behavior",
+      title: "Mobile Behavior",
+      role: "layout",
+      writablePaths: ["behavior.mobileMode", "behavior.hideCtaOnMobile"],
+    },
+    {
+      mode: "visual",
+      id: "navigation.visual.colors-borders-typography",
+      title: "Colors, Borders, Typography",
+      role: "visual",
+      writablePaths: [
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.textColor",
+        "style.logoColor",
+        "style.linkColor",
+        "style.linkHoverColor",
+        "style.linkActiveColor",
+        "style.borderWidth",
+        "style.fontSize",
+        "style.fontWeight",
+        "style.textTransform",
+        "style.letterSpacing",
+        "style.ctaBackgroundColor",
+        "style.ctaTextColor",
+        "style.ctaBorderColor",
+        "style.linkUnderline",
+        "style.shadow",
+        "style.backdropBlur",
+        "style.dropdownDirection",
+        "style.motion",
+        "style.logoHeight",
+        "style.ctaBorderRadius",
+        "style.ctaSeparator",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "navigation.visual.surface-runtime-behavior",
+      title: "Surface and Runtime Behavior",
+      role: "layout",
+      writablePaths: [
+        "layout.alignment",
+        "layout.maxWidth",
+        "layout.paddingY",
+        "layout.itemGap",
+        "behavior.transparent",
+        "behavior.sticky",
+        "behavior.collapseOnScroll",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "navigation.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["linksSource", "menuKey", "items", "cta"],
+    },
+    {
+      mode: "advanced",
+      id: "navigation.advanced.layout-token-summary",
+      title: "Layout token summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["layout.alignment", "layout.maxWidth", "layout.paddingY", "layout.itemGap"],
+    },
+    {
+      mode: "advanced",
+      id: "navigation.advanced.runtime-behavior-summary",
+      title: "Runtime behavior summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "behavior.sticky",
+        "behavior.transparent",
+        "behavior.collapseOnScroll",
+        "behavior.mobileMode",
+        "behavior.hideCtaOnMobile",
+        "behavior.activeLinkMode",
+      ],
+    },
+  ],
 };
 
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
+
+const toTrimmedString = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const normalizeNavigationHref = (value: unknown) =>
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  });
+
+const normalizeNavigationImageHref = (value: unknown) =>
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHttp: true,
+  });
+
+const normalizeNavigationTarget = (value: unknown): NavigationLinkTarget =>
+  value === "blank" ? "blank" : "self";
 
 const variantSupportsCta = (variant: string) => variant === "with-cta" || variant === "split";
 
@@ -283,6 +488,12 @@ const textTransformClassMap = {
   capitalize: "capitalize",
 } as const;
 
+const letterSpacingClassMap = {
+  none: "",
+  wide: "tracking-wide",
+  wider: "tracking-wider",
+} as const;
+
 const borderWidthValueMap = {
   "0": "0px",
   "1": "1px",
@@ -290,39 +501,633 @@ const borderWidthValueMap = {
   "3": "3px",
 } as const;
 
+const shadowClassMap = {
+  none: "",
+  sm: "shadow-sm",
+  md: "shadow-md",
+  lg: "shadow-lg",
+} as const;
+
+const backdropBlurClassMap = {
+  none: "",
+  sm: "backdrop-blur-sm",
+  md: "backdrop-blur-md",
+} as const;
+
+const logoHeightClassMap = {
+  sm: "h-5",
+  md: "h-6",
+  lg: "h-8",
+  xl: "h-10",
+} as const;
+
+const ctaRadiusClassMap = {
+  sm: "rounded-sm",
+  md: "rounded-md",
+  lg: "rounded-lg",
+  full: "rounded-full",
+} as const;
+
+const badgeToneClassMap: Record<NavigationBadgeTone, string> = {
+  default: "bg-muted text-foreground/80",
+  accent: "bg-primary/10 text-primary",
+  success: "bg-emerald-500/10 text-emerald-700",
+  warning: "bg-amber-500/10 text-amber-700",
+  danger: "bg-rose-500/10 text-rose-700",
+};
+
+const rootMotionClassMap = {
+  none: "transition-none",
+  subtle:
+    "transition-[background-color,border-color,box-shadow,padding] duration-150 ease-out motion-reduce:transition-none",
+  standard:
+    "transition-[background-color,border-color,box-shadow,padding,transform] duration-200 ease-out motion-reduce:transition-none",
+} as const;
+
+const surfaceMotionClassMap = {
+  none: "transition-none",
+  subtle:
+    "transition-[opacity,transform,max-height] duration-150 ease-out motion-reduce:transition-none",
+  standard:
+    "transition-[opacity,transform,max-height] duration-200 ease-out motion-reduce:transition-none",
+} as const;
+
+const navigationRuntimeClientScript = `
+(() => {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+  const listenersBound = window.__nextlessNavigationBound === true;
+  window.__nextlessNavigationBound = true;
+
+  const DRAWER_ANIMATION_MS = 180;
+  const focusableSelector = 'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+  const getRoots = () =>
+    Array.from(document.querySelectorAll('[data-navigation-widget="1"]')).filter(
+      (candidate) => candidate instanceof HTMLElement
+    );
+
+  const getFocusableElements = (container) =>
+    Array.from(container.querySelectorAll(focusableSelector)).filter((candidate) => {
+      if (!(candidate instanceof HTMLElement)) return false;
+      if (candidate.hidden) return false;
+      if (candidate.getAttribute("aria-hidden") === "true") return false;
+      return candidate.offsetParent !== null || candidate === document.activeElement;
+    });
+
+  const parseUrl = (href) => {
+    if (!href || href.startsWith("#")) return null;
+    try {
+      return new URL(href, window.location.origin);
+    } catch {
+      return null;
+    }
+  };
+
+  const resolveMatchingPath = (href, mode) => {
+    const parsed = parseUrl(href);
+    if (!parsed || parsed.origin !== window.location.origin) return null;
+    const currentPath = window.location.pathname.replace(/\\/$/, "") || "/";
+    const targetPath = parsed.pathname.replace(/\\/$/, "") || "/";
+    if (mode === "exact") return currentPath === targetPath ? targetPath : null;
+    if (mode === "pathname") {
+      return targetPath === "/"
+        ? currentPath === "/"
+          ? targetPath
+          : null
+        : currentPath === targetPath || currentPath.startsWith(targetPath + "/")
+          ? targetPath
+          : null;
+    }
+    return null;
+  };
+
+  const updateActiveLinks = (root) => {
+    const mode = root.dataset.navigationActiveMode;
+    const anchors = Array.from(root.querySelectorAll('[data-navigation-link="1"]'));
+    const matches = [];
+    for (const candidate of anchors) {
+      if (!(candidate instanceof HTMLAnchorElement)) continue;
+      candidate.dataset.navigationActive = "false";
+      candidate.removeAttribute("aria-current");
+      if (!mode || mode === "none") continue;
+      const matchedPath = resolveMatchingPath(candidate.getAttribute("href"), mode);
+      if (!matchedPath) continue;
+      matches.push({ anchor: candidate, path: matchedPath });
+    }
+
+    if (matches.length === 0) return;
+
+    const bestLength = matches.reduce(
+      (longest, match) => Math.max(longest, match.path.length),
+      0
+    );
+    let currentAssigned = false;
+    for (const match of matches) {
+      if (match.path.length !== bestLength) continue;
+      match.anchor.dataset.navigationActive = "true";
+      if (!currentAssigned) {
+        match.anchor.setAttribute("aria-current", "page");
+        currentAssigned = true;
+      }
+    }
+  };
+
+  const resolveSubmenuPanel = (toggle) => {
+    const controls = toggle.getAttribute("aria-controls");
+    if (!controls) return null;
+    const panel = document.getElementById(controls);
+    return panel instanceof HTMLElement ? panel : null;
+  };
+
+  const syncSubmenuPosition = (toggle, panel) => {
+    const configured = panel.dataset.navigationDirection || "bottom";
+    if (configured === "top" || configured === "bottom") {
+      panel.dataset.navigationPosition = configured;
+      return;
+    }
+    const rect = panel.getBoundingClientRect();
+    const shouldOpenUp = rect.bottom > window.innerHeight - 24 && rect.top > window.innerHeight / 2;
+    panel.dataset.navigationPosition = shouldOpenUp ? "top" : "bottom";
+  };
+
+  const closeSiblingSubmenus = (root, exceptToggle) => {
+    for (const candidate of root.querySelectorAll('[data-navigation-submenu-toggle="1"]')) {
+      if (!(candidate instanceof HTMLButtonElement) || candidate === exceptToggle) continue;
+      const panel = resolveSubmenuPanel(candidate);
+      if (!panel) continue;
+      candidate.dataset.state = "closed";
+      candidate.setAttribute("aria-expanded", "false");
+      panel.dataset.state = "closed";
+      panel.setAttribute("aria-hidden", "true");
+      panel.setAttribute("hidden", "");
+    }
+  };
+
+  const setSubmenuState = (toggle, open) => {
+    const root = toggle.closest('[data-navigation-widget="1"]');
+    if (!(root instanceof HTMLElement)) return;
+    const panel = resolveSubmenuPanel(toggle);
+    if (!panel) return;
+    if (open) {
+      closeSiblingSubmenus(root, toggle);
+      panel.removeAttribute("hidden");
+      syncSubmenuPosition(toggle, panel);
+    } else {
+      panel.setAttribute("hidden", "");
+    }
+    toggle.dataset.state = open ? "open" : "closed";
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    panel.dataset.state = open ? "open" : "closed";
+    panel.setAttribute("aria-hidden", open ? "false" : "true");
+  };
+
+  const closeAllSubmenus = (root) => {
+    for (const candidate of root.querySelectorAll('[data-navigation-submenu-toggle="1"]')) {
+      if (!(candidate instanceof HTMLButtonElement)) continue;
+      setSubmenuState(candidate, false);
+    }
+  };
+
+  const resolveDrawer = (root) => {
+    const trigger = root.querySelector('[data-navigation-mobile-toggle]');
+    const panel = root.querySelector('[data-navigation-mobile-panel]');
+    if (!(trigger instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) return null;
+    return { trigger, panel };
+  };
+
+  const syncToggleDecorations = (trigger, open) => {
+    trigger.dataset.state = open ? "open" : "closed";
+    trigger.setAttribute("aria-expanded", open ? "true" : "false");
+    trigger.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
+    for (const icon of trigger.querySelectorAll('[data-navigation-mobile-icon]')) {
+      if (!(icon instanceof HTMLElement)) continue;
+      const iconState = icon.dataset.navigationMobileIcon;
+      icon.hidden = open ? iconState !== "close" : iconState !== "menu";
+    }
+    const label = trigger.querySelector('[data-navigation-mobile-label]');
+    if (label instanceof HTMLElement) {
+      label.textContent = open ? "Close" : "Menu";
+    }
+  };
+
+  const clearPanelCloseTimer = (panel) => {
+    const timerId = panel.dataset.navigationCloseTimer;
+    if (!timerId) return;
+    window.clearTimeout(Number(timerId));
+    delete panel.dataset.navigationCloseTimer;
+  };
+
+  const setPanelOpenState = (panel, open) => {
+    clearPanelCloseTimer(panel);
+    panel.dataset.state = open ? "open" : "closed";
+    panel.setAttribute("aria-hidden", open ? "false" : "true");
+    if ("inert" in panel) {
+      panel.inert = !open;
+    }
+    if (open) {
+      panel.hidden = false;
+      requestAnimationFrame(() => {
+        panel.dataset.state = "open";
+      });
+    } else {
+      const timer = window.setTimeout(() => {
+        panel.hidden = true;
+      }, DRAWER_ANIMATION_MS);
+      panel.dataset.navigationCloseTimer = String(timer);
+    }
+  };
+
+  const focusFirstDrawerTarget = (panel, trigger) => {
+    const focusable = getFocusableElements(panel)[0];
+    if (focusable instanceof HTMLElement) {
+      focusable.focus();
+      return;
+    }
+    if (!panel.hasAttribute("tabindex")) {
+      panel.setAttribute("tabindex", "-1");
+    }
+    panel.focus();
+    trigger.blur();
+  };
+
+  const setDrawerState = (root, open, focusTriggerOnClose = true) => {
+    const drawer = resolveDrawer(root);
+    if (!drawer) return;
+    const { trigger, panel } = drawer;
+    syncToggleDecorations(trigger, open);
+    setPanelOpenState(panel, open);
+    if (open) {
+      focusFirstDrawerTarget(panel, trigger);
+      closeAllSubmenus(root);
+    } else if (focusTriggerOnClose) {
+      trigger.focus();
+    }
+  };
+
+  const updateCollapseState = () => {
+    const currentY = window.scrollY;
+    for (const root of getRoots()) {
+      if (!(root instanceof HTMLElement)) continue;
+      if (root.dataset.collapseOnScroll !== "true") continue;
+      const previousY = Number(root.dataset.navigationLastScrollY || "0");
+      const collapsed = currentY > 24 && currentY > previousY;
+      root.dataset.navigationCollapsed = collapsed ? "true" : "false";
+      root.classList.toggle("is-navigation-collapsed", collapsed);
+      root.dataset.navigationLastScrollY = String(currentY);
+    }
+  };
+
+  const closeRootsOnOutsideClick = (target) => {
+    for (const root of getRoots()) {
+      if (!(root instanceof HTMLElement)) continue;
+      if (root.contains(target)) continue;
+      setDrawerState(root, false, false);
+      closeAllSubmenus(root);
+    }
+  };
+
+  if (!listenersBound) {
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const drawerTrigger = target.closest('[data-navigation-mobile-toggle]');
+      if (drawerTrigger instanceof HTMLButtonElement) {
+        const root = drawerTrigger.closest('[data-navigation-widget="1"]');
+        if (!(root instanceof HTMLElement)) return;
+        const nextOpen = drawerTrigger.getAttribute("aria-expanded") !== "true";
+        setDrawerState(root, nextOpen, true);
+        return;
+      }
+
+      const submenuTrigger = target.closest('[data-navigation-submenu-toggle="1"]');
+      if (submenuTrigger instanceof HTMLButtonElement) {
+        const nextOpen = submenuTrigger.getAttribute("aria-expanded") !== "true";
+        setSubmenuState(submenuTrigger, nextOpen);
+        return;
+      }
+
+      closeRootsOnOutsideClick(target);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        for (const root of getRoots()) {
+          if (!(root instanceof HTMLElement)) continue;
+          const drawer = resolveDrawer(root);
+          const drawerOpen = drawer?.trigger.getAttribute("aria-expanded") === "true";
+          if (drawerOpen) {
+            event.preventDefault();
+            setDrawerState(root, false, true);
+          }
+          for (const toggle of root.querySelectorAll('[data-navigation-submenu-toggle="1"]')) {
+            if (!(toggle instanceof HTMLButtonElement)) continue;
+            if (toggle.getAttribute("aria-expanded") !== "true") continue;
+            event.preventDefault();
+            setSubmenuState(toggle, false);
+            toggle.focus();
+          }
+        }
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      for (const root of getRoots()) {
+        const drawer = resolveDrawer(root);
+        if (!drawer) continue;
+        if (drawer.trigger.getAttribute("aria-expanded") !== "true") continue;
+        const focusables = [drawer.trigger, ...getFocusableElements(drawer.panel)];
+        const currentIndex = focusables.indexOf(document.activeElement);
+        if (currentIndex === -1 || focusables.length === 0) continue;
+        if (event.shiftKey && currentIndex === 0) {
+          event.preventDefault();
+          focusables[focusables.length - 1]?.focus();
+        } else if (!event.shiftKey && currentIndex === focusables.length - 1) {
+          event.preventDefault();
+          focusables[0]?.focus();
+        }
+      }
+    });
+
+    window.addEventListener("scroll", updateCollapseState, { passive: true });
+    window.addEventListener("popstate", () => {
+      for (const root of getRoots()) {
+        updateActiveLinks(root);
+      }
+    });
+    window.addEventListener("hashchange", () => {
+      for (const root of getRoots()) {
+        updateActiveLinks(root);
+      }
+    });
+  }
+
+  for (const root of getRoots()) {
+    if (!(root instanceof HTMLElement)) continue;
+    const drawer = resolveDrawer(root);
+    if (drawer) {
+      syncToggleDecorations(drawer.trigger, false);
+      drawer.panel.hidden = true;
+      drawer.panel.dataset.state = "closed";
+      drawer.panel.setAttribute("aria-hidden", "true");
+      if ("inert" in drawer.panel) {
+        drawer.panel.inert = true;
+      }
+    }
+    closeAllSubmenus(root);
+    updateActiveLinks(root);
+    root.dataset.navigationLastScrollY = String(window.scrollY);
+    if (root.dataset.collapseOnScroll === "true") {
+      root.dataset.navigationCollapsed = "false";
+    }
+  }
+
+  updateCollapseState();
+})();
+`;
+
+function normalizeNavigationItemMeta(meta: NavigationItem["meta"]): NavigationItemMeta | undefined {
+  if (!meta) return undefined;
+  return {
+    visibility:
+      meta.visibility === "logged_in" || meta.visibility === "logged_out" ? meta.visibility : "all",
+    badge:
+      meta.badge && toTrimmedString(meta.badge.label)
+        ? {
+            label: toTrimmedString(meta.badge.label)!,
+            tone:
+              meta.badge.tone === "accent" ||
+              meta.badge.tone === "success" ||
+              meta.badge.tone === "warning" ||
+              meta.badge.tone === "danger"
+                ? meta.badge.tone
+                : "default",
+          }
+        : null,
+    description: toTrimmedString(meta.description ?? undefined) ?? null,
+    icon: toTrimmedString(meta.icon ?? undefined) ?? null,
+  };
+}
+
+const normalizeNavigationActiveLinkMode = (value: unknown): NavigationActiveLinkMode =>
+  value === "pathname" || value === "exact" ? value : "none";
+
+const normalizeNavigationStyle = (style: NavigationData["style"]): NavigationStyle => ({
+  ...(style ?? {}),
+  borderWidth:
+    style?.borderWidth === "0" ||
+    style?.borderWidth === "1" ||
+    style?.borderWidth === "2" ||
+    style?.borderWidth === "3"
+      ? style.borderWidth
+      : undefined,
+  fontSize:
+    style?.fontSize === "none" ||
+    style?.fontSize === "xs" ||
+    style?.fontSize === "sm" ||
+    style?.fontSize === "base" ||
+    style?.fontSize === "lg"
+      ? style.fontSize
+      : undefined,
+  fontWeight:
+    style?.fontWeight === "none" ||
+    style?.fontWeight === "normal" ||
+    style?.fontWeight === "medium" ||
+    style?.fontWeight === "semibold" ||
+    style?.fontWeight === "bold"
+      ? style.fontWeight
+      : undefined,
+  textTransform:
+    style?.textTransform === "none" ||
+    style?.textTransform === "uppercase" ||
+    style?.textTransform === "capitalize"
+      ? style.textTransform
+      : undefined,
+  linkUnderline:
+    style?.linkUnderline === "hover" || style?.linkUnderline === "always"
+      ? style.linkUnderline
+      : style?.linkUnderline === "none"
+        ? "none"
+        : undefined,
+  letterSpacing:
+    style?.letterSpacing === "wide" || style?.letterSpacing === "wider"
+      ? style.letterSpacing
+      : style?.letterSpacing === "none"
+        ? "none"
+        : undefined,
+  shadow:
+    style?.shadow === "sm" || style?.shadow === "md" || style?.shadow === "lg"
+      ? style.shadow
+      : style?.shadow === "none"
+        ? "none"
+        : undefined,
+  backdropBlur:
+    style?.backdropBlur === "sm" || style?.backdropBlur === "md"
+      ? style.backdropBlur
+      : style?.backdropBlur === "none"
+        ? "none"
+        : undefined,
+  dropdownDirection:
+    style?.dropdownDirection === "top" ||
+    style?.dropdownDirection === "bottom" ||
+    style?.dropdownDirection === "auto"
+      ? style.dropdownDirection
+      : undefined,
+  motion:
+    style?.motion === "none" || style?.motion === "standard"
+      ? style.motion
+      : style?.motion === "subtle"
+        ? "subtle"
+        : undefined,
+  logoHeight:
+    style?.logoHeight === "sm" ||
+    style?.logoHeight === "md" ||
+    style?.logoHeight === "lg" ||
+    style?.logoHeight === "xl"
+      ? style.logoHeight
+      : undefined,
+  ctaBorderRadius:
+    style?.ctaBorderRadius === "sm" ||
+    style?.ctaBorderRadius === "md" ||
+    style?.ctaBorderRadius === "lg" ||
+    style?.ctaBorderRadius === "full"
+      ? style.ctaBorderRadius
+      : undefined,
+  ctaSeparator:
+    style?.ctaSeparator === "line" || style?.ctaSeparator === "spacing"
+      ? style.ctaSeparator
+      : style?.ctaSeparator === "none"
+        ? "none"
+        : undefined,
+});
+
+function normalizeNavigationItems(items: NavigationData["items"]): NavigationItem[] {
+  if (!Array.isArray(items)) return [];
+  const normalizeList = (list: NavigationData["items"]): NavigationItem[] => {
+    const normalized: NavigationItem[] = [];
+    for (const item of list) {
+      const label = toTrimmedString(item?.label);
+      const href = normalizeNavigationHref(item?.href);
+      if (!label || !href) continue;
+
+      const children = Array.isArray(item.children) ? normalizeList(item.children) : undefined;
+      normalized.push({
+        label,
+        href,
+        target: normalizeNavigationTarget(item?.target),
+        ...(normalizeNavigationItemMeta(item.meta)
+          ? { meta: normalizeNavigationItemMeta(item.meta) }
+          : {}),
+        ...(children && children.length > 0 ? { children } : {}),
+      });
+    }
+    return normalized;
+  };
+
+  return normalizeList(items);
+}
+
+function normalizeNavigationLogo(logo: NavigationData["logo"]): NavigationData["logo"] {
+  const type = logo?.type === "image" ? "image" : "text";
+  const value = toTrimmedString(logo?.value);
+  const normalizedValue =
+    type === "image"
+      ? (normalizeNavigationImageHref(value) ?? "")
+      : (value ?? navigationDefaults.logo.value ?? "Coderso");
+
+  return {
+    ...navigationDefaults.logo,
+    ...logo,
+    type,
+    value: normalizedValue,
+    href: normalizeNavigationHref(logo?.href) ?? navigationDefaults.logo.href,
+    alt: toTrimmedString(logo?.alt) ?? logo?.alt,
+  };
+}
+
+export function normalizeNavigationData(data: NavigationData): NavigationData {
+  const normalizedItems = normalizeNavigationItems(data.items);
+  const ctaLabel = toTrimmedString(data.cta?.label);
+  const ctaHref = normalizeNavigationHref(data.cta?.href);
+  const baseBehavior = {
+    ...navigationDefaults.behavior,
+    ...data.behavior,
+    activeLinkMode: normalizeNavigationActiveLinkMode(data.behavior?.activeLinkMode),
+  } satisfies NavigationBehavior;
+
+  return {
+    ...navigationDefaults,
+    ...data,
+    logo: normalizeNavigationLogo(data.logo),
+    items: normalizedItems,
+    behavior: baseBehavior,
+    style: {
+      ...navigationDefaults.style,
+      ...normalizeNavigationStyle(data.style),
+    },
+    ...(ctaLabel && ctaHref ? { cta: { label: ctaLabel, href: ctaHref } } : { cta: undefined }),
+  };
+}
+
+function resolveLinkProps(item: NavigationItem) {
+  const target = item.target === "blank" ? "_blank" : undefined;
+  return {
+    href: item.href,
+    target,
+    rel: target ? "noopener noreferrer" : undefined,
+  };
+}
+
 export function NavigationBlock({
   data,
   variant,
   slots,
   previewDevice,
+  blockId,
+  renderContext,
 }: {
   data: NavigationData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
+  blockId?: string;
+  renderContext?: WidgetRenderContext;
 }) {
+  const normalized = normalizeNavigationData(data);
   const showCta = variantSupportsCta(variant);
   const splitLayout = variant === "split";
-  const linksSource = data.linksSource ?? "manual";
+  const linksSource = normalized.linksSource ?? "manual";
   const resolvedAlignment =
-    data.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "left";
+    normalized.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "left";
   const alignmentClass =
     resolvedAlignment === "center"
       ? "justify-center"
       : resolvedAlignment === "right"
         ? "justify-end"
         : "justify-start";
-  const layout = data.layout ?? {};
-  const style = data.style ?? {};
-  const behavior = data.behavior ?? {};
+  const layout = normalized.layout ?? {};
+  const style = normalized.style ?? {};
+  const behavior = normalized.behavior ?? {};
   const mobileMode = behavior.mobileMode ?? "expanded";
+  const isDrawerMode = mobileMode === "drawer";
+  const isMinimalMode = mobileMode === "minimal";
   const linksVisibleOnMobile = mobileMode === "expanded";
-  const showMobileToggle = mobileMode !== "expanded";
-  const renderedItems = data.items.length > 0 ? data.items : navigationDefaults.items;
+  const showMobileToggle = isDrawerMode;
+  const renderedItems = normalized.items;
+  const hasInteractiveSubmenus = renderedItems.some((item) => (item.children?.length ?? 0) > 0);
   const rightSlotBlocks = slots?.right ?? [];
-  const hasRightActions = rightSlotBlocks.length > 0 || Boolean(showCta && data.cta);
+  const hasRightActions = rightSlotBlocks.length > 0 || Boolean(showCta && normalized.cta);
+  const shouldRenderRightCluster = hasRightActions || showMobileToggle;
+  const rootId = blockId ?? "navigation";
+  const mobilePanelId = `${rootId}-mobile-panel`;
   const borderWidth = style.borderWidth ?? "1";
-  const navStyle: CSSProperties =
+  const textClass = joinClasses(
+    fontSizeClassMap[style.fontSize ?? "sm"] ?? "text-sm",
+    fontWeightClassMap[style.fontWeight ?? "medium"] ?? "font-medium",
+    textTransformClassMap[style.textTransform ?? "none"] ?? "normal-case",
+    letterSpacingClassMap[style.letterSpacing ?? "none"] ?? ""
+  );
+  const navStyle =
     compactStyle({
       backgroundColor: behavior.transparent
         ? "transparent"
@@ -333,15 +1138,20 @@ export function NavigationBlock({
       borderBottomStyle: "solid",
       borderBottomWidth: borderWidthValueMap[borderWidth] ?? "1px",
       color: style.textColor ?? "var(--color-text)",
+      ["--navigation-link-color" as keyof CSSProperties]:
+        style.linkColor ?? style.textColor ?? "var(--color-text)",
+      ["--navigation-link-hover-color" as keyof CSSProperties]:
+        style.linkHoverColor ?? style.linkColor ?? style.textColor ?? "var(--color-text)",
+      ["--navigation-link-active-color" as keyof CSSProperties]:
+        style.linkActiveColor ??
+        style.linkHoverColor ??
+        style.linkColor ??
+        style.textColor ??
+        "var(--color-text)",
     }) ?? {};
 
-  const logoStyle: CSSProperties =
-    data.logo.type === "text"
-      ? { color: style.logoColor ?? style.textColor ?? "var(--color-text)" }
-      : {};
-
-  const linksStyle: CSSProperties = {
-    color: style.linkColor ?? style.textColor ?? "var(--color-text)",
+  const logoStyle: CSSProperties = {
+    color: style.logoColor ?? style.textColor ?? "var(--color-text)",
   };
 
   const ctaStyle: CSSProperties =
@@ -361,31 +1171,212 @@ export function NavigationBlock({
   const navClass = joinClasses(
     "w-full px-6",
     paddingYClassMap[layout.paddingY ?? "4"] ?? "py-4",
-    behavior.sticky && "sticky top-0 z-40"
+    behavior.sticky && "sticky top-0 z-40",
+    shadowClassMap[style.shadow ?? "none"],
+    backdropBlurClassMap[style.backdropBlur ?? "none"],
+    rootMotionClassMap[style.motion ?? "subtle"],
+    "data-[navigation-collapsed=true]:py-2 data-[navigation-collapsed=true]:shadow-md"
+  );
+
+  const logoHref = normalized.logo.href ?? "/";
+  const hasLogoImage = normalized.logo.type === "image" && normalized.logo.value.trim().length > 0;
+  const logoAccessibleName =
+    normalized.logo.type === "image"
+      ? (toTrimmedString(normalized.logo.alt) ?? "Logo")
+      : normalized.logo.value;
+  const linkUnderlineClass =
+    style.linkUnderline === "always"
+      ? "underline underline-offset-4"
+      : style.linkUnderline === "hover"
+        ? "hover:underline data-[navigation-active=true]:underline underline-offset-4"
+        : "";
+
+  const linkClass = joinClasses(
+    "inline-flex items-center gap-2 rounded-sm text-[var(--navigation-link-color)] transition-colors motion-reduce:transition-none",
+    "hover:text-[var(--navigation-link-hover-color)] data-[navigation-active=true]:text-[var(--navigation-link-active-color)]",
+    linkUnderlineClass
+  );
+
+  const dropdownDirection = style.dropdownDirection ?? "bottom";
+  const motionClass = surfaceMotionClassMap[style.motion ?? "subtle"];
+
+  const renderNavigationLabel = (item: NavigationItem) => (
+    <span className="inline-flex min-w-0 flex-col">
+      <span className="inline-flex min-w-0 items-center gap-2">
+        {item.meta?.icon ? (
+          <span
+            aria-hidden="true"
+            className="inline-flex h-5 min-w-5 items-center justify-center rounded bg-muted/50 px-1 text-[10px] font-semibold uppercase tracking-wide text-foreground/70"
+          >
+            {item.meta.icon}
+          </span>
+        ) : null}
+        <span className="min-w-0 truncate">{item.label}</span>
+        {item.meta?.badge ? (
+          <span
+            className={joinClasses(
+              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+              badgeToneClassMap[item.meta.badge.tone]
+            )}
+          >
+            {item.meta.badge.label}
+          </span>
+        ) : null}
+      </span>
+      {item.meta?.description ? (
+        <span className="mt-0.5 text-left text-xs text-[var(--color-text)]/70">
+          {item.meta.description}
+        </span>
+      ) : null}
+    </span>
+  );
+
+  const renderSubmenuList = (
+    items: NavigationItem[],
+    panelId: string,
+    mobile = false
+  ): ReactNode => (
+    <ul
+      id={panelId}
+      data-navigation-submenu-panel="1"
+      data-navigation-direction={mobile ? "bottom" : dropdownDirection}
+      data-navigation-position={mobile ? "bottom" : dropdownDirection === "top" ? "top" : "bottom"}
+      data-state="closed"
+      hidden
+      className={joinClasses(
+        mobile
+          ? "mt-2 space-y-2 rounded-md border border-border/60 bg-background/60 p-3"
+          : "absolute left-0 z-20 min-w-64 rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] p-2",
+        mobile
+          ? ""
+          : "data-[navigation-position=bottom]:top-full data-[navigation-position=bottom]:mt-2 data-[navigation-position=top]:bottom-full data-[navigation-position=top]:mb-2",
+        motionClass,
+        "data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0 data-[state=closed]:-translate-y-1",
+        "data-[state=open]:pointer-events-auto data-[state=open]:opacity-100 data-[state=open]:translate-y-0"
+      )}
+      aria-hidden="true"
+    >
+      {items.map((child, childIndex) => {
+        const childProps = resolveLinkProps(child);
+        return (
+          <li key={`${child.href || child.label}-${childIndex}`}>
+            <a
+              {...childProps}
+              data-navigation-link="1"
+              data-navigation-active="false"
+              className={joinClasses(
+                "block rounded-md px-3 py-2 text-left text-[var(--navigation-link-color)] transition-colors motion-reduce:transition-none",
+                "hover:bg-[var(--color-surface)]/70 hover:text-[var(--navigation-link-hover-color)]",
+                "data-[navigation-active=true]:bg-[var(--color-surface)]/70 data-[navigation-active=true]:text-[var(--navigation-link-active-color)]"
+              )}
+            >
+              {renderNavigationLabel(child)}
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  const renderNavigationItem = (item: NavigationItem, index: number, mobile = false): ReactNode => {
+    const itemProps = resolveLinkProps(item);
+    const submenuId = `${rootId}-${mobile ? "mobile" : "desktop"}-submenu-${index}`;
+    const hasChildren = Boolean(item.children?.length);
+
+    return (
+      <li
+        key={`${mobile ? "mobile" : "desktop"}-${item.href || item.label}-${index}`}
+        className={joinClasses("relative", mobile ? "space-y-2" : "group")}
+      >
+        <div className={joinClasses("flex items-start gap-2", mobile && "justify-between")}>
+          <a
+            {...itemProps}
+            data-navigation-link="1"
+            data-navigation-active="false"
+            className={joinClasses(linkClass, mobile ? "min-w-0 flex-1 py-1" : "py-1")}
+          >
+            {renderNavigationLabel(item)}
+          </a>
+          {hasChildren ? (
+            <button
+              type="button"
+              data-navigation-submenu-toggle="1"
+              data-state="closed"
+              aria-expanded="false"
+              aria-controls={submenuId}
+              aria-label={`Toggle ${item.label} submenu`}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border/60 text-[var(--navigation-link-color)] transition-colors hover:bg-muted/50 hover:text-[var(--navigation-link-hover-color)]"
+            >
+              <span aria-hidden="true">{mobile ? "+" : "▾"}</span>
+            </button>
+          ) : null}
+        </div>
+        {hasChildren ? renderSubmenuList(item.children ?? [], submenuId, mobile) : null}
+      </li>
+    );
+  };
+
+  const headerCtaClass = joinClasses(
+    ctaRadiusClassMap[style.ctaBorderRadius ?? "md"],
+    "px-3 py-2 text-xs font-semibold",
+    behavior.hideCtaOnMobile && "hidden md:inline-flex",
+    !behavior.hideCtaOnMobile && isDrawerMode && "hidden md:inline-flex"
+  );
+
+  const ctaClusterClass = joinClasses(
+    "flex items-center gap-3",
+    style.ctaSeparator === "line"
+      ? "border-l border-[var(--color-border)] pl-4"
+      : style.ctaSeparator === "spacing"
+        ? "pl-4"
+        : ""
   );
 
   return (
     <nav
       className={navClass}
+      data-navigation-widget="1"
+      data-navigation-collapsed="false"
       data-collapse-on-scroll={behavior.collapseOnScroll ? "true" : undefined}
       data-mobile-mode={mobileMode}
       data-link-source={linksSource}
-      data-menu-key={data.menuKey ?? undefined}
+      data-menu-key={normalized.menuKey ?? undefined}
+      data-navigation-active-mode={behavior.activeLinkMode ?? "none"}
       style={navStyle}
+      aria-label="Primary navigation"
     >
       <div
         className={joinClasses(
-          "mx-auto flex w-full items-center justify-between",
+          "mx-auto flex w-full items-center justify-between gap-4",
           maxWidthClassMap[layout.maxWidth ?? "6xl"] ?? "max-w-6xl"
         )}
       >
-        <div className="flex items-center gap-3 text-sm font-semibold text-[var(--color-text)]">
-          {data.logo.type === "image" ? (
-            <img src={data.logo.value} alt={data.logo.alt ?? "Logo"} className="h-6 w-auto" />
+        <a
+          href={logoHref}
+          className="inline-flex items-center gap-3 text-sm font-semibold text-[var(--color-text)] transition-colors hover:text-[var(--navigation-link-hover-color)]"
+          aria-label={`${logoAccessibleName} home`}
+        >
+          {hasLogoImage ? (
+            <img
+              src={normalized.logo.value}
+              alt={normalized.logo.alt ?? "Logo"}
+              className={joinClasses(
+                logoHeightClassMap[style.logoHeight ?? "md"] ?? "h-6",
+                "w-auto"
+              )}
+            />
           ) : (
-            <span style={logoStyle}>{data.logo.value}</span>
+            <span
+              data-navigation-logo-missing-image={
+                normalized.logo.type === "image" ? "true" : undefined
+              }
+              style={logoStyle}
+            >
+              {normalized.logo.type === "image" ? logoAccessibleName : normalized.logo.value}
+            </span>
           )}
-        </div>
+        </a>
+
         <div
           className={joinClasses(
             "flex flex-1 items-center",
@@ -395,63 +1386,112 @@ export function NavigationBlock({
           <ul
             className={joinClasses(
               "items-center",
-              linksVisibleOnMobile ? "flex" : "hidden md:flex",
+              linksVisibleOnMobile ? "flex" : isMinimalMode ? "hidden md:flex" : "hidden md:flex",
               itemGapClassMap[layout.itemGap ?? "4"] ?? "gap-4",
-              fontSizeClassMap[style.fontSize ?? "sm"] ?? "text-sm",
-              fontWeightClassMap[style.fontWeight ?? "medium"] ?? "font-medium",
-              textTransformClassMap[style.textTransform ?? "none"] ?? "normal-case"
+              textClass
             )}
-            style={linksStyle}
           >
-            {renderedItems.map((item, index) => (
-              <li key={`${item.href || item.label}-${index}`} className="group relative">
-                <a href={item.href}>{item.label}</a>
-                {item.children?.length ? (
-                  <ul className="absolute left-0 top-full z-20 mt-2 hidden min-w-40 rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] p-2 shadow-sm group-hover:block group-focus-within:block">
-                    {item.children.map((child, childIndex) => (
-                      <li key={`${child.href || child.label}-${childIndex}`}>
-                        <a
-                          href={child.href}
-                          className="block rounded px-2 py-1 text-sm text-[var(--color-text)]/80 hover:bg-[var(--color-surface)]"
-                        >
-                          {child.label}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            ))}
+            {renderedItems.map((item, index) => renderNavigationItem(item, index, false))}
           </ul>
         </div>
-        {hasRightActions ? (
+
+        {shouldRenderRightCluster ? (
           <div className="flex items-center gap-3 pl-4">
             {showMobileToggle ? (
               <button
                 type="button"
-                className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs font-semibold md:hidden"
+                className={joinClasses(
+                  "inline-flex items-center gap-2 rounded-md border border-[var(--color-border)] px-3 py-2 text-xs font-semibold text-[var(--navigation-link-color)] md:hidden",
+                  "transition-colors hover:bg-muted/50 hover:text-[var(--navigation-link-hover-color)]"
+                )}
+                data-navigation-mobile-toggle
+                data-state="closed"
+                aria-expanded="false"
+                aria-controls={mobilePanelId}
+                aria-label="Open navigation menu"
               >
-                Menu
+                <span data-navigation-mobile-icon="menu" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4 fill-none stroke-current"
+                    strokeWidth="2"
+                  >
+                    <path d="M4 7h16M4 12h16M4 17h16" />
+                  </svg>
+                </span>
+                <span data-navigation-mobile-icon="close" aria-hidden="true" hidden>
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4 fill-none stroke-current"
+                    strokeWidth="2"
+                  >
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </span>
+                <span data-navigation-mobile-label>Menu</span>
               </button>
             ) : null}
+
             {rightSlotBlocks.map((slotBlock) => (
-              <WidgetRenderer key={slotBlock.id} block={slotBlock} previewDevice={previewDevice} />
+              <WidgetRenderer
+                key={slotBlock.id}
+                block={slotBlock}
+                previewDevice={previewDevice}
+                renderContext={renderContext}
+              />
             ))}
-            {showCta && data.cta ? (
-              <a
-                className={joinClasses(
-                  "rounded-md px-3 py-2 text-xs font-semibold",
-                  behavior.hideCtaOnMobile && "hidden md:inline-flex"
-                )}
-                style={ctaStyle}
-                href={data.cta.href}
-              >
-                {data.cta.label}
-              </a>
+
+            {showCta && normalized.cta ? (
+              <div className={ctaClusterClass}>
+                <a className={headerCtaClass} style={ctaStyle} href={normalized.cta.href}>
+                  {normalized.cta.label}
+                </a>
+              </div>
             ) : null}
           </div>
         ) : null}
       </div>
+
+      {showMobileToggle ? (
+        <div
+          id={mobilePanelId}
+          data-navigation-mobile-panel
+          data-state="closed"
+          hidden
+          aria-hidden="true"
+          className={joinClasses(
+            "mx-auto mt-3 w-full max-w-6xl overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] p-4 md:hidden",
+            motionClass,
+            "data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0 data-[state=closed]:-translate-y-2",
+            "data-[state=open]:pointer-events-auto data-[state=open]:opacity-100 data-[state=open]:translate-y-0"
+          )}
+        >
+          <ul className={joinClasses("flex flex-col gap-3", textClass)}>
+            {renderedItems.map((item, index) => renderNavigationItem(item, index, true))}
+          </ul>
+          {showCta && normalized.cta && !behavior.hideCtaOnMobile ? (
+            <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+              <a
+                className={joinClasses(
+                  ctaRadiusClassMap[style.ctaBorderRadius ?? "md"],
+                  "inline-flex px-3 py-2 text-xs font-semibold"
+                )}
+                style={ctaStyle}
+                href={normalized.cta.href}
+              >
+                {normalized.cta.label}
+              </a>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {(showMobileToggle ||
+        hasInteractiveSubmenus ||
+        behavior.collapseOnScroll ||
+        behavior.activeLinkMode !== "none") && (
+        <script dangerouslySetInnerHTML={{ __html: navigationRuntimeClientScript }} />
+      )}
     </nav>
   );
 }
@@ -475,6 +1515,7 @@ export function createNavigationWidget(editors: {
     schema: navigationSchema,
     defaults: navigationDefaults,
     editor: editors,
+    editorContract: navigationEditorContract,
     editorCapabilities: { visualOwnsVariantSelection: true },
     render: NavigationBlock,
   };

@@ -2,7 +2,7 @@
 
 import React from "react";
 import type { ComponentType } from "react";
-import { act } from "react";
+
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
@@ -33,38 +33,37 @@ import {
   compareTimelineDefaults,
   createCompareTimelineWidget,
 } from "../../../core/widgets/core/compareTimeline";
-import {
-  createFooterWidget,
-  footerDefaults,
-} from "../../../core/widgets/core/footer";
-import {
-  contactDefaults,
-  createContactWidget,
-} from "../../../core/widgets/core/contact";
-import {
-  createNavigationWidget,
-  navigationDefaults,
-} from "../../../core/widgets/core/navigation";
-import {
-  createNewsletterWidget,
-  newsletterDefaults,
-} from "../../../core/widgets/core/newsletter";
-import {
-  createTimelineWidget,
-  timelineDefaults,
-} from "../../../core/widgets/core/timeline";
-import type {
-  WidgetDefinition,
-  WidgetEditorProps,
-} from "../../../core/widgets/types";
+import { createFooterWidget, footerDefaults } from "../../../core/widgets/core/footer";
+import { contactDefaults, createContactWidget } from "../../../core/widgets/core/contact";
+import { createNavigationWidget, navigationDefaults } from "../../../core/widgets/core/navigation";
+import { createNewsletterWidget, newsletterDefaults } from "../../../core/widgets/core/newsletter";
+import { createTimelineWidget, timelineDefaults } from "../../../core/widgets/core/timeline";
+import type { WidgetDefinition, WidgetEditorProps } from "../../../core/widgets/types";
+
+vi.mock("@/components/ui/switch", () => ({
+  Switch: ({
+    checked,
+    onCheckedChange,
+  }: {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <button
+      type="button"
+      data-switch-checked={String(Boolean(checked))}
+      onClick={() => onCheckedChange?.(!checked)}
+    >
+      switch
+    </button>
+  ),
+}));
 
 const StubVisual: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => (
   <div>Hero visual editor body</div>
 );
 const StubEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
-const asEditor = <T,>() =>
-  StubEditor as unknown as ComponentType<WidgetEditorProps<T>>;
+const asEditor = <T,>() => StubEditor as unknown as ComponentType<WidgetEditorProps<T>>;
 
 const asVisualPanelWidget = <T,>(widget: WidgetDefinition<T>) =>
   widget as unknown as WidgetDefinition;
@@ -82,9 +81,7 @@ const baseBlock: Block = {
   },
 };
 
-function createWidget(
-  capabilities?: WidgetDefinition["editorCapabilities"]
-): WidgetDefinition {
+function createWidget(capabilities?: WidgetDefinition["editorCapabilities"]): WidgetDefinition {
   return {
     type: "hero",
     title: "Hero",
@@ -110,14 +107,14 @@ function mount(node: React.ReactNode) {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -131,13 +128,11 @@ afterEach(() => {
 
 test("VisualPanel keeps generic variant controls by default", () => {
   const html = renderAdminUi(
-    <VisualPanel
-      widget={createWidget()}
-      block={baseBlock}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={createWidget()} block={baseBlock} onChange={() => undefined} />
   );
 
+  expect(html).toContain('data-widget-editor="hero"');
+  expect(html).toContain('data-widget-editor-mode="visual"');
   expect(html).toContain("Choose a visual style for this widget.");
   expect(html).toContain("Add variant preset");
   expect(html).toContain("Hero visual editor body");
@@ -154,6 +149,125 @@ test("VisualPanel hides generic variant controls when widget owns visual variant
 
   expect(html).not.toContain("Choose a visual style for this widget.");
   expect(html).toContain("Hero visual editor body");
+});
+
+test("VisualPanel renders slot controls inside a named structure section", () => {
+  const html = renderAdminUi(
+    <VisualPanel
+      widget={createWidget({ visualOwnsVariantSelection: true })}
+      block={baseBlock}
+      onChange={() => undefined}
+      slotControls={{
+        sectionId: "hero.structure",
+        title: "Structure",
+        description: "Manage slots in the visual flow.",
+        addActions: [],
+        items: [
+          {
+            id: "hero.slot.content",
+            label: "Hero Content slot",
+            count: 0,
+            empty: true,
+            canRemove: false,
+            canMoveUp: false,
+            canMoveDown: false,
+          },
+        ],
+        childrenHint: "Use the slot add action in the canvas or drag from the widgets tab.",
+      }}
+    />
+  );
+
+  expect(html).toContain('data-widget-editor-section="hero.structure"');
+  expect(html).toContain('data-widget-control="hero.slot.content"');
+  expect(html).toContain('data-widget-control-ownership="action"');
+  expect(html).toContain("Hero Content slot");
+  expect(html).toContain("Manage slots in the visual flow.");
+});
+
+test("VisualPanel renders repeatable slot move controls with disabled boundaries", () => {
+  const html = renderAdminUi(
+    <VisualPanel
+      widget={createWidget({ visualOwnsVariantSelection: true })}
+      block={baseBlock}
+      onChange={() => undefined}
+      slotControls={{
+        sectionId: "accordion.structure",
+        title: "Structure",
+        addActions: [],
+        items: [
+          {
+            id: "accordion.slot.item-1",
+            label: "Item 1 slot",
+            count: 1,
+            empty: false,
+            canRemove: true,
+            canMoveUp: false,
+            canMoveDown: true,
+            onMoveUp: () => undefined,
+            onMoveDown: () => undefined,
+            onRemove: () => undefined,
+          },
+        ],
+      }}
+    />
+  );
+
+  expect(html).toContain("Move up");
+  expect(html).toContain("Move down");
+  expect(html).toContain("disabled");
+});
+
+test("VisualPanel forwards section region label edits through slot controls", () => {
+  const onLabelChange = vi.fn();
+  const view = mount(
+    <VisualPanel
+      widget={createWidget({ visualOwnsVariantSelection: true })}
+      block={baseBlock}
+      onChange={() => undefined}
+      slotControls={{
+        sectionId: "section.structure",
+        title: "Structure",
+        addActions: [],
+        items: [
+          {
+            id: "section.slot.region-1",
+            label: "Primary hero slot",
+            labelValue: "Primary hero",
+            labelPlaceholder: "Region 1",
+            count: 0,
+            empty: true,
+            canRemove: false,
+            canMoveUp: false,
+            canMoveDown: false,
+            onLabelChange,
+          },
+        ],
+      }}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Region label");
+    const input = view.container.querySelector(
+      'input[placeholder="Region 1"]'
+    ) as HTMLInputElement | null;
+    expect(input?.value).toBe("Primary hero");
+
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    React.act(() => {
+      if (!input) {
+        throw new Error("Missing region label input");
+      }
+      valueSetter?.call(input, "Supporting proof");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(onLabelChange).toHaveBeenCalledWith("Supporting proof");
+  } finally {
+    view.cleanup();
+  }
 });
 
 test("VisualPanel uses navigation editor variant controls", () => {
@@ -174,11 +288,7 @@ test("VisualPanel uses navigation editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -204,11 +314,7 @@ test("VisualPanel uses footer editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -232,11 +338,7 @@ test("VisualPanel uses timeline editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -261,11 +363,7 @@ test("VisualPanel uses compare timeline editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -290,11 +388,7 @@ test("VisualPanel uses newsletter editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -319,11 +413,7 @@ test("VisualPanel uses contact editor variant controls", () => {
   };
 
   const html = renderAdminUi(
-    <VisualPanel
-      widget={asVisualPanelWidget(widget)}
-      block={block}
-      onChange={() => undefined}
-    />
+    <VisualPanel widget={asVisualPanelWidget(widget)} block={block} onChange={() => undefined} />
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
@@ -374,10 +464,7 @@ test("VisualPanel forwards generic variant clicks and visual editor callbacks", 
   }) => (
     <div>
       <p data-current-variant={variant}>{String(value.headline)}</p>
-      <button
-        type="button"
-        onClick={() => onValueChange({ headline: "Updated headline" })}
-      >
+      <button type="button" onClick={() => onValueChange({ headline: "Updated headline" })}>
         Editor update data
       </button>
       <button type="button" onClick={() => onVariantChange?.("split")}>
@@ -423,13 +510,13 @@ test("VisualPanel forwards generic variant clicks and visual editor callbacks", 
     throw new Error("Missing editor variant button");
   }
 
-  act(() => {
+  React.act(() => {
     splitVariantButton.click();
   });
   expect(onChange).toHaveBeenLastCalledWith({ ...baseBlock, variant: "split" });
 
   onChange.mockClear();
-  act(() => {
+  React.act(() => {
     dataButton.click();
   });
   expect(onChange).toHaveBeenCalledWith({
@@ -438,10 +525,66 @@ test("VisualPanel forwards generic variant clicks and visual editor callbacks", 
   });
 
   onChange.mockClear();
-  act(() => {
+  React.act(() => {
     variantButton.click();
   });
   expect(onChange).toHaveBeenCalledWith({ ...baseBlock, variant: "split" });
 
   cleanup();
+});
+
+test("VisualPanel owns shared block layout and device visibility controls", () => {
+  const onChange = vi.fn();
+  const block: Block = {
+    ...baseBlock,
+    layout: {
+      container: "default",
+      padding: { top: "xl", bottom: "md" },
+      margin: { top: "none", bottom: "none" },
+      background: { color: "transparent", image: null },
+    },
+    visibility: {
+      enabled: true,
+      devices: ["desktop", "mobile"],
+    },
+  };
+
+  const { container, cleanup } = mount(
+    <VisualPanel widget={asVisualPanelWidget(createWidget())} block={block} onChange={onChange} />
+  );
+
+  try {
+    expect(container.textContent).toContain("Block layout");
+    expect(container.textContent).toContain("Device visibility");
+    const writablePaths = Array.from(container.querySelectorAll("[data-widget-control-path]"))
+      .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+      .map((element) => element.getAttribute("data-widget-control-path"));
+    expect(writablePaths).toEqual(
+      expect.arrayContaining([
+        "layout.container",
+        "layout.padding.top",
+        "layout.padding.bottom",
+        "layout.margin.top",
+        "layout.margin.bottom",
+        "visibility.devices.desktop",
+        "visibility.devices.tablet",
+        "visibility.devices.mobile",
+      ])
+    );
+
+    const switches = Array.from(container.querySelectorAll("button[data-switch-checked]"));
+    React.act(() => {
+      switches[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...block,
+      visibility: {
+        enabled: true,
+        devices: ["desktop", "mobile", "tablet"],
+      },
+    });
+  } finally {
+    cleanup();
+  }
 });

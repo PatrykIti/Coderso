@@ -20,6 +20,7 @@ export type AssistantResourceCatalogDeps = {
   listEntries?: (typeId: string) => Promise<unknown[]>;
   listContentTypes: () => Promise<unknown[]>;
   listCustomScreens: () => Promise<unknown[]>;
+  listDetailPages?: () => Promise<unknown[]>;
   listListingQueries: () => Promise<unknown[]>;
   listListingTemplates: () => Promise<unknown[]>;
   listFormsWithFields: () => Promise<AssistantFormWithFieldsRaw[]>;
@@ -40,6 +41,7 @@ type CatalogGroup =
   | "entries"
   | "content_types"
   | "custom_screens"
+  | "detail_pages"
   | "listing_queries"
   | "listing_templates"
   | "forms"
@@ -96,6 +98,7 @@ export async function buildAssistantResourceCatalogSnapshot(
     posts,
     contentTypes,
     customScreens,
+    detailPages,
     listingQueries,
     listingTemplates,
     forms,
@@ -111,6 +114,9 @@ export async function buildAssistantResourceCatalogSnapshot(
     deps.listPosts ? safeLoadGroup("posts", deps.listPosts, warnings) : Promise.resolve([]),
     safeLoadGroup("content_types", deps.listContentTypes, warnings),
     safeLoadGroup("custom_screens", deps.listCustomScreens, warnings),
+    deps.listDetailPages
+      ? safeLoadGroup("detail_pages", deps.listDetailPages, warnings)
+      : Promise.resolve([]),
     safeLoadGroup("listing_queries", deps.listListingQueries, warnings),
     safeLoadGroup("listing_templates", deps.listListingTemplates, warnings),
     safeLoadGroup("forms", deps.listFormsWithFields, warnings),
@@ -137,6 +143,7 @@ export async function buildAssistantResourceCatalogSnapshot(
       posts,
       entries,
       customScreens,
+      detailPages,
       listingQueries,
       listingTemplates,
       forms,
@@ -177,6 +184,8 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
     mediaService,
     commerceService,
     solutionKitsService,
+    detailPageDocumentService,
+    settingsService,
   ] = await Promise.all([
     import("../content/typeService"),
     import("../pages/pageService"),
@@ -192,7 +201,33 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
     import("../media/mediaService"),
     import("../commerce/commerceService"),
     import("../kits/solutionKitsService"),
+    import("../content/detailPageDocumentService"),
+    import("../settings/settingsService"),
   ]);
+
+  const listDetailPages = async () => {
+    const [detailPages, rawRoutes] = await Promise.all([
+      detailPageDocumentService.listDetailPageDocuments(),
+      settingsService.getSetting("site.contentRoutes"),
+    ]);
+    const linkedRouteTypeByDetailPageId = new Map<string, string>();
+    for (const route of settingsService.normalizeContentRoutes(rawRoutes)) {
+      if (route.detailPageId) {
+        linkedRouteTypeByDetailPageId.set(route.detailPageId, route.type);
+      }
+    }
+    return detailPages.map((detailPage) => ({
+      id: detailPage.id,
+      name: detailPage.name,
+      status: detailPage.status,
+      contentTypeId: detailPage.contentTypeId,
+      contentTypeSlug: detailPage.currentDocument.contentTypeSlug,
+      linkedRouteType: linkedRouteTypeByDetailPageId.get(detailPage.id) ?? null,
+      updatedAt: detailPage.updatedAt,
+      blockCount: detailPage.currentDocument.blocks.length,
+      bindingCount: detailPage.currentDocument.bindings.length,
+    }));
+  };
 
   return buildAssistantResourceCatalogSnapshot(input, {
     listPages: pageService.listPages,
@@ -200,6 +235,7 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
     listEntries: entryService.listEntries,
     listContentTypes: typeService.listContentTypes,
     listCustomScreens: customScreenService.listCustomScreens,
+    listDetailPages,
     listListingQueries: listingQueryService.listListingQueries,
     listListingTemplates: listingTemplateService.listListingTemplates,
     listFormsWithFields: async () => {

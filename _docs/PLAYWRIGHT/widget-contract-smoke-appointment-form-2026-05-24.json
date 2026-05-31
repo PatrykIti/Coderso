@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-05-24T12:50:06.975Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-13 --widget appointment-form --output-json _docs/PLAYWRIGHT/widget-contract-smoke-appointment-form-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-appointment-form-2026-05-24.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["appointment-form"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "appointment-form",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 1,
+            "visibleSectionCount": 1,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 7,
+            "visibleSectionCount": 7,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "f22436b5-24db-4536-9dda-07c0ae9cfcdb",
+        "adminPath": "http://localhost:5173/admin/pages/f22436b5-24db-4536-9dda-07c0ae9cfcdb",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "appointment-form",
+        "publicPath": "/test-appointment-form-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

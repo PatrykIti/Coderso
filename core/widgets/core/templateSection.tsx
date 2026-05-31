@@ -1,18 +1,39 @@
 import type { ComponentType } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps, WidgetLayoutDefaults } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorContract,
+  WidgetEditorProps,
+  WidgetLayoutDefaults,
+} from "../types";
 
 export const TEMPLATE_SECTION_TYPE = "template-section";
 
 export type TemplateSectionData = {
   templateId?: string;
   templateName?: string;
+  metadata?: {
+    category?: string;
+    previewLabel?: string;
+    version?: string;
+  };
   resolved?: {
     blocks?: WidgetBlock[];
     error?: string;
   };
 };
+
+export type TemplateSectionResolutionState =
+  | "not_selected"
+  | "preview_unresolved"
+  | "template_missing"
+  | "template_unpublished"
+  | "template_loop"
+  | "template_empty"
+  | "ready";
 
 export const templateSectionSchema = {
   type: "object",
@@ -20,6 +41,15 @@ export const templateSectionSchema = {
   properties: {
     templateId: { type: "string" },
     templateName: { type: "string" },
+    metadata: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        category: { type: "string" },
+        previewLabel: { type: "string" },
+        version: { type: "string" },
+      },
+    },
     resolved: {
       type: "object",
       additionalProperties: false,
@@ -39,25 +69,93 @@ export const templateSectionSchema = {
 export const templateSectionDefaults: TemplateSectionData = {
   templateId: "",
   templateName: "",
+  metadata: {
+    category: "",
+    previewLabel: "",
+    version: "",
+  },
 };
 
-export function normalizeTemplateSectionData(
-  data: TemplateSectionData
-): TemplateSectionData {
+const templateSectionEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "template-section.wizard.template-setup",
+      title: "Template setup",
+      role: "setup",
+      writablePaths: ["templateId", "templateName"],
+    },
+    {
+      mode: "visual",
+      id: "template-section.visual.active-template",
+      title: "Active template",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["templateId", "templateName"],
+    },
+    {
+      mode: "visual",
+      id: "template-section.visual.presentation-fields",
+      title: "Template presentation",
+      role: "visual",
+      writablePaths: ["metadata.previewLabel", "metadata.category"],
+      readOnlyPaths: ["metadata.version"],
+    },
+    {
+      mode: "advanced",
+      id: "template-section.advanced.template-diagnostics",
+      title: "Resolved template",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "templateId",
+        "templateName",
+        "metadata.previewLabel",
+        "metadata.category",
+        "metadata.version",
+        "resolved.blocks",
+        "resolved.error",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "template-section.advanced.runtime-payload",
+      title: "Resolved content summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["resolved.blocks", "resolved.error"],
+    },
+    {
+      mode: "advanced",
+      id: "template-section.advanced.runtime-rules",
+      title: "Runtime behavior",
+      role: "summary",
+      writablePaths: [],
+    },
+  ],
+} satisfies WidgetEditorContract;
+
+export function normalizeTemplateSectionData(data: TemplateSectionData): TemplateSectionData {
   const templateId = typeof data.templateId === "string" ? data.templateId : "";
   const templateName = typeof data.templateName === "string" ? data.templateName : "";
+  const metadata = data.metadata
+    ? {
+        category: typeof data.metadata.category === "string" ? data.metadata.category : "",
+        previewLabel:
+          typeof data.metadata.previewLabel === "string" ? data.metadata.previewLabel : "",
+        version: typeof data.metadata.version === "string" ? data.metadata.version : "",
+      }
+    : templateSectionDefaults.metadata;
   const resolvedBlocks =
-    data.resolved && Array.isArray(data.resolved.blocks)
-      ? data.resolved.blocks
-      : undefined;
+    data.resolved && Array.isArray(data.resolved.blocks) ? data.resolved.blocks : undefined;
   const resolvedError =
-    data.resolved && typeof data.resolved.error === "string"
-      ? data.resolved.error
-      : undefined;
+    data.resolved && typeof data.resolved.error === "string" ? data.resolved.error : undefined;
 
   return {
     templateId,
     templateName,
+    metadata,
     ...(data.resolved
       ? {
           resolved: {
@@ -69,18 +167,20 @@ export function normalizeTemplateSectionData(
   };
 }
 
-
 const resolveTemplateLabel = (data: TemplateSectionData) => {
+  const previewLabel = data.metadata?.previewLabel?.trim();
+  if (previewLabel) return previewLabel;
   const name = data.templateName?.trim();
   if (name) return name;
-  const id = data.templateId?.trim();
-  if (id) return id;
   return "Template section";
 };
 
 const resolvePlaceholderMessage = (data: TemplateSectionData) => {
   const templateId = data.templateId?.trim();
   if (!templateId) return "Select a widget template to render here.";
+  if (!data.resolved) {
+    return "Admin preview is placeholder-only until runtime resolves this template.";
+  }
 
   switch (data.resolved?.error) {
     case "template_missing":
@@ -94,24 +194,51 @@ const resolvePlaceholderMessage = (data: TemplateSectionData) => {
   }
 };
 
+export const resolveTemplateSectionState = (
+  data: TemplateSectionData
+): TemplateSectionResolutionState => {
+  const templateId = data.templateId?.trim();
+  if (!templateId) return "not_selected";
+  if (!data.resolved) return "preview_unresolved";
+  if (data.resolved.error === "template_missing") return "template_missing";
+  if (data.resolved.error === "template_unpublished") return "template_unpublished";
+  if (data.resolved.error === "template_loop") return "template_loop";
+  const blocks = Array.isArray(data.resolved.blocks) ? data.resolved.blocks : [];
+  return blocks.length > 0 ? "ready" : "template_empty";
+};
+
 const TemplateSectionPlaceholder = ({
   label,
   message,
   templateId,
+  resolutionState,
+  category,
+  version,
 }: {
   label: string;
   message: string;
   templateId?: string;
+  resolutionState: TemplateSectionResolutionState;
+  category?: string;
+  version?: string;
 }) => (
   <div
     className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm"
     data-template-section={templateId ?? ""}
     data-template-section-state="empty"
+    data-template-section-resolution={resolutionState}
+    data-template-section-category={category ?? ""}
+    data-template-section-version={version ?? ""}
   >
     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
       Template section
     </p>
     <p className="mt-1 text-sm font-semibold text-foreground">{label}</p>
+    {category || version ? (
+      <p className="mt-1 text-xs text-muted-foreground">
+        {[category, version].filter(Boolean).join(" / ")}
+      </p>
+    ) : null}
     <p className="mt-1 text-xs text-muted-foreground">{message}</p>
   </div>
 );
@@ -130,13 +257,21 @@ export function TemplateSectionBlock({
   const blocks = Array.isArray(normalized.resolved?.blocks) ? normalized.resolved?.blocks : [];
   const templateId = normalized.templateId?.trim();
   const label = resolveTemplateLabel(normalized);
+  const metadata = normalized.metadata ?? templateSectionDefaults.metadata ?? {};
+  const category = metadata.category?.trim();
+  const previewLabel = metadata.previewLabel?.trim();
+  const version = metadata.version?.trim();
+  const resolutionState = resolveTemplateSectionState(normalized);
 
-  if (!blocks.length) {
+  if (normalized.resolved?.error || !blocks.length) {
     return (
       <TemplateSectionPlaceholder
         label={label}
         message={resolvePlaceholderMessage(normalized)}
         templateId={templateId}
+        resolutionState={resolutionState}
+        category={category}
+        version={version}
       />
     );
   }
@@ -146,7 +281,17 @@ export function TemplateSectionBlock({
       className="flex flex-col gap-6"
       data-template-section={templateId ?? ""}
       data-template-section-state="ready"
+      data-template-section-resolution="ready"
+      data-template-section-category={category ?? ""}
+      data-template-section-version={version ?? ""}
     >
+      {previewLabel || category || version ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {previewLabel ? <span>{previewLabel}</span> : null}
+          {category ? <span>{category}</span> : null}
+          {version ? <span>{version}</span> : null}
+        </div>
+      ) : null}
       {blocks.map((child) => (
         <WidgetRenderer
           key={child.id}
@@ -174,6 +319,7 @@ export function createTemplateSectionWidget(editors: {
     defaults: templateSectionDefaults,
     editor: editors,
     editorCapabilities: { visualOwnsVariantSelection: true },
+    editorContract: templateSectionEditorContract,
     render: TemplateSectionBlock,
   };
 }

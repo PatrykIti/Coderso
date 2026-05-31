@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
-import { createBlock } from "@/ui/pages/builder/blockUtils";
+import { applyWidgetBlockPatch, createBlock } from "@/ui/pages/builder/blockUtils";
 import type { Block, WidgetDefinition } from "@/ui/pages/builder/types";
 import { getRegisteredWidget } from "@/ui/widgets/registry";
 
@@ -33,6 +33,7 @@ function WidgetConfigPreview({ widget }: WidgetConfigPreviewProps) {
       block={previewBlock}
       widget={widget}
       onChange={(next) => setPreviewBlock(next)}
+      onBlockPatch={(patch) => setPreviewBlock((current) => applyWidgetBlockPatch(current, patch))}
     />
   );
 }
@@ -54,8 +55,7 @@ export function WidgetDetailsDrawer({
     : "no-widget";
 
   const actionLabel =
-    primaryActionLabel ??
-    (widget?.source === "template" ? "Edit Template" : "Insert Widget");
+    primaryActionLabel ?? (widget?.source === "template" ? "Edit Template" : "Insert Widget");
   const actionHandler = onPrimaryAction ?? onInsert;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -114,8 +114,8 @@ export function WidgetDetailsDrawer({
                   </div>
                   {widgetDefinition ? (
                     <p className="text-[11px] text-muted-foreground">
-                      This is a preview of the configuration. Insert the widget to
-                      save it into a page or template.
+                      This is a preview of the configuration. Insert the widget to save it into a
+                      page or template.
                     </p>
                   ) : null}
                   {widgetDefinition ? (

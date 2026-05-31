@@ -10,6 +10,7 @@ test("ContentTypeEditor renders editor shell", () => {
   expect(html).toContain("Content Type Editor");
   expect(html).toContain("Save draft");
   expect(html).toContain("Publish");
+  expect(html).toContain("Collection workspace");
   expect(html).toContain("Duplicate");
   expect(html).toContain("Delete");
   expect(html).toContain("sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur");

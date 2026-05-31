@@ -7,7 +7,9 @@ import {
   normalizeCustomScreenDefinition,
   normalizeCustomScreenDefinitionForRead,
   normalizeCustomScreenSchemaVersion,
+  normalizeCustomScreenCollectionLink,
   type CustomScreenBinding,
+  type CustomScreenCollectionRole,
   type CustomScreenDefinition,
   type CustomScreenDefinitionVersion,
   normalizeCustomScreenSidebarConfig,
@@ -20,6 +22,8 @@ export type CustomScreenRecord = {
   name: string;
   contentTypeId: string;
   status: CustomScreenStatus;
+  collectionRole: CustomScreenCollectionRole | null;
+  compositionKey: string | null;
   showInSidebar: boolean;
   sidebarLabel: string | null;
   schemaVersion: CustomScreenDefinitionVersion;
@@ -35,6 +39,8 @@ export type CustomScreenCreateInput = {
   name: string;
   contentTypeId: string;
   status?: CustomScreenStatus;
+  collectionRole?: CustomScreenCollectionRole | null;
+  compositionKey?: string | null;
   showInSidebar?: boolean;
   sidebarLabel?: string | null;
   schemaVersion?: number;
@@ -47,6 +53,8 @@ export type CustomScreenUpdateInput = {
   name?: string;
   contentTypeId?: string;
   status?: CustomScreenStatus;
+  collectionRole?: CustomScreenCollectionRole | null;
+  compositionKey?: string | null;
   showInSidebar?: boolean;
   sidebarLabel?: string | null;
   schemaVersion?: number;
@@ -112,6 +120,10 @@ const mapRow = (
     name: row.name,
     contentTypeId: row.contentTypeId,
     status: normalizeStatus(row.status),
+    ...normalizeCustomScreenCollectionLink({
+      collectionRole: row.collectionRole,
+      compositionKey: row.compositionKey,
+    }),
     showInSidebar: row.showInSidebar,
     sidebarLabel: row.sidebarLabel ?? null,
     schemaVersion: definition.schemaVersion,
@@ -178,6 +190,10 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
     showInSidebar: input.showInSidebar,
     sidebarLabel: input.sidebarLabel,
   });
+  const collectionLink = normalizeCustomScreenCollectionLink({
+    collectionRole: input.collectionRole,
+    compositionKey: input.compositionKey,
+  });
 
   const now = new Date();
   const [row] = await db
@@ -186,6 +202,8 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
       name,
       contentTypeId,
       status: normalizeStatus(input.status),
+      collectionRole: collectionLink.collectionRole,
+      compositionKey: collectionLink.compositionKey,
       showInSidebar: sidebar.showInSidebar,
       sidebarLabel: sidebar.sidebarLabel,
       schemaVersion: definition.schemaVersion,
@@ -265,6 +283,12 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
     showInSidebar: input.showInSidebar !== undefined ? input.showInSidebar : existing.showInSidebar,
     sidebarLabel: input.sidebarLabel !== undefined ? input.sidebarLabel : existing.sidebarLabel,
   });
+  const collectionLink = normalizeCustomScreenCollectionLink({
+    collectionRole:
+      input.collectionRole !== undefined ? input.collectionRole : existing.collectionRole,
+    compositionKey:
+      input.compositionKey !== undefined ? input.compositionKey : existing.compositionKey,
+  });
 
   const [row] = await db
     .update(customScreens)
@@ -275,6 +299,8 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
         input.status !== undefined
           ? normalizeStatus(input.status)
           : normalizeStatus(existing.status),
+      collectionRole: collectionLink.collectionRole,
+      compositionKey: collectionLink.compositionKey,
       showInSidebar: sidebar.showInSidebar,
       sidebarLabel: sidebar.sidebarLabel,
       schemaVersion: definition.schemaVersion,

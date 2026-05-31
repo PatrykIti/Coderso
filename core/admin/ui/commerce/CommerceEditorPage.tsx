@@ -3,12 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -107,11 +102,7 @@ export function CommerceEditorPage() {
       })
       .catch((error) => {
         if (!active) return;
-        setError(
-          isApiClientError(error)
-            ? error.message
-            : "Failed to load commerce collections."
-        );
+        setError(isApiClientError(error) ? error.message : "Failed to load commerce collections.");
       })
       .finally(() => {
         if (!active) return;
@@ -126,11 +117,7 @@ export function CommerceEditorPage() {
         })
         .catch((error) => {
           if (!active) return;
-          setError(
-            isApiClientError(error)
-              ? error.message
-              : "Failed to load commerce product."
-          );
+          setError(isApiClientError(error) ? error.message : "Failed to load commerce product.");
         })
         .finally(() => {
           if (active) setIsLoading(false);
@@ -189,9 +176,7 @@ export function CommerceEditorPage() {
       }
       setSuccess("Product saved successfully.");
     } catch (error) {
-      setError(
-        isApiClientError(error) ? error.message : "Failed to save commerce product."
-      );
+      setError(isApiClientError(error) ? error.message : "Failed to save commerce product.");
     } finally {
       setIsSaving(false);
     }
@@ -232,7 +217,11 @@ export function CommerceEditorPage() {
 
   if (isLoading) {
     return (
-      <EditorShell activeHref="/admin/advanced/commerce" leftPanel={leftPanel} rightPanel={rightPanel}>
+      <EditorShell
+        activeHref="/admin/advanced/commerce"
+        leftPanel={leftPanel}
+        rightPanel={rightPanel}
+      >
         <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
           Loading product editor...
         </div>
@@ -245,17 +234,7 @@ export function CommerceEditorPage() {
       activeHref="/admin/advanced/commerce"
       leftPanel={leftPanel}
       rightPanel={rightPanel}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span>Commerce</span>
-          <span>/</span>
-          <span className="text-foreground">
-            {isCreateMode ? "New product" : draft.title || "Editor"}
-          </span>
-        </div>
-      }
+      breadcrumbs={["Coderso", "Commerce", isCreateMode ? "New product" : draft.title || "Editor"]}
     >
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 lg:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">

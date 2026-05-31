@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -29,6 +29,15 @@ type TestMenuItemNode = {
 type TestMenuWithItems = {
   menu: TestMenuSummary;
   items: TestMenuItemNode[];
+};
+
+type TestPageSummary = {
+  id: string;
+  title: string;
+  slug: string;
+  status: "draft" | "published" | "scheduled" | "archived";
+  updatedAt: string;
+  author: null;
 };
 
 type TestMediaRecord = {
@@ -88,7 +97,7 @@ function createMenuDetails(): Record<string, TestMenuWithItems> {
               id: "nav-1-1",
               label: "Archive",
               href: null,
-              pageId: null,
+              pageId: "page-archive",
               parentId: "nav-1",
               orderIndex: 0,
               settings: {
@@ -127,6 +136,67 @@ function createMenuDetails(): Record<string, TestMenuWithItems> {
       ],
     },
   };
+}
+
+function createPages(): TestPageSummary[] {
+  return [
+    {
+      id: "page-archive",
+      title: "Archive",
+      slug: "blog/archive/",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-contact",
+      title: "Contact",
+      slug: "contact",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-platform",
+      title: "Platform",
+      slug: "platform",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-api",
+      title: "API",
+      slug: "api",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-brand",
+      title: "Brand",
+      slug: "brand",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-root",
+      title: "Root",
+      slug: "",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-home",
+      title: "Home",
+      slug: "home",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+  ];
 }
 
 function createMediaRecords(): TestMediaRecord[] {
@@ -193,6 +263,7 @@ const navigationClientState = vi.hoisted(() => ({
   menuDetails: createMenuDetails(),
   listMenusError: null as unknown,
   menuDetailError: null as unknown,
+  pages: createPages(),
   media: createMediaRecords(),
   mediaError: null as unknown,
   mediaPickerValue: "logo-1" as unknown,
@@ -373,6 +444,19 @@ vi.mock("@/services/mediaClient", () => ({
   }),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => {
+    await Promise.resolve();
+    return navigationClientState.pages;
+  }),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+  },
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({
     value,
@@ -398,14 +482,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -414,7 +498,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -427,7 +511,7 @@ const normalizeText = (value: string | null | undefined) =>
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -437,7 +521,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -445,7 +529,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const clickElement = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLElement)) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
@@ -475,6 +559,20 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findInputByAriaLabel = (container: ParentNode, ariaLabel: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) =>
+      element instanceof HTMLInputElement && element.getAttribute("aria-label") === ariaLabel
+  );
+
+const getDestinationSelect = (container: ParentNode, fieldId: string) => {
+  const select = container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error(`Missing destination select "${fieldId}"`);
+  }
+  return select;
+};
+
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).filter((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
@@ -487,7 +585,7 @@ const findSelectByOptions = (container: ParentNode, values: string[], index = 0)
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find(
-    (section) => normalizeText(section.querySelector("p")?.textContent) === normalizeText(title)
+    (section) => normalizeText(section.querySelector("h3, p")?.textContent) === normalizeText(title)
   );
 
 const findCheckboxes = (container: ParentNode) =>
@@ -506,6 +604,7 @@ afterEach(() => {
   navigationClientState.menuDetails = createMenuDetails();
   navigationClientState.listMenusError = null;
   navigationClientState.menuDetailError = null;
+  navigationClientState.pages = createPages();
   navigationClientState.media = createMediaRecords();
   navigationClientState.mediaError = null;
   navigationClientState.mediaPickerValue = "logo-1";
@@ -516,7 +615,10 @@ test("Navigation helper exports map menu metadata and selection patches", async 
   const { buildMenuSelectionPatch, mapMenuNodesToNavigationItems } =
     await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
-  const mapped = mapMenuNodesToNavigationItems(createMenuDetails()["menu-1"].items);
+  const mapped = mapMenuNodesToNavigationItems(
+    createMenuDetails()["menu-1"].items,
+    new Map(createPages().map((page) => [page.id, page.slug] as const))
+  );
 
   expect(mapped).toEqual([
     {
@@ -531,7 +633,7 @@ test("Navigation helper exports map menu metadata and selection patches", async 
       children: [
         {
           label: "Archive",
-          href: "#",
+          href: "/blog/archive",
           meta: {
             visibility: "logged_out",
             badge: null,
@@ -563,7 +665,7 @@ test("Navigation helper exports map menu metadata and selection patches", async 
   });
 });
 
-test("NavigationWizardEditor covers links-source branching, menu sync, logo library resolution, and CTA variant toggles", async () => {
+test("NavigationWizardEditor is now a read-only starter summary", async () => {
   const { NavigationWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
@@ -597,144 +699,53 @@ test("NavigationWizardEditor covers links-source branching, menu sync, logo libr
   const view = mount(<Harness />);
 
   try {
+    await flush();
     expect(normalizeText(view.container.textContent)).toContain(normalizeText("Quick links"));
-
-    const linksSourceSelect = findSelectByOptions(view.container, ["manual", "menu", "pages"]);
-    setSelectValue(linksSourceSelect, "pages");
-
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Current layout"));
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Simple"));
     expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Fallback links appear when no pages match.")
+      normalizeText("Current links source")
     );
-
-    setInputValue(findInputByPlaceholder(view.container, "Item 1 label"), "Overview");
-    expect(latestValue.items[0]).toMatchObject({
-      label: "Overview",
-      href: "/",
-    });
-
-    clickElement(findCheckboxes(view.container)[0]);
-    expect(latestVariant).toBe("with-cta");
-
-    setInputValue(findInputByPlaceholder(view.container, "Get started"), "Talk to sales");
-    setInputValue(findInputByPlaceholder(view.container, "/start"), "/contact");
-    expect(latestValue.cta).toEqual({
-      label: "Talk to sales",
-      href: "/contact",
-    });
-
-    setSelectValue(linksSourceSelect, "menu");
-    await flush();
-
-    const menuSelect = findSelectByOptions(view.container, ["__none__", "menu-1", "menu-2"]);
-    setSelectValue(menuSelect, "menu-1");
-
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Manual links"));
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Logo type"));
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Text logo"));
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Logo text"));
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Coderso"));
+    expect(view.container.querySelectorAll("select")).toHaveLength(0);
+    expect(findSelectsByOptions(view.container, ["manual", "menu", "pages"])).toHaveLength(0);
     expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Syncing links from selected menu...")
+      normalizeText(
+        "Visual owns source switching, link labels, destinations, and dropdown structure."
+      )
     );
-
-    await flush();
-
-    expect(latestValue.menuKey).toBe("menu-1");
-    expect(latestValue.items).toEqual([
-      {
-        label: "Blog",
-        href: "/blog",
-        meta: {
-          visibility: "logged_in",
-          badge: { label: "New", tone: "accent" },
-          description: "Latest writing",
-          icon: "newspaper",
-        },
-        children: [
-          {
-            label: "Archive",
-            href: "#",
-            meta: {
-              visibility: "logged_out",
-              badge: null,
-              description: null,
-              icon: null,
-            },
-          },
-        ],
-      },
-      {
-        label: "Contact",
-        href: "/contact",
-        meta: {
-          visibility: "all",
-          badge: null,
-          description: null,
-          icon: null,
-        },
-      },
-    ]);
-
-    setSelectValue(menuSelect, "__none__");
-    expect(latestValue.menuKey).toBeUndefined();
-
-    const logoTypeSelect = findSelectByOptions(view.container, ["text", "image"]);
-    setSelectValue(logoTypeSelect, "image");
-    setInputValue(findInputByPlaceholder(view.container, "https://..."), "logo.svg");
-
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Use a relative path or full URL.")
-    );
-
-    const logoSourceSelect = findSelectByOptions(view.container, ["external", "library"]);
-    setSelectValue(logoSourceSelect, "library");
-
-    navigationClientState.mediaPickerValue = "missing-asset";
-    clickByText(view.container, "pick-media");
-    await flush();
-
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Selected media could not be resolved.")
-    );
-
-    navigationClientState.mediaPickerValue = "logo-1";
-    clickByText(view.container, "pick-media");
-    await flush();
-
-    expect(latestValue.logo).toMatchObject({
-      type: "image",
-      source: "library",
-      assetId: "logo-1",
-      value: "https://cdn.example.com/logo.png",
-      alt: "Coderso mark",
-    });
-
-    clickByText(view.container, "clear-media");
-    expect(latestValue.logo).toMatchObject({
-      assetId: undefined,
-      value: "",
-    });
-
-    setSelectValue(findSelectByOptions(view.container, ["external", "library"]), "external");
-    expect(latestValue.logo).toMatchObject({
-      source: "external",
-      assetId: undefined,
-    });
-
-    clickElement(findCheckboxes(view.container)[0]);
-    expect(latestVariant).toBe("simple");
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Simple variant hides CTA in runtime output.")
     );
+    expect(findInputByPlaceholder(view.container, "Get started")).toBeUndefined();
+    expect(
+      view.container.querySelector(
+        '[data-link-destination-field="navigation-wizard-cta-destination"]'
+      )
+    ).toBeNull();
+    expect(findInputByPlaceholder(view.container, "Coderso")).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "Logo alt text")).toBeUndefined();
+    expect(() => clickByText(view.container, "pick-media")).toThrow();
+    expect(latestVariant).toBe("simple");
+    expect(latestValue.logo?.value).toBe("Coderso");
   } finally {
     view.cleanup();
   }
 });
 
-test("NavigationWizardEditor surfaces menu list and logo lookup API errors without using live clients", async () => {
+test("NavigationWizardEditor shows read-only menu state without surfacing live menu client failures", async () => {
   navigationClientState.listMenusError = createApiClientError("Menus unavailable");
-  navigationClientState.mediaError = createApiClientError("Logo lookup failed");
 
   const { NavigationWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   let latestValue = createNavigationValue({
     linksSource: "menu",
+    menuKey: "menu-1",
     logo: {
       type: "image",
       value: "",
@@ -766,24 +777,20 @@ test("NavigationWizardEditor surfaces menu list and logo lookup API errors witho
   try {
     await flush();
 
-    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Menus unavailable"));
-
-    clickByText(view.container, "pick-media");
-    await flush();
-
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Logo lookup failed")
+    expect(normalizeText(view.container.textContent)).not.toContain(
+      normalizeText("Menus unavailable")
     );
-    expect(latestValue.logo).toMatchObject({
-      source: "library",
-      assetId: "logo-1",
-    });
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Selected menu"));
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("menu-1"));
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Switch source or sync a different menu in Visual.")
+    );
   } finally {
     view.cleanup();
   }
 });
 
-test("NavigationWizardEditor updates manual links and logo copy safely without a variant handler", async () => {
+test("NavigationWizardEditor no longer mutates manual links or logo copy without a variant handler", async () => {
   const { NavigationWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
@@ -811,42 +818,25 @@ test("NavigationWizardEditor updates manual links and logo copy safely without a
   const view = mount(<Harness />);
 
   try {
-    setSelectValue(findSelectByOptions(view.container, ["simple", "with-cta", "split"]), "split");
-
-    const quickLinkInputs = findInputsByPlaceholder(view.container, "/path");
-    setInputValue(findInputByPlaceholder(view.container, "Item 1 label"), "Platform");
-    setInputValue(quickLinkInputs[0], "/platform");
-
-    expect(latestValue.items[0]).toMatchObject({
-      label: "Platform",
-      href: "/platform",
-    });
-
-    setInputValue(findInputByPlaceholder(view.container, "Coderso"), "Northwind");
-    setInputValue(findInputByPlaceholder(view.container, "Logo link (e.g. /)"), "/home");
-
-    expect(latestValue.logo).toMatchObject({
-      type: "text",
-      value: "Northwind",
-      href: "/home",
-    });
-
-    clickElement(findCheckboxes(view.container).at(-1));
+    await flush();
+    expect(findInputByPlaceholder(view.container, "Item 1 label")).toBeUndefined();
+    expect(
+      view.container.querySelector(
+        '[data-link-destination-field="navigation-wizard-link-1-destination"]'
+      )
+    ).toBeNull();
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText(
+        "Visual owns source switching, link labels, destinations, and dropdown structure."
+      )
+    );
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Simple variant hides CTA in runtime output.")
     );
-
-    const logoTypeSelect = findSelectByOptions(view.container, ["text", "image"]);
-    setSelectValue(logoTypeSelect, "image");
-
-    setInputValue(findInputByPlaceholder(view.container, "https://..."), "/brand/logo.svg");
-    setInputValue(findInputByPlaceholder(view.container, "Logo alt text"), "Northwind mark");
-
     expect(latestValue.logo).toMatchObject({
-      type: "image",
-      value: "/brand/logo.svg",
-      href: "/home",
-      alt: "Northwind mark",
+      type: "text",
+      value: "Starter brand",
+      href: "/",
     });
   } finally {
     view.cleanup();
@@ -869,8 +859,14 @@ test("Navigation editors surface generic menu and logo resolver failures without
 
   try {
     await flush();
-    expect(normalizeText(menuLoadView.container.textContent)).toContain(
+    expect(normalizeText(menuLoadView.container.textContent)).not.toContain(
       normalizeText("Failed to load menus.")
+    );
+    expect(normalizeText(menuLoadView.container.textContent)).toContain(
+      normalizeText("Current links source")
+    );
+    expect(normalizeText(menuLoadView.container.textContent)).toContain(
+      normalizeText("Existing menu")
     );
   } finally {
     menuLoadView.cleanup();
@@ -915,47 +911,6 @@ test("Navigation editors surface generic menu and logo resolver failures without
 
   navigationClientState.menuDetailError = null;
   navigationClientState.mediaError = new Error("resolve_failed");
-
-  let latestLogoValue = createNavigationValue({
-    logo: {
-      type: "image",
-      value: "",
-      href: "/",
-      source: "library",
-    },
-  });
-
-  const LogoHarness = () => {
-    const [value, setValue] = useState<NavigationData>(latestLogoValue);
-
-    return (
-      <NavigationWizardEditor
-        value={value}
-        onChange={(next) => {
-          latestLogoValue = next;
-          setValue(next);
-        }}
-        variant="with-cta"
-      />
-    );
-  };
-
-  const logoView = mount(<LogoHarness />);
-
-  try {
-    clickByText(logoView.container, "pick-media");
-    await flush();
-
-    expect(normalizeText(logoView.container.textContent)).toContain(
-      normalizeText("Failed to resolve selected logo.")
-    );
-    expect(latestLogoValue.logo).toMatchObject({
-      source: "library",
-      assetId: "logo-1",
-    });
-  } finally {
-    logoView.cleanup();
-  }
 });
 
 test("NavigationVisualEditor covers API menu resolver fallback and color picker updates", async () => {
@@ -982,6 +937,7 @@ test("NavigationVisualEditor covers API menu resolver fallback and color picker 
   const view = mount(<Harness />);
 
   try {
+    await flush();
     const structureSection = findSectionByTitle(view.container, "Variant and Structure");
     if (!(structureSection instanceof HTMLElement)) {
       throw new Error("Missing structure section");
@@ -1070,32 +1026,81 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     expect(mobileSection).toBeTruthy();
     expect(colorsSection).toBeTruthy();
     expect(surfaceSection).toBeTruthy();
+    expect(
+      Array.from(view.container.querySelectorAll("[data-widget-editor-section]")).map((section) =>
+        section.getAttribute("data-widget-editor-section")
+      )
+    ).toEqual([
+      "navigation.visual.variant-structure",
+      "navigation.visual.brand-logo",
+      "navigation.visual.navigation-links",
+      "navigation.visual.cta-right-actions",
+      "navigation.visual.mobile-behavior",
+      "navigation.visual.colors-borders-typography",
+      "navigation.visual.surface-runtime-behavior",
+    ]);
+    expect(
+      findInputByAriaLabel(colorsSection ?? view.container, "Surface color value")
+    ).toBeFalsy();
+    expect(findInputByAriaLabel(colorsSection ?? view.container, "Border color value")).toBeFalsy();
 
     clickByText(structureSection ?? view.container, "Split");
     expect(latestVariant).toBe("split");
+    await flush();
 
     setInputValue(findInputByPlaceholder(linksSection ?? view.container, "Item 1 label"), "Docs");
-    setInputValue(
-      findInputsByPlaceholder(linksSection ?? view.container, "/path")[0],
-      "ftp://invalid"
+    setSelectValue(
+      getDestinationSelect(linksSection ?? view.container, "navigation-visual-link-1-destination"),
+      "page-platform"
     );
 
-    expect(normalizeText(linksSection?.textContent)).toContain(
-      normalizeText("Use a relative path or full URL.")
-    );
     expect(latestValue.items[0]).toMatchObject({
       label: "Docs",
-      href: "ftp://invalid",
+      href: "/platform",
+    });
+    expect(findInputsByPlaceholder(linksSection ?? view.container, "/path")).toHaveLength(0);
+
+    setSelectValue(
+      findSelectByOptions(linksSection ?? view.container, ["none", "pathname", "exact"]),
+      "exact"
+    );
+    expect(latestValue.behavior?.activeLinkMode).toBe("exact");
+
+    setInputValue(findInputByPlaceholder(linksSection ?? view.container, "sparkles"), "spark");
+    setInputValue(
+      findInputByPlaceholder(linksSection ?? view.container, "Helpful context under the label"),
+      "Latest writing"
+    );
+    setInputValue(findInputByPlaceholder(linksSection ?? view.container, "New"), "Beta");
+    setSelectValue(findSelectByOptions(linksSection ?? view.container, ["self", "blank"]), "blank");
+    expect(latestValue.items[0]).toMatchObject({
+      target: "blank",
+      meta: {
+        icon: "spark",
+        description: "Latest writing",
+        badge: {
+          label: "Beta",
+          tone: "default",
+        },
+      },
     });
 
     clickByText(linksSection ?? view.container, "Add sub-link", 0);
     setInputValue(findInputByPlaceholder(linksSection ?? view.container, "Sub-link label"), "API");
-    setInputValue(findInputsByPlaceholder(linksSection ?? view.container, "/path")[1], "/api");
+    await flush();
+    setSelectValue(
+      getDestinationSelect(
+        linksSection ?? view.container,
+        "navigation-visual-link-1-child-1-destination"
+      ),
+      "page-api"
+    );
 
     expect(latestValue.items[0].children).toEqual([
       {
         label: "API",
         href: "/api",
+        target: "self",
       },
     ]);
 
@@ -1161,15 +1166,18 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
         },
       },
     ]);
+    expect(normalizeText(linksSection?.textContent)).toContain(
+      normalizeText("Current synced menu")
+    );
+    expect(normalizeText(linksSection?.textContent)).toContain(normalizeText("Support"));
+    expect(normalizeText(linksSection?.textContent)).toContain(normalizeText("/support"));
 
     setSelectValue(findSelectByOptions(brandSection ?? view.container, ["text", "image"]), "image");
-    setInputValue(
-      findInputByPlaceholder(brandSection ?? view.container, "https://..."),
-      "/brand/logo.svg"
-    );
-    setInputValue(
-      findInputByPlaceholder(brandSection ?? view.container, "Logo link (e.g. /)"),
-      "/brand"
+    clickByText(brandSection ?? view.container, "pick-media");
+    await flush();
+    setSelectValue(
+      getDestinationSelect(brandSection ?? view.container, "navigation-visual-logo-destination"),
+      "page-brand"
     );
     setInputValue(
       findInputByPlaceholder(brandSection ?? view.container, "Logo alt text"),
@@ -1186,20 +1194,19 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
       value: "Northwind OS",
       href: "/brand",
       alt: "Brand mark",
+      source: "library",
+      assetId: "logo-1",
     });
 
     setInputValue(findInputByPlaceholder(ctaSection ?? view.container, "CTA label"), "Contact");
-    setInputValue(
-      findInputByPlaceholder(ctaSection ?? view.container, "/start"),
-      "mailto:test@example.com"
+    setSelectValue(
+      getDestinationSelect(ctaSection ?? view.container, "navigation-visual-cta-destination"),
+      "page-contact"
     );
 
-    expect(normalizeText(ctaSection?.textContent)).toContain(
-      normalizeText("Use a relative path or full URL.")
-    );
     expect(latestValue.cta).toEqual({
       label: "Contact",
-      href: "mailto:test@example.com",
+      href: "/contact",
     });
 
     setSelectValue(
@@ -1213,27 +1220,36 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
       hideCtaOnMobile: true,
     });
 
-    setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#ffffff"), "#f8fafc");
-    setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#e2e8f0"), "#cbd5e1");
     setInputValue(
-      findInputsByPlaceholder(colorsSection ?? view.container, "#0f172a")[0],
+      findInputByAriaLabel(colorsSection ?? view.container, "Surface color swatch"),
+      "#f8fafc"
+    );
+    setInputValue(
+      findInputByAriaLabel(colorsSection ?? view.container, "Border color swatch"),
+      "#cbd5e1"
+    );
+    setInputValue(
+      findInputByAriaLabel(colorsSection ?? view.container, "Text color swatch"),
       "#0f172b"
     );
     setInputValue(
-      findInputsByPlaceholder(colorsSection ?? view.container, "#0f172a")[1],
+      findInputByAriaLabel(colorsSection ?? view.container, "Logo color swatch"),
       "#1f2937"
     );
-    setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#334155"), "#475569");
     setInputValue(
-      findInputsByPlaceholder(colorsSection ?? view.container, "#1d4ed8")[0],
+      findInputByAriaLabel(colorsSection ?? view.container, "Link color swatch"),
+      "#475569"
+    );
+    setInputValue(
+      findInputByAriaLabel(colorsSection ?? view.container, "CTA background swatch"),
       "#2563eb"
     );
     setInputValue(
-      findInputsByPlaceholder(colorsSection ?? view.container, "#ffffff")[1],
+      findInputByAriaLabel(colorsSection ?? view.container, "CTA text color swatch"),
       "#eff6ff"
     );
     setInputValue(
-      findInputsByPlaceholder(colorsSection ?? view.container, "#1d4ed8")[1],
+      findInputByAriaLabel(colorsSection ?? view.container, "CTA border color swatch"),
       "#1e40af"
     );
     setSelectValue(findSelectByOptions(colorsSection ?? view.container, ["0", "1", "2", "3"]), "2");
@@ -1286,13 +1302,149 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
   }
 });
 
-test("NavigationAdvancedEditor updates layout tokens and runtime toggles", async () => {
-  const { NavigationAdvancedEditor } =
+test("NavigationVisualEditor surfaces runtime boundaries, cleared-link feedback, and full color reset policy", async () => {
+  const { NavigationVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
   let latestValue = createNavigationValue({
-    layout: {},
-    behavior: {},
+    style: {
+      surfaceColor: "var(--color-bg)",
+      borderColor: "#cbd5e1",
+      textColor: "#0f172a",
+      logoColor: "#1f2937",
+      linkColor: "#475569",
+      linkHoverColor: "#0f172a",
+      linkActiveColor: "#1d4ed8",
+      ctaBackgroundColor: "var(--color-primary)",
+      ctaTextColor: "var(--color-bg)",
+      ctaBorderColor: "transparent",
+    },
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState<NavigationData>(latestValue);
+
+    return (
+      <NavigationVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="with-cta"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    const linksSection = findSectionByTitle(view.container, "Navigation Links");
+    const colorsSection = findSectionByTitle(view.container, "Colors, Borders, Typography");
+
+    expect(normalizeText(linksSection?.textContent)).toContain(
+      normalizeText(
+        "Admin preview renders static navigation markup. Drawer, submenu, collapse-on-scroll, and active-link updates are activated by the public runtime script."
+      )
+    );
+
+    expect(normalizeText(colorsSection?.textContent)).toContain(normalizeText("Theme default"));
+    expect(normalizeText(colorsSection?.textContent)).toContain(
+      normalizeText(
+        "The admin swatch is a fallback preview; public pages resolve `var(--color-bg)` from the active theme."
+      )
+    );
+    expect(normalizeText(colorsSection?.textContent)).not.toContain(
+      normalizeText("Saved custom color")
+    );
+
+    clickByText(linksSection ?? view.container, "Clear destination", 0);
+    await flush();
+
+    expect(latestValue.items[0].href).toBe("");
+    expect(normalizeText(linksSection?.textContent)).toContain(
+      normalizeText(
+        "This link is saved in the editor but hidden from runtime until a public-safe destination is selected."
+      )
+    );
+
+    const clearButtons = Array.from(
+      (colorsSection ?? view.container).querySelectorAll("button")
+    ).filter((button) => normalizeText(button.textContent) === "clear");
+
+    expect(clearButtons).toHaveLength(10);
+    clickElement(clearButtons[1]);
+    await flush();
+
+    expect(latestValue.style?.borderColor).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("NavigationVisualEditor clear image leaves image mode without a broken fallback source", async () => {
+  const { NavigationVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
+
+  let latestValue = createNavigationValue({
+    logo: {
+      type: "image",
+      value: "https://cdn.example.com/logo.png",
+      href: "/",
+      alt: "Northwind",
+      source: "external",
+    },
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState<NavigationData>(latestValue);
+
+    return (
+      <NavigationVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="split"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    const brandSection = findSectionByTitle(view.container, "Brand and Logo");
+    clickByText(brandSection ?? view.container, "Clear image");
+    await flush();
+
+    expect(latestValue.logo).toMatchObject({
+      type: "image",
+      value: "",
+      source: "external",
+    });
+    expect(normalizeText(brandSection?.textContent)).toContain(
+      normalizeText(
+        "No image is saved. Runtime uses the logo alt text as a safe text fallback until a Media Library image is selected."
+      )
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("NavigationVisualEditor reorders top-level links with move controls", async () => {
+  const { NavigationVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
+
+  let latestValue = createNavigationValue({
+    linksSource: "manual",
   });
 
   const Harness = () => {
@@ -1302,6 +1454,48 @@ test("NavigationAdvancedEditor updates layout tokens and runtime toggles", async
       latestValue = next;
       setValue(next);
     };
+
+    return (
+      <NavigationVisualEditor
+        value={value}
+        onChange={handleChange}
+        variant="split"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const linksSection = findSectionByTitle(view.container, "Navigation Links");
+    const firstLinkCard = Array.from(
+      (linksSection ?? view.container).querySelectorAll(".rounded-md")
+    ).find((candidate) => normalizeText(candidate.textContent).includes(normalizeText("Link 1")));
+
+    clickByText(firstLinkCard ?? linksSection ?? view.container, "Move down");
+    await flush();
+
+    expect(latestValue.items.map((item) => item.label)).toEqual(["Docs", "Home", "Pricing"]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("NavigationAdvancedEditor keeps layout and runtime behavior diagnostics read-only", async () => {
+  const { NavigationAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
+
+  let latestValue = createNavigationValue({
+    layout: {},
+    behavior: {},
+  });
+  const handleChange = vi.fn((next: NavigationData) => {
+    latestValue = next;
+  });
+
+  const Harness = () => {
+    const [value] = useState<NavigationData>(latestValue);
 
     return (
       <NavigationAdvancedEditor
@@ -1316,34 +1510,36 @@ test("NavigationAdvancedEditor updates layout tokens and runtime toggles", async
   const view = mount(<Harness />);
 
   try {
-    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Runtime Behavior"));
-
-    setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "center");
-    const maxWidthSelect = findSelectByOptions(view.container, ["5xl", "6xl", "7xl"]);
-    const paddingYSelect = findSelectByOptions(view.container, ["2", "3", "4", "5"]);
-    const itemGapSelect = findSelectByOptions(view.container, ["2", "3", "4", "6"]);
-    for (const select of [maxWidthSelect, paddingYSelect, itemGapSelect]) {
-      expect(
-        Array.from((select as HTMLSelectElement).options).map((option) => option.value)
-      ).toContain("none");
-    }
-    setSelectValue(maxWidthSelect, "7xl");
-    setSelectValue(paddingYSelect, "5");
-    setSelectValue(itemGapSelect, "6");
-
-    const checkboxes = findCheckboxes(view.container);
-    clickElement(checkboxes[0]);
-    clickElement(checkboxes[1]);
-
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Layout token summary")
+    );
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Runtime behavior summary")
+    );
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Transparent surface")
+    );
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Mobile mode"));
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Hide CTA on mobile")
+    );
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Active link mode"));
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Admin preview runtime")
+    );
+    expect(findSelectByOptions(view.container, ["left", "center", "right"])).toBeUndefined();
+    expect(findSelectByOptions(view.container, ["5xl", "6xl", "7xl"])).toBeUndefined();
+    expect(findCheckboxes(view.container)).toHaveLength(0);
+    expect(handleChange).not.toHaveBeenCalled();
     expect(latestValue.layout).toEqual({
-      alignment: "center",
-      maxWidth: "7xl",
-      paddingY: "5",
-      itemGap: "6",
+      alignment: "right",
+      maxWidth: "6xl",
+      paddingY: "4",
+      itemGap: "4",
     });
     expect(latestValue.behavior).toMatchObject({
-      sticky: true,
-      collapseOnScroll: true,
+      sticky: false,
+      collapseOnScroll: false,
     });
   } finally {
     view.cleanup();
@@ -1371,33 +1567,23 @@ test("Navigation editors fall back to default source, items, behavior, and layou
   );
 
   try {
-    expect(
-      (
-        findSelectByOptions(wizardView.container, ["manual", "menu", "pages"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("manual");
-    expect(
-      (
-        findInputByPlaceholder(wizardView.container, "Item 1 label") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("Home");
-    expect(
-      (findInputByPlaceholder(wizardView.container, "/path") as HTMLInputElement | null | undefined)
-        ?.value
-    ).toBe("/");
-    expect(
-      (
-        findInputByPlaceholder(wizardView.container, "Coderso") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+    await flush();
+    expect(findSelectsByOptions(wizardView.container, ["manual", "menu", "pages"])).toHaveLength(0);
+    expect(wizardView.container.querySelectorAll("select")).toHaveLength(0);
+    expect(normalizeText(wizardView.container.textContent)).toContain(
+      normalizeText("Current links source")
+    );
+    expect(normalizeText(wizardView.container.textContent)).toContain(
+      normalizeText("Manual links")
+    );
+    expect(normalizeText(wizardView.container.textContent)).toContain(
+      normalizeText("Current layout")
+    );
+    expect(normalizeText(wizardView.container.textContent)).toContain(normalizeText("Text logo"));
+    expect(normalizeText(wizardView.container.textContent)).toContain(
+      normalizeText("Starter links preview")
+    );
+    expect(findInputByPlaceholder(wizardView.container, "Coderso")).toBeUndefined();
   } finally {
     wizardView.cleanup();
   }
@@ -1435,13 +1621,16 @@ test("Navigation editors fall back to default source, items, behavior, and layou
         ?.checked
     ).toBe(false);
     expect(
+      findInputByAriaLabel(colorsSection as ParentNode, "Surface color value")
+    ).toBeUndefined();
+    expect(
       (
-        findInputByPlaceholder(colorsSection as ParentNode, "#ffffff") as
+        findInputByAriaLabel(colorsSection as ParentNode, "Surface color swatch") as
           | HTMLInputElement
           | null
           | undefined
       )?.value
-    ).toBe("");
+    ).toBe("#ffffff");
     expect(
       (
         findSelectByOptions(colorsSection as ParentNode, ["0", "1", "2", "3"]) as
@@ -1483,27 +1672,15 @@ test("Navigation editors fall back to default source, items, behavior, and layou
 
   try {
     expect(
-      (
-        findSelectByOptions(advancedView.container, ["left", "center", "right"]) as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("right");
-    const maxWidthSelect = findSelectByOptions(advancedView.container, ["5xl", "6xl", "7xl"]);
-    const paddingYSelect = findSelectByOptions(advancedView.container, ["2", "3", "4", "5"]);
-    const itemGapSelect = findSelectByOptions(advancedView.container, ["2", "3", "4", "6"]);
-    for (const select of [maxWidthSelect, paddingYSelect, itemGapSelect]) {
-      expect(
-        Array.from((select as HTMLSelectElement).options).map((option) => option.value)
-      ).toContain("none");
-    }
-    expect((maxWidthSelect as HTMLSelectElement | null | undefined)?.value).toBe("6xl");
-    expect((paddingYSelect as HTMLSelectElement | undefined)?.value).toBe("4");
-    expect((itemGapSelect as HTMLSelectElement | undefined)?.value).toBe("4");
-    const toggles = findCheckboxes(advancedView.container);
-    expect(toggles[0]?.checked).toBe(false);
-    expect(toggles[1]?.checked).toBe(false);
+      findSelectByOptions(advancedView.container, ["left", "center", "right"])
+    ).toBeUndefined();
+    expect(findSelectByOptions(advancedView.container, ["5xl", "6xl", "7xl"])).toBeUndefined();
+    expect(findCheckboxes(advancedView.container)).toHaveLength(0);
+    expect(advancedView.container.textContent).toContain("Layout token summary");
+    expect(advancedView.container.textContent).toContain("right");
+    expect(advancedView.container.textContent).toContain("6xl");
+    expect(advancedView.container.textContent).toContain("Runtime behavior summary");
+    expect(advancedView.container.textContent).toContain("Disabled");
   } finally {
     advancedView.cleanup();
   }

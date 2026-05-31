@@ -1,0 +1,94 @@
+{
+  "generatedAt": "2026-05-26T02:00:48.958Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session task-336-19-product-gallery-query-color --widget product-gallery --admin http://localhost:5173/admin --front http://localhost:3000 --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-product-gallery-query-color-2026-05-26.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-product-gallery-query-color-2026-05-26.md --strict",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["product-gallery"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true,
+    "resolvedPlaywrightSession": "task-336-19-product-gallery-query-color"
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "product-gallery",
+        "modes": [
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 10,
+            "visibleSectionCount": 10,
+            "writablePaths": [
+              "style.cardBackground",
+              "style.cardBorderColor",
+              "style.emptyBackground",
+              "style.emptyBorderColor",
+              "layout.container",
+              "layout.padding.top",
+              "layout.padding.bottom",
+              "layout.margin.top",
+              "layout.margin.bottom",
+              "visibility.devices.desktop",
+              "visibility.devices.tablet",
+              "visibility.devices.mobile"
+            ],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "1edd10a5-7626-4630-aa47-87c6604fcc62",
+        "adminPath": "http://localhost:5173/admin/pages/1edd10a5-7626-4630-aa47-87c6604fcc62",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "product-gallery",
+        "publicPath": "/test-product-gallery-widget",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-product-gallery.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

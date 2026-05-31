@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -20,20 +20,10 @@ vi.mock("@/components/ui/select", () => ({
     value: string;
   }) => {
     const nextValue =
-      value === "default"
-        ? "full"
-        : value === "xl"
-          ? "md"
-          : value === "none"
-            ? "lg"
-            : "sm";
+      value === "default" ? "full" : value === "xl" ? "md" : value === "none" ? "lg" : "sm";
 
     return (
-      <button
-        type="button"
-        data-select-value={value}
-        onClick={() => onValueChange?.(nextValue)}
-      >
+      <button type="button" data-select-value={value} onClick={() => onValueChange?.(nextValue)}>
         {children}
       </button>
     );
@@ -57,14 +47,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -91,7 +81,7 @@ test("LayoutPanel normalizes container and spacing selections", () => {
     expect(buttons).toHaveLength(5);
 
     for (const button of buttons) {
-      act(() => {
+      React.act(() => {
         button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       });
     }

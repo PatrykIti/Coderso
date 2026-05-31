@@ -1,0 +1,94 @@
+{
+  "generatedAt": "2026-05-25T20:18:33.728Z",
+  "command": "bun .tmp/playwright-content-list-focused-probe.ts",
+  "session": "task-336-19-content-list-focused",
+  "probe": "content-list wizard and conditional view-all controls",
+  "wizard": {
+    "fixture": {
+      "pageId": "e07ab9e8-57f8-477b-86c3-86b2ccec4b61",
+      "adminPath": "http://localhost:5173/admin/pages/e07ab9e8-57f8-477b-86c3-86b2ccec4b61"
+    },
+    "wizard": {
+      "mode": "wizard",
+      "rootCount": 1,
+      "sectionCount": 2,
+      "visibleSectionCount": 2,
+      "writablePaths": [
+        "source.mode",
+        "source.contentTypeId",
+        "source.statusScope",
+        "source.sort",
+        "source.limit"
+      ],
+      "controlsWithoutPath": 0,
+      "rawJsonVisible": false,
+      "rawPathInputCount": 0
+    },
+    "passed": true
+  },
+  "viewAll": {
+    "fixture": {
+      "pageId": "e07ab9e8-57f8-477b-86c3-86b2ccec4b61",
+      "adminPath": "http://localhost:5173/admin/pages/e07ab9e8-57f8-477b-86c3-86b2ccec4b61"
+    },
+    "visual": {
+      "mode": "visual",
+      "rootCount": 1,
+      "sectionCount": 9,
+      "visibleSectionCount": 9,
+      "writablePaths": [
+        "variant",
+        "style.columns",
+        "style.gap",
+        "style.cardStyle",
+        "filters.taxonomy",
+        "filters.authorId",
+        "filters.searchQuery",
+        "filters.featuredOnly",
+        "title",
+        "description",
+        "pagination.mode",
+        "pagination.pageSize",
+        "pagination.viewAllHref",
+        "pagination.viewAllLabel",
+        "fields.showImage",
+        "fields.showExcerpt",
+        "fields.showMeta",
+        "fields.showCta",
+        "style.imageAspect",
+        "style.tagMode",
+        "style.tagLimit",
+        "style.ctaLabel",
+        "style.backgroundColor",
+        "style.borderColor",
+        "style.textColor",
+        "emptyState.title",
+        "emptyState.description",
+        "layout.container",
+        "layout.padding.top",
+        "layout.padding.bottom",
+        "layout.margin.top",
+        "layout.margin.bottom",
+        "visibility.devices.desktop",
+        "visibility.devices.tablet",
+        "visibility.devices.mobile"
+      ],
+      "controlsWithoutPath": 0,
+      "rawJsonVisible": false,
+      "rawPathInputCount": 0
+    },
+    "controls": {
+      "pageSize": 1,
+      "viewAllHref": 1,
+      "viewAllLabel": 1,
+      "linkDestinationFields": 1,
+      "rawPathInputs": 0
+    },
+    "passed": true
+  },
+  "summary": {
+    "wizardPassed": true,
+    "viewAllPassed": true,
+    "status": "passed"
+  }
+}

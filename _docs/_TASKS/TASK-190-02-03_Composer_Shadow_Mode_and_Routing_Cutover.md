@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Planner Rollout Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-02-01, TASK-190-02-02
-**Status:** To Do
+**Status:** Done (2026-05-06)
 
 ---
 
@@ -25,6 +25,14 @@ including `TASK-190-06-03`), and the rollout gates are then validated in
 
 This prevents a big-bang cutover in `actionPlannerService.ts`.
 
+Historical follow-up note:
+- this leaf stayed shadow-only when it landed,
+- later `TASK-190-03..07` slices can now enable bounded live routing for the
+  current mixed-capability setup families once their own validation/docs gates
+  are satisfied,
+- the broader detail-page, workspace/manual-editability, no-duplicate, and
+  rollout-evaluation closure still remains owned by the later leaves.
+
 ## Sub-Tasks
 
 No child task files.
@@ -33,8 +41,8 @@ No child task files.
 
 Before full composer availability:
 - existing single-blueprint prompts still return current plans,
-- candidate composer runs and records comparison metadata in test-only planner
-  diagnostics only,
+- candidate composer runs and records comparison metadata in test diagnostics and
+  optional debug-flag planner metadata only,
 - generic CMS/admin provider planning keeps the existing `cms_operation_draft`
   contract and does not switch response shape in this leaf,
 - shadow diagnostics compare:
@@ -46,7 +54,7 @@ Before full composer availability:
   - candidate score/reason snapshots,
 - mismatches become fixtures, not production regressions,
 - no graph, merge, action assembly, dry-run, execute, or user-visible plan
-  routing changes happen in this leaf.
+  routing changes happened in this leaf itself.
 
 Deferred full plan cutover:
 - selected prompt families may opt into composer routing only after
@@ -78,11 +86,11 @@ After cutover:
 ## Files to Change
 
 - `core/services/assistant/actionPlannerService.ts`
-- `core/services/assistant/blueprints/blueprintCandidateResolver.ts`
+- `core/services/assistant/actionPlanTypes.ts`
+- `core/services/assistant/actionPlanSchema.ts`
 - Add `core/services/assistant/blueprints/blueprintComposerShadow.ts`
 - Update `tests/vitest/assistant/actionPlannerService.test.ts`
 - Add `tests/vitest/assistant/blueprint-composer-shadow.test.ts`
-- Add `tests/vitest/assistant/blueprint-candidate-shadow.test.ts`
 
 ## Technical Scope
 
@@ -105,6 +113,9 @@ Feature/cutover controls:
   toggles,
 - env/test override for fixtures,
 - per-family allowlist for candidate shadow diagnostics,
+- shadow candidate comparison must use the same normalized admin-route aliases
+  the planner relies on, including `content` / `content-types` -> Engine/Entries
+  canonicalization before catalog-aware family inference runs,
 - any provider-backed capability-id suggestion remains test/dev/shadow only in
   this slice,
 - full `shouldUseBlueprintComposer(...)` plan routing remains hard-disabled in

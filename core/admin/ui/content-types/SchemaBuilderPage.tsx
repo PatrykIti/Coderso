@@ -1,11 +1,4 @@
-import {
-  Image,
-  Link2,
-  PlusCircle,
-  Save,
-  SlidersHorizontal,
-  Type,
-} from "lucide-react";
+import { Image, Link2, PlusCircle, Save, SlidersHorizontal, Type } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -24,11 +17,7 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 import { ContentTypeSidebar } from "./ContentTypeSidebar";
 import { FieldCard } from "./FieldCard";
 import { SchemaPreviewPanel } from "./SchemaPreviewPanel";
-import {
-  buildSchemaFromFields,
-  fieldsFromSchema,
-  type ContentSchema,
-} from "./schemaMapping";
+import { buildSchemaFromFields, fieldsFromSchema, type ContentSchema } from "./schemaMapping";
 import { resolveContentTypeIdFromPath } from "./pathResolvers";
 
 const iconForType = (type: string) => {
@@ -70,18 +59,14 @@ export function SchemaBuilderPage() {
   const initialCachedList = getCachedContentTypes();
   const initialCachedType =
     typeId && initialCachedList
-      ? initialCachedList.find((item) => item.id === typeId) ?? null
+      ? (initialCachedList.find((item) => item.id === typeId) ?? null)
       : null;
   const initialFields = initialCachedType
     ? fieldsFromSchema(initialCachedType.schema)
     : fieldsFromSchema(buildSchemaFromFields([]));
-  const [contentType, setContentType] = useState<ContentTypeSummary | null>(
-    initialCachedType
-  );
+  const [contentType, setContentType] = useState<ContentTypeSummary | null>(initialCachedType);
   const [fields, setFields] = useState(initialFields);
-  const [schema, setSchema] = useState<ContentSchema>(
-    buildSchemaFromFields(initialFields)
-  );
+  const [schema, setSchema] = useState<ContentSchema>(buildSchemaFromFields(initialFields));
   const [list, setList] = useState<ContentTypeSummary[]>(initialCachedList ?? []);
   const [isLoading, setIsLoading] = useState(() => !initialCachedType);
   const [error, setError] = useState<string | null>(null);
@@ -155,17 +140,7 @@ export function SchemaBuilderPage() {
     <SplitShell
       activeHref="/admin/content-types"
       rightPanel={<SchemaPreviewPanel schema={schema} />}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span>Schema Builder</span>
-          <span>/</span>
-          <span className="text-foreground">
-            {contentType?.name ?? "Content Type"}
-          </span>
-        </div>
-      }
+      breadcrumbs={["Content", "Schema Builder", contentType?.name ?? "Content Type"]}
       topbarActions={
         <div className="flex items-center gap-2">
           <Button variant="ghost">Discard</Button>

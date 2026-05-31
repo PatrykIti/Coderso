@@ -1,4 +1,4 @@
-import { HelpCircle } from "lucide-react";
+import { Info } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -11,12 +11,7 @@ export type InfoTipProps = {
   className?: string;
 };
 
-export function InfoTip({
-  content,
-  label = "Info",
-  side = "top",
-  className,
-}: InfoTipProps) {
+export function InfoTip({ content, label = "Info", side = "top", className }: InfoTipProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -28,7 +23,7 @@ export function InfoTip({
             className
           )}
         >
-          <HelpCircle className="h-3.5 w-3.5" />
+          <Info className="h-3.5 w-3.5" />
         </button>
       </TooltipTrigger>
       <TooltipContent side={side} sideOffset={6} className="max-w-[220px] text-xs">

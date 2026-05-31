@@ -61,6 +61,26 @@ test("pageCreateSchema accepts valid payload", () => {
   expect(validateCreate(validCreatePayload)).toBe(true);
 });
 
+test("pageCreateSchema accepts persisted collection link metadata", () => {
+  expect(
+    validateCreate({
+      ...validCreatePayload,
+      data: {
+        ...validCreatePayload.data,
+        settings: {
+          ...validCreatePayload.data.settings,
+          collectionLink: {
+            contentTypeId: "type-1",
+            pageRole: "canonical-list-page",
+            listingQueryId: "query-1",
+            listingTemplateId: "template-1",
+          },
+        },
+      },
+    })
+  ).toBe(true);
+});
+
 test("pageCreateSchema rejects missing title", () => {
   const payload = { ...validCreatePayload } as Record<string, unknown>;
   delete payload.title;
@@ -70,6 +90,24 @@ test("pageCreateSchema rejects missing title", () => {
 test("pageCreateSchema rejects unknown root fields", () => {
   const payload = { ...validCreatePayload, extra: "nope" };
   expect(validateCreate(payload)).toBe(false);
+});
+
+test("pageCreateSchema rejects malformed collection link metadata", () => {
+  expect(
+    validateCreate({
+      ...validCreatePayload,
+      data: {
+        ...validCreatePayload.data,
+        settings: {
+          ...validCreatePayload.data.settings,
+          collectionLink: {
+            contentTypeId: "",
+            pageRole: "maybe-canonical",
+          },
+        },
+      },
+    })
+  ).toBe(false);
 });
 
 test("pageUpdateSchema accepts partial update", () => {

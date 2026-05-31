@@ -2,9 +2,14 @@ import {
   AlignLeft,
   AtSign,
   Calendar,
+  CircleDot,
+  Gauge,
   CheckSquare,
   Eye,
+  EyeOff,
   ListChecks,
+  ListOrdered,
+  Timer,
   Save,
   Type,
 } from "lucide-react";
@@ -12,19 +17,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
-import {
-  listContentTypesCached,
-  type ContentTypeSummary,
-} from "@/services/contentTypesClient";
+import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
 import {
   getCachedFormActions,
   getCachedFormDetail,
@@ -96,6 +93,13 @@ const fieldLibraryItems: FieldLibraryItem[] = [
     helper: "Choose one option from a list.",
   },
   {
+    id: "radio",
+    label: "Radio Group",
+    icon: CircleDot,
+    type: "radio",
+    helper: "Choose one option with explicit radio buttons.",
+  },
+  {
     id: "textarea",
     label: "Textarea",
     icon: AlignLeft,
@@ -108,6 +112,41 @@ const fieldLibraryItems: FieldLibraryItem[] = [
     icon: Calendar,
     type: "date",
     helper: "Pick a date from the calendar.",
+  },
+  {
+    id: "number",
+    label: "Number Field",
+    icon: ListOrdered,
+    type: "number",
+    helper: "Accept only numeric input.",
+  },
+  {
+    id: "time",
+    label: "Time Field",
+    icon: Timer,
+    type: "time",
+    helper: "Collect a time value in HH:MM format.",
+  },
+  {
+    id: "range",
+    label: "Range Slider",
+    icon: Gauge,
+    type: "range",
+    helper: "Capture a bounded numeric value with a slider.",
+  },
+  {
+    id: "rating",
+    label: "Rating Field",
+    icon: Gauge,
+    type: "rating",
+    helper: "Collect a 1-to-N rating with bounded scale.",
+  },
+  {
+    id: "hidden",
+    label: "Hidden Field",
+    icon: EyeOff,
+    type: "hidden",
+    helper: "Submit a trusted fixed value without showing a visible control.",
   },
 ];
 
@@ -225,15 +264,13 @@ export function FormBuilderPage() {
           settings: getDefaultFormSettings(),
         }
   );
-  const [formActions, setFormActions] = useState<FormActionInput[]>(() =>
-    initialCachedFormActions?.map(toFormActionInput) ?? []
+  const [formActions, setFormActions] = useState<FormActionInput[]>(
+    () => initialCachedFormActions?.map(toFormActionInput) ?? []
   );
   const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>([]);
-  const [inspectorTab, setInspectorTab] = useState<"settings" | "automation">(
-    "settings"
-  );
-  const [fields, setFields] = useState<FormFieldState[]>(() =>
-    initialCachedFormDetail?.fields.map(toFieldState) ?? []
+  const [inspectorTab, setInspectorTab] = useState<"settings" | "automation">("settings");
+  const [fields, setFields] = useState<FormFieldState[]>(
+    () => initialCachedFormDetail?.fields.map(toFieldState) ?? []
   );
   const [selectedTarget, setSelectedTarget] = useState<SelectedTarget>(() => {
     const firstField = initialCachedFormDetail?.fields[0];
@@ -445,9 +482,7 @@ export function FormBuilderPage() {
               settings: {
                 ...field.settings,
                 ...updates,
-                step: normalizeFormStep(
-                  updates.step ?? field.settings.step ?? 1
-                ),
+                step: normalizeFormStep(updates.step ?? field.settings.step ?? 1),
               },
             }
           : field
@@ -529,10 +564,7 @@ export function FormBuilderPage() {
   const formTitle = meta.name || activeForm?.name || "Form";
   const formDescription = meta.description || activeForm?.description || "";
 
-  const setMetaField = <K extends keyof FormMetaState>(
-    field: K,
-    value: FormMetaState[K]
-  ) => {
+  const setMetaField = <K extends keyof FormMetaState>(field: K, value: FormMetaState[K]) => {
     setMeta((prev) => ({ ...prev, [field]: value }));
     setUnsavedChanges(true);
   };
@@ -580,9 +612,7 @@ export function FormBuilderPage() {
 
     const shouldReplace = fields.length > 0;
     if (shouldReplace) {
-      const confirmed = window.confirm(
-        "Apply preset will replace current fields. Continue?"
-      );
+      const confirmed = window.confirm("Apply preset will replace current fields. Continue?");
       if (!confirmed) return;
     }
 
@@ -612,7 +642,9 @@ export function FormBuilderPage() {
     });
 
     setFields(nextFields);
-    setSelectedTarget(nextFields.length > 0 ? { type: "field", id: nextFields[0].id } : { type: "form" });
+    setSelectedTarget(
+      nextFields.length > 0 ? { type: "field", id: nextFields[0].id } : { type: "form" }
+    );
     setMeta((prev) => ({
       ...prev,
       successMessage:
@@ -693,11 +725,7 @@ export function FormBuilderPage() {
     <EditorShell
       activeHref="/admin/advanced/forms"
       leftPanel={
-        <Tabs
-          value={leftTab}
-          onValueChange={setLeftTab}
-          className="flex h-full flex-col"
-        >
+        <Tabs value={leftTab} onValueChange={setLeftTab} className="flex h-full flex-col">
           <TabsList variant="line" className="border-b border-border px-4 pt-4">
             <TabsTrigger value="fields">Fields</TabsTrigger>
             <TabsTrigger value="library">Library</TabsTrigger>
@@ -729,13 +757,9 @@ export function FormBuilderPage() {
         )
       }
       rightPanelClassName="p-0"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span>Forms</span>
-          <span>/</span>
-          <span className="text-foreground">{formTitle}</span>
+      breadcrumbs={["Content", "Forms", formTitle]}
+      topbarActions={
+        <div className="flex items-center gap-2">
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
             {meta.status}
           </span>
@@ -775,18 +799,10 @@ export function FormBuilderPage() {
               {isSaving ? "Saving..." : "Save form"}
             </Button>
             <div className="flex items-center gap-2 lg:hidden">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMobileFieldsOpen(true)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setMobileFieldsOpen(true)}>
                 Fields
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMobileSettingsOpen(true)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setMobileSettingsOpen(true)}>
                 Details
               </Button>
             </div>
@@ -851,11 +867,7 @@ export function FormBuilderPage() {
             Browse form fields and add new ones.
           </SheetDescription>
           <div className="flex h-full flex-col overflow-y-auto">
-            <Tabs
-              value={leftTab}
-              onValueChange={setLeftTab}
-              className="flex h-full flex-col"
-            >
+            <Tabs value={leftTab} onValueChange={setLeftTab} className="flex h-full flex-col">
               <TabsList variant="line" className="border-b border-border px-4 pt-4">
                 <TabsTrigger value="fields">Fields</TabsTrigger>
                 <TabsTrigger value="library">Library</TabsTrigger>

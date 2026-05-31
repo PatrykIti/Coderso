@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -80,9 +80,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -182,14 +180,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -201,7 +199,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing input for value ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -213,7 +211,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
   if (!(element instanceof HTMLTextAreaElement)) {
     throw new Error(`Missing textarea for value ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -225,7 +223,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) {
     throw new Error(`Missing select for value ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -239,7 +237,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
 };
@@ -253,6 +251,7 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
   const onScheduleDraftChange = vi.fn();
   const onAddScheduleRow = vi.fn();
   const onRemoveScheduleRow = vi.fn();
+  const onResetScheduleDraft = vi.fn();
   const onSaveSchedules = vi.fn();
   const onBlackoutFormChange = vi.fn();
   const onCreateBlackout = vi.fn();
@@ -280,11 +279,14 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
         timezone: "Europe/Warsaw",
         isAvailable: true,
       }}
+      hasUnsavedScheduleDraft
+      scheduleDraftGuidance="Add the draft row or reset it before saving schedules."
       scheduleLoading={false}
       scheduleSaving={false}
       onScheduleDraftChange={onScheduleDraftChange}
       onAddScheduleRow={onAddScheduleRow}
       onRemoveScheduleRow={onRemoveScheduleRow}
+      onResetScheduleDraft={onResetScheduleDraft}
       onSaveSchedules={onSaveSchedules}
       blackoutForm={{
         resourceId: "all",
@@ -312,9 +314,7 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
 
   try {
     const selects = Array.from(view.container.querySelectorAll("select"));
-    const inputs = Array.from(
-      view.container.querySelectorAll('input:not([type="checkbox"])')
-    );
+    const inputs = Array.from(view.container.querySelectorAll('input:not([type="checkbox"])'));
     const checkbox = view.container.querySelector('input[type="checkbox"]');
     const textarea = view.container.querySelector("textarea");
     const iconButtons = Array.from(view.container.querySelectorAll("button")).filter(
@@ -329,14 +329,15 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
     if (!(checkbox instanceof HTMLInputElement)) {
       throw new Error("Missing availability checkbox");
     }
-    act(() => {
+    React.act(() => {
       checkbox.click();
     });
     clickByText(view.container, "Add row");
+    clickByText(view.container, "Reset draft");
     if (!(iconButtons[0] instanceof HTMLButtonElement)) {
       throw new Error("Missing schedule delete button");
     }
-    act(() => {
+    React.act(() => {
       iconButtons[0].click();
     });
     clickByText(view.container, "Save schedules");
@@ -349,7 +350,7 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
     if (!(iconButtons[1] instanceof HTMLButtonElement)) {
       throw new Error("Missing blackout delete button");
     }
-    act(() => {
+    React.act(() => {
       iconButtons[1].click();
     });
 
@@ -360,6 +361,7 @@ test("BookingAvailabilityTab routes draft, schedule, and blackout callbacks", ()
     expect(onScheduleDraftChange).toHaveBeenCalledWith({ timezone: "UTC" });
     expect(onScheduleDraftChange).toHaveBeenCalledWith({ isAvailable: false });
     expect(onAddScheduleRow).toHaveBeenCalled();
+    expect(onResetScheduleDraft).toHaveBeenCalled();
     expect(onRemoveScheduleRow).toHaveBeenCalledWith(0);
     expect(onSaveSchedules).toHaveBeenCalled();
     expect(onBlackoutFormChange).toHaveBeenCalledWith({ resourceId: resource.id });
@@ -509,10 +511,10 @@ test("BookingServicesTab routes service form, edit/delete, assignment, and save 
 
   try {
     const selects = Array.from(view.container.querySelectorAll("select"));
-    const inputs = Array.from(
-      view.container.querySelectorAll('input:not([type="checkbox"])')
-    );
-    const checkboxes = Array.from(view.container.querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[];
+    const inputs = Array.from(view.container.querySelectorAll('input:not([type="checkbox"])'));
+    const checkboxes = Array.from(
+      view.container.querySelectorAll('input[type="checkbox"]')
+    ) as HTMLInputElement[];
     const textarea = view.container.querySelector("textarea");
 
     clickByText(view.container, "Edit");
@@ -530,7 +532,7 @@ test("BookingServicesTab routes service form, edit/delete, assignment, and save 
     clickByText(view.container, "Save service");
     clickByText(view.container, "Cancel edit");
     setSelectValue(selects[2], service.id);
-    act(() => {
+    React.act(() => {
       checkboxes[1]?.click();
       checkboxes[0]?.click();
     });

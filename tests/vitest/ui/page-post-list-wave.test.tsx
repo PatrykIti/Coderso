@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -40,8 +40,8 @@ const pagePostState = vi.hoisted(() => {
     apiError,
     pages: [{ ...page }],
     posts: [{ ...post }],
-    cachedPagesOverride: undefined as typeof page[] | null | undefined,
-    cachedPostsOverride: undefined as typeof post[] | null | undefined,
+    cachedPagesOverride: undefined as (typeof page)[] | null | undefined,
+    cachedPostsOverride: undefined as (typeof post)[] | null | undefined,
     pageError: null as unknown,
     postError: null as unknown,
     createPageError: null as unknown,
@@ -151,13 +151,8 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-  }) => (open ? <div data-dialog-open="true">{children}</div> : null),
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <div data-dialog-open="true">{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -207,9 +202,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -257,7 +250,10 @@ vi.mock("@/components/ui/sheet", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-sheet-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       <button type="button" onClick={() => onOpenChange?.(true)}>
         sheet-trigger-open
       </button>
@@ -321,10 +317,12 @@ vi.mock("@/services/siteSettingsClient", () => ({
       },
     ],
   })),
-  resolvePostSlugRouteContext: (settings: {
-    publicBaseUrl?: string | null;
-    contentRoutes?: Array<{ detailPath: string; enabled: boolean; type: string }>;
-  } | null) => ({
+  resolvePostSlugRouteContext: (
+    settings: {
+      publicBaseUrl?: string | null;
+      contentRoutes?: Array<{ detailPath: string; enabled: boolean; type: string }>;
+    } | null
+  ) => ({
     publicBaseUrl: settings?.publicBaseUrl ?? null,
     detailPathPattern:
       settings?.contentRoutes?.find((route) => route.enabled)?.detailPath ?? "/post/:slug",
@@ -624,14 +622,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -641,10 +639,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -652,10 +647,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -671,12 +663,8 @@ afterEach(() => {
 });
 
 test("PageCreateDrawer and PostsCreateDrawer normalize create payloads and toggles", async () => {
-  const { PageCreateDrawer } = await import(
-    "../../../core/admin/ui/pages/PageCreateDrawer"
-  );
-  const { PostsCreateDrawer } = await import(
-    "../../../core/admin/ui/posts/PostsCreateDrawer"
-  );
+  const { PageCreateDrawer } = await import("../../../core/admin/ui/pages/PageCreateDrawer");
+  const { PostsCreateDrawer } = await import("../../../core/admin/ui/posts/PostsCreateDrawer");
 
   const onCreatePage = vi.fn();
   const onCreatePost = vi.fn();
@@ -719,7 +707,7 @@ test("PageCreateDrawer and PostsCreateDrawer normalize create payloads and toggl
       view.container.querySelectorAll("input[type='checkbox']")
     ) as HTMLInputElement[];
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         view.container.querySelector('input[placeholder="e.g. About us"]') ?? undefined,
         "About us"
@@ -728,11 +716,14 @@ test("PageCreateDrawer and PostsCreateDrawer normalize create payloads and toggl
       buttons.find((button) => button.textContent === "Create Page")?.click();
     });
 
-    act(() => {
+    React.act(() => {
       toggles[0]?.click();
-      buttons.find((button) => button.getAttribute("aria-label") === "Close create page drawer")?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Close create page drawer")
+        ?.click();
       setInputValue(
-        view.container.querySelector('input[placeholder="e.g. Product launch update"]') ?? undefined,
+        view.container.querySelector('input[placeholder="e.g. Product launch update"]') ??
+          undefined,
         "Release Notes"
       );
       buttons.find((button) => button.textContent === "Create Post")?.click();
@@ -740,9 +731,11 @@ test("PageCreateDrawer and PostsCreateDrawer normalize create payloads and toggl
 
     expect(view.container.textContent).toContain("https://coderso.test/blog/release-notes");
 
-    act(() => {
+    React.act(() => {
       toggles[1]?.click();
-      buttons.find((button) => button.getAttribute("aria-label") === "Close create post drawer")?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Close create post drawer")
+        ?.click();
     });
 
     expect(onCreatePage).toHaveBeenCalledWith({
@@ -787,7 +780,7 @@ test("PageFilters forwards query and filter changes", async () => {
     const input = view.container.querySelector("input");
     const selects = Array.from(view.container.querySelectorAll("select"));
 
-    act(() => {
+    React.act(() => {
       setInputValue(input ?? undefined, "pricing");
       setSelectValue(selects[0], "published");
       setSelectValue(selects[1], "author-1");
@@ -808,16 +801,14 @@ test("PageListPage loads without cache, refreshes on matching cache events, and 
   pagePostState.pageError = pagePostState.apiError("Pages unavailable.");
   pagePostState.getUserSettings.mockRejectedValueOnce(new Error("prefs unavailable"));
 
-  const { PageListPage } = await import(
-    "../../../core/admin/ui/pages/PageListPage"
-  );
+  const { PageListPage } = await import("../../../core/admin/ui/pages/PageListPage");
 
   const view = mount(<PageListPage />);
 
   try {
     expect(view.container.textContent).toContain("Loading pages");
 
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
@@ -825,20 +816,16 @@ test("PageListPage loads without cache, refreshes on matching cache events, and 
     expect(pagePostState.getUserSettings).toHaveBeenCalled();
 
     pagePostState.pageError = new Error("generic page load failure");
-    await act(async () => {
-      pagePostState.pageSubscribers.forEach((handler) =>
-        handler({ key: "pagesList" })
-      );
+    await React.act(async () => {
+      pagePostState.pageSubscribers.forEach((handler) => handler({ key: "pagesList" }));
       await flushMicrotasks();
     });
 
     expect(view.container.textContent).toContain("Failed to load pages.");
 
     pagePostState.pageError = null;
-    await act(async () => {
-      pagePostState.pageSubscribers.forEach((handler) =>
-        handler({ key: "pagesList" })
-      );
+    await React.act(async () => {
+      pagePostState.pageSubscribers.forEach((handler) => handler({ key: "pagesList" }));
       await flushMicrotasks();
     });
 
@@ -860,108 +847,115 @@ test("PageListPage opens drawer via sheet controls, creates with navigation, and
     value: vi.fn(),
   });
 
-  const { PageListPage } = await import(
-    "../../../core/admin/ui/pages/PageListPage"
-  );
+  const { PageListPage } = await import("../../../core/admin/ui/pages/PageListPage");
 
   const view = mount(<PageListPage />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
-    const titleInput = () =>
-      view.container.querySelector('input[placeholder="e.g. About us"]');
+    const titleInput = () => view.container.querySelector('input[placeholder="e.g. About us"]');
 
-    act(() => {
-      buttons().find((button) => button.textContent === "sheet-trigger-open")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "sheet-trigger-open")
+        ?.click();
     });
     expect(
-      view.container
-        .querySelector("[data-has-open-change='true']")
-        ?.getAttribute("data-sheet-open")
+      view.container.querySelector("[data-has-open-change='true']")?.getAttribute("data-sheet-open")
     ).toBe("true");
 
-    act(() => {
-      buttons().find((button) => button.textContent === "sheet-trigger-close")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "sheet-trigger-close")
+        ?.click();
     });
     expect(
-      view.container
-        .querySelector("[data-has-open-change='true']")
-        ?.getAttribute("data-sheet-open")
+      view.container.querySelector("[data-has-open-change='true']")?.getAttribute("data-sheet-open")
     ).toBe("false");
 
-    act(() => {
+    React.act(() => {
       buttons()
         .find((button) => button.textContent === "New")
         ?.click();
       setInputValue(titleInput() ?? undefined, "Docs Home");
     });
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
     pagePostState.createPageError = new Error("create page generic failure");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "Create Page")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "Create Page")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Failed to create page.");
-    expect(pagePostState.toastError).toHaveBeenCalledWith(
-      "Failed to create page."
-    );
+    expect(pagePostState.toastError).toHaveBeenCalledWith("Failed to create page.");
 
     pagePostState.createPageError = null;
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(titleInput() ?? undefined, "Docs Home");
       await flushMicrotasks();
-      buttons().find((button) => button.textContent === "Create Page")?.click();
+      buttons()
+        .find((button) => button.textContent === "Create Page")
+        ?.click();
       await flushMicrotasks();
     });
 
     expect(pagePostState.navigateCalls).toContain("/pages/created-page");
-    expect(pagePostState.toastSuccess).toHaveBeenCalledWith(
-      'Page "Docs Home" created.'
-    );
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith('Page "Docs Home" created.');
 
     pagePostState.previewPageError = pagePostState.apiError("Preview page denied.");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "preview-page-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "preview-page-row")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Preview page denied.");
 
     pagePostState.publishPageError = new Error("publish page generic failure");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "publish-page-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "publish-page-row")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Failed to publish page.");
-    expect(pagePostState.toastError).toHaveBeenCalledWith(
-      "Failed to publish page."
-    );
+    expect(pagePostState.toastError).toHaveBeenCalledWith("Failed to publish page.");
 
     pagePostState.unpublishPageError = pagePostState.apiError("Unpublish page denied.");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "unpublish-page-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "unpublish-page-row")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Unpublish page denied.");
 
     pagePostState.duplicatePageError = new Error("duplicate page generic failure");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "duplicate-page-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "duplicate-page-row")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Failed to duplicate page.");
 
     pagePostState.deletePageError = pagePostState.apiError("Delete page denied.");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "delete-page-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "delete-page-row")
+        ?.click();
       await flushMicrotasks();
-      buttons().find((button) => button.textContent === "Delete page")?.click();
+      buttons()
+        .find((button) => button.textContent === "Delete page")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Delete page denied.");
@@ -989,21 +983,17 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
     },
   ];
 
-  const { PageListPage } = await import(
-    "../../../core/admin/ui/pages/PageListPage"
-  );
+  const { PageListPage } = await import("../../../core/admin/ui/pages/PageListPage");
 
   const view = mount(<PageListPage />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
     expect(view.container.textContent).toContain("Showing 1-2 of 2 pages");
-    expect(pagePostState.pageRefreshCalls).toEqual([
-      { force: false, background: undefined },
-    ]);
+    expect(pagePostState.pageRefreshCalls).toEqual([{ force: false, background: undefined }]);
 
     const searchInput = view.container.querySelector(
       'input[placeholder="Search pages by title..."]'
@@ -1012,18 +1002,16 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
     const statusSelect = selects.find((select) =>
       select.querySelector('option[value="scheduled"]')
     );
-    const authorSelect = selects.find((select) =>
-      select.querySelector('option[value="author-2"]')
-    );
+    const authorSelect = selects.find((select) => select.querySelector('option[value="author-2"]'));
 
-    act(() => {
+    React.act(() => {
       setInputValue(searchInput ?? undefined, "missing");
     });
 
     expect(view.container.textContent).toContain("No pages match your current filters.");
     expect(view.container.textContent).toContain("Showing 0 of 0 pages");
 
-    act(() => {
+    React.act(() => {
       setInputValue(searchInput ?? undefined, "docs");
       setSelectValue(statusSelect, "published");
       setSelectValue(authorSelect, "author-2");
@@ -1037,19 +1025,15 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
       )
     ).toHaveLength(1);
 
-    await act(async () => {
-      pagePostState.pageSubscribers.forEach((handler) =>
-        handler({ key: "postsList" })
-      );
+    await React.act(async () => {
+      pagePostState.pageSubscribers.forEach((handler) => handler({ key: "postsList" }));
       await flushMicrotasks();
     });
 
     expect(pagePostState.pageRefreshCalls).toHaveLength(1);
 
-    await act(async () => {
-      pagePostState.pageSubscribers.forEach((handler) =>
-        handler({ key: "pagesList" })
-      );
+    await React.act(async () => {
+      pagePostState.pageSubscribers.forEach((handler) => handler({ key: "pagesList" }));
       await flushMicrotasks();
     });
 
@@ -1060,31 +1044,27 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       buttons()
         .find((button) => button.textContent === "New")
         ?.click();
     });
 
     expect(
-      view.container
-        .querySelector("[data-has-open-change='true']")
-        ?.getAttribute("data-sheet-open")
+      view.container.querySelector("[data-has-open-change='true']")?.getAttribute("data-sheet-open")
     ).toBe("true");
 
-    const openAfterCreateToggle = view.container.querySelector(
-      "#page-open-after-create"
-    );
-    const titleInput = view.container.querySelector(
-      'input[placeholder="e.g. About us"]'
-    );
+    const openAfterCreateToggle = view.container.querySelector("#page-open-after-create");
+    const titleInput = view.container.querySelector('input[placeholder="e.g. About us"]');
 
-    await act(async () => {
+    await React.act(async () => {
       if (openAfterCreateToggle instanceof HTMLInputElement) {
         openAfterCreateToggle.click();
       }
       setInputValue(titleInput ?? undefined, "Support");
-      buttons().find((button) => button.textContent === "Create Page")?.click();
+      buttons()
+        .find((button) => button.textContent === "Create Page")
+        ?.click();
       await flushMicrotasks();
     });
 
@@ -1110,9 +1090,7 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
     ]);
     expect(pagePostState.navigateCalls).not.toContain("/pages/created-page");
     expect(
-      view.container
-        .querySelector("[data-has-open-change='true']")
-        ?.getAttribute("data-sheet-open")
+      view.container.querySelector("[data-has-open-change='true']")?.getAttribute("data-sheet-open")
     ).toBe("false");
   } finally {
     view.cleanup();
@@ -1136,14 +1114,12 @@ test("PageListPage shows bulk actions for visible selection, trims hidden select
     },
   ];
 
-  const { PageListPage } = await import(
-    "../../../core/admin/ui/pages/PageListPage"
-  );
+  const { PageListPage } = await import("../../../core/admin/ui/pages/PageListPage");
 
   const view = mount(<PageListPage />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
@@ -1152,23 +1128,21 @@ test("PageListPage shows bulk actions for visible selection, trims hidden select
       'input[placeholder="Search pages by title..."]'
     );
 
-    act(() => {
-      buttons().find((button) => button.textContent === "toggle-page-all")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "toggle-page-all")
+        ?.click();
     });
 
     expect(view.container.textContent).toContain("Selected 2");
     expect(view.container.textContent).toContain("page-selected:2");
-    expect(
-      view.container.querySelector('[data-page-bulk-actions="inline"]')
-    ).not.toBeNull();
-    expect(
-      view.container.querySelector('[data-page-bulk-actions="card"]')
-    ).toBeNull();
-    expect(
-      (view.container.textContent ?? "").indexOf("Selected 2")
-    ).toBeLessThan((view.container.textContent ?? "").indexOf("New"));
+    expect(view.container.querySelector('[data-page-bulk-actions="inline"]')).not.toBeNull();
+    expect(view.container.querySelector('[data-page-bulk-actions="card"]')).toBeNull();
+    expect((view.container.textContent ?? "").indexOf("Selected 2")).toBeLessThan(
+      (view.container.textContent ?? "").indexOf("New")
+    );
 
-    act(() => {
+    React.act(() => {
       setInputValue(searchInput ?? undefined, "docs");
     });
 
@@ -1185,12 +1159,14 @@ test("PageListPage shows bulk actions for visible selection, trims hidden select
       select.querySelector('option[value="publish"]')
     );
 
-    act(() => {
+    React.act(() => {
       setSelectValue(bulkSelect, "publish");
     });
 
-    await act(async () => {
-      buttons().find((button) => button.textContent === "Apply")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "Apply")
+        ?.click();
       await flushMicrotasks();
     });
 
@@ -1221,12 +1197,8 @@ test("PageListPage and PostsListPage scope selection to the paginated visible ro
     tags: [`tag-${index + 1}`],
   }));
 
-  const { PageListPage } = await import(
-    "../../../core/admin/ui/pages/PageListPage"
-  );
-  const { PostsListPage } = await import(
-    "../../../core/admin/ui/posts/PostsListPage"
-  );
+  const { PageListPage } = await import("../../../core/admin/ui/pages/PageListPage");
+  const { PostsListPage } = await import("../../../core/admin/ui/posts/PostsListPage");
 
   const view = mount(
     <>
@@ -1236,21 +1208,25 @@ test("PageListPage and PostsListPage scope selection to the paginated visible ro
   );
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
-      buttons().find((button) => button.textContent === "toggle-page-all")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "toggle-page-all")
+        ?.click();
     });
 
     expect(view.container.textContent).toContain("Selected 10");
     expect(view.container.textContent).toContain("page-selected:10");
 
-    await act(async () => {
-      buttons().filter((button) => button.textContent === "Next")[0]?.click();
+    await React.act(async () => {
+      buttons()
+        .filter((button) => button.textContent === "Next")[0]
+        ?.click();
       await flushMicrotasks();
     });
 
@@ -1258,10 +1234,8 @@ test("PageListPage and PostsListPage scope selection to the paginated visible ro
     expect(view.container.textContent).toContain("page-selected:0");
     expect(view.container.textContent).not.toContain("Selected 10");
 
-    const selectAllPosts = view.container.querySelector(
-      'input[aria-label="Select all posts"]'
-    );
-    act(() => {
+    const selectAllPosts = view.container.querySelector('input[aria-label="Select all posts"]');
+    React.act(() => {
       if (selectAllPosts instanceof HTMLInputElement) {
         selectAllPosts.click();
       }
@@ -1269,8 +1243,10 @@ test("PageListPage and PostsListPage scope selection to the paginated visible ro
 
     expect(view.container.textContent).toContain("10 posts selected");
 
-    await act(async () => {
-      buttons().filter((button) => button.textContent === "Next")[1]?.click();
+    await React.act(async () => {
+      buttons()
+        .filter((button) => button.textContent === "Next")[1]
+        ?.click();
       await flushMicrotasks();
     });
 
@@ -1302,44 +1278,38 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     },
   ];
 
-  const { PostsListPage } = await import(
-    "../../../core/admin/ui/posts/PostsListPage"
-  );
+  const { PostsListPage } = await import("../../../core/admin/ui/posts/PostsListPage");
 
   const view = mount(<PostsListPage />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
     expect(view.container.textContent).toContain("Product launch");
     expect(view.container.textContent).toContain("Roadmap");
     expect(view.container.textContent).toContain("Showing 1-2 of 2 posts");
-    expect(pagePostState.postRefreshCalls).toEqual([
-      { force: true, background: true },
-    ]);
+    expect(pagePostState.postRefreshCalls).toEqual([{ force: true, background: true }]);
 
     const searchInput = view.container.querySelector(
       'input[placeholder="Search posts by title..."]'
     );
     const selectAll = view.container.querySelector('input[aria-label="Select all posts"]');
 
-    act(() => {
+    React.act(() => {
       if (selectAll instanceof HTMLInputElement) {
         selectAll.click();
       }
     });
 
     expect(view.container.textContent).toContain("2 posts selected");
-    expect(
-      view.container.querySelector('[data-post-bulk-actions="inline"]')
-    ).not.toBeNull();
-    expect(
-      (view.container.textContent ?? "").indexOf("2 posts selected")
-    ).toBeLessThan((view.container.textContent ?? "").indexOf("New"));
+    expect(view.container.querySelector('[data-post-bulk-actions="inline"]')).not.toBeNull();
+    expect((view.container.textContent ?? "").indexOf("2 posts selected")).toBeLessThan(
+      (view.container.textContent ?? "").indexOf("New")
+    );
 
-    act(() => {
+    React.act(() => {
       setInputValue(searchInput ?? undefined, "unknown");
     });
 
@@ -1348,7 +1318,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     expect(view.container.textContent).not.toContain("posts selected");
     expect(view.container.textContent).toContain("Showing 0 of 0 posts");
 
-    act(() => {
+    React.act(() => {
       setInputValue(searchInput ?? undefined, "campaign");
     });
 
@@ -1357,10 +1327,8 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     expect(view.container.textContent).not.toContain("posts selected");
     expect(view.container.textContent).toContain("Showing 1-1 of 1 posts");
 
-    await act(async () => {
-      pagePostState.postSubscribers.forEach((handler) =>
-        handler({ key: "pagesList" })
-      );
+    await React.act(async () => {
+      pagePostState.postSubscribers.forEach((handler) => handler({ key: "pagesList" }));
       await flushMicrotasks();
     });
 
@@ -1368,42 +1336,44 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
-      buttons().find((button) => button.textContent === "delete-post-row")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "delete-post-row")
+        ?.click();
     });
 
     expect(view.container.textContent).toContain("Delete post?");
-    act(() => {
-      buttons().find((button) => button.textContent === "Cancel")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "Cancel")
+        ?.click();
     });
 
     expect(pagePostState.deletePostCalls).toEqual([]);
 
-    act(() => {
+    React.act(() => {
       buttons()
         .find((button) => button.textContent === "New")
         ?.click();
     });
 
     expect(
-      view.container
-        .querySelector("[data-has-open-change='true']")
-        ?.getAttribute("data-sheet-open")
+      view.container.querySelector("[data-has-open-change='true']")?.getAttribute("data-sheet-open")
     ).toBe("true");
 
-    const openAfterCreateToggle = view.container.querySelector(
-      "#post-open-after-create"
-    );
+    const openAfterCreateToggle = view.container.querySelector("#post-open-after-create");
     const titleInput = view.container.querySelector(
       'input[placeholder="e.g. Product launch update"]'
     );
 
-    await act(async () => {
+    await React.act(async () => {
       if (openAfterCreateToggle instanceof HTMLInputElement) {
         openAfterCreateToggle.click();
       }
       setInputValue(titleInput ?? undefined, "Release Notes");
-      buttons().find((button) => button.textContent === "Create Post")?.click();
+      buttons()
+        .find((button) => button.textContent === "Create Post")
+        ?.click();
       await flushMicrotasks();
     });
 
@@ -1424,9 +1394,7 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
     ]);
     expect(pagePostState.navigateCalls).not.toContain("/posts/created-post");
     expect(
-      view.container
-        .querySelector("[data-has-open-change='true']")
-        ?.getAttribute("data-sheet-open")
+      view.container.querySelector("[data-has-open-change='true']")?.getAttribute("data-sheet-open")
     ).toBe("false");
   } finally {
     view.cleanup();
@@ -1451,14 +1419,12 @@ test("PostsListPage bulk toolbar applies visible-scope actions and clears select
     },
   ];
 
-  const { PostsListPage } = await import(
-    "../../../core/admin/ui/posts/PostsListPage"
-  );
+  const { PostsListPage } = await import("../../../core/admin/ui/posts/PostsListPage");
 
   const view = mount(<PostsListPage />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
@@ -1467,26 +1433,24 @@ test("PostsListPage bulk toolbar applies visible-scope actions and clears select
       'input[placeholder="Search posts by title..."]'
     );
 
-    act(() => {
+    React.act(() => {
       if (selectAll instanceof HTMLInputElement) {
         selectAll.click();
       }
     });
 
     expect(view.container.textContent).toContain("2 posts selected");
-    expect(
-      view.container.querySelector('[data-post-bulk-actions="inline"]')
-    ).not.toBeNull();
+    expect(view.container.querySelector('[data-post-bulk-actions="inline"]')).not.toBeNull();
 
     const bulkSelect = Array.from(view.container.querySelectorAll("select")).find((select) =>
       select.querySelector('option[value="publish"]')
     );
 
-    act(() => {
+    React.act(() => {
       setSelectValue(bulkSelect, "publish");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Apply")
         ?.click();
@@ -1498,13 +1462,13 @@ test("PostsListPage bulk toolbar applies visible-scope actions and clears select
     expect(view.container.textContent).toContain("Bulk action completed");
     expect(view.container.textContent).not.toContain("2 posts selected");
 
-    act(() => {
+    React.act(() => {
       setInputValue(searchInput ?? undefined, "beta");
     });
 
     const filteredSelectAll = view.container.querySelector('input[aria-label="Select all posts"]');
 
-    act(() => {
+    React.act(() => {
       if (filteredSelectAll instanceof HTMLInputElement) {
         filteredSelectAll.click();
       }
@@ -1512,15 +1476,15 @@ test("PostsListPage bulk toolbar applies visible-scope actions and clears select
 
     expect(view.container.textContent).toContain("1 post selected");
 
-    const filteredBulkSelect = Array.from(view.container.querySelectorAll("select")).find((select) =>
-      select.querySelector('option[value="delete"]')
+    const filteredBulkSelect = Array.from(view.container.querySelectorAll("select")).find(
+      (select) => select.querySelector('option[value="delete"]')
     );
 
-    act(() => {
+    React.act(() => {
       setSelectValue(filteredBulkSelect, "delete");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Apply")
         ?.click();
@@ -1544,16 +1508,14 @@ test("PostsListPage loads without cache, refreshes on matching cache events, and
   pagePostState.postError = pagePostState.apiError("Posts unavailable.");
   pagePostState.getUserSettings.mockRejectedValueOnce(new Error("prefs unavailable"));
 
-  const { PostsListPage } = await import(
-    "../../../core/admin/ui/posts/PostsListPage"
-  );
+  const { PostsListPage } = await import("../../../core/admin/ui/posts/PostsListPage");
 
   const view = mount(<PostsListPage />);
 
   try {
     expect(view.container.textContent).toContain("Loading posts");
 
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
@@ -1561,20 +1523,16 @@ test("PostsListPage loads without cache, refreshes on matching cache events, and
     expect(pagePostState.getUserSettings).toHaveBeenCalled();
 
     pagePostState.postError = new Error("generic load failure");
-    await act(async () => {
-      pagePostState.postSubscribers.forEach((handler) =>
-        handler({ key: "postsList" })
-      );
+    await React.act(async () => {
+      pagePostState.postSubscribers.forEach((handler) => handler({ key: "postsList" }));
       await flushMicrotasks();
     });
 
     expect(view.container.textContent).toContain("Failed to load posts.");
 
     pagePostState.postError = null;
-    await act(async () => {
-      pagePostState.postSubscribers.forEach((handler) =>
-        handler({ key: "postsList" })
-      );
+    await React.act(async () => {
+      pagePostState.postSubscribers.forEach((handler) => handler({ key: "postsList" }));
       await flushMicrotasks();
     });
 
@@ -1596,110 +1554,116 @@ test("PostsListPage opens drawer via sheet controls, creates with navigation, an
     value: vi.fn(),
   });
 
-  const { PostsListPage } = await import(
-    "../../../core/admin/ui/posts/PostsListPage"
-  );
+  const { PostsListPage } = await import("../../../core/admin/ui/posts/PostsListPage");
 
   const view = mount(<PostsListPage />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
     const titleInput = () =>
-      view.container.querySelector(
-        'input[placeholder="e.g. Product launch update"]'
-      );
+      view.container.querySelector('input[placeholder="e.g. Product launch update"]');
 
-    act(() => {
-      buttons().find((button) => button.textContent === "sheet-trigger-open")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "sheet-trigger-open")
+        ?.click();
     });
     expect(
-      view.container
-        .querySelector("[data-has-open-change='true']")
-        ?.getAttribute("data-sheet-open")
+      view.container.querySelector("[data-has-open-change='true']")?.getAttribute("data-sheet-open")
     ).toBe("true");
 
-    act(() => {
-      buttons().find((button) => button.textContent === "sheet-trigger-close")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "sheet-trigger-close")
+        ?.click();
     });
     expect(
-      view.container
-        .querySelector("[data-has-open-change='true']")
-        ?.getAttribute("data-sheet-open")
+      view.container.querySelector("[data-has-open-change='true']")?.getAttribute("data-sheet-open")
     ).toBe("false");
 
-    act(() => {
+    React.act(() => {
       buttons()
         .find((button) => button.textContent === "New")
         ?.click();
       setInputValue(titleInput() ?? undefined, "Launch Memo");
     });
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
     pagePostState.createPostError = new Error("create generic failure");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "Create Post")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "Create Post")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Failed to create post.");
-    expect(pagePostState.toastError).toHaveBeenCalledWith(
-      "Failed to create post."
-    );
+    expect(pagePostState.toastError).toHaveBeenCalledWith("Failed to create post.");
 
     pagePostState.createPostError = null;
-    await act(async () => {
+    await React.act(async () => {
       setInputValue(titleInput() ?? undefined, "Launch Memo");
       await flushMicrotasks();
-      buttons().find((button) => button.textContent === "Create Post")?.click();
+      buttons()
+        .find((button) => button.textContent === "Create Post")
+        ?.click();
       await flushMicrotasks();
     });
 
     expect(pagePostState.navigateCalls).toContain("/posts/created-post");
-    expect(pagePostState.toastSuccess).toHaveBeenCalledWith(
-      'Post "Launch Memo" created.'
-    );
+    expect(pagePostState.toastSuccess).toHaveBeenCalledWith('Post "Launch Memo" created.');
 
     pagePostState.previewPostError = pagePostState.apiError("Preview denied.");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "preview-post-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "preview-post-row")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Preview denied.");
 
     pagePostState.publishPostError = new Error("publish generic failure");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "publish-post-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "publish-post-row")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Failed to publish post.");
-    expect(pagePostState.toastError).toHaveBeenCalledWith(
-      "Failed to publish post."
-    );
+    expect(pagePostState.toastError).toHaveBeenCalledWith("Failed to publish post.");
 
     pagePostState.unpublishPostError = pagePostState.apiError("Unpublish denied.");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "unpublish-post-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "unpublish-post-row")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Unpublish denied.");
 
     pagePostState.duplicatePostError = new Error("duplicate generic failure");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "duplicate-post-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "duplicate-post-row")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Failed to duplicate post.");
 
     pagePostState.deletePostError = pagePostState.apiError("Delete denied.");
-    await act(async () => {
-      buttons().find((button) => button.textContent === "delete-post-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "delete-post-row")
+        ?.click();
       await flushMicrotasks();
-      buttons().find((button) => button.textContent === "Delete post")?.click();
+      buttons()
+        .find((button) => button.textContent === "Delete post")
+        ?.click();
       await flushMicrotasks();
     });
     expect(view.container.textContent).toContain("Delete denied.");
@@ -1716,12 +1680,8 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
     writable: true,
     value: (url: string) => pagePostState.previewUrlCalls.push(url),
   });
-  const { PageListPage } = await import(
-    "../../../core/admin/ui/pages/PageListPage"
-  );
-  const { PostsListPage } = await import(
-    "../../../core/admin/ui/posts/PostsListPage"
-  );
+  const { PageListPage } = await import("../../../core/admin/ui/pages/PageListPage");
+  const { PostsListPage } = await import("../../../core/admin/ui/posts/PostsListPage");
 
   const view = mount(
     <>
@@ -1731,7 +1691,7 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
   );
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
@@ -1740,33 +1700,65 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
 
-    await act(async () => {
-      buttons().find((button) => button.textContent === "New")?.click();
-      buttons().filter((button) => button.textContent === "New")[1]?.click();
-      buttons().find((button) => button.textContent === "edit-page-row")?.click();
-      buttons().find((button) => button.textContent === "preview-page-row")?.click();
-      buttons().find((button) => button.textContent === "publish-page-row")?.click();
-      buttons().find((button) => button.textContent === "unpublish-page-row")?.click();
-      buttons().find((button) => button.textContent === "duplicate-page-row")?.click();
-      buttons().find((button) => button.textContent === "edit-post-row")?.click();
-      buttons().find((button) => button.textContent === "preview-post-row")?.click();
-      buttons().find((button) => button.textContent === "publish-post-row")?.click();
-      buttons().find((button) => button.textContent === "unpublish-post-row")?.click();
-      buttons().find((button) => button.textContent === "duplicate-post-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "New")
+        ?.click();
+      buttons()
+        .filter((button) => button.textContent === "New")[1]
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "edit-page-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "preview-page-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "publish-page-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "unpublish-page-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "duplicate-page-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "edit-post-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "preview-post-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "publish-post-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "unpublish-post-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "duplicate-post-row")
+        ?.click();
       await flushMicrotasks();
     });
 
-    await act(async () => {
-      buttons().find((button) => button.textContent === "delete-page-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "delete-page-row")
+        ?.click();
       await flushMicrotasks();
-      buttons().find((button) => button.textContent === "Delete page")?.click();
+      buttons()
+        .find((button) => button.textContent === "Delete page")
+        ?.click();
       await flushMicrotasks();
     });
 
-    await act(async () => {
-      buttons().find((button) => button.textContent === "delete-post-row")?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "delete-post-row")
+        ?.click();
       await flushMicrotasks();
-      buttons().find((button) => button.textContent === "Delete post")?.click();
+      buttons()
+        .find((button) => button.textContent === "Delete post")
+        ?.click();
       await flushMicrotasks();
     });
 

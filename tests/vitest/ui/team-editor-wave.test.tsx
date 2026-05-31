@@ -1,12 +1,54 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+import { listMediaCached } from "@/services/mediaClient";
 import { teamDefaults, type TeamData } from "../../../core/widgets/core/team";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+vi.mock("@/services/mediaClient", () => ({
+  listMediaCached: vi.fn(),
+}));
+
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "careers-page",
+      title: "Careers",
+      slug: "careers",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "draft-page",
+      title: "Draft careers",
+      slug: "draft-careers",
+      status: "draft",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({ value, onChange }: { value: unknown; onChange?: (value: unknown) => void }) => (
+    <div>
+      <button type="button" onClick={() => onChange?.("media-1")}>
+        Browse media
+      </button>
+      {value ? (
+        <button type="button" onClick={() => onChange?.(null)}>
+          Clear selected media
+        </button>
+      ) : null}
+      <p>{value ? `Selected: ${String(value)}` : "No media selected yet."}</p>
+    </div>
+  ),
+}));
 
 vi.mock("@/components/ui/badge", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
@@ -28,6 +70,32 @@ vi.mock("@/components/ui/button", () => ({
       {children}
     </button>
   ),
+}));
+
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    children,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description?: string;
+    children?: React.ReactNode;
+    onConfirm: () => void;
+  }) =>
+    open ? (
+      <div data-confirm-dialog="true">
+        <p>{title}</p>
+        {description ? <p>{description}</p> : null}
+        <div>{children}</div>
+        <button type="button" onClick={onConfirm}>
+          confirm-action
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("@/components/ui/input", () => ({
@@ -140,14 +208,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -158,17 +226,7 @@ const mount = (node: React.ReactNode) => {
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
-    descriptor?.set?.call(element, value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-};
-
-const setTextareaValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -178,7 +236,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -186,8 +244,17 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+const flushAsyncUpdates = async () => {
+  await React.act(async () => {
+    await flushPromises();
+    await flushPromises();
   });
 };
 
@@ -213,14 +280,15 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
-const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
-  Array.from(container.querySelectorAll("textarea")).find(
-    (element) =>
-      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
-  );
-
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).find((element) => {
+    if (!(element instanceof HTMLSelectElement)) return false;
+    const optionValues = Array.from(element.options).map((option) => option.value);
+    return values.every((value) => optionValues.includes(value));
+  });
+
+const findSelectsByOptions = (container: ParentNode, values: string[]) =>
+  Array.from(container.querySelectorAll("select")).filter((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
     const optionValues = Array.from(element.options).map((option) => option.value);
     return values.every((value) => optionValues.includes(value));
@@ -231,16 +299,17 @@ const normalizeText = (value: string | null | undefined) =>
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(section.querySelectorAll("h3, p")).some(
+      (candidate) => normalizeText(candidate.textContent) === normalizeText(title)
     )
   );
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
-test("Team wizard editor covers variant fallback, count changes, and primary member normalization", async () => {
+test("Team wizard editor covers variant fallback and leaves member count to Visual", async () => {
   const { TeamWizardEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
 
   const onChangeSpy = vi.fn();
@@ -275,7 +344,10 @@ test("Team wizard editor covers variant fallback, count changes, and primary mem
   try {
     expect(view.container.textContent).toContain("Team layout");
     expect(view.container.textContent).toContain("Members count");
-    expect(view.container.textContent).toContain("Primary member names");
+    expect(view.container.textContent).toContain("Use Visual to change member count");
+    expect(
+      findSectionByTitle(view.container, "Starter team")?.getAttribute("data-widget-editor-section")
+    ).toBe("team.wizard.starter-team");
 
     const variantSelect = findSelectByOptions(view.container, [
       "cards",
@@ -287,75 +359,37 @@ test("Team wizard editor covers variant fallback, count changes, and primary mem
 
     setSelectValue(variantSelect, "spotlight");
     expect(onVariantChangeSpy).toHaveBeenLastCalledWith("spotlight");
-    expect(
-      (
-        findSelectByOptions(view.container, [
-          "cards",
-          "compact-list",
-          "spotlight",
-        ]) as HTMLSelectElement
-      ).value
-    ).toBe("spotlight");
-
-    const memberCountSelect = findSelectByOptions(view.container, ["1", "12"]);
-    setSelectValue(memberCountSelect, "4");
-
-    expect(latestValue.members).toHaveLength(4);
-    expect(latestValue.header?.title).toBe(teamDefaults.header?.title);
-    expect(latestValue.style?.columns).toBe("3");
-    expect(findInputsByPlaceholder(view.container, "Member 1 name")).toHaveLength(1);
-    expect(findInputsByPlaceholder(view.container, "Member 2 name")).toHaveLength(1);
-    expect(findInputsByPlaceholder(view.container, "Member 3 name")).toHaveLength(1);
-    expect(view.container.querySelectorAll("input")).toHaveLength(3);
-
-    setInputValue(findInputByPlaceholder(view.container, "Member 1 name"), " Alice ");
-    setInputValue(findInputByPlaceholder(view.container, "Member 2 name"), "");
-    setInputValue(findInputByPlaceholder(view.container, "Member 3 name"), "Cara");
-
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.members[0]?.name).toBe("Alice");
-    expect(latestValue.members[1]?.name).toBe("Team Member 2");
-    expect(latestValue.members[2]?.name).toBe("Cara");
-    expect(latestValue.members[3]?.name).toBe("Team Member 4");
+    expect(findSelectByOptions(view.container, ["1", "12"])).toBeUndefined();
+    expect(latestValue.members).toHaveLength(1);
+    expect(findInputsByPlaceholder(view.container, "Member 1 name")).toHaveLength(0);
+    expect(findInputsByPlaceholder(view.container, "Member 1 role")).toHaveLength(0);
+    expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
 });
 
-test("Team visual editor covers member structure, social link branching, and style updates", async () => {
-  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+test("Team wizard keeps Spotlight transitions non-destructive for larger teams", async () => {
+  const { TeamWizardEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
   let latestValue: TeamData = {
-    header: {
-      title: "",
-      description: "",
-    },
-    members: [
-      {
-        name: " ",
-        role: "Owner",
-        bio: "Keeps delivery moving.",
-        photo: "",
-        socialLinks: [],
-      },
-    ],
-    style: {
-      columns: "9" as never,
-      gap: "wide" as never,
-      radius: "round" as never,
-      cardSurface: "var(--surface)",
-      cardBorder: "not-a-color",
-    },
-  } as TeamData;
+    members: Array.from({ length: 7 }, (_, index) => ({
+      id: `member-${index + 1}`,
+      name: `Member ${index + 1}`,
+      role: "Role",
+      bio: "Configured profile.",
+      socialLinks: [],
+    })),
+  };
 
   const Harness = () => {
     const [value, setValue] = useState<TeamData>(latestValue);
     const [variant, setVariant] = useState("cards");
 
     return (
-      <TeamVisualEditor
+      <TeamWizardEditor
         value={value}
         onChange={(next) => {
           latestValue = next;
@@ -374,123 +408,435 @@ test("Team visual editor covers member structure, social link branching, and sty
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Variant and member structure");
+    expect(view.container.textContent).toContain("7 members");
+    const variantSelect = findSelectByOptions(view.container, [
+      "cards",
+      "compact-list",
+      "spotlight",
+    ]);
+
+    setSelectValue(variantSelect, "spotlight");
+
+    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("spotlight");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(latestValue.members).toHaveLength(7);
+    expect(view.container.textContent).toContain("7 members");
+    expect(view.container.textContent).toContain("reduce the member list intentionally");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Team visual editor integrates social links into member panels and confirms destructive actions", async () => {
+  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+
+  let latestValue: TeamData = {
+    header: {
+      title: "Leadership",
+      description: "",
+    },
+    members: [
+      {
+        id: "member-1",
+        name: "Ada",
+        role: "CTO",
+        bio: "Builds release systems.",
+        photo: "",
+        socialLinks: [],
+      },
+    ],
+    style: {},
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<TeamData>(latestValue);
+    const [variant, setVariant] = useState("cards");
+
+    return (
+      <TeamVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => setVariant(next)}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(view.container.textContent).toContain("Header copy and CTA");
     expect(view.container.textContent).toContain("Members content and order");
+    expect(view.container.textContent).toContain("Section and card style");
     expect(view.container.textContent).toContain("Social links");
-    expect(view.container.textContent).toContain("Card and layout style");
-
-    const socialLinksSection = findSectionByTitle(view.container, "Social links");
-    expect(socialLinksSection?.textContent).toContain("No social links configured.");
-    expect(socialLinksSection?.textContent).toContain("Member 1");
-
-    const colorInputs = Array.from(
-      view.container.querySelectorAll("input[type='color']")
-    ) as HTMLInputElement[];
-    expect(colorInputs[0]?.value).toBe("#ffffff");
-    expect(colorInputs[1]?.value).toBe("#e2e8f0");
-
-    clickButtonByText(view.container, "Compact List");
-    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("compact-list");
-
-    setInputValue(findInputByPlaceholder(view.container, "Meet the team"), "Leadership");
-    setTextareaValue(
-      findTextareaByPlaceholder(
-        view.container,
-        "Introduce key people behind delivery, support, and strategy."
-      ),
-      "Who ships the product."
-    );
-    setInputValue(findInputsByPlaceholder(view.container, "Anna Kowalska")[0], "Ada");
-    setInputValue(findInputsByPlaceholder(view.container, "Head of Product")[0], "CTO");
-    setTextareaValue(
-      findTextareaByPlaceholder(view.container, "Short bio describing responsibilities and value."),
-      "Builds release systems."
-    );
-    setInputValue(
-      findInputByPlaceholder(view.container, "https://images.unsplash.com/..."),
-      "https://cdn.example.com/ada.jpg"
+    expect(
+      findSectionByTitle(view.container, "Variant and member structure")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.visual.variant-member-structure");
+    expect(
+      findSectionByTitle(view.container, "Header copy and CTA")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.visual.header-cta");
+    expect(
+      findSectionByTitle(view.container, "Members content and order")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.visual.members-content-order");
+    expect(
+      findSectionByTitle(view.container, "Section and card style")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.visual.section-card-style");
+    expect(view.container.textContent).not.toContain(
+      "No social links configured.No social links configured."
     );
 
-    expect(latestValue.header?.title).toBe("Leadership");
-    expect(latestValue.header?.description).toBe("Who ships the product.");
-    expect(latestValue.members[0]?.name).toBe("Ada");
-    expect(latestValue.members[0]?.role).toBe("CTO");
-    expect(latestValue.members[0]?.bio).toBe("Builds release systems.");
-    expect(latestValue.members[0]?.photo).toBe("https://cdn.example.com/ada.jpg");
+    const membersSection = findSectionByTitle(view.container, "Members content and order");
+    expect(membersSection).toBeTruthy();
+    expect(
+      Array.from((membersSection as ParentNode).querySelectorAll("button")).filter((button) =>
+        button.textContent?.includes("Add member")
+      )
+    ).toHaveLength(2);
 
-    clickButtonByText(socialLinksSection as ParentNode, "Add link");
+    clickButtonByText(membersSection as ParentNode, "Add link");
     expect(latestValue.members[0]?.socialLinks).toHaveLength(1);
-    expect(latestValue.members[0]?.socialLinks?.[0]?.label).toBe("LinkedIn");
-    expect(latestValue.members[0]?.socialLinks?.[0]?.url).toBe("#");
+    expect(latestValue.members[0]?.socialLinks?.[0]?.url).toBeUndefined();
 
-    setInputValue(findInputsByPlaceholder(view.container, "LinkedIn")[0], "GitHub");
-    setInputValue(
-      findInputsByPlaceholder(view.container, "https://...")[0],
-      "https://github.com/ada"
+    setSelectValue(
+      findSelectByOptions(view.container, [
+        "linkedin",
+        "x",
+        "github",
+        "instagram",
+        "facebook",
+        "youtube",
+      ]),
+      "github"
     );
-
+    setInputValue(findInputsByPlaceholder(view.container, "ada-lovelace")[0], "ada");
     expect(latestValue.members[0]?.socialLinks?.[0]).toEqual(
       expect.objectContaining({
         label: "GitHub",
         url: "https://github.com/ada",
       })
     );
+    expect(findInputsByPlaceholder(view.container, "https://...")).toHaveLength(0);
 
-    clickButtonByText(findSectionByTitle(view.container, "Social links") as ParentNode, "Remove");
+    const socialProfileInput = findInputsByPlaceholder(view.container, "ada-lovelace")[0];
+    const socialRow = socialProfileInput?.closest("[data-team-social-link]");
+    clickButtonByText(socialRow as ParentNode, "Remove");
+    expect(view.container.textContent).toContain("Remove this social link from Ada?");
+    clickButtonByText(socialRow as ParentNode, "Cancel");
+    expect(latestValue.members[0]?.socialLinks).toHaveLength(1);
+    clickButtonByText(socialRow as ParentNode, "Remove");
+    clickButtonByText(socialRow as ParentNode, "Confirm remove");
     expect(latestValue.members[0]?.socialLinks).toHaveLength(0);
-    expect(findSectionByTitle(view.container, "Social links")?.textContent).toContain(
-      "No social links configured."
-    );
+    expect(view.container.textContent).toContain("No social links configured.");
 
-    const membersSection = findSectionByTitle(view.container, "Members content and order");
     clickButtonByText(membersSection as ParentNode, "Add member");
     expect(latestValue.members).toHaveLength(2);
     setInputValue(findInputsByPlaceholder(view.container, "Anna Kowalska")[1], "Grace");
 
-    clickButtonByText(membersSection as ParentNode, "Move down");
-    expect(latestValue.members[0]?.name).toBe("Grace");
-    expect(latestValue.members[1]?.name).toBe("Ada");
+    const memberRemoveButtons = Array.from(
+      (membersSection as ParentNode).querySelectorAll("button")
+    ).filter((button) => button.textContent === "Remove");
+    clickElement(memberRemoveButtons[1]);
+    expect(view.container.textContent).toContain("Remove this member profile");
+    clickButtonByText(membersSection as ParentNode, "Cancel");
+    expect(latestValue.members).toHaveLength(2);
 
-    clickButtonByText(membersSection as ParentNode, "Remove");
+    clickElement(
+      Array.from((membersSection as ParentNode).querySelectorAll("button")).filter(
+        (button) => button.textContent === "Remove"
+      )[1]
+    );
+    clickButtonByText(membersSection as ParentNode, "Confirm remove");
     expect(latestValue.members).toHaveLength(1);
     expect(latestValue.members[0]?.name).toBe("Ada");
-
-    const styleSection = findSectionByTitle(view.container, "Card and layout style");
-    expect(
-      (
-        findSelectByOptions(styleSection as ParentNode, ["1", "2", "3", "4"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("3");
-    setSelectValue(findSelectByOptions(styleSection as ParentNode, ["1", "2", "3", "4"]), "4");
-    setSelectValue(
-      findSelectByOptions(styleSection as ParentNode, ["none", "sm", "md", "lg"]),
-      "lg"
-    );
-    setSelectValue(
-      findSelectByOptions(styleSection as ParentNode, ["none", "md", "lg", "xl"]),
-      "xl"
-    );
-    setInputValue(colorInputs[0], "#123456");
-    setInputValue(colorInputs[1], "#abcdef");
-
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.style).toEqual(
-      expect.objectContaining({
-        columns: "4",
-        gap: "lg",
-        radius: "xl",
-        cardSurface: "#123456",
-        cardBorder: "#abcdef",
-      })
-    );
   } finally {
     view.cleanup();
   }
 });
 
-test("Team advanced editor covers normalization safeguards, token updates, and reset", async () => {
+test("Team visual editor preserves LinkedIn handles when switching social platforms", async () => {
+  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+
+  let latestValue: TeamData = {
+    header: {
+      title: "Leadership",
+      description: "",
+    },
+    members: [
+      {
+        id: "member-1",
+        name: "Anna",
+        role: "Head of Product",
+        bio: "Owns product strategy.",
+        socialLinks: [
+          {
+            id: "social-1",
+            label: "LinkedIn",
+            url: "https://www.linkedin.com/in/anna-kowalska",
+          },
+          {
+            id: "social-2",
+            label: "LinkedIn",
+            url: "https://www.linkedin.com/company/coderso",
+          },
+        ],
+      },
+    ],
+    style: {},
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<TeamData>(latestValue);
+
+    return (
+      <TeamVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const platformValues = ["linkedin", "x", "github", "instagram", "facebook", "youtube"];
+    const platformSelects = findSelectsByOptions(view.container, platformValues);
+    expect(platformSelects).toHaveLength(2);
+
+    setSelectValue(platformSelects[0], "github");
+
+    expect(latestValue.members[0]?.socialLinks?.[0]).toEqual(
+      expect.objectContaining({
+        label: "GitHub",
+        url: "https://github.com/anna-kowalska",
+      })
+    );
+    expect(latestValue.members[0]?.socialLinks?.[0]?.url).not.toBe("https://github.com/in");
+
+    setSelectValue(findSelectsByOptions(view.container, platformValues)[1], "github");
+
+    expect(latestValue.members[0]?.socialLinks?.[1]).toEqual(
+      expect.objectContaining({
+        label: "GitHub",
+        url: "https://github.com/coderso",
+      })
+    );
+    expect(latestValue.members[0]?.socialLinks?.[1]?.url).not.toBe("https://github.com/company");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Team visual editor covers spotlight lead, media picker, CTA feedback, and style controls", async () => {
+  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+  vi.mocked(listMediaCached).mockResolvedValue([
+    {
+      id: "media-1",
+      url: "https://cdn.example.com/ada-picked.jpg",
+      alt: "Ada portrait",
+      title: "Ada portrait",
+      caption: "",
+      originalName: "ada.jpg",
+      mimeType: "image/jpeg",
+    } as never,
+  ]);
+
+  let latestValue: TeamData = {
+    header: teamDefaults.header,
+    members: [
+      {
+        id: "member-1",
+        name: "Ada",
+        role: "CTO",
+        bio: "Builds release systems.",
+        photo: "",
+        socialLinks: [],
+      },
+      {
+        id: "member-2",
+        name: "Grace",
+        role: "COO",
+        bio: "Keeps delivery aligned.",
+        photo: "",
+        socialLinks: [],
+      },
+    ],
+    style: {},
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<TeamData>(latestValue);
+    const [variant, setVariant] = useState("spotlight");
+
+    return (
+      <TeamVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => setVariant(next)}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    clickButtonByText(view.container, "Set as spotlight lead");
+    expect(latestValue.spotlightLeadId).toBe("member-2");
+    expect(view.container.textContent).toContain("Spotlight Lead");
+
+    const browseButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
+      button.textContent?.includes("Browse media")
+    );
+    expect(
+      findInputByPlaceholder(view.container, "https://images.unsplash.com/...")
+    ).toBeUndefined();
+    clickElement(browseButtons[0]);
+    expect(listMediaCached).toHaveBeenCalled();
+    await flushAsyncUpdates();
+    expect(latestValue.members[0]?.photo).toBe("https://cdn.example.com/ada-picked.jpg");
+
+    clickButtonByText(view.container, "Clear photo");
+    await flushAsyncUpdates();
+    expect(latestValue.members[0]?.photo).toBeUndefined();
+
+    setInputValue(findInputByPlaceholder(view.container, "Our team"), "Leadership");
+    setInputValue(findInputByPlaceholder(view.container, "Meet the team"), "Meet leadership");
+    setInputValue(findInputByPlaceholder(view.container, "See all positions"), "Join us");
+    await flushAsyncUpdates();
+    setSelectValue(
+      findSelectByOptions(view.container, ["__coderso_link_empty__", "careers-page"]),
+      "careers-page"
+    );
+    expect(findInputByPlaceholder(view.container, "/careers")).toBeUndefined();
+    expect(view.container.textContent).toContain("Links to selected site page: Careers.");
+
+    const styleSection = findSectionByTitle(view.container, "Section and card style");
+    const sectionBackgroundSwatch = (styleSection as ParentNode).querySelector(
+      'input[aria-label="Section background"]'
+    );
+    const cardBackgroundSwatch = (styleSection as ParentNode).querySelector(
+      'input[aria-label="Card background"]'
+    );
+    const cardBorderSwatch = (styleSection as ParentNode).querySelector(
+      'input[aria-label="Card border"]'
+    );
+    expect(sectionBackgroundSwatch).toBeInstanceOf(HTMLInputElement);
+    expect(cardBackgroundSwatch).toBeInstanceOf(HTMLInputElement);
+    expect(cardBorderSwatch).toBeInstanceOf(HTMLInputElement);
+    expect(
+      (styleSection as ParentNode).querySelector('input[aria-label="Section background value"]')
+    ).toBeNull();
+    expect(
+      (styleSection as ParentNode).querySelector('input[aria-label="Card background value"]')
+    ).toBeNull();
+    expect(
+      (styleSection as ParentNode).querySelector('input[aria-label="Card border value"]')
+    ).toBeNull();
+    setInputValue(sectionBackgroundSwatch, "#111827");
+    setInputValue(cardBackgroundSwatch, "#f8fafc");
+    setInputValue(cardBorderSwatch, "#cbd5e1");
+    setSelectValue(findSelectByOptions(styleSection as ParentNode, ["0", "1", "2", "3"]), "3");
+    setSelectValue(findSelectByOptions(styleSection as ParentNode, ["show", "hide"]), "hide");
+
+    expect(latestValue.header?.eyebrow).toBe("Leadership");
+    expect(latestValue.header?.title).toBe("Meet leadership");
+    expect(latestValue.cta?.label).toBe("Join us");
+    expect(latestValue.cta?.url).toBe("/careers");
+    expect(latestValue.style?.sectionBackground).toBe("#111827");
+    expect(latestValue.style?.cardSurface).toBe("#f8fafc");
+    expect(latestValue.style?.cardBorder).toBe("#cbd5e1");
+    expect(latestValue.style?.cardBorderWidth).toBe("3");
+    expect(latestValue.style?.compactMobileBio).toBe("hide");
+    expect(view.container.textContent).toContain("Configured colors may be hard to read together.");
+
+    const clearButtons = Array.from((styleSection as ParentNode).querySelectorAll("button")).filter(
+      (button) => button.textContent?.includes("Clear")
+    );
+    clickElement(clearButtons[0]);
+    clickElement(clearButtons[1]);
+    clickElement(clearButtons[2]);
+    expect(latestValue.style?.sectionBackground).toBe("");
+    expect(latestValue.style?.cardSurface).toBe("");
+    expect(latestValue.style?.cardBorder).toBe("");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Team visual editor clears stale picked-media state when media resolution fails", async () => {
+  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+  vi.mocked(listMediaCached).mockRejectedValueOnce(new Error("network_error"));
+
+  let latestValue: TeamData = {
+    header: teamDefaults.header,
+    members: [
+      {
+        id: "member-1",
+        name: "Ada",
+        role: "CTO",
+        bio: "Builds release systems.",
+        photo: "https://cdn.example.com/direct-ada.jpg",
+        socialLinks: [],
+      },
+    ],
+    style: {},
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<TeamData>(latestValue);
+    const [variant, setVariant] = useState("cards");
+
+    return (
+      <TeamVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => setVariant(next)}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    clickButtonByText(view.container, "Browse media");
+    await flushAsyncUpdates();
+
+    expect(listMediaCached).toHaveBeenCalled();
+    expect(latestValue.members[0]?.photo).toBe("https://cdn.example.com/direct-ada.jpg");
+    expect(view.container.textContent).toContain("Failed to resolve selected media.");
+    expect(view.container.textContent).toContain(
+      "A saved photo is configured. Browse media to replace it or clear the photo."
+    );
+    expect(view.container.textContent).not.toContain("Selected: media-1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Team advanced editor keeps truthful read-only diagnostics sections", async () => {
   const { TeamAdvancedEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
 
   const onChangeSpy = vi.fn();
@@ -518,6 +864,8 @@ test("Team advanced editor covers normalization safeguards, token updates, and r
       columns: "9" as never,
       gap: "wide" as never,
       radius: "round" as never,
+      cardBorderWidth: "9" as never,
+      compactMobileBio: "other" as never,
     },
   } as TeamData;
 
@@ -540,375 +888,54 @@ test("Team advanced editor covers normalization safeguards, token updates, and r
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Technical layout tokens");
-    expect(view.container.textContent).toContain("Normalization and safeguards");
-    expect(view.container.textContent).toContain("Raw payload snapshot");
-
-    const initialSnapshot = view.container.querySelector("pre")?.textContent ?? "";
-    expect(initialSnapshot).toContain('"columns": "3"');
-    expect(initialSnapshot).toContain('"gap": "md"');
-    expect(initialSnapshot).toContain('"radius": "lg"');
-    expect(initialSnapshot).toContain('"id": "member-2"');
-    expect(initialSnapshot).toContain('"id": "social-2"');
-    expect(initialSnapshot).toContain('"label": "LinkedIn"');
-
-    clickButtonByText(view.container, "Normalize now");
-
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.header?.title).toBe(teamDefaults.header?.title);
-    expect(latestValue.style).toEqual(
-      expect.objectContaining({
-        columns: "3",
-        gap: "md",
-        radius: "lg",
-        cardSurface: undefined,
-        cardBorder: undefined,
-      })
+    expect(view.container.textContent).toContain(
+      "Advanced mode is read-only. Use Visual for public-facing Team copy, members, CTA, layout, colors, and card presentation changes."
     );
-    expect(latestValue.members[1]?.id).toBe("member-2");
-    expect(latestValue.members[0]?.socialLinks?.[0]?.label).toBe("LinkedIn");
-    expect(latestValue.members[0]?.socialLinks?.[1]?.id).toBe("social-2");
-
-    setSelectValue(findSelectByOptions(view.container, ["1", "2", "3", "4"]), "2");
-    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
-    setSelectValue(findSelectByOptions(view.container, ["none", "md", "lg", "xl"]), "xl");
-    setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "var(--panel)");
-    setInputValue(findInputByPlaceholder(view.container, "var(--color-border)"), "var(--edge)");
-
-    expect(latestValue.style).toEqual(
-      expect.objectContaining({
-        columns: "2",
-        gap: "lg",
-        radius: "xl",
-        cardSurface: "var(--panel)",
-        cardBorder: "var(--edge)",
-      })
-    );
-
-    clickButtonByText(view.container, "Reset to defaults");
-    expect(latestValue).toEqual(teamDefaults);
-    expect(view.container.querySelector("pre")?.textContent).toContain('"title": "Meet the team"');
+    expect(view.container.textContent).toContain("Layout summary");
+    expect(view.container.textContent).toContain("Surface summary");
+    expect(view.container.textContent).toContain("Content summary");
+    expect(view.container.textContent).toContain("Contract summary");
+    expect(view.container.textContent).toContain("Read-only layout state");
+    expect(
+      findSectionByTitle(view.container, "Layout summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.advanced.layout-summary");
+    expect(
+      findSectionByTitle(view.container, "Surface summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.advanced.surface-summary");
+    expect(
+      findSectionByTitle(view.container, "Content summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.advanced.content-summary");
+    expect(
+      findSectionByTitle(view.container, "Contract summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.advanced.contract-summary");
+    expect(view.container.textContent).not.toContain("Raw payload snapshot");
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.querySelector("select")).toBeNull();
+    expect(view.container.querySelector('input[placeholder="var(--color-bg)"]')).toBeNull();
+    expect(view.container.querySelector('input[placeholder="var(--color-border)"]')).toBeNull();
+    expect(
+      view.container.querySelectorAll(
+        '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    ).toHaveLength(0);
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(view.container.textContent).toContain("Section heading");
+    expect(view.container.textContent).toContain("Helper copy");
+    expect(view.container.textContent).toContain("Photo coverage");
+    expect(view.container.textContent).toContain("Wizard owns");
+    expect(view.container.textContent).toContain("Visual owns");
+    expect(view.container.textContent).toContain("Advanced owns");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(latestValue.header).toBeUndefined();
   } finally {
     view.cleanup();
-  }
-});
-
-test("Team visual editor covers member-count expansion, social add-link, and raw card token inputs", async () => {
-  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
-
-  let latestValue: TeamData = {
-    members: [
-      {
-        name: "Ada",
-        role: "CTO",
-        bio: "Builds delivery systems.",
-        socialLinks: [],
-      },
-    ],
-    style: {},
-  };
-
-  const Harness = () => {
-    const [value, setValue] = useState<TeamData>(latestValue);
-
-    return (
-      <TeamVisualEditor
-        value={value}
-        onChange={(next) => {
-          latestValue = next;
-          setValue(next);
-        }}
-        variant="cards"
-      />
-    );
-  };
-
-  const view = mount(<Harness />);
-
-  try {
-    const structureSection = findSectionByTitle(view.container, "Variant and member structure");
-    setSelectValue(findSelectByOptions(structureSection as ParentNode, ["1", "12"]), "2");
-    expect(latestValue.members).toHaveLength(2);
-
-    const membersSection = findSectionByTitle(view.container, "Members content and order");
-    setInputValue(findInputsByPlaceholder(view.container, "Anna Kowalska")[1], "Grace");
-    const moveUpButtons = Array.from(
-      (membersSection ?? view.container).querySelectorAll("button")
-    ).filter((button) => button.textContent?.includes("Move up"));
-    clickElement(moveUpButtons[1]);
-    expect(latestValue.members.map((member) => member.name)).toEqual(["Grace", "Ada"]);
-
-    const socialLinksSection = findSectionByTitle(view.container, "Social links");
-    clickButtonByText(socialLinksSection as ParentNode, "Add link");
-    expect(latestValue.members[0]?.socialLinks).toHaveLength(1);
-    expect(latestValue.members[0]?.socialLinks?.[0]).toEqual(
-      expect.objectContaining({
-        label: "LinkedIn",
-        url: "#",
-      })
-    );
-
-    const styleSection = findSectionByTitle(view.container, "Card and layout style");
-    setInputValue(
-      findInputByPlaceholder(styleSection as ParentNode, "var(--color-bg)"),
-      "var(--team-surface)"
-    );
-    setInputValue(
-      findInputByPlaceholder(styleSection as ParentNode, "var(--color-border)"),
-      "var(--team-border)"
-    );
-
-    expect(latestValue.style).toEqual(
-      expect.objectContaining({
-        cardSurface: "var(--team-surface)",
-        cardBorder: "var(--team-border)",
-      })
-    );
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("Team editors render sparse defaults and ignore variant changes without a handler", async () => {
-  const { TeamAdvancedEditor, TeamVisualEditor, TeamWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/TeamEditors");
-
-  const sparseValue: TeamData = {
-    header: {},
-    members: [{} as never],
-    style: {},
-  };
-
-  const wizardView = mount(
-    <TeamWizardEditor value={sparseValue} onChange={() => undefined} variant="legacy-team" />
-  );
-
-  try {
-    expect(
-      (
-        findSelectByOptions(wizardView.container, ["cards", "compact-list", "spotlight"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("cards");
-    expect(
-      (
-        findSelectByOptions(wizardView.container, ["1", "12"]) as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("1");
-    expect(
-      (
-        findInputByPlaceholder(wizardView.container, "Member 1 name") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("Team Member 1");
-  } finally {
-    wizardView.cleanup();
-  }
-
-  const visualView = mount(
-    <TeamVisualEditor value={sparseValue} onChange={() => undefined} variant="legacy-team" />
-  );
-
-  try {
-    const structureSection = findSectionByTitle(
-      visualView.container,
-      "Variant and member structure"
-    );
-    clickButtonByText(structureSection as ParentNode, "Compact List");
-
-    expect(
-      (
-        findInputByPlaceholder(visualView.container, "Meet the team") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe(teamDefaults.header?.title);
-    expect(
-      (
-        findTextareaByPlaceholder(
-          visualView.container,
-          "Introduce key people behind delivery, support, and strategy."
-        ) as HTMLTextAreaElement | null | undefined
-      )?.value
-    ).toBe(teamDefaults.header?.description);
-    expect(
-      (
-        findInputByPlaceholder(visualView.container, "Anna Kowalska") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("Team Member 1");
-    expect(
-      (
-        findInputByPlaceholder(visualView.container, "Head of Product") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("Role");
-    expect(
-      (
-        findTextareaByPlaceholder(
-          visualView.container,
-          "Short bio describing responsibilities and value."
-        ) as HTMLTextAreaElement | null | undefined
-      )?.value
-    ).toBe("Short bio describing responsibilities and value.");
-    expect(findSectionByTitle(visualView.container, "Social links")?.textContent).toContain(
-      "No social links configured."
-    );
-  } finally {
-    visualView.cleanup();
-  }
-
-  const advancedView = mount(
-    <TeamAdvancedEditor value={sparseValue} onChange={() => undefined} variant="cards" />
-  );
-
-  try {
-    expect(
-      (
-        findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("3");
-    expect(
-      (
-        findSelectByOptions(advancedView.container, ["none", "sm", "md", "lg"]) as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("md");
-    expect(
-      (
-        findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("lg");
-    expect(
-      (
-        findInputByPlaceholder(advancedView.container, "var(--color-bg)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findInputByPlaceholder(advancedView.container, "var(--color-border)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-  } finally {
-    advancedView.cleanup();
-  }
-});
-
-test("Team editors fall back when normalized style is missing and social labels are sparse", async () => {
-  vi.resetModules();
-  vi.doMock("../../../core/widgets/core/team", async () => {
-    const actual = await vi.importActual<typeof import("../../../core/widgets/core/team")>(
-      "../../../core/widgets/core/team"
-    );
-
-    return {
-      ...actual,
-      normalizeTeamData: (value: TeamData) => ({
-        ...actual.normalizeTeamData(value),
-        style: undefined,
-      }),
-    };
-  });
-
-  const { TeamAdvancedEditor, TeamVisualEditor } =
-    await import("../../../core/admin/ui/widgets/editors/TeamEditors");
-
-  const value: TeamData = {
-    members: [
-      {
-        name: "",
-        role: "",
-        bio: "",
-        socialLinks: [{ label: "", url: "" }],
-      },
-    ],
-  };
-
-  const visualView = mount(
-    <TeamVisualEditor value={value} onChange={() => undefined} variant="cards" />
-  );
-
-  try {
-    expect(findSectionByTitle(visualView.container, "Social links")?.textContent).toContain(
-      "Member 1"
-    );
-    expect(
-      (
-        findInputByPlaceholder(visualView.container, "var(--color-bg)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe(teamDefaults.style?.cardSurface);
-    expect(
-      (
-        findInputByPlaceholder(visualView.container, "var(--color-border)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe(teamDefaults.style?.cardBorder);
-  } finally {
-    visualView.cleanup();
-  }
-
-  const advancedView = mount(
-    <TeamAdvancedEditor value={value} onChange={() => undefined} variant="cards" />
-  );
-
-  try {
-    expect(
-      (
-        findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("3");
-    expect(
-      (
-        findSelectByOptions(advancedView.container, ["none", "sm", "md", "lg"]) as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("md");
-    expect(
-      (
-        findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("lg");
-  } finally {
-    advancedView.cleanup();
-    vi.doUnmock("../../../core/widgets/core/team");
-    vi.resetModules();
   }
 });

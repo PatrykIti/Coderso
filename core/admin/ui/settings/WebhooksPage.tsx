@@ -127,9 +127,7 @@ export function WebhooksPage() {
     try {
       if (editingWebhook) {
         const { item } = await updateWebhook(editingWebhook.id, payload);
-        setItems((prev) =>
-          prev.map((current) => (current.id === item.id ? item : current))
-        );
+        setItems((prev) => prev.map((current) => (current.id === item.id ? item : current)));
       } else {
         const { item } = await createWebhook(payload);
         setItems((prev) => [item, ...prev]);
@@ -186,13 +184,7 @@ export function WebhooksPage() {
     <SettingsShell
       activeHref="/admin/settings"
       sidebar={<SettingsSidebar activeId="webhooks" />}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Settings</span>
-          <span>/</span>
-          <span className="text-foreground">Webhooks</span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Webhooks"]}
     >
       <div className="flex h-full flex-col">
         <div className="border-b bg-background/70 px-6 py-5">

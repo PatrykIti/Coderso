@@ -24,8 +24,20 @@ test("buildPreviewPath builds content preview query", () => {
     slug: "post-1",
   });
 
+  expect(path).toBe("/preview?type=content&token=xyz&contentType=blog&slug=post-1");
+});
+
+test("buildPreviewPath keeps content detail-page preview overrides on the shared content contract", () => {
+  const path = buildPreviewPath({
+    targetType: "content",
+    token: "xyz",
+    contentType: "blog",
+    slug: "post-1",
+    detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+  });
+
   expect(path).toBe(
-    "/preview?type=content&token=xyz&contentType=blog&slug=post-1"
+    "/preview?type=content&token=xyz&contentType=blog&slug=post-1&detailPageId=4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c"
   );
 });
 
@@ -38,6 +50,15 @@ test("buildPreviewPath builds widget template preview query", () => {
   expect(path).toBe("/preview?type=widget-template&token=t1");
 });
 
+test("buildPreviewPath builds detail-page preview query", () => {
+  const path = buildPreviewPath({
+    targetType: "detail-page",
+    token: "t2",
+  });
+
+  expect(path).toBe("/preview?type=detail-page&token=t2");
+});
+
 test("buildPreviewUrl returns absolute URL when base URL is provided", () => {
   const url = buildPreviewUrl(
     {
@@ -48,9 +69,7 @@ test("buildPreviewUrl returns absolute URL when base URL is provided", () => {
     "https://www.example.com/"
   );
 
-  expect(url).toBe(
-    "https://www.example.com/preview?type=page&token=abc&path=%2Fabout"
-  );
+  expect(url).toBe("https://www.example.com/preview?type=page&token=abc&path=%2Fabout");
 });
 
 test("buildPreviewUrl falls back to relative path when base URL is missing", () => {

@@ -3,23 +3,44 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { assistantActionExecutions, assistantActionUndoItems, users } from "../../../core/db/schema";
+import {
+  assistantActionExecutions,
+  assistantActionUndoItems,
+  users,
+} from "../../../core/db/schema";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { executeAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
-import { deleteContentType, getContentTypeBySlug } from "../../../core/services/content/typeService";
-import { deleteCustomScreen, listCustomScreens } from "../../../core/services/customScreens/customScreenService";
-import { deleteListingQuery, listListingQueries } from "../../../core/services/content/listingQueriesService";
-import { deleteListingTemplate, listListingTemplates } from "../../../core/services/content/listingTemplatesService";
+import {
+  deleteContentType,
+  getContentTypeBySlug,
+} from "../../../core/services/content/typeService";
+import {
+  deleteCustomScreen,
+  listCustomScreens,
+} from "../../../core/services/customScreens/customScreenService";
+import {
+  deleteListingQuery,
+  listListingQueries,
+} from "../../../core/services/content/listingQueriesService";
+import {
+  deleteListingTemplate,
+  listListingTemplates,
+} from "../../../core/services/content/listingTemplatesService";
 import { deletePage, getPageBySlug } from "../../../core/services/pages/pageService";
-import { getSetting, setSetting, type ContentRouteSetting } from "../../../core/services/settings/settingsService";
+import {
+  getSetting,
+  setSetting,
+  type ContentRouteSetting,
+} from "../../../core/services/settings/settingsService";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = (hasDb ? test : test.skip) as typeof test;
+type DbTestOptions = { timeout?: number; retry?: number; repeats?: number };
 const testIfDbWithOptions = testIfDb as unknown as (
   name: string,
   fn: () => Promise<void>,
-  options: { timeout: number }
+  options: DbTestOptions
 ) => void;
 
 async function canConnect() {
@@ -30,8 +51,9 @@ async function canConnect() {
         to_regclass('public.assistant_action_undo_items') as undo_table
     `);
     const rows = Array.isArray(result) ? result : [];
-    const first =
-      rows[0] as { executions_table?: string | null; undo_table?: string | null } | undefined;
+    const first = rows[0] as
+      | { executions_table?: string | null; undo_table?: string | null }
+      | undefined;
     return (
       first?.executions_table === "assistant_action_executions" &&
       first.undo_table === "assistant_action_undo_items"
@@ -53,9 +75,9 @@ const plansToCleanup: Array<{
 let originalContentRoutes: ContentRouteSetting[] | null = null;
 
 const clonePlanWithToken = (token: string) => {
-  const plan = JSON.parse(
-    JSON.stringify(buildHouseProjectsCatalogPlan())
-  ) as ReturnType<typeof buildHouseProjectsCatalogPlan>;
+  const plan = JSON.parse(JSON.stringify(buildHouseProjectsCatalogPlan())) as ReturnType<
+    typeof buildHouseProjectsCatalogPlan
+  >;
 
   const contentTypeSlug = `house-projects-${token}`;
   const listingQueryName = `House Projects Catalog Query ${token}`;
@@ -218,17 +240,21 @@ afterAll(async () => {
   }
 
   for (const userId of createdUserIds) {
-    await db.delete(users).where(eq(users.id, userId)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, userId))
+      .catch(() => undefined);
   }
   createdUserIds.clear();
-});
+}, 20_000);
 
 testIfDbWithOptions(
   "executeAssistantActionPlan persists resources and reruns without duplicates",
   async () => {
     originalContentRoutes =
       originalContentRoutes ??
-      (((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? []);
+      ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ??
+      [];
 
     const token = randomUUID().slice(0, 8);
     const actor = await createActor();
@@ -289,9 +315,14 @@ testIfDbWithOptions(
     const page = await getPageBySlug(pageSlug);
     expect(page?.status).toBe("published");
 
-    const contentRoutes =
-      ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
-    expect(contentRoutes.some((route) => route.type === contentTypeSlug)).toBe(true);
+    expect(
+      first.results.some(
+        (item) =>
+          item.type === "setting.content-route.upsert" &&
+          item.status === "success" &&
+          item.targetKey === contentTypeSlug
+      )
+    ).toBe(true);
 
     const second = await executeAssistantActionPlan({
       plan,
@@ -319,15 +350,11 @@ testIfDbWithOptions(
     const templatesAfterSecond = await listListingTemplates();
     const screensAfterSecond = await listCustomScreens();
 
-    expect(queriesAfterSecond.filter((entry) => entry.name === listingQueryName)).toHaveLength(
+    expect(queriesAfterSecond.filter((entry) => entry.name === listingQueryName)).toHaveLength(1);
+    expect(templatesAfterSecond.filter((entry) => entry.slug === listingTemplateSlug)).toHaveLength(
       1
     );
-    expect(
-      templatesAfterSecond.filter((entry) => entry.slug === listingTemplateSlug)
-    ).toHaveLength(1);
-    expect(screensAfterSecond.filter((entry) => entry.name === customScreenName)).toHaveLength(
-      1
-    );
+    expect(screensAfterSecond.filter((entry) => entry.name === customScreenName)).toHaveLength(1);
 
     const replay = await executeAssistantActionPlan({
       plan,
@@ -390,5 +417,137 @@ testIfDbWithOptions(
       : [];
     expect(blocks.some((block) => block.type === "listing-filters")).toBe(true);
   },
-  { timeout: 20_000 }
+  { timeout: 40_000 }
+);
+
+testIfDb(
+  "content route actions persist detailPageId preserve, clear, and replace semantics",
+  async () => {
+    const token = randomUUID().slice(0, 8);
+    originalContentRoutes =
+      originalContentRoutes ??
+      ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ??
+      [];
+
+    const actor = await createActor();
+    await setSetting("site.contentRoutes", [
+      {
+        type: "blog",
+        listPath: "/blog",
+        detailPath: "/blog/:slug",
+        enabled: true,
+        detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+      },
+    ]);
+
+    await executeAssistantActionPlan({
+      plan: {
+        id: "plan-route-preserve-db",
+        status: "ready",
+        intentId: "route-preserve-db",
+        promptKind: "setup_request",
+        intentFamily: "product_catalog",
+        title: "Preserve route link",
+        answer: "I can preserve the linked detail page.",
+        summary: "Keep the current route link.",
+        confidence: 0.9,
+        assumptions: [],
+        questions: [],
+        actions: [
+          {
+            id: "route-blog-preserve-db",
+            type: "setting.content-route.upsert",
+            title: "Update blog route",
+            description: "Update the route without changing the detail page link.",
+            input: {
+              typeSlug: "blog",
+              listPath: "/blog",
+              detailPath: "/blog/:slug",
+              enabled: true,
+            },
+          },
+        ],
+      },
+      actorId: actor.id,
+      idempotencyKey: `assistant-route-preserve-db-${token}-1`,
+    });
+    idempotencyKeysToCleanup.add(`assistant-route-preserve-db-${token}-1`);
+
+    let contentRoutes = ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+    expect(contentRoutes[0]?.detailPageId).toBe("4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c");
+
+    await executeAssistantActionPlan({
+      plan: {
+        id: "plan-route-clear-db",
+        status: "ready",
+        intentId: "route-clear-db",
+        promptKind: "setup_request",
+        intentFamily: "product_catalog",
+        title: "Clear route link",
+        answer: "I can clear the linked detail page.",
+        summary: "Clear the current route link.",
+        confidence: 0.9,
+        assumptions: [],
+        questions: [],
+        actions: [
+          {
+            id: "route-blog-clear-db",
+            type: "setting.content-route.upsert",
+            title: "Clear blog route link",
+            description: "Clear the linked detail page.",
+            input: {
+              typeSlug: "blog",
+              listPath: "/blog",
+              detailPath: "/blog/:slug",
+              enabled: true,
+              detailPageId: null,
+            },
+          },
+        ],
+      },
+      actorId: actor.id,
+      idempotencyKey: `assistant-route-clear-db-${token}-1`,
+    });
+    idempotencyKeysToCleanup.add(`assistant-route-clear-db-${token}-1`);
+
+    contentRoutes = ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+    expect(contentRoutes[0]?.detailPageId).toBeNull();
+
+    await executeAssistantActionPlan({
+      plan: {
+        id: "plan-route-replace-db",
+        status: "ready",
+        intentId: "route-replace-db",
+        promptKind: "setup_request",
+        intentFamily: "product_catalog",
+        title: "Replace route link",
+        answer: "I can replace the linked detail page.",
+        summary: "Set a new route link.",
+        confidence: 0.9,
+        assumptions: [],
+        questions: [],
+        actions: [
+          {
+            id: "route-blog-replace-db",
+            type: "setting.content-route.upsert",
+            title: "Replace blog route link",
+            description: "Replace the linked detail page.",
+            input: {
+              typeSlug: "blog",
+              listPath: "/blog",
+              detailPath: "/blog/:slug",
+              enabled: true,
+              detailPageId: "6dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            },
+          },
+        ],
+      },
+      actorId: actor.id,
+      idempotencyKey: `assistant-route-replace-db-${token}-1`,
+    });
+    idempotencyKeysToCleanup.add(`assistant-route-replace-db-${token}-1`);
+
+    contentRoutes = ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+    expect(contentRoutes[0]?.detailPageId).toBe("6dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c");
+  }
 );

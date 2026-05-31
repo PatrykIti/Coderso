@@ -139,17 +139,7 @@ export function FormActionLogsPage() {
   return (
     <AdminShell
       activeHref="/admin/advanced/forms"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span>Forms</span>
-          <span>/</span>
-          <span>{formName}</span>
-          <span>/</span>
-          <span className="text-foreground">Action logs</span>
-        </div>
-      }
+      breadcrumbs={["Content", "Forms", formName, "Action logs"]}
     >
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
         <PageHeader
@@ -191,9 +181,7 @@ export function FormActionLogsPage() {
         <div className="flex items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3">
           <div>
             <p className="text-sm font-medium text-foreground">Filter status</p>
-            <p className="text-xs text-muted-foreground">
-              Narrow down runs by execution status.
-            </p>
+            <p className="text-xs text-muted-foreground">Narrow down runs by execution status.</p>
           </div>
           <Select
             value={statusFilter}
@@ -243,7 +231,8 @@ export function FormActionLogsPage() {
               ) : runs.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
-                    No action runs yet. Use Runtime preview in the form editor to trigger a test submission.
+                    No action runs yet. Use Runtime preview in the form editor to trigger a test
+                    submission.
                   </td>
                 </tr>
               ) : (

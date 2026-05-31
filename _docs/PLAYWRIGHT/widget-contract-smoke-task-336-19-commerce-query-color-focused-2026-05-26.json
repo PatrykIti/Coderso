@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-05-26T02:05:00.000Z",
+  "session": "task-336-19-commerce-query-color-focused",
+  "admin": "http://localhost:5173/admin",
+  "widgets": [
+    {
+      "widgetType": "product-compare",
+      "adminPath": "http://localhost:5173/admin/pages/3beb58fc-0d9a-4bd9-ae92-c1d2f83de65e",
+      "visualSwatchCount": 5,
+      "visualValueInputCount": 0,
+      "visualRawColorInputCount": 0,
+      "visualMediaHintCount": 0,
+      "advancedPreCount": 0,
+      "advancedWritablePathCount": 0,
+      "runtimePathCount": 0,
+      "advancedRawCopyMatches": 0,
+      "hasSourceSummary": true,
+      "hasSurfaceSummary": true,
+      "visualRawTokenTextVisible": false,
+      "passed": true
+    },
+    {
+      "widgetType": "product-gallery",
+      "adminPath": "http://localhost:5173/admin/pages/1edd10a5-7626-4630-aa47-87c6604fcc62",
+      "visualSwatchCount": 4,
+      "visualValueInputCount": 0,
+      "visualRawColorInputCount": 0,
+      "visualMediaHintCount": 0,
+      "advancedPreCount": 0,
+      "advancedWritablePathCount": 0,
+      "runtimePathCount": 0,
+      "advancedRawCopyMatches": 0,
+      "hasSourceSummary": true,
+      "hasSurfaceSummary": true,
+      "visualRawTokenTextVisible": false,
+      "passed": true
+    }
+  ],
+  "passed": true
+}

@@ -1,0 +1,246 @@
+# TASK-252-05-09: Accordion Disclosure Default Open and Accessibility
+
+# FileName: TASK-252-05-09_Accordion_Disclosure_Default_Open_and_Accessibility.md
+
+**Priority:** High
+**Category:** Widgets + Admin UI + Runtime Render
+**Estimated Effort:** Medium
+**Dependencies:** TASK-252-01, TASK-252-02
+**Status:** Done
+**Started:** 2026-05-11
+**Completed:** 2026-05-12
+
+---
+
+## Overview
+
+Make Accordion a first-class disclosure widget with single/multiple open behavior, default open items, collapsible state, and accessible panel semantics.
+
+This is an execution leaf under `TASK-252-05`. It must not re-open the
+research phase; use `_docs/_WIDGETS/tmp/accordion/MATRIX.md` and the widget README under
+`_docs/_WIDGETS/tmp/accordion/` as the source evidence for Keep, Adapt,
+and Reject decisions.
+
+## Business Requirements
+
+- Use `_docs/_WIDGETS/tmp/accordion/MATRIX.md` as the binding research evidence for the final option set.
+- Consume shared TASK-252 editor sections, rows, labels, info tips, and `data-widget-control` metadata from TASK-252-01; do not create a widget-local control framework.
+- Keep schema/default/normalizer/render/editor/docs changes together and preserve existing saved payload compatibility.
+- Keep layout choices beginner-readable through presets and bounded tokens rather than arbitrary CSS controls.
+
+## Research Decisions
+
+- Keep: repeatable items, single/multiple open behavior, default open item(s),
+  collapsible semantics, and accessibility behavior from
+  `_docs/_WIDGETS/tmp/accordion/MATRIX.md`; map them to schema-owned
+  `options.openMode`, `options.defaultOpenIds`, `options.collapsible`, and the
+  existing `accordionItemSlot`, with a legacy adapter for
+  `options.initiallyOpenId` and `options.allowMultiple`.
+- Adapt: panel style changes and visual variants remain conditional; implement
+  only when schema/defaults/normalizer/render/editor/tests move together.
+- Reject: nested accordions by default and arbitrary disclosure scripting.
+
+## Editor Mode Ownership
+
+- `Wizard`: first-run setup for the safest useful defaults for `accordion`.
+- `Visual`: `Items`, `Open behavior`, `Existing panel token preservation`.
+- `Advanced`: `A11y diagnostics`, `Legacy expanded item mapping`.
+
+## Sub-Tasks
+
+- None. This is an execution leaf.
+
+## Files to Change
+
+- `core/widgets/core/accordion.tsx`
+- `core/admin/ui/widgets/editors/AccordionEditors.tsx`
+- `tests/vitest/widgets/renderer.test.tsx` if slot or shared renderer output changes.
+- `tests/unit/widgets/validator.test.ts` when schema validation or slot normalization changes.
+- `tests/vitest/widgets/accordionWidget.test.tsx`
+- `tests/vitest/ui/accordion-editor-wave.test.tsx`
+- `_docs/WIDGETS.md`
+- `_docs/_WIDGETS/ACCORDION.md`
+- `_docs/_WIDGETS/tmp/accordion/MATRIX.md` for evidence reference only; do not rewrite research
+  unless implementation finds a concrete source mismatch.
+- `_docs/_TASKS/TASK-252-05-09_Accordion_Disclosure_Default_Open_and_Accessibility.md` for status updates during execution.
+- `_docs/_TASKS/README.md` on status changes.
+
+## New Files to Create
+
+- `_docs/_WIDGETS/ACCORDION.md` if no canonical accordion widget page exists
+  when this leaf is implemented.
+
+## Implementation Pseudocode
+
+```tsx
+function normalizeAccordionData(data: AccordionData): AccordionData {
+  return {
+    items: normalizeAccordionItems(data.items),
+    options: normalizeAccordionOptions({
+      openMode: data.options?.openMode ?? (data.options?.allowMultiple ? "multiple" : "single"),
+      defaultOpenIds: data.options?.defaultOpenIds ?? normalizeLegacyInitiallyOpenId(data.options?.initiallyOpenId),
+      collapsible: data.options?.collapsible ?? true,
+    }),
+    style: normalizeAccordionStyle(data.style),
+  };
+}
+
+function AccordionVisualEditor(props: WidgetEditorProps<AccordionData>) {
+  const value = props.value;
+  return (
+    <WidgetEditorSection id="accordion.options" title="Disclosure behavior">
+      <WidgetControlRow id="accordion.options.openMode" label="Open mode" data-widget-control="accordion.options.openMode">
+        <SegmentedControl value={value.options?.openMode ?? "single"} onChange={(openMode) => props.onChange(updateAccordionOptions(value, { openMode }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="accordion.options.defaultOpenIds" label="Default open items" data-widget-control="accordion.options.defaultOpenIds">
+        <DefaultOpenItemsPicker value={value.options?.defaultOpenIds ?? []} mode={value.options?.openMode ?? "single"} onChange={(defaultOpenIds) => props.onChange(updateAccordionOptions(value, { defaultOpenIds }))} />
+      </WidgetControlRow>
+      <WidgetControlRow id="accordion.options.collapsible" label="Allow all closed" data-widget-control="accordion.options.collapsible">
+        <Switch checked={value.options?.collapsible ?? true} onCheckedChange={(collapsible) => props.onChange(updateAccordionOptions(value, { collapsible }))} />
+      </WidgetControlRow>
+    </WidgetEditorSection>
+  );
+}
+
+function renderAccordionRuntime(items: AccordionItem[], options: AccordionOptions, variant: AccordionVariantId) {
+  const openIds = resolveAccordionOpenIds(items, options);
+  return (
+    <div
+      data-nextless-accordion="1"
+      data-nextless-accordion-variant={variant}
+      data-nextless-accordion-count={String(items.length)}
+    >
+      {items.map((item) => {
+        const buttonId = `accordion-trigger-${item.instanceId}`;
+        const panelId = `accordion-panel-${item.instanceId}`;
+        const expanded = openIds.includes(item.instanceId);
+        return (
+          <div data-nextless-accordion-item={item.instanceId}>
+            <h3>
+              <button
+                id={buttonId}
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={panelId}
+              >
+                {item.title}
+              </button>
+            </h3>
+            <div
+              id={panelId}
+              role="region"
+              aria-labelledby={buttonId}
+              hidden={!expanded}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function syncAccordionDisclosure(root: HTMLElement, itemId: string, options: AccordionOptions) {
+  // If this leaf replaces the current native details/summary behavior with
+  // explicit button/region markup, the inline runtime script must own public
+  // disclosure behavior. It updates aria-expanded, hidden panels, focus-safe
+  // single/multiple state, and data-state through existing data-nextless markers.
+}
+
+function bindAccordionRuntime(root: HTMLElement) {
+  // Attach delegated click and keydown handlers to accordion trigger buttons.
+  // Keep Space/Enter behavior keyboard-accessible and preserve native fallback
+  // if the implementation stays on details/summary.
+}
+```
+
+Implementation checklist:
+
+- Read `_docs/_WIDGETS/tmp/accordion/MATRIX.md` before changing the schema or editor.
+- Extend or reorganize `core/widgets/core/accordion.tsx` schema/defaults/normalizer/rendering
+  only for fields approved by the research decisions above.
+- Refactor `core/admin/ui/widgets/editors/AccordionEditors.tsx` to shared TASK-252 editor primitives from
+  TASK-252-01; do not create widget-local replacements for sections, rows, info
+  tips, or metadata.
+- Keep legacy payloads non-destructive: missing new fields must normalize to the
+  current rendered behavior.
+- Preserve existing runtime/test markers (`data-nextless-accordion="1"`,
+  `data-nextless-accordion-variant`, `data-nextless-accordion-count`, and
+  `data-nextless-accordion-item`) even if the renderer moves away from the
+  current native `details`/`summary` shape toward explicit button/region
+  semantics.
+- Preserve a deterministic button/region strategy: every trigger needs a stable
+  id, `aria-expanded`, and `aria-controls`, and every panel needs a matching
+  `role="region"` plus `aria-labelledby`.
+- Do not make public accordions inert. The current renderer gets interaction
+  from native `details`/`summary`; if this leaf moves to explicit button/region
+  markup, add an inline delegated runtime script that synchronizes
+  `aria-expanded`, hidden panels, single/multiple open rules, and keyboard
+  activation. React-only event handlers are not sufficient for server-rendered
+  public widget output.
+- Tests must prove `openMode`, `defaultOpenIds`, and `collapsible` update both
+  visible state and accessible state without orphaning existing slot content.
+- Add or update runtime/widget tests and editor-wave tests in the files listed
+  above.
+
+## Security Contract
+
+- Visibility:
+  - editor controls are internal admin UI;
+  - rendered `accordion` output is public page/runtime output.
+- Auth model:
+  - no new endpoint is introduced by this leaf;
+  - edits persist through existing authenticated admin page/template save flows.
+- RBAC:
+  - unchanged page/template/widget-template write permissions.
+- CSRF:
+  - unchanged admin write CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - changed `accordion` schema fields must reject unknown fields and
+    normalize legacy payloads through `core/widgets/core/accordion.tsx`.
+- Anti-abuse:
+  - No raw class-name interpolation from user-controlled fields.
+  - No public write endpoint is introduced.
+
+## Testing Requirements
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
+- `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
+  must cover single vs multiple open behavior, `defaultOpenIds`,
+  `collapsible`, trigger/panel id wiring, `aria-expanded`,
+  `aria-controls`, panel `aria-labelledby`, and preservation of the existing
+  `data-nextless-accordion*` runtime markers. If button/region markup replaces
+  native `details`, tests must also prove the delegated runtime script is present
+  and covers click plus keyboard activation.
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
+  slot, or shared output behavior changes.
+- `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
+  token/clear/default adjacency changes.
+- Add Bun-owned route/security tests when endpoint behavior, public writes,
+  provider fetches, or runtime-kernel scripts change.
+
+## Documentation Updates Required
+
+- `_docs/WIDGETS.md`
+- `_docs/_WIDGETS/ACCORDION.md`
+- `_docs/_WIDGETS/README.md`; `ACCORDION.md` does not currently exist, so
+  completing this leaf must create the page and index entry.
+- `_docs/_TASKS/TASK-252-05-09_Accordion_Disclosure_Default_Open_and_Accessibility.md` status notes during execution.
+- `_docs/_TASKS/README.md` on status changes.
+- `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
+  completed.
+
+## Acceptance Criteria
+
+- `accordion` Visual mode is sectioned, accessible, and metadata-backed.
+- Final `accordion` options match Keep/Adapt/Reject decisions from the research matrix.
+- Existing saved widget payloads remain backward compatible.
+- Documentation names the research decisions that explain both added and
+  rejected options.
+- Validation commands and any skipped suites are recorded before marking this
+  leaf `Done`.

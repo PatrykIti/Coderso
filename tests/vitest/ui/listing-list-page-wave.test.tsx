@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -11,6 +11,7 @@ import type {
 
 const listingPageState = vi.hoisted(() => ({
   navigate: vi.fn(),
+  path: "/admin/advanced/listings",
   refreshQueries: vi.fn(async () => undefined),
   refreshTemplates: vi.fn(async () => undefined),
   deleteListingQuery: vi.fn(async () => undefined),
@@ -66,6 +67,7 @@ const listingPageState = vi.hoisted(() => ({
     this.deleteListingQuery.mockResolvedValue(undefined);
     this.deleteListingTemplate.mockReset();
     this.deleteListingTemplate.mockResolvedValue(undefined);
+    this.path = "/admin/advanced/listings";
     this.queryError = null;
     this.templateError = null;
   },
@@ -116,29 +118,14 @@ vi.mock("@/components/ui/tabs", () => {
       return <div>{children}</div>;
     },
     TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    TabsTrigger: ({
-      children,
-      value,
-    }: {
-      children: React.ReactNode;
-      value: string;
-    }) => {
+    TabsTrigger: ({ children, value }: { children: React.ReactNode; value: string }) => {
       return (
-        <button
-          type="button"
-          onClick={() => tabsMockState.onValueChange?.(value)}
-        >
+        <button type="button" onClick={() => tabsMockState.onValueChange?.(value)}>
           {children}
         </button>
       );
     },
-    TabsContent: ({
-      children,
-      value,
-    }: {
-      children: React.ReactNode;
-      value: string;
-    }) => {
+    TabsContent: ({ children, value }: { children: React.ReactNode; value: string }) => {
       return tabsMockState.currentValue === value ? <div>{children}</div> : null;
     },
   };
@@ -152,11 +139,18 @@ vi.mock("@/services/listingsClient", () => ({
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
   useAdminRouter: () => ({
     navigate: listingPageState.navigate,
+    path: listingPageState.path,
   }),
 }));
 
 vi.mock("@/ui/layouts/AdminShell", () => ({
-  AdminShell: ({ children, breadcrumbs }: { children: React.ReactNode; breadcrumbs?: React.ReactNode }) => (
+  AdminShell: ({
+    children,
+    breadcrumbs,
+  }: {
+    children: React.ReactNode;
+    breadcrumbs?: React.ReactNode;
+  }) => (
     <div>
       <div>{breadcrumbs}</div>
       <div>{children}</div>
@@ -333,17 +327,19 @@ vi.mock("../../../core/admin/ui/listings/listingActionToasts", () => ({
     error: vi.fn((_action: string, error: unknown) =>
       error instanceof Error ? error.message : "Query action failed."
     ),
-    summarizeBulkAction: vi.fn((_action: string, ids: string[], results: PromiseSettledResult<unknown>[]) => {
-      const failedTargets = ids.filter((_, index) => results[index]?.status === "rejected");
-      return {
-        ok: failedTargets.length === 0,
-        toastMessage: "bulk query result",
-        inlineMessage: "bulk query result",
-        succeededCount: ids.length - failedTargets.length,
-        failedCount: failedTargets.length,
-        failedTargets,
-      };
-    }),
+    summarizeBulkAction: vi.fn(
+      (_action: string, ids: string[], results: PromiseSettledResult<unknown>[]) => {
+        const failedTargets = ids.filter((_, index) => results[index]?.status === "rejected");
+        return {
+          ok: failedTargets.length === 0,
+          toastMessage: "bulk query result",
+          inlineMessage: "bulk query result",
+          succeededCount: ids.length - failedTargets.length,
+          failedCount: failedTargets.length,
+          failedTargets,
+        };
+      }
+    ),
     emitBulk: vi.fn(),
   },
   listingTemplateToasts: {
@@ -351,17 +347,19 @@ vi.mock("../../../core/admin/ui/listings/listingActionToasts", () => ({
     error: vi.fn((_action: string, error: unknown) =>
       error instanceof Error ? error.message : "Template action failed."
     ),
-    summarizeBulkAction: vi.fn((_action: string, ids: string[], results: PromiseSettledResult<unknown>[]) => {
-      const failedTargets = ids.filter((_, index) => results[index]?.status === "rejected");
-      return {
-        ok: failedTargets.length === 0,
-        toastMessage: "bulk template result",
-        inlineMessage: "bulk template result",
-        succeededCount: ids.length - failedTargets.length,
-        failedCount: failedTargets.length,
-        failedTargets,
-      };
-    }),
+    summarizeBulkAction: vi.fn(
+      (_action: string, ids: string[], results: PromiseSettledResult<unknown>[]) => {
+        const failedTargets = ids.filter((_, index) => results[index]?.status === "rejected");
+        return {
+          ok: failedTargets.length === 0,
+          toastMessage: "bulk template result",
+          inlineMessage: "bulk template result",
+          succeededCount: ids.length - failedTargets.length,
+          failedCount: failedTargets.length,
+          failedTargets,
+        };
+      }
+    ),
     emitBulk: vi.fn(),
   },
 }));
@@ -377,14 +375,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -399,13 +397,13 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -427,9 +425,24 @@ test("ListingListPage routes active-tab New through the shell", () => {
     expect(listingPageState.navigate).toHaveBeenCalledWith("/advanced/listings/new");
 
     clickByText(view.container, "Templates");
+    expect(listingPageState.navigate).toHaveBeenCalledWith("/advanced/listings?tab=templates", {
+      replace: true,
+    });
     clickByText(view.container, "New");
     expect(view.container.textContent).toContain("template-create-dialog");
-    expect(listingPageState.navigate).toHaveBeenCalledTimes(1);
+    expect(listingPageState.navigate).toHaveBeenCalledTimes(2);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingListPage opens templates tab from query params", () => {
+  listingPageState.path = "/admin/advanced/listings?tab=templates";
+  const view = mount(<ListingListPage />);
+
+  try {
+    expect(view.container.textContent).toContain("template-count:1");
+    expect(view.container.textContent).not.toContain("query-count:1");
   } finally {
     view.cleanup();
   }
@@ -477,9 +490,7 @@ test("ListingListPage scopes bulk delete to the active tab", async () => {
     clickByText(view.container, "Delete selected");
     await flush();
 
-    expect(listingPageState.deleteListingTemplate).toHaveBeenCalledWith(
-      "listing-template-1"
-    );
+    expect(listingPageState.deleteListingTemplate).toHaveBeenCalledWith("listing-template-1");
   } finally {
     view.cleanup();
   }
@@ -503,33 +514,19 @@ test("ListingListPage renders load errors from both listing hooks", () => {
 
 test("Listings filter helpers narrow query and template resources", () => {
   expect(
-    filterListingQueries(listingPageState.queryItems, "service", "all").map(
-      (item) => item.id
-    )
+    filterListingQueries(listingPageState.queryItems, "service", "all").map((item) => item.id)
   ).toEqual(["listing-query-1"]);
+  expect(filterListingQueries(listingPageState.queryItems, "missing", "all")).toEqual([]);
   expect(
-    filterListingQueries(listingPageState.queryItems, "missing", "all")
-  ).toEqual([]);
-  expect(
-    filterListingQueries(listingPageState.queryItems, "", "entries").map(
-      (item) => item.id
-    )
+    filterListingQueries(listingPageState.queryItems, "", "entries").map((item) => item.id)
   ).toEqual(["listing-query-1"]);
-  expect(filterListingQueries(listingPageState.queryItems, "", "posts")).toEqual(
-    []
-  );
+  expect(filterListingQueries(listingPageState.queryItems, "", "posts")).toEqual([]);
 
   expect(
-    filterListingTemplates(listingPageState.templateItems, "cards", "all").map(
-      (item) => item.id
-    )
+    filterListingTemplates(listingPageState.templateItems, "cards", "all").map((item) => item.id)
   ).toEqual(["listing-template-1"]);
+  expect(filterListingTemplates(listingPageState.templateItems, "cards", "list")).toEqual([]);
   expect(
-    filterListingTemplates(listingPageState.templateItems, "cards", "list")
-  ).toEqual([]);
-  expect(
-    filterListingTemplates(listingPageState.templateItems, "card", "grid").map(
-      (item) => item.id
-    )
+    filterListingTemplates(listingPageState.templateItems, "card", "grid").map((item) => item.id)
   ).toEqual(["listing-template-1"]);
 });

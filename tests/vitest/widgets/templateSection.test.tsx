@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { afterEach, expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
 
+import { richTextHtmlToPlainText } from "../../../core/widgets/core/richTextSection";
 import {
   createTemplateSectionWidget,
   TemplateSectionBlock,
@@ -11,6 +12,7 @@ import {
 } from "../../../core/widgets/core/templateSection";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetEditorProps } from "../../../core/widgets/types";
 
@@ -47,6 +49,50 @@ test("template section renders placeholder when empty", () => {
 
   expect(html).toContain("Template section");
   expect(html).toContain("Select a widget template");
+  expect(html).toContain('data-template-section-resolution="not_selected"');
+});
+
+test("template section placeholder does not expose raw template ids", () => {
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "tpl_01HT_RAW_IDENTIFIER",
+        resolved: {
+          error: "template_missing",
+        },
+      }}
+      variant="default"
+    />
+  );
+  const visibleText = richTextHtmlToPlainText(html);
+
+  expect(html).toContain("Template section");
+  expect(html).toContain("Template not found. Pick another template.");
+  expect(html).toContain('data-template-section-resolution="template_missing"');
+  expect(visibleText).not.toContain("tpl_01HT_RAW_IDENTIFIER");
+});
+
+test("template section selected admin placeholder reports unresolved preview state", () => {
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "template-1",
+        templateName: "Draft template",
+        metadata: {
+          category: "Marketing",
+          version: "v2",
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain('data-template-section-resolution="preview_unresolved"');
+  expect(html).toContain('data-template-section-category="Marketing"');
+  expect(html).toContain('data-template-section-version="v2"');
+  expect(html).toContain("Marketing / v2");
+  expect(html).toContain("Admin preview is placeholder-only until runtime resolves this template.");
 });
 
 test("template section renders resolved blocks", () => {
@@ -65,10 +111,13 @@ test("template section renders resolved blocks", () => {
       data={{
         templateId: "template-1",
         templateName: "Hero Cluster",
+        metadata: {
+          category: "Marketing",
+          previewLabel: "Homepage Hero",
+          version: "v2",
+        },
         resolved: {
-          blocks: [
-            { id: "dummy-1", type: "dummy", variant: "default", data: {} },
-          ],
+          blocks: [{ id: "dummy-1", type: "dummy", variant: "default", data: {} }],
         },
       }}
       variant="default"
@@ -76,7 +125,111 @@ test("template section renders resolved blocks", () => {
   );
 
   expect(html).toContain('data-template-section-state="ready"');
+  expect(html).toContain('data-template-section-resolution="ready"');
+  expect(html).toContain('data-template-section-category="Marketing"');
+  expect(html).toContain('data-template-section-version="v2"');
+  expect(html).toContain("Homepage Hero");
   expect(html).toContain('data-dummy="true"');
+});
+
+test("template section renders safe placeholder when resolution has an error", () => {
+  clearWidgets();
+  registerWidget(
+    createTemplateSectionWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+  registerWidget(dummyWidget);
+
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "template-1",
+        templateName: "Draft Hero Cluster",
+        resolved: {
+          error: "template_unpublished",
+          blocks: [{ id: "dummy-1", type: "dummy", variant: "default", data: {} }],
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain('data-template-section-resolution="template_unpublished"');
+  expect(html).toContain("Template is not published yet.");
+  expect(html).not.toContain('data-dummy="true"');
+});
+
+test("template section reports template loop placeholders", () => {
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "template-1",
+        templateName: "Looped Hero Cluster",
+        resolved: {
+          error: "template_loop",
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain('data-template-section-resolution="template_loop"');
+  expect(html).toContain("Template loop detected. Remove nested template sections.");
+});
+
+test("template section reports resolved empty templates separately from unresolved preview", () => {
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "template-1",
+        templateName: "Empty Hero Cluster",
+        resolved: {
+          blocks: [],
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain('data-template-section-resolution="template_empty"');
+  expect(html).toContain("This template has no blocks yet.");
+});
+
+test("template section renders safe placeholder when a missing template carries stale blocks", () => {
+  clearWidgets();
+  registerWidget(
+    createTemplateSectionWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+  registerWidget(dummyWidget);
+
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "template-1",
+        templateName: "Missing Hero Cluster",
+        resolved: {
+          error: "template_missing",
+          blocks: [{ id: "dummy-1", type: "dummy", variant: "default", data: {} }],
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain('data-template-section-resolution="template_missing"');
+  expect(html).toContain("Template not found. Pick another template.");
+  expect(html).not.toContain('data-dummy="true"');
 });
 
 test("template section schema accepts runtime payload", () => {
@@ -97,10 +250,36 @@ test("template section schema accepts runtime payload", () => {
       data: {
         templateId: "template-1",
         templateName: "Hero Cluster",
+        metadata: {
+          category: "Marketing",
+          previewLabel: "Homepage Hero",
+          version: "v2",
+        },
         resolved: {
           blocks: [],
         },
       },
     })
   ).not.toThrow();
+});
+
+test("template section declares a valid editor ownership contract", () => {
+  const definition = createTemplateSectionWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+
+  const validation = validateWidgetEditorContract(definition, { requireContract: true });
+
+  expect(validation.valid).toBe(true);
+  expect(validation.errors).toEqual([]);
+  expect(definition.editorContract?.sections.map((section) => section.id)).toEqual([
+    "template-section.wizard.template-setup",
+    "template-section.visual.active-template",
+    "template-section.visual.presentation-fields",
+    "template-section.advanced.template-diagnostics",
+    "template-section.advanced.runtime-payload",
+    "template-section.advanced.runtime-rules",
+  ]);
 });

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
@@ -57,7 +57,7 @@ const writeMediaCache = (rows: MediaRecord[]) => {
 };
 
 const flushEffects = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -67,7 +67,7 @@ const click = async (element: Element | null) => {
   if (!element) {
     throw new Error("Expected element to exist before clicking");
   }
-  await act(async () => {
+  await React.act(async () => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await Promise.resolve();
   });
@@ -88,7 +88,7 @@ const mountMediaLibrary = () => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(
       <AdminRouterProvider initialPath="/admin/media">
         <MediaLibraryPage />
@@ -99,7 +99,7 @@ const mountMediaLibrary = () => {
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -223,7 +223,7 @@ test("MediaLibraryPage applies media update events from storage without fetching
     await flushEffects();
     writeMediaCache([mediaRecord({ title: "Storage update" })]);
 
-    act(() => {
+    React.act(() => {
       broadcastCacheEvent({ key: cacheKeys.mediaList, action: "update" });
     });
 

@@ -161,13 +161,7 @@ export function IntegrationsPage() {
     <SettingsShell
       activeHref="/admin/settings"
       sidebar={<SettingsSidebar activeId="integrations" />}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Settings</span>
-          <span>/</span>
-          <span className="text-foreground">Integrations</span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Integrations"]}
       search={<IntegrationsSearch value={query} onChange={setQuery} />}
     >
       <div className="flex h-full flex-col">

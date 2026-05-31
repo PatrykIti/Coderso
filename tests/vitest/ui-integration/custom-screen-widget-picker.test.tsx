@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React from "react";
-import { act } from "react";
+
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -34,6 +34,8 @@ const createScreenRecord = (): CustomScreenRecord => ({
   name: "Project Screen",
   contentTypeId: "type-1",
   status: "active" as const,
+  collectionRole: null,
+  compositionKey: null,
   showInSidebar: true,
   sidebarLabel: "Projects",
   schemaVersion: 3,
@@ -102,7 +104,7 @@ const mount = (path: string) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(
       <AdminRouterProvider initialPath={path}>
         <CustomScreenEditorPage />
@@ -113,7 +115,7 @@ const mount = (path: string) => {
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -122,7 +124,7 @@ const mount = (path: string) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     for (let index = 0; index < 5; index += 1) {
       await Promise.resolve();
     }
@@ -154,7 +156,7 @@ test("Editor View picker exposes only admin-editor-view screen widgets", async (
   try {
     await flush();
 
-    act(() => {
+    React.act(() => {
       findButton(view.container, "Editor View")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
@@ -210,14 +212,14 @@ test("Editor View keeps legacy selected widgets editable without exposing them i
   try {
     await flush();
 
-    act(() => {
+    React.act(() => {
       findButton(view.container, "Editor View")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
     });
     await flush();
 
-    act(() => {
+    React.act(() => {
       findButton(view.container, "Selected Widget")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
@@ -244,7 +246,7 @@ test("Editor View picker stays empty until a content type is selected", async ()
   try {
     await flush();
 
-    act(() => {
+    React.act(() => {
       findButton(view.container, "Editor View")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );

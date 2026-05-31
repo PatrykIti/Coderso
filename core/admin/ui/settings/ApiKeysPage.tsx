@@ -31,14 +31,9 @@ export function ApiKeysPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
-  const [copyableSecrets, setCopyableSecrets] = useState<Record<string, string>>(
-    {}
-  );
+  const [copyableSecrets, setCopyableSecrets] = useState<Record<string, string>>({});
 
-  const copyableIds = useMemo(
-    () => new Set(Object.keys(copyableSecrets)),
-    [copyableSecrets]
-  );
+  const copyableIds = useMemo(() => new Set(Object.keys(copyableSecrets)), [copyableSecrets]);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -111,9 +106,7 @@ export function ApiKeysPage() {
     setError(null);
     try {
       const result = await rotateApiKey(key.id);
-      setItems((prev) =>
-        prev.map((item) => (item.id === key.id ? result.item : item))
-      );
+      setItems((prev) => prev.map((item) => (item.id === key.id ? result.item : item)));
       setCopyableSecrets((prev) => ({ ...prev, [result.item.id]: result.secret }));
       setSecretDialog({
         id: result.item.id,
@@ -165,13 +158,7 @@ export function ApiKeysPage() {
     <SettingsShell
       activeHref="/admin/settings"
       sidebar={<SettingsSidebar activeId="api-keys" />}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Settings</span>
-          <span>/</span>
-          <span className="text-foreground">API Keys</span>
-        </div>
-      }
+      breadcrumbs={["Settings", "API Keys"]}
     >
       <div className="flex h-full flex-col">
         <div className="border-b bg-background/70 px-6 py-5">

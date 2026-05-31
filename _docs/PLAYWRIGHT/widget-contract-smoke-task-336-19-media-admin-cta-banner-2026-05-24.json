@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-05-24T17:22:13.277Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session task-336-19-media-admin-cta-banner --widget cta-banner --skip-front --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-media-admin-cta-banner-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-media-admin-cta-banner-2026-05-24.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["cta-banner"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": null,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "cta-banner",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 1,
+            "visibleSectionCount": 1,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "admin_fixture_unopenable:block_select_missing"
+          }
+        ],
+        "pageId": "94e844e2-9287-4aa4-949e-c2ea9d28ca4f",
+        "adminPath": "http://localhost:5173/admin/pages/94e844e2-9287-4aa4-949e-c2ea9d28ca4f",
+        "status": "fixture-gap",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": true,
+    "results": []
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 1,
+    "metadataGaps": 0
+  }
+}

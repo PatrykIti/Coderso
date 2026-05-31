@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, expect, test, vi } from "vitest";
@@ -82,7 +82,10 @@ vi.mock("@/components/ui/dialog", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-dialog-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-dialog-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -147,9 +150,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -202,7 +203,10 @@ vi.mock("@/components/ui/sheet", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-sheet-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -256,7 +260,9 @@ vi.mock("@/components/ui/tabs", () => ({
   Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
 }));
 
 vi.mock("@/components/ui/textarea", () => ({
@@ -280,9 +286,7 @@ vi.mock("@/services/apiClient", () => ({
 }));
 
 vi.mock("@/services/formsClient", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>(
-    "@/services/formsClient"
-  );
+  const actual = await vi.importActual<Record<string, unknown>>("@/services/formsClient");
   return {
     ...actual,
     submitForm: formsRuntimeState.submitForm,
@@ -306,8 +310,7 @@ vi.mock("@/ui/shared/AdminLink", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -315,14 +318,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -332,10 +335,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -343,10 +343,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setTextareaValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -354,10 +351,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -367,9 +361,7 @@ afterEach(() => {
 });
 
 test("FormCreateDrawer auto-generates slugs and submits normalized payloads", async () => {
-  const { FormCreateDrawer } = await import(
-    "../../../core/admin/ui/forms/FormCreateDrawer"
-  );
+  const { FormCreateDrawer } = await import("../../../core/admin/ui/forms/FormCreateDrawer");
 
   const onOpenChange = vi.fn();
   const onCreate = vi.fn();
@@ -395,13 +387,15 @@ test("FormCreateDrawer auto-generates slugs and submits normalized payloads", as
     const select = view.container.querySelector("select");
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       setInputValue(inputs[0], "Contact Form");
       setTextareaValue(textarea ?? undefined, "Lead form");
       setSelectValue(select ?? undefined, "published");
       buttons.find((button) => button.textContent === "Create form")?.click();
       buttons.find((button) => button.textContent === "Cancel")?.click();
-      buttons.find((button) => button.getAttribute("aria-label") === "Close create form drawer")?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Close create form drawer")
+        ?.click();
     });
 
     expect((inputs[1] as HTMLInputElement).defaultValue).toBe("contact-form");
@@ -421,9 +415,7 @@ test("FormCreateDrawer auto-generates slugs and submits normalized payloads", as
 
 test("FormTable and FieldListPanel render empty and interactive states", async () => {
   const { FormTable } = await import("../../../core/admin/ui/forms/FormTable");
-  const { FieldListPanel } = await import(
-    "../../../core/admin/ui/forms/FieldListPanel"
-  );
+  const { FieldListPanel } = await import("../../../core/admin/ui/forms/FieldListPanel");
 
   const onEdit = vi.fn();
   const onActionLogs = vi.fn();
@@ -445,12 +437,7 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
         onArchive={onArchive}
         onDelete={onDelete}
       />
-      <FieldListPanel
-        fields={[]}
-        selectedId={null}
-        onSelect={onSelect}
-        onAdd={onAdd}
-      />
+      <FieldListPanel fields={[]} selectedId={null} onSelect={onSelect} onAdd={onAdd} />
     </>
   );
 
@@ -528,13 +515,15 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
       (input) => input.getAttribute("placeholder") === "Search fields..."
     );
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "Edit")?.click();
       buttons.find((button) => button.textContent === "Action logs")?.click();
       buttons.find((button) => button.textContent === "Move to draft")?.click();
       buttons.find((button) => button.textContent === "Archive")?.click();
       buttons.find((button) => button.textContent === "Delete")?.click();
-      buttons.find((button) => !button.textContent && button.getAttribute("type") === "button")?.click();
+      buttons
+        .find((button) => !button.textContent && button.getAttribute("type") === "button")
+        ?.click();
       setInputValue(searchInput, "message");
     });
 
@@ -546,7 +535,7 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
     expect(view.container.textContent).toContain("Message");
     expect(view.container.textContent).not.toContain("Email");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Message"))?.click();
     });
 
@@ -557,9 +546,7 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
 });
 
 test("FieldSettingsPanel forwards general, logic, style, and duplicate actions", async () => {
-  const { FieldSettingsPanel } = await import(
-    "../../../core/admin/ui/forms/FieldSettingsPanel"
-  );
+  const { FieldSettingsPanel } = await import("../../../core/admin/ui/forms/FieldSettingsPanel");
 
   const onChange = vi.fn();
   const onSettingsChange = vi.fn();
@@ -611,7 +598,7 @@ test("FieldSettingsPanel forwards general, logic, style, and duplicate actions",
       view.container.querySelectorAll("input[type='checkbox']")
     ) as HTMLInputElement[];
 
-    act(() => {
+    React.act(() => {
       setInputValue(inputs[0], "Work email");
       setTextareaValue(textareas[0], "Visible helper");
       setTextareaValue(textareas[1], "Sales\nSupport\nBilling");
@@ -643,9 +630,7 @@ test("FieldSettingsPanel forwards general, logic, style, and duplicate actions",
 });
 
 test("FormSettingsPanel forwards metadata, presets, step titles, and retry controls", async () => {
-  const { FormSettingsPanel } = await import(
-    "../../../core/admin/ui/forms/FormSettingsPanel"
-  );
+  const { FormSettingsPanel } = await import("../../../core/admin/ui/forms/FormSettingsPanel");
 
   const onNameChange = vi.fn();
   const onDescriptionChange = vi.fn();
@@ -705,7 +690,7 @@ test("FormSettingsPanel forwards metadata, presets, step titles, and retry contr
     ) as HTMLInputElement[];
     const buttons = Array.from(view.container.querySelectorAll("button")) as HTMLButtonElement[];
 
-    act(() => {
+    React.act(() => {
       setInputValue(inputs[0], "Support");
       setTextareaValue(textareas[0], "Support requests");
       setSelectValue(selects[0], "published");
@@ -742,9 +727,8 @@ test("FormSettingsPanel forwards metadata, presets, step titles, and retry contr
 });
 
 test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and submit errors", async () => {
-  const { FormRuntimePreviewDialog } = await import(
-    "../../../core/admin/ui/forms/FormRuntimePreviewDialog"
-  );
+  const { FormRuntimePreviewDialog } =
+    await import("../../../core/admin/ui/forms/FormRuntimePreviewDialog");
 
   const onOpenLogs = vi.fn();
   const onOpenChange = vi.fn();
@@ -792,6 +776,41 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
             step: 2,
           },
         },
+        {
+          id: "field-3",
+          type: "radio",
+          label: "Preferred contact",
+          name: "contact_method",
+          required: true,
+          settings: {
+            options: ["Email", "Phone"],
+            defaultValue: "Email",
+            step: 2,
+          },
+        },
+        {
+          id: "field-4",
+          type: "rating",
+          label: "Priority",
+          name: "priority",
+          required: false,
+          settings: {
+            max: 7,
+            defaultValue: "3",
+            step: 2,
+          },
+        },
+        {
+          id: "field-5",
+          type: "hidden",
+          label: "Segment",
+          name: "segment",
+          required: false,
+          settings: {
+            defaultValue: "enterprise",
+            step: 2,
+          },
+        },
       ]}
       hasUnsavedChanges={false}
       onOpenLogs={onOpenLogs}
@@ -805,22 +824,48 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
     const inputs = () => Array.from(view.container.querySelectorAll("input"));
 
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("Open action logs"))?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Open action logs"))
+        ?.click();
       setInputValue(inputs()[0], "Jane Doe");
-      buttons().find((button) => button.textContent === "Next")?.click();
+      buttons()
+        .find((button) => button.textContent === "Next")
+        ?.click();
     });
 
     expect(onOpenLogs).toHaveBeenCalledOnce();
     expect(view.container.textContent).toContain("Need invoice");
+    expect(view.container.textContent).toContain("Preferred contact");
+    expect(view.container.textContent).toContain("Priority");
+    expect(view.container.textContent).toContain("Hidden field submits trusted value:");
 
-    await act(async () => {
-      buttons().find((button) => button.textContent?.includes("Submit preview"))?.click();
+    await React.act(async () => {
+      const radio = Array.from(view.container.querySelectorAll("input")).find(
+        (input) =>
+          input instanceof HTMLInputElement &&
+          input.type === "radio" &&
+          input.getAttribute("value") === "Phone"
+      ) as HTMLInputElement | undefined;
+      radio?.click();
+      const rating = Array.from(view.container.querySelectorAll("input")).find(
+        (input) =>
+          input instanceof HTMLInputElement &&
+          input.type === "radio" &&
+          input.getAttribute("value") === "6"
+      ) as HTMLInputElement | undefined;
+      rating?.click();
+      buttons()
+        .find((button) => button.textContent?.includes("Submit preview"))
+        ?.click();
     });
 
     expect(formsRuntimeState.submitForm).toHaveBeenCalledWith("form-1", {
       full_name: "Jane Doe",
       need_invoice: true,
+      contact_method: "Phone",
+      priority: "6",
+      segment: "enterprise",
     });
     expect(view.container.textContent).toContain("Submission completed");
     expect(view.container.textContent).toContain("Runtime redirect configured");
@@ -830,10 +875,16 @@ test("FormRuntimePreviewDialog handles unsaved, multi-step, submit success, and 
       message: "Submit failed",
     });
 
-    await act(async () => {
-      buttons().find((button) => button.textContent === "Back")?.click();
-      buttons().find((button) => button.textContent === "Next")?.click();
-      buttons().find((button) => button.textContent?.includes("Submit preview"))?.click();
+    await React.act(async () => {
+      buttons()
+        .find((button) => button.textContent === "Back")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "Next")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent?.includes("Submit preview"))
+        ?.click();
     });
 
     expect(view.container.textContent).toContain("Submit failed");

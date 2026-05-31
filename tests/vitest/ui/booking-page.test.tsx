@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -90,10 +90,10 @@ const bookingPageState = vi.hoisted(() => {
     services: [service],
     reservations: [reservation],
     blackouts: [blackout],
-    cachedResources: [resource] as typeof resource[] | undefined,
-    cachedServices: [service] as typeof service[] | undefined,
-    cachedReservations: [reservation] as typeof reservation[] | undefined,
-    cachedBlackouts: [blackout] as typeof blackout[] | undefined,
+    cachedResources: [resource] as (typeof resource)[] | undefined,
+    cachedServices: [service] as (typeof service)[] | undefined,
+    cachedReservations: [reservation] as (typeof reservation)[] | undefined,
+    cachedBlackouts: [blackout] as (typeof blackout)[] | undefined,
     schedulesByResource: {
       "resource-1": [...schedules],
     } as Record<string, typeof schedules>,
@@ -213,7 +213,9 @@ vi.mock("@/components/ui/tabs", () => ({
   Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
 }));
 
 vi.mock("@/services/cachePolicy", () => ({
@@ -230,8 +232,10 @@ vi.mock("@/services/bookingClient", () => ({
   getCachedBookingServices: () => bookingPageState.cachedServices,
   getCachedBookingReservations: () => bookingPageState.cachedReservations,
   getCachedBookingBlackouts: () => bookingPageState.cachedBlackouts,
-  resolveBookingSubmissionAccess: (settings: Record<string, unknown> | null | undefined, fallback = "public") =>
-    (settings?.submissionAccess as string | undefined) ?? fallback,
+  resolveBookingSubmissionAccess: (
+    settings: Record<string, unknown> | null | undefined,
+    fallback = "public"
+  ) => (settings?.submissionAccess as string | undefined) ?? fallback,
   withBookingSubmissionAccess: (
     settings: Record<string, unknown> | null | undefined,
     submissionAccess: string
@@ -462,7 +466,11 @@ vi.mock("../../../core/admin/ui/booking/components/ResourcesTab", () => ({
       <button type="button" onClick={onSubmitResource}>
         submit-resource
       </button>
-      <button type="button" onClick={() => onEditResource(resources[0]!)} disabled={resources.length === 0}>
+      <button
+        type="button"
+        onClick={() => onEditResource(resources[0]!)}
+        disabled={resources.length === 0}
+      >
         edit-resource
       </button>
       <button
@@ -559,7 +567,11 @@ vi.mock("../../../core/admin/ui/booking/components/ServicesTab", () => ({
       <button type="button" onClick={onSubmitService}>
         submit-service
       </button>
-      <button type="button" onClick={() => onEditService(services[0]!)} disabled={services.length === 0}>
+      <button
+        type="button"
+        onClick={() => onEditService(services[0]!)}
+        disabled={services.length === 0}
+      >
         edit-service
       </button>
       <button
@@ -603,6 +615,8 @@ vi.mock("../../../core/admin/ui/booking/components/ServicesTab", () => ({
 vi.mock("../../../core/admin/ui/booking/components/AvailabilityTab", () => ({
   BookingAvailabilityTab: ({
     scheduleRows,
+    hasUnsavedScheduleDraft,
+    scheduleDraftGuidance,
     scheduleLoading,
     scheduleSaving,
     blackouts,
@@ -610,12 +624,15 @@ vi.mock("../../../core/admin/ui/booking/components/AvailabilityTab", () => ({
     onScheduleDraftChange,
     onAddScheduleRow,
     onRemoveScheduleRow,
+    onResetScheduleDraft,
     onSaveSchedules,
     onBlackoutFormChange,
     onCreateBlackout,
     onDeleteBlackout,
   }: {
     scheduleRows: unknown[];
+    hasUnsavedScheduleDraft: boolean;
+    scheduleDraftGuidance: string | null;
     scheduleLoading: boolean;
     scheduleSaving: boolean;
     blackouts: Array<{ id: string }>;
@@ -623,6 +640,7 @@ vi.mock("../../../core/admin/ui/booking/components/AvailabilityTab", () => ({
     onScheduleDraftChange: (patch: Record<string, unknown>) => void;
     onAddScheduleRow: () => void;
     onRemoveScheduleRow: (index: number) => void;
+    onResetScheduleDraft: () => void;
     onSaveSchedules: () => void;
     onBlackoutFormChange: (patch: Record<string, unknown>) => void;
     onCreateBlackout: () => void;
@@ -630,6 +648,8 @@ vi.mock("../../../core/admin/ui/booking/components/AvailabilityTab", () => ({
   }) => (
     <div>
       <span>{`schedules:${scheduleRows.length}`}</span>
+      <span>{`schedule-draft-unsaved:${String(hasUnsavedScheduleDraft)}`}</span>
+      <span>{`schedule-draft-guidance:${scheduleDraftGuidance ?? "none"}`}</span>
       <span>{`schedule-loading:${String(scheduleLoading)}`}</span>
       <span>{`schedule-saving:${String(scheduleSaving)}`}</span>
       <span>{`blackouts:${blackouts.length}`}</span>
@@ -667,6 +687,9 @@ vi.mock("../../../core/admin/ui/booking/components/AvailabilityTab", () => ({
       </button>
       <button type="button" onClick={() => onRemoveScheduleRow(0)}>
         remove-schedule
+      </button>
+      <button type="button" onClick={onResetScheduleDraft}>
+        reset-schedule-draft
       </button>
       <button type="button" onClick={onSaveSchedules}>
         save-schedules
@@ -869,14 +892,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -885,7 +908,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -899,7 +922,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -1066,7 +1089,7 @@ test("BookingPage drives booking flows across resources, services, availability,
     });
     expect(view.container.textContent).toContain("Found 1 available slots.");
 
-    await act(async () => {
+    await React.act(async () => {
       for (const subscriber of bookingPageState.subscribers) {
         subscriber({ key: "bookingResourcesList" });
         subscriber({ key: "bookingServicesList" });
@@ -1112,6 +1135,41 @@ test("BookingPage reports validation errors for invalid schedule, blackout, rese
     clickByText(view.container, "preview-slots");
     await flush();
     expect(view.container.textContent).toContain("Slot preview failed");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BookingPage blocks schedule save when a draft row is still unsaved and allows reset before saving", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/booking");
+  const { BookingPage } = await import("../../../core/admin/ui/booking/BookingPage");
+  const view = mount(<BookingPage />);
+
+  try {
+    await flush();
+
+    clickByText(view.container, "fill-schedule");
+    await flush();
+    expect(view.container.textContent).toContain("schedule-draft-unsaved:true");
+
+    clickByText(view.container, "save-schedules");
+    await flush();
+    expect(bookingPageState.saveScheduleCalls).toHaveLength(0);
+    expect(view.container.textContent).toContain(
+      "schedule-draft-guidance:Add the draft row or reset it before saving schedules."
+    );
+
+    clickByText(view.container, "reset-schedule-draft");
+    clickByText(view.container, "remove-schedule");
+    await flush();
+    expect(view.container.textContent).toContain("schedule-draft-unsaved:false");
+
+    clickByText(view.container, "save-schedules");
+    await flush();
+    expect(bookingPageState.saveScheduleCalls[0]).toEqual({
+      id: "resource-1",
+      payload: [],
+    });
   } finally {
     view.cleanup();
   }
@@ -1200,9 +1258,7 @@ test("BookingPage reports delete-service/delete-blackout failures and reservatio
     clickByText(view.container, "fill-reservation-invalid-range");
     clickByText(view.container, "create-reservation");
     await flush();
-    expect(view.container.textContent).toContain(
-      "End time must be later than start time."
-    );
+    expect(view.container.textContent).toContain("End time must be later than start time.");
   } finally {
     view.cleanup();
   }

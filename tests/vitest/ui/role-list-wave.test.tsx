@@ -1,19 +1,15 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/badge", () => ({
-  Badge: ({
-    children,
-    ...props
-  }: {
-    children: React.ReactNode;
-    [key: string]: unknown;
-  }) => <span {...props}>{children}</span>,
+  Badge: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <span {...props}>{children}</span>
+  ),
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -81,14 +77,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -100,7 +96,7 @@ const click = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLElement)) {
     throw new Error("Missing clickable element");
   }
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };

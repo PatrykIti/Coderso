@@ -37,10 +37,10 @@ export const listingFilterOperatorOptions: Array<{
   { value: "exists", label: "Exists" },
 ];
 
-export const createDefaultListingQuery = (): ListingQueryPayload => ({
+export const createDefaultListingQuery = (contentTypeId = ""): ListingQueryPayload => ({
   source: "entries",
   sourceConfig: {
-    contentTypeId: "",
+    contentTypeId,
     includeDrafts: false,
   },
   filters: [],

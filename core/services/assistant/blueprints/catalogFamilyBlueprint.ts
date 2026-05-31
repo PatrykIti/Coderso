@@ -6,6 +6,11 @@ import type {
   AssistantPromptKind,
   AssistantPlannedAction,
 } from "../actionPlanTypes";
+import {
+  composeAdminSurface,
+  type BlueprintAdminSurfaceField,
+} from "./blueprintAdminSurfaceComposer";
+import { composeBindings } from "./blueprintBindingComposer";
 
 type CatalogScreenFieldValue = {
   id: string;
@@ -58,128 +63,97 @@ export type CatalogFamilyPreset = {
   };
 };
 
-const createBlock = (
-  id: string,
-  type: string,
-  data: Record<string, unknown>,
-  options?: {
-    variant?: string;
-    slots?: Record<string, WidgetBlock[]>;
-  }
-): WidgetBlock => ({
-  id,
-  type,
-  ...(options?.variant ? { variant: options.variant } : {}),
-  data,
-  ...(options?.slots ? { slots: options.slots } : {}),
+const toAdminSurfaceField = (
+  field: CatalogScreenFieldValue,
+  options?: { placeholderValue?: string }
+): BlueprintAdminSurfaceField => ({
+  key: field.id,
+  label: field.label,
+  helper: field.helper,
+  field: field.field,
+  tone: field.tone,
+  ...(options?.placeholderValue !== undefined
+    ? { placeholderValue: options.placeholderValue }
+    : {}),
 });
 
-const buildScreenBlocks = (preset: CatalogFamilyPreset): WidgetBlock[] => [
-  createBlock(`${preset.key}-header`, "screen-record-header", {
-    eyebrow: preset.screen.eyebrow,
-    title: "Record overview",
-    subtitle: preset.screen.subtitle,
-    description: preset.screen.description,
-    badge: preset.screen.badge,
-    align: "start",
-  }),
-  createBlock(
-    `${preset.key}-columns`,
-    "screen-two-column",
-    {
+const buildScreenBlocks = (preset: CatalogFamilyPreset): WidgetBlock[] =>
+  composeAdminSurface({
+    key: preset.key,
+    contentSchema: preset.contentSchema,
+    header: {
+      eyebrow: preset.screen.eyebrow,
+      subtitle: preset.screen.subtitle,
+      description: preset.screen.description,
+      badge: preset.screen.badge,
+    },
+    columns: {
       leftTitle: preset.screen.leftTitle,
       rightTitle: preset.screen.rightTitle,
-      gap: "md",
     },
-    {
-      variant: "aside",
-      slots: {
-        left: [
-          createBlock(
-            `${preset.key}-left-group`,
-            "screen-field-group",
-            {
-              title: preset.screen.leftGroupTitle,
-              description: preset.screen.leftGroupDescription,
-            },
-            {
-              slots: {
-                content: preset.screen.leftFields.map((field) =>
-                  createBlock(`${preset.key}-${field.id}`, "screen-field-value", {
-                    label: field.label,
-                    value: "0",
-                    helper: field.helper,
-                    tone: field.tone,
-                  })
-                ),
-              },
-            }
-          ),
-        ],
-        right: [
-          createBlock(
-            `${preset.key}-right-group`,
-            "screen-field-group",
-            {
-              title: preset.screen.rightGroupTitle,
-              description: preset.screen.rightGroupDescription,
-            },
-            {
-              slots: {
-                content: preset.screen.rightFields.map((field) =>
-                  createBlock(`${preset.key}-${field.id}`, "screen-field-value", {
-                    label: field.label,
-                    value: field.tone === "muted" ? "status" : "0",
-                    helper: field.helper,
-                    tone: field.tone,
-                  })
-                ),
-              },
-            }
-          ),
-        ],
+    groups: [
+      {
+        key: "left",
+        title: preset.screen.leftGroupTitle,
+        description: preset.screen.leftGroupDescription,
+        column: "left",
+        fields: preset.screen.leftFields.map((field) => toAdminSurfaceField(field)),
       },
-    }
-  ),
-];
+      {
+        key: "right",
+        title: preset.screen.rightGroupTitle,
+        description: preset.screen.rightGroupDescription,
+        column: "right",
+        fields: preset.screen.rightFields.map((field) =>
+          toAdminSurfaceField(field, {
+            placeholderValue: field.tone === "muted" ? "status" : "0",
+          })
+        ),
+      },
+    ],
+  }).blocks;
 
-const buildScreenBindings = (preset: CatalogFamilyPreset) => [
-  {
-    id: `binding-${preset.key}-header-title`,
-    widgetId: `${preset.key}-header`,
-    propPath: "title",
-    field: "title",
-    mode: "read",
-  },
-  {
-    id: `binding-${preset.key}-header-subtitle`,
-    widgetId: `${preset.key}-header`,
-    propPath: "subtitle",
-    field: "summary",
-    mode: "read",
-  },
-  {
-    id: `binding-${preset.key}-header-badge`,
-    widgetId: `${preset.key}-header`,
-    propPath: "badge",
-    field: "projectStatus",
-    mode: "read",
-  },
-  ...preset.screen.leftFields.map((field) => ({
-    id: `binding-${preset.key}-${field.id}`,
-    widgetId: `${preset.key}-${field.id}`,
-    propPath: "value",
-    field: field.field,
-    mode: "read",
-  })),
-  ...preset.screen.rightFields.map((field) => ({
-    id: `binding-${preset.key}-${field.id}`,
-    widgetId: `${preset.key}-${field.id}`,
-    propPath: "value",
-    field: field.field,
-    mode: "read",
-  })),
-];
+const buildScreenBindings = (preset: CatalogFamilyPreset) =>
+  composeBindings({
+    contentSchema: preset.contentSchema,
+    bindings: [
+      {
+        id: `binding-${preset.key}-header-title`,
+        widgetId: `${preset.key}-header`,
+        propPath: "title",
+        field: "title",
+        mode: "read",
+      },
+      {
+        id: `binding-${preset.key}-header-subtitle`,
+        widgetId: `${preset.key}-header`,
+        propPath: "subtitle",
+        field: "summary",
+        mode: "read",
+      },
+      {
+        id: `binding-${preset.key}-header-badge`,
+        widgetId: `${preset.key}-header`,
+        propPath: "badge",
+        field: "projectStatus",
+        mode: "read",
+      },
+      ...preset.screen.leftFields.map((field) => ({
+        id: `binding-${preset.key}-${field.id}`,
+        widgetId: `${preset.key}-${field.id}`,
+        propPath: "value",
+        field: field.field,
+        mode: "read" as const,
+      })),
+      ...preset.screen.rightFields.map((field) => ({
+        id: `binding-${preset.key}-${field.id}`,
+        widgetId: `${preset.key}-${field.id}`,
+        propPath: "value",
+        field: field.field,
+        mode: "read" as const,
+      })),
+    ],
+  });
 
 export const buildCatalogFamilyPlan = (
   preset: CatalogFamilyPreset,
@@ -193,8 +167,7 @@ export const buildCatalogFamilyPlan = (
       id: `content-route-${preset.key}`,
       type: "setting.content-route.upsert",
       title: `Register public detail route for ${preset.contentTypeName.toLowerCase()}`,
-      description:
-        "Add public entry routes so listing cards can open a working detail page.",
+      description: "Add public entry routes so listing cards can open a working detail page.",
       input: {
         typeSlug: preset.contentTypeSlug,
         listPath: preset.catalogHiddenListPath,
@@ -206,8 +179,7 @@ export const buildCatalogFamilyPlan = (
       id: `content-type-${preset.key}`,
       type: "content-type.upsert",
       title: `Create the ${preset.contentTypeName.toLowerCase()} content model`,
-      description:
-        "Provision structured fields for summaries, media, specs, pricing, and status.",
+      description: "Provision structured fields for summaries, media, specs, pricing, and status.",
       input: {
         slug: preset.contentTypeSlug,
         name: preset.contentTypeName,
@@ -226,6 +198,8 @@ export const buildCatalogFamilyPlan = (
         status: "active",
         showInSidebar: true,
         sidebarLabel: preset.customScreenName,
+        collectionRole: "canonical-admin-screen",
+        compositionKey: preset.key,
         blocks: buildScreenBlocks(preset) as unknown as Array<Record<string, unknown>>,
         bindings: buildScreenBindings(preset) as unknown as Array<Record<string, unknown>>,
       },
@@ -266,8 +240,7 @@ export const buildCatalogFamilyPlan = (
       id: `listing-template-${preset.key}`,
       type: "listing-template.upsert",
       title: "Create a grid listing template for catalog cards",
-      description:
-        "Define which catalog fields appear in cards and how they are formatted.",
+      description: "Define which catalog fields appear in cards and how they are formatted.",
       input: {
         name: preset.listingTemplateName,
         slug: preset.listingTemplateSlug,
@@ -291,6 +264,12 @@ export const buildCatalogFamilyPlan = (
         introTitle: preset.introTitle,
         introBody: preset.introBody,
         ctaLabel: preset.ctaLabel,
+        collectionLink: {
+          contentTypeSlug: preset.contentTypeSlug,
+          pageRole: "canonical-list-page",
+          listingQueryName: preset.listingQueryName,
+          listingTemplateSlug: preset.listingTemplateSlug,
+        },
       },
     },
   ];
@@ -381,6 +360,12 @@ export const buildCatalogFamilyRefinementPlan = (
       introTitle: preset.introTitle,
       introBody: preset.introBody,
       ctaLabel: preset.ctaLabel,
+      collectionLink: {
+        contentTypeSlug: preset.contentTypeSlug,
+        pageRole: "canonical-list-page",
+        listingQueryName: preset.listingQueryName,
+        listingTemplateSlug: preset.listingTemplateSlug,
+      },
       ...(options.pageOverrides ?? {}),
     },
   };

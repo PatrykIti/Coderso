@@ -2,12 +2,16 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import {
   clearContentTypesCache,
+  clearContentTypeCollectionWorkspaceCache,
   createContentType,
   deleteContentType,
   duplicateContentType,
+  getCachedContentTypeCollectionWorkspace,
   getCachedContentTypes,
   getContentType,
   getContentTypeCached,
+  getContentTypeCollectionWorkspace,
+  getContentTypeCollectionWorkspaceCached,
   listContentTypes,
   listContentTypesCached,
   primeContentTypesCache,
@@ -35,8 +39,76 @@ const createLocalStorage = () => {
   };
 };
 
+const workspaceSummary = {
+  contentType: {
+    id: "ct-1",
+    name: "Products",
+    slug: "products",
+    status: "published",
+    fieldCount: 3,
+    updatedAt: "2026-05-10T08:00:00.000Z",
+  },
+  canonical: {
+    contentRoute: {
+      type: "products",
+      listPath: "/products",
+      detailPath: "/products/:slug",
+      enabled: true,
+      detailPageId: "detail-products",
+    },
+    detailPage: {
+      id: "detail-products",
+      label: "Product Detail",
+      status: "published",
+      updatedAt: "2026-05-10T08:00:00.000Z",
+    },
+    listPage: {
+      id: "page-products",
+      label: "Products",
+      slug: "products",
+      status: "published",
+      role: "canonical-list-page",
+      compositionKey: "products",
+      updatedAt: "2026-05-10T08:00:00.000Z",
+    },
+    listingQuery: {
+      id: "query-products",
+      label: "Products Query",
+      updatedAt: "2026-05-10T08:00:00.000Z",
+    },
+    listingTemplate: {
+      id: "template-products",
+      label: "Product Grid",
+      slug: "product-grid",
+      updatedAt: "2026-05-10T08:00:00.000Z",
+    },
+    adminScreen: {
+      id: "screen-products",
+      label: "Products Admin",
+      status: "active",
+      role: "canonical-admin-screen",
+      compositionKey: "products",
+      updatedAt: "2026-05-10T08:00:00.000Z",
+    },
+  },
+  linkedSecondary: {
+    pages: [],
+    adminScreens: [],
+  },
+  unresolved: [],
+  candidates: {
+    detailPages: [],
+    pages: [],
+    listingQueries: [],
+    listingTemplates: [],
+    adminScreens: [],
+  },
+};
+
 const resetCaches = () => {
   clearContentTypesCache();
+  clearContentTypeCollectionWorkspaceCache("ct-1");
+  clearContentTypeCollectionWorkspaceCache("ct-3");
 };
 
 afterEach(() => {
@@ -74,6 +146,24 @@ test("getContentType hits GET /content-types/:id", async () => {
   try {
     await getContentType("ct-1");
     expect(calls[0]?.input).toBe("/admin/api/content-types/ct-1");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("getContentTypeCollectionWorkspace hits the collection workspace endpoint", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(workspaceSummary);
+  };
+
+  try {
+    await getContentTypeCollectionWorkspace("ct-1");
+    expect(calls[0]?.input).toBe("/admin/api/content-types/ct-1/collection-workspace");
     expect(calls[0]?.init?.method).toBe("GET");
   } finally {
     globalThis.fetch = originalFetch;
@@ -339,6 +429,127 @@ test("listContentTypesCached reads from local storage", async () => {
     const result = await listContentTypesCached();
     expect(result).toEqual(cached);
     expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("getContentTypeCollectionWorkspaceCached reads from content-types namespace", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(workspaceSummary);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    storage.setItem(
+      cacheKeys.contentTypeCollectionWorkspace("ct-1"),
+      JSON.stringify({ value: workspaceSummary, savedAt: Date.now() })
+    );
+
+    const result = await getContentTypeCollectionWorkspaceCached("ct-1");
+    expect(result.contentType.id).toBe("ct-1");
+    expect(getCachedContentTypeCollectionWorkspace("ct-1")?.contentType.name).toBe("Products");
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("updateContentType invalidates collection workspace cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      id: "ct-1",
+      name: "Products",
+      slug: "products",
+      status: "published",
+      schema: { type: "object", additionalProperties: false, properties: {} },
+      createdAt: "2026-05-10T08:00:00.000Z",
+      updatedAt: "2026-05-10T08:00:00.000Z",
+    });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCsrfToken();
+    resetCaches();
+    storage.setItem(
+      cacheKeys.contentTypeCollectionWorkspace("ct-1"),
+      JSON.stringify({ value: workspaceSummary, savedAt: Date.now() })
+    );
+    expect(getCachedContentTypeCollectionWorkspace("ct-1")).not.toBeNull();
+
+    await updateContentType("ct-1", { name: "Products" });
+
+    expect(storage.getItem(cacheKeys.contentTypeCollectionWorkspace("ct-1"))).toBeNull();
+    expect(getCachedContentTypeCollectionWorkspace("ct-1")).toBeNull();
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("deleteContentType clears collection workspace cache even without list cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ ok: true });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCsrfToken();
+    resetCaches();
+    storage.setItem(
+      cacheKeys.contentTypeCollectionWorkspace("ct-1"),
+      JSON.stringify({ value: workspaceSummary, savedAt: Date.now() })
+    );
+    storage.setItem(
+      cacheKeys.contentTypeDetail("ct-1"),
+      JSON.stringify({ value: { id: "ct-1" }, savedAt: Date.now() })
+    );
+
+    await deleteContentType("ct-1");
+
+    expect(storage.getItem(cacheKeys.contentTypeCollectionWorkspace("ct-1"))).toBeNull();
+    expect(storage.getItem(cacheKeys.contentTypeDetail("ct-1"))).toBeNull();
   } finally {
     globalThis.fetch = originalFetch;
     if (originalLocal === undefined) {

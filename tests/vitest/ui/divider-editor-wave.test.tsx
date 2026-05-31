@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { DividerData } from "../../../core/widgets/core/divider";
+import { describeDividerThickness, type DividerData } from "../../../core/widgets/core/divider";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -119,8 +119,7 @@ vi.mock("@/components/ui/select", () => {
 });
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -128,14 +127,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -145,11 +144,8 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -158,11 +154,8 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -175,7 +168,7 @@ const clickByText = (container: ParentNode, text: string, index = 0) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text} (${index})`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
 };
@@ -186,17 +179,10 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
-const findColorInputForPlaceholder = (container: ParentNode, placeholder: string) => {
-  const textInput = findInputByPlaceholder(container, placeholder);
-  if (!(textInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing input with placeholder "${placeholder}"`);
-  }
-  const colorInput = textInput.parentElement?.querySelector('input[type="color"]');
-  if (!(colorInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing color input for "${placeholder}"`);
-  }
-  return colorInput;
-};
+const findInputByAriaLabel = (container: ParentNode, label: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) => element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
+  );
 
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).filter((element) => {
@@ -205,12 +191,14 @@ const findSelectsByOptions = (container: ParentNode, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
+const customWidthPresetValues = ["240px", "320px", "480px", "640px", "75%"];
+
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
+    Array.from(section.querySelectorAll("p, h3")).some(
       (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
     )
   );
@@ -221,11 +209,8 @@ afterEach(() => {
 });
 
 test("Divider editors cover variant changes, width modes, spacing tokens, and advanced snapshot updates", async () => {
-  const {
-    DividerAdvancedEditor,
-    DividerVisualEditor,
-    DividerWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/DividerEditors");
+  const { DividerAdvancedEditor, DividerVisualEditor, DividerWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/DividerEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: DividerData = {
@@ -287,30 +272,49 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
   const view = mount(<Harness />);
 
   try {
-    const wizardStyle = findSelectsByOptions(view.container, ["line", "dashed", "label-center"])[0];
-    expect((wizardStyle as HTMLSelectElement | null | undefined)?.value).toBe("line");
-    setSelectValue(wizardStyle, "label-center");
-    expect(currentVariant).toBe("label-center");
-
-    setInputValue(findInputByPlaceholder(view.container, "Optional label"), "Milestone");
-    const wizardThickness = findSelectsByOptions(view.container, ["1", "2", "3", "4", "5", "6", "7", "8"])[0];
-    setSelectValue(wizardThickness, "4");
-
-    expect(latestValue).toMatchObject({
-      label: "Milestone",
-      thickness: 4,
-    });
+    const wizardSection = findSectionByTitle(view.container, "Divider quick start");
+    const wizardStyleSummary = (wizardSection as ParentNode).querySelector(
+      '[data-widget-control="divider.wizard.variant"]'
+    );
+    expect(wizardStyleSummary?.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(wizardStyleSummary?.textContent).toContain("Line");
+    expect(normalizeText((wizardSection as ParentNode).textContent)).toContain(
+      "visual owns divider style changes, center labels, line weight, color, width, and spacing."
+    );
+    const wizardRoot = view.container.querySelector(
+      '[data-widget-editor-mode="wizard"]'
+    ) as ParentNode | null;
+    expect(findInputByPlaceholder(wizardRoot ?? view.container, "Optional label")).toBeUndefined();
+    expect(
+      findSelectsByOptions(wizardRoot ?? view.container, ["line", "dashed", "label-center"])
+    ).toHaveLength(0);
 
     clickByText(view.container, "Dashed");
     expect(currentVariant).toBe("dashed");
 
     const lineSection = findSectionByTitle(view.container, "Line style and width");
-    const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, ["full", "container", "custom"])[0];
-    const thicknessSelect = findSelectsByOptions(lineSection as ParentNode, ["1", "2", "3", "4", "5", "6", "7", "8"])[0];
+    const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, [
+      "full",
+      "container",
+      "custom",
+    ])[0];
+    const thicknessSelect = findSelectsByOptions(lineSection as ParentNode, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ])[0];
     setSelectValue(thicknessSelect, "2");
     setSelectValue(widthModeSelect, "custom");
-    setInputValue(findInputByPlaceholder(lineSection as ParentNode, "e.g. 320px or 60%"), "60%");
-    setInputValue(findInputByPlaceholder(lineSection as ParentNode, "var(--color-border)"), "#334155");
+    setSelectValue(
+      findSelectsByOptions(lineSection as ParentNode, customWidthPresetValues)[0],
+      "75%"
+    );
+    setInputValue(findInputByAriaLabel(lineSection as ParentNode, "Line color swatch"), "#334155");
 
     const spacingSection = findSectionByTitle(view.container, "Spacing around divider");
     const spacingSelects = Array.from((spacingSection as ParentNode).querySelectorAll("select"));
@@ -318,39 +322,38 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
     setSelectValue(spacingSelects[1], "8");
 
     const advancedSection = findSectionByTitle(view.container, "Technical divider tokens");
-    const advancedWidthMode = findSelectsByOptions(advancedSection as ParentNode, ["full", "container", "custom"])[0];
-    setSelectValue(advancedWidthMode, "container");
+    expect(advancedSection).toBeUndefined();
+    const runtimeSection = findSectionByTitle(view.container, "Runtime divider summary");
+    expect(runtimeSection).toBeDefined();
+    expect((runtimeSection as ParentNode).querySelectorAll("input, select, button")).toHaveLength(
+      0
+    );
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue).toMatchObject({
       thickness: 2,
-      width: "container",
-      customWidth: "60%",
+      width: "custom",
+      customWidth: "75%",
       color: "#334155",
       marginTop: "12",
       marginBottom: "8",
     });
 
     const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"width": "container"');
-    expect(snapshot?.textContent).toContain('"color": "#334155"');
-    expect(snapshot?.textContent).toContain('"marginTop": "12"');
-    expect(snapshot?.textContent).toContain('"marginBottom": "8"');
+    expect(snapshot).toBeNull();
   } finally {
     view.cleanup();
   }
 });
 
-test("Divider editors cover visual label input, color picker changes, custom spacing text input, and advanced variant no-op", async () => {
-  const {
-    DividerAdvancedEditor,
-    DividerVisualEditor,
-    DividerWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/DividerEditors");
+test("Divider editors cover visual label input, color picker changes, custom spacing compatibility, and read-only advanced summary", async () => {
+  const { DividerAdvancedEditor, DividerVisualEditor, DividerWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/DividerEditors");
 
   let latestValue: DividerData = {
+    color: "var(--color-border)",
     width: "container",
-    marginTop: "custom-margin",
+    marginTop: "40px",
     marginBottom: "bad",
   };
   let currentVariant = "label-center";
@@ -402,41 +405,91 @@ test("Divider editors cover visual label input, color picker changes, custom spa
 
   try {
     const visualVariant = findSectionByTitle(view.container, "Variant and label");
-    setInputValue(findInputByPlaceholder(visualVariant as ParentNode, "Optional label"), "Chapter break");
+    setInputValue(
+      findInputByPlaceholder(visualVariant as ParentNode, "Optional label"),
+      "Chapter break"
+    );
+    expect(normalizeText((visualVariant as ParentNode).textContent)).toContain("small");
+    expect(normalizeText((visualVariant as ParentNode).textContent)).toContain("medium");
+    expect(normalizeText((visualVariant as ParentNode).textContent)).toContain("large");
+    expect(normalizeText((visualVariant as ParentNode).textContent)).not.toContain("xs");
 
     const lineSection = findSectionByTitle(view.container, "Line style and width");
-    setInputValue(findColorInputForPlaceholder(lineSection as ParentNode, "var(--color-border)"), "#94a3b8");
-    const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, ["full", "container", "custom"])[0];
+    const thicknessLabels = Array.from({ length: 8 }, (_, index) =>
+      describeDividerThickness(index + 1).toLowerCase()
+    );
+    expect(new Set(thicknessLabels).size).toBe(thicknessLabels.length);
+    for (const label of thicknessLabels) {
+      expect(normalizeText((lineSection as ParentNode).textContent)).toContain(label);
+    }
+    expect(normalizeText((lineSection as ParentNode).textContent)).toContain("theme token");
+    expect(normalizeText((lineSection as ParentNode).textContent)).toContain(
+      "a theme token is saved"
+    );
+    setInputValue(findInputByAriaLabel(lineSection as ParentNode, "Line color swatch"), "#94a3b8");
+    expect(latestValue.color).toBe("#94a3b8");
+    expect(normalizeText((lineSection as ParentNode).textContent)).toContain("selected color");
+    expect(
+      findInputByPlaceholder(lineSection as ParentNode, "var(--color-border)")
+    ).toBeUndefined();
+    const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, [
+      "full",
+      "container",
+      "custom",
+    ])[0];
     setSelectValue(widthModeSelect, "custom");
-    setInputValue(findInputByPlaceholder(lineSection as ParentNode, "e.g. 320px or 60%"), "55%");
+    setSelectValue(
+      findSelectsByOptions(lineSection as ParentNode, customWidthPresetValues)[0],
+      "480px"
+    );
 
     const spacingSection = findSectionByTitle(view.container, "Spacing around divider");
-    setInputValue(findInputByPlaceholder(spacingSection as ParentNode, "e.g. 32px"), "40px");
-
-    const advancedSection = findSectionByTitle(view.container, "Technical divider tokens");
-    const variantSelect = findSelectsByOptions(advancedSection as ParentNode, ["line", "dashed", "label-center"])[0];
-    setSelectValue(variantSelect, "line");
-    const advancedSpacingInputs = Array.from(
-      (advancedSection as ParentNode).querySelectorAll("input[placeholder='e.g. 32px']")
+    const spacingSelects = Array.from((spacingSection as ParentNode).querySelectorAll("select"));
+    setSelectValue(spacingSelects[0], "custom");
+    expect(spacingSelects[0]?.value).toBe("custom");
+    expect(normalizeText((spacingSection as ParentNode).textContent)).toContain(
+      "custom value unavailable"
     );
-    setInputValue(advancedSpacingInputs[0], "24px");
-    setInputValue(advancedSpacingInputs[1], "18px");
+    expect(normalizeText((spacingSection as ParentNode).textContent)).toContain(
+      "saved custom value is active. pick a spacing option to replace it."
+    );
+    expect(normalizeText((spacingSection as ParentNode).textContent)).not.toContain(
+      "pick a preset"
+    );
+    expect(normalizeText((spacingSection as ParentNode).textContent)).not.toContain(
+      "enter a custom px value"
+    );
+    setInputValue(
+      findInputByPlaceholder(spacingSection as ParentNode, "Saved custom spacing"),
+      "bad-value"
+    );
+    expect(latestValue.marginTop).toBe("40px");
+    expect(normalizeText((spacingSection as ParentNode).textContent)).not.toContain(
+      "invalid custom px value"
+    );
+    setInputValue(
+      findInputByPlaceholder(spacingSection as ParentNode, "Saved custom spacing"),
+      "40px"
+    );
+
+    const advancedSection = findSectionByTitle(view.container, "Runtime divider summary");
+    expect(normalizeText((advancedSection as ParentNode).textContent)).toContain("variant");
+    expect((advancedSection as ParentNode).querySelectorAll("input, select, button")).toHaveLength(
+      0
+    );
 
     expect(currentVariant).toBe("label-center");
     expect(latestValue).toMatchObject({
       label: "Chapter break",
       width: "custom",
-      customWidth: "55%",
+      customWidth: "480px",
       color: "#94a3b8",
-      marginTop: "24px",
-      marginBottom: "18px",
+      marginTop: "40px",
+      marginBottom: "6",
     });
 
     const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"label": "Chapter break"');
-    expect(snapshot?.textContent).toContain('"customWidth": "55%"');
-    expect(snapshot?.textContent).toContain('"marginTop": "24px"');
-    expect(snapshot?.textContent).toContain('"marginBottom": "18px"');
+    expect(snapshot).toBeNull();
   } finally {
     view.cleanup();
   }

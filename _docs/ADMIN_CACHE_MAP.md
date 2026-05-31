@@ -96,12 +96,45 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Schema builder
   - UI: `core/admin/ui/content-types/SchemaBuilderPage.tsx`
   - Cached APIs: `listContentTypesCached`, `getContentTypeCached`
+- Collection workspace
+  - UI: `core/admin/ui/content-types/CollectionWorkspacePage.tsx`,
+    `CollectionOverview.tsx`, `CollectionReadinessChecklist.tsx`
+  - Cached APIs: `getContentTypeCollectionWorkspaceCached`,
+    `getCachedContentTypeCollectionWorkspace`, `listContentTypesCached`
+  - Cache bus: `contentTypes:collectionWorkspace:<contentTypeId>`,
+    `contentTypes:detail:<contentTypeId>`, `contentTypes:list`
+  - Prefetch: `/advanced/engine/:contentTypeId/collection` uses a predicate
+    prefetch matcher before the generic `/advanced/engine` prefix and warms the
+    workspace summary with `{ force: false }`
+  - Detail template prefetch:
+    `/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`
+    warms the workspace summary, detail-page record, content-types list, and
+    bounded sample entries with `{ force: false }`
+
+## Detail Pages
+- Detail-page admin client
+  - UI: collection workspace and detail-template editor surfaces
+  - Cached APIs: `listDetailPagesCached`, `getDetailPageCached`,
+    `getCachedDetailPages`, `getCachedDetailPage`
+  - Mutations: `createDetailPage`, `updateDetailPage`, `deleteDetailPage`,
+    `publishDetailPage`, `unpublishDetailPage`, `restoreDetailPageRevision`
+  - Lifecycle/revisions: `previewDetailPage`, `autosaveDetailPage`,
+    `listDetailPageRevisions`, `discardDetailPageRevision`
+  - Cache bus: `detailPages:list`,
+    `detailPages:list:contentType:<contentTypeId>`,
+    `detailPages:detail:<id>`
+  - Assistant execution: `detail-page.upsert` emits the same list/detail cache
+    events as manual admin mutations
 
 ## Custom Screens
 - Screens list
   - UI: `core/admin/ui/custom-screens/CustomScreenListPage.tsx`
   - Cached APIs: `listCustomScreensCached`, `getCachedCustomScreens`,
     `listContentTypesCached`, `getCachedContentTypes`
+  - Record metadata: cached custom screen rows preserve nullable
+    `collectionRole` / `compositionKey` from the custom-screen owner seam for
+    later workspace resolution; legacy cached rows normalize missing values to
+    `null`
   - Mutations: `createCustomScreen`, `updateCustomScreen`,
     `deleteCustomScreen`
   - Cache bus: `customScreens:list`, `contentTypes:list` for label projection

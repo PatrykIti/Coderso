@@ -44,13 +44,7 @@ export function ImportExportPage() {
   return (
     <AdminShell
       activeHref="/admin/tools/import-export"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Data</span>
-          <span>/</span>
-          <span className="text-foreground">Import &amp; Export</span>
-        </div>
-      }
+      breadcrumbs={["Data", "Import & Export"]}
       topbarActions={
         <Button variant="outline" size="sm" className="gap-2">
           <History className="h-4 w-4" />
@@ -59,10 +53,7 @@ export function ImportExportPage() {
       }
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-10">
-        <PageHeader
-          title="Import & Export"
-          description="Data management and portability."
-        />
+        <PageHeader title="Import & Export" description="Data management and portability." />
         {error ? (
           <Alert variant="destructive">
             <AlertTitle>Import/export error</AlertTitle>

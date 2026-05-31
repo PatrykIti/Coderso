@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Admin Context
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-03-05, TASK-190-05-03-07, TASK-190-06-03-01, TASK-190-06-03-02
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -51,7 +51,7 @@ No child task files.
 The collection workspace stays inside the existing Engine module:
 
 ```text
-/admin/coderso/engine/:contentTypeId/collection
+/admin/advanced/engine/:contentTypeId/collection
 ```
 
 Expected context additions:
@@ -83,7 +83,7 @@ Exact browser owner split:
 - The workspace route itself is the existing source of truth for
   `collectionWorkspaceHint.contentTypeId`, but this leaf must extend
   `useAssistantAdminContext.ts` with an explicit workspace-aware route match
-  for `/admin/coderso/engine/:contentTypeId/collection` instead of assuming
+  for `/admin/advanced/engine/:contentTypeId/collection` instead of assuming
   the current generic `selectedResourceFromRoute(...)` helper already provides
   that distinction today.
 - `buildAssistantAdminRuntimeSnapshot(...)` / `selectedResourceFromRoute(...)`
@@ -103,9 +103,9 @@ Exact browser owner split:
 Rules:
 
 - workspace route parsing must continue to resolve to
-  `area: "coderso"` + `codersoModule: "engine"`,
+  `area: "advanced"` + `advancedModule: "engine"`,
 - `useAssistantAdminContext.ts` must add an explicit workspace-route branch for
-  `/admin/coderso/engine/:contentTypeId/collection` when deriving
+  `/admin/advanced/engine/:contentTypeId/collection` when deriving
   `collectionWorkspaceHint.contentTypeId`; do not broaden the existing generic
   `content-type` route match so far that ordinary Engine routes start emitting
   workspace hints,
@@ -138,7 +138,7 @@ Rules:
   must widen that existing chain in place rather than bypassing one hop with a
   direct browser-to-provider payload,
 - selected resource stays the collection/content-type shell resource for the
-  workspace root; do not repurpose `/admin/coderso/engine/:contentTypeId/collection`
+  workspace root; do not repurpose `/admin/advanced/engine/:contentTypeId/collection`
   to `selectedResource.kind = "detail-page"`,
 - the active detail-template editor publishes `activeSurface.kind = "detail-page"`,
 - this leaf consumes the detail-page read/admin seam introduced by
@@ -229,6 +229,29 @@ Rules:
   before such a route exists,
 - no second route-to-surface transport is introduced.
 
+## Pseudocode
+
+```ts
+const browserContext: AssistantActionContext = {
+  page: route,
+  runtimeSnapshot,
+  activeSurface,
+  collectionWorkspaceHint: isCollectionWorkspaceRoute(route)
+    ? {
+        contentTypeId: runtimeSnapshot.selectedResource?.id ?? null,
+        activeDetailPageId: activeSurface?.kind === "detail-page" ? activeSurface.detailPage.id : null,
+      }
+    : null,
+};
+
+const contextWithCatalog = includeResourceCatalog
+  ? { ...browserContext, resourceCatalog: await service.buildResourceCatalog({}) }
+  : browserContext;
+
+const hydratedContext = await service.hydrateActiveSurface(contextWithCatalog);
+return service.planActions({ prompt, context: hydratedContext });
+```
+
 ## Security Contract
 
 - Visibility: internal assistant planning context only.
@@ -249,9 +272,32 @@ Rules:
   leak into frontend runtime snapshot fields; media context excludes raw bytes,
   signed/private URLs, upload tokens, and secret storage details.
 
+## Implementation Notes
+
+- `AssistantActionContext` now carries browser-owned
+  `collectionWorkspaceHint` plus server-hydrated `collectionWorkspace`.
+- `useAssistantAdminContext.ts` recognizes only the explicit
+  `/admin/advanced/engine/:contentTypeId/collection` route family for
+  workspace hints and keeps `selectedResource.kind = "content-type"`.
+- `DetailTemplateEditorPage.tsx` publishes `activeSurface.kind =
+  "detail-page"` through the existing `activeSurfaceContext.ts` transport.
+- `assistantActionSchemas.ts` accepts the strict `detail-page` active-surface
+  payload and identity-only `collectionWorkspaceHint`; browser-supplied
+  `collectionWorkspace` summaries remain rejected.
+- `assistantRoutes.ts` keeps explicit `detail-page` read planning permission
+  parity with `content:read` plus `widgets:read`, then passes route-resolved
+  permissions into the default hydrator.
+- `activeSurfaceHydration.ts` reuses `getCollectionWorkspaceSummary(...)` and
+  `getDetailPageDocument(...)` to hydrate the bounded workspace summary,
+  reconcile `activeDetailPageId`, drop stale/missing detail-page context, and
+  attach referenced widget-template summaries without adding a second lookup
+  path.
+- `providerPlanningContext.ts` exposes only the hydrated workspace package to
+  provider prompts; raw browser hints are sanitized before provider packaging.
+
 ## Testing Requirements
 
-- workspace route is recognized as `codersoModule: "engine"`.
+- workspace route is recognized as `advancedModule: "engine"`.
 - `assistantActionSchemas.ts` accepts the new `detail-page` active-surface shape
   and bounded `collectionWorkspaceHint` browser payload shape.
 - `/assistant/actions/plan` keeps explicit permission parity for
@@ -305,8 +351,29 @@ Rules:
   through the existing active-surface transport instead of inventing a second
   producer path.
 
+## Validation
+
+- `bun run test:vitest -- tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/ui/detail-template-editor.test.tsx tests/vitest/assistant/admin-context-service.test.ts tests/vitest/assistant/active-surface-hydration.test.ts tests/vitest/assistant/provider-planning-context.test.ts`
+  - 5 files passed / 39 tests passed.
+- `bun test tests/integration/routes/assistant.test.ts`
+  - 25 tests passed.
+- `bun run test:vitest`
+  - 578 files passed / 2578 tests passed.
+- `bun run test:bun`
+  - 752 tests passed / 204 files passed.
+- `bun run lint`
+  - passed.
+- `bun run scan:security:strict`
+  - passed.
+- `bun --cwd core lint:types`
+  - passed.
+- `bun --cwd core lint`
+  - passed.
+
 ## Documentation Updates Required
 
 - `_docs/ARCHITECTURE.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/_TASKS/README.md`
+- `_docs/CMS_API.md`
+- `_docs/_CHANGELOG/824-2026-05-10-task-190-collection-workspace-assistant-context.md`

@@ -3,12 +3,40 @@ import { eq, lt } from "drizzle-orm";
 import { db } from "../../db/client";
 import { previewTokens } from "../../db/schema";
 
-export type PreviewTargetType = "page" | "content" | "widget-template";
+export type PreviewTargetType = "page" | "content" | "widget-template" | "detail-page";
+
+export type PreviewTokenContext = null | {
+  kind: "detail-page";
+  sampleEntryId: string;
+};
+
+export type ValidPreviewToken = {
+  id: string;
+  targetType: PreviewTargetType;
+  targetId: string;
+  tokenHash: string;
+  context: PreviewTokenContext;
+  expiresAt: Date;
+  createdAt: Date;
+};
+
+export type PreviewTokenValidationResult =
+  | {
+      status: "valid";
+      token: ValidPreviewToken;
+    }
+  | {
+      status: "missing";
+    }
+  | {
+      status: "expired";
+    };
 
 export type CreatePreviewInput = {
   targetType: PreviewTargetType;
   targetId: string;
   ttlMinutes?: number;
+  context?: PreviewTokenContext;
 };
 
 export type PreviewProbeFailureReason =
@@ -31,10 +59,7 @@ export type PreviewProbeResult =
       targetLabel: string;
     };
 
-type PreviewProbeFetch = (
-  input: string,
-  init?: RequestInit
-) => Promise<Response>;
+type PreviewProbeFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 type PreviewProbeOptions = {
   allowedOrigins?: string[];
@@ -46,13 +71,59 @@ type PreviewProbeOptions = {
 const DEFAULT_PREVIEW_PROBE_TIMEOUT_MS = 1500;
 const DEFAULT_PREVIEW_PROBE_REDIRECTS = 3;
 const HTTP_REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function hashPreviewToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-const isHttpProtocol = (protocol: string) =>
-  protocol === "http:" || protocol === "https:";
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const normalizeUuid = (value: unknown) => {
+  if (typeof value !== "string") throw new Error("preview_token_context_invalid");
+  const normalized = value.trim().toLowerCase();
+  if (!uuidPattern.test(normalized)) throw new Error("preview_token_context_invalid");
+  return normalized;
+};
+
+const normalizeStoredTargetType = (value: unknown): PreviewTargetType => {
+  if (value === "page") return "page";
+  if (value === "content") return "content";
+  if (value === "widget-template") return "widget-template";
+  if (value === "detail-page") return "detail-page";
+  throw new Error("preview_token_invalid");
+};
+
+const normalizePreviewTokenContext = (
+  targetType: PreviewTargetType,
+  value: unknown
+): PreviewTokenContext => {
+  if (value === undefined || value === null) {
+    if (targetType === "detail-page") {
+      throw new Error("preview_token_context_invalid");
+    }
+    return null;
+  }
+
+  if (!isRecord(value)) throw new Error("preview_token_context_invalid");
+
+  const keys = Object.keys(value);
+  if (keys.length !== 2 || !keys.includes("kind") || !keys.includes("sampleEntryId")) {
+    throw new Error("preview_token_context_invalid");
+  }
+
+  if (targetType !== "detail-page" || value.kind !== "detail-page") {
+    throw new Error("preview_token_context_invalid");
+  }
+
+  return {
+    kind: "detail-page",
+    sampleEntryId: normalizeUuid(value.sampleEntryId),
+  };
+};
+
+const isHttpProtocol = (protocol: string) => protocol === "http:" || protocol === "https:";
 
 const resolveProbeUrl = (value: string) => {
   try {
@@ -63,10 +134,7 @@ const resolveProbeUrl = (value: string) => {
   }
 };
 
-const normalizeAllowedOrigins = (
-  previewUrl: URL,
-  allowedOrigins: string[] | undefined
-) => {
+const normalizeAllowedOrigins = (previewUrl: URL, allowedOrigins: string[] | undefined) => {
   const origins = new Set([previewUrl.origin]);
   for (const value of allowedOrigins ?? []) {
     const parsed = resolveProbeUrl(value);
@@ -98,8 +166,7 @@ const cancelResponseBody = (response: Response) => {
   void response.body?.cancel().catch(() => undefined);
 };
 
-const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === "AbortError";
+const isAbortError = (error: unknown) => error instanceof Error && error.name === "AbortError";
 
 const fetchPreviewProbe = async (
   fetchImpl: PreviewProbeFetch,
@@ -126,15 +193,13 @@ const fetchPreviewProbe = async (
   }
 };
 
-const probeUrl = async (
-  input: {
-    url: URL;
-    allowedOrigins: Set<string>;
-    fetchImpl: PreviewProbeFetch;
-    timeoutMs: number;
-    redirectsRemaining: number;
-  }
-): Promise<PreviewProbeResult> => {
+const probeUrl = async (input: {
+  url: URL;
+  allowedOrigins: Set<string>;
+  fetchImpl: PreviewProbeFetch;
+  timeoutMs: number;
+  redirectsRemaining: number;
+}): Promise<PreviewProbeResult> => {
   if (!isAllowedProbeUrl(input.url, input.allowedOrigins)) {
     return {
       ok: false,
@@ -145,12 +210,7 @@ const probeUrl = async (
 
   for (const method of ["HEAD", "GET"] as const) {
     try {
-      const response = await fetchPreviewProbe(
-        input.fetchImpl,
-        input.url,
-        method,
-        input.timeoutMs
-      );
+      const response = await fetchPreviewProbe(input.fetchImpl, input.url, method, input.timeoutMs);
       cancelResponseBody(response);
 
       if (method === "HEAD" && (response.status === 405 || response.status === 501)) {
@@ -234,8 +294,7 @@ export async function probeGeneratedPreviewUrl(
     allowedOrigins,
     fetchImpl: options.fetchImpl ?? fetch,
     timeoutMs: options.timeoutMs ?? DEFAULT_PREVIEW_PROBE_TIMEOUT_MS,
-    redirectsRemaining:
-      options.maxRedirects ?? DEFAULT_PREVIEW_PROBE_REDIRECTS,
+    redirectsRemaining: options.maxRedirects ?? DEFAULT_PREVIEW_PROBE_REDIRECTS,
   });
 }
 
@@ -244,36 +303,82 @@ export async function createPreviewToken(input: CreatePreviewInput) {
   const ttlMinutes = input.ttlMinutes ?? 60;
   const expiresAt = new Date(Date.now() + ttlMinutes * 60_000);
   const tokenHash = hashPreviewToken(token);
+  const context = normalizePreviewTokenContext(input.targetType, input.context);
 
   await db.insert(previewTokens).values({
     targetType: input.targetType,
     targetId: input.targetId,
     tokenHash,
+    context,
     expiresAt,
   });
 
   return { token, expiresAt };
 }
 
+export async function createDetailPagePreviewToken(input: {
+  detailPageId: string;
+  sampleEntryId: string;
+  ttlMinutes?: number;
+}) {
+  return createPreviewToken({
+    targetType: "detail-page",
+    targetId: input.detailPageId,
+    ttlMinutes: input.ttlMinutes,
+    context: {
+      kind: "detail-page",
+      sampleEntryId: input.sampleEntryId,
+    },
+  });
+}
+
 export async function validatePreviewToken(
   token: string,
   targetType?: PreviewTargetType
-) {
+): Promise<PreviewTokenValidationResult> {
   const tokenHash = hashPreviewToken(token);
-  const [row] = await db
-    .select()
-    .from(previewTokens)
-    .where(eq(previewTokens.tokenHash, tokenHash));
+  const [row] = await db.select().from(previewTokens).where(eq(previewTokens.tokenHash, tokenHash));
 
-  if (!row) return null;
-  if (row.expiresAt <= new Date()) return null;
-  if (targetType && row.targetType !== targetType) return null;
+  if (!row) {
+    return { status: "missing" };
+  }
 
-  return row;
+  let normalizedTargetType: PreviewTargetType;
+  try {
+    normalizedTargetType = normalizeStoredTargetType(row.targetType);
+  } catch {
+    return { status: "missing" };
+  }
+
+  if (targetType && normalizedTargetType !== targetType) {
+    return { status: "missing" };
+  }
+
+  if (row.expiresAt <= new Date()) {
+    return { status: "expired" };
+  }
+
+  let context: PreviewTokenContext;
+  try {
+    context = normalizePreviewTokenContext(normalizedTargetType, row.context ?? null);
+  } catch {
+    return { status: "missing" };
+  }
+
+  return {
+    status: "valid",
+    token: {
+      id: row.id,
+      targetType: normalizedTargetType,
+      targetId: row.targetId,
+      tokenHash: row.tokenHash,
+      context,
+      expiresAt: row.expiresAt,
+      createdAt: row.createdAt,
+    },
+  };
 }
 
 export async function purgeExpiredPreviewTokens(reference = new Date()) {
-  await db
-    .delete(previewTokens)
-    .where(lt(previewTokens.expiresAt, reference));
+  await db.delete(previewTokens).where(lt(previewTokens.expiresAt, reference));
 }

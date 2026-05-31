@@ -1,8 +1,11 @@
 import { afterEach, expect, test } from "vitest";
 
 import {
+  ApiClientError,
   apiRequest,
+  classifyAdminApiFailure,
   getCsrfToken,
+  isSessionExpiredApiError,
   resetCsrfToken,
 } from "../../../core/admin/services/apiClient";
 
@@ -62,10 +65,7 @@ test("getCsrfToken deduplicates concurrent token requests", async () => {
     expect(fetchMock.calls).toHaveLength(1);
     resolveCsrf(jsonResponse({ token: "shared-token" }));
 
-    await expect(Promise.all([first, second])).resolves.toEqual([
-      "shared-token",
-      "shared-token",
-    ]);
+    await expect(Promise.all([first, second])).resolves.toEqual(["shared-token", "shared-token"]);
   } finally {
     fetchMock.restore();
   }
@@ -124,10 +124,7 @@ test("apiRequest does not retry non-csrf forbidden responses", async () => {
     if (url.endsWith("/auth/csrf")) {
       return jsonResponse({ token: "csrf-token" });
     }
-    return jsonResponse(
-      { error: { code: "forbidden", message: "Forbidden" } },
-      403
-    );
+    return jsonResponse({ error: { code: "forbidden", message: "Forbidden" } }, 403);
   });
 
   try {
@@ -149,4 +146,45 @@ test("apiRequest does not retry non-csrf forbidden responses", async () => {
   } finally {
     fetchMock.restore();
   }
+});
+
+test("apiRequest classifies 401 responses as session-expired without retrying csrf", async () => {
+  const fetchMock = installFetch(async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse(
+      { error: { code: "auth_required", message: "Authentication required" } },
+      401
+    );
+  });
+
+  try {
+    await expect(
+      apiRequest<{ ok: boolean }>(
+        "/pages/page-1",
+        { method: "PATCH", body: JSON.stringify({ title: "Updated" }) },
+        { withCsrf: true }
+      )
+    ).rejects.toMatchObject({
+      code: "auth_required",
+      status: 401,
+      sharedFailureKind: "session_expired",
+    });
+
+    expect(fetchMock.calls.map((call) => String(call.input))).toEqual([
+      "/admin/api/auth/csrf",
+      "/admin/api/pages/page-1",
+    ]);
+  } finally {
+    fetchMock.restore();
+  }
+});
+
+test("shared api client helpers classify session-expired and csrf-refreshable failures distinctly", () => {
+  const authRequired = new ApiClientError("auth_required", "Authentication required", 401);
+
+  expect(classifyAdminApiFailure(authRequired)).toBe("session_expired");
+  expect(isSessionExpiredApiError(authRequired)).toBe(true);
 });

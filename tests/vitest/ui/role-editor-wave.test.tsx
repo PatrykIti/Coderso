@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -61,7 +61,10 @@ vi.mock("@/components/ui/dialog", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-dialog-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-dialog-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -83,14 +86,7 @@ vi.mock("@/components/ui/input", () => ({
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     disabled?: boolean;
     placeholder?: string;
-  }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      placeholder={placeholder}
-    />
-  ),
+  }) => <input value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} />,
 }));
 
 vi.mock("@/components/ui/separator", () => ({
@@ -130,14 +126,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -152,7 +148,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
 };
@@ -161,7 +157,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing input for ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -173,7 +169,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
   if (!(element instanceof HTMLTextAreaElement)) {
     throw new Error(`Missing textarea for ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -190,12 +186,7 @@ test("RoleEditor create mode uses fallback catalog, select-all full access, and 
   const onSave = vi.fn();
 
   const view = mount(
-    <RoleEditor
-      open
-      onOpenChange={onOpenChange}
-      onSave={onSave}
-      permissionGroups={[]}
-    />
+    <RoleEditor open onOpenChange={onOpenChange} onSave={onSave} permissionGroups={[]} />
   );
 
   try {
@@ -258,12 +249,15 @@ test("RoleEditor edit mode clears full access, toggles specific permissions, and
 
     const firstEnabledCheckbox = Array.from(
       view.container.querySelectorAll('input[type="checkbox"]')
-    ).find((checkbox) => !(checkbox as HTMLInputElement).disabled) as HTMLInputElement | null | undefined;
+    ).find((checkbox) => !(checkbox as HTMLInputElement).disabled) as
+      | HTMLInputElement
+      | null
+      | undefined;
     if (!firstEnabledCheckbox) {
       throw new Error("Missing permission checkbox");
     }
 
-    act(() => {
+    React.act(() => {
       firstEnabledCheckbox.click();
     });
     clickByText(view.container, "Save role");
@@ -310,7 +304,7 @@ test("RoleEditor respects canManageRoles=false and keeps controls inert", () => 
     expect((clear as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
     expect((save as HTMLButtonElement | null | undefined)?.disabled).toBe(true);
 
-    act(() => {
+    React.act(() => {
       (selectAll as HTMLButtonElement | null | undefined)?.click();
       (clear as HTMLButtonElement | null | undefined)?.click();
       (save as HTMLButtonElement | null | undefined)?.click();

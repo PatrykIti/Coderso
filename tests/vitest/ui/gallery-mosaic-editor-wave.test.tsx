@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -31,6 +31,32 @@ vi.mock("@/components/ui/button", () => ({
       {children}
     </button>
   ),
+}));
+
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    children,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description?: string;
+    children?: React.ReactNode;
+    onConfirm: () => void;
+  }) =>
+    open ? (
+      <div data-confirm-dialog="true">
+        <p>{title}</p>
+        {description ? <p>{description}</p> : null}
+        <div>{children}</div>
+        <button type="button" onClick={onConfirm}>
+          confirm-action
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("@/components/ui/input", () => ({
@@ -164,14 +190,76 @@ vi.mock("@/services/mediaClient", () => ({
       caption: null,
       createdAt: "2026-04-26T00:00:00.000Z",
     },
+    {
+      id: "media-2",
+      key: "media/launch.mp4",
+      url: "/media/launch.mp4",
+      originalName: "launch.mp4",
+      type: "file",
+      mimeType: "video/mp4",
+      size: 2048,
+      title: "Launch clip",
+      caption: null,
+      createdAt: "2026-04-26T00:00:00.000Z",
+    },
+    {
+      id: "media-3",
+      key: "media/brochure.pdf",
+      url: "/media/brochure.pdf",
+      originalName: "brochure.pdf",
+      type: "file",
+      mimeType: "application/pdf",
+      size: 1024,
+      title: "Brochure",
+      caption: null,
+      createdAt: "2026-04-26T00:00:00.000Z",
+    },
+  ]),
+}));
+
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "lead-page",
+      title: "Lead page",
+      slug: "lead",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
   ]),
 }));
 
 vi.mock("@/ui/media/MediaPicker", () => ({
-  MediaPicker: ({ onChange }: { onChange: (value: unknown) => void }) => (
-    <button type="button" onClick={() => onChange(["media-1"])}>
-      Pick media
-    </button>
+  MediaPicker: ({
+    value,
+    onChange,
+    accept,
+    multiple,
+  }: {
+    value: unknown;
+    onChange: (value: unknown) => void;
+    accept?: string[];
+    multiple?: boolean;
+  }) => (
+    <div data-media-picker="true">
+      <button type="button" onClick={() => onChange(multiple ? ["media-1"] : "media-1")}>
+        pick-image-media
+      </button>
+      <button type="button" onClick={() => onChange(multiple ? ["media-2"] : "media-2")}>
+        pick-video-media
+      </button>
+      <button type="button" onClick={() => onChange(multiple ? ["media-3"] : "media-3")}>
+        pick-unsupported-media
+      </button>
+      <button type="button" onClick={() => onChange(multiple ? [] : null)}>
+        clear-media
+      </button>
+      <span>
+        {Array.isArray(value) ? value.join(",") : typeof value === "string" ? value : "none"}
+      </span>
+      <span>{(accept ?? []).join(",")}</span>
+    </div>
   ),
 }));
 
@@ -180,14 +268,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -204,7 +292,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   }
 
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -217,7 +305,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
   }
 
   const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -230,7 +318,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   }
 
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -241,18 +329,41 @@ const clickElement = (element: Element | null | undefined) => {
     throw new Error("Expected HTMLElement");
   }
 
-  act(() => {
+  React.act(() => {
     element.click();
+  });
+};
+
+const dispatchDragEvent = (target: Element, type: string, options: { clientY?: number } = {}) => {
+  const dragStore = new Map<string, string>();
+  const event = new DragEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientY: options.clientY ?? 0,
+  });
+  Object.defineProperty(event, "dataTransfer", {
+    configurable: true,
+    value: {
+      effectAllowed: "",
+      dropEffect: "move",
+      setDragImage: vi.fn(),
+      setData: vi.fn((key: string, value: string) => {
+        dragStore.set(key, value);
+      }),
+      getData: vi.fn((key: string) => dragStore.get(key) ?? ""),
+    },
+  });
+  Object.defineProperty(event, "clientY", {
+    configurable: true,
+    value: options.clientY ?? 0,
+  });
+  React.act(() => {
+    target.dispatchEvent(event);
   });
 };
 
 const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).find(
-    (element) => element.getAttribute("placeholder") === placeholder
-  );
-
-const findAllInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
-  Array.from(container.querySelectorAll("input")).filter(
     (element) => element.getAttribute("placeholder") === placeholder
   );
 
@@ -266,6 +377,12 @@ const findButtonByText = (container: ParentNode, text: string) =>
     normalizeText(element.textContent).includes(normalizeText(text))
   );
 
+const findMediaPickers = (container: ParentNode) =>
+  Array.from(container.querySelectorAll('[data-media-picker="true"]'));
+
+const findDragHandles = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("[data-gallery-drag-handle]"));
+
 const findButtonsByText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll("button")).filter(
     (element) => normalizeText(element.textContent) === normalizeText(text)
@@ -276,11 +393,16 @@ const findSectionByTitle = (container: ParentNode, title: string) =>
     normalizeText(section.textContent).includes(normalizeText(title))
   );
 
+const findAllSelectsByOption = (container: ParentNode, optionText: string) =>
+  Array.from(container.querySelectorAll("select")).filter((element) =>
+    normalizeText(element.textContent).includes(normalizeText(optionText))
+  );
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("GalleryMosaic wizard normalizes the variant selector and seeds deterministic item growth", async () => {
+test("GalleryMosaic wizard seeds layout selection and deterministic item growth", async () => {
   const { GalleryMosaicWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
@@ -319,40 +441,44 @@ test("GalleryMosaic wizard normalizes the variant selector and seeds determinist
   const view = mount(<Harness />);
 
   try {
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    expect(selects).toHaveLength(2);
-    expect(selects[0]?.value).toBe("mosaic");
+    expect(
+      findSectionByTitle(view.container, "Starter media")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.wizard.starter-media");
+    expect(view.container.textContent).toContain("Mosaic");
+    expect(view.container.textContent).toContain("Uniform Grid");
+    expect(view.container.textContent).toContain("Feature Left");
+    expect(view.container.textContent).toContain("1 item");
+    expect(latestValue.header).toEqual({});
+    expect(latestValue.items).toHaveLength(1);
+    expect(latestValue.items.map((item) => item.id)).toEqual(["custom-1"]);
+    expect(latestValue.items.map((item) => item.caption)).toEqual(["Lead story"]);
+    expect(view.container.textContent).toContain("Configured media");
+    expect(view.container.textContent).toContain(
+      "After Wizard, use Visual for section title, media selection, captions, destinations, alt text, posters, lightbox, overlay, density, and motion controls."
+    );
+    expect(findInputByPlaceholder(view.container, "Gallery highlights")).toBeUndefined();
+    expect(findButtonByText(view.container, "pick-video-media")).toBeUndefined();
 
-    setSelectValue(selects[0], "feature-left");
+    clickElement(findButtonByText(view.container, "Feature Left"));
     expect(onVariantChangeSpy).toHaveBeenLastCalledWith("feature-left");
-    expect(selects[0]?.value).toBe("feature-left");
 
-    setInputValue(findInputByPlaceholder(view.container, "Gallery highlights"), "Customer stories");
-    setSelectValue(selects[1], "3");
-
+    const countSelect = view.container.querySelector("select");
+    setSelectValue(countSelect, "4");
     expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.header).toEqual({
-      title: "Customer stories",
-      description: galleryMosaicDefaults.header?.description,
-    });
-    expect(latestValue.items).toHaveLength(3);
-    expect(latestValue.items.map((item) => item.id)).toEqual([
-      "custom-1",
-      "gallery-2",
-      "gallery-3",
-    ]);
-    expect(latestValue.items.map((item) => item.caption)).toEqual([
-      "Lead story",
-      "Visual detail",
-      "Story frame",
-    ]);
+    expect(latestValue.items).toHaveLength(4);
 
-    await act(async () => {
-      findButtonByText(view.container, "Pick media")?.click();
-      await Promise.resolve();
-    });
-    expect(latestValue.items[0]?.image).toBe("/media/hero.jpg");
-    expect(latestValue.items[0]?.caption).toBe("Hero media");
+    const callsBeforeReduction = onChangeSpy.mock.calls.length;
+    setSelectValue(view.container.querySelector("select"), "2");
+    expect(onChangeSpy).toHaveBeenCalledTimes(callsBeforeReduction);
+    expect(latestValue.items).toHaveLength(4);
+    expect(view.container.textContent).toContain("Reduce gallery items");
+    expect(view.container.textContent).toContain(
+      "Increasing the count again creates new placeholder tiles; removed content is not restored."
+    );
+    clickElement(findButtonByText(view.container, "confirm-action"));
+    expect(latestValue.items).toHaveLength(2);
   } finally {
     view.cleanup();
   }
@@ -364,6 +490,8 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
+  const confirmSpy = vi.fn(() => true);
+  vi.stubGlobal("confirm", confirmSpy);
   let latestValue: GalleryMosaicData = {
     header: {
       title: "Launch assets",
@@ -419,12 +547,47 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
   const view = mount(<Harness />);
 
   try {
+    expect(
+      findSectionByTitle(view.container, "Variant and media structure")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.visual.variant-media-structure");
+    expect(
+      findSectionByTitle(view.container, "Header copy")?.getAttribute("data-widget-editor-section")
+    ).toBe("gallery-mosaic.visual.header-copy");
+    expect(
+      findSectionByTitle(view.container, "Media items and links")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.visual.media-items-links");
+    expect(
+      findSectionByTitle(view.container, "Interaction")?.getAttribute("data-widget-editor-section")
+    ).toBe("gallery-mosaic.visual.interaction");
+    expect(
+      findSectionByTitle(view.container, "Overlay and caption controls")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.visual.overlay-caption-controls");
+    expect(
+      findSectionByTitle(view.container, "Layout style")?.getAttribute("data-widget-editor-section")
+    ).toBe("gallery-mosaic.visual.layout-style");
+    expect(
+      findSectionByTitle(view.container, "Density and motion")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.visual.density-motion");
+    expect(view.container.textContent).toContain("Current media: Image");
+    expect(view.container.textContent).toContain("Current media: Placeholder");
+    expect(view.container.textContent).toContain("Image preview");
+    expect(view.container.textContent).toContain("Placeholder preview");
+
     clickElement(findButtonByText(view.container, "Feature Left"));
     expect(onVariantChangeSpy).toHaveBeenLastCalledWith("feature-left");
 
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    expect(selects).toHaveLength(5);
+    let selects = Array.from(view.container.querySelectorAll("select"));
+    expect(selects.length).toBeGreaterThanOrEqual(5);
     setSelectValue(selects[0], "3");
+    expect(view.container.textContent).toContain("Item count grows or trims from the end.");
 
     setTextareaValue(
       findTextareaByPlaceholder(view.container, "Visual storytelling block with media tiles."),
@@ -433,72 +596,187 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
 
     const colorPicker = view.container.querySelector('input[type="color"]');
     expect(colorPicker).toBeInstanceOf(HTMLInputElement);
-    expect((colorPicker as HTMLInputElement).value).toBe("#0f172a");
+    expect((colorPicker as HTMLInputElement).value).toBe("#010203");
 
-    setInputValue(
-      findAllInputsByPlaceholder(view.container, "https://cdn.example.com/clip.mp4")[1],
-      "https://cdn.example.com/item-2.mp4"
+    const mediaPickers = findMediaPickers(view.container);
+    expect(mediaPickers).toHaveLength(3);
+    expect(view.container.textContent).toContain(
+      "Saved image asset is configured. Browse media to replace it or clear media and poster."
     );
+    clickElement(findButtonsByText(mediaPickers[1]!, "pick-video-media")[0]);
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const mediaPickersAfterVideo = findMediaPickers(view.container);
+    expect(mediaPickersAfterVideo).toHaveLength(4);
+    clickElement(findButtonsByText(mediaPickersAfterVideo[2]!, "pick-image-media")[0]);
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(latestValue.items[1]).toEqual(
+      expect.objectContaining({
+        video: "/media/launch.mp4",
+        poster: "/media/hero.jpg",
+      })
+    );
+    clickElement(findButtonByText(view.container, "Clear poster"));
+    expect(latestValue.items[1]?.poster).toBeUndefined();
+
     setInputValue(findInputByPlaceholder(view.container, "Media 2"), "Motion close-up");
-    setInputValue(findAllInputsByPlaceholder(view.container, "#")[1], "/motion-updated");
+    setInputValue(findInputByPlaceholder(view.container, "Gallery item 1"), "Lead alt");
+    selects = Array.from(view.container.querySelectorAll("select"));
+    setSelectValue(findAllSelectsByOption(view.container, "Right")[0], "right");
+    setSelectValue(findAllSelectsByOption(view.container, "Inherit section ratio")[0], "1:1");
+    expect(view.container.textContent).toContain("Current media: Video");
+    expect(view.container.textContent).toContain("Video preview");
+    const interactionSection = findSectionByTitle(view.container, "Interaction");
+    const interactionSelects = Array.from(
+      interactionSection?.querySelectorAll("select") ?? []
+    ) as HTMLSelectElement[];
+    expect(interactionSelects).toHaveLength(2);
+    setSelectValue(interactionSelects[0], "lightbox");
+    setSelectValue(interactionSelects[1], "fill");
+    expect(view.container.textContent).toContain(
+      "Admin preview shows lightbox markup as static. Published pages bind the lightbox script;"
+    );
+    expect(view.container.textContent).toContain(
+      "This item keeps link navigation. Clear the destination to open it in the lightbox instead."
+    );
+    expect(view.container.textContent).toContain(
+      "linked items still use navigation. Clear each destination to open that tile in the lightbox instead."
+    );
+
+    const dragHandles = findDragHandles(view.container);
+    expect(dragHandles).toHaveLength(3);
+    vi.spyOn(dragHandles[1]!, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 40,
+      top: 0,
+      left: 0,
+      right: 200,
+      bottom: 40,
+      toJSON: () => ({}),
+    } as DOMRect);
+    dispatchDragEvent(dragHandles[0]!, "dragstart");
+    dispatchDragEvent(dragHandles[1]!, "dragover", { clientY: 32 });
+    dispatchDragEvent(dragHandles[1]!, "drop", { clientY: 32 });
+
+    expect(latestValue.items.map((item) => item.id)).toEqual([
+      "gallery-b",
+      "gallery-a",
+      "gallery-3",
+    ]);
 
     clickElement(findButtonsByText(view.container, "Move up")[1]);
     expect(latestValue.items.map((item) => item.caption)).toEqual([
-      "Motion close-up",
       "Lead frame",
+      "Motion close-up",
       "Story frame",
     ]);
 
     clickElement(findButtonsByText(view.container, "Remove")[1]);
-    expect(latestValue.items.map((item) => item.caption)).toEqual([
-      "Motion close-up",
-      "Story frame",
-    ]);
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(latestValue.items.map((item) => item.caption)).toEqual(["Lead frame", "Story frame"]);
 
     clickElement(findButtonByText(view.container, "Add item"));
     expect(latestValue.items.map((item) => item.caption)).toEqual([
-      "Motion close-up",
+      "Lead frame",
       "Story frame",
       "Media 3",
     ]);
 
-    setSelectValue(selects[1], "hover");
+    const refreshedMediaPickers = findMediaPickers(view.container);
+    clickElement(
+      findButtonsByText(
+        refreshedMediaPickers[refreshedMediaPickers.length - 1]!,
+        "pick-unsupported-media"
+      )[0]
+    );
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(view.container.textContent).toContain("Item 3: failed to resolve selected media.");
+
+    setSelectValue(Array.from(view.container.querySelectorAll("select"))[0], "1");
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(latestValue.items).toHaveLength(3);
+    expect(view.container.textContent).toContain("Reduce gallery items");
+    expect(view.container.textContent).toContain(
+      "Increasing the count again creates new placeholder tiles; removed content is not restored."
+    );
+    clickElement(findButtonByText(view.container, "confirm-action"));
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(latestValue.items).toHaveLength(1);
+    expect(view.container.textContent).toContain(
+      "Feature Left works best with one lead tile plus at least one supporting item."
+    );
+
+    const overlaySection = findSectionByTitle(view.container, "Overlay and caption controls");
+    const overlaySelect = overlaySection?.querySelector("select");
+    setSelectValue(overlaySelect, "hover");
     setInputValue(colorPicker, "#112233");
-    setSelectValue(selects[2], "16:9");
-    setSelectValue(selects[3], "lg");
-    setSelectValue(selects[4], "xl");
+    const layoutStyleSection = findSectionByTitle(view.container, "Layout style");
+    const layoutStyleSelects = Array.from(
+      layoutStyleSection?.querySelectorAll("select") ?? []
+    ) as HTMLSelectElement[];
+    expect(layoutStyleSelects).toHaveLength(3);
+    setSelectValue(layoutStyleSelects[0], "16:9");
+    setSelectValue(layoutStyleSelects[1], "lg");
+    setSelectValue(layoutStyleSelects[2], "xl");
+    const densitySection = findSectionByTitle(view.container, "Density and motion");
+    const densitySelects = Array.from(densitySection?.querySelectorAll("select") ?? []) as
+      | HTMLSelectElement[]
+      | [];
+    expect(densitySelects).toHaveLength(2);
+    setSelectValue(densitySelects[0], "dense");
+    setSelectValue(densitySelects[1], "slide-up");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.header).toEqual({
       title: "Launch assets",
       description: "Updated supporting copy",
     });
+    expect(latestValue.items).toHaveLength(1);
     expect(latestValue.items[0]).toMatchObject({
-      id: "gallery-b",
-      video: "https://cdn.example.com/item-2.mp4",
-      caption: "Motion close-up",
-      href: "/motion-updated",
+      id: "gallery-a",
+      image: "/lead.jpg",
+      alt: "Lead alt",
+      objectPosition: "right",
+      ratio: "1:1",
+      caption: "Lead frame",
+      href: "/lead",
+    });
+    expect(latestValue.interaction).toEqual({
+      mode: "lightbox",
+      zoom: "fill",
     });
     expect(latestValue.style).toEqual({
       ratio: "16:9",
       gap: "lg",
       radius: "xl",
-      overlay: "#112233",
+      overlay: "rgba(17, 34, 51, 0.5)",
       captionPosition: "hover",
+      layoutDensity: "dense",
+      motionPreset: "slide-up",
     });
     expect((view.container.querySelector('input[type="color"]') as HTMLInputElement).value).toBe(
       "#112233"
     );
   } finally {
     view.cleanup();
+    vi.unstubAllGlobals();
   }
 });
 
-test("GalleryMosaic advanced editor normalizes malformed payloads, applies token edits, and resets to defaults", async () => {
+test("GalleryMosaic advanced editor keeps diagnostics read-only with truthful summary sections", async () => {
   const { GalleryMosaicAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
-  const onChangeSpy = vi.fn();
   let latestValue = {
     items: [
       {
@@ -508,30 +786,34 @@ test("GalleryMosaic advanced editor normalizes malformed payloads, applies token
       },
       {
         id: "duplicate",
+        href: "/lead",
       },
     ],
+    interaction: {
+      mode: "lightbox",
+      zoom: "fit",
+    },
     style: {
       ratio: "cinematic",
       gap: "wide",
       radius: "round",
       overlay: "",
       captionPosition: "floating",
+      layoutDensity: "fluid",
+      motionPreset: "bounce",
     },
   } as unknown as GalleryMosaicData;
 
   const Harness = () => {
     const [value, setValue] = useState<GalleryMosaicData>(latestValue);
 
-    const handleChange = (next: GalleryMosaicData) => {
-      latestValue = next;
-      onChangeSpy(next);
-      setValue(next);
-    };
-
     return (
       <GalleryMosaicAdvancedEditor
         value={value}
-        onChange={handleChange}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
         variant="mosaic"
         onVariantChange={() => undefined}
       />
@@ -541,67 +823,67 @@ test("GalleryMosaic advanced editor normalizes malformed payloads, applies token
   const view = mount(<Harness />);
 
   try {
-    const preview = view.container.querySelector("pre");
-    expect(preview?.textContent).toContain('"ratio": "4:3"');
-    expect(preview?.textContent).toContain('"gap": "md"');
-    expect(preview?.textContent).toContain('"radius": "lg"');
-    expect(preview?.textContent).toContain('"captionPosition": "inside"');
-    expect(preview?.textContent).toContain('"id": "gallery-2"');
-
-    clickElement(findButtonByText(view.container, "Normalize now"));
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.header).toEqual(galleryMosaicDefaults.header);
-    expect(latestValue.items).toEqual([
-      {
-        id: "duplicate",
-        image: "/lead.jpg",
-        video: undefined,
-        caption: "Media highlight",
-        href: undefined,
-      },
-      {
-        id: "gallery-2",
-        image: undefined,
-        video: undefined,
-        caption: "Visual detail",
-        href: undefined,
-      },
-    ]);
-    expect(latestValue.style).toEqual({
-      ratio: "4:3",
-      gap: "md",
-      radius: "lg",
-      overlay: undefined,
-      captionPosition: "inside",
-    });
-
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    expect(selects).toHaveLength(4);
-    setSelectValue(selects[0], "1:1");
-    setSelectValue(selects[1], "sm");
-    setSelectValue(selects[2], "none");
-    setSelectValue(selects[3], "below");
-    setInputValue(
-      findInputByPlaceholder(view.container, "rgba(15, 23, 42, 0.35)"),
-      "rgba(0, 0, 0, 0.6)"
+    expect(view.container.textContent).toContain(
+      "Advanced mode is read-only. Use Visual for public-facing Gallery Mosaic media, captions, links, interaction, overlay, density, and layout changes."
     );
-
-    expect(latestValue.style).toEqual({
-      ratio: "1:1",
-      gap: "sm",
-      radius: "none",
-      overlay: "rgba(0, 0, 0, 0.6)",
-      captionPosition: "below",
-    });
-
-    clickElement(findButtonByText(view.container, "Reset to defaults"));
-    expect(latestValue).toEqual(galleryMosaicDefaults);
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain(
+      "Lightbox on unlinked items; 1 linked item keeps navigation"
+    );
+    expect(view.container.textContent).toContain("Style summary");
+    expect(view.container.textContent).toContain("Accessibility diagnostics");
+    expect(view.container.textContent).toContain("Contract summary");
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(
+      findSectionByTitle(view.container, "Runtime summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.advanced.runtime-summary");
+    expect(
+      findSectionByTitle(view.container, "Style summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.advanced.style-summary");
+    expect(
+      findSectionByTitle(view.container, "Accessibility diagnostics")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.advanced.accessibility-diagnostics");
+    expect(
+      findSectionByTitle(view.container, "Contract summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.advanced.contract-summary");
+    expect(
+      view.container.querySelectorAll(
+        '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    ).toHaveLength(0);
+    expect(view.container.querySelectorAll("select")).toHaveLength(0);
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(view.container.textContent).toContain("Section heading");
+    expect(view.container.textContent).toContain("Helper copy");
+    expect(view.container.textContent).toContain("Alt text coverage");
+    expect(view.container.textContent).toContain("Poster coverage");
+    expect(view.container.textContent).toContain("Wizard owns");
+    expect(view.container.textContent).toContain("Visual owns");
+    expect(view.container.textContent).toContain("Advanced owns");
+    expect(view.container.textContent).toContain(
+      "Read-only runtime diagnostics, style summaries, accessibility checks, and contract ownership."
+    );
+    expect(latestValue).toEqual(
+      expect.objectContaining({
+        items: expect.arrayContaining([
+          expect.objectContaining({ id: "duplicate", image: "/lead.jpg" }),
+        ]),
+      })
+    );
   } finally {
     view.cleanup();
   }
 });
 
-test("GalleryMosaic visual editor updates header title, image field, move-down ordering, and raw overlay token without a variant handler", async () => {
+test("GalleryMosaic visual editor updates header title, media picker, ordering, and swatch-only overlay without a variant handler", async () => {
   const { GalleryMosaicVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
@@ -639,17 +921,33 @@ test("GalleryMosaic visual editor updates header title, image field, move-down o
     );
 
     const mediaSection = findSectionByTitle(view.container, "Media items and links");
-    setInputValue(
-      findInputByPlaceholder(mediaSection ?? view.container, "https://cdn.example.com/photo.jpg"),
-      "https://cdn.example.com/updated-lead.jpg"
+    expect(mediaSection?.textContent).not.toContain("Image URL");
+    expect(mediaSection?.textContent).not.toContain("Video URL");
+    expect(mediaSection?.textContent).not.toContain("Poster image URL");
+    expect(mediaSection?.textContent).not.toContain("Link URL");
+    expect(mediaSection?.textContent).toContain(
+      "Saved image asset is configured. Browse media to replace it or clear media and poster."
     );
+    clickElement(findButtonsByText(mediaSection ?? view.container, "Clear media and poster")[0]);
+    expect(latestValue.items[0]?.image).toBeUndefined();
+    const mediaPicker = findMediaPickers(view.container)[0];
+    clickElement(findButtonByText(mediaPicker ?? view.container, "pick-image-media"));
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     clickElement(findButtonsByText(mediaSection ?? view.container, "Move down")[0]);
 
     const overlaySection = findSectionByTitle(view.container, "Overlay and caption controls");
-    setInputValue(
-      findInputByPlaceholder(overlaySection ?? view.container, "rgba(15, 23, 42, 0.35)"),
-      "var(--gallery-overlay)"
+    const overlaySwatch = (overlaySection ?? view.container).querySelector(
+      '[data-widget-control="gallery-mosaic.style.overlay"] input[type="color"]'
     );
+    expect(overlaySwatch).toBeInstanceOf(HTMLInputElement);
+    expect(overlaySection?.textContent).toContain("The default overlay strength is 35%.");
+    expect(findInputByPlaceholder(overlaySection ?? view.container, "rgba(15, 23, 42, 0.35)")).toBe(
+      undefined
+    );
+    setInputValue(overlaySwatch, "#112233");
 
     expect(latestValue.header).toEqual(
       expect.objectContaining({
@@ -659,13 +957,13 @@ test("GalleryMosaic visual editor updates header title, image field, move-down o
     expect(latestValue.items[1]).toEqual(
       expect.objectContaining({
         id: "gallery-a",
-        image: "https://cdn.example.com/updated-lead.jpg",
+        image: "/media/hero.jpg",
         caption: "Lead frame",
       })
     );
     expect(latestValue.style).toEqual(
       expect.objectContaining({
-        overlay: "var(--gallery-overlay)",
+        overlay: "rgba(17, 34, 51, 0.35)",
       })
     );
   } finally {

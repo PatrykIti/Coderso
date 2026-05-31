@@ -1,16 +1,18 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { HeroData } from "../../../core/widgets/core/hero";
+import { heroEditorContract, type HeroData } from "../../../core/widgets/core/hero";
 
 const heroState = vi.hoisted(() => {
   const createMediaItems = () => [
     {
       id: "asset-hero",
       url: "/media/hero.jpg",
+      type: "image",
+      mimeType: "image/jpeg",
       alt: "Hero alt",
       title: "Hero still",
       originalName: "hero.jpg",
@@ -18,6 +20,8 @@ const heroState = vi.hoisted(() => {
     {
       id: "asset-video",
       url: "https://cdn.example.com/demo.mp4",
+      type: "file",
+      mimeType: "video/mp4",
       alt: null,
       title: "Demo video",
       originalName: "demo.mp4",
@@ -25,6 +29,8 @@ const heroState = vi.hoisted(() => {
     {
       id: "asset-background",
       url: "/media/background.jpg",
+      type: "image",
+      mimeType: "image/jpeg",
       alt: "Backdrop",
       title: "Backdrop",
       originalName: "background.jpg",
@@ -234,6 +240,51 @@ vi.mock("@/services/mediaClient", () => ({
   }),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "hero-signup-page",
+      title: "Signup",
+      slug: "signup",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "hero-demo-page",
+      title: "Demo",
+      slug: "demo",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "hero-join-page",
+      title: "Join",
+      slug: "join",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "hero-case-study-page",
+      title: "Case Study",
+      slug: "case-study",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "hero-launch-page",
+      title: "Launch",
+      slug: "launch",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/services/userSettingsClient", () => ({
   getUserSetting: vi.fn(async () => {
     if (heroState.userSettingError) throw heroState.userSettingError;
@@ -282,19 +333,47 @@ vi.mock("@/ui/media/MediaPicker", () => ({
   ),
 }));
 
+vi.mock("@/ui/posts/editor/richtext/PostRichTextAdapter", () => ({
+  PostRichTextAdapter: ({
+    value,
+    onChange,
+    placeholder,
+    id,
+    ariaLabelledBy,
+    ariaDescribedBy,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    id?: string;
+    ariaLabelledBy?: string;
+    ariaDescribedBy?: string;
+  }) => (
+    <textarea
+      id={id}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      aria-labelledby={ariaLabelledBy}
+      aria-describedby={ariaDescribedBy}
+      data-rich-text-adapter="true"
+    />
+  ),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -303,7 +382,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -336,7 +415,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -371,6 +450,16 @@ const findButtonsByText = (container: ParentNode, text: string) =>
     (element) => element.textContent?.trim() === text
   );
 
+const findButtonByControl = (container: ParentNode, controlId: string, text: string) =>
+  Array.from(container.querySelectorAll(`[data-widget-control="${controlId}"] button`)).find(
+    (element) => element.textContent?.trim() === text
+  );
+
+const findColorInputByControl = (container: ParentNode, controlId: string) =>
+  container.querySelector(
+    `[data-widget-control="${controlId}"] input[type="color"]`
+  ) as HTMLInputElement | null;
+
 const findButtonContainingText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll("button")).find((element) =>
     element.textContent?.includes(text)
@@ -379,13 +468,19 @@ const findButtonContainingText = (container: ParentNode, text: string) =>
 const findMediaPickers = (container: ParentNode) =>
   Array.from(container.querySelectorAll("[data-media-picker='true']"));
 
+const getMediaPickerValue = (picker: Element | undefined) =>
+  picker?.querySelector("span")?.textContent?.trim();
+
+const findLinkDestinationSelect = (container: ParentNode, fieldId: string) =>
+  container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(section.querySelectorAll("h2,h3,p")).some(
+      (heading) => normalizeText(heading.textContent) === normalizeText(title)
     )
   );
 
@@ -395,7 +490,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-test("HeroWizardEditor applies presets, updates direct content fields, toggles CTA branches, resolves media, and emits centered guidance", async () => {
+test("HeroWizardEditor keeps goal presets as the only mutating setup action", async () => {
   const { HeroWizardEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 
   const onChangeSpy = vi.fn();
@@ -423,9 +518,41 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
   };
 
   const view = mount(<Harness />);
+  await flush();
 
   try {
-    act(() => {
+    expect(view.container.textContent).toContain(
+      "Layout and daily presentation changes live in Visual."
+    );
+    expect(view.container.querySelector('[data-widget-control="hero.subhead"]')).toBeNull();
+    expect(
+      view.container.querySelector('[data-widget-control="hero.secondaryCta.label"]')
+    ).toBeNull();
+    expect(view.container.querySelector('[data-widget-control="hero.media.type"]')).toBeNull();
+
+    expect(
+      Array.from(view.container.querySelectorAll("[data-widget-editor-section]")).map((section) => [
+        section.getAttribute("data-widget-editor-mode"),
+        section.getAttribute("data-widget-editor-section-role"),
+      ])
+    ).toEqual([
+      ["wizard", "setup"],
+      ["wizard", "setup"],
+      ["wizard", "setup"],
+    ]);
+
+    expect(
+      Array.from(view.container.querySelectorAll('[data-widget-control-ownership="writable"]')).map(
+        (control) => control.getAttribute("data-widget-control-path")
+      )
+    ).toEqual([]);
+    expect(
+      Array.from(view.container.querySelectorAll('[data-widget-control-readonly="true"]')).map(
+        (control) => control.getAttribute("data-widget-control-path")
+      )
+    ).toEqual(expect.arrayContaining(["headline", "primaryCta.label", "primaryCta.href"]));
+
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["lead", "sales", "info"]), "sales");
     });
 
@@ -436,191 +563,57 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
     ).toEqual(
       expect.objectContaining({
         headline: "Convert more visitors",
-        subhead: "Lead with the outcome and reduce friction.",
         primaryCta: { label: "Book a demo", href: "/demo" },
-        secondaryCta: { label: "Pricing", href: "/pricing" },
       })
     );
-
-    act(() => {
-      setInputValue(
-        findInputByPlaceholder(view.container, "Build with confidence"),
-        "Pipeline-ready hero"
-      );
-      setTextareaValue(
-        findTextareaByPlaceholder(view.container, "Short supporting message"),
-        "Support the main outcome with a concise sentence."
-      );
-      setInputValue(findInputByPlaceholder(view.container, "Get started"), "Start onboarding");
-      setInputValue(findInputByPlaceholder(view.container, "/start"), "/join");
-      setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Review pricing");
-      setInputValue(findInputByPlaceholder(view.container, "/learn"), "/pricing");
-    });
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "single");
-    });
-    expect(view.container.textContent).not.toContain("Secondary CTA Label");
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "dual");
-    });
-    expect(view.container.textContent).toContain("Secondary CTA Label");
-
-    act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Review pricing");
-      setInputValue(findInputByPlaceholder(view.container, "/learn"), "/pricing");
-    });
-    expect(
-      [...onChangeSpy.mock.calls]
-        .reverse()
-        .find(([arg]) => arg?.secondaryCta?.label === "Review pricing")?.[0]
-    ).toEqual(
-      expect.objectContaining({
-        secondaryCta: {
-          label: "Review pricing",
-          href: "/pricing",
-        },
-      })
-    );
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "image");
-    });
-    expect(view.container.textContent).toContain(
-      "Centered layout renders the selected image as hero background."
-    );
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
-    });
-    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-hero")[0]);
-    await flush();
+    expect(onChangeSpy.mock.lastCall?.[0]).not.toHaveProperty("subhead");
+    expect(onChangeSpy.mock.lastCall?.[0]).not.toHaveProperty("body");
+    expect(onChangeSpy.mock.lastCall?.[0]).not.toHaveProperty("secondaryCta");
 
     expect(
-      [...onChangeSpy.mock.calls]
-        .reverse()
-        .find(([arg]) => arg?.media?.assetId === "asset-hero")?.[0]
-    ).toEqual(
-      expect.objectContaining({
-        media: expect.objectContaining({
-          type: "image",
-          source: "library",
-          assetId: "asset-hero",
-          src: "/media/hero.jpg",
-          alt: "Hero alt",
-        }),
-      })
-    );
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "video");
-    });
-    expect(view.container.textContent).toContain(
-      "Centered layout does not show inline video. Use Media Right or Media Left to display video content."
-    );
-
-    act(() => {
-      setSelectValue(
-        findSelectByOptions(view.container, ["centered", "split", "media-left"]),
-        "media-left"
-      );
-    });
-    expect(onVariantChangeSpy).toHaveBeenCalledWith("media-left");
+      findSelectByOptions(view.container, ["centered", "split", "media-left"])
+    ).toBeUndefined();
     expect(latestValue).toMatchObject({
-      headline: "Pipeline-ready hero",
-      subhead: "Support the main outcome with a concise sentence.",
+      headline: "Convert more visitors",
       primaryCta: {
-        label: "Start onboarding",
-        href: "/join",
-      },
-      media: {
-        type: "video",
-        source: "library",
-        assetId: "asset-hero",
-        src: "/media/hero.jpg",
+        label: "Book a demo",
+        href: "/demo",
       },
     });
+    expect(latestValue.secondaryCta).toBeUndefined();
+    expect(latestValue.media).toBeUndefined();
   } finally {
     view.cleanup();
   }
 });
 
-test("HeroWizardEditor validates media URLs and covers unresolved, clear, external-source, and lookup failure branches", async () => {
+test("HeroWizardEditor marks goal as an action and keeps all writable paths documented", async () => {
   const { HeroWizardEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
-  let latestValue: HeroData = { headline: "" };
 
-  const Harness = () => {
-    const [value, setValue] = useState<HeroData>(latestValue);
-    return (
-      <HeroWizardEditor
-        value={value}
-        onChange={(next) => {
-          latestValue = next;
-          setValue(next);
-        }}
-        variant="split"
-        onVariantChange={() => undefined}
-      />
-    );
-  };
-
-  const view = mount(<Harness />);
-
+  const view = mount(
+    <HeroWizardEditor
+      value={{ headline: "Hero", primaryCta: { label: "Start", href: "/start" } }}
+      onChange={() => undefined}
+      variant="split"
+      onVariantChange={() => undefined}
+    />
+  );
   try {
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "image");
-    });
-
-    act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "https://"), "ftp://asset.invalid");
-    });
-    expect(view.container.textContent).toContain("Use a relative path or full URL.");
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
-    });
-    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-missing-asset")[0]);
-    await flush();
-    expect(view.container.textContent).toContain("Selected media could not be resolved.");
-
-    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "clear-media")[0]);
-    await flush();
-    expect(latestValue.media).toEqual(
-      expect.objectContaining({
-        type: "image",
-        source: "library",
-        assetId: undefined,
-        src: undefined,
-      })
-    );
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "external");
-    });
-    expect(latestValue.media).toEqual(
-      expect.objectContaining({
-        source: "external",
-        assetId: undefined,
-      })
-    );
-
-    heroState.mediaError = {
-      name: "ApiClientError",
-      message: "Media lookup failed",
-    };
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
-    });
-    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
-    await flush();
-    expect(view.container.textContent).toContain("Media lookup failed");
-
-    heroState.mediaError = new Error("lookup exploded");
-    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-hero")[0]);
-    await flush();
-    expect(view.container.textContent).toContain("Failed to resolve media URL.");
+    expect(
+      view.container
+        .querySelector('[data-widget-control="hero.goal"]')
+        ?.getAttribute("data-widget-control-ownership")
+    ).toBe("action");
+    expect(
+      view.container
+        .querySelector('[data-widget-control="hero.goal"]')
+        ?.hasAttribute("data-widget-control-path")
+    ).toBe(false);
+    expect(
+      Array.from(view.container.querySelectorAll("[data-widget-control]"))
+        .filter((control) => control.getAttribute("data-widget-control-ownership") !== "action")
+        .map((control) => control.getAttribute("data-widget-control-path"))
+    ).toEqual(["headline", "primaryCta.label", "primaryCta.href"]);
   } finally {
     view.cleanup();
   }
@@ -679,8 +672,11 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
 
   const Harness = () => {
     const [value, setValue] = useState<HeroData>({
-      headline: "",
-      primaryCta: { label: "", href: "" },
+      headline: "Current hero",
+      primaryCta: { label: "Current CTA", href: "/current" },
+      secondaryCta: { label: "Legacy secondary", href: "/legacy" },
+      background: { color: "#111827" },
+      style: { cardShadow: "strong" },
     });
     const [variant, setVariant] = useState("split");
     return (
@@ -710,18 +706,31 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
 
     clickElement(findButtonsByText(view.container, "Apply")[0]);
     expect(onVariantChangeSpy).toHaveBeenCalledWith("media-left");
-    expect(
-      [...onChangeSpy.mock.calls]
-        .reverse()
-        .find(([arg]) => arg?.headline === "Preset headline")?.[0]
-    ).toEqual(
+    const appliedPreset = [...onChangeSpy.mock.calls]
+      .reverse()
+      .find(([arg]) => arg?.headline === "Preset headline")?.[0];
+    expect(appliedPreset).toEqual(
       expect.objectContaining({
         headline: "Preset headline",
         primaryCta: { label: "Open library", href: "/library" },
+        layout: {
+          align: "center",
+          maxWidth: "xl",
+          contentWidth: "lg",
+          height: "auto",
+          bleed: "contained",
+        },
+        background: expect.objectContaining({
+          media: expect.objectContaining({
+            type: "none",
+            source: "external",
+          }),
+        }),
       })
     );
+    expect(appliedPreset?.secondaryCta).toBeUndefined();
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "Build with confidence"),
         "Updated hero"
@@ -734,20 +743,20 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
 
     clickElement(findButtonsByText(view.container, "Add variant preset")[0]);
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Homepage Hero"), "   ");
     });
     clickElement(findButtonsByText(view.container, "Save preset")[0]);
     expect(view.container.textContent).toContain("Preset name is required.");
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Homepage Hero"), "Launch");
     });
     clickElement(findButtonsByText(view.container, "Save preset")[0]);
     expect(view.container.textContent).toContain("Preset name must be unique.");
 
     heroState.savePresetError = new Error("save failed");
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Homepage Hero"), "Homepage Hero");
     });
     clickElement(findButtonsByText(view.container, "Save preset")[0]);
@@ -771,7 +780,12 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
       ])
     );
 
-    clickElement(findButtonsByText(view.container, "Update")[0]);
+    const launchUpdateButton = Array.from(view.container.querySelectorAll("button")).find(
+      (node) =>
+        node.textContent === "Update" &&
+        node.parentElement?.parentElement?.textContent?.includes("Launch")
+    );
+    clickElement(launchUpdateButton);
     await flush();
     expect(heroState.lastSavedValue).toEqual(
       expect.arrayContaining([
@@ -785,9 +799,594 @@ test("HeroVisualEditor loads sanitized presets, applies them, validates create f
       ])
     );
 
-    clickElement(findButtonsByText(view.container, "Delete")[0]);
+    const launchDeleteButton = Array.from(view.container.querySelectorAll("button")).find(
+      (node) =>
+        node.textContent === "Delete" &&
+        node.parentElement?.parentElement?.textContent?.includes("Launch")
+    );
+    clickElement(launchDeleteButton);
+    clickElement(findButtonsByText(view.container, "Delete preset")[0]);
     await flush();
-    expect(view.container.textContent).not.toContain("Launch");
+    expect(
+      Array.from(view.container.querySelectorAll("button")).find(
+        (node) =>
+          node.textContent === "Update" &&
+          node.parentElement?.parentElement?.textContent?.includes("Launch")
+      )
+    ).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor updates rich copy and social proof fields", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  const onChangeSpy = vi.fn();
+  let latestValue: HeroData = {
+    headline: "Hero",
+    primaryCta: { label: "Get started", href: "/signup" },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant="centered"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Styled headline");
+    expect(view.container.textContent).toContain("Styled body copy");
+    expect(view.container.textContent).not.toContain("Rich headline HTML");
+    expect(view.container.textContent).not.toContain("Rich body HTML");
+    expect(view.container.textContent).not.toContain("Allowed tags");
+    expect(view.container.querySelectorAll("[data-rich-text-adapter='true']")).toHaveLength(2);
+    expect(
+      view.container
+        .querySelector('[data-widget-control="hero.richHeadline"] textarea')
+        ?.getAttribute("aria-labelledby")
+    ).toContain("hero-richheadline-label");
+
+    React.act(() => {
+      setTextareaValue(
+        view.container.querySelector('[data-widget-control="hero.richHeadline"] textarea'),
+        "<strong>Build</strong> faster"
+      );
+      setTextareaValue(
+        view.container.querySelector('[data-widget-control="hero.richBody"] textarea'),
+        "<p>Safe <em>rich</em> body copy.</p>"
+      );
+    });
+
+    clickElement(
+      view.container.querySelector(
+        '[data-widget-control="hero.socialProof.enabled"] input[type="checkbox"]'
+      )
+    );
+
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "4.9/5"), "4.8/5");
+      setInputValue(findInputByPlaceholder(view.container, "2,000+ reviews"), "1,200+ reviews");
+      setInputValue(
+        findInputByPlaceholder(view.container, "Trusted by product and ops teams."),
+        "Trusted by customer-facing teams."
+      );
+      setInputValue(findInputByPlaceholder(view.container, "Reviewer avatar"), "Reviewer one");
+    });
+    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-hero")[0]);
+    await flush();
+
+    expect(latestValue).toEqual(
+      expect.objectContaining({
+        richHeadline: "<strong>Build</strong> faster",
+        richBody: "<p>Safe <em>rich</em> body copy.</p>",
+        socialProof: expect.objectContaining({
+          enabled: true,
+          rating: "4.8/5",
+          reviewCount: "1,200+ reviews",
+          label: "Trusted by customer-facing teams.",
+          avatars: [
+            {
+              source: "library",
+              assetId: "asset-hero",
+              src: "/media/hero.jpg",
+              alt: "Reviewer one",
+            },
+          ],
+        }),
+      })
+    );
+
+    React.act(() => {
+      setTextareaValue(
+        view.container.querySelector('[data-widget-control="hero.richHeadline"] textarea'),
+        "<p><br></p>"
+      );
+      setTextareaValue(
+        view.container.querySelector('[data-widget-control="hero.richBody"] textarea'),
+        '<p>Keep this<img src="/inline.jpg" /></p>'
+      );
+    });
+
+    expect(latestValue.richHeadline).toBe("");
+    expect(latestValue.richBody).toBe("<p>Keep this</p>");
+    expect(view.container.textContent).toContain("Formatting adjusted");
+    expect(view.container.textContent).toContain("Pasted images are removed from styled copy.");
+
+    React.act(() => {
+      setTextareaValue(
+        view.container.querySelector('[data-widget-control="hero.richHeadline"] textarea'),
+        "<script>alert(1)</script><p><br></p>"
+      );
+    });
+
+    expect(latestValue.richHeadline).toBe("");
+    expect(view.container.textContent).toContain(
+      "Executable or styling markup is removed from styled copy."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps saved external social proof avatars replace-or-clear only", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Hero",
+    socialProof: {
+      enabled: true,
+      avatars: [{ src: "https://legacy.example.com/avatar.jpg", alt: "Legacy reviewer" }],
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="centered"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Saved external avatar image is configured.");
+    expect(view.container.textContent).toContain(
+      "Avatar images use the Media Library; saved external avatars stay replace-or-clear compatible."
+    );
+    expect(view.container.textContent).not.toContain("Avatar 1 URL");
+    expect(view.container.textContent).not.toContain("Use a relative path or full URL.");
+    expect(
+      findInputByPlaceholder(view.container, "https://cdn.example.com/avatar-1.jpg")
+    ).toBeUndefined();
+    expect(findMediaPickers(view.container)).toHaveLength(5);
+    expect(getMediaPickerValue(findMediaPickers(view.container)[0])).toBe("none");
+
+    clickElement(findButtonsByText(view.container, "Clear saved external avatar")[0]);
+    await flush();
+    expect(latestValue.socialProof?.avatars).toEqual([]);
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
+    await flush();
+    expect(view.container.textContent).toContain("Select an image from the Media Library.");
+    expect(latestValue.socialProof?.avatars).toEqual([]);
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-hero")[0]);
+    await flush();
+    expect(latestValue.socialProof?.avatars?.[0]).toEqual(
+      expect.objectContaining({
+        source: "library",
+        assetId: "asset-hero",
+        src: "/media/hero.jpg",
+        alt: "Hero alt",
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps library social proof avatar state selected", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  const view = mount(
+    <HeroVisualEditor
+      value={{
+        headline: "Hero",
+        socialProof: {
+          enabled: true,
+          avatars: [
+            {
+              source: "library",
+              assetId: "asset-hero",
+              src: "/media/hero.jpg",
+              alt: "Reviewer",
+            },
+          ],
+        },
+      }}
+      onChange={() => undefined}
+      variant="centered"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+
+    expect(getMediaPickerValue(findMediaPickers(view.container)[0])).toBe("asset-hero");
+    expect(view.container.textContent).not.toContain("Saved external avatar image is configured.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor exposes contract metadata for visible Visual controls", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+  const visualContractPaths = new Set(
+    heroEditorContract.sections
+      .filter((section) => section.mode === "visual")
+      .flatMap((section) => section.writablePaths)
+  );
+
+  const view = mount(
+    <HeroVisualEditor
+      value={{
+        headline: "Hero",
+        badge: { enabled: true, label: "New" },
+        primaryCta: { label: "Start", href: "/start" },
+        secondaryCta: { label: "Learn", href: "/learn" },
+        media: {
+          type: "video",
+          source: "external",
+          src: "https://cdn.example.com/demo.mp4",
+        },
+        background: {
+          media: {
+            type: "video",
+            source: "external",
+            src: "https://cdn.example.com/bg.mp4",
+          },
+        },
+        socialProof: {
+          enabled: true,
+          avatars: [{ src: "/avatar.jpg", alt: "Reviewer" }],
+        },
+      }}
+      onChange={() => undefined}
+      variant="split"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+
+    const controls = Array.from(
+      view.container.querySelectorAll('[data-widget-control-ownership="writable"]')
+    );
+    const visiblePaths = controls
+      .map((control) => control.getAttribute("data-widget-control-path"))
+      .filter((path): path is string => Boolean(path));
+
+    expect(controls.every((control) => control.hasAttribute("data-widget-control-path"))).toBe(
+      true
+    );
+    expect(new Set(visiblePaths).size).toBe(visiblePaths.length);
+    for (const path of visiblePaths) {
+      expect(visualContractPaths.has(path)).toBe(true);
+    }
+    expect(visiblePaths).toEqual(
+      expect.arrayContaining([
+        "variant",
+        "headline",
+        "primaryCta.label",
+        "secondaryCta.label",
+        "media.type",
+        "media.title",
+        "background.media.type",
+        "background.media.title",
+        "socialProof.avatars.0.assetId",
+        "socialProof.avatars.0.alt",
+        "layout.align",
+        "spacing.paddingTop",
+        "responsive.hideMediaOnMobile",
+      ])
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps centered media editable and clears incompatible media sources on type changes", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestVisualValue: HeroData = {
+    headline: "Hero",
+    media: {
+      type: "image",
+      source: "library",
+      assetId: "asset-hero",
+      src: "/media/hero.jpg",
+      alt: "Hero background",
+      overlay: "rgba(0,0,0,0.2)",
+    },
+  };
+
+  const VisualHarness = () => {
+    const [value, setValue] = useState(latestVisualValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestVisualValue = next;
+          setValue(next);
+        }}
+        variant="centered"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const visualView = mount(<VisualHarness />);
+
+  try {
+    await flush();
+
+    expect(findSectionByTitle(visualView.container, "Media")).toBeTruthy();
+    expect(visualView.container.textContent).toContain(
+      "Centered layout renders the selected image as hero background."
+    );
+
+    React.act(() => {
+      setSelectValue(
+        findSelectByOptions(visualView.container, ["none", "image", "video"]),
+        "video"
+      );
+    });
+
+    expect(visualView.container.textContent).toContain(
+      "Centered layout does not render inline video."
+    );
+    expect(latestVisualValue.media).toEqual(
+      expect.objectContaining({
+        type: "video",
+        source: "library",
+        assetId: undefined,
+        src: undefined,
+        alt: undefined,
+      })
+    );
+  } finally {
+    visualView.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps single CTA and colored overlay opacity changes round-trippable", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Hero",
+    primaryCta: { label: "Only CTA", href: "/start" },
+    secondaryCta: { label: "Learn more", href: "/learn" },
+    media: {
+      type: "image",
+      source: "library",
+      assetId: "asset-hero",
+      src: "/media/hero.jpg",
+      overlay: "rgba(255, 0, 0, 0.20)",
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<HeroData>(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="split"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "single");
+    });
+    expect(latestValue.secondaryCta).toBeUndefined();
+    expect(view.container.textContent).not.toContain("Secondary CTA Label");
+
+    React.act(() => {
+      setInputValue(
+        view.container.querySelector(
+          '[data-widget-control="hero.media.overlay"] input[type="range"]'
+        ),
+        "70"
+      );
+    });
+    expect(latestValue.media?.overlay).toBe("rgba(255, 0, 0, 0.70)");
+    expect(findColorInputByControl(view.container, "hero.media.overlay")?.value).toBe("#ff0000");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor applies palettes without erasing content and keeps gradient contrast guidance unknown", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Hero headline",
+    primaryCta: { label: "Get started", href: "/signup" },
+    background: {
+      gradient: "linear-gradient(135deg, #020617, #0f172a)",
+    },
+    style: {
+      textColor: "#ffffff",
+      bodyColor: "#e2e8f0",
+      secondaryButtonText: "#ffffff",
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="centered"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain(
+      "Contrast depends on inherited theme or transparent colors."
+    );
+
+    const colorsSection = findSectionByTitle(view.container, "Colors and Borders");
+    clickElement(findButtonContainingText(colorsSection ?? view.container, "Dark"));
+
+    expect(latestValue).toEqual(
+      expect.objectContaining({
+        headline: "Hero headline",
+        primaryCta: { label: "Get started", href: "/signup" },
+        background: expect.objectContaining({
+          color: "#0f172a",
+          gradient: "linear-gradient(135deg, #020617, #0f172a)",
+        }),
+        style: expect.objectContaining({
+          textColor: "#f8fafc",
+          subheadColor: "#e2e8f0",
+          bodyColor: "#cbd5e1",
+          primaryButtonBg: "#38bdf8",
+          secondaryButtonBorder: "#334155",
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor filters and sorts presets without raw JSON transfer controls", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  heroState.presetValue = [
+    {
+      name: "Zeta",
+      variant: "split",
+      data: {
+        headline: "Zeta preset",
+      },
+      updatedAt: "2026-03-09T08:00:00.000Z",
+    },
+    {
+      name: "Alpha",
+      variant: "media-left",
+      data: {
+        headline: "Alpha preset",
+      },
+      updatedAt: "2026-03-08T08:00:00.000Z",
+    },
+  ];
+
+  const view = mount(
+    <HeroVisualEditor
+      value={{ headline: "Current hero" }}
+      onChange={() => undefined}
+      variant="split"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+
+    const initialText = view.container.textContent ?? "";
+    expect(initialText.indexOf("Zeta")).toBeGreaterThan(-1);
+    expect(initialText.indexOf("Alpha")).toBeGreaterThan(initialText.indexOf("Zeta"));
+
+    React.act(() => {
+      setSelectValue(findSelectByOptions(view.container, ["updated-desc", "name-asc"]), "name-asc");
+    });
+    const sortedText = view.container.textContent ?? "";
+    expect(sortedText.indexOf("Alpha")).toBeGreaterThan(-1);
+    expect(sortedText.indexOf("Zeta")).toBeGreaterThan(sortedText.indexOf("Alpha"));
+
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Search presets"), "alp");
+    });
+    expect(view.container.textContent).toContain("Alpha");
+    expect(view.container.textContent).not.toContain("Zeta");
+    expect(findButtonsByText(view.container, "Export presets")).toHaveLength(0);
+    expect(findButtonsByText(view.container, "Import presets")).toHaveLength(0);
+    expect(findTextareaByPlaceholder(view.container, "Paste preset JSON")).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor uses the runtime body weight default in Typography controls", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  const view = mount(
+    <HeroVisualEditor
+      value={{ headline: "Hero" }}
+      onChange={() => undefined}
+      variant="centered"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+
+    const bodyWeightSelect = view.container.querySelector(
+      '[data-widget-control="hero.style.bodyWeight"] select'
+    );
+
+    expect(bodyWeightSelect).toBeInstanceOf(HTMLSelectElement);
+    expect((bodyWeightSelect as HTMLSelectElement).value).toBe("normal");
   } finally {
     view.cleanup();
   }
@@ -825,6 +1424,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     await flush();
 
     const ctaSection = findSectionByTitle(view.container, "CTA");
+    const layoutSection = findSectionByTitle(view.container, "Layout and spacing");
     const typographySection = findSectionByTitle(view.container, "Typography");
     const colorsSection = findSectionByTitle(view.container, "Colors and Borders");
     const backgroundSection = findSectionByTitle(view.container, "Background");
@@ -833,14 +1433,15 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       "No presets yet. Save your current setup as a starting point."
     );
     expect(view.container.textContent).toContain(
-      "Background media supports both Media Library and external URL."
+      "Background media uses the Media Library. Saved external media remains replace-or-clear compatible."
     );
     expect(ctaSection).toBeTruthy();
+    expect(layoutSection).toBeTruthy();
     expect(typographySection).toBeTruthy();
     expect(colorsSection).toBeTruthy();
     expect(backgroundSection).toBeTruthy();
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "Build with confidence"),
         "Ship hero updates faster"
@@ -856,19 +1457,23 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       setInputValue(findInputByPlaceholder(view.container, "Get started"), "Start trial");
     });
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "dual");
     });
-    act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "/start"), "javascript:alert(1)");
+    React.act(() => {
+      setSelectValue(
+        findLinkDestinationSelect(view.container, "hero.primaryCta.href"),
+        "hero-signup-page"
+      );
       setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Read case study");
-      setInputValue(findInputByPlaceholder(view.container, "/learn"), "ftp://secondary.invalid");
+      setSelectValue(
+        findLinkDestinationSelect(view.container, "hero.secondaryCta.href"),
+        "hero-case-study-page"
+      );
     });
-    expect(
-      view.container.textContent?.match(/Use a relative path or full URL\./g)?.length
-    ).toBeGreaterThanOrEqual(2);
+    expect(view.container.textContent).not.toContain("Use a relative path or full URL.");
 
-    act(() => {
+    React.act(() => {
       const ctaSizeSelects = findSelectsByOptions(ctaSection ?? view.container, ["sm", "md", "lg"]);
       expect(
         Array.from((ctaSizeSelects[0] as HTMLSelectElement).options).map((option) => option.value)
@@ -882,30 +1487,35 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     });
     expect(view.container.textContent).not.toContain("Secondary CTA Label");
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["none", "image", "video"])[0], "video");
     });
-    act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "https://"), "ftp://media.invalid");
-    });
-    expect(view.container.textContent).toContain("Use a relative path or full URL.");
-
-    act(() => {
-      setSelectValue(findSelectsByOptions(view.container, ["library", "external"])[0], "library");
-    });
+    expect(findInputByPlaceholder(view.container, "https://")).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "rgba(0,0,0,0.2)")).toBeUndefined();
+    expect(findSelectsByOptions(view.container, ["library", "external"])).toHaveLength(0);
+    expect(view.container.textContent).not.toContain("Use a relative path or full URL.");
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
     await flush();
 
-    act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "Describe the media"), "Intro clip");
-      setInputValue(findInputByPlaceholder(view.container, "rgba(0,0,0,0.2)"), "rgba(0,0,0,0.4)");
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Product demo video"), "Intro clip");
+      setTextareaValue(
+        findTextareaByPlaceholder(view.container, "Optional context for screen readers"),
+        "Launch walkthrough"
+      );
+      setInputValue(
+        view.container.querySelector(
+          '[data-widget-control="hero.media.overlay"] input[type="range"]'
+        ),
+        "40"
+      );
       setSelectValue(findSelectByOptions(view.container, ["16:9", "4:3", "1:1", "3:4"]), "1:1");
     });
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
     await flush();
 
-    act(() => {
-      const typographySelects = findSelectsByOptions(typographySection ?? view.container, [
+    React.act(() => {
+      const alignmentSelect = findSelectByOptions(layoutSection ?? view.container, [
         "left",
         "center",
         "right",
@@ -933,35 +1543,38 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
           Array.from((select as HTMLSelectElement).options).map((option) => option.value)
         ).toContain("none");
       }
-      setSelectValue(typographySelects[0], "left");
+      setSelectValue(alignmentSelect, "left");
       setSelectValue(headlineSizeSelect, "5xl");
       setSelectValue(subheadSizeSelect, "2xl");
       setSelectValue(bodySizeSelect, "lg");
     });
 
-    act(() => {
+    React.act(() => {
       const colorsRoot = colorsSection ?? view.container;
-      const textColorInputs = findInputsByPlaceholder(colorsRoot, "var(--color-text)");
-      const borderColorInputs = findInputsByPlaceholder(colorsRoot, "var(--color-border)");
-      const transparentInputs = findInputsByPlaceholder(colorsRoot, "transparent");
+      expect(findInputByPlaceholder(colorsRoot, "var(--color-text)")).toBeUndefined();
+      expect(findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.8)")).toBeUndefined();
+      expect(findInputByPlaceholder(colorsRoot, "transparent")).toBeUndefined();
 
-      setInputValue(textColorInputs[0], "#111111");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.textColor"), "#111111");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.subheadColor"), "#121212");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.bodyColor"), "#131313");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.borderColor"), "#222222");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.primaryButtonBg"), "#333333");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.primaryButtonText"), "#f8fafc");
       setInputValue(
-        findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.8)"),
-        "rgba(17,17,17,0.8)"
+        findColorInputByControl(colorsRoot, "hero.style.primaryButtonBorder"),
+        "#444444"
+      );
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.secondaryButtonBg"), "#555555");
+      setInputValue(
+        findColorInputByControl(colorsRoot, "hero.style.secondaryButtonText"),
+        "#666666"
       );
       setInputValue(
-        findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.7)"),
-        "rgba(17,17,17,0.7)"
+        findColorInputByControl(colorsRoot, "hero.style.secondaryButtonBorder"),
+        "#777777"
       );
-      setInputValue(borderColorInputs[0], "#222222");
-      setInputValue(findInputByPlaceholder(colorsRoot, "var(--color-primary)"), "#333333");
-      setInputValue(findInputByPlaceholder(colorsRoot, "var(--color-bg)"), "#f8fafc");
-      setInputValue(transparentInputs[0], "#444444");
-      setInputValue(transparentInputs[1], "#555555");
-      setInputValue(textColorInputs[1], "#666666");
-      setInputValue(borderColorInputs[1], "#777777");
-      setInputValue(borderColorInputs[2], "#888888");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.mediaBorderColor"), "#888888");
 
       const widthSelects = findSelectsByOptions(colorsRoot, ["0", "1", "2", "3"]);
       const radiusSelects = findSelectsByOptions(colorsRoot, ["lg", "xl", "2xl", "3xl"]);
@@ -977,18 +1590,15 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       setSelectValue(radiusSelects[1], "3xl");
     });
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["none", "image", "video"])[1], "image");
     });
-    act(() => {
-      setSelectValue(findSelectsByOptions(view.container, ["library", "external"])[1], "library");
-    });
     clickElement(
-      findButtonsByText(findMediaPickers(view.container)[1], "pick-asset-background")[0]
+      findButtonsByText(findMediaPickers(view.container)[2], "pick-asset-background")[0]
     );
     await flush();
 
-    act(() => {
+    React.act(() => {
       const backgroundRoot = backgroundSection ?? view.container;
       const backgroundColorInputs = backgroundRoot.querySelectorAll(
         'input[type="color"]'
@@ -997,18 +1607,19 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
         'input[type="range"]'
       ) as HTMLInputElement | null;
 
-      setInputValue(findInputByPlaceholder(backgroundRoot, "transparent"), "#999999");
+      expect(findInputByPlaceholder(backgroundRoot, "transparent")).toBeUndefined();
+      setInputValue(findColorInputByControl(backgroundRoot, "hero.background.color"), "#999999");
       setInputValue(backgroundColorInputs[1], "#123456");
       setInputValue(backgroundColorInputs[2], "#654321");
       setInputValue(gradientAngle ?? undefined, "45");
     });
 
-    act(() => {
+    React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["none", "image", "video"])[1], "none");
     });
 
     expect(
-      [...onChangeSpy.mock.calls].reverse().find(([arg]) => arg?.media?.alt === "Intro clip")?.[0]
+      [...onChangeSpy.mock.calls].reverse().find(([arg]) => arg?.media?.title === "Intro clip")?.[0]
     ).toEqual(
       expect.objectContaining({
         headline: "Ship hero updates faster",
@@ -1016,16 +1627,17 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
         body: "Explain the offer with a little more precision.",
         primaryCta: expect.objectContaining({
           label: "Start trial",
-          href: "javascript:alert(1)",
+          href: "/signup",
         }),
         media: expect.objectContaining({
           type: "video",
           source: "library",
           assetId: "asset-video",
           src: "https://cdn.example.com/demo.mp4",
-          alt: "Intro clip",
+          title: "Intro clip",
+          description: "Launch walkthrough",
           ratio: "1:1",
-          overlay: "rgba(0,0,0,0.4)",
+          overlay: "rgba(0, 0, 0, 0.40)",
         }),
         layout: expect.objectContaining({
           align: "left",
@@ -1036,8 +1648,8 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
           subheadSize: "2xl",
           bodySize: "lg",
           textColor: "#111111",
-          subheadColor: "rgba(17,17,17,0.8)",
-          bodyColor: "rgba(17,17,17,0.7)",
+          subheadColor: "#121212",
+          bodyColor: "#131313",
           borderColor: "#222222",
           primaryButtonBg: "#333333",
           primaryButtonText: "#f8fafc",
@@ -1057,12 +1669,238 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
           image: undefined,
           media: expect.objectContaining({
             type: "none",
-            source: "library",
           }),
         }),
       })
     );
     expect(latestValue.secondaryCta).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps saved custom colors replace-or-clear in Visual", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Hero",
+    style: {
+      textColor: "var(--color-text)",
+      subheadColor: "rgba(17, 24, 39, 0.8)",
+      primaryButtonBg: "var(--color-primary)",
+      primaryButtonBorder: "transparent",
+    },
+    background: {
+      color: "transparent",
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="split"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    const colorsSection = findSectionByTitle(view.container, "Colors and Borders");
+    const colorsRoot = colorsSection ?? view.container;
+    const backgroundSection = findSectionByTitle(view.container, "Background");
+    const backgroundRoot = backgroundSection ?? view.container;
+
+    expect(colorsRoot.textContent).toContain("Saved custom color");
+    expect(colorsRoot.textContent).toContain("Transparent");
+    expect(backgroundRoot.textContent).toContain("Transparent");
+    expect(findInputByPlaceholder(colorsRoot, "var(--color-text)")).toBeUndefined();
+    expect(findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.8)")).toBeUndefined();
+    expect(findInputByPlaceholder(colorsRoot, "transparent")).toBeUndefined();
+    expect(findInputByPlaceholder(backgroundRoot, "transparent")).toBeUndefined();
+
+    clickElement(findButtonByControl(colorsRoot, "hero.style.subheadColor", "Clear"));
+    await flush();
+    expect(latestValue.style?.subheadColor).toBeUndefined();
+
+    clickElement(findButtonByControl(backgroundRoot, "hero.background.color", "Clear"));
+    await flush();
+    expect(latestValue.background?.color).toBeUndefined();
+
+    React.act(() => {
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.textColor"), "#101010");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.primaryButtonBg"), "#202020");
+    });
+
+    expect(latestValue.style).toEqual(
+      expect.objectContaining({
+        textColor: "#101010",
+        primaryButtonBg: "#202020",
+      })
+    );
+
+    clickElement(findButtonsByText(colorsRoot, "Use transparent")[0]);
+    expect(latestValue.style).toEqual(
+      expect.objectContaining({
+        primaryButtonBorder: "transparent",
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps saved external hero media replace-or-clear only", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Legacy media",
+    media: {
+      type: "video",
+      source: "external",
+      assetId: "asset-video",
+      src: "https://legacy.example.com/hero.mp4",
+      posterAssetId: "asset-hero",
+      posterSrc: "https://legacy.example.com/poster.jpg",
+      title: "Legacy video",
+      description: "Legacy description",
+    },
+    background: {
+      media: {
+        type: "video",
+        source: "external",
+        assetId: "asset-background",
+        src: "https://legacy.example.com/background.mp4",
+        posterSource: "external",
+        posterAssetId: "asset-hero",
+        posterSrc: "https://legacy.example.com/background-poster.jpg",
+      },
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<HeroData>(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="split"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Saved external media is configured.");
+    expect(view.container.textContent).toContain("Saved external poster image is configured.");
+    expect(view.container.textContent).not.toContain("Clear saved external poster");
+    expect(view.container.textContent).not.toContain("Media URL");
+    expect(view.container.textContent).not.toContain("Poster image URL");
+    expect(view.container.textContent).not.toContain("External URL");
+    expect(findInputByPlaceholder(view.container, "https://")).toBeUndefined();
+    expect(findSelectsByOptions(view.container, ["library", "external"])).toHaveLength(0);
+
+    const initialPickers = findMediaPickers(view.container);
+    expect(initialPickers).toHaveLength(4);
+    expect(initialPickers.map(getMediaPickerValue)).toEqual(["none", "none", "none", "none"]);
+
+    clickElement(findButtonsByText(view.container, "Clear saved external media")[0]);
+    await flush();
+    expect(latestValue.media).toEqual(
+      expect.objectContaining({
+        source: "library",
+        assetId: undefined,
+        src: undefined,
+      })
+    );
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
+    await flush();
+    expect(latestValue.media).toEqual(
+      expect.objectContaining({
+        source: "library",
+        assetId: "asset-video",
+        src: "https://cdn.example.com/demo.mp4",
+      })
+    );
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[1], "clear-media")[0]);
+    await flush();
+    expect(latestValue.media).toEqual(
+      expect.objectContaining({
+        posterSource: "library",
+        posterAssetId: undefined,
+        posterSrc: undefined,
+      })
+    );
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[1], "pick-asset-hero")[0]);
+    await flush();
+    expect(latestValue.media).toEqual(
+      expect.objectContaining({
+        posterSource: "library",
+        posterAssetId: "asset-hero",
+        posterSrc: "/media/hero.jpg",
+      })
+    );
+
+    clickElement(findButtonsByText(view.container, "Clear saved external media")[0]);
+    await flush();
+    expect(latestValue.background?.media).toEqual(
+      expect.objectContaining({
+        source: "library",
+        assetId: undefined,
+        src: undefined,
+      })
+    );
+
+    clickElement(
+      findButtonsByText(findMediaPickers(view.container)[2], "pick-asset-background")[0]
+    );
+    await flush();
+    expect(latestValue.background?.media).toEqual(
+      expect.objectContaining({
+        source: "library",
+        assetId: "asset-background",
+        src: "/media/background.jpg",
+      })
+    );
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[3], "clear-media")[0]);
+    await flush();
+    expect(latestValue.background?.media).toEqual(
+      expect.objectContaining({
+        posterSource: "library",
+        posterAssetId: undefined,
+        posterSrc: undefined,
+      })
+    );
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[3], "pick-asset-hero")[0]);
+    await flush();
+    expect(latestValue.background?.media).toEqual(
+      expect.objectContaining({
+        posterSource: "library",
+        posterAssetId: "asset-hero",
+        posterSrc: "/media/hero.jpg",
+      })
+    );
   } finally {
     view.cleanup();
   }
@@ -1167,26 +2005,43 @@ test("HeroVisualEditor handles preset fallback, variant button changes, load fai
   }
 });
 
-test("HeroAdvancedEditor covers legacy background media, layout and spacing controls, gradients, hide-on-mobile, and media reset", async () => {
-  const { HeroAdvancedEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+test("HeroVisualEditor hides inline media frame controls for centered variants", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 
+  const view = mount(
+    <HeroVisualEditor
+      value={{ headline: "Hero" }}
+      onChange={() => undefined}
+      variant="centered"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+    expect(view.container.textContent).not.toContain("Media frame border color");
+    expect(view.container.textContent).not.toContain("Media border width");
+    expect(view.container.textContent).not.toContain("Media radius");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor toggles badge fields and validates unsafe badge hrefs", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
   const onChangeSpy = vi.fn();
 
   const Harness = () => {
-    const [value, setValue] = useState<HeroData>({
-      headline: "",
-      background: {
-        image: "/legacy-hero.jpg",
-      },
-    });
+    const [value, setValue] = useState<HeroData>({ headline: "Hero headline" });
     return (
-      <HeroAdvancedEditor
+      <HeroVisualEditor
         value={value}
-        variant="centered"
         onChange={(next) => {
           onChangeSpy(next);
           setValue(next);
         }}
+        variant="centered"
+        onVariantChange={() => undefined}
       />
     );
   };
@@ -1194,86 +2049,105 @@ test("HeroAdvancedEditor covers legacy background media, layout and spacing cont
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain(
-      "Advanced mode exposes technical layout controls only."
-    );
-    expect(
-      (findSelectByOptions(view.container, ["none", "image", "video"]) as HTMLSelectElement).value
-    ).toBe("image");
-
-    const backgroundSection = findSectionByTitle(view.container, "Background");
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "right");
-      const maxWidthSelect = findSelectByOptions(view.container, ["sm", "md", "lg", "xl", "2xl"]);
-      const contentWidthSelect = findSelectsByOptions(view.container, ["sm", "md", "lg", "xl"])[1];
-      expect(
-        Array.from((maxWidthSelect as HTMLSelectElement).options).map((option) => option.value)
-      ).toContain("none");
-      expect(
-        Array.from((contentWidthSelect as HTMLSelectElement).options).map((option) => option.value)
-      ).toContain("none");
-      setSelectValue(maxWidthSelect, "2xl");
-      setSelectValue(contentWidthSelect, "sm");
-      const spacingSelects = findSelectsByOptions(view.container, [
-        "none",
-        "xs",
-        "sm",
-        "md",
-        "lg",
-        "xl",
-        "2xl",
-      ]);
-      setSelectValue(spacingSelects[0], "sm");
-      setSelectValue(spacingSelects[1], "2xl");
-      setInputValue(findInputByPlaceholder(view.container, "transparent"), "#ffffff");
-      const backgroundColors = backgroundSection?.querySelectorAll('input[type="color"]') as
-        | NodeListOf<HTMLInputElement>
-        | undefined;
-      setInputValue(backgroundColors?.[0], "#f8fafc");
-      setInputValue(backgroundColors?.[1], "#0ea5e9");
-      setInputValue(backgroundColors?.[2], "#0369a1");
-      setInputValue(backgroundSection?.querySelector('input[type="range"]') ?? undefined, "60");
-    });
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
-    });
-    clickElement(
-      findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-background")[0]
-    );
+    await flush();
+    const variantSection = findSectionByTitle(view.container, "Variant and Presets");
+    const badgeSection = findSectionByTitle(view.container, "Badge and headline");
+    const ctaSection = findSectionByTitle(view.container, "CTA");
+    const richCopySection = findSectionByTitle(view.container, "Rich copy and social proof");
+    expect(variantSection?.getAttribute("data-widget-editor-section-role")).toBe("setup");
+    expect(badgeSection?.getAttribute("data-widget-editor-section")).toBe("hero.badge-headline");
+    expect(badgeSection?.getAttribute("data-widget-editor-section-role")).toBe("content");
+    expect(ctaSection?.getAttribute("data-widget-editor-section-role")).toBe("content");
+    expect(richCopySection?.getAttribute("data-widget-editor-section-role")).toBe("content");
+    const badgeToggle = badgeSection?.querySelector("input[type='checkbox']");
+    clickElement(badgeToggle ?? undefined);
     await flush();
 
-    clickElement(view.container.querySelector("input[type='checkbox']") ?? undefined);
-
-    act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "none");
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Now shipping"), "Launch week");
+      setInputValue(findInputByPlaceholder(view.container, "New"), "New");
+      setSelectValue(
+        findLinkDestinationSelect(view.container, "hero.badge.href"),
+        "hero-launch-page"
+      );
     });
 
+    expect(view.container.textContent).not.toContain("Use a relative path, hash, or full URL.");
     expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
-        layout: expect.objectContaining({
-          align: "right",
-          maxWidth: "2xl",
-          contentWidth: "sm",
-        }),
-        spacing: expect.objectContaining({
-          paddingTop: "sm",
-          paddingBottom: "2xl",
-        }),
-        background: expect.objectContaining({
-          color: "#f8fafc",
-          gradient: "linear-gradient(60deg, #0ea5e9, #0369a1)",
-          media: expect.objectContaining({
-            type: "none",
-          }),
-        }),
-        responsive: expect.objectContaining({
-          hideMediaOnMobile: true,
+        badge: expect.objectContaining({
+          enabled: true,
+          label: "Launch week",
+          prefix: "New",
+          href: "/launch",
         }),
       })
     );
-    expect(onChangeSpy.mock.lastCall?.[0]?.background?.image).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroAdvancedEditor exposes read-only diagnostics and normalized runtime summary", async () => {
+  const { HeroAdvancedEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  const onChangeSpy = vi.fn();
+
+  const view = mount(
+    <HeroAdvancedEditor
+      value={{
+        headline: "",
+        primaryCta: { label: "Start", href: "javascript:alert(1)" },
+        media: {
+          type: "video",
+          src: "https://cdn.example.com/demo.mp4",
+          title: "Demo",
+        },
+        background: {
+          image: "/legacy-hero.jpg",
+          media: {
+            type: "video",
+            src: "https://cdn.example.com/bg.mp4",
+            overlay: "rgba(0,0,0,0.25)",
+          },
+        },
+        responsive: { hideMediaOnMobile: true },
+      }}
+      variant="centered"
+      onChange={onChangeSpy}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain(
+      "Advanced mode is read-only. Use Visual for public-facing Hero copy"
+    );
+    expect(view.container.textContent).toContain("Layout summary");
+    expect(view.container.textContent).toContain("Style token summary");
+    expect(view.container.textContent).toContain("Media diagnostics");
+    expect(view.container.textContent).toContain("Accessibility diagnostics");
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain("Contract summary");
+    expect(view.container.textContent).toContain("Rejected unsafe URL");
+    expect(view.container.textContent).toContain("Video title or description missing");
+    expect(view.container.textContent).toContain("Background video title or description missing");
+    expect(view.container.textContent).toContain("Saved external foreground media");
+    expect(view.container.textContent).toContain("Raw JSON is not shown");
+    expect(view.container.textContent).not.toContain('"src": "https://cdn.example.com/bg.mp4"');
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(
+      Array.from(view.container.querySelectorAll("[data-widget-editor-section]")).map((section) =>
+        section.getAttribute("data-widget-editor-mode")
+      )
+    ).toEqual(["advanced", "advanced", "advanced", "advanced", "advanced", "advanced"]);
+    expect(view.container.querySelector("input,select,textarea,button")).toBeNull();
+    expect(
+      view.container.querySelectorAll('[data-widget-control-ownership="writable"]')
+    ).toHaveLength(0);
+    expect(
+      view.container.querySelectorAll('[data-widget-control-readonly="true"]')
+    ).not.toHaveLength(0);
+    expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

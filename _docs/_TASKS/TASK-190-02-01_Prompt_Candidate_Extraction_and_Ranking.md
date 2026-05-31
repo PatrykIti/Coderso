@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Planner Routing
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-01
-**Status:** To Do
+**Status:** Done (2026-05-05)
 
 ---
 
@@ -13,7 +13,7 @@
 
 Implement deterministic candidate extraction over capability manifests. The
 resolver should select a primary capability and optional adjunct capabilities
-based on prompt signals, context, and existing resources.
+based on prompt signals and bounded route/context hints.
 
 ## Sub-Tasks
 
@@ -23,7 +23,6 @@ No child task files.
 
 - Add `core/services/assistant/blueprints/blueprintPromptSignals.ts`
 - Add `core/services/assistant/blueprints/blueprintCandidateResolver.ts`
-- Update `core/services/assistant/actionPlannerService.ts`
 - Add `tests/vitest/assistant/blueprint-candidate-resolver.test.ts`
 
 ## Technical Scope
@@ -33,20 +32,18 @@ Signals:
 - outcome verbs: create, add, configure, refine,
 - module words: form, filters, blog, FAQ, booking, testimonials, contact,
 - media words: upload, attach, gallery, hero image, replace image, remove image,
-  use existing media, use selected gallery items, files from prompt,
+  use existing media, use selected gallery items,
 - style/reference phrases: "like Mabudo", "catalog plus inquiry",
-- current admin context,
-- existing planning state.
+- current admin route/context.
 
 Scoring:
 - primary domain match,
 - exact capability alias,
 - route/context boost,
 - adjunct module match,
-- media intent match, with a hard distinction between existing media-library
-  references and attached files that still need media-import gating,
+- media intent match for capability scoring only,
 - gated capability penalty,
-- conflict risk penalty.
+- deterministic tie-break order.
 
 ## Pseudocode
 
@@ -79,11 +76,9 @@ export const resolveBlueprintCandidates = (input: {
 
 - Single-primary prompts.
 - Multi-module prompts.
-- Ambiguous prompts return needs-input candidate reason.
 - Existing prompt routing remains stable.
-- Media prompt signals select media-aware adjuncts without emitting actions in
-  this leaf; attached-file signals are marked as gated/needs-input until trusted
-  media ids exist.
+- Media prompt signals remain advisory in this leaf; action gating stays in later
+  composition/execution slices.
 
 ## Documentation Updates Required
 

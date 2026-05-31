@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-05-25T22:41:58.599Z",
+  "command": "bun .tmp/playwright-product-table-focused-probe.ts",
+  "session": "task-336-19-product-table-focused",
+  "probe": "product-table one-time wizard metadata and technical-input guard",
+  "rootCount": 1,
+  "sectionCount": 2,
+  "visibleSectionCount": 2,
+  "writablePaths": [
+    "source.limit",
+    "source.search",
+    "source.collectionIds",
+    "source.sortField",
+    "source.sortDir",
+    "source.status",
+    "source.status",
+    "source.status"
+  ],
+  "controlsWithoutPath": 0,
+  "rawTechnicalInputCount": 0,
+  "passed": true,
+  "summary": {
+    "wizardPassed": true,
+    "status": "passed"
+  }
+}

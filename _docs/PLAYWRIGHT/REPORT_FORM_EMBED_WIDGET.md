@@ -1,0 +1,134 @@
+# RAPORT: Form Embed Widget — Finalny status po TASK-269
+
+> **Status:** Zamknięty po implementacji i rerunie owner test lanes
+> **Data zamknięcia:** 2026-05-18
+> **Owner task:** `TASK-269`
+> **Shared follow-ups:** none for the current shipped contract; grouped choice semantics stay non-current-contract, and file upload remains explicitly unsupported.
+
+---
+
+## Status po TASK-336-19
+
+2026-05-25 targeted cleanup keeps the existing Wizard / Visual / Advanced split
+but removes the residual UI drift:
+
+- Visual color controls are swatch-only with clear/replace behavior; raw
+  CSS/token text inputs are no longer rendered for authors.
+- Visual selected-form status is an author-facing `summary` section (`Form
+  preview`) rather than diagnostics-only copy.
+- Advanced no longer renders the normalized payload snapshot, raw endpoints,
+  raw form IDs, public site keys, nonce strings, or API-scope copy.
+- Advanced now uses human read-only rows for runtime status, submission
+  safeguards, authoring summary, and contract summary.
+- TASK-336-19 evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-form-embed-2026-05-25.*`
+  and
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-form-embed-focused-2026-05-25.*`.
+
+---
+
+## 1. Zakres zamknięcia
+
+Raport został zamknięty po wdrożeniu zmian w:
+
+- `core/widgets/core/formEmbed.tsx`
+- `core/admin/ui/widgets/editors/FormEmbedEditors.tsx`
+- `core/widgets/core/formRuntimeScript.ts`
+- `core/services/forms/formRuntimeResolver.ts`
+- testach Vitest/Bun dla renderera, runtime scriptu, resolvera oraz konsumenta
+  resolved-data
+
+`TASK-256` pozostaje poza implementacją widget-local; shared rows U3/U4 zostały
+domknięte przez landed shared color seam, shared stale-nonce cache freshness
+została domknięta w runtime cache layer, a rozszerzenie modelu pól Forms
+zostało wdrożone dla `radio`, `number`, `time`, `range`, `rating`, i trusted
+`hidden` with explicit `file` rejection.
+
+## 2. Finalna macierz findings
+
+| ID | Status | Owner | Dowód / uwaga końcowa |
+|---|---|---|---|
+| C1 | fixed | TASK-269-03 | Przywrócono truthful contract: current source-of-truth docs opisują tylko `standard`, zamiast obiecywać nieistniejące `card` / `inline`. |
+| C2 | fixed | TASK-311-01 | Current Forms owner contract now supports `radio`; Form Embed renders the control instead of the unsupported diagnostic. |
+| C3 | fixed | TASK-269-01 | Wizard / Visual / Advanced nie są już aliasami jednego widoku; każdy ma osobny zakres odpowiedzialności. |
+| C4 | fixed | TASK-269-01 | Editor pokazuje runtime resolver error oraz selected-form diagnostics bez otwierania preview. |
+| W1 | fixed | TASK-311-02 / TASK-311-03 | `number`, `time`, `range`, `rating`, and trusted `hidden` are now supported. `file` remains explicit unsupported scope and still renders a visible diagnostic instead of widening public-write behavior. |
+| W2 | fixed | TASK-269-05 | Success behavior jest jawnie sterowalne (`hide`, `reset`, `keep`) i pokryte DOM runtime tests. |
+| W3 | fixed | TASK-269-05 | Submit przechodzi w busy/loading state z przywróceniem stanu po zakończeniu. |
+| W4 | fixed | TASK-269-03 | Layout ma niezależne section padding controls zamiast twardego `px-4`. |
+| W5 | fixed | TASK-269-03 | Section vertical padding i internal field gap są niezależnymi controlami. |
+| W6 | fixed | TASK-269-03 | `borderColor` jest konsekwentnie używany przez rendered controls. |
+| W7 | fixed | TASK-269-03 | Label color ma własny bounded style field. |
+| W8 | fixed | TASK-269-03 | Helper color ma własny bounded style field. |
+| W9 | fixed | TASK-269-03 | Submit button background/text color są kontrolowane przez widget-local style fields. |
+| W10 | fixed | TASK-269-03 | Tytuł ma bounded color / size / weight contract. |
+| W11 | fixed | TASK-269-05 | Form Embed runtime mostkuje istniejący backend-owned captcha + nonce contract przez safe `siteKey` / `action` projection. |
+| W12 | fixed | TASK-269-01 | Editor pokazuje field count i typy wybranego formularza. |
+| W13 | fixed | TASK-269-04 | Back/Next labels są konfigurowalne. |
+| W14 | fixed | TASK-269-04 | Multi-step progress indicator jest renderowany i aktualizowany w runtime. |
+| W15 | verified-current | TASK-269-05 | Route owner już mapuje `successRedirectUrl -> runtime.redirectUrl`; runtime redirect path został zweryfikowany testem. |
+| W16 | fixed | TASK-269-04 | Saved progress ma TTL i przeterminowany payload jest usuwany. |
+| W17 | fixed | TASK-269-02 | Checkbox inline label positioning działa zgodnie z current field style contract. |
+| U1 | fixed | TASK-269-01 | Tryby edytora mają rozdzielone role i własne sekcje diagnostyczne / operacyjne. |
+| U2 | fixed | TASK-269-01 | Editor pokazuje field summary bez wychodzenia z widget editor. |
+| U3 | fixed via shared scope | TASK-310 | Form Embed konsumuje shared color helper; CSS-variable swatch drift jest naprawiony dla tego widgetu. |
+| U4 | fixed via shared scope | TASK-310 | `borderColor` ma clear control w Form Embed dzięki shared color-field contract. |
+| U5 | fixed | TASK-269-01 | Draft / archived status jest widoczny w diagnostics i ostrzeżeniach. |
+| U6 | fixed | TASK-269-01 | Multi-step / save-progress metadata jest widoczne w selected-form diagnostics. |
+| U7 | fixed | TASK-269-04 | Multi-step navigation / submit behavior ma osobną sekcję i nie jest już „ukrytym” kontraktem. |
+| U8 | fixed | TASK-269-04 | Editor wystawia `backLabel` i `nextLabel`. |
+| U9 | fixed | TASK-269-01 | No-form CTA i selected-form empty state są jawne. |
+| U10 | fixed | TASK-269-01 | Editor pokazuje normalization hints dla pustych `submitLabel` / `successMessage`. |
+| A1 | fixed | TASK-269-03 | Wrapper sekcji ma accessible naming. |
+| A2 | fixed | TASK-269-03 | Heading level jest bounded layout control, zamiast twardego `<h3>`. |
+| A3 | fixed | TASK-269-02 | `label` i `input` są programowo połączone przez `htmlFor` / `id`. |
+| A4 | fixed | TASK-269-02 | Controls mają stabilne DOM ids. |
+| A5 | fixed | TASK-269-02 | Hidden-label controls dostają `aria-label`. |
+| A6 | fixed | TASK-269-02 | Required fields mają `aria-required="true"`. |
+| A7 | fixed | TASK-269-02 | Helper text jest połączony przez `aria-describedby`. |
+| A8 | fixed | TASK-269-05 | Success/error nodes są live regions. |
+| A9 | fixed | TASK-269-05 | Submit button ustawia i czyści `aria-busy`. |
+| A10 | not-applicable-current-contract | TASK-269-02 / TASK-311-01 | Obecny shipped Forms contract nie wystawia grouped checkbox/radio controls; grouped semantics are explicitly outside the current contract. |
+
+## 3. Dowód owner test lanes
+
+### Focused Vitest lanes
+
+- `tests/vitest/widgets/formEmbed.test.tsx`
+- `tests/vitest/widgets/formRuntimeScript.test.ts`
+- `tests/vitest/ui/form-embed-editor-wave.test.tsx`
+- `tests/vitest/forms/formRuntimeResolver.test.ts`
+- `tests/vitest/content/detailPageBindingResolver.test.ts`
+
+### Bun-owned runtime / security lanes
+
+- `tests/integration/routes/forms.test.ts`
+- `tests/integration/runtime/detail-page-runtime-lite.test.ts`
+- `tests/security/codersoSecurityGate.test.ts`
+
+### DB-backed lane
+
+- `tests/unit/forms/submissionService.test.ts`
+
+Ta lane wymaga `DATABASE_URL`. Jeśli środowisko lokalne nie ma dostępnej bazy,
+suite może zostać uruchomiona tylko w skip-mode z odnotowanym blockerem
+środowiskowym; nie jest to dowód zastępujący route/security lanes.
+
+## 4. Parity note
+
+Admin editor i public runtime są zsynchronizowane na poziomie current contract:
+
+- selected form status / access / field summary
+- field ids / labels / helper wiring
+- multi-step navigation and progress
+- submit success / error / redirect flow
+- safe public captcha + nonce bridge
+
+## 5. Current boundary notes
+
+- Grouped checkbox/radio semantics remain non-current-contract and are not
+  claimed by the current Form Embed surface.
+- `file` remains explicit unsupported scope until a safe upload/storage seam is
+  approved.
+
+No anonymous “future” buckets remain in this report.

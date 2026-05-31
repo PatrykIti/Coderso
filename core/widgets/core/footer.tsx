@@ -1,11 +1,34 @@
-import type { CSSProperties, ComponentType } from "react";
+import type { CSSProperties, ComponentType, SVGProps } from "react";
+import { useId } from "react";
+import {
+  Facebook,
+  Github,
+  Globe,
+  Instagram,
+  Linkedin,
+  Twitch,
+  Twitter,
+  X as XIcon,
+  Youtube,
+} from "lucide-react";
+
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorContract,
+  WidgetEditorProps,
+} from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { normalizeWidgetSafeHref } from "./widgetSafeHref";
+
+export type FooterLinkTarget = "_self" | "_blank";
 
 export type FooterLink = {
   label: string;
   href: string;
+  target?: FooterLinkTarget;
 };
 
 export type FooterColumn = {
@@ -13,44 +36,161 @@ export type FooterColumn = {
   links: FooterLink[];
 };
 
+export const footerSocialTypes = [
+  "linkedin",
+  "twitter",
+  "x",
+  "github",
+  "youtube",
+  "facebook",
+  "instagram",
+  "tiktok",
+  "discord",
+  "pinterest",
+  "mastodon",
+  "twitch",
+  "snapchat",
+  "custom",
+] as const;
+
+export type FooterSocialType = (typeof footerSocialTypes)[number];
+
 export type FooterSocial = {
   type: string;
   href: string;
+  label?: string;
+};
+
+export type FooterBrand = {
+  logoUrl?: string;
+  logoAlt?: string;
+  logoText?: string;
+  tagline?: string;
 };
 
 export type FooterLegal = {
+  enabled?: boolean;
   copyright?: string;
   privacy?: string;
+  privacyLabel?: string;
+  privacyTarget?: FooterLinkTarget;
   terms?: string;
+  termsLabel?: string;
+  termsTarget?: FooterLinkTarget;
+};
+
+export type FooterContactInfo = {
+  address?: string;
+  phone?: string;
+  email?: string;
+};
+
+export type FooterBackToTop = {
+  enabled?: boolean;
+  label?: string;
+};
+
+export type FooterLayout = {
+  align?: "left" | "center" | "right";
+  legalAlign?: "left" | "center" | "right";
+  maxWidth?: "none" | "5xl" | "6xl" | "7xl";
+  columnGap?: "none" | "4" | "6" | "8";
+  columnBreakpoint?: "sm" | "md" | "lg";
+  sectionPaddingY?: "none" | "8" | "10" | "12";
+  paddingX?: "none" | "4" | "6" | "8";
+};
+
+export type FooterStyle = {
+  surfaceColor?: string;
+  borderColor?: string;
+  borderTopWidth?: "0" | "1" | "2" | "3";
+  textColor?: string;
+  headingColor?: string;
+  linkColor?: string;
+  legalTextColor?: string;
+  socialColor?: string;
+  fontSize?: "none" | "xs" | "sm" | "base";
+  headingTransform?: "none" | "uppercase" | "capitalize";
+  linkHoverColor?: string;
+  linkActiveColor?: string;
+  linkUnderline?: "none" | "hover" | "always";
+  linkFontWeight?: "normal" | "medium" | "semibold";
+  linkLetterSpacing?: "normal" | "wide";
 };
 
 export type FooterData = {
   columns: FooterColumn[];
+  brand?: FooterBrand;
   legal?: FooterLegal;
+  contact?: FooterContactInfo;
+  backToTop?: FooterBackToTop;
   social?: FooterSocial[];
-  layout?: {
-    align?: "left" | "center" | "right";
-    legalAlign?: "left" | "center" | "right";
-    maxWidth?: "none" | "5xl" | "6xl" | "7xl";
-    columnGap?: "none" | "4" | "6" | "8";
-    sectionPaddingY?: "none" | "8" | "10" | "12";
-  };
-  style?: {
-    surfaceColor?: string;
-    borderColor?: string;
-    borderTopWidth?: "0" | "1" | "2" | "3";
-    textColor?: string;
-    headingColor?: string;
-    linkColor?: string;
-    legalTextColor?: string;
-    socialColor?: string;
-    fontSize?: "none" | "xs" | "sm" | "base";
-    headingTransform?: "none" | "uppercase" | "capitalize";
-  };
+  socialEnabled?: boolean;
+  layout?: FooterLayout;
+  style?: FooterStyle;
+};
+
+type FooterResolvedLinkAttrs = {
+  href: string;
+  target?: "_blank";
+  rel?: string;
+};
+
+type NormalizedFooterLegal = {
+  enabled: boolean;
+  copyright?: string;
+  privacy?: string;
+  privacyLabel: string;
+  privacyTarget?: FooterLinkTarget;
+  terms?: string;
+  termsLabel: string;
+  termsTarget?: FooterLinkTarget;
+};
+
+type NormalizedFooterSocial = {
+  type: FooterSocialType;
+  href: string;
+  label: string;
+};
+
+type NormalizedFooterContactInfo = {
+  address?: string;
+  phoneLabel?: string;
+  phoneHref?: string;
+  emailLabel?: string;
+  emailHref?: string;
+};
+
+type NormalizedFooterBackToTop = {
+  label: string;
+};
+
+type FooterCssVars = CSSProperties & {
+  "--footer-link-hover-color"?: string;
+  "--footer-link-active-color"?: string;
 };
 
 export const footerColumnSlotIds = ["column-1", "column-2", "column-3"] as const;
 export type FooterColumnSlotId = (typeof footerColumnSlotIds)[number];
+
+const knownFooterSocialTypeSet = new Set<FooterSocialType>(footerSocialTypes);
+
+const footerSocialLabelMap: Record<FooterSocialType, string> = {
+  linkedin: "LinkedIn",
+  twitter: "Twitter",
+  x: "X",
+  github: "GitHub",
+  youtube: "YouTube",
+  facebook: "Facebook",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  discord: "Discord",
+  pinterest: "Pinterest",
+  mastodon: "Mastodon",
+  twitch: "Twitch",
+  snapchat: "Snapchat",
+  custom: "Custom",
+};
 
 export const footerSchema = {
   type: "object",
@@ -75,21 +215,55 @@ export const footerSchema = {
               properties: {
                 label: { type: "string" },
                 href: { type: "string" },
+                target: { enum: ["_self", "_blank"] },
               },
             },
           },
         },
       },
     },
+    brand: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        logoUrl: { type: "string" },
+        logoAlt: { type: "string" },
+        logoText: { type: "string" },
+        tagline: { type: "string" },
+      },
+    },
     legal: {
       type: "object",
       additionalProperties: false,
       properties: {
+        enabled: { type: "boolean" },
         copyright: { type: "string" },
         privacy: { type: "string" },
+        privacyLabel: { type: "string" },
+        privacyTarget: { enum: ["_self", "_blank"] },
         terms: { type: "string" },
+        termsLabel: { type: "string" },
+        termsTarget: { enum: ["_self", "_blank"] },
       },
     },
+    contact: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        address: { type: "string" },
+        phone: { type: "string" },
+        email: { type: "string" },
+      },
+    },
+    backToTop: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        label: { type: "string" },
+      },
+    },
+    socialEnabled: { type: "boolean" },
     social: {
       type: "array",
       items: {
@@ -99,6 +273,7 @@ export const footerSchema = {
         properties: {
           type: { type: "string" },
           href: { type: "string" },
+          label: { type: "string" },
         },
       },
     },
@@ -110,7 +285,9 @@ export const footerSchema = {
         legalAlign: { enum: ["left", "center", "right"] },
         maxWidth: { enum: ["none", "5xl", "6xl", "7xl"] },
         columnGap: { enum: ["none", "4", "6", "8"] },
+        columnBreakpoint: { enum: ["sm", "md", "lg"] },
         sectionPaddingY: { enum: ["none", "8", "10", "12"] },
+        paddingX: { enum: ["none", "4", "6", "8"] },
       },
     },
     style: {
@@ -127,6 +304,11 @@ export const footerSchema = {
         socialColor: { type: "string" },
         fontSize: { enum: ["none", "xs", "sm", "base"] },
         headingTransform: { enum: ["none", "uppercase", "capitalize"] },
+        linkHoverColor: { type: "string" },
+        linkActiveColor: { type: "string" },
+        linkUnderline: { enum: ["none", "hover", "always"] },
+        linkFontWeight: { enum: ["normal", "medium", "semibold"] },
+        linkLetterSpacing: { enum: ["normal", "wide"] },
       },
     },
   },
@@ -156,25 +338,200 @@ export const footerDefaults: FooterData = {
       ],
     },
   ],
-  legal: { copyright: "© 2026 Coderso", privacy: "/privacy", terms: "/terms" },
+  legal: {
+    enabled: true,
+    copyright: "© 2026 Coderso",
+    privacy: "/privacy",
+    privacyLabel: "Privacy",
+    terms: "/terms",
+    termsLabel: "Terms",
+  },
+  socialEnabled: true,
   social: [
-    { type: "twitter", href: "https://twitter.com" },
-    { type: "linkedin", href: "https://linkedin.com" },
+    { type: "x", href: "https://x.com/coderso" },
+    { type: "linkedin", href: "https://www.linkedin.com/company/coderso" },
   ],
   layout: {
     align: "left",
     legalAlign: "right",
     maxWidth: "6xl",
     columnGap: "6",
+    columnBreakpoint: "md",
     sectionPaddingY: "10",
+    paddingX: "6",
   },
   style: {
-    surfaceColor: "var(--color-bg)",
-    borderColor: "var(--color-border)",
     borderTopWidth: "1",
     fontSize: "sm",
     headingTransform: "uppercase",
+    linkUnderline: "hover",
+    linkFontWeight: "normal",
+    linkLetterSpacing: "normal",
   },
+};
+
+export const footerEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "footer.wizard.starter-footer",
+      title: "Starter footer",
+      role: "setup",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "columns", "socialEnabled"],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.variant-structure",
+      title: "Variant and structure",
+      role: "setup",
+      writablePaths: ["variant"],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.columns-links",
+      title: "Columns and links",
+      role: "content",
+      writablePaths: [
+        "columns.*.title",
+        "columns.*.links.*.label",
+        "columns.*.links.*.href",
+        "columns.*.links.*.target",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.brand-legal",
+      title: "Brand and legal",
+      role: "content",
+      writablePaths: ["brand", "legal"],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.utility-strip",
+      title: "Utility strip",
+      role: "content",
+      writablePaths: ["contact", "backToTop"],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.social-links",
+      title: "Social links and icon style",
+      role: "content",
+      writablePaths: ["socialEnabled", "social"],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.colors-borders",
+      title: "Colors and borders",
+      role: "visual",
+      writablePaths: [
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.textColor",
+        "style.headingColor",
+        "style.linkColor",
+        "style.legalTextColor",
+        "style.socialColor",
+        "style.borderTopWidth",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.typography-links",
+      title: "Typography and link styling",
+      role: "visual",
+      writablePaths: [
+        "style.fontSize",
+        "style.headingTransform",
+        "style.linkUnderline",
+        "style.linkFontWeight",
+        "style.linkLetterSpacing",
+        "style.linkHoverColor",
+        "style.linkActiveColor",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.layout-spacing",
+      title: "Layout and spacing",
+      role: "layout",
+      writablePaths: [
+        "layout.align",
+        "layout.legalAlign",
+        "layout.maxWidth",
+        "layout.columnGap",
+        "layout.columnBreakpoint",
+        "layout.sectionPaddingY",
+        "layout.paddingX",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.slots-overview",
+      title: "Slots overview and insertion hints",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["slots"],
+    },
+    {
+      mode: "advanced",
+      id: "footer.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "columns", "legal", "social", "backToTop"],
+    },
+    {
+      mode: "advanced",
+      id: "footer.advanced.layout-diagnostics",
+      title: "Layout diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "layout.align",
+        "layout.legalAlign",
+        "layout.maxWidth",
+        "layout.columnGap",
+        "layout.columnBreakpoint",
+        "layout.sectionPaddingY",
+        "layout.paddingX",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "footer.advanced.style-diagnostics",
+      title: "Style diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.textColor",
+        "style.headingColor",
+        "style.linkColor",
+        "style.legalTextColor",
+        "style.socialColor",
+        "style.borderTopWidth",
+        "style.fontSize",
+        "style.headingTransform",
+        "style.linkUnderline",
+        "style.linkFontWeight",
+        "style.linkLetterSpacing",
+        "style.linkHoverColor",
+        "style.linkActiveColor",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "footer.advanced.support-summary",
+      title: "Support summary",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["slots"],
+    },
+  ],
 };
 
 const footerColumnCountByVariant = {
@@ -197,11 +554,42 @@ const gapClassMap = {
   "8": "gap-8",
 } as const;
 
+const columnBreakpointClassMap = {
+  sm: {
+    1: "sm:grid-cols-1",
+    2: "sm:grid-cols-2",
+    3: "sm:grid-cols-3",
+  },
+  md: {
+    1: "md:grid-cols-1",
+    2: "md:grid-cols-2",
+    3: "md:grid-cols-3",
+  },
+  lg: {
+    1: "lg:grid-cols-1",
+    2: "lg:grid-cols-2",
+    3: "lg:grid-cols-3",
+  },
+} as const;
+
+const minimalBreakpointClassMap = {
+  sm: "sm:flex-row sm:items-center sm:justify-between",
+  md: "md:flex-row md:items-center md:justify-between",
+  lg: "lg:flex-row lg:items-center lg:justify-between",
+} as const;
+
 const sectionPaddingYClassMap = {
   none: "py-0",
   "8": "py-8",
   "10": "py-10",
   "12": "py-12",
+} as const;
+
+const paddingXClassMap = {
+  none: "px-0",
+  "4": "px-4",
+  "6": "px-6",
+  "8": "px-8",
 } as const;
 
 const fontSizeClassMap = {
@@ -215,6 +603,23 @@ const headingTransformClassMap = {
   none: "normal-case",
   uppercase: "uppercase",
   capitalize: "capitalize",
+} as const;
+
+const linkUnderlineClassMap = {
+  none: "no-underline",
+  hover: "no-underline underline-offset-4 hover:underline",
+  always: "underline underline-offset-4",
+} as const;
+
+const linkFontWeightClassMap = {
+  normal: "font-normal",
+  medium: "font-medium",
+  semibold: "font-semibold",
+} as const;
+
+const linkLetterSpacingClassMap = {
+  normal: "tracking-normal",
+  wide: "tracking-wide",
 } as const;
 
 const alignClassMap = {
@@ -239,20 +644,343 @@ const borderWidthValueMap = {
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
+const moveItem = <T,>(items: T[], fromIndex: number, toIndex: number) => {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= items.length ||
+    toIndex >= items.length
+  ) {
+    return items;
+  }
+  const next = [...items];
+  const [item] = next.splice(fromIndex, 1);
+  if (item === undefined) return items;
+  next.splice(toIndex, 0, item);
+  return next;
+};
+
+const toTrimmedString = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const toTitleCase = (value: string) =>
+  value
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const hasOwn = (value: unknown, key: string) =>
+  typeof value === "object" && value !== null && Object.prototype.hasOwnProperty.call(value, key);
+
+const normalizeFooterHref = (value: unknown) =>
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  });
+
+const normalizeFooterImageSrc = (value: unknown) =>
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHash: false,
+    allowHttp: true,
+  });
+
+const normalizeFooterRenderColor = (value: unknown) => {
+  const trimmed = resolveClearableStyleValue(value);
+  if (!trimmed) return undefined;
+  if (/^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$/.test(trimmed)) return trimmed;
+  if (/^var\(--[a-zA-Z0-9-_]+\)$/.test(trimmed)) return trimmed;
+  if (/^(?:rgb|hsl)a?\([\d\s,./%+-]+\)$/i.test(trimmed)) return trimmed;
+  if (/^(?:transparent|currentColor|inherit)$/i.test(trimmed)) return trimmed;
+  if (/^[a-zA-Z]+$/.test(trimmed)) return trimmed;
+  return undefined;
+};
+
+const normalizeFooterInteractiveColor = normalizeFooterRenderColor;
+
+const normalizeFooterTarget = (value: unknown): FooterLinkTarget | undefined =>
+  value === "_blank" || value === "_self" ? value : undefined;
+
+const isExternalHttpHref = (href: string) =>
+  href.startsWith("http://") || href.startsWith("https://");
+
+const resolveFooterLinkAttrs = (
+  href: unknown,
+  target?: FooterLinkTarget
+): FooterResolvedLinkAttrs | undefined => {
+  const safeHref = normalizeFooterHref(href);
+  if (!safeHref) return undefined;
+  if (target === "_blank") {
+    return { href: safeHref, target: "_blank", rel: "noopener noreferrer" };
+  }
+  if (isExternalHttpHref(safeHref)) {
+    return { href: safeHref, rel: "noopener noreferrer" };
+  }
+  return { href: safeHref };
+};
+
+const resolveFooterSocialLinkAttrs = (href: unknown): FooterResolvedLinkAttrs | undefined => {
+  const safeHref = normalizeFooterHref(href);
+  if (!safeHref) return undefined;
+  if (isExternalHttpHref(safeHref)) {
+    return { href: safeHref, target: "_blank", rel: "noopener noreferrer" };
+  }
+  return { href: safeHref };
+};
+
 const normalizeFooterLink = (link: FooterLink, index: number): FooterLink => {
-  const label = link.label?.trim() || `Link ${index + 1}`;
-  const href = link.href?.trim() || "#";
-  return { label, href };
+  const label = toTrimmedString(link.label) ?? `Link ${index + 1}`;
+  const href = normalizeFooterHref(link.href) ?? "#";
+  return {
+    label,
+    href,
+    target: normalizeFooterTarget(link.target),
+  };
 };
 
 const normalizeFooterColumn = (column: FooterColumn, index: number): FooterColumn => {
-  const title = column.title?.trim() || `Column ${index + 1}`;
+  const title = toTrimmedString(column.title) ?? `Column ${index + 1}`;
   const links = Array.isArray(column.links) ? column.links.map(normalizeFooterLink) : [];
   return { title, links };
 };
 
 export const resolveFooterColumnCount = (variant: string) =>
   footerColumnCountByVariant[variant as keyof typeof footerColumnCountByVariant] ?? 2;
+
+export const resolveFooterSocialType = (value: unknown): FooterSocialType => {
+  const normalized = toTrimmedString(value)?.toLowerCase();
+  if (normalized && knownFooterSocialTypeSet.has(normalized as FooterSocialType)) {
+    return normalized as FooterSocialType;
+  }
+  return "custom";
+};
+
+export const resolveFooterSocialLabel = (type: unknown, explicitLabel?: string) => {
+  const normalizedType = resolveFooterSocialType(type);
+  if (normalizedType !== "custom") {
+    return footerSocialLabelMap[normalizedType];
+  }
+  const label = toTrimmedString(explicitLabel);
+  if (label) return label;
+  const rawType = toTrimmedString(type);
+  return rawType ? toTitleCase(rawType) : footerSocialLabelMap.custom;
+};
+
+const normalizeFooterLegal = (value: unknown): NormalizedFooterLegal => {
+  const defaultLegal = footerDefaults.legal ?? {};
+  const privacy = hasOwn(value, "privacy")
+    ? normalizeFooterHref((value as FooterLegal).privacy)
+    : normalizeFooterHref(defaultLegal.privacy);
+  const terms = hasOwn(value, "terms")
+    ? normalizeFooterHref((value as FooterLegal).terms)
+    : normalizeFooterHref(defaultLegal.terms);
+
+  return {
+    enabled: (value as FooterLegal | undefined)?.enabled !== false,
+    copyright: hasOwn(value, "copyright")
+      ? toTrimmedString((value as FooterLegal).copyright)
+      : toTrimmedString(defaultLegal.copyright),
+    privacy,
+    privacyLabel:
+      toTrimmedString((value as FooterLegal | undefined)?.privacyLabel) ??
+      toTrimmedString(defaultLegal.privacyLabel) ??
+      "Privacy",
+    privacyTarget: normalizeFooterTarget((value as FooterLegal | undefined)?.privacyTarget),
+    terms,
+    termsLabel:
+      toTrimmedString((value as FooterLegal | undefined)?.termsLabel) ??
+      toTrimmedString(defaultLegal.termsLabel) ??
+      "Terms",
+    termsTarget: normalizeFooterTarget((value as FooterLegal | undefined)?.termsTarget),
+  };
+};
+
+const normalizeFooterBrand = (value: unknown): FooterBrand | undefined => {
+  const logoUrl = normalizeFooterImageSrc((value as FooterBrand | undefined)?.logoUrl);
+  const logoText = toTrimmedString((value as FooterBrand | undefined)?.logoText);
+  const tagline = toTrimmedString((value as FooterBrand | undefined)?.tagline);
+  const logoAlt =
+    toTrimmedString((value as FooterBrand | undefined)?.logoAlt) ??
+    logoText ??
+    (logoUrl ? "Footer logo" : undefined);
+
+  if (!logoUrl && !logoText && !tagline) return undefined;
+
+  return {
+    logoUrl,
+    logoAlt,
+    logoText,
+    tagline,
+  };
+};
+
+const footerEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizeFooterContactInfo = (value: unknown): NormalizedFooterContactInfo | undefined => {
+  const address = toTrimmedString((value as FooterContactInfo | undefined)?.address);
+  const rawPhone = toTrimmedString((value as FooterContactInfo | undefined)?.phone);
+  const rawEmail = toTrimmedString((value as FooterContactInfo | undefined)?.email);
+
+  const normalizedPhone =
+    rawPhone && /^[+\d][\d\s().-]{2,}$/.test(rawPhone)
+      ? rawPhone.replace(/[\s().-]+/g, "")
+      : undefined;
+  const phoneHref =
+    normalizedPhone && /^\+?\d{3,20}$/.test(normalizedPhone) ? `tel:${normalizedPhone}` : undefined;
+
+  const normalizedEmail =
+    rawEmail && footerEmailPattern.test(rawEmail) ? rawEmail.toLowerCase() : undefined;
+  const emailHref = normalizedEmail ? `mailto:${normalizedEmail}` : undefined;
+
+  if (!address && !phoneHref && !emailHref) return undefined;
+
+  return {
+    address,
+    phoneLabel: phoneHref ? rawPhone : undefined,
+    phoneHref,
+    emailLabel: emailHref ? rawEmail : undefined,
+    emailHref,
+  };
+};
+
+const normalizeFooterBackToTop = (value: unknown): NormalizedFooterBackToTop | undefined => {
+  if ((value as FooterBackToTop | undefined)?.enabled !== true) return undefined;
+  return {
+    label: toTrimmedString((value as FooterBackToTop | undefined)?.label) ?? "Back to top",
+  };
+};
+
+const normalizeFooterSocialEntry = (
+  entry: FooterSocial,
+  index: number
+): NormalizedFooterSocial | null => {
+  const linkAttrs = resolveFooterSocialLinkAttrs(entry?.href);
+  if (!linkAttrs) return null;
+
+  return {
+    type: resolveFooterSocialType(entry?.type),
+    href: linkAttrs.href,
+    label: resolveFooterSocialLabel(entry?.type, entry?.label) || `Social link ${index + 1}`,
+  };
+};
+
+const resolveFooterGridClass = (count: number, breakpoint: FooterLayout["columnBreakpoint"]) => {
+  const normalizedCount = count === 1 || count === 3 ? count : 2;
+  const normalizedBreakpoint = breakpoint ?? "md";
+  return columnBreakpointClassMap[normalizedBreakpoint][normalizedCount];
+};
+
+function FooterMonogramIcon({ text, ...props }: { text: string } & SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <text
+        x="12"
+        y="15"
+        textAnchor="middle"
+        fontSize="7"
+        fontWeight="700"
+        fill="currentColor"
+        stroke="none"
+      >
+        {text}
+      </text>
+    </svg>
+  );
+}
+
+function FooterSocialIcon({ type }: { type: FooterSocialType }) {
+  const iconClassName = "h-4 w-4";
+  switch (type) {
+    case "linkedin":
+      return <Linkedin className={iconClassName} aria-hidden="true" strokeWidth={1.8} />;
+    case "twitter":
+      return <Twitter className={iconClassName} aria-hidden="true" strokeWidth={1.8} />;
+    case "x":
+      return <XIcon className={iconClassName} aria-hidden="true" strokeWidth={1.8} />;
+    case "github":
+      return <Github className={iconClassName} aria-hidden="true" strokeWidth={1.8} />;
+    case "youtube":
+      return <Youtube className={iconClassName} aria-hidden="true" strokeWidth={1.8} />;
+    case "facebook":
+      return <Facebook className={iconClassName} aria-hidden="true" strokeWidth={1.8} />;
+    case "instagram":
+      return <Instagram className={iconClassName} aria-hidden="true" strokeWidth={1.8} />;
+    case "twitch":
+      return <Twitch className={iconClassName} aria-hidden="true" strokeWidth={1.8} />;
+    case "tiktok":
+      return <FooterMonogramIcon text="TT" className={iconClassName} aria-hidden="true" />;
+    case "discord":
+      return <FooterMonogramIcon text="D" className={iconClassName} aria-hidden="true" />;
+    case "pinterest":
+      return <FooterMonogramIcon text="P" className={iconClassName} aria-hidden="true" />;
+    case "mastodon":
+      return <FooterMonogramIcon text="M" className={iconClassName} aria-hidden="true" />;
+    case "snapchat":
+      return <FooterMonogramIcon text="S" className={iconClassName} aria-hidden="true" />;
+    case "custom":
+    default:
+      return <Globe className={iconClassName} aria-hidden="true" strokeWidth={1.8} />;
+  }
+}
+
+function FooterBrandBlock({
+  brand,
+  labelId,
+  textStyle,
+  metaStyle,
+  compact,
+}: {
+  brand: FooterBrand | undefined;
+  labelId?: string;
+  textStyle: CSSProperties;
+  metaStyle: CSSProperties;
+  compact?: boolean;
+}) {
+  if (!brand) return null;
+
+  return (
+    <div className={joinClasses("space-y-2", compact ? "max-w-md" : "max-w-lg")}>
+      <div className="flex items-center gap-3">
+        {brand.logoUrl ? (
+          <img
+            src={brand.logoUrl}
+            alt={brand.logoAlt ?? "Footer logo"}
+            loading="lazy"
+            className="h-10 w-auto rounded-sm"
+          />
+        ) : null}
+        {brand.logoText ? (
+          <p id={labelId} className="text-base font-semibold" style={textStyle}>
+            {brand.logoText}
+          </p>
+        ) : null}
+      </div>
+      {brand.tagline ? (
+        <p className={compact ? "text-sm" : "text-sm"} style={metaStyle}>
+          {brand.tagline}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function renderSlotBlocks(blocks: WidgetBlock[], previewDevice?: DeviceTarget) {
+  if (blocks.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-3">
+      {blocks.map((slotBlock) => (
+        <WidgetRenderer key={slotBlock.id} block={slotBlock} previewDevice={previewDevice} />
+      ))}
+    </div>
+  );
+}
 
 export function resolveFooterColumnsForVariant(
   columns: FooterColumn[],
@@ -276,6 +1004,57 @@ export function resolveFooterColumnsForVariant(
   return result;
 }
 
+export function reorderFooterColumnsAndSlots({
+  columns,
+  slots,
+  variant,
+  fromIndex,
+  toIndex,
+}: {
+  columns: FooterColumn[];
+  slots?: Record<string, WidgetBlock[]>;
+  variant: string;
+  fromIndex: number;
+  toIndex: number;
+}): {
+  columns: FooterColumn[];
+  slots?: Record<string, WidgetBlock[]>;
+} {
+  const visibleCount = resolveFooterColumnCount(variant);
+  if (
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= visibleCount ||
+    toIndex >= visibleCount ||
+    fromIndex === toIndex
+  ) {
+    return { columns, slots };
+  }
+
+  const visibleColumns = resolveFooterColumnsForVariant(columns, variant);
+  const hiddenColumns =
+    Array.isArray(columns) && columns.length > visibleCount ? columns.slice(visibleCount) : [];
+  const reorderedColumns = moveItem(visibleColumns, fromIndex, toIndex);
+  const nextColumns = [...reorderedColumns, ...hiddenColumns];
+
+  if (!slots) {
+    return { columns: nextColumns, slots };
+  }
+
+  const nextSlotOrder = moveItem([...footerColumnSlotIds], fromIndex, toIndex);
+  const nextSlots: Record<string, WidgetBlock[]> = { ...slots };
+
+  footerColumnSlotIds.forEach((slotId, index) => {
+    const sourceSlotId = nextSlotOrder[index] ?? slotId;
+    nextSlots[slotId] = slots[sourceSlotId] ?? [];
+  });
+
+  return {
+    columns: nextColumns,
+    slots: nextSlots,
+  };
+}
+
 export function FooterBlock({
   data,
   variant,
@@ -287,56 +1066,135 @@ export function FooterBlock({
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
 }) {
+  const footerLabelId = useId();
   const columns = resolveFooterColumnsForVariant(data.columns, variant);
   const visibleColumnCount = columns.length;
-  const layout = data.layout ?? {};
-  const style = data.style ?? {};
+  const hasStyleObject = typeof data.style === "object" && data.style !== null;
+  const layout: FooterLayout = {
+    ...footerDefaults.layout,
+    ...data.layout,
+  };
+  const style: FooterStyle = {
+    ...footerDefaults.style,
+    ...data.style,
+  };
   const align = layout.align ?? "left";
   const legalAlign = layout.legalAlign ?? "right";
-  const gridClass =
-    visibleColumnCount === 3
-      ? "md:grid-cols-3"
-      : visibleColumnCount === 1
-        ? "md:grid-cols-1"
-        : "md:grid-cols-2";
-  const legal = data.legal ?? footerDefaults.legal;
-  const social = Array.isArray(data.social) ? data.social : footerDefaults.social;
+  const legal = normalizeFooterLegal(data.legal);
+  const brand = normalizeFooterBrand(data.brand);
+  const contact = normalizeFooterContactInfo(data.contact);
+  const backToTop = normalizeFooterBackToTop(data.backToTop);
+  const social = (Array.isArray(data.social) ? data.social : (footerDefaults.social ?? []))
+    .map(normalizeFooterSocialEntry)
+    .filter((entry): entry is NormalizedFooterSocial => entry !== null);
+  const socialVisible = data.socialEnabled !== false && social.length > 0;
   const bottomSlotBlocks = slots?.bottom ?? [];
+  const firstColumnSlotBlocks = slots?.[footerColumnSlotIds[0]] ?? [];
+  const showLegalContent =
+    legal.enabled && Boolean(legal.copyright || legal.privacy || legal.terms);
+  const footerTextColor = normalizeFooterRenderColor(style.textColor) ?? "var(--color-text)";
+  const footerBorderColor = normalizeFooterRenderColor(style.borderColor) ?? "var(--color-border)";
   const outerStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
-      borderColor: resolveClearableStyleValue(style.borderColor),
+      backgroundColor: hasStyleObject
+        ? normalizeFooterRenderColor(data.style?.surfaceColor)
+        : normalizeFooterRenderColor(style.surfaceColor),
+      borderColor: footerBorderColor,
       borderTopWidth: borderWidthValueMap[style.borderTopWidth ?? "1"] ?? "1px",
-      color: style.textColor ?? "var(--color-text)",
+      color: footerTextColor,
     }) ?? {};
-  const headingStyle = {
-    color: style.headingColor ?? style.textColor ?? "var(--color-text)",
-  };
-  const linkStyle = {
-    color: style.linkColor ?? style.textColor ?? "var(--color-text)",
-  };
-  const legalStyle = {
-    color: style.legalTextColor ?? style.textColor ?? "var(--color-text)",
-  };
-  const socialStyle = {
-    color: style.socialColor ?? style.linkColor ?? style.textColor ?? "var(--color-text)",
+  const headingStyle =
+    compactStyle({
+      color: normalizeFooterRenderColor(style.headingColor) ?? footerTextColor,
+    }) ?? {};
+  const brandMetaStyle =
+    compactStyle({
+      color: normalizeFooterRenderColor(style.legalTextColor) ?? footerTextColor,
+    }) ?? {};
+  const legalStyle =
+    compactStyle({
+      color: normalizeFooterRenderColor(style.legalTextColor) ?? footerTextColor,
+    }) ?? {};
+  const socialStyle =
+    compactStyle({
+      color:
+        normalizeFooterRenderColor(style.socialColor) ??
+        normalizeFooterRenderColor(style.linkColor) ??
+        footerTextColor,
+    }) ?? {};
+  const hoverColor = normalizeFooterInteractiveColor(style.linkHoverColor);
+  const activeColor = normalizeFooterInteractiveColor(style.linkActiveColor);
+  const linkStyle =
+    compactStyle({
+      color: normalizeFooterRenderColor(style.linkColor) ?? footerTextColor,
+      "--footer-link-hover-color": hoverColor,
+      "--footer-link-active-color": activeColor,
+    } as FooterCssVars) ?? {};
+  const linkClassName = joinClasses(
+    "transition-colors",
+    linkFontWeightClassMap[style.linkFontWeight ?? "normal"] ?? "font-normal",
+    linkLetterSpacingClassMap[style.linkLetterSpacing ?? "normal"] ?? "tracking-normal",
+    linkUnderlineClassMap[style.linkUnderline ?? "hover"] ??
+      "no-underline hover:underline underline-offset-4",
+    hoverColor ? "hover:text-[var(--footer-link-hover-color)]" : undefined,
+    activeColor ? "active:text-[var(--footer-link-active-color)]" : undefined
+  );
+  const innerClassName = joinClasses(
+    "mx-auto w-full",
+    maxWidthClassMap[layout.maxWidth ?? "6xl"] ?? "max-w-6xl"
+  );
+  const showBottomStrip =
+    showLegalContent ||
+    socialVisible ||
+    bottomSlotBlocks.length > 0 ||
+    Boolean(contact) ||
+    Boolean(backToTop);
+
+  const renderContactInfo = () => {
+    if (!contact) return null;
+    return (
+      <address className="flex flex-wrap items-center gap-4 not-italic" style={legalStyle}>
+        {contact.address ? <span className="whitespace-pre-line">{contact.address}</span> : null}
+        {contact.phoneHref && contact.phoneLabel ? (
+          <a href={contact.phoneHref} className={linkClassName} style={linkStyle}>
+            {contact.phoneLabel}
+          </a>
+        ) : null}
+        {contact.emailHref && contact.emailLabel ? (
+          <a href={contact.emailHref} className={linkClassName} style={linkStyle}>
+            {contact.emailLabel}
+          </a>
+        ) : null}
+      </address>
+    );
   };
 
-  return (
-    <footer
-      className={joinClasses(
-        "border-t px-6",
-        sectionPaddingYClassMap[layout.sectionPaddingY ?? "10"] ?? "py-10",
-        fontSizeClassMap[style.fontSize ?? "sm"] ?? "text-sm"
-      )}
-      style={outerStyle}
-    >
+  const renderBackToTopLink = () => {
+    if (!backToTop) return null;
+    return (
+      <a href="#top" data-footer-back-to-top="1" className={linkClassName} style={linkStyle}>
+        {backToTop.label}
+      </a>
+    );
+  };
+
+  const renderColumnsFooter = () => (
+    <>
+      {brand ? (
+        <div className="mb-8">
+          <FooterBrandBlock
+            brand={brand}
+            labelId={brand.logoText ? footerLabelId : undefined}
+            textStyle={headingStyle}
+            metaStyle={brandMetaStyle}
+          />
+        </div>
+      ) : null}
       <div
         className={joinClasses(
-          "mx-auto grid w-full",
-          maxWidthClassMap[layout.maxWidth ?? "6xl"] ?? "max-w-6xl",
+          "grid w-full",
           gapClassMap[layout.columnGap ?? "6"] ?? "gap-6",
-          gridClass
+          resolveFooterGridClass(visibleColumnCount, layout.columnBreakpoint)
         )}
       >
         {columns.map((column, index) => {
@@ -345,9 +1203,9 @@ export function FooterBlock({
           return (
             <div
               key={`${column.title}-${index}`}
-              className={joinClasses("space-y-2", alignClassMap[align] ?? "text-left")}
+              className={joinClasses("space-y-3", alignClassMap[align] ?? "text-left")}
             >
-              <p
+              <h3
                 className={joinClasses(
                   "text-xs font-semibold",
                   headingTransformClassMap[style.headingTransform ?? "uppercase"] ?? "uppercase"
@@ -355,68 +1213,231 @@ export function FooterBlock({
                 style={headingStyle}
               >
                 {column.title}
-              </p>
-              <ul className="space-y-1">
-                {column.links.map((link, linkIndex) => (
-                  <li key={`${link.label}-${link.href}-${linkIndex}`}>
-                    <a href={link.href} style={linkStyle}>
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              </h3>
+              {column.links.length > 0 ? (
+                <ul className="space-y-2">
+                  {column.links.map((link, linkIndex) => {
+                    const linkAttrs = resolveFooterLinkAttrs(link.href, link.target);
+                    if (!linkAttrs) return null;
+                    return (
+                      <li key={`${link.label}-${link.href}-${linkIndex}`}>
+                        <a {...linkAttrs} className={linkClassName} style={linkStyle}>
+                          {link.label}
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
               {slotBlocks.length > 0 ? (
-                <div className="pt-2">
-                  <div className="flex flex-col gap-3">
-                    {slotBlocks.map((slotBlock) => (
-                      <WidgetRenderer
-                        key={slotBlock.id}
-                        block={slotBlock}
-                        previewDevice={previewDevice}
-                      />
-                    ))}
-                  </div>
-                </div>
+                <div className="pt-1">{renderSlotBlocks(slotBlocks, previewDevice)}</div>
               ) : null}
             </div>
           );
         })}
       </div>
-      <div
-        className={joinClasses(
-          "mx-auto mt-8 flex w-full flex-wrap items-center gap-4 border-t pt-4 text-xs",
-          maxWidthClassMap[layout.maxWidth ?? "6xl"] ?? "max-w-6xl",
-          justifyClassMap[legalAlign] ?? "justify-end"
-        )}
-        style={{
-          borderColor: style.borderColor ?? "var(--color-border)",
-        }}
-      >
-        <span style={legalStyle}>{legal?.copyright}</span>
-        <div className={joinClasses("flex flex-wrap items-center gap-4")}>
-          {bottomSlotBlocks.map((slotBlock) => (
-            <WidgetRenderer key={slotBlock.id} block={slotBlock} previewDevice={previewDevice} />
-          ))}
-          {legal?.privacy ? (
-            <a href={legal.privacy} style={linkStyle}>
-              Privacy
-            </a>
+      {showBottomStrip ? (
+        <div
+          className={joinClasses(
+            "mt-8 flex flex-wrap items-center gap-4 border-t pt-4 text-xs",
+            justifyClassMap[legalAlign] ?? "justify-end"
+          )}
+          style={{ borderColor: footerBorderColor }}
+        >
+          {legal.enabled && legal.copyright ? (
+            <span style={legalStyle}>{legal.copyright}</span>
           ) : null}
-          {legal?.terms ? (
-            <a href={legal.terms} style={linkStyle}>
-              Terms
-            </a>
-          ) : null}
-          {social?.map((socialEntry, socialIndex) => (
-            <a
-              key={`${socialEntry.type}-${socialEntry.href}-${socialIndex}`}
-              href={socialEntry.href}
-              style={socialStyle}
-            >
-              {socialEntry.type}
-            </a>
-          ))}
+          <div className="flex flex-wrap items-center gap-4">
+            {renderContactInfo()}
+            {bottomSlotBlocks.map((slotBlock) => (
+              <WidgetRenderer key={slotBlock.id} block={slotBlock} previewDevice={previewDevice} />
+            ))}
+            {legal.enabled && legal.privacy
+              ? (() => {
+                  const linkAttrs = resolveFooterLinkAttrs(legal.privacy, legal.privacyTarget);
+                  if (!linkAttrs) return null;
+                  return (
+                    <a {...linkAttrs} className={linkClassName} style={linkStyle}>
+                      {legal.privacyLabel}
+                    </a>
+                  );
+                })()
+              : null}
+            {legal.enabled && legal.terms
+              ? (() => {
+                  const linkAttrs = resolveFooterLinkAttrs(legal.terms, legal.termsTarget);
+                  if (!linkAttrs) return null;
+                  return (
+                    <a {...linkAttrs} className={linkClassName} style={linkStyle}>
+                      {legal.termsLabel}
+                    </a>
+                  );
+                })()
+              : null}
+            {socialVisible ? (
+              <ul className="flex flex-wrap items-center gap-2" aria-label="Footer social links">
+                {social.map((socialEntry, socialIndex) => {
+                  const linkAttrs = resolveFooterSocialLinkAttrs(socialEntry.href);
+                  if (!linkAttrs) return null;
+                  const accessibleLabel =
+                    linkAttrs.target === "_blank"
+                      ? `${socialEntry.label} (opens in new tab)`
+                      : socialEntry.label;
+                  return (
+                    <li key={`${socialEntry.type}-${socialEntry.href}-${socialIndex}`}>
+                      <a
+                        {...linkAttrs}
+                        aria-label={accessibleLabel}
+                        title={accessibleLabel}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border)]/70 transition-colors hover:border-[var(--color-primary)]"
+                        style={socialStyle}
+                      >
+                        <FooterSocialIcon type={socialEntry.type} />
+                        <span className="sr-only">{accessibleLabel}</span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+            {renderBackToTopLink()}
+          </div>
         </div>
+      ) : null}
+    </>
+  );
+
+  const renderMinimalFooter = () => {
+    const primaryColumn = columns[0] ?? { title: "Column 1", links: [] };
+    const hasInlineLinks = primaryColumn.links.length > 0;
+    const secondarySlotBlocks = [...firstColumnSlotBlocks, ...bottomSlotBlocks];
+
+    return (
+      <div className="space-y-4">
+        <div
+          className={joinClasses(
+            "flex flex-col gap-4",
+            minimalBreakpointClassMap[layout.columnBreakpoint ?? "md"] ??
+              "md:flex-row md:items-center md:justify-between"
+          )}
+        >
+          <div className="flex flex-col gap-3">
+            <FooterBrandBlock
+              brand={brand}
+              labelId={brand?.logoText ? footerLabelId : undefined}
+              textStyle={headingStyle}
+              metaStyle={brandMetaStyle}
+              compact
+            />
+            {hasInlineLinks ? (
+              <nav aria-label={`${primaryColumn.title} links`}>
+                <ul className="flex flex-wrap items-center gap-3">
+                  {primaryColumn.links.map((link, index) => {
+                    const linkAttrs = resolveFooterLinkAttrs(link.href, link.target);
+                    if (!linkAttrs) return null;
+                    return (
+                      <li key={`${link.label}-${link.href}-${index}`}>
+                        <a {...linkAttrs} className={linkClassName} style={linkStyle}>
+                          {link.label}
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            ) : null}
+          </div>
+          {showLegalContent || socialVisible ? (
+            <div
+              className={joinClasses(
+                "flex flex-wrap items-center gap-4",
+                justifyClassMap[legalAlign]
+              )}
+            >
+              {legal.enabled && legal.copyright ? (
+                <span style={legalStyle}>{legal.copyright}</span>
+              ) : null}
+              {renderContactInfo()}
+              {legal.enabled && legal.privacy
+                ? (() => {
+                    const linkAttrs = resolveFooterLinkAttrs(legal.privacy, legal.privacyTarget);
+                    if (!linkAttrs) return null;
+                    return (
+                      <a {...linkAttrs} className={linkClassName} style={linkStyle}>
+                        {legal.privacyLabel}
+                      </a>
+                    );
+                  })()
+                : null}
+              {legal.enabled && legal.terms
+                ? (() => {
+                    const linkAttrs = resolveFooterLinkAttrs(legal.terms, legal.termsTarget);
+                    if (!linkAttrs) return null;
+                    return (
+                      <a {...linkAttrs} className={linkClassName} style={linkStyle}>
+                        {legal.termsLabel}
+                      </a>
+                    );
+                  })()
+                : null}
+              {socialVisible ? (
+                <ul className="flex flex-wrap items-center gap-2" aria-label="Footer social links">
+                  {social.map((socialEntry, socialIndex) => {
+                    const linkAttrs = resolveFooterSocialLinkAttrs(socialEntry.href);
+                    if (!linkAttrs) return null;
+                    const accessibleLabel =
+                      linkAttrs.target === "_blank"
+                        ? `${socialEntry.label} (opens in new tab)`
+                        : socialEntry.label;
+                    return (
+                      <li key={`${socialEntry.type}-${socialEntry.href}-${socialIndex}`}>
+                        <a
+                          {...linkAttrs}
+                          aria-label={accessibleLabel}
+                          title={accessibleLabel}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border)]/70 transition-colors hover:border-[var(--color-primary)]"
+                          style={socialStyle}
+                        >
+                          <FooterSocialIcon type={socialEntry.type} />
+                          <span className="sr-only">{accessibleLabel}</span>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+              {renderBackToTopLink()}
+            </div>
+          ) : null}
+        </div>
+        {secondarySlotBlocks.length > 0 ? (
+          <div
+            className="border-t pt-4"
+            style={{
+              borderColor: footerBorderColor,
+            }}
+          >
+            {renderSlotBlocks(secondarySlotBlocks, previewDevice)}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  return (
+    <footer
+      aria-labelledby={brand?.logoText ? footerLabelId : undefined}
+      aria-label={brand?.logoText ? undefined : "Site footer"}
+      className={joinClasses(
+        "border-t",
+        paddingXClassMap[layout.paddingX ?? "6"] ?? "px-6",
+        sectionPaddingYClassMap[layout.sectionPaddingY ?? "10"] ?? "py-10",
+        fontSizeClassMap[style.fontSize ?? "sm"] ?? "text-sm"
+      )}
+      style={outerStyle}
+    >
+      <div className={innerClassName}>
+        {variant === "minimal" ? renderMinimalFooter() : renderColumnsFooter()}
       </div>
     </footer>
   );
@@ -430,7 +1451,7 @@ export function createFooterWidget(editors: {
   return {
     type: "footer",
     title: "Footer",
-    description: "Footer with links and company info.",
+    description: "Footer with brand, links, and company info.",
     category: "navigation",
     slots: [
       { id: "column-1", label: "Column 1" },
@@ -446,6 +1467,7 @@ export function createFooterWidget(editors: {
     schema: footerSchema,
     defaults: footerDefaults,
     editor: editors,
+    editorContract: footerEditorContract,
     editorCapabilities: { visualOwnsVariantSelection: true },
     render: FooterBlock,
   };

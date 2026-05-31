@@ -1,116 +1,257 @@
-# Contact Widget (v1)
+# Contact Widget (v2)
 
 ## Purpose
 
-Sekcja kontaktu z formularzem, danymi firmy i opcjonalna mapa embed.
+Sekcja kontaktu z opcjonalnym formularzem, danymi firmy, linkami social i mapa
+embed. Contact jest widgetem composite-first: ma dawac czytelny section header,
+bezpieczne dane kontaktowe i uczciwe zachowanie formularza zarowno w trybie
+static, jak i przy podpietym runtime Forms.
 
 ## Widget ID
 
 `contact`
 
-## Variants (v1)
+## Variants
 
 - `form-left` - formularz po lewej, dane kontaktowe po prawej
 - `form-right` - dane kontaktowe po lewej, formularz po prawej
-- `minimal` - tylko dane kontaktowe (bez formularza), opcjonalna mapa
+- `minimal` - tylko dane kontaktowe + opcjonalna mapa; formularz nie renderuje
 
-## Wizard flow (TASK-050-11-02)
+## Editor Modes
 
-1. Layout (`form-left` / `form-right` / `minimal`)
-2. Form fields (`name`, `email`, `phone`, `message`)
-3. Submit label
-4. Contact details (`phone`, `email`, `address`)
+### Wizard
 
-Wizard ma dawac bezpieczny quick setup bez pol technicznych.
+Wizard jest teraz read-only starter summary:
 
-## Visual mode (TASK-050-11-02)
+- current layout
+- current visible fields
+- current submit label
 
-Contact przejmuje selektor wariantu w Visual przez:
-`editorCapabilities.visualOwnsVariantSelection = true`
+Wizard nie edytuje już layoutu, section header, business details ani form
+setup. Tytul/opis sekcji, details panel title, telefon, email, adres, godziny,
+visible fields, submit label, i runtime binding należą do Visual.
 
-Docelowe sekcje Visual:
+### Visual
 
-1. Variant and layout structure
-2. Form fields and required rules
-3. Contact details and business info
-4. Map source and display behavior
-5. Colors, borders, and surface styling
-6. Spacing and columns
+Contact przejmuje wybor wariantu przez
+`editorCapabilities.visualOwnsVariantSelection = true`.
 
-Visual jest glownym trybem codziennej edycji content + stylu.
+Glowny tryb codziennej edycji obejmuje:
 
-## Advanced mode (TASK-050-11-02)
+1. section header
+2. form fields, required rules, field order, labels/placeholders/layout
+3. submission runtime binding do istniejącego Forms record
+4. contact details, labels, ikony, social links przez platform + profile name
+5. map location + display controls; editor buduje `map.embedUrl`
+6. palettes, text colors, submit button colors, card/button radius, borders,
+   width, padding, spacing, columns
 
-Advanced jest techniczny i nie duplikuje codziennej edycji content/style z Visual.
+`minimal` ukrywa form-field controls i pokazuje user-facing copy, zamiast
+pozostawiac mylace ustawienia formularza.
 
-Sekcje Advanced:
+Visual nie prosi nietechnicznego uzytkownika o `iframe`, raw map URL, social
+URL, ani developer-only path. Mapa przyjmuje publiczna lokalizacje/adres i
+zapisuje kompatybilny `map.embedUrl`. Znane platformy social przyjmuja tylko
+profile name/handle i zapisuja bezpieczne `social.href`; legacy custom links sa
+pokazywane jako replace/clear state. Nowe social rows startuja od znanej
+platformy, a nie od `custom`, zeby nie tworzyc martwego beginner flow.
+Jesli uzytkownik wklei pelny link profilu dla znanej platformy, helper probuje
+wydobyc profile name/handle; nieparsowalny link jest odrzucany zamiast
+kodowany jako handle.
 
-- Map source and runtime metadata
-- Normalization and fallback controls
-- Runtime diagnostics snapshot
+### Advanced
 
-## Runtime rendering rules
+Advanced zostaje techniczny i Contact-local:
 
-- Renderer respektuje wariant (`form-left` / `form-right` / `minimal`).
-- `minimal` nie renderuje formularza.
-- Mapa renderuje sie tylko gdy:
-  - `map.enabled = true`
-  - `map.embedUrl` jest prawidlowym URL `http/https`.
-- Styl sekcji respektuje:
-  - `style.spacing`
-  - `style.columns`
-  - `style.background`
-- Styl kart/form paneli respektuje:
-  - `style.surfaceColor`
-  - `style.borderColor`
-  - `style.borderWidth`
+- read-only map/runtime diagnostics
+- confirm-gated normalization support action
+- runtime diagnostics summary z redakcja `resolved.submissionNonce`
 
-## Clear Controls
-
-- `style.background` and `style.surfaceColor` are clearable; clear removes the
-  configured section/card surface key and the renderer omits the forced
-  background style.
-- Border width/color, form field rules, and map rendering rules are unchanged by
-  surface clear.
-
-## Data model (summary)
+## Data Model (summary)
 
 ```json
 {
-  "variant": "form-left",
+  "title": "Get in touch",
+  "description": "Talk to the team behind the product.",
   "form": {
+    "title": "Send a message",
     "fields": ["name", "email", "message"],
     "required": ["email", "message"],
-    "submitLabel": "Send message"
+    "submitLabel": "Send message",
+    "fieldLayout": "one",
+    "fieldSettings": {
+      "name": {
+        "label": "Name",
+        "placeholder": "Your name",
+        "autocomplete": "name",
+        "span": "full"
+      }
+    },
+    "submission": {
+      "mode": "static",
+      "staticMessage": "This contact form is not connected yet.",
+      "formId": "",
+      "fieldMap": {
+        "name": "",
+        "email": "",
+        "phone": "",
+        "message": ""
+      },
+      "successMessage": "Thanks for your message.",
+      "errorMessage": "Unable to send your message. Please try again."
+    }
   },
   "contact": {
+    "title": "Contact details",
     "phone": "+1 555 123 456",
     "email": "hello@example.com",
     "address": "123 Market Street",
-    "hours": "Mon-Fri 9-5"
+    "hours": "Mon-Fri 9-5",
+    "details": {
+      "phone": { "label": "Phone", "icon": "phone" }
+    },
+    "social": [
+      {
+        "id": "contact-social-1",
+        "platform": "linkedin",
+        "label": "LinkedIn",
+        "href": "https://www.linkedin.com/company/example"
+      }
+    ]
   },
   "map": {
     "enabled": false,
-    "embedUrl": ""
+    "embedUrl": "",
+    "title": "",
+    "description": "",
+    "height": "md",
+    "fallbackCopy": "Map is unavailable."
   },
   "style": {
     "spacing": "md",
-    "background": "#f8fafc",
+    "background": "",
     "columns": "two",
     "surfaceColor": "var(--color-bg)",
     "borderColor": "var(--color-border)",
-    "borderWidth": "1"
+    "borderWidth": "1",
+    "textColor": "",
+    "mutedTextColor": "",
+    "buttonBackgroundColor": "",
+    "buttonTextColor": "",
+    "buttonBorderColor": "",
+    "maxWidth": "xl",
+    "paddingX": "md",
+    "panelRadius": "xl",
+    "buttonRadius": "md"
   }
 }
 ```
 
-## Normalization rules
+## Runtime Behavior
+
+- Renderer respektuje wariant `form-left`, `form-right`, `minimal`.
+- `minimal` nie renderuje formularza; pokazuje tylko dane kontaktowe i opcjonalna mape.
+- Contact section moze miec `title`/`description`, a oba panele moga miec
+  wlasne `form.title` i `contact.title`.
+- Dane kontaktowe renderuja sie semantycznie jako `<address>` + `<dl>/<dt>/<dd>`.
+- `phone` i `email` dostaja bezpieczne `tel:` / `mailto:` tylko dla poprawnych
+  wartosci. Nieprawidlowe dane zostaja zwyklym tekstem.
+- Social links przechodza przez Contact-local safe href normalization i
+  wpuszczaja tylko absolutne linki webowe (`http/https`).
+- Visual authoring dla znanych platform social zapisuje `social.href` z
+  nietechnicznego profile name/handle; custom `href` pozostaje legacy/support.
+- Mapa renderuje sie tylko gdy:
+  - `map.enabled = true`
+  - `map.embedUrl` jest poprawnym `http/https` URL
+- Visual authoring zapisuje Google Maps embed URL z publicznej lokalizacji lub
+  adresu, bez proszenia uzytkownika o kod osadzenia.
+- Gdy mapa jest wlaczona, ale URL nie przechodzi walidacji runtime, widget
+  pokazuje `map.fallbackCopy` zamiast pustego iframe.
+- Iframe mapy dostaje `allowFullScreen` i tytul pochodzacy z `map.title` lub
+  bezpiecznego fallbacku.
+
+## Form Contract
+
+### Static mode
+
+- `form.submission.mode = "static"` jest legacy/default behavior.
+- Static Contact nie robi native GET do aktualnego URL.
+- Submit CTA ma `type="button"`, `data-form-submit="1"`, `aria-busy="false"`,
+  a widget pokazuje user-facing `staticMessage`.
+
+### Forms runtime mode
+
+Contact moze aktywowac realny submit tylko przez istniejacy Forms runtime:
+
+- `form.submission.mode = "forms-runtime"`
+- `form.submission.formId` wskazuje istniejący Forms record
+- `publicSite.tsx` hydratuje render-only `resolved`
+- `resolved.submissionAccess === "public"`
+- kazde widoczne Contact field mapuje sie 1:1 do zgodnego typem Forms field:
+  - `name -> text`
+  - `email -> email`
+  - `phone -> phone`
+  - `message -> textarea`
+- liczba widocznych Contact fields musi odpowiadac liczbie runtime fields
+- Contact nie aktywuje runtime submit dla Forms field logic, extra step groups,
+  internal-only forms, missing forms, unpublished public forms, ani dla form
+  z dodatkowymi lub niekompatybilnymi polami
+
+Gdy ktorykolwiek z warunkow nie jest spelniony, Contact wraca do static-safe
+renderu zamiast udawac aktywna wysylke.
+
+### Shared runtime boundary
+
+- Contact reuzywa `POST /forms/:id/submissions`, `__nl_form_nonce`,
+  `getFormRuntimeClientScript()`, `data-form-embed-success`, i
+  `data-form-embed-error`.
+- Contact nie wprowadza wlasnego public endpointu ani widget-owned nonce/CAPTCHA
+  konfiguracji.
+- Shared busy/live-region/CAPTCHA projection jest juz domknieta w shared
+  Forms runtime; Contact emituje tylko kompatybilne markery i nie definiuje
+  własnego runtime/public-write kontraktu.
+
+## Accessibility and Diagnostics
+
+- Section i oba panele maja stabilne accessible names przez
+  `aria-labelledby` lub deterministic fallback `aria-label`.
+- Field controls maja stabilne `id`, `name`, explicit labels, placeholders,
+  i `autocomplete`.
+- Runtime diagnostics summary redaguje transient nonce values:
+  `submissionNonce` nigdy nie powinien byc traktowany jako edytowalny payload.
+
+## Clear Controls
+
+- `style.background` i `style.surfaceColor` sa clearable i usuwaja wymuszone
+  style tła.
+- `style.borderColor`, `style.textColor`, `style.mutedTextColor`,
+  `style.buttonBackgroundColor`, `style.buttonTextColor`, i
+  `style.buttonBorderColor` sa clearable z disabled-state gdy Contact jest w
+  stanie theme-default, zgodnie z hero-like daily authoring.
+
+## Normalization Rules
 
 - Dozwolone pola formularza: `name`, `email`, `phone`, `message`.
 - Nieznane i zduplikowane pola sa usuwane.
 - `required` jest zawsze przycinane do aktualnie wybranych `fields`.
-- Puste `submitLabel` wraca do defaultu.
-- Nieprawidlowe tokeny stylu wracaja do defaultow:
-  - `spacing=md`
-  - `columns=two`
-  - `borderWidth=1`
+- Puste `submitLabel`, `successMessage`, `errorMessage`, i `staticMessage`
+  wracaja do bezpiecznych defaultow.
+- `spacing`, `columns`, `borderWidth`, `fieldLayout`, `map.height`,
+  `maxWidth`, i `paddingX` maja jawne defaulty:
+  - `spacing = md`
+  - `columns = two`
+  - `borderWidth = 1`
+  - `fieldLayout = one`
+  - `map.height = md`
+  - `maxWidth = xl`
+  - `paddingX = md`
+
+## TASK-336-18 Editor Contract
+
+- Exports `contactEditorContract` with `version: 2`.
+- Contract target: Wizard is a read-only starter summary; Visual owns form
+  details, field labels, business details, map, social links, and style;
+  Advanced is read-only submission/map/runtime diagnostics.
+- TASK-336-19 removes duplicate map editing from Advanced and replaces normal
+  Visual map/social raw URL authoring with location/profile-name flows while
+  preserving the existing string schema.

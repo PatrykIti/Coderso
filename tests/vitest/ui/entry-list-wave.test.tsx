@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -171,13 +171,7 @@ vi.mock("@/ui/layouts/AdminShell", () => ({
 }));
 
 vi.mock("@/ui/shared/PageHeader", () => ({
-  PageHeader: ({
-    title,
-    actions,
-  }: {
-    title: string;
-    actions?: React.ReactNode;
-  }) => (
+  PageHeader: ({ title, actions }: { title: string; actions?: React.ReactNode }) => (
     <header>
       <h1>{title}</h1>
       {actions}
@@ -270,11 +264,7 @@ vi.mock("@/services/entriesClient", () => ({
     entryListState.duplicateEntryCalls.push({ slug, id });
     return entryListState.createEntry(`${id}-copy`, slug, "Copy");
   },
-  updateEntryMetadata: async (
-    slug: string,
-    id: string,
-    input: Record<string, unknown>
-  ) => {
+  updateEntryMetadata: async (slug: string, id: string, input: Record<string, unknown>) => {
     entryListState.updateMetadataCalls.push({ slug, id, input });
     const error = entryListState.nextMetadataError.get(`${slug}:${id}`);
     if (error) throw error;
@@ -384,22 +374,12 @@ vi.mock("@/ui/entries/EntryCreateDrawer", () => ({
   }: {
     open: boolean;
     defaultTypeSlug?: string | null;
-    onCreated?: (
-      entry: { id: string },
-      typeSlug: string,
-      openAfterCreate: boolean
-    ) => void;
+    onCreated?: (entry: { id: string }, typeSlug: string, openAfterCreate: boolean) => void;
   }) =>
     open ? (
       <button
         type="button"
-        onClick={() =>
-          onCreated?.(
-            { id: "created-entry" },
-            defaultTypeSlug ?? "articles",
-            true
-          )
-        }
+        onClick={() => onCreated?.({ id: "created-entry" }, defaultTypeSlug ?? "articles", true)}
       >
         create entry
       </button>
@@ -461,7 +441,7 @@ vi.mock("@/ui/entries/EntryTable", () => ({
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 async function flushAsync() {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -472,14 +452,14 @@ function mount(node: React.ReactNode) {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -518,32 +498,30 @@ test("EntryList hydrates all entries cache, filters rows, navigates, and creates
     expect(view.container.textContent).toContain("Alpha Entry");
     expect(view.container.textContent).toContain("Beta Product");
 
-    act(() => {
-      Array.from(view.container.querySelectorAll("button")).find(
-        (button) => button.textContent === "search beta"
-      )?.click();
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "search beta")
+        ?.click();
     });
     expect(view.container.textContent).not.toContain("Alpha Entry");
     expect(view.container.textContent).toContain("Beta Product");
 
-    act(() => {
-      view.container
-        .querySelectorAll("button")
-        .forEach((button) => {
-          if (button.textContent === "edit entry-2") button.click();
-        });
+    React.act(() => {
+      view.container.querySelectorAll("button").forEach((button) => {
+        if (button.textContent === "edit entry-2") button.click();
+      });
     });
     expect(entryListState.navigateCalls).toContain("/entries/products/entry-2");
 
-    act(() => {
-      Array.from(view.container.querySelectorAll("button")).find(
-        (button) => button.textContent === "New"
-      )?.click();
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "New")
+        ?.click();
     });
-    act(() => {
-      Array.from(view.container.querySelectorAll("button")).find(
-        (button) => button.textContent === "create entry"
-      )?.click();
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "create entry")
+        ?.click();
     });
     expect(entryListState.navigateCalls).toContain("/entries/articles/created-entry");
     expect(entryListState.toastSuccess).toHaveBeenCalledWith("Entry created.");
@@ -557,23 +535,21 @@ test("EntryList bulk updates selected row refs with their content type slugs", a
 
   try {
     await flushAsync();
-    const checkboxes = Array.from(
-      view.container.querySelectorAll("input[type='checkbox']")
-    );
-    act(() => {
+    const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
+    React.act(() => {
       checkboxes.forEach((checkbox) => {
         if (checkbox instanceof HTMLInputElement) checkbox.click();
       });
     });
-    act(() => {
-      Array.from(view.container.querySelectorAll("button")).find(
-        (button) => button.textContent === "choose archive"
-      )?.click();
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "choose archive")
+        ?.click();
     });
-    await act(async () => {
-      Array.from(view.container.querySelectorAll("button")).find(
-        (button) => button.textContent === "apply bulk"
-      )?.click();
+    await React.act(async () => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "apply bulk")
+        ?.click();
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -582,9 +558,7 @@ test("EntryList bulk updates selected row refs with their content type slugs", a
       { slug: "articles", id: "entry-1", input: { status: "archived" } },
       { slug: "products", id: "entry-2", input: { status: "archived" } },
     ]);
-    expect(entryListState.toastSuccess).toHaveBeenCalledWith(
-      "2 entries archived."
-    );
+    expect(entryListState.toastSuccess).toHaveBeenCalledWith("2 entries archived.");
   } finally {
     view.cleanup();
   }
@@ -596,28 +570,26 @@ test("EntryList bulk delete uses shared confirmation and keeps partial failure f
 
   try {
     await flushAsync();
-    const checkboxes = Array.from(
-      view.container.querySelectorAll("input[type='checkbox']")
-    );
-    act(() => {
+    const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
+    React.act(() => {
       checkboxes.forEach((checkbox) => {
         if (checkbox instanceof HTMLInputElement) checkbox.click();
       });
     });
-    act(() => {
-      Array.from(view.container.querySelectorAll("button")).find(
-        (button) => button.textContent === "choose delete"
-      )?.click();
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "choose delete")
+        ?.click();
     });
-    act(() => {
-      Array.from(view.container.querySelectorAll("button")).find(
-        (button) => button.textContent === "apply bulk"
-      )?.click();
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "apply bulk")
+        ?.click();
     });
-    await act(async () => {
-      Array.from(view.container.querySelectorAll("button")).find(
-        (button) => button.textContent === "Delete entries"
-      )?.click();
+    await React.act(async () => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Delete entries")
+        ?.click();
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -627,9 +599,7 @@ test("EntryList bulk delete uses shared confirmation and keeps partial failure f
       { slug: "products", id: "entry-2" },
     ]);
     expect(view.container.textContent).toContain("Deleted 1 entry; failed 1.");
-    expect(entryListState.toastError).toHaveBeenCalledWith(
-      "Deleted 1 entry; failed 1."
-    );
+    expect(entryListState.toastError).toHaveBeenCalledWith("Deleted 1 entry; failed 1.");
   } finally {
     view.cleanup();
   }
@@ -640,7 +610,7 @@ test("EntryList refreshes all-entry and content-type caches on cache bus events"
 
   try {
     await flushAsync();
-    act(() => {
+    React.act(() => {
       entryListState.triggerCache(cacheKeys.entriesAllList);
       entryListState.triggerCache(cacheKeys.contentTypesList);
     });

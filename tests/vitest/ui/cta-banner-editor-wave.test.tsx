@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -122,6 +122,24 @@ vi.mock("@/components/ui/select", () => {
   };
 });
 
+vi.mock("@/components/ui/switch", () => ({
+  Switch: ({
+    checked,
+    onCheckedChange,
+  }: {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <button
+      type="button"
+      data-switch-checked={String(Boolean(checked))}
+      onClick={() => onCheckedChange?.(!checked)}
+    >
+      switch
+    </button>
+  ),
+}));
+
 vi.mock("@/components/ui/textarea", () => ({
   Textarea: ({
     value,
@@ -153,19 +171,101 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+vi.mock("@/services/mediaClient", () => ({
+  listMediaCached: vi.fn(async () => [
+    {
+      id: "asset-1",
+      url: "/media/cta-background.jpg",
+      type: "image",
+      mimeType: "image/jpeg",
+    },
+  ]),
+}));
+
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "page-demo",
+      title: "Demo",
+      slug: "demo",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-sales",
+      title: "Sales",
+      slug: "sales",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-later",
+      title: "Later",
+      slug: "later",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) => (
+    <button
+      type="button"
+      data-media-picker-value={String(value ?? "")}
+      onClick={() => onChange("asset-1")}
+    >
+      media-picker
+    </button>
+  ),
+}));
+
+vi.mock("../../../core/admin/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    onOpenChange,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    confirmLabel: string;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void | Promise<void>;
+  }) =>
+    open ? (
+      <div data-cta-confirm-dialog={title}>
+        <p>{title}</p>
+        <p>{description}</p>
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Cancel
+        </button>
+        <button type="button" onClick={() => void onConfirm()}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -176,17 +276,7 @@ const mount = (node: React.ReactNode) => {
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
-    descriptor?.set?.call(element, value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-};
-
-const setTextareaValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -196,7 +286,7 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -204,42 +294,43 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const clickButton = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLButtonElement)) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
 
-const getInputByPlaceholder = (container: ParentNode, placeholder: string) => {
-  const input = Array.from(container.querySelectorAll("input")).find(
-    (element) =>
-      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
-  );
-  if (!(input instanceof HTMLInputElement)) {
-    throw new Error(`Missing input with placeholder "${placeholder}"`);
-  }
-  return input;
+const flush = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+  });
 };
 
-const getInputsByPlaceholder = (container: ParentNode, placeholder: string) => {
+const getInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const inputs = Array.from(container.querySelectorAll("input")).filter(
     (element): element is HTMLInputElement =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
-  if (inputs.length === 0) {
-    throw new Error(`Missing inputs with placeholder "${placeholder}"`);
+  const input = inputs[index];
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing input with placeholder "${placeholder}" at index ${index}`);
   }
-  return inputs;
+  return input;
 };
 
-const getTextareaByPlaceholder = (container: ParentNode, placeholder: string) => {
-  const textarea = Array.from(container.querySelectorAll("textarea")).find(
-    (element) =>
-      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
+const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
+  Array.from(container.querySelectorAll("input")).filter(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
-  if (!(textarea instanceof HTMLTextAreaElement)) {
-    throw new Error(`Missing textarea with placeholder "${placeholder}"`);
+
+const getDestinationSelect = (container: ParentNode, fieldId: string) => {
+  const select = (container as ParentNode).querySelector(
+    `[data-link-destination-field="${fieldId}"] select`
+  );
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error(`Missing destination select "${fieldId}"`);
   }
-  return textarea;
+  return select;
 };
 
 const getSelectByOptions = (container: ParentNode, values: string[]) => {
@@ -258,11 +349,10 @@ const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
-  const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
-    )
+  const titleNode = Array.from(container.querySelectorAll("h3, p")).find(
+    (candidate) => normalizeText(candidate.textContent) === normalizeText(title)
   );
+  const section = titleNode?.closest("section");
   if (!(section instanceof HTMLElement)) {
     throw new Error(`Missing section "${title}"`);
   }
@@ -278,6 +368,26 @@ const getButtonsByText = (container: ParentNode, text: string) => {
     throw new Error(`Missing button "${text}"`);
   }
   return buttons;
+};
+
+const getSwitchByLabel = (container: ParentNode, labelText: string, index = 0) => {
+  const labels = Array.from(container.querySelectorAll("label")).filter((candidate) =>
+    normalizeText(candidate.textContent).includes(normalizeText(labelText))
+  );
+  const label = labels[index];
+  const button = label?.querySelector("button[data-switch-checked]");
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Missing switch for label "${labelText}" at index ${index}`);
+  }
+  return button;
+};
+
+const getActionCard = (container: ParentNode, kind: "primary" | "secondary" | "tertiary") => {
+  const card = container.querySelector(`[data-cta-action-editor="${kind}"]`);
+  if (!(card instanceof HTMLElement)) {
+    throw new Error(`Missing action card "${kind}"`);
+  }
+  return card;
 };
 
 const getColorInputs = (container: ParentNode) =>
@@ -338,19 +448,23 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("CtaBanner wizard covers variant fallback and nested CTA normalization", async () => {
+test("CtaBanner wizard stays setup-only while preserving existing CTA data for Visual", async () => {
   const { CtaBannerWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
 
   const initialValue: CtaBannerData = {
     content: {},
     actions: {
-      primaryCta: { href: "/upgrade" },
-      secondaryCta: { label: "Talk to sales" },
+      primaryCta: { label: "Start", href: "/upgrade", enabled: true },
+      secondaryCta: {
+        label: "Talk to sales",
+        href: "/contact",
+        enabled: true,
+      },
     },
   };
 
-  const { cleanup, container, getLatestValue, getLatestVariant, onChangeSpy, onVariantChangeSpy } =
+  const { cleanup, container, getLatestValue, getLatestVariant, onVariantChangeSpy } =
     mountCtaBannerHarness({
       initialValue,
       initialVariant: "legacy-layout",
@@ -358,39 +472,42 @@ test("CtaBanner wizard covers variant fallback and nested CTA normalization", as
     });
 
   try {
-    const variantSelect = getSelectByOptions(container, ["centered", "split", "with-badge"]);
-    expect(variantSelect.value).toBe("centered");
-    expect(getInputByPlaceholder(container, "Ready to launch your next campaign?").value).toBe(
-      ctaBannerDefaults.content?.title
-    );
-    expect(getInputByPlaceholder(container, "Get started").value).toBe(
-      ctaBannerDefaults.actions?.primaryCta?.label
-    );
+    await flush();
+    expect(container.textContent).toContain("Banner layout");
+    expect(container.textContent).toContain("Centered");
+    expect(container.querySelector("button")).toBeNull();
+    expect(getLatestVariant()).toBe("legacy-layout");
+    expect(onVariantChangeSpy).not.toHaveBeenCalled();
 
-    setSelectValue(variantSelect, "split");
-    expect(getLatestVariant()).toBe("split");
-    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("split");
-
-    setInputValue(
-      getInputByPlaceholder(container, "Ready to launch your next campaign?"),
-      "Ship campaigns faster"
+    expect(findInputsByPlaceholder(container, "Ready to launch your next campaign?")).toHaveLength(
+      0
     );
-    setInputValue(getInputByPlaceholder(container, "Get started"), "Start free trial");
+    expect(
+      container.querySelector(
+        '[data-link-destination-field="cta-banner-wizard-primary-destination"]'
+      )
+    ).toBeNull();
+    expect(
+      container.querySelector(
+        '[data-link-destination-field="cta-banner-wizard-secondary-destination"]'
+      )
+    ).toBeNull();
+    expect(
+      Array.from(container.querySelectorAll("label")).some((candidate) =>
+        normalizeText(candidate.textContent).includes(normalizeText("Enable secondary CTA"))
+      )
+    ).toBe(false);
 
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(getLatestValue().content).toMatchObject({
-      title: "Ship campaigns faster",
-      badge: ctaBannerDefaults.content?.badge,
-      description: ctaBannerDefaults.content?.description,
-    });
+    expect(getLatestValue().content).toEqual(initialValue.content);
     expect(getLatestValue().actions).toMatchObject({
       primaryCta: {
-        label: "Start free trial",
+        label: "Start",
         href: "/upgrade",
       },
       secondaryCta: {
         label: "Talk to sales",
-        href: "#",
+        href: "/contact",
+        enabled: true,
       },
     });
   } finally {
@@ -398,7 +515,7 @@ test("CtaBanner wizard covers variant fallback and nested CTA normalization", as
   }
 });
 
-test("CtaBanner visual covers variant cards, picker fallbacks, action updates, and style selects", async () => {
+test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clear wiring, and background controls", async () => {
   const { CtaBannerVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
 
@@ -406,115 +523,171 @@ test("CtaBanner visual covers variant cards, picker fallbacks, action updates, a
     content: {
       badge: "",
       title: "",
-      description: "",
+      description: "Support line",
+      showDescription: true,
     },
     actions: {
-      primaryCta: { label: "Join now", href: "" },
-      secondaryCta: { href: "/contact" },
+      primaryCta: { label: "Join now", href: "javascript:alert(1)", enabled: true },
+      secondaryCta: { label: "Talk", href: "/contact", enabled: true },
+      tertiaryCta: { label: "", href: "", enabled: false },
     },
     style: {
       background: "surface-token",
       text: "#123456",
-      badgeBackground: "primary-token",
       border: "outline-token",
       borderWidth: "9" as never,
       radius: "pill" as never,
       padding: "jumbo" as never,
     },
+    background: {
+      color: "surface-token",
+      media: {
+        type: "none",
+        source: "external",
+        fit: "cover",
+        position: "center",
+      },
+    },
+    motion: {
+      preset: "none",
+    },
   };
 
-  const { cleanup, container, getLatestValue, getLatestVariant, onChangeSpy, onVariantChangeSpy } =
-    mountCtaBannerHarness({
-      initialValue,
-      initialVariant: "unsupported",
-      render: (props) => <CtaBannerVisualEditor {...props} />,
-    });
+  const { cleanup, container, getLatestValue, getLatestVariant } = mountCtaBannerHarness({
+    initialValue,
+    initialVariant: "unsupported",
+    render: (props) => <CtaBannerVisualEditor {...props} />,
+  });
 
   try {
+    await flush();
     const layoutSection = getSectionByTitle(container, "Variant and layout structure");
-    const colorsSection = getSectionByTitle(container, "Colors and button styles");
-    const spacingSection = getSectionByTitle(container, "Border and spacing");
+    const actionsSection = getSectionByTitle(container, "Actions");
+    const colorsSection = getSectionByTitle(container, "Colors and Borders");
+    const backgroundSection = getSectionByTitle(container, "Background and motion");
 
-    const colorInputs = getColorInputs(container);
-    expect(colorInputs.map((input) => input.value)).toEqual([
-      "#f8fafc",
-      "#123456",
-      "#1d4ed8",
-      "#ffffff",
-      "#1d4ed8",
-      "#ffffff",
-      "#0f172a",
-      "#ffffff",
-      "#e2e8f0",
-    ]);
-
-    const borderWidthSelect = getSelectByOptions(spacingSection, ["0", "1", "2", "3"]);
-    const radiusSelect = getSelectByOptions(spacingSection, ["none", "md", "lg", "xl", "2xl"]);
-    const paddingSelect = getSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]);
-
-    expect(borderWidthSelect.value).toBe("1");
-    expect(radiusSelect.value).toBe("xl");
-    expect(paddingSelect.value).toBe("md");
     expect(getButtonsByText(layoutSection, "Selected")).toHaveLength(1);
-
+    expect(colorsSection.textContent).toContain("CTA Banner palettes");
+    expect(colorsSection.textContent).toContain("Contrast guidance");
+    expect(colorsSection.textContent).toContain("Theme default");
+    expect(backgroundSection.textContent).toContain("Saved custom color");
+    expect(layoutSection.textContent).toContain("Padding");
+    expect(findInputsByPlaceholder(colorsSection, "var(--color-text)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(colorsSection, "var(--color-primary)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(colorsSection, "var(--color-bg)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(colorsSection, "var(--color-border)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(backgroundSection, "var(--color-surface)")).toHaveLength(0);
     clickButton(getButtonsByText(layoutSection, "With Badge")[0]);
     expect(getLatestVariant()).toBe("with-badge");
-    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("with-badge");
-
-    setInputValue(getInputByPlaceholder(container, "Limited offer"), "Only this week");
-    setInputValue(
-      getInputByPlaceholder(container, "Ready to launch your next campaign?"),
-      "Scale onboarding faster"
+    expect(layoutSection.textContent).toContain(
+      "With Badge uses a framed badge treatment distinct from Centered."
     );
-    setTextareaValue(
-      getTextareaByPlaceholder(container, "Use reusable sections and publish faster."),
-      "Keep CTA copy aligned across launch pages."
-    );
-    setInputValue(getInputByPlaceholder(container, "Get started"), "Book demo");
-    setInputValue(getInputsByPlaceholder(container, "#")[0], "/demo");
-    setInputValue(getInputByPlaceholder(container, "Contact sales"), "Talk with team");
-    setInputValue(getInputsByPlaceholder(container, "#")[1], "/contact-sales");
-    setInputValue(colorInputs[1], "#0f172a");
-    setInputValue(colorInputs[2], "#2563eb");
-    setInputValue(colorInputs[3], "#f9fafb");
-    setInputValue(colorInputs[4], "#7c3aed");
-    setInputValue(colorInputs[5], "#f5f5f5");
-    setInputValue(colorInputs[6], "#111827");
-    setInputValue(getInputsByPlaceholder(colorsSection, "var(--color-surface)")[0], "#101820");
-    setInputValue(getInputsByPlaceholder(spacingSection, "var(--color-border)")[0], "#334455");
-    setSelectValue(borderWidthSelect, "3");
-    setSelectValue(radiusSelect, "2xl");
-    setSelectValue(paddingSelect, "xl");
 
-    expect(onChangeSpy).toHaveBeenCalled();
+    const primaryCard = getActionCard(actionsSection, "primary");
+    expect(primaryCard.textContent).toContain("Saved custom destination");
+    expect(getLatestValue().actions?.primaryCta?.href).toBe("javascript:alert(1)");
+
+    setSelectValue(
+      getDestinationSelect(primaryCard, "cta-banner-primary-destination"),
+      "page-demo"
+    );
+    expect(getLatestValue().actions?.primaryCta?.href).toBe("/demo");
+
+    const secondaryCard = getActionCard(actionsSection, "secondary");
+    clickButton(getSwitchByLabel(secondaryCard, "Enabled"));
+    expect(getLatestValue().actions?.secondaryCta).toMatchObject({
+      label: "Talk",
+      href: "/contact",
+      enabled: false,
+    });
+
+    clickButton(getSwitchByLabel(secondaryCard, "Enabled"));
+    setInputValue(getInputByPlaceholder(secondaryCard, "Contact sales"), "Talk with team");
+    await flush();
+    setSelectValue(
+      getDestinationSelect(secondaryCard, "cta-banner-secondary-destination"),
+      "page-sales"
+    );
+    const secondaryCardAfterHref = getActionCard(actionsSection, "secondary");
+    clickButton(getSwitchByLabel(secondaryCardAfterHref, "Open in new tab"));
+
+    const tertiaryCard = getActionCard(actionsSection, "tertiary");
+    clickButton(getSwitchByLabel(tertiaryCard, "Enabled"));
+    setInputValue(getInputByPlaceholder(tertiaryCard, "No thanks"), "Maybe later");
+    await flush();
+    expect(getActionCard(actionsSection, "tertiary").textContent).toContain(
+      "This CTA has a label but no destination, so it renders as disabled until you choose a page or clear the label."
+    );
+    setSelectValue(
+      getDestinationSelect(tertiaryCard, "cta-banner-tertiary-destination"),
+      "page-later"
+    );
+    const tertiaryCardAfterHref = getActionCard(actionsSection, "tertiary");
+    const tertiaryIconSelect = getSelectByOptions(tertiaryCardAfterHref, [
+      "none",
+      "arrow-right",
+      "chevron-right",
+      "external-link",
+    ]);
+    setSelectValue(tertiaryIconSelect, "external-link");
+
+    const textColorClear = getButtonsByText(colorsSection, "Clear")[0];
+    clickButton(textColorClear);
+    expect(getLatestValue().style?.text).toBeUndefined();
+
+    const colorInputs = getColorInputs(backgroundSection);
+    setInputValue(colorInputs[0], "#101820");
+    const mediaTypeSelect = getSelectByOptions(backgroundSection, ["none", "image"]);
+    setSelectValue(mediaTypeSelect, "image");
+    clickButton(getButtonsByText(backgroundSection, "media-picker")[0]);
+    await flush();
+    const fitSelect = getSelectByOptions(backgroundSection, ["cover", "contain"]);
+    setSelectValue(fitSelect, "contain");
+    const positionSelect = getSelectByOptions(backgroundSection, ["center", "top", "bottom"]);
+    setSelectValue(positionSelect, "top");
+    const motionSelect = getSelectByOptions(backgroundSection, ["none", "fade-in", "slide-up"]);
+    setSelectValue(motionSelect, "slide-up");
+
+    const descriptionSwitch = getSwitchByLabel(container, "Show description");
+    clickButton(descriptionSwitch);
+
     expect(getLatestValue()).toMatchObject({
       content: {
-        badge: "Only this week",
-        title: "Scale onboarding faster",
-        description: "Keep CTA copy aligned across launch pages.",
+        showDescription: false,
       },
       actions: {
         primaryCta: {
-          label: "Book demo",
           href: "/demo",
         },
         secondaryCta: {
           label: "Talk with team",
-          href: "/contact-sales",
+          href: "/sales",
+          enabled: true,
+          openInNewTab: true,
+        },
+        tertiaryCta: {
+          label: "Maybe later",
+          href: "/later",
+          enabled: true,
+          icon: "external-link",
         },
       },
       style: {
-        background: "#101820",
-        text: "#0f172a",
-        badgeBackground: "#2563eb",
-        badgeText: "#f9fafb",
-        primaryButtonBg: "#7c3aed",
-        primaryButtonText: "#f5f5f5",
-        secondaryButtonText: "#111827",
-        border: "#334455",
-        borderWidth: "3",
-        radius: "2xl",
-        padding: "xl",
+        text: undefined,
+      },
+      background: {
+        color: "#101820",
+        media: {
+          type: "image",
+          source: "library",
+          assetId: "asset-1",
+          src: "/media/cta-background.jpg",
+          fit: "contain",
+          position: "top",
+        },
+      },
+      motion: {
+        preset: "slide-up",
       },
     });
   } finally {
@@ -522,63 +695,60 @@ test("CtaBanner visual covers variant cards, picker fallbacks, action updates, a
   }
 });
 
-test("CtaBanner advanced covers raw token updates, normalize now, reset to defaults, and payload snapshot", async () => {
+test("CtaBanner advanced keeps style diagnostics read-only and confirms support actions", async () => {
   const { CtaBannerAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
 
   const initialValue: CtaBannerData = {
     content: {
       description: "Existing support line.",
+      showDescription: false,
     },
     actions: {
       primaryCta: { label: "Launch" },
-      secondaryCta: {},
+      secondaryCta: { enabled: false },
+      tertiaryCta: { enabled: true, label: "Later", href: "/later" },
     },
     style: {
       background: "",
       text: "#111111",
+      border: "var(--cta-border)",
       borderWidth: "8" as never,
       radius: "circle" as never,
       padding: "loose" as never,
-      primaryButtonBorder: "",
+      primaryButtonBorder: "var(--cta-primary-border)",
+      secondaryButtonBorder: "var(--cta-secondary-border)",
     },
   };
 
-  const { cleanup, container, getLatestValue, onChangeSpy } = mountCtaBannerHarness({
+  const { cleanup, container, getLatestValue } = mountCtaBannerHarness({
     initialValue,
     initialVariant: "centered",
     render: (props) => <CtaBannerAdvancedEditor {...props} />,
   });
 
   try {
-    setInputValue(getInputByPlaceholder(container, "background token"), "var(--cta-bg)");
-    setInputValue(getInputByPlaceholder(container, "text token"), "var(--cta-text)");
-    setInputValue(getInputByPlaceholder(container, "border token"), "var(--cta-border)");
-    setInputValue(
-      getInputByPlaceholder(container, "primary button border token"),
-      "var(--cta-primary-border)"
-    );
-    setInputValue(
-      getInputByPlaceholder(container, "secondary button border token"),
-      "var(--cta-secondary-border)"
-    );
-
-    expect(getLatestValue().style).toMatchObject({
-      background: "var(--cta-bg)",
-      text: "var(--cta-text)",
-      border: "var(--cta-border)",
-      primaryButtonBorder: "var(--cta-primary-border)",
-      secondaryButtonBorder: "var(--cta-secondary-border)",
-    });
+    const diagnosticsSection = getSectionByTitle(container, "Style diagnostics");
+    expect(diagnosticsSection.textContent).toContain("Visual owns color editing");
+    expect(diagnosticsSection.textContent).toContain("#111111");
+    expect(diagnosticsSection.textContent).toContain("var(--cta-border)");
+    expect(findInputsByPlaceholder(container, "background token")).toHaveLength(0);
+    expect(findInputsByPlaceholder(container, "text token")).toHaveLength(0);
+    expect(findInputsByPlaceholder(container, "border token")).toHaveLength(0);
+    expect(findInputsByPlaceholder(container, "primary button border token")).toHaveLength(0);
+    expect(findInputsByPlaceholder(container, "secondary button border token")).toHaveLength(0);
 
     clickButton(getButtonsByText(container, "Normalize now")[0]);
+    expect(container.textContent).toContain("Normalize CTA banner data?");
+    clickButton(getButtonsByText(container, "Normalize now").at(-1));
+    expect(container.textContent).toContain("CTA banner data normalized.");
 
-    expect(onChangeSpy).toHaveBeenCalled();
     expect(getLatestValue()).toMatchObject({
       content: {
         badge: ctaBannerDefaults.content?.badge,
         title: ctaBannerDefaults.content?.title,
         description: "Existing support line.",
+        showDescription: false,
       },
       actions: {
         primaryCta: {
@@ -588,11 +758,16 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
         secondaryCta: {
           label: ctaBannerDefaults.actions?.secondaryCta?.label,
           href: "#",
+          enabled: false,
+        },
+        tertiaryCta: {
+          label: "Later",
+          href: "/later",
+          enabled: true,
         },
       },
       style: {
-        background: "var(--cta-bg)",
-        text: "var(--cta-text)",
+        text: "#111111",
         border: "var(--cta-border)",
         borderWidth: "1",
         radius: "xl",
@@ -602,137 +777,19 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
       },
     });
 
-    const snapshotAfterNormalize = container.querySelector("pre")?.textContent ?? "";
-    expect(snapshotAfterNormalize).toContain('"title": "Ready to launch your next campaign?"');
-    expect(snapshotAfterNormalize).toContain('"borderWidth": "1"');
-    expect(snapshotAfterNormalize).toContain(
-      '"secondaryButtonBorder": "var(--cta-secondary-border)"'
-    );
+    expect(container.querySelector("pre")).toBeNull();
+    expect(container.textContent).toContain("Runtime summary");
+    expect(container.textContent).toContain("Human diagnostics only");
+    expect(container.textContent).toContain("2 configured");
 
     clickButton(getButtonsByText(container, "Reset to defaults")[0]);
+    expect(container.textContent).toContain("Reset CTA banner to defaults?");
+    clickButton(getButtonsByText(container, "Reset to defaults").at(-1));
+    expect(container.textContent).toContain("CTA banner reset to defaults.");
 
     expect(getLatestValue()).toEqual(ctaBannerDefaults);
-    const snapshotAfterReset = container.querySelector("pre")?.textContent ?? "";
-    expect(snapshotAfterReset).toContain('"label": "Contact sales"');
-    expect(snapshotAfterReset).toContain('"background": "var(--color-surface)"');
+    expect(container.querySelector("pre")).toBeNull();
   } finally {
     cleanup();
-  }
-});
-
-test("CtaBanner editors render defensive empty and default fallbacks for sparse normalized fields", async () => {
-  vi.resetModules();
-
-  const ctaBannerModule = await import("../../../core/widgets/core/ctaBanner");
-  vi.spyOn(ctaBannerModule, "normalizeCtaBannerData").mockReturnValue({
-    content: {},
-    actions: {
-      primaryCta: {},
-      secondaryCta: {},
-    },
-    style: {},
-  });
-
-  const { CtaBannerWizardEditor, CtaBannerVisualEditor, CtaBannerAdvancedEditor } =
-    await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
-
-  const wizardMount = mount(
-    <CtaBannerWizardEditor
-      value={{}}
-      onChange={vi.fn()}
-      variant="split"
-      onVariantChange={vi.fn()}
-    />
-  );
-
-  try {
-    expect(
-      getInputByPlaceholder(wizardMount.container, "Ready to launch your next campaign?").value
-    ).toBe("");
-    expect(getInputByPlaceholder(wizardMount.container, "Get started").value).toBe("");
-  } finally {
-    wizardMount.cleanup();
-  }
-
-  const visualMount = mount(
-    <CtaBannerVisualEditor
-      value={{}}
-      onChange={vi.fn()}
-      variant="with-badge"
-      onVariantChange={vi.fn()}
-    />
-  );
-
-  try {
-    const colorsSection = getSectionByTitle(visualMount.container, "Colors and button styles");
-    const spacingSection = getSectionByTitle(visualMount.container, "Border and spacing");
-
-    expect(getInputByPlaceholder(visualMount.container, "Limited offer").value).toBe("");
-    expect(
-      getInputByPlaceholder(visualMount.container, "Ready to launch your next campaign?").value
-    ).toBe("");
-    expect(
-      getTextareaByPlaceholder(visualMount.container, "Use reusable sections and publish faster.")
-        .value
-    ).toBe("");
-    expect(getInputByPlaceholder(visualMount.container, "Get started").value).toBe("");
-    expect(getInputByPlaceholder(visualMount.container, "Contact sales").value).toBe("");
-    expect(getInputsByPlaceholder(visualMount.container, "#").map((input) => input.value)).toEqual([
-      "",
-      "",
-    ]);
-
-    expect(
-      getInputsByPlaceholder(colorsSection, "var(--color-surface)").map((input) => input.value)
-    ).toEqual([""]);
-    expect(
-      getInputsByPlaceholder(colorsSection, "var(--color-text)").map((input) => input.value)
-    ).toEqual(["", ""]);
-    expect(
-      getInputsByPlaceholder(colorsSection, "var(--color-primary)").map((input) => input.value)
-    ).toEqual(["", ""]);
-    expect(
-      getInputsByPlaceholder(colorsSection, "var(--color-bg)").map((input) => input.value)
-    ).toEqual(["", ""]);
-    expect(
-      getInputsByPlaceholder(spacingSection, "var(--color-border)").map((input) => input.value)
-    ).toEqual([""]);
-
-    expect(getColorInputs(visualMount.container).map((input) => input.value)).toEqual([
-      "#f8fafc",
-      "#0f172a",
-      "#1d4ed8",
-      "#ffffff",
-      "#1d4ed8",
-      "#ffffff",
-      "#0f172a",
-      "#ffffff",
-      "#e2e8f0",
-    ]);
-
-    expect(getSelectByOptions(spacingSection, ["0", "1", "2", "3"]).value).toBe("1");
-    expect(getSelectByOptions(spacingSection, ["none", "md", "lg", "xl", "2xl"]).value).toBe("xl");
-    expect(getSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]).value).toBe("md");
-  } finally {
-    visualMount.cleanup();
-  }
-
-  const advancedMount = mount(
-    <CtaBannerAdvancedEditor value={{}} onChange={vi.fn()} variant="centered" />
-  );
-
-  try {
-    expect(getInputByPlaceholder(advancedMount.container, "background token").value).toBe("");
-    expect(getInputByPlaceholder(advancedMount.container, "text token").value).toBe("");
-    expect(getInputByPlaceholder(advancedMount.container, "border token").value).toBe("");
-    expect(
-      getInputByPlaceholder(advancedMount.container, "primary button border token").value
-    ).toBe("");
-    expect(
-      getInputByPlaceholder(advancedMount.container, "secondary button border token").value
-    ).toBe("");
-  } finally {
-    advancedMount.cleanup();
-    vi.resetModules();
   }
 });

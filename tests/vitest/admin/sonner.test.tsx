@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { CSSProperties, ReactNode } from "react";
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -36,10 +36,7 @@ vi.mock("sonner", () => ({
   },
 }));
 
-import {
-  ADMIN_TOASTER_TOKEN_STYLE,
-  Toaster,
-} from "../../../core/admin/components/ui/sonner";
+import { ADMIN_TOASTER_TOKEN_STYLE, Toaster } from "../../../core/admin/components/ui/sonner";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -47,13 +44,13 @@ const mount = (node: React.ReactNode) => {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
   return {
     host,
     cleanup: () => {
-      act(() => root.unmount());
+      React.act(() => root.unmount());
       host.remove();
     },
   };
@@ -119,15 +116,12 @@ test("Toaster exposes shared state icons and avoids bundled hard-coded palettes"
 });
 
 test("global CSS scopes Sonner sub-parts to shared Admin UI toast variables", () => {
-  const css = fs.readFileSync(
-    path.join(process.cwd(), "core/admin/styles/globals.css"),
-    "utf8"
-  );
+  const css = fs.readFileSync(path.join(process.cwd(), "core/admin/styles/globals.css"), "utf8");
 
-  expect(css).toContain(".toaster [data-sonner-toast][data-type=\"success\"]");
-  expect(css).toContain(".toaster [data-sonner-toast][data-type=\"error\"]");
-  expect(css).toContain(".toaster [data-sonner-toast][data-type=\"warning\"]");
-  expect(css).toContain(".toaster [data-sonner-toast][data-type=\"info\"]");
+  expect(css).toContain('.toaster [data-sonner-toast][data-type="success"]');
+  expect(css).toContain('.toaster [data-sonner-toast][data-type="error"]');
+  expect(css).toContain('.toaster [data-sonner-toast][data-type="warning"]');
+  expect(css).toContain('.toaster [data-sonner-toast][data-type="info"]');
   expect(css).toContain("[data-description]");
   expect(css).toContain("[data-close-button]");
   expect(css).toContain("[data-action]");

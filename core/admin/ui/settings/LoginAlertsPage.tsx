@@ -132,13 +132,7 @@ export function LoginAlertsPage() {
       activeHref="/admin/settings"
       sidebar={<SettingsSidebar activeId="security" />}
       showSearch={false}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Security</span>
-          <span>/</span>
-          <span className="text-foreground">Login Alerts</span>
-        </div>
-      }
+      breadcrumbs={["Security", "Login Alerts"]}
       topbarActions={
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" disabled={busy} onClick={handleDiscard}>
@@ -155,9 +149,7 @@ export function LoginAlertsPage() {
         <div className="border-b bg-background px-6 py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">
-                Login Alerts
-              </h1>
+              <h1 className="text-2xl font-semibold text-foreground">Login Alerts</h1>
               <p className="text-sm text-muted-foreground">
                 Security • Notifications &amp; Protection
               </p>
@@ -168,10 +160,7 @@ export function LoginAlertsPage() {
           </div>
         </div>
 
-        <Tabs
-          defaultValue="login-alerts"
-          className="flex flex-1 flex-col"
-        >
+        <Tabs defaultValue="login-alerts" className="flex flex-1 flex-col">
           <div className="border-b bg-background px-6">
             <TabsList variant="line" className="h-12 gap-6">
               <TabsTrigger value="general" className={tabTriggerClassName}>
@@ -180,10 +169,7 @@ export function LoginAlertsPage() {
               <TabsTrigger value="active-sessions" className={tabTriggerClassName}>
                 Active Sessions
               </TabsTrigger>
-              <TabsTrigger
-                value="login-alerts"
-                className={tabTriggerClassName}
-              >
+              <TabsTrigger value="login-alerts" className={tabTriggerClassName}>
                 Login Alerts
               </TabsTrigger>
               <TabsTrigger value="audit-log" className={tabTriggerClassName}>
@@ -225,9 +211,7 @@ export function LoginAlertsPage() {
                   description="Notify when a login comes from a different browser or device fingerprint."
                   icon={<Laptop className="h-5 w-5" />}
                   checked={form.notifyOnNewDevice}
-                  onCheckedChange={(value) =>
-                    handleFieldChange("notifyOnNewDevice", value)
-                  }
+                  onCheckedChange={(value) => handleFieldChange("notifyOnNewDevice", value)}
                   disabled={busy || !form.enabled}
                 />
                 <LoginAlertsCard
@@ -235,9 +219,7 @@ export function LoginAlertsPage() {
                   description="Notify when a login comes from a different IP location."
                   icon={<MapPin className="h-5 w-5" />}
                   checked={form.notifyOnNewLocation}
-                  onCheckedChange={(value) =>
-                    handleFieldChange("notifyOnNewLocation", value)
-                  }
+                  onCheckedChange={(value) => handleFieldChange("notifyOnNewLocation", value)}
                   disabled={busy || !form.enabled}
                 />
               </div>
@@ -249,23 +231,17 @@ export function LoginAlertsPage() {
                       <ShieldAlert className="h-5 w-5" />
                     </div>
                     <div className="flex-1">
-                      <h2 className="text-base font-semibold">
-                        Brute Force Protection
-                      </h2>
+                      <h2 className="text-base font-semibold">Brute Force Protection</h2>
                       <p className="text-sm text-muted-foreground">
-                        Protect your account from automated login attempts by
-                        setting a lockout threshold.
+                        Protect your account from automated login attempts by setting a lockout
+                        threshold.
                       </p>
                     </div>
                   </div>
                   <div className="space-y-3 pl-14">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Failed attempts threshold
-                      </span>
-                      <span className="font-semibold text-primary">
-                        5 attempts
-                      </span>
+                      <span className="text-muted-foreground">Failed attempts threshold</span>
+                      <span className="font-semibold text-primary">5 attempts</span>
                     </div>
                     <Slider
                       defaultValue={[5]}
@@ -275,8 +251,8 @@ export function LoginAlertsPage() {
                       aria-label="Failed attempts threshold"
                     />
                     <p className="text-xs text-muted-foreground italic">
-                      User will be temporarily locked out for 30 minutes after
-                      reaching the threshold.
+                      User will be temporarily locked out for 30 minutes after reaching the
+                      threshold.
                     </p>
                   </div>
                 </CardContent>
@@ -291,8 +267,7 @@ export function LoginAlertsPage() {
                     <div className="flex-1">
                       <h2 className="text-base font-semibold">Recipients</h2>
                       <p className="text-sm text-muted-foreground">
-                        Choose who receives the security alerts and system
-                        warnings.
+                        Choose who receives the security alerts and system warnings.
                       </p>
                     </div>
                   </div>
@@ -332,12 +307,9 @@ export function LoginAlertsPage() {
                       <Share2 className="h-5 w-5" />
                     </div>
                     <div className="flex-1">
-                      <h2 className="text-base font-semibold">
-                        Notification Channels
-                      </h2>
+                      <h2 className="text-base font-semibold">Notification Channels</h2>
                       <p className="text-sm text-muted-foreground">
-                        Select the platforms where you want to receive security
-                        events.
+                        Select the platforms where you want to receive security events.
                       </p>
                     </div>
                   </div>
@@ -365,9 +337,7 @@ export function LoginAlertsPage() {
 
         <div className="sticky bottom-0 mt-auto border-t bg-background/80 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              Unsaved changes in Security settings
-            </p>
+            <p className="text-sm text-muted-foreground">Unsaved changes in Security settings</p>
             <div className="flex items-center gap-2">
               <Button variant="ghost">Discard</Button>
               <Button>Save Changes</Button>

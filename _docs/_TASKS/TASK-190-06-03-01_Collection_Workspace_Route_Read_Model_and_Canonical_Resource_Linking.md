@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Collections + Read Model
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-02, TASK-190-05-03-07, TASK-190-06-02
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -20,9 +20,32 @@ prefixes. The workspace should surface deterministic links first and return
 `unresolved` / `candidates[]` when the repo does not yet have enough
 information to pick one canonical resource safely.
 
+This task is now a small program, not one implementation leaf. It still owns
+the workspace route/read-model outcome, but the work is split so we do not mix:
+
+- route registration plus server summary assembly,
+- canonical resolution plus owner-read/redaction rules,
+- client cache/prefetch/UI shell
+
+into one oversized slice.
+
 ## Sub-Tasks
 
-No child task files.
+- `TASK-190-06-03-01-01_Collection_Workspace_Route_and_Server_Read_Model.md` -
+  done: internal collection workspace route/read model is registered and returns
+  bounded canonical/unresolved/candidate buckets.
+- `TASK-190-06-03-01-02_Collection_Workspace_Canonical_Resolution_and_Read_Permissions.md` -
+  done: canonical route/detail/list/listing/admin-screen links now resolve from
+  owner seams with unresolved candidates and owner-read redaction.
+- `TASK-190-06-03-01-03_Collection_Workspace_Client_Cache_Prefetch_and_UI_Shell.md` -
+  done: cached content-types client helpers, specific Engine prefetch warmup,
+  and first workspace route shell now hydrate the server-owned summary.
+
+Scope correction (2026-05-11): the landed read model is intentionally bounded to
+current deterministic owner seams: route, detail page, list page, listing query,
+listing template, admin screen, secondary pages, and secondary admin screens.
+Forms/CTA, media, and SEO workspace summaries remain follow-up owner-seam
+extensions rather than inferred fields inside this read model.
 
 ## Files to Change
 
@@ -46,10 +69,9 @@ No child task files.
   list-page/supporting-resource linkage is missing today; keep that ownership in
   `TASK-190-05-02` / page-owned contracts rather than
   `collectionWorkspaceService.ts`
-- Update current custom-screen owner seams only if explicit stable metadata such
-  as exact `collectionRole` / `compositionKey` fields are required for canonical
-  admin-screen resolution; land those exact fields in `TASK-190-06-02` /
-  current custom-screen schema-service-client contracts
+- Consume the exact `collectionRole` / `compositionKey` fields from
+  `TASK-190-06-02` / current custom-screen schema-service-client contracts for
+  canonical admin-screen resolution
 - Update current detail-page owner seams only if explicit persisted secondary
   references are needed beyond route-level `detailPageId` linkage; land those
   fields in `TASK-190-05-03-01` / `TASK-190-05-03-07` / current detail-page
@@ -99,12 +121,12 @@ Reuse rule:
   seams; `contentTypesClient.ts` workspace helpers must not become a
   centralized mutation broker.
 - `adminPrefetch.ts` remains the owner of route warmup. The new
-  `/coderso/engine/:contentTypeId/collection` route must extend the existing
+  `/advanced/engine/:contentTypeId/collection` route must extend the existing
   Engine prefetch family through that shared helper, not route-local hover
   hooks or page-level effect fetches.
 - Because current `createAdminPrefetcher(...)` picks the first matching prefix,
   this leaf must ensure the workspace route does not collapse into the generic
-  `/coderso/engine` warmup path. The implementation must either:
+  `/advanced/engine` warmup path. The implementation must either:
   - register a more specific workspace prefetch entry ahead of the generic
     Engine entry, or
   - teach `adminPrefetch.ts` to prefer the most specific matching route.
@@ -137,8 +159,9 @@ Owner rule:
   consumes it.
 - The custom-screen owner seam owns any explicit `collectionRole`,
   `compositionKey`, and related canonical screen-link metadata needed to resolve
-  a canonical admin screen safely. If those fields do not exist yet, they must
-  land through `TASK-190-06-02` before this leaf consumes them.
+  a canonical admin screen safely. `TASK-190-06-02` has landed those exact
+  fields through the current custom-screen schema/service/client/action/storage
+  contract; this leaf consumes them read-only.
 - The workspace service must only read these owner contracts. It must never
   invent, persist, or backfill canonical links in browser cache, local state, or
   route-local helpers.
@@ -151,7 +174,7 @@ Owner rule:
 Workspace root:
 
 ```text
-/admin/coderso/engine/:contentTypeId/collection
+/admin/advanced/engine/:contentTypeId/collection
 ```
 
 Server-owned read endpoint:
@@ -214,9 +237,9 @@ Deterministic resolution order:
      - one matching listing template referenced by the canonical public page,
    - otherwise return `unresolved` plus bounded candidates.
 5. Admin screen:
-   - canonical admin screen may resolve from explicit stable metadata on the
+  - canonical admin screen may resolve from explicit stable metadata on the
      custom-screen owner seam from `TASK-190-06-02` first,
-   - only if that metadata does not exist yet, canonical admin screen may
+   - only if that metadata is absent on older rows, canonical admin screen may
      resolve when exactly one screen is a safe deterministic match for the
      collection content type and workspace role;
      otherwise return `unresolved` plus bounded candidates.
@@ -330,7 +353,7 @@ type CollectionWorkspaceSummary = {
 - `adminPrefetch.ts` keeps workspace warmup inside the existing Engine prefetch
   seam; no route-local prefetch flow is introduced for the collection route.
 - Workspace route warmup resolves through a specific workspace prefetch match and
-  does not get swallowed by the broader `/coderso/engine` prefix entry under the
+  does not get swallowed by the broader `/advanced/engine` prefix entry under the
   current `adminPrefetch.ts` matcher.
 - route tests cover the owner-read bundle explicitly: `content:read` for the
   host route plus `settings:read` / `forms:read` / `media:read` gated slices

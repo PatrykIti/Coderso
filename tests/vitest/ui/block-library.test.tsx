@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -12,7 +12,9 @@ vi.mock("@/components/ui/accordion", () => ({
   Accordion: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AccordionContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AccordionItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AccordionTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  AccordionTrigger: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
 }));
 
 vi.mock("@/components/ui/badge", () => ({
@@ -64,14 +66,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -86,7 +88,7 @@ test("BlockLibrary filters visible blocks from the search input", () => {
     expect(view.container.textContent).toContain("Container");
     expect(view.container.textContent).toContain("Image");
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-input-action='match']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -95,7 +97,7 @@ test("BlockLibrary filters visible blocks from the search input", () => {
     expect(view.container.textContent).toContain("Image");
     expect(view.container.textContent).not.toContain("Container");
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-input-action='empty']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -10,38 +11,59 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { isApiClientError } from "@/services/apiClient";
-import { listListingQueriesCached, type ListingQueryRecord } from "@/services/listingsClient";
 
 import {
   normalizeSearchBoxData,
   searchBoxDefaults,
+  type SearchBoxDisplayMode,
   type SearchBoxData,
 } from "../../../../widgets/core/searchBox";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableInputField } from "./ClearableFields";
+import type { WidgetEditorProps, WidgetEditorSectionRole } from "../../../../widgets/types";
+import { useListingQueries } from "../../listings/hooks/useListingQueries";
+import { LinkDestinationField } from "./LinkDestinationField";
+import { SharedColorControl } from "./SharedColorControl";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
+const displayModeOptions: SearchBoxDisplayMode[] = ["full", "compact"];
+const searchBoxClearedColorState = {
+  label: "No inline color",
+  description:
+    "No color override is saved. The search shell stays unstyled until you pick a color.",
+  clearResultLabel: "removes the saved color and leaves the field unstyled",
+};
+const searchBoxThemeDefaultStyleValues = {
+  frameBackground: [
+    searchBoxDefaults.style?.frameBackground ??
+      "color-mix(in srgb, var(--color-bg) 80%, transparent)",
+  ],
+  frameBorderColor: [searchBoxDefaults.style?.frameBorderColor ?? "var(--color-border)"],
+  actionBackground: [searchBoxDefaults.style?.actionBackground ?? "var(--color-primary)"],
+};
 
 function EditorSection({
+  id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
+  id: string;
+  mode: "wizard" | "visual" | "advanced";
+  role: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={id} mode={mode} role={role} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
@@ -83,38 +105,6 @@ function clearStyle(
   });
 }
 
-function useListingQueries() {
-  const [items, setItems] = useState<ListingQueryRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    listListingQueriesCached({ force: true })
-      .then((next) => {
-        if (!active) return;
-        setItems(next);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load listing queries.");
-        }
-      })
-      .finally(() => {
-        if (!active) return;
-        setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return { items, loading, error };
-}
-
 function SearchMode({
   value,
   onChange,
@@ -123,9 +113,9 @@ function SearchMode({
   onChange: (next: SearchBoxData) => void;
 }) {
   const normalized = normalizeSearchBoxData(value);
-  const { items, loading, error } = useListingQueries();
+  const { items, isLoading, error, refresh } = useListingQueries({ retryAuthOnce: true });
   const mode = normalized.mode ?? "listing";
-  const listingLoadState = loading
+  const listingLoadState = isLoading
     ? "loading"
     : error
       ? "error"
@@ -137,74 +127,200 @@ function SearchMode({
     selectedListingQuery === NO_LISTING_QUERY_VALUE
       ? "No listing query selected"
       : (items.find((item) => item.id === selectedListingQuery)?.name ?? "Selected listing query");
+  const hasCustomEndpoint =
+    typeof normalized.endpoint === "string" &&
+    normalized.endpoint.trim() !== "" &&
+    normalized.endpoint.trim() !== searchBoxDefaults.endpoint;
 
   return (
-    <EditorSection title="Mode" description="Choose listing search or global public search.">
-      <Select
-        value={mode}
-        onValueChange={(nextMode) => {
-          updateValue(value, onChange, (current) => ({
-            ...current,
-            mode: nextMode === "global" ? "global" : "listing",
-          }));
-        }}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select mode" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="listing">Listing runtime search</SelectItem>
-          <SelectItem value="global">Global public search</SelectItem>
-        </SelectContent>
-      </Select>
-
-      {mode === "listing" ? (
-        <div className="space-y-2">
+    <EditorSection
+      id="search-box.wizard.source-setup"
+      mode="wizard"
+      role="source"
+      title="Search source"
+      description="Choose listing search, global public search, or route-submit setup."
+    >
+      <WidgetControlRow id="search-box.wizard.mode" label="Search mode" path="mode">
+        {(fieldProps) => (
           <Select
-            value={selectedListingQuery}
-            onValueChange={(next) =>
+            value={mode}
+            onValueChange={(nextMode) => {
               updateValue(value, onChange, (current) => ({
                 ...current,
-                listingQueryId: next === NO_LISTING_QUERY_VALUE ? "" : next,
-              }))
-            }
+                mode:
+                  nextMode === "global"
+                    ? "global"
+                    : nextMode === "route-submit"
+                      ? "route-submit"
+                      : "listing",
+              }));
+            }}
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Select listing query">{selectedLabel}</SelectValue>
+            <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+              <SelectValue placeholder="Select mode" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={NO_LISTING_QUERY_VALUE}>No listing query selected</SelectItem>
-              {items.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.name}
-                </SelectItem>
-              ))}
+              <SelectItem value="listing">Listing runtime search</SelectItem>
+              <SelectItem value="global">Global public search</SelectItem>
+              <SelectItem value="route-submit">Route submit search</SelectItem>
             </SelectContent>
           </Select>
-          {listingLoadState === "loading" ? (
-            <p className="text-xs text-muted-foreground">Loading listing queries...</p>
-          ) : null}
-          {listingLoadState === "empty" ? (
-            <p className="text-xs text-muted-foreground">No listing queries are available yet.</p>
-          ) : null}
-          {listingLoadState === "error" && error ? (
-            <p className="text-xs text-destructive">{error}</p>
-          ) : null}
+        )}
+      </WidgetControlRow>
+
+      {mode === "listing" ? (
+        <WidgetControlRow
+          id="search-box.wizard.listing-query"
+          label="Listing query"
+          path="listingQueryId"
+        >
+          {(fieldProps) => (
+            <div className="space-y-2">
+              <Select
+                value={selectedListingQuery}
+                onValueChange={(next) =>
+                  updateValue(value, onChange, (current) => ({
+                    ...current,
+                    listingQueryId: next === NO_LISTING_QUERY_VALUE ? "" : next,
+                  }))
+                }
+              >
+                <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                  <SelectValue placeholder="Select listing query">{selectedLabel}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_LISTING_QUERY_VALUE}>No listing query selected</SelectItem>
+                  {items.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {listingLoadState === "loading" ? (
+                <p className="text-xs text-muted-foreground">Loading listing queries...</p>
+              ) : null}
+              {listingLoadState === "empty" ? (
+                <p className="text-xs text-muted-foreground">
+                  No listing queries are available yet.
+                </p>
+              ) : null}
+              {listingLoadState === "error" && error ? (
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-destructive">{error}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      void refresh({ force: true, retryAuthOnce: true });
+                    }}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </WidgetControlRow>
+      ) : mode === "global" ? (
+        <div className="space-y-3">
+          <div className="rounded-md border border-border/70 bg-muted/30 p-3 text-sm text-muted-foreground">
+            {hasCustomEndpoint
+              ? "A custom search provider is already configured by support. Source choices below stay safe for authors."
+              : "Global search uses the built-in public search service. Provider details stay in Advanced diagnostics for support."}
+          </div>
+          <div className="space-y-2 rounded-md border border-border/70 bg-background/60 p-3">
+            <p className="text-sm font-medium">Global search sources</p>
+            <WidgetControlRow
+              id="search-box.wizard.sources-pages"
+              label="Pages"
+              path="sources.pages"
+            >
+              {() => (
+                <Switch
+                  checked={normalized.sources?.pages !== false}
+                  onCheckedChange={(checked) =>
+                    updateValue(value, onChange, (current) => ({
+                      ...current,
+                      sources: {
+                        ...current.sources,
+                        pages: checked,
+                      },
+                    }))
+                  }
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow
+              id="search-box.wizard.sources-entries"
+              label="Entries"
+              path="sources.entries"
+            >
+              {() => (
+                <Switch
+                  checked={normalized.sources?.entries !== false}
+                  onCheckedChange={(checked) =>
+                    updateValue(value, onChange, (current) => ({
+                      ...current,
+                      sources: {
+                        ...current.sources,
+                        entries: checked,
+                      },
+                    }))
+                  }
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow
+              id="search-box.wizard.sources-posts"
+              label="Posts"
+              path="sources.posts"
+            >
+              {() => (
+                <Switch
+                  checked={normalized.sources?.posts === true}
+                  onCheckedChange={(checked) =>
+                    updateValue(value, onChange, (current) => ({
+                      ...current,
+                      sources: {
+                        ...current.sources,
+                        posts: checked,
+                      },
+                    }))
+                  }
+                />
+              )}
+            </WidgetControlRow>
+          </div>
         </div>
       ) : (
-        <div className="space-y-2">
-          <Input
-            value={normalized.endpoint ?? ""}
-            onChange={(event) =>
-              updateValue(value, onChange, (current) => ({
-                ...current,
-                endpoint: event.target.value,
-              }))
-            }
-            placeholder="/api/search"
-          />
+        <div className="space-y-3">
+          <WidgetControlRow
+            id="search-box.wizard.target-route"
+            label="Search results page"
+            path="targetRoute"
+          >
+            {(fieldProps) => (
+              <LinkDestinationField
+                fieldId={fieldProps.id}
+                label="Search results page"
+                value={normalized.targetRoute ?? "/search"}
+                onChange={(nextTargetRoute) =>
+                  updateValue(value, onChange, (current) => ({
+                    ...current,
+                    targetRoute: nextTargetRoute || "/search",
+                  }))
+                }
+                emptyLabel="Default search page"
+                helpText="Choose the published page that receives visitor searches."
+              />
+            )}
+          </WidgetControlRow>
           <p className="text-xs text-muted-foreground">
-            Endpoint should return <code>{"{ items: [...] }"}</code>.
+            {
+              "The visitor's search term is forwarded automatically; the technical parameter name stays support-owned."
+            }
           </p>
         </div>
       )}
@@ -212,7 +328,95 @@ function SearchMode({
   );
 }
 
-function CopyAndBehavior({
+function SearchCopyEditor({
+  value,
+  onChange,
+}: {
+  value: SearchBoxData;
+  onChange: (next: SearchBoxData) => void;
+}) {
+  const normalized = normalizeSearchBoxData(value);
+
+  return (
+    <EditorSection
+      id="search-box.visual.search-copy"
+      mode="visual"
+      role="content"
+      title="Search copy"
+      description="Labels and helper text shown to visitors."
+    >
+      <WidgetControlRow id="search-box.visual.title" label="Title" path="title">
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={normalized.title ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                title: event.target.value,
+              }))
+            }
+            placeholder="Search"
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="search-box.visual.description" label="Description" path="description">
+        {(fieldProps) => (
+          <Textarea
+            {...fieldProps}
+            value={normalized.description ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                description: event.target.value,
+              }))
+            }
+            rows={2}
+            placeholder="Optional helper text."
+          />
+        )}
+      </WidgetControlRow>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <WidgetControlRow id="search-box.visual.placeholder" label="Placeholder" path="placeholder">
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              value={normalized.placeholder ?? ""}
+              onChange={(event) =>
+                updateValue(value, onChange, (current) => ({
+                  ...current,
+                  placeholder: event.target.value,
+                }))
+              }
+              placeholder="Type to search..."
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="search-box.visual.submit-label"
+          label="Submit label"
+          path="submitLabel"
+        >
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              value={normalized.submitLabel ?? ""}
+              onChange={(event) =>
+                updateValue(value, onChange, (current) => ({
+                  ...current,
+                  submitLabel: event.target.value,
+                }))
+              }
+              placeholder="Search"
+            />
+          )}
+        </WidgetControlRow>
+      </div>
+    </EditorSection>
+  );
+}
+
+function SearchInteractionEditor({
   value,
   onChange,
 }: {
@@ -223,136 +427,120 @@ function CopyAndBehavior({
   const mode = normalized.mode ?? "listing";
 
   return (
-    <EditorSection title="Copy and behavior" description="Labels and interaction controls.">
-      <Input
-        value={normalized.title ?? ""}
-        onChange={(event) =>
-          updateValue(value, onChange, (current) => ({
-            ...current,
-            title: event.target.value,
-          }))
-        }
-        placeholder="Search"
-      />
-      <Textarea
-        value={normalized.description ?? ""}
-        onChange={(event) =>
-          updateValue(value, onChange, (current) => ({
-            ...current,
-            description: event.target.value,
-          }))
-        }
-        rows={2}
-        placeholder="Optional helper text."
-      />
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Input
-          value={normalized.placeholder ?? ""}
-          onChange={(event) =>
-            updateValue(value, onChange, (current) => ({
-              ...current,
-              placeholder: event.target.value,
-            }))
-          }
-          placeholder="Type to search..."
-        />
-        <Input
-          value={normalized.submitLabel ?? ""}
-          onChange={(event) =>
-            updateValue(value, onChange, (current) => ({
-              ...current,
-              submitLabel: event.target.value,
-            }))
-          }
-          placeholder="Search"
-        />
-      </div>
-      {mode === "listing" ? (
-        <label className="flex items-center justify-between rounded-md border border-border/70 bg-background/60 px-3 py-2 text-sm">
-          <span>Auto apply on input</span>
-          <Switch
-            checked={normalized.autoApply !== false}
-            onCheckedChange={(checked) =>
+    <EditorSection
+      id="search-box.visual.search-interaction"
+      mode="visual"
+      role="visual"
+      title="Search interaction"
+      description="Visible layout and visitor interaction behavior."
+    >
+      <WidgetControlRow id="search-box.visual.display-mode" label="Display mode" path="displayMode">
+        {(fieldProps) => (
+          <Select
+            value={normalized.displayMode ?? "full"}
+            onValueChange={(next) =>
               updateValue(value, onChange, (current) => ({
                 ...current,
-                autoApply: checked,
+                displayMode: next as SearchBoxDisplayMode,
               }))
             }
-          />
-        </label>
+          >
+            <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+              <SelectValue placeholder="Display mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {displayModeOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      {mode === "listing" ? (
+        <WidgetControlRow
+          id="search-box.visual.auto-apply"
+          label="Auto apply on input"
+          path="autoApply"
+        >
+          {() => (
+            <Switch
+              checked={normalized.autoApply !== false}
+              onCheckedChange={(checked) =>
+                updateValue(value, onChange, (current) => ({
+                  ...current,
+                  autoApply: checked,
+                }))
+              }
+            />
+          )}
+        </WidgetControlRow>
       ) : (
-        <div className="space-y-2 rounded-md border border-border/70 bg-background/60 p-3">
-          <p className="text-sm font-medium">Global search sources</p>
-          <label className="flex items-center justify-between text-sm">
-            <span>Pages</span>
-            <Switch
-              checked={normalized.sources?.pages !== false}
-              onCheckedChange={(checked) =>
-                updateValue(value, onChange, (current) => ({
-                  ...current,
-                  sources: {
-                    ...current.sources,
-                    pages: checked,
-                  },
-                }))
-              }
-            />
-          </label>
-          <label className="flex items-center justify-between text-sm">
-            <span>Entries</span>
-            <Switch
-              checked={normalized.sources?.entries !== false}
-              onCheckedChange={(checked) =>
-                updateValue(value, onChange, (current) => ({
-                  ...current,
-                  sources: {
-                    ...current.sources,
-                    entries: checked,
-                  },
-                }))
-              }
-            />
-          </label>
-          <label className="flex items-center justify-between text-sm">
-            <span>Posts</span>
-            <Switch
-              checked={normalized.sources?.posts === true}
-              onCheckedChange={(checked) =>
-                updateValue(value, onChange, (current) => ({
-                  ...current,
-                  sources: {
-                    ...current.sources,
-                    posts: checked,
-                  },
-                }))
-              }
-            />
-          </label>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          {mode === "global"
+            ? "Global search runs against the setup sources selected in Wizard."
+            : "Route-submit mode forwards the visitor query to the selected public results page."}
+        </p>
       )}
     </EditorSection>
   );
 }
 
-function RuntimeSnapshot({ value }: { value: SearchBoxData }) {
+function RuntimeStatus({ value }: { value: SearchBoxData }) {
   const normalized = normalizeSearchBoxData(value);
-  const snapshot = useMemo(
-    () =>
-      JSON.stringify(
-        {
-          resolved: normalized.resolved,
-        },
-        null,
-        2
-      ),
-    [normalized]
-  );
+  const rejectedTokens = normalized.resolved?.rejectedTokens ?? [];
+  const rejectedSummary =
+    rejectedTokens.length > 0
+      ? `${rejectedTokens.length} token${rejectedTokens.length === 1 ? "" : "s"} ignored`
+      : "No ignored tokens";
 
   return (
-    <EditorSection title="Runtime payload" description="Read-only runtime data from SSR.">
-      <Textarea value={snapshot} readOnly rows={8} className="font-mono text-xs" />
+    <EditorSection
+      id="search-box.advanced.runtime-status"
+      mode="advanced"
+      role="diagnostics"
+      title="Runtime status"
+      description="Read-only visitor-query diagnostics without raw payloads."
+    >
+      <ReadonlyWidgetSummaryRow
+        id="search-box.advanced.runtime-query"
+        label="Last visitor query"
+        path="resolved.query"
+        value={normalized.resolved?.query || "No query captured"}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="search-box.advanced.runtime-rejected"
+        label="Ignored filters"
+        path="resolved.rejectedTokens"
+        value={rejectedSummary}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="search-box.advanced.runtime-error"
+        label="Runtime health"
+        path="resolved.error"
+        value={normalized.resolved?.error || "No runtime errors reported"}
+      />
     </EditorSection>
   );
+}
+
+function describeEndpoint(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === searchBoxDefaults.endpoint) return "Built-in public search service";
+  return "Custom search provider configured by support";
+}
+
+function describeTargetRoute(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === searchBoxDefaults.targetRoute) return "Default search results page";
+  return "Custom results page configured";
+}
+
+function describeQueryParam(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === searchBoxDefaults.queryParam) return "Standard search term routing";
+  return "Custom search term routing configured by support";
 }
 
 function SurfaceEditor({
@@ -365,66 +553,151 @@ function SurfaceEditor({
   const normalized = normalizeSearchBoxData(value);
 
   return (
-    <EditorSection title="Surface" description="Decorative search shell and action color.">
-      <ClearableInputField
+    <EditorSection
+      id="search-box.visual.search-surface"
+      mode="visual"
+      role="visual"
+      title="Search surface"
+      description="Decorative search shell and action color."
+    >
+      <WidgetControlRow
+        id="search-box.visual.frame-background"
         label="Frame background"
-        value={normalized.style?.frameBackground}
-        onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
-        onClear={() => clearStyle(value, onChange, "frameBackground")}
-        placeholder="var(--color-bg)"
-      />
-      <ClearableInputField
+        path="style.frameBackground"
+      >
+        {() => (
+          <SharedColorControl
+            label="Frame background"
+            value={normalized.style?.frameBackground}
+            onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+            onClear={() => clearStyle(value, onChange, "frameBackground")}
+            pickerFallback="#ffffff"
+            showValueInput={false}
+            treatAsThemeDefaultValues={searchBoxThemeDefaultStyleValues.frameBackground}
+            clearedLabel={searchBoxClearedColorState.label}
+            clearedDescription={searchBoxClearedColorState.description}
+            clearResultLabel={searchBoxClearedColorState.clearResultLabel}
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="search-box.visual.frame-border"
         label="Frame border"
-        value={normalized.style?.frameBorderColor}
-        onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
-        onClear={() => clearStyle(value, onChange, "frameBorderColor")}
-        placeholder="var(--color-border)"
-      />
-      <ClearableInputField
+        path="style.frameBorderColor"
+      >
+        {() => (
+          <SharedColorControl
+            label="Frame border"
+            value={normalized.style?.frameBorderColor}
+            onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+            onClear={() => clearStyle(value, onChange, "frameBorderColor")}
+            pickerFallback="#d4d4d8"
+            showValueInput={false}
+            treatAsThemeDefaultValues={searchBoxThemeDefaultStyleValues.frameBorderColor}
+            clearedLabel={searchBoxClearedColorState.label}
+            clearedDescription={searchBoxClearedColorState.description}
+            clearResultLabel={searchBoxClearedColorState.clearResultLabel}
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="search-box.visual.action-background"
         label="Action background"
-        value={normalized.style?.actionBackground}
-        onChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
-        onClear={() => clearStyle(value, onChange, "actionBackground")}
-        placeholder="var(--color-primary)"
-      />
+        path="style.actionBackground"
+      >
+        {() => (
+          <SharedColorControl
+            label="Action background"
+            value={normalized.style?.actionBackground}
+            onChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
+            onClear={() => clearStyle(value, onChange, "actionBackground")}
+            pickerFallback="#2563eb"
+            showValueInput={false}
+            treatAsThemeDefaultValues={searchBoxThemeDefaultStyleValues.actionBackground}
+            clearedLabel={searchBoxClearedColorState.label}
+            clearedDescription={searchBoxClearedColorState.description}
+            clearResultLabel={searchBoxClearedColorState.clearResultLabel}
+          />
+        )}
+      </WidgetControlRow>
     </EditorSection>
   );
 }
 
 export function SearchBoxWizardEditor({ value, onChange }: WidgetEditorProps<SearchBoxData>) {
-  return (
-    <div className="space-y-3">
-      <SearchMode value={value} onChange={onChange} />
-      <CopyAndBehavior value={value} onChange={onChange} />
-      <SurfaceEditor value={value} onChange={onChange} />
-    </div>
-  );
+  return <SearchMode value={value} onChange={onChange} />;
 }
 
 export function SearchBoxVisualEditor({ value, onChange }: WidgetEditorProps<SearchBoxData>) {
   return (
-    <div className="space-y-3">
-      <SearchMode value={value} onChange={onChange} />
-      <CopyAndBehavior value={value} onChange={onChange} />
+    <>
+      <SearchCopyEditor value={value} onChange={onChange} />
+      <SearchInteractionEditor value={value} onChange={onChange} />
       <SurfaceEditor value={value} onChange={onChange} />
-    </div>
+    </>
   );
 }
 
-export function SearchBoxAdvancedEditor({ value, onChange }: WidgetEditorProps<SearchBoxData>) {
+export function SearchBoxAdvancedEditor({ value }: WidgetEditorProps<SearchBoxData>) {
+  const normalized = normalizeSearchBoxData(value);
+
   return (
-    <div className="space-y-3">
-      <CopyAndBehavior value={value} onChange={onChange} />
-      <RuntimeSnapshot value={value} />
+    <>
       <EditorSection
-        title="Contract"
-        description="Listing mode writes and reads lq.<queryId>.__q from page URL."
+        id="search-box.advanced.runtime-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime diagnostics"
+        description="Read-only source and routing state."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="search-box.advanced.mode"
+          label="Mode"
+          path="mode"
+          value={normalized.mode}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="search-box.advanced.listing-query"
+          label="Listing query"
+          path="listingQueryId"
+          value={normalized.listingQueryId || "Not selected"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="search-box.advanced.endpoint"
+          label="Search provider"
+          path="endpoint"
+          value={describeEndpoint(normalized.endpoint)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="search-box.advanced.route-target"
+          label="Results page"
+          path="targetRoute"
+          value={describeTargetRoute(normalized.targetRoute)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="search-box.advanced.query-param"
+          label="Search term routing"
+          path="queryParam"
+          value={describeQueryParam(normalized.queryParam)}
+        />
+      </EditorSection>
+      <RuntimeStatus value={value} />
+      <EditorSection
+        id="search-box.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Wizard chooses the search source once. Visual edits visitor copy and swatches. Advanced stays read-only for support."
       >
         <p className="text-xs text-muted-foreground">
-          Defaults come from <code>searchBoxDefaults</code>.
+          Built-in endpoints, query keys, and runtime state are support-owned implementation
+          details.
         </p>
       </EditorSection>
-    </div>
+    </>
   );
 }
 

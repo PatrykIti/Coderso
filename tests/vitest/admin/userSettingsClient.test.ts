@@ -75,20 +75,14 @@ test("setUserSetting updates cached settings", async () => {
     if (url.endsWith("/user-settings") && init?.method === "GET") {
       return jsonResponse(settings);
     }
-    if (
-      url.includes("/user-settings/customScreens.openAfterCreate") &&
-      init?.method === "PATCH"
-    ) {
+    if (url.includes("/user-settings/customScreens.openAfterCreate") && init?.method === "PATCH") {
       settings["customScreens.openAfterCreate"] = false;
       return jsonResponse({
         key: "customScreens.openAfterCreate",
         value: false,
       });
     }
-    if (
-      url.includes("/user-settings/forms.openAfterCreate") &&
-      init?.method === "PATCH"
-    ) {
+    if (url.includes("/user-settings/forms.openAfterCreate") && init?.method === "PATCH") {
       settings["forms.openAfterCreate"] = false;
       return jsonResponse({
         key: "forms.openAfterCreate",
@@ -141,10 +135,7 @@ test("setUserSetting handles post editor preference payloads", async () => {
     if (url.endsWith("/user-settings") && init?.method === "GET") {
       return jsonResponse(settings);
     }
-    if (
-      url.includes("/user-settings/posts.editor.preferences") &&
-      init?.method === "PATCH"
-    ) {
+    if (url.includes("/user-settings/posts.editor.preferences") && init?.method === "PATCH") {
       settings["posts.editor.preferences"] = nextPreferences;
       return jsonResponse({
         key: "posts.editor.preferences",
@@ -162,6 +153,53 @@ test("setUserSetting handles post editor preference payloads", async () => {
     await setUserSetting("posts.editor.preferences", nextPreferences);
     const next = await getUserSetting("posts.editor.preferences");
     expect(next.value).toEqual(nextPreferences);
+  } finally {
+    globalThis.fetch = originalFetch;
+    invalidateUserSettingsCache();
+  }
+});
+
+test("setUserSetting handles media-center hero preset payloads", async () => {
+  const originalFetch = globalThis.fetch;
+  const settings = makeSettings();
+  const nextPresets = [
+    {
+      name: "Showcase Hero",
+      variant: "media-center" as const,
+      data: {
+        headline: "Show the product in context",
+        layout: { height: "screen", bleed: "contained" },
+      },
+      updatedAt: "2026-05-19T08:00:00.000Z",
+    },
+  ];
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (url.endsWith("/user-settings") && init?.method === "GET") {
+      return jsonResponse(settings);
+    }
+    if (url.includes("/user-settings/widgets.hero.presets") && init?.method === "PATCH") {
+      settings["widgets.hero.presets"] = nextPresets;
+      return jsonResponse({
+        key: "widgets.hero.presets",
+        value: nextPresets,
+      });
+    }
+    return jsonResponse({}, 404);
+  };
+
+  try {
+    invalidateUserSettingsCache();
+    resetCsrfToken();
+
+    await getUserSettings();
+    await setUserSetting("widgets.hero.presets", nextPresets);
+    const next = await getUserSetting("widgets.hero.presets");
+    expect(next.value).toEqual(nextPresets);
   } finally {
     globalThis.fetch = originalFetch;
     invalidateUserSettingsCache();

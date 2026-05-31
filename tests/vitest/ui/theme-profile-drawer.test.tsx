@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -66,7 +66,10 @@ vi.mock("@/components/ui/sheet", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-sheet-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -141,14 +144,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -158,10 +161,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -169,10 +169,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -184,7 +181,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
   return button;
@@ -201,9 +198,7 @@ afterEach(() => {
 });
 
 test("ThemeProfileDrawer create mode supports template selection, palette copy, save, and cancel", async () => {
-  const { ThemeProfileDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeProfileDrawer"
-  );
+  const { ThemeProfileDrawer } = await import("../../../core/admin/ui/themes/ThemeProfileDrawer");
 
   const clipboardWriteText = vi.fn(async () => undefined);
   Object.defineProperty(navigator, "clipboard", {
@@ -303,12 +298,7 @@ test("ThemeProfileDrawer create mode supports template selection, palette copy, 
   ];
 
   const view = mount(
-    <ThemeProfileDrawer
-      open
-      onOpenChange={onOpenChange}
-      templates={templates}
-      onSave={onSave}
-    />
+    <ThemeProfileDrawer open onOpenChange={onOpenChange} templates={templates} onSave={onSave} />
   );
 
   try {
@@ -318,11 +308,14 @@ test("ThemeProfileDrawer create mode supports template selection, palette copy, 
     const createButton = clickByText(view.container, "Create Profile");
     expect((createButton as HTMLButtonElement).disabled).toBe(true);
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Neo Minimalist"), "Operations Dark");
-      setInputValue(findInputByPlaceholder(view.container, "Short summary"), "Operations dashboard");
+      setInputValue(
+        findInputByPlaceholder(view.container, "Short summary"),
+        "Operations dashboard"
+      );
     });
-    act(() => {
+    React.act(() => {
       const select = view.container.querySelector("select");
       setSelectValue(select ?? undefined, "template-2");
     });
@@ -332,7 +325,7 @@ test("ThemeProfileDrawer create mode supports template selection, palette copy, 
     const swatchButton = Array.from(view.container.querySelectorAll("button")).find(
       (candidate) => candidate.getAttribute("title") === "#fafafa"
     );
-    act(() => {
+    React.act(() => {
       swatchButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(clipboardWriteText).toHaveBeenCalledWith("#fafafa");
@@ -352,9 +345,7 @@ test("ThemeProfileDrawer create mode supports template selection, palette copy, 
 });
 
 test("ThemeProfileDrawer edit mode disables save while saving and handles no-template state", async () => {
-  const { ThemeProfileDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeProfileDrawer"
-  );
+  const { ThemeProfileDrawer } = await import("../../../core/admin/ui/themes/ThemeProfileDrawer");
 
   const onOpenChange = vi.fn();
   const profile = {
@@ -367,19 +358,13 @@ test("ThemeProfileDrawer edit mode disables save while saving and handles no-tem
   };
 
   const emptyView = mount(
-    <ThemeProfileDrawer
-      open
-      onOpenChange={onOpenChange}
-      templates={[]}
-      isSaving
-      onSave={vi.fn()}
-    />
+    <ThemeProfileDrawer open onOpenChange={onOpenChange} templates={[]} isSaving onSave={vi.fn()} />
   );
 
   try {
     expect(emptyView.container.textContent).toContain("No themes available");
-    const saveButton = Array.from(emptyView.container.querySelectorAll("button")).find((candidate) =>
-      candidate.textContent?.includes("Saving...")
+    const saveButton = Array.from(emptyView.container.querySelectorAll("button")).find(
+      (candidate) => candidate.textContent?.includes("Saving...")
     ) as HTMLButtonElement | null | undefined;
     expect(saveButton?.disabled).toBe(true);
   } finally {

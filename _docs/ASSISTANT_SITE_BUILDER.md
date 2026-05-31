@@ -70,6 +70,46 @@ Current implemented guide blueprint:
   - listing template
   - public catalog page
   - public detail routes
+- capability registry/composer foundation:
+  - current packs and adjunct/gated modules now register through a strict capability manifest and registry layer
+  - mixed setup prompts can now be analyzed into primary + adjunct capability candidates inside the foundation layer
+  - composed graph/assembler helpers still reuse the current strict typed action families; no parallel blueprint executor was introduced
+  - supported mixed-capability and primary-plus-gated setup prompts now route through the composed planner path; single-pack setup/refinement still uses the existing legacy pack builders outside this bounded mixed-setup cutover
+  - compatible `content-type.upsert` fragments now merge server-side through `blueprintSchemaMerger.ts` plus the existing content schema validator, so additive field/enum extensions stay in one strict action instead of surfacing as duplicate-resource drift
+  - compatible listing facet/card fragments now merge through schema-backed listing owners, and the assembler widens `listing-query.upsert.fields` automatically so merged filters/card bindings keep the runtime projection fields they need
+  - assistant-facing page section aliases and merge slots now resolve through a deterministic library over the current page-builder widget registry and alias-specific `modulePackMatrix` helper mappings; unsupported aliases stay gated instead of inventing a second section catalog
+  - page section seed data still normalizes through the widget owner, but raw media URLs stay gated until the assistant has trusted media-library ids rather than arbitrary external/upload payloads
+  - blueprint graph conflicts now include media missing/ambiguous/upload/delete
+    gates plus manifest permission gaps, so media and privileged boundaries
+    return `needs_input`/`gated` before executable action assembly instead of
+    silently becoming partial plans
+  - canonical collection pages now compose listing/filter/form sections through `blueprintPageSectionComposer.ts`, and `page.upsert` persists `PageData.settings.collectionLink` through the existing page owner seam so workspace/no-duplicate slices resolve canonical links from owner metadata instead of route heuristics; assistant transport locators resolve back into those persisted ids before page writes land
+  - final TASK-190 closure is documented through `_docs/BLUEPRINT_COMPOSER.md`, the fixture/live matrices, redacted diagnostics helpers, task board, and changelog; future pack enrichment must extend those owner seams instead of adding a parallel composer path
+  - catalog admin review screens now compose their `screen-*` custom-screen
+    blocks through `blueprintAdminSurfaceComposer.ts`; the helper merges admin
+    groups deterministically, validates referenced content schema fields,
+    rejects secret-like field references, and keeps output on the existing
+    `custom-screen.upsert` `blocks` / `bindings` transport shape
+  - catalog admin bindings now compose through `blueprintBindingComposer.ts`,
+    which keeps the existing `widgetId + propPath + field + mode` contract while
+    rejecting unsafe or secret-like paths; generated canonical screens persist
+    `collectionRole` / `compositionKey` through the current custom-screen schema,
+    service, admin cache, and assistant action executor seams
+  - catalog capabilities can already describe `detail-page` intent in metadata, and the current `TASK-190` slices now cover persisted detail-page documents, published/runtime detail rendering, shared preview handling, the executable `detail-page.upsert` assistant action, `setting.content-route.upsert` `detailPageId` route-linking, the internal `/admin/api/detail-pages*` CRUD/lifecycle/revision route family, admin client/cache parity, local deterministic fixture/runtime acceptance, collection-workspace route/read/cache/UI shell, the manual detail-template editor, assistant follow-up context for workspace/detail-page surfaces, catalog-backed no-duplicate reuse, and generic `detail-page` resource vocabulary/policy/provider packaging through the current owner seams
+  - generic CMS operation drafts may now inspect/find `detail-page` resources from server-derived catalog summaries or active detail-template context; free-text detail-page names are not trusted targets, and generic `detail-page` mutations remain gated so execution stays on the local `detail-page.upsert` assembler/executor path
+  - `blueprintExistingResourceMatcher.ts` consumes the server-derived resource catalog before executor handoff: detail pages reuse stable/canonical linked ids, pages reuse persisted `PageData.settings.collectionLink`, custom screens use `collectionRole` / `compositionKey`, listing query name collisions block as `needs_input`, and media reuse stays exact-id only. During execute only, a single exact-name custom screen with null `collectionRole` and null `compositionKey` may be upgraded as a legacy compatibility fallback; same-name screens with other metadata still block as dependency conflicts.
+  - `blueprintCompositionMetadata.ts` attaches strict
+    `metadata.blueprintComposition` diagnostics to composed ready and
+    needs-input plans: primary/adjunct/gated capability ids, merged resource
+    ownership, existing-resource reuse matches, resolved/unresolved conflicts,
+    and redacted deterministic candidate scores are available to review UI/tests
+    without exposing raw provider output
+  - `blueprintCompositionDiagnostics.ts` provides an internal/test-only support
+    payload for prompt hashes, selected/gated capability ids, action assembly
+    type/count traces, conflict snapshots, no-duplicate matcher decisions, and
+    redacted provider-draft shape without raw prompt/provider snippets
+  - provider prompt packaging now carries bounded capability summaries for setup/composer evaluation, while generic provider planning still uses the current `cms_operation_draft` response contract
+  - candidate shadow diagnostics can be exposed only through a local/test env gate; they remain metadata-only even though the bounded mixed-setup cutover is now live
 
 Current capability limits:
 - `docs-only` answers are read-only and never return executable action plans.
@@ -117,6 +157,21 @@ Core domain service:
 - generic guide runtime:
   - `core/services/assistant/actionPlannerService.ts`
   - `core/services/assistant/actionExecutorService.ts`
+  - `core/services/assistant/blueprints/blueprintCapabilitySchema.ts`
+  - `core/services/assistant/blueprints/blueprintCapabilityRegistry.ts`
+  - `core/services/assistant/blueprints/blueprintCandidateResolver.ts`
+  - `core/services/assistant/blueprints/blueprintCompositionGraph.ts`
+  - `core/services/assistant/blueprints/blueprintFacetMerger.ts`
+  - `core/services/assistant/blueprints/blueprintCardConfigMerger.ts`
+  - `core/services/assistant/blueprints/blueprintPageSectionTypes.ts`
+  - `core/services/assistant/blueprints/blueprintPageSectionLibrary.ts`
+  - `core/services/assistant/blueprints/blueprintPageSectionComposer.ts`
+  - `core/services/assistant/blueprints/blueprintActionAssembler.ts`
+  - `core/services/assistant/blueprints/blueprintCompositionMetadata.ts`
+  - `core/services/assistant/blueprints/blueprintCompositionDiagnostics.ts`
+  - `core/services/assistant/blueprints/blueprintProviderContext.ts`
+  - `core/services/assistant/blueprints/blueprintCompositionDraftSchema.ts`
+  - `core/services/assistant/blueprints/blueprintComposerShadow.ts`
 
 Public functions:
 - `previewGuidedSiteBuilderPlan(input)`
@@ -161,7 +216,15 @@ RBAC:
 - additional site-kit permissions:
   - `solution-kits:read` when planning or dry-running `site-kit.*` actions
   - `solution-kits:write` when executing `site-kit.*` actions
-- site-kit actions require `LLM Guide` availability (`llmAvailable=true`) and must not run as docs-only fallback
+- site-kit actions require `LLM Guide` availability (`llmAvailable=true`) and
+  must not run as docs-only fallback
+- catalog-backed planning through `includeResourceCatalog=true` also requires
+  `LLM Guide` availability and fails closed instead of degrading into an
+  under-informed local mutation path
+- active `detail-page` follow-up context requires `content:read` plus
+  `widgets:read`; workspace follow-up packages are server-hydrated from the
+  collection-workspace read model and browser payloads may send only the
+  identity-only `collectionWorkspaceHint`
 
 Security:
 - CSRF required on all POST endpoints

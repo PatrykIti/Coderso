@@ -9,17 +9,11 @@ const makeHit = (
   }
 ): DocsSearchHit => ({
   chunk: {
-    id: overrides.chunk?.id ?? "docs/coderso/widget-template-editor.md:10-20",
-    docPath:
-      overrides.chunk?.docPath ?? "docs/coderso/widget-template-editor.md",
-    docTitle:
-      overrides.chunk?.docTitle ?? "Widget Template Editor",
+    id: overrides.chunk?.id ?? "docs/guide/coderso/widget-template-editor.md:10-20",
+    docPath: overrides.chunk?.docPath ?? "docs/guide/coderso/widget-template-editor.md",
+    docTitle: overrides.chunk?.docTitle ?? "Widget Template Editor",
     productArea: overrides.chunk?.productArea ?? "coderso-widgets",
-    headingPath:
-      overrides.chunk?.headingPath ?? [
-        "Widget Template Editor",
-        "Step By Step",
-      ],
+    headingPath: overrides.chunk?.headingPath ?? ["Widget Template Editor", "Step By Step"],
     heading: overrides.chunk?.heading ?? "Step By Step",
     lineStart: overrides.chunk?.lineStart ?? 10,
     lineEnd: overrides.chunk?.lineEnd ?? 20,
@@ -29,22 +23,20 @@ const makeHit = (
     normalizedText:
       overrides.chunk?.normalizedText ??
       "open the hero template and use the visual tab to edit colors spacing and background settings",
-    tokenCounts:
-      overrides.chunk?.tokenCounts ?? {
-        hero: 1,
-        template: 1,
-        visual: 1,
-        colors: 1,
-        background: 1,
-        spacing: 1,
-      },
+    tokenCounts: overrides.chunk?.tokenCounts ?? {
+      hero: 1,
+      template: 1,
+      visual: 1,
+      colors: 1,
+      background: 1,
+      spacing: 1,
+    },
     tokenCount: overrides.chunk?.tokenCount ?? 8,
   },
   score: overrides.score ?? 2.8,
   matchedTerms: overrides.matchedTerms ?? ["hero", "visual", "colors"],
   snippet:
-    overrides.snippet ??
-    "…use the Visual tab to edit colors, spacing, and background settings.…",
+    overrides.snippet ?? "…use the Visual tab to edit colors, spacing, and background settings.…",
   rankingSignals: overrides.rankingSignals ?? {
     textScore: 1.9,
     domainScore: 1.8,
@@ -103,7 +95,7 @@ test("composeDocsAnswer keeps widget-specific location step when step-by-step se
         score: 2.9,
         chunk: {
           id: "widgets-long-step-by-step",
-          docPath: "docs/coderso/widget-template-editor.md",
+          docPath: "docs/guide/coderso/widget-template-editor.md",
           docTitle: "Widget Template Editor",
           productArea: "coderso-widgets",
           headingPath: ["Widget Template Editor", "Step By Step"],
@@ -169,7 +161,9 @@ test("composeDocsAnswer uses what-is-it and workflow support for capability ques
   expect(answer.template).toBe("how_to_answer");
   expect(answer.answer).toContain("Most relevant surface:");
   expect(answer.answer).not.toContain("Most relevant surface:\nWhat Is It");
-  expect(answer.answer).toContain("Widgets and Template Editor are the reusable presentation surfaces");
+  expect(answer.answer).toContain(
+    "Widgets and Template Editor are the reusable presentation surfaces"
+  );
   expect(answer.answer).toContain("Typical workflow:");
   expect(answer.answer).not.toContain("Confusing the widget library");
 });
@@ -181,7 +175,7 @@ test("composeDocsAnswer prefers complete sentences over truncated half-sentences
       makeHit({
         chunk: {
           id: "engine-what-is-it",
-          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docPath: "docs/guide/coderso/content-type-editor-and-schema-builder.md",
           headingPath: ["Content Type Editor and Schema Builder", "What Is It"],
           heading: "What Is It",
           content:
@@ -205,7 +199,7 @@ test("composeDocsAnswer prefers step-by-step guidance for procedural engine ques
         score: 2.9,
         chunk: {
           id: "engine-step-by-step",
-          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docPath: "docs/guide/coderso/content-type-editor-and-schema-builder.md",
           docTitle: "Content Type Editor and Schema Builder",
           productArea: "coderso-engine",
           headingPath: ["Content Type Editor and Schema Builder", "Step By Step"],
@@ -220,7 +214,7 @@ test("composeDocsAnswer prefers step-by-step guidance for procedural engine ques
         score: 3.1,
         chunk: {
           id: "engine-when-to-use",
-          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docPath: "docs/guide/coderso/content-type-editor-and-schema-builder.md",
           docTitle: "Content Type Editor and Schema Builder",
           productArea: "coderso-engine",
           headingPath: ["Content Type Editor and Schema Builder", "When To Use"],
@@ -235,7 +229,7 @@ test("composeDocsAnswer prefers step-by-step guidance for procedural engine ques
         score: 2.2,
         chunk: {
           id: "engine-what-is-it",
-          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docPath: "docs/guide/coderso/content-type-editor-and-schema-builder.md",
           docTitle: "Content Type Editor and Schema Builder",
           productArea: "coderso-engine",
           headingPath: ["Content Type Editor and Schema Builder", "What Is It"],
@@ -266,7 +260,7 @@ test("composeDocsAnswer respects explicit basic detail level", () => {
         score: 3,
         chunk: {
           id: "engine-instruction",
-          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docPath: "docs/guide/coderso/content-type-editor-and-schema-builder.md",
           docTitle: "Content Type Editor and Schema Builder",
           productArea: "coderso-engine",
           headingPath: ["Content Type Editor and Schema Builder", "Instruction"],
@@ -281,7 +275,7 @@ test("composeDocsAnswer respects explicit basic detail level", () => {
         score: 2.2,
         chunk: {
           id: "engine-basic",
-          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docPath: "docs/guide/coderso/content-type-editor-and-schema-builder.md",
           docTitle: "Content Type Editor and Schema Builder",
           productArea: "coderso-engine",
           headingPath: ["Content Type Editor and Schema Builder", "Basic"],
@@ -307,13 +301,12 @@ test("composeDocsAnswer builds troubleshooting block and follow-up options", () 
         score: 2.8,
         chunk: {
           id: "entries-instruction",
-          docPath: "docs/coderso/entry-editor-and-metadata.md",
+          docPath: "docs/guide/coderso/entry-editor-and-metadata.md",
           docTitle: "Entry Editor and Metadata Workflow",
           productArea: "coderso-entries",
           headingPath: ["Entry Editor and Metadata Workflow", "Instruction"],
           heading: "Instruction",
-          content:
-            "1. Open Entries. 2. Edit the record. 3. Save and verify validation.",
+          content: "1. Open Entries. 2. Edit the record. 3. Save and verify validation.",
           normalizedText: "open entries edit the record save and verify validation",
         },
       }),
@@ -321,7 +314,7 @@ test("composeDocsAnswer builds troubleshooting block and follow-up options", () 
         score: 2.4,
         chunk: {
           id: "entries-troubleshooting",
-          docPath: "docs/coderso/entry-editor-and-metadata.md",
+          docPath: "docs/guide/coderso/entry-editor-and-metadata.md",
           docTitle: "Entry Editor and Metadata Workflow",
           productArea: "coderso-entries",
           headingPath: ["Entry Editor and Metadata Workflow", "Troubleshooting"],
@@ -338,9 +331,7 @@ test("composeDocsAnswer builds troubleshooting block and follow-up options", () 
   expect(answer.guideMode).toBe("troubleshooting");
   expect(answer.answer).toContain("Troubleshooting:");
   expect(answer.answer).toContain("If save fails");
-  expect(answer.followUpOptions.some((option) => option.id === "followup-back-default")).toBe(
-    true
-  );
+  expect(answer.followUpOptions.some((option) => option.id === "followup-back-default")).toBe(true);
 });
 
 test("composeDocsAnswer uses dedicated security section as primary follow-up without fallback duplication", () => {
@@ -353,7 +344,7 @@ test("composeDocsAnswer uses dedicated security section as primary follow-up wit
         score: 2.9,
         chunk: {
           id: "widget-template-security",
-          docPath: "docs/coderso/widget-template-editor.md",
+          docPath: "docs/guide/coderso/widget-template-editor.md",
           docTitle: "Widget Template Editor",
           productArea: "coderso-widgets",
           headingPath: ["Widget Template Editor", "Security"],
@@ -376,7 +367,7 @@ test("composeDocsAnswer uses dedicated security section as primary follow-up wit
         score: 2.4,
         chunk: {
           id: "widget-template-instruction",
-          docPath: "docs/coderso/widget-template-editor.md",
+          docPath: "docs/guide/coderso/widget-template-editor.md",
           docTitle: "Widget Template Editor",
           productArea: "coderso-widgets",
           headingPath: ["Widget Template Editor", "Instruction"],
@@ -405,7 +396,7 @@ test("composeDocsAnswer returns clarifying question when top docs stay ambiguous
         score: 2.1,
         chunk: {
           id: "themes",
-          docPath: "docs/screens/themes.md",
+          docPath: "docs/guide/screens/themes.md",
           docTitle: "Themes",
           productArea: "themes",
           headingPath: ["Themes", "Step By Step"],
@@ -426,7 +417,7 @@ test("composeDocsAnswer returns clarifying question when top docs stay ambiguous
         score: 1.95,
         chunk: {
           id: "widgets",
-          docPath: "docs/coderso/widget-template-editor.md",
+          docPath: "docs/guide/coderso/widget-template-editor.md",
           headingPath: ["Widget Template Editor", "Step By Step"],
           heading: "Step By Step",
           content: "Edit template visual settings from Widgets.",

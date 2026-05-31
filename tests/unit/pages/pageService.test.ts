@@ -74,13 +74,56 @@ testIfDb("create/update/publish/unpublish page", async () => {
           editor: { mode: "visual", wizardCompleted: true },
         },
       ],
+      settings: {
+        collectionLink: {
+          contentTypeId: "content-type-1",
+          pageRole: "canonical-list-page",
+          listingQueryId: "query-1",
+          listingTemplateId: "template-1",
+        },
+      },
     },
   });
 
   createdPageId = page.id;
+  expect(
+    (page.currentData as { settings?: { collectionLink?: Record<string, unknown> } }).settings
+      ?.collectionLink
+  ).toEqual({
+    contentTypeId: "content-type-1",
+    pageRole: "canonical-list-page",
+    listingQueryId: "query-1",
+    listingTemplateId: "template-1",
+  });
 
-  const updated = await updatePage(page.id, { title: "Home Updated" });
+  const updated = await updatePage(page.id, {
+    title: "Home Updated",
+    data: {
+      schemaVersion: 1,
+      blocks: [],
+      settings: {
+        collectionLink: {
+          contentTypeId: "content-type-1",
+          pageRole: "canonical-list-page",
+          listingQueryId: "query-2",
+          listingTemplateId: "template-2",
+        },
+      },
+    },
+  });
   expect(updated?.title).toBe("Home Updated");
+  expect(
+    (
+      updated?.currentData as {
+        settings?: { collectionLink?: Record<string, unknown> };
+      }
+    )?.settings?.collectionLink
+  ).toEqual({
+    contentTypeId: "content-type-1",
+    pageRole: "canonical-list-page",
+    listingQueryId: "query-2",
+    listingTemplateId: "template-2",
+  });
 
   const published = await publishPage(page.id, createdUserId, {
     schemaVersion: 1,
@@ -91,12 +134,31 @@ testIfDb("create/update/publish/unpublish page", async () => {
         editor: { mode: "visual", wizardCompleted: true },
       },
     ],
+    settings: {
+      collectionLink: {
+        contentTypeId: "content-type-1",
+        pageRole: "canonical-list-page",
+        listingQueryId: "query-2",
+        listingTemplateId: "template-2",
+      },
+    },
   });
   expect(published?.status).toBe("published");
   expect(
-    (published?.publishedData as { blocks?: Array<Record<string, unknown>> })
-      ?.blocks?.[0]?.editor
+    (published?.publishedData as { blocks?: Array<Record<string, unknown>> })?.blocks?.[0]?.editor
   ).toBeUndefined();
+  expect(
+    (
+      published?.publishedData as {
+        settings?: { collectionLink?: Record<string, unknown> };
+      }
+    )?.settings?.collectionLink
+  ).toEqual({
+    contentTypeId: "content-type-1",
+    pageRole: "canonical-list-page",
+    listingQueryId: "query-2",
+    listingTemplateId: "template-2",
+  });
 
   const revisions = await listRevisions(page.id);
   expect(revisions.length).toBe(1);

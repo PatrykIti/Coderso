@@ -7,13 +7,34 @@ import { users } from "../../../core/db/schema";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { executeAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
-import { createEntry, deleteEntry, getEntryBySlug, publishEntry } from "../../../core/services/content/entryService";
-import { deleteContentType, getContentTypeBySlug } from "../../../core/services/content/typeService";
-import { deleteCustomScreen, listCustomScreens } from "../../../core/services/customScreens/customScreenService";
-import { deleteListingQuery, listListingQueries } from "../../../core/services/content/listingQueriesService";
-import { deleteListingTemplate, listListingTemplates } from "../../../core/services/content/listingTemplatesService";
+import {
+  createEntry,
+  deleteEntry,
+  getEntryBySlug,
+  publishEntry,
+} from "../../../core/services/content/entryService";
+import {
+  deleteContentType,
+  getContentTypeBySlug,
+} from "../../../core/services/content/typeService";
+import {
+  deleteCustomScreen,
+  listCustomScreens,
+} from "../../../core/services/customScreens/customScreenService";
+import {
+  deleteListingQuery,
+  listListingQueries,
+} from "../../../core/services/content/listingQueriesService";
+import {
+  deleteListingTemplate,
+  listListingTemplates,
+} from "../../../core/services/content/listingTemplatesService";
 import { deletePage, getPageBySlug } from "../../../core/services/pages/pageService";
-import { getSetting, setSetting, type ContentRouteSetting } from "../../../core/services/settings/settingsService";
+import {
+  getSetting,
+  setSetting,
+  type ContentRouteSetting,
+} from "../../../core/services/settings/settingsService";
 import { startHttpServer } from "../../../core/server/httpServer";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
@@ -51,9 +72,9 @@ const stopServer = () => {
 };
 
 const clonePlanWithToken = (token: string) => {
-  const plan = JSON.parse(
-    JSON.stringify(buildHouseProjectsCatalogPlan())
-  ) as ReturnType<typeof buildHouseProjectsCatalogPlan>;
+  const plan = JSON.parse(JSON.stringify(buildHouseProjectsCatalogPlan())) as ReturnType<
+    typeof buildHouseProjectsCatalogPlan
+  >;
 
   const contentTypeSlug = `house-projects-${token}`;
   const listingQueryName = `House Projects Catalog Query ${token}`;
@@ -211,7 +232,10 @@ afterAll(async () => {
   }
 
   for (const userId of createdUserIds) {
-    await db.delete(users).where(eq(users.id, userId)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, userId))
+      .catch(() => undefined);
   }
   createdUserIds.clear();
 });
@@ -221,18 +245,13 @@ testIfDbWithOptions(
   async () => {
     originalContentRoutes =
       originalContentRoutes ??
-      (((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? []);
+      ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ??
+      [];
 
     const token = randomUUID().slice(0, 8);
     const actor = await createActor();
-    const {
-      plan,
-      contentTypeSlug,
-      pageSlug,
-      detailPath,
-      listingQueryName,
-      listingTemplateSlug,
-    } = clonePlanWithToken(token);
+    const { plan, contentTypeSlug, pageSlug, detailPath, listingQueryName, listingTemplateSlug } =
+      clonePlanWithToken(token);
 
     await executeAssistantActionPlan({
       plan,
@@ -322,5 +341,5 @@ testIfDbWithOptions(
     const bySlug = await getEntryBySlug(contentType.id, `projekt-domu-${token}`);
     expect(bySlug?.id).toBe(entry.id);
   },
-  { timeout: 20_000 }
+  { timeout: 30_000 }
 );

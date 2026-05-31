@@ -45,22 +45,132 @@ export type WidgetSlotDefinition = {
   allowedTypes?: string[];
 };
 
+export type WidgetRenderMode = "public" | "editor-preview" | "admin-preview";
+
+export type NestedRenderSurface = "default-block" | "row-flow-item";
+
+export type WidgetPreviewState = {
+  status: "idle" | "loading" | "ready" | "error";
+  dataPatch?: Record<string, unknown>;
+  message?: string;
+  requestKey?: string;
+};
+
+export type WidgetRuntimeScriptRegistry = {
+  registerScript: (id: string, source: string) => void;
+  renderScripts: () => ReactNode[];
+};
+
+export type WidgetRenderContext = {
+  mode: WidgetRenderMode;
+  previewDevice?: DeviceTarget;
+  previewState?: WidgetPreviewState | null;
+  runtimeScripts?: WidgetRuntimeScriptRegistry;
+  nestedSurface?: NestedRenderSurface;
+};
+
+export type WidgetEditorSlotTarget = {
+  definitionId: string;
+  slotId: string;
+  label: string;
+  kind: "fixed" | "repeatable";
+  instanceId?: string;
+};
+
+export type WidgetEditorBookingFlowSummary = {
+  blockId: string;
+  flowId: string;
+  label: string;
+};
+
+export type WidgetEditorBookingFlows = {
+  calendars: WidgetEditorBookingFlowSummary[];
+};
+
+export type WidgetBlockPatch = Partial<WidgetBlock> | ((current: WidgetBlock) => WidgetBlock);
+
+export type WidgetBlockPatcher = (patch: WidgetBlockPatch) => void;
+
 export type WidgetEditorProps<T> = {
   value: T;
   onChange: (next: T) => void;
   variant: string;
   onVariantChange?: (next: string) => void;
+  onBlockPatch?: WidgetBlockPatcher;
   context?: WidgetEditorContext;
 };
 
 export type WidgetEditorContext = {
   surface: WidgetSurface;
+  blockId?: string;
+  editorMode?: EditorMode;
+  previewState?: WidgetPreviewState | null;
+  setPreviewState?: (state: WidgetPreviewState | null) => void;
   jumpToBindingPropPath?: (propPath: string) => void;
   getBindingState?: (propPath: string) => "literal" | "bound" | "mixed";
+  slotTargets?: WidgetEditorSlotTarget[];
+  bookingFlows?: WidgetEditorBookingFlows;
+  widgetPreviewData?: Record<string, unknown>;
+};
+
+export type WidgetSlotControlSection = {
+  id: string;
+  title: string;
+  description?: string;
+  mode?: "visual" | "advanced";
+};
+
+export type WidgetRepeatableSlotSyncAdapter = {
+  definitionId: string;
+  buildDefaultItem?: (instanceId: string, nextIndex: number) => unknown;
+  appendItem?: (data: Record<string, unknown>, nextItem: unknown) => Record<string, unknown>;
+  removeItemByInstanceId?: (
+    data: Record<string, unknown>,
+    instanceId: string
+  ) => Record<string, unknown>;
+  reorderItemsByInstanceIds?: (
+    data: Record<string, unknown>,
+    orderedInstanceIds: string[]
+  ) => Record<string, unknown>;
 };
 
 export type WidgetEditorCapabilities = {
   visualOwnsVariantSelection?: boolean;
+  slotControlSection?: WidgetSlotControlSection;
+  supportsPreviewState?: boolean;
+};
+
+export type WidgetEditorMode = EditorMode;
+
+export type WidgetEditorSectionRole =
+  | "setup"
+  | "source"
+  | "content"
+  | "visual"
+  | "layout"
+  | "technical"
+  | "diagnostics"
+  | "summary";
+
+export type WidgetEditorDuplicateWritablePathAllowance = {
+  path: string;
+  reason: string;
+  expiresWithTask: string;
+};
+
+export type WidgetEditorSectionContract = {
+  mode: WidgetEditorMode;
+  id: string;
+  title: string;
+  role: WidgetEditorSectionRole;
+  writablePaths: string[];
+  readOnlyPaths?: string[];
+  allowedDuplicateWritablePaths?: WidgetEditorDuplicateWritablePathAllowance[];
+};
+
+export type WidgetEditorContract = {
+  version: 2;
+  sections: WidgetEditorSectionContract[];
 };
 
 export type WidgetDefinition<T = Record<string, unknown>> = {
@@ -78,15 +188,18 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   bindingTargets?: WidgetBindingTarget[];
   canHaveChildren?: boolean;
   slots?: WidgetSlotDefinition[];
+  repeatableSlotSync?: WidgetRepeatableSlotSyncAdapter[];
   variants: WidgetVariant[];
   schema: Record<string, unknown>;
   defaults: T;
+  preserveAbsentDefaultKeys?: string[];
   editor: {
     wizard: ComponentType<WidgetEditorProps<T>>;
     visual: ComponentType<WidgetEditorProps<T>>;
     advanced: ComponentType<WidgetEditorProps<T>>;
   };
   editorCapabilities?: WidgetEditorCapabilities;
+  editorContract?: WidgetEditorContract;
   render: ComponentType<{
     data: T;
     variant: string;
@@ -94,7 +207,8 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
     previewDevice?: DeviceTarget;
     pageDefaults?: WidgetLayoutDefaults;
     blockId?: string;
-    renderBlock?: (block: WidgetBlock) => ReactNode;
+    renderContext?: WidgetRenderContext;
+    renderBlock?: (block: WidgetBlock, context?: WidgetRenderContext) => ReactNode;
   }>;
 };
 

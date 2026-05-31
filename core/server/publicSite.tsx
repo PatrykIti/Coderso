@@ -4,11 +4,9 @@ import path from "node:path";
 import type { DeviceTarget, WidgetBlock } from "../widgets/types";
 import { ensureRuntimeWidgetsRegistered } from "../widgets/runtime";
 import { renderPublicPageHtml, renderPublicPageRuntimeHtml } from "../site/renderPublicPage";
+import { renderPublicEntryDetailHtml, renderPublicEntryListHtml } from "../site/renderPublicEntry";
 import {
-  renderPublicEntryDetailHtml,
-  renderPublicEntryListHtml,
-} from "../site/renderPublicEntry";
-import {
+  blocksAllowSiteHtmlCache,
   buildSiteCacheKey,
   configureSiteCache,
   getSiteCacheEntry,
@@ -18,15 +16,8 @@ import {
 import { matchContentRoute } from "../site/contentRouteMatcher";
 import { toCssVariables } from "../ui/theme/tokenCss";
 import { getPageBySlug, getPage } from "../services/pages/pageService";
-import {
-  type PreviewTargetType,
-  validatePreviewToken,
-} from "../services/pages/previewService";
-import {
-  getEntry,
-  getEntryBySlug,
-  listEntries,
-} from "../services/content/entryService";
+import { type PreviewTargetType, validatePreviewToken } from "../services/pages/previewService";
+import { getEntry, getEntryBySlug, listEntries } from "../services/content/entryService";
 import {
   DEFAULT_POST_CONTENT_SCHEMA,
   getPost,
@@ -36,6 +27,12 @@ import {
   POST_CONTENT_TYPE_SLUG,
 } from "../services/content/postsService";
 import { resolveContentListRuntimeData } from "../services/content/contentListResolver";
+import {
+  resolvePreviewDetailPageRuntime,
+  resolvePublishedDetailPageRuntime,
+} from "../services/content/detailPageRuntimeResolver";
+import { isDetailPageTitleTokenSafe } from "../services/content/detailPageSchema";
+import type { DetailPageDocument } from "../services/content/detailPageTypes";
 import { resolvePostsFeedRuntimeData } from "../services/content/postsFeedResolver";
 import { resolveEntryTeaserRuntimeData } from "../services/content/entryTeaserResolver";
 import {
@@ -52,31 +49,22 @@ import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import type { ContentSchema } from "../services/content/validation";
 import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
 import { getWidgetTemplateLayoutSettings } from "../services/widgets/widgetTemplateSettings";
-import { resolveDevAssetUrl } from "./utils/styleUrl";
-import {
-  normalizeContentListData,
-  type ContentListData,
-} from "../widgets/core/contentList";
-import {
-  normalizePostsFeedData,
-  type PostsFeedData,
-} from "../widgets/core/postsFeed";
-import {
-  normalizeEntryTeaserData,
-  type EntryTeaserData,
-} from "../widgets/core/entryTeaser";
+import { resolveDevAssetUrl, resolveSiteDevServerUrl } from "./utils/styleUrl";
+import { normalizeContentListData, type ContentListData } from "../widgets/core/contentList";
+import { normalizePostsFeedData, type PostsFeedData } from "../widgets/core/postsFeed";
+import { normalizeEntryTeaserData, type EntryTeaserData } from "../widgets/core/entryTeaser";
 import { type ProductGalleryData } from "../widgets/core/productGallery";
 import { type ProductCompareData } from "../widgets/core/productCompare";
 import { type ProductTableData } from "../widgets/core/productTable";
-import {
-  normalizeFormEmbedData,
-  type FormEmbedData,
-} from "../widgets/core/formEmbed";
+import { normalizeContactData, type ContactData } from "../widgets/core/contact";
+import { normalizeFormEmbedData, type FormEmbedData } from "../widgets/core/formEmbed";
+import { normalizeNewsletterData, type NewsletterData } from "../widgets/core/newsletter";
 import {
   normalizeBookingCalendarData,
   type BookingCalendarData,
 } from "../widgets/core/bookingCalendar";
 import {
+  appointmentFormSchema,
   normalizeAppointmentFormData,
   type AppointmentFormData,
 } from "../widgets/core/appointmentForm";
@@ -84,10 +72,7 @@ import {
   normalizeListingFiltersData,
   type ListingFiltersData,
 } from "../widgets/core/listingFilters";
-import {
-  normalizeSearchBoxData,
-  type SearchBoxData,
-} from "../widgets/core/searchBox";
+import { normalizeSearchBoxData, type SearchBoxData } from "../widgets/core/searchBox";
 import { resolveNavigationRuntimeData } from "../services/navigation/navigationRuntimeResolver";
 import { resolveTemplateSectionRuntimeData } from "../services/widgets/templateSectionRuntime";
 import { resolveFormRuntimeData } from "../services/forms/formRuntimeResolver";
@@ -96,6 +81,10 @@ import {
   resolveListingFiltersRuntimeData,
   resolveListingSearchRuntimeState,
 } from "../services/search/listingRuntimeService";
+import {
+  isDetailPageIdFormat,
+  normalizeDetailPageIdText,
+} from "../services/settings/detailPageIdContract";
 import {
   isPostContentTypeSlug,
   resolvePostRuntimeMetaDescription,
@@ -106,6 +95,7 @@ import { searchPublicIndex } from "../services/search/searchIndexService";
 import { publicSearchRequestSchema } from "./validation/filterSchemas";
 import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
+import { readBindingPathValue } from "../services/utils/bindingPath";
 
 export type PublicPageData = {
   title: string;
@@ -115,11 +105,7 @@ export type PublicPageData = {
   currentData?: Record<string, unknown> | null;
 };
 
-const resolveManifestCss = (
-  manifestPath: string,
-  basePath: string,
-  entryHints: string[]
-) => {
+const resolveManifestCss = (manifestPath: string, basePath: string, entryHints: string[]) => {
   if (!fs.existsSync(manifestPath)) return null;
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as Record<
     string,
@@ -134,18 +120,18 @@ const resolveManifestCss = (
 };
 
 const resolveSiteCss = () =>
-  resolveManifestCss(
-    path.resolve(process.cwd(), "dist/site/manifest.json"),
-    "/site",
-    ["main.ts", "main.tsx", "site/main.ts", "site/main.tsx"]
-  );
+  resolveManifestCss(path.resolve(process.cwd(), "dist/site/manifest.json"), "/site", [
+    "main.ts",
+    "main.tsx",
+    "site/main.ts",
+    "site/main.tsx",
+  ]);
 
 const resolveAdminCss = () =>
-  resolveManifestCss(
-    path.resolve(process.cwd(), "dist/client/manifest.json"),
-    "/admin",
-    ["admin/main.tsx", "admin/index.html"]
-  );
+  resolveManifestCss(path.resolve(process.cwd(), "dist/client/manifest.json"), "/admin", [
+    "admin/main.tsx",
+    "admin/index.html",
+  ]);
 
 const resolveIp = (req: Request) => {
   const forwarded = req.headers.get("x-forwarded-for");
@@ -175,18 +161,18 @@ const serveSiteAsset = async (pathname: string) => {
 const resolvePublicStyles = async () => {
   const tokens = await getResolvedTokens();
   const inlineCss = toCssVariables(tokens);
+  const adminDevBaseUrl =
+    process.env.VITE_DEV_SERVER_URL ?? process.env.CODERSO_PUBLIC_VITE_DEV_URL;
+  const siteDevBaseUrl = resolveSiteDevServerUrl(
+    process.env.VITE_SITE_DEV_SERVER_URL,
+    adminDevBaseUrl
+  );
 
   const siteCssHref = resolveSiteCss();
   if (siteCssHref) return { inlineCss, cssHref: siteCssHref, devModuleScripts: [] };
 
-  const siteDevClient = resolveDevAssetUrl(
-    process.env.VITE_SITE_DEV_SERVER_URL,
-    "/site/@vite/client"
-  );
-  const siteDevEntry = resolveDevAssetUrl(
-    process.env.VITE_SITE_DEV_SERVER_URL,
-    "/site/main.ts"
-  );
+  const siteDevClient = resolveDevAssetUrl(siteDevBaseUrl ?? undefined, "/site/@vite/client");
+  const siteDevEntry = resolveDevAssetUrl(siteDevBaseUrl ?? undefined, "/site/main.ts");
   if (siteDevClient && siteDevEntry) {
     return {
       inlineCss,
@@ -198,14 +184,8 @@ const resolvePublicStyles = async () => {
   const adminCssHref = resolveAdminCss();
   if (adminCssHref) return { inlineCss, cssHref: adminCssHref, devModuleScripts: [] };
 
-  const adminDevClient = resolveDevAssetUrl(
-    process.env.VITE_DEV_SERVER_URL,
-    "/admin/@vite/client"
-  );
-  const adminDevEntry = resolveDevAssetUrl(
-    process.env.VITE_DEV_SERVER_URL,
-    "/admin/main.tsx"
-  );
+  const adminDevClient = resolveDevAssetUrl(adminDevBaseUrl ?? undefined, "/admin/@vite/client");
+  const adminDevEntry = resolveDevAssetUrl(adminDevBaseUrl ?? undefined, "/admin/main.tsx");
   if (adminDevClient && adminDevEntry) {
     return {
       inlineCss,
@@ -234,6 +214,14 @@ const ensureRecord = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
+const appointmentFormSupportsRuntimeCaptchaHydration = (() => {
+  const properties = ensureRecord((appointmentFormSchema as { properties?: unknown }).properties);
+  const resolvedSchema = ensureRecord(
+    (properties.resolved as { properties?: unknown } | undefined)?.properties
+  );
+  return Object.prototype.hasOwnProperty.call(resolvedSchema, "captcha");
+})();
+
 type RuntimeHydrationCache = {
   booking?: Awaited<ReturnType<typeof resolveBookingRuntimeData>>;
   commerce?: CommerceRuntimeCache;
@@ -252,13 +240,12 @@ const hydrateRuntimeBlock = async (
   let nextBlock: WidgetBlock = block;
 
   if (block.type === "content-list") {
-    const normalizedData = normalizeContentListData(
-      ensureRecord(block.data) as ContentListData
-    );
+    const normalizedData = normalizeContentListData(ensureRecord(block.data) as ContentListData);
     const resolved = await resolveContentListRuntimeData(normalizedData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
       runtimeSearchParams: options.runtimeSearchParams,
+      blockId: block.id,
     });
     nextBlock = {
       ...block,
@@ -269,12 +256,12 @@ const hydrateRuntimeBlock = async (
     };
   }
   if (block.type === "posts-feed") {
-    const normalizedData = normalizePostsFeedData(
-      ensureRecord(block.data) as PostsFeedData
-    );
+    const normalizedData = normalizePostsFeedData(ensureRecord(block.data) as PostsFeedData);
     const resolved = await resolvePostsFeedRuntimeData(normalizedData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
+      runtimeSearchParams: options.runtimeSearchParams,
+      blockId: block.id,
     });
     nextBlock = {
       ...block,
@@ -288,14 +275,12 @@ const hydrateRuntimeBlock = async (
     const normalizedData = normalizeListingFiltersData(
       ensureRecord(block.data) as ListingFiltersData
     );
-    const resolved = await resolveListingFiltersRuntimeData(
-      {
-        listingQueryId: normalizedData.listingQueryId,
-        facets: normalizedData.facets,
-        preview: options.preview,
-        runtimeSearchParams: options.runtimeSearchParams,
-      }
-    );
+    const resolved = await resolveListingFiltersRuntimeData({
+      listingQueryId: normalizedData.listingQueryId,
+      facets: normalizedData.facets,
+      preview: options.preview,
+      runtimeSearchParams: options.runtimeSearchParams,
+    });
 
     nextBlock = {
       ...block,
@@ -312,18 +297,11 @@ const hydrateRuntimeBlock = async (
     };
   }
   if (block.type === "search-box") {
-    const normalizedData = normalizeSearchBoxData(
-      ensureRecord(block.data) as SearchBoxData
-    );
+    const normalizedData = normalizeSearchBoxData(ensureRecord(block.data) as SearchBoxData);
     const listingQueryId =
-      normalizedData.mode === "listing"
-        ? normalizedData.listingQueryId?.trim() ?? ""
-        : "";
+      normalizedData.mode === "listing" ? (normalizedData.listingQueryId?.trim() ?? "") : "";
     const runtimeState = listingQueryId
-      ? resolveListingSearchRuntimeState(
-          listingQueryId,
-          options.runtimeSearchParams
-        )
+      ? resolveListingSearchRuntimeState(listingQueryId, options.runtimeSearchParams)
       : { rejectedTokens: [] as string[] };
 
     nextBlock = {
@@ -339,9 +317,7 @@ const hydrateRuntimeBlock = async (
     };
   }
   if (block.type === "entry-teaser") {
-    const normalizedData = normalizeEntryTeaserData(
-      ensureRecord(block.data) as EntryTeaserData
-    );
+    const normalizedData = normalizeEntryTeaserData(ensureRecord(block.data) as EntryTeaserData);
     const resolved = await resolveEntryTeaserRuntimeData(normalizedData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
@@ -393,6 +369,8 @@ const hydrateRuntimeBlock = async (
       {
         preview: options.preview,
         cache: commerceCache,
+        runtimeSearchParams: options.runtimeSearchParams,
+        blockId: block.id,
       }
     );
     nextBlock = {
@@ -401,9 +379,7 @@ const hydrateRuntimeBlock = async (
     };
   }
   if (block.type === "form-embed") {
-    const normalizedData = normalizeFormEmbedData(
-      ensureRecord(block.data) as FormEmbedData
-    );
+    const normalizedData = normalizeFormEmbedData(ensureRecord(block.data) as FormEmbedData);
     const resolved = normalizedData.formId
       ? await resolveFormRuntimeData(normalizedData.formId, {
           preview: options.preview,
@@ -417,14 +393,90 @@ const hydrateRuntimeBlock = async (
       },
     };
   }
+  if (block.type === "contact") {
+    const normalizedData = normalizeContactData(ensureRecord(block.data) as ContactData);
+    const submission = normalizedData.form?.submission;
+    const formId = submission?.mode === "forms-runtime" ? (submission.formId ?? "").trim() : "";
+    const resolvedData = formId
+      ? await resolveFormRuntimeData(formId, {
+          preview: options.preview,
+        })
+      : undefined;
+    const resolved = resolvedData
+      ? {
+          formId: resolvedData.formId,
+          formName: resolvedData.formName,
+          description: resolvedData.description,
+          status: resolvedData.status,
+          successMessage: resolvedData.successMessage,
+          successRedirectUrl: resolvedData.successRedirectUrl,
+          submissionAccess: resolvedData.submissionAccess,
+          submissionNonce: resolvedData.submissionNonce ?? null,
+          fields: resolvedData.fields,
+          ...(resolvedData.error ? { error: resolvedData.error } : {}),
+        }
+      : undefined;
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        ...(resolved ? { resolved } : {}),
+      },
+    };
+  }
+  if (block.type === "newsletter") {
+    const normalizedData = normalizeNewsletterData(ensureRecord(block.data) as NewsletterData);
+    const formId =
+      normalizedData.submission?.mode === "forms-runtime"
+        ? (normalizedData.submission.formId ?? "").trim()
+        : "";
+    const resolvedData = formId
+      ? await resolveFormRuntimeData(formId, {
+          preview: options.preview,
+        })
+      : undefined;
+    const resolved = resolvedData
+      ? {
+          formId: resolvedData.formId,
+          formName: resolvedData.formName,
+          description: resolvedData.description,
+          status: resolvedData.status,
+          successMessage: resolvedData.successMessage,
+          successRedirectUrl: resolvedData.successRedirectUrl,
+          submissionAccess: resolvedData.submissionAccess,
+          submissionNonce: resolvedData.submissionNonce ?? null,
+          botProtection: resolvedData.botProtection ?? null,
+          fields: resolvedData.fields,
+          ...(resolvedData.error ? { error: resolvedData.error } : {}),
+        }
+      : undefined;
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        ...(resolved ? { resolved } : {}),
+      },
+    };
+  }
   if (block.type === "booking-calendar") {
     const normalizedData = normalizeBookingCalendarData(
       ensureRecord(block.data) as BookingCalendarData
     );
+    const slotPolicy = {
+      ...(normalizedData.minDate ? { minDate: normalizedData.minDate } : {}),
+      ...(normalizedData.maxDate ? { maxDate: normalizedData.maxDate } : {}),
+    };
+    const shouldReuseBookingCache = !slotPolicy.minDate && !slotPolicy.maxDate;
     const resolved =
-      options.runtimeCache.booking ??
-      (await resolveBookingRuntimeData({ preview: options.preview }));
-    options.runtimeCache.booking = resolved;
+      shouldReuseBookingCache && options.runtimeCache.booking
+        ? options.runtimeCache.booking
+        : await resolveBookingRuntimeData({
+            preview: options.preview,
+            ...(shouldReuseBookingCache ? {} : { slotPolicy }),
+          });
+    if (shouldReuseBookingCache) {
+      options.runtimeCache.booking = resolved;
+    }
 
     nextBlock = {
       ...block,
@@ -454,6 +506,7 @@ const hydrateRuntimeBlock = async (
         ...normalizedData,
         resolved: {
           submissionNonce: resolved.submissionNonce,
+          ...(appointmentFormSupportsRuntimeCaptchaHydration ? { captcha: resolved.captcha } : {}),
           ...(resolved.error ? { error: resolved.error } : {}),
         },
       },
@@ -540,11 +593,139 @@ const hydrateRuntimeBlocks = async (
 const buildHtmlResponse = (html: string) =>
   new Response(html, { headers: { "Content-Type": "text/html" } });
 
+type PublicHtmlRenderResult = {
+  html: string;
+  cacheable: boolean;
+};
+
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
     headers: { "Content-Type": "application/json" },
   });
+
+type DetailPageRuntimeEntrySeo = {
+  description?: string | null;
+  canonicalUrl?: string | null;
+};
+
+type DetailPageRuntimeEntry = {
+  title?: string | null;
+  slug?: string | null;
+  data?: Record<string, unknown> | null;
+  seo?: DetailPageRuntimeEntrySeo | null;
+  publishedAt?: Date | string | null;
+  updatedAt?: Date | string | null;
+  createdAt?: Date | string | null;
+  author?: { name?: string | null } | null;
+};
+
+const detailPageTitleTokenPattern = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}|\{\s*([A-Za-z0-9_.-]+)\s*\}/g;
+
+const toPublicSeoText = (value: unknown) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value instanceof Date && Number.isFinite(value.getTime())) return value.toISOString();
+  return null;
+};
+
+const readDetailPageEntryValue = (entry: DetailPageRuntimeEntry, field: string) => {
+  const normalized = field.trim();
+  switch (normalized) {
+    case "title":
+      return entry.title;
+    case "slug":
+      return entry.slug;
+    case "publishedAt":
+      return entry.publishedAt;
+    case "updatedAt":
+      return entry.updatedAt;
+    case "createdAt":
+      return entry.createdAt;
+    case "author":
+      return entry.author?.name ?? null;
+    default: {
+      const dataPath = normalized.startsWith("data.")
+        ? normalized.slice("data.".length)
+        : normalized;
+      return readBindingPathValue(entry.data ?? {}, dataPath);
+    }
+  }
+};
+
+const resolveDetailPageTitle = (
+  pattern: string | null | undefined,
+  entry: DetailPageRuntimeEntry,
+  fallback: string
+) => {
+  const source = typeof pattern === "string" && pattern.trim().length > 0 ? pattern : fallback;
+  let blockedToken = false;
+  const rendered = source.replace(
+    detailPageTitleTokenPattern,
+    (_match, doubleToken, singleToken) => {
+      const token = doubleToken ?? singleToken;
+      if (!isDetailPageTitleTokenSafe(token)) {
+        blockedToken = true;
+        return "";
+      }
+      return toPublicSeoText(readDetailPageEntryValue(entry, token)) ?? "";
+    }
+  );
+  if (blockedToken) return fallback;
+  const trimmed = rendered.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+};
+
+const resolveDetailPageImageUrl = (value: unknown): string | null => {
+  if (Array.isArray(value)) return value.length > 0 ? resolveDetailPageImageUrl(value[0]) : null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (
+      trimmed.startsWith("/") ||
+      trimmed.startsWith("https://") ||
+      trimmed.startsWith("http://")
+    ) {
+      return trimmed;
+    }
+    return null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  return resolveDetailPageImageUrl(record.src ?? record.url);
+};
+
+const resolveEntryMetaDescription = (entry: DetailPageRuntimeEntry) =>
+  entry.seo?.description ?? resolvePostRuntimeMetaDescription(entry.data ?? {});
+
+const resolveDetailPageRuntimeSeo = (input: {
+  document: DetailPageDocument;
+  entry: DetailPageRuntimeEntry;
+  contentTypeName: string;
+}) => {
+  const fallbackTitle = input.entry.title ?? input.contentTypeName;
+  const descriptionField = input.document.seo?.descriptionField ?? null;
+  const imageField = input.document.seo?.imageField ?? null;
+  const description = descriptionField
+    ? toPublicSeoText(readDetailPageEntryValue(input.entry, descriptionField))
+    : null;
+  const imageUrl = imageField
+    ? resolveDetailPageImageUrl(readDetailPageEntryValue(input.entry, imageField))
+    : null;
+
+  return {
+    title: resolveDetailPageTitle(
+      input.document.seo?.titlePattern ?? input.document.titlePattern,
+      input.entry,
+      fallbackTitle
+    ),
+    metaDescription: description ?? resolveEntryMetaDescription(input.entry),
+    imageUrl,
+    canonicalUrl: input.entry.seo?.canonicalUrl ?? null,
+  };
+};
 
 const renderPublicPageHtmlInternal = async (
   page: PublicPageData,
@@ -554,7 +735,7 @@ const renderPublicPageHtmlInternal = async (
     themeName?: string;
     runtimeSearchParams?: URLSearchParams;
   }
-) => {
+): Promise<PublicHtmlRenderResult> => {
   ensureRuntimeWidgetsRegistered();
 
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
@@ -575,35 +756,48 @@ const renderPublicPageHtmlInternal = async (
     runtimeCache: {},
   });
 
-  return renderPublicPageRuntimeHtml({
-    title: page.title ?? "Page",
-    blocks,
-    cssHref,
-    inlineCss,
-    isPreview: options?.preview ?? false,
-    previewDevice: options?.previewDevice,
-    layoutSettings: getPageLayoutSettingsFromData(sourceData),
-    devModuleScripts,
-    metaDescription,
-    themeName,
-    templateKey: settingsRecord.template,
-  });
+  return {
+    html: await renderPublicPageRuntimeHtml({
+      title: page.title ?? "Page",
+      blocks,
+      cssHref,
+      inlineCss,
+      isPreview: options?.preview ?? false,
+      previewDevice: options?.previewDevice,
+      layoutSettings: getPageLayoutSettingsFromData(sourceData),
+      devModuleScripts,
+      metaDescription,
+      themeName,
+      templateKey: settingsRecord.template,
+    }),
+    cacheable: blocksAllowSiteHtmlCache(blocks),
+  };
 };
 
 export async function renderPublicPage(
   page: PublicPageData,
   options?: { preview?: boolean; previewDevice?: DeviceTarget }
 ) {
-  const html = await renderPublicPageHtmlInternal(page, options);
-  return buildHtmlResponse(html);
+  const result = await renderPublicPageHtmlInternal(page, options);
+  return buildHtmlResponse(result.html);
 }
 
 const resolvePreviewTargetType = (value: string | null): PreviewTargetType | null => {
   if (value === "page") return "page";
   if (value === "content") return "content";
   if (value === "widget-template") return "widget-template";
+  if (value === "detail-page") return "detail-page";
   return null;
 };
+
+const normalizePreviewDetailPageId = (value: string | null) => {
+  const normalized = normalizeDetailPageIdText(value);
+  if (!normalized || !isDetailPageIdFormat(normalized)) return null;
+  return normalized;
+};
+
+const resolveLinkedDetailPageId = (typeSlug: string, contentRoutes: ContentRouteSetting[]) =>
+  contentRoutes.find((entry) => entry.enabled && entry.type === typeSlug)?.detailPageId ?? null;
 
 const resolvePreviewDevice = (value: string | null): DeviceTarget | null => {
   if (value === "desktop") return "desktop";
@@ -716,11 +910,22 @@ const renderEntryListHtml = async (
 
 const renderEntryDetailHtml = async (
   typeSlug: string,
-  slug: string,
-  options?: { preview?: boolean; themeName?: string; preferGenericEntry?: boolean }
-) => {
+  routeValue: string,
+  options?: {
+    preview?: boolean;
+    previewDevice?: DeviceTarget;
+    themeName?: string;
+    preferGenericEntry?: boolean;
+    routeParam?: "slug" | "id";
+    detailPageId?: string | null;
+    contentRoutes?: ContentRouteSetting[];
+    runtimeSearchParams?: URLSearchParams;
+  }
+): Promise<PublicHtmlRenderResult | string | null> => {
+  const routeParam = options?.routeParam ?? "slug";
+
   if (!options?.preferGenericEntry && isPostContentTypeSlug(typeSlug)) {
-    const post = await getPostBySlug(slug);
+    const post = routeParam === "id" ? await getPost(routeValue) : await getPostBySlug(routeValue);
     if (!post) return null;
     if (!options?.preview && !isEntryPublished(post)) {
       return null;
@@ -741,8 +946,7 @@ const renderEntryDetailHtml = async (
       devModuleScripts,
       isPreview: options?.preview ?? false,
       themeName: options?.themeName ?? (await resolvePublicThemeName()),
-      metaDescription:
-        post.seo?.description ?? resolvePostRuntimeMetaDescription(post.data),
+      metaDescription: post.seo?.description ?? resolvePostRuntimeMetaDescription(post.data),
       canonicalUrl: post.seo?.canonicalUrl ?? null,
     });
   }
@@ -750,24 +954,120 @@ const renderEntryDetailHtml = async (
   const contentType = await getContentTypeBySlug(typeSlug);
   if (!contentType) return null;
 
-  const entry = await getEntryBySlug(contentType.id, slug);
-  if (!entry) return null;
-  if (!options?.preview && !isEntryPublished(entry)) {
+  const entryDetail =
+    routeParam === "id"
+      ? await getEntry(routeValue)
+      : await (async () => {
+          const entry = await getEntryBySlug(contentType.id, routeValue);
+          if (!entry) return null;
+          if (!options?.preview && !isEntryPublished(entry)) {
+            return null;
+          }
+          return getEntry(entry.id);
+        })();
+  if (!entryDetail) return null;
+  if (entryDetail.typeId !== contentType.id) return null;
+  if (!options?.preview && !isEntryPublished(entryDetail)) {
     return null;
   }
 
-  const entryDetail = await getEntry(entry.id);
-  if (!entryDetail) return null;
-
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
+  const contentTypeSnapshot = {
+    id: contentType.id,
+    name: contentType.name,
+    slug: contentType.slug,
+    schema: contentType.schema as ContentSchema,
+  };
+  const contentRoutes = options?.contentRoutes ?? [];
+  const activeDetailPageId =
+    options?.detailPageId ??
+    (options?.preview ? resolveLinkedDetailPageId(contentType.slug, contentRoutes) : null);
+
+  if (activeDetailPageId) {
+    const detailPage = options?.preview
+      ? await resolvePreviewDetailPageRuntime({
+          detailPageId: activeDetailPageId,
+          documentSource: "published",
+          entry: {
+            id: entryDetail.id,
+            typeId: entryDetail.typeId,
+            title: entryDetail.title,
+            slug: entryDetail.slug,
+            status: entryDetail.status,
+            tags: entryDetail.tags ?? [],
+            data: entryDetail.data ?? {},
+            publishedAt: entryDetail.publishedAt ?? null,
+            scheduledAt: entryDetail.scheduledAt ?? null,
+            createdAt: entryDetail.createdAt ?? null,
+            updatedAt: entryDetail.updatedAt ?? null,
+            author: entryDetail.author ?? null,
+          },
+          contentType: {
+            id: contentType.id,
+            slug: contentType.slug,
+            schema: contentType.schema as ContentSchema,
+          },
+          contentRoutes,
+        })
+      : await resolvePublishedDetailPageRuntime({
+          detailPageId: activeDetailPageId,
+          entry: {
+            id: entryDetail.id,
+            typeId: entryDetail.typeId,
+            title: entryDetail.title,
+            slug: entryDetail.slug,
+            status: entryDetail.status,
+            tags: entryDetail.tags ?? [],
+            data: entryDetail.data ?? {},
+            publishedAt: entryDetail.publishedAt ?? null,
+            scheduledAt: entryDetail.scheduledAt ?? null,
+            createdAt: entryDetail.createdAt ?? null,
+            updatedAt: entryDetail.updatedAt ?? null,
+            author: entryDetail.author ?? null,
+          },
+          contentType: {
+            id: contentType.id,
+            slug: contentType.slug,
+            schema: contentType.schema as ContentSchema,
+          },
+          contentRoutes,
+        });
+    if (!detailPage) return null;
+
+    const detailSeo = resolveDetailPageRuntimeSeo({
+      document: detailPage.document,
+      entry: entryDetail,
+      contentTypeName: contentType.name,
+    });
+    const blocks = await hydrateRuntimeBlocks(detailPage.blocks, {
+      preview: options?.preview ?? false,
+      contentRoutes,
+      runtimeSearchParams: options?.runtimeSearchParams,
+      runtimeCache: {},
+    });
+    return {
+      html: await renderPublicPageRuntimeHtml({
+        title: detailSeo.title,
+        blocks,
+        cssHref,
+        inlineCss,
+        devModuleScripts,
+        isPreview: options?.preview ?? false,
+        previewDevice: options?.previewDevice,
+        layoutSettings: detailPage.document.settings.layout,
+        metaDescription: detailSeo.metaDescription,
+        canonicalUrl: detailSeo.canonicalUrl,
+        imageUrl: detailSeo.imageUrl,
+        themeName: options?.themeName ?? (await resolvePublicThemeName()),
+        templateKey: detailPage.document.settings.template,
+      }),
+      cacheable: blocksAllowSiteHtmlCache(blocks),
+    };
+  }
+
   return renderPublicEntryDetailHtml({
     title: entryDetail.title ?? contentType.name,
-    contentType: {
-      id: contentType.id,
-      name: contentType.name,
-      slug: contentType.slug,
-      schema: contentType.schema as ContentSchema,
-    },
+    contentType: contentTypeSnapshot,
     entry: entryDetail,
     cssHref,
     inlineCss,
@@ -776,12 +1076,78 @@ const renderEntryDetailHtml = async (
     themeName: options?.themeName ?? (await resolvePublicThemeName()),
     metaDescription:
       "seo" in entryDetail && entryDetail.seo
-        ? entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data)
+        ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
         : resolvePostRuntimeMetaDescription(entryDetail.data),
     canonicalUrl:
-      "seo" in entryDetail && entryDetail.seo
-        ? entryDetail.seo.canonicalUrl ?? null
-        : null,
+      "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
+  });
+};
+
+const renderDetailPagePreviewHtml = async (input: {
+  detailPageId: string;
+  sampleEntryId: string;
+  previewDevice: DeviceTarget;
+  runtimeSearchParams: URLSearchParams;
+}) => {
+  const entryDetail = await getEntry(input.sampleEntryId);
+  if (!entryDetail || !isEntryPublished(entryDetail)) return null;
+
+  const contentType = await getContentType(entryDetail.typeId);
+  if (!contentType) return null;
+
+  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+  const detailPage = await resolvePreviewDetailPageRuntime({
+    detailPageId: input.detailPageId,
+    documentSource: "current",
+    entry: {
+      id: entryDetail.id,
+      typeId: entryDetail.typeId,
+      title: entryDetail.title,
+      slug: entryDetail.slug,
+      status: entryDetail.status,
+      tags: entryDetail.tags ?? [],
+      data: entryDetail.data ?? {},
+      publishedAt: entryDetail.publishedAt ?? null,
+      scheduledAt: entryDetail.scheduledAt ?? null,
+      createdAt: entryDetail.createdAt ?? null,
+      updatedAt: entryDetail.updatedAt ?? null,
+      author: entryDetail.author ?? null,
+    },
+    contentType: {
+      id: contentType.id,
+      slug: contentType.slug,
+      schema: contentType.schema as ContentSchema,
+    },
+    contentRoutes,
+  });
+  if (!detailPage) return null;
+
+  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
+  const detailSeo = resolveDetailPageRuntimeSeo({
+    document: detailPage.document,
+    entry: entryDetail,
+    contentTypeName: contentType.name,
+  });
+
+  return renderPublicPageRuntimeHtml({
+    title: detailSeo.title,
+    blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
+      preview: true,
+      contentRoutes,
+      runtimeSearchParams: input.runtimeSearchParams,
+      runtimeCache: {},
+    }),
+    cssHref,
+    inlineCss,
+    devModuleScripts,
+    isPreview: true,
+    previewDevice: input.previewDevice,
+    layoutSettings: detailPage.document.settings.layout,
+    metaDescription: detailSeo.metaDescription,
+    canonicalUrl: detailSeo.canonicalUrl,
+    imageUrl: detailSeo.imageUrl,
+    themeName: await resolvePublicThemeName(),
+    templateKey: detailPage.document.settings.template,
   });
 };
 
@@ -853,47 +1219,74 @@ export async function handlePublicRequest(req: Request) {
     if (!previewEnabled) return new Response("Not Found", { status: 404 });
 
     const preview = await validatePreviewToken(token, targetType);
-    if (!preview) return new Response("Preview expired", { status: 410 });
+    if (preview.status === "expired") {
+      return new Response("Preview expired", { status: 410 });
+    }
+    if (preview.status !== "valid") {
+      return new Response("Not Found", { status: 404 });
+    }
 
-    if (preview.targetType === "page") {
-      const page = await getPage(preview.targetId);
+    if (preview.token.targetType === "page") {
+      const page = await getPage(preview.token.targetId);
       if (!page) return new Response("Not Found", { status: 404 });
       const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
         preview: true,
         previewDevice,
         runtimeSearchParams: url.searchParams,
       });
-      return buildHtmlResponse(html);
+      return buildHtmlResponse(html.html);
     }
 
-    if (preview.targetType === "content") {
-      const post = await getPost(preview.targetId);
+    if (preview.token.targetType === "content") {
+      const post = await getPost(preview.token.targetId);
       if (post) {
         const html = await renderEntryDetailHtml(POST_CONTENT_TYPE_SLUG, post.slug, {
           preview: true,
+          previewDevice,
         });
         if (!html) return new Response("Not Found", { status: 404 });
-        return buildHtmlResponse(html);
+        return buildHtmlResponse(typeof html === "string" ? html : html.html);
       }
 
-      const entry = await getEntry(preview.targetId);
+      const entry = await getEntry(preview.token.targetId);
       if (!entry) return new Response("Not Found", { status: 404 });
       const contentType = await getContentType(entry.typeId);
       if (!contentType) return new Response("Not Found", { status: 404 });
+      const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+      const requestedDetailPageId = url.searchParams.get("detailPageId");
+      const normalizedDetailPageId = normalizePreviewDetailPageId(requestedDetailPageId);
+      if (requestedDetailPageId !== null && !normalizedDetailPageId) {
+        return new Response("Not Found", { status: 404 });
+      }
       const html = await renderEntryDetailHtml(contentType.slug, entry.slug, {
         preview: true,
+        previewDevice,
         preferGenericEntry: true,
+        detailPageId: normalizedDetailPageId,
+        contentRoutes,
+        runtimeSearchParams: url.searchParams,
+      });
+      if (!html) return new Response("Not Found", { status: 404 });
+      return buildHtmlResponse(typeof html === "string" ? html : html.html);
+    }
+
+    if (preview.token.targetType === "detail-page") {
+      const sampleEntryId =
+        preview.token.context?.kind === "detail-page" ? preview.token.context.sampleEntryId : null;
+      if (!sampleEntryId) return new Response("Not Found", { status: 404 });
+      const html = await renderDetailPagePreviewHtml({
+        detailPageId: preview.token.targetId,
+        sampleEntryId,
+        previewDevice,
+        runtimeSearchParams: url.searchParams,
       });
       if (!html) return new Response("Not Found", { status: 404 });
       return buildHtmlResponse(html);
     }
 
-    if (preview.targetType === "widget-template") {
+    if (preview.token.targetType === "widget-template") {
       try {
-        const html = await renderWidgetTemplatePreviewHtml(
-          preview.targetId,
-          previewDevice
-        );
+        const html = await renderWidgetTemplatePreviewHtml(preview.token.targetId, previewDevice);
         return buildHtmlResponse(html);
       } catch (error) {
         if (error instanceof Error && error.message === "widget_template_not_found") {
@@ -928,14 +1321,14 @@ export async function handlePublicRequest(req: Request) {
       if (!page || page.status !== "published" || !page.publishedData) {
         return new Response("Not Found", { status: 404 });
       }
-      const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
+      const result = await renderPublicPageHtmlInternal(page as PublicPageData, {
         themeName,
         runtimeSearchParams: url.searchParams,
       });
-      if (shouldUseCache) {
-        setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+      if (shouldUseCache && result.cacheable) {
+        setSiteCacheEntry(cacheKey, result.html, cacheTtlSeconds);
       }
-      return buildHtmlResponse(html);
+      return buildHtmlResponse(result.html);
     }
   }
 
@@ -954,9 +1347,17 @@ export async function handlePublicRequest(req: Request) {
     }
     const slug = match.params.slug ?? match.params.id ?? "";
     if (!slug) return new Response("Not Found", { status: 404 });
-    const html = await renderEntryDetailHtml(match.type, slug, { themeName });
-    if (!html) return new Response("Not Found", { status: 404 });
-    if (shouldUseCache) {
+    const detailHtml = await renderEntryDetailHtml(match.type, slug, {
+      themeName,
+      routeParam: match.params.slug ? "slug" : "id",
+      detailPageId: match.detailPageId,
+      contentRoutes,
+      runtimeSearchParams: url.searchParams,
+    });
+    if (!detailHtml) return new Response("Not Found", { status: 404 });
+    const html = typeof detailHtml === "string" ? detailHtml : detailHtml.html;
+    const canCache = typeof detailHtml === "string" ? true : detailHtml.cacheable;
+    if (shouldUseCache && canCache) {
       setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
     }
     return buildHtmlResponse(html);
@@ -966,12 +1367,12 @@ export async function handlePublicRequest(req: Request) {
   if (page.status !== "published" || !page.publishedData) {
     return new Response("Not Found", { status: 404 });
   }
-  const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
+  const result = await renderPublicPageHtmlInternal(page as PublicPageData, {
     themeName,
     runtimeSearchParams: url.searchParams,
   });
-  if (shouldUseCache) {
-    setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+  if (shouldUseCache && result.cacheable) {
+    setSiteCacheEntry(cacheKey, result.html, cacheTtlSeconds);
   }
-  return buildHtmlResponse(html);
+  return buildHtmlResponse(result.html);
 }

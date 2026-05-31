@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -61,7 +61,10 @@ vi.mock("@/components/ui/dialog", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-dialog-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-dialog-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -83,14 +86,7 @@ vi.mock("@/components/ui/input", () => ({
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     disabled?: boolean;
     placeholder?: string;
-  }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      placeholder={placeholder}
-    />
-  ),
+  }) => <input value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} />,
 }));
 
 vi.mock("@/components/ui/select", () => {
@@ -108,9 +104,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -204,14 +198,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -223,7 +217,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing input for value: ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -235,7 +229,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) {
     throw new Error(`Missing select for value: ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -246,7 +240,7 @@ const setCheckboxValue = (element: Element | null | undefined, checked: boolean)
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing checkbox for checked=${String(checked)}`);
   }
-  act(() => {
+  React.act(() => {
     if (element.checked !== checked) {
       element.click();
     }
@@ -257,7 +251,7 @@ const dispatchCheckboxChange = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error("Missing checkbox for manual change dispatch");
   }
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
 };
@@ -269,16 +263,16 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
   return button;
 };
 
 const findCheckboxByRoleLabel = (container: HTMLElement, labelText: string) =>
-  Array.from(container.querySelectorAll("label")).find((label) =>
-    label.textContent?.includes(labelText)
-  )?.querySelector('input[type="checkbox"]');
+  Array.from(container.querySelectorAll("label"))
+    .find((label) => label.textContent?.includes(labelText))
+    ?.querySelector('input[type="checkbox"]');
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -289,9 +283,7 @@ test("UserEditor create mode updates draft, toggles invite, and saves selected r
   const onOpenChange = vi.fn();
   const onSave = vi.fn();
 
-  const view = mount(
-    <UserEditor open roles={roles} onOpenChange={onOpenChange} onSave={onSave} />
-  );
+  const view = mount(<UserEditor open roles={roles} onOpenChange={onOpenChange} onSave={onSave} />);
 
   try {
     expect(view.container.textContent).toContain("Invite new user");
@@ -301,7 +293,7 @@ test("UserEditor create mode updates draft, toggles invite, and saves selected r
     const saveButton = clickByText(view.container, "Invite user");
     expect(saveButton.disabled).toBe(true);
 
-    act(() => {
+    React.act(() => {
       setInputValue(view.container.querySelector('input[placeholder="Full name"]'), "Ada Lovelace");
       setInputValue(
         view.container.querySelector('input[placeholder="name@company.com"]'),
@@ -317,7 +309,7 @@ test("UserEditor create mode updates draft, toggles invite, and saves selected r
     ) as HTMLInputElement[];
     expect(checkboxes.at(-1)?.checked).toBe(true);
 
-    act(() => {
+    React.act(() => {
       setCheckboxValue(checkboxes.at(-1), false);
     });
 
@@ -372,7 +364,7 @@ test("UserEditor edit mode protects locked roles, updates status, and saves rema
     expect((adminCheckbox as HTMLInputElement | null)?.disabled).toBe(true);
     expect((editorCheckbox as HTMLInputElement | null)?.checked).toBe(true);
 
-    act(() => {
+    React.act(() => {
       setSelectValue(view.container.querySelector("select"), "active");
       setCheckboxValue(editorCheckbox, false);
     });

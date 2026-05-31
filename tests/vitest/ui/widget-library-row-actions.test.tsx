@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -51,14 +51,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -93,12 +93,8 @@ test("WidgetLibraryRowActions keeps core actions source-specific", () => {
     const preview = buttons.find((button) => button.textContent?.includes("Preview"));
     const configure = buttons.find((button) => button.textContent?.includes("Configure"));
     const insert = buttons.find((button) => button.textContent?.includes("Insert"));
-    const favorite = buttons.find((button) =>
-      button.textContent?.includes("Add to favorites")
-    );
-    const duplicate = buttons.find((button) =>
-      button.textContent?.includes("Duplicate")
-    );
+    const favorite = buttons.find((button) => button.textContent?.includes("Add to favorites"));
+    const duplicate = buttons.find((button) => button.textContent?.includes("Duplicate"));
 
     expect(preview).toBeDefined();
     expect(configure).toBeDefined();
@@ -106,7 +102,7 @@ test("WidgetLibraryRowActions keeps core actions source-specific", () => {
     expect(favorite).toBeDefined();
     expect(duplicate).toBeUndefined();
 
-    act(() => {
+    React.act(() => {
       (preview as HTMLButtonElement).click();
       (configure as HTMLButtonElement).click();
       (insert as HTMLButtonElement).click();

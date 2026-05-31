@@ -30,10 +30,7 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 
 import { EntryCreateDrawer } from "./EntryCreateDrawer";
-import {
-  EntryBulkActionsBar,
-  type BulkActionValue,
-} from "./EntryBulkActionsBar";
+import { EntryBulkActionsBar, type BulkActionValue } from "./EntryBulkActionsBar";
 import { EntryFilters } from "./EntryFilters";
 import { EntryTable } from "./EntryTable";
 
@@ -82,8 +79,7 @@ export type EntryListFilters = {
   updatedTo: string;
 };
 
-export const resolveEntrySelectionKey = (ref: SelectedEntryRef) =>
-  `${ref.typeSlug}:${ref.id}`;
+export const resolveEntrySelectionKey = (ref: SelectedEntryRef) => `${ref.typeSlug}:${ref.id}`;
 
 const toEntryRef = (entry: EntryListItem): SelectedEntryRef => ({
   id: entry.id,
@@ -97,10 +93,7 @@ const parseDateBoundary = (value: string, endOfDay: boolean) => {
   return Number.isNaN(timestamp) ? null : timestamp;
 };
 
-export function filterEntries(
-  entries: EntryListItem[],
-  filters: EntryListFilters
-) {
+export function filterEntries(entries: EntryListItem[], filters: EntryListFilters) {
   const normalized = filters.query.trim().toLowerCase();
   const updatedFrom = parseDateBoundary(filters.updatedFrom, false);
   const updatedTo = parseDateBoundary(filters.updatedTo, true);
@@ -111,16 +104,11 @@ export function filterEntries(
       !normalized ||
       entry.title.toLowerCase().includes(normalized) ||
       entry.slug.toLowerCase().includes(normalized);
-    const matchesStatus =
-      filters.status === "all" || entry.status === filters.status;
-    const matchesType =
-      filters.typeSlug === "all" ||
-      entry.contentType.slug === filters.typeSlug;
-    const matchesAuthor =
-      filters.author === "any" || entry.author?.id === filters.author;
+    const matchesStatus = filters.status === "all" || entry.status === filters.status;
+    const matchesType = filters.typeSlug === "all" || entry.contentType.slug === filters.typeSlug;
+    const matchesAuthor = filters.author === "any" || entry.author?.id === filters.author;
     const matchesUpdatedFrom =
-      updatedFrom === null ||
-      (!Number.isNaN(updatedAt) && updatedAt >= updatedFrom);
+      updatedFrom === null || (!Number.isNaN(updatedAt) && updatedAt >= updatedFrom);
     const matchesUpdatedTo =
       updatedTo === null || (!Number.isNaN(updatedAt) && updatedAt <= updatedTo);
 
@@ -187,29 +175,26 @@ export function EntryList() {
     []
   );
 
-  const refreshTypes = useCallback(
-    async (options?: { force?: boolean; background?: boolean }) => {
-      const background = resolveCacheRefreshBackground({
-        explicitBackground: options?.background,
-        hasHydrated: hasHydratedTypesRef.current,
-      });
-      if (!background) setTypesLoading(true);
-      try {
-        const next = await listContentTypesCached({ force: options?.force ?? false });
-        setTypes(next);
-        hasHydratedTypesRef.current = true;
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load content types.");
-        }
-      } finally {
-        if (!background) setTypesLoading(false);
+  const refreshTypes = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
+    const background = resolveCacheRefreshBackground({
+      explicitBackground: options?.background,
+      hasHydrated: hasHydratedTypesRef.current,
+    });
+    if (!background) setTypesLoading(true);
+    try {
+      const next = await listContentTypesCached({ force: options?.force ?? false });
+      setTypes(next);
+      hasHydratedTypesRef.current = true;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load content types.");
       }
-    },
-    []
-  );
+    } finally {
+      if (!background) setTypesLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -316,20 +301,10 @@ export function EntryList() {
       updatedFrom: updatedFromFilter,
       updatedTo: updatedToFilter,
     }),
-    [
-      authorFilter,
-      searchQuery,
-      statusFilter,
-      typeFilter,
-      updatedFromFilter,
-      updatedToFilter,
-    ]
+    [authorFilter, searchQuery, statusFilter, typeFilter, updatedFromFilter, updatedToFilter]
   );
 
-  const filteredEntries = useMemo(
-    () => filterEntries(entries, filters),
-    [entries, filters]
-  );
+  const filteredEntries = useMemo(() => filterEntries(entries, filters), [entries, filters]);
   const pagination = useListPagination(filteredEntries, {
     resetKey: JSON.stringify(filters),
   });
@@ -351,16 +326,14 @@ export function EntryList() {
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
   const isLoading = entriesLoading || typesLoading;
   const defaultCreateTypeSlug =
-    typeFilter !== "all" ? typeFilter : types[0]?.slug ?? entries[0]?.contentType.slug ?? null;
+    typeFilter !== "all" ? typeFilter : (types[0]?.slug ?? entries[0]?.contentType.slug ?? null);
 
   const findEntry = (id: string) => entries.find((entry) => entry.id === id) ?? null;
 
   const handleEditEntry = (id: string) => {
     const entry = findEntry(id);
     if (!entry) return;
-    navigate(
-      `/entries/${encodeURIComponent(entry.contentType.slug)}/${encodeURIComponent(id)}`
-    );
+    navigate(`/entries/${encodeURIComponent(entry.contentType.slug)}/${encodeURIComponent(id)}`);
   };
 
   const handleDeleteEntry = (id: string) => {
@@ -434,9 +407,7 @@ export function EntryList() {
   };
 
   const handleToggleAll = () => {
-    setSelectedRefs((_prev) =>
-      isAllSelected ? [] : pagination.visibleRows.map(toEntryRef)
-    );
+    setSelectedRefs((_prev) => (isAllSelected ? [] : pagination.visibleRows.map(toEntryRef)));
   };
 
   const handleClearSelection = () => {
@@ -445,16 +416,11 @@ export function EntryList() {
   };
 
   const runBulkAction = async (action: Exclude<BulkActionValue, "delete">) => {
-    const status =
-      action === "publish" ? "published" : action === "draft" ? "draft" : "archived";
+    const status = action === "publish" ? "published" : action === "draft" ? "draft" : "archived";
     const results = await Promise.allSettled(
       visibleSelectedRefs.map((ref) => updateEntryMetadata(ref.typeSlug, ref.id, { status }))
     );
-    const summary = entryListToasts.summarizeBulkAction(
-      action,
-      visibleSelectedRefs,
-      results
-    );
+    const summary = entryListToasts.summarizeBulkAction(action, visibleSelectedRefs, results);
     entryListToasts.emitBulk(summary);
     return summary.ok ? null : summary.inlineMessage;
   };
@@ -464,12 +430,9 @@ export function EntryList() {
     if (bulkAction === "delete") {
       setDeleteRequest({
         refs: visibleSelectedRefs,
-        title: `Delete ${selectedCount} entr${
-          selectedCount === 1 ? "y" : "ies"
-        }?`,
+        title: `Delete ${selectedCount} entr${selectedCount === 1 ? "y" : "ies"}?`,
         description: "Selected entries will be removed permanently.",
-        confirmLabel:
-          selectedCount === 1 ? "Delete entry" : "Delete entries",
+        confirmLabel: selectedCount === 1 ? "Delete entry" : "Delete entries",
         mode: "bulk",
       });
       return;
@@ -500,11 +463,7 @@ export function EntryList() {
       const results = await Promise.allSettled(
         deleteRequest.refs.map((ref) => deleteEntry(ref.typeSlug, ref.id))
       );
-      const summary = entryListToasts.summarizeBulkAction(
-        "delete",
-        deleteRequest.refs,
-        results
-      );
+      const summary = entryListToasts.summarizeBulkAction("delete", deleteRequest.refs, results);
       if (deleteRequest.mode === "single" && summary.ok) {
         entryListToasts.success("delete");
       } else {
@@ -522,16 +481,7 @@ export function EntryList() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/entries"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span className="text-foreground">Entries</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/entries" breadcrumbs={["Content", "Entries"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Entries"
@@ -600,11 +550,7 @@ export function EntryList() {
             onEdit={handleEditEntry}
             onDelete={handleDeleteEntry}
             onDuplicate={handleDuplicateEntry}
-            emptyMessage={
-              entries.length > 0
-                ? "No entries match your current filters."
-                : undefined
-            }
+            emptyMessage={entries.length > 0 ? "No entries match your current filters." : undefined}
           />
         )}
         <ListPaginationFooter
@@ -629,9 +575,7 @@ export function EntryList() {
           if (!open && !isDeleting) setDeleteRequest(null);
         }}
         title={deleteRequest?.title ?? "Delete entry?"}
-        description={
-          deleteRequest?.description ?? "This entry will be removed permanently."
-        }
+        description={deleteRequest?.description ?? "This entry will be removed permanently."}
         confirmLabel={deleteRequest?.confirmLabel ?? "Delete entry"}
         confirmingLabel="Deleting..."
         isConfirming={isDeleting}

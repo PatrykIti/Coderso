@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -27,9 +27,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       const props = child.props as { value?: string; children?: React.ReactNode };
@@ -65,9 +63,7 @@ vi.mock("@/components/ui/select", () => {
       </select>
     ),
     SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    SelectItem: ({ children }: { children: React.ReactNode; value: string }) => (
-      <>{children}</>
-    ),
+    SelectItem: ({ children }: { children: React.ReactNode; value: string }) => <>{children}</>,
     SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     SelectValue: () => null,
   };
@@ -95,19 +91,19 @@ const mount = (props: HarnessProps) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(<Harness {...props} />);
   });
 
   return {
     container,
     rerender: (nextProps: HarnessProps) => {
-      act(() => {
+      React.act(() => {
         root.render(<Harness {...nextProps} />);
       });
     },
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -132,19 +128,25 @@ test("ListPaginationFooter reports range copy and drives previous and next pages
 
   try {
     expect(view.container.textContent).toContain("Showing 1-10 of 25 records");
-    expect(view.container.querySelector("[data-testid='visible-rows']")?.textContent).toContain("Row 10");
-    expect(view.container.querySelector("[data-testid='visible-rows']")?.textContent).not.toContain("Row 11");
+    expect(view.container.querySelector("[data-testid='visible-rows']")?.textContent).toContain(
+      "Row 10"
+    );
+    expect(view.container.querySelector("[data-testid='visible-rows']")?.textContent).not.toContain(
+      "Row 11"
+    );
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Next")
         ?.click();
     });
 
     expect(view.container.textContent).toContain("Showing 11-20 of 25 records");
-    expect(view.container.querySelector("[data-testid='visible-rows']")?.textContent).toContain("Row 11");
+    expect(view.container.querySelector("[data-testid='visible-rows']")?.textContent).toContain(
+      "Row 11"
+    );
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Previous")
         ?.click();
@@ -161,7 +163,7 @@ test("useListPagination resets on page-size and reset-key changes", () => {
   const view = mount({ rows, resetKey: "all" });
 
   try {
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Next")
         ?.click();
@@ -169,7 +171,7 @@ test("useListPagination resets on page-size and reset-key changes", () => {
     expect(view.container.textContent).toContain("Showing 11-20 of 25 records");
 
     const pageSizeSelect = view.container.querySelector("select");
-    act(() => {
+    React.act(() => {
       if (pageSizeSelect instanceof HTMLSelectElement) {
         pageSizeSelect.value = "20";
         pageSizeSelect.dispatchEvent(new Event("change", { bubbles: true }));
@@ -179,7 +181,7 @@ test("useListPagination resets on page-size and reset-key changes", () => {
     expect(view.container.textContent).toContain("Showing 1-20 of 25 records");
     expect(view.container.querySelector("[data-testid='page-size']")?.textContent).toBe("20");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Next")
         ?.click();

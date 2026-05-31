@@ -90,9 +90,7 @@ export function PluginStorePage() {
   const [query, setQuery] = useState("");
   const [storeItems, setStoreItems] = useState(catalog);
   const [selectedStoreId, setSelectedStoreId] = useState(storeItems[0]?.id ?? "");
-  const [selectedVersion, setSelectedVersion] = useState(
-    storeItems[0]?.versions[0]?.version ?? ""
-  );
+  const [selectedVersion, setSelectedVersion] = useState(storeItems[0]?.versions[0]?.version ?? "");
   const [installedPlugins, setInstalledPlugins] = useState(installedSeed);
   const [selectedInstalled, setSelectedInstalled] = useState(installedSeed[0]?.name ?? "");
 
@@ -152,9 +150,7 @@ export function PluginStorePage() {
 
     setStoreItems((prev) =>
       prev.map((item) =>
-        item.id === selectedStore.id
-          ? { ...item, installedVersion: version }
-          : item
+        item.id === selectedStore.id ? { ...item, installedVersion: version } : item
       )
     );
     setSelectedInstalled(selectedStore.name);
@@ -183,9 +179,7 @@ export function PluginStorePage() {
   const handlePolicyChange = (policy: UpdatePolicy) => {
     if (!selectedInstalledPlugin) return;
     setInstalledPlugins((prev) =>
-      prev.map((item) =>
-        item.name === selectedInstalledPlugin.name ? { ...item, policy } : item
-      )
+      prev.map((item) => (item.name === selectedInstalledPlugin.name ? { ...item, policy } : item))
     );
   };
 
@@ -204,16 +198,7 @@ export function PluginStorePage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/store"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Store</span>
-          <span>/</span>
-          <span className="text-foreground">Plugin Store</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/store" breadcrumbs={["Store", "Plugin Store"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Plugin Store"

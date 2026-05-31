@@ -1,0 +1,195 @@
+# TASK-264-02: Divider Width Alignment and Custom Validation
+
+# FileName: TASK-264-02_Divider_Width_Alignment_and_Custom_Validation.md
+
+**Priority:** High
+**Category:** Widgets + Layout + Admin UI + Runtime Render
+**Estimated Effort:** Medium
+**Dependencies:** TASK-264
+**Status:** Done (2026-05-17)
+
+---
+
+## Overview
+
+Add Divider-owned width, alignment, and custom-width validation behavior from
+`_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md`.
+
+This leaf covers:
+
+- W3: replace the hardcoded `container` width with a configurable bounded
+  container-width token or value;
+- W4: add horizontal alignment for `container` and `custom` width modes;
+- the custom-width portion of U6: show clear validation feedback for custom
+  width values instead of silently falling back to defaults.
+
+U5 is already current-state verified because `%` width values are accepted by
+the live parser; TASK-264-06 should record that row as report drift or
+`not-reproducible`, not recreate the parser surface here.
+
+## Scope Boundary
+
+This leaf does not change shared spacing-token semantics, shared spacing
+resolved-value copy, or the TASK-256 custom spacing UX. It may show custom-width
+validation feedback because `customWidth` is Divider-owned, but it must not
+introduce a new shared `SpacingField` state machine.
+
+## Sub-Tasks
+
+- [x] Define bounded width-alignment fields in `divider.tsx`.
+- [x] Extend `dividerSchema`, `dividerDefaults`, and `normalizeDividerData()`
+  without changing existing `full`, `container`, or `custom` payload meanings.
+- [x] Replace `resolveDividerWidthCss("container")` hardcoding with a normalized
+  `containerWidth` value or token.
+- [x] Add `left`, `center`, and `right` alignment mapping for non-full widths.
+- [x] Add custom-width validation helpers that can return both persisted
+  normalized value and editor feedback.
+- [x] Refactor the current `DividerEditors.tsx` update path so invalid raw
+  custom-width input remains visible while the persisted payload still
+  normalizes safely. The current editor calls `normalizeValue()` before
+  `onChange`, so this leaf must add local raw draft state or a
+  non-normalizing field update path for the custom-width input.
+- [x] Update editor controls and tests for valid `%`, `px`, `rem`, and `em`
+  values plus invalid raw input that remains visible with fallback copy.
+- [x] Preserve backward compatibility for already-saved bare-number payloads
+  without widening the editor authoring contract beyond explicit CSS lengths.
+
+## Files to Change
+
+| File | Required change |
+|---|---|
+| `core/widgets/core/divider.tsx` | Add `align` and `containerWidth` or equivalent bounded fields; export pure validation helpers for width input feedback; update width CSS and alignment class/style mapping. |
+| `core/admin/ui/widgets/editors/DividerEditors.tsx` | Add width alignment controls and custom-width validation text for Visual/Advanced. |
+| `tests/vitest/widgets/divider.test.tsx` | Add normalization and SSR output assertions for container width, alignment, valid custom widths, and invalid fallback behavior. |
+| `tests/vitest/ui/divider-editor-wave.test.tsx` | Add editor assertions for alignment selection and custom-width error/resolved copy. |
+| `_docs/_WIDGETS/DIVIDER.md` | Document width modes, alignment, and custom-width validation. |
+
+## Implementation Pseudocode
+
+```ts
+export type DividerAlignment = "left" | "center" | "right";
+
+const dividerContainerWidthTokens = {
+  sm: "min(100%, 40rem)",
+  md: "min(100%, 48rem)",
+  lg: "min(100%, 64rem)",
+} as const;
+
+function validateDividerWidthInput(value: string | undefined) {
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (trimmed.length === 0) {
+    return { status: "empty", css: dividerDefaults.customWidth, message: "Using default width." };
+  }
+  if (cssLengthPattern.test(trimmed)) {
+    return { status: "valid", css: normalizeCssLength(trimmed), message: "Resolved width." };
+  }
+  if (legacyNumberPattern.test(trimmed)) {
+    return {
+      status: "legacy-number",
+      css: `${trimmed}px`,
+      message: "Add a unit such as px, rem, em, or % to keep the value explicit.",
+    };
+  }
+  return { status: "invalid", css: dividerDefaults.customWidth, message: "Invalid width; using default." };
+}
+
+function resolveDividerAlignmentClass(widthMode: DividerWidthMode, align: DividerAlignment) {
+  if (widthMode === "full") return "mx-0";
+  if (align === "left") return "mr-auto";
+  if (align === "right") return "ml-auto";
+  return "mx-auto";
+}
+```
+
+Editor flow:
+
+```tsx
+function CustomWidthField({ normalizedValue, onCommit }: CustomWidthFieldProps) {
+  const [draft, setDraft] = useState(normalizedValue.customWidth ?? dividerDefaults.customWidth);
+  const validation = validateDividerWidthInput(draft);
+
+  return (
+    <>
+      <Input
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={() => onCommit(validation.css)}
+      />
+      <p role={validation.status === "invalid" ? "alert" : undefined}>
+        {validation.message}
+      </p>
+    </>
+  );
+}
+```
+
+Error handling:
+
+- Invalid persisted custom widths continue to normalize to the safe default.
+- The editor must show the fallback reason before persistence so the user is not
+  surprised by a normalized value.
+- Invalid raw custom-width text must remain visible in the input until the user
+  corrects it or commits a valid value; do not immediately replace it through
+  the current normalized `updateData()` path.
+- Already-saved bare-number payloads may normalize to `px` for backward
+  compatibility, but the editor must not silently widen the authoring contract
+  by treating unitless numbers as the preferred new input format.
+- Existing payloads without `align` or `containerWidth` render exactly as the
+  current centered `48rem` container until the user configures new fields.
+
+## Security Contract
+
+No API routes are added.
+
+- Endpoint visibility/auth/RBAC/CSRF/rate limit: unchanged.
+- Reject-unknown validation: schema must list new width/alignment fields.
+- Anti-abuse: width values remain bounded CSS length inputs only; no arbitrary
+  class names or raw style maps.
+- Secret handling: no secrets in widget data, diagnostics, reports, or DOM
+  markers.
+
+## Git Scope Safeguards
+
+- Work in a dedicated TASK-264 branch or worktree when implementation runs
+  alongside other widget-report agents.
+- Re-read `_docs/_TASKS/README.md` immediately before editing the board because
+  it is a shared hotspot.
+- Stage only this leaf's Divider owner files plus required Divider docs, report,
+  changelog, and task-board updates.
+- Verify `git diff --cached --name-only` before every commit so unrelated
+  widget task families stay out of scope.
+
+## Testing Requirements
+
+- `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts` if schema/defaults change
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit` before any manual commit or leaf closure
+
+## Documentation Updates Required
+
+- Update `_docs/_WIDGETS/DIVIDER.md`.
+- Update `_docs/PLAYWRIGHT/REPORT_DIVIDER_WIDGET.md` rows W3, W4, and the
+  custom-width portion of U6 after validation. Record U5 only if validation
+  proves the current `%` support claim regressed.
+
+## Changelog Policy
+
+- Covered by the TASK-264 family changelog or a leaf-specific changelog entry
+  before moving to `Done`.
+
+## Acceptance Criteria
+
+- Container width is configurable through a bounded schema-backed field.
+- Custom/container dividers can align left, center, or right.
+- Invalid custom widths show clear editor feedback and still normalize safely.
+- Invalid custom-width drafts remain visible long enough for the user to fix
+  them instead of being overwritten by `normalizeDividerData()`.
+- New editor authoring stays explicit to CSS lengths (`%`, `px`, `rem`, `em`);
+  legacy bare numbers may be normalized for compatibility but are not the new
+  documented contract.
+- Existing Divider payloads remain backward compatible.

@@ -6,19 +6,16 @@ import type {
   WidgetDataAccess,
   WidgetDefinition,
 } from "../../widgets/types";
+import {
+  readBindingPathValue,
+  splitBindingPath,
+  writeBindingPathValue,
+} from "../utils/bindingPath";
+export { collectBindingPropPaths } from "../utils/bindingPropPaths";
 
 import type { CustomScreenBinding } from "./customScreenSchemas";
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const isArrayIndex = (segment: string) => /^[0-9]+$/.test(segment);
-
-export const splitBindingPath = (path: string) =>
-  path
-    .split(".")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
+export { readBindingPathValue, splitBindingPath, writeBindingPathValue };
 
 export type CustomScreenBindingWidgetSource = "screen-registry" | "legacy-fallback" | "unknown";
 
@@ -232,67 +229,6 @@ export function isBindingWriteAllowed(
   return target?.modes.includes("write") === true;
 }
 
-export function readBindingPathValue(source: unknown, path: string): unknown {
-  const segments = splitBindingPath(path);
-  let current = source;
-
-  for (const segment of segments) {
-    if (Array.isArray(current)) {
-      if (!isArrayIndex(segment)) return undefined;
-      current = current[Number(segment)];
-      continue;
-    }
-    if (!isRecord(current)) return undefined;
-    current = current[segment];
-  }
-
-  return current;
-}
-
-export function writeBindingPathValue(source: unknown, path: string, value: unknown): unknown {
-  const segments = splitBindingPath(path);
-  if (segments.length === 0) return source;
-
-  const writeAt = (current: unknown, index: number): unknown => {
-    const segment = segments[index];
-    if (segment === undefined) return current;
-
-    if (index === segments.length - 1) {
-      if (Array.isArray(current)) {
-        const next = [...current];
-        if (!isArrayIndex(segment)) return current;
-        next[Number(segment)] = value;
-        return next;
-      }
-
-      const next = isRecord(current) ? { ...current } : {};
-      next[segment] = value;
-      return next;
-    }
-
-    const nextContainer =
-      Array.isArray(current) && isArrayIndex(segment)
-        ? current[Number(segment)]
-        : isRecord(current)
-          ? current[segment]
-          : undefined;
-    const resolvedChild = writeAt(nextContainer, index + 1);
-
-    if (Array.isArray(current)) {
-      if (!isArrayIndex(segment)) return current;
-      const next = [...current];
-      next[Number(segment)] = resolvedChild;
-      return next;
-    }
-
-    const next = isRecord(current) ? { ...current } : {};
-    next[segment] = resolvedChild;
-    return next;
-  };
-
-  return writeAt(source, 0);
-}
-
 export const getWidgetBindings = (
   bindings: CustomScreenBinding[],
   widgetId: string,
@@ -376,27 +312,6 @@ export function applyBindingsToBlocks(
   fieldValues: Record<string, unknown>
 ) {
   return blocks.map((block) => applyBindingsToBlock(block, bindings, fieldValues));
-}
-
-export function collectBindingPropPaths(value: unknown, prefix = ""): string[] {
-  if (Array.isArray(value)) {
-    return value.flatMap((item, index) =>
-      collectBindingPropPaths(item, prefix ? `${prefix}.${String(index)}` : String(index))
-    );
-  }
-
-  if (!isRecord(value)) {
-    return prefix ? [prefix] : [];
-  }
-
-  const entries = Object.entries(value);
-  if (entries.length === 0) {
-    return prefix ? [prefix] : [];
-  }
-
-  return entries.flatMap(([key, nested]) =>
-    collectBindingPropPaths(nested, prefix ? `${prefix}.${key}` : key)
-  );
 }
 
 export function collectWritableBindingFields(

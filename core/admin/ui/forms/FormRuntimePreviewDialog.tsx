@@ -2,21 +2,12 @@ import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
-import {
-  submitForm,
-  type FormSettings,
-  type FormSubmissionResponse,
-} from "@/services/formsClient";
+import { submitForm, type FormSettings, type FormSubmissionResponse } from "@/services/formsClient";
 import {
   evaluateFormFieldLogic,
   resolveFormFieldStyle,
@@ -37,6 +28,8 @@ type RuntimePreviewField = {
     options?: string[];
     defaultValue?: string | boolean;
     pattern?: string;
+    min?: number;
+    max?: number;
     step?: number;
     logic?: FormFieldLogic;
     style?: FormFieldStyle;
@@ -109,14 +102,10 @@ export function FormRuntimePreviewDialog({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<FormSubmissionResponse | null>(null);
 
-  const values =
-    valuesState.source === fields ? valuesState.values : buildInitialValues(fields);
-  const setValues = (
-    next: RuntimeValues | ((previous: RuntimeValues) => RuntimeValues)
-  ) => {
+  const values = valuesState.source === fields ? valuesState.values : buildInitialValues(fields);
+  const setValues = (next: RuntimeValues | ((previous: RuntimeValues) => RuntimeValues)) => {
     setValuesState((previous) => {
-      const current =
-        previous.source === fields ? previous.values : buildInitialValues(fields);
+      const current = previous.source === fields ? previous.values : buildInitialValues(fields);
       return {
         source: fields,
         values: typeof next === "function" ? next(current) : next,
@@ -135,15 +124,12 @@ export function FormRuntimePreviewDialog({
   };
 
   const visibleFields = useMemo(() => {
-    return fields.filter((field) =>
-      evaluateFormFieldLogic(field.settings.logic, values)
-    );
+    return fields.filter((field) => evaluateFormFieldLogic(field.settings.logic, values));
   }, [fields, values]);
 
   const stepGroups = useMemo(() => toStepGroups(visibleFields), [visibleFields]);
   const maxStep = settings.layoutMode === "multi_step" ? Math.max(stepGroups.length, 1) : 1;
-  const activeStep =
-    settings.layoutMode === "multi_step" ? Math.min(currentStep, maxStep) : 1;
+  const activeStep = settings.layoutMode === "multi_step" ? Math.min(currentStep, maxStep) : 1;
 
   const activeStepFields = useMemo(() => {
     if (settings.layoutMode !== "multi_step") return visibleFields;
@@ -205,7 +191,10 @@ export function FormRuntimePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-4xl" showCloseButton={false}>
+      <DialogContent
+        className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-4xl"
+        showCloseButton={false}
+      >
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>Form Runtime Preview</DialogTitle>
           <p className="text-xs text-muted-foreground">
@@ -303,9 +292,7 @@ export function FormRuntimePreviewDialog({
                             checked={value === true}
                             onChange={(event) => updateValue(field.name, event.target.checked)}
                           />
-                          <span>
-                            {style.labelPosition === "hidden" ? "Checkbox" : field.label}
-                          </span>
+                          <span>{style.labelPosition === "hidden" ? "Checkbox" : field.label}</span>
                         </label>
                       ) : field.type === "textarea" ? (
                         <div className={labelPositionClass}>
@@ -318,7 +305,9 @@ export function FormRuntimePreviewDialog({
                               onChange={(event) => updateValue(field.name, event.target.value)}
                             />
                             {field.settings.helper ? (
-                              <p className="text-xs text-muted-foreground">{field.settings.helper}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {field.settings.helper}
+                              </p>
                             ) : null}
                           </div>
                         </div>
@@ -340,9 +329,71 @@ export function FormRuntimePreviewDialog({
                               ))}
                             </select>
                             {field.settings.helper ? (
-                              <p className="text-xs text-muted-foreground">{field.settings.helper}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {field.settings.helper}
+                              </p>
                             ) : null}
                           </div>
+                        </div>
+                      ) : field.type === "radio" ? (
+                        <div className={labelPositionClass}>
+                          {labelNode}
+                          <div className="space-y-2">
+                            {(field.settings.options ?? []).map((option) => (
+                              <label
+                                key={`${field.id}-${option}`}
+                                className="flex items-center gap-2 text-sm text-foreground"
+                              >
+                                <input
+                                  type="radio"
+                                  name={field.name}
+                                  value={option}
+                                  checked={value === option}
+                                  onChange={() => updateValue(field.name, option)}
+                                />
+                                <span>{option}</span>
+                              </label>
+                            ))}
+                            {field.settings.helper ? (
+                              <p className="text-xs text-muted-foreground">
+                                {field.settings.helper}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : field.type === "rating" ? (
+                        <div className={labelPositionClass}>
+                          {labelNode}
+                          <div className="space-y-2">
+                            {Array.from(
+                              { length: Math.max(1, Number(field.settings.max ?? 5)) },
+                              (_, index) => String(index + 1)
+                            ).map((option) => (
+                              <label
+                                key={`${field.id}-${option}`}
+                                className="flex items-center gap-2 text-sm text-foreground"
+                              >
+                                <input
+                                  type="radio"
+                                  name={field.name}
+                                  value={option}
+                                  checked={value === option}
+                                  onChange={() => updateValue(field.name, option)}
+                                />
+                                <span>{option}</span>
+                              </label>
+                            ))}
+                            {field.settings.helper ? (
+                              <p className="text-xs text-muted-foreground">
+                                {field.settings.helper}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : field.type === "hidden" ? (
+                        <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                          Hidden field submits trusted value:{" "}
+                          <span className="font-mono">{String(value ?? "")}</span>
                         </div>
                       ) : (
                         <div className={labelPositionClass}>
@@ -355,16 +406,37 @@ export function FormRuntimePreviewDialog({
                                   ? "email"
                                   : field.type === "date"
                                     ? "date"
-                                    : field.type === "phone"
-                                      ? "tel"
-                                      : "text"
+                                    : field.type === "time"
+                                      ? "time"
+                                      : field.type === "number" || field.type === "range"
+                                        ? field.type
+                                        : field.type === "phone"
+                                          ? "tel"
+                                          : "text"
                               }
                               value={typeof value === "string" ? value : ""}
                               placeholder={field.settings.placeholder ?? ""}
                               onChange={(event) => updateValue(field.name, event.target.value)}
+                              min={
+                                typeof field.settings.min === "number"
+                                  ? String(field.settings.min)
+                                  : undefined
+                              }
+                              max={
+                                typeof field.settings.max === "number"
+                                  ? String(field.settings.max)
+                                  : undefined
+                              }
+                              step={
+                                typeof field.settings.step === "number"
+                                  ? String(field.settings.step)
+                                  : undefined
+                              }
                             />
                             {field.settings.helper ? (
-                              <p className="text-xs text-muted-foreground">{field.settings.helper}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {field.settings.helper}
+                              </p>
                             ) : null}
                           </div>
                         </div>

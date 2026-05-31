@@ -17,7 +17,10 @@ import type {
   AssistantResourceCatalogSnapshot,
   AssistantTemplateSectionReferenceSummary,
 } from "./adminContextTypes";
+import type { CustomScreenCollectionRole } from "../customScreens/customScreenSchemas";
 import { isAssistantActionPlanStrict } from "./actionPlanSchema";
+import type { DetailPageDocument } from "../content/detailPageTypes";
+import type { CollectionWorkspaceSummary } from "../content/collectionWorkspaceService";
 
 export type AssistantActionPlanStatus = "ready" | "needs_input";
 export type AssistantPromptKind =
@@ -77,6 +80,8 @@ export type AssistantActionContext = {
   resourceCatalog?: AssistantResourceCatalogSnapshot;
   runtimeSnapshot?: AssistantActionRuntimeSnapshot;
   activeSurface?: AssistantActiveSurfaceContext | null;
+  collectionWorkspaceHint?: AssistantCollectionWorkspaceHint | null;
+  collectionWorkspace?: AssistantCollectionWorkspaceSummary | null;
   planningState?: AssistantPlanningState | null;
 };
 
@@ -198,10 +203,48 @@ export type AssistantActiveCustomScreenSurfaceContext = {
   warnings: string[];
 };
 
+export type AssistantCollectionWorkspaceHint = {
+  contentTypeId: string;
+  activeDetailPageId?: string | null;
+};
+
+export type AssistantCollectionWorkspaceSummary = CollectionWorkspaceSummary & {
+  activeDetailPageId: string | null;
+};
+
+export type AssistantDetailPageBindingSummary = {
+  id: string;
+  blockId: string;
+  propPath: string;
+  source: DetailPageDocument["bindings"][number]["source"];
+  transform: DetailPageDocument["bindings"][number]["transform"] | null;
+  required: boolean;
+};
+
+export type AssistantActiveDetailPageSurfaceContext = {
+  kind: "detail-page";
+  detailPage: {
+    id: string;
+    name: string;
+    status: string;
+    contentTypeId: string;
+    contentTypeSlug: string;
+    titlePattern: string;
+  };
+  sampleEntryId: string | null;
+  selectedBlockId: string | null;
+  blocks: AssistantActiveSurfaceBlockSummary[];
+  bindings?: AssistantDetailPageBindingSummary[];
+  templateReferences?: AssistantTemplateSectionReferenceSummary[];
+  referencedTemplates?: AssistantReferencedWidgetTemplateSummary[];
+  warnings: string[];
+};
+
 export type AssistantActiveSurfaceContext =
   | AssistantActivePageSurfaceContext
   | AssistantActiveWidgetTemplateSurfaceContext
-  | AssistantActiveCustomScreenSurfaceContext;
+  | AssistantActiveCustomScreenSurfaceContext
+  | AssistantActiveDetailPageSurfaceContext;
 
 export type AssistantAdminContext = {
   route: string | null;
@@ -209,6 +252,8 @@ export type AssistantAdminContext = {
   resourceCatalog: AssistantResourceCatalogSnapshot | null;
   runtimeSnapshot: AssistantAdminRuntimeSnapshot | null;
   activeSurface: AssistantActiveSurfaceContext | null;
+  collectionWorkspaceHint: AssistantCollectionWorkspaceHint | null;
+  collectionWorkspace: AssistantCollectionWorkspaceSummary | null;
   planningState: AssistantPlanningState | null;
   area: "dashboard" | "pages" | "posts" | "advanced" | "settings" | "other";
   advancedModule:
@@ -241,6 +286,7 @@ export type AssistantContentRouteUpsertAction = {
     listPath: string;
     detailPath: string;
     enabled: boolean;
+    detailPageId?: string | null;
   };
 };
 
@@ -278,6 +324,8 @@ export type AssistantCustomScreenUpsertAction = {
     name: string;
     contentTypeSlug: string;
     status: "draft" | "active";
+    collectionRole?: CustomScreenCollectionRole | null;
+    compositionKey?: string | null;
     showInSidebar: boolean;
     sidebarLabel: string | null;
     blocks: Array<Record<string, unknown>>;
@@ -310,6 +358,8 @@ export type AssistantCustomScreenUpdateAction = {
     patch: {
       name?: string;
       status?: "draft" | "active";
+      collectionRole?: CustomScreenCollectionRole | null;
+      compositionKey?: string | null;
       showInSidebar?: boolean;
       sidebarLabel?: string | null;
       binding?: {
@@ -714,6 +764,17 @@ export type AssistantFormAutomationUpsertAction = {
   };
 };
 
+export type AssistantPageCollectionLinkInput = {
+  contentTypeId?: string | null;
+  contentTypeSlug?: string | null;
+  pageRole: "canonical-list-page" | "supporting-page";
+  compositionKey?: string | null;
+  listingQueryId?: string | null;
+  listingQueryName?: string | null;
+  listingTemplateId?: string | null;
+  listingTemplateSlug?: string | null;
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -750,6 +811,18 @@ export type AssistantPageUpsertAction = {
       submitLabel: string;
       successMessage: string;
     } | null;
+    collectionLink?: AssistantPageCollectionLinkInput;
+  };
+};
+
+export type AssistantDetailPageUpsertAction = {
+  id: string;
+  type: "detail-page.upsert";
+  title: string;
+  description: string;
+  input: {
+    document: DetailPageDocument;
+    expectedExistingId?: string | null;
   };
 };
 
@@ -906,6 +979,7 @@ export type AssistantPlannedAction =
   | AssistantPageWidgetPatchAction
   | AssistantFormAutomationUpsertAction
   | AssistantPageUpsertAction
+  | AssistantDetailPageUpsertAction
   | AssistantPageUpdateAction
   | AssistantPageDeleteAction
   | AssistantWidgetTemplateDeleteAction
@@ -925,6 +999,7 @@ export type AssistantActionContractFamily =
   | "custom-screen"
   | "listing"
   | "form"
+  | "detail-page"
   | "page"
   | "site-kit"
   | "entry"
@@ -958,10 +1033,90 @@ export type AssistantActionFamilyContract<TType extends string = string> = {
   secretHandling: readonly string[];
 };
 
+export type AssistantBlueprintCompositionResourceKind =
+  | "content-type"
+  | "content-route"
+  | "entry"
+  | "custom-screen"
+  | "listing-query"
+  | "listing-template"
+  | "page"
+  | "detail-page"
+  | "media"
+  | "form"
+  | "menu"
+  | "seo"
+  | "widget-template"
+  | "site-kit";
+
+export type AssistantBlueprintCompositionConflictMetadata = {
+  code: string;
+  severity: "warning" | "error";
+  message: string;
+  capabilityId?: string | null;
+  resourceKey?: string | null;
+  actionType?: AssistantExecutableActionType | null;
+};
+
+export type AssistantBlueprintCompositionResourceMetadata = {
+  key: string;
+  kind: AssistantBlueprintCompositionResourceKind;
+  sourceCapabilityIds: string[];
+};
+
+export type AssistantBlueprintCompositionExistingResourceMetadata = {
+  actionId: string | null;
+  actionType: AssistantExecutableActionType | null;
+  resourceKey: string;
+  existingId: string | null;
+  status: "matched" | "unresolved";
+  reason: string | null;
+  candidateIds: string[];
+};
+
+export type AssistantBlueprintCompositionCandidateScoreMetadata = {
+  id: string;
+  role: "primary" | "adjunct" | "gated";
+  score: number;
+  reasons: string[];
+};
+
+export type AssistantBlueprintCompositionMetadata = {
+  schemaVersion: 1;
+  kind: "blueprint-composition";
+  primaryCapabilityId: string;
+  adjunctCapabilityIds: string[];
+  gatedCapabilityIds: string[];
+  mergedResources: AssistantBlueprintCompositionResourceMetadata[];
+  existingResourceMatches: AssistantBlueprintCompositionExistingResourceMetadata[];
+  resolvedConflicts: AssistantBlueprintCompositionConflictMetadata[];
+  unresolvedConflicts: AssistantBlueprintCompositionConflictMetadata[];
+  diagnostics?: {
+    candidateScores?: AssistantBlueprintCompositionCandidateScoreMetadata[];
+  };
+};
+
 export type AssistantActionPlanMetadata = {
   planner: "local" | "provider" | "fallback";
   providerDraftUsed: boolean;
   providerId?: string | null;
+  blueprintComposition?: AssistantBlueprintCompositionMetadata;
+  blueprintShadow?: {
+    schemaVersion: 1;
+    currentIntentId: string;
+    currentIntentFamily: AssistantIntentFamily | null;
+    primaryCapabilityId: string | null;
+    adjunctCapabilityIds: string[];
+    gatedCapabilityIds: string[];
+    candidates: Array<{
+      capabilityId: string;
+      role: "primary" | "adjunct" | "gated";
+      score: number;
+      matchedSignals: string[];
+      reasons: string[];
+    }>;
+    mismatchReason: string | null;
+  };
 };
 
 export type AssistantActionPlanInspectionCandidate = {
@@ -1093,6 +1248,5 @@ export type AssistantActionExecuteResult = {
   };
 };
 
-export const isAssistantActionPlan = (
-  value: unknown
-): value is AssistantActionPlan => isAssistantActionPlanStrict(value);
+export const isAssistantActionPlan = (value: unknown): value is AssistantActionPlan =>
+  isAssistantActionPlanStrict(value);

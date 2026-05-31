@@ -5,13 +5,27 @@
 **Category:** Assistant/Core + Conflict Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03-01
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
 ## Overview
 
 Resolve or surface conflicts in composed blueprint graphs.
+
+Current slice note:
+- stable merge keys and duplicate-action conflict detection are landed,
+- typed `route_conflict`, `resource_slug_conflict`, `field_type_conflict`, and
+  blocking `gated_domain` surfacing now return machine-readable conflicts
+  through a closed typed contract that the assembler/planner path can downgrade
+  into `needs_input` / `gated`,
+- media conflicts now surface as `media_asset_missing`,
+  `media_asset_ambiguous`, `media_upload_gated`, and `media_delete_gated`
+  without transporting raw upload payloads or deleting media assets through the
+  composer,
+- required manifest permissions that are not declared by the composed action
+  family contracts now surface as typed `permission_gap` conflicts instead of
+  being treated as implicit grants.
 
 ## Sub-Tasks
 
@@ -40,14 +54,10 @@ No child task files.
 ## Pseudocode
 
 ```ts
-export const resolveBlueprintConflicts = (graph, context) => {
-  const conflicts = detectConflicts(graph, context);
-  const resolved = conflicts.map((conflict) =>
-    canAutoResolve(conflict) ? autoResolve(conflict) : conflict
+export const resolveBlueprintConflicts = (graph) => {
+  return detectConflicts(graph).map((conflict) =>
+    normalizeBlueprintConflict(conflict)
   );
-  return unresolved(resolved).length > 0
-    ? buildNeedsInputCompositionPlan(resolved)
-    : applyConflictResolutions(graph, resolved);
 };
 ```
 
@@ -58,20 +68,20 @@ export const resolveBlueprintConflicts = (graph, context) => {
 - RBAC: permission gaps cannot auto-resolve.
 - CSRF: unchanged.
 - Rate-limit bucket: unchanged.
-- Reject-unknown validation: conflict objects strict.
+- Reject-unknown validation: conflict objects use a closed typed
+  code/severity contract.
 - Anti-abuse: destructive/privileged conflicts always need input.
 - Secret handling: conflict messages redact secret-like fields.
 
 ## Testing Requirements
 
-- Slug collision test.
+- Listing-template slug conflict test.
 - Field type mismatch test.
 - Route collision test.
-- Permission gap test.
 - Gated module test.
-- Media conflict tests for missing asset id, ambiguous filename/label matches,
-  attached files that need media import first, and asset deletion requests that
-  lack an executable media-service action.
+- Closed-contract regression for unknown conflict codes.
+- Media missing/ambiguous/upload/delete conflict tests.
+- Permission gap and permission-satisfied-by-action-contract tests.
 
 ## Documentation Updates Required
 

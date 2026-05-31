@@ -302,8 +302,8 @@ export async function listListingQueriesCached(options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = getCachedListingQueries();
     if (cached) return cached;
-    if (cachedQueriesPromise) return cachedQueriesPromise;
   }
+  if (cachedQueriesPromise) return cachedQueriesPromise;
   const request = listListingQueries();
   cachedQueriesPromise = request;
   const items = await request;
@@ -475,10 +475,7 @@ export async function getListingTemplate(id: string) {
   return apiRequest<ListingTemplateRecord>(`/listings/templates/${id}`, { method: "GET" });
 }
 
-export async function getListingTemplateCached(
-  id: string,
-  options?: { force?: boolean }
-) {
+export async function getListingTemplateCached(id: string, options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = readTemplateDetailCache(id);
     if (cached) return cached;

@@ -14,7 +14,10 @@ import {
   normalizeStackData,
   resolveStackVariant,
   StackBlock,
+  stackAlignTokens,
   stackDefaults,
+  stackGapTokens,
+  stackJustifyTokens,
   type StackData,
 } from "../../../core/widgets/core/stack";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -25,20 +28,152 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubStackEditor: ComponentType<WidgetEditorProps<StackData>> = () => null;
 const StubHeroEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 
-test("stack renders defaults", () => {
+const expectHtmlClasses = (html: string, classes: string[]) => {
+  for (const className of classes) {
+    expect(html).toContain(className);
+  }
+};
+
+test("stack renders defaults with responsive axis markers", () => {
   const html = renderToString(<StackBlock data={stackDefaults} variant="vertical" />);
 
+  expectHtmlClasses(html, ["gap-4", "md:gap-6", "lg:gap-6"]);
   expect(html).toContain('data-stack-variant="vertical"');
   expect(html).toContain('data-stack-direction-desktop="column"');
+  expect(html).toContain('data-stack-align="stretch"');
+  expect(html).toContain('data-stack-align-desktop="stretch"');
+  expect(html).toContain('data-stack-justify-tablet="start"');
+  expect(html).toContain('data-stack-wrap-mobile="false"');
   expect(html).toContain('data-stack-items="0"');
   expect(html).toContain("Empty stack.");
 });
 
-test("stack normalization keeps deterministic variant flow defaults", () => {
+test("stack renders every responsive utility as build-safe literal classes", () => {
+  const directions = ["row", "column"] as const;
+  for (const direction of directions) {
+    const html = renderToString(
+      <StackBlock
+        variant="responsive"
+        data={{
+          direction: {
+            desktop: direction,
+            tablet: direction,
+            mobile: direction,
+          },
+        }}
+      />
+    );
+    const suffix = direction === "row" ? "row" : "col";
+    expectHtmlClasses(html, [`flex-${suffix}`, `md:flex-${suffix}`, `lg:flex-${suffix}`]);
+  }
+
+  for (const gap of stackGapTokens) {
+    const html = renderToString(
+      <StackBlock
+        variant="responsive"
+        data={{
+          gap: {
+            desktop: gap,
+            tablet: gap,
+            mobile: gap,
+          },
+        }}
+      />
+    );
+    const suffix = gap === "none" ? "0" : gap;
+    expectHtmlClasses(html, [`gap-${suffix}`, `md:gap-${suffix}`, `lg:gap-${suffix}`]);
+  }
+
+  const alignSuffixMap = {
+    start: "start",
+    center: "center",
+    end: "end",
+    stretch: "stretch",
+    baseline: "baseline",
+  } as const;
+  for (const align of stackAlignTokens) {
+    const html = renderToString(
+      <StackBlock
+        variant="responsive"
+        data={{
+          align: {
+            desktop: align,
+            tablet: align,
+            mobile: align,
+          },
+        }}
+      />
+    );
+    const suffix = alignSuffixMap[align];
+    expectHtmlClasses(html, [`items-${suffix}`, `md:items-${suffix}`, `lg:items-${suffix}`]);
+  }
+
+  for (const justify of stackJustifyTokens) {
+    const html = renderToString(
+      <StackBlock
+        variant="responsive"
+        data={{
+          justify: {
+            desktop: justify,
+            tablet: justify,
+            mobile: justify,
+          },
+        }}
+      />
+    );
+    expectHtmlClasses(html, [
+      `justify-${justify}`,
+      `md:justify-${justify}`,
+      `lg:justify-${justify}`,
+    ]);
+  }
+
+  for (const wrap of [false, true]) {
+    const html = renderToString(
+      <StackBlock
+        variant="responsive"
+        data={{
+          wrap: {
+            desktop: wrap,
+            tablet: wrap,
+            mobile: wrap,
+          },
+        }}
+      />
+    );
+    const suffix = wrap ? "wrap" : "nowrap";
+    expectHtmlClasses(html, [`flex-${suffix}`, `md:flex-${suffix}`, `lg:flex-${suffix}`]);
+  }
+});
+
+test("stack normalization supports presets, legacy scalars, and responsive objects", () => {
   const horizontal = normalizeStackData({}, "horizontal");
-  expect(horizontal.direction?.desktop).toBe("row");
-  expect(horizontal.direction?.tablet).toBe("row");
-  expect(horizontal.direction?.mobile).toBe("row");
+  expect(horizontal.direction).toEqual({
+    desktop: "row",
+    tablet: "row",
+    mobile: "row",
+  });
+  expect(horizontal.align).toEqual({
+    desktop: "stretch",
+    tablet: "stretch",
+    mobile: "stretch",
+  });
+
+  const legacyZeroGap = normalizeStackData(
+    {
+      gap: {
+        desktop: "0",
+        tablet: "0",
+        mobile: "0",
+      },
+    },
+    "vertical"
+  );
+  expect(legacyZeroGap.gap).toEqual({
+    desktop: "0",
+    tablet: "0",
+    mobile: "0",
+  });
 
   const responsive = normalizeStackData(
     {
@@ -46,21 +181,93 @@ test("stack normalization keeps deterministic variant flow defaults", () => {
       gap: {
         desktop: "unknown" as NonNullable<StackData["gap"]>["desktop"],
       },
-      align: "bad" as StackData["align"],
-      justify: "bad" as StackData["justify"],
+      align: "baseline",
+      justify: {
+        desktop: "evenly",
+        tablet: "around",
+        mobile: "bad" as never,
+      },
+      wrap: true,
     },
     "responsive"
   );
-  expect(responsive.direction?.desktop).toBe("row");
-  expect(responsive.direction?.tablet).toBe("row");
-  expect(responsive.direction?.mobile).toBe("row");
+  expect(responsive.direction).toEqual({
+    desktop: "row",
+    tablet: "row",
+    mobile: "row",
+  });
   expect(responsive.gap?.desktop).toBe("6");
-  expect(responsive.align).toBe("stretch");
-  expect(responsive.justify).toBe("start");
+  expect(responsive.align).toEqual({
+    desktop: "baseline",
+    tablet: "baseline",
+    mobile: "baseline",
+  });
+  expect(responsive.justify).toEqual({
+    desktop: "evenly",
+    tablet: "around",
+    mobile: "start",
+  });
+  expect(responsive.wrap).toEqual({
+    desktop: true,
+    tablet: true,
+    mobile: true,
+  });
   expect(resolveStackVariant("unknown")).toBe("vertical");
 });
 
-test("stack validator accepts expanded model", () => {
+test("stack renders responsive align, justify, and wrap classes", () => {
+  const html = renderToString(
+    <StackBlock
+      data={{
+        direction: {
+          desktop: "row",
+          tablet: "row",
+          mobile: "column",
+        },
+        gap: {
+          desktop: "none",
+          tablet: "6",
+          mobile: "4",
+        },
+        align: {
+          desktop: "baseline",
+          tablet: "center",
+          mobile: "start",
+        },
+        justify: {
+          desktop: "evenly",
+          tablet: "around",
+          mobile: "between",
+        },
+        wrap: {
+          desktop: true,
+          tablet: false,
+          mobile: true,
+        },
+      }}
+      variant="responsive"
+    />
+  );
+
+  expect(html).toContain("items-start");
+  expect(html).toContain("md:items-center");
+  expect(html).toContain("lg:items-baseline");
+  expect(html).toContain("justify-between");
+  expect(html).toContain("md:justify-around");
+  expect(html).toContain("lg:justify-evenly");
+  expect(html).toContain("flex-wrap");
+  expect(html).toContain("md:flex-nowrap");
+  expect(html).toContain("lg:flex-wrap");
+  expect(html).toContain('data-stack-gap-desktop="none"');
+  expect(html).toContain('data-stack-align="start"');
+  expect(html).toContain('data-stack-align-desktop="baseline"');
+  expect(html).toContain('data-stack-justify="between"');
+  expect(html).toContain('data-stack-justify-tablet="around"');
+  expect(html).toContain('data-stack-wrap="true"');
+  expect(html).toContain('data-stack-wrap-tablet="false"');
+});
+
+test("stack validator accepts legacy scalar and responsive axis or wrap models", () => {
   clearWidgets();
   const widget = createStackWidget({
     wizard: StubStackEditor,
@@ -71,7 +278,7 @@ test("stack validator accepts expanded model", () => {
 
   expect(() =>
     normalizeWidgetBlock({
-      id: "stack-1",
+      id: "stack-legacy-axis",
       type: "stack",
       variant: "responsive",
       data: {
@@ -86,8 +293,46 @@ test("stack validator accepts expanded model", () => {
           mobile: "4",
         },
         align: "center",
-        justify: "between",
-        wrap: true,
+        justify: "around",
+        wrap: false,
+      },
+      slots: {
+        content: [],
+      },
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "stack-responsive-axis",
+      type: "stack",
+      variant: "responsive",
+      data: {
+        direction: {
+          desktop: "row",
+          tablet: "row",
+          mobile: "column",
+        },
+        gap: {
+          desktop: "8",
+          tablet: "6",
+          mobile: "4",
+        },
+        align: {
+          desktop: "baseline",
+          tablet: "center",
+          mobile: "stretch",
+        },
+        justify: {
+          desktop: "evenly",
+          tablet: "around",
+          mobile: "start",
+        },
+        wrap: {
+          desktop: true,
+          tablet: false,
+          mobile: true,
+        },
       },
       slots: {
         content: [],
@@ -97,7 +342,7 @@ test("stack validator accepts expanded model", () => {
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
-test("stack validator rejects invalid variant", () => {
+test("stack validator rejects invalid responsive axis keys and values", () => {
   clearWidgets();
   registerWidget(
     createStackWidget({
@@ -109,12 +354,34 @@ test("stack validator rejects invalid variant", () => {
 
   expect(() =>
     normalizeWidgetBlock({
-      id: "stack-2",
+      id: "stack-invalid-align-key",
       type: "stack",
-      variant: "invalid",
-      data: stackDefaults,
+      variant: "responsive",
+      data: {
+        ...stackDefaults,
+        align: {
+          desktop: "center",
+          widescreen: "start",
+        } as never,
+      },
     })
-  ).toThrow("widget_invalid_variant");
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "stack-invalid-wrap-value",
+      type: "stack",
+      variant: "responsive",
+      data: {
+        ...stackDefaults,
+        wrap: {
+          desktop: true,
+          tablet: false,
+          mobile: "yes",
+        } as never,
+      },
+    })
+  ).toThrow("widget_schema_invalid");
 });
 
 test("stack renders content slot blocks", () => {
@@ -139,8 +406,15 @@ test("stack renders content slot blocks", () => {
       block={{
         id: "stack-parent",
         type: "stack",
-        variant: "vertical",
-        data: stackDefaults,
+        variant: "horizontal",
+        data: {
+          ...stackDefaults,
+          direction: {
+            desktop: "row",
+            tablet: "row",
+            mobile: "column",
+          },
+        },
         slots: {
           content: [
             {
@@ -160,9 +434,12 @@ test("stack renders content slot blocks", () => {
 
   expect(html).toContain("Stack child");
   expect(html).toContain('data-stack-items="1"');
+  expect(html).toContain('data-widget-surface="row-flow-item"');
+  expect(html).toContain('class="min-w-0 max-w-full" data-widget-surface="row-flow-item"');
+  expect(html.match(/<section/g) ?? []).toHaveLength(1);
 });
 
-test("stack editors render expected sections", () => {
+test("stack editors render updated sections, copy, and miniatures", () => {
   const wizardHtml = renderToString(
     <StackWizardEditor
       value={stackDefaults}
@@ -171,8 +448,14 @@ test("stack editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(wizardHtml).toContain("Stack style");
-  expect(wizardHtml).toContain("Mobile direction");
+  expect(wizardHtml).toContain("Stack quick start");
+  expect(wizardHtml).toContain(
+    "Visual owns stack preset choice, breakpoint flow directions, spacing, alignment, distribution, and wrapping after setup."
+  );
+  expect(wizardHtml).not.toContain("Gap on all breakpoints");
+  expect(wizardHtml).not.toContain("Align on all breakpoints");
+  expect(wizardHtml).not.toContain("Justify on all breakpoints");
+  expect(wizardHtml).toContain("content");
 
   const visualHtml = renderToString(
     <StackVisualEditor
@@ -184,7 +467,11 @@ test("stack editors render expected sections", () => {
   );
   expect(visualHtml).toContain("Variant and flow");
   expect(visualHtml).toContain("Responsive direction");
-  expect(visualHtml).toContain("Spacing and distribution");
+  expect(visualHtml).toContain("Responsive alignment and wrap");
+  expect(visualHtml).toContain("Slot guidance");
+  expect(visualHtml).toContain('data-stack-variant-miniature="vertical"');
+  expect(visualHtml).toContain('data-stack-variant-miniature="horizontal"');
+  expect(visualHtml).toContain('data-stack-variant-miniature="responsive"');
 
   const advancedHtml = renderToString(
     <StackAdvancedEditor
@@ -194,6 +481,10 @@ test("stack editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Technical flow tokens");
-  expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(advancedHtml).toContain("Runtime stack summary");
+  expect(advancedHtml).toContain("Support summary");
+  expect(advancedHtml).toContain("Stack vertically");
+  expect(advancedHtml).not.toContain("Technical flow tokens");
+  expect(advancedHtml).not.toContain("Raw payload snapshot");
+  expect(advancedHtml).not.toContain("<pre");
 });

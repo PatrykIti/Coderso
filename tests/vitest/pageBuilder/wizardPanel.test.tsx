@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import type { ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
@@ -83,14 +83,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -114,10 +114,10 @@ test("WizardPanel renders widget editor and metadata", () => {
     expect(view.container.textContent).toContain("Dummy Widget");
     expect(view.container.textContent).toContain("Widget type");
     expect(view.container.textContent).toContain("dummy");
-    expect(view.container.textContent).toContain(
-      "Next you can fine-tune layout, styling, and advanced settings."
-    );
-    expect(view.container.textContent).toContain("Continue to layout and styling");
+    expect(view.container.innerHTML).toContain('data-widget-editor="dummy"');
+    expect(view.container.innerHTML).toContain('data-widget-editor-mode="wizard"');
+    expect(view.container.innerHTML).toContain('aria-label="Dummy Widget widget information"');
+    expect(view.container.textContent).toContain("Finish setup and open Visual");
   } finally {
     view.cleanup();
   }
@@ -133,12 +133,10 @@ test("WizardPanel forwards editor data, variant updates, and completion", () => 
 
   try {
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "change-data")?.click();
       buttons.find((button) => button.textContent === "change-variant")?.click();
-      buttons
-        .find((button) => button.textContent === "Continue to layout and styling")
-        ?.click();
+      buttons.find((button) => button.textContent === "Finish setup and open Visual")?.click();
     });
 
     expect(onChange).toHaveBeenCalledWith({
@@ -150,6 +148,36 @@ test("WizardPanel forwards editor data, variant updates, and completion", () => 
       variant: "beta",
     });
     expect(onComplete).toHaveBeenCalledTimes(1);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("WizardPanel prefers atomic block patches when provided", () => {
+  const onChange = vi.fn();
+  const onBlockPatch = vi.fn();
+
+  const view = mount(
+    <WizardPanel
+      widget={widget}
+      block={block}
+      onChange={onChange}
+      onBlockPatch={onBlockPatch}
+      onComplete={() => {}}
+    />
+  );
+
+  try {
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent === "change-data")?.click();
+      buttons.find((button) => button.textContent === "change-variant")?.click();
+    });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onBlockPatch).toHaveBeenCalledTimes(2);
+    expect(onBlockPatch).toHaveBeenNthCalledWith(1, expect.any(Function));
+    expect(onBlockPatch).toHaveBeenNthCalledWith(2, { variant: "beta" });
   } finally {
     view.cleanup();
   }

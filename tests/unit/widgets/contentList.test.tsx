@@ -15,17 +15,50 @@ import {
 } from "../../../core/services/content/contentListResolver";
 import {
   ContentListBlock,
+  contentListEditorContract,
   contentListDefaults,
   createContentListWidget,
   normalizeContentListData,
   normalizeContentListLimit,
   type ContentListData,
 } from "../../../core/widgets/core/contentList";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<ContentListData>> = () => null;
+
+test("content list exposes a strict v2 editor contract", () => {
+  const widget = createContentListWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+
+  expect(widget.editorContract).toBe(contentListEditorContract);
+  expect(validation.valid).toBe(true);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
+    "content-list.wizard.source-binding",
+    "content-list.wizard.source-rules",
+    "content-list.visual.variant-layout",
+    "content-list.visual.filters",
+    "content-list.visual.section-context",
+    "content-list.visual.pagination-actions",
+    "content-list.visual.presentation-fields",
+    "content-list.visual.surface-colors",
+    "content-list.visual.empty-state",
+    "content-list.advanced.source-summary",
+    "content-list.advanced.style-summary",
+    "content-list.advanced.runtime-summary",
+  ]);
+  expect(
+    widget.editorContract?.sections
+      .filter((section) => section.mode === "advanced")
+      .flatMap((section) => section.writablePaths)
+  ).toEqual([]);
+});
 
 const createEntry = (patch: Partial<ContentListResolverEntry>): ContentListResolverEntry => ({
   id: "entry-1",
@@ -85,6 +118,39 @@ test("content list renders listing source placeholder when listing query is miss
   expect(html).toContain('data-content-list-state="missing-source"');
 });
 
+test("content list renders section heading and listing-aware empty description", () => {
+  const html = renderToString(
+    <ContentListBlock
+      blockId="content-list-1"
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        title: "Latest work",
+        description: "Fresh additions from the listing query.",
+        source: {
+          ...contentListDefaults.source,
+          mode: "listing",
+          listingQueryId: "query-1",
+          listingTemplateId: "template-1",
+        },
+        resolved: {
+          items: [],
+          total: 0,
+          listingQueryId: "query-1",
+          listingTemplateId: "template-1",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('aria-labelledby="content-list-1-title"');
+  expect(html).toContain("Latest work");
+  expect(html).toContain("Fresh additions from the listing query.");
+  expect(html).toContain("Adjust the listing query or publish matching entries.");
+  expect(html).not.toContain("Adjust filters or publish entries for this content type.");
+});
+
 test("content list renders resolved items and runtime markers", () => {
   const html = renderToString(
     <ContentListBlock
@@ -123,9 +189,234 @@ test("content list renders resolved items and runtime markers", () => {
 
   expect(html).toContain("Release notes");
   expect(html).toContain("Open post");
+  expect(html).toContain('dateTime="2026-02-08T09:00:00.000Z"');
+  expect(html).toContain("Feb 8, 2026");
+  expect(html).toContain('aria-label="Open post: Release notes"');
   expect(html).toContain('data-content-list-variant="compact"');
   expect(html).toContain('data-content-list-items="1"');
   expect(html).toContain('data-content-list-state="ready"');
+});
+
+test("content list renders image aspect classes and CTA fallback label when href is missing", () => {
+  const html = renderToString(
+    <ContentListBlock
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        style: {
+          ...contentListDefaults.style,
+          imageAspect: "wide",
+          ctaLabel: "Open post",
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              excerpt: "Latest platform updates.",
+              imageSrc: "/assets/release-notes.jpg",
+              publishedAt: "2026-02-08T09:00:00.000Z",
+              status: "published",
+            },
+          ],
+          total: 1,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain("aspect-[16/9]");
+  expect(html).toContain('aria-disabled="true"');
+  expect(html).toContain('aria-label="Open post: Release notes"');
+  expect(html).toContain('data-content-list-cta-disabled="missing-href"');
+  expect(html).toContain("Open post");
+  expect(html).not.toContain('data-content-list-link-unavailable="1"');
+  expect(html).not.toContain("Links unavailable until a detail route is configured.");
+  expect(html).not.toContain('href="/blog/release-notes"');
+});
+
+test("content list omits semantic time markup when runtime date is invalid", () => {
+  const html = renderToString(
+    <ContentListBlock
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              href: "/blog/release-notes",
+              excerpt: "Latest platform updates.",
+              authorName: "Editor",
+              publishedAt: "not-a-date",
+              status: "published",
+            },
+          ],
+          total: 1,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain("Editor");
+  expect(html).not.toContain("<time");
+  expect(html).not.toContain('dateTime="');
+});
+
+test("content list renders paged navigation and view-all actions", () => {
+  const pagedHtml = renderToString(
+    <ContentListBlock
+      blockId="content-list-1"
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        pagination: {
+          mode: "paged",
+          pageSize: 2,
+          viewAllHref: "",
+          viewAllLabel: "View all",
+          loadMoreLabel: "Load more",
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              href: "/blog/release-notes",
+              excerpt: "Latest platform updates.",
+              publishedAt: "2026-02-08T09:00:00.000Z",
+              status: "published",
+            },
+          ],
+          total: 5,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+          runtime: {
+            page: 2,
+            pageSize: 2,
+            totalPages: 3,
+            previousPageHref: "?cl.content-list-1.page=1",
+            nextPageHref: "?cl.content-list-1.page=3",
+          },
+        },
+      })}
+    />
+  );
+
+  const viewAllHtml = renderToString(
+    <ContentListBlock
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        pagination: {
+          mode: "view-all",
+          pageSize: 3,
+          viewAllHref: "",
+          viewAllLabel: "Browse all",
+          loadMoreLabel: "Load more",
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              href: "/blog/release-notes",
+              excerpt: "Latest platform updates.",
+              publishedAt: "2026-02-08T09:00:00.000Z",
+              status: "published",
+            },
+          ],
+          total: 5,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          listPath: "/articles",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(pagedHtml).toContain('aria-label="Content list pagination"');
+  expect(pagedHtml.replace(/<!-- -->/g, "")).toContain("Page 2 of 3");
+  expect(pagedHtml).toContain('href="?cl.content-list-1.page=1"');
+  expect(pagedHtml).toContain('href="?cl.content-list-1.page=3"');
+  expect(viewAllHtml).toContain('href="/articles"');
+  expect(viewAllHtml).toContain("Browse all");
+});
+
+test("content list renders tags as badges when configured", () => {
+  const html = renderToString(
+    <ContentListBlock
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        style: {
+          ...contentListDefaults.style,
+          tagMode: "badges",
+          tagLimit: 1,
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              href: "/blog/release-notes",
+              excerpt: "Latest platform updates.",
+              tags: ["featured", "news"],
+              authorName: "Editor",
+              publishedAt: "2026-02-08T09:00:00.000Z",
+              status: "published",
+            },
+          ],
+          total: 1,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain("featured");
+  expect(html).not.toContain("featured, news");
 });
 
 test("content list preserves none gap token", () => {
@@ -193,8 +484,10 @@ test("content list cleared card background omits runtime background style", () =
   const html = renderToString(<ContentListBlock data={normalized} variant="cards" />);
 
   expect(normalized.style?.backgroundColor).toBeUndefined();
+  expect(normalized.style?.textColor).toBeUndefined();
   expect(html).toContain('data-content-list-state="ready"');
   expect(html).not.toContain("background-color:");
+  expect(html).not.toContain("color:var(--color-text)");
 });
 
 test("content list normalizes limit and model defaults", () => {
@@ -298,7 +591,7 @@ test("content list editors render expected sections", () => {
     />
   );
   expect(wizardHtml).toContain("Source setup");
-  expect(wizardHtml).toContain("Variant");
+  expect(wizardHtml).not.toContain("Variant");
 
   const visualHtml = renderToString(
     <ContentListVisualEditor
@@ -309,7 +602,7 @@ test("content list editors render expected sections", () => {
     />
   );
   expect(visualHtml).toContain("Variant and layout");
-  expect(visualHtml).toContain("Source and filters");
+  expect(visualHtml).toContain("Daily filters");
   expect(visualHtml).toContain("Presentation fields");
 
   const advancedHtml = renderToString(
@@ -320,9 +613,9 @@ test("content list editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Query controls");
-  expect(advancedHtml).toContain("Styling tokens");
-  expect(advancedHtml).toContain("Runtime payload snapshot");
+  expect(advancedHtml).toContain("Source summary");
+  expect(advancedHtml).toContain("Style summary");
+  expect(advancedHtml).toContain("Runtime summary");
 });
 
 test("content list runtime filters and sorting respect preview and status scope", () => {

@@ -27,6 +27,84 @@ test("normalizeAssistantActionPlan accepts current catalog family plans", () => 
   ]);
 });
 
+test("normalizeAssistantActionPlan accepts content route actions with explicit detailPageId semantics", () => {
+  const normalized = normalizeAssistantActionPlan({
+    id: "plan-content-route-detail-page-id",
+    status: "ready",
+    intentId: "content-route-detail-page-id",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Update content route",
+    answer: "I can update the content route.",
+    summary: "Update the route metadata.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "route-blog",
+        type: "setting.content-route.upsert",
+        title: "Update blog route",
+        description: "Update the blog route.",
+        input: {
+          typeSlug: "blog",
+          listPath: "/blog",
+          detailPath: "/blog/:slug",
+          enabled: true,
+          detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+        },
+      },
+      {
+        id: "route-news",
+        type: "setting.content-route.upsert",
+        title: "Clear news route detail page link",
+        description: "Clear the linked detail page.",
+        input: {
+          typeSlug: "news",
+          listPath: "/news",
+          detailPath: "/news/:slug",
+          enabled: true,
+          detailPageId: null,
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "setting.content-route.upsert",
+    input: {
+      detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    },
+  });
+  expect(normalized.actions[1]).toMatchObject({
+    type: "setting.content-route.upsert",
+    input: {
+      detailPageId: null,
+    },
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...normalized,
+      actions: [
+        {
+          id: "route-invalid",
+          type: "setting.content-route.upsert",
+          title: "Invalid detail page route",
+          description: "Reject invalid detailPageId.",
+          input: {
+            typeSlug: "invalid",
+            listPath: "/invalid",
+            detailPath: "/invalid/:slug",
+            enabled: true,
+            detailPageId: "not-a-detail-page-id",
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -40,12 +118,48 @@ test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
         planner: "provider",
         providerDraftUsed: true,
         providerId: "fake",
+        blueprintShadow: {
+          schemaVersion: 1,
+          currentIntentId: "product-catalog",
+          currentIntentFamily: "product_catalog",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: ["product-inquiry-catalog"],
+          gatedCapabilityIds: [],
+          candidates: [
+            {
+              capabilityId: "product-catalog",
+              role: "primary",
+              score: 100,
+              matchedSignals: ["intent:product_catalog"],
+              reasons: ["Primary product catalog."],
+            },
+          ],
+          mismatchReason: null,
+        },
       },
     }).metadata
   ).toEqual({
     planner: "provider",
     providerDraftUsed: true,
     providerId: "fake",
+    blueprintShadow: {
+      schemaVersion: 1,
+      currentIntentId: "product-catalog",
+      currentIntentFamily: "product_catalog",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog"],
+      gatedCapabilityIds: [],
+      candidates: [
+        {
+          capabilityId: "product-catalog",
+          role: "primary",
+          score: 100,
+          matchedSignals: ["intent:product_catalog"],
+          reasons: ["Primary product catalog."],
+        },
+      ],
+      mismatchReason: null,
+    },
   });
 
   expect(() =>
@@ -55,6 +169,199 @@ test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
         planner: "provider",
         providerDraftUsed: true,
         debug: true,
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+        blueprintShadow: {
+          schemaVersion: 2,
+          currentIntentId: "product-catalog",
+          currentIntentFamily: "product_catalog",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: [],
+          gatedCapabilityIds: [],
+          candidates: [],
+          mismatchReason: null,
+        },
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+        blueprintShadow: {
+          schemaVersion: 1,
+          currentIntentId: "product-catalog",
+          currentIntentFamily: "wrong_family",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: [],
+          gatedCapabilityIds: [],
+          candidates: [],
+          mismatchReason: null,
+        },
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+        blueprintShadow: {
+          schemaVersion: 1,
+          currentIntentId: "product-catalog",
+          currentIntentFamily: "product_catalog",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: [],
+          gatedCapabilityIds: [],
+          candidates: [
+            {
+              capabilityId: "product-catalog",
+              role: "unsupported",
+              score: 100,
+              matchedSignals: [],
+              reasons: [],
+            },
+          ],
+          mismatchReason: null,
+        },
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan accepts strict blueprint composition metadata", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+      blueprintComposition: {
+        schemaVersion: 1,
+        kind: "blueprint-composition",
+        primaryCapabilityId: "product-catalog",
+        adjunctCapabilityIds: ["product-inquiry-catalog"],
+        gatedCapabilityIds: ["booking-service"],
+        mergedResources: [
+          {
+            key: "detail-page:products",
+            kind: "detail-page",
+            sourceCapabilityIds: ["product-catalog"],
+          },
+          {
+            key: "content-type:products",
+            kind: "content-type",
+            sourceCapabilityIds: ["product-catalog", "product-inquiry-catalog"],
+          },
+        ],
+        existingResourceMatches: [
+          {
+            actionId: "page-products",
+            actionType: "page.upsert",
+            resourceKey: "page-collection-link:ct-products",
+            existingId: "page-products",
+            status: "matched",
+            reason: "collection_link",
+            candidateIds: ["page-products"],
+          },
+        ],
+        resolvedConflicts: [],
+        unresolvedConflicts: [
+          {
+            code: "gated_domain",
+            severity: "error",
+            message: "Booking remains gated.",
+            capabilityId: "booking-service",
+            resourceKey: "gated:booking",
+            actionType: null,
+          },
+        ],
+        diagnostics: {
+          candidateScores: [
+            {
+              id: "product-catalog",
+              role: "primary",
+              score: 100,
+              reasons: ["Primary product catalog."],
+            },
+          ],
+        },
+      },
+    },
+  });
+
+  expect(normalized.metadata?.blueprintComposition).toMatchObject({
+    kind: "blueprint-composition",
+    primaryCapabilityId: "product-catalog",
+    adjunctCapabilityIds: ["product-inquiry-catalog"],
+    gatedCapabilityIds: ["booking-service"],
+    mergedResources: expect.arrayContaining([
+      expect.objectContaining({ kind: "detail-page", key: "detail-page:products" }),
+    ]),
+    existingResourceMatches: [
+      expect.objectContaining({
+        status: "matched",
+        existingId: "page-products",
+      }),
+    ],
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "local",
+        providerDraftUsed: false,
+        blueprintComposition: {
+          schemaVersion: 1,
+          kind: "blueprint-composition",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: [],
+          gatedCapabilityIds: [],
+          mergedResources: [],
+          existingResourceMatches: [],
+          resolvedConflicts: [],
+          unresolvedConflicts: [],
+          rawProviderOutput: "not allowed",
+        },
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "local",
+        providerDraftUsed: false,
+        blueprintComposition: {
+          schemaVersion: 2,
+          kind: "blueprint-composition",
+          primaryCapabilityId: "product-catalog",
+          adjunctCapabilityIds: [],
+          gatedCapabilityIds: [],
+          mergedResources: [],
+          existingResourceMatches: [],
+          resolvedConflicts: [],
+          unresolvedConflicts: [],
+        },
       },
     })
   ).toThrow("assistant_action_plan_invalid");
@@ -704,6 +1011,269 @@ test("normalizeAssistantActionPlan accepts page update actions", () => {
   expect(normalized.actions[0]?.type).toBe("page.update");
 });
 
+test("normalizeAssistantActionPlan accepts page upsert collection-link metadata", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-products",
+        type: "page.upsert",
+        title: "Create page",
+        description: "Create a catalog page.",
+        input: {
+          title: "Products",
+          slug: "/products",
+          status: "published",
+          listingQueryName: "Products Catalog Query",
+          listingTemplateSlug: "products-grid",
+          introTitle: "Products",
+          introBody: "Browse products.",
+          collectionLink: {
+            contentTypeId: "ct-products",
+            contentTypeSlug: "products",
+            pageRole: "canonical-list-page",
+            listingQueryId: "query-products",
+            listingQueryName: "Products Catalog Query",
+            listingTemplateId: "template-products",
+            listingTemplateSlug: "products-grid",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "page.upsert",
+    input: {
+      collectionLink: {
+        contentTypeId: "ct-products",
+        contentTypeSlug: "products",
+        pageRole: "canonical-list-page",
+        listingQueryId: "query-products",
+        listingQueryName: "Products Catalog Query",
+        listingTemplateId: "template-products",
+        listingTemplateSlug: "products-grid",
+      },
+    },
+  });
+});
+
+test("normalizeAssistantActionPlan accepts page upsert blocks that reference trusted media library asset ids", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-products",
+        type: "page.upsert",
+        title: "Create page",
+        description: "Create a catalog page.",
+        input: {
+          title: "Products",
+          slug: "/products",
+          status: "published",
+          introTitle: "Products",
+          introBody: "Browse products.",
+          blocks: [
+            {
+              id: "hero-1",
+              type: "hero",
+              variant: "centered",
+              data: {
+                headline: "Browse products",
+                media: {
+                  type: "image",
+                  source: "library",
+                  assetId: "media-hero",
+                },
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "page.upsert",
+    input: {
+      blocks: [
+        {
+          data: {
+            media: {
+              type: "image",
+              source: "library",
+              assetId: "media-hero",
+            },
+          },
+        },
+      ],
+    },
+  });
+});
+
+test("normalizeAssistantActionPlan accepts detail-page upsert documents", () => {
+  const normalized = normalizeAssistantActionPlan({
+    id: "plan-detail-page-upsert",
+    status: "ready",
+    intentId: "detail-page-upsert",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can create the detail template.",
+    summary: "Create a products detail template.",
+    confidence: 0.91,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          document: {
+            schemaVersion: 1,
+            id: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            name: "Products detail template",
+            contentTypeId: "4fd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            contentTypeSlug: "products",
+            status: "published",
+            titlePattern: "{{ title }}",
+            settings: {
+              template: "detail",
+              layout: {
+                wrapper: {
+                  container: "default",
+                  padding: { top: "md", bottom: "lg" },
+                  background: {
+                    color: "#ffffff",
+                    image: null,
+                    media: {
+                      type: "none",
+                      source: "external",
+                      src: null,
+                    },
+                  },
+                },
+                sections: {
+                  gap: "lg",
+                  defaults: {
+                    container: "default",
+                    padding: { top: "xl", bottom: "xl" },
+                    margin: { top: "none", bottom: "none" },
+                  },
+                },
+                applyDefaultsToNewBlocks: false,
+              },
+            },
+            blocks: [
+              {
+                id: "hero-1",
+                type: "hero",
+                variant: "centered",
+                data: {
+                  headline: "Products detail",
+                },
+              },
+            ],
+            bindings: [],
+          },
+          expectedExistingId: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "detail-page.upsert",
+    input: {
+      expectedExistingId: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+      document: {
+        id: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+        contentTypeSlug: "products",
+        status: "published",
+      },
+    },
+  });
+});
+
+test("normalizeAssistantActionPlan rejects top-level detail-page status outside document", () => {
+  expect(() =>
+    normalizeAssistantActionPlan({
+      id: "plan-detail-page-upsert-invalid",
+      status: "ready",
+      intentId: "detail-page-upsert-invalid",
+      promptKind: "setup_request",
+      intentFamily: "product_catalog",
+      title: "Create detail template",
+      answer: "I can create the detail template.",
+      summary: "Create a products detail template.",
+      confidence: 0.91,
+      assumptions: [],
+      questions: [],
+      actions: [
+        {
+          id: "detail-page-products",
+          type: "detail-page.upsert",
+          title: "Create products detail template",
+          description: "Create a products detail template.",
+          input: {
+            status: "published",
+            document: {
+              schemaVersion: 1,
+              id: "54d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+              name: "Products detail template",
+              contentTypeId: "5fd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+              contentTypeSlug: "products",
+              status: "published",
+              titlePattern: "{{ title }}",
+              settings: {
+                template: "detail",
+                layout: {
+                  wrapper: {
+                    container: "default",
+                    padding: { top: "md", bottom: "lg" },
+                    background: {
+                      color: "#ffffff",
+                      image: null,
+                      media: {
+                        type: "none",
+                        source: "external",
+                        src: null,
+                      },
+                    },
+                  },
+                  sections: {
+                    gap: "lg",
+                    defaults: {
+                      container: "default",
+                      padding: { top: "xl", bottom: "xl" },
+                      margin: { top: "none", bottom: "none" },
+                    },
+                  },
+                  applyDefaultsToNewBlocks: false,
+                },
+              },
+              blocks: [],
+              bindings: [],
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow();
+});
+
 test("normalizeAssistantActionPlan accepts widget template update and block patch actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -779,6 +1349,8 @@ test("normalizeAssistantActionPlan accepts custom screen update and widget patch
           patch: {
             name: "Project Screen Updated",
             status: "active",
+            collectionRole: "secondary-admin-screen",
+            compositionKey: "projects-secondary",
             showInSidebar: true,
             sidebarLabel: "Projects",
             binding: {
@@ -812,6 +1384,14 @@ test("normalizeAssistantActionPlan accepts custom screen update and widget patch
     "custom-screen.update",
     "custom-screen.widget.patch",
   ]);
+  expect(normalized.actions[0]).toMatchObject({
+    input: {
+      patch: {
+        collectionRole: "secondary-admin-screen",
+        compositionKey: "projects-secondary",
+      },
+    },
+  });
 });
 
 test("normalizeAssistantActionPlan accepts safe form automation upsert actions", () => {
@@ -882,10 +1462,7 @@ test("normalizeAssistantActionPlan accepts form delete and archive actions", () 
     ],
   });
 
-  expect(normalized.actions.map((action) => action.type)).toEqual([
-    "form.delete",
-    "form.archive",
-  ]);
+  expect(normalized.actions.map((action) => action.type)).toEqual(["form.delete", "form.archive"]);
 });
 
 test("normalizeAssistantActionPlan rejects webhook form automation in this slice", () => {
@@ -1333,6 +1910,106 @@ test("normalizeAssistantActionPlan rejects unsupported media reference targets",
       ],
     })
   ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects raw media URLs inside page upsert blocks", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  for (const src of [
+    "https://example.com/hero.jpg",
+    "data:image/png;base64,Zm9v",
+    "blob:https://example.com/123",
+    "file:///tmp/hero.jpg",
+  ]) {
+    expect(() =>
+      normalizeAssistantActionPlan({
+        ...plan,
+        actions: [
+          {
+            id: "page-products",
+            type: "page.upsert",
+            title: "Create page",
+            description: "Create a catalog page.",
+            input: {
+              title: "Products",
+              slug: "/products",
+              status: "published",
+              introTitle: "Products",
+              introBody: "Browse products.",
+              blocks: [
+                {
+                  id: "hero-1",
+                  type: "hero",
+                  variant: "centered",
+                  data: {
+                    headline: "Browse products",
+                    media: {
+                      type: "image",
+                      source: "external",
+                      src,
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      })
+    ).toThrow("assistant_action_plan_invalid");
+  }
+});
+
+test("normalizeAssistantActionPlan keeps non-media URL fields available to widget contracts", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-products",
+        type: "page.upsert",
+        title: "Create page",
+        description: "Create a catalog page.",
+        input: {
+          title: "Products",
+          slug: "/products",
+          status: "published",
+          introTitle: "Products",
+          introBody: "Browse products.",
+          blocks: [
+            {
+              id: "hero-1",
+              type: "hero",
+              variant: "centered",
+              data: {
+                headline: "Browse products",
+                ctaUrl: "https://example.com/buy",
+              },
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "page.upsert",
+    input: {
+      blocks: [
+        {
+          data: {
+            ctaUrl: "https://example.com/buy",
+          },
+        },
+      ],
+    },
+  });
 });
 
 test("normalizeAssistantActionPlan rejects invalid seo targets and fields", () => {

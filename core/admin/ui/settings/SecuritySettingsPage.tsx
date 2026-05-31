@@ -80,14 +80,12 @@ const isScoreString = (value: string) => {
 const isInvalidNumber = (value: string) =>
   value.trim().length > 0 && !isPositiveNumberString(value);
 
-const isInvalidScore = (value: string) =>
-  value.trim().length > 0 && !isScoreString(value);
+const isInvalidScore = (value: string) => value.trim().length > 0 && !isScoreString(value);
 
 const isInvalidRequired = (value: string) => !value.trim();
 
 const inputErrorClass = (invalid: boolean) =>
   invalid ? "border-destructive focus-visible:ring-destructive/30" : undefined;
-
 
 type SecurityFormState = {
   requestIdEnabled: boolean;
@@ -264,29 +262,15 @@ const toFormState = (settings: SecuritySettingsResponse): SecurityFormState => (
   rateLimitEnabled: settings.rateLimit.enabled,
   rateLimitAuthWindowSeconds: String(settings.rateLimit.buckets.auth.windowSeconds),
   rateLimitAuthMaxRequests: String(settings.rateLimit.buckets.auth.maxRequests),
-  rateLimitAdminReadWindowSeconds: String(
-    settings.rateLimit.buckets.admin_read.windowSeconds
-  ),
+  rateLimitAdminReadWindowSeconds: String(settings.rateLimit.buckets.admin_read.windowSeconds),
   rateLimitAdminReadMaxRequests: String(settings.rateLimit.buckets.admin_read.maxRequests),
-  rateLimitAdminWriteWindowSeconds: String(
-    settings.rateLimit.buckets.admin_write.windowSeconds
-  ),
+  rateLimitAdminWriteWindowSeconds: String(settings.rateLimit.buckets.admin_write.windowSeconds),
   rateLimitAdminWriteMaxRequests: String(settings.rateLimit.buckets.admin_write.maxRequests),
-  rateLimitPublicReadWindowSeconds: String(
-    settings.rateLimit.buckets.public_read.windowSeconds
-  ),
-  rateLimitPublicReadMaxRequests: String(
-    settings.rateLimit.buckets.public_read.maxRequests
-  ),
-  rateLimitPublicWriteWindowSeconds: String(
-    settings.rateLimit.buckets.public_write.windowSeconds
-  ),
-  rateLimitPublicWriteMaxRequests: String(
-    settings.rateLimit.buckets.public_write.maxRequests
-  ),
-  rateLimitAssistantWindowSeconds: String(
-    settings.rateLimit.buckets.assistant.windowSeconds
-  ),
+  rateLimitPublicReadWindowSeconds: String(settings.rateLimit.buckets.public_read.windowSeconds),
+  rateLimitPublicReadMaxRequests: String(settings.rateLimit.buckets.public_read.maxRequests),
+  rateLimitPublicWriteWindowSeconds: String(settings.rateLimit.buckets.public_write.windowSeconds),
+  rateLimitPublicWriteMaxRequests: String(settings.rateLimit.buckets.public_write.maxRequests),
+  rateLimitAssistantWindowSeconds: String(settings.rateLimit.buckets.assistant.windowSeconds),
   rateLimitAssistantMaxRequests: String(settings.rateLimit.buckets.assistant.maxRequests),
   headersEnabled: settings.headers.enabled,
   frameOptions: settings.headers.frameOptions,
@@ -421,8 +405,7 @@ export function SecuritySettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
-  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
-    useSettingsAutoSave();
+  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
   const {
     entries: allowlistEntries,
     isLoading: allowlistLoading,
@@ -480,10 +463,9 @@ export function SecuritySettingsPage() {
   const csrfHeaderInvalid = isInvalidRequired(form.csrfHeaderName);
   const csrfTtlInvalid = isInvalidNumber(form.csrfTtlMinutes);
   const corsMaxAgeInvalid = isInvalidNumber(form.corsMaxAgeSeconds);
-  const authThrottleInvalid = [
-    form.rateLimitAuthWindowSeconds,
-    form.rateLimitAuthMaxRequests,
-  ].some(isInvalidNumber);
+  const authThrottleInvalid = [form.rateLimitAuthWindowSeconds, form.rateLimitAuthMaxRequests].some(
+    isInvalidNumber
+  );
   const rateLimitInvalid = [
     form.rateLimitAdminReadWindowSeconds,
     form.rateLimitAdminReadMaxRequests,
@@ -510,7 +492,11 @@ export function SecuritySettingsPage() {
 
   const headerInvalid = requestIdHeaderInvalid || csrfHeaderInvalid;
   const numericInvalid =
-    csrfTtlInvalid || corsMaxAgeInvalid || authThrottleInvalid || rateLimitInvalid || sessionInvalid;
+    csrfTtlInvalid ||
+    corsMaxAgeInvalid ||
+    authThrottleInvalid ||
+    rateLimitInvalid ||
+    sessionInvalid;
   const scoreInvalid = botScoreInvalid;
   const hasValidationErrors = headerInvalid || numericInvalid || scoreInvalid;
   const presetId = resolveRateLimitPreset(form);
@@ -556,28 +542,26 @@ export function SecuritySettingsPage() {
         cors: {
           allowedOrigins: parseListWithFallback(form.corsAllowedOrigins, [], true),
           allowCredentials: form.corsAllowCredentials,
-          allowedMethods: parseListWithFallback(
-            form.corsAllowedMethods,
-            ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
-          ),
-          allowedHeaders: parseListWithFallback(
-            form.corsAllowedHeaders,
-            ["content-type", "x-csrf-token"]
-          ),
+          allowedMethods: parseListWithFallback(form.corsAllowedMethods, [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS",
+          ]),
+          allowedHeaders: parseListWithFallback(form.corsAllowedHeaders, [
+            "content-type",
+            "x-csrf-token",
+          ]),
           maxAgeSeconds: parsePositiveNumber(form.corsMaxAgeSeconds, "cors_max_age"),
         },
         rateLimit: {
           enabled: form.rateLimitEnabled,
           buckets: {
             auth: {
-              windowSeconds: parsePositiveNumber(
-                form.rateLimitAuthWindowSeconds,
-                "auth_window"
-              ),
-              maxRequests: parsePositiveNumber(
-                form.rateLimitAuthMaxRequests,
-                "auth_requests"
-              ),
+              windowSeconds: parsePositiveNumber(form.rateLimitAuthWindowSeconds, "auth_window"),
+              maxRequests: parsePositiveNumber(form.rateLimitAuthMaxRequests, "auth_requests"),
             },
             admin_read: {
               windowSeconds: parsePositiveNumber(
@@ -659,10 +643,7 @@ export function SecuritySettingsPage() {
           thresholds: {
             login: parseScore(form.botProtectionThresholdLogin, "bot_login"),
             reset: parseScore(form.botProtectionThresholdReset, "bot_reset"),
-            publicWrite: parseScore(
-              form.botProtectionThresholdPublicWrite,
-              "bot_public"
-            ),
+            publicWrite: parseScore(form.botProtectionThresholdPublicWrite, "bot_public"),
           },
           enforceOnLocalhost: form.botProtectionEnforceLocalhost,
         } as Record<string, unknown>,
@@ -675,14 +656,8 @@ export function SecuritySettingsPage() {
       }
 
       const runtimePayload = {
-        "auth.sessionTtlDays": parsePositiveNumber(
-          form.authSessionTtlDays,
-          "auth_session_ttl"
-        ),
-        "auth.resetTtlMinutes": parsePositiveNumber(
-          form.authResetTtlMinutes,
-          "auth_reset_ttl"
-        ),
+        "auth.sessionTtlDays": parsePositiveNumber(form.authSessionTtlDays, "auth_session_ttl"),
+        "auth.resetTtlMinutes": parsePositiveNumber(form.authResetTtlMinutes, "auth_reset_ttl"),
       };
 
       const [updatedSecurity] = await Promise.all([
@@ -718,21 +693,14 @@ export function SecuritySettingsPage() {
     onSave: handleSave,
   });
 
-    const saveDisabled = busy || hasValidationErrors;
+  const saveDisabled = busy || hasValidationErrors;
 
   return (
     <SettingsShell
       activeHref="/admin/settings/security"
       showSearch={false}
       sidebar={<SettingsSidebar activeId="security" />}
-      breadcrumbs={
-        <div className="flex flex-col gap-1">
-          <span className="text-base font-semibold text-foreground">Security Settings</span>
-          <span className="text-xs text-muted-foreground">
-            Keep sign-in and public access safe without slowing down real users.
-          </span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Security"]}
       topbarActions={null}
     >
       <div className="flex min-h-full flex-col">
@@ -895,7 +863,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="bot-login-score"
                             aria-invalid={isInvalidScore(form.botProtectionThresholdLogin)}
-                            className={inputErrorClass(isInvalidScore(form.botProtectionThresholdLogin))}
+                            className={inputErrorClass(
+                              isInvalidScore(form.botProtectionThresholdLogin)
+                            )}
                             placeholder="0.5"
                             value={form.botProtectionThresholdLogin}
                             onChange={(event) =>
@@ -917,7 +887,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="bot-reset-score"
                             aria-invalid={isInvalidScore(form.botProtectionThresholdReset)}
-                            className={inputErrorClass(isInvalidScore(form.botProtectionThresholdReset))}
+                            className={inputErrorClass(
+                              isInvalidScore(form.botProtectionThresholdReset)
+                            )}
                             placeholder="0.6"
                             value={form.botProtectionThresholdReset}
                             onChange={(event) =>
@@ -939,7 +911,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="bot-public-score"
                             aria-invalid={isInvalidScore(form.botProtectionThresholdPublicWrite)}
-                            className={inputErrorClass(isInvalidScore(form.botProtectionThresholdPublicWrite))}
+                            className={inputErrorClass(
+                              isInvalidScore(form.botProtectionThresholdPublicWrite)
+                            )}
                             placeholder="0.5"
                             value={form.botProtectionThresholdPublicWrite}
                             onChange={(event) =>
@@ -990,7 +964,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="auth-window"
                             aria-invalid={isInvalidNumber(form.rateLimitAuthWindowSeconds)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitAuthWindowSeconds))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitAuthWindowSeconds)
+                            )}
                             value={form.rateLimitAuthWindowSeconds}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1008,7 +984,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="auth-max"
                             aria-invalid={isInvalidNumber(form.rateLimitAuthMaxRequests)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitAuthMaxRequests))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitAuthMaxRequests)
+                            )}
                             value={form.rateLimitAuthMaxRequests}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1042,7 +1020,9 @@ export function SecuritySettingsPage() {
                             Set AUTH_PASSWORD_PEPPER in server ENV to enable.
                           </p>
                         </div>
-                        <Badge variant={settings?.passwordPepperConfigured ? "default" : "secondary"}>
+                        <Badge
+                          variant={settings?.passwordPepperConfigured ? "default" : "secondary"}
+                        >
                           {settings?.passwordPepperConfigured ? "Enabled" : "Not configured"}
                         </Badge>
                       </div>
@@ -1063,7 +1043,10 @@ export function SecuritySettingsPage() {
                       icon={<Sliders className="h-4 w-4" />}
                     >
                       <div className="flex items-center gap-3">
-                        <Select value={presetId} onValueChange={(value) => handleApplyPreset(value as PresetId)}>
+                        <Select
+                          value={presetId}
+                          onValueChange={(value) => handleApplyPreset(value as PresetId)}
+                        >
                           <SelectTrigger className="w-[240px]">
                             <SelectValue placeholder="Choose preset" />
                           </SelectTrigger>
@@ -1114,7 +1097,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="admin-read-max"
                             aria-invalid={isInvalidNumber(form.rateLimitAdminReadMaxRequests)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitAdminReadMaxRequests))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitAdminReadMaxRequests)
+                            )}
                             value={form.rateLimitAdminReadMaxRequests}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1132,7 +1117,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="admin-read-window"
                             aria-invalid={isInvalidNumber(form.rateLimitAdminReadWindowSeconds)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitAdminReadWindowSeconds))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitAdminReadWindowSeconds)
+                            )}
                             value={form.rateLimitAdminReadWindowSeconds}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1150,7 +1137,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="admin-write-max"
                             aria-invalid={isInvalidNumber(form.rateLimitAdminWriteMaxRequests)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitAdminWriteMaxRequests))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitAdminWriteMaxRequests)
+                            )}
                             value={form.rateLimitAdminWriteMaxRequests}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1168,7 +1157,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="admin-write-window"
                             aria-invalid={isInvalidNumber(form.rateLimitAdminWriteWindowSeconds)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitAdminWriteWindowSeconds))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitAdminWriteWindowSeconds)
+                            )}
                             value={form.rateLimitAdminWriteWindowSeconds}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1198,7 +1189,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="public-read-max"
                             aria-invalid={isInvalidNumber(form.rateLimitPublicReadMaxRequests)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitPublicReadMaxRequests))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitPublicReadMaxRequests)
+                            )}
                             value={form.rateLimitPublicReadMaxRequests}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1216,7 +1209,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="public-read-window"
                             aria-invalid={isInvalidNumber(form.rateLimitPublicReadWindowSeconds)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitPublicReadWindowSeconds))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitPublicReadWindowSeconds)
+                            )}
                             value={form.rateLimitPublicReadWindowSeconds}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1234,7 +1229,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="public-write-max"
                             aria-invalid={isInvalidNumber(form.rateLimitPublicWriteMaxRequests)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitPublicWriteMaxRequests))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitPublicWriteMaxRequests)
+                            )}
                             value={form.rateLimitPublicWriteMaxRequests}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1252,7 +1249,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="public-write-window"
                             aria-invalid={isInvalidNumber(form.rateLimitPublicWriteWindowSeconds)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitPublicWriteWindowSeconds))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitPublicWriteWindowSeconds)
+                            )}
                             value={form.rateLimitPublicWriteWindowSeconds}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1282,7 +1281,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="assistant-max"
                             aria-invalid={isInvalidNumber(form.rateLimitAssistantMaxRequests)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitAssistantMaxRequests))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitAssistantMaxRequests)
+                            )}
                             value={form.rateLimitAssistantMaxRequests}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1300,7 +1301,9 @@ export function SecuritySettingsPage() {
                           <Input
                             id="assistant-window"
                             aria-invalid={isInvalidNumber(form.rateLimitAssistantWindowSeconds)}
-                            className={inputErrorClass(isInvalidNumber(form.rateLimitAssistantWindowSeconds))}
+                            className={inputErrorClass(
+                              isInvalidNumber(form.rateLimitAssistantWindowSeconds)
+                            )}
                             value={form.rateLimitAssistantWindowSeconds}
                             onChange={(event) =>
                               setForm((prev) => ({
@@ -1858,12 +1861,7 @@ export function SecuritySettingsPage() {
               <span>Auto-save settings across all screens</span>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={handleSave}
-                disabled={saveDisabled}
-              >
+              <Button size="sm" className="gap-2" onClick={handleSave} disabled={saveDisabled}>
                 {busy ? "Saving..." : "Save changes"}
               </Button>
             </div>

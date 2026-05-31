@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React from "react";
-import { act } from "react";
+
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -75,14 +75,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -118,7 +118,7 @@ test("record header visual editor exposes binding state badges and jump actions"
     expect(view.container.textContent).toContain("Literal");
     const titleButton = view.container.querySelector('button[data-binding-prop-path="title"]');
     expect(titleButton).not.toBeNull();
-    act(() => {
+    React.act(() => {
       titleButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(jumpToBindingPropPath).toHaveBeenCalledWith("title");

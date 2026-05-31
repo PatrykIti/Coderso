@@ -59,6 +59,12 @@ published rendering.
 ```
 
 Notes:
+- `layout.container`, `layout.padding.*`, and `layout.margin.*` may use
+  `"inherit"` to keep the page section default. The builder must present these
+  as inherited values with their effective defaults, not as saved overrides.
+- `visibility.devices: []` means the block is hidden on all devices and is not
+  rendered in public SSR or preview-device output. Omitted `visibility.devices`
+  keeps the default desktop/tablet/mobile visibility.
 - `layout.wrapper.background.media` supports `none | image | video` with
   `source: library | external`.
 - For backwards compatibility, legacy `background.image` is normalized into

@@ -34,6 +34,7 @@ export type CommerceRouteHandler = (ctx: RouteContext) => Promise<unknown> | unk
 export type CommerceRouteDeps = {
   requirePermission: (permission: string) => CommerceRouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
+  executeQuery?: typeof executeCommerceQuery;
 };
 
 export type Router = {
@@ -87,6 +88,7 @@ const withCommerceErrors = async <T>(fn: () => Promise<T>) => {
 
 export function registerCommerceRoutes(router: Router, deps: CommerceRouteDeps) {
   const { requirePermission, validate } = deps;
+  const executeQuery = deps.executeQuery ?? executeCommerceQuery;
 
   router.get("/commerce/products", requirePermission("commerce:read"), async () => {
     return withCommerceErrors(async () => {
@@ -167,7 +169,7 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRouteDeps) 
   router.post("/commerce/products/query", requirePermission("commerce:read"), async (ctx) => {
     return withCommerceErrors(async () => {
       validate(commerceQuerySchema, ctx.body ?? {});
-      const result = await executeCommerceQuery((ctx.body ?? {}) as CommerceQueryInput);
+      const result = await executeQuery((ctx.body ?? {}) as CommerceQueryInput);
       return result;
     });
   });
@@ -194,21 +196,17 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRouteDeps) 
     });
   });
 
-  router.patch(
-    "/commerce/collections/:id",
-    requirePermission("commerce:write"),
-    async (ctx) => {
-      return withCommerceErrors(async () => {
-        validate(commerceCollectionUpdateSchema, ctx.body ?? {});
-        const updated = await updateCommerceCollection(
-          ctx.params.id,
-          (ctx.body ?? {}) as CommerceCollectionUpdateInput
-        );
-        if (!updated) throw new Error("commerce_collection_not_found");
-        return updated;
-      });
-    }
-  );
+  router.patch("/commerce/collections/:id", requirePermission("commerce:write"), async (ctx) => {
+    return withCommerceErrors(async () => {
+      validate(commerceCollectionUpdateSchema, ctx.body ?? {});
+      const updated = await updateCommerceCollection(
+        ctx.params.id,
+        (ctx.body ?? {}) as CommerceCollectionUpdateInput
+      );
+      if (!updated) throw new Error("commerce_collection_not_found");
+      return updated;
+    });
+  });
 
   router.delete("/commerce/collections/:id", requirePermission("commerce:write"), async (ctx) => {
     return withCommerceErrors(async () => {

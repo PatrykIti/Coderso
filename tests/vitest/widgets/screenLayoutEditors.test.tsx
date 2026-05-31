@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -90,14 +90,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -155,7 +155,7 @@ test("screen two column visual editor updates normalized gap tokens", () => {
   try {
     const select = view.container.querySelector("select");
     expect(select).not.toBeNull();
-    act(() => {
+    React.act(() => {
       if (select instanceof HTMLSelectElement) {
         select.value = "lg";
         select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -185,7 +185,7 @@ test("screen layout wizard editors delegate variant changes", () => {
     const subtleButton = Array.from(groupView.container.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("Subtle")
     );
-    act(() => {
+    React.act(() => {
       subtleButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(groupVariantChange).toHaveBeenCalledWith("subtle");
@@ -206,7 +206,7 @@ test("screen layout wizard editors delegate variant changes", () => {
     const asideButton = Array.from(twoColumnView.container.querySelectorAll("button")).find(
       (button) => button.textContent?.includes("Aside")
     );
-    act(() => {
+    React.act(() => {
       asideButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(twoColumnVariantChange).toHaveBeenCalledWith("aside");

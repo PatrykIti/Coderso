@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Product Architecture + Blueprint Planning
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-172, TASK-178, TASK-188, TASK-189
-**Status:** To Do
+**Status:** Done (2026-05-11)
 
 ---
 
@@ -50,6 +50,49 @@ The goal is foundation first. Do not start by expanding individual presets such
 as Mabudo-like house projects. Preset-specific enrichment comes after the
 composer exists and can consume richer capabilities safely.
 
+The delivered foundation remains composition-first. Capability manifests,
+candidate ranking, graph fragments, assembler helpers, no-duplicate reuse,
+composition review metadata, diagnostics, fixture/live matrices, authoring docs,
+and generic detail-page resource packaging now drive the local setup
+planner/resource layer for supported mixed-capability and primary-plus-gated
+setup requests. Single-pack setup/refinement continues to use the existing
+legacy pack builders outside this foundation's bounded mixed-setup cutover.
+Compatible `content-type.upsert` fragments can now also merge into one
+validator-backed content schema action. Compatible listing facet/card fragments
+can now also merge through schema-backed listing owners and widen
+`listing-query.upsert.fields` automatically for the required projection paths.
+Canonical collection pages now also compose listing/filter/form sections
+through `blueprintPageSectionComposer.ts`, and assistant-created catalog pages
+persist `PageData.settings.collectionLink` through the existing page owner seam
+instead of leaving canonical collection linkage implicit. The first
+detail-page storage/schema slice is also landed through
+`detail_page_documents` / `detail_page_revisions` plus the
+`content_type_has_detail_pages` delete guard. The detail-page foundation is now
+closed through the generic assistant resource layer: strict policy/schema
+vocabulary, bounded provider context summaries, trusted target resolution from
+catalog ids/content type linkage/active context, and gated generic mutations all
+keep execution on the existing local `detail-page.upsert` path. The published
+runtime, shared preview path, typed `detail-page.upsert` execution, internal
+admin route family, admin client/cache parity, fixture/runtime acceptance,
+no-duplicate DB reuse, review metadata, first admin-screen layout composer,
+custom-screen binding/collection-link metadata safety, collection workspace,
+manual detail-template editor, and assistant follow-up context for that
+workspace/detail-page surface are already landed. Collection workspace work has
+now landed the internal Engine route, bounded server read model, deterministic
+canonical resource resolution/read redaction, cached client helpers, specific
+Engine prefetch, first route shell, the
+`/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`
+editor surface that reuses existing page-builder seams, and server-owned
+assistant context hydration for the workspace/detail-page follow-up flow.
+The no-duplicate slice now also adds bounded detail-page resource catalog
+summaries and the catalog-backed `blueprintExistingResourceMatcher.ts` seam so
+supported create-like actions can reuse existing detail pages/pages/resources
+through current owner metadata before the existing executor validates them.
+The review-metadata slice now adds strict `metadata.blueprintComposition`
+diagnostics with primary/adjunct/gated capability ids, merged resource ownership,
+existing-resource reuse matches, conflicts, and redacted deterministic candidate
+scores for the admin review UI and tests.
+
 This task is not limited to theme templates or a narrow detail-template editor.
 The business target remains full assistant-composed setup of a site/service
 within the current typed action boundary:
@@ -91,11 +134,12 @@ means:
   the composer may reference those assets through `media.reference.attach`,
   entry/page/widget owner actions, or `needs_input` when the asset does not yet
   exist,
-- assistant resource catalogs used for composition must be server-derived from
-  current admin-context/catalog owners. Clients may request catalog inclusion
-  through the reviewed flag, but they must not submit a trusted
-  `resourceCatalog`, and catalog-backed LLM Guide planning remains gated by the
-  existing LLM availability checks,
+- assistant resource catalogs used by the composed blueprint/shadow cutover
+  paths must be server-derived from current admin-context/catalog owners.
+  Clients may request catalog inclusion through the reviewed flag, but they
+  must not submit a trusted `resourceCatalog`, and catalog-backed LLM Guide
+  planning for those cutover paths remains gated by the existing LLM
+  availability checks,
 - when a leaf widens an existing contract, it should name the concrete write
   owner, read/cache owner, and admin/UI transport owner for that widened seam
   instead of leaving responsibility implicit,
@@ -321,6 +365,7 @@ Technical leaf tasks:
 - `TASK-190-08-01_Composition_Fixture_Matrix_and_Red_Team_Corpus.md`
 - `TASK-190-08-02_Docs_Changelog_and_Closure.md`
 - `TASK-190-08-03_Capability_Authoring_Guide_and_Observability.md`
+- `TASK-190-08-04_Live_Provider_Matrix_Approval_and_Rerun.md`
 
 ## Implementation Order
 
@@ -471,3 +516,9 @@ Technical leaf tasks:
     Listing, Form, SEO, and route editors where possible.
 14. Detail page route linking, internal admin APIs, action registry/cache/UI
     labels, and capability manifests are explicit for `detail-page`.
+
+## Progress Notes
+
+- 2026-05-10: TASK-190 closed after the evaluation/docs leaf synchronized the
+  source-of-truth docs, task board, changelog, fixture/live matrices, redacted
+  diagnostics, and full local validation gates.

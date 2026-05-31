@@ -2,10 +2,8 @@ import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { formActionRuns, formFields, forms, formSubmissions } from "../../db/schema";
-import {
-  normalizeSubmissionAccess,
-  type SubmissionAccessMode,
-} from "./submissionAccess";
+import { invalidateLinkedDetailPageRouteCaches } from "../../site/cache/siteCache";
+import { normalizeSubmissionAccess, type SubmissionAccessMode } from "./submissionAccess";
 import {
   deriveFormSlug,
   normalizeFormFields,
@@ -13,10 +11,7 @@ import {
   type NormalizedFormField,
 } from "./validation";
 import { normalizeFormSettings } from "./formSettings";
-import {
-  normalizeFormStatus,
-  type FormStatus,
-} from "./formStatus";
+import { normalizeFormStatus, type FormStatus } from "./formStatus";
 
 export type FormCreateInput = {
   name: string;
@@ -141,10 +136,7 @@ export async function updateForm(id: string, input: FormUpdateInput) {
     const baseName = update.name ?? (await getForm(id))?.name;
     if (!baseName) throw new Error("form_not_found");
     const slug = deriveFormSlug(baseName, input.slug);
-    const existing = await db
-      .select({ id: forms.id })
-      .from(forms)
-      .where(eq(forms.slug, slug));
+    const existing = await db.select({ id: forms.id }).from(forms).where(eq(forms.slug, slug));
     if (existing.length > 0 && existing[0]?.id !== id) {
       throw new Error("form_slug_exists");
     }
@@ -175,11 +167,11 @@ export async function updateForm(id: string, input: FormUpdateInput) {
     update.settings = normalizeFormSettings(input.settings);
   }
 
-  const [row] = await db
-    .update(forms)
-    .set(update)
-    .where(eq(forms.id, id))
-    .returning();
+  const [row] = await db.update(forms).set(update).where(eq(forms.id, id)).returning();
+
+  if (row) {
+    await invalidateLinkedDetailPageRouteCaches();
+  }
 
   return row ?? null;
 }
@@ -195,6 +187,9 @@ export async function deleteForm(id: string) {
     throw new Error("form_delete_restricted");
   }
   const [row] = await db.delete(forms).where(eq(forms.id, id)).returning();
+  if (row) {
+    await invalidateLinkedDetailPageRouteCaches();
+  }
   return row ?? null;
 }
 
@@ -215,7 +210,7 @@ export async function setFormFields(formId: string, fieldsInput: FormFieldInput[
 
   const inserted = await db.transaction(async (tx) => {
     await tx.delete(formFields).where(eq(formFields.formId, formId));
-    if (normalized.length === 0) return [] as typeof formFields.$inferSelect[];
+    if (normalized.length === 0) return [] as (typeof formFields.$inferSelect)[];
     return tx
       .insert(formFields)
       .values(
@@ -236,8 +231,9 @@ export async function setFormFields(formId: string, fieldsInput: FormFieldInput[
   });
 
   await db.update(forms).set({ updatedAt: now }).where(eq(forms.id, formId));
+  await invalidateLinkedDetailPageRouteCaches();
 
-  return inserted as typeof formFields.$inferSelect[];
+  return inserted as (typeof formFields.$inferSelect)[];
 }
 
 export function toFieldRecord(row: typeof formFields.$inferSelect): NormalizedFormField {

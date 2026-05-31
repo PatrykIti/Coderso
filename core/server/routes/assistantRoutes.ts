@@ -5,10 +5,7 @@ import {
   reindexAssistantDocs,
   type AssistantChatInput,
 } from "../../services/assistant/assistantService";
-import {
-  assistantChatSchema,
-  assistantReindexSchema,
-} from "../validation/assistantSchemas";
+import { assistantChatSchema, assistantReindexSchema } from "../validation/assistantSchemas";
 import {
   assistantActionDryRunRequestSchema,
   assistantActionExecuteRequestSchema,
@@ -32,6 +29,7 @@ import {
   getAssistantActionFamilyContract,
   isAssistantKnownActionContractType,
 } from "../../services/assistant/actionFamilyContracts";
+import { getUserPermissions } from "../../services/auth/roleService";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -52,12 +50,15 @@ type AssistantRouteService = {
   getStatus: typeof getAssistantStatus;
   reindex: typeof reindexAssistantDocs;
   chat: typeof answerAssistantQuestion;
-  planActions: (input: AssistantActionPlanInput) => AssistantActionPlan | Promise<AssistantActionPlan>;
+  planActions: (
+    input: AssistantActionPlanInput
+  ) => AssistantActionPlan | Promise<AssistantActionPlan>;
   dryRunActions: typeof dryRunAssistantActionPlan;
   executeActions: typeof executeAssistantActionPlan;
   buildResourceCatalog: typeof buildAssistantResourceCatalogSnapshotWithDefaultDeps;
   hydrateActiveSurface: (
-    context: AssistantActionContext | undefined
+    context: AssistantActionContext | undefined,
+    options?: { permissions?: readonly string[] }
   ) => Promise<AssistantActionContext | undefined>;
 };
 
@@ -102,14 +103,8 @@ const defaultService: AssistantRouteService = {
       ),
       llmAvailable: Boolean(provider),
       limits: {
-        maxInputTokens: await readOptionalNumberSetting(
-          "assistant.llm.maxInputTokens",
-          8192
-        ),
-        maxOutputTokens: await readOptionalNumberSetting(
-          "assistant.llm.maxOutputTokens",
-          2048
-        ),
+        maxInputTokens: await readOptionalNumberSetting("assistant.llm.maxInputTokens", 8192),
+        maxOutputTokens: await readOptionalNumberSetting("assistant.llm.maxOutputTokens", 2048),
         timeoutMs: await readOptionalNumberSetting("assistant.llm.timeoutMs", 20000),
       },
     });
@@ -117,16 +112,27 @@ const defaultService: AssistantRouteService = {
   dryRunActions: dryRunAssistantActionPlan,
   executeActions: executeAssistantActionPlan,
   buildResourceCatalog: buildAssistantResourceCatalogSnapshotWithDefaultDeps,
-  hydrateActiveSurface: async (context) => {
-    const [pageService, widgetTemplateService, customScreenService] = await Promise.all([
+  hydrateActiveSurface: async (context, options) => {
+    const [
+      pageService,
+      widgetTemplateService,
+      customScreenService,
+      detailPageDocumentService,
+      collectionWorkspaceService,
+    ] = await Promise.all([
       import("../../services/pages/pageService"),
       import("../../services/widgets/widgetTemplateService"),
       import("../../services/customScreens/customScreenService"),
+      import("../../services/content/detailPageDocumentService"),
+      import("../../services/content/collectionWorkspaceService"),
     ]);
     return hydrateAssistantActiveSurfaceContext(context, {
       getPage: pageService.getPage,
       getWidgetTemplate: widgetTemplateService.getWidgetTemplate,
       getCustomScreen: customScreenService.getCustomScreen,
+      getDetailPageDocument: detailPageDocumentService.getDetailPageDocument,
+      getCollectionWorkspaceSummary: collectionWorkspaceService.getCollectionWorkspaceSummary,
+      permissions: options?.permissions,
     });
   },
 };
@@ -134,6 +140,7 @@ const defaultService: AssistantRouteService = {
 export type AssistantRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
+  resolvePermissions?: (ctx: RouteContext) => Promise<string[]> | string[];
   service?: Partial<AssistantRouteService>;
 };
 
@@ -175,10 +182,16 @@ const mapAssistantError = (error: unknown) => {
     case "assistant_llm_unavailable":
       return {
         code: "assistant_llm_unavailable",
-        message: "LLM Guide must be configured before site-kit planning or execution",
+        message: "LLM Guide must be configured before catalog-backed planning or site-kit actions",
         status: 409,
       };
     case "assistant_action_plan_invalid":
+      return {
+        code: "assistant_action_plan_invalid",
+        message: "Assistant action plan payload is invalid",
+        status: 400,
+      };
+    case "settings_value_invalid":
       return {
         code: "assistant_action_plan_invalid",
         message: "Assistant action plan payload is invalid",
@@ -256,10 +269,7 @@ const mapAssistantError = (error: unknown) => {
   }
 };
 
-const withAssistantErrors = async <T>(
-  requestId: string | undefined,
-  fn: () => Promise<T>
-) => {
+const withAssistantErrors = async <T>(requestId: string | undefined, fn: () => Promise<T>) => {
   try {
     return await fn();
   } catch (error) {
@@ -281,8 +291,7 @@ const withAssistantErrors = async <T>(
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-const hasSiteKitContext = (value: unknown) =>
-  isRecord(value) && isRecord(value.siteKit);
+const hasSiteKitContext = (value: unknown) => isRecord(value) && isRecord(value.siteKit);
 
 const activeSurfaceKind = (value: unknown) => {
   if (!isRecord(value) || !isRecord(value.activeSurface)) return null;
@@ -290,17 +299,27 @@ const activeSurfaceKind = (value: unknown) => {
   return typeof kind === "string" ? kind : null;
 };
 
+const hasCollectionWorkspaceHint = (value: unknown) =>
+  isRecord(value) && isRecord(value.collectionWorkspaceHint);
+
+const resolveRoutePermissions = async (
+  ctx: RouteContext,
+  resolvePermissions?: AssistantRouteDeps["resolvePermissions"]
+) => {
+  if (resolvePermissions) return resolvePermissions(ctx);
+  if (!ctx.user?.id) return ["content:read"];
+  return getUserPermissions(ctx.user.id);
+};
+
 const hasSiteKitActions = (plan: unknown) => {
   if (!isRecord(plan) || !Array.isArray(plan.actions)) return false;
   return plan.actions.some(
-    (action) => isRecord(action) && typeof action.type === "string" && action.type.startsWith("site-kit.")
+    (action) =>
+      isRecord(action) && typeof action.type === "string" && action.type.startsWith("site-kit.")
   );
 };
 
-const collectActionPermissions = (
-  plan: unknown,
-  phase: "dryRun" | "execute"
-) => {
+const collectActionPermissions = (plan: unknown, phase: "dryRun" | "execute") => {
   if (!isRecord(plan) || !Array.isArray(plan.actions)) return [];
   const permissions = new Set<string>();
   for (const action of plan.actions) {
@@ -339,46 +358,35 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
     }
   };
 
-  router.get(
-    "/assistant/status",
-    requirePermission("settings:read"),
-    async (ctx) =>
-      withAssistantErrors(ctx.requestId, async () => {
-        return service.getStatus();
-      })
+  router.get("/assistant/status", requirePermission("settings:read"), async (ctx) =>
+    withAssistantErrors(ctx.requestId, async () => {
+      return service.getStatus();
+    })
   );
 
-  router.post(
-    "/assistant/reindex",
-    requirePermission("settings:write"),
-    async (ctx) => {
-      validate(assistantReindexSchema, ctx.body ?? {});
-      return withAssistantErrors(ctx.requestId, async () => {
-        return service.reindex({
-          actorId: ctx.user?.id ?? null,
-        });
+  router.post("/assistant/reindex", requirePermission("settings:write"), async (ctx) => {
+    validate(assistantReindexSchema, ctx.body ?? {});
+    return withAssistantErrors(ctx.requestId, async () => {
+      return service.reindex({
+        actorId: ctx.user?.id ?? null,
       });
-    }
-  );
+    });
+  });
 
-  router.post(
-    "/assistant/chat",
-    requirePermission("settings:read"),
-    async (ctx) => {
-      validate(assistantChatSchema, ctx.body ?? {});
-      const body = ctx.body as AssistantChatInput;
-      return withAssistantErrors(ctx.requestId, async () =>
-        service.chat({
-          message: body.message,
-          mode: body.mode,
-          detailLevel: body.detailLevel,
-          guideMode: body.guideMode,
-          context: body.context,
-          actorId: ctx.user?.id ?? null,
-        })
-      );
-    }
-  );
+  router.post("/assistant/chat", requirePermission("settings:read"), async (ctx) => {
+    validate(assistantChatSchema, ctx.body ?? {});
+    const body = ctx.body as AssistantChatInput;
+    return withAssistantErrors(ctx.requestId, async () =>
+      service.chat({
+        message: body.message,
+        mode: body.mode,
+        detailLevel: body.detailLevel,
+        guideMode: body.guideMode,
+        context: body.context,
+        actorId: ctx.user?.id ?? null,
+      })
+    );
+  });
 
   router.post(
     "/assistant/actions/plan",
@@ -398,14 +406,15 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
       if (surfaceKind === "widget-template") {
         await requirePermission("widgets:read")(ctx);
       }
-      if (surfaceKind === "page" || surfaceKind === "custom-screen") {
+      if (surfaceKind === "custom-screen") {
         await requirePermission("content:read")(ctx);
       }
-      if (surfaceKind === "page") {
+      if (surfaceKind === "page" || surfaceKind === "detail-page") {
+        await requirePermission("content:read")(ctx);
         await requirePermission("widgets:read")(ctx);
       }
       return withAssistantErrors(ctx.requestId, async () => {
-        if (hasSiteKitContext(body.context) || includeResourceCatalog) {
+        if (hasSiteKitContext(body.context)) {
           await ensureLlmGuideAvailable();
         }
         const contextWithCatalog: AssistantActionContext | undefined = includeResourceCatalog
@@ -414,7 +423,11 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
               resourceCatalog: await service.buildResourceCatalog({}),
             }
           : body.context;
-        const context = await service.hydrateActiveSurface(contextWithCatalog);
+        const context = await service.hydrateActiveSurface(contextWithCatalog, {
+          permissions: hasCollectionWorkspaceHint(body.context)
+            ? await resolveRoutePermissions(ctx, deps.resolvePermissions)
+            : undefined,
+        });
         return service.planActions({
           prompt: body.prompt,
           context,
@@ -423,53 +436,42 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
     }
   );
 
-  router.post(
-    "/assistant/actions/dry-run",
-    requirePermission("settings:read"),
-    requirePermission("content:read"),
-    async (ctx) => {
-      validate(assistantActionDryRunRequestSchema, ctx.body ?? {});
-      const body = (ctx.body ?? {}) as { plan: AssistantActionPlan };
-      await requireActionPermissions(ctx, body.plan, "dryRun", requirePermission);
-      if (hasSiteKitActions(body.plan)) {
-        await requirePermission("solution-kits:read")(ctx);
-      }
-      return withAssistantErrors(ctx.requestId, async () => {
-        if (hasSiteKitActions(body.plan)) {
-          await ensureLlmGuideAvailable();
-        }
-        return service.dryRunActions({
-          plan: body.plan,
-        });
-      });
+  router.post("/assistant/actions/dry-run", async (ctx) => {
+    validate(assistantActionDryRunRequestSchema, ctx.body ?? {});
+    const body = (ctx.body ?? {}) as { plan: AssistantActionPlan };
+    await requireActionPermissions(ctx, body.plan, "dryRun", requirePermission);
+    if (hasSiteKitActions(body.plan)) {
+      await requirePermission("solution-kits:read")(ctx);
     }
-  );
+    return withAssistantErrors(ctx.requestId, async () => {
+      if (hasSiteKitActions(body.plan)) {
+        await ensureLlmGuideAvailable();
+      }
+      return service.dryRunActions({
+        plan: body.plan,
+      });
+    });
+  });
 
-  router.post(
-    "/assistant/actions/execute",
-    requirePermission("settings:write"),
-    requirePermission("content:write"),
-    requirePermission("content:publish"),
-    async (ctx) => {
-      validate(assistantActionExecuteRequestSchema, ctx.body ?? {});
-      const body = (ctx.body ?? {}) as {
-        plan: AssistantActionPlan;
-        idempotencyKey: string;
-      };
-      await requireActionPermissions(ctx, body.plan, "execute", requirePermission);
-      if (hasSiteKitActions(body.plan)) {
-        await requirePermission("solution-kits:write")(ctx);
-      }
-      return withAssistantErrors(ctx.requestId, async () => {
-        if (hasSiteKitActions(body.plan)) {
-          await ensureLlmGuideAvailable();
-        }
-        return service.executeActions({
-          plan: body.plan,
-          idempotencyKey: body.idempotencyKey,
-          actorId: ctx.user?.id ?? "",
-        });
-      });
+  router.post("/assistant/actions/execute", async (ctx) => {
+    validate(assistantActionExecuteRequestSchema, ctx.body ?? {});
+    const body = (ctx.body ?? {}) as {
+      plan: AssistantActionPlan;
+      idempotencyKey: string;
+    };
+    await requireActionPermissions(ctx, body.plan, "execute", requirePermission);
+    if (hasSiteKitActions(body.plan)) {
+      await requirePermission("solution-kits:write")(ctx);
     }
-  );
+    return withAssistantErrors(ctx.requestId, async () => {
+      if (hasSiteKitActions(body.plan)) {
+        await ensureLlmGuideAvailable();
+      }
+      return service.executeActions({
+        plan: body.plan,
+        idempotencyKey: body.idempotencyKey,
+        actorId: ctx.user?.id ?? "",
+      });
+    });
+  });
 }

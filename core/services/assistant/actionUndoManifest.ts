@@ -21,11 +21,7 @@ export type AssistantUndoStrategy =
   | "rollback-site-kit"
   | "blocked";
 
-export type AssistantUndoItemStatus =
-  | "available"
-  | "blocked"
-  | "already-undone"
-  | "manual-only";
+export type AssistantUndoItemStatus = "available" | "blocked" | "already-undone" | "manual-only";
 
 export type AssistantUndoManifestItem = {
   actionId: string;
@@ -121,23 +117,20 @@ const dependencyKeysFor = (
 ) =>
   preview.changes
     .find((change) => change.actionId === result.actionId)
-    ?.dependencies.map((dependency) => `${dependency.targetType}:${dependency.targetKey}`) ??
-  [];
+    ?.dependencies.map((dependency) => `${dependency.targetType}:${dependency.targetKey}`) ?? [];
 
 const publicImpactFor = (result: AssistantActionExecutionItem) => {
   const impact: string[] = [];
   if (result.publicHref) impact.push(`publicHref:${result.publicHref}`);
   if (result.targetType === "page") impact.push("public-page");
+  if (result.targetType === "detail-page") impact.push("public-detail-page");
   if (result.targetType === "form" && result.operation === "create") {
     impact.push("public-form-contract");
   }
   return impact;
 };
 
-const buildAfterSnapshot = (
-  action: AssistantPlannedAction,
-  result: AssistantActionExecutionItem
-) =>
+const buildAfterSnapshot = (action: AssistantPlannedAction, result: AssistantActionExecutionItem) =>
   sanitizeRecord({
     actionInput: action.input,
     result: {

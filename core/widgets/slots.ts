@@ -37,10 +37,7 @@ export function parseRepeatableSlotId(slotId: string): {
   return { definitionId, instanceId };
 }
 
-export function isSlotIdMatchingDefinition(
-  slot: WidgetSlotDefinition,
-  slotId: string
-): boolean {
+export function isSlotIdMatchingDefinition(slot: WidgetSlotDefinition, slotId: string): boolean {
   if (getWidgetSlotKind(slot) === "fixed") return slot.id === slotId;
   const parsed = parseRepeatableSlotId(slotId);
   return parsed?.definitionId === slot.id;
@@ -71,6 +68,37 @@ export function getNextRepeatableSlotInstanceId(
   let next = 1;
   while (used.has(String(next))) next += 1;
   return String(next);
+}
+
+export function reorderRepeatableSlotMap<T>(
+  slotMap: Record<string, T>,
+  definitionId: string,
+  orderedInstanceIds: string[]
+): Record<string, T> {
+  const orderedSlotIds = orderedInstanceIds.map((instanceId) =>
+    buildRepeatableSlotId(definitionId, instanceId)
+  );
+  const orderedSet = new Set(orderedSlotIds);
+  const nextSlots: Record<string, T> = {};
+
+  for (const slotId of orderedSlotIds) {
+    if (slotId in slotMap) {
+      nextSlots[slotId] = slotMap[slotId]!;
+    }
+  }
+
+  for (const slotId of Object.keys(slotMap)) {
+    const parsed = parseRepeatableSlotId(slotId);
+    if (!parsed || parsed.definitionId !== definitionId) {
+      nextSlots[slotId] = slotMap[slotId]!;
+      continue;
+    }
+    if (!orderedSet.has(slotId)) {
+      nextSlots[slotId] = slotMap[slotId]!;
+    }
+  }
+
+  return nextSlots;
 }
 
 export function resolveWidgetSlotTargets(

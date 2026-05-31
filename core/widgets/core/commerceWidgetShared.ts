@@ -41,6 +41,10 @@ export type CommerceWidgetRuntimeCompareRow = {
   id: string;
   title: string;
   slug: string;
+  excerpt: string | null;
+  productHref: string | null;
+  imageUrl: string | null;
+  imageAlt: string | null;
   priceAmount: number;
   currency: string;
   compareAtAmount: number | null;
@@ -88,11 +92,7 @@ const clampInteger = (value: unknown, fallback: number, min: number, max: number
 const normalizeCollectionIds = (value: unknown) => {
   if (!Array.isArray(value)) return [] as string[];
   return Array.from(
-    new Set(
-      value
-        .map((entry) => toText(entry))
-        .filter((entry) => entry.length > 0)
-    )
+    new Set(value.map((entry) => toText(entry)).filter((entry) => entry.length > 0))
   ).slice(0, 30);
 };
 
@@ -145,18 +145,14 @@ export const normalizeCommerceWidgetSource = (
   };
 };
 
-export const buildCommerceWidgetQueryInput = (
-  source: NormalizedCommerceWidgetSource
-) => ({
+export const buildCommerceWidgetQueryInput = (source: NormalizedCommerceWidgetSource) => ({
   pagination: {
     limit: source.limit,
     offset: 0,
   },
   sort: [{ field: source.sortField, dir: source.sortDir }],
   ...(source.search ? { search: source.search } : {}),
-  ...(source.collectionIds.length > 0
-    ? { collectionIds: source.collectionIds }
-    : {}),
+  ...(source.collectionIds.length > 0 ? { collectionIds: source.collectionIds } : {}),
   ...(source.status.length > 0 ? { status: source.status } : {}),
 });
 
@@ -169,25 +165,29 @@ export const normalizeResolvedMeta = (value: CommerceWidgetResolvedMeta | undefi
   error: toText(value?.error),
 });
 
-export const formatCommerceMoney = (amount: number, currency: string) => {
+export const formatCommerceMoney = (
+  amount: number,
+  currency: string,
+  locale = "en-US",
+  currencyDisplay: "symbol" | "code" | "name" | "narrowSymbol" = "symbol"
+) => {
   if (!Number.isFinite(amount)) return "-";
   const normalizedCurrency = toText(currency).toUpperCase() || "USD";
+  const normalizedAmount = amount / 100;
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: normalizedCurrency,
+      currencyDisplay,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(normalizedAmount);
   } catch {
-    return `${amount.toFixed(2)} ${normalizedCurrency}`;
+    return `${normalizedAmount.toFixed(2)} ${normalizedCurrency}`;
   }
 };
 
-export const commerceStockLabelMap: Record<
-  CommerceWidgetRuntimeCard["stock"]["state"],
-  string
-> = {
+export const commerceStockLabelMap: Record<CommerceWidgetRuntimeCard["stock"]["state"], string> = {
   in_stock: "In stock",
   out_of_stock: "Out of stock",
   backorder: "Backorder",

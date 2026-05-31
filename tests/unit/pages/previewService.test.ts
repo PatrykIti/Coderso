@@ -40,9 +40,7 @@ test("redactPreviewProbeTargetLabel removes token and device query values", () =
       "https://preview.example.test/preview?type=page&token=secret&device=mobile"
     )
   ).toBe("https://preview.example.test/preview");
-  expect(
-    redactPreviewProbeTargetLabel("/preview?type=page&token=secret")
-  ).not.toContain("secret");
+  expect(redactPreviewProbeTargetLabel("/preview?type=page&token=secret")).not.toContain("secret");
 });
 
 test("probeGeneratedPreviewUrl maps success, http error, redirects, and timeout", async () => {
@@ -115,8 +113,15 @@ testIfDb("create and validate preview token", async () => {
     ttlMinutes: 5,
   });
 
-  const row = await validatePreviewToken(token, "page");
-  expect(row?.targetId).toBe(targetId);
+  const result = await validatePreviewToken(token, "page");
+  expect(result).toEqual({
+    status: "valid",
+    token: expect.objectContaining({
+      targetId,
+      targetType: "page",
+      context: null,
+    }),
+  });
 
   await db.delete(previewTokens).where(eq(previewTokens.targetId, targetId));
 });
@@ -129,8 +134,37 @@ testIfDb("expired preview token is rejected", async () => {
     ttlMinutes: -1,
   });
 
-  const row = await validatePreviewToken(token, "page");
-  expect(row).toBeNull();
+  const result = await validatePreviewToken(token, "page");
+  expect(result).toEqual({ status: "expired" });
+
+  await db.delete(previewTokens).where(eq(previewTokens.targetId, targetId));
+});
+
+testIfDb("detail-page preview tokens persist strict sample-entry context", async () => {
+  const targetId = randomUUID();
+  const sampleEntryId = randomUUID();
+  const { token } = await createPreviewToken({
+    targetType: "detail-page",
+    targetId,
+    ttlMinutes: 5,
+    context: {
+      kind: "detail-page",
+      sampleEntryId,
+    },
+  });
+
+  const result = await validatePreviewToken(token, "detail-page");
+  expect(result).toEqual({
+    status: "valid",
+    token: expect.objectContaining({
+      targetId,
+      targetType: "detail-page",
+      context: {
+        kind: "detail-page",
+        sampleEntryId,
+      },
+    }),
+  });
 
   await db.delete(previewTokens).where(eq(previewTokens.targetId, targetId));
 });
@@ -145,9 +179,6 @@ testIfDb("purgeExpiredPreviewTokens removes expired rows", async () => {
 
   await purgeExpiredPreviewTokens();
 
-  const rows = await db
-    .select()
-    .from(previewTokens)
-    .where(eq(previewTokens.targetId, targetId));
+  const rows = await db.select().from(previewTokens).where(eq(previewTokens.targetId, targetId));
   expect(rows.length).toBe(0);
 });

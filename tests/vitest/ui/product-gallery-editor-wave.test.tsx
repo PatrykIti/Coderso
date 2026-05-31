@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { ProductGalleryData } from "../../../core/widgets/core/productGallery";
+import type { WidgetPreviewState } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -40,6 +41,24 @@ vi.mock("@/components/ui/textarea", () => ({
   }) => <textarea value={value} onChange={onChange} rows={rows} {...props} />,
 }));
 
+vi.mock("@/components/ui/button", () => ({
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    ...props
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+    [key: string]: unknown;
+  }) => (
+    <button type="button" onClick={onClick} disabled={disabled} {...props}>
+      {children}
+    </button>
+  ),
+}));
+
 vi.mock("@/components/ui/select", () => ({
   Select: ({
     value,
@@ -64,6 +83,90 @@ vi.mock("@/components/ui/select", () => ({
 
 vi.mock("@/services/commerceClient", () => ({
   listCommerceCollectionsCached: vi.fn(async () => []),
+  listCommerceProductsCached: vi.fn(async () => [
+    {
+      id: "product-1",
+      title: "Preview Home",
+      slug: "preview-home",
+      status: "published",
+      excerpt: null,
+      description: null,
+      pricing: { amount: 19900, currency: "USD", compareAtAmount: null },
+      stock: { state: "in_stock", quantity: 4 },
+      collectionIds: [],
+      mediaIds: [],
+      variants: [],
+      metadata: {},
+      data: {},
+      createdAt: "2026-05-19T12:00:00.000Z",
+      updatedAt: "2026-05-19T12:00:00.000Z",
+      publishedAt: "2026-05-19T12:00:00.000Z",
+    },
+    {
+      id: "product-2",
+      title: "Premium Home",
+      slug: "premium-home",
+      status: "published",
+      excerpt: null,
+      description: null,
+      pricing: { amount: 49900, currency: "USD", compareAtAmount: null },
+      stock: { state: "in_stock", quantity: 6 },
+      collectionIds: [],
+      mediaIds: [],
+      variants: [],
+      metadata: {},
+      data: {},
+      createdAt: "2026-05-19T12:00:00.000Z",
+      updatedAt: "2026-05-19T12:00:00.000Z",
+      publishedAt: "2026-05-19T12:00:00.000Z",
+    },
+  ]),
+}));
+
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "catalog-page",
+      title: "Catalog",
+      slug: "catalog",
+      status: "published",
+      updatedAt: "2026-05-19T12:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
+const previewProductGalleryMock = vi.hoisted(() =>
+  vi.fn(async () => ({
+    items: [
+      {
+        id: "product-1",
+        title: "Preview Home",
+        slug: "preview-home",
+        excerpt: "Preview excerpt",
+        status: "published",
+        pricing: {
+          amount: 19900,
+          currency: "USD",
+          compareAtAmount: null,
+        },
+        stock: {
+          state: "in_stock",
+          quantity: 4,
+          inStock: true,
+        },
+        primaryMediaId: null,
+        mediaIds: [],
+        collectionIds: [],
+      },
+    ],
+    total: 1,
+    resolvedAt: "2026-05-19T12:00:00.000Z",
+  }))
+);
+
+vi.mock("@/services/productGalleryPreviewClient", () => ({
+  previewProductGallery: previewProductGalleryMock,
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -71,14 +174,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -89,10 +192,21 @@ const mount = (node: React.ReactNode) => {
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
+const flushPromises = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+  });
+};
+
 const setInputValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLTextAreaElement)) return;
+  const descriptor = Object.getOwnPropertyDescriptor(
+    element instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype,
+    "value"
+  );
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -102,7 +216,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -110,8 +224,18 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const toggleCheckbox = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLInputElement)) return;
-  act(() => {
+  React.act(() => {
     element.click();
+  });
+};
+
+const clickButton = (container: ParentNode, label: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((element) =>
+    normalizeText(element.textContent).includes(normalizeText(label))
+  );
+  if (!(button instanceof HTMLButtonElement)) return;
+  React.act(() => {
+    button.click();
   });
 };
 
@@ -125,84 +249,72 @@ const findLabeledField = (
     ?.querySelector(selector);
 
 const findInputByLabel = (container: ParentNode, text: string) =>
-  Array.from(container.querySelectorAll("input")).find((element) =>
-    normalizeText(element.closest("label")?.textContent).startsWith(normalizeText(text))
+  findLabeledField(container, text, "input");
+
+const findInputByAriaLabel = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) => normalizeText(element.getAttribute("aria-label")) === normalizeText(text)
   );
 
 const findSelectByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "select");
 
-const findSectionByTitle = (container: ParentNode, title: string) =>
-  Array.from(container.querySelectorAll("section")).find((section) =>
-    normalizeText(section.textContent).includes(normalizeText(title))
+const findSelectByOption = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("select")).find((element) =>
+    normalizeText(element.textContent).includes(normalizeText(text))
   );
 
 afterEach(() => {
   vi.restoreAllMocks();
+  previewProductGalleryMock.mockClear();
 });
 
-test("ProductGallery editors cover source, card fields, empty state, and runtime preview", async () => {
+test("ProductGallery editors update source, links, curation, and preview status", async () => {
   const { ProductGalleryAdvancedEditor, ProductGalleryVisualEditor, ProductGalleryWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
 
-  const onChangeSpy = vi.fn();
-  let latestValue: ProductGalleryData = {
-    resolved: {
-      items: [
-        {
-          id: "product-1",
-          title: "City Bike",
-          slug: "city-bike",
-          excerpt: "Light commuting bike",
-          status: "published",
-          pricing: {
-            amount: 199.99,
-            currency: "USD",
-            compareAtAmount: 249.99,
-          },
-          stock: {
-            state: "in_stock",
-            quantity: 12,
-            inStock: true,
-          },
-          primaryMediaId: "media-1",
-          mediaIds: ["media-1"],
-          collectionIds: ["featured"],
-        },
-      ],
-      total: 3,
-      resolvedAt: "2026-03-08T10:00:00.000Z",
-    },
-  };
+  let latestValue: ProductGalleryData = {};
+  let latestPreviewState: WidgetPreviewState | null = null;
 
   const Harness = () => {
     const [value, setValue] = useState<ProductGalleryData>(latestValue);
-
-    const handleChange = (next: ProductGalleryData) => {
-      latestValue = next;
-      onChangeSpy(next);
-      setValue(next);
-    };
+    const [previewState, setPreviewState] = useState<WidgetPreviewState | null>(null);
 
     return (
       <>
         <ProductGalleryWizardEditor
           value={value}
-          onChange={handleChange}
-          variant="gallery"
-          onVariantChange={() => undefined}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="cards"
         />
         <ProductGalleryVisualEditor
           value={value}
-          onChange={handleChange}
-          variant="gallery"
-          onVariantChange={() => undefined}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="cards"
         />
         <ProductGalleryAdvancedEditor
           value={value}
-          onChange={handleChange}
-          variant="gallery"
-          onVariantChange={() => undefined}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="cards"
+          context={{
+            surface: "page-builder",
+            blockId: "block-1",
+            editorMode: "advanced",
+            previewState,
+            setPreviewState: (next) => {
+              latestPreviewState = next;
+              setPreviewState(next);
+            },
+          }}
         />
       </>
     );
@@ -211,92 +323,114 @@ test("ProductGallery editors cover source, card fields, empty state, and runtime
   const view = mount(<Harness />);
 
   try {
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Resolved items: 1 · Total: 3")
-    );
+    await flushPromises();
+    expect(previewProductGalleryMock).toHaveBeenCalled();
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Preview ready"));
 
     setInputValue(findInputByLabel(view.container, "Limit"), "4");
-    setInputValue(findInputByLabel(view.container, "Search"), "bike");
-    setInputValue(
-      findInputByLabel(view.container, "Collection IDs fallback"),
-      "featured, sale, featured"
-    );
-    setSelectValue(findSelectByLabel(view.container, "Sort field"), "pricing.amount");
-    setSelectValue(findSelectByLabel(view.container, "Sort direction"), "asc");
-    toggleCheckbox(findInputByLabel(view.container, "published"));
-    toggleCheckbox(findInputByLabel(view.container, "archived"));
+    setInputValue(findInputByLabel(view.container, "Minimum price"), "199");
+    setInputValue(findInputByLabel(view.container, "Maximum price"), "499");
     setSelectValue(findSelectByLabel(view.container, "Columns"), "4");
-    setSelectValue(findSelectByLabel(view.container, "Card style"), "minimal");
-
-    toggleCheckbox(findInputByLabel(view.container, "Show excerpt"));
-    toggleCheckbox(findInputByLabel(view.container, "Show price"));
-    toggleCheckbox(findInputByLabel(view.container, "Show stock badge"));
-    toggleCheckbox(findInputByLabel(view.container, "Show media hint"));
-
-    const emptyStateSection = findSectionByTitle(
-      view.container,
-      "Shown when query returns no products."
+    setInputValue(findInputByLabel(view.container, "CTA label"), "View details");
+    setSelectValue(findSelectByLabel(view.container, "CTA style"), "button");
+    toggleCheckbox(findInputByLabel(view.container, "Show status badge"));
+    setSelectValue(findSelectByLabel(view.container, "Product selection"), "manual");
+    await flushPromises();
+    toggleCheckbox(findInputByLabel(view.container, "Premium Home"));
+    toggleCheckbox(findInputByLabel(view.container, "Preview Home"));
+    setSelectValue(findSelectByLabel(view.container, "More products action"), "view-all");
+    await flushPromises();
+    setSelectValue(findSelectByOption(view.container, "Catalog"), "catalog-page");
+    setInputValue(findInputByLabel(view.container, "Link label"), "Browse catalog");
+    expect(findInputByLabel(view.container, "Show media hint")).toBeUndefined();
+    expect(findInputByAriaLabel(view.container, "Card background value")).toBeUndefined();
+    expect(normalizeText(view.container.textContent)).not.toContain(normalizeText("var(--color"));
+    setInputValue(findInputByAriaLabel(view.container, "Card background swatch"), "#f8fafc");
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Preview needs refresh")
     );
-    setInputValue(findInputByLabel(emptyStateSection ?? view.container, "Title"), "Nothing found");
-    const emptyStateInputs = Array.from(
-      (emptyStateSection ?? view.container).querySelectorAll("input")
-    );
-    setInputValue(emptyStateInputs[1], "Adjust query filters or publish products.");
-    setInputValue(findInputByLabel(view.container, "Runtime error flag"), "resolver-timeout");
+    clickButton(view.container, "Refresh products");
+    await flushPromises();
 
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.source).toEqual({
-      limit: 4,
-      search: "bike",
-      collectionIds: ["featured", "sale"],
-      status: ["published", "archived"],
-      sortField: "pricing.amount",
-      sortDir: "asc",
-    });
+    expect(latestValue.source).toEqual(
+      expect.objectContaining({
+        limit: 4,
+        minPriceMinor: 19900,
+        maxPriceMinor: 49900,
+      })
+    );
     expect(latestValue.style).toEqual(
       expect.objectContaining({
         columns: "4",
-        cardStyle: "minimal",
-        cardBackground: "var(--color-bg)",
-        cardBorderColor: "var(--color-border)",
-        emptyBackground: "color-mix(in srgb, var(--color-bg) 70%, transparent)",
-        emptyBorderColor: "var(--color-border)",
+        cardBackground: "#f8fafc",
       })
     );
-    expect(latestValue.fields).toEqual({
-      showExcerpt: false,
-      showPrice: false,
-      showStock: false,
-      showMediaHint: true,
+    expect(latestValue.link).toEqual(
+      expect.objectContaining({
+        ctaLabel: "View details",
+        ctaStyle: "button",
+      })
+    );
+    expect(latestValue.fields).toEqual(
+      expect.objectContaining({
+        showStatus: true,
+      })
+    );
+    expect(latestValue.curation).toEqual({
+      mode: "manual",
+      productIds: ["product-2", "product-1"],
     });
-    expect(latestValue.emptyState).toEqual({
-      title: "Nothing found",
-      description: "Adjust query filters or publish products.",
+    expect(latestValue.pagination).toEqual({
+      mode: "view-all",
+      viewAllHref: "/catalog",
+      viewAllLabel: "Browse catalog",
     });
-    expect(latestValue.resolved).toMatchObject({
-      total: 3,
-      resolvedAt: "2026-03-08T10:00:00.000Z",
-      error: "resolver-timeout",
-    });
-    expect(latestValue.resolved?.items).toHaveLength(1);
-
-    const preview = view.container.querySelector("pre");
-    expect(preview?.textContent).toContain('"limit": 4');
-    expect(preview?.textContent).toContain('"field": "pricing.amount"');
-    expect(preview?.textContent).toContain('"dir": "asc"');
-    expect(preview?.textContent).toContain('"search": "bike"');
-    expect(preview?.textContent).toContain('"collectionIds": [');
-    expect(preview?.textContent).toContain('"featured"');
-    expect(preview?.textContent).toContain('"sale"');
-    expect(preview?.textContent).toContain('"status": [');
-    expect(preview?.textContent).toContain('"published"');
-    expect(preview?.textContent).toContain('"archived"');
+    const resolvedPreviewState = latestPreviewState as WidgetPreviewState | null;
+    expect(resolvedPreviewState?.status).toBe("ready");
+    expect(previewProductGalleryMock.mock.calls.length).toBe(2);
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Source summary"));
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Surface summary"));
+    expect(normalizeText(view.container.textContent)).not.toContain(normalizeText("Query preview"));
+    expect(normalizeText(view.container.textContent)).not.toContain(normalizeText('"productIds"'));
+    expect(view.container.querySelector("pre")).toBeNull();
   } finally {
     view.cleanup();
   }
 });
 
-test("ProductGallery visual editor updates the empty-state description in isolation", async () => {
+test("ProductGallery keeps daily presentation controls out of Wizard", async () => {
+  const { ProductGalleryVisualEditor, ProductGalleryWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
+
+  const wizardView = mount(
+    <ProductGalleryWizardEditor value={{}} onChange={() => undefined} variant="cards" />
+  );
+
+  try {
+    expect(findSelectByLabel(wizardView.container, "Columns")).toBeUndefined();
+    expect(findSelectByLabel(wizardView.container, "Card style")).toBeUndefined();
+  } finally {
+    wizardView.cleanup();
+  }
+
+  const visualView = mount(
+    <ProductGalleryVisualEditor value={{}} onChange={() => undefined} variant="cards" />
+  );
+
+  try {
+    expect(findSelectByLabel(visualView.container, "Columns")).toBeInstanceOf(HTMLSelectElement);
+    expect(findSelectByLabel(visualView.container, "Card style")).toBeInstanceOf(HTMLSelectElement);
+    expect(findInputByLabel(visualView.container, "Show media hint")).toBeUndefined();
+    expect(findInputByAriaLabel(visualView.container, "Card background swatch")).toBeInstanceOf(
+      HTMLInputElement
+    );
+    expect(findInputByAriaLabel(visualView.container, "Card background value")).toBeUndefined();
+  } finally {
+    visualView.cleanup();
+  }
+});
+
+test("ProductGallery visual editor keeps an intentionally blank empty-state description", async () => {
   const { ProductGalleryVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
 
@@ -312,7 +446,7 @@ test("ProductGallery visual editor updates the empty-state description in isolat
           latestValue = next;
           setValue(next);
         }}
-        variant="gallery"
+        variant="cards"
       />
     );
   };
@@ -320,19 +454,13 @@ test("ProductGallery visual editor updates the empty-state description in isolat
   const view = mount(<Harness />);
 
   try {
-    const emptyStateSection = findSectionByTitle(
-      view.container,
-      "Shown when query returns no products."
+    const descriptionInputs = Array.from(view.container.querySelectorAll("input")).filter(
+      (element) => normalizeText(element.closest("label")?.textContent).startsWith("description")
     );
-    const emptyStateInputs = Array.from(
-      (emptyStateSection ?? view.container).querySelectorAll("input")
-    );
-
-    setInputValue(emptyStateInputs[1], "No catalog items yet.");
-
+    setInputValue(descriptionInputs[descriptionInputs.length - 1], "");
     expect(latestValue.emptyState).toEqual(
       expect.objectContaining({
-        description: "No catalog items yet.",
+        description: "",
       })
     );
   } finally {
@@ -340,64 +468,131 @@ test("ProductGallery visual editor updates the empty-state description in isolat
   }
 });
 
-test("ProductGallery editors fall back to default layout values and empty runtime totals", async () => {
-  const { ProductGalleryAdvancedEditor, ProductGalleryWizardEditor } =
+test("ProductGallery visual editor surfaces missing routes and view-all disappearance", async () => {
+  const { ProductGalleryVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
 
-  let latestValue: ProductGalleryData = {
-    style: {
-      columns: "bogus" as never,
-      cardStyle: "unknown" as never,
-    },
-  };
-
-  const Harness = () => {
-    const [value, setValue] = useState<ProductGalleryData>(latestValue);
-
-    return (
-      <>
-        <ProductGalleryWizardEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            setValue(next);
-          }}
-          variant="gallery"
-        />
-        <ProductGalleryAdvancedEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            setValue(next);
-          }}
-          variant="gallery"
-        />
-      </>
-    );
-  };
-
-  const view = mount(<Harness />);
+  const view = mount(
+    <ProductGalleryVisualEditor
+      value={{
+        pagination: {
+          mode: "view-all",
+          viewAllLabel: "Browse catalog",
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-1",
+              title: "Preview Home",
+              slug: "preview-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 19900, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 4, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+            },
+          ],
+          total: 3,
+          resolvedAt: "2026-05-19T12:00:00.000Z",
+        },
+      }}
+      onChange={() => undefined}
+      variant="cards"
+    />
+  );
 
   try {
-    const columnsSelect = findSelectByLabel(view.container, "Columns");
-    const cardStyleSelect = findSelectByLabel(view.container, "Card style");
-
-    expect((columnsSelect as HTMLSelectElement | null | undefined)?.value).toBe("3");
-    expect((cardStyleSelect as HTMLSelectElement | null | undefined)?.value).toBe("outlined");
     expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Resolved items: 0 · Total: 0")
+      normalizeText("product cards and CTA labels stay non-clickable")
     );
-
-    setSelectValue(columnsSelect, "invalid-columns");
-    setSelectValue(cardStyleSelect, "invalid-card-style");
-
-    expect(latestValue.style).toEqual(
-      expect.objectContaining({
-        columns: "3",
-        cardStyle: "outlined",
-      })
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("More products link is hidden until a destination page is selected.")
     );
+    expect(
+      view.container.querySelector('[data-product-gallery-route-guidance="missing-route"]')
+    ).toBeInstanceOf(HTMLElement);
+    expect(
+      view.container.querySelector('[data-product-gallery-view-all-guidance="missing_destination"]')
+    ).toBeInstanceOf(HTMLElement);
   } finally {
     view.cleanup();
   }
 });
+
+test.each([
+  ["wizard", "ProductGalleryWizardEditor"],
+  ["visual", "ProductGalleryVisualEditor"],
+] as const)(
+  "ProductGallery %s mode hydrates preview first and owns stale-source refresh",
+  async (editorMode, exportName) => {
+    const editors = await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
+    const Editor = editors[exportName];
+
+    let latestPreviewState: WidgetPreviewState | null = null;
+    let setLimit: ((limit: number) => void) | null = null;
+
+    const Harness = () => {
+      const [value, setValue] = useState<ProductGalleryData>({ source: { limit: 4 } });
+      const [previewState, setPreviewState] = useState<WidgetPreviewState | null>(null);
+      setLimit = (limit: number) =>
+        setValue((current) => ({
+          ...current,
+          source: {
+            ...(current.source ?? {}),
+            limit,
+          },
+        }));
+
+      return (
+        <Editor
+          value={value}
+          onChange={() => undefined}
+          variant="cards"
+          context={{
+            surface: "page-builder",
+            blockId: "block-1",
+            editorMode,
+            previewState,
+            setPreviewState: (next) => {
+              latestPreviewState = next;
+              setPreviewState(next);
+            },
+          }}
+        />
+      );
+    };
+
+    const view = mount(<Harness />);
+
+    try {
+      await flushPromises();
+      expect(previewProductGalleryMock).toHaveBeenCalledTimes(1);
+      expect((latestPreviewState as WidgetPreviewState | null)?.status).toBe("ready");
+      expect(normalizeText(view.container.textContent)).toContain(normalizeText("Preview ready"));
+
+      React.act(() => {
+        setLimit?.(6);
+      });
+      await flushPromises();
+
+      expect(previewProductGalleryMock).toHaveBeenCalledTimes(1);
+      expect((latestPreviewState as WidgetPreviewState | null)?.status).toBe("idle");
+      expect((latestPreviewState as WidgetPreviewState | null)?.message).toBe(
+        "Source changed. Refresh products to update preview."
+      );
+      expect(normalizeText(view.container.textContent)).toContain(
+        normalizeText("Preview needs refresh")
+      );
+
+      clickButton(view.container, "Refresh products");
+      await flushPromises();
+
+      expect(previewProductGalleryMock).toHaveBeenCalledTimes(2);
+      expect((latestPreviewState as WidgetPreviewState | null)?.status).toBe("ready");
+    } finally {
+      view.cleanup();
+    }
+  }
+);

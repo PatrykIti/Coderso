@@ -62,8 +62,11 @@ import { resolveBlockTransformForCommand } from "./postRichTextBlockTransforms";
 type PostRichTextAdapterProps = {
   value: string;
   onChange: (next: string) => void;
+  id?: string;
   placeholder?: string;
   ariaLabel?: string;
+  ariaLabelledBy?: string;
+  ariaDescribedBy?: string;
   disabled?: boolean;
   className?: string;
   minHeightClassName?: string;
@@ -71,6 +74,7 @@ type PostRichTextAdapterProps = {
   onPasteDirectives?: (directives: PostPasteDirectives) => void;
   onFocus?: () => void;
   onEditorBlur?: (finalHtml: string) => void;
+  onUnsafeLinkAttempt?: (href: string) => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
   toolbarProfile?: PostRichTextToolbarProfile;
   fontFamily?: "sans" | "serif" | "mono";
@@ -122,10 +126,7 @@ const getCurrentBlockElement = (editorRoot: HTMLElement) => {
 
   let node: Node | null = selection.anchorNode;
   while (node && node !== editorRoot) {
-    if (
-      node instanceof HTMLElement &&
-      editorBlockTagSet.has(node.tagName.toLowerCase())
-    ) {
+    if (node instanceof HTMLElement && editorBlockTagSet.has(node.tagName.toLowerCase())) {
       return node;
     }
     node = node.parentNode;
@@ -136,10 +137,7 @@ const getCurrentBlockElement = (editorRoot: HTMLElement) => {
 const getClosestBlockElement = (node: Node | null, editorRoot: HTMLElement) => {
   let cursor: Node | null = node;
   while (cursor && cursor !== editorRoot) {
-    if (
-      cursor instanceof HTMLElement &&
-      editorBlockTagSet.has(cursor.tagName.toLowerCase())
-    ) {
+    if (cursor instanceof HTMLElement && editorBlockTagSet.has(cursor.tagName.toLowerCase())) {
       return cursor;
     }
     cursor = cursor.parentNode;
@@ -225,31 +223,23 @@ const collectSelectedTextRuns = (range: Range): SelectedTextRun[] => {
     return end > start ? [{ node: root, start, end }] : [];
   }
 
-  const walker = document.createTreeWalker(
-    root,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode(node) {
-        if (!(node instanceof Text)) return NodeFilter.FILTER_REJECT;
-        if (!node.nodeValue || node.nodeValue.length === 0) {
-          return NodeFilter.FILTER_REJECT;
-        }
-        if (!range.intersectsNode(node)) return NodeFilter.FILTER_REJECT;
-        return NodeFilter.FILTER_ACCEPT;
-      },
-    }
-  );
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!(node instanceof Text)) return NodeFilter.FILTER_REJECT;
+      if (!node.nodeValue || node.nodeValue.length === 0) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      if (!range.intersectsNode(node)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
 
   const runs: SelectedTextRun[] = [];
   let current = walker.nextNode();
   while (current) {
     if (current instanceof Text && current.nodeValue) {
-      const start =
-        current === range.startContainer ? range.startOffset : 0;
-      const end =
-        current === range.endContainer
-          ? range.endOffset
-          : current.nodeValue.length;
+      const start = current === range.startContainer ? range.startOffset : 0;
+      const end = current === range.endContainer ? range.endOffset : current.nodeValue.length;
       if (end > start) {
         runs.push({ node: current, start, end });
       }
@@ -353,7 +343,7 @@ const findInlineTypographySpan = (
   editorRoot: HTMLElement
 ): HTMLSpanElement | null => {
   let cursor: HTMLElement | null =
-    node instanceof HTMLElement ? node : node?.parentElement ?? null;
+    node instanceof HTMLElement ? node : (node?.parentElement ?? null);
   while (cursor && cursor !== editorRoot) {
     if (
       cursor instanceof HTMLSpanElement &&
@@ -392,9 +382,7 @@ const wrapSelectionWithTag = (tagName: "code" | "mark", editorRoot: HTMLElement)
   if (!selectedText) return;
 
   // Preserve line/block structure by wrapping each selected text run.
-  const textRuns = collectSelectedTextRuns(range).filter((run) =>
-    editorRoot.contains(run.node)
-  );
+  const textRuns = collectSelectedTextRuns(range).filter((run) => editorRoot.contains(run.node));
   if (textRuns.length === 0) return;
 
   const wrappedNodes: HTMLElement[] = [];
@@ -433,9 +421,7 @@ const wrapSelectionWithInlineSpan = (
   const selectedText = selection.toString().trim();
   if (!selectedText) return false;
 
-  const textRuns = collectSelectedTextRuns(range).filter((run) =>
-    editorRoot.contains(run.node)
-  );
+  const textRuns = collectSelectedTextRuns(range).filter((run) => editorRoot.contains(run.node));
   if (textRuns.length === 0) return false;
 
   const wrappedNodes: HTMLElement[] = [];
@@ -481,9 +467,7 @@ export const applyInlineTypographySelection = (
   if (!editorRoot.contains(range.commonAncestorContainer)) return false;
   if (!selection.toString().trim()) return false;
 
-  const runs = collectSelectedTextRuns(range).filter((run) =>
-    editorRoot.contains(run.node)
-  );
+  const runs = collectSelectedTextRuns(range).filter((run) => editorRoot.contains(run.node));
   const listItems = new Set<HTMLLIElement>();
   for (const run of runs) {
     const candidate = run.node.parentElement?.closest("li");
@@ -613,7 +597,10 @@ export const extractClipboardImageFiles = (clipboard: ClipboardDataLike | null |
 };
 
 const deriveClipboardImageAlt = (file: File) => {
-  const base = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " ").trim();
+  const base = file.name
+    .replace(/\.[^/.]+$/, "")
+    .replace(/[-_]+/g, " ")
+    .trim();
   return (base || "Pasted image").slice(0, 200);
 };
 
@@ -635,10 +622,7 @@ const findClosestImageFromNode = (
     if (cursor instanceof HTMLImageElement) {
       return cursor;
     }
-    if (
-      cursor instanceof HTMLElement &&
-      cursor.tagName.toLowerCase() === "img"
-    ) {
+    if (cursor instanceof HTMLElement && cursor.tagName.toLowerCase() === "img") {
       return cursor as HTMLImageElement;
     }
     cursor = cursor.parentNode;
@@ -674,10 +658,7 @@ const readImageLayoutFromElement = (image: HTMLImageElement): PostImageLayout =>
     marginPreset: image.getAttribute("data-margin"),
   });
 
-const applyImageLayoutToElement = (
-  image: HTMLImageElement,
-  layout: PostImageLayout
-) => {
+const applyImageLayoutToElement = (image: HTMLImageElement, layout: PostImageLayout) => {
   image.setAttribute("data-wrap", layout.wrap);
   image.setAttribute("data-width", String(layout.widthPercent));
   image.setAttribute("data-margin", layout.marginPreset);
@@ -709,8 +690,11 @@ export const resolveClipboardPasteMode = (input: {
 export function PostRichTextAdapter({
   value,
   onChange,
+  id,
   placeholder = "Start writing…",
   ariaLabel = "Rich text editor",
+  ariaLabelledBy,
+  ariaDescribedBy,
   disabled = false,
   className,
   minHeightClassName = "min-h-[18rem]",
@@ -718,6 +702,7 @@ export function PostRichTextAdapter({
   onPasteDirectives,
   onFocus,
   onEditorBlur,
+  onUnsafeLinkAttempt,
   onUploadClipboardImage,
   toolbarProfile = "writing-canvas",
   fontFamily = "sans",
@@ -736,9 +721,7 @@ export function PostRichTextAdapter({
   const [slashOpen, setSlashOpen] = useState(false);
   const [pasteHint, setPasteHint] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
-  const [selectedImageLayout, setSelectedImageLayout] = useState<PostImageLayout | null>(
-    null
-  );
+  const [selectedImageLayout, setSelectedImageLayout] = useState<PostImageLayout | null>(null);
 
   const emitChange = useCallback(() => {
     const current = editorRef.current;
@@ -862,17 +845,13 @@ export function PostRichTextAdapter({
       const selectedBlocks = getSelectedBlockElements(editorRoot);
       const currentBlock = getCurrentBlockElement(editorRoot);
       const targetBlocks =
-        selectedBlocks.length > 0
-          ? selectedBlocks
-          : currentBlock
-            ? [currentBlock]
-            : [];
+        selectedBlocks.length > 0 ? selectedBlocks : currentBlock ? [currentBlock] : [];
       const commandKind = getPostRichTextCommandKind(command);
 
       if (onBlockTypeChange) {
         const shouldHandleBlockType =
-          commandKind === "block-type"
-          || (commandKind === "block-format" && blockTransformMode === "type-and-format");
+          commandKind === "block-type" ||
+          (commandKind === "block-format" && blockTransformMode === "type-and-format");
         if (shouldHandleBlockType) {
           const transform = resolveBlockTransformForCommand(command);
           if (transform) {
@@ -897,16 +876,21 @@ export function PostRichTextAdapter({
             if (!nextHref) {
               runCommand("unlink");
             } else {
+              const hrefIsSafe = /^(https?:|mailto:|tel:|\/|#)/i.test(nextHref);
+              const commandHref = hrefIsSafe ? nextHref : "#";
+              if (!hrefIsSafe) {
+                onUnsafeLinkAttempt?.(nextHref);
+              }
               const selection = window.getSelection();
               if (selection && selection.rangeCount > 0) {
                 if (selection.isCollapsed) {
                   const label = window.prompt("Link text", nextHref) ?? nextHref;
                   runCommand(
                     "insertHTML",
-                    `<a href="${escapeHtml(nextHref)}">${escapeHtml(label)}</a>`
+                    `<a href="${escapeHtml(commandHref)}">${escapeHtml(label)}</a>`
                   );
                 } else {
-                  runCommand("createLink", nextHref);
+                  runCommand("createLink", commandHref);
                 }
               }
             }
@@ -917,10 +901,7 @@ export function PostRichTextAdapter({
           targetBlocks.length > 0
             ? executeBlockCommandOnBlocks(command, targetBlocks)
             : (() => {
-                const nextHtml = applyCommandToRootHtmlWithoutBlocks(
-                  command,
-                  editorRoot.innerHTML
-                );
+                const nextHtml = applyCommandToRootHtmlWithoutBlocks(command, editorRoot.innerHTML);
                 if (!nextHtml) return false;
                 editorRoot.innerHTML = nextHtml;
                 return true;
@@ -963,6 +944,7 @@ export function PostRichTextAdapter({
       disabled,
       emitChange,
       onBlockTypeChange,
+      onUnsafeLinkAttempt,
       restoreSelectionRange,
       saveSelectionRange,
     ]
@@ -1034,10 +1016,7 @@ export function PostRichTextAdapter({
     setSlashQuery((match[1] ?? "").toLowerCase());
   }, [onSlashInsertBlock, slashOpen]);
 
-  const slashOptions = useMemo(
-    () => searchPostBlockCatalog(slashQuery).slice(0, 8),
-    [slashQuery]
-  );
+  const slashOptions = useMemo(() => searchPostBlockCatalog(slashQuery).slice(0, 8), [slashQuery]);
 
   const applySelectedImageLayout = useCallback(
     (patch: Partial<PostImageLayout>) => {
@@ -1148,9 +1127,7 @@ export function PostRichTextAdapter({
       if (normalized.warnings.length > 0) {
         const firstWarning = normalized.warnings[0] ?? "";
         const suffix =
-          normalized.warnings.length > 1
-            ? ` (+${normalized.warnings.length - 1} more)`
-            : "";
+          normalized.warnings.length > 1 ? ` (+${normalized.warnings.length - 1} more)` : "";
         setPasteHint(`${firstWarning}${suffix}`);
       } else {
         setPasteHint(null);
@@ -1220,10 +1197,13 @@ export function PostRichTextAdapter({
         ) : null}
         <div
           ref={editorRef}
+          id={id}
           contentEditable={!disabled && !imageUploading}
           data-post-editor-primary-editable="true"
           suppressContentEditableWarning
-          aria-label={ariaLabel}
+          aria-label={ariaLabelledBy ? undefined : ariaLabel}
+          aria-labelledby={ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
           className={cn(
             "post-editor-richtext w-full rounded-lg px-3 py-2 leading-relaxed focus:outline-none",
             baseTextScale === "sm"
@@ -1311,11 +1291,7 @@ export function PostRichTextAdapter({
                 <SelectContent>
                   {POST_IMAGE_WRAP_VALUES.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {value === "none"
-                        ? "No wrap"
-                        : value === "left"
-                          ? "Left"
-                          : "Right"}
+                      {value === "none" ? "No wrap" : value === "left" ? "Left" : "Right"}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1361,11 +1337,7 @@ export function PostRichTextAdapter({
                 <SelectContent>
                   {POST_IMAGE_MARGIN_VALUES.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {value === "sm"
-                        ? "Compact"
-                        : value === "md"
-                          ? "Balanced"
-                          : "Spacious"}
+                      {value === "sm" ? "Compact" : value === "md" ? "Balanced" : "Spacious"}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1374,11 +1346,7 @@ export function PostRichTextAdapter({
           </div>
         </div>
       ) : null}
-      {pasteHint ? (
-        <p className="text-xs text-amber-500">
-          Paste notice: {pasteHint}
-        </p>
-      ) : null}
+      {pasteHint ? <p className="text-xs text-amber-500">Paste notice: {pasteHint}</p> : null}
     </div>
   );
 }

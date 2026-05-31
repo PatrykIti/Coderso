@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils";
 
 import { WidgetRenderer } from "../../../../widgets/renderers/widgetRenderer";
 import type { WidgetRendererPageDefaults } from "../../../../widgets/renderers/widgetRenderer";
+import { applySectionRegionLabels, type SectionData } from "../../../../widgets/core/section";
 import { resolveWidgetSlotTargets } from "../../../../widgets/slots";
+import type { WidgetPreviewState } from "../../../../widgets/types";
 import type { Block, WidgetDefinition } from "./types";
 import { getWidgetRegistry } from "./widgetRegistry";
 import type { BlockPath } from "./blockUtils";
@@ -30,6 +32,7 @@ export type BlockListProps = {
     slotLabel: string;
     allowedTypes?: string[];
   }) => void;
+  previewStatesByBlockId?: Record<string, WidgetPreviewState | undefined>;
   path?: BlockPath;
   depth?: number;
   widgetRegistry?: WidgetDefinition[];
@@ -48,6 +51,7 @@ export function BlockList({
   onInsert,
   onMoveToSlot,
   onOpenSlotInsert,
+  previewStatesByBlockId,
   path,
   depth,
   widgetRegistry: providedWidgetRegistry,
@@ -86,11 +90,7 @@ export function BlockList({
     onMove(listPath, from, to);
   };
 
-  const handleDragStart = (
-    event: React.DragEvent<HTMLElement>,
-    index: number,
-    blockId: string
-  ) => {
+  const handleDragStart = (event: React.DragEvent<HTMLElement>, index: number, blockId: string) => {
     event.dataTransfer.setData("text/plain", `${listToken}:${String(index)}`);
     event.dataTransfer.setData("block-id", blockId);
     event.dataTransfer.effectAllowed = "move";
@@ -108,7 +108,18 @@ export function BlockList({
         const widget = widgetRegistry.find((item) => item.type === block.type);
         const label = widget?.title ?? block.type;
         const slotMap = getSlotMap(block);
-        const slotTargets =
+        const previewState = previewStatesByBlockId?.[block.id] ?? null;
+        const previewBlock =
+          previewState?.dataPatch && block.data && typeof block.data === "object"
+            ? {
+                ...block,
+                data: {
+                  ...(block.data as Record<string, unknown>),
+                  ...previewState.dataPatch,
+                },
+              }
+            : block;
+        const resolvedSlotTargets =
           widget?.slots && widget.slots.length > 0
             ? resolveWidgetSlotTargets(widget.slots, slotMap)
             : Object.keys(slotMap).map((slotId) => ({
@@ -117,10 +128,11 @@ export function BlockList({
                 label: slotId === "default" ? "Default slot" : slotId,
                 kind: "fixed" as const,
               }));
-        const nestedCount = Object.values(slotMap).reduce(
-          (sum, items) => sum + items.length,
-          0
-        );
+        const slotTargets =
+          block.type === "section"
+            ? applySectionRegionLabels(resolvedSlotTargets, block.data as SectionData | undefined)
+            : resolvedSlotTargets;
+        const nestedCount = Object.values(slotMap).reduce((sum, items) => sum + items.length, 0);
         return (
           <div
             key={block.id}
@@ -129,8 +141,7 @@ export function BlockList({
               "cursor-pointer rounded-xl border bg-background p-4 shadow-sm",
               level > 0 && "border-dashed bg-muted/20",
               selectedId === block.id && "border-primary/50 ring-2 ring-primary/10",
-              highlightedId === block.id &&
-                "border-emerald-500/40 ring-2 ring-emerald-500/20",
+              highlightedId === block.id && "border-emerald-500/40 ring-2 ring-emerald-500/20",
               hoverIndex === index && dragIndex !== null && "border-primary/40"
             )}
             draggable
@@ -179,6 +190,7 @@ export function BlockList({
                 <button
                   type="button"
                   data-block-select="true"
+                  data-block-widget-type={block.type}
                   className="flex flex-1 items-start gap-3 text-left"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -230,7 +242,11 @@ export function BlockList({
               </div>
             </div>
             <div className="border-t bg-muted/5">
-              <WidgetRenderer block={block} pageDefaults={pageDefaults} />
+              <WidgetRenderer
+                block={previewBlock}
+                pageDefaults={pageDefaults}
+                renderContext={{ mode: "editor-preview", previewState }}
+              />
             </div>
             {slotTargets.length > 0 ? (
               <div className="border-t p-4 space-y-4">
@@ -244,9 +260,7 @@ export function BlockList({
                       key={`${block.id}-slot-${slot.slotId}`}
                       className="space-y-2"
                       onDragOver={(event) => {
-                        const hasWidget = Boolean(
-                          event.dataTransfer.getData("widget-type")
-                        );
+                        const hasWidget = Boolean(event.dataTransfer.getData("widget-type"));
                         const hasBlock = Boolean(event.dataTransfer.getData("block-id"));
                         if (!hasWidget && !hasBlock) return;
                         event.preventDefault();
@@ -285,6 +299,7 @@ export function BlockList({
                           onInsert={onInsert}
                           onMoveToSlot={onMoveToSlot}
                           onOpenSlotInsert={onOpenSlotInsert}
+                          previewStatesByBlockId={previewStatesByBlockId}
                           path={[...listPath, { index, slotId: slot.slotId }]}
                           depth={level + 1}
                           widgetRegistry={widgetRegistry}
@@ -313,8 +328,7 @@ export function BlockList({
                                   Add widget to {slot.label}
                                 </span>
                                 <span className="block text-muted-foreground">
-                                  Drag from the library or choose a widget from the
-                                  widgets tab.
+                                  Drag from the library or choose a widget from the widgets tab.
                                 </span>
                               </span>
                             </button>

@@ -9,16 +9,16 @@ import {
   getMenuWithItemsByLocation,
   type MenuWithItems,
 } from "../menus/menuService";
-import type { MenuItemNode } from "../menus/treeBuilder";
 import {
-  resolveMenuItemSettings,
-  type ResolvedMenuItemSettings,
-} from "../menus/menuItemSettings";
+  collectNavigationMenuPageIds,
+  mapMenuNodesToNavigationItems,
+} from "./navigationMenuMapping";
 import {
   navigationDefaults,
   type NavigationItemMeta,
   type NavigationItem,
   type NavigationData,
+  type NavigationLinkTarget,
 } from "../../widgets/core/navigation";
 
 export type NavigationLinksSource = NonNullable<NavigationData["linksSource"]>;
@@ -53,11 +53,19 @@ const readTrimmedString = (value: unknown) => {
 
 const sanitizeHref = (value: string) => {
   const trimmed = value.trim();
-  if (trimmed.startsWith("/") || trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+  if (
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("#") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://")
+  ) {
     return trimmed;
   }
   return "#";
 };
+
+const normalizeTarget = (value: unknown): NavigationLinkTarget =>
+  value === "blank" ? "blank" : "self";
 
 const normalizeLinksSource = (value: unknown): NavigationLinksSource => {
   if (value === "menu" || value === "pages") return value;
@@ -107,16 +115,6 @@ const toNavigationMeta = (value: unknown): NavigationItemMeta => {
   };
 };
 
-const menuSettingsToMeta = (value: unknown): NavigationItemMeta => {
-  const settings = resolveMenuItemSettings(value) satisfies ResolvedMenuItemSettings;
-  return {
-    visibility: settings.visibility,
-    badge: settings.badge,
-    description: settings.description,
-    icon: settings.icon,
-  };
-};
-
 const normalizeNavigationItems = (value: unknown): NavigationItem[] => {
   if (!Array.isArray(value)) return [];
 
@@ -132,6 +130,7 @@ const normalizeNavigationItems = (value: unknown): NavigationItem[] => {
       normalized.push({
         label,
         href: sanitizeHref(href),
+        target: normalizeTarget(raw.target),
         meta: toNavigationMeta(raw.meta),
         ...(children && children.length > 0 ? { children } : {}),
       });
@@ -148,45 +147,14 @@ const ensureMinimumItems = (
   minimumItems = 2
 ) => (items.length >= minimumItems ? items : fallback);
 
-const collectMenuPageIds = (nodes: MenuItemNode[]) => {
-  const ids: string[] = [];
-  const walk = (list: MenuItemNode[]) => {
-    for (const node of list) {
-      if (!node.href && node.pageId) ids.push(node.pageId);
-      if (node.children.length > 0) walk(node.children);
-    }
-  };
-  walk(nodes);
-  return ids;
-};
-
-const mapMenuNodesToNavigationItems = (
-  nodes: MenuItemNode[],
-  pageSlugsById: Map<string, string>
-): NavigationItem[] => {
-  const walk = (list: MenuItemNode[]): NavigationItem[] => {
-    const mapped: NavigationItem[] = [];
-    for (const node of list) {
-      const label = readTrimmedString(node.label);
-      if (!label) continue;
-
-      const hrefCandidate =
-        readTrimmedString(node.href) ??
-        (node.pageId ? pageSlugsById.get(node.pageId) ?? null : null) ??
-        "#";
-      const href = sanitizeHref(hrefCandidate);
-      const children = node.children.length > 0 ? walk(node.children) : undefined;
-      mapped.push({
-        label,
-        href,
-        meta: menuSettingsToMeta(node.settings),
-        ...(children && children.length > 0 ? { children } : {}),
-      });
-    }
-    return mapped;
-  };
-
-  return walk(nodes);
+const resolveManualItems = (
+  inputItems: unknown,
+  normalizedItems: NavigationItem[],
+  fallbackItems: NavigationItem[]
+) => {
+  if (normalizedItems.length > 0) return normalizedItems;
+  if (Array.isArray(inputItems) && inputItems.length > 0) return [];
+  return fallbackItems;
 };
 
 export async function resolveNavigationRuntimeData(
@@ -200,7 +168,7 @@ export async function resolveNavigationRuntimeData(
   const requestedSource = normalizeLinksSource(data.linksSource);
   const defaultManualItems = normalizeNavigationItems(navigationDefaults.items);
   const manualItemsCandidate = normalizeNavigationItems(data.items);
-  const manualItems = ensureMinimumItems(manualItemsCandidate, defaultManualItems, 1);
+  const manualItems = resolveManualItems(data.items, manualItemsCandidate, defaultManualItems);
 
   if (requestedSource === "manual") {
     return { items: manualItems, linksSource: "manual" };
@@ -233,9 +201,11 @@ export async function resolveNavigationRuntimeData(
     return { items: manualItems, linksSource: "manual" };
   }
 
-  const pageIds = collectMenuPageIds(menu.items);
+  const pageIds = collectNavigationMenuPageIds(menu.items);
   const pageSlugsById = await resolvedDeps.getPageSlugsByIds(pageIds);
-  const menuItems = mapMenuNodesToNavigationItems(menu.items, pageSlugsById);
+  const menuItems = mapMenuNodesToNavigationItems(menu.items, pageSlugsById, {
+    includeDefaultTarget: true,
+  });
 
   const safeItems = ensureMinimumItems(menuItems, manualItems, 1);
   return { items: safeItems, linksSource: safeItems === menuItems ? "menu" : "manual" };

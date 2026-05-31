@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Blueprint Manifest
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-01
-**Status:** To Do
+**Status:** Done (2026-05-05)
 
 ---
 
@@ -51,6 +51,7 @@ Required invariants:
   executable actions.
 - resource keys are stable and deterministic.
 - `detail-page` is a first-class resource kind, separate from `page`.
+- `content-route` is a first-class resource kind for `setting.content-route.upsert`.
 - `public-detail-page` is a first-class provide kind for catalog detail
   templates.
 - UI can label `detail-page` as "Detail Template", but manifests use the
@@ -69,10 +70,6 @@ Required invariants:
   or widget media references, but they cannot embed raw file bytes, base64 blobs,
   signed URLs, upload instructions, or provider-authored asset metadata as
   executable payload.
-- If the prompt includes user-attached files, the normalized manifest/plan must
-  represent them as a gated media-import prerequisite or a `needs_input` item
-  until the media service returns trusted asset ids. Only then may downstream
-  actions reference those ids.
 - Media add/remove/replace intent must normalize as explicit reference
   operations against existing fields/widgets. It must not become ad hoc
   untyped patches or filename-only fuzzy matching.
@@ -137,8 +134,6 @@ export const normalizeBlueprintCapability = (value: unknown): BlueprintCapabilit
 - `media` manifest entries accept bounded existing-asset references and reject
   raw file bytes, base64 payloads, signed URLs, and filename-only mutation
   targets.
-- Attached-file prompts normalize to gated/needs-input media-import prerequisites
-  when no trusted media-library id exists yet.
 - current-pack detail-page metadata without a matching gated/latent declaration
   rejects.
 - Secret-like defaults reject.

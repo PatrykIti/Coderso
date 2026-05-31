@@ -12,12 +12,7 @@ const currencyPattern = "^[A-Z]{3}$";
 const metadataFieldPattern = "^[a-zA-Z0-9_.-]+$";
 
 const primitiveValueSchema = {
-  anyOf: [
-    { type: "string" },
-    { type: "number" },
-    { type: "boolean" },
-    { type: "null" },
-  ],
+  anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }],
 } as const;
 
 export const commerceMoneySchema = {
@@ -183,6 +178,12 @@ export const commerceQuerySchema = {
       maxItems: 20,
       uniqueItems: true,
       items: { type: "string", pattern: uuidPattern },
+    },
+    productIds: {
+      type: "array",
+      maxItems: 20,
+      uniqueItems: true,
+      items: { type: "string", minLength: 1, maxLength: 200 },
     },
     search: { type: ["string", "null"], maxLength: 160 },
   },

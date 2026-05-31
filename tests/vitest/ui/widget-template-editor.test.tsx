@@ -118,50 +118,26 @@ import {
   compareTimelineDefaults,
   createCompareTimelineWidget,
 } from "../../../core/widgets/core/compareTimeline";
-import {
-  contactDefaults,
-  createContactWidget,
-} from "../../../core/widgets/core/contact";
+import { contactDefaults, createContactWidget } from "../../../core/widgets/core/contact";
 import {
   createFeatureGridWidget,
   featureGridDefaults,
 } from "../../../core/widgets/core/featureGrid";
-import {
-  createFooterWidget,
-  footerDefaults,
-} from "../../../core/widgets/core/footer";
-import {
-  createNavigationWidget,
-  navigationDefaults,
-} from "../../../core/widgets/core/navigation";
-import {
-  createNewsletterWidget,
-  newsletterDefaults,
-} from "../../../core/widgets/core/newsletter";
+import { createFooterWidget, footerDefaults } from "../../../core/widgets/core/footer";
+import { createNavigationWidget, navigationDefaults } from "../../../core/widgets/core/navigation";
+import { createNewsletterWidget, newsletterDefaults } from "../../../core/widgets/core/newsletter";
 import {
   createPricingPlansWidget,
   pricingPlansDefaults,
 } from "../../../core/widgets/core/pricingPlans";
-import {
-  createCtaBannerWidget,
-  ctaBannerDefaults,
-} from "../../../core/widgets/core/ctaBanner";
-import {
-  createLogoCloudWidget,
-  logoCloudDefaults,
-} from "../../../core/widgets/core/logoCloud";
+import { createCtaBannerWidget, ctaBannerDefaults } from "../../../core/widgets/core/ctaBanner";
+import { createLogoCloudWidget, logoCloudDefaults } from "../../../core/widgets/core/logoCloud";
 import {
   createGalleryMosaicWidget,
   galleryMosaicDefaults,
 } from "../../../core/widgets/core/galleryMosaic";
-import {
-  createStatsKpiWidget,
-  statsKpiDefaults,
-} from "../../../core/widgets/core/statsKpi";
-import {
-  createTeamWidget,
-  teamDefaults,
-} from "../../../core/widgets/core/team";
+import { createStatsKpiWidget, statsKpiDefaults } from "../../../core/widgets/core/statsKpi";
+import { createTeamWidget, teamDefaults } from "../../../core/widgets/core/team";
 import {
   createRichTextSectionWidget,
   richTextSectionDefaults,
@@ -174,34 +150,19 @@ import {
   createTestimonialsWidget,
   testimonialsDefaults,
 } from "../../../core/widgets/core/testimonials";
-import {
-  createTimelineWidget,
-  timelineDefaults,
-} from "../../../core/widgets/core/timeline";
-import {
-  createSectionWidget,
-  sectionDefaults,
-} from "../../../core/widgets/core/section";
+import { createTimelineWidget, timelineDefaults } from "../../../core/widgets/core/timeline";
+import { createSectionWidget, sectionDefaults } from "../../../core/widgets/core/section";
 import {
   createGridColumnsWidget,
   gridColumnsDefaults,
 } from "../../../core/widgets/core/gridColumns";
-import {
-  createStackWidget,
-  stackDefaults,
-} from "../../../core/widgets/core/stack";
+import { createStackWidget, stackDefaults } from "../../../core/widgets/core/stack";
 import {
   createSplitLayoutWidget,
   splitLayoutDefaults,
 } from "../../../core/widgets/core/splitLayout";
-import {
-  createSpacerWidget,
-  spacerDefaults,
-} from "../../../core/widgets/core/spacer";
-import {
-  createDividerWidget,
-  dividerDefaults,
-} from "../../../core/widgets/core/divider";
+import { createSpacerWidget, spacerDefaults } from "../../../core/widgets/core/spacer";
+import { createDividerWidget, dividerDefaults } from "../../../core/widgets/core/divider";
 import type { WidgetDefinition } from "../../../core/widgets/types";
 
 const asBlockSettingsWidget = <T,>(widget: WidgetDefinition<T>) =>
@@ -283,7 +244,7 @@ test("widget template block settings render footer visual sections", () => {
   );
 
   expect(html).toContain("Variant and structure");
-  expect(html).toContain("Legal strip");
+  expect(html).toContain("Brand and legal");
   expect(html).toContain("Social links");
 });
 
@@ -373,8 +334,10 @@ test("widget template block settings render newsletter visual sections", () => {
 
   expect(html).toContain("Variant and form structure");
   expect(html).toContain("Content and copy");
-  expect(html).toContain("Consent and submit behavior");
-  expect(html).toContain("Integration target");
+  expect(html).toContain("Form semantics and consent");
+  expect(html).toContain("Submission runtime");
+  expect(html).toContain("Connection status");
+  expect(html).toContain("Colors and emphasis");
   expect(html).toContain("Spacing and alignment");
 });
 
@@ -433,7 +396,9 @@ test("widget template block settings render section visual sections", () => {
   );
 
   expect(html).toContain("Variant and structure");
-  expect(html).toContain("Semantics and anchor");
+  expect(html).toContain("Heading and intro");
+  expect(html).toContain("Section link and accessibility");
+  expect(html).toContain("Width and spacing");
   expect(html).toContain("Surface and borders");
 });
 
@@ -499,7 +464,8 @@ test("widget template block settings render stack visual sections", () => {
 
   expect(html).toContain("Variant and flow");
   expect(html).toContain("Responsive direction");
-  expect(html).toContain("Spacing and distribution");
+  expect(html).toContain("Responsive alignment and wrap");
+  expect(html).toContain("Slot guidance");
 });
 
 test("widget template block settings render split layout visual sections", () => {
@@ -530,9 +496,10 @@ test("widget template block settings render split layout visual sections", () =>
     />
   );
 
-  expect(html).toContain("Variant and pane ratio");
-  expect(html).toContain("Mobile collapse behavior");
-  expect(html).toContain("Spacing and vertical alignment");
+  expect(html).toContain("Pane layout");
+  expect(html).toContain("Phone behavior");
+  expect(html).toContain("Spacing and alignment");
+  expect(html).toContain("Pane content");
 });
 
 test("widget template block settings render spacer visual sections", () => {
@@ -649,7 +616,9 @@ test("widget template block settings render pricing plans visual sections", () =
 
   expect(html).toContain("Variant and plan structure");
   expect(html).toContain("Header copy");
+  expect(html).toContain("Billing toggle");
   expect(html).toContain("Plans, features, and actions");
+  expect(html).toContain("Layout and notes");
   expect(html).toContain("Colors and emphasis");
 });
 
@@ -680,7 +649,7 @@ test("widget template block settings render faq accordion visual sections", () =
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Header copy");
   expect(html).toContain("Questions and answers");
-  expect(html).toContain("Colors and spacing");
+  expect(html).toContain("Colors and panel style");
 });
 
 test("widget template block settings render cta banner visual sections", () => {
@@ -710,7 +679,7 @@ test("widget template block settings render cta banner visual sections", () => {
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Content copy");
   expect(html).toContain("Actions");
-  expect(html).toContain("Colors and button styles");
+  expect(html).toContain("Colors and Borders");
 });
 
 test("widget template block settings render logo cloud visual sections", () => {
@@ -797,11 +766,12 @@ test("widget template block settings render stats kpi visual sections", () => {
     />
   );
 
-  expect(html).toContain("Variant and metric structure");
-  expect(html).toContain("Header copy");
-  expect(html).toContain("Metrics content and order");
-  expect(html).toContain("Typography and colors");
-  expect(html).toContain("Layout display options");
+  expect(html).toContain("Variant and structure");
+  expect(html).toContain("Section header");
+  expect(html).toContain("Metrics content and links");
+  expect(html).toContain("Typography");
+  expect(html).toContain("Card and icon surfaces");
+  expect(html).toContain("Section layout and spacing");
 });
 
 test("widget template block settings render team visual sections", () => {
@@ -832,7 +802,7 @@ test("widget template block settings render team visual sections", () => {
   expect(html).toContain("Header copy");
   expect(html).toContain("Members content and order");
   expect(html).toContain("Social links");
-  expect(html).toContain("Card and layout style");
+  expect(html).toContain("Section and card style");
 });
 
 test("widget template block settings render rich text section visual sections", () => {
@@ -862,7 +832,7 @@ test("widget template block settings render rich text section visual sections", 
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Title block copy");
   expect(html).toContain("Body content");
-  expect(html).toContain("Structured fallback blocks");
+  expect(html).toContain("Structured content blocks");
   expect(html).toContain("Reader options");
   expect(html).toContain("Typography and colors");
 });
@@ -891,9 +861,9 @@ test("widget template block settings render contact visual sections", () => {
     />
   );
 
-  expect(html).toContain("Variant and layout structure");
+  expect(html).toContain("Variant and section header");
   expect(html).toContain("Form fields and required rules");
   expect(html).toContain("Contact details and business info");
   expect(html).toContain("Map source and display behavior");
-  expect(html).toContain("Spacing and columns");
+  expect(html).toContain("Section layout and spacing");
 });

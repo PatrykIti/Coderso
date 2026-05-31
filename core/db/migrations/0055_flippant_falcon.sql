@@ -1,0 +1,1 @@
+ALTER TABLE "preview_tokens" ADD COLUMN "context" jsonb;

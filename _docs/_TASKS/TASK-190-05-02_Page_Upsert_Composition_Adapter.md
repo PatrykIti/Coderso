@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Page Action Adapter
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03-01, TASK-190-05-01
-**Status:** To Do
+**Status:** Done (2026-05-07)
 
 ---
 
@@ -13,6 +13,20 @@
 
 Adapt composed page sections into `page.upsert` input while preserving backward
 compatibility with current catalog-page mode.
+
+Delivered slice note:
+- Added `blueprintPageSectionComposer.ts` as the page-owned helper that
+  assembles catalog listing/filter/form sections through the existing widget
+  owner instead of a second assistant-only block registry.
+- Widened `page.upsert` with reviewed `collectionLink` planning metadata so
+  assistant-created canonical collection pages persist
+  `PageData.settings.collectionLink` through the existing page owner seam.
+- `pageService.ts` now normalizes `settings.collectionLink`, and current page
+  route validation accepts that persisted metadata for manual page create/update
+  flows without adding a second storage path.
+- Current page editor/settings flows keep unknown settings keys intact through
+  the existing spread-based data update path, so no separate page-metadata UI
+  seam was needed in this slice.
 
 ## Sub-Tasks
 
@@ -79,6 +93,13 @@ Explicit page-owned metadata contract:
 - The default owner path is `PageData.settings.collectionLink` inside the
   existing `currentData` / `publishedData` JSON contract handled by
   `pageService.ts`.
+- The assistant transport may carry either persisted ids or reviewed
+  slug/name locators while upstream resources are still being created, but the
+  executor must resolve those locators into the page-owned persisted id fields
+  before writing `PageData.settings.collectionLink`.
+- If reviewed collection locators disagree with linked listing resources, the
+  executor fails closed with a dependency conflict instead of persisting mixed
+  collection/listing ownership under one page.
 - Minimal contract for downstream consumers:
 
 ```ts
@@ -191,6 +212,8 @@ export const composePageUpsertInput = (graph): AssistantPageUpsertAction["input"
 - Canonical list-page linkage and page-attached listing query/template refs are
   read from `settings.collectionLink`, not re-derived from route or slug
   heuristics once this contract exists.
+- Conflicting `contentType*` vs listing-query/template locators fail closed
+  instead of persisting mismatched ids into the page seam.
 - Any manual editor support for that metadata stays page-owned in the current
   Page settings drawer seam rather than moving into workspace-only controls or a
   second page-metadata form.

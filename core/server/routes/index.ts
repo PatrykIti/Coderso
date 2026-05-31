@@ -36,6 +36,7 @@ import { registerWidgetTemplateCategoryRoutes } from "./widgetTemplateCategoryRo
 import { registerTaxonomyRoutes } from "./taxonomyRoutes";
 import { registerAssistantRoutes } from "./assistantRoutes";
 import { registerListingsRoutes } from "./listingsRoutes";
+import { registerDetailPageRoutes } from "./detailPageRoutes";
 import { registerFilterRoutes } from "./filterRoutes";
 import { registerBookingRoutes } from "./bookingRoutes";
 import { registerCommerceRoutes } from "./commerceRoutes";
@@ -52,44 +53,122 @@ export type RouteDeps = {
 
 export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerAuthRoutes(router, { requireAuth: deps.requireAuth, validate: deps.validate });
-  registerPageRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerMediaRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerMenuRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerContentTypeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerContentEntryRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerCustomScreenRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerPostsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerPageRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerMediaRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerMenuRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerContentTypeRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerContentEntryRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerCustomScreenRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerPostsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerSearchRoutes(router, { requirePermission: deps.requirePermission });
   registerAuditRoutes(router, { requirePermission: deps.requirePermission });
-  registerThemeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerAdminThemeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerThemeRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerAdminThemeRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerSeoRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerAnalyticsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerAnalyticsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerDashboardRoutes(router, { requirePermission: deps.requirePermission });
-  registerBackupRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerImportExportRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerRedirectRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerAdminUsersRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerAdminRolesRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerSessionAdminRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerAccessLogRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerIpAllowlistRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerFormsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerBackupRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerImportExportRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerRedirectRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerAdminUsersRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerAdminRolesRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerSessionAdminRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerAccessLogRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerIpAllowlistRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerFormsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerFormActionsRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });
-  registerApiKeysRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerWebhooksRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerEmailSettingsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerIntegrationsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerApiKeysRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerWebhooksRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerEmailSettingsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerIntegrationsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerPluginsRoutes(router, {
     requirePermission: deps.requirePermission,
   });
-  registerSettingsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerSettingsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerUserSettingsRoutes(router, { requireAuth: deps.requireAuth, validate: deps.validate });
-  registerWidgetRoutes(router, { requirePermission: deps.requirePermission });
-  registerWidgetTemplateRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerWidgetRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerWidgetTemplateRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerWidgetTemplateCategoryRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
@@ -103,6 +182,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerListingsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerDetailPageRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });

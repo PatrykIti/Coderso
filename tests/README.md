@@ -7,6 +7,12 @@ This repository uses a hybrid testing model aligned with the product architectur
 - Bun owns runtime-kernel validation:
   - `tests/integration/routes/*`
   - `tests/integration/runtime/*`
+    - `tests/integration/runtime/detail-page-runtime-lite.test.ts` keeps the
+      public detail-page route contract executable even when local DB fixtures
+      are unavailable.
+    - `tests/integration/runtime/detail-page-runtime.test.ts` extends that same
+      contract with DB-backed content-type/detail-page fixture coverage when
+      `DATABASE_URL` is reachable.
   - `tests/integration/server/*`
   - `tests/integration/store/*`
   - `tests/integration/plugins/*`
@@ -37,9 +43,36 @@ bun run test:coverage:bun:full
 bun run test:coverage:all
 ```
 
+`test:vitest` loads `.env` when the file exists and then forces `NODE_ENV=test`
+for the Vitest process so React test helpers and test-only assistant diagnostics
+do not inherit production shell settings. CI can provide the same values through
+job environment variables without creating a local `.env` file.
+`test:bun` runs the DB/runtime lane serially with a `15000ms` per-test timeout;
+the lane exercises real database and runtime flows that can exceed Bun's default
+`5000ms` timeout under full-suite load.
 `test:bun:lane` runs curated Bun-owned route/plugin/perf suites without coverage.
 `test:coverage:bun` uses the same curated Bun-owned route/plugin/perf suites through `scripts/run-bun-lane.ts`.
+It writes `coverage/bun/lcov.info` and prints a compact LCOV-derived summary,
+instead of streaming Bun's full per-file text coverage table into CI logs.
 `test:coverage` now uses `scripts/run-vitest-coverage.ts` and the canonical full-lane report path `coverage/vitest/coverage-summary.json`.
+
+## Manual Smoke
+
+The TASK-336 widget contract smoke is a Bun-owned Playwright CLI harness. It is
+not part of the default automated lane because it requires local admin/frontend
+servers and admin credentials.
+
+```bash
+CODERSO_PLAYWRIGHT_EMAIL="<admin email>" \
+CODERSO_PLAYWRIGHT_PASSWORD="<admin password>" \
+bun scripts/playwright-widget-contract-smoke.ts \
+  --session widget-contract-smoke \
+  --admin http://localhost:5173/admin \
+  --front http://localhost:3000
+```
+
+Use `--dry-run` for inventory validation and `--widget <type>` for targeted
+debugging. The durable evidence is written to `_docs/PLAYWRIGHT`.
 
 ## Lane guidance
 

@@ -5,7 +5,7 @@
 **Category:** Docs + QA Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-08-01, TASK-190-08-03
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -40,11 +40,12 @@ Closure sequencing rule:
 
 ## Security Contract
 
-- Visibility: docs/QA only.
-- Auth model: no runtime change.
-- RBAC: docs preserve permission boundaries.
+- Visibility: docs/QA plus internal diagnostics redaction hardening.
+- Auth model: no public or API route behavior change.
+- RBAC: docs preserve permission boundaries; diagnostics remain internal
+  observability helpers.
 - CSRF: no runtime change.
-- Rate-limit bucket: no runtime change.
+- Rate-limit bucket: no public or API route behavior change.
 - Reject-unknown validation: docs state provider composition drafts are strict.
 - Anti-abuse: docs preserve review/dry-run/execute requirement.
 - Secret handling: no secrets in docs/changelog.
@@ -69,3 +70,85 @@ Closure sequencing rule:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - New changelog entries for completed TASK-190 leaves and umbrella closure.
+
+## Progress Notes
+
+- 2026-05-10: Final closure pass synchronized the architecture/API/site-builder
+  docs, acceptance/live matrices, security notes, task board, and changelog for
+  the complete TASK-190 blueprint composer foundation.
+- 2026-05-10: Validation completed with targeted TASK-190 Vitest
+  diagnostics/fixtures/live-matrix coverage (`3` files, `22` tests), Bun
+  live-matrix smoke (`1` test, `24` assertions), `bun --cwd core lint`,
+  `bun --cwd core lint:types`, `bun run lint`, full `bun run test:vitest`
+  (`582` files, `2609` tests), full DB/runtime `bun run test:bun` outside the
+  sandbox with `.env` loaded (`755` tests, `2913` assertions), and
+  `bun run scan:security:strict` clean. The container image scan remained
+  intentionally skipped because `SECURITY_SCAN_IMAGE` was not set.
+- 2026-05-10: Post-closure review fixes landed for published detail-template
+  draft saves, metadata-backed custom-screen reuse, detail-page editor
+  `adminHref`, acceptance-matrix wording, and security-contract precision.
+  Follow-up validation passed targeted Vitest detail-template/diagnostics/fixture
+  suites (`3` files, `26` tests), targeted Bun action executor coverage (`62`
+  tests, `292` assertions), `bun --cwd core lint`, `bun --cwd core lint:types`,
+  `bun run lint`, full `bun run test:vitest` (`582` files, `2611` tests), full
+  DB/runtime `bun run test:bun` outside the sandbox with `.env` loaded (`756`
+  tests, `2921` assertions), and `bun run scan:security:strict` clean. The
+  container image scan remained intentionally skipped because
+  `SECURITY_SCAN_IMAGE` was not set.
+- 2026-05-10: Final no-duplicate follow-up added legacy exact-name custom-screen
+  reuse before `collectionRole` / `compositionKey` metadata exists, preserving
+  backward compatibility while still preferring metadata-backed canonical
+  matches. Same-name screens with different composition metadata stay protected
+  by a dependency conflict instead of being overwritten by the fallback.
+- 2026-05-10: Final fallback validation passed targeted Bun action executor
+  coverage (`64` tests, `307` assertions), `bun --cwd core lint`,
+  `bun --cwd core lint:types`, `bun run lint`, full `bun run test:vitest`
+  (`582` files, `2611` tests), full DB/runtime `bun run test:bun` outside the
+  sandbox with `.env` loaded (`758` tests, `2936` assertions), and
+  `bun run scan:security:strict` clean. The container image scan remained
+  intentionally skipped because `SECURITY_SCAN_IMAGE` was not set.
+- 2026-05-11: Final agent-pass drift fixes landed for catalog-backed LLM
+  gating, detail-page runtime SEO/title mappings, metadata-aware custom-screen
+  action identity, and source-of-truth legacy fallback wording. Validation
+  passed targeted Vitest planner/assembler/renderer coverage (`3` files, `125`
+  tests), targeted Bun action executor coverage (`65` tests, `313`
+  assertions), targeted DB-backed detail-page runtime coverage outside the
+  sandbox (`8` tests, `24` assertions), `bun --cwd core lint`,
+  `bun --cwd core lint:types`, `bun run lint`, full `bun run test:vitest`
+  (`582` files, `2611` tests), and `bun run precommit`. Final local broad-gate
+  rerun confirmed `bun run test:bun` green (`760` tests across `204` files,
+  `2946` assertions), full `bun run test:vitest` green (`582` files, `2611`
+  tests), and `bun run scan:security:strict` green across Semgrep,
+  `bun audit`, Trivy vulnerability/config/secret scans, and Gitleaks
+  history/worktree scans. The container image scan remained intentionally
+  skipped because `SECURITY_SCAN_IMAGE` was not set.
+- 2026-05-11: Second final agent pass found no high TASK-190 drift and closed
+  the remaining medium/low validation drift: `setting.content-route.upsert`
+  now rejects invalid `detailPageId` values at the assistant schema and route
+  boundary, `page.upsert` action-family metadata matches the real strict page
+  schema, detail-page route schemas reject unknown top-level document fields
+  before service work, and dedicated detail-page preview now has explicit
+  title/SEO regression coverage. The Vitest command also forces
+  `NODE_ENV=test` after `.env` loading so local production shells cannot disable
+  React `act` or test-only blueprint-shadow diagnostics. A post-commit Bun
+  gate rerun also stabilized the DB/runtime lane with an explicit `15000ms`
+  `test:bun` timeout after multiple real DB-backed tests proved to run above
+  Bun's `5000ms` default in the full serial gate. Validation passed
+  targeted Bun route/runtime coverage (`42` tests, `178` assertions), targeted
+  Vitest assistant schema/contract coverage (`2` files, `54` tests),
+  `bun run lint`, full DB/runtime `bun run test:bun` outside the sandbox with
+  `.env` loaded (`763` tests across `204` files, `2956` assertions), full
+  `bun run test:vitest` (`582` files, `2611` tests), and
+  `bun run scan:security:strict` clean across Semgrep, `bun audit`, Trivy
+  vulnerability/config/secret scans, and Gitleaks history/worktree scans. The
+  container image scan remained intentionally skipped because
+  `SECURITY_SCAN_IMAGE` was not set.
+- 2026-05-11: After explicit user approval for the opt-in external provider
+  transfer, the second-pass live gate was rerun outside the sandbox. The first
+  `bun run test:assistant:live` attempt exposed live CMS harness drift: fixture
+  `resourceCatalog` payloads missed the required `includeResourceCatalog: true`
+  trust flag and were correctly ignored by the current server-side security
+  contract. After adding that flag to the live CMS contexts,
+  `bun run test:assistant:live:cms:openai` passed (`15` tests, `263`
+  assertions), then full `bun run test:assistant:live` passed for route
+  OpenAI/OpenRouter and CMS OpenAI/OpenRouter.

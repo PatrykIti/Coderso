@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -15,13 +15,7 @@ vi.mock("@/components/ui/alert", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({
-    children,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-  }) => (
+  Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
     <button type="button" onClick={onClick}>
       {children}
     </button>
@@ -42,12 +36,12 @@ const mount = (node: React.ReactNode) => {
   return {
     container,
     render: () => {
-      act(() => {
+      React.act(() => {
         root.render(node);
       });
     },
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -74,10 +68,7 @@ test("PluginErrorBoundary isolates crashes and forwards disable action", () => {
   const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   const onDisable = vi.fn();
   const view = mount(
-    <PluginErrorBoundary
-      plugin={{ name: "Catalog", version: "1.0.0" }}
-      onDisable={onDisable}
-    >
+    <PluginErrorBoundary plugin={{ name: "Catalog", version: "1.0.0" }} onDisable={onDisable}>
       <Crash />
     </PluginErrorBoundary>
   );
@@ -88,7 +79,7 @@ test("PluginErrorBoundary isolates crashes and forwards disable action", () => {
     expect(view.container.textContent).toContain("Catalog");
     expect(view.container.textContent).toContain("Disable plugin");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))[0]?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );

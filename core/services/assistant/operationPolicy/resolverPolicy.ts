@@ -92,10 +92,7 @@ const surfaceStopWords = new Set([
 ]);
 
 export const normalizeResolverText = (value: string) =>
-  value
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLowerCase();
+  value.trim().replace(/\s+/g, " ").toLowerCase();
 
 const includesAny = (value: string, candidates: string[]) =>
   candidates.some((candidate) => value.includes(normalizeResolverText(candidate)));
@@ -131,6 +128,9 @@ export const inferOperationWithPolicy = (
     if (!operations.has(operation)) continue;
     if (includesAny(normalizedPrompt, operationAliases[operation])) return operation;
   }
+  if (/^(czy|is|does)\b/u.test(normalizedPrompt)) {
+    return operations.has("inspect") ? "inspect" : null;
+  }
   return null;
 };
 
@@ -138,7 +138,9 @@ export const includesPrefixIntentWithPolicy = (normalizedPrompt: string) =>
   includesAny(normalizedPrompt, prefixAliases);
 
 const policyResourceEntries = (policy: AssistantOperationPolicy) =>
-  Object.entries(policy.resources).filter(([, resource]) => resource.coverage.state !== "not-applicable");
+  Object.entries(policy.resources).filter(
+    ([, resource]) => resource.coverage.state !== "not-applicable"
+  );
 
 export const getResolverResourcePolicyByKey = (
   key: string | null | undefined,
@@ -155,9 +157,7 @@ export const getResolverResourcePolicy = (
 ): AssistantResourcePolicy | null => {
   const exact = policy.resources[kind];
   if (exact?.kind === kind && exact.coverage.state !== "not-applicable") return exact;
-  return (
-    policyResourceEntries(policy).find(([, resource]) => resource.kind === kind)?.[1] ?? null
-  );
+  return policyResourceEntries(policy).find(([, resource]) => resource.kind === kind)?.[1] ?? null;
 };
 
 export const getResolverResourcePolicyForDraft = (
@@ -178,7 +178,8 @@ export const resolveResourcePolicyEntryFromPromptWithPolicy = (
       resource,
       score: resource.aliases.reduce(
         (result, alias) =>
-          result + (wordLikeContains(normalizedPrompt, alias) ? normalizeResolverText(alias).length : 0),
+          result +
+          (wordLikeContains(normalizedPrompt, alias) ? normalizeResolverText(alias).length : 0),
         0
       ),
     }))
@@ -194,8 +195,9 @@ export const resolveResourceKindFromPromptWithPolicy = (
   prompt: string,
   policy: AssistantOperationPolicy = assistantOperationPolicy
 ): CmsResourceKind | null =>
-  (resolveResourcePolicyEntryFromPromptWithPolicy(prompt, policy)?.resource.kind as CmsResourceKind | undefined) ??
-  null;
+  (resolveResourcePolicyEntryFromPromptWithPolicy(prompt, policy)?.resource.kind as
+    | CmsResourceKind
+    | undefined) ?? null;
 
 const isCmsResourceKind = (value: unknown): value is CmsResourceKind =>
   typeof value === "string" && (cmsResourceKindValues as readonly string[]).includes(value);
@@ -207,7 +209,11 @@ export const inferRequestedCountWithPolicy = (
   const digitMatch = normalizedPrompt.match(/\b(\d{1,2})\b/);
   if (digitMatch?.[1]) return Number(digitMatch[1]);
   for (const [word, count] of Object.entries(policy.followUp.countWords)) {
-    if (new RegExp(`(^|\\s)${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`, "u").test(normalizedPrompt)) {
+    if (
+      new RegExp(`(^|\\s)${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`, "u").test(
+        normalizedPrompt
+      )
+    ) {
       return count;
     }
   }
@@ -326,8 +332,11 @@ const candidateSearchValues = (candidate: CmsResolvedTargetCandidate) =>
 export const matchesCandidateWithPolicy = (
   candidate: CmsResolvedTargetCandidate,
   query: CmsOperationTargetQuery,
-  _resourcePolicy: AssistantResourcePolicy | null
+  resourcePolicy: AssistantResourcePolicy | null
 ) => {
+  if (candidate.kind === "detail-page" || resourcePolicy?.kind === "detail-page") {
+    return matchesDetailPageCandidateWithPolicy(candidate, query);
+  }
   const candidates = candidateSearchValues(candidate);
   if (query.slug) return normalizeValue(candidate.slug) === normalizeResolverText(query.slug);
   if (query.exactName) {
@@ -343,6 +352,55 @@ export const matchesCandidateWithPolicy = (
     return targets.some((target) => candidates.some((value) => value.includes(target)));
   }
   return true;
+};
+
+const detailPageTrustedTargetValues = (candidate: CmsResolvedTargetCandidate) =>
+  [
+    candidate.id,
+    candidate.details?.contentTypeId,
+    candidate.details?.contentTypeSlug,
+    candidate.details?.linkedRouteType,
+    candidate.slug,
+  ]
+    .map((value) => normalizeValue(value))
+    .filter(Boolean);
+
+const detailPageRouteTargetValues = (candidate: CmsResolvedTargetCandidate) => {
+  const values = detailPageTrustedTargetValues(candidate);
+  return new Set(
+    values.flatMap((value) => [value, value.startsWith("/") ? value.slice(1) : `/${value}`])
+  );
+};
+
+const matchesDetailPageCandidateWithPolicy = (
+  candidate: CmsResolvedTargetCandidate,
+  query: CmsOperationTargetQuery
+) => {
+  if (query.active) return true;
+  if (query.slug) {
+    const target = normalizeResolverText(query.slug).replace(/^\/+/u, "");
+    return (
+      detailPageRouteTargetValues(candidate).has(target) ||
+      detailPageRouteTargetValues(candidate).has(`/${target}`)
+    );
+  }
+  if (query.route) {
+    const target = normalizeResolverText(query.route).replace(/^\/+/u, "");
+    return (
+      detailPageRouteTargetValues(candidate).has(target) ||
+      detailPageRouteTargetValues(candidate).has(`/${target}`)
+    );
+  }
+  if (query.exactName) {
+    const target = normalizeResolverText(query.exactName);
+    return detailPageTrustedTargetValues(candidate).includes(target);
+  }
+  if (query.text) {
+    const targets = splitTextQueryTerms(query.text);
+    const trustedValues = detailPageTrustedTargetValues(candidate);
+    return targets.some((target) => trustedValues.includes(target));
+  }
+  return !query.prefix;
 };
 
 const surfaceTokensForPolicy = (resourcePolicy: AssistantResourcePolicy | null) => {
@@ -383,12 +441,11 @@ export const isSurfaceOnlyReadQueryWithPolicy = (
   const surfaceText = normalizeResolverText(draft.surfaceHint ?? "");
   const surfaceTokens = surfaceTokensForPolicy(resourcePolicy);
   const tokens = text.split(/[^a-z0-9ąćęłńóśźż]+/u).filter(Boolean);
-  const isOnlySurfaceWords = tokens.every(
-    (token) => surfaceTokens.has(token) || token.length <= 2
-  );
+  const isOnlySurfaceWords = tokens.every((token) => surfaceTokens.has(token) || token.length <= 2);
   return (
-    Boolean(surfaceText && (text === surfaceText || (text.includes(surfaceText) && isOnlySurfaceWords))) ||
-    isOnlySurfaceWords
+    Boolean(
+      surfaceText && (text === surfaceText || (text.includes(surfaceText) && isOnlySurfaceWords))
+    ) || isOnlySurfaceWords
   );
 };
 
@@ -397,6 +454,7 @@ export const inferActiveResourceKindWithPolicy = (
 ): CmsResourceKind | null => {
   const activeSurface = context?.activeSurface ?? null;
   if (activeSurface?.kind === "page") return "page";
+  if (activeSurface?.kind === "detail-page") return "detail-page";
   if (activeSurface?.kind === "custom-screen") return "custom-screen";
   if (activeSurface?.kind === "widget-template") return "widget-template";
   const selected = context?.runtimeSnapshot?.selectedResource;

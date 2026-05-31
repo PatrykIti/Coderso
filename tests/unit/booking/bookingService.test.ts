@@ -89,17 +89,13 @@ const cleanup = async () => {
   }
 };
 
-const createBookingResource = async (
-  input: Parameters<typeof createBookingResourceBase>[0]
-) => {
+const createBookingResource = async (input: Parameters<typeof createBookingResourceBase>[0]) => {
   const resource = await createBookingResourceBase(input);
   createdResourceIds.push(resource.id);
   return resource;
 };
 
-const createBookingService = async (
-  input: Parameters<typeof createBookingServiceBase>[0]
-) => {
+const createBookingService = async (input: Parameters<typeof createBookingServiceBase>[0]) => {
   const service = await createBookingServiceBase(input);
   createdServiceIds.push(service.id);
   return service;
@@ -113,9 +109,7 @@ const createBookingReservation = async (
   return booking;
 };
 
-const createBookingBlackout = async (
-  input: Parameters<typeof createBookingBlackoutBase>[0]
-) => {
+const createBookingBlackout = async (input: Parameters<typeof createBookingBlackoutBase>[0]) => {
   const blackout = await createBookingBlackoutBase(input);
   if (blackout) createdBlackoutIds.push(blackout.id);
   return blackout;
@@ -177,6 +171,47 @@ testIfDb("booking resource/service setup and slot preview", async () => {
   expect(slots.length).toBe(4);
   expect(slots[0]?.startsAt).toBe("2030-01-15T09:00:00.000Z");
   expect(slots[3]?.startsAt).toBe("2030-01-15T10:30:00.000Z");
+});
+
+testIfDb("booking slot preview rejects past dates and signed out-of-range policy", async () => {
+  const resource = await createBookingResource({
+    name: `Bay ${randomUUID()}`,
+    type: "bay",
+    timezone: "UTC",
+    capacity: 1,
+  });
+  const service = await createBookingService({
+    name: `Inspection ${randomUUID()}`,
+    durationMinutes: 30,
+  });
+
+  await setBookingServiceResources(service.id, [{ resourceId: resource.id }]);
+
+  await expect(
+    previewBookingSlots({
+      serviceId: service.id,
+      resourceId: resource.id,
+      date: "2020-01-06",
+      timezone: "UTC",
+      intervalMinutes: 30,
+    })
+  ).rejects.toThrow("booking_slot_date_in_past");
+
+  await expect(
+    previewBookingSlots(
+      {
+        serviceId: service.id,
+        resourceId: resource.id,
+        date: "2030-01-18",
+        timezone: "UTC",
+        intervalMinutes: 30,
+      },
+      {
+        minDate: "2030-01-19",
+        maxDate: "2030-01-20",
+      }
+    )
+  ).rejects.toThrow("booking_slot_date_out_of_range");
 });
 
 testIfDbWithOptions(

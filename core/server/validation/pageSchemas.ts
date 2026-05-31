@@ -206,6 +206,21 @@ const pageDataSchema = {
         showInNav: { type: "boolean" },
         layout: pageLayoutSchema,
         revisionRetention: { type: "number", minimum: 1, maximum: 100 },
+        collectionLink: {
+          type: "object",
+          required: ["contentTypeId", "pageRole"],
+          additionalProperties: false,
+          properties: {
+            contentTypeId: { type: "string", minLength: 1 },
+            pageRole: {
+              type: "string",
+              enum: ["canonical-list-page", "supporting-page"],
+            },
+            compositionKey: { type: ["string", "null"] },
+            listingQueryId: { type: ["string", "null"] },
+            listingTemplateId: { type: ["string", "null"] },
+          },
+        },
       },
     },
   },

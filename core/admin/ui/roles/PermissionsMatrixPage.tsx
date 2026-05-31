@@ -14,16 +14,10 @@ import {
 } from "@/services/adminRolesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
-import {
-  PermissionsMatrix,
-  type RolePermissionsMap,
-} from "./PermissionsMatrix";
+import { PermissionsMatrix, type RolePermissionsMap } from "./PermissionsMatrix";
 import { RoleEditor } from "./RoleEditor";
 import type { RoleDraft, RoleSummary } from "./types";
-import {
-  fallbackPermissionGroups,
-  flattenPermissionGroups,
-} from "./permissionCatalog";
+import { fallbackPermissionGroups, flattenPermissionGroups } from "./permissionCatalog";
 
 function PermissionsMatrixSearch({
   value,
@@ -47,9 +41,8 @@ function PermissionsMatrixSearch({
 
 export function PermissionsMatrixPage() {
   const [roles, setRoles] = useState<RoleSummary[]>([]);
-  const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>(
-    fallbackPermissionGroups
-  );
+  const [permissionGroups, setPermissionGroups] =
+    useState<PermissionGroup[]>(fallbackPermissionGroups);
   const [draftPermissions, setDraftPermissions] = useState<RolePermissionsMap>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [roleEditorOpen, setRoleEditorOpen] = useState(false);
@@ -78,20 +71,15 @@ export function PermissionsMatrixPage() {
       .filter((group) => group.permissions.length > 0);
   }, [permissionGroups, searchQuery]);
 
-  const buildRolePermissions = useCallback(
-    (roleList: typeof roles, groups: PermissionGroup[]) => {
-      const available = flattenPermissionGroups(groups);
-      const map: RolePermissionsMap = {};
-      roleList.forEach((role) => {
-        const permissions = role.permissions.includes("*")
-          ? available
-          : role.permissions;
-        map[role.id] = Array.from(new Set(permissions));
-      });
-      return map;
-    },
-    []
-  );
+  const buildRolePermissions = useCallback((roleList: typeof roles, groups: PermissionGroup[]) => {
+    const available = flattenPermissionGroups(groups);
+    const map: RolePermissionsMap = {};
+    roleList.forEach((role) => {
+      const permissions = role.permissions.includes("*") ? available : role.permissions;
+      map[role.id] = Array.from(new Set(permissions));
+    });
+    return map;
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -146,9 +134,7 @@ export function PermissionsMatrixPage() {
 
   const hasUnsavedChanges = useMemo(() => {
     return roles.some((role) => {
-      const current = role.permissions.includes("*")
-        ? allPermissionIds
-        : role.permissions;
+      const current = role.permissions.includes("*") ? allPermissionIds : role.permissions;
       const next = draftPermissions[role.id] ?? [];
       const sortedCurrent = [...new Set(current)].sort();
       const sortedNext = [...new Set(next)].sort();
@@ -203,16 +189,12 @@ export function PermissionsMatrixPage() {
     setError(null);
     try {
       const updates = roles.filter((role) => {
-        const current = role.permissions.includes("*")
-          ? allPermissionIds
-          : role.permissions;
+        const current = role.permissions.includes("*") ? allPermissionIds : role.permissions;
         const next = draftPermissions[role.id] ?? [];
         const sortedCurrent = [...new Set(current)].sort();
         const sortedNext = [...new Set(next)].sort();
         if (sortedCurrent.length !== sortedNext.length) return true;
-        return sortedCurrent.some(
-          (permission, index) => permission !== sortedNext[index]
-        );
+        return sortedCurrent.some((permission, index) => permission !== sortedNext[index]);
       });
 
       await Promise.all(
@@ -242,16 +224,7 @@ export function PermissionsMatrixPage() {
   return (
     <AdminShell
       activeHref="/admin/roles"
-      breadcrumbs={
-        <div className="flex flex-col gap-1">
-          <span className="text-base font-semibold text-foreground">
-            Permissions Matrix
-          </span>
-          <span className="text-xs text-muted-foreground">
-            Manage access across roles and admin modules.
-          </span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Permissions Matrix"]}
       search={<PermissionsMatrixSearch value={searchQuery} onChange={setSearchQuery} />}
       topbarActions={
         <Button

@@ -1,25 +1,47 @@
 import { expect, test } from "vitest";
 
-import {
-  cmsOperationFixtures,
-  fakeProvider,
-} from "./fixtures/cmsOperationFixtures";
+import { cmsOperationFixtures, fakeProvider } from "./fixtures/cmsOperationFixtures";
 import {
   planAssistantActions,
   planAssistantActionsWithProviderDraft,
 } from "../../../core/services/assistant/actionPlannerService";
 
+const resolveTrustedFixtureContext = <
+  T extends
+    | {
+        includeResourceCatalog?: boolean;
+        resourceCatalog?: unknown;
+      }
+    | null
+    | undefined,
+>(
+  context: T
+): T => {
+  if (
+    !context ||
+    context.includeResourceCatalog === true ||
+    context.resourceCatalog === undefined
+  ) {
+    return context;
+  }
+  return {
+    ...context,
+    includeResourceCatalog: true,
+  };
+};
+
 test.each(cmsOperationFixtures)("CMS operation fixture: $name", async (fixture) => {
+  const context = resolveTrustedFixtureContext(fixture.context);
   const plan = fixture.providerDraft
     ? await planAssistantActionsWithProviderDraft({
         prompt: fixture.prompt,
-        context: fixture.context,
+        context,
         provider: fakeProvider(fixture.providerDraft),
         llmAvailable: true,
       })
     : planAssistantActions({
         prompt: fixture.prompt,
-        context: fixture.context,
+        context,
       });
 
   expect(plan.status).toBe(fixture.expected.status);

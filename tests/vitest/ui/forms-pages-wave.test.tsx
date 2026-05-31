@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -222,7 +222,9 @@ vi.mock("@/components/ui/tabs", () => ({
   Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
 }));
 
 vi.mock("@/services/apiClient", () => ({
@@ -247,9 +249,7 @@ vi.mock("@/services/contentTypesClient", () => ({
 }));
 
 vi.mock("@/services/formsClient", async () => {
-  const actual = await vi.importActual<Record<string, unknown>>(
-    "@/services/formsClient"
-  );
+  const actual = await vi.importActual<Record<string, unknown>>("@/services/formsClient");
   return {
     ...actual,
     getCachedForms: () => formsPageState.formsList,
@@ -387,14 +387,17 @@ vi.mock("@/ui/layouts/EditorShell", () => ({
     leftPanel,
     rightPanel,
     breadcrumbs,
+    topbarActions,
   }: {
     children: React.ReactNode;
     leftPanel?: React.ReactNode;
     rightPanel?: React.ReactNode;
     breadcrumbs?: React.ReactNode;
+    topbarActions?: React.ReactNode;
   }) => (
     <div>
       <div>{breadcrumbs}</div>
+      <div>{topbarActions}</div>
       <aside>{leftPanel}</aside>
       <main>{children}</main>
       <aside>{rightPanel}</aside>
@@ -768,14 +771,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -784,7 +787,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -798,7 +801,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -828,14 +831,14 @@ test("useForms consumes cache, refreshes, and reacts to cache bus events", async
   const view = mount(<Harness />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
     expect(view.container.textContent).toContain("count:1");
     expect(formsPageState.listCalls).toContain(false);
 
-    await act(async () => {
+    await React.act(async () => {
       for (const subscriber of formsPageState.subscribers) {
         subscriber({ key: "formsList" });
       }
@@ -845,7 +848,7 @@ test("useForms consumes cache, refreshes, and reacts to cache bus events", async
     expect(formsPageState.listCalls.length).toBeGreaterThan(1);
 
     formsPageState.listError = formsPageState.apiError("Forms load failed");
-    await act(async () => {
+    await React.act(async () => {
       view.container
         .querySelector("button")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -859,24 +862,26 @@ test("useForms consumes cache, refreshes, and reacts to cache bus events", async
 });
 
 test("FormListPage creates, refreshes fallback, confirms row actions, and reports form errors", async () => {
-  const { FormListPage } = await import(
-    "../../../core/admin/ui/forms/FormListPage"
-  );
+  const { FormListPage } = await import("../../../core/admin/ui/forms/FormListPage");
 
   const view = mount(<FormListPage />);
 
   try {
     expect(view.container.textContent).toContain("Forms");
     expect(view.container.textContent).toContain("Contact");
-    expect(view.container.querySelector("[data-active-href]")?.getAttribute("data-active-href")).toBe(
-      "/admin/advanced/forms"
-    );
+    expect(
+      view.container.querySelector("[data-active-href]")?.getAttribute("data-active-href")
+    ).toBe("/admin/advanced/forms");
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
-      buttons().find((button) => button.textContent?.includes("New"))?.click();
-      buttons().find((button) => button.textContent === "create-form-drawer")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("New"))
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "create-form-drawer")
+        ?.click();
     });
     await flush();
 
@@ -887,47 +892,57 @@ test("FormListPage creates, refreshes fallback, confirms row actions, and report
       description: "Created from drawer",
     });
     expect(formsPageState.navigateCalls).toContain("/advanced/forms/created-form");
-    expect(formsPageState.toastSuccess).toHaveBeenCalledWith(
-      'Form "Created form" created.'
-    );
+    expect(formsPageState.toastSuccess).toHaveBeenCalledWith('Form "Created form" created.');
 
     formsPageState.createReturnsNull = true;
-    act(() => {
-      buttons().find((button) => button.textContent === "create-form-drawer")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "create-form-drawer")
+        ?.click();
     });
     await flush();
     expect(formsPageState.listCalls.at(-1)).toBe(true);
 
-    act(() => {
-      buttons().find((button) => button.textContent === "edit-form-row")?.click();
-      buttons().find((button) => button.textContent === "action-logs-form-row")?.click();
-      buttons().find((button) => button.textContent === "publish-form-row")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "edit-form-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "action-logs-form-row")
+        ?.click();
+      buttons()
+        .find((button) => button.textContent === "publish-form-row")
+        ?.click();
     });
     await flush();
     expect(formsPageState.navigateCalls).toContain("/advanced/forms/form-1");
-    expect(formsPageState.navigateCalls).toContain(
-      "/advanced/forms/form-1/action-runs"
-    );
+    expect(formsPageState.navigateCalls).toContain("/advanced/forms/form-1/action-runs");
     expect(formsPageState.updateFormCalls).toContainEqual({
       id: "form-1",
       input: { status: "published" },
     });
 
-    act(() => {
-      buttons().find((button) => button.textContent === "delete-form-row")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "delete-form-row")
+        ?.click();
     });
     expect(formsPageState.deleteCalls).toHaveLength(0);
 
-    act(() => {
-      buttons().find((button) => button.textContent === "Delete form")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "Delete form")
+        ?.click();
     });
     await flush();
     expect(formsPageState.deleteCalls).toContain("form-1");
     expect(formsPageState.toastSuccess).toHaveBeenCalledWith("Form deleted.");
 
     formsPageState.createError = formsPageState.apiError("Create failed");
-    act(() => {
-      buttons().find((button) => button.textContent === "create-form-drawer")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "create-form-drawer")
+        ?.click();
     });
     await flush();
     expect(view.container.textContent).toContain("Forms update failed");
@@ -935,12 +950,16 @@ test("FormListPage creates, refreshes fallback, confirms row actions, and report
 
     formsPageState.createError = null;
     formsPageState.deleteError = new Error("boom");
-    act(() => {
-      buttons().find((button) => button.textContent === "delete-form-row")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "delete-form-row")
+        ?.click();
     });
     await flush();
-    act(() => {
-      buttons().find((button) => button.textContent === "Delete form")?.click();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent === "Delete form")
+        ?.click();
     });
     await flush();
     expect(view.container.textContent).toContain("Failed to delete form.");
@@ -951,9 +970,7 @@ test("FormListPage creates, refreshes fallback, confirms row actions, and report
 
 test("FormListPage reports load failures", async () => {
   formsPageState.listError = formsPageState.apiError("Forms load failed");
-  const { FormListPage } = await import(
-    "../../../core/admin/ui/forms/FormListPage"
-  );
+  const { FormListPage } = await import("../../../core/admin/ui/forms/FormListPage");
 
   const view = mount(<FormListPage />);
 
@@ -975,9 +992,7 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
     configurable: true,
     writable: true,
   });
-  const { FormBuilderPage } = await import(
-    "../../../core/admin/ui/forms/FormBuilderPage"
-  );
+  const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
 
   const view = mount(<FormBuilderPage />);
 
@@ -1004,7 +1019,7 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
       (button) => button.textContent === "add-library-field"
     );
 
-    act(() => {
+    React.act(() => {
       mobileSelectButtons.at(-1)?.click();
       mobileAddButtons.at(-1)?.click();
     });
@@ -1018,9 +1033,7 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
     clickByText(view.container, "Runtime preview");
     await flush();
 
-    expect(view.container.textContent).toContain(
-      "Save form before opening runtime preview."
-    );
+    expect(view.container.textContent).toContain("Save form before opening runtime preview.");
 
     clickByText(view.container, "canvas-select-form");
     clickByText(view.container, "change-form-name");
@@ -1040,7 +1053,7 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
       fields: [formsPageState.formDetail.fields[0]!],
     };
 
-    await act(async () => {
+    await React.act(async () => {
       for (const subscriber of formsPageState.subscribers) {
         subscriber({ key: "formDetail:form-1" });
       }
@@ -1079,9 +1092,7 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
     expect(view.container.textContent).toContain("runtime-preview:open:clean");
 
     clickByText(view.container, "Action logs");
-    expect(formsPageState.navigateCalls).toContain(
-      "/advanced/forms/form-1/action-runs"
-    );
+    expect(formsPageState.navigateCalls).toContain("/advanced/forms/form-1/action-runs");
   } finally {
     Object.defineProperty(window, "confirm", {
       value: originalConfirm,
@@ -1094,9 +1105,7 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
 
 test("FormBuilderPage handles routes without form ids", async () => {
   window.history.replaceState({}, "", "/admin/forms");
-  const { FormBuilderPage } = await import(
-    "../../../core/admin/ui/forms/FormBuilderPage"
-  );
+  const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
 
   const view = mount(<FormBuilderPage />);
 
@@ -1117,9 +1126,7 @@ test("FormBuilderPage handles routes without form ids", async () => {
 
 test("FormBuilderPage reports not-found, load, and save errors", async () => {
   window.history.replaceState({}, "", "/admin/forms/form-1");
-  const { FormBuilderPage } = await import(
-    "../../../core/admin/ui/forms/FormBuilderPage"
-  );
+  const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
 
   formsPageState.formDetail = null as never;
 

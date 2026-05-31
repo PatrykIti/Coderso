@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test } from "vitest";
 import { Database } from "lucide-react";
@@ -43,7 +43,7 @@ const mountSidebar = (sections: NavSection[]) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(
       <AdminRouterProvider initialPath="/admin">
         <AdminBasePathProvider value="/admin">
@@ -56,7 +56,7 @@ const mountSidebar = (sections: NavSection[]) => {
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -108,7 +108,7 @@ test("SidebarNav preserves desktop menu scroll position across navigation remoun
     expect(nav).toBeTruthy();
     expect(seoLink).toBeTruthy();
 
-    act(() => {
+    React.act(() => {
       (nav as HTMLElement).scrollTop = 180;
       (seoLink as HTMLAnchorElement).click();
     });
@@ -201,7 +201,7 @@ test("SidebarNav prefers the custom screen records shortcut over the generic Scr
   document.body.appendChild(activeContainer);
   const activeRoot = createRoot(activeContainer);
 
-  act(() => {
+  React.act(() => {
     activeRoot.render(
       <AdminRouterProvider initialPath="/admin/advanced/custom-screens/screen-1/entries/entry-1">
         <AdminBasePathProvider value="/admin">
@@ -230,7 +230,7 @@ test("SidebarNav prefers the custom screen records shortcut over the generic Scr
       customScreenShortcutLink?.className.includes("bg-[var(--admin-sidebar-active-bg)]")
     ).toBe(true);
   } finally {
-    act(() => {
+    React.act(() => {
       activeRoot.unmount();
     });
     activeContainer.remove();

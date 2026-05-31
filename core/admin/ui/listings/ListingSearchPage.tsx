@@ -37,17 +37,13 @@ export function ListingSearchPage() {
       const limitValue = Number(limit);
       const result = await previewPublicSearch({
         q: query,
-        ...(Number.isFinite(limitValue) && limitValue > 0
-          ? { limit: Math.floor(limitValue) }
-          : {}),
+        ...(Number.isFinite(limitValue) && limitValue > 0 ? { limit: Math.floor(limitValue) } : {}),
         ...(selectedSources.length > 0 ? { sources: selectedSources } : {}),
       });
       setPayload(result);
     } catch (error) {
       const message =
-        error instanceof Error && error.message
-          ? error.message
-          : "Failed to load search preview.";
+        error instanceof Error && error.message ? error.message : "Failed to load search preview.";
       setError(message);
       setPayload(null);
     } finally {
@@ -56,16 +52,7 @@ export function ListingSearchPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/advanced/search"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span className="text-foreground">Search</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/advanced/search" breadcrumbs={["Coderso", "Search"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Search"

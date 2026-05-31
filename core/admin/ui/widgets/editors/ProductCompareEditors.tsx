@@ -1,18 +1,138 @@
+import { useEffect, useRef, useState } from "react";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { previewProductCompare } from "@/services/productComparePreviewClient";
+
 import {
   buildProductCompareQueryInput,
   normalizeProductCompareData,
+  productCompareAttributeKeys,
+  productCompareCtaModes,
   productCompareDefaults,
+  productCompareMoneyLocales,
+  productCompareQuantityDisplayModes,
+  type ProductCompareAttributeKey,
   type ProductCompareData,
 } from "../../../../widgets/core/productCompare";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import {
+  commerceSortFieldLabelMap,
+  type CommerceWidgetSortDirection,
+  type CommerceWidgetSortField,
+} from "../../../../widgets/core/commerceWidgetShared";
+import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
   CommerceEditorSection,
+  CommerceProductSelectField,
+  CommerceProductSelectionField,
   CommerceSourceFields,
   CommerceTextField,
   CommerceToggleField,
   normalizeSourceForEditor,
+  type CommerceSourceFieldOptions,
 } from "./CommerceWidgetEditorShared";
-import { ClearableInputField } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
+import { ReadonlyWidgetSummaryRow } from "./WidgetEditorControls";
+
+const variantOptions = [
+  {
+    id: "matrix",
+    label: "Matrix",
+    description: "Attribute rows with products as columns.",
+  },
+  {
+    id: "compact",
+    label: "Compact",
+    description: "Dense comparison table for tighter layouts.",
+  },
+  {
+    id: "cards",
+    label: "Cards",
+    description: "Product cards with stacked comparison details.",
+  },
+] as const;
+
+const productCompareSourceFieldOptions: CommerceSourceFieldOptions = {
+  limitMax: 12,
+  allowCollectionFallbackInput: false,
+  copy: {
+    searchPlaceholder: "product name",
+    searchHelpText: "Use search to narrow Product Compare candidates before final curation.",
+    statusHelpText:
+      "Empty keeps the current runtime defaults. Use Published for public-ready comparisons.",
+  },
+};
+
+const normalizeText = (value: unknown) =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : "";
+
+const describeCommerceColor = (value: string | undefined) => {
+  if (!value?.trim()) return "Theme default";
+  if (/^#[0-9a-f]{6}$/i.test(value.trim())) return "Selected swatch";
+  return "Saved custom color";
+};
+
+const summarizeStatusFilters = (status: string[] | undefined) => {
+  const count = status?.length ?? 0;
+  if (count === 0) return "Public-ready default";
+  return `${count} ${count === 1 ? "status filter" : "status filters"} selected`;
+};
+
+const summarizeCollectionFilters = (collectionIds: string[] | undefined) => {
+  const count = collectionIds?.length ?? 0;
+  if (count === 0) return "No collection filter";
+  return `${count} ${count === 1 ? "collection" : "collections"} selected`;
+};
+
+const summarizeCommerceSort = (
+  field: CommerceWidgetSortField | undefined,
+  direction: CommerceWidgetSortDirection | undefined
+) => {
+  const resolvedField = field ?? "title";
+  const resolvedDirection = direction ?? "asc";
+
+  if (resolvedField === "pricing.amount") {
+    return resolvedDirection === "asc" ? "Price, low to high" : "Price, high to low";
+  }
+
+  if (resolvedField === "updatedAt") {
+    return resolvedDirection === "desc" ? "Recently updated first" : "Oldest updated first";
+  }
+
+  if (resolvedField === "createdAt") {
+    return resolvedDirection === "desc" ? "Newest first" : "Oldest first";
+  }
+
+  if (resolvedField === "publishedAt") {
+    return resolvedDirection === "desc" ? "Recently published first" : "Oldest published first";
+  }
+
+  const label =
+    resolvedField === "slug" ? "Product URL path" : commerceSortFieldLabelMap[resolvedField];
+  return `${label}, ${resolvedDirection === "asc" ? "A to Z" : "Z to A"}`;
+};
+
+const productCompareMoneyLocaleLabelMap: Record<
+  (typeof productCompareMoneyLocales)[number],
+  string
+> = {
+  "en-US": "English (United States)",
+  "pl-PL": "Polish (Poland)",
+  "de-DE": "German (Germany)",
+  "fr-FR": "French (France)",
+};
+
+const resolvePreviewErrorMessage = (error: unknown) => {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+  return "Resolved Product Compare preview could not be loaded.";
+};
 
 const update = (
   value: ProductCompareData,
@@ -48,9 +168,91 @@ const clearStyle = (
   const current = normalizeProductCompareData(value);
   const { [key]: _removed, ...nextStyle } = current.style ?? {};
   update(value, onChange, {
-    style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : undefined,
   });
 };
+
+const updateRowVisibility = (
+  value: ProductCompareData,
+  onChange: (next: ProductCompareData) => void,
+  key: ProductCompareAttributeKey,
+  visible: boolean
+) => {
+  const current = normalizeProductCompareData(value);
+  update(value, onChange, {
+    rows: (current.rows ?? []).map((row) => (row.key === key ? { ...row, visible } : row)),
+  });
+};
+
+const resolvePreviewResolvedData = (
+  normalized: ProductCompareData,
+  previewState: WidgetPreviewState | null | undefined
+) => {
+  const previewResolved = previewState?.dataPatch?.resolved;
+  if (previewResolved && typeof previewResolved === "object") {
+    return previewResolved as NonNullable<ProductCompareData["resolved"]>;
+  }
+  return normalized.resolved ?? { rows: [], total: 0, resolvedAt: "" };
+};
+
+function useProductComparePreviewSync({
+  active,
+  value,
+  previewState,
+  setPreviewState,
+}: {
+  active: boolean;
+  value: ProductCompareData;
+  previewState: WidgetPreviewState | null | undefined;
+  setPreviewState?: (state: WidgetPreviewState | null) => void;
+}) {
+  const [refreshToken, setRefreshToken] = useState(0);
+  const latestDataPatchRef = useRef<WidgetPreviewState["dataPatch"] | undefined>(
+    previewState?.dataPatch
+  );
+
+  useEffect(() => {
+    latestDataPatchRef.current = previewState?.dataPatch;
+  }, [previewState?.dataPatch]);
+
+  useEffect(() => {
+    if (!active || !setPreviewState) return;
+    let activeRequest = true;
+    const dataPatch = latestDataPatchRef.current;
+    setPreviewState({
+      status: "loading",
+      ...(dataPatch ? { dataPatch } : {}),
+    });
+
+    previewProductCompare(value)
+      .then((resolved) => {
+        if (!activeRequest) return;
+        setPreviewState({
+          status: "ready",
+          dataPatch: {
+            resolved,
+          },
+        });
+      })
+      .catch((error) => {
+        if (!activeRequest) return;
+        setPreviewState({
+          status: "error",
+          message: resolvePreviewErrorMessage(error),
+          ...(dataPatch ? { dataPatch } : {}),
+        });
+      });
+
+    return () => {
+      activeRequest = false;
+    };
+  }, [active, refreshToken, setPreviewState, value]);
+
+  return {
+    refresh: () => setRefreshToken((current) => current + 1),
+    isLoading: previewState?.status === "loading",
+  };
+}
 
 function SurfaceFields({
   value,
@@ -62,41 +264,208 @@ function SurfaceFields({
   const normalized = normalizeProductCompareData(value);
 
   return (
-    <CommerceEditorSection title="Surfaces" description="Comparison table and empty state colors.">
-      <ClearableInputField
+    <CommerceEditorSection
+      id="product-compare.visual.surfaces"
+      mode="visual"
+      role="visual"
+      title="Surfaces"
+      description="Comparison table and empty state colors."
+    >
+      <SharedColorControl
+        controlId="product-compare.visual.table-background"
+        controlPath="style.tableBackground"
         label="Table background"
         value={normalized.style?.tableBackground}
         onChange={(next) => updateStyle(value, onChange, { tableBackground: next })}
         onClear={() => clearStyle(value, onChange, "tableBackground")}
-        placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-compare.visual.table-border"
+        controlPath="style.tableBorderColor"
         label="Table border"
         value={normalized.style?.tableBorderColor}
         onChange={(next) => updateStyle(value, onChange, { tableBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "tableBorderColor")}
-        placeholder="var(--color-border)"
+        pickerFallback="#e2e8f0"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-compare.visual.header-background"
+        controlPath="style.headerBackground"
         label="Header background"
         value={normalized.style?.headerBackground}
         onChange={(next) => updateStyle(value, onChange, { headerBackground: next })}
         onClear={() => clearStyle(value, onChange, "headerBackground")}
-        placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-compare.visual.empty-background"
+        controlPath="style.emptyBackground"
         label="Empty background"
         value={normalized.style?.emptyBackground}
         onChange={(next) => updateStyle(value, onChange, { emptyBackground: next })}
         onClear={() => clearStyle(value, onChange, "emptyBackground")}
-        placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-compare.visual.empty-border"
+        controlPath="style.emptyBorderColor"
         label="Empty border"
         value={normalized.style?.emptyBorderColor}
         onChange={(next) => updateStyle(value, onChange, { emptyBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "emptyBorderColor")}
-        placeholder="var(--color-border)"
+        pickerFallback="#e2e8f0"
+        showValueInput={false}
+      />
+    </CommerceEditorSection>
+  );
+}
+
+function ProductCompareSelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <label className="space-y-1 text-sm">
+      <span className="font-medium text-foreground">{label}</span>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
+function PreviewStatusCard({
+  value,
+  context,
+  onRefresh,
+}: {
+  value: ProductCompareData;
+  context: WidgetEditorProps<ProductCompareData>["context"];
+  onRefresh?: () => void;
+}) {
+  const normalized = normalizeProductCompareData(value);
+  const resolved = resolvePreviewResolvedData(normalized, context?.previewState);
+  const selectedCount = normalized.source?.productIds?.length ?? 0;
+  const guidanceTone =
+    context?.previewState?.status === "error"
+      ? "border-amber-300 bg-amber-50 text-amber-900"
+      : context?.previewState?.status === "loading"
+        ? "border-sky-300 bg-sky-50 text-sky-900"
+        : "border-border/70 bg-background text-muted-foreground";
+
+  return (
+    <div className={`space-y-2 rounded-md border p-3 text-xs ${guidanceTone}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="space-y-1">
+          <p>
+            Resolved rows: {resolved.rows?.length ?? 0} of {resolved.total ?? 0}
+          </p>
+          <p>
+            Selected products: {selectedCount || "None"} · Limit: {normalized.source?.limit ?? 0}
+          </p>
+          <p>
+            {context?.previewState?.status === "loading"
+              ? "Preview refresh is running against the backend-owned commerce resolver."
+              : context?.previewState?.status === "error"
+                ? (context.previewState.message ??
+                  "Preview refresh failed. Showing the last safe preview data when available.")
+                : resolved.resolvedAt
+                  ? `Resolved at ${resolved.resolvedAt}`
+                  : "No resolved preview snapshot is available yet."}
+          </p>
+          {resolved.error ? <p>Runtime warning: {resolved.error}</p> : null}
+        </div>
+        {typeof onRefresh === "function" ? (
+          <button
+            type="button"
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
+            onClick={onRefresh}
+          >
+            Refresh preview
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function QuerySummarySection({ value }: { value: ProductCompareData }) {
+  const normalized = normalizeProductCompareData(value);
+  const query = buildProductCompareQueryInput(normalized);
+  const selectedCount = normalized.source?.productIds?.length ?? 0;
+
+  return (
+    <CommerceEditorSection
+      id="product-compare.advanced.source-summary"
+      mode="advanced"
+      role="diagnostics"
+      title="Source summary"
+      description="Read-only summary of how products are resolved. Change source and curation in Wizard or Visual."
+    >
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-source-mode"
+        label="Source mode"
+        path="source"
+        value={
+          selectedCount > 0
+            ? `${selectedCount} selected ${selectedCount === 1 ? "product" : "products"} in manual order`
+            : "Query results"
+        }
+      />
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-limit"
+        label="Product limit"
+        path="source.limit"
+        value={`${query.pagination.limit} ${query.pagination.limit === 1 ? "product" : "products"}`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-search"
+        label="Search"
+        path="source.search"
+        value={normalizeText(normalized.source?.search) ? "Configured" : "None"}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-collections"
+        label="Collections"
+        path="source.collectionIds"
+        value={summarizeCollectionFilters(normalized.source?.collectionIds)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-status"
+        label="Status filters"
+        path="source.status"
+        value={summarizeStatusFilters(normalized.source?.status)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-sort"
+        label="Sort"
+        path="source.sortField"
+        value={
+          selectedCount > 0
+            ? "Ignored while selected products are used"
+            : summarizeCommerceSort(normalized.source?.sortField, normalized.source?.sortDir)
+        }
       />
     </CommerceEditorSection>
   );
@@ -105,35 +474,77 @@ function SurfaceFields({
 export function ProductCompareWizardEditor({
   value,
   onChange,
+  context,
 }: WidgetEditorProps<ProductCompareData>) {
   const normalized = normalizeProductCompareData(value);
-  const source = normalizeSourceForEditor(normalized.source, {
-    limit: productCompareDefaults.source?.limit ?? 3,
-    sortField: "title",
-    sortDir: "asc",
+  const source = normalizeSourceForEditor(
+    normalized.source,
+    {
+      limit: productCompareDefaults.source?.limit ?? 3,
+      sortField: "title",
+      sortDir: "asc",
+    },
+    productCompareSourceFieldOptions
+  );
+  const selectedProductIds = normalized.source?.productIds ?? [];
+  const selectedProductIdsRef = useRef(selectedProductIds);
+  useEffect(() => {
+    selectedProductIdsRef.current = normalized.source?.productIds ?? [];
+  }, [normalized.source?.productIds]);
+  useProductComparePreviewSync({
+    active: context?.editorMode === "wizard" && typeof context?.setPreviewState === "function",
+    value,
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
   });
+  const dense = source.limit > 5 || selectedProductIds.length > 5;
 
   return (
     <div className="space-y-4">
       <CommerceEditorSection
+        id="product-compare.wizard.comparison-source"
+        mode="wizard"
+        role="source"
         title="Comparison source"
         description="Select products used in the comparison matrix."
       >
         <CommerceSourceFields
           source={source}
-          onChange={(nextSource) => update(normalized, onChange, { source: nextSource })}
+          onChange={(nextSource) =>
+            update(value, onChange, {
+              source: {
+                ...nextSource,
+                productIds: selectedProductIdsRef.current,
+              },
+            })
+          }
+          options={productCompareSourceFieldOptions}
         />
+        <p className="text-xs text-muted-foreground">
+          Specific product curation is available in Visual as a product picker. Wizard keeps source
+          setup filter-based.
+        </p>
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-compare.wizard.limit-guidance"
+        mode="wizard"
+        role="source"
         title="Limit guidance"
         description="Comparison matrix is most readable with 2-5 products."
       >
-        <p className="rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          Current limit: {source.limit}. For dense catalogs prefer Product Table widget.
+        <p
+          className={`rounded-md border p-2 text-xs ${
+            dense
+              ? "border-amber-300 bg-amber-50 text-amber-900"
+              : "border-border/70 bg-background text-muted-foreground"
+          }`}
+        >
+          {dense
+            ? `Current compare density can be hard to read on mobile (${Math.max(source.limit, selectedProductIds.length)} products in play). Prefer 2-5 products or switch to Product Table for dense catalogs.`
+            : `Current limit: ${source.limit}. A curated set of 2-5 products stays easiest to compare.`}
         </p>
       </CommerceEditorSection>
-      <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
@@ -141,47 +552,71 @@ export function ProductCompareWizardEditor({
 export function ProductCompareVisualEditor({
   value,
   onChange,
+  variant,
+  onVariantChange,
+  context,
 }: WidgetEditorProps<ProductCompareData>) {
   const normalized = normalizeProductCompareData(value);
+  useProductComparePreviewSync({
+    active: context?.editorMode === "visual" && typeof context?.setPreviewState === "function",
+    value,
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
+  });
+  const resolvedVariant = variant === "compact" || variant === "cards" ? variant : "matrix";
 
   return (
     <div className="space-y-4">
       <CommerceEditorSection
-        title="Attribute rows"
-        description="Control which comparison attributes are visible."
+        id="product-compare.visual.variant-structure"
+        mode="visual"
+        role="visual"
+        title="Variant and structure"
+        description="Choose the comparison layout style for this widget."
       >
-        <CommerceToggleField
-          label="Show compare-at price"
-          checked={normalized.fields?.showCompareAt !== false}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showCompareAt: next,
-              },
-            })
-          }
-        />
-        <CommerceToggleField
-          label="Show stock quantity"
-          checked={normalized.fields?.showStockQuantity !== false}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showStockQuantity: next,
-              },
-            })
-          }
-        />
-        <CommerceToggleField
-          label="Show slug"
-          checked={normalized.fields?.showSlug === true}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showSlug: next,
+        <div className="space-y-2">
+          {variantOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onVariantChange?.(option.id)}
+              className={
+                resolvedVariant === option.id
+                  ? "w-full rounded-lg border border-primary bg-primary/5 p-3 text-left"
+                  : "w-full rounded-lg border bg-background p-3 text-left"
+              }
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold">{option.label}</p>
+                  <p className="text-xs text-muted-foreground">{option.description}</p>
+                </div>
+                <span className="rounded-full border px-2 py-0.5 text-xs font-medium">
+                  {resolvedVariant === option.id ? "Selected" : "Pick"}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        id="product-compare.visual.compared-products"
+        mode="visual"
+        role="content"
+        title="Compared products"
+        description="Choose products by name and control their column order."
+      >
+        <CommerceProductSelectionField
+          label="Selected products"
+          selectedIds={normalized.source?.productIds ?? []}
+          maxSelected={12}
+          description="Product Compare preserves the order shown here. Use Up and Down to reorder columns."
+          onChange={(productIds) =>
+            update(value, onChange, {
+              source: {
+                ...normalized.source,
+                productIds,
               },
             })
           }
@@ -189,53 +624,340 @@ export function ProductCompareVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
-        title="Labels"
-        description="Customize labels shown in the left column."
+        id="product-compare.visual.section-copy"
+        mode="visual"
+        role="content"
+        title="Section copy"
+        description="Name the comparison section and its accessible caption."
       >
         <CommerceTextField
-          label="Price"
-          value={normalized.labels?.price}
+          label="Title"
+          value={normalized.section?.title}
           onChange={(next) =>
-            update(normalized, onChange, {
-              labels: {
-                ...normalized.labels,
-                price: next,
+            update(value, onChange, {
+              section: {
+                ...normalized.section,
+                title: next,
               },
             })
           }
         />
         <CommerceTextField
-          label="Compare at"
-          value={normalized.labels?.compareAt}
+          label="Description"
+          value={normalized.section?.description}
           onChange={(next) =>
-            update(normalized, onChange, {
-              labels: {
-                ...normalized.labels,
-                compareAt: next,
+            update(value, onChange, {
+              section: {
+                ...normalized.section,
+                description: next,
               },
             })
           }
         />
         <CommerceTextField
-          label="Stock"
-          value={normalized.labels?.stock}
+          label="Table caption"
+          value={normalized.section?.caption}
           onChange={(next) =>
-            update(normalized, onChange, {
-              labels: {
-                ...normalized.labels,
-                stock: next,
+            update(value, onChange, {
+              section: {
+                ...normalized.section,
+                caption: next,
+              },
+            })
+          }
+        />
+        <CommerceToggleField
+          label="Hide caption visually"
+          checked={normalized.section?.hideCaption !== false}
+          onChange={(next) =>
+            update(value, onChange, {
+              section: {
+                ...normalized.section,
+                hideCaption: next,
               },
             })
           }
         />
       </CommerceEditorSection>
 
-      <CommerceEditorSection title="Empty state" description="Shown when no products are resolved.">
+      <CommerceEditorSection
+        id="product-compare.visual.attribute-rows"
+        mode="visual"
+        role="content"
+        title="Attribute rows"
+        description="Control which comparison attributes are visible."
+      >
+        <CommerceToggleField
+          label="Show price"
+          checked={normalized.fields?.showPrice !== false}
+          onChange={(next) => updateRowVisibility(value, onChange, "price", next)}
+        />
+        <CommerceToggleField
+          label="Show compare-at price"
+          checked={normalized.fields?.showCompareAt !== false}
+          onChange={(next) => updateRowVisibility(value, onChange, "compareAt", next)}
+        />
+        <CommerceToggleField
+          label="Show stock"
+          checked={normalized.fields?.showStock !== false}
+          onChange={(next) => updateRowVisibility(value, onChange, "stock", next)}
+        />
+        <CommerceToggleField
+          label="Show stock quantity"
+          checked={normalized.fields?.showStockQuantity !== false}
+          onChange={(next) => updateRowVisibility(value, onChange, "quantity", next)}
+        />
+        <CommerceToggleField
+          label="Show product URL path"
+          checked={normalized.fields?.showSlug === true}
+          onChange={(next) => updateRowVisibility(value, onChange, "slug", next)}
+        />
+        <CommerceToggleField
+          label="Show excerpt"
+          checked={normalized.fields?.showExcerpt === true}
+          onChange={(next) => updateRowVisibility(value, onChange, "excerpt", next)}
+        />
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        id="product-compare.visual.labels"
+        mode="visual"
+        role="content"
+        title="Labels"
+        description="Customize labels shown in the comparison."
+      >
+        <CommerceTextField
+          label="Attribute column"
+          value={normalized.labels?.attributeHeader}
+          onChange={(next) =>
+            update(value, onChange, {
+              labels: {
+                ...normalized.labels,
+                attributeHeader: next,
+              },
+            })
+          }
+        />
+        {productCompareAttributeKeys.map((key) => (
+          <CommerceTextField
+            key={key}
+            label={key === "compareAt" ? "Compare at" : key.charAt(0).toUpperCase() + key.slice(1)}
+            value={normalized.labels?.[key]}
+            onChange={(next) =>
+              update(value, onChange, {
+                labels: {
+                  ...normalized.labels,
+                  [key]: next,
+                },
+              })
+            }
+          />
+        ))}
+        <CommerceTextField
+          label="In-stock label"
+          value={normalized.labels?.inStock}
+          onChange={(next) =>
+            update(value, onChange, {
+              labels: {
+                ...normalized.labels,
+                inStock: next,
+              },
+            })
+          }
+        />
+        <CommerceTextField
+          label="Out-of-stock label"
+          value={normalized.labels?.outOfStock}
+          onChange={(next) =>
+            update(value, onChange, {
+              labels: {
+                ...normalized.labels,
+                outOfStock: next,
+              },
+            })
+          }
+        />
+        <CommerceTextField
+          label="Backorder label"
+          value={normalized.labels?.backorder}
+          onChange={(next) =>
+            update(value, onChange, {
+              labels: {
+                ...normalized.labels,
+                backorder: next,
+              },
+            })
+          }
+        />
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        id="product-compare.visual.product-columns"
+        mode="visual"
+        role="content"
+        title="Product columns"
+        description="Control images, links, and CTA output in each product header."
+      >
+        <p className="text-xs text-muted-foreground">
+          Product links and CTAs use the enabled products detail route from Site Settings. When no
+          route is available, runtime keeps the header text-only.
+        </p>
+        <CommerceToggleField
+          label="Show product images"
+          checked={normalized.header?.showImages === true}
+          onChange={(next) =>
+            update(value, onChange, {
+              header: {
+                ...normalized.header,
+                showImages: next,
+              },
+            })
+          }
+        />
+        <CommerceToggleField
+          label="Link product titles"
+          checked={normalized.header?.linkTitles === true}
+          onChange={(next) =>
+            update(value, onChange, {
+              header: {
+                ...normalized.header,
+                linkTitles: next,
+              },
+            })
+          }
+        />
+        <ProductCompareSelectField
+          label="CTA mode"
+          value={normalized.header?.ctaMode ?? "none"}
+          options={productCompareCtaModes.map((mode) => ({
+            value: mode,
+            label: mode === "none" ? "No CTA" : "View product",
+          }))}
+          onChange={(next) =>
+            update(value, onChange, {
+              header: {
+                ...normalized.header,
+                ctaMode: next as NonNullable<ProductCompareData["header"]>["ctaMode"],
+              },
+            })
+          }
+        />
+        {normalized.header?.ctaMode === "view_product" ? (
+          <CommerceTextField
+            label="CTA label"
+            value={normalized.header?.ctaLabel}
+            onChange={(next) =>
+              update(value, onChange, {
+                header: {
+                  ...normalized.header,
+                  ctaLabel: next,
+                },
+              })
+            }
+          />
+        ) : null}
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        id="product-compare.visual.formatting"
+        mode="visual"
+        role="visual"
+        title="Formatting"
+        description="Use bounded formatting options for money and quantity output."
+      >
+        <ProductCompareSelectField
+          label="Money locale"
+          value={normalized.format?.moneyLocale ?? "en-US"}
+          options={productCompareMoneyLocales.map((locale) => ({
+            value: locale,
+            label: productCompareMoneyLocaleLabelMap[locale],
+          }))}
+          onChange={(next) =>
+            update(value, onChange, {
+              format: {
+                ...normalized.format,
+                moneyLocale: next as NonNullable<ProductCompareData["format"]>["moneyLocale"],
+              },
+            })
+          }
+        />
+        <ProductCompareSelectField
+          label="Quantity display"
+          value={normalized.format?.quantityDisplay ?? "exact"}
+          options={productCompareQuantityDisplayModes.map((mode) => ({
+            value: mode,
+            label: mode === "exact" ? "Exact quantity" : "Compact threshold",
+          }))}
+          onChange={(next) =>
+            update(value, onChange, {
+              format: {
+                ...normalized.format,
+                quantityDisplay: next as NonNullable<
+                  ProductCompareData["format"]
+                >["quantityDisplay"],
+              },
+            })
+          }
+        />
+        <CommerceTextField
+          label="Compact quantity limit"
+          value={String(normalized.format?.quantityCompactLimit ?? 99)}
+          onChange={(next) =>
+            update(value, onChange, {
+              format: {
+                ...normalized.format,
+                quantityCompactLimit: Number(next),
+              },
+            })
+          }
+        />
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        id="product-compare.visual.layout"
+        mode="visual"
+        role="visual"
+        title="Layout"
+        description="Highlight a product and keep table headers visible in dense tables."
+      >
+        <CommerceProductSelectField
+          label="Featured product"
+          value={normalized.layout?.featuredProductId}
+          onChange={(next) =>
+            update(value, onChange, {
+              layout: {
+                ...normalized.layout,
+                featuredProductId: next,
+              },
+            })
+          }
+        />
+        <CommerceToggleField
+          label="Sticky table header"
+          checked={normalized.layout?.stickyHeader === true}
+          onChange={(next) =>
+            update(value, onChange, {
+              layout: {
+                ...normalized.layout,
+                stickyHeader: next,
+              },
+            })
+          }
+        />
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        id="product-compare.visual.empty-state"
+        mode="visual"
+        role="content"
+        title="Empty state"
+        description="Shown when no products are resolved."
+      >
         <CommerceTextField
           label="Title"
           value={normalized.emptyState?.title}
           onChange={(next) =>
-            update(normalized, onChange, {
+            update(value, onChange, {
               emptyState: {
                 ...normalized.emptyState,
                 title: next,
@@ -247,7 +969,7 @@ export function ProductCompareVisualEditor({
           label="Description"
           value={normalized.emptyState?.description}
           onChange={(next) =>
-            update(normalized, onChange, {
+            update(value, onChange, {
               emptyState: {
                 ...normalized.emptyState,
                 description: next,
@@ -256,49 +978,110 @@ export function ProductCompareVisualEditor({
           }
         />
       </CommerceEditorSection>
-      <SurfaceFields value={normalized} onChange={onChange} />
+
+      <SurfaceFields value={value} onChange={onChange} />
     </div>
   );
 }
 
 export function ProductCompareAdvancedEditor({
   value,
-  onChange,
+  context,
 }: WidgetEditorProps<ProductCompareData>) {
   const normalized = normalizeProductCompareData(value);
-  const previewQuery = buildProductCompareQueryInput(normalized);
+  const { refresh } = useProductComparePreviewSync({
+    active: context?.editorMode === "advanced" && typeof context?.setPreviewState === "function",
+    value,
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
+  });
+  const resolved = resolvePreviewResolvedData(normalized, context?.previewState);
 
   return (
     <div className="space-y-4">
       <CommerceEditorSection
-        title="Runtime payload"
-        description="Resolved rows are set by runtime resolver."
+        id="product-compare.advanced.preview-status"
+        mode="advanced"
+        role="diagnostics"
+        title="Preview status"
+        description="Read-only runtime diagnostics from SSR and admin preview refreshes."
       >
-        <div className="rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          Resolved rows: {normalized.resolved?.rows?.length ?? 0} · Total:{" "}
-          {normalized.resolved?.total ?? 0}
-        </div>
-        <CommerceTextField
-          label="Runtime error flag"
-          value={normalized.resolved?.error ?? ""}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              resolved: {
-                ...normalized.resolved,
-                error: next,
-              },
-            })
-          }
+        <p className="text-sm text-muted-foreground">
+          Advanced mode is read-only. Use Wizard or Visual for source setup, curation, labels,
+          formatting, layout, and surface changes.
+        </p>
+        <PreviewStatusCard
+          value={value}
+          context={context}
+          onRefresh={typeof context?.setPreviewState === "function" ? refresh : undefined}
+        />
+        {resolved.error ? (
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+            Runtime warning: {resolved.error}
+          </div>
+        ) : null}
+      </CommerceEditorSection>
+
+      <QuerySummarySection value={value} />
+
+      <CommerceEditorSection
+        id="product-compare.advanced.surface-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Surface summary"
+        description="Read-only color state. Change table and empty-state colors in Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-table-background"
+          label="Table background"
+          path="style.tableBackground"
+          value={describeCommerceColor(normalized.style?.tableBackground)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-table-border"
+          label="Table border"
+          path="style.tableBorderColor"
+          value={describeCommerceColor(normalized.style?.tableBorderColor)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-header-background"
+          label="Header background"
+          path="style.headerBackground"
+          value={describeCommerceColor(normalized.style?.headerBackground)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-empty-state"
+          label="Empty state colors"
+          path="style"
+          value={`Background: ${describeCommerceColor(normalized.style?.emptyBackground)}, border: ${describeCommerceColor(normalized.style?.emptyBorderColor)}`}
         />
       </CommerceEditorSection>
 
       <CommerceEditorSection
-        title="Query preview"
-        description="Normalized query payload sent to commerce runtime resolver."
+        id="product-compare.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Editor ownership split for the Product Compare v2 contract."
       >
-        <pre className="max-h-52 overflow-auto rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          {JSON.stringify(previewQuery, null, 2)}
-        </pre>
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-contract-wizard"
+          label="Wizard owns"
+          path="source"
+          value="One-time comparison source setup and dense compare guidance."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-contract-visual"
+          label="Visual owns"
+          path="variant"
+          value="Variant, compared products, section copy, rows, labels, product columns, formatting, layout, empty state, and surfaces."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-contract-advanced"
+          label="Advanced owns"
+          path="editorContract"
+          value="Read-only preview status, source summaries, surface diagnostics, and contract ownership."
+        />
       </CommerceEditorSection>
     </div>
   );

@@ -753,30 +753,22 @@ export function MenuEditorPage() {
     <SplitShell
       activeHref="/admin/menus"
       rightPanel={isLargeScreen ? rightPanel : undefined}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <button
-            type="button"
-            className="transition hover:text-foreground"
-            onClick={() => navigate("/menus")}
-          >
-            Menus
-          </button>
-          <span>/</span>
-          <span className="text-foreground">{title}</span>
-          {originalMenu ? (
-            <span className={menuEditorStatusBadgeClassName(menuStatus)}>
-              {isPublished ? "Published" : "Draft"}
-            </span>
-          ) : null}
-          {canSave ? (
-            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-700">
-              Unsaved changes
-            </span>
-          ) : null}
-        </div>
+      breadcrumbs={["Content", "Menus", title]}
+      topbarActions={
+        originalMenu || canSave ? (
+          <div className="flex items-center gap-2">
+            {originalMenu ? (
+              <span className={menuEditorStatusBadgeClassName(menuStatus)}>
+                {isPublished ? "Published" : "Draft"}
+              </span>
+            ) : null}
+            {canSave ? (
+              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-700">
+                Unsaved changes
+              </span>
+            ) : null}
+          </div>
+        ) : null
       }
     >
       <div className="flex h-full flex-col gap-6">

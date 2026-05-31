@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Review UX + Diagnostics
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-07-01, TASK-190-07-02
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -16,6 +16,19 @@ show why the composer selected a primary capability, which adjunct fragments wer
 included, what was merged, and what was gated.
 
 This prevents the composer from becoming a black box.
+
+Completion notes:
+- Added strict `metadata.blueprintComposition` normalization to the assistant
+  action-plan schema.
+- Added `blueprintCompositionMetadata.ts` to derive primary/adjunct/gated
+  capability ids, merged resource ownership, existing-resource reuse matches,
+  conflicts, and deterministic candidate scores from the local composition
+  graph.
+- Wired composed ready/needs-input plans to carry this metadata while preserving
+  local/provider planner metadata and env-gated shadow diagnostics.
+- Rendered bounded composition diagnostics in the admin action-review card.
+- Added Vitest coverage for schema strictness, metadata redaction, planner
+  propagation, assembler compatibility, and UI rendering.
 
 ## Sub-Tasks
 

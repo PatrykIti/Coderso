@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
 
@@ -167,6 +167,13 @@ vi.mock("@/components/ui/sheet", () => ({
 vi.mock("@/services/apiClient", () => ({
   isApiClientError: (error: unknown) =>
     typeof error === "object" && error !== null && "kind" in error && error.kind === "api",
+  isSessionExpiredApiError: (error: unknown) =>
+    typeof error === "object" &&
+    error !== null &&
+    "kind" in error &&
+    error.kind === "api" &&
+    "sharedFailureKind" in error &&
+    (error as { sharedFailureKind?: string }).sharedFailureKind === "session_expired",
 }));
 
 vi.mock("@/services/cachePolicy", () => ({
@@ -197,15 +204,18 @@ vi.mock("@/ui/layouts/EditorShell", () => ({
     breadcrumbs,
     leftPanel,
     rightPanel,
+    topbarActions,
     children,
   }: {
     breadcrumbs?: React.ReactNode;
     leftPanel?: React.ReactNode;
     rightPanel?: React.ReactNode;
+    topbarActions?: React.ReactNode;
     children: React.ReactNode;
   }) => (
     <div>
       <div>{breadcrumbs}</div>
+      <div>{topbarActions}</div>
       <div>{leftPanel}</div>
       <div>{rightPanel}</div>
       <div>{children}</div>
@@ -499,6 +509,7 @@ vi.mock("../../../core/admin/ui/pages/builder/widgetRegistry", () => ({
     { type: "compare-timeline" },
     { type: "template-section" },
     { type: "form-embed" },
+    { type: "faq-accordion" },
   ],
 }));
 
@@ -549,14 +560,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -565,7 +576,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -586,7 +597,7 @@ const clickButton = (
     throw new Error(`Missing button: ${label}`);
   }
 
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -596,12 +607,20 @@ const findSpanByText = (container: HTMLElement, label: string) =>
     (candidate) => candidate.textContent === label
   );
 
-const apiError = (message: string) => ({
+const apiError = (
+  message: string,
+  overrides: Partial<{
+    code: string;
+    status: number;
+    sharedFailureKind: string;
+  }> = {}
+) => ({
   kind: "api" as const,
   name: "ApiClientError",
-  code: "request_failed",
+  code: overrides.code ?? "request_failed",
   message,
-  status: 400,
+  status: overrides.status ?? 400,
+  ...(overrides.sharedFailureKind ? { sharedFailureKind: overrides.sharedFailureKind } : {}),
 });
 
 beforeEach(() => {
@@ -646,7 +665,7 @@ test("PageEditor hydrates from cache, surfaces remote updates, and supports shel
       title: "Remote Homepage",
       currentData: { blocks: [createBlock("hero")] },
     });
-    act(() => {
+    React.act(() => {
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
     await flush();
@@ -778,6 +797,84 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
   }
 });
 
+test("PageEditor normalizes legacy loaded block editor state before mutations", async () => {
+  pageEditorState.reset();
+  const legacyPage = createPage({
+    currentData: {
+      settings: {
+        template: "landing",
+      },
+      blocks: [
+        {
+          id: "legacy-faq",
+          type: "faq-accordion",
+          data: {},
+        },
+      ],
+    },
+  });
+  pageEditorState.cachedPage = legacyPage;
+  pageEditorState.currentPage = clonePage(legacyPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={legacyPage} />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("settings-block:faq-accordion");
+    clickButton(view.container, "add-widget");
+    await flush();
+
+    clickButton(view.container, "Preview");
+    await flush();
+
+    const previewSyncPayload = pageEditorState.updatePage.mock.calls[0]?.[1] as {
+      data: { blocks: Array<{ editor?: unknown }> };
+    };
+    expect(previewSyncPayload.data.blocks[0]?.editor).toEqual({
+      mode: "visual",
+      wizardCompleted: true,
+    });
+
+    clickButton(view.container, "Page settings");
+    await flush();
+    clickButton(view.container, "settings-save");
+    await flush();
+
+    const settingsPayload = pageEditorState.updatePage.mock.calls[1]?.[1] as {
+      data: { blocks: Array<{ editor?: unknown }> };
+    };
+    expect(settingsPayload.data.blocks[0]?.editor).toEqual({
+      mode: "visual",
+      wizardCompleted: true,
+    });
+
+    clickButton(view.container, "Save draft");
+    await flush();
+
+    const draftPayload = pageEditorState.updatePage.mock.calls[2]?.[1] as {
+      data: { blocks: Array<{ editor?: unknown }> };
+    };
+    expect(draftPayload.data.blocks[0]?.editor).toEqual({
+      mode: "visual",
+      wizardCompleted: true,
+    });
+
+    clickButton(view.container, "Publish");
+    await flush();
+
+    const publishPayload = pageEditorState.publishPage.mock.calls[0]?.[1] as {
+      blocks: Array<{ editor?: unknown }>;
+    };
+    expect(publishPayload.blocks[0]?.editor).toEqual({
+      mode: "visual",
+      wizardCompleted: true,
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageEditor hides draft save on published pages and previews unsaved edits through silent draft sync", async () => {
   const initialPage = createPage({
     status: "published",
@@ -852,7 +949,7 @@ test("PageEditor emits save success toast only after the mutation resolves", asy
       throw new Error("Missing save or publish button");
     }
 
-    act(() => {
+    React.act(() => {
       saveButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       publishButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
@@ -863,7 +960,7 @@ test("PageEditor emits save success toast only after the mutation resolves", asy
     expect((publishButton as HTMLButtonElement).disabled).toBe(true);
     expect(pageEditorToastState.success).not.toHaveBeenCalledWith("Draft saved.");
 
-    await act(async () => {
+    await React.act(async () => {
       resolveSave?.(clonePage(initialPage));
       await Promise.resolve();
     });
@@ -1083,7 +1180,7 @@ test("PageEditor uses image background fallback, starts without selection for em
       }),
       currentData: undefined,
     } as unknown as PageDetail;
-    act(() => {
+    React.act(() => {
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
     await flush();
@@ -1180,7 +1277,7 @@ test("PageEditor inserts into slots, mutates selected blocks, and warns before u
     }) as BeforeUnloadEvent & { returnValue: string };
     beforeUnload.returnValue = "keep";
 
-    act(() => {
+    React.act(() => {
       window.dispatchEvent(beforeUnload);
     });
 
@@ -1252,7 +1349,7 @@ test("PageEditor surfaces API client error messages across page, settings, and r
     await flush();
 
     pageEditorState.getPageCached.mockRejectedValueOnce(apiError("Remote refresh denied"));
-    act(() => {
+    React.act(() => {
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
     await flush();
@@ -1304,6 +1401,195 @@ test("PageEditor surfaces API client error messages across page, settings, and r
     clickButton(view.container, "discard-revision");
     await flush();
     expect(view.container.textContent).toContain("revision-error:Discard denied");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor preserves unsaved state and shows shared expired-session guidance", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({ id: "page-1" });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "add-widget");
+    await flush();
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    pageEditorState.updatePage.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "Save draft");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "Your admin session expired. Sign in again before saving."
+    );
+    expect(view.container.textContent).toContain("Unsaved changes");
+    expect(pageEditorToastState.error).toHaveBeenCalledWith(
+      "Your admin session expired. Sign in again before saving."
+    );
+
+    pageEditorState.publishPage.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "Publish");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "Your admin session expired. Sign in again before publishing."
+    );
+    expect(view.container.textContent).toContain("Unsaved changes");
+    expect(pageEditorToastState.error).toHaveBeenCalledWith(
+      "Your admin session expired. Sign in again before publishing."
+    );
+
+    clickButton(view.container, "Page settings");
+    await flush();
+    pageEditorState.updatePage.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "settings-save");
+    await flush();
+    expect(view.container.textContent).toContain("Page settings error");
+    expect(view.container.textContent).toContain(
+      "Your admin session expired. Sign in again before updating page settings."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor reuses shared expired-session guidance for load and revision flows", async () => {
+  pageEditorState.reset();
+  window.history.replaceState({}, "", "/admin/advanced/pages/page-2");
+  pageEditorState.currentPage = createPage({ id: "page-2", title: "Fallback page" });
+  pageEditorState.getPageCached.mockRejectedValueOnce(
+    apiError("Authentication required", {
+      code: "auth_required",
+      status: 401,
+      sharedFailureKind: "session_expired",
+    })
+  );
+
+  const loadingView = mount(<PageEditor />);
+
+  try {
+    await flush();
+    expect(loadingView.container.textContent).toContain("Page error");
+    expect(loadingView.container.textContent).toContain(
+      "Your admin session expired. Sign in again before loading this page."
+    );
+  } finally {
+    loadingView.cleanup();
+  }
+
+  pageEditorState.reset();
+  const initialPage = createPage({ id: "page-1" });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    pageEditorState.previewPage.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "Preview");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "preview-error:Your admin session expired. Sign in again before generating preview."
+    );
+
+    pageEditorState.getPageTemplateOptions.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "Page settings");
+    await flush();
+    await flush();
+    expect(view.container.textContent).toContain(
+      "template-options-error:Your admin session expired. Sign in again before loading page settings."
+    );
+
+    pageEditorState.getPageCached.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    React.act(() => {
+      pageEditorState.triggerCacheEvent("page-detail:page-1");
+    });
+    await flush();
+    expect(view.container.textContent).toContain(
+      "Your admin session expired. Sign in again before loading this page."
+    );
+
+    pageEditorState.listPageRevisions.mockImplementationOnce(async () => {
+      throw apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      });
+    });
+    clickButton(view.container, "History");
+    await flush();
+    await flush();
+    expect(view.container.textContent).toContain(
+      "revision-error:Your admin session expired. Sign in again before loading page history."
+    );
+
+    pageEditorState.restorePageRevision.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "restore-revision");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "revision-error:Your admin session expired. Sign in again before restoring this revision."
+    );
+
+    pageEditorState.discardPageRevision.mockRejectedValueOnce(
+      apiError("Authentication required", {
+        code: "auth_required",
+        status: 401,
+        sharedFailureKind: "session_expired",
+      })
+    );
+    clickButton(view.container, "discard-revision");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "revision-error:Your admin session expired. Sign in again before discarding this autosave."
+    );
   } finally {
     view.cleanup();
   }
@@ -1369,7 +1655,7 @@ test("PageEditor clears unsaved and remote-update flags when publish completes w
       title: "Remote Homepage",
       currentData: { blocks: [createBlock("hero")] },
     });
-    act(() => {
+    React.act(() => {
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
     await flush();

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -10,13 +10,9 @@ vi.mock("@/components/ui/avatar", () => ({
 }));
 
 vi.mock("@/components/ui/badge", () => ({
-  Badge: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <span className={className}>{children}</span>,
+  Badge: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span className={className}>{children}</span>
+  ),
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -56,13 +52,9 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
 }));
 
 vi.mock("@/components/ui/table", () => ({
-  Table: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <table className={className}>{children}</table>,
+  Table: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <table className={className}>{children}</table>
+  ),
   TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
   TableCell: ({
     children,
@@ -150,14 +142,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -172,7 +164,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!(target instanceof HTMLElement)) {
     throw new Error(`Missing clickable: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     target.click();
   });
 };
@@ -182,9 +174,7 @@ afterEach(() => {
 });
 
 test("AuditTable renders user and system rows, selected state, and footer controls", () => {
-  const view = mount(
-    <AuditTable logs={logs} selectedId="log-2" onSelect={() => undefined} />
-  );
+  const view = mount(<AuditTable logs={logs} selectedId="log-2" onSelect={() => undefined} />);
 
   try {
     expect(view.container.textContent).toContain("User login");
@@ -221,7 +211,7 @@ test("AuditTable routes row and menu detail selection without triggering from th
     if (!(iconButton instanceof HTMLButtonElement)) {
       throw new Error("Missing menu trigger");
     }
-    act(() => {
+    React.act(() => {
       iconButton.click();
     });
     expect(onSelect).toHaveBeenCalledTimes(1);

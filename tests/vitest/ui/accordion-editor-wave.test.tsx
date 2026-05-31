@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -9,6 +9,7 @@ import {
   accordionItemMax,
   type AccordionData,
 } from "../../../core/widgets/core/accordion";
+import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -133,14 +134,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -151,7 +152,7 @@ const mount = (node: React.ReactNode) => {
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -161,7 +162,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -170,14 +171,14 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 const toggleCheckbox = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
 
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -194,6 +195,11 @@ const findAllInputsByPlaceholder = (container: ParentNode, placeholder: string) 
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findInputsByType = (container: ParentNode, type: string) =>
+  Array.from(container.querySelectorAll("input")).filter(
+    (element) => element instanceof HTMLInputElement && element.type === type
+  );
+
 const findButtonByText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll("button")).find((element) =>
     (element.textContent ?? "").includes(text)
@@ -206,13 +212,25 @@ const findSelectByOptions = (container: ParentNode, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
-const readDiagnostics = (container: ParentNode) => {
-  const diagnostics = container.querySelector("pre");
-  if (!(diagnostics instanceof HTMLPreElement)) {
-    throw new Error("Missing diagnostics preview");
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+const getSectionByTitle = (container: ParentNode, title: string) => {
+  const section = Array.from(container.querySelectorAll("section")).find(
+    (candidate) =>
+      normalizeText(candidate.querySelector("h3")?.textContent) === normalizeText(title)
+  );
+  if (!(section instanceof HTMLElement)) {
+    throw new Error(`Missing section "${title}"`);
   }
-  return JSON.parse(diagnostics.textContent ?? "{}") as AccordionData;
+  return section;
 };
+
+const writablePaths = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("[data-widget-control-path]"))
+    .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+    .map((element) => element.getAttribute("data-widget-control-path"))
+    .filter((path): path is string => Boolean(path));
 
 type EditorKind = "wizard" | "visual" | "advanced";
 
@@ -220,10 +238,12 @@ const renderEditor = async ({
   editor,
   initialValue,
   initialVariant = "soft",
+  initialContext,
 }: {
   editor: EditorKind;
   initialValue: AccordionData;
   initialVariant?: string;
+  initialContext?: WidgetEditorProps<AccordionData>["context"];
 }) => {
   const { AccordionAdvancedEditor, AccordionVisualEditor, AccordionWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/AccordionEditors");
@@ -259,6 +279,7 @@ const renderEditor = async ({
           onVariantChangeSpy(next);
           setVariant(next);
         }}
+        context={initialContext}
       />
     );
   };
@@ -279,10 +300,72 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("Accordion wizard editor resolves legacy variants, preserves a valid open item, and updates generated items", async () => {
+test("Accordion editors expose non-overlapping writable ownership metadata", async () => {
+  const baseValue: AccordionData = {
+    items: [
+      { id: "1", title: "Intro", description: "Start here" },
+      { id: "2", title: "Pricing", description: "Plans overview", icon: "✨" },
+    ],
+    options: {
+      defaultOpenIds: ["1"],
+      openMode: "single",
+      collapsible: true,
+    },
+    style: accordionDefaults.style,
+  };
+  const wizard = await renderEditor({ editor: "wizard", initialValue: baseValue });
+  const visual = await renderEditor({ editor: "visual", initialValue: baseValue });
+  const advanced = await renderEditor({ editor: "advanced", initialValue: baseValue });
+
+  try {
+    const wizardPaths = writablePaths(wizard.container);
+    const visualPaths = writablePaths(visual.container);
+    const advancedPaths = writablePaths(advanced.container);
+    const duplicatePaths = [...wizardPaths, ...visualPaths, ...advancedPaths].filter(
+      (path, index, paths) => paths.indexOf(path) !== index
+    );
+
+    expect(wizardPaths).toEqual(expect.arrayContaining(["options.defaultOpenIds"]));
+    expect(wizardPaths).not.toContain("items.count");
+    expect(visualPaths).toEqual(
+      expect.arrayContaining([
+        "variant",
+        "items.0.title",
+        "items.0.description",
+        "items.0.icon",
+        "options.openMode",
+        "options.collapsible",
+        "options.motion",
+        "layout.maxWidth",
+        "style.summaryPadding",
+        "style.surfaceColor",
+      ])
+    );
+    expect(wizardPaths).not.toContain("variant");
+    expect(wizardPaths).not.toContain("style.surfaceColor");
+    expect(visualPaths).not.toContain("items.count");
+    expect(visualPaths).not.toContain("options.defaultOpenIds");
+    expect(advancedPaths).toEqual([]);
+    expect(duplicatePaths).toEqual([]);
+  } finally {
+    wizard.cleanup();
+    visual.cleanup();
+    advanced.cleanup();
+  }
+});
+
+test("Accordion wizard editor preserves a valid open item and seeds generated items", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialVariant: "legacy",
+    initialContext: {
+      surface: "page-builder",
+      slotTargets: [
+        { definitionId: "item", slotId: "item:1", label: "Item 1", kind: "repeatable" },
+        { definitionId: "item", slotId: "item:2", label: "Item 2", kind: "repeatable" },
+        { definitionId: "item", slotId: "item:3", label: "Item 3", kind: "repeatable" },
+      ],
+    },
     initialValue: {
       items: [
         { id: "1", title: "Intro", description: "Start here" },
@@ -297,20 +380,23 @@ test("Accordion wizard editor resolves legacy variants, preserves a valid open i
   });
 
   try {
-    expect(findButtonByText(view.container, "Soft")?.textContent).toContain("Selected");
-    expect(findButtonByText(view.container, "Bordered")?.textContent).toContain("Pick");
-
-    clickElement(findButtonByText(view.container, "Bordered"));
-    expect(view.getVariant()).toBe("bordered");
-    expect(view.onVariantChangeSpy).toHaveBeenCalledWith("bordered");
-
-    setSelectValue(
-      findSelectByOptions(view.container, ["2", "3", "4", String(accordionItemMax)]),
-      "4"
+    const setupSection = getSectionByTitle(view.container, "Starter items");
+    expect(view.container.innerHTML).toContain(
+      'data-widget-editor-section="accordion.wizard.starter-setup"'
     );
-
-    expect(view.getValue().items).toHaveLength(4);
+    expect(() => getSectionByTitle(view.container, "Variant")).toThrow();
+    expect(setupSection.textContent).toContain("Visual owns daily item title edits");
+    expect(setupSection.textContent).toContain("Panel count");
+    expect(setupSection.textContent).toContain("3 slot-owned panels");
+    expect(findSelectByOptions(setupSection, ["2", "3", "4", String(accordionItemMax)])).toBe(
+      undefined
+    );
+    expect(setupSection.textContent).toContain("Item 3");
     expect(view.getValue().options?.initiallyOpenId).toBe("2");
+
+    setSelectValue(findSelectByOptions(setupSection, ["1", "2", "3"]), "3");
+    expect(view.getValue().options?.initiallyOpenId).toBe("3");
+    expect(view.getValue().options?.defaultOpenIds).toEqual(["3"]);
     expect(view.getValue().items?.[2]).toEqual(
       expect.objectContaining({
         id: "3",
@@ -318,20 +404,9 @@ test("Accordion wizard editor resolves legacy variants, preserves a valid open i
       })
     );
 
-    setSelectValue(findSelectByOptions(view.container, ["1", "2", "3", "4"]), "4");
-    expect(view.getValue().options?.initiallyOpenId).toBe("4");
-
-    setInputValue(findInputByPlaceholder(view.container, "Section 4"), "Support");
-    setInputValue(findAllInputsByPlaceholder(view.container, "Optional summary text")[3], "SLA");
-
-    expect(view.getValue().items?.[3]).toEqual(
-      expect.objectContaining({
-        id: "4",
-        title: "Support",
-        description: "SLA",
-      })
-    );
+    expect(setupSection.querySelectorAll("input")).toHaveLength(0);
     expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -341,6 +416,32 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
   const view = await renderEditor({
     editor: "visual",
     initialVariant: "compact",
+    initialContext: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "item",
+          slotId: "item:1",
+          label: "Item 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "item",
+          slotId: "item:2",
+          label: "Item 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "item",
+          slotId: "item:3",
+          label: "Item 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
     initialValue: {
       items: [
         { id: "alpha", title: "Alpha", description: "First item" },
@@ -359,59 +460,94 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
   });
 
   try {
-    const surfaceInput = findInputByPlaceholder(view.container, "var(--color-surface)");
-    const borderInput = findInputByPlaceholder(view.container, "var(--color-border)");
-    const summaryInput = findInputByPlaceholder(view.container, "var(--color-text)");
+    expect(view.container.innerHTML).toContain(
+      'data-widget-editor-section="accordion.visual.behavior-style"'
+    );
+    expect(view.container.innerHTML).toContain(
+      'data-widget-editor-section="accordion.visual.item-content"'
+    );
+    expect(view.container.textContent).not.toContain("Initially open item");
+    const behaviorSection = getSectionByTitle(view.container, "Behavior and Style");
+    expect(behaviorSection.textContent).toContain("Alpha");
+    expect(behaviorSection.textContent).not.toContain("alpha");
+    expect(
+      findSelectByOptions(view.container, ["2", "3", "4", String(accordionItemMax)])
+    ).toBeUndefined();
+    const colorPickers = findInputsByType(view.container, "color");
 
-    expect((surfaceInput as HTMLInputElement | null | undefined)?.value).toBe(
-      accordionDefaults.style?.surfaceColor
-    );
-    expect((borderInput as HTMLInputElement | null | undefined)?.value).toBe(
-      accordionDefaults.style?.borderColor
-    );
-    expect((summaryInput as HTMLInputElement | null | undefined)?.value).toBe(
-      accordionDefaults.style?.summaryTextColor
-    );
+    expect(colorPickers).toHaveLength(4);
+    expect(findInputByPlaceholder(view.container, "var(--color-surface)")).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "var(--color-border)")).toBeUndefined();
+    expect(findAllInputsByPlaceholder(view.container, "var(--color-text)")).toEqual([]);
+    expect(view.container.textContent).toContain("Theme default");
+    expect(view.container.textContent).not.toContain("var(--color");
+    expect(
+      Array.from(view.container.querySelectorAll("button")).filter((button) =>
+        (button.textContent ?? "").includes("Clear")
+      )
+    ).toHaveLength(0);
 
     clickElement(findButtonByText(view.container, "Soft"));
     expect(view.getVariant()).toBe("soft");
     expect(view.onVariantChangeSpy).toHaveBeenCalledWith("soft");
 
-    setSelectValue(
-      findSelectByOptions(view.container, ["2", "3", "4", String(accordionItemMax)]),
-      "3"
-    );
+    expect(view.getValue().items).toHaveLength(2);
+    expect(findInputByPlaceholder(view.container, "Section 3")).toBeTruthy();
+
+    setInputValue(findInputByPlaceholder(view.container, "Section 3"), "Delivery");
+    setInputValue(findAllInputsByPlaceholder(view.container, "Optional icon or emoji")[2], "🔥");
     expect(view.getValue().items).toHaveLength(3);
     expect(view.getValue().items?.[2]).toEqual(
       expect.objectContaining({
         id: "3",
-        title: "Section 3",
+        title: "Delivery",
+        icon: "🔥",
       })
     );
+    setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "multiple");
 
-    setSelectValue(findSelectByOptions(view.container, ["alpha", "beta", "3"]), "3");
-    expect(view.getValue().options?.initiallyOpenId).toBe("3");
+    expect(view.getValue().options?.openMode).toBe("multiple");
+    expect(view.getValue().options?.defaultOpenIds).toEqual(["alpha"]);
 
-    setInputValue(findInputByPlaceholder(view.container, "Section 3"), "Delivery");
-    expect(view.getValue().items?.[2]?.title).toBe("Delivery");
+    setSelectValue(findSelectByOptions(view.container, ["none", "subtle", "smooth"]), "smooth");
+    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "full"]), "sm");
+    setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "xl"]), "xl");
+    setSelectValue(findSelectByOptions(view.container, ["sm", "base", "lg"]), "lg");
+    setSelectValue(findSelectByOptions(view.container, ["medium", "semibold", "bold"]), "bold");
 
-    const allowMultipleCheckbox = view.container.querySelector("input[type='checkbox']");
-    toggleCheckbox(allowMultipleCheckbox ?? undefined, true);
-
-    setInputValue(surfaceInput, "#101010");
-    setInputValue(borderInput, "#202020");
-    setInputValue(summaryInput, "#303030");
+    setInputValue(colorPickers[0], "#101010");
+    setInputValue(colorPickers[1], "#202020");
+    setInputValue(colorPickers[2], "#303030");
+    setInputValue(colorPickers[3], "#404040");
+    const clearButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
+      (button.textContent ?? "").includes("Clear")
+    );
+    expect(clearButtons).toHaveLength(4);
+    clickElement(clearButtons[1]);
+    clickElement(clearButtons[2]);
+    expect(view.getValue().style?.borderColor).toBe(accordionDefaults.style?.borderColor);
+    expect(view.getValue().style?.summaryTextColor).toBe(accordionDefaults.style?.summaryTextColor);
 
     expect(view.getValue()).toEqual(
       expect.objectContaining({
         options: expect.objectContaining({
+          openMode: "multiple",
+          defaultOpenIds: ["alpha"],
+          collapsible: true,
           allowMultiple: true,
-          initiallyOpenId: "3",
+          motion: "smooth",
+        }),
+        layout: expect.objectContaining({
+          maxWidth: "sm",
         }),
         style: expect.objectContaining({
           surfaceColor: "#101010",
-          borderColor: "#202020",
-          summaryTextColor: "#303030",
+          borderColor: accordionDefaults.style?.borderColor,
+          summaryTextColor: accordionDefaults.style?.summaryTextColor,
+          descriptionTextColor: "#404040",
+          radius: "xl",
+          summaryFontSize: "lg",
+          summaryFontWeight: "bold",
         }),
       })
     );
@@ -420,10 +556,68 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
   }
 });
 
-test("Accordion advanced editor shows normalized diagnostics and keeps the preview in sync with edits", async () => {
+test("Accordion visual open mode keeps Wizard-owned all-collapsed setup", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {
+      items: [
+        { id: "1", title: "Intro", description: "Start here" },
+        { id: "2", title: "Details", description: "More context" },
+      ],
+      options: {
+        openMode: "single",
+        defaultOpenIds: [],
+        collapsible: true,
+      },
+      style: accordionDefaults.style,
+    },
+  });
+
+  try {
+    setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "multiple");
+    expect(view.getValue().options?.openMode).toBe("multiple");
+    expect(view.getValue().options?.defaultOpenIds).toEqual([]);
+    expect(view.getValue().options?.initiallyOpenId).toBeUndefined();
+
+    setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "single");
+    expect(view.getValue().options?.openMode).toBe("single");
+    expect(view.getValue().options?.defaultOpenIds).toEqual([]);
+    expect(view.getValue().options?.initiallyOpenId).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Accordion advanced editor exposes read-only normalized diagnostics", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialVariant: "unknown",
+    initialContext: {
+      surface: "page-builder",
+      slotTargets: [
+        {
+          definitionId: "item",
+          slotId: "item:1",
+          label: "Item 1",
+          kind: "repeatable",
+          instanceId: "1",
+        },
+        {
+          definitionId: "item",
+          slotId: "item:2",
+          label: "Item 2",
+          kind: "repeatable",
+          instanceId: "2",
+        },
+        {
+          definitionId: "item",
+          slotId: "item:3",
+          label: "Item 3",
+          kind: "repeatable",
+          instanceId: "3",
+        },
+      ],
+    },
     initialValue: {
       items: [
         { id: " ", title: " ", description: " " },
@@ -441,50 +635,30 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
   });
 
   try {
-    expect(findButtonByText(view.container, "Soft")?.textContent).toContain("Selected");
+    const diagnosticsSection = getSectionByTitle(view.container, "Behavior summary");
+    const itemsSection = getSectionByTitle(view.container, "Saved items summary");
+    const displaySection = getSectionByTitle(view.container, "Saved display summary");
+    const summarySection = getSectionByTitle(view.container, "Contract summary");
 
-    expect(readDiagnostics(view.container)).toEqual({
-      items: [
-        { id: "1", title: "Section 1" },
-        { id: "2", title: "Custom title", description: "Helpful details" },
-      ],
-      options: {
-        initiallyOpenId: "1",
-        allowMultiple: false,
-      },
-      style: {
-        borderColor: "accent-border",
-        summaryTextColor: accordionDefaults.style?.summaryTextColor,
-      },
-    });
+    expect(diagnosticsSection.textContent).toContain("Visitor opening");
+    expect(diagnosticsSection.textContent).toContain("Starts with");
+    expect(itemsSection.textContent).toContain("Custom title; summary text saved; no icon");
+    expect(displaySection.textContent).toContain("Style preset");
+    expect(displaySection.textContent).toContain("1 saved color choices");
+    expect(summarySection.textContent).toContain("Advanced only summarizes the saved state");
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).not.toContain("summary suffix");
+    expect(view.container.textContent).not.toContain("content suffix");
+    expect(view.container.textContent).not.toContain('"items"');
+    expect(view.container.textContent).not.toContain('"options"');
 
-    setSelectValue(
-      findSelectByOptions(view.container, ["2", "3", "4", String(accordionItemMax)]),
-      "3"
-    );
-    setInputValue(findInputByPlaceholder(view.container, "Section 3"), "Rollout");
-    toggleCheckbox(view.container.querySelector("input[type='checkbox']") ?? undefined, true);
-    setInputValue(
-      findInputByPlaceholder(view.container, "var(--color-text)"),
-      "var(--color-muted)"
-    );
-
-    expect(readDiagnostics(view.container)).toEqual({
-      items: [
-        { id: "1", title: "Section 1" },
-        { id: "2", title: "Custom title", description: "Helpful details" },
-        { id: "3", title: "Rollout" },
-      ],
-      options: {
-        initiallyOpenId: "1",
-        allowMultiple: true,
-      },
-      style: {
-        borderColor: "accent-border",
-        summaryTextColor: "var(--color-muted)",
-      },
-    });
-    expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(() => getSectionByTitle(view.container, "Variant")).toThrow();
+    expect(() => getSectionByTitle(view.container, "Item content")).toThrow();
+    expect(() => getSectionByTitle(view.container, "Behavior and Style")).toThrow();
+    expect(view.container.querySelectorAll("input, select, button")).toHaveLength(0);
+    expect(writablePaths(view.container)).toEqual([]);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

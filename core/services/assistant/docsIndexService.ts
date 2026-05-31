@@ -3,7 +3,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 
 import type { DocsChunk, DocsIndex, DocsIndexStatus } from "./docsTypes";
 
-const DEFAULT_DOC_PATHS = ["docs"];
+const DEFAULT_DOC_PATHS = ["docs/guide"];
 const DEFAULT_MAX_CHUNK_CHARS = 1200;
 const HEADING_REGEX = /^(#{1,6})\s+(.+?)\s*$/;
 
@@ -209,11 +209,7 @@ const toTokenCounts = (tokens: string[]) => {
 };
 
 const headingFromFilename = (filePath: string) =>
-  path
-    .basename(filePath)
-    .replace(/\.md$/i, "")
-    .replace(/[-_]+/g, " ")
-    .trim();
+  path.basename(filePath).replace(/\.md$/i, "").replace(/[-_]+/g, " ").trim();
 
 const parseSections = (filePath: string, content: string): ParsedSection[] => {
   const lines = content.split(/\r?\n/);
@@ -374,16 +370,11 @@ export const getDocsIndexStatus = (): DocsIndexStatus => ({
   chunkCount: cachedDocsIndex?.chunkCount ?? 0,
 });
 
-export const buildDocsIndex = async (
-  options: BuildDocsIndexOptions = {}
-): Promise<DocsIndex> => {
+export const buildDocsIndex = async (options: BuildDocsIndexOptions = {}): Promise<DocsIndex> => {
   const startedAt = Date.now();
   const cwd = options.cwd ?? process.cwd();
   const now = options.now ?? (() => new Date());
-  const maxChunkChars = Math.max(
-    300,
-    Math.floor(options.maxChunkChars ?? DEFAULT_MAX_CHUNK_CHARS)
-  );
+  const maxChunkChars = Math.max(300, Math.floor(options.maxChunkChars ?? DEFAULT_MAX_CHUNK_CHARS));
 
   const configuredPaths = await resolveAssistantDocPaths(options.docPaths);
   lastConfiguredPaths = configuredPaths;
@@ -440,9 +431,7 @@ export const buildDocsIndex = async (
   return index;
 };
 
-export const reindexDocsIndex = async (
-  options: BuildDocsIndexOptions = {}
-): Promise<DocsIndex> => {
+export const reindexDocsIndex = async (options: BuildDocsIndexOptions = {}): Promise<DocsIndex> => {
   if (docsIndexBuildPromise) {
     return docsIndexBuildPromise;
   }
@@ -463,22 +452,18 @@ export const reindexDocsIndex = async (
   return docsIndexBuildPromise;
 };
 
-export const ensureDocsIndex = async (
-  options: BuildDocsIndexOptions = {}
-): Promise<DocsIndex> => {
+export const ensureDocsIndex = async (options: BuildDocsIndexOptions = {}): Promise<DocsIndex> => {
   if (cachedDocsIndex) return cachedDocsIndex;
   return reindexDocsIndex(options);
 };
 
-export const initializeDocsIndexOnBootIfEnabled = async (
-  _options: BuildDocsIndexOptions = {}
-) => {
+export const initializeDocsIndexOnBootIfEnabled = async (_options: BuildDocsIndexOptions = {}) => {
   try {
     const { getSetting } = await import("../settings/settingsService");
     const reindexOnBoot = await getSetting("assistant.docs.reindexOnBoot");
     if (reindexOnBoot === true) {
       const { ingestInternalDocsToDb } = await import("./docsIngestService");
-      await ingestInternalDocsToDb({ sourceRoot: "docs" });
+      await ingestInternalDocsToDb({ sourceRoot: "docs/guide" });
       return;
     }
   } catch {

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Page Builder + Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03, TASK-190-04
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -26,6 +26,48 @@ Reuse rule:
   metadata, and current section/page preset coverage,
 - this slice must not create a second source of truth for section readiness next
   to the current widget pack / preset contract.
+
+Current slice note:
+- `TASK-190-05-01` is landed: assistant-facing section alias/slot vocabulary
+  and deterministic widget/pack mapping now sit in
+  `blueprintPageSectionTypes.ts` / `blueprintPageSectionLibrary.ts`.
+- `TASK-190-05-02` is landed: canonical collection pages now compose
+  listing/filter/form blocks through `blueprintPageSectionComposer.ts`, and
+  assistant-created collection pages persist `PageData.settings.collectionLink`
+  through the existing page owner seam.
+- `TASK-190-05-03-01` is landed: detail-page document/revision storage and the
+  blocking `content_type_has_detail_pages` dependency now exist under the
+  content-domain owner seam.
+- `TASK-190-05-03-02` is landed: detail-page blocks now resolve strict
+  entry-field/meta/computed bindings through `detailPageBindingResolver.ts`
+  with shared safe dot-path helpers and thin adapters over the existing
+  content/forms runtime seams.
+- `TASK-190-05-03-07-02` is landed: canonical content routes now round-trip
+  structural `detailPageId` linkage through settings, assistant actions, and
+  matcher metadata so the runtime leaf can consume one validated route owner
+  seam.
+- `TASK-190-05-03-03` is landed: published content routes with linked
+  `detailPageId` now resolve and hydrate composed detail-page blocks through
+  the existing page runtime shell, while unlinked routes stay on the legacy
+  entry-detail renderer.
+- `TASK-190-05-03-04` is landed: preview tokens now carry strict detail-page
+  sample-entry context, content/detail preview routes reuse one shared
+  preview-token contract, and canonical content-route updates reuse a shared
+  site-cache invalidation seam.
+- `TASK-190-05-03-05` is landed: `detail-page.upsert` now executes through the
+  content-domain owner seam with strict schema/contract validation.
+- `TASK-190-05-03-07-01` and `TASK-190-05-03-07-02` are landed: the internal
+  `/admin/api/detail-pages*` CRUD/lifecycle/revision route family now exists,
+  and `setting.content-route.upsert` owns `detailPageId` route-linking through
+  the shared content-route contract.
+- `TASK-190-05-03-06` and `TASK-190-05-03-07-03` are landed: deterministic
+  detail-page fixtures, DB-backed runtime acceptance, and admin client/cache
+  parity now cover the base detail-page surface.
+- `TASK-190-05-03-08` is landed: generic assistant resource packaging now covers
+  `detail-page` with strict policy/schema vocabulary, bounded provider context,
+  trusted target resolution, and gated generic mutations that keep execution on
+  the existing local `detail-page.upsert` path.
+- The page section, widget, and detail-page composer family is complete.
 
 ## Sub-Tasks
 
@@ -90,9 +132,10 @@ Touched existing files:
 10. `setting.content-route.upsert` is extended rather than replaced; omitted
     `detailPageId` preserves the current link, `null` clears it, and a string
     sets it.
-11. Generic assistant resource support for `detail-page` is a later explicit
-    slice; base composer/runtime/admin flow does not pretend that support
-    already exists.
+11. Generic assistant resource support for `detail-page` is explicit and
+    bounded: provider planning may describe the resource family, target
+    resolution uses trusted catalog/active context only, and generic mutations
+    stay gated instead of creating a second executor path.
 12. Detail page preview/cache/invalidation behavior is covered by Bun runtime
     tests.
 

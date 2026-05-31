@@ -64,11 +64,6 @@ test("registerAssistantRoutes wires endpoints", () => {
     "settings:read",
     "settings:read",
     "content:read",
-    "settings:read",
-    "content:read",
-    "settings:write",
-    "content:write",
-    "content:publish",
   ]);
 });
 
@@ -390,6 +385,93 @@ test("assistant action plan route attaches resource catalog context when request
   });
 });
 
+test("assistant action plan route preserves locally composed mixed setup plans after trusted catalog handoff", async () => {
+  const { router, routes } = makeRouter();
+  let receivedContext: Record<string, unknown> | undefined;
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "docs-only",
+        retrievalBackend: "db",
+        llmAvailable: true,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+      hydrateActiveSurface: async (context) => context,
+      buildResourceCatalog: async () => ({
+        schemaVersion: 1,
+        generatedAt: "2026-04-11T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [
+          { id: "ct-products", slug: "products", name: "Products", entryCount: 0, fields: [] },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      }),
+      planActions: async (payload) => {
+        receivedContext = payload.context as Record<string, unknown>;
+        return {
+          ...buildHouseProjectsCatalogPlan(),
+          intentId: "blueprint-composed-product-catalog",
+          metadata: {
+            planner: "local",
+            providerDraftUsed: false,
+          },
+        };
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const result = await handler?.({
+    params: {},
+    query: {},
+    body: {
+      prompt: "Create a product catalog with inquiry form and a blog hub.",
+      context: {
+        page: "/admin/advanced/widgets",
+        locale: "en-US",
+        includeResourceCatalog: true,
+      },
+    },
+    requestId: "req-plan-mixed-local",
+    user: { id: "user-1" },
+  });
+
+  expect(result).toMatchObject({
+    intentId: "blueprint-composed-product-catalog",
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+    },
+  });
+  expect(receivedContext).toMatchObject({
+    includeResourceCatalog: true,
+    resourceCatalog: {
+      schemaVersion: 1,
+      contentTypes: [{ slug: "products" }],
+    },
+  });
+});
+
 test("assistant action plan route requires widget read permission for active page template inspection", async () => {
   const { router, routes } = makeRouter();
   const requestedPermissions: string[] = [];
@@ -449,6 +531,124 @@ test("assistant action plan route requires widget read permission for active pag
   expect(requestedPermissions).toContain("widgets:read");
 });
 
+test("assistant action plan route hydrates collection workspace hints with explicit detail page permissions", async () => {
+  const { router, routes } = makeRouter();
+  const requestedPermissions: string[] = [];
+  let receivedHydrationPermissions: readonly string[] | undefined;
+  let receivedContext: Record<string, unknown> | undefined;
+
+  registerAssistantRoutes(router, {
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
+    validate: validateSchema,
+    resolvePermissions: () => ["content:read", "settings:read"],
+    service: {
+      hydrateActiveSurface: async (context, options) => {
+        receivedHydrationPermissions = options?.permissions;
+        return {
+          ...context,
+          collectionWorkspace: {
+            contentType: {
+              id: "ct-products",
+              name: "Products",
+              slug: "products",
+              status: "published",
+              fieldCount: 3,
+              updatedAt: "2026-05-10T10:00:00.000Z",
+            },
+            canonical: {
+              contentRoute: null,
+              detailPage: {
+                id: "detail-page-products",
+                label: "Product Detail",
+                status: "draft",
+              },
+              listPage: null,
+              listingQuery: null,
+              listingTemplate: null,
+              adminScreen: null,
+            },
+            linkedSecondary: {
+              pages: [],
+              adminScreens: [],
+            },
+            unresolved: [],
+            candidates: {
+              detailPages: [],
+              pages: [],
+              listingQueries: [],
+              listingTemplates: [],
+              adminScreens: [],
+            },
+            activeDetailPageId: "detail-page-products",
+          },
+        };
+      },
+      planActions: async (payload) => {
+        receivedContext = payload.context as Record<string, unknown>;
+        return buildHouseProjectsCatalogPlan();
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+  await handler?.({
+    params: {},
+    query: {},
+    body: {
+      prompt: "continue this detail template",
+      context: {
+        page: "/admin/advanced/engine/ct-products/collection/detail-template/detail-page-products",
+        collectionWorkspaceHint: {
+          contentTypeId: "ct-products",
+          activeDetailPageId: "detail-page-products",
+        },
+        activeSurface: {
+          kind: "detail-page",
+          detailPage: {
+            id: "detail-page-products",
+            name: "Product Detail",
+            status: "draft",
+            contentTypeId: "ct-products",
+            contentTypeSlug: "products",
+            titlePattern: "{title}",
+          },
+          sampleEntryId: "entry-1",
+          selectedBlockId: "hero-1",
+          blocks: [
+            {
+              id: "hero-1",
+              type: "hero",
+              label: "Hero",
+              path: "0",
+              childCount: 0,
+              slotKeys: [],
+              templateId: null,
+              templateName: null,
+            },
+          ],
+          warnings: [],
+        },
+      },
+    },
+    requestId: "req-plan-detail-page",
+    user: { id: "user-1" },
+  });
+
+  expect(requestedPermissions).toContain("content:read");
+  expect(requestedPermissions).toContain("widgets:read");
+  expect(receivedHydrationPermissions).toEqual(["content:read", "settings:read"]);
+  expect(receivedContext?.collectionWorkspace).toMatchObject({
+    contentType: {
+      id: "ct-products",
+    },
+    activeDetailPageId: "detail-page-products",
+  });
+});
+
 test("assistant action plan route rejects unknown context fields", async () => {
   const { router, routes } = makeRouter();
 
@@ -472,6 +672,47 @@ test("assistant action plan route rejects unknown context fields", async () => {
         },
       },
       requestId: "req-plan-invalid-context",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("validation_error");
+    expect(apiError.status).toBe(400);
+  }
+});
+
+test("assistant action plan route rejects browser supplied collection workspace summaries", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: validateSchema,
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: {
+        prompt: "potrzebuje katalogu produktow",
+        context: {
+          page: "/admin/advanced/engine/ct-products/collection",
+          collectionWorkspaceHint: {
+            contentTypeId: "ct-products",
+          },
+          collectionWorkspace: {
+            contentType: {
+              id: "ct-products",
+            },
+          },
+        },
+      },
+      requestId: "req-plan-invalid-workspace",
       user: { id: "user-1" },
     });
     throw new Error("expected_error");
@@ -532,7 +773,234 @@ test("assistant action plan route blocks site-kit planning when LLM Guide is una
     const apiError = error as ApiError;
     expect(apiError.code).toBe("assistant_llm_unavailable");
     expect(apiError.status).toBe(409);
+    expect(apiError.message).toBe(
+      "LLM Guide must be configured before catalog-backed planning or site-kit actions"
+    );
     expect(apiError.details).toEqual({ requestId: "req-site-kit-unavailable" });
+  }
+});
+
+test("assistant action plan route maps catalog-backed planner unavailability", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      buildResourceCatalog: async () => ({
+        schemaVersion: 1,
+        generatedAt: "2026-04-11T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      }),
+      hydrateActiveSurface: async (context) => context,
+      planActions: async () => {
+        throw new Error("assistant_llm_unavailable");
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: {
+        prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+        context: {
+          page: "/admin/pages",
+          locale: "pl-PL",
+          includeResourceCatalog: true,
+        },
+      },
+      requestId: "req-catalog-unavailable",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_llm_unavailable");
+    expect(apiError.status).toBe(409);
+    expect(apiError.message).toBe(
+      "LLM Guide must be configured before catalog-backed planning or site-kit actions"
+    );
+    expect(apiError.details).toEqual({ requestId: "req-catalog-unavailable" });
+  }
+});
+
+test("assistant action dry-run route blocks site-kit actions when LLM Guide is unavailable", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "docs-only",
+        retrievalBackend: "db",
+        llmAvailable: false,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/dry-run");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const plan = {
+    id: "plan-site-kit-install",
+    status: "ready",
+    intentId: "site-kit-install",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: "Install site kit",
+    answer: "I can install the site kit.",
+    summary: "Install the selected site kit.",
+    confidence: 0.8,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "site-kit-install-automotive-workshop",
+        type: "site-kit.install",
+        title: "Install Automotive Workshop",
+        description: "Apply the site kit.",
+        input: {
+          businessType: "automotive_workshop",
+          goals: ["lead_generation"],
+          locale: "en",
+          preview: {
+            selectedKitId: "automotive-workshop",
+            selectedKitTitle: "Automotive Workshop",
+            enabledStepIds: ["settings"],
+            plan: { confidence: 80 },
+          },
+          selectedKitId: "automotive-workshop",
+          enabledStepIds: ["settings"],
+          continueOnError: true,
+        },
+      },
+    ],
+  };
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: { plan },
+      requestId: "req-site-kit-dry-run-unavailable",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_llm_unavailable");
+    expect(apiError.status).toBe(409);
+    expect(apiError.message).toBe(
+      "LLM Guide must be configured before catalog-backed planning or site-kit actions"
+    );
+    expect(apiError.details).toEqual({ requestId: "req-site-kit-dry-run-unavailable" });
+  }
+});
+
+test("assistant action execute route blocks site-kit actions when LLM Guide is unavailable", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "docs-only",
+        retrievalBackend: "db",
+        llmAvailable: false,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/execute");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const plan = {
+    id: "plan-site-kit-install",
+    status: "ready",
+    intentId: "site-kit-install",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: "Install site kit",
+    answer: "I can install the site kit.",
+    summary: "Install the selected site kit.",
+    confidence: 0.8,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "site-kit-install-automotive-workshop",
+        type: "site-kit.install",
+        title: "Install Automotive Workshop",
+        description: "Apply the site kit.",
+        input: {
+          businessType: "automotive_workshop",
+          goals: ["lead_generation"],
+          locale: "en",
+          preview: {
+            selectedKitId: "automotive-workshop",
+            selectedKitTitle: "Automotive Workshop",
+            enabledStepIds: ["settings"],
+            plan: { confidence: 80 },
+          },
+          selectedKitId: "automotive-workshop",
+          enabledStepIds: ["settings"],
+          continueOnError: true,
+        },
+      },
+    ],
+  };
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: { plan, idempotencyKey: "assistant-site-kit-unavailable" },
+      requestId: "req-site-kit-execute-unavailable",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_llm_unavailable");
+    expect(apiError.status).toBe(409);
+    expect(apiError.message).toBe(
+      "LLM Guide must be configured before catalog-backed planning or site-kit actions"
+    );
+    expect(apiError.details).toEqual({ requestId: "req-site-kit-execute-unavailable" });
   }
 });
 
@@ -587,15 +1055,57 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
     assumptions: [],
     questions: [],
     actions: [
-      { id: "screen-update", type: "custom-screen.update", title: "Screen update", description: "Screen update", input: {} },
-      { id: "screen-widget", type: "custom-screen.widget.patch", title: "Screen widget", description: "Screen widget", input: {} },
+      {
+        id: "screen-update",
+        type: "custom-screen.update",
+        title: "Screen update",
+        description: "Screen update",
+        input: {},
+      },
+      {
+        id: "screen-widget",
+        type: "custom-screen.widget.patch",
+        title: "Screen widget",
+        description: "Screen widget",
+        input: {},
+      },
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
-      { id: "menu-delete", type: "menu.item.delete", title: "Menu delete", description: "Menu delete", input: {} },
-      { id: "menu-update", type: "menu.item.update", title: "Menu update", description: "Menu update", input: {} },
+      {
+        id: "menu-delete",
+        type: "menu.item.delete",
+        title: "Menu delete",
+        description: "Menu delete",
+        input: {},
+      },
+      {
+        id: "menu-update",
+        type: "menu.item.update",
+        title: "Menu update",
+        description: "Menu update",
+        input: {},
+      },
       { id: "entry", type: "entry.delete", title: "Entry", description: "Entry", input: {} },
-      { id: "entry-update", type: "entry.update", title: "Entry update", description: "Entry update", input: {} },
-      { id: "listing-query", type: "listing-query.delete", title: "Listing query", description: "Listing query", input: {} },
-      { id: "listing-query-update", type: "listing-query.update", title: "Listing query update", description: "Listing query update", input: {} },
+      {
+        id: "entry-update",
+        type: "entry.update",
+        title: "Entry update",
+        description: "Entry update",
+        input: {},
+      },
+      {
+        id: "listing-query",
+        type: "listing-query.delete",
+        title: "Listing query",
+        description: "Listing query",
+        input: {},
+      },
+      {
+        id: "listing-query-update",
+        type: "listing-query.update",
+        title: "Listing query update",
+        description: "Listing query update",
+        input: {},
+      },
       {
         id: "listing-template",
         type: "listing-template.delete",
@@ -618,12 +1128,48 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
         input: {},
       },
       { id: "form", type: "form.automation.upsert", title: "Form", description: "Form", input: {} },
-      { id: "form-delete", type: "form.delete", title: "Form delete", description: "Form delete", input: {} },
-      { id: "form-archive", type: "form.archive", title: "Form archive", description: "Form archive", input: {} },
-      { id: "form-update", type: "form.update", title: "Form update", description: "Form update", input: {} },
-      { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
-      { id: "seo-delete", type: "seo.document.delete", title: "SEO delete", description: "SEO delete", input: {} },
-      { id: "seo-update", type: "seo.document.update", title: "SEO update", description: "SEO update", input: {} },
+      {
+        id: "form-delete",
+        type: "form.delete",
+        title: "Form delete",
+        description: "Form delete",
+        input: {},
+      },
+      {
+        id: "form-archive",
+        type: "form.archive",
+        title: "Form archive",
+        description: "Form archive",
+        input: {},
+      },
+      {
+        id: "form-update",
+        type: "form.update",
+        title: "Form update",
+        description: "Form update",
+        input: {},
+      },
+      {
+        id: "media",
+        type: "media.reference.attach",
+        title: "Media",
+        description: "Media",
+        input: {},
+      },
+      {
+        id: "seo-delete",
+        type: "seo.document.delete",
+        title: "SEO delete",
+        description: "SEO delete",
+        input: {},
+      },
+      {
+        id: "seo-update",
+        type: "seo.document.update",
+        title: "SEO update",
+        description: "SEO update",
+        input: {},
+      },
       { id: "page", type: "page.delete", title: "Page", description: "Page", input: {} },
       {
         id: "template",
@@ -730,6 +1276,61 @@ test("assistant action dry-run route maps unsupported actions to invalid plan er
   }
 });
 
+test("assistant action dry-run route rejects invalid content route detailPageId", async () => {
+  const { router, routes } = makeRouter();
+  const plan = {
+    id: "plan-invalid-detail-page-id",
+    status: "ready",
+    intentId: "invalid-detail-page-id",
+    title: "Invalid detail page id",
+    answer: "Invalid detail page id",
+    summary: "Invalid detail page id",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "route-invalid-detail-page-id",
+        type: "setting.content-route.upsert",
+        title: "Update route",
+        description: "Update route with invalid detailPageId.",
+        input: {
+          typeSlug: "products",
+          listPath: "/products",
+          detailPath: "/products/:slug",
+          enabled: true,
+          detailPageId: "not-a-detail-page-id",
+        },
+      },
+    ],
+  };
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/dry-run");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: { plan },
+      requestId: "req-invalid-detail-page-id",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_action_plan_invalid");
+    expect(apiError.status).toBe(400);
+    expect(apiError.details).toEqual({ requestId: "req-invalid-detail-page-id" });
+  }
+});
+
 test("assistant action execute route injects actorId and idempotency key", async () => {
   const { router, routes } = makeRouter();
   const plan = buildHouseProjectsCatalogPlan();
@@ -796,15 +1397,57 @@ test("assistant action execute route enforces per-action write permissions", asy
     assumptions: [],
     questions: [],
     actions: [
-      { id: "screen-update", type: "custom-screen.update", title: "Screen update", description: "Screen update", input: {} },
-      { id: "screen-widget", type: "custom-screen.widget.patch", title: "Screen widget", description: "Screen widget", input: {} },
+      {
+        id: "screen-update",
+        type: "custom-screen.update",
+        title: "Screen update",
+        description: "Screen update",
+        input: {},
+      },
+      {
+        id: "screen-widget",
+        type: "custom-screen.widget.patch",
+        title: "Screen widget",
+        description: "Screen widget",
+        input: {},
+      },
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
-      { id: "menu-delete", type: "menu.item.delete", title: "Menu delete", description: "Menu delete", input: {} },
-      { id: "menu-update", type: "menu.item.update", title: "Menu update", description: "Menu update", input: {} },
+      {
+        id: "menu-delete",
+        type: "menu.item.delete",
+        title: "Menu delete",
+        description: "Menu delete",
+        input: {},
+      },
+      {
+        id: "menu-update",
+        type: "menu.item.update",
+        title: "Menu update",
+        description: "Menu update",
+        input: {},
+      },
       { id: "entry", type: "entry.delete", title: "Entry", description: "Entry", input: {} },
-      { id: "entry-update", type: "entry.update", title: "Entry update", description: "Entry update", input: {} },
-      { id: "listing-query", type: "listing-query.delete", title: "Listing query", description: "Listing query", input: {} },
-      { id: "listing-query-update", type: "listing-query.update", title: "Listing query update", description: "Listing query update", input: {} },
+      {
+        id: "entry-update",
+        type: "entry.update",
+        title: "Entry update",
+        description: "Entry update",
+        input: {},
+      },
+      {
+        id: "listing-query",
+        type: "listing-query.delete",
+        title: "Listing query",
+        description: "Listing query",
+        input: {},
+      },
+      {
+        id: "listing-query-update",
+        type: "listing-query.update",
+        title: "Listing query update",
+        description: "Listing query update",
+        input: {},
+      },
       {
         id: "listing-template",
         type: "listing-template.delete",
@@ -827,12 +1470,48 @@ test("assistant action execute route enforces per-action write permissions", asy
         input: {},
       },
       { id: "form", type: "form.automation.upsert", title: "Form", description: "Form", input: {} },
-      { id: "form-delete", type: "form.delete", title: "Form delete", description: "Form delete", input: {} },
-      { id: "form-archive", type: "form.archive", title: "Form archive", description: "Form archive", input: {} },
-      { id: "form-update", type: "form.update", title: "Form update", description: "Form update", input: {} },
-      { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
-      { id: "seo-delete", type: "seo.document.delete", title: "SEO delete", description: "SEO delete", input: {} },
-      { id: "seo-update", type: "seo.document.update", title: "SEO update", description: "SEO update", input: {} },
+      {
+        id: "form-delete",
+        type: "form.delete",
+        title: "Form delete",
+        description: "Form delete",
+        input: {},
+      },
+      {
+        id: "form-archive",
+        type: "form.archive",
+        title: "Form archive",
+        description: "Form archive",
+        input: {},
+      },
+      {
+        id: "form-update",
+        type: "form.update",
+        title: "Form update",
+        description: "Form update",
+        input: {},
+      },
+      {
+        id: "media",
+        type: "media.reference.attach",
+        title: "Media",
+        description: "Media",
+        input: {},
+      },
+      {
+        id: "seo-delete",
+        type: "seo.document.delete",
+        title: "SEO delete",
+        description: "SEO delete",
+        input: {},
+      },
+      {
+        id: "seo-update",
+        type: "seo.document.update",
+        title: "SEO update",
+        description: "SEO update",
+        input: {},
+      },
       { id: "page", type: "page.delete", title: "Page", description: "Page", input: {} },
       {
         id: "template",
@@ -900,6 +1579,79 @@ test("assistant action execute route enforces per-action write permissions", asy
   expect(requestedPermissions).toContain("content:write");
   expect(requestedPermissions).toContain("content:publish");
   expect(requestedPermissions).toContain("widgets:write");
+});
+
+test("assistant action execute preserves the settings-only route-link permission boundary", async () => {
+  const { router, routes } = makeRouter();
+  const requestedPermissions: string[] = [];
+
+  registerAssistantRoutes(router, {
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
+    validate: () => undefined,
+    service: {
+      executeActions: async (payload) => ({
+        plan: payload.plan,
+        preview: {
+          plan: payload.plan,
+          changes: [],
+          warnings: [],
+          readyToExecute: true,
+        },
+        results: [],
+        summary: {
+          create: 0,
+          update: 1,
+          noop: 0,
+          failed: 0,
+        },
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/execute");
+  const handler = route?.handlers[route.handlers.length - 1];
+  await handler?.({
+    params: {},
+    query: {},
+    body: {
+      idempotencyKey: "assistant-content-route-execute-1",
+      plan: {
+        id: "plan-content-route-execute",
+        status: "ready",
+        intentId: "content-route-execute",
+        title: "Update content route",
+        answer: "Update content route",
+        summary: "Update content route",
+        confidence: 0.9,
+        assumptions: [],
+        questions: [],
+        actions: [
+          {
+            id: "route-link",
+            type: "setting.content-route.upsert",
+            title: "Update route link",
+            description: "Update route link",
+            input: {
+              typeSlug: "products",
+              listPath: "/products",
+              detailPath: "/products/:slug",
+              enabled: true,
+              detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            },
+          },
+        ],
+      },
+    },
+    requestId: "req-content-route-execute",
+    user: { id: "user-1" },
+  });
+
+  expect(requestedPermissions).toContain("settings:write");
+  expect(requestedPermissions).not.toContain("content:write");
+  expect(requestedPermissions).not.toContain("content:publish");
 });
 
 test("assistant action execute route enforces kit permission for site-kit plans", async () => {

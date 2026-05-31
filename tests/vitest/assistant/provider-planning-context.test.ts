@@ -44,6 +44,39 @@ const resourceCatalog = {
     },
   ],
   customScreens: [],
+  detailPages: [
+    {
+      id: "detail-page-products",
+      name: "Product Detail",
+      status: "draft",
+      contentTypeId: "ct-products",
+      contentTypeSlug: "products",
+      linkedRouteType: "products",
+      updatedAt: "2026-04-12T10:00:00.000Z",
+      blockCount: 3,
+      bindingCount: 2,
+    },
+  ],
+  posts: [
+    {
+      id: "post-1",
+      title: "Products launch",
+      slug: "products-launch",
+      status: "published",
+      publishedAt: "2026-04-12T10:00:00.000Z",
+    },
+  ],
+  entries: [
+    {
+      id: "entry-1",
+      contentTypeId: "ct-products",
+      contentTypeSlug: "products",
+      title: "Router",
+      slug: "router",
+      status: "published",
+      updatedAt: "2026-04-12T10:00:00.000Z",
+    },
+  ],
   listings: {
     queries: [],
     templates: [],
@@ -105,6 +138,45 @@ const resourceCatalog = {
       status: "published",
     },
   ],
+  media: [
+    {
+      id: "media-hero",
+      name: "Hero",
+      altText: "Hero",
+      mimeType: "image/jpeg",
+      width: 1600,
+      height: 900,
+      folder: null,
+    },
+  ],
+  commerce: {
+    products: [
+      {
+        id: "commerce-product-1",
+        slug: "router-x",
+        name: "Router X",
+        status: "active",
+        price: "299.00",
+      },
+    ],
+    collections: [
+      {
+        id: "collection-1",
+        slug: "networking",
+        name: "Networking",
+        productCount: 1,
+      },
+    ],
+  },
+  solutionKits: [
+    {
+      id: "kit-1",
+      title: "Workshop",
+      businessType: "services",
+      moduleCount: 3,
+      installed: false,
+    },
+  ],
   warnings: [],
 } as unknown as AssistantActionContext["resourceCatalog"];
 
@@ -116,13 +188,13 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
     maxResourceItemsPerGroup: 1,
     evidence: [
       {
-        path: "docs/coderso/products.md",
+        path: "docs/guide/coderso/products.md",
         heading: "Products",
         content: "This is a long documentation passage for product catalogs.",
         score: 3,
       },
       {
-        path: "docs/coderso/other.md",
+        path: "docs/guide/coderso/other.md",
         heading: "Other",
         content: "Other content",
         score: 1,
@@ -131,6 +203,7 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
     context: {
       page: "/admin/advanced/entries",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog,
       runtimeSnapshot: {
         schemaVersion: 2,
@@ -179,26 +252,213 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   expect(prompt.docs[0]?.content).toContain("...");
   expect(prompt.registry.some((entry) => entry.kind === "page")).toBe(true);
   expect(prompt.policyGuidance.resources.some((entry) => entry.key === "page")).toBe(true);
-  expect(prompt.policyGuidance.resources.some((entry) => entry.key === "settings-api-keys")).toBe(true);
+  expect(prompt.policyGuidance.resources.some((entry) => entry.key === "settings-api-keys")).toBe(
+    true
+  );
   expect(prompt.operationDraftGuidance.notes.join(" ")).toContain("Allowed draft resourceKinds");
   expect(prompt.operationDraftGuidance.notes.join(" ")).toContain("custom-screen.status");
-  expect(prompt.operationDraftGuidance.notes.join(" ")).toContain("Secret-bearing resources are redacted");
+  expect(prompt.operationDraftGuidance.notes.join(" ")).toContain(
+    "Secret-bearing resources are redacted"
+  );
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("Custom Screens");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("content-type");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("Lead Form");
+  expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("detail-page");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("listing-query");
   expect(JSON.stringify(prompt.operationDraftGuidance.examples)).toContain("seo-document");
   expect(prompt.resources?.pages).toHaveLength(1);
+  expect(prompt.resources?.posts).toHaveLength(1);
+  expect(prompt.resources?.entries).toHaveLength(1);
   expect(prompt.resources?.contentTypes).toHaveLength(1);
+  expect(prompt.resources?.detailPages).toHaveLength(1);
   expect(prompt.resources?.forms).toHaveLength(1);
   expect(prompt.resources?.menus).toHaveLength(1);
   expect(prompt.resources?.seoDocuments).toHaveLength(1);
   expect(prompt.resources?.widgets).toHaveLength(1);
+  expect(prompt.resources?.media).toHaveLength(1);
+  expect(prompt.resources?.commerce.products).toHaveLength(1);
+  expect(prompt.resources?.commerce.collections).toHaveLength(1);
+  expect(prompt.resources?.solutionKits).toHaveLength(1);
+  expect(prompt.blueprints.capabilities).toHaveLength(1);
+  expect(prompt.blueprints.capabilities[0]?.id).toBe("house-projects-catalog");
   expect(prompt.activeSurface).toBeNull();
   expect(prompt.warnings).toEqual([
     "docs_truncated",
     "doc_content_truncated",
     "content_types_truncated",
+  ]);
+});
+
+test("buildProviderPlanningPromptPackage returns null resources when no catalog is available", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Create a product catalog",
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(prompt.resources).toBeNull();
+  expect(prompt.blueprints.capabilities.length).toBeGreaterThan(0);
+});
+
+test("buildProviderPlanningPromptPackage ignores caller-supplied catalogs without the reviewed include flag", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Create a product catalog",
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "pl-PL",
+      resourceCatalog,
+    },
+  });
+
+  expect(prompt.resources).toBeNull();
+});
+
+test("buildProviderPlanningPromptPackage emits truncation warnings for added resource groups", () => {
+  const catalog = resourceCatalog as NonNullable<AssistantActionContext["resourceCatalog"]>;
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Create a product catalog",
+    maxResourceItemsPerGroup: 1,
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: {
+        ...catalog,
+        posts: [
+          ...(catalog.posts ?? []),
+          {
+            id: "post-2",
+            title: "Products follow-up",
+            slug: "products-follow-up",
+            status: "draft",
+            publishedAt: null,
+            updatedAt: null,
+          },
+        ],
+        entries: [
+          ...(catalog.entries ?? []),
+          {
+            id: "entry-2",
+            typeId: "ct-products",
+            title: "Switch",
+            slug: "switch",
+            status: "draft",
+            publishedAt: null,
+            updatedAt: "2026-04-12T12:00:00.000Z",
+          },
+        ],
+        detailPages: [
+          ...(catalog.detailPages ?? []),
+          {
+            id: "detail-page-services",
+            name: "Service Detail",
+            status: "published",
+            contentTypeId: "ct-services",
+            contentTypeSlug: "services",
+            linkedRouteType: "services",
+            updatedAt: "2026-04-12T12:00:00.000Z",
+            blockCount: 2,
+            bindingCount: 1,
+          },
+        ],
+        media: [
+          ...(catalog.media ?? []),
+          {
+            id: "media-gallery",
+            title: "Gallery",
+            originalName: "gallery.png",
+            type: "image",
+            mimeType: "image/png",
+            size: 1024,
+            alt: "Gallery",
+            createdAt: "2026-04-12T12:00:00.000Z",
+          },
+        ],
+        commerce: {
+          products: [
+            ...(catalog.commerce?.products ?? []),
+            {
+              id: "commerce-product-2",
+              slug: "switch-y",
+              title: "Switch Y",
+              status: "draft",
+              currency: "USD",
+              priceAmount: 199,
+              stockState: "in_stock",
+              updatedAt: "2026-04-12T12:00:00.000Z",
+            },
+          ],
+          collections: [
+            ...(catalog.commerce?.collections ?? []),
+            {
+              id: "collection-2",
+              slug: "wireless",
+              name: "Wireless",
+              productCount: 1,
+              updatedAt: "2026-04-12T12:00:00.000Z",
+            },
+          ],
+        },
+        solutionKits: [
+          ...(catalog.solutionKits ?? []),
+          {
+            id: "kit-2",
+            title: "Storefront",
+            shortDescription: "Commerce starter",
+            recommendedModules: ["commerce"],
+            features: ["catalog"],
+          },
+        ],
+      },
+    },
+  });
+
+  expect(prompt.resources?.posts).toHaveLength(1);
+  expect(prompt.resources?.entries).toHaveLength(1);
+  expect(prompt.resources?.detailPages).toHaveLength(1);
+  expect(prompt.resources?.media).toHaveLength(1);
+  expect(prompt.resources?.commerce.products).toHaveLength(1);
+  expect(prompt.resources?.commerce.collections).toHaveLength(1);
+  expect(prompt.resources?.solutionKits).toHaveLength(1);
+  expect(prompt.warnings).toContain("posts_truncated");
+  expect(prompt.warnings).toContain("entries_truncated");
+  expect(prompt.warnings).toContain("detail_pages_truncated");
+  expect(prompt.warnings).toContain("media_truncated");
+  expect(prompt.warnings).toContain("commerce_products_truncated");
+  expect(prompt.warnings).toContain("commerce_collections_truncated");
+  expect(prompt.warnings).toContain("solution_kits_truncated");
+});
+
+test("buildProviderPlanningPromptPackage reads retrieval-shaped evidence chunks", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Create a product catalog",
+    evidence: [
+      {
+        chunk: {
+          docPath: "docs/guide/coderso/retrieval.md",
+          docTitle: "Retrieval Title",
+          heading: "Chunk Heading",
+          content: "Chunk content for retrieval evidence.",
+        },
+        snippet: "Fallback snippet",
+        score: 7,
+      } as never,
+    ],
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(prompt.docs).toEqual([
+    {
+      path: "docs/guide/coderso/retrieval.md",
+      heading: "Chunk Heading",
+      content: "Chunk content for retrieval evidence.",
+      score: 7,
+    },
   ]);
 });
 
@@ -247,7 +507,9 @@ test("buildProviderPlanningPromptPackage includes redacted active surface summar
     selectedBlockId: "cta-1",
   });
   expect(JSON.stringify(prompt)).not.toContain("apiKey should be hidden");
-  expect(prompt.activeSurface?.kind === "widget-template" ? prompt.activeSurface.blocks[0]?.label : null).toBeNull();
+  expect(
+    prompt.activeSurface?.kind === "widget-template" ? prompt.activeSurface.blocks[0]?.label : null
+  ).toBeNull();
 });
 
 test("buildProviderPlanningPromptPackage includes referenced template target context", () => {
@@ -342,6 +604,69 @@ test("buildProviderPlanningPromptPackage includes referenced template target con
   });
   expect(JSON.stringify(prompt)).not.toContain("apiKey should be hidden");
   expect(JSON.stringify(prompt)).not.toContain("apiKey");
+});
+
+test("buildProviderPlanningPromptPackage includes only hydrated collection workspace context", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Continue the product detail template",
+    context: {
+      page: "/admin/advanced/engine/ct-products/collection",
+      collectionWorkspaceHint: {
+        contentTypeId: "ct-products",
+        activeDetailPageId: "detail-page-products",
+      },
+      collectionWorkspace: {
+        contentType: {
+          id: "ct-products",
+          name: "Products",
+          slug: "products",
+          status: "published",
+          fieldCount: 3,
+          updatedAt: "2026-05-10T10:00:00.000Z",
+        },
+        canonical: {
+          contentRoute: null,
+          detailPage: {
+            id: "detail-page-products",
+            label: "Product Detail",
+            status: "draft",
+          },
+          listPage: null,
+          listingQuery: null,
+          listingTemplate: null,
+          adminScreen: null,
+        },
+        linkedSecondary: {
+          pages: [],
+          adminScreens: [],
+        },
+        unresolved: [],
+        candidates: {
+          detailPages: [
+            {
+              id: "detail-page-products",
+              label: "Product Detail",
+              status: "draft",
+            },
+          ],
+          pages: [],
+          listingQueries: [],
+          listingTemplates: [],
+          adminScreens: [],
+        },
+        activeDetailPageId: "detail-page-products",
+      },
+    },
+  });
+
+  expect(prompt.collectionWorkspace).toMatchObject({
+    contentType: {
+      id: "ct-products",
+      slug: "products",
+    },
+    activeDetailPageId: "detail-page-products",
+  });
+  expect(JSON.stringify(prompt)).not.toContain("collectionWorkspaceHint");
 });
 
 test("buildProviderPlanningPromptPackage redacts secret-like prompt data", () => {

@@ -1,94 +1,53 @@
-# Coderso Assistant Documentation
+# Coderso Documentation
 
-This directory contains the official product documentation corpus used by the
-assistant knowledge base.
+Welcome to the Coderso documentation. It is split by audience so you can go straight to what you need.
 
-## Purpose
+| If you want to… | Go to |
+|---|---|
+| **Use the product** — build pages, manage content, run business modules | [`guide/`](./guide/) |
+| **Develop or extend Coderso** — set up locally, add features, write plugins | [`develop/`](./develop/) |
+| Get the big picture / marketing overview | [Project README](../README.md) |
 
-- describe real product behavior in user-facing language,
-- cover major admin screens, workflows, and examples,
-- provide stable source material for DB ingest and assistant retrieval,
-- stay separate from `_docs/`, which remains the home for architecture notes,
-  task tracking, changelog entries, and developer-oriented references.
+---
 
-## Audience
+## 📘 For users & operators — [`guide/`](./guide/)
 
-Primary audiences:
-- `admin`
-- `editor`
+End-user product documentation written in plain language. This is also the knowledge corpus that
+powers the built-in **AI assistant** (it is ingested from `docs/guide/` — see
+[the corpus README](./guide/README.md)).
 
-Secondary audience:
-- `developer` only when a screen or workflow truly requires implementation
-  detail for integrations or advanced setup.
+- [Getting started](./guide/getting-started/) — orientation and your first publish
+- [Admin screens](./guide/screens/) — every core screen and setting
+- [Coderso modules](./guide/coderso/) — Engine, Forms, Listings, Booking, Commerce, Posts, and more
+- [Solution Kits](./guide/solution-kits/) — ready-made setups for whole verticals
+- [Playbooks](./guide/playbooks/) — goal-oriented, end-to-end guides
 
-## Required Structure For Assistant Docs
+---
 
-Every ingestable document in `docs/` must include:
+## 🛠️ For developers & contributors — [`develop/`](./develop/)
 
-1. YAML frontmatter:
-   - `title`
-   - `audience`
-   - `productArea`
-   - `language`
-   - `keywords`
-2. Required sections:
-   - `Basic`
-   - `Medium`
-   - `Instruction`
-   - `Advanced`
+Everything you need to run, understand, extend, and ship Coderso. Friendly and practical — for the
+exhaustive internal specifications, these pages link into `_docs/` where it helps.
 
-Optional but strongly recommended sections:
-- `Troubleshooting`
-- `Decision Guide`
-- `Checklist`
-- `Security`
+Start with the [**developer handbook index**](./develop/README.md), or jump in:
 
-Backward compatibility:
-- legacy section pack (`What Is It`, `When To Use`, `Step By Step`, `Examples`,
-  `Common Mistakes`) is still accepted by ingest,
-- new docs should prefer the multi-level pack.
+- [Local Development Setup](./develop/getting-started.md)
+- [Project Structure](./develop/project-structure.md)
+- [Architecture Overview](./develop/architecture.md)
+- [The No-Restart Runtime](./develop/runtime-model.md)
+- [Content Models & Widgets](./develop/content-and-widgets.md)
+- [Plugins, SDK & Store](./develop/plugins-and-store.md)
+- [The AI Assistant](./develop/assistant.md)
+- [Testing](./develop/testing.md)
+- [Security for Developers](./develop/security.md)
+- [Contributing Workflow](./develop/contributing.md)
+- [Adding a Change: End to End](./develop/adding-a-change.md)
 
-See [the template](./_TEMPLATE.md) before creating or editing content.
+---
 
-## Query Intent -> Preferred Section
+## 🤖 Internal reference — `_docs/`
 
-Use this mapping to keep assistant answers deterministic:
-
-| Query intent | Preferred section |
-| --- | --- |
-| quick overview / "what is this" | `Basic` |
-| "more details" / "when should I use it" | `Medium` |
-| "how do I configure/use..." | `Instruction` |
-| "advanced setup/scenarios/trade-offs" | `Advanced` |
-| error/fix/debug | `Troubleshooting` |
-| "which option should I choose" | `Decision Guide` |
-| "give me launch/readiness checks" | `Checklist` |
-| security/auth/hardening concerns | `Security` |
-
-## Directory Map
-
-- `getting-started/`
-  High-level orientation, navigation, and first-run guidance.
-- `screens/`
-  Canonical guidance for core admin screens and settings surfaces.
-- `coderso/`
-  Canonical guidance for Advanced modules and their workflows.
-- `solution-kits/`
-  Applied guidance for each packaged solution kit.
-- `playbooks/`
-  Scenario-based guides for common outcomes such as lead generation, booking,
-  commerce, and content-first workflows.
-
-## Coverage
-
-The route-to-doc coverage plan lives in [the coverage matrix](./_COVERAGE_MATRIX.md).
-Every major admin route should map to one canonical document in this directory.
-
-## Writing Rules
-
-- Write in English.
-- Prefer product language over developer shorthand.
-- Explain intent, workflow, and outcome before internal terminology.
-- Use real route and screen names that match the shipped UI.
-- Include practical examples and common failure modes.
-- Do not document roadmap or unfinished behavior as if it were shipped.
+`_docs/` holds the exhaustive, internal documentation used primarily by AI coding agents: detailed
+specs, the task board, ADRs, and the changelog. It is intentionally dense and is **not** required
+reading for using or contributing to Coderso — the human-facing docs above cover that. It remains in
+the repository for full transparency and deep reference.

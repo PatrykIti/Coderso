@@ -5,6 +5,7 @@ export type SiteContentRoute = {
   listPath: string;
   detailPath: string;
   enabled: boolean;
+  detailPageId?: string | null;
 };
 
 export type SiteSettingsResponse = {
@@ -75,10 +76,7 @@ const resolvePostDetailPathPattern = (routes: SiteContentRoute[]) => {
   return route?.detailPath ?? "/post/:slug";
 };
 
-const resolveContentDetailRoute = (
-  routes: SiteContentRoute[],
-  contentTypeSlug: string
-) => {
+const resolveContentDetailRoute = (routes: SiteContentRoute[], contentTypeSlug: string) => {
   const route = routes.find((item) => item.enabled && item.type === contentTypeSlug);
   return {
     detailPathPattern: route?.detailPath ?? `/${contentTypeSlug}/:slug`,
@@ -106,25 +104,20 @@ const normalizeContentRoutes = (value: unknown): SiteContentRoute[] => {
         listPath: record.listPath,
         detailPath: record.detailPath,
         enabled: typeof record.enabled === "boolean" ? record.enabled : true,
+        ...(Object.prototype.hasOwnProperty.call(record, "detailPageId")
+          ? { detailPageId: normalizeOptionalString(record.detailPageId) }
+          : {}),
       } satisfies SiteContentRoute;
     })
     .filter((entry): entry is SiteContentRoute => Boolean(entry));
 };
 
-const resolveSiteSettings = (
-  payload: Record<string, unknown>
-): SiteSettingsResponse => {
+const resolveSiteSettings = (payload: Record<string, unknown>): SiteSettingsResponse => {
   return {
     adminBaseUrl: normalizeOptionalString(payload["site.adminBaseUrl"]),
     publicBaseUrl: normalizeOptionalString(payload["site.publicBaseUrl"]),
-    adminPath:
-      typeof payload["site.adminPath"] === "string"
-        ? payload["site.adminPath"]
-        : "/admin",
-    adminRedirectEnabled: normalizeOptionalBoolean(
-      payload["site.adminRedirectEnabled"],
-      false
-    ),
+    adminPath: typeof payload["site.adminPath"] === "string" ? payload["site.adminPath"] : "/admin",
+    adminRedirectEnabled: normalizeOptionalBoolean(payload["site.adminRedirectEnabled"], false),
     homepageId: normalizeOptionalString(payload["site.homepageId"]),
     notFoundPageId: normalizeOptionalString(payload["site.notFoundPageId"]),
     previewEnabled: normalizeOptionalBoolean(payload["site.previewEnabled"], true),
@@ -218,9 +211,7 @@ export async function updateSiteSettings(update: SiteSettingsUpdate) {
     payload["site.homepageId"] = normalizeOptionalIdInput(update.homepageId);
   }
   if ("notFoundPageId" in update) {
-    payload["site.notFoundPageId"] = normalizeOptionalIdInput(
-      update.notFoundPageId
-    );
+    payload["site.notFoundPageId"] = normalizeOptionalIdInput(update.notFoundPageId);
   }
   if ("previewEnabled" in update) {
     payload["site.previewEnabled"] = update.previewEnabled;

@@ -57,10 +57,7 @@ const resolveCategory = (record: AuditRecord): AuditCategory => {
   return "system";
 };
 
-const resolveSeverity = (
-  record: AuditRecord,
-  metadata: Record<string, unknown>
-): AuditSeverity => {
+const resolveSeverity = (record: AuditRecord, metadata: Record<string, unknown>): AuditSeverity => {
   const metaSeverity = typeof metadata.severity === "string" ? metadata.severity : null;
   if (metaSeverity === "info" || metaSeverity === "warning" || metaSeverity === "error") {
     return metaSeverity;
@@ -199,16 +196,7 @@ export function AuditList() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/audit"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Security</span>
-          <span>/</span>
-          <span className="text-foreground">Audit Logs</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/audit" breadcrumbs={["Security", "Audit Logs"]}>
       <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6">
         <PageHeader
           title="Audit Logs"
@@ -244,18 +232,10 @@ export function AuditList() {
             No audit logs match the current filters.
           </div>
         ) : (
-          <AuditTable
-            logs={filteredLogs}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-          />
+          <AuditTable logs={filteredLogs} selectedId={selectedId} onSelect={handleSelect} />
         )}
       </div>
-      <AuditDetailsDrawer
-        log={selectedLog}
-        open={drawerOpen}
-        onOpenChange={handleDrawerChange}
-      />
+      <AuditDetailsDrawer log={selectedLog} open={drawerOpen} onOpenChange={handleDrawerChange} />
       <ExportDialog
         open={exportOpen}
         onOpenChange={setExportOpen}

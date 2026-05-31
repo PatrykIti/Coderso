@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { listingQueries } from "../../db/schema";
+import { invalidateLinkedDetailPageRouteCaches } from "../../site/cache/siteCache";
 import {
   executeListingQuery,
   parseListingQuery,
@@ -30,19 +31,13 @@ const mapRow = (row: typeof listingQueries.$inferSelect): ListingQueryRecord => 
 });
 
 export async function listListingQueries(): Promise<ListingQueryRecord[]> {
-  const rows = await db
-    .select()
-    .from(listingQueries)
-    .orderBy(desc(listingQueries.updatedAt));
+  const rows = await db.select().from(listingQueries).orderBy(desc(listingQueries.updatedAt));
 
   return rows.map(mapRow);
 }
 
 export async function getListingQuery(id: string) {
-  const [row] = await db
-    .select()
-    .from(listingQueries)
-    .where(eq(listingQueries.id, id));
+  const [row] = await db.select().from(listingQueries).where(eq(listingQueries.id, id));
   if (!row) return null;
   return mapRow(row);
 }
@@ -83,6 +78,10 @@ export async function updateListingQuery(id: string, input: unknown) {
     .where(eq(listingQueries.id, id))
     .returning();
 
+  if (row) {
+    await invalidateLinkedDetailPageRouteCaches();
+  }
+
   if (!row) return null;
   return mapRow(row);
 }
@@ -92,6 +91,10 @@ export async function deleteListingQuery(id: string) {
     .delete(listingQueries)
     .where(eq(listingQueries.id, id))
     .returning({ id: listingQueries.id });
+
+  if (row) {
+    await invalidateLinkedDetailPageRouteCaches();
+  }
 
   if (!row) return null;
   return row;

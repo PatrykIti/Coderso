@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import {
   buildCommerceComparePayload,
+  buildCommerceProductHrefMap,
   buildCommerceWishlistPayload,
   resolveCommerceRuntimeProducts,
   toCommerceRuntimeCard,
@@ -34,14 +35,87 @@ test("toCommerceRuntimeCard maps runtime friendly shape", () => {
   expect(card.stock.inStock).toBe(true);
 });
 
-test("compare/wishlist payload builders normalize runtime payloads", () => {
-  const compare = buildCommerceComparePayload([baseProduct]);
+test("compare/wishlist payload builders normalize runtime payloads", async () => {
+  const compare = await buildCommerceComparePayload([baseProduct], {
+    getContentRoutes: async () => [
+      {
+        type: "products",
+        enabled: true,
+        listPath: "/products",
+        detailPath: "/products/:slug",
+      },
+    ],
+    readMedia: async () => ({
+      id: "m-1",
+      key: "2026/05/m-1.jpg",
+      url: "/media/m-1.jpg",
+      originalName: "m-1.jpg",
+      type: "image",
+      mimeType: "image/jpeg",
+      size: 100,
+      width: 1200,
+      height: 800,
+      alt: "Oak Residence hero",
+      title: "Oak Residence hero",
+      caption: null,
+      createdBy: null,
+      createdAt: new Date("2026-02-01T10:00:00.000Z"),
+      updatedAt: new Date("2026-02-01T10:00:00.000Z"),
+    }),
+    now: () => "2026-05-19T12:00:00.000Z",
+  });
   const wishlist = buildCommerceWishlistPayload([baseProduct]);
 
   expect(compare.rows).toHaveLength(1);
+  expect(compare.generatedAt).toBe("2026-05-19T12:00:00.000Z");
   expect(compare.rows[0]?.priceAmount).toBe(450000);
+  expect(compare.rows[0]?.excerpt).toBe("Modern home");
+  expect(compare.rows[0]?.productHref).toBe("/products/oak-residence");
+  expect(compare.rows[0]?.imageUrl).toBe("/media/m-1.jpg");
+  expect(compare.rows[0]?.imageAlt).toBe("Oak Residence hero");
   expect(wishlist.total).toBe(1);
   expect(wishlist.items[0]?.primaryMediaId).toBe("m-1");
+});
+
+test("buildCommerceProductHrefMap resolves safe relative product hrefs", async () => {
+  const hrefMap = await buildCommerceProductHrefMap([baseProduct], {
+    getContentRoutes: async () => [
+      {
+        type: "products",
+        enabled: true,
+        listPath: "/products",
+        detailPath: "/products/:slug",
+      },
+    ],
+  });
+
+  expect(hrefMap.get("product-1")).toBe("/products/oak-residence");
+});
+
+test("compare payload omits product links when no enabled products detail route exists", async () => {
+  const compare = await buildCommerceComparePayload([baseProduct], {
+    getContentRoutes: async () => [],
+    readMedia: async () => ({
+      id: "m-1",
+      key: "2026/05/m-1.jpg",
+      url: "/media/m-1.jpg",
+      originalName: "m-1.jpg",
+      type: "image",
+      mimeType: "image/jpeg",
+      size: 100,
+      width: 1200,
+      height: 800,
+      alt: "Oak Residence hero",
+      title: "Oak Residence hero",
+      caption: null,
+      createdBy: null,
+      createdAt: new Date("2026-02-01T10:00:00.000Z"),
+      updatedAt: new Date("2026-02-01T10:00:00.000Z"),
+    }),
+    now: () => "2026-05-19T12:00:00.000Z",
+  });
+
+  expect(compare.rows[0]?.productHref).toBeNull();
 });
 
 test("resolveCommerceRuntimeProducts enforces published status outside preview", async () => {

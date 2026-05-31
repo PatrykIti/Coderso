@@ -25,6 +25,237 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1032 | 2026-05-31 | CodeQL widget sanitizer and validation DoS remediation | Security/CodeQL/Widgets/Testing |
+| 1031 | 2026-05-31 | Bun coverage WriteFailed stabilization | CI/Testing/Tooling/Docs |
+| 1030 | 2026-05-31 | CI env loading for test lanes | CI/Testing/Docs |
+| 1029 | 2026-05-30 | TASK-343-02 Appointment Form phone validation | CMS Widgets/Appointment Form/Admin UI/Runtime/QA/Docs |
+| 1028 | 2026-05-30 | TASK-343-04 Accordion preview truthfulness | CMS Widgets/Accordion/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1027 | 2026-05-30 | TASK-343-05 FAQ Accordion spacing and preview truthfulness | CMS Widgets/FAQ/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1026 | 2026-05-30 | TASK-343-06 Booking Calendar truthfulness | CMS Widgets/Booking/Admin UI/Runtime/QA/Docs |
+| 1025 | 2026-05-30 | TASK-343-08 Compare Timeline segment label size | CMS Widgets/Compare Timeline/Runtime/QA/Docs |
+| 1024 | 2026-05-30 | TASK-343-11 Team truthfulness | CMS Widgets/Team/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1023 | 2026-05-30 | TASK-343-12 Template Section truthfulness | CMS Widgets/Template Section/Admin UI/Runtime/QA/Docs |
+| 1022 | 2026-05-30 | TASK-343-13 Timeline truthfulness | CMS Widgets/Timeline/Admin UI/Runtime/QA/Docs |
+| 1021 | 2026-05-30 | TASK-343-15 Navigation truthfulness | CMS Widgets/Navigation/Admin UI/Runtime/QA/Docs |
+| 1020 | 2026-05-30 | TASK-343-16 Product Gallery truthfulness | CMS Widgets/Commerce/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1019 | 2026-05-30 | TASK-343-17 Rich Text Section truthfulness | CMS Widgets/Rich Text/Admin UI/Runtime/Security/QA/Docs |
+| 1018 | 2026-05-30 | TASK-343-20 Search Box truthfulness | CMS Widgets/Search/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1017 | 2026-05-30 | TASK-343-22 CTA Banner truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 1016 | 2026-05-30 | TASK-343-23 Gallery Mosaic truthfulness | CMS Widgets/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1015 | 2026-05-30 | TASK-343-26 Stats KPI truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 1014 | 2026-05-30 | TASK-343-25 Pricing Plans truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 1013 | 2026-05-30 | TASK-343-24 Logo Cloud truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 1012 | 2026-05-30 | TASK-343-27 Tabs slot truthfulness | CMS Widgets/Admin UI/Builder/Runtime/QA/Docs |
+| 1011 | 2026-05-30 | TASK-343-28 Split Layout ratio truthfulness | CMS Widgets/Admin UI/UX/QA/Docs |
+| 1010 | 2026-05-30 | TASK-343-29 Entry Teaser a11y and CTA guidance | CMS Widgets/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1009 | 2026-05-30 | TASK-343-31 MediaPicker dialog description | CMS Widgets/Admin UI/Accessibility/QA/Docs |
+| 1008 | 2026-05-30 | TASK-343-30 Shared color state truthfulness | CMS Widgets/Admin UI/QA/Docs |
+| 1007 | 2026-05-30 | TASK-343-21 Shared block layout and visibility | CMS Widgets/Admin UI/Builder/Runtime/QA |
+| 1006 | 2026-05-30 | TASK-343-19 Posts Feed route truthfulness | CMS Widgets/Posts/Admin UI/Runtime/QA |
+| 1005 | 2026-05-30 | TASK-343-18 Listing Filters a11y and empty facets | CMS Widgets/Listings/Admin UI/Runtime/A11y/QA |
+| 1004 | 2026-05-30 | TASK-343-14 Form Embed truthfulness | CMS Widgets/Forms/Admin UI/Runtime/QA |
+| 1003 | 2026-05-30 | TASK-343-10 Toggle Block contrast | CMS Widgets/Admin UI/Runtime/QA |
+| 1002 | 2026-05-30 | TASK-343-09 Stack responsive class maps | CMS Widgets/Runtime/Tailwind/QA |
+| 1001 | 2026-05-30 | TASK-343-07 Feature Grid remediation | CMS Widgets/Admin UI/A11y/QA |
+| 1000 | 2026-05-30 | TASK-343-03 Newsletter submit guard | CMS Widgets/Forms/Public UX/QA |
+| 999 | 2026-05-30 | TASK-343-01 Hero remediation | CMS Widgets/Admin UI/Runtime/QA |
+| 998 | 2026-05-30 | TASK-343 Claude cross-check | QA/Widgets/Docs |
+| 997 | 2026-05-29 | TASK-343 code alignment audit | QA/Widgets/Docs |
+| 996 | 2026-05-29 | TASK-343 shared MediaPicker routing | QA/Widgets/Admin UI/Accessibility/Docs |
+| 995 | 2026-05-29 | TASK-343 report classification correction | QA/Widgets/Playwright/Docs |
+| 994 | 2026-05-28 | TASK-342 widget Playwright gap closure | QA/Widgets/Playwright/Docs |
+| 993 | 2026-05-28 | TASK-342 evidence reconciliation | QA/Widgets/Playwright/Docs |
+| 992 | 2026-05-28 | TASK-342 commerce populated fixture wave | QA/Widgets/Commerce/Playwright |
+| 991 | 2026-05-28 | TASK-342 metadata-gap admin contract wave | QA/Widgets/Admin UI/Playwright |
+| 990 | 2026-05-27 | Widget current-state Playwright re-audit | QA/Widgets/Playwright/Docs |
+| 989 | 2026-05-27 | Widget contract Bun expectation drift repair | QA/Widgets/Admin UI/Tooling |
+| 988 | 2026-05-27 | Widget hero parity program closure | CMS Widgets/Admin UI/Docs/QA |
+| 987 | 2026-05-27 | Residual widget contract truthfulness sweep | CMS Widgets/Admin UI/Contracts/QA/Docs |
+| 986 | 2026-05-27 | Timeline contract truthfulness | CMS Widgets/Admin UI/Timeline/Contracts/Playwright/QA/Docs |
+| 985 | 2026-05-27 | Product Compare contract truthfulness | CMS Widgets/Admin UI/Commerce/Contracts/Playwright/QA/Docs |
+| 984 | 2026-05-27 | Product Gallery contract truthfulness | CMS Widgets/Admin UI/Commerce/Contracts/Playwright/QA/Docs |
+| 983 | 2026-05-27 | Entry Teaser contract truthfulness | CMS Widgets/Admin UI/Content/Contracts/Playwright/QA/Docs |
+| 982 | 2026-05-27 | Rich Text Section contract truthfulness | CMS Widgets/Admin UI/Editorial/Contracts/Playwright/QA/Docs |
+| 981 | 2026-05-27 | Team contract truthfulness | CMS Widgets/Admin UI/Team/Contracts/Playwright/QA/Docs |
+| 980 | 2026-05-27 | Gallery Mosaic contract truthfulness | CMS Widgets/Admin UI/Media/Contracts/Playwright/QA/Docs |
+| 979 | 2026-05-27 | FAQ Accordion contract truthfulness | CMS Widgets/Admin UI/FAQ/Contracts/Playwright/QA/Docs |
+| 978 | 2026-05-27 | Pricing Plans contract truthfulness | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
+| 977 | 2026-05-27 | Testimonials contract truthfulness | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
+| 976 | 2026-05-27 | CTA Banner hero section parity | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
+| 975 | 2026-05-27 | Contact hero color parity | CMS Widgets/Admin UI/Forms/Contracts/Playwright/QA/Docs |
+| 974 | 2026-05-27 | Navigation hero parity and contract truthfulness | CMS Widgets/Admin UI/Navigation/Contracts/Playwright/QA/Docs |
+| 973 | 2026-05-27 | Widget daily live preview surface | CMS Widgets/Admin UI/Builder/Preview/QA/Docs |
+| 972 | 2026-05-27 | Widget contract Vitest expectation drift repair | QA/Widgets/Admin UI/Tooling |
+| 971 | 2026-05-27 | Spacer and Stats KPI lint typecheck repair | QA/Widgets/Admin UI/Tooling |
+| 970 | 2026-05-26 | Widget UI mode drift cleanup closure | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
+| 969 | 2026-05-26 | Raw Advanced payload and preset cleanup | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
+| 968 | 2026-05-26 | Booking editor cleanup | CMS Widgets/Admin UI/Booking/Contracts/QA/Docs |
+| 967 | 2026-05-26 | Gallery Mosaic and Team editor cleanup | CMS Widgets/Admin UI/Media/Team/Contracts/QA/Docs |
+| 966 | 2026-05-26 | Commerce editor query and color cleanup | CMS Widgets/Admin UI/Commerce/Contracts/QA/Docs |
+| 965 | 2026-05-26 | Logo Cloud editor drift cleanup | CMS Widgets/Admin UI/Trust/Contracts/QA/Docs |
+| 964 | 2026-05-26 | Feature Grid editor drift cleanup | CMS Widgets/Admin UI/Marketing/Contracts/QA/Docs |
+| 963 | 2026-05-26 | Newsletter editor drift cleanup | CMS Widgets/Admin UI/Forms/Contracts/QA/Docs |
+| 962 | 2026-05-25 | FAQ Accordion editor drift cleanup | CMS Widgets/Admin UI/FAQ/Contracts/QA/Docs |
+| 961 | 2026-05-25 | Form Embed editor drift cleanup | CMS Widgets/Admin UI/Forms/Contracts/QA/Docs |
+| 960 | 2026-05-25 | Product Table editor drift cleanup | CMS Widgets/Admin UI/Commerce/Contracts/QA/Docs |
+| 959 | 2026-05-25 | Listing Filters editor drift cleanup | CMS Widgets/Admin UI/Listings/Contracts/QA/Docs |
+| 958 | 2026-05-25 | Search Box editor drift cleanup | CMS Widgets/Admin UI/Search/Contracts/QA/Docs |
+| 957 | 2026-05-25 | Content List editor drift cleanup | CMS Widgets/Admin UI/Contracts/QA/Docs |
+| 956 | 2026-05-25 | Stack editor drift cleanup | CMS Widgets/Admin UI/Layout/Contracts/QA/Docs |
+| 955 | 2026-05-25 | Divider editor drift cleanup | CMS Widgets/Admin UI/Layout/Contracts/QA/Docs |
+| 954 | 2026-05-25 | Spacer editor drift cleanup | CMS Widgets/Admin UI/Layout/Contracts/QA/Docs |
+| 953 | 2026-05-25 | Accordion editor drift cleanup | CMS Widgets/Admin UI/Runtime/Contracts/QA/Docs |
+| 952 | 2026-05-25 | Tabs editor drift cleanup | CMS Widgets/Admin UI/Runtime/Contracts/QA/Docs |
+| 951 | 2026-05-25 | Split Layout editor ownership | CMS Widgets/Admin UI/Layout/Contracts/QA/Docs |
+| 950 | 2026-05-25 | Template Section editor ownership | CMS Widgets/Admin UI/Runtime/Contracts/QA/Docs |
+| 949 | 2026-05-25 | Grid Columns editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
+| 948 | 2026-05-25 | Section editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
+| 947 | 2026-05-25 | Testimonials editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
+| 946 | 2026-05-25 | Entry Teaser editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
+| 945 | 2026-05-24 | One-time widget Wizard lifecycle | CMS Widgets/Admin UI/Builder/Playwright/QA/Docs |
+| 944 | 2026-05-24 | Remaining widget editor contracts | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
+| 943 | 2026-05-24 | Widget frontend fixtures and overflow contract | CMS Widgets/Runtime/Frontend CSS/Playwright/QA/Docs |
+| 942 | 2026-05-24 | Layout widget Advanced token policy | CMS Widgets/Admin UI/Layout/QA/Docs |
+| 941 | 2026-05-24 | P2 widget editor ownership | CMS Widgets/Admin UI/Forms/Security/QA/Docs |
+| 940 | 2026-05-24 | Stats KPI editor ownership | CMS Widgets/Admin UI/QA/Docs |
+| 939 | 2026-05-24 | Hero editor ownership | CMS Widgets/Admin UI/QA/Docs |
+| 938 | 2026-05-24 | Form Embed editor ownership | CMS Widgets/Forms/Admin UI/Security/QA/Docs |
+| 937 | 2026-05-24 | Posts Feed editor ownership | CMS Widgets/Admin UI/QA/Docs |
+| 936 | 2026-05-24 | Accordion editor ownership | CMS Widgets/Admin UI/QA/Docs |
+| 935 | 2026-05-24 | Tabs editor ownership | CMS Widgets/Admin UI/QA/Docs |
+| 934 | 2026-05-24 | Listing Filters editor ownership | CMS Widgets/Admin UI/QA/Docs |
+| 933 | 2026-05-24 | Template Section and Search Box editor ownership | CMS Widgets/Admin UI/QA/Docs |
+| 932 | 2026-05-23 | Widget contract Playwright smoke harness | CMS Widgets/Admin UI/Playwright/QA/Docs |
+| 931 | 2026-05-23 | Widget editor DOM ownership metadata | CMS Widgets/Admin UI/QA/Docs |
+| 930 | 2026-05-23 | Widget editor contract v2 foundation | CMS Widgets/Admin UI/QA/Docs |
+| 929 | 2026-05-23 | Shared row-flow child shell | CMS Widgets/Layout/Runtime/QA/Docs |
+| 928 | 2026-05-23 | Shared widget script dedupe and color-token truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 927 | 2026-05-23 | Shared widget residual audit closure | CMS Widgets/Accessibility/Admin UI/QA/Docs |
+| 926 | 2026-05-22 | TASK-292 toggle block widget followups | CMS Widgets/Admin UI/Runtime/Accessibility/QA/Docs |
+| 925 | 2026-05-22 | TASK-291 timeline widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 924 | 2026-05-22 | TASK-290 testimonials widget product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 923 | 2026-05-22 | TASK-289 Team widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 922 | 2026-05-22 | TASK-287 stats kpi widget followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 921 | 2026-05-22 | TASK-288 tabs widget drift hardening | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 920 | 2026-05-22 | TASK-288 tabs widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 919 | 2026-05-22 | TASK-286 stack widget Playwright product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 918 | 2026-05-21 | TASK-284 spacer widget Playwright product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 917 | 2026-05-21 | TASK-284-04 spacer horizontal orientation decision | CMS Widgets/Layout/Runtime/QA/Docs |
+| 916 | 2026-05-21 | TASK-284-03 spacer named rhythm presets | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 915 | 2026-05-21 | TASK-284-02 spacer viewport and fluid lengths | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 914 | 2026-05-21 | TASK-284-01 spacer editor guidance and accessibility | CMS Widgets/Admin UI/Accessibility/QA/Docs |
+| 913 | 2026-05-22 | TASK-283 section widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 912 | 2026-05-22 | TASK-283-05-02 section angle and overlay slider controls | CMS Widgets/Admin UI/QA/Docs |
+| 911 | 2026-05-22 | TASK-326 section shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 910 | 2026-05-22 | TASK-283-07 section region labels and structure UX | CMS Widgets/Admin UI/Builder/QA/Docs |
+| 909 | 2026-05-22 | TASK-283-06 section responsive spacing | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 908 | 2026-05-21 | TASK-283-05-01 section shadow motion and surface preview | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 907 | 2026-05-21 | TASK-283-04 section presets and width guidance | CMS Widgets/Admin UI/QA/Docs |
+| 906 | 2026-05-21 | TASK-283-03 section heading typography alignment and Wizard UX | CMS Widgets/Admin UI/Runtime/QA |
+| 905 | 2026-05-21 | TASK-283-02 section background media and layering model | CMS Widgets/Admin UI/Runtime/QA |
+| 904 | 2026-05-21 | TASK-283-01 section layout height and region flow controls | CMS Widgets/Admin UI/Runtime/QA |
+| 903 | 2026-05-22 | TASK-281 product table widget closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 902 | 2026-05-22 | TASK-281-09 product table export and currency | CMS Widgets/Admin UI/Runtime/QA |
+| 901 | 2026-05-22 | TASK-281-08 product table layout variants and sticky header | CMS Widgets/Admin UI/Runtime/QA |
+| 900 | 2026-05-22 | TASK-281-07 product table public controls | CMS Widgets/Admin UI/Runtime/QA |
+| 899 | 2026-05-22 | TASK-281-06 product table media excerpt section header | CMS Widgets/Admin UI/Runtime/QA |
+| 898 | 2026-05-21 | TASK-281-05 product table accessibility semantics | CMS Widgets/Accessibility/Runtime/QA |
+| 897 | 2026-05-21 | TASK-281-04 product table links and action column | CMS Widgets/Admin UI/Runtime/QA |
+| 896 | 2026-05-21 | TASK-281-03 product table status stock and row state | CMS Widgets/Admin UI/Runtime/QA |
+| 895 | 2026-05-21 | TASK-281-02 product table column labels and visibility | CMS Widgets/Admin UI/Runtime/QA |
+| 894 | 2026-05-21 | TASK-281-01 product table admin preview parity | CMS Widgets/Admin UI/Runtime/QA |
+| 893 | 2026-05-21 | TASK-282 Rich Text Section implementation pass | CMS Widgets/Admin UI/Runtime/Accessibility/QA |
+| 892 | 2026-05-21 | TASK-325 Grid Columns shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA |
+| 891 | 2026-05-21 | TASK-319 newsletter responsive variant decision | CMS Widgets/Admin UI/Runtime/QA |
+| 890 | 2026-05-21 | TASK-322 session expiry resilience | CMS Admin UI/Auth/Reliability |
+| 889 | 2026-05-21 | TASK-322-01 admin API session classification | CMS Admin API/Auth |
+| 888 | 2026-05-21 | TASK-317 widget editor live preview surface | CMS Admin UI/Builder/Preview |
+| 887 | 2026-05-21 | TASK-321 shared clear undo feedback contract | CMS Admin UI/Widgets/QA |
+| 886 | 2026-05-21 | TASK-318 section sticky containment contract | CMS Layout/Runtime/QA |
+| 885 | 2026-05-21 | TASK-323 content list legacy pagination truthfulness | CMS Widgets/Runtime/QA |
+| 884 | 2026-05-21 | TASK-320 content list shared accessibility residuals | CMS Widgets/Accessibility/Runtime/QA |
+| 883 | 2026-05-19 | TASK-280 Product Gallery follow-ups and TASK-313 money parity | CMS Widgets/Admin UI/Runtime/QA |
+| 882 | 2026-05-20 | TASK-279 product compare widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
+| 881 | 2026-05-20 | TASK-278 pricing plans widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
+| 880 | 2026-05-20 | TASK-277 posts feed widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
+| 879 | 2026-05-19 | TASK-276 newsletter widget Playwright followups | CMS Widgets/Forms/Admin UI/Runtime/QA |
+| 878 | 2026-05-19 | TASK-275 navigation widget followups | CMS Widgets/Admin UI/Runtime/QA |
+| 877 | 2026-05-19 | TASK-274 Logo Cloud closure and validation sync | CMS Widgets/Admin UI/Runtime/QA |
+| 876 | 2026-05-19 | TASK-274-05 Logo Cloud tile links and CTA | CMS Widgets/Admin UI/Runtime/QA |
+| 875 | 2026-05-19 | TASK-274-04 Logo Cloud layouts and marquee | CMS Widgets/Admin UI/Runtime/QA |
+| 874 | 2026-05-19 | TASK-274-03 Logo Cloud item management and reorder | CMS Widgets/Admin UI/QA |
+| 873 | 2026-05-19 | TASK-274-02 Logo Cloud asset authoring and previews | CMS Widgets/Admin UI/Runtime/QA |
+| 872 | 2026-05-19 | TASK-274-01 Logo Cloud header shell controls | CMS Widgets/Admin UI/Runtime/QA |
+| 871 | 2026-05-19 | TASK-314 Logo Cloud shared residuals | CMS Widgets/Admin UI/Runtime/QA |
+| 870 | 2026-05-20 | TASK-273 listing-filters and shared runtime wave | CMS Widgets/Admin UI/Runtime/QA |
+| 869 | 2026-05-19 | TASK-272 Hero widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
+| 868 | 2026-05-19 | TASK-271 Grid Columns widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
+| 867 | 2026-05-19 | TASK-311 forms field model wave | CMS Forms/Runtime/Admin UI |
+| 866 | 2026-05-19 | TASK-310 shared color adoption wave | CMS Widgets/Admin UI |
+| 865 | 2026-05-19 | TASK-308 and TASK-309 footer owner wave | CMS Footer/Admin UI/Runtime |
+| 864 | 2026-05-19 | TASK-304 Entry Teaser manual listing contract | CMS Widgets/Runtime/Admin UI |
+| 863 | 2026-05-19 | TASK-293 to TASK-301 shared follow-up owners | CMS Widgets/Forms/Admin UI/Runtime |
+| 862 | 2026-05-18 | TASK-257 to TASK-270 regression fixes | QA/CMS Widgets/Assistant |
+| 861 | 2026-05-18 | TASK-270 Gallery Mosaic widget follow-ups | CMS Widgets/Admin UI/Runtime/QA |
+| 860 | 2026-05-18 | TASK-312 Gallery Mosaic shared residuals | CMS Widgets/Admin UI/Runtime/QA |
+| 847 | 2026-05-18 | TASK-269 Form Embed closure | CMS Widgets/Forms/Admin UI/QA |
+| 846 | 2026-05-17 | TASK-256 follow-up drift closure | CMS Widgets/Admin UI/QA |
+| 845 | 2026-05-17 | TASK-256 shared widget contract closure | CMS Widgets/Admin UI/QA |
+| 844 | 2026-05-13 | Admin breadcrumbs and workspace links | CMS Content/Admin UI |
+| 843 | 2026-05-12 | Detail template workspace actions | CMS Content/Admin UI |
+| 842 | 2026-05-12 | Detail template field bindings | CMS Content/Admin UI |
+| 841 | 2026-05-12 | Widget editor single-column control stacking | CMS Widgets/Admin UI |
+| 840 | 2026-05-12 | Admin detail page schema browser-safe hashing | Admin UI/Resilience |
+| 839 | 2026-05-12 | TASK-252 widget configuration closure | CMS Widgets/Admin UI/QA |
+| 838 | 2026-05-11 | TASK-252 widget inspector IA | CMS Widgets/Admin UI |
+| 837 | 2026-05-10 | TASK-252 widget research archive | CMS Widgets/Research |
+| 836 | 2026-05-11 | TASK-190 implementation drift hardening | Assistant/Core |
+| 835 | 2026-05-11 | TASK-190 live provider matrix rerun | Assistant/QA |
+| 834 | 2026-05-11 | TASK-190 validation drift closure | Assistant/Core/QA |
+| 833 | 2026-05-10 | TASK-190 final agent pass fixes | Assistant/Core |
+| 832 | 2026-05-10 | TASK-190 legacy custom screen reuse fallback | Assistant/Core |
+| 831 | 2026-05-10 | TASK-190 post-review drift fixes | Assistant/Core |
+| 830 | 2026-05-10 | TASK-190 blueprint composer closure | Documentation/Assistant |
+| 829 | 2026-05-10 | TASK-190 blueprint composer guide | Documentation/Assistant |
+| 828 | 2026-05-10 | TASK-190 composition fixture matrix | Assistant/QA |
+| 827 | 2026-05-10 | TASK-190 detail-page generic resource integration | Assistant/Core |
+| 826 | 2026-05-10 | TASK-190 composition review metadata | Assistant/Core |
+| 825 | 2026-05-10 | TASK-190 existing resource matcher | Assistant/Core |
+| 824 | 2026-05-10 | TASK-190 collection workspace assistant context | Assistant/Core |
+| 823 | 2026-05-10 | TASK-190 detail template editor surface | Assistant/Admin UI |
+| 822 | 2026-05-10 | TASK-190 collection workspace cache UI shell | Assistant/Admin UI |
+| 821 | 2026-05-10 | TASK-190 collection workspace canonical resolution | Assistant/Core |
+| 820 | 2026-05-10 | TASK-190 collection workspace route read model | Assistant/Core |
+| 819 | 2026-05-10 | TASK-190 admin bindings metadata safety | Assistant/Core |
+| 818 | 2026-05-10 | TASK-190 admin screen layout composer | Assistant/Core |
+| 817 | 2026-05-10 | TASK-190 detail-page fixture runtime acceptance | Assistant/QA |
+| 816 | 2026-05-10 | TASK-190 detail-page admin client cache parity | Assistant/Admin Cache |
+| 815 | 2026-05-10 | TASK-190 conflict media and permission closure | Assistant/Core |
+| 814 | 2026-05-10 | TASK-190 docs status drift sync | Documentation/Assistant |
+| 813 | 2026-05-10 | Security strict dependency advisory closure | Security/Dependencies |
+| 812 | 2026-05-09 | TASK-190 detail-page route contract hardening | Assistant/Core |
+| 811 | 2026-05-09 | Test runner and wave act stabilization | QA/Tooling |
+| 810 | 2026-05-08 | TASK-190 detail-page revision routes | Assistant/Core |
+| 809 | 2026-05-08 | TASK-190 drift pass runtime and cache verification | Assistant/Core |
+| 808 | 2026-05-08 | TASK-190 detail-page drift hardening | Assistant/Core |
+| 807 | 2026-05-08 | TASK-190 detail-page lifecycle routes | Assistant/Core |
+| 806 | 2026-05-08 | TASK-190 detail-page CRUD and read routes | Assistant/Core |
+| 805 | 2026-05-08 | TASK-190 detail-page action adapter | Assistant/Core |
+| 804 | 2026-05-08 | TASK-190 detail-page preview and cache invalidation | Assistant/Core |
+| 803 | 2026-05-08 | TASK-190 detail-page runtime route rendering | Assistant/Core |
+| 802 | 2026-05-08 | TASK-190 detailPageId content-route round-trip | Assistant/Core |
+| 801 | 2026-05-08 | TASK-190 detail page binding resolver | Assistant/Core |
+| 800 | 2026-05-07 | TASK-190 provider sanitization and collection-link conflict closure | Assistant/Core |
+| 799 | 2026-05-07 | TASK-190 planner boundary and page collection drift fixes | Assistant/Core |
+| 798 | 2026-05-07 | TASK-190 detail page model and schema contract | Assistant/Core |
+| 797 | 2026-05-07 | TASK-190 page upsert composition adapter | Assistant/Core |
+| 796 | 2026-05-07 | TASK-190 post-review drift fixes | Assistant/Core |
+| 795 | 2026-05-07 | TASK-190 page section library slice | Assistant/Core |
+| 794 | 2026-05-07 | TASK-190 listing facet and card merge slice | Assistant/Core |
+| 793 | 2026-05-07 | TASK-190 content schema merge slice | Assistant/Core |
+| 792 | 2026-05-06 | TASK-190 conflict needs-input slice | Assistant/Core |
+| 791 | 2026-05-06 | TASK-190 provider and shadow diagnostics slice | Assistant/Core |
+| 790 | 2026-05-05 | TASK-190 blueprint composer foundation slice 1 | Assistant/Core |
 | 789 | 2026-05-04 | Manual git hooks setup and Docker-safe install | Developer Tooling |
 | 788 | 2026-05-03 | TASK-251 custom screens builder hardening | CMS Custom Screens/Admin UI |
 | 787 | 2026-05-02 | TASK-250 custom screens screen widget parity | CMS Custom Screens/Admin UI |
@@ -735,8 +966,8 @@ Project Change Log.
 | 120 | 2026-02-01 | Admin input controls theming | Admin/UI |
 | 121 | 2026-02-01 | Menus editor wiring | Admin/UI |
 | 122 | 2026-02-01 | Menus editor validation | Admin/UI |
-| 123 | 2026-02-02 | Widgets library UI refresh | Admin/UI |
-| 124 | 2026-02-02 | Widget template editor drag-and-drop | Admin/UI |
+| 848 | 2026-02-02 | Widgets library UI refresh | Admin/UI |
+| 849 | 2026-02-02 | Widget template editor drag-and-drop | Admin/UI |
 | 210 | 2026-02-14 | Page settings retention and runtime preview polish | CMS/Pages |
 | 211 | 2026-02-14 | Page builder template sections | Admin/UI |
 | 212 | 2026-02-14 | Runtime preview FOUC dev modules | CMS/Site |
@@ -752,7 +983,7 @@ Project Change Log.
 | 221 | 2026-02-15 | Admin rate limit auth bypass | Core/Security |
 | 222 | 2026-02-16 | Settings UI polish + content type editor fix | Admin/UI |
 | 223 | 2026-02-16 | Menu editor cache + drag nesting | Admin/UI |
-| 204 | 2026-02-15 | Security hardening and settings UX | Core/Security |
+| 850 | 2026-02-15 | Security hardening and settings UX | Core/Security |
 | 224 | 2026-02-17 | Widget library cache hydration | Admin/UI |
 
 | 225 | 2026-02-17 | Admin SPA navigation + prefetch | Admin/UI |
@@ -821,4 +1052,3 @@ Project Change Log.
 | 284 | 2026-02-21 | TASK-057-07 post block runtime renderer and public preview/published parity | CMS/Runtime |
 | 285 | 2026-02-21 | TASK-057-03 rich text engine and text formatting capabilities | Admin/UI |
 | 286 | 2026-02-21 | TASK-057-08 post editor QA/docs/rollout closure with fallback mode | QA/Docs |
-| 287 | 2026-02-23 | Posts editor paste flow fix (rich-text priority + image-safe fallback + section normalization) | Admin/UI |

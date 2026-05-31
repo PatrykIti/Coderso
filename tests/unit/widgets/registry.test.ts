@@ -7,9 +7,22 @@ import {
   listWidgetsForSurfaceContext,
   registerWidget,
 } from "../../../core/widgets/registry";
+import { createPricingPlansWidget } from "../../../core/widgets/core/pricingPlans";
+import {
+  createProductTableWidget,
+  type ProductTableData,
+} from "../../../core/widgets/core/productTable";
+import type { WidgetEditorProps } from "../../../core/widgets/types";
 import type { WidgetDefinition } from "../../../core/widgets/types";
+import type { PricingPlansData } from "../../../core/widgets/core/pricingPlans";
 
 const Dummy = () => null;
+const DummyPricingPlansEditor = Dummy as unknown as (
+  props: WidgetEditorProps<PricingPlansData>
+) => null;
+const DummyProductTableEditor = Dummy as unknown as (
+  props: WidgetEditorProps<ProductTableData>
+) => null;
 
 const baseDef: WidgetDefinition = {
   type: "hero",
@@ -220,4 +233,30 @@ test("registerWidget rejects invalid binding target metadata", () => {
       ],
     })
   ).toThrow("widget_binding_targets_duplicate");
+});
+
+test("registerWidget keeps pricing plans two-plan variant available", () => {
+  registerWidget(
+    createPricingPlansWidget({
+      wizard: DummyPricingPlansEditor,
+      visual: DummyPricingPlansEditor,
+      advanced: DummyPricingPlansEditor,
+    })
+  );
+
+  const pricingWidget = listWidgets().find((item) => item.type === "pricing-plans");
+  expect(pricingWidget?.variants.map((variant) => variant.id)).toContain("two-plans");
+});
+
+test("registerWidget keeps product table compact variant available", () => {
+  registerWidget(
+    createProductTableWidget({
+      wizard: DummyProductTableEditor,
+      visual: DummyProductTableEditor,
+      advanced: DummyProductTableEditor,
+    })
+  );
+
+  const productTableWidget = listWidgets().find((item) => item.type === "product-table");
+  expect(productTableWidget?.variants.map((variant) => variant.id)).toContain("compact");
 });

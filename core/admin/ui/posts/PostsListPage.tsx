@@ -51,12 +51,7 @@ const postListToasts = createListActionToastAdapter({
   },
 });
 
-export function filterPosts(
-  posts: PostSummary[],
-  query: string,
-  status: string,
-  author: string
-) {
+export function filterPosts(posts: PostSummary[], query: string, status: string, author: string) {
   const normalized = query.trim().toLowerCase();
   return posts.filter((post) => {
     const matchesQuery =
@@ -230,8 +225,7 @@ export function PostsListPage() {
   );
   const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
   const selectedCount = visibleSelectedIds.length;
-  const isAllSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
   const clearSelection = useCallback(() => {
@@ -355,10 +349,7 @@ export function PostsListPage() {
     setPendingDeleteId(id);
   };
 
-  const runBulkAction = async (
-    action: "publish" | "unpublish" | "delete",
-    ids: string[]
-  ) => {
+  const runBulkAction = async (action: "publish" | "unpublish" | "delete", ids: string[]) => {
     if (ids.length === 0) return;
     setError(null);
     setBulkFeedback(null);
@@ -420,16 +411,7 @@ export function PostsListPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/posts"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span className="text-foreground">Posts</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/posts" breadcrumbs={["Content", "Posts"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Posts"
@@ -445,9 +427,7 @@ export function PostsListPage() {
                     <span className="font-semibold text-foreground">
                       {selectedCount} post{selectedCount === 1 ? "" : "s"} selected
                     </span>
-                    <span className="sr-only">
-                      Apply a bulk action to the visible selection.
-                    </span>
+                    <span className="sr-only">Apply a bulk action to the visible selection.</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Select
@@ -520,11 +500,7 @@ export function PostsListPage() {
         ) : (
           <PostsTable
             items={pagination.visibleRows}
-            emptyMessage={
-              items.length > 0
-                ? "No posts match your current filters."
-                : undefined
-            }
+            emptyMessage={items.length > 0 ? "No posts match your current filters." : undefined}
             selectedIds={visibleSelectedIds}
             isAllSelected={isAllSelected}
             isIndeterminate={isIndeterminate}
@@ -538,11 +514,7 @@ export function PostsListPage() {
             onDelete={handleDelete}
           />
         )}
-        <ListPaginationFooter
-          resourceLabel="posts"
-          pagination={pagination}
-          isLoading={isLoading}
-        />
+        <ListPaginationFooter resourceLabel="posts" pagination={pagination} isLoading={isLoading} />
       </div>
       <PostsCreateDrawer
         key={drawerKey}

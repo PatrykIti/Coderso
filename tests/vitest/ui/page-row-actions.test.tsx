@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -51,14 +51,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -103,7 +103,7 @@ test("PageRowActions routes actions and disables publish/delete when unavailable
     expect(unpublishButton?.hasAttribute("disabled")).toBe(true);
     expect(deleteButton?.hasAttribute("disabled")).toBe(true);
 
-    act(() => {
+    React.act(() => {
       (editButton as HTMLButtonElement).click();
       (previewButton as HTMLButtonElement).click();
       (duplicateButton as HTMLButtonElement).click();
@@ -149,7 +149,7 @@ test("PageRowActions enables unpublish/delete for published pages and respects d
     expect(unpublishButton?.hasAttribute("disabled")).toBe(false);
     expect(deleteButton?.hasAttribute("disabled")).toBe(false);
 
-    act(() => {
+    React.act(() => {
       (unpublishButton as HTMLButtonElement).click();
       (deleteButton as HTMLButtonElement).click();
     });
@@ -185,7 +185,7 @@ test("PageRowActions disables delete without handler and keeps publish available
     expect(unpublishButton?.hasAttribute("disabled")).toBe(true);
     expect(deleteButton?.hasAttribute("disabled")).toBe(true);
 
-    act(() => {
+    React.act(() => {
       (publishButton as HTMLButtonElement).click();
     });
 

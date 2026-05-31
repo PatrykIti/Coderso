@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import React, { useMemo, useState } from "react";
-import { act } from "react";
+
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test } from "vitest";
 
@@ -32,14 +32,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -130,7 +130,7 @@ test("jump to binding switches into the Data tab and focuses the matching prop p
     const titleDataButton = view.container.querySelector('button[data-binding-prop-path="title"]');
     expect(titleDataButton).not.toBeNull();
 
-    act(() => {
+    React.act(() => {
       titleDataButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 

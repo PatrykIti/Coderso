@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { isApiClientError } from "@/services/apiClient";
 import {
   getThemeProfile,
@@ -64,9 +63,7 @@ export function ThemeEditorPage({
     if (typeof window === "undefined") return null;
     return resolveProfileId(window.location.pathname);
   });
-  const [profile, setProfile] = useState<ThemeProfile | null>(
-    initialProfile ?? null
-  );
+  const [profile, setProfile] = useState<ThemeProfile | null>(initialProfile ?? null);
   const [themes, setThemes] = useState<ThemeMeta[]>([]);
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [tokens, setTokens] = useState<DesignTokenOverrides>(
@@ -127,11 +124,7 @@ export function ThemeEditorPage({
     if (!profileId) return;
     if (initialProfile) return;
     let active = true;
-    Promise.all([
-      getThemeProfile(profileId),
-      listThemes(),
-      listPagesCached({ force: true }),
-    ])
+    Promise.all([getThemeProfile(profileId), listThemes(), listPagesCached({ force: true })])
       .then(([profileResult, themesResult, pagesResult]) => {
         if (!active) return;
         setProfile(profileResult);
@@ -176,10 +169,7 @@ export function ThemeEditorPage({
     return mergeTokens(withThemeDefaults, tokens);
   }, [themeMeta, tokens]);
 
-  const previewStyle = useMemo(
-    () => toCssVariableMap(resolvedTokens),
-    [resolvedTokens]
-  );
+  const previewStyle = useMemo(() => toCssVariableMap(resolvedTokens), [resolvedTokens]);
 
   const routesError = useMemo(() => {
     const seen = new Set<string>();
@@ -269,22 +259,15 @@ export function ThemeEditorPage({
       activeHref="/admin/themes"
       contentClassName="p-0"
       showSearch={false}
-      breadcrumbs={
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <span>Settings</span>
-          <span>/</span>
-          <span className="text-foreground">Theme Editor</span>
-          <Separator orientation="vertical" className="h-4" />
+      breadcrumbs={["Settings", "Theme Editor"]}
+      topbarActions={
+        <div className="flex items-center gap-2">
           <Badge className="bg-emerald-100 text-[10px] uppercase tracking-wide text-emerald-700">
             {profile?.isActive ? "Live" : "Draft"}
           </Badge>
           <span className="text-xs italic text-muted-foreground/80">
             Last saved {lastSavedLabel}
           </span>
-        </div>
-      }
-      topbarActions={
-        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -295,12 +278,7 @@ export function ThemeEditorPage({
             <RefreshCcw className="h-4 w-4" />
             Reset
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => setExportOpen(true)}
-          >
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => setExportOpen(true)}>
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -317,9 +295,7 @@ export function ThemeEditorPage({
       }
     >
       {error ? (
-        <div className="border-b bg-rose-50 px-6 py-3 text-sm text-rose-600">
-          {error}
-        </div>
+        <div className="border-b bg-rose-50 px-6 py-3 text-sm text-rose-600">{error}</div>
       ) : null}
       {isLoading ? (
         <div className="p-6 text-sm text-muted-foreground">Loading theme profile...</div>

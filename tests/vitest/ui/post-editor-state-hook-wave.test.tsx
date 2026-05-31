@@ -1,10 +1,14 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { PostDetail, PostRevision, PostStatus } from "../../../core/admin/services/postsClient";
+import type {
+  PostDetail,
+  PostRevision,
+  PostStatus,
+} from "../../../core/admin/services/postsClient";
 import { deletePost } from "../../../core/admin/services/postsClient";
 
 type CacheEvent = { key: string };
@@ -12,10 +16,7 @@ type CacheEvent = { key: string };
 const hookState = vi.hoisted(() => {
   const listeners = new Set<(event: CacheEvent) => void>();
 
-  const createPost = (
-    id = "post-1",
-    overrides: Partial<PostDetail> = {}
-  ): PostDetail => ({
+  const createPost = (id = "post-1", overrides: Partial<PostDetail> = {}): PostDetail => ({
     id,
     typeId: "post",
     title: "Editor Post",
@@ -58,10 +59,7 @@ const hookState = vi.hoisted(() => {
     ...overrides,
   });
 
-  const createRevision = (
-    id = "rev-1",
-    overrides: Partial<PostRevision> = {}
-  ): PostRevision => ({
+  const createRevision = (id = "rev-1", overrides: Partial<PostRevision> = {}): PostRevision => ({
     id,
     postId: "post-1",
     version: 1,
@@ -77,10 +75,7 @@ const hookState = vi.hoisted(() => {
     ...overrides,
   });
 
-  const applyPayload = (
-    current: PostDetail,
-    payload: Record<string, unknown>
-  ): PostDetail => {
+  const applyPayload = (current: PostDetail, payload: Record<string, unknown>): PostDetail => {
     const nextTags = Array.isArray(payload.tags)
       ? payload.tags.filter((value): value is string => typeof value === "string")
       : current.tags;
@@ -89,9 +84,7 @@ const hookState = vi.hoisted(() => {
         ? (payload.taxonomy as { categoryId?: string | null })
         : undefined;
     const categoryId =
-      taxonomyPayload && "categoryId" in taxonomyPayload
-        ? taxonomyPayload.categoryId
-        : undefined;
+      taxonomyPayload && "categoryId" in taxonomyPayload ? taxonomyPayload.categoryId : undefined;
     const seoPayload =
       payload.seo && typeof payload.seo === "object"
         ? (payload.seo as Record<string, unknown>)
@@ -106,10 +99,10 @@ const hookState = vi.hoisted(() => {
           ? { ...(payload.data as Record<string, unknown>) }
           : current.data,
       tags: nextTags,
-      seo: seoPayload ? { ...(current.seo ?? {}), ...seoPayload } : current.seo ?? null,
+      seo: seoPayload ? { ...(current.seo ?? {}), ...seoPayload } : (current.seo ?? null),
       taxonomy:
         categoryId === undefined
-          ? current.taxonomy ?? null
+          ? (current.taxonomy ?? null)
           : {
               ...(current.taxonomy ?? {}),
               category:
@@ -132,14 +125,12 @@ const hookState = vi.hoisted(() => {
     fetchedPost: null as PostDetail | null,
     restoredPost: null as PostDetail | null,
     revisions: [] as PostRevision[],
-    autosaveOptions: null as
-      | {
-          enabled: boolean;
-          dirty: boolean;
-          signature: string;
-          onAutosave: () => Promise<void>;
-        }
-      | null,
+    autosaveOptions: null as {
+      enabled: boolean;
+      dirty: boolean;
+      signature: string;
+      onAutosave: () => Promise<void>;
+    } | null,
     nextGetError: null as unknown,
     nextUpdateError: null as unknown,
     nextMetadataError: null as unknown,
@@ -461,7 +452,7 @@ const mountHook = () => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(<Harness />);
   });
 
@@ -473,7 +464,7 @@ const mountHook = () => {
       return latest.current;
     },
     cleanup() {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -483,7 +474,7 @@ const mountHook = () => {
 
 const flush = async (times = 3) => {
   for (let index = 0; index < times; index += 1) {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -642,7 +633,7 @@ test("usePostEditorState defers remote refresh while dirty and reloads on demand
   try {
     await waitFor(() => view.current().loading === false);
 
-    act(() => {
+    React.act(() => {
       view.current().setTitle("Local draft title");
     });
     hookState.fetchedPost = hookState.createPost("post-1", {
@@ -650,7 +641,7 @@ test("usePostEditorState defers remote refresh while dirty and reloads on demand
       updatedAt: "2026-03-12T13:00:00.000Z",
     });
 
-    await act(async () => {
+    await React.act(async () => {
       hookState.trigger("post:post-1");
       await Promise.resolve();
     });
@@ -658,7 +649,7 @@ test("usePostEditorState defers remote refresh while dirty and reloads on demand
 
     expect(view.current().title).toBe("Local draft title");
 
-    await act(async () => {
+    await React.act(async () => {
       await view.current().markReloadRemote();
     });
     await waitFor(() => view.current().remoteUpdatePending === false);
@@ -678,11 +669,11 @@ test("usePostEditorState autosaves dirty content and surfaces autosave api error
   try {
     await waitFor(() => view.current().loading === false);
 
-    act(() => {
+    React.act(() => {
       view.current().setTitle("Autosaved title");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       await hookState.autosaveOptions?.onAutosave();
     });
     await waitFor(() => view.current().autosaveSaving === false);
@@ -692,12 +683,12 @@ test("usePostEditorState autosaves dirty content and surfaces autosave api error
     expect(view.current().autosaveError).toBeNull();
     expect(view.current().hasUnsavedChanges).toBe(false);
 
-    act(() => {
+    React.act(() => {
       view.current().setTitle("Autosave failure");
     });
     hookState.nextAutosaveError = hookState.apiError("Autosave failed.");
 
-    await act(async () => {
+    await React.act(async () => {
       await hookState.autosaveOptions?.onAutosave();
     });
     await waitFor(() => view.current().autosaveSaving === false);
@@ -716,13 +707,13 @@ test("usePostEditorState autosaves metadata-only tag and category changes", asyn
   try {
     await waitFor(() => view.current().loading === false);
 
-    act(() => {
+    React.act(() => {
       view.current().setTagsInput("Launch, News, launch");
       view.current().setCategoryId("cat-2");
     });
     expect(view.current().hasUnsavedChanges).toBe(true);
 
-    await act(async () => {
+    await React.act(async () => {
       await hookState.autosaveOptions?.onAutosave();
     });
     await waitFor(() => view.current().autosaveSaving === false);
@@ -748,7 +739,7 @@ test("usePostEditorState saveDraft normalizes metadata payload and clears blank 
   try {
     await waitFor(() => view.current().loading === false);
 
-    act(() => {
+    React.act(() => {
       view.current().setTitle("Saved title");
       view.current().setFeaturedImage("   ");
       view.current().setTagsInput("One, two\nONE");
@@ -761,7 +752,7 @@ test("usePostEditorState saveDraft normalizes metadata payload and clears blank 
       });
     });
 
-    await act(async () => {
+    await React.act(async () => {
       await view.current().saveDraft();
     });
     await waitFor(() => view.current().hasUnsavedChanges === false);
@@ -795,11 +786,11 @@ test("usePostEditorState publish and unpublish keep status in sync with refresh"
   try {
     await waitFor(() => view.current().loading === false);
 
-    act(() => {
+    React.act(() => {
       view.current().setTitle("Publish me");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       await view.current().publish();
     });
     await waitFor(() => view.current().status === "published");
@@ -808,7 +799,7 @@ test("usePostEditorState publish and unpublish keep status in sync with refresh"
     expect(hookState.publishCalls).toEqual(["post-1"]);
     expect(view.current().status).toBe("published");
 
-    await act(async () => {
+    await React.act(async () => {
       await view.current().unpublish();
     });
     await waitFor(() => view.current().status === "draft");
@@ -829,11 +820,11 @@ test("usePostEditorState preview saves dirty state and reports preview api error
   try {
     await waitFor(() => view.current().loading === false);
 
-    act(() => {
+    React.act(() => {
       view.current().setTitle("Preview draft");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       await view.current().preview();
     });
     await waitFor(() => view.current().previewLoading === false);
@@ -858,7 +849,7 @@ test("usePostEditorState exposes block editing callbacks and focus-token branche
 
     const initialFocusToken = view.current().insertFocusToken;
 
-    act(() => {
+    React.act(() => {
       view.current().insertBlock("not-a-real-block");
     });
 
@@ -866,12 +857,12 @@ test("usePostEditorState exposes block editing callbacks and focus-token branche
     expect(view.current().selectedBlock?.type).toBe("writing-canvas");
     expect(view.current().insertFocusToken).toBe(initialFocusToken + 1);
 
-    act(() => {
+    React.act(() => {
       view.current().insertBlock("paragraph", { focus: false });
     });
     expect(view.current().insertFocusToken).toBe(initialFocusToken + 1);
 
-    act(() => {
+    React.act(() => {
       view.current().selectBlock(null);
       view.current().updateSelectedBlockContent("ignored");
       view.current().updateSelectedBlockAttrs({ align: "left" });
@@ -880,7 +871,7 @@ test("usePostEditorState exposes block editing callbacks and focus-token branche
       view.current().transformSelectedBlock("quote");
     });
 
-    act(() => {
+    React.act(() => {
       view.current().selectBlock(fallbackBlockId);
       view.current().updateSelectedBlockContent({
         version: 1,
@@ -927,13 +918,13 @@ test("usePostEditorState loads revisions and restores a revision", async () => {
   try {
     await waitFor(() => view.current().loading === false);
 
-    act(() => {
+    React.act(() => {
       view.current().openRevisions();
     });
     await waitFor(() => view.current().revisionsOpen === true);
     await waitFor(() => view.current().revisions.length === 1);
 
-    await act(async () => {
+    await React.act(async () => {
       await view.current().restoreRevision("rev-1");
     });
     await waitFor(() => view.current().restoringRevisionId === null);
@@ -956,7 +947,7 @@ test("usePostEditorState reports restore and upload failures and handles move-to
     await waitFor(() => view.current().loading === false);
 
     hookState.nextRestoreError = hookState.apiError("Restore failed.");
-    await act(async () => {
+    await React.act(async () => {
       await expect(view.current().restoreRevision("rev-404")).rejects.toMatchObject({
         message: "Restore failed.",
       });
@@ -965,18 +956,18 @@ test("usePostEditorState reports restore and upload failures and handles move-to
 
     hookState.nextUploadError = hookState.apiError("Upload failed.");
     await expect(
-      view.current().uploadClipboardImage(
-        new File(["image"], "clipboard.png", { type: "image/png" })
-      )
+      view
+        .current()
+        .uploadClipboardImage(new File(["image"], "clipboard.png", { type: "image/png" }))
     ).rejects.toThrow("Upload failed.");
 
     hookState.nextDeleteError = hookState.apiError("Delete failed.");
-    await act(async () => {
+    await React.act(async () => {
       await expect(view.current().moveToTrash()).resolves.toBe(false);
     });
     expect(view.current().error).toBe("Delete failed.");
 
-    await act(async () => {
+    await React.act(async () => {
       await expect(view.current().moveToTrash()).resolves.toBe(true);
     });
     expect(hookState.deleteCalls).toEqual(["post-1", "post-1"]);
@@ -1019,17 +1010,17 @@ test("usePostEditorState guards missing selected blocks, patches non-record attr
   try {
     await waitFor(() => view.current().loading === false);
 
-    act(() => {
+    React.act(() => {
       view.current().updateSelectedBlockAttrs({ align: "center" });
     });
     expect(view.current().selectedBlock?.attrs).toMatchObject({ align: "center" });
 
-    act(() => {
+    React.act(() => {
       view.current().selectBlock("missing-block");
     });
     expect(view.current().selectedBlock).toBeNull();
 
-    act(() => {
+    React.act(() => {
       view.current().updateSelectedBlockContent("ignored");
       view.current().updateSelectedBlockAttrs({ width: "wide" });
       view.current().deleteSelectedBlock();
@@ -1037,13 +1028,13 @@ test("usePostEditorState guards missing selected blocks, patches non-record attr
       view.current().transformSelectedBlock("quote");
     });
 
-    await act(async () => {
+    await React.act(async () => {
       firstDeletePromise = view.current().moveToTrash();
       await Promise.resolve();
     });
     await waitFor(() => view.current().deletingPost === true);
 
-    await act(async () => {
+    await React.act(async () => {
       await expect(view.current().moveToTrash()).resolves.toBe(false);
     });
 
@@ -1051,7 +1042,7 @@ test("usePostEditorState guards missing selected blocks, patches non-record attr
     if (finishDelete) {
       finishDelete({ ok: true });
     }
-    await act(async () => {
+    await React.act(async () => {
       await expect(firstDeletePromise).resolves.toBe(true);
     });
 
@@ -1061,7 +1052,7 @@ test("usePostEditorState guards missing selected blocks, patches non-record attr
       finishDelete({ ok: true });
     }
     if (firstDeletePromise) {
-      await act(async () => {
+      await React.act(async () => {
         await firstDeletePromise;
       });
     }
@@ -1078,32 +1069,32 @@ test("usePostEditorState handles revision drawer toggles and generic async failu
   try {
     await waitFor(() => view.current().loading === false);
 
-    act(() => {
+    React.act(() => {
       view.current().setRevisionsOpen(false);
     });
     expect(hookState.listRevisionCalls).toHaveLength(0);
 
-    act(() => {
+    React.act(() => {
       view.current().setRevisionsOpen(true);
     });
     await waitFor(() => view.current().revisionsOpen === true);
     await waitFor(() => view.current().revisions.length === 1);
 
     hookState.nextRestoreError = new Error("restore exploded");
-    await act(async () => {
+    await React.act(async () => {
       await expect(view.current().restoreRevision("rev-1")).rejects.toThrow("restore exploded");
     });
     expect(view.current().revisionsError).toBe("Failed to restore revision.");
 
     hookState.nextUploadError = new Error("upload exploded");
     await expect(
-      view.current().uploadClipboardImage(
-        new File(["image"], "clipboard-generic.png", { type: "image/png" })
-      )
+      view
+        .current()
+        .uploadClipboardImage(new File(["image"], "clipboard-generic.png", { type: "image/png" }))
     ).rejects.toThrow("upload exploded");
 
     hookState.nextDeleteError = new Error("delete exploded");
-    await act(async () => {
+    await React.act(async () => {
       await expect(view.current().moveToTrash()).resolves.toBe(false);
     });
     expect(view.current().error).toBe("Failed to move post to trash.");
@@ -1133,7 +1124,7 @@ test("usePostEditorState reports missing remote post, successful preview, and ge
   try {
     await waitFor(() => view.current().loading === false);
 
-    await act(async () => {
+    await React.act(async () => {
       await view.current().preview();
     });
     await waitFor(() => view.current().previewLoading === false);
@@ -1143,13 +1134,13 @@ test("usePostEditorState reports missing remote post, successful preview, and ge
     expect(view.current().previewError).toBeNull();
 
     hookState.nextUnpublishError = new Error("unpublish exploded");
-    await act(async () => {
+    await React.act(async () => {
       await expect(view.current().unpublish()).rejects.toThrow("unpublish exploded");
     });
     expect(view.current().error).toBe("Failed to move post to draft.");
 
     hookState.nextRevisionsError = new Error("revisions exploded");
-    act(() => {
+    React.act(() => {
       view.current().openRevisions();
     });
     await waitFor(() => view.current().revisionsError === "Failed to load post revisions.");

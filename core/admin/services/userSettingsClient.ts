@@ -4,7 +4,7 @@ import { apiRequest } from "./apiClient";
 
 export type HeroPresetSetting = {
   name: string;
-  variant: "centered" | "split" | "media-left";
+  variant: "centered" | "split" | "media-left" | "media-center";
   data: Record<string, unknown>;
   updatedAt: string;
 };
@@ -64,10 +64,7 @@ export async function getUserSetting<K extends keyof UserSettings>(
   return result;
 }
 
-export async function setUserSetting<K extends keyof UserSettings>(
-  key: K,
-  value: UserSettings[K]
-) {
+export async function setUserSetting<K extends keyof UserSettings>(key: K, value: UserSettings[K]) {
   const result = await apiRequest<{ key: K; value: UserSettings[K] }>(
     `/user-settings/${encodeURIComponent(key)}`,
     {

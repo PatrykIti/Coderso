@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -9,7 +9,9 @@ import { FieldLibrary } from "../../../core/admin/ui/forms/FieldLibrary";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  Button: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
 }));
 
 vi.mock("@/components/ui/scroll-area", () => ({
@@ -21,14 +23,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -43,6 +45,9 @@ test("FieldLibrary renders items and forwards add callbacks", () => {
     <FieldLibrary
       items={[
         { id: "text", label: "Text", icon: Icon as never, type: "text" },
+        { id: "radio", label: "Radio", icon: Icon as never, type: "radio" },
+        { id: "number", label: "Number", icon: Icon as never, type: "number" },
+        { id: "hidden", label: "Hidden", icon: Icon as never, type: "hidden" },
         { id: "checkbox", label: "Checkbox", icon: Icon as never, type: "checkbox" },
       ]}
       onAddField={onAddField}
@@ -52,18 +57,20 @@ test("FieldLibrary renders items and forwards add callbacks", () => {
   try {
     expect(view.container.textContent).toContain("Fields Library");
     expect(view.container.textContent).toContain("Advanced Fields");
+    expect(view.container.textContent).toContain("Number");
+    expect(view.container.textContent).toContain("Hidden");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent?.includes("Checkbox"))
+        .find((button) => button.textContent?.includes("Radio"))
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(onAddField).toHaveBeenCalledWith({
-      id: "checkbox",
-      label: "Checkbox",
+      id: "radio",
+      label: "Radio",
       icon: Icon,
-      type: "checkbox",
+      type: "radio",
     });
   } finally {
     view.cleanup();

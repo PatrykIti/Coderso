@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-05-24T14:53:36.207Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-18-admin --skip-front --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-18-admin-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-18-admin-2026-05-24.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": [
+      "section",
+      "template-section",
+      "grid-columns",
+      "split-layout",
+      "tabs",
+      "accordion",
+      "toggle-block",
+      "spacer",
+      "divider",
+      "stack",
+      "hero",
+      "feature-grid",
+      "testimonials",
+      "pricing-plans",
+      "faq-accordion",
+      "cta-banner",
+      "logo-cloud",
+      "gallery-mosaic",
+      "stats-kpi",
+      "team",
+      "rich-text-section",
+      "content-list",
+      "posts-feed",
+      "entry-teaser",
+      "product-gallery",
+      "product-compare",
+      "product-table",
+      "listing-filters",
+      "search-box",
+      "timeline",
+      "compare-timeline",
+      "newsletter",
+      "booking-calendar",
+      "appointment-form",
+      "form-embed",
+      "contact",
+      "navigation",
+      "footer"
+    ]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": null,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": false,
+    "results": [],
+    "error": "credentials_missing"
+  },
+  "public": {
+    "skipped": true,
+    "results": []
+  },
+  "summary": {
+    "adminFailures": 1,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

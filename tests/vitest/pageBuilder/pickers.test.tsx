@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -20,13 +20,7 @@ vi.mock("@/components/ui/badge", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({
-    children,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-  }) => (
+  Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
     <button type="button" onClick={onClick}>
       {children}
     </button>
@@ -168,19 +162,19 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     rerender: (next: React.ReactNode) => {
-      act(() => {
+      React.act(() => {
         root.render(next);
       });
     },
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -226,7 +220,7 @@ test("FormPicker renders loading, error, filtering, and add flows", () => {
     expect(view.container.textContent).toContain("Contact");
     expect(view.container.textContent).toContain("No description yet.");
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-input-action='match']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -235,7 +229,7 @@ test("FormPicker renders loading, error, filtering, and add flows", () => {
     expect(view.container.textContent).toContain("Support");
     expect(view.container.textContent).not.toContain("Contact");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "plus-icon")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -243,7 +237,7 @@ test("FormPicker renders loading, error, filtering, and add flows", () => {
 
     expect(onAdd).toHaveBeenCalledWith({ id: "form-2", name: "Support" });
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-input-action='empty']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -292,7 +286,7 @@ test("TemplatePicker renders loading, error, filtering, and add flows", () => {
     view.rerender(<TemplatePicker onAdd={onAdd} />);
     expect(view.container.textContent).toContain("Reusable template section.");
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-input-action='match']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -301,7 +295,7 @@ test("TemplatePicker renders loading, error, filtering, and add flows", () => {
     expect(view.container.textContent).toContain("Footer Links");
     expect(view.container.textContent).not.toContain("Hero Promo");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "plus-icon")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -312,7 +306,7 @@ test("TemplatePicker renders loading, error, filtering, and add flows", () => {
       name: "Footer Links",
     });
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-input-action='empty']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -345,7 +339,7 @@ test("WidgetPicker groups registry items by category, supports slot context, and
     expect(view.container.textContent).not.toContain("Hero content block");
     expect(view.container.textContent).not.toContain("Template Section");
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-input-action='match']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -354,7 +348,7 @@ test("WidgetPicker groups registry items by category, supports slot context, and
     expect(view.container.textContent).toContain("Feature Grid");
     expect(view.container.textContent).not.toContain("Hero content block");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Clear")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -364,12 +358,12 @@ test("WidgetPicker groups registry items by category, supports slot context, and
     const addButtons = Array.from(view.container.querySelectorAll("button")).filter(
       (button) => button.textContent === "plus-icon"
     );
-    act(() => {
+    React.act(() => {
       addButtons[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(onAdd).toHaveBeenCalledWith("feature-grid");
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-input-action='empty']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));

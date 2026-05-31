@@ -1,83 +1,113 @@
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
+import type { Block, WidgetDefinition, WidgetEditorContext, WidgetLayoutDefaults } from "./types";
+import {
+  applyWidgetBlockPatch,
+  resolveSharedBlockLayoutState,
+  resolveSharedBlockVisibilityState,
+  type SharedBlockValueState,
+} from "./blockUtils";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetEditorModeRoot,
+  WidgetEditorSection,
+} from "../../widgets/editors/WidgetEditorControls";
 
-import type { Block, DeviceTarget, WidgetDefinition, WidgetEditorContext } from "./types";
-import { LayoutPanel } from "./LayoutPanel";
-import { sanitizeLayout } from "./blockUtils";
+const spacingLabel = (value: string) => (value === "none" ? "None" : value.toUpperCase());
 
-const deviceLabels: { id: DeviceTarget; label: string }[] = [
-  { id: "desktop", label: "Desktop" },
-  { id: "tablet", label: "Tablet" },
-  { id: "mobile", label: "Mobile" },
-];
+const formatSharedValue = <Saved extends string, Effective extends string>(
+  state: SharedBlockValueState<Saved, Effective>,
+  label: (value: Effective | Saved) => string
+) =>
+  state.source === "inherited"
+    ? `Inherit page default (${label(state.effective)})`
+    : label(state.saved);
 
 export type AdvancedPanelProps = {
   block: Block;
   widget: WidgetDefinition;
   onChange: (next: Block) => void;
+  onBlockPatch?: (patch: Parameters<typeof applyWidgetBlockPatch>[1]) => void;
   editorContext?: WidgetEditorContext;
+  pageDefaults?: WidgetLayoutDefaults;
 };
 
-export function AdvancedPanel({ block, widget, onChange, editorContext }: AdvancedPanelProps) {
+export function AdvancedPanel({
+  block,
+  widget,
+  onChange,
+  onBlockPatch,
+  editorContext,
+  pageDefaults,
+}: AdvancedPanelProps) {
   const Editor = widget.editor.advanced;
-  const layoutValue = sanitizeLayout(block.layout);
-
-  const devices = block.visibility?.devices ?? ["desktop", "tablet", "mobile"];
-  const toggleDevice = (device: DeviceTarget) => {
-    const nextDevices = devices.includes(device)
-      ? devices.filter((entry) => entry !== device)
-      : [...devices, device];
-    onChange({
-      ...block,
-      visibility: {
-        ...block.visibility,
-        devices: nextDevices,
-        enabled: block.visibility?.enabled ?? true,
-      },
+  const layoutState = resolveSharedBlockLayoutState(block.layout, pageDefaults);
+  const visibilityState = resolveSharedBlockVisibilityState(block.visibility);
+  const patchBlock =
+    onBlockPatch ??
+    ((patch: Parameters<typeof applyWidgetBlockPatch>[1]) => {
+      onChange(applyWidgetBlockPatch(block, patch));
     });
-  };
 
   return (
-    <div className="space-y-6">
+    <WidgetEditorModeRoot widgetType={widget.type} mode="advanced" className="space-y-6">
       <Editor
         value={block.data as Record<string, unknown>}
-        onChange={(data) => onChange({ ...block, data })}
+        onChange={(data) =>
+          patchBlock((current) => ({
+            ...current,
+            data,
+          }))
+        }
         variant={block.variant ?? widget.variants[0]?.id ?? ""}
-        onVariantChange={(next) => onChange({ ...block, variant: next })}
+        onVariantChange={(next) => patchBlock({ variant: next })}
+        onBlockPatch={patchBlock}
         context={editorContext}
       />
-      <div>
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Layout
-          </p>
-          <Badge variant="outline" className="text-[10px]">
-            Tokens only
-          </Badge>
-        </div>
-        <div className="mt-3">
-          <LayoutPanel value={layoutValue} onChange={(layout) => onChange({ ...block, layout })} />
-        </div>
-      </div>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Visibility
-        </p>
-        <div className="mt-3 space-y-2">
-          {deviceLabels.map((device) => (
-            <div
-              key={device.id}
-              className="flex items-center justify-between rounded-lg border p-3"
-            >
-              <span className="text-sm font-medium">{device.label}</span>
-              <Switch
-                checked={devices.includes(device.id)}
-                onCheckedChange={() => toggleDevice(device.id)}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+      <WidgetEditorSection
+        id="builder.advanced.block-layout-summary"
+        mode="advanced"
+        role="summary"
+        title="Block layout summary"
+        description="Read-only outer block placement. Change daily layout in Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="builder.advanced.layout.container"
+          label="Content width"
+          path="layout.container"
+          value={formatSharedValue(layoutState.container, (value) => value)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="builder.advanced.layout.padding"
+          label="Padding"
+          path="layout.padding"
+          value={`Top ${formatSharedValue(layoutState.padding.top, spacingLabel)}, bottom ${formatSharedValue(
+            layoutState.padding.bottom,
+            spacingLabel
+          )}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="builder.advanced.layout.margin"
+          label="Margin"
+          path="layout.margin"
+          value={`Top ${formatSharedValue(layoutState.margin.top, spacingLabel)}, bottom ${formatSharedValue(
+            layoutState.margin.bottom,
+            spacingLabel
+          )}`}
+        />
+      </WidgetEditorSection>
+      <WidgetEditorSection
+        id="builder.advanced.visibility-summary"
+        mode="advanced"
+        role="summary"
+        title="Visibility summary"
+        description="Read-only device visibility. Change daily visibility in Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="builder.advanced.visibility.devices"
+          label="Shown on"
+          path="visibility.devices"
+          value={visibilityState.summary}
+        />
+      </WidgetEditorSection>
+    </WidgetEditorModeRoot>
   );
 }

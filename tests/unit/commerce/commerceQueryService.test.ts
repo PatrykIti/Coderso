@@ -70,6 +70,7 @@ test("buildCommerceExecutionPlan applies defaults", () => {
   expect(plan.pagination).toEqual({ limit: 24, offset: 0 });
   expect(plan.status).toEqual([]);
   expect(plan.collectionIds).toEqual([]);
+  expect(plan.productIds).toEqual([]);
   expect(plan.search).toBeNull();
 });
 
@@ -134,4 +135,22 @@ test("executeCommerceQuery supports between/date filters and pagination", async 
   expect(result.total).toBe(2);
   expect(result.rows).toHaveLength(1);
   expect(result.rows[0]?.id).toBe("p-1");
+});
+
+test("executeCommerceQuery filters productIds before pagination and preserves manual order", async () => {
+  const result = await executeCommerceQuery(
+    {
+      productIds: ["p-3", "p-1", "missing", "p-3"],
+      sort: [{ field: "title", dir: "asc" }],
+      pagination: { limit: 10, offset: 0 },
+      status: ["published"],
+    },
+    {
+      listProducts: async () => products,
+    }
+  );
+
+  expect(result.total).toBe(2);
+  expect(result.rows.map((row) => row.id)).toEqual(["p-3", "p-1"]);
+  expect(result.query.productIds).toEqual(["p-3", "p-1"]);
 });

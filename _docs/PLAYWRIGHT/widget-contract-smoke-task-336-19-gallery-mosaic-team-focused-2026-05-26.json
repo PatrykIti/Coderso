@@ -1,0 +1,109 @@
+{
+  "generatedAt": "2026-05-26T03:24:38.342Z",
+  "command": "bun .tmp/playwright-gallery-mosaic-team-focused-probe.ts",
+  "session": "task-336-19-gallery-mosaic-team-focused",
+  "probe": "Gallery Mosaic and Team Visual swatch-only authoring plus read-only/confirm-gated Advanced checks",
+  "passed": true,
+  "results": [
+    {
+      "widgetType": "gallery-mosaic",
+      "pageId": "a097da80-3d15-4b0a-8413-fac910b876e3",
+      "pageSnapshot": {
+        "url": "http://localhost:5173/admin/pages/a097da80-3d15-4b0a-8413-fac910b876e3",
+        "bodyText": "C\nCoderso\nAdmin Panel\n\nMAIN\n\nDashboard\nPages\nPosts\nMenus\nMedia\nAdvanced\nEngine\nEntries\nScreens\nBeta\nWidgets\nForms\nListings\nBeta\nFilters\nBeta\nSearch\nBeta\nBooking\nBeta\nReviews\nBeta\nCommerce\nBeta\nPopups\nBeta\nSolution Kits\nBeta\nHouse Projects\n\nSTORE\n\nPlugin Store\n\nVISUAL\n\nAdmin UI Theme\n\nTOOLS\n\nSearch\nSEO Manager\nAnalytics\nBackups\nImport / Export\nRedirects\n\nADMIN\n\nUsers\nRoles Matrix\nAudit Logs\nAccess Logs\nSettings\nDocs\nSupport\nPages\n/\nGALLERY-MOSAIC-TEST-0516\nLight\nPUBLISHED\nWidgets\nTemplates\nForms\nLAYOUT\n10\n\nSection\n\nSemantic layout wrapper with repeatable region slots.\n\nGrid Columns\n\nResponsive multi-column layout with repeatable column slots.\n\nSplit Layout\n\nTwo-pane layout wrapper with ratio and mobile behavior controls.\n\nTabs\n\nSwitch between grouped content panels.\n\nAccordion\n\nExpandable stacked content panels.\n\nToggle Block\n\nSwitch between two alternate content panes.\n\nSpacer\n\nResponsive vertical spacing primitive for clean rhythm control.\n\nDivider\n\nVisual separator with optional centered label and spacing controls.\n\nStack\n\nFlow layout wrapper with responsive direction, spacing, and axis control.\n\nHero\n\nTop-of-page hero section with CTA.\n\nCONTENT\n20\n\nFeature Grid\n\nCard grid for va",
+        "blockSelectTotal": 5,
+        "editorRootTotal": 1,
+        "buttonTexts": ["Advanced", "Light", "Widgets", "Templates", "Forms"]
+      },
+      "blockSelectCount": 5,
+      "passed": true,
+      "visual": {
+        "rootCount": 1,
+        "sectionCount": 9,
+        "visibleSectionCount": 9,
+        "writablePaths": [
+          "layout.container",
+          "layout.padding.top",
+          "layout.padding.bottom",
+          "layout.margin.top",
+          "layout.margin.bottom",
+          "visibility.devices.desktop",
+          "visibility.devices.tablet",
+          "visibility.devices.mobile"
+        ],
+        "controlsWithoutPath": 0,
+        "text": "VARIANT AND MEDIA STRUCTURE\nChoose gallery arrangement and deterministic item count.\n\nMosaic\n\nSelected\n\nAsymmetric layout with highlighted lead media.\n\nUniform Grid\n\nPick\n\nEqual tiles in a clean grid.\n\nFeature Left\n\nPick\n\nLarge media on left with supporting items on right.\n\nItems count\n\n5\n\nItem count grows or trims from the end. Use Add item and Remove for intentional per-item edits.\n\nHEADER COPY\nEdit section title and supporting description.\n\nTitle\n\nDescription\n\nMEDIA ITEMS AND LINKS\nChoose gallery assets, captions, poster frames, and page destinations.\n\nItem 1\n\nCurrent media: Image\n\nA saved image is currently active for this item.\n\nMove up\nMove down\nRemove\n\nImage preview\n\nCaption item 1\n\nMedia library\n\nSelect a single asset.\n\nAllowed: image/*, video/*\n\nBrowse media\nNo media selected yet.\n\nSelecting an asset updates the current image or video for this item.\n\nSaved image asset is configured. Browse media to replace it or clear media and poster.\n\nClear media and poster\n\nCaption\n\nAlt text\n\nDestination page\n\nClear destination\nSaved custom destination\n\nA custom destination is already configured. Choose a site page to replace it or clear the destination.\n\nFocus point\n\nCenter\n\nItem ratio\n\nInherit section ratio\n\nItem 2\n\nCurrent media: Image\n\nA saved image is currently active for this item.\n\nMove up\nMove down\nRemove\n\nImage preview\n\nCaption item 2\n\nMedia library\n\nSelect a single asset.\n\nAllowed: image/*, video/*\n\nBrowse media\nNo media selected yet.\n\nSelecting an asset updates the current image or video for this item.\n\nSaved image asset is configured. Browse media to replace it or clear media and poster.\n\nClear media and poster\n\nCaption\n\nAlt text\n\nDestination page\n\nNo destination\n\nPick a site page. Hand-typed links from older edits stay until you replace or clear them.\n\nFocus point\n\nCenter\n\nItem ratio\n\nInherit section ratio\n\nItem 3\n\nCurrent media: Image\n\nA saved image is currently active for this item.\n\nMove up\nMove down\nRemove\n\nImage preview\n\nCaption item 3\n\nMedia library\n\nSelect a single asset.\n\nAllowed: image/*, video/*\n\nBrowse media\nNo media selected yet.\n\nSelecting an asset updates the current image or video for this item.\n\nSaved image asset is configured. Browse media to replace it or clear media and poster.\n\nClear media and poster\n\nCaption\n\nAlt text\n\nDestination page\n\nNo destination\n\nPick a site page. Hand-typed links from older edits stay until you replace or clear them.\n\nFocus point\n\nCenter\n\nItem ratio\n\nInherit section ratio\n\nItem 4\n\nCurrent media: Image\n\nA saved image is currently active for this item.\n\nMove up\nMove down\nRemove\n\nImage preview\n\nCaption item 4\n\nMedia library\n\nSelect a single asset.\n\nAllowed: image/*, video/*\n\nBrowse media\nNo media selected yet.\n\nSelecting an asset updates the current image or video for this item.\n\nSaved image asset is configured. Browse media to replace it or clear media and poster.\n\nClear media and poster\n\nCaption\n\nAlt text\n\nDestination page\n\nNo destination\n\nPick a site page. Hand-typed links from older edits stay until you replace or clear them.\n\nFocus point\n\nCenter\n\nItem ratio\n\nInherit section ratio\n\nItem 5\n\nCurrent media: Image\n\nA saved image is currently active for this item.\n\nMove up\nMove down\nRemove\n\nImage preview\n\nCaption item 5\n\nMedia library\n\nSelect a single asset.\n\nAllowed: image/*, video/*\n\nBrowse media\nNo media selected yet.\n\nSelecting an asset updates the current image or video for this item.\n\nSaved image asset is configured. Browse media to replace it or clear media and poster.\n\nClear media and poster\n\nCaption\n\nAlt text\n\nDestination page\n\nNo destination\n\nPick a site page. Hand-typed links from older edits stay until you replace or clear them.\n\nFocus point\n\nCenter\n\nItem ratio\n\nInherit section ratio\nAdd item\nINTERACTION\nChoose whether gallery items stay static or open a widget-local lightbox.\n\nInteraction mode\n\nStatic tiles\n\nLightbox zoom\n\nFit inside dialog\n\nLightbox stays off by default so existing gallery payloads keep the current click behavior.\n\nOVERLAY AND CAPTION CONTROLS\nAdjust caption placement and overlay color for readability.\n\nCaption position\n\nOn hover\n\nOverlay color\n\nClear\nSelected color\n\nSwatch changes keep the saved overlay opacity when one exists. The default overlay strength is 35%.\n\nLAYOUT STYLE\nSet ratio, spacing, and corner radius for gallery tiles.\n\nRatio\n\n4:3\n\nGap\n\nDefault\n\nRadius\n\nMedium\nDENSITY AND MOTION\nChoose bounded responsive density presets and reduced-motion-safe entrances.\n\nLayout density\n\nAuto\n\nDensity stays bounded to product presets. Gallery Mosaic does not accept raw per-breakpoint column maps in widget data.\n\nMotion preset\n\nNo motion\n\nMotion presets respect reduced-motion preferences and stay off by default for backward compatibility.\n\nBLOCK LAYOUT\nControl this block's outer content width and spacing.\nContent width\ndefault\nTop padding\nxl\nBottom padding\nxl\nTop margin\nnone\nBottom margin\nnone\nDEVICE VISIBILITY\nChoose which visitor device sizes should show this block.\nDesktop\nShown\nTablet\nShown\nMobile\nShown",
+        "preCount": 0
+      },
+      "advanced": {
+        "rootCount": 1,
+        "sectionCount": 6,
+        "visibleSectionCount": 6,
+        "writablePaths": [],
+        "controlsWithoutPath": 0,
+        "text": "TECHNICAL RATIO AND LAYOUT TOKENS\nVisual owns the live shared style fields for Gallery Mosaic. Advanced stays diagnostic-only.\n\nVisual owns the current shared style fields.\n\nRatio, gap, radius, caption position, and overlay stay editable in Visual for Gallery Mosaic. Advanced remains diagnostic-only so shared fields do not have two competing editors.\n\nRatio\n4:3\nGap\nmd\nRadius\nmd\nCaption\nhover\nDensity\nauto\nMotion\nnone\nOverlay\nrgba(0,0,0,0.3)\nCONFIGURATION IMPORT AND EXPORT\nUse the schema-owned JSON payload for safe Gallery Mosaic import/export.\nExport current config\nImport config\nNORMALIZATION AND SAFEGUARDS\nApply deterministic fallback data for media items and styles.\nNormalize now\nReset to defaults\nRUNTIME SUMMARY\nRead-only Gallery Mosaic state for support. Change content and presentation in Visual.\nVariant\nmosaic\nMedia items\n5 items\nConfigured media\n5 items with media\nLinked items\n1 destination\nInteraction\nStatic tiles\nBLOCK LAYOUT SUMMARY\nRead-only outer block placement. Change daily layout in Visual.\nContent width\ndefault\nPadding\nTop XL, bottom XL\nMargin\nTop None, bottom None\nVISIBILITY SUMMARY\nRead-only device visibility. Change daily visibility in Visual.\nShown on\nDesktop, Tablet, Mobile",
+        "preCount": 0
+      },
+      "extra": {
+        "overlayValueInputs": 0,
+        "overlaySwatches": 1,
+        "overlayHelp": true,
+        "rawOverlayPlaceholder": 0,
+        "rawPayloadText": false,
+        "importConfirmVisible": true
+      }
+    },
+    {
+      "widgetType": "team",
+      "pageId": "d7197340-dd88-420b-90f9-1b6f7a383c10",
+      "pageSnapshot": {
+        "url": "http://localhost:5173/admin/pages/d7197340-dd88-420b-90f9-1b6f7a383c10",
+        "bodyText": "C\nCoderso\nAdmin Panel\n\nMAIN\n\nDashboard\nPages\nPosts\nMenus\nMedia\nAdvanced\nEngine\nEntries\nScreens\nBeta\nWidgets\nForms\nListings\nBeta\nFilters\nBeta\nSearch\nBeta\nBooking\nBeta\nReviews\nBeta\nCommerce\nBeta\nPopups\nBeta\nSolution Kits\nBeta\nHouse Projects\n\nSTORE\n\nPlugin Store\n\nVISUAL\n\nAdmin UI Theme\n\nTOOLS\n\nSearch\nSEO Manager\nAnalytics\nBackups\nImport / Export\nRedirects\n\nADMIN\n\nUsers\nRoles Matrix\nAudit Logs\nAccess Logs\nSettings\nDocs\nSupport\nPages\n/\nTEST-TEAM-0516\nLight\nPUBLISHED\nWidgets\nTemplates\nForms\nLAYOUT\n10\n\nSection\n\nSemantic layout wrapper with repeatable region slots.\n\nGrid Columns\n\nResponsive multi-column layout with repeatable column slots.\n\nSplit Layout\n\nTwo-pane layout wrapper with ratio and mobile behavior controls.\n\nTabs\n\nSwitch between grouped content panels.\n\nAccordion\n\nExpandable stacked content panels.\n\nToggle Block\n\nSwitch between two alternate content panes.\n\nSpacer\n\nResponsive vertical spacing primitive for clean rhythm control.\n\nDivider\n\nVisual separator with optional centered label and spacing controls.\n\nStack\n\nFlow layout wrapper with responsive direction, spacing, and axis control.\n\nHero\n\nTop-of-page hero section with CTA.\n\nCONTENT\n20\n\nFeature Grid\n\nCard grid for value propos",
+        "blockSelectTotal": 1,
+        "editorRootTotal": 1,
+        "buttonTexts": ["Advanced", "Light", "Widgets", "Templates", "Forms"]
+      },
+      "blockSelectCount": 1,
+      "passed": true,
+      "visual": {
+        "rootCount": 1,
+        "sectionCount": 6,
+        "visibleSectionCount": 6,
+        "writablePaths": [
+          "layout.container",
+          "layout.padding.top",
+          "layout.padding.bottom",
+          "layout.margin.top",
+          "layout.margin.bottom",
+          "visibility.devices.desktop",
+          "visibility.devices.tablet",
+          "visibility.devices.mobile"
+        ],
+        "controlsWithoutPath": 0,
+        "text": "VARIANT AND MEMBER STRUCTURE\nChoose team presentation mode and deterministic member count.\n\nCards\n\nPick\n\nResponsive cards grid for equal profile emphasis.\n\nCompact List\n\nPick\n\nStacked rows for denser team information.\n\nSpotlight\n\nSelected\n\nLead profile with supporting member profiles.\n\nMembers count\n\n3\n\nTeam intentionally supports up to 12 members. Use multiple Team sections for larger directories.\n\nSpotlight uses the selected lead member below and still honors the supporting-columns control in Section and card style.\n\nHEADER COPY AND CTA\nEdit section eyebrow, copy, presentation, and the optional Team CTA.\n\nEyebrow\n\nTitle\n\nDescription\n\nHeader alignment\n\nCenter\n\nTitle size\n\n2XL\n\nCTA label\n\nCTA destination\n\nNo destination\n\nPick a site page for the Team CTA. Hand-typed links from older edits stay until you replace or clear them.\n\nMEMBERS CONTENT AND ORDER\nManage names, roles, bios, photos, social links, spotlight lead, and member order.\n\nAdd members from the top when the list gets long. The secondary action stays at the bottom for parity with existing flows.\n\nAdd member\n\nAnna Kowalska\n\nSpotlight Lead\nMove up\nMove down\nRemove\n\nName\n\nRole\n\nBio\n\nClear the bio if you want the runtime card to omit it.\n\nPhoto\n\nPhoto preview\n\nA saved photo is configured. Browse media to replace it or clear the photo.\n\nSelect a single asset.\n\nAllowed: image/*\n\nBrowse media\nNo media selected yet.\nClear photo\n\nSocial links\n\nAdd link\n\nSocial link 1\n\nRemove\n\nPLATFORM\n\nLinkedIn\n\nPUBLIC LABEL\n\nPROFILE NAME\n\nEnter only the public profile name or handle. The editor builds the safe destination.\n\nA saved destination is still stored for this social link. Replace it with a profile name or clear it before publishing changes.\n\nClear saved destination\n\nSocial link 2\n\nRemove\n\nPLATFORM\n\nX\n\nPUBLIC LABEL\n\nPROFILE NAME\n\nEnter only the public profile name or handle. The editor builds the safe destination.\n\nA saved destination is still stored for this social link. Replace it with a profile name or clear it before publishing changes.\n\nClear saved destination\n\nMarek Nowak\n\nSet as spotlight lead\nMove up\nMove down\nRemove\n\nName\n\nRole\n\nBio\n\nClear the bio if you want the runtime card to omit it.\n\nPhoto\n\nPhoto preview\n\nA saved photo is configured. Browse media to replace it or clear the photo.\n\nSelect a single asset.\n\nAllowed: image/*\n\nBrowse media\nNo media selected yet.\nClear photo\n\nSocial links\n\nAdd link\n\nSocial link 1\n\nRemove\n\nPLATFORM\n\nLinkedIn\n\nPUBLIC LABEL\n\nPROFILE NAME\n\nEnter only the public profile name or handle. The editor builds the safe destination.\n\nA saved destination is still stored for this social link. Replace it with a profile name or clear it before publishing changes.\n\nClear saved destination\n\nEwa Zielinska\n\nSet as spotlight lead\nMove up\nMove down\nRemove\n\nName\n\nRole\n\nBio\n\nClear the bio if you want the runtime card to omit it.\n\nPhoto\n\nPhoto preview\n\nA saved photo is configured. Browse media to replace it or clear the photo.\n\nSelect a single asset.\n\nAllowed: image/*\n\nBrowse media\nNo media selected yet.\nClear photo\n\nSocial links\n\nAdd link\n\nSocial link 1\n\nRemove\n\nPLATFORM\n\nLinkedIn\n\nPUBLIC LABEL\n\nPROFILE NAME\n\nEnter only the public profile name or handle. The editor builds the safe destination.\n\nA saved destination is still stored for this social link. Replace it with a profile name or clear it before publishing changes.\n\nClear saved destination\nAdd member\nSECTION AND CARD STYLE\nTune section background, card presentation, and compact-list mobile density.\n\nSection background\n\nClear\nTheme default\n\nColumns\n\n3 columns\n\nSpotlight now applies the selected 1-4 supporting columns instead of collapsing 2, 3, and 4 into the same layout.\n\nGap\n\nDefault\n\nCard radius\n\nLarge\n\nCard background\n\nClear\nSaved custom color\n\nA saved custom color is configured. Pick a swatch to replace it, or clear the field.\n\nCard border\n\nClear\nSaved custom color\n\nA saved custom color is configured. Pick a swatch to replace it, or clear the field.\n\nCard background contrast: Contrast depends on inherited theme or transparent colors. Contrast is estimated against the default theme text color.\n\nCard border width\n\n1px\n\nCompact-list mobile bio\n\nShow on mobile\n\nCompact-list mobile bio affects only the Compact List variant. Hiding keeps the bio available to assistive technology on small screens.\n\nBLOCK LAYOUT\nControl this block's outer content width and spacing.\nContent width\ndefault\nTop padding\nxl\nBottom padding\nxl\nTop margin\nnone\nBottom margin\nnone\nDEVICE VISIBILITY\nChoose which visitor device sizes should show this block.\nDesktop\nShown\nTablet\nShown\nMobile\nShown",
+        "preCount": 0
+      },
+      "advanced": {
+        "rootCount": 1,
+        "sectionCount": 6,
+        "visibleSectionCount": 6,
+        "writablePaths": [],
+        "controlsWithoutPath": 0,
+        "text": "LAYOUT SUMMARY\nRead-only layout state. Change member layout and card style in Visual.\nVariant\nspotlight\nColumns\n3 columns\nGap\nDefault\nCard radius\nLarge\nCard border width\n1px\nCompact mobile bio\nShown on mobile\nSURFACE SUMMARY\nRead-only color state. Change section and card colors in Visual.\nSection background\nTheme default\nCard background\nSaved custom color\nCard border\nSaved custom color\nCONTENT SUMMARY\nRead-only team content state. Change members, photos, social links, and CTA in Visual.\nMembers\n3 members\nSocial links\n4 configured\nSpotlight lead\nUses first member\nCTA\nNot configured\nSUPPORT ACTIONS\nConfirm-gated maintenance actions for support use. Daily authoring stays in Visual.\nNormalize now\nReset to defaults\nBLOCK LAYOUT SUMMARY\nRead-only outer block placement. Change daily layout in Visual.\nContent width\ndefault\nPadding\nTop XL, bottom XL\nMargin\nTop None, bottom None\nVISIBILITY SUMMARY\nRead-only device visibility. Change daily visibility in Visual.\nShown on\nDesktop, Tablet, Mobile",
+        "preCount": 0
+      },
+      "extra": {
+        "colorValueInputs": 0,
+        "colorSwatches": 3,
+        "rawTokenPlaceholders": 0,
+        "rawPayloadText": false,
+        "advancedFormControls": 0,
+        "normalizeConfirmVisible": true
+      }
+    }
+  ],
+  "summary": {
+    "passed": true,
+    "status": "passed"
+  }
+}

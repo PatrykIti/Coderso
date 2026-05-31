@@ -168,15 +168,56 @@ export const bookingPublicSlotQuerySchema = {
   additionalProperties: false,
 } as const;
 
+const bookingPublicReservationCustomFieldTypes = [
+  "text",
+  "email",
+  "phone",
+  "select",
+  "checkbox",
+  "textarea",
+] as const;
+
+export const bookingPublicReservationMetadataConsentSchema = {
+  type: "object",
+  required: ["accepted", "label"],
+  properties: {
+    accepted: { type: "boolean" },
+    label: { type: "string", minLength: 1, maxLength: 240 },
+  },
+  additionalProperties: false,
+} as const;
+
+export const bookingPublicReservationMetadataCustomFieldSchema = {
+  type: "object",
+  required: ["id", "label", "type"],
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 120 },
+    label: { type: "string", minLength: 1, maxLength: 240 },
+    type: { enum: bookingPublicReservationCustomFieldTypes },
+    value: { type: ["string", "null"], maxLength: 2000 },
+    checked: { type: "boolean" },
+  },
+  additionalProperties: false,
+} as const;
+
+export const bookingPublicReservationMetadataSchema = {
+  type: "object",
+  properties: {
+    flowId: { type: "string", minLength: 1, maxLength: 120 },
+    pathname: { type: "string", minLength: 1, maxLength: 512 },
+    consent: bookingPublicReservationMetadataConsentSchema,
+    customFields: {
+      type: "array",
+      maxItems: 12,
+      items: bookingPublicReservationMetadataCustomFieldSchema,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
 export const bookingPublicReservationSchema = {
   type: "object",
-  required: [
-    "serviceId",
-    "resourceId",
-    "startsAt",
-    "endsAt",
-    "customerName",
-  ],
+  required: ["serviceId", "resourceId", "startsAt", "endsAt", "customerName"],
   properties: {
     serviceId: { type: "string", pattern: uuidPattern },
     resourceId: { type: "string", pattern: uuidPattern },
@@ -187,7 +228,7 @@ export const bookingPublicReservationSchema = {
     customerEmail: { type: ["string", "null"], maxLength: 320 },
     customerPhone: { type: ["string", "null"], maxLength: 64 },
     notes: { type: ["string", "null"], maxLength: 2000 },
-    metadata: { type: "object" },
+    metadata: bookingPublicReservationMetadataSchema,
     captchaToken: { type: "string", minLength: 1, maxLength: 4096 },
     formNonce: { type: "string", minLength: 1, maxLength: 1024 },
   },

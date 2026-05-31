@@ -13,9 +13,22 @@ test("buildProviderPolicyGuidance exposes provider-safe policy resources", () =>
 
   expect(guidance.schemaVersion).toBe(1);
   expect(guidance.draft.resourceKinds).toEqual(
-    expect.arrayContaining(["page", "custom-screen", "settings-surface", "solution-kit", "post", "media"])
+    expect.arrayContaining([
+      "page",
+      "detail-page",
+      "custom-screen",
+      "settings-surface",
+      "solution-kit",
+      "post",
+      "media",
+    ])
   );
   expect(guidance.resources.some((resource) => resource.key === "appointments")).toBe(false);
+  expect(guidance.resources.find((resource) => resource.key === "detail-page")).toMatchObject({
+    kind: "detail-page",
+    coverageState: "live-gated",
+    actions: expect.not.arrayContaining([expect.objectContaining({ mode: "executable" })]),
+  });
 
   const settings = guidance.resources.find((resource) => resource.key === "settings-api-keys");
   expect(settings?.coverageState).toBe("live-gated");
@@ -54,6 +67,7 @@ test("provider registry is grouped from operation policy", () => {
   const settings = registry.find((entry) => entry.kind === "settings-surface");
 
   expect(registry.some((entry) => entry.kind === "page")).toBe(true);
+  expect(registry.some((entry) => entry.kind === "detail-page")).toBe(true);
   expect(settings?.aliases).toEqual(expect.arrayContaining(["settings", "api keys"]));
   expect(settings?.supportedOperations).toEqual(
     expect.arrayContaining(["inspect", "find", "configure", "update"])
@@ -69,6 +83,7 @@ test("operation draft guidance is generated from policy metadata", () => {
   expect(noteText).toContain("custom-screen.status");
   expect(noteText).toContain("Secret-bearing resources are redacted");
   expect(examplesText).toContain("listing-query");
+  expect(examplesText).toContain("detail-page");
   expect(examplesText).toContain("seo-document");
 });
 

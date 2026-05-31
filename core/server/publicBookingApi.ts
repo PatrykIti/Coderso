@@ -72,31 +72,90 @@ const normalizeSlotsQuery = (url: URL): BookingPublicSlotsQuery => ({
   intervalMinutes: parsePositiveInt(url.searchParams.get("intervalMinutes")),
 });
 
-type PublicReservationBody = BookingReservationInput & {
+type PublicReservationBody = Omit<BookingReservationInput, "metadata"> & {
+  metadata: unknown;
   formNonce?: string;
   captchaToken?: string;
 };
 
+const hasOwn = (value: Record<string, unknown>, key: string) =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
 const readText = (value: unknown) =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 
+const readOptionalText = (value: unknown) => {
+  if (value === null) return null;
+  return readText(value);
+};
+
+const normalizeReservationMetadataConsent = (value: unknown): unknown => {
+  if (!isPlainObject(value)) return value;
+  return {
+    ...value,
+    ...(hasOwn(value, "accepted") ? { accepted: value.accepted } : {}),
+    ...(hasOwn(value, "label") ? { label: readText(value.label) } : {}),
+  };
+};
+
+const normalizeReservationMetadataCustomField = (value: unknown): unknown => {
+  if (!isPlainObject(value)) return value;
+  return {
+    ...value,
+    ...(hasOwn(value, "id") ? { id: readText(value.id) } : {}),
+    ...(hasOwn(value, "label") ? { label: readText(value.label) } : {}),
+    ...(hasOwn(value, "type") ? { type: readText(value.type) } : {}),
+    ...(hasOwn(value, "value") ? { value: readOptionalText(value.value) } : {}),
+    ...(hasOwn(value, "checked") ? { checked: value.checked } : {}),
+  };
+};
+
+const normalizeReservationMetadata = (value: unknown): unknown => {
+  if (value === undefined) return {};
+  if (!isPlainObject(value)) return value;
+
+  return {
+    ...value,
+    ...(hasOwn(value, "flowId") ? { flowId: readText(value.flowId) } : {}),
+    ...(hasOwn(value, "pathname") ? { pathname: readText(value.pathname) } : {}),
+    ...(hasOwn(value, "consent")
+      ? { consent: normalizeReservationMetadataConsent(value.consent) }
+      : {}),
+    ...(hasOwn(value, "customFields")
+      ? {
+          customFields: Array.isArray(value.customFields)
+            ? value.customFields.map(normalizeReservationMetadataCustomField)
+            : value.customFields,
+        }
+      : {}),
+  };
+};
+
 const normalizeReservationBody = (body: unknown): PublicReservationBody => {
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
+  if (!isPlainObject(body)) {
     return {
       serviceId: "",
       resourceId: "",
       startsAt: "",
       endsAt: "",
       customerName: "",
+      metadata: {},
     };
   }
 
-  const payload = body as Record<string, unknown>;
+  const payload = body;
 
   const formNonce =
     readText(payload.formNonce) ?? readText(payload.__nl_booking_nonce) ?? undefined;
 
+  const normalized: Record<string, unknown> = { ...payload };
+  delete normalized.__nl_booking_nonce;
+
   return {
+    ...normalized,
     serviceId: readText(payload.serviceId) ?? "",
     resourceId: readText(payload.resourceId) ?? "",
     startsAt: readText(payload.startsAt) ?? "",
@@ -106,10 +165,7 @@ const normalizeReservationBody = (body: unknown): PublicReservationBody => {
     customerEmail: readText(payload.customerEmail) ?? null,
     customerPhone: readText(payload.customerPhone) ?? null,
     notes: readText(payload.notes) ?? null,
-    metadata:
-      payload.metadata && typeof payload.metadata === "object" && !Array.isArray(payload.metadata)
-        ? (payload.metadata as Record<string, unknown>)
-        : {},
+    metadata: normalizeReservationMetadata(payload.metadata),
     formNonce,
     captchaToken: readText(payload.captchaToken),
   };
@@ -173,9 +229,7 @@ const enforceBookingRuntimeAccess = async (params: {
   authorizationHeader?: string | null;
   requiredPermission: "booking:read" | "booking:write";
 }) => {
-  const apiKey = params.user
-    ? null
-    : await authenticateApiKey(params.authorizationHeader ?? null);
+  const apiKey = params.user ? null : await authenticateApiKey(params.authorizationHeader ?? null);
   const access = evaluateBookingAccess({
     mode: params.mode,
     isAuthenticated: Boolean(params.user),
@@ -237,12 +291,10 @@ export async function handlePublicBookingApi(
         authorizationHeader,
         requiredPermission: "booking:read",
       });
+      const slotPolicyClaims =
+        runtimeToken || access.requireCaptcha ? assertBookingSlotsToken(runtimeToken) : {};
 
-      if (access.requireCaptcha) {
-        assertBookingSlotsToken(runtimeToken);
-      }
-
-      const items = await previewBookingSlots(previewInput);
+      const items = await previewBookingSlots(previewInput, slotPolicyClaims);
       return jsonResponse({ items });
     } catch (error) {
       return errorResponse(error);
@@ -295,7 +347,7 @@ export async function handlePublicBookingApi(
         customerEmail: body.customerEmail,
         customerPhone: body.customerPhone,
         notes: body.notes,
-        metadata: body.metadata,
+        metadata: body.metadata as Record<string, unknown>,
       });
 
       if (!created) {

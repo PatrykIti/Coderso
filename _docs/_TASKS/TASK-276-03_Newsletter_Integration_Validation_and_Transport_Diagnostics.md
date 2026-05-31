@@ -1,0 +1,218 @@
+# TASK-276-03: Newsletter Integration Validation and Transport Diagnostics
+
+# FileName: TASK-276-03_Newsletter_Integration_Validation_and_Transport_Diagnostics.md
+
+**Priority:** High
+**Category:** Widgets + Admin UI + Runtime Render + Integration Safety
+**Estimated Effort:** Large
+**Dependencies:** TASK-276, TASK-276-01
+**Status:** Done (2026-05-19)
+
+---
+
+## Overview
+
+Make Newsletter integration settings truthful and validated across Visual,
+Advanced, and runtime output.
+
+The report highlights that action URL accepts arbitrary text, the renderer
+always posts with method `POST`, Advanced shows both action URL and webhook ID
+without priority guidance, and transport-security details are unclear. This
+leaf keeps transport choices bounded and explainable without adding provider
+secrets to widget data.
+
+## Scope Boundary
+
+This leaf owns:
+
+- Safe action URL normalization and inline editor validation.
+- Bounded method selection for pure external native submits only, and only when
+  a provider reference truly requires it. If Newsletter submits through the
+  shared Forms runtime from TASK-276-02, keep the shared runtime `POST`
+  contract and split any broader method support into shared work.
+- Advanced integration diagnostics explaining which field is active for the
+  selected mode.
+- External action safety diagnostics where applicable. Do not add invalid HTML
+  attributes to `<form>`; if the report's `rel` row is not applicable to form
+  actions, close it as `not reproducible` with evidence in TASK-276-07.
+- Compatibility handling for existing `integration.mode`, `actionUrl`, and
+  `webhookId`.
+
+This leaf does not own:
+
+- Runtime success/error orchestration from TASK-276-02.
+- New backend webhook delivery service or provider secret storage.
+- Arbitrary scripts, custom headers, CORS bypasses, provider API keys, or raw
+  HTML embed snippets in widget data.
+- Generic safe URL helpers for unrelated widgets unless already available from
+  TASK-256.
+
+## Sub-Tasks
+
+- [x] Add `integration.method?: "post" | "get"` with default `post` only if
+  current provider references require method configurability and the chosen
+  submit path stays a native external form submit rather than the shared Forms
+  runtime.
+- [x] Normalize `integration.actionUrl` to accepted safe values: HTTPS absolute
+  URLs and explicit relative paths only when the route is Coderso-owned.
+- [x] Reject protocol-relative URLs, `http:` URLs, bare domains,
+  admin/internal relative paths, and unknown relative paths.
+- [x] Reject or surface editor diagnostics for bare domains such as
+  `example.com`.
+- [x] Keep `webhookId` as a safe identifier only; do not treat it as a secret or
+  direct provider URL.
+- [x] In Advanced, show active transport summary: selected mode, active field,
+  ignored field, method, and submit readiness.
+- [x] Preserve legacy payloads by normalizing missing method to `post` and
+  missing action URL to a non-submitting state.
+- [x] Add docs explaining external action URL limitations, the non-applicable
+  `rel`/target distinction for forms if confirmed, and the backend-owned path
+  for webhook/public write behavior.
+
+## Files to Change
+
+| File | Required change |
+|---|---|
+| `core/widgets/core/newsletter.tsx` | Extend schema/defaults/normalizer for method and safe URL diagnostics; render method/action only when valid. |
+| `core/admin/ui/widgets/editors/NewsletterEditors.tsx` | Add action URL validation, method choice if approved, and Advanced active-field diagnostics. |
+| `tests/vitest/widgets/newsletter.test.tsx` | Cover valid/invalid URL normalization, method defaults, and non-submitting invalid action state. |
+| `tests/vitest/ui/newsletter-editor-wave.test.tsx` | Cover inline validation and Advanced diagnostics. |
+| `tests/unit/widgets/validator.test.ts` | Update when schema changes. |
+| `_docs/_WIDGETS/NEWSLETTER.md` | Document integration modes, method support, URL constraints, and diagnostics. |
+
+## Implementation Pseudocode
+
+```ts
+type NewsletterIntegration = {
+  mode?: "action-url" | "webhook";
+  method?: "post" | "get";
+  actionUrl?: string;
+  webhookId?: string;
+};
+
+function normalizeNewsletterActionUrl(value: unknown) {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (text.length === 0) return { value: "", status: "empty" as const };
+  if (text.startsWith("//")) return { value: "", status: "invalid" as const };
+  if (text.startsWith("/")) {
+    return isCodersoOwnedNewsletterSubmitPath(text)
+      ? { value: text, status: "valid" as const }
+      : { value: "", status: "invalid" as const };
+  }
+  try {
+    const url = new URL(text);
+    if (url.protocol === "https:" && !isPrivateOrCredentialedUrl(url)) {
+      return { value: url.toString(), status: "valid" as const };
+    }
+  } catch {
+    return { value: "", status: "invalid" as const };
+  }
+  return { value: "", status: "invalid" as const };
+}
+
+function isCodersoOwnedNewsletterSubmitPath(path: string) {
+  return /^\/forms\/[a-zA-Z0-9_-]+\/submissions$/.test(path);
+}
+
+function isPrivateOrCredentialedUrl(url: URL) {
+  if (url.username || url.password) return true;
+  const host = url.hostname.toLowerCase();
+  return (
+    host === "localhost" ||
+    host === "::1" ||
+    host === "[::1]" ||
+    host.endsWith(".local") ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+    /^\[?(fc|fd|fe80:)/.test(host)
+  );
+}
+
+function resolveNewsletterTransport(integration: NewsletterIntegration) {
+  const action = normalizeNewsletterActionUrl(integration.actionUrl);
+  const mode = integration.mode === "webhook" ? "webhook" : "action-url";
+  return {
+    mode,
+    method: integration.method === "get" ? "get" : "post",
+    actionUrl: mode === "action-url" && action.status === "valid" ? action.value : "",
+    actionStatus: action.status,
+    activeField: mode === "webhook" ? "webhookId" : "actionUrl",
+  };
+}
+```
+
+Error handling:
+
+- Invalid action URLs render no `action` attribute and set
+  `data-newsletter-action-status="invalid"`.
+- Bare domains remain invalid until the user adds `https://`.
+- `http:`, protocol-relative `//`, `/admin/*`, unknown relative paths,
+  credentialed URLs, localhost, `.local`, loopback, and private-network hosts
+  are invalid. Only HTTPS external targets and approved Coderso-owned public
+  submit paths are valid.
+- Webhook mode ignores action URL at runtime but keeps the stored value for
+  backward-compatible editing.
+- If method is `get`, hidden fields and consent names must still be safe and no
+  secret-like values may be included.
+- If the active submit path reuses the shared Forms runtime client, do not
+  treat `GET` as a Newsletter-local toggle; split that runtime change into
+  shared work instead.
+- Advanced diagnostics must describe inactive fields rather than encouraging
+  users to fill both.
+
+## Security Contract
+
+This leaf does not add API routes.
+
+- Endpoint visibility: none.
+- Auth/RBAC/CSRF/rate limit: unchanged admin editing and public rendering.
+- Reject-unknown validation: integration schema remains
+  `additionalProperties: false`; invalid URLs/methods normalize or fail
+  validation in tests.
+- Anti-abuse: external action URLs are not Coderso-protected; docs and
+  diagnostics must not imply nonce/CAPTCHA protection unless the target is a
+  Coderso-owned route.
+- Secret handling: no provider API keys, webhook secrets, custom headers, raw
+  scripts, private URLs, or credentials in widget data.
+
+## Testing Requirements
+
+- Inherit the TASK-276 family gate before commit/closure:
+  `bun run lint`, `bun run test:bun`, `bun run test:vitest`,
+  `bun run scan:security:strict`, `bun run precommit`.
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx` with
+  cases for `//evil.example`, `http://example.com`, `example.com`,
+  `/admin/forms`, valid `https://example.com/subscribe`, and valid
+  `/forms/:id/submissions`, plus invalid `https://user:pass@example.com`,
+  `https://localhost/subscribe`, `https://127.0.0.1/subscribe`,
+  `https://10.0.0.1/subscribe`, `https://169.254.1.1/subscribe`,
+  `https://[::1]/subscribe`, and `https://service.local/subscribe`.
+- `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run scan:security:strict` before closure if URL/transport sanitization
+  behavior changes.
+
+## Documentation Updates Required
+
+- `_docs/_WIDGETS/NEWSLETTER.md`
+- `_docs/PLAYWRIGHT/REPORT_NEWSLETTER_WIDGET.md` rows UX-03, UX-04, BF-10, and
+  BF-13 after validation or not-applicable evidence.
+
+## Changelog Policy
+
+- Covered by the TASK-276 family changelog or a leaf-specific changelog entry
+  before moving to `Done`.
+
+## Acceptance Criteria
+
+- Invalid action URLs cannot silently produce broken public submit behavior.
+- Advanced editor clearly identifies the active integration field and ignored
+  metadata.
+- Method behavior is explicit, backward-compatible, and test-covered if added.
+- Widget data remains free of secrets, arbitrary scripts, and custom privileged
+  provider configuration.

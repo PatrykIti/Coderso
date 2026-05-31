@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -44,13 +44,9 @@ vi.mock("@/components/ui/separator", () => ({
 vi.mock("@/components/ui/table", () => ({
   Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
   TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
-  TableCell: ({
-    children,
-    colSpan,
-  }: {
-    children: React.ReactNode;
-    colSpan?: number;
-  }) => <td colSpan={colSpan}>{children}</td>,
+  TableCell: ({ children, colSpan }: { children: React.ReactNode; colSpan?: number }) => (
+    <td colSpan={colSpan}>{children}</td>
+  ),
   TableHead: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
   TableHeader: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
   TableRow: ({ children }: { children: React.ReactNode }) => <tr>{children}</tr>,
@@ -61,14 +57,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -103,13 +99,11 @@ test("PermissionsMatrix renders fallback groups and forwards bulk and per-permis
     const byLabel = (label: string) =>
       view.container.querySelector(`button[aria-label='${label}']`);
 
-    act(() => {
+    React.act(() => {
       byLabel("Toggle all Admin permissions")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
-      byLabel("Read content for Editor")?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true })
-      );
+      byLabel("Read content for Editor")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(onToggleRoleAll).toHaveBeenCalledWith("admin");

@@ -37,6 +37,8 @@ export type FieldSettings = {
     options?: string[];
     defaultValue?: boolean | string;
     pattern?: string;
+    min?: number;
+    max?: number;
     step?: number;
     logic?: FormFieldLogic;
     style?: FormFieldStyle;
@@ -47,16 +49,25 @@ type FieldSettingsPanelProps = {
   field: FieldSettings | null;
   allFields: Array<Pick<FieldSettings, "id" | "name" | "label">>;
   onChange: (fieldId: string, updates: Partial<FieldSettings>) => void;
-  onSettingsChange: (
-    fieldId: string,
-    updates: Partial<FieldSettings["settings"]>
-  ) => void;
+  onSettingsChange: (fieldId: string, updates: Partial<FieldSettings["settings"]>) => void;
   onDuplicate?: (fieldId: string) => void;
 };
 
-const supportsPlaceholder = new Set(["text", "email", "textarea", "phone", "date"]);
-const supportsOptions = new Set(["select"]);
+const supportsPlaceholder = new Set([
+  "text",
+  "email",
+  "textarea",
+  "phone",
+  "date",
+  "number",
+  "time",
+]);
+const supportsOptions = new Set(["select", "radio"]);
 const supportsDefault = new Set(["checkbox"]);
+const supportsChoiceDefault = new Set(["select", "radio"]);
+const supportsNumericBounds = new Set(["number", "range", "rating"]);
+const supportsStep = new Set(["number", "range"]);
+const supportsTextDefault = new Set(["hidden"]);
 
 const createLogicPatch = (
   current: FormFieldLogic | undefined,
@@ -77,9 +88,7 @@ const createLogicPatch = (
     return {
       operator: merged.operator,
       field: "",
-      ...(isValueLogicOperator(merged.operator)
-        ? { value: merged.value?.trim() ?? "" }
-        : {}),
+      ...(isValueLogicOperator(merged.operator) ? { value: merged.value?.trim() ?? "" } : {}),
     };
   }
 
@@ -172,9 +181,7 @@ export function FieldSettingsPanel({
                 </label>
                 <Input
                   value={field.label}
-                  onChange={(event) =>
-                    onChange(field.id, { label: event.target.value })
-                  }
+                  onChange={(event) => onChange(field.id, { label: event.target.value })}
                 />
               </div>
               {supportsPlaceholder.has(field.type) ? (
@@ -199,9 +206,7 @@ export function FieldSettingsPanel({
                 <Textarea
                   rows={2}
                   value={field.settings.helper ?? ""}
-                  onChange={(event) =>
-                    onSettingsChange(field.id, { helper: event.target.value })
-                  }
+                  onChange={(event) => onSettingsChange(field.id, { helper: event.target.value })}
                 />
               </div>
             </div>
@@ -240,8 +245,132 @@ export function FieldSettingsPanel({
                   </div>
                   <Switch
                     checked={Boolean(field.settings.defaultValue)}
-                    onCheckedChange={(value) =>
-                      onSettingsChange(field.id, { defaultValue: value })
+                    onCheckedChange={(value) => onSettingsChange(field.id, { defaultValue: value })}
+                  />
+                </div>
+              </>
+            ) : null}
+            {supportsChoiceDefault.has(field.type) ? (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Default option
+                  </label>
+                  {field.settings.options && field.settings.options.length > 0 ? (
+                    <Select
+                      value={
+                        typeof field.settings.defaultValue === "string"
+                          ? field.settings.defaultValue
+                          : "__none__"
+                      }
+                      onValueChange={(value) =>
+                        onSettingsChange(field.id, {
+                          defaultValue: value === "__none__" ? undefined : value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="No default option" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">No default option</SelectItem>
+                        {field.settings.options.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Add options before selecting a default value.
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : null}
+            {supportsTextDefault.has(field.type) ? (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Trusted default value
+                  </label>
+                  <Input
+                    value={
+                      typeof field.settings.defaultValue === "string"
+                        ? field.settings.defaultValue
+                        : ""
+                    }
+                    onChange={(event) =>
+                      onSettingsChange(field.id, { defaultValue: event.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Hidden fields submit this exact value and reject client-side tampering.
+                  </p>
+                </div>
+              </>
+            ) : null}
+            {supportsNumericBounds.has(field.type) ? (
+              <>
+                <Separator />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Minimum
+                    </label>
+                    <Input
+                      type="number"
+                      value={field.settings.min ?? ""}
+                      onChange={(event) =>
+                        onSettingsChange(field.id, {
+                          min:
+                            event.target.value.trim().length === 0
+                              ? undefined
+                              : Number(event.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Maximum
+                    </label>
+                    <Input
+                      type="number"
+                      value={field.settings.max ?? ""}
+                      onChange={(event) =>
+                        onSettingsChange(field.id, {
+                          max:
+                            event.target.value.trim().length === 0
+                              ? undefined
+                              : Number(event.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </>
+            ) : null}
+            {supportsStep.has(field.type) ? (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Step value
+                  </label>
+                  <Input
+                    type="number"
+                    value={field.settings.step ?? ""}
+                    onChange={(event) =>
+                      onSettingsChange(field.id, {
+                        step:
+                          event.target.value.trim().length === 0
+                            ? undefined
+                            : Number(event.target.value),
+                      })
                     }
                   />
                 </div>
@@ -253,17 +382,13 @@ export function FieldSettingsPanel({
                 Validation Rules
               </label>
               <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Step number
-                </label>
+                <label className="text-xs font-medium text-muted-foreground">Step number</label>
                 <Input
                   inputMode="numeric"
                   value={String(field.settings.step ?? 1)}
                   onChange={(event) => {
                     const parsed = Number.parseInt(event.target.value, 10);
-                    const step = Number.isFinite(parsed)
-                      ? Math.max(1, Math.min(10, parsed))
-                      : 1;
+                    const step = Number.isFinite(parsed) ? Math.max(1, Math.min(10, parsed)) : 1;
                     onSettingsChange(field.id, { step });
                   }}
                 />
@@ -274,21 +399,15 @@ export function FieldSettingsPanel({
               <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">Required Field</p>
-                  <p className="text-xs text-muted-foreground">
-                    Prevent empty submissions.
-                  </p>
+                  <p className="text-xs text-muted-foreground">Prevent empty submissions.</p>
                 </div>
                 <Switch
                   checked={field.required}
-                  onCheckedChange={(value) =>
-                    onChange(field.id, { required: value })
-                  }
+                  onCheckedChange={(value) => onChange(field.id, { required: value })}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Regex Pattern
-                </label>
+                <label className="text-xs font-medium text-muted-foreground">Regex Pattern</label>
                 <div className="flex items-center gap-2">
                   <Input
                     value={field.settings.pattern ?? ""}
@@ -313,9 +432,7 @@ export function FieldSettingsPanel({
               </label>
               <Select
                 value={logic.operator}
-                onValueChange={(value) =>
-                  patchLogic({ operator: value as FormFieldLogicOperator })
-                }
+                onValueChange={(value) => patchLogic({ operator: value as FormFieldLogicOperator })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select rule" />
@@ -383,9 +500,7 @@ export function FieldSettingsPanel({
               </label>
               <Select
                 value={style.width ?? "full"}
-                onValueChange={(value) =>
-                  patchStyle({ width: value as FormFieldStyle["width"] })
-                }
+                onValueChange={(value) => patchStyle({ width: value as FormFieldStyle["width"] })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select width" />
@@ -432,11 +547,7 @@ export function FieldSettingsPanel({
         </Tabs>
       </ScrollArea>
       <div className="border-t p-4">
-        <Button
-          variant="secondary"
-          className="w-full"
-          onClick={() => onDuplicate?.(field.id)}
-        >
+        <Button variant="secondary" className="w-full" onClick={() => onDuplicate?.(field.id)}>
           Duplicate Field
         </Button>
       </div>

@@ -1,10 +1,10 @@
 import type { DocsAnswerSource, DocsSearchHit } from "./docsTypes";
-import type {
-  AssistantActionContext,
-  AssistantAdminRuntimeSnapshot,
-} from "./actionPlanTypes";
+import type { AssistantActionContext, AssistantAdminRuntimeSnapshot } from "./actionPlanTypes";
 import type { AssistantResourceCatalogSnapshot } from "./adminContextTypes";
-import { buildAssistantAdminContext } from "./adminContextService";
+import {
+  buildAssistantAdminContext,
+  sanitizeAssistantPlanningContext,
+} from "./adminContextService";
 import { redactAssistantMetadata, redactAssistantText } from "./assistantRedaction";
 import { assistantOperationPolicy } from "./operationPolicy/assistantOperationPolicy";
 import {
@@ -13,6 +13,10 @@ import {
   buildProviderPolicyRegistry,
   type AssistantProviderPolicyGuidance,
 } from "./operationPolicy/providerGuidance";
+import {
+  buildBlueprintProviderContext,
+  type BlueprintProviderContextPackage,
+} from "./blueprints/blueprintProviderContext";
 
 export type AssistantProviderPlanningEvidence =
   | DocsSearchHit
@@ -63,15 +67,27 @@ export type AssistantProviderPlanningPromptPackage = {
     schemaVersion: 1;
     budget: AssistantResourceCatalogSnapshot["budget"];
     pages: NonNullable<AssistantResourceCatalogSnapshot["pages"]>;
+    posts: NonNullable<AssistantResourceCatalogSnapshot["posts"]>;
+    entries: NonNullable<AssistantResourceCatalogSnapshot["entries"]>;
     contentTypes: AssistantResourceCatalogSnapshot["contentTypes"];
     customScreens: AssistantResourceCatalogSnapshot["customScreens"];
+    detailPages: NonNullable<AssistantResourceCatalogSnapshot["detailPages"]>;
     listings: AssistantResourceCatalogSnapshot["listings"];
     forms: AssistantResourceCatalogSnapshot["forms"];
     menus: AssistantResourceCatalogSnapshot["menus"];
     seoDocuments: AssistantResourceCatalogSnapshot["seoDocuments"];
     widgets: AssistantResourceCatalogSnapshot["widgets"];
+    media: NonNullable<AssistantResourceCatalogSnapshot["media"]>;
+    commerce: {
+      products: NonNullable<NonNullable<AssistantResourceCatalogSnapshot["commerce"]>["products"]>;
+      collections: NonNullable<
+        NonNullable<AssistantResourceCatalogSnapshot["commerce"]>["collections"]
+      >;
+    };
+    solutionKits: NonNullable<AssistantResourceCatalogSnapshot["solutionKits"]>;
     warnings: string[];
   } | null;
+  blueprints: BlueprintProviderContextPackage;
   registry: Array<{
     kind: string;
     aliases: string[];
@@ -87,6 +103,7 @@ export type AssistantProviderPlanningPromptPackage = {
     }>;
   };
   activeSurface: AssistantActionContext["activeSurface"];
+  collectionWorkspace: AssistantActionContext["collectionWorkspace"];
   warnings: string[];
 };
 
@@ -104,9 +121,7 @@ const readNumber = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
 const clampPositiveInteger = (value: unknown, fallback: number) =>
-  typeof value === "number" && Number.isFinite(value)
-    ? Math.max(1, Math.floor(value))
-    : fallback;
+  typeof value === "number" && Number.isFinite(value) ? Math.max(1, Math.floor(value)) : fallback;
 
 const readEvidence = (value: AssistantProviderPlanningEvidence) => {
   if ("chunk" in value && isRecord(value.chunk)) {
@@ -149,12 +164,7 @@ const buildDocs = (
   });
 };
 
-const clampItems = <T>(
-  items: T[],
-  max: number,
-  warning: string,
-  warnings: string[]
-) => {
+const clampItems = <T>(items: T[], max: number, warning: string, warnings: string[]) => {
   if (items.length > max) warnings.push(warning);
   return items.slice(0, max);
 };
@@ -169,16 +179,70 @@ const buildResources = (
     schemaVersion: 1,
     budget: catalog.budget,
     pages: clampItems(catalog.pages ?? [], maxItemsPerGroup, "pages_truncated", warnings),
-    contentTypes: clampItems(catalog.contentTypes, maxItemsPerGroup, "content_types_truncated", warnings),
-    customScreens: clampItems(catalog.customScreens, maxItemsPerGroup, "custom_screens_truncated", warnings),
+    posts: clampItems(catalog.posts ?? [], maxItemsPerGroup, "posts_truncated", warnings),
+    entries: clampItems(catalog.entries ?? [], maxItemsPerGroup, "entries_truncated", warnings),
+    contentTypes: clampItems(
+      catalog.contentTypes,
+      maxItemsPerGroup,
+      "content_types_truncated",
+      warnings
+    ),
+    customScreens: clampItems(
+      catalog.customScreens,
+      maxItemsPerGroup,
+      "custom_screens_truncated",
+      warnings
+    ),
+    detailPages: clampItems(
+      catalog.detailPages ?? [],
+      maxItemsPerGroup,
+      "detail_pages_truncated",
+      warnings
+    ),
     listings: {
-      queries: clampItems(catalog.listings.queries, maxItemsPerGroup, "listing_queries_truncated", warnings),
-      templates: clampItems(catalog.listings.templates, maxItemsPerGroup, "listing_templates_truncated", warnings),
+      queries: clampItems(
+        catalog.listings.queries,
+        maxItemsPerGroup,
+        "listing_queries_truncated",
+        warnings
+      ),
+      templates: clampItems(
+        catalog.listings.templates,
+        maxItemsPerGroup,
+        "listing_templates_truncated",
+        warnings
+      ),
     },
     forms: clampItems(catalog.forms, maxItemsPerGroup, "forms_truncated", warnings),
     menus: clampItems(catalog.menus, maxItemsPerGroup, "menus_truncated", warnings),
-    seoDocuments: clampItems(catalog.seoDocuments, maxItemsPerGroup, "seo_documents_truncated", warnings),
+    seoDocuments: clampItems(
+      catalog.seoDocuments,
+      maxItemsPerGroup,
+      "seo_documents_truncated",
+      warnings
+    ),
     widgets: clampItems(catalog.widgets, maxItemsPerGroup, "widgets_truncated", warnings),
+    media: clampItems(catalog.media ?? [], maxItemsPerGroup, "media_truncated", warnings),
+    commerce: {
+      products: clampItems(
+        catalog.commerce?.products ?? [],
+        maxItemsPerGroup,
+        "commerce_products_truncated",
+        warnings
+      ),
+      collections: clampItems(
+        catalog.commerce?.collections ?? [],
+        maxItemsPerGroup,
+        "commerce_collections_truncated",
+        warnings
+      ),
+    },
+    solutionKits: clampItems(
+      catalog.solutionKits ?? [],
+      maxItemsPerGroup,
+      "solution_kits_truncated",
+      warnings
+    ),
     warnings: [...catalog.warnings],
   };
 };
@@ -209,12 +273,9 @@ export const buildProviderPlanningPromptPackage = (
   input: AssistantProviderPlanningPromptInput
 ): AssistantProviderPlanningPromptPackage => {
   const warnings: string[] = [];
-  const context = buildAssistantAdminContext(input.context);
+  const context = buildAssistantAdminContext(sanitizeAssistantPlanningContext(input.context));
   const maxDocs = clampPositiveInteger(input.maxDocs, DEFAULT_MAX_DOCS);
-  const maxCharsPerDoc = clampPositiveInteger(
-    input.maxCharsPerDoc,
-    DEFAULT_MAX_CHARS_PER_DOC
-  );
+  const maxCharsPerDoc = clampPositiveInteger(input.maxCharsPerDoc, DEFAULT_MAX_CHARS_PER_DOC);
   const maxResourceItemsPerGroup = clampPositiveInteger(
     input.maxResourceItemsPerGroup,
     DEFAULT_MAX_RESOURCE_ITEMS_PER_GROUP
@@ -228,10 +289,14 @@ export const buildProviderPlanningPromptPackage = (
     runtime: buildRuntime(context.runtimeSnapshot),
     docs: buildDocs(input.evidence, maxDocs, maxCharsPerDoc, warnings),
     resources: buildResources(context.resourceCatalog, maxResourceItemsPerGroup, warnings),
+    blueprints: buildBlueprintProviderContext({
+      maxCapabilities: maxResourceItemsPerGroup,
+    }),
     registry: providerPolicyRegistry,
     policyGuidance: providerPolicyGuidance,
     operationDraftGuidance: providerOperationDraftGuidance,
     activeSurface: context.activeSurface,
+    collectionWorkspace: context.collectionWorkspace,
     warnings,
   };
 

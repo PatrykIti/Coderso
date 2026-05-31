@@ -1,4 +1,4 @@
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, afterEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
@@ -11,11 +11,24 @@ import {
   normalizeListingTemplateConfig,
   updateListingTemplate,
 } from "../../../core/services/content/listingTemplatesService";
+import {
+  getSetting,
+  setSetting,
+  type ContentRouteSetting,
+} from "../../../core/services/settings/settingsService";
+import {
+  buildSiteCacheKey,
+  clearSiteCache,
+  configureSiteCache,
+  getSiteCacheEntry,
+  setSiteCacheEntry,
+} from "../../../core/site/cache/siteCache";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
 
 const createdTemplateIds = new Set<string>();
+let originalContentRoutes: ContentRouteSetting[] | null = null;
 
 async function canConnect() {
   try {
@@ -51,6 +64,11 @@ async function ensureListingTemplatesTable() {
 }
 
 afterAll(async () => {
+  clearSiteCache();
+  if (originalContentRoutes) {
+    await setSetting("site.contentRoutes", originalContentRoutes);
+    originalContentRoutes = null;
+  }
   if (!hasDb || createdTemplateIds.size === 0) return;
   await db
     .delete(listingTemplates)
@@ -59,6 +77,35 @@ afterAll(async () => {
     await db.delete(listingTemplates).where(eq(listingTemplates.id, id));
   }
 });
+
+afterEach(async () => {
+  clearSiteCache();
+  if (originalContentRoutes) {
+    await setSetting("site.contentRoutes", originalContentRoutes);
+    originalContentRoutes = null;
+  }
+});
+
+const enableLinkedDetailRouteCache = async () => {
+  originalContentRoutes =
+    originalContentRoutes ??
+    ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ??
+    [];
+  await setSetting("site.contentRoutes", [
+    {
+      type: "products",
+      listPath: "/products",
+      detailPath: "/products/:slug",
+      enabled: true,
+      detailPageId: "14d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    } satisfies ContentRouteSetting,
+  ]);
+  configureSiteCache(300);
+  const key = buildSiteCacheKey("profile-1", "/products/example");
+  setSiteCacheEntry(key, "<html>cached</html>", 300, 0);
+  expect(getSiteCacheEntry(key, 1)).toBe("<html>cached</html>");
+  return key;
+};
 
 test("normalizeListingTemplateConfig returns defaults", () => {
   const config = normalizeListingTemplateConfig(undefined);
@@ -164,3 +211,29 @@ testIfDb("listing template CRUD flow with slug uniqueness", async () => {
   expect(removed?.id).toBe(created.id);
   createdTemplateIds.delete(created.id);
 });
+
+testIfDb(
+  "listing template owner seam invalidates linked detail-route cache on update and delete",
+  async () => {
+    await ensureListingTemplatesTable();
+    const cacheKey = await enableLinkedDetailRouteCache();
+    const created = await createListingTemplate({
+      name: `Cached template ${randomUUID()}`,
+      layout: "grid",
+      config: { fields: [] },
+    });
+    createdTemplateIds.add(created.id);
+
+    await updateListingTemplate(created.id, {
+      name: `${created.name} Updated`,
+    });
+    expect(getSiteCacheEntry(cacheKey, 1)).toBeNull();
+
+    setSiteCacheEntry(cacheKey, "<html>cached</html>", 300, 0);
+    expect(getSiteCacheEntry(cacheKey, 1)).toBe("<html>cached</html>");
+
+    await deleteListingTemplate(created.id);
+    expect(getSiteCacheEntry(cacheKey, 1)).toBeNull();
+    createdTemplateIds.delete(created.id);
+  }
+);

@@ -11,6 +11,7 @@ import {
 } from "../../../core/widgets/core/compareTimeline";
 import {
   createTimelineWidget,
+  normalizeTimelineSteps,
   timelineDefaults,
   type TimelineData,
 } from "../../../core/widgets/core/timeline";
@@ -74,11 +75,7 @@ import {
   statsKpiDefaults,
   type StatsKpiData,
 } from "../../../core/widgets/core/statsKpi";
-import {
-  createTeamWidget,
-  teamDefaults,
-  type TeamData,
-} from "../../../core/widgets/core/team";
+import { createTeamWidget, teamDefaults, type TeamData } from "../../../core/widgets/core/team";
 import {
   createRichTextSectionWidget,
   richTextSectionDefaults,
@@ -94,11 +91,7 @@ import {
   gridColumnsDefaults,
   type GridColumnsData,
 } from "../../../core/widgets/core/gridColumns";
-import {
-  createStackWidget,
-  stackDefaults,
-  type StackData,
-} from "../../../core/widgets/core/stack";
+import { createStackWidget, stackDefaults, type StackData } from "../../../core/widgets/core/stack";
 import {
   createSplitLayoutWidget,
   splitLayoutDefaults,
@@ -119,8 +112,7 @@ import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
-const StubCompareTimelineEditor: ComponentType<WidgetEditorProps<CompareTimelineData>> = () =>
-  null;
+const StubCompareTimelineEditor: ComponentType<WidgetEditorProps<CompareTimelineData>> = () => null;
 const StubTimelineEditor: ComponentType<WidgetEditorProps<TimelineData>> = () => null;
 const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 const StubFooterEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
@@ -129,22 +121,17 @@ const StubContactEditor: ComponentType<WidgetEditorProps<ContactData>> = () => n
 const StubFeatureGridEditor: ComponentType<WidgetEditorProps<FeatureGridData>> = () => null;
 const StubTestimonialsEditor: ComponentType<WidgetEditorProps<TestimonialsData>> = () => null;
 const StubPricingPlansEditor: ComponentType<WidgetEditorProps<PricingPlansData>> = () => null;
-const StubFaqAccordionEditor: ComponentType<WidgetEditorProps<FaqAccordionData>> = () =>
-  null;
+const StubFaqAccordionEditor: ComponentType<WidgetEditorProps<FaqAccordionData>> = () => null;
 const StubCtaBannerEditor: ComponentType<WidgetEditorProps<CtaBannerData>> = () => null;
 const StubLogoCloudEditor: ComponentType<WidgetEditorProps<LogoCloudData>> = () => null;
-const StubGalleryMosaicEditor: ComponentType<WidgetEditorProps<GalleryMosaicData>> = () =>
-  null;
+const StubGalleryMosaicEditor: ComponentType<WidgetEditorProps<GalleryMosaicData>> = () => null;
 const StubStatsKpiEditor: ComponentType<WidgetEditorProps<StatsKpiData>> = () => null;
 const StubTeamEditor: ComponentType<WidgetEditorProps<TeamData>> = () => null;
-const StubRichTextSectionEditor: ComponentType<WidgetEditorProps<RichTextSectionData>> = () =>
-  null;
+const StubRichTextSectionEditor: ComponentType<WidgetEditorProps<RichTextSectionData>> = () => null;
 const StubSectionEditor: ComponentType<WidgetEditorProps<SectionData>> = () => null;
-const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () =>
-  null;
+const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () => null;
 const StubStackEditor: ComponentType<WidgetEditorProps<StackData>> = () => null;
-const StubSplitLayoutEditor: ComponentType<WidgetEditorProps<SplitLayoutData>> = () =>
-  null;
+const StubSplitLayoutEditor: ComponentType<WidgetEditorProps<SplitLayoutData>> = () => null;
 const StubSpacerEditor: ComponentType<WidgetEditorProps<SpacerData>> = () => null;
 const StubDividerEditor: ComponentType<WidgetEditorProps<DividerData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
@@ -199,12 +186,8 @@ test("renderer respects visibility devices in runtime preview", () => {
     visibility: { enabled: true, devices: ["mobile"] },
   };
 
-  const desktopHtml = renderToString(
-    <WidgetRenderer block={block} previewDevice="desktop" />
-  );
-  const mobileHtml = renderToString(
-    <WidgetRenderer block={block} previewDevice="mobile" />
-  );
+  const desktopHtml = renderToString(<WidgetRenderer block={block} previewDevice="desktop" />);
+  const mobileHtml = renderToString(<WidgetRenderer block={block} previewDevice="mobile" />);
 
   expect(desktopHtml).toBe("");
   expect(mobileHtml).toContain("Build your system with Coderso");
@@ -228,9 +211,30 @@ test("renderer hides widget when visibility devices are empty", () => {
     visibility: { enabled: true, devices: [] },
   };
 
-  const html = renderToString(
-    <WidgetRenderer block={block} previewDevice="desktop" />
+  const html = renderToString(<WidgetRenderer block={block} previewDevice="desktop" />);
+
+  expect(html).toBe("");
+});
+
+test("renderer hides public widget output when visibility devices are empty", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
   );
+
+  const block: WidgetBlock = {
+    id: "hero-public-no-devices",
+    type: "hero",
+    variant: "centered",
+    data: heroDefaults,
+    visibility: { enabled: true, devices: [] },
+  };
+
+  const html = renderToString(<WidgetRenderer block={block} />);
 
   expect(html).toBe("");
 });
@@ -305,6 +309,36 @@ test("renderer resolves inherit layout tokens from page defaults", () => {
   expect(html).toContain("mb-4");
 });
 
+test("renderer can render a nested row-flow child shell without the default block wrapper", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  const block: WidgetBlock = {
+    id: "hero-row-flow",
+    type: "hero",
+    variant: "centered",
+    data: heroDefaults,
+  };
+
+  const html = renderToStaticMarkup(
+    <WidgetRenderer
+      block={block}
+      renderContext={{ mode: "public", nestedSurface: "row-flow-item" }}
+    />
+  );
+
+  expect(html).toContain('data-widget-surface="row-flow-item"');
+  expect(html).toContain('data-widget-type="hero"');
+  expect(html).not.toContain("<section");
+  expect(html).not.toContain("max-w-5xl");
+});
+
 test("renderer renders nested blocks", () => {
   clearWidgets();
   registerWidget(
@@ -358,9 +392,7 @@ test("renderer passes slots to widget render", () => {
     schema: { type: "object", additionalProperties: true },
     defaults: {},
     editor: { wizard: StubEditor, visual: StubEditor, advanced: StubEditor },
-    render: ({ slots }) => (
-      <div>Slots:{slots?.main?.length ?? 0}</div>
-    ),
+    render: ({ slots }) => <div>Slots:{slots?.main?.length ?? 0}</div>,
   });
 
   const block: WidgetBlock = {
@@ -502,6 +534,7 @@ test("renderer outputs split layout markers", () => {
           ratio: {
             desktop: "40-60",
             tablet: "60-40",
+            mobile: "50-50",
           },
           collapseMobile: "keep",
           reverseOnMobile: true,
@@ -519,6 +552,7 @@ test("renderer outputs split layout markers", () => {
   expect(html).toContain('data-split-layout-variant="40-60"');
   expect(html).toContain('data-split-ratio-desktop="40-60"');
   expect(html).toContain('data-split-ratio-tablet="60-40"');
+  expect(html).toContain('data-split-ratio-mobile="50-50"');
   expect(html).toContain('data-split-collapse-mobile="keep"');
   expect(html).toContain('data-split-reverse-mobile="true"');
 });
@@ -757,9 +791,14 @@ test("renderer renders footer column and bottom slot content", () => {
 
   expect(html).toContain("Column slot item");
   expect(html).toContain("Bottom slot item");
+  expect(html).toContain('aria-label="Site footer"');
+  expect(html).toContain("<h3");
+  expect(html).toContain('aria-label="X (opens in new tab)"');
+  expect(html).toContain('target="_blank"');
+  expect(html).not.toContain(">twitter<");
 });
 
-test("renderer outputs timeline variant and orientation markers", () => {
+test("renderer outputs timeline semantics and container metadata", () => {
   clearWidgets();
   registerWidget(
     createTimelineWidget({
@@ -777,11 +816,38 @@ test("renderer outputs timeline variant and orientation markers", () => {
         variant: "cards",
         data: {
           ...timelineDefaults,
+          header: {
+            title: "Product roadmap",
+            description: "Key milestones for launch",
+          },
           layout: {
             ...timelineDefaults.layout,
             orientation: "vertical",
             labelPosition: "bottom",
+            padding: "lg",
+            maxWidth: "7xl",
           },
+          style: {
+            ...timelineDefaults.style,
+            markerDisplay: "icon",
+          },
+          steps: normalizeTimelineSteps([
+            {
+              id: "timeline-step-1",
+              title: "Discover",
+              status: "current",
+              markerIcon: "rocket",
+              link: { href: "/timeline/discover", label: "Open discovery" },
+            },
+            {
+              id: "timeline-step-2",
+              title: "Plan",
+            },
+            {
+              id: "timeline-step-3",
+              title: "Ship",
+            },
+          ]),
         },
       }}
     />
@@ -790,6 +856,13 @@ test("renderer outputs timeline variant and orientation markers", () => {
   expect(html).toContain('data-timeline-variant="cards"');
   expect(html).toContain('data-timeline-orientation="vertical"');
   expect(html).toContain('data-timeline-label-position="bottom"');
+  expect(html).toContain('data-timeline-padding="lg"');
+  expect(html).toContain('data-timeline-max-width="7xl"');
+  expect(html).toContain('data-timeline-marker-display="icon"');
+  expect(html).toContain('aria-label="Product roadmap steps"');
+  expect(html).toContain('aria-current="step"');
+  expect(html).toContain('aria-hidden="true"');
+  expect(html).toContain('href="/timeline/discover"');
 });
 
 test("renderer outputs compare timeline highlight segments", () => {
@@ -828,7 +901,7 @@ test("renderer outputs compare timeline highlight segments", () => {
   expect(html).toContain("Fast lane");
 });
 
-test("renderer outputs newsletter variant and integration markers", () => {
+test("renderer outputs newsletter variant and forms-runtime markers", () => {
   clearWidgets();
   registerWidget(
     createNewsletterWidget({
@@ -847,15 +920,59 @@ test("renderer outputs newsletter variant and integration markers", () => {
         data: {
           ...newsletterDefaults,
           description: "Hidden in minimal variant",
-          consent: {
-            enabled: true,
-            label: "Accept policy",
-            required: true,
+          form: {
+            ...newsletterDefaults.form,
+            firstName: {
+              ...newsletterDefaults.form?.firstName,
+              enabled: true,
+            },
           },
-          integration: {
-            mode: "webhook",
-            webhookId: "webhook_1",
-            actionUrl: "",
+          submission: {
+            ...newsletterDefaults.submission,
+            mode: "forms-runtime",
+            formId: "form-public",
+            analyticsEvent: "newsletter_submit",
+          },
+          stateCopy: {
+            loadingMessage: "Saving...",
+            successMessage: "Joined.",
+            errorMessage: "Try again.",
+          },
+          resolved: {
+            formId: "form-public",
+            formName: "Newsletter",
+            status: "published",
+            submissionAccess: "public",
+            submissionNonce: "nonce-1",
+            fields: [
+              {
+                id: "field-1",
+                type: "text",
+                label: "First name",
+                name: "first_name",
+                required: false,
+                orderIndex: 0,
+                settings: {},
+              },
+              {
+                id: "field-2",
+                type: "email",
+                label: "Email",
+                name: "email",
+                required: true,
+                orderIndex: 1,
+                settings: {},
+              },
+              {
+                id: "field-3",
+                type: "checkbox",
+                label: "Consent",
+                name: "consent",
+                required: false,
+                orderIndex: 2,
+                settings: {},
+              },
+            ],
           },
           style: {
             spacing: "lg",
@@ -868,9 +985,10 @@ test("renderer outputs newsletter variant and integration markers", () => {
   );
 
   expect(html).toContain('data-newsletter-variant="minimal"');
-  expect(html).toContain('data-newsletter-integration-mode="webhook"');
-  expect(html).toContain('data-newsletter-consent-required="true"');
-  expect(html).toContain('name="webhookId"');
+  expect(html).toContain('data-newsletter-submission-mode="forms-runtime"');
+  expect(html).toContain('data-nextless-form-runtime="1"');
+  expect(html).toContain('data-newsletter-submit-ready="true"');
+  expect(html).toContain('name="__nl_form_nonce"');
   expect(html).not.toContain("Hidden in minimal variant");
 });
 
@@ -1224,8 +1342,19 @@ test("renderer outputs logo cloud variant and style markers", () => {
             logoHeight: "lg",
             gap: "lg",
             alignment: "start",
+            headerAlign: "end",
+            headerSize: "lg",
+            tileRadius: "full",
+            tileBorderWidth: "md",
+            openLinksInNewTab: true,
             grayscale: true,
             hoverColor: false,
+          },
+          cta: {
+            enabled: true,
+            label: "Talk to sales",
+            href: "https://example.com/contact",
+            target: "new-tab",
           },
         },
       }}
@@ -1237,7 +1366,17 @@ test("renderer outputs logo cloud variant and style markers", () => {
   expect(html).toContain('data-logo-cloud-count="3"');
   expect(html).toContain('data-logo-cloud-alignment="start"');
   expect(html).toContain('data-logo-cloud-grayscale="true"');
+  expect(html).toContain('data-logo-cloud-header-align="end"');
+  expect(html).toContain('data-logo-cloud-header-size="lg"');
+  expect(html).toContain('data-logo-cloud-row-mode="wrap"');
+  expect(html).toContain('data-logo-cloud-motion="static"');
+  expect(html).toContain('data-logo-cloud-tile-radius="full"');
+  expect(html).toContain('data-logo-cloud-tile-border-width="md"');
+  expect(html).toContain('data-logo-cloud-open-in-new-tab="true"');
+  expect(html).toContain("<h2");
+  expect(html).toContain("aria-labelledby=");
   expect(html).toContain("North Labs");
+  expect(html).toContain('data-logo-cloud-cta="true"');
 });
 
 test("renderer outputs gallery mosaic variant and caption markers", () => {
@@ -1293,7 +1432,14 @@ test("renderer outputs gallery mosaic variant and caption markers", () => {
   expect(html).toContain('data-gallery-mosaic-gap="lg"');
   expect(html).toContain('data-gallery-mosaic-ratio="16:9"');
   expect(html).toContain('data-gallery-mosaic-caption-position="hover"');
+  expect(html).toContain('data-gallery-mosaic-interaction="none"');
+  expect(html).toContain('data-gallery-mosaic-zoom="fit"');
+  expect(html).toContain('data-gallery-mosaic-layout-density="auto"');
+  expect(html).toContain('data-gallery-mosaic-motion="none"');
   expect(html).toContain('data-gallery-media-type="video"');
+  expect(html).toContain("<figure");
+  expect(html).toContain("<figcaption");
+  expect(html).toContain("controls");
   expect(html).toContain("Main frame");
 });
 
@@ -1322,21 +1468,34 @@ test("renderer outputs stats kpi variant and style markers", () => {
           items: [
             {
               id: "kpi-1",
-              value: "250%",
+              value: "250",
+              suffix: "%",
               label: "Growth",
               description: "Revenue growth in the last quarter.",
               icon: "📈",
+              accentColor: "#ff5500",
+              trend: {
+                label: "+18% QoQ",
+                direction: "up",
+              },
+              link: {
+                href: "https://example.com/report",
+                label: "Read report",
+                openInNewTab: true,
+              },
             },
             {
               id: "kpi-2",
-              value: "99.95%",
+              value: "99.95",
+              suffix: "%",
               label: "Uptime",
               description: "Average service availability.",
               icon: "⚙️",
             },
             {
               id: "kpi-3",
-              value: "18m",
+              value: "18",
+              suffix: "m",
               label: "Support SLA",
               description: "Median first-response time.",
               icon: "⏱",
@@ -1346,7 +1505,13 @@ test("renderer outputs stats kpi variant and style markers", () => {
             ...statsKpiDefaults.style,
             alignment: "start",
             spacing: "lg",
+            valueSize: "lg",
             divider: true,
+            dividerIntensity: "strong",
+            maxWidth: "xl",
+            padding: "lg",
+            minHeight: "compact",
+            iconSize: "lg",
           },
         },
       }}
@@ -1357,9 +1522,20 @@ test("renderer outputs stats kpi variant and style markers", () => {
   expect(html).toContain('data-stats-kpi-count="3"');
   expect(html).toContain('data-stats-kpi-alignment="start"');
   expect(html).toContain('data-stats-kpi-spacing="lg"');
-  expect(html).toContain('data-stats-kpi-divider="true"');
+  expect(html).toContain('data-stats-kpi-divider="false"');
+  expect(html).toContain('data-stats-kpi-divider-saved="true"');
+  expect(html).toContain('data-stats-kpi-divider-intensity="strong"');
+  expect(html).toContain('data-stats-kpi-value-size="lg"');
+  expect(html).toContain('data-stats-kpi-max-width="xl"');
+  expect(html).toContain('data-stats-kpi-padding="lg"');
+  expect(html).toContain('data-stats-kpi-min-height="compact"');
+  expect(html).toContain('data-stats-kpi-icon-size="lg"');
+  expect(html).toContain('data-stats-kpi-trend-direction="up"');
+  expect(html).toContain("grid grid-cols-1 sm:grid-cols-2 lg:col-span-2");
+  expect(html).toContain('href="https://example.com/report"');
   expect(html).toContain("Performance overview");
   expect(html).toContain("Support SLA");
+  expect(html).toContain("Read report");
 });
 
 test("renderer outputs team variant and style markers", () => {

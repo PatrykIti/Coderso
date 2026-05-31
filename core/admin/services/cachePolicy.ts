@@ -10,8 +10,7 @@ export const cacheKeys = {
   pageDetail: (id: string) => `pages:detail:${id}`,
   entriesAllList: "entries:list:all",
   entriesList: (typeSlug: string) => `entries:list:${typeSlug}`,
-  entryDetail: (typeSlug: string, id: string) =>
-    `entries:detail:${typeSlug}:${id}`,
+  entryDetail: (typeSlug: string, id: string) => `entries:detail:${typeSlug}:${id}`,
   customScreensList: "customScreens:list",
   customScreenDetail: (id: string) => `customScreens:detail:${id}`,
   postsList: "posts:list",
@@ -19,6 +18,11 @@ export const cacheKeys = {
   postRevisions: (id: string) => `posts:revisions:${id}`,
   contentTypesList: "contentTypes:list",
   contentTypeDetail: (id: string) => `contentTypes:detail:${id}`,
+  contentTypeCollectionWorkspace: (id: string) => `contentTypes:collectionWorkspace:${id}`,
+  detailPagesList: "detailPages:list",
+  detailPagesListByContentType: (contentTypeId: string) =>
+    `detailPages:list:contentType:${contentTypeId}`,
+  detailPageDetail: (id: string) => `detailPages:detail:${id}`,
   menusList: "menus:list",
   menuDetail: (id: string) => `menus:detail:${id}`,
   seoList: "seo:list",

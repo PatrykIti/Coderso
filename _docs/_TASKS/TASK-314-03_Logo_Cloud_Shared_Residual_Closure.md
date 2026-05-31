@@ -1,0 +1,179 @@
+# TASK-314-03: Logo Cloud Shared Residual Closure
+
+# FileName: TASK-314-03_Logo_Cloud_Shared_Residual_Closure.md
+
+**Priority:** Medium
+**Category:** Widgets + Logo Cloud + QA + Documentation + Changelog
+**Estimated Effort:** Medium
+**Dependencies:** TASK-314-01, TASK-314-02
+**Status:** Done (2026-05-19)
+
+---
+
+## Overview
+
+Close the reopened Logo Cloud shared-contract residual family with a
+finding-by-finding evidence pass against the live checkout, source report,
+widget docs, changelog, and board state.
+
+This leaf is not allowed to mark `TASK-314` complete from proxy evidence alone.
+It must verify every reopened shared row against concrete code, tests, docs, or
+an explicit current-state note.
+
+## Files to Change
+
+| File | Required change |
+|---|---|
+| `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md` | Add fixed/current-state/deferred evidence for the reopened shared rows. |
+| `_docs/_WIDGETS/LOGO_CLOUD.md` | Ensure shared mode ownership and runtime baseline match code. |
+| `_docs/_TASKS/TASK-314*.md` | Update statuses and final validation notes. |
+| `_docs/_TASKS/README.md` | Move `TASK-314*` rows to the correct board state and update statistics. |
+| `_docs/_CHANGELOG/*.md` | Add a numbered changelog entry for the completed family. |
+| `_docs/_CHANGELOG/README.md` | Register the new changelog entry. |
+
+## Closure Checklist
+
+Source report coverage:
+
+- `UX-07` is fixed or explicitly current-state-verified under `TASK-314-01`.
+- `BF-10` shared link-input feedback is fixed or explicitly current-state
+  verified under `TASK-314-01`.
+- `BUG-02`, `BF-09`, and `BUG-05` are fixed or explicitly current-state
+  verified under `TASK-314-02`.
+- Shared rows that already landed under `TASK-256-06-02` remain distinguished
+  from the reopened `TASK-314` scope.
+
+Code and docs consistency:
+
+- `core/widgets/core/logoCloud.tsx` owns the shared runtime semantics repaired
+  by `TASK-314-02`.
+- `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` reflects the settled
+  shared editor-mode ownership from `TASK-314-01`.
+- `tests/vitest/widgets/logoCloud.test.tsx`,
+  `tests/vitest/widgets/renderer.test.tsx`,
+  `tests/vitest/widgets/styleNoneTokens.test.tsx`, and
+  `tests/vitest/ui/logo-cloud-editor-wave.test.tsx` cover the repaired shared
+  contract.
+- `_docs/_WIDGETS/LOGO_CLOUD.md` matches current code and does not describe
+  future `TASK-274` product fields as already shipped.
+
+## Implementation Pseudocode
+
+```ts
+type SharedCoverageStatus =
+  | "task-314-fixed"
+  | "task-256-fixed"
+  | "current-state-ok"
+  | "deferred";
+
+type SharedCoverageRow = {
+  finding: string;
+  status: SharedCoverageStatus;
+  evidence: string[];
+};
+
+function assertSharedCoverage(rows: SharedCoverageRow[]) {
+  const uncovered = rows.filter((row) => row.evidence.length === 0 && row.status !== "deferred");
+  if (uncovered.length > 0) {
+    throw new Error(
+      `Missing Logo Cloud shared residual coverage: ${uncovered.map((row) => row.finding).join(", ")}`
+    );
+  }
+}
+```
+
+Error handling:
+
+- Closure must fail if any reopened shared row is marked fixed without concrete
+  evidence in code, tests, docs, or a bounded current-state note.
+- Do not relabel `TASK-274` product-owned findings as `TASK-314` shared fixes
+  just to complete the matrix.
+- If validation or docs disagree with code, keep the family open and repair the
+  real owner before updating board/changelog status.
+
+## Data Flow
+
+1. `TASK-314-01` and `TASK-314-02` land the shared editor/runtime repairs.
+2. This closure leaf re-reads the live report, widget doc, task files, tests,
+   and changelog entries against those landed owners.
+3. Every reopened row is recorded as `task-314-fixed`, `task-256-fixed`,
+   `current-state-ok`, or `deferred` with explicit evidence.
+4. Only after the evidence matrix is complete do the board row and changelog
+   entry move to final closed state.
+
+Regression-test shape:
+
+```ts
+test("reopened shared rows cannot close without evidence", () => {
+  expect(() =>
+    assertSharedCoverage([{ finding: "BUG-02", status: "task-314-fixed", evidence: [] }])
+  ).toThrow(/missing logo cloud shared residual coverage/i);
+});
+```
+
+## Sub-Tasks
+
+- None. This is the closure and evidence leaf for the `TASK-314` family.
+
+## Security Contract
+
+No API routes are added by this closure leaf.
+
+- Endpoint visibility: none.
+- Auth/RBAC/CSRF/rate limit: unchanged.
+- Reject-unknown validation: closure must confirm no product-only `TASK-274`
+  fields were added while fixing the shared reopen.
+- Anti-abuse: closure must confirm safe-href behavior remains covered before
+  marking link-input shared rows fixed.
+
+## Testing Requirements
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts` if any
+  shared helper behavior changes
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
+
+## Documentation Updates Required
+
+- `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md`
+- `_docs/_WIDGETS/LOGO_CLOUD.md`
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
+- A numbered `_docs/_CHANGELOG/*task-314-logo-cloud-shared-residuals*.md` entry.
+
+## Acceptance Criteria
+
+- `TASK-314` does not overclaim `TASK-274` product findings as shared fixes.
+- Every reopened shared row has concrete evidence or an explicit current-state
+  note.
+- Task files, board statistics, widget docs, report, and changelog are in sync.
+
+## Completion Notes
+
+- 2026-05-19: `_docs/PLAYWRIGHT/REPORT_LOGO_CLOUD_WIDGET.md`,
+  `_docs/_WIDGETS/LOGO_CLOUD.md`, `_docs/_TASKS/README.md`, and the new
+  changelog entry now all record the reopened shared residual closure before
+  `TASK-274` product implementation proceeds.
+- Validation:
+  - `git diff --check`
+  - `bun run precommit`
+
+## Validation Addendum (2026-05-21 audit)
+
+- `bun --cwd core lint`: passed
+- `bun --cwd core lint:types`: passed
+- `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx`: passed (`4` files, `66` tests)
+- `bun run gates:coderso`: passed
+- `bun run scan:security:strict`: attempted but failed outside TASK-314 scope
+  because the local Semgrep trust store had no CA anchors and `bun audit` could
+  not reach the advisory endpoint; Trivy and Gitleaks sub-scanners were clean
+  in the same run
+- `bun run precommit`: passed repeatedly while staging the 2026-05-21 audit
+  follow-up commits

@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Eye, History, Save, Settings2, X } from "lucide-react";
+import { Eye, History, Save, Settings2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
@@ -52,10 +53,16 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { listRegisteredPageWidgets } from "@/ui/widgets/registry";
+import {
+  buildActiveWidgetPreviewStates,
+  widgetSupportsPreviewState,
+} from "@/ui/widgets/previewStateSupport";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import { MediaPicker } from "@/ui/media/MediaPicker";
+import { collectBookingFlowSummaries } from "@/ui/pages/builder/bookingFlowContext";
 import {
+  applyWidgetBlockPatch,
   appendSlotBlock,
   createBlock,
   deleteBlockById,
@@ -69,11 +76,7 @@ import {
 import type { Block } from "@/ui/pages/builder/types";
 import { getWidgetRegistry } from "@/ui/pages/builder/widgetRegistry";
 import { WidgetPicker } from "@/ui/pages/builder/WidgetPicker";
-import {
-  resolveAdminBasePath,
-  resolveAdminHref,
-  stripAdminBasePath,
-} from "@/utils/adminPaths";
+import { resolveAdminBasePath, resolveAdminHref, stripAdminBasePath } from "@/utils/adminPaths";
 import {
   pageLayoutTokens,
   type PageBackgroundMediaSource,
@@ -84,7 +87,14 @@ import {
   normalizeWidgetTemplateSettings,
   type WidgetTemplateSettings,
 } from "../../../services/widgets/widgetTemplateSettings";
-import { containerTokens, spacingTokens, type ContainerToken, type SpacingToken } from "../../../widgets/types";
+import {
+  containerTokens,
+  spacingTokens,
+  type ContainerToken,
+  type SpacingToken,
+  type WidgetEditorContext,
+  type WidgetPreviewState,
+} from "../../../widgets/types";
 import type { WidgetCategoryId } from "./types";
 import { WidgetTemplatePreviewDialog } from "./WidgetTemplatePreviewDialog";
 import { WidgetTemplateRevisionDrawer } from "./WidgetTemplateRevisionDrawer";
@@ -111,6 +121,8 @@ const backgroundMediaSourceLabelMap: Record<PageBackgroundMediaSource, string> =
   library: "Media library",
   external: "External URL",
 };
+
+const supportsTransientWidgetPreview = (type: string | undefined) => type === "entry-teaser";
 
 const spacingTokenToListSpaceClassMap: Record<SpacingToken, string> = {
   none: "space-y-0",
@@ -158,8 +170,7 @@ const pageMaxWidthClassMap: Record<PageMaxWidthToken, string> = {
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
-const isHexColor = (value: string) =>
-  /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+const isHexColor = (value: string) => /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
 
 const resolveTemplateId = (pathname: string) => {
   const adminBasePath = resolveAdminBasePath(pathname);
@@ -214,8 +225,10 @@ const summarizeTemplateBlocksForAssistant = (
         path,
         childCount: childBlocks.length + slotChildCount,
         slotKeys: slotEntries.map(([key]) => key).sort((left, right) => left.localeCompare(right)),
-        templateId: block.type === "template-section" ? readBlockDataText(block, "templateId") : null,
-        templateName: block.type === "template-section" ? readBlockDataText(block, "templateName") : null,
+        templateId:
+          block.type === "template-section" ? readBlockDataText(block, "templateId") : null,
+        templateName:
+          block.type === "template-section" ? readBlockDataText(block, "templateName") : null,
       });
 
       if (result.length >= maxBlocks) return;
@@ -245,36 +258,26 @@ export function WidgetTemplateEditorPage() {
   const isNew = !templateId || templateId === "new";
 
   const widgets = useMemo(() => listRegisteredPageWidgets(), []);
-  const initialCategories = useMemo(
-    () => getCachedWidgetTemplateCategories(),
-    []
-  );
+  const initialCategories = useMemo(() => getCachedWidgetTemplateCategories(), []);
   const initialTemplate = useMemo(
-    () =>
-      !isNew && templateId ? getCachedWidgetTemplate(templateId) ?? null : null,
+    () => (!isNew && templateId ? (getCachedWidgetTemplate(templateId) ?? null) : null),
     [isNew, templateId]
   );
-  const [blocks, setBlocks] = useState<Block[]>(
-    () => (initialTemplate?.blocks as Block[]) ?? []
-  );
+  const [blocks, setBlocks] = useState<Block[]>(() => (initialTemplate?.blocks as Block[]) ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [name, setName] = useState(() => initialTemplate?.name ?? "");
-  const [description, setDescription] = useState(
-    () => initialTemplate?.description ?? ""
-  );
+  const [description, setDescription] = useState(() => initialTemplate?.description ?? "");
   const [category, setCategory] = useState(() => initialTemplate?.category ?? "");
   const [status, setStatus] = useState<WidgetTemplateStatus>(
     () => initialTemplate?.status ?? "draft"
   );
-  const [templateSettings, setTemplateSettings] = useState<WidgetTemplateSettings>(
-    () => normalizeWidgetTemplateSettings(initialTemplate?.settings)
+  const [templateSettings, setTemplateSettings] = useState<WidgetTemplateSettings>(() =>
+    normalizeWidgetTemplateSettings(initialTemplate?.settings)
   );
-  const [activeCategory, setActiveCategory] = useState<
-    WidgetCategoryId | "all"
-  >("all");
-  const [templateCategories, setTemplateCategories] = useState<
-    WidgetTemplateCategory[]
-  >(() => initialCategories ?? []);
+  const [activeCategory, setActiveCategory] = useState<WidgetCategoryId | "all">("all");
+  const [templateCategories, setTemplateCategories] = useState<WidgetTemplateCategory[]>(
+    () => initialCategories ?? []
+  );
   const resolvedCategory = category || templateCategories[0]?.name || "";
   const hasHydratedCategoriesRef = useRef(Boolean(initialCategories));
   const [isLoading, setIsLoading] = useState(!isNew && !initialTemplate);
@@ -283,23 +286,21 @@ export function WidgetTemplateEditorPage() {
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewData, setPreviewData] =
-    useState<WidgetTemplatePreviewResponse | null>(null);
+  const [previewData, setPreviewData] = useState<WidgetTemplatePreviewResponse | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"settings" | "details">("settings");
-  const [backgroundLookupError, setBackgroundLookupError] = useState<string | null>(
-    null
-  );
+  const [backgroundLookupError, setBackgroundLookupError] = useState<string | null>(null);
   const backgroundLookupRequestIdRef = useRef(0);
   const [revisionsOpen, setRevisionsOpen] = useState(false);
   const [revisions, setRevisions] = useState<WidgetTemplateRevision[]>([]);
   const [revisionsError, setRevisionsError] = useState<string | null>(null);
   const [revisionsLoading, setRevisionsLoading] = useState(false);
-  const [restoringRevisionId, setRestoringRevisionId] = useState<string | null>(
-    null
-  );
+  const [restoringRevisionId, setRestoringRevisionId] = useState<string | null>(null);
+  const [widgetPreviewStates, setWidgetPreviewStates] = useState<
+    Record<string, WidgetPreviewState | undefined>
+  >({});
 
   const displayError = error ?? categoriesError;
 
@@ -318,14 +319,10 @@ export function WidgetTemplateEditorPage() {
   const wrapperBackgroundMedia = templateLayout.wrapper.background.media;
   const wrapperBackgroundImage =
     wrapperBackgroundMedia.type === "image"
-      ? wrapperBackgroundMedia.src ??
-        templateLayout.wrapper.background.image ??
-        null
+      ? (wrapperBackgroundMedia.src ?? templateLayout.wrapper.background.image ?? null)
       : null;
   const wrapperBackgroundVideo =
-    wrapperBackgroundMedia.type === "video"
-      ? wrapperBackgroundMedia.src
-      : null;
+    wrapperBackgroundMedia.type === "video" ? wrapperBackgroundMedia.src : null;
   const backgroundMediaAccept =
     wrapperBackgroundMedia.type === "image"
       ? ["image/*"]
@@ -334,9 +331,7 @@ export function WidgetTemplateEditorPage() {
         : undefined;
   const wrapperBackgroundStyle = {
     backgroundColor: templateLayout.wrapper.background.color,
-    backgroundImage: wrapperBackgroundImage
-      ? `url(${wrapperBackgroundImage})`
-      : undefined,
+    backgroundImage: wrapperBackgroundImage ? `url(${wrapperBackgroundImage})` : undefined,
     backgroundSize: wrapperBackgroundImage ? "cover" : undefined,
     backgroundPosition: wrapperBackgroundImage ? "center" : undefined,
   };
@@ -344,6 +339,52 @@ export function WidgetTemplateEditorPage() {
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
   }, [selectedBlock]);
+  const selectedWidgetSupportsPreviewState = useMemo(
+    () => widgetSupportsPreviewState(selectedWidget),
+    [selectedWidget]
+  );
+  const activeWidgetPreviewStates = useMemo(() => {
+    const previewEnabled =
+      Boolean(selectedBlock) &&
+      (supportsTransientWidgetPreview(selectedBlock?.type) || selectedWidgetSupportsPreviewState);
+    if (!selectedBlock || !previewEnabled) {
+      return {} as Record<string, WidgetPreviewState | undefined>;
+    }
+    if (selectedWidgetSupportsPreviewState) {
+      return buildActiveWidgetPreviewStates(selectedBlock.id, selectedWidget, widgetPreviewStates);
+    }
+    const previewState = widgetPreviewStates[selectedBlock.id];
+    return previewState
+      ? { [selectedBlock.id]: previewState }
+      : ({} as Record<string, WidgetPreviewState | undefined>);
+  }, [selectedBlock, selectedWidget, selectedWidgetSupportsPreviewState, widgetPreviewStates]);
+  const selectedBlockPreviewState = selectedBlock
+    ? (activeWidgetPreviewStates[selectedBlock.id] ?? null)
+    : null;
+  const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
+  const previewEnabled = useMemo(
+    () =>
+      Boolean(selectedBlock) &&
+      (supportsTransientWidgetPreview(selectedBlock?.type) || selectedWidgetSupportsPreviewState),
+    [selectedBlock, selectedWidgetSupportsPreviewState]
+  );
+  const widgetTemplateEditorContext = useMemo<WidgetEditorContext | undefined>(() => {
+    if (!selectedBlock) return undefined;
+    return {
+      surface: "page-builder",
+      blockId: selectedBlock.id,
+      editorMode: selectedBlock.editor?.mode ?? "wizard",
+      bookingFlows,
+      previewState: previewEnabled ? selectedBlockPreviewState : null,
+      setPreviewState: previewEnabled
+        ? (state) =>
+            setWidgetPreviewStates((current) => ({
+              ...current,
+              [selectedBlock.id]: state ?? undefined,
+            }))
+        : undefined,
+    };
+  }, [bookingFlows, previewEnabled, selectedBlock, selectedBlockPreviewState]);
 
   useEffect(() => {
     if (isNew || !templateId) {
@@ -388,8 +429,7 @@ export function WidgetTemplateEditorPage() {
 
   const filteredWidgets = useMemo(() => {
     return widgets.filter((widget) => {
-      const matchesCategory =
-        activeCategory === "all" || widget.category === activeCategory;
+      const matchesCategory = activeCategory === "all" || widget.category === activeCategory;
       return matchesCategory;
     });
   }, [widgets, activeCategory]);
@@ -587,9 +627,7 @@ export function WidgetTemplateEditorPage() {
       if (!template) return;
       applyTemplate(template);
     } catch (err) {
-      const message = isApiClientError(err)
-        ? err.message
-        : "Failed to load template.";
+      const message = isApiClientError(err) ? err.message : "Failed to load template.";
       setError(message);
     } finally {
       if (shouldSetLoading) setIsLoading(false);
@@ -606,9 +644,7 @@ export function WidgetTemplateEditorPage() {
       })
       .catch((err) => {
         if (!active) return;
-        const message = isApiClientError(err)
-          ? err.message
-          : "Failed to load template.";
+        const message = isApiClientError(err) ? err.message : "Failed to load template.";
         setError(message);
       })
       .finally(() => {
@@ -714,10 +750,7 @@ export function WidgetTemplateEditorPage() {
       setRemoteUpdatePending(false);
       toast.success("Template saved.");
     } catch (err) {
-      const message = resolveAdminActionErrorMessage(
-        err,
-        "Failed to save template."
-      );
+      const message = resolveAdminActionErrorMessage(err, "Failed to save template.");
       setError(message);
       toast.error(message);
     } finally {
@@ -808,9 +841,18 @@ export function WidgetTemplateEditorPage() {
       <BlockSettings
         block={selectedBlock}
         widget={selectedWidget}
-        onChange={(next) =>
-          setBlocks((prev) => updateBlockById(prev, next.id, () => next))
+        onChange={(next) => setBlocks((prev) => updateBlockById(prev, next.id, () => next))}
+        onBlockPatch={
+          selectedBlock
+            ? (patch) =>
+                setBlocks((prev) =>
+                  updateBlockById(prev, selectedBlock.id, (current) =>
+                    applyWidgetBlockPatch(current, patch)
+                  )
+                )
+            : undefined
         }
+        editorContext={widgetTemplateEditorContext}
       />
     </div>
   );
@@ -951,9 +993,7 @@ export function WidgetTemplateEditorPage() {
                   wrapper: {
                     ...prev.layout.wrapper,
                     maxWidth:
-                      next === MAX_WIDTH_DEFAULT_VALUE
-                        ? undefined
-                        : (next as PageMaxWidthToken),
+                      next === MAX_WIDTH_DEFAULT_VALUE ? undefined : (next as PageMaxWidthToken),
                   },
                 },
               }))
@@ -964,9 +1004,7 @@ export function WidgetTemplateEditorPage() {
               <SelectValue placeholder="Max width" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={MAX_WIDTH_DEFAULT_VALUE}>
-                theme default
-              </SelectItem>
+              <SelectItem value={MAX_WIDTH_DEFAULT_VALUE}>theme default</SelectItem>
               {pageLayoutTokens.maxWidth.map((token) => (
                 <SelectItem key={token} value={token}>
                   {token}
@@ -1168,19 +1206,14 @@ export function WidgetTemplateEditorPage() {
                   <SelectValue placeholder="Source" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="library">
-                    {backgroundMediaSourceLabelMap.library}
-                  </SelectItem>
-                  <SelectItem value="external">
-                    {backgroundMediaSourceLabelMap.external}
-                  </SelectItem>
+                  <SelectItem value="library">{backgroundMediaSourceLabelMap.library}</SelectItem>
+                  <SelectItem value="external">{backgroundMediaSourceLabelMap.external}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           ) : null}
         </div>
-        {wrapperBackgroundMedia.type !== "none" &&
-        wrapperBackgroundMedia.source === "external" ? (
+        {wrapperBackgroundMedia.type !== "none" && wrapperBackgroundMedia.source === "external" ? (
           <div className="space-y-2">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Media URL
@@ -1196,8 +1229,7 @@ export function WidgetTemplateEditorPage() {
             />
           </div>
         ) : null}
-        {wrapperBackgroundMedia.type !== "none" &&
-        wrapperBackgroundMedia.source === "library" ? (
+        {wrapperBackgroundMedia.type !== "none" && wrapperBackgroundMedia.source === "library" ? (
           <div className="space-y-2">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Media library
@@ -1221,15 +1253,9 @@ export function WidgetTemplateEditorPage() {
       <AdminShell
         activeHref="/admin/widgets"
         showSearch={false}
-        breadcrumbs={
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Widgets</span>
-            <ChevronRight className="h-4 w-4" />
-            <span>Templates</span>
-            <ChevronRight className="h-4 w-4" />
-            <span className="text-foreground">
-              {isNew ? "New Template" : name || "Template"}
-            </span>
+        breadcrumbs={["Widgets", "Templates", isNew ? "New Template" : name || "Template"]}
+        topbarActions={
+          <div className="flex items-center gap-2">
             <Badge variant="secondary" className="ml-2 text-[10px] uppercase">
               {status}
             </Badge>
@@ -1250,22 +1276,18 @@ export function WidgetTemplateEditorPage() {
                   </p>
                   <Select
                     value={activeCategory}
-                    onValueChange={(value) =>
-                      setActiveCategory(value as WidgetCategoryId | "all")
-                    }
+                    onValueChange={(value) => setActiveCategory(value as WidgetCategoryId | "all")}
                   >
                     <SelectTrigger className="text-xs">
                       <SelectValue placeholder="All widgets" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All widgets</SelectItem>
-                      {(Object.keys(widgetCategoryLabels) as WidgetCategoryId[]).map(
-                        (cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {widgetCategoryLabels[cat]}
-                          </SelectItem>
-                        )
-                      )}
+                      {(Object.keys(widgetCategoryLabels) as WidgetCategoryId[]).map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {widgetCategoryLabels[cat]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1284,184 +1306,184 @@ export function WidgetTemplateEditorPage() {
             </aside>
 
             <main
-            className={
-              "flex-1 overflow-auto bg-[radial-gradient(circle,var(--admin-base-border)_1px,transparent_1px)] bg-[size:24px_24px]"
-            }
-            onDragOver={(event) => {
-              event.preventDefault();
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              const type = event.dataTransfer.getData("widget-type");
-              if (type) handleAddBlock(type);
-            }}
-          >
-            <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-2 backdrop-blur">
-              <div className="mx-auto flex w-full max-w-3xl items-center gap-1.5">
-                <span className="hidden text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:block">
-                  Template canvas
-                </span>
-                <div className="flex-1" />
-                <div className="flex items-center gap-1.5 lg:hidden">
-                  <Button variant="outline" size="sm" onClick={openSettingsPanel}>
-                    Settings
+              className={
+                "flex-1 overflow-auto bg-[radial-gradient(circle,var(--admin-base-border)_1px,transparent_1px)] bg-[size:24px_24px]"
+              }
+              onDragOver={(event) => {
+                event.preventDefault();
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                const type = event.dataTransfer.getData("widget-type");
+                if (type) handleAddBlock(type);
+              }}
+            >
+              <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-2 backdrop-blur">
+                <div className="mx-auto flex w-full max-w-3xl items-center gap-1.5">
+                  <span className="hidden text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:block">
+                    Template canvas
+                  </span>
+                  <div className="flex-1" />
+                  <div className="flex items-center gap-1.5 lg:hidden">
+                    <Button variant="outline" size="sm" onClick={openSettingsPanel}>
+                      Settings
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={openDetailsPanel}
+                      disabled={!selectedBlock || !selectedWidget}
+                    >
+                      Details
+                    </Button>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => void handleOpenRevisions()}
+                    disabled={isNew}
+                    title="History"
+                  >
+                    <History className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={openDetailsPanel}
-                    disabled={!selectedBlock || !selectedWidget}
+                    className="hidden sm:inline-flex"
+                    disabled={isNew}
+                    onClick={() => void handlePreviewOpen()}
                   >
-                    Details
+                    <Eye className="h-4 w-4" />
+                    Preview
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 sm:hidden"
+                    disabled={isNew}
+                    onClick={() => void handlePreviewOpen()}
+                    title="Preview"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="hidden sm:inline-flex"
+                    onClick={handleDiscard}
+                  >
+                    Discard
+                  </Button>
+                  <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                    <Save className="h-4 w-4" />
+                    <span className="hidden sm:inline">
+                      {isSaving ? "Saving..." : "Save Template"}
+                    </span>
+                    <span className="sm:hidden">{isSaving ? "..." : "Save"}</span>
                   </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={() => void handleOpenRevisions()}
-                  disabled={isNew}
-                  title="History"
-                >
-                  <History className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="hidden sm:inline-flex"
-                  disabled={isNew}
-                  onClick={() => void handlePreviewOpen()}
-                >
-                  <Eye className="h-4 w-4" />
-                  Preview
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 shrink-0 sm:hidden"
-                  disabled={isNew}
-                  onClick={() => void handlePreviewOpen()}
-                  title="Preview"
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button variant="secondary" size="sm" className="hidden sm:inline-flex" onClick={handleDiscard}>
-                  Discard
-                </Button>
-                <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                  <Save className="h-4 w-4" />
-                  <span className="hidden sm:inline">{isSaving ? "Saving..." : "Save Template"}</span>
-                  <span className="sm:hidden">{isSaving ? "..." : "Save"}</span>
-                </Button>
               </div>
-            </div>
-            <div className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8">
-              {displayError ? (
-                <Alert variant="destructive">
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{displayError}</AlertDescription>
-                </Alert>
-              ) : null}
-              {remoteUpdatePending ? (
-                <Alert>
-                  <AlertTitle>Updated in another tab</AlertTitle>
-                  <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <span>New changes are available. Refresh to load the latest version.</span>
-                    <Button variant="outline" size="sm" onClick={() => loadTemplate()}>
-                      Refresh
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-              {isLoading ? (
-                <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                    <Settings2 className="h-10 w-10" />
+              <div className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8">
+                {displayError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{displayError}</AlertDescription>
+                  </Alert>
+                ) : null}
+                {remoteUpdatePending ? (
+                  <Alert>
+                    <AlertTitle>Updated in another tab</AlertTitle>
+                    <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <span>New changes are available. Refresh to load the latest version.</span>
+                      <Button variant="outline" size="sm" onClick={() => loadTemplate()}>
+                        Refresh
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+                {isLoading ? (
+                  <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                      <Settings2 className="h-10 w-10" />
+                    </div>
+                    <h2 className="text-2xl font-semibold text-foreground">Loading template</h2>
                   </div>
-                  <h2 className="text-2xl font-semibold text-foreground">
-                    Loading template
-                  </h2>
-                </div>
-              ) : blocks.length === 0 ? (
-                <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                    <Settings2 className="h-10 w-10" />
+                ) : blocks.length === 0 ? (
+                  <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                      <Settings2 className="h-10 w-10" />
+                    </div>
+                    <h2 className="text-2xl font-semibold text-foreground">Build your template</h2>
+                    <p className="mt-3 max-w-xs text-sm text-muted-foreground">
+                      Drag widgets from the library to build a reusable template layout.
+                    </p>
+                    <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <span className="rounded-full border border-border/60 px-3 py-1">
+                        Section 1
+                      </span>
+                      <span className="rounded-full border border-primary/30 px-3 py-1 text-primary">
+                        Drop target
+                      </span>
+                    </div>
                   </div>
-                  <h2 className="text-2xl font-semibold text-foreground">
-                    Build your template
-                  </h2>
-                  <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-                    Drag widgets from the library to build a reusable template layout.
-                  </p>
-                  <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    <span className="rounded-full border border-border/60 px-3 py-1">
-                      Section 1
-                    </span>
-                    <span className="rounded-full border border-primary/30 px-3 py-1 text-primary">
-                      Drop target
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className={joinClasses(
-                    "relative w-full overflow-hidden rounded-xl border border-border/40",
-                    wrapperPaddingClass
-                  )}
-                  style={wrapperBackgroundStyle}
-                >
-                  {wrapperBackgroundVideo ? (
-                    <video
-                      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-                      src={wrapperBackgroundVideo}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      aria-hidden="true"
-                    />
-                  ) : null}
+                ) : (
                   <div
                     className={joinClasses(
-                      wrapperContainerClass,
-                      wrapperBackgroundVideo ? "relative z-[1]" : undefined
+                      "relative w-full overflow-hidden rounded-xl border border-border/40",
+                      wrapperPaddingClass
                     )}
+                    style={wrapperBackgroundStyle}
                   >
-                    <BlockList
-                      blocks={blocks}
-                      className={
-                        spacingTokenToListSpaceClassMap[templateLayout.sections.gap]
-                      }
-                      pageDefaults={templateLayout.sections.defaults}
-                      selectedId={selectedId}
-                      onSelect={(id) => {
-                        setSelectedId(id);
-                        setSidebarTab("details");
-                      }}
-                      onMove={(path, from, to) =>
-                        setBlocks((prev) => reorderBlocksAtPath(prev, path, from, to))
-                      }
-                      onDuplicate={(id) =>
-                        setBlocks((prev) => duplicateBlock(prev, id))
-                      }
-                      onDelete={(id) =>
-                        setBlocks((prev) => {
-                          const result = deleteBlockById(prev, id);
-                          if (selectedId && !findBlockById(result.blocks, selectedId)) {
-                            const nextSelected = getFirstBlockId(result.blocks);
-                            setSelectedId(nextSelected);
-                            if (!nextSelected) setSidebarTab("settings");
-                          }
-                          return result.blocks;
-                        })
-                      }
-                      onInsert={handleInsertIntoSlot}
-                      onMoveToSlot={handleMoveIntoSlot}
-                    />
+                    {wrapperBackgroundVideo ? (
+                      <video
+                        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                        src={wrapperBackgroundVideo}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    <div
+                      className={joinClasses(
+                        wrapperContainerClass,
+                        wrapperBackgroundVideo ? "relative z-[1]" : undefined
+                      )}
+                    >
+                      <BlockList
+                        blocks={blocks}
+                        className={spacingTokenToListSpaceClassMap[templateLayout.sections.gap]}
+                        pageDefaults={templateLayout.sections.defaults}
+                        selectedId={selectedId}
+                        onSelect={(id) => {
+                          setSelectedId(id);
+                          setSidebarTab("details");
+                        }}
+                        onMove={(path, from, to) =>
+                          setBlocks((prev) => reorderBlocksAtPath(prev, path, from, to))
+                        }
+                        onDuplicate={(id) => setBlocks((prev) => duplicateBlock(prev, id))}
+                        onDelete={(id) =>
+                          setBlocks((prev) => {
+                            const result = deleteBlockById(prev, id);
+                            if (selectedId && !findBlockById(result.blocks, selectedId)) {
+                              const nextSelected = getFirstBlockId(result.blocks);
+                              setSelectedId(nextSelected);
+                              if (!nextSelected) setSidebarTab("settings");
+                            }
+                            return result.blocks;
+                          })
+                        }
+                        onInsert={handleInsertIntoSlot}
+                        onMoveToSlot={handleMoveIntoSlot}
+                        previewStatesByBlockId={activeWidgetPreviewStates}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
             </main>
 
             <aside
@@ -1470,9 +1492,7 @@ export function WidgetTemplateEditorPage() {
             >
               <Tabs
                 value={sidebarTab}
-                onValueChange={(value) =>
-                  setSidebarTab(value as "settings" | "details")
-                }
+                onValueChange={(value) => setSidebarTab(value as "settings" | "details")}
                 className="flex h-full min-h-0 flex-col"
               >
                 <TabsList variant="line" className="px-4 pt-3">
@@ -1480,14 +1500,10 @@ export function WidgetTemplateEditorPage() {
                   <TabsTrigger value="details">Details</TabsTrigger>
                 </TabsList>
                 <TabsContent value="settings" className="mt-0 min-h-0 flex-1">
-                  <ScrollArea className="h-full min-h-0 flex-1">
-                    {templateSettingsPanel}
-                  </ScrollArea>
+                  <ScrollArea className="h-full min-h-0 flex-1">{templateSettingsPanel}</ScrollArea>
                 </TabsContent>
                 <TabsContent value="details" className="mt-0 min-h-0 flex-1">
-                  <ScrollArea className="h-full min-h-0 flex-1">
-                    {templateDetailsPanel}
-                  </ScrollArea>
+                  <ScrollArea className="h-full min-h-0 flex-1">{templateDetailsPanel}</ScrollArea>
                 </TabsContent>
               </Tabs>
             </aside>
@@ -1510,9 +1526,7 @@ export function WidgetTemplateEditorPage() {
           </div>
           <Tabs
             value={sidebarTab}
-            onValueChange={(value) =>
-              setSidebarTab(value as "settings" | "details")
-            }
+            onValueChange={(value) => setSidebarTab(value as "settings" | "details")}
             className="flex min-h-0 flex-1 flex-col"
           >
             <TabsList variant="line" className="px-6 pt-3">
@@ -1520,14 +1534,10 @@ export function WidgetTemplateEditorPage() {
               <TabsTrigger value="details">Details</TabsTrigger>
             </TabsList>
             <TabsContent value="settings" className="mt-0 min-h-0 flex-1">
-              <ScrollArea className="h-full">
-                {templateSettingsPanel}
-              </ScrollArea>
+              <ScrollArea className="h-full">{templateSettingsPanel}</ScrollArea>
             </TabsContent>
             <TabsContent value="details" className="mt-0 min-h-0 flex-1">
-              <ScrollArea className="h-full">
-                {templateDetailsPanel}
-              </ScrollArea>
+              <ScrollArea className="h-full">{templateDetailsPanel}</ScrollArea>
             </TabsContent>
           </Tabs>
         </SheetContent>

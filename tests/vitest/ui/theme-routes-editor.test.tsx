@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -91,14 +91,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -133,29 +133,27 @@ test("ThemeRoutesEditor supports empty, add, update, remove, and error states", 
     expect(view.container.textContent).toContain("No routes configured yet.");
     expect(view.container.textContent).toContain("Duplicate route");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent?.includes("Add route"))
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-input-action='set-route']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-select-value='none']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
-    expect(changes.at(-1)).toEqual([
-      { id: "route-new", path: "/catalog", pageId: "page-2" },
-    ]);
+    expect(changes.at(-1)).toEqual([{ id: "route-new", path: "/catalog", pageId: "page-2" }]);
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.getAttribute("aria-label") === "Remove route")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));

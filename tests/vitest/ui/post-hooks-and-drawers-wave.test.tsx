@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, expect, test, vi } from "vitest";
@@ -46,17 +46,12 @@ vi.mock("@/components/ui/button", () => ({
       <button type="button" onClick={onClick} disabled={disabled} {...props}>
         {children}
       </button>
-  ),
+    ),
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-  }) => (open ? <div data-dialog-open="true">{children}</div> : null),
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <div data-dialog-open="true">{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -87,7 +82,10 @@ vi.mock("@/components/ui/sheet", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-sheet-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -107,19 +105,19 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     rerender: (next: React.ReactNode) => {
-      act(() => {
+      React.act(() => {
         root.render(next);
       });
     },
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -168,17 +166,14 @@ afterEach(() => {
 });
 
 test("focus return utilities capture, restore, clear, and gate close transitions", async () => {
-  const { shouldReturnFocus, useFocusReturn } = await import(
-    "../../../core/admin/ui/posts/editor/hooks/useFocusReturn"
-  );
+  const { shouldReturnFocus, useFocusReturn } =
+    await import("../../../core/admin/ui/posts/editor/hooks/useFocusReturn");
 
   expect(shouldReturnFocus(true, false)).toBe(true);
   expect(shouldReturnFocus(false, false)).toBe(false);
   expect(shouldReturnFocus(true, true)).toBe(false);
 
-  let handle:
-    | ReturnType<typeof useFocusReturn>
-    | undefined;
+  let handle: ReturnType<typeof useFocusReturn> | undefined;
 
   const Harness = () => {
     handle = useFocusReturn();
@@ -222,14 +217,11 @@ test("focus return utilities capture, restore, clear, and gate close transitions
 
 test("usePostAutosave schedules, flushes, and cancels autosave work", async () => {
   vi.useFakeTimers();
-  const { usePostAutosave } = await import(
-    "../../../core/admin/ui/posts/editor/hooks/usePostAutosave"
-  );
+  const { usePostAutosave } =
+    await import("../../../core/admin/ui/posts/editor/hooks/usePostAutosave");
 
   const autosave = vi.fn(async () => undefined);
-  let controls:
-    | ReturnType<typeof usePostAutosave>
-    | undefined;
+  let controls: ReturnType<typeof usePostAutosave> | undefined;
 
   const Harness = ({
     enabled,
@@ -253,21 +245,21 @@ test("usePostAutosave schedules, flushes, and cancels autosave work", async () =
   const view = mount(<Harness enabled dirty signature="a" />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       vi.advanceTimersByTime(100);
       await Promise.resolve();
     });
     expect(autosave).toHaveBeenCalledTimes(1);
 
     view.rerender(<Harness enabled dirty signature="b" />);
-    await act(async () => {
+    await React.act(async () => {
       const flushed = await controls?.flush();
       expect(flushed).toBe(true);
     });
     expect(autosave).toHaveBeenCalledTimes(2);
 
     view.rerender(<Harness enabled={false} dirty signature="c" />);
-    await act(async () => {
+    await React.act(async () => {
       vi.advanceTimersByTime(200);
       await Promise.resolve();
     });
@@ -275,7 +267,7 @@ test("usePostAutosave schedules, flushes, and cancels autosave work", async () =
 
     view.rerender(<Harness enabled dirty signature="d" />);
     controls?.cancel();
-    await act(async () => {
+    await React.act(async () => {
       vi.advanceTimersByTime(200);
       await Promise.resolve();
     });
@@ -291,21 +283,15 @@ test("post editor preferences normalize stored values and sync local/remote stat
     DEFAULT_POST_EDITOR_PREFERENCES,
     normalizePostEditorPreferences,
     toStoredPostEditorPreferences,
-  } = await import(
-    "../../../core/admin/ui/posts/editor/settings/postEditorPreferences"
-  );
+  } = await import("../../../core/admin/ui/posts/editor/settings/postEditorPreferences");
   const {
     POST_EDITOR_PREFERENCES_STORAGE_KEY,
     POST_EDITOR_PREFERENCES_LEGACY_STORAGE_KEY,
     resolveStoredPostEditorPreferences,
     usePostEditorPreferences,
-  } = await import(
-    "../../../core/admin/ui/posts/editor/hooks/usePostEditorPreferences"
-  );
+  } = await import("../../../core/admin/ui/posts/editor/hooks/usePostEditorPreferences");
 
-  expect(normalizePostEditorPreferences(null)).toEqual(
-    DEFAULT_POST_EDITOR_PREFERENCES
-  );
+  expect(normalizePostEditorPreferences(null)).toEqual(DEFAULT_POST_EDITOR_PREFERENCES);
   expect(
     normalizePostEditorPreferences({
       focusModeOnOpen: true,
@@ -341,9 +327,7 @@ test("post editor preferences normalize stored values and sync local/remote stat
 
   setLocalStorage(createLocalStorage());
 
-  let result:
-    | ReturnType<typeof usePostEditorPreferences>
-    | undefined;
+  let result: ReturnType<typeof usePostEditorPreferences> | undefined;
 
   const Harness = () => {
     result = usePostEditorPreferences();
@@ -353,7 +337,7 @@ test("post editor preferences normalize stored values and sync local/remote stat
   const view = mount(<Harness />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -366,7 +350,7 @@ test("post editor preferences normalize stored values and sync local/remote stat
       })
     );
 
-    await act(async () => {
+    await React.act(async () => {
       result?.setPreferences({
         focusModeOnOpen: false,
         compactSidePanels: true,
@@ -392,7 +376,7 @@ test("post editor preferences normalize stored values and sync local/remote stat
       })
     );
 
-    await act(async () => {
+    await React.act(async () => {
       result?.resetPreferences();
       await Promise.resolve();
     });
@@ -402,19 +386,16 @@ test("post editor preferences normalize stored values and sync local/remote stat
       (globalThis.localStorage as ReturnType<typeof createLocalStorage>).getItem(
         POST_EDITOR_PREFERENCES_STORAGE_KEY
       )
-    ).toContain("\"version\":2");
+    ).toContain('"version":2');
   } finally {
     view.cleanup();
   }
 });
 
 test("revision drawers render states and gate restore/discard with confirmation", async () => {
-  const { PostRevisionDrawer } = await import(
-    "../../../core/admin/ui/posts/editor/PostRevisionDrawer"
-  );
-  const { PageRevisionDrawer } = await import(
-    "../../../core/admin/ui/pages/PageRevisionDrawer"
-  );
+  const { PostRevisionDrawer } =
+    await import("../../../core/admin/ui/posts/editor/PostRevisionDrawer");
+  const { PageRevisionDrawer } = await import("../../../core/admin/ui/pages/PageRevisionDrawer");
 
   const onRestorePost = vi.fn();
   const onRestorePage = vi.fn();
@@ -477,26 +458,28 @@ test("revision drawers render states and gate restore/discard with confirmation"
       <PageRevisionDrawer
         open
         onOpenChange={onOpenChange}
-        revisions={[
-          {
-            id: "page-rev-1",
-            version: 4,
-            kind: "published",
-            createdAt: "2026-03-06T12:00:00.000Z",
-            createdBy: { name: "", email: "system@example.com" },
-            title: "Landing",
-            slug: "/landing",
-          },
-          {
-            id: "page-rev-2",
-            version: 5,
-            kind: "autosave",
-            createdAt: "2026-03-06T13:00:00.000Z",
-            createdBy: { name: "Editor", email: "editor@example.com" },
-            title: "Draft",
-            slug: "/draft",
-          },
-        ] as never}
+        revisions={
+          [
+            {
+              id: "page-rev-1",
+              version: 4,
+              kind: "published",
+              createdAt: "2026-03-06T12:00:00.000Z",
+              createdBy: { name: "", email: "system@example.com" },
+              title: "Landing",
+              slug: "/landing",
+            },
+            {
+              id: "page-rev-2",
+              version: 5,
+              kind: "autosave",
+              createdAt: "2026-03-06T13:00:00.000Z",
+              createdBy: { name: "Editor", email: "editor@example.com" },
+              title: "Draft",
+              slug: "/draft",
+            },
+          ] as never
+        }
         isLoading={false}
         error={null}
         restoringId={null}
@@ -514,7 +497,7 @@ test("revision drawers render states and gate restore/discard with confirmation"
     expect(view.container.textContent).toContain("Draft version");
     expect(view.container.textContent).toContain("Title: Landing");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Preview")
         ?.click();
@@ -522,37 +505,38 @@ test("revision drawers render states and gate restore/discard with confirmation"
 
     expect(view.container.textContent).toContain("First preview block");
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Restore")
         ?.click();
     });
     expect(view.container.textContent).toContain("Restore revision?");
-    act(() => {
-      const restoreButtons = Array.from(view.container.querySelectorAll("button"))
-        .filter((button) => button.textContent === "Restore");
+    React.act(() => {
+      const restoreButtons = Array.from(view.container.querySelectorAll("button")).filter(
+        (button) => button.textContent === "Restore"
+      );
       restoreButtons[restoreButtons.length - 1]?.click();
     });
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Discard")
         ?.click();
     });
     expect(view.container.textContent).toContain("Discard draft version?");
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Discard draft version")
         ?.click();
     });
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .filter((button) => button.textContent === "Restore")[1]
         ?.click();
     });
     expect(view.container.textContent).toContain("Restore draft version?");
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "Cancel")
         ?.click();
@@ -567,9 +551,8 @@ test("revision drawers render states and gate restore/discard with confirmation"
 });
 
 test("PostRevisionDrawer renders useful fallback metadata for empty previews", async () => {
-  const { PostRevisionDrawer } = await import(
-    "../../../core/admin/ui/posts/editor/PostRevisionDrawer"
-  );
+  const { PostRevisionDrawer } =
+    await import("../../../core/admin/ui/posts/editor/PostRevisionDrawer");
 
   const view = mount(
     <PostRevisionDrawer
@@ -603,13 +586,11 @@ test("PostRevisionDrawer renders useful fallback metadata for empty previews", a
       throw new Error("missing preview button");
     }
 
-    act(() => {
+    React.act(() => {
       previewButton.click();
     });
 
-    expect(view.container.textContent).not.toContain(
-      "No preview available for this revision."
-    );
+    expect(view.container.textContent).not.toContain("No preview available for this revision.");
     expect(view.container.textContent).toContain("Version 7 by editor@example.com");
     expect(view.container.textContent).toContain(
       "Snapshot contains 1 block without extractable text."

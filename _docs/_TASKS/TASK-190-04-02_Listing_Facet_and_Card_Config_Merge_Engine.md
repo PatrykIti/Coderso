@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Listings + Filters
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-04-01
-**Status:** To Do
+**Status:** Done (2026-05-07)
 
 ---
 
@@ -13,6 +13,23 @@
 
 Merge listing facets and card config so composed catalogs can expose all
 relevant filters and card fields.
+
+Delivered slice note:
+- Added `blueprintFacetMerger.ts` and `blueprintCardConfigMerger.ts` as the
+  owners for composed listing facet/card merge.
+- Compatible facet arrays and listing template card bindings now merge
+  deterministically with source-path validation against the composed content
+  schema.
+- The assembler now widens `listing-query.upsert.fields` automatically so
+  merged filter metrics and card bindings still have the projected runtime data
+  they need.
+- Missing facet/card source fields now fail closed through typed
+  `facet_field_missing` needs-input behavior instead of silently producing a
+  broken listing surface.
+- Post-review drift fixes also ensure incompatible facet merges fail closed into
+  typed `needs_input` instead of throwing planner exceptions, and shared listing
+  templates widen projection fields for every linked query instead of only the
+  first one.
 
 ## Sub-Tasks
 

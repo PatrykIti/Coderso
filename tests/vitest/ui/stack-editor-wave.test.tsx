@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -96,14 +96,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -114,7 +114,7 @@ const mount = (node: React.ReactNode) => {
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -123,7 +123,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 const setCheckboxValue = (element: Element | null | undefined, checked: boolean) => {
   if (!(element instanceof HTMLInputElement)) return;
   if (element.checked === checked) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
@@ -135,27 +135,23 @@ const clickByText = (container: ParentNode, text: string, index = 0) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text} (${index})`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
 };
-
-const findSelectsByOptions = (container: ParentNode, values: string[]) =>
-  Array.from(container.querySelectorAll("select")).filter((element) => {
-    if (!(element instanceof HTMLSelectElement)) return false;
-    const optionValues = Array.from(element.options).map((option) => option.value);
-    return values.every((value) => optionValues.includes(value));
-  });
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
+    Array.from(section.querySelectorAll("p, h3")).some(
       (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
     )
   );
+
+const findByDataAttr = (container: ParentNode, attr: string, value: string) =>
+  container.querySelector(`[${attr}="${value}"]`);
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -164,9 +160,8 @@ afterEach(() => {
   vi.resetModules();
 });
 
-test("Stack editors cover variant changes, responsive direction tokens, wrap, and advanced snapshot updates", async () => {
-  const { StackAdvancedEditor, StackVisualEditor, StackWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/StackEditors");
+test("StackWizardEditor keeps setup to guidance and slot framing only", async () => {
+  const { StackWizardEditor } = await import("../../../core/admin/ui/widgets/editors/StackEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: StackData = {
@@ -191,141 +186,204 @@ test("Stack editors cover variant changes, responsive direction tokens, wrap, an
     const [variant, setVariant] = useState(currentVariant);
 
     return (
-      <>
-        <StackWizardEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            currentVariant = next;
-            setVariant(next);
-          }}
-        />
-        <StackVisualEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            currentVariant = next;
-            setVariant(next);
-          }}
-        />
-        <StackAdvancedEditor
-          value={value}
-          onChange={(next) => {
-            latestValue = next;
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={() => undefined}
-        />
-      </>
+      <StackWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => {
+          currentVariant = next;
+          setVariant(next);
+        }}
+      />
     );
   };
 
   const view = mount(<Harness />);
 
   try {
-    const wizardPreset = findSelectsByOptions(view.container, [
-      "vertical",
-      "horizontal",
-      "responsive",
-    ])[0];
-    expect((wizardPreset as HTMLSelectElement | null | undefined)?.value).toBe("vertical");
-    setSelectValue(wizardPreset, "responsive");
-    expect(currentVariant).toBe("responsive");
-
-    const wizardSelects = Array.from(view.container.querySelectorAll("select"));
-    expect(
-      Array.from((wizardSelects[2] as HTMLSelectElement).options).map((option) => option.value)
-    ).toContain("none");
-    setSelectValue(wizardSelects[1], "row");
-    setSelectValue(wizardSelects[2], "8");
-    expect(latestValue.direction?.mobile).toBe("row");
-    expect(latestValue.gap).toMatchObject({
-      mobile: "8",
-      tablet: "8",
-      desktop: "8",
+    expect(view.container.textContent).toContain(
+      "Visual owns stack preset choice, breakpoint flow directions, spacing, alignment, distribution, and wrapping after setup."
+    );
+    expect(view.container.textContent).toContain("`content` slot");
+    expect(view.container.textContent).not.toContain("Gap on all breakpoints");
+    expect(view.container.textContent).not.toContain("Align on all breakpoints");
+    expect(view.container.textContent).not.toContain("Justify on all breakpoints");
+    expect(view.container.querySelector('[data-widget-control-path="variant"]')).toBeNull();
+    expect(Array.from(view.container.querySelectorAll("select"))).toHaveLength(0);
+    expect(currentVariant).toBe("legacy");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(latestValue).toEqual({
+      direction: {
+        desktop: "bad",
+        tablet: "bad",
+        mobile: "bad",
+      },
+      gap: {
+        desktop: "99",
+        tablet: "99",
+        mobile: "99",
+      },
+      align: "bad",
+      justify: "bad",
+      wrap: false,
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("StackVisualEditor renders miniatures and writes responsive direction, axis, and wrap", async () => {
+  const { StackVisualEditor } = await import("../../../core/admin/ui/widgets/editors/StackEditors");
+
+  const onChangeSpy = vi.fn();
+  let latestValue: StackData = {};
+  let currentVariant = "vertical";
+
+  const Harness = () => {
+    const [value, setValue] = useState<StackData>(latestValue);
+    const [variant, setVariant] = useState(currentVariant);
+
+    return (
+      <StackVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => {
+          currentVariant = next;
+          setVariant(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(findByDataAttr(view.container, "data-stack-variant-miniature", "vertical")).toBeTruthy();
+    expect(
+      findByDataAttr(view.container, "data-stack-variant-miniature", "horizontal")
+    ).toBeTruthy();
+    expect(
+      findByDataAttr(view.container, "data-stack-variant-miniature", "responsive")
+    ).toBeTruthy();
+    expect(view.container.textContent).toContain(
+      "Picking a preset updates the saved desktop, tablet, and mobile flow directions."
+    );
 
     clickByText(view.container, "Horizontal");
     expect(currentVariant).toBe("horizontal");
 
-    const directionSection = findSectionByTitle(view.container, "Responsive direction");
-    const directionSelects = Array.from(
-      (directionSection as ParentNode).querySelectorAll("select")
-    );
-    setSelectValue(directionSelects[0], "row");
-    setSelectValue(directionSelects[1], "3");
-    setSelectValue(directionSelects[2], "row");
-    setSelectValue(directionSelects[3], "5");
-    setSelectValue(directionSelects[4], "column");
-    setSelectValue(directionSelects[5], "2");
-
-    const spacingSection = findSectionByTitle(view.container, "Spacing and distribution");
-    const spacingSelects = Array.from((spacingSection as ParentNode).querySelectorAll("select"));
-    setSelectValue(spacingSelects[0], "center");
-    setSelectValue(spacingSelects[1], "between");
-
-    const wrapSection = findSectionByTitle(view.container, "Wrapping and slot behavior");
-    const wrapToggle = Array.from(
-      (wrapSection as ParentNode).querySelectorAll('input[type="checkbox"]')
-    )[0];
-    setCheckboxValue(wrapToggle, true);
-
-    const advancedSection = findSectionByTitle(view.container, "Technical flow tokens");
-    const advancedSelects = Array.from((advancedSection as ParentNode).querySelectorAll("select"));
-    for (const index of [1, 3, 5]) {
-      expect(
-        Array.from((advancedSelects[index] as HTMLSelectElement).options).map(
-          (option) => option.value
-        )
-      ).toContain("none");
+    for (const [breakpoint, directionValue, gapValue] of [
+      ["desktop", "row", "none"],
+      ["tablet", "row", "6"],
+      ["mobile", "column", "4"],
+    ] as const) {
+      const card = findByDataAttr(view.container, "data-stack-direction-card", breakpoint);
+      const selects = Array.from((card as ParentNode).querySelectorAll("select"));
+      setSelectValue(selects[0], directionValue);
+      setSelectValue(selects[1], gapValue);
     }
-    setSelectValue(advancedSelects[0], "column");
-    setSelectValue(advancedSelects[1], "10");
-    setSelectValue(advancedSelects[2], "row");
-    setSelectValue(advancedSelects[3], "6");
-    setSelectValue(advancedSelects[4], "row");
-    setSelectValue(advancedSelects[5], "4");
-    setSelectValue(advancedSelects[6], "end");
-    setSelectValue(advancedSelects[7], "center");
-    const advancedWrapToggle = Array.from(
-      (advancedSection as ParentNode).querySelectorAll('input[type="checkbox"]')
-    )[0];
-    setCheckboxValue(advancedWrapToggle, false);
+
+    for (const [breakpoint, alignValue, justifyValue, wrapValue] of [
+      ["desktop", "baseline", "evenly", true],
+      ["tablet", "center", "around", false],
+      ["mobile", "stretch", "start", true],
+    ] as const) {
+      const card = findByDataAttr(view.container, "data-stack-axis-card", breakpoint);
+      const selects = Array.from((card as ParentNode).querySelectorAll("select"));
+      const toggle = (card as ParentNode).querySelector('input[type="checkbox"]');
+      setSelectValue(selects[0], alignValue);
+      setSelectValue(selects[1], justifyValue);
+      setCheckboxValue(toggle, wrapValue);
+    }
 
     expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue).toMatchObject({
-      direction: {
-        desktop: "column",
-        tablet: "row",
-        mobile: "row",
-      },
-      gap: {
-        desktop: "10",
-        tablet: "6",
-        mobile: "4",
-      },
-      align: "end",
-      justify: "center",
-      wrap: false,
+    expect(latestValue.direction).toMatchObject({
+      desktop: "row",
+      tablet: "row",
+      mobile: "column",
     });
+    expect(latestValue.gap).toMatchObject({
+      desktop: "none",
+      tablet: "6",
+      mobile: "4",
+    });
+    expect(latestValue.align).toEqual({
+      desktop: "baseline",
+      tablet: "center",
+      mobile: "stretch",
+    });
+    expect(latestValue.justify).toEqual({
+      desktop: "evenly",
+      tablet: "around",
+      mobile: "start",
+    });
+    expect(latestValue.wrap).toEqual({
+      desktop: true,
+      tablet: false,
+      mobile: true,
+    });
+    expect(view.container.textContent).toContain("Stack keeps one fixed content slot");
+  } finally {
+    view.cleanup();
+  }
+});
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"desktop": "column"');
-    expect(snapshot?.textContent).toContain('"tablet": "row"');
-    expect(snapshot?.textContent).toContain('"mobile": "row"');
-    expect(snapshot?.textContent).toContain('"justify": "center"');
+test("StackAdvancedEditor shows read-only summaries without hidden mutators or raw payload", async () => {
+  const { StackAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/StackEditors");
+
+  const onChangeSpy = vi.fn();
+  const value: StackData = {
+    direction: {
+      desktop: "column",
+      tablet: "column",
+      mobile: "column",
+    },
+    gap: {
+      desktop: "6",
+      tablet: "6",
+      mobile: "4",
+    },
+    align: "center",
+    justify: "between",
+    wrap: false,
+  };
+
+  const Harness = () => {
+    return <StackAdvancedEditor value={value} onChange={onChangeSpy} variant="responsive" />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(view.container.textContent).toContain("Runtime stack summary");
+    expect(view.container.textContent).toContain("Support summary");
+    expect(view.container.textContent).toContain("Stack vertically");
+    expect(view.container.textContent).toContain("Balanced desktop spacing");
+    expect(view.container.textContent).toContain(
+      "Legacy single-value axis settings normalize for desktop, tablet, and mobile."
+    );
+    expect(view.container.textContent).toContain(
+      "Use Visual to adjust flow, spacing, alignment, distribution, and wrapping."
+    );
+    expect(view.container.textContent).not.toContain("Technical flow tokens");
+    expect(view.container.textContent).not.toContain("Raw payload snapshot");
+    expect(view.container.querySelectorAll("select")).toHaveLength(0);
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(view.container.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(findByDataAttr(view.container, "data-stack-direction-card", "desktop")).toBeNull();
+    expect(findByDataAttr(view.container, "data-stack-axis-card", "desktop")).toBeNull();
+    expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -362,160 +420,43 @@ test("Stack editors fall back to safe defaults when normalization is partial and
   );
 
   try {
-    const wizardPreset = findSelectsByOptions(view.container, [
-      "vertical",
-      "horizontal",
-      "responsive",
-    ])[0];
-    expect((wizardPreset as HTMLSelectElement | null | undefined)?.value).toBe("vertical");
-    expect(() => setSelectValue(wizardPreset, "responsive")).not.toThrow();
-    expect((wizardPreset as HTMLSelectElement | null | undefined)?.value).toBe("vertical");
+    const wizardSection = findSectionByTitle(view.container, "Stack quick start");
+    expect(wizardSection?.querySelectorAll("select")).toHaveLength(0);
 
-    const wizardSelects = Array.from(view.container.querySelectorAll("select"));
-    expect((wizardSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((wizardSelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("4");
-
-    const variantButtons = Array.from(view.container.querySelectorAll("button")).filter(
-      (candidate) =>
-        candidate.textContent?.includes("Vertical") ||
-        candidate.textContent?.includes("Horizontal") ||
-        candidate.textContent?.includes("Responsive")
-    );
-    expect(variantButtons[0]?.textContent).toContain("Selected");
-    expect(variantButtons[1]?.textContent).toContain("Pick");
-    expect(variantButtons[2]?.textContent).toContain("Pick");
+    expect(findByDataAttr(view.container, "data-stack-variant-miniature", "vertical")).toBeTruthy();
+    expect(
+      findByDataAttr(view.container, "data-stack-variant-miniature", "horizontal")
+    ).toBeTruthy();
+    expect(
+      findByDataAttr(view.container, "data-stack-variant-miniature", "responsive")
+    ).toBeTruthy();
 
     expect(() => clickByText(view.container, "Responsive")).not.toThrow();
-    expect(variantButtons[0]?.textContent).toContain("Selected");
-    expect(variantButtons[2]?.textContent).toContain("Pick");
 
-    const directionSection = findSectionByTitle(view.container, "Responsive direction");
-    const directionSelects = Array.from(
-      (directionSection as ParentNode).querySelectorAll("select")
+    const visualSection = findSectionByTitle(view.container, "Responsive alignment and wrap");
+    const desktopAxisCard = findByDataAttr(
+      visualSection as ParentNode,
+      "data-stack-axis-card",
+      "desktop"
     );
-    expect((directionSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((directionSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("6");
-    expect((directionSelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((directionSelects[3] as HTMLSelectElement | null | undefined)?.value).toBe("6");
-    expect((directionSelects[4] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((directionSelects[5] as HTMLSelectElement | null | undefined)?.value).toBe("4");
+    const desktopAxisSelects = Array.from(
+      (desktopAxisCard as ParentNode).querySelectorAll("select")
+    );
+    const desktopWrapToggle = (desktopAxisCard as ParentNode).querySelector(
+      'input[type="checkbox"]'
+    );
+    expect((desktopAxisSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("stretch");
+    expect((desktopAxisSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("start");
+    expect((desktopWrapToggle as HTMLInputElement | null | undefined)?.checked).toBe(false);
 
-    const spacingSection = findSectionByTitle(view.container, "Spacing and distribution");
-    const spacingSelects = Array.from((spacingSection as ParentNode).querySelectorAll("select"));
-    expect((spacingSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("stretch");
-    expect((spacingSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("start");
-
-    const wrapSection = findSectionByTitle(view.container, "Wrapping and slot behavior");
-    const wrapToggle = Array.from(
-      (wrapSection as ParentNode).querySelectorAll('input[type="checkbox"]')
-    )[0];
-    expect((wrapToggle as HTMLInputElement | null | undefined)?.checked).toBe(false);
-
-    const advancedSection = findSectionByTitle(view.container, "Technical flow tokens");
-    const advancedSelects = Array.from((advancedSection as ParentNode).querySelectorAll("select"));
-    expect((advancedSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((advancedSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("6");
-    expect((advancedSelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((advancedSelects[3] as HTMLSelectElement | null | undefined)?.value).toBe("6");
-    expect((advancedSelects[4] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((advancedSelects[5] as HTMLSelectElement | null | undefined)?.value).toBe("4");
-    expect((advancedSelects[6] as HTMLSelectElement | null | undefined)?.value).toBe("stretch");
-    expect((advancedSelects[7] as HTMLSelectElement | null | undefined)?.value).toBe("start");
-
-    const advancedWrapToggle = Array.from(
-      (advancedSection as ParentNode).querySelectorAll('input[type="checkbox"]')
-    )[0];
-    expect((advancedWrapToggle as HTMLInputElement | null | undefined)?.checked).toBe(false);
-
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent?.trim()).toBe("{}");
+    const advancedSection = findSectionByTitle(view.container, "Runtime stack summary");
+    expect(advancedSection?.textContent).toContain("Stack vertically");
+    expect(advancedSection?.querySelectorAll("select")).toHaveLength(0);
+    expect(
+      findByDataAttr(advancedSection as ParentNode, "data-stack-direction-card", "desktop")
+    ).toBeNull();
+    expect(view.container.querySelector("pre")).toBeNull();
     expect(onChangeSpy).not.toHaveBeenCalled();
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("Stack editors apply per-breakpoint defaults when normalized direction and gap objects are sparse", async () => {
-  vi.doMock("../../../core/widgets/core/stack", async () => {
-    const actual = await vi.importActual<typeof import("../../../core/widgets/core/stack")>(
-      "../../../core/widgets/core/stack"
-    );
-
-    return {
-      ...actual,
-      normalizeStackData: vi.fn(() => ({
-        direction: {},
-        gap: {},
-        align: "center",
-        justify: "between",
-        wrap: true,
-      })),
-    };
-  });
-
-  const { StackAdvancedEditor, StackVisualEditor, StackWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/StackEditors");
-
-  const view = mount(
-    <>
-      <StackWizardEditor value={{}} onChange={() => undefined} variant="vertical" />
-      <StackVisualEditor
-        value={{}}
-        onChange={() => undefined}
-        variant="vertical"
-        onVariantChange={() => undefined}
-      />
-      <StackAdvancedEditor value={{}} onChange={() => undefined} variant="vertical" />
-    </>
-  );
-
-  try {
-    const wizardSelects = Array.from(view.container.querySelectorAll("select"));
-    expect((wizardSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((wizardSelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("4");
-
-    const directionSection = findSectionByTitle(view.container, "Responsive direction");
-    const directionSelects = Array.from(
-      (directionSection as ParentNode).querySelectorAll("select")
-    );
-    expect((directionSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((directionSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("6");
-    expect((directionSelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((directionSelects[3] as HTMLSelectElement | null | undefined)?.value).toBe("6");
-    expect((directionSelects[4] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((directionSelects[5] as HTMLSelectElement | null | undefined)?.value).toBe("4");
-
-    const spacingSection = findSectionByTitle(view.container, "Spacing and distribution");
-    const spacingSelects = Array.from((spacingSection as ParentNode).querySelectorAll("select"));
-    expect((spacingSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("center");
-    expect((spacingSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("between");
-
-    const wrapSection = findSectionByTitle(view.container, "Wrapping and slot behavior");
-    const wrapToggle = Array.from(
-      (wrapSection as ParentNode).querySelectorAll('input[type="checkbox"]')
-    )[0];
-    expect((wrapToggle as HTMLInputElement | null | undefined)?.checked).toBe(true);
-
-    const advancedSection = findSectionByTitle(view.container, "Technical flow tokens");
-    const advancedSelects = Array.from((advancedSection as ParentNode).querySelectorAll("select"));
-    expect((advancedSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((advancedSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("6");
-    expect((advancedSelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((advancedSelects[3] as HTMLSelectElement | null | undefined)?.value).toBe("6");
-    expect((advancedSelects[4] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((advancedSelects[5] as HTMLSelectElement | null | undefined)?.value).toBe("4");
-    expect((advancedSelects[6] as HTMLSelectElement | null | undefined)?.value).toBe("center");
-    expect((advancedSelects[7] as HTMLSelectElement | null | undefined)?.value).toBe("between");
-
-    const advancedWrapToggle = Array.from(
-      (advancedSection as ParentNode).querySelectorAll('input[type="checkbox"]')
-    )[0];
-    expect((advancedWrapToggle as HTMLInputElement | null | undefined)?.checked).toBe(true);
-
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"direction": {}');
-    expect(snapshot?.textContent).toContain('"gap": {}');
-    expect(snapshot?.textContent).toContain('"wrap": true');
   } finally {
     view.cleanup();
   }

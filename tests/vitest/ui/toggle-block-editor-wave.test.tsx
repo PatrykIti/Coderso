@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -113,14 +113,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -131,7 +131,7 @@ const mount = (node: React.ReactNode) => {
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -141,7 +141,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
-  act(() => {
+  React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -149,9 +149,35 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const clickButton = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLButtonElement)) return;
-  act(() => {
+  React.act(() => {
     element.click();
   });
+};
+
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+const getSectionByTitle = (container: ParentNode, title: string) => {
+  const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
+    Array.from(candidate.querySelectorAll("h3, p")).some(
+      (node) => normalizeText(node.textContent) === normalizeText(title)
+    )
+  );
+  if (!(section instanceof HTMLElement)) {
+    throw new Error(`Missing section "${title}"`);
+  }
+  return section;
+};
+
+const findButtonByText = (container: ParentNode, text: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find(
+    (element) =>
+      element instanceof HTMLButtonElement && element.textContent?.includes(text) === true
+  );
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Missing button "${text}"`);
+  }
+  return button;
 };
 
 const findInputByPlaceholder = (container: ParentNode, placeholder: string) => {
@@ -161,6 +187,16 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) => {
   );
   if (!(input instanceof HTMLInputElement)) {
     throw new Error(`Missing input with placeholder "${placeholder}"`);
+  }
+  return input;
+};
+
+const findInputByAriaLabel = (container: ParentNode, label: string) => {
+  const input = Array.from(container.querySelectorAll("input")).find(
+    (element) => element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
+  );
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing input with aria-label "${label}"`);
   }
   return input;
 };
@@ -177,52 +213,16 @@ const findSelectByOptions = (container: ParentNode, values: string[]) => {
   return select;
 };
 
-const findButtonByText = (container: ParentNode, text: string) => {
-  const button = Array.from(container.querySelectorAll("button")).find(
-    (element) =>
-      element instanceof HTMLButtonElement && element.textContent?.includes(text) === true
-  );
-  if (!(button instanceof HTMLButtonElement)) {
-    throw new Error(`Missing button "${text}"`);
-  }
-  return button;
-};
-
-const normalizeText = (value: string | null | undefined) =>
-  (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
-
-const getSectionByTitle = (container: ParentNode, title: string) => {
-  const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
-    )
-  );
-  if (!(section instanceof HTMLElement)) {
-    throw new Error(`Missing section "${title}"`);
-  }
-  return section;
-};
-
-const getDiagnosticsSnapshot = (container: ParentNode): ToggleBlockData => {
-  const snapshot = container.querySelector("pre");
-  if (!(snapshot instanceof HTMLPreElement)) {
-    throw new Error("Missing diagnostics snapshot");
-  }
-  return JSON.parse(snapshot.textContent ?? "{}") as ToggleBlockData;
-};
-
 type EditorKind = "wizard" | "visual" | "advanced";
 
 const renderEditor = async ({
   editor,
   initialValue,
   initialVariant = "switch",
-  withVariantChange = true,
 }: {
   editor: EditorKind;
   initialValue: ToggleBlockData;
   initialVariant?: string;
-  withVariantChange?: boolean;
 }) => {
   const { ToggleBlockAdvancedEditor, ToggleBlockVisualEditor, ToggleBlockWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ToggleBlockEditors");
@@ -253,15 +253,11 @@ const renderEditor = async ({
           setValue(next);
         }}
         variant={variant}
-        onVariantChange={
-          withVariantChange
-            ? (next) => {
-                latestVariant = next;
-                onVariantChangeSpy(next);
-                setVariant(next);
-              }
-            : undefined
-        }
+        onVariantChange={(next) => {
+          latestVariant = next;
+          onVariantChangeSpy(next);
+          setVariant(next);
+        }}
       />
     );
   };
@@ -282,7 +278,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("ToggleBlock wizard editor covers variant fallback and label normalization", async () => {
+test("ToggleBlock wizard editor keeps setup focused on variant and points daily editing to Visual", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialVariant: "legacy-toggle",
@@ -290,325 +286,217 @@ test("ToggleBlock wizard editor covers variant fallback and label normalization"
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant");
-    expect(normalizeText(findButtonByText(variantSection, "Switch").textContent)).toContain(
-      "selected"
+    expect(view.container.textContent).toContain("Step 1: Variant");
+    expect(view.container.textContent).toContain("Wizard is one-time starter setup.");
+    expect(view.container.textContent).toContain("editor preview is static in setup mode");
+    expect(view.container.textContent).toContain("public pages mount click and keyboard switching");
+    expect(view.container.textContent).not.toContain("Theme");
+    expect(view.container.textContent).not.toContain("Diagnostics");
+    const variantSection = getSectionByTitle(view.container, "Step 1: Variant");
+    expect(variantSection.getAttribute("data-widget-editor-mode")).toBe("wizard");
+    expect(variantSection.getAttribute("data-widget-editor-section-role")).toBe("setup");
+    const variantSummary = variantSection.querySelector(
+      '[data-widget-control="toggle-block.wizard.variant-summary"]'
     );
-    expect(normalizeText(findButtonByText(variantSection, "Cards").textContent)).toContain("pick");
-    expect(view.container.textContent).not.toContain("Behavior and Style");
-
-    clickButton(findButtonByText(variantSection, "Cards"));
-    expect(view.getVariant()).toBe("cards");
-    expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("cards");
-
-    const labelsSection = getSectionByTitle(view.container, "Labels");
-    const primaryInput = findInputByPlaceholder(labelsSection, "View A");
-    const secondaryInput = findInputByPlaceholder(labelsSection, "View B");
-    const helperInput = findInputByPlaceholder(labelsSection, "Switch between two content views.");
-
-    expect(primaryInput.value).toBe("View A");
-    expect(secondaryInput.value).toBe("View B");
-    expect(helperInput.value).toBe("Switch between two content views.");
-
-    setInputValue(primaryInput, " Overview ");
-    setInputValue(secondaryInput, "   ");
-    setInputValue(helperInput, "");
-
-    expect(view.getValue()).toEqual({
-      labels: {
-        primary: "Overview",
-        secondary: "View B",
-        helper: "Switch between two content views.",
-      },
-      options: {
-        defaultState: "primary",
-      },
-      style: {
-        surfaceColor: "var(--color-surface)",
-        borderColor: "var(--color-border)",
-        accentColor: "var(--color-text)",
-      },
-    });
-    expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(variantSummary?.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(variantSummary?.textContent).toContain("Switch");
+    expect(
+      view.container.querySelector('[data-widget-control="toggle-block.variant-preview.switch"]')
+    ).toBeNull();
+    expect(
+      view.container.querySelector('[data-widget-control="toggle-block.variant-preview.cards"]')
+    ).toBeNull();
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(view.getVariant()).toBe("legacy-toggle");
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
+    expect(view.container.querySelector('input[placeholder="View A"]')).toBeNull();
+    expect(
+      view.container.querySelector('input[placeholder="Switch between two content views."]')
+    ).toBeNull();
+    expect(
+      Array.from(view.container.querySelectorAll("select")).some((select) => {
+        if (!(select instanceof HTMLSelectElement)) return false;
+        const optionValues = Array.from(select.options).map((option) => option.value);
+        return optionValues.includes("primary") && optionValues.includes("secondary");
+      })
+    ).toBe(false);
+    expect(view.getValue()).toEqual({});
   } finally {
     view.cleanup();
   }
 });
 
-test("ToggleBlock visual editor covers behavior controls and style token normalization", async () => {
+test("ToggleBlock visual editor owns motion, accessibility, pane cards, and swatch-only colors", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "switch",
+    initialValue: {},
+  });
+
+  try {
+    expect(view.container.textContent).toContain("Experience");
+    expect(view.container.textContent).toContain("Theme");
+    expect(view.container.textContent).toContain("Accessibility");
+    expect(view.container.textContent).toContain("Pane cards");
+    expect(view.container.textContent).toContain("Pane authoring");
+    expect(view.container.textContent).not.toContain("Runtime summary");
+    expect(view.container.textContent).not.toContain("Support summary");
+
+    clickButton(findButtonByText(view.container, "Cards"));
+    expect(view.getVariant()).toBe("cards");
+
+    const experienceSection = getSectionByTitle(view.container, "Experience");
+    expect(experienceSection.textContent).toContain("Editor preview is static");
+    expect(experienceSection.textContent).toContain(
+      "Public pages mount click and keyboard switching"
+    );
+    const motionSelect = findSelectByOptions(experienceSection, ["none", "fade", "slide"]);
+    setSelectValue(motionSelect, "slide");
+
+    const themeSection = getSectionByTitle(view.container, "Theme");
+    expect(themeSection.getAttribute("data-widget-editor-mode")).toBe("visual");
+    expect(themeSection.getAttribute("data-widget-editor-section-role")).toBe("visual");
+    expect(findInputByAriaLabel(themeSection, "Accent color swatch").value).toBe("#0f172a");
+    expect(findInputByAriaLabel(themeSection, "Accent contrast color swatch").value).toBe(
+      "#ffffff"
+    );
+    expect(themeSection.querySelector('[aria-label="Accent color value"]')).toBeNull();
+    expect(themeSection.textContent).toContain("Theme default");
+
+    setInputValue(findInputByAriaLabel(themeSection, "Accent color swatch"), "#111111");
+    setInputValue(findInputByAriaLabel(themeSection, "Accent contrast color swatch"), "#222222");
+
+    const accessibilitySection = getSectionByTitle(view.container, "Accessibility");
+    expect(accessibilitySection.getAttribute("data-widget-editor-mode")).toBe("visual");
+    expect(accessibilitySection.getAttribute("data-widget-editor-section-role")).toBe("content");
+    setInputValue(
+      findInputByPlaceholder(accessibilitySection, "Toggle content view"),
+      "Przelacz widok"
+    );
+    setInputValue(findInputByPlaceholder(accessibilitySection, "selected"), "aktywny");
+
+    const paneSection = getSectionByTitle(view.container, "Pane cards");
+    expect(paneSection.getAttribute("data-widget-editor-mode")).toBe("visual");
+    expect(paneSection.getAttribute("data-widget-editor-section-role")).toBe("visual");
+    const selects = Array.from(paneSection.querySelectorAll("select"));
+    setSelectValue(selects[0], "contrast");
+    setSelectValue(selects[3], "strong");
+    setSelectValue(selects[4], "soft");
+    setSelectValue(selects[6], "lg");
+
+    expect(view.container.textContent).toContain("Configured colors may be hard to read together.");
+    expect(view.container.textContent).toContain(
+      "Toggle Block stays intentionally limited to two panes."
+    );
+    expect(view.getValue().options?.motion).toBe("slide");
+    expect(view.getValue().labels?.ariaLabel).toBe("Przelacz widok");
+    expect(view.getValue().labels?.selectedSuffix).toBe("aktywny");
+    expect(view.getValue().style?.accentColor).toBe("#111111");
+    expect(view.getValue().style?.accentContrastColor).toBe("#222222");
+    expect(view.getValue().style?.panes?.primary?.surface).toBe("contrast");
+    expect(view.getValue().style?.panes?.primary?.borderEmphasis).toBe("strong");
+    expect(view.getValue().style?.panes?.secondary?.surface).toBe("soft");
+    expect(view.getValue().style?.panes?.secondary?.radius).toBe("lg");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ToggleBlock visual editor evaluates the rendered active trigger contrast pair", async () => {
   const view = await renderEditor({
     editor: "visual",
     initialVariant: "cards",
     initialValue: {
-      labels: {
-        primary: "Summary",
-        secondary: "Details",
-        helper: "Switch views",
-      },
-      options: {
-        defaultState: "secondary",
-      },
       style: {
-        surfaceColor: "   ",
-        borderColor: "",
-        accentColor: "#111111",
+        accentColor: "#000080",
+        accentContrastColor: "#ffffff",
       },
     },
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant");
-    expect(normalizeText(findButtonByText(variantSection, "Cards").textContent)).toContain(
-      "selected"
+    const themeSection = getSectionByTitle(view.container, "Theme");
+    expect(themeSection.textContent).not.toContain(
+      "Configured colors may be hard to read together."
     );
 
-    clickButton(findButtonByText(variantSection, "Switch"));
-    expect(view.getVariant()).toBe("switch");
-    expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("switch");
+    setInputValue(findInputByAriaLabel(themeSection, "Accent contrast color swatch"), "#000080");
 
-    const behaviorSection = getSectionByTitle(view.container, "Behavior and Style");
-    const stateSelect = findSelectByOptions(behaviorSection, ["primary", "secondary"]);
-    const surfaceInput = findInputByPlaceholder(behaviorSection, "var(--color-surface)");
-    const borderInput = findInputByPlaceholder(behaviorSection, "var(--color-border)");
-    const accentInput = findInputByPlaceholder(behaviorSection, "var(--color-text)");
-
-    expect(stateSelect.value).toBe("secondary");
-    expect(view.container.textContent).not.toContain("Diagnostics");
-
-    setSelectValue(stateSelect, "primary");
-    setInputValue(surfaceInput, " #fafafa ");
-    setInputValue(borderInput, "   ");
-    setInputValue(accentInput, " #ff5500 ");
-
-    expect(view.getValue()).toEqual({
-      labels: {
-        primary: "Summary",
-        secondary: "Details",
-        helper: "Switch views",
-      },
-      options: {
-        defaultState: "primary",
-      },
-      style: {
-        surfaceColor: "#fafafa",
-        borderColor: "var(--color-border)",
-        accentColor: "#ff5500",
-      },
-    });
-    expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(themeSection.textContent).toContain(
+      "Active trigger rendered contrast: Configured colors may be hard to read together."
+    );
+    expect(view.getValue().style?.accentColor).toBe("#000080");
+    expect(view.getValue().style?.accentContrastColor).toBe("#000080");
   } finally {
     view.cleanup();
   }
 });
 
-test("ToggleBlock advanced editor renders diagnostics from normalized data and tolerates missing variant callback", async () => {
+test("ToggleBlock advanced editor is read-only diagnostics", async () => {
   const view = await renderEditor({
     editor: "advanced",
-    initialVariant: "legacy-toggle",
-    withVariantChange: false,
+    initialVariant: "cards",
     initialValue: {
       labels: {
-        primary: " Overview ",
-        secondary: "   ",
-        helper: "  ",
+        primary: "Overview",
+        secondary: "Specs",
+        helper: "",
+        ariaLabel: "Przelacz widok",
+        selectedSuffix: "aktywny",
       },
       options: {
         defaultState: "secondary",
+        motion: "slide",
       },
       style: {
-        surfaceColor: "",
-        borderColor: " #222222 ",
-        accentColor: "   ",
+        surfaceColor: "#f8fafc",
+        accentColor: "#111111",
+        panes: {
+          primary: {
+            surface: "contrast",
+            padding: "compact",
+            radius: "sm",
+            borderEmphasis: "strong",
+          },
+          secondary: {
+            surface: "soft",
+            padding: "comfortable",
+            radius: "lg",
+          },
+        },
       },
     },
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant");
-    expect(normalizeText(findButtonByText(variantSection, "Switch").textContent)).toContain(
-      "selected"
-    );
-
-    clickButton(findButtonByText(variantSection, "Cards"));
-    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
-
-    expect(getDiagnosticsSnapshot(view.container)).toEqual({
-      labels: {
-        primary: "Overview",
-        secondary: "View B",
-        helper: "Switch between two content views.",
-      },
-      options: {
-        defaultState: "secondary",
-      },
-      style: {
-        borderColor: "#222222",
-        accentColor: "var(--color-text)",
-      },
-    });
-
-    const labelsSection = getSectionByTitle(view.container, "Labels");
-    const behaviorSection = getSectionByTitle(view.container, "Behavior and Style");
-    const helperInput = findInputByPlaceholder(labelsSection, "Switch between two content views.");
-    const stateSelect = findSelectByOptions(behaviorSection, ["primary", "secondary"]);
-    const surfaceInput = findInputByPlaceholder(behaviorSection, "var(--color-surface)");
-
-    setInputValue(helperInput, "Shared context");
-    setSelectValue(stateSelect, "primary");
-    setInputValue(surfaceInput, " #f5f5f5 ");
-
-    expect(getDiagnosticsSnapshot(view.container)).toEqual({
-      labels: {
-        primary: "Overview",
-        secondary: "View B",
-        helper: "Shared context",
-      },
-      options: {
-        defaultState: "primary",
-      },
-      style: {
-        surfaceColor: "#f5f5f5",
-        borderColor: "#222222",
-        accentColor: "var(--color-text)",
-      },
-    });
-    expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain("Style diagnostics");
+    expect(view.container.textContent).toContain("Support summary");
+    const runtimeSection = getSectionByTitle(view.container, "Runtime summary");
+    const styleSection = getSectionByTitle(view.container, "Style diagnostics");
+    const supportSection = getSectionByTitle(view.container, "Support summary");
+    expect(runtimeSection.getAttribute("data-widget-editor-mode")).toBe("advanced");
+    expect(runtimeSection.getAttribute("data-widget-editor-section-role")).toBe("diagnostics");
+    expect(styleSection.getAttribute("data-widget-editor-mode")).toBe("advanced");
+    expect(styleSection.getAttribute("data-widget-editor-section-role")).toBe("diagnostics");
+    expect(supportSection.getAttribute("data-widget-editor-mode")).toBe("advanced");
+    expect(supportSection.getAttribute("data-widget-editor-section-role")).toBe("summary");
+    expect(view.container.textContent).toContain("Overview / Specs");
+    expect(view.container.textContent).toContain("Specs (secondary)");
+    expect(view.container.textContent).toContain("Slide");
+    expect(view.container.textContent).toContain("Surface: Contrast surface");
+    expect(view.container.textContent).toContain("Wizard seeds setup");
+    expect(view.container.querySelectorAll("input, select, button, textarea")).toHaveLength(0);
+    expect(
+      view.container.querySelectorAll(
+        '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    ).toHaveLength(0);
+    expect(
+      view.container.querySelectorAll('[data-widget-control-readonly="true"]').length
+    ).toBeGreaterThan(0);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
-  }
-});
-
-test("ToggleBlock editor controls fall back safely when normalized fields are partial", async () => {
-  vi.resetModules();
-
-  vi.doMock("../../../core/widgets/core/toggleBlock", async () => {
-    const actual = await vi.importActual<typeof import("../../../core/widgets/core/toggleBlock")>(
-      "../../../core/widgets/core/toggleBlock"
-    );
-
-    const partialNormalized: ToggleBlockData = {
-      labels: {
-        primary: undefined,
-        secondary: undefined,
-        helper: undefined,
-      },
-      style: {
-        surfaceColor: undefined,
-        borderColor: undefined,
-        accentColor: undefined,
-      },
-    };
-
-    const partialDefaults: ToggleBlockData = {
-      labels: {
-        primary: undefined,
-        secondary: "Fallback secondary",
-        helper: undefined,
-      },
-      style: {
-        surfaceColor: undefined,
-        borderColor: "var(--fallback-border)",
-        accentColor: undefined,
-      },
-    };
-
-    return {
-      ...actual,
-      normalizeToggleBlockData: vi.fn(() => partialNormalized),
-      toggleBlockDefaults: partialDefaults,
-    };
-  });
-
-  const wizardView = await renderEditor({
-    editor: "wizard",
-    initialVariant: "legacy-toggle",
-    initialValue: {},
-  });
-  const visualView = await renderEditor({
-    editor: "visual",
-    initialVariant: "legacy-toggle",
-    initialValue: {},
-  });
-  const advancedView = await renderEditor({
-    editor: "advanced",
-    initialVariant: "legacy-toggle",
-    initialValue: {},
-  });
-
-  try {
-    const wizardLabels = getSectionByTitle(wizardView.container, "Labels");
-    expect(findInputByPlaceholder(wizardLabels, "View A").value).toBe("");
-    expect(findInputByPlaceholder(wizardLabels, "View B").value).toBe("Fallback secondary");
-    expect(findInputByPlaceholder(wizardLabels, "Switch between two content views.").value).toBe(
-      ""
-    );
-
-    const visualBehavior = getSectionByTitle(visualView.container, "Behavior and Style");
-    expect(findSelectByOptions(visualBehavior, ["primary", "secondary"]).value).toBe("primary");
-    expect(findInputByPlaceholder(visualBehavior, "var(--color-surface)").value).toBe("");
-    expect(findInputByPlaceholder(visualBehavior, "var(--color-border)").value).toBe(
-      "var(--fallback-border)"
-    );
-    expect(findInputByPlaceholder(visualBehavior, "var(--color-text)").value).toBe("");
-
-    expect(getDiagnosticsSnapshot(advancedView.container)).toEqual({
-      labels: {},
-      style: {},
-    });
-  } finally {
-    wizardView.cleanup();
-    visualView.cleanup();
-    advancedView.cleanup();
-    vi.doUnmock("../../../core/widgets/core/toggleBlock");
-    vi.resetModules();
-  }
-});
-
-test("ToggleBlock visual editor uses empty strings when secondary and border defaults are absent", async () => {
-  vi.resetModules();
-
-  vi.doMock("../../../core/widgets/core/toggleBlock", async () => {
-    const actual = await vi.importActual<typeof import("../../../core/widgets/core/toggleBlock")>(
-      "../../../core/widgets/core/toggleBlock"
-    );
-
-    return {
-      ...actual,
-      normalizeToggleBlockData: vi.fn(() => ({
-        labels: {},
-        style: {},
-      })),
-      toggleBlockDefaults: {
-        labels: {
-          primary: "View A",
-          helper: "Switch between two content views.",
-        },
-        options: {
-          defaultState: "primary",
-        },
-        style: {
-          surfaceColor: "var(--color-surface)",
-          accentColor: "var(--color-text)",
-        },
-      } satisfies ToggleBlockData,
-    };
-  });
-
-  const view = await renderEditor({
-    editor: "visual",
-    initialVariant: "legacy-toggle",
-    initialValue: {},
-  });
-
-  try {
-    const labelsSection = getSectionByTitle(view.container, "Labels");
-    const behaviorSection = getSectionByTitle(view.container, "Behavior and Style");
-
-    expect(findInputByPlaceholder(labelsSection, "View B").value).toBe("");
-    expect(findInputByPlaceholder(behaviorSection, "var(--color-border)").value).toBe("");
-  } finally {
-    view.cleanup();
-    vi.doUnmock("../../../core/widgets/core/toggleBlock");
-    vi.resetModules();
   }
 });

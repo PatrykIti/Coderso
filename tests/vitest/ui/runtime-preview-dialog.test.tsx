@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -13,14 +13,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -50,8 +50,8 @@ test("RuntimePreviewDialog renders description and iframe sandbox contract", () 
 
   try {
     expect(document.body.innerHTML).toContain("Runtime preview (read-only, site theme).");
-    expect(document.body.innerHTML).toContain("sandbox=\"allow-same-origin allow-scripts\"");
-    expect(document.body.innerHTML).toContain("data-preview-device=\"tablet\"");
+    expect(document.body.innerHTML).toContain('sandbox="allow-same-origin allow-scripts"');
+    expect(document.body.innerHTML).toContain('data-preview-device="tablet"');
   } finally {
     view.cleanup();
   }
@@ -77,15 +77,17 @@ test("RuntimePreviewDialog shows actionable loopback failure without leaking tok
   );
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
     expect(document.body.textContent).toContain("Live preview unavailable");
-    expect(document.body.textContent).toContain("Frontend is not responding at http://localhost:3000.");
+    expect(document.body.textContent).toContain(
+      "Frontend is not responding at http://localhost:3000."
+    );
     expect(document.body.textContent).not.toContain("secret-token");
 
-    act(() => {
+    React.act(() => {
       Array.from(document.body.querySelectorAll("button"))
         .find((button) => button.textContent === "Open page settings")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -153,7 +155,7 @@ test("RuntimePreviewDialog renders iframe for successful probe and load", () => 
     expect(iframe).not.toBeNull();
     expect(iframe?.getAttribute("data-preview-device")).toBe("mobile");
 
-    act(() => {
+    React.act(() => {
       iframe?.dispatchEvent(new Event("load", { bubbles: true }));
     });
 
@@ -180,7 +182,7 @@ test("RuntimePreviewDialog falls back after iframe timeout for non-loopback host
   );
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       vi.advanceTimersByTime(3000);
       await Promise.resolve();
     });

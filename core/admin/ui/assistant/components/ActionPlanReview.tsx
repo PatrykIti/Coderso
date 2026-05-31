@@ -29,8 +29,7 @@ const labelByOperation = {
 const secretLikeTextPattern =
   /(token|secret|password|api[-_]?key|credential|cookie|csrf|authorization|bearer)/i;
 
-const redactUiText = (value: string) =>
-  secretLikeTextPattern.test(value) ? "[redacted]" : value;
+const redactUiText = (value: string) => (secretLikeTextPattern.test(value) ? "[redacted]" : value);
 
 const destructiveActionTypes = new Set([
   "content-type.delete",
@@ -79,6 +78,7 @@ const actionTypeLabels: Record<string, string> = {
   "page.widget.patch": "Page widget",
   "form.automation.upsert": "Form automation",
   "page.upsert": "Page",
+  "detail-page.upsert": "Detail Template",
   "page.update": "Page",
   "page.delete": "Page",
   "widget-template.delete": "Widget template",
@@ -123,6 +123,9 @@ const resolvePlannerLabel = (metadata: AssistantActionPlanResponse["metadata"]) 
   return "Local planner";
 };
 
+const formatCompositionId = (value: string) =>
+  redactUiText(value.replaceAll("-", " ").replaceAll("_", " "));
+
 export function ActionPlanReview({
   plan,
   preview,
@@ -147,7 +150,19 @@ export function ActionPlanReview({
     plan.responseKind === "inspection" || (Boolean(plan.inspection) && !hasExecutableActions);
   const showActionControls = hasExecutableActions || !isReadOnlyPlan;
   const guideLabel = isReadOnlyPlan ? "LLM Guide Inspection" : "LLM Guide Plan";
-  const statusLabel = isReadOnlyPlan ? "Read-only" : plan.status === "ready" ? "Ready" : "Needs input";
+  const statusLabel = isReadOnlyPlan
+    ? "Read-only"
+    : plan.status === "ready"
+      ? "Ready"
+      : "Needs input";
+  const composition = plan.metadata?.blueprintComposition;
+  const mergedCompositionResources =
+    composition?.mergedResources.filter((resource) => resource.sourceCapabilityIds.length > 1) ??
+    [];
+  const matchedCompositionResources =
+    composition?.existingResourceMatches.filter((match) => match.status === "matched") ?? [];
+  const unresolvedCompositionResources =
+    composition?.existingResourceMatches.filter((match) => match.status === "unresolved") ?? [];
 
   return (
     <Card className="border-emerald-200/80 bg-emerald-50/40">
@@ -157,9 +172,7 @@ export function ActionPlanReview({
             <Sparkles className="h-3 w-3" />
             {guideLabel}
           </Badge>
-          <Badge variant={plan.status === "ready" ? "default" : "outline"}>
-            {statusLabel}
-          </Badge>
+          <Badge variant={plan.status === "ready" ? "default" : "outline"}>{statusLabel}</Badge>
           <Badge variant="outline">Confidence {Math.round(plan.confidence * 100)}%</Badge>
           <Badge variant="outline">{resolvePlannerLabel(plan.metadata)}</Badge>
         </div>
@@ -173,8 +186,8 @@ export function ActionPlanReview({
           <Alert variant="destructive">
             <AlertTitle>Destructive operation requires review</AlertTitle>
             <AlertDescription>
-              Preview the impact before executing. Delete, archive, and detach operations
-              can remove or hide resources from public/admin workflows.
+              Preview the impact before executing. Delete, archive, and detach operations can remove
+              or hide resources from public/admin workflows.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -211,6 +224,58 @@ export function ActionPlanReview({
                 <li key={item}>{redactUiText(item)}</li>
               ))}
             </ul>
+          </div>
+        ) : null}
+
+        {composition ? (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Composition diagnostics
+            </p>
+            <div className="space-y-3 rounded-lg border bg-background px-3 py-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">
+                  Primary {formatCompositionId(composition.primaryCapabilityId)}
+                </Badge>
+                {composition.adjunctCapabilityIds.map((capabilityId) => (
+                  <Badge key={`adjunct-${capabilityId}`} variant="outline">
+                    Adjunct {formatCompositionId(capabilityId)}
+                  </Badge>
+                ))}
+                {composition.gatedCapabilityIds.map((capabilityId) => (
+                  <Badge key={`gated-${capabilityId}`} variant="outline">
+                    Gated {formatCompositionId(capabilityId)}
+                  </Badge>
+                ))}
+              </div>
+              {matchedCompositionResources.length > 0 ||
+              unresolvedCompositionResources.length > 0 ||
+              mergedCompositionResources.length > 0 ? (
+                <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+                  <div>
+                    <span className="font-medium text-foreground">Merged</span>{" "}
+                    {mergedCompositionResources.length}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Reused</span>{" "}
+                    {matchedCompositionResources.length}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Needs input</span>{" "}
+                    {composition.unresolvedConflicts.length + unresolvedCompositionResources.length}
+                  </div>
+                </div>
+              ) : null}
+              {mergedCompositionResources.length > 0 ? (
+                <ul className="ml-5 list-disc space-y-1 text-xs text-muted-foreground">
+                  {mergedCompositionResources.slice(0, 4).map((resource) => (
+                    <li key={`${resource.kind}-${resource.key}`}>
+                      {redactUiText(resource.kind)} {redactUiText(resource.key)}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
@@ -259,9 +324,7 @@ export function ActionPlanReview({
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-muted-foreground">
-                  No matching CMS resources were found.
-                </p>
+                <p className="mt-2 text-muted-foreground">No matching CMS resources were found.</p>
               )}
               {plan.inspection.truncated ? (
                 <p className="text-xs text-muted-foreground">
@@ -278,74 +341,76 @@ export function ActionPlanReview({
               Planned actions
             </p>
             <div className="space-y-2">
-              {hasExecutableActions ? plan.actions.map((action) => {
-                const previewChange = preview?.changes.find(
-                  (change) => change.actionId === action.id
-                );
-                return (
-                  <div
-                    key={action.id}
-                    className="rounded-xl border bg-background px-3 py-3 text-sm"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{redactUiText(action.title)}</span>
-                      <Badge variant="secondary">{resolveActionTypeLabel(action.type)}</Badge>
-                      <Badge
-                        variant={
-                          resolveOperationLabel(action.type, previewChange) === "Blocked" ||
-                          isDestructiveAction(action.type, previewChange)
-                            ? "destructive"
-                            : "outline"
-                        }
-                      >
-                        {resolveOperationLabel(action.type, previewChange)}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-muted-foreground">
-                      {redactUiText(action.description)}
-                    </p>
-                    {previewChange ? (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Target: {redactUiText(previewChange.targetType)} /{" "}
-                        {redactUiText(previewChange.targetKey)}
+              {hasExecutableActions ? (
+                plan.actions.map((action) => {
+                  const previewChange = preview?.changes.find(
+                    (change) => change.actionId === action.id
+                  );
+                  return (
+                    <div
+                      key={action.id}
+                      className="rounded-xl border bg-background px-3 py-3 text-sm"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{redactUiText(action.title)}</span>
+                        <Badge variant="secondary">{resolveActionTypeLabel(action.type)}</Badge>
+                        <Badge
+                          variant={
+                            resolveOperationLabel(action.type, previewChange) === "Blocked" ||
+                            isDestructiveAction(action.type, previewChange)
+                              ? "destructive"
+                              : "outline"
+                          }
+                        >
+                          {resolveOperationLabel(action.type, previewChange)}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-muted-foreground">
+                        {redactUiText(action.description)}
                       </p>
-                    ) : null}
-                    {previewChange?.warnings.length ? (
-                      <ul className="ml-5 mt-2 list-disc space-y-1 text-xs text-muted-foreground">
-                        {previewChange.warnings.map((warning) => (
-                          <li key={warning}>{redactUiText(warning)}</li>
-                        ))}
-                      </ul>
-                    ) : null}
-                    {previewChange?.conflicts?.length ? (
-                      <div className="mt-2 space-y-1 text-xs">
-                        {previewChange.conflicts.map((conflict) => (
-                          <p
-                            key={`${conflict.code}-${conflict.message}`}
-                            className={
-                              conflict.severity === "error"
-                                ? "text-destructive"
-                                : "text-muted-foreground"
-                            }
-                          >
-                            Conflict: {redactUiText(conflict.message)}
-                          </p>
-                        ))}
-                      </div>
-                    ) : null}
-                    {previewChange?.dependencies?.length ? (
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Depends on:{" "}
-                        {previewChange.dependencies
-                          .map((dependency) =>
-                            redactUiText(`${dependency.targetType}/${dependency.targetKey}`)
-                          )
-                          .join(", ")}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              }) : (
+                      {previewChange ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Target: {redactUiText(previewChange.targetType)} /{" "}
+                          {redactUiText(previewChange.targetKey)}
+                        </p>
+                      ) : null}
+                      {previewChange?.warnings.length ? (
+                        <ul className="ml-5 mt-2 list-disc space-y-1 text-xs text-muted-foreground">
+                          {previewChange.warnings.map((warning) => (
+                            <li key={warning}>{redactUiText(warning)}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      {previewChange?.conflicts?.length ? (
+                        <div className="mt-2 space-y-1 text-xs">
+                          {previewChange.conflicts.map((conflict) => (
+                            <p
+                              key={`${conflict.code}-${conflict.message}`}
+                              className={
+                                conflict.severity === "error"
+                                  ? "text-destructive"
+                                  : "text-muted-foreground"
+                              }
+                            >
+                              Conflict: {redactUiText(conflict.message)}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                      {previewChange?.dependencies?.length ? (
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          Depends on:{" "}
+                          {previewChange.dependencies
+                            .map((dependency) =>
+                              redactUiText(`${dependency.targetType}/${dependency.targetKey}`)
+                            )
+                            .join(", ")}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })
+              ) : (
                 <div className="rounded-lg border bg-background px-3 py-3 text-sm text-muted-foreground">
                   No changes are planned for this response.
                 </div>
@@ -368,10 +433,7 @@ export function ActionPlanReview({
               variant="outline"
               onClick={onPreview}
               disabled={
-                isPreviewing ||
-                isExecuting ||
-                plan.questions.length > 0 ||
-                !hasExecutableActions
+                isPreviewing || isExecuting || plan.questions.length > 0 || !hasExecutableActions
               }
             >
               {isPreviewing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

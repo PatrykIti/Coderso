@@ -6,6 +6,7 @@ import type {
   DeviceTarget,
   SpacingToken,
   WidgetBlock,
+  WidgetRenderContext,
 } from "../widgets/types";
 import {
   normalizePageLayoutSettings,
@@ -21,6 +22,7 @@ export type PageTemplateProps = {
   layoutSettings?: PageLayoutSettings;
   isPreview?: boolean;
   previewDevice?: DeviceTarget;
+  renderContext?: WidgetRenderContext;
 };
 
 const spacingTokenToGapClassMap: Record<SpacingToken, string> = {
@@ -73,7 +75,8 @@ const renderBlocks = (
   blocks: WidgetBlock[],
   sectionGap: SpacingToken,
   pageDefaults: WidgetRendererPageDefaults,
-  previewDevice?: DeviceTarget
+  previewDevice?: DeviceTarget,
+  renderContext?: WidgetRenderContext
 ) => {
   if (!blocks.length) {
     return (
@@ -91,6 +94,7 @@ const renderBlocks = (
           block={block}
           pageDefaults={pageDefaults}
           previewDevice={previewDevice}
+          renderContext={renderContext}
         />
       ))}
     </main>
@@ -101,6 +105,7 @@ export function DefaultRuntimePageShell({
   blocks,
   layoutSettings: rawLayoutSettings,
   previewDevice,
+  renderContext,
 }: PageTemplateProps) {
   const layoutSettings = normalizePageLayoutSettings(rawLayoutSettings);
   const pageDefaults = layoutSettings.sections.defaults;
@@ -120,7 +125,7 @@ export function DefaultRuntimePageShell({
   const wrapperBackgroundMedia = layoutSettings.wrapper.background.media;
   const wrapperBackgroundImage =
     wrapperBackgroundMedia.type === "image"
-      ? wrapperBackgroundMedia.src ?? layoutSettings.wrapper.background.image ?? null
+      ? (wrapperBackgroundMedia.src ?? layoutSettings.wrapper.background.image ?? null)
       : null;
   const wrapperBackgroundVideo =
     wrapperBackgroundMedia.type === "video" ? wrapperBackgroundMedia.src : null;
@@ -154,7 +159,13 @@ export function DefaultRuntimePageShell({
           wrapperBackgroundVideo ? "relative z-[1]" : undefined
         )}
       >
-        {renderBlocks(blocks, layoutSettings.sections.gap, pageDefaults, previewDevice)}
+        {renderBlocks(
+          blocks,
+          layoutSettings.sections.gap,
+          pageDefaults,
+          previewDevice,
+          renderContext
+        )}
       </div>
     </div>
   );

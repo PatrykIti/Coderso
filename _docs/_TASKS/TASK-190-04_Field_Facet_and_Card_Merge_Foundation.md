@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + CMS Schema + Listings
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-03
-**Status:** To Do
+**Status:** Done (2026-05-07)
 
 ---
 
@@ -15,6 +15,15 @@ Build merge engines for content schemas, listing facets, and listing card
 configuration. This lets the composer add fragments such as "pricing packages",
 "Mabudo-like filters", "lead capture", or "portfolio proof" to a primary
 catalog without hardcoding a new preset.
+
+Current slice note:
+- `TASK-190-04-01` is landed: compatible `content-type.upsert` fragments now
+  merge through `blueprintSchemaMerger.ts` and the existing content schema
+  validator, so additive fields/required keys/enum values stay executable.
+- `TASK-190-04-02` is landed: compatible listing facet/card fragments now merge
+  through schema-backed listing owners, validate filter/card source paths
+  against the composed content model, and widen listing query projections for
+  the runtime fields those fragments need.
 
 Business value:
 - Richer catalogs can be assembled from reusable fragments.

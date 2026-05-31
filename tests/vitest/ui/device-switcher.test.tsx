@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -33,14 +33,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -69,7 +69,7 @@ test("DeviceSwitcher renders buttons and updates uncontrolled state", () => {
     expect(desktopButton?.getAttribute("data-variant")).toBe("secondary");
     expect(tabletButton?.getAttribute("data-variant")).toBe("ghost");
 
-    act(() => {
+    React.act(() => {
       (tabletButton as HTMLButtonElement).click();
     });
 
@@ -91,7 +91,7 @@ test("DeviceSwitcher respects controlled value without mutating internal state",
     const tabletButton = buttons.find((button) => button.getAttribute("aria-label") === "Tablet");
     const mobileButton = buttons.find((button) => button.getAttribute("aria-label") === "Mobile");
 
-    act(() => {
+    React.act(() => {
       (tabletButton as HTMLButtonElement).click();
     });
 
@@ -112,7 +112,7 @@ test("DeviceSwitcher updates internal state without external callback and preser
     const mobileButton = buttons.find((button) => button.getAttribute("aria-label") === "Mobile");
     const desktopButton = buttons.find((button) => button.getAttribute("aria-label") === "Desktop");
 
-    act(() => {
+    React.act(() => {
       (mobileButton as HTMLButtonElement).click();
     });
 
@@ -141,7 +141,7 @@ test("DeviceSwitcher updates internal state without external callback and preser
       (button) => button.getAttribute("aria-label") === "Tablet"
     );
 
-    act(() => {
+    React.act(() => {
       Array.from(controlledView.container.querySelectorAll("button"))
         .find((button) => button.textContent === "force-tablet")
         ?.click();

@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2026-05-25T20:58:52.353Z",
+  "command": "bun .tmp/playwright-search-box-focused-probe.ts",
+  "session": "task-336-19-search-box-focused",
+  "probe": "search-box one-time wizard source modes",
+  "fixture": {
+    "pageId": "b4734a85-b68d-470f-b65d-54ea42f92eaa",
+    "adminPath": "http://localhost:5173/admin/pages/b4734a85-b68d-470f-b65d-54ea42f92eaa"
+  },
+  "listing": {
+    "rootCount": 1,
+    "sectionCount": 1,
+    "visibleSectionCount": 1,
+    "writablePaths": ["mode", "listingQueryId"],
+    "controlsWithoutPath": 0,
+    "rawEndpointInputs": 0,
+    "linkDestinationFields": 0,
+    "rawContractCopyVisible": false,
+    "technicalValuesVisible": false
+  },
+  "global": {
+    "rootCount": 1,
+    "sectionCount": 1,
+    "visibleSectionCount": 1,
+    "writablePaths": ["mode", "sources.pages", "sources.entries", "sources.posts"],
+    "controlsWithoutPath": 0,
+    "rawEndpointInputs": 0,
+    "linkDestinationFields": 0,
+    "rawContractCopyVisible": false,
+    "technicalValuesVisible": false
+  },
+  "routeSubmit": {
+    "rootCount": 1,
+    "sectionCount": 1,
+    "visibleSectionCount": 1,
+    "writablePaths": ["mode", "targetRoute"],
+    "controlsWithoutPath": 0,
+    "rawEndpointInputs": 0,
+    "linkDestinationFields": 1,
+    "rawContractCopyVisible": false,
+    "technicalValuesVisible": false
+  },
+  "passed": true,
+  "summary": {
+    "wizardPassed": true,
+    "status": "passed"
+  }
+}

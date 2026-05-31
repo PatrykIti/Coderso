@@ -9,10 +9,13 @@ export type ApiErrorPayload = {
   };
 };
 
+export type AdminApiFailureKind = "csrf_refresh" | "session_expired" | "generic_error";
+
 export class ApiClientError extends Error {
   public readonly code: string;
   public readonly status: number;
   public readonly details?: unknown;
+  public sharedFailureKind: AdminApiFailureKind;
 
   constructor(code: string, message: string, status: number, details?: unknown) {
     super(message);
@@ -20,6 +23,7 @@ export class ApiClientError extends Error {
     this.code = code;
     this.status = status;
     this.details = details;
+    this.sharedFailureKind = "generic_error";
   }
 }
 
@@ -71,6 +75,22 @@ export async function getCsrfToken(options?: { force?: boolean }) {
 
 const isRefreshableCsrfError = (error: ApiClientError) =>
   error.status === 403 && csrfRefreshErrorCodes.has(error.code);
+
+export const classifyAdminApiFailure = (error: ApiClientError): AdminApiFailureKind => {
+  if (isRefreshableCsrfError(error)) return "csrf_refresh";
+  if (error.status === 401 || error.code === "session_expired" || error.code === "auth_required") {
+    return "session_expired";
+  }
+  return "generic_error";
+};
+
+const annotateAdminApiFailure = (error: ApiClientError) => {
+  error.sharedFailureKind = classifyAdminApiFailure(error);
+  return error;
+};
+
+export const isSessionExpiredApiError = (error: unknown): error is ApiClientError =>
+  isApiClientError(error) && classifyAdminApiFailure(error) === "session_expired";
 
 async function sendApiRequest(
   path: string,
@@ -137,11 +157,13 @@ export async function apiRequest<T>(
 
     if (!response.ok) {
       const error = await parseError(response);
+      annotateAdminApiFailure(error);
       if (options?.withCsrf && isRefreshableCsrfError(error)) {
         resetCsrfToken();
         response = await sendApiRequest(path, init, options, { force: true });
         if (!response.ok) {
           const retryError = await parseError(response);
+          annotateAdminApiFailure(retryError);
           if (isRefreshableCsrfError(retryError)) {
             resetCsrfToken();
           }
@@ -159,6 +181,7 @@ export async function apiRequest<T>(
     return payload;
   } catch (error) {
     if (isApiClientError(error)) {
+      annotateAdminApiFailure(error);
       throw error;
     }
     finishMetric({ status: 0, ok: false, errorCode: "network_error" });

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
@@ -30,9 +29,7 @@ import { PostInserterSidebar } from "./sidebars/PostInserterSidebar";
 import { PostListViewSidebar } from "./sidebars/PostListViewSidebar";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 import { PostEditorSettingsDialog } from "./settings/PostEditorSettingsDialog";
-import {
-  type PostEditorPreferences,
-} from "./settings/postEditorPreferences";
+import { type PostEditorPreferences } from "./settings/postEditorPreferences";
 import { usePostEditorPreferences } from "./hooks/usePostEditorPreferences";
 import { usePostEditorShortcuts } from "./hooks/usePostEditorShortcuts";
 import { useFocusReturn } from "./hooks/useFocusReturn";
@@ -56,20 +53,6 @@ const postEditorActionToasts = createAdminActionToastAdapter({
   },
 });
 
-const statusLabel: Record<string, string> = {
-  draft: "Draft",
-  published: "Published",
-  scheduled: "Scheduled",
-  archived: "Archived",
-};
-
-const statusClass: Record<string, string> = {
-  published: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700",
-  draft: "border-amber-500/30 bg-amber-500/10 text-amber-700",
-  scheduled: "border-blue-500/30 bg-blue-500/10 text-blue-700",
-  archived: "border-slate-500/30 bg-slate-500/10 text-slate-700",
-};
-
 type StoredPostEditorLayoutState = {
   secondarySidebar: PostEditorSecondarySidebar;
   detailsOpen: boolean;
@@ -88,9 +71,7 @@ const resolveTaxonomyErrorCopy = (error: unknown) => {
   return TAXONOMY_LOAD_ERROR_COPY;
 };
 
-const resolveInitialDetailsTab = (
-  preferences: PostEditorPreferences
-): PostEditorDetailsTab =>
+const resolveInitialDetailsTab = (preferences: PostEditorPreferences): PostEditorDetailsTab =>
   preferences.defaultInspectorTab === "block" ? "block" : "document";
 
 const resolveInitialLayoutState = (
@@ -120,9 +101,7 @@ const resolveInitialLayoutState = (
           ? null
           : fallback.secondarySidebar;
     const detailsOpen =
-      typeof parsed.detailsOpen === "boolean"
-        ? parsed.detailsOpen
-        : fallback.detailsOpen;
+      typeof parsed.detailsOpen === "boolean" ? parsed.detailsOpen : fallback.detailsOpen;
     const leftRailMode =
       parsed.leftRailMode === "list-view" || parsed.leftRailMode === "outline"
         ? parsed.leftRailMode
@@ -149,9 +128,9 @@ const resolveInitialFocusMode = (preferences: PostEditorPreferences) => {
   if (preferences.focusModeOnOpen) return true;
   if (typeof window === "undefined") return false;
   return (
-    window.localStorage.getItem(FOCUS_MODE_STORAGE_KEY) ??
-    window.localStorage.getItem(LEGACY_FOCUS_MODE_STORAGE_KEY)
-  ) === "1";
+    (window.localStorage.getItem(FOCUS_MODE_STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_FOCUS_MODE_STORAGE_KEY)) === "1"
+  );
 };
 
 // TASK-063-11 UX contract anchor:
@@ -170,12 +149,8 @@ export function PostBlockEditorShell() {
   const outlineButtonRef = useRef<HTMLButtonElement>(null);
   const detailsButtonRef = useRef<HTMLButtonElement>(null);
   const canonicalAutoFillRef = useRef<{ postId: string; value: string } | null>(null);
-  const {
-    preferences,
-    initialPreferences,
-    setPreferences,
-    resetPreferences,
-  } = usePostEditorPreferences();
+  const { preferences, initialPreferences, setPreferences, resetPreferences } =
+    usePostEditorPreferences();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [slugRouteContext, setSlugRouteContext] = useState<PostSlugRouteContext>(() =>
     resolvePostSlugRouteContext(null)
@@ -184,12 +159,8 @@ export function PostBlockEditorShell() {
   const [taxonomyLoading, setTaxonomyLoading] = useState(false);
   const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
   const [taxonomyRetryToken, setTaxonomyRetryToken] = useState(0);
-  const [initialFocusMode] = useState(() =>
-    resolveInitialFocusMode(initialPreferences)
-  );
-  const [initialLayoutState] = useState(() =>
-    resolveInitialLayoutState(initialPreferences)
-  );
+  const [initialFocusMode] = useState(() => resolveInitialFocusMode(initialPreferences));
+  const [initialLayoutState] = useState(() => resolveInitialLayoutState(initialPreferences));
 
   const layout = usePostEditorLayout({
     initialSecondarySidebar: initialLayoutState.secondarySidebar,
@@ -225,14 +196,12 @@ export function PostBlockEditorShell() {
       return;
     }
 
-    const secondarySidebar =
-      layout.state.focusMode
-        ? layout.state.focusRestore?.secondarySidebar ?? layout.state.secondarySidebar
-        : layout.state.secondarySidebar;
-    const detailsOpen =
-      layout.state.focusMode
-        ? layout.state.focusRestore?.detailsOpen ?? layout.state.detailsOpen
-        : layout.state.detailsOpen;
+    const secondarySidebar = layout.state.focusMode
+      ? (layout.state.focusRestore?.secondarySidebar ?? layout.state.secondarySidebar)
+      : layout.state.secondarySidebar;
+    const detailsOpen = layout.state.focusMode
+      ? (layout.state.focusRestore?.detailsOpen ?? layout.state.detailsOpen)
+      : layout.state.detailsOpen;
 
     const serialized = JSON.stringify({
       secondarySidebar,
@@ -329,8 +298,7 @@ export function PostBlockEditorShell() {
       canonicalAutoFillRef.current = null;
     }
 
-    const fallbackCanonicalUrl =
-      slugDisplay.concrete ? slugDisplay.value.trim() : "";
+    const fallbackCanonicalUrl = slugDisplay.concrete ? slugDisplay.value.trim() : "";
     if (!fallbackCanonicalUrl) return;
 
     const autoFilled = canonicalAutoFillRef.current;
@@ -382,9 +350,7 @@ export function PostBlockEditorShell() {
 
   const handleToggleOutline = useCallback(() => {
     const isOutlineOpen =
-      layout.secondarySidebarOpen &&
-      !layout.showInserter &&
-      layout.leftRailMode === "outline";
+      layout.secondarySidebarOpen && !layout.showInserter && layout.leftRailMode === "outline";
     if (isOutlineOpen) {
       handleCloseSecondarySidebar("outline");
       return;
@@ -517,20 +483,7 @@ export function PostBlockEditorShell() {
     />
   );
 
-  const shellBreadcrumbs = (
-    <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
-      <span>Posts</span>
-      <span>/</span>
-      <span className="truncate text-foreground">{editor.title || "Edit Post"}</span>
-      <Badge
-        variant="outline"
-        className={statusClass[editor.status] ?? statusClass.draft}
-        data-post-editor-topbar-status="true"
-      >
-        {statusLabel[editor.status] ?? editor.status}
-      </Badge>
-    </div>
-  );
+  const shellBreadcrumbs = ["Content", "Posts", editor.title || "Edit Post"];
 
   const editorBreadcrumbs = useMemo(
     () => (
@@ -635,9 +588,7 @@ export function PostBlockEditorShell() {
             status={editor.status}
             dirty={editor.hasUnsavedChanges}
             saving={
-              editor.state.saving ||
-              editor.autosaveSaving ||
-              editor.restoringRevisionId !== null
+              editor.state.saving || editor.autosaveSaving || editor.restoringRevisionId !== null
             }
             lastSavedAt={editor.lastSavedAt}
             breadcrumbs={editorBreadcrumbs}

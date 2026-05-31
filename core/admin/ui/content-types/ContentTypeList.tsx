@@ -46,9 +46,7 @@ const contentTypeListToasts = createListActionToastAdapter({
       pastTense: "created",
       failureVerb: "create",
       singleSuccessMessage: ({ targetLabel }) =>
-        targetLabel
-          ? `Collection "${targetLabel}" created.`
-          : "Collection created.",
+        targetLabel ? `Collection "${targetLabel}" created.` : "Collection created.",
     },
     publish: { pastTense: "published", failureVerb: "publish" },
     draft: {
@@ -92,16 +90,12 @@ function ContentTypeBulkActionsBar({
         <Badge variant="secondary" className="text-[10px] uppercase tracking-widest">
           Selected {selectedCount}
         </Badge>
-        <span className="sr-only">
-          Apply a bulk action to the selected content types.
-        </span>
+        <span className="sr-only">Apply a bulk action to the selected content types.</span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={action}
-          onValueChange={(value) =>
-            onActionChange(value as ContentTypeBulkActionValue)
-          }
+          onValueChange={(value) => onActionChange(value as ContentTypeBulkActionValue)}
         >
           <SelectTrigger className="h-8 w-[160px]">
             <SelectValue placeholder="Bulk actions" />
@@ -117,12 +111,7 @@ function ContentTypeBulkActionsBar({
         <Button size="sm" onClick={onApply} disabled={!action || isApplying}>
           {isApplying ? "Applying..." : "Apply"}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClear}
-          aria-label="Clear selection"
-        >
+        <Button variant="ghost" size="sm" onClick={onClear} aria-label="Clear selection">
           Clear
         </Button>
       </div>
@@ -204,8 +193,7 @@ export function ContentTypeList() {
   );
   const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
   const selectedCount = visibleSelectedIds.length;
-  const isAllSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
   useEffect(() => {
@@ -263,9 +251,7 @@ export function ContentTypeList() {
       toast.success(`Duplicated "${duplicated.name}".`);
       navigate(`/content-types/${encodeURIComponent(duplicated.id)}`);
     } catch (err) {
-      const message = isApiClientError(err)
-        ? err.message
-        : "Failed to duplicate content type.";
+      const message = isApiClientError(err) ? err.message : "Failed to duplicate content type.";
       setError(message);
       toast.error(message);
     }
@@ -305,10 +291,7 @@ export function ContentTypeList() {
     setBulkAction("");
   };
 
-  const runBulkAction = async (
-    action: ContentTypeBulkActionValue,
-    ids: string[]
-  ) => {
+  const runBulkAction = async (action: ContentTypeBulkActionValue, ids: string[]) => {
     if (ids.length === 0) return;
     setIsBulkWorking(true);
     setError(null);
@@ -322,11 +305,7 @@ export function ContentTypeList() {
         })
       );
       const failedIds = ids.filter((_, index) => results[index]?.status === "rejected");
-      const summary = contentTypeListToasts.summarizeBulkAction(
-        action,
-        ids,
-        results
-      );
+      const summary = contentTypeListToasts.summarizeBulkAction(action, ids, results);
       const nextTypes = await listContentTypesCached({ force: true });
       setTypes(nextTypes);
       contentTypeListToasts.emitBulk(summary);
@@ -363,16 +342,7 @@ export function ContentTypeList() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/content-types"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span className="text-foreground">Content Types</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/content-types" breadcrumbs={["Content", "Content Types"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Content Types"
@@ -420,9 +390,7 @@ export function ContentTypeList() {
           </div>
           <Select
             value={statusFilter}
-            onValueChange={(value) =>
-              setStatusFilter(value as "all" | "draft" | "published")
-            }
+            onValueChange={(value) => setStatusFilter(value as "all" | "draft" | "published")}
           >
             <SelectTrigger>
               <SelectValue placeholder="Status" />
@@ -477,11 +445,9 @@ export function ContentTypeList() {
         title="Delete content type?"
         description={
           <>
-            <span className="font-medium text-foreground">
-              {pendingDelete?.name}
-            </span>{" "}
-            ({pendingDelete?.slug}) will be deleted only if no entries or
-            dependent owners reference it.
+            <span className="font-medium text-foreground">{pendingDelete?.name}</span> (
+            {pendingDelete?.slug}) will be deleted only if no entries or dependent owners reference
+            it.
           </>
         }
         confirmLabel="Delete type"
@@ -489,8 +455,8 @@ export function ContentTypeList() {
         isConfirming={isDeleting}
         onConfirm={handleDelete}
       >
-        The server blocks deletion for entries, custom screens, taxonomies,
-        content routes, and listings.
+        The server blocks deletion for entries, custom screens, taxonomies, content routes, and
+        listings.
       </ConfirmActionDialog>
       <ConfirmActionDialog
         open={pendingBulkDeleteIds.length > 0}
@@ -504,8 +470,8 @@ export function ContentTypeList() {
         isConfirming={isBulkWorking}
         onConfirm={() => runBulkAction("delete", pendingBulkDeleteIds)}
       >
-        The server blocks deletion for entries, custom screens, taxonomies,
-        content routes, and listings.
+        The server blocks deletion for entries, custom screens, taxonomies, content routes, and
+        listings.
       </ConfirmActionDialog>
     </AdminShell>
   );

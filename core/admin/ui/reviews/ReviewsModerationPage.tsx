@@ -8,11 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
-import {
-  deleteReview,
-  updateReviewStatus,
-  type ReviewRecord,
-} from "@/services/reviewsClient";
+import { deleteReview, updateReviewStatus, type ReviewRecord } from "@/services/reviewsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
@@ -91,16 +87,7 @@ export function ReviewsModerationPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/advanced/reviews"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span className="text-foreground">Reviews</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/advanced/reviews" breadcrumbs={["Coderso", "Reviews"]}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <PageHeader
           title="Reviews"
@@ -166,9 +153,14 @@ export function ReviewsModerationPage() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="space-y-1">
                       <p className="font-medium text-foreground">{selected.authorName}</p>
-                      <p className="text-xs text-muted-foreground">{renderStars(selected.rating)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {renderStars(selected.rating)}
+                      </p>
                     </div>
-                    <Badge variant={selected.status === "approved" ? "default" : "outline"} className="capitalize">
+                    <Badge
+                      variant={selected.status === "approved" ? "default" : "outline"}
+                      className="capitalize"
+                    >
                       {selected.status}
                     </Badge>
                   </div>
@@ -178,13 +170,35 @@ export function ReviewsModerationPage() {
                   </div>
 
                   <Input value={selected.title ?? ""} readOnly aria-label="Review title" />
-                  <Textarea value={selected.body ?? ""} readOnly rows={8} aria-label="Review content" />
+                  <Textarea
+                    value={selected.body ?? ""}
+                    readOnly
+                    rows={8}
+                    aria-label="Review content"
+                  />
 
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" onClick={() => handleModerate(selected.id, "approved")}>Approve</Button>
-                    <Button variant="outline" onClick={() => handleModerate(selected.id, "pending")}>Pending</Button>
-                    <Button variant="outline" onClick={() => handleModerate(selected.id, "rejected")}>Reject</Button>
-                    <Button variant="outline" onClick={() => handleModerate(selected.id, "spam")}>Spam</Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleModerate(selected.id, "approved")}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleModerate(selected.id, "pending")}
+                    >
+                      Pending
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleModerate(selected.id, "rejected")}
+                    >
+                      Reject
+                    </Button>
+                    <Button variant="outline" onClick={() => handleModerate(selected.id, "spam")}>
+                      Spam
+                    </Button>
                   </div>
                 </>
               )}

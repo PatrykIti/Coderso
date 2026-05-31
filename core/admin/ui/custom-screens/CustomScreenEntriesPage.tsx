@@ -437,19 +437,9 @@ export function CustomScreenEntriesPage() {
     <AdminShell
       activeHref={screenRecordsHref}
       breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span>Screens</span>
-          {screen?.name ? (
-            <>
-              <span>/</span>
-              <span>{screen.name}</span>
-            </>
-          ) : null}
-          <span>/</span>
-          <span className="text-foreground">Records</span>
-        </div>
+        screen?.name
+          ? ["Coderso", "Screens", screen.name, "Records"]
+          : ["Coderso", "Screens", "Records"]
       }
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-6">

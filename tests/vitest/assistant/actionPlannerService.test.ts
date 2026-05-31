@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import {
   classifyAssistantPrompt,
@@ -12,6 +12,10 @@ import type {
   AssistantPlannedAction,
 } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantProvider } from "../../../core/services/assistant/providers/providerTypes";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 const createFakeProvider = (text: string): AssistantProvider => ({
   id: "fake",
@@ -121,9 +125,7 @@ test("classifyAssistantPrompt distinguishes docs, setup, and refinement prompts"
     intentFamily: "catalog_showcase",
   });
 
-  expect(
-    classifyAssistantPrompt("dodaj filtr po metrazu i liczbie pokoi")
-  ).toMatchObject({
+  expect(classifyAssistantPrompt("dodaj filtr po metrazu i liczbie pokoi")).toMatchObject({
     promptKind: "refinement_request",
   });
 });
@@ -153,6 +155,709 @@ test("planAssistantActions builds ready house projects catalog plan", () => {
   expect(plan.actions.some((action) => action.type === "page.upsert")).toBe(true);
 });
 
+test("planAssistantActions composes a single-adjunct house projects prompt through the live blueprint planner path", () => {
+  const plan = planAssistantActions({
+    prompt: "Build a house projects catalog with a blog hub.",
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("catalog_showcase");
+  expect(plan.intentId).toBe("blueprint-composed-house-projects-catalog");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/projekty-domow", "/blog"]);
+});
+
+test("planAssistantActions composes mixed product prompts through the live blueprint planner path", () => {
+  const plan = planAssistantActions({
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("product_catalog");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
+  expect(plan.actions.filter((action) => action.type === "content-type.upsert")).toHaveLength(1);
+  expect(plan.actions.filter((action) => action.type === "form.upsert")).toHaveLength(1);
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/produkty", "/blog"]);
+  expect(plan.metadata?.blueprintShadow).toBeUndefined();
+});
+
+test("planAssistantActions composes single-adjunct prompts through the live blueprint planner path", () => {
+  const plan = planAssistantActions({
+    prompt: "Create a contact page and blog hub.",
+    context: {
+      page: "/admin/pages",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("editorial_content_hub");
+  expect(plan.intentId).toBe("blueprint-composed-editorial-content-hub");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/blog", "/kontakt"]);
+});
+
+test("planAssistantActions exposes aligned blueprint shadow diagnostics only when the debug flag is enabled", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/produkty", "/blog"]);
+  expect(plan.metadata).toMatchObject({
+    planner: "local",
+    providerDraftUsed: false,
+    blueprintShadow: {
+      currentIntentId: "blueprint-composed-product-catalog",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
+      mismatchReason: null,
+    },
+  });
+});
+
+test("planAssistantActionsWithProviderDraft also exposes aligned blueprint shadow diagnostics only when the debug flag is enabled", async () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
+    llmAvailable: false,
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
+  expect(plan.metadata).toMatchObject({
+    planner: "local",
+    providerDraftUsed: false,
+    blueprintShadow: {
+      currentIntentId: "blueprint-composed-product-catalog",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
+      mismatchReason: null,
+    },
+  });
+});
+
+test("planAssistantActionsWithProviderDraft prefers local blueprint composition before provider drafting for supported mixed setup requests", async () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+  const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
+    llmAvailable: true,
+    provider: {
+      id: "openai",
+      complete: async (request) => {
+        requests.push(request);
+        return {
+          text: JSON.stringify({
+            operation: "inspect",
+            resourceKind: "page",
+            targetQuery: { exactName: "non-existent-page" },
+            filters: null,
+            mutation: null,
+            constraints: null,
+          }),
+        };
+      },
+    },
+    providerModel: "gpt-4o-mini",
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
+  expect(plan.metadata).toMatchObject({
+    planner: "local",
+    providerDraftUsed: false,
+    blueprintComposition: {
+      kind: "blueprint-composition",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
+      gatedCapabilityIds: [],
+    },
+    blueprintShadow: {
+      currentIntentId: "blueprint-composed-product-catalog",
+      primaryCapabilityId: "product-catalog",
+      adjunctCapabilityIds: ["product-inquiry-catalog", "editorial-content-hub"],
+      mismatchReason: null,
+    },
+  });
+  expect(plan.metadata?.blueprintComposition?.mergedResources).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ kind: "detail-page", key: "detail-page:products" }),
+    ])
+  );
+  expect(requests).toHaveLength(0);
+});
+
+test("planAssistantActionsWithProviderDraft preserves provider metadata and request contract on a real provider response", async () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+  const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+    llmAvailable: true,
+    provider: {
+      id: "openai",
+      complete: async (request) => {
+        requests.push(request);
+        return {
+          text: JSON.stringify({
+            operation: "inspect",
+            resourceKind: "page",
+            surfaceHint: "Pages",
+            targetQuery: { exactName: "Pysiek Mysiek" },
+            filters: null,
+            mutation: null,
+            constraints: null,
+          }),
+        };
+      },
+    },
+    providerModel: "gpt-4o-mini",
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-19T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [
+          { id: "page-home", title: "home", slug: "/", status: "published" },
+          {
+            id: "page-pysiek",
+            title: "Pysiek Mysiek",
+            slug: "/pysiek-mysiek",
+            status: "draft",
+          },
+        ],
+        posts: [],
+        entries: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.metadata).toMatchObject({
+    planner: "provider",
+    providerDraftUsed: true,
+    providerId: "openai",
+  });
+  expect(plan.metadata?.blueprintShadow).toBeUndefined();
+  expect(requests).toHaveLength(1);
+  expect(requests[0]?.responseContract).toMatchObject({
+    kind: "json_schema",
+    name: "cms_operation_draft",
+  });
+});
+
+test("planAssistantActionsWithProviderDraft keeps provider responses free of blueprint shadow metadata when the debug flag is off", async () => {
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+    llmAvailable: true,
+    provider: createFakeProvider(
+      JSON.stringify({
+        operation: "inspect",
+        resourceKind: "page",
+        surfaceHint: "Pages",
+        targetQuery: { exactName: "Pysiek Mysiek" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      })
+    ),
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-19T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [
+          { id: "page-home", title: "home", slug: "/", status: "published" },
+          {
+            id: "page-pysiek",
+            title: "Pysiek Mysiek",
+            slug: "/pysiek-mysiek",
+            status: "draft",
+          },
+        ],
+        posts: [],
+        entries: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.metadata?.planner).toBe("provider");
+  expect(plan.metadata?.providerDraftUsed).toBe(true);
+  expect(plan.metadata?.providerId).toBe("fake");
+  expect(plan.metadata?.blueprintShadow).toBeUndefined();
+});
+
+test("planAssistantActions does not attach blueprint shadow metadata to generic cms plans even in debug mode", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "czy widzisz strone Home w Pages?",
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [{ id: "page-home", title: "Home", slug: "/", status: "published" }],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "type-1",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.intentId).toBe("cms-resource-inspect");
+  expect(plan.metadata?.blueprintShadow).toBeUndefined();
+});
+
+test("planAssistantActions uses normalized admin route aliases for blueprint shadow diagnostics", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/content",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-products",
+              name: "Products Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "ct-products",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: "product-catalog",
+  });
+});
+
+test("planAssistantActions uses normalized content-type aliases for blueprint shadow diagnostics", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/content-types/type-1",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "type-1",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+          {
+            id: "type-2",
+            slug: "services",
+            name: "Services",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-products",
+              name: "Products Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "type-1",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+      runtimeSnapshot: {
+        schemaVersion: 2,
+        route: "/admin/content-types/type-1",
+        activeHref: "/admin/content-types/type-1",
+        area: "advanced",
+        advancedModule: null,
+        selectedResource: {
+          kind: "content-type",
+          id: "type-1",
+        },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          reason: "not_available",
+          requiredForVisibleActions: [],
+        },
+      },
+    },
+  });
+
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: "product-catalog",
+  });
+});
+
+test("planAssistantActions uses normalized content-type aliases for blueprint shadow diagnostics without selectedResource", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/content-types/type-1",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "type-1",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+          {
+            id: "type-2",
+            slug: "services",
+            name: "Services",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-products",
+              name: "Products Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "type-1",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+      runtimeSnapshot: {
+        schemaVersion: 2,
+        route: "/admin/content-types/type-1",
+        activeHref: "/admin/content-types/type-1",
+        area: "advanced",
+        advancedModule: null,
+        selectedResource: null,
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          reason: "not_available",
+          requiredForVisibleActions: [],
+        },
+      },
+    },
+  });
+
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: "product-catalog",
+  });
+});
+
+test("planAssistantActions ignores client-authored resource catalogs in blueprint shadow diagnostics without the include flag", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/content-types/type-1",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "type-1",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+      runtimeSnapshot: {
+        schemaVersion: 2,
+        route: "/admin/content-types/type-1",
+        activeHref: "/admin/content-types/type-1",
+        area: "advanced",
+        advancedModule: null,
+        selectedResource: {
+          kind: "content-type",
+          id: "type-1",
+        },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          reason: "not_available",
+          requiredForVisibleActions: [],
+        },
+      },
+    },
+  });
+
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: null,
+    mismatchReason: "no_candidates",
+  });
+  expect(plan.intentFamily).toBe("unknown");
+});
+
+test("planAssistantActions shadow diagnostics can infer family from selectedResource id on engine surfaces", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/advanced/engine/type-1",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+      runtimeSnapshot: {
+        schemaVersion: 2,
+        route: "/admin/advanced/engine/type-1",
+        activeHref: "/admin/advanced/engine/type-1",
+        area: "advanced",
+        advancedModule: "engine",
+        selectedResource: {
+          kind: "content-type",
+          id: "type-1",
+        },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          reason: "not_available",
+          requiredForVisibleActions: [],
+        },
+      },
+    },
+  });
+
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: "product-catalog",
+  });
+});
+
+test("planAssistantActions shadow diagnostics ignore selectedResource ids on non catalog-aware page surfaces", () => {
+  vi.stubEnv("ASSISTANT_BLUEPRINT_SHADOW", "1");
+
+  const plan = planAssistantActions({
+    prompt: "dodaj sortowanie A-Z",
+    context: {
+      page: "/admin/pages/123",
+      locale: "pl-PL",
+      runtimeSnapshot: {
+        schemaVersion: 2,
+        route: "/admin/pages/123",
+        activeHref: "/admin/pages/123",
+        area: "pages",
+        advancedModule: null,
+        selectedResource: {
+          kind: "page",
+          id: "page-services",
+        },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          reason: "not_available",
+          requiredForVisibleActions: [],
+        },
+      },
+    },
+  });
+
+  expect(plan.intentId).toBe("page-update-needs-input");
+  expect(plan.metadata?.blueprintShadow).toMatchObject({
+    primaryCapabilityId: null,
+    mismatchReason: "no_candidates",
+  });
+});
+
 test("planAssistantActions returns docs guidance plan for non-actionable docs prompt", () => {
   const plan = planAssistantActions({
     prompt: "gdzie zmienie kolory hero widgetu?",
@@ -176,6 +881,7 @@ test("planAssistantActions returns read-only CMS inspection plan for page lookup
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-16T10:00:00.000Z",
@@ -225,6 +931,7 @@ test("planAssistantActions builds generic page delete plan from resource catalog
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-16T10:00:00.000Z",
@@ -273,6 +980,7 @@ test("planAssistantActions returns custom screen prefix candidates as read-only 
     context: {
       page: "/admin/settings/assistant",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-16T10:00:00.000Z",
@@ -288,6 +996,8 @@ test("planAssistantActions returns custom screen prefix candidates as read-only 
             name: "House Projects",
             contentTypeId: "type-1",
             status: "active",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: true,
             sidebarLabel: "House Projects",
             writableBindingFields: [],
@@ -298,6 +1008,8 @@ test("planAssistantActions returns custom screen prefix candidates as read-only 
             name: "House Projects Archive",
             contentTypeId: "type-1",
             status: "draft",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: false,
             sidebarLabel: null,
             writableBindingFields: [],
@@ -353,6 +1065,7 @@ test("planAssistantActions reuses planning state for follow-up target selection"
         createdAt: "2026-04-17T10:00:00.000Z",
         expiresAt: "2099-04-17T10:10:00.000Z",
       },
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-17T10:00:00.000Z",
@@ -369,6 +1082,8 @@ test("planAssistantActions reuses planning state for follow-up target selection"
             name: "House Projects",
             contentTypeId: "type-1",
             status: "active",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: true,
             sidebarLabel: "House Projects",
             writableBindingFields: [],
@@ -379,6 +1094,8 @@ test("planAssistantActions reuses planning state for follow-up target selection"
             name: "House Projects Archive",
             contentTypeId: "type-1",
             status: "draft",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: false,
             sidebarLabel: null,
             writableBindingFields: [],
@@ -435,6 +1152,7 @@ test("planAssistantActions reuses all prior page candidates when follow-up has n
         createdAt: "2026-04-17T10:00:00.000Z",
         expiresAt: "2099-04-17T10:10:00.000Z",
       },
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-17T10:00:00.000Z",
@@ -489,6 +1207,7 @@ test("planAssistantActions deletes all published pages through explicit filtered
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-17T10:00:00.000Z",
@@ -549,6 +1268,8 @@ test("planAssistantActions builds custom screen delete plan from resource catalo
             name: "House Projects",
             contentTypeId: "type-1",
             status: "active",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: true,
             sidebarLabel: "House Projects",
             writableBindingFields: [],
@@ -559,6 +1280,8 @@ test("planAssistantActions builds custom screen delete plan from resource catalo
             name: "House Projects Archive",
             contentTypeId: "type-1",
             status: "draft",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: false,
             sidebarLabel: null,
             writableBindingFields: [],
@@ -569,6 +1292,8 @@ test("planAssistantActions builds custom screen delete plan from resource catalo
             name: "Products",
             contentTypeId: "type-2",
             status: "active",
+            collectionRole: null,
+            compositionKey: null,
             showInSidebar: true,
             sidebarLabel: "Products",
             writableBindingFields: [],
@@ -792,7 +1517,8 @@ test("planAssistantActions asks for page instance vs template target on ambiguou
     {
       id: "cms-operation-target",
       label: "Which exact CMS resource should I use?",
-      description: "Choose one exact candidate, provide a stricter name, or add the expected count.",
+      description:
+        "Choose one exact candidate, provide a stricter name, or add the expected count.",
       required: true,
     },
   ]);
@@ -1182,6 +1908,7 @@ test("planAssistantActions builds content type delete plan from resource catalog
     context: {
       page: "/admin/advanced/engine",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-13T10:00:00.000Z",
@@ -1230,6 +1957,7 @@ test("planAssistantActions blocks content type delete when entries exist", () =>
     context: {
       page: "/admin/advanced/engine",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-13T10:00:00.000Z",
@@ -1284,6 +2012,7 @@ test("planAssistantActions builds listing query delete plan from active listing 
           reason: "frontend_user_has_no_permissions",
         },
       },
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-13T10:00:00.000Z",
@@ -1338,6 +2067,7 @@ test("planAssistantActions builds listing template delete plan from exact slug",
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-13T10:00:00.000Z",
@@ -1390,6 +2120,7 @@ test("planAssistantActions asks for exact listing query when name is ambiguous",
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-13T10:00:00.000Z",
@@ -1449,6 +2180,7 @@ test("planAssistantActions builds listing query update plan from exact target", 
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -1509,6 +2241,7 @@ test("planAssistantActions builds form delete plan from active form route", () =
           reason: "frontend_user_has_no_permissions",
         },
       },
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -1558,6 +2291,7 @@ test("planAssistantActions builds form archive plan from exact slug", () => {
     context: {
       page: "/admin/advanced/forms",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -1607,6 +2341,7 @@ test("planAssistantActions asks for exact form when name is ambiguous", () => {
     context: {
       page: "/admin/advanced/forms",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -1655,6 +2390,7 @@ test("planAssistantActions builds menu item delete plan from exact href", () => 
     context: {
       page: "/admin/menus/menu-primary",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -1723,6 +2459,7 @@ test("planAssistantActions builds menu item update plan from exact href", () => 
     context: {
       page: "/admin/menus/menu-primary",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -1783,6 +2520,7 @@ test("planAssistantActions builds SEO document delete plan from exact slug", () 
     context: {
       page: "/admin/seo/seo-products",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -1834,6 +2572,7 @@ test("planAssistantActions builds SEO document update plan from exact slug", () 
     context: {
       page: "/admin/seo/seo-products",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -1887,6 +2626,7 @@ test("planAssistantActions asks for exact menu item when label is ambiguous", ()
     context: {
       page: "/admin/menus/menu-primary",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-14T10:00:00.000Z",
@@ -1965,20 +2705,26 @@ test("planAssistantActions builds product inquiry catalog for catalog plus form 
 
   expect(plan.status).toBe("ready");
   expect(plan.intentFamily).toBe("product_catalog");
-  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
   expect(plan.actions.map((action) => action.type)).toEqual([
-    "setting.content-route.upsert",
     "content-type.upsert",
     "custom-screen.upsert",
     "listing-query.upsert",
     "listing-template.upsert",
     "form.upsert",
     "page.upsert",
+    "setting.content-route.upsert",
   ]);
-  expect(plan.summary).toContain("inquiry form");
+  expect(plan.actions.find((action) => action.type === "page.upsert")).toMatchObject({
+    input: {
+      formEmbed: {
+        formName: "Product Catalog Inquiry",
+      },
+    },
+  });
 });
 
-test("planAssistantActions returns needs-input for checkout/payment prompts", () => {
+test("planAssistantActions routes checkout/payment prompts through the composed gated path", () => {
   const plan = planAssistantActions({
     prompt: "potrzebuje sklep z checkoutem koszykiem i platnosciami",
     context: {
@@ -1988,9 +2734,151 @@ test("planAssistantActions returns needs-input for checkout/payment prompts", ()
   });
 
   expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("gated");
   expect(plan.intentFamily).toBe("product_catalog");
-  expect(plan.intentId).toBe("product-checkout-needs-prerequisite");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog-needs-input");
   expect(plan.actions).toEqual([]);
+  expect(plan.questions).toEqual([
+    expect.objectContaining({
+      id: expect.stringContaining("blueprint-gated-domain"),
+    }),
+  ]);
+  expect(plan.summary).toContain("Checkout and Payment");
+});
+
+test("planAssistantActions returns a gated composed plan for mixed services setup with booking", () => {
+  const plan = planAssistantActions({
+    prompt: "Build a services directory with contact page and booking.",
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.intentFamily).toBe("services_directory");
+  expect(plan.intentId).toBe("blueprint-composed-services-directory-needs-input");
+  expect(plan.actions).toEqual([]);
+  expect(plan.questions).toEqual([
+    expect.objectContaining({
+      id: expect.stringContaining("blueprint-gated-domain"),
+    }),
+  ]);
+  expect(plan.summary).toContain("Booking Service");
+});
+
+test("planAssistantActions composes a services directory with a single adjunct contact page", () => {
+  const plan = planAssistantActions({
+    prompt: "Build a services directory with contact page.",
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("services_directory");
+  expect(plan.intentId).toBe("blueprint-composed-services-directory");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/uslugi", "/kontakt"]);
+});
+
+test("planAssistantActions ignores untrusted resource catalogs on the live composed setup path", () => {
+  const prompt = "Create a services directory with contact page here.";
+  const trustedByRouteOnly = planAssistantActions({
+    prompt,
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "en-US",
+    },
+  });
+  const withClientAuthoredCatalog = planAssistantActions({
+    prompt,
+    context: {
+      page: "/admin/advanced/entries",
+      locale: "en-US",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [],
+        posts: [],
+        entries: [],
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 1,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(withClientAuthoredCatalog.intentId).toBe(trustedByRouteOnly.intentId);
+  expect(withClientAuthoredCatalog.intentFamily).toBe(trustedByRouteOnly.intentFamily);
+  expect(withClientAuthoredCatalog.actions).toEqual(trustedByRouteOnly.actions);
+});
+
+test("planAssistantActions ignores untrusted resource catalogs on local CMS inspection paths", () => {
+  const prompt = "find page home";
+  const trustedByRouteOnly = planAssistantActions({
+    prompt,
+    context: {
+      page: "/admin/pages",
+      locale: "en-US",
+    },
+  });
+  const withClientAuthoredCatalog = planAssistantActions({
+    prompt,
+    context: {
+      page: "/admin/pages",
+      locale: "en-US",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-08T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [
+          {
+            id: "page-home",
+            title: "Home",
+            slug: "/home",
+            status: "published",
+          },
+        ],
+        posts: [],
+        entries: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        media: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(withClientAuthoredCatalog.responseKind).toBe(trustedByRouteOnly.responseKind);
+  expect(withClientAuthoredCatalog.inspection?.candidates ?? []).toEqual(
+    trustedByRouteOnly.inspection?.candidates ?? []
+  );
 });
 
 test("planAssistantActions builds ready portfolio and services plans for routed families", () => {
@@ -2073,6 +2961,7 @@ test("planAssistantActions inspects posts from resource catalog", () => {
     context: {
       page: "/admin/posts",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-20T10:00:00.000Z",
@@ -2150,6 +3039,8 @@ test("planAssistantActions inspects left-menu resource catalog sections", () => 
         name: "Products Screen",
         contentTypeId: "ct-products",
         status: "active",
+        collectionRole: null,
+        compositionKey: null,
         showInSidebar: true,
         sidebarLabel: "Products",
         writableBindingFields: [],
@@ -2240,13 +3131,17 @@ test("planAssistantActions inspects left-menu resource catalog sections", () => 
       context: {
         page: "/admin",
         locale: "pl-PL",
+        includeResourceCatalog: true,
         resourceCatalog,
       },
     });
 
     expect(plan.responseKind, item.prompt).toBe("inspection");
     expect(plan.inspection?.resourceKind, item.prompt).toBe(item.resourceKind);
-    expect(plan.inspection?.candidates.map((candidate) => candidate.label), item.prompt).toEqual(item.labels);
+    expect(
+      plan.inspection?.candidates.map((candidate) => candidate.label),
+      item.prompt
+    ).toEqual(item.labels);
     expect(plan.actions, item.prompt).toEqual([]);
   }
 });
@@ -2257,6 +3152,7 @@ test("planAssistantActions uses SEO target titles instead of technical entry slu
     context: {
       page: "/admin/seo",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-20T10:00:00.000Z",
@@ -2493,6 +3389,7 @@ test("planAssistantActionsWithProviderDraft recovers empty provider inspection t
     ),
     context: {
       page: "/admin/pages",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-19T10:00:00.000Z",
@@ -2516,12 +3413,55 @@ test("planAssistantActionsWithProviderDraft recovers empty provider inspection t
   expect(plan.metadata?.planner).toBe("provider");
   expect(plan.metadata?.providerDraftUsed).toBe(true);
   expect(plan.responseKind).toBe("inspection");
-  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toContain("Pysiek Mysiek");
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toContain(
+    "Pysiek Mysiek"
+  );
+});
+
+test("planAssistantActionsWithProviderDraft ignores untrusted resource catalogs during provider local recovery", async () => {
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+    llmAvailable: true,
+    provider: createFakeProvider(
+      JSON.stringify({
+        operation: "inspect",
+        resourceKind: "page",
+        surfaceHint: "Pages",
+        targetQuery: { exactName: "Pages" },
+        filters: null,
+        mutation: null,
+        constraints: null,
+      })
+    ),
+    context: {
+      page: "/admin/pages",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-19T10:00:00.000Z",
+        budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+        pages: [
+          { id: "page-home", title: "home", slug: "/", status: "published" },
+          { id: "page-pysiek", title: "Pysiek Mysiek", slug: "/pysiek-mysiek", status: "draft" },
+        ],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.responseKind).toBe("inspection");
+  expect(plan.inspection?.candidates).toEqual([]);
 });
 
 test("planAssistantActionsWithProviderDraft falls back when provider is unavailable", async () => {
   const plan = await planAssistantActionsWithProviderDraft({
-    prompt: "potrzebuje katalogu produktow dla sklepu z meblami",
+    prompt: "Create a product catalog with inquiry form and a blog hub.",
     llmAvailable: false,
     provider: createFakeProvider(
       JSON.stringify({
@@ -2537,7 +3477,74 @@ test("planAssistantActionsWithProviderDraft falls back when provider is unavaila
 
   expect(plan.status).toBe("ready");
   expect(plan.intentFamily).toBe("product_catalog");
-  expect(plan.intentId).toBe("product-catalog");
+  expect(plan.intentId).toBe("blueprint-composed-product-catalog");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(["/produkty", "/blog"]);
+});
+
+test("planAssistantActionsWithProviderDraft enforces the LLM gate for catalog-backed planning", async () => {
+  await expect(
+    planAssistantActionsWithProviderDraft({
+      prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+      llmAvailable: false,
+      context: {
+        page: "/admin/pages",
+        locale: "pl-PL",
+        includeResourceCatalog: true,
+        resourceCatalog: {
+          schemaVersion: 1,
+          generatedAt: "2026-04-19T10:00:00.000Z",
+          budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+          pages: [],
+          posts: [],
+          entries: [],
+          contentTypes: [],
+          customScreens: [],
+          listings: { queries: [], templates: [] },
+          forms: [],
+          menus: [],
+          seoDocuments: [],
+          widgets: [],
+          media: [],
+          warnings: [],
+        },
+      },
+    })
+  ).rejects.toThrow("assistant_llm_unavailable");
+});
+
+test("planAssistantActionsWithProviderDraft gates supported catalog-backed setup requests when LLM is unavailable", async () => {
+  await expect(
+    planAssistantActionsWithProviderDraft({
+      prompt: "Create a product catalog with inquiry form and a blog hub.",
+      llmAvailable: false,
+      context: {
+        page: "/admin/advanced/widgets",
+        locale: "en-US",
+        includeResourceCatalog: true,
+        resourceCatalog: {
+          schemaVersion: 1,
+          generatedAt: "2026-05-07T10:00:00.000Z",
+          budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+          pages: [],
+          posts: [],
+          entries: [],
+          contentTypes: [],
+          customScreens: [],
+          listings: { queries: [], templates: [] },
+          forms: [],
+          menus: [],
+          seoDocuments: [],
+          widgets: [],
+          media: [],
+          warnings: [],
+        },
+      },
+    })
+  ).rejects.toThrow("assistant_llm_unavailable");
 });
 
 test("planAssistantActionsWithProviderDraft prefers planning state for follow-up target selection", async () => {
@@ -2564,6 +3571,7 @@ test("planAssistantActionsWithProviderDraft prefers planning state for follow-up
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       planningState: {
         schemaVersion: 1,
         sourcePlanId: "plan-cms-page-delete-needs-input",
@@ -2624,10 +3632,7 @@ test("planAssistantActionsWithProviderDraft prefers planning state for follow-up
   expect(providerCalls).toBe(0);
   expect(plan.status).toBe("ready");
   expect(plan.actions.map((action) => action.type)).toEqual(["page.delete", "page.delete"]);
-  expect(plan.actions.map((action) => action.title)).toEqual([
-    "Delete test-page",
-    "Delete test2",
-  ]);
+  expect(plan.actions.map((action) => action.title)).toEqual(["Delete test-page", "Delete test2"]);
 });
 
 test("planAssistantActionsWithProviderDraft recovers explicit page create fields when provider asks for target", async () => {
@@ -2647,6 +3652,7 @@ test("planAssistantActionsWithProviderDraft recovers explicit page create fields
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -2700,6 +3706,7 @@ test("planAssistantActionsWithProviderDraft recovers explicit form create fields
     context: {
       page: "/admin/advanced/forms",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -2751,6 +3758,7 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied public form v
     context: {
       page: "/admin/advanced/forms",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -2790,9 +3798,50 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied public form v
   });
 
   expect(plan.responseKind).toBe("inspection");
-  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual([
-    "Lead Public",
-  ]);
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual(["Lead Public"]);
+});
+
+test("planAssistantActions inspects trusted form visibility questions instead of routing them into refinement setup", () => {
+  const plan = planAssistantActions({
+    prompt: "czy formularz Lead Form jest publiczny?",
+    context: {
+      page: "/admin/advanced/forms",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-18T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        pages: [],
+        contentTypes: [],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [
+          {
+            id: "form-lead",
+            name: "Lead Form",
+            slug: "lead-form",
+            status: "published",
+            submissionAccess: "public",
+            fields: [],
+          },
+        ],
+        menus: [],
+        seoDocuments: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.responseKind).toBe("inspection");
+  expect(plan.intentId).toBe("cms-resource-inspect");
+  expect(plan.inspection?.resourceKind).toBe("form");
+  expect(plan.inspection?.candidates.map((candidate) => candidate.label)).toEqual(["Lead Form"]);
 });
 
 test("planAssistantActionsWithProviderDraft recovers provider misses with local read-only word search", async () => {
@@ -2818,6 +3867,7 @@ test("planAssistantActionsWithProviderDraft recovers provider misses with local 
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -2868,6 +3918,7 @@ test("planAssistantActionsWithProviderDraft rejects provider destructive actions
     context: {
       page: "/admin/advanced/forms",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -2919,6 +3970,7 @@ test("planAssistantActionsWithProviderDraft rejects provider destructive count m
     context: {
       page: "/admin/pages",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -2964,6 +4016,7 @@ test("planAssistantActionsWithProviderDraft applies prompt-implied listing templ
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -3024,6 +4077,7 @@ test("planAssistantActionsWithProviderDraft coerces prompt-implied listing query
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",
@@ -3077,6 +4131,7 @@ test("planAssistantActions reads listing query limit outside quoted target names
     context: {
       page: "/admin/advanced/listings",
       locale: "pl-PL",
+      includeResourceCatalog: true,
       resourceCatalog: {
         schemaVersion: 1,
         generatedAt: "2026-04-18T10:00:00.000Z",

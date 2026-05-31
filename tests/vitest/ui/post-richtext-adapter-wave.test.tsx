@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -12,8 +12,7 @@ import {
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | false | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 vi.mock("@/components/ui/select", () => {
@@ -27,9 +26,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -59,13 +56,9 @@ vi.mock("@/components/ui/select", () => {
     SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     SelectValue: ({ children }: { children?: React.ReactNode }) => <>{children ?? null}</>,
     SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    SelectItem: ({
-      children,
-      value,
-    }: {
-      children: React.ReactNode;
-      value: string;
-    }) => <option value={value}>{children}</option>,
+    SelectItem: ({ children, value }: { children: React.ReactNode; value: string }) => (
+      <option value={value}>{children}</option>
+    ),
   };
 });
 
@@ -168,14 +161,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -193,13 +186,13 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
 
 const dispatchEditorEvent = (element: HTMLElement, type: string) => {
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new Event(type, { bubbles: true }));
   });
 };
@@ -252,13 +245,13 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   }
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -284,7 +277,7 @@ const createClipboardData = (options: {
 });
 
 const dispatchPaste = async (element: HTMLElement, clipboardData: unknown) => {
-  await act(async () => {
+  await React.act(async () => {
     const event = new Event("paste", { bubbles: true, cancelable: true });
     Object.defineProperty(event, "clipboardData", { value: clipboardData });
     element.dispatchEvent(event);
@@ -339,7 +332,7 @@ test("PostRichTextAdapter routes toolbar fallback callbacks and keyboard shortcu
     expect(onFontFamilyChange).toHaveBeenCalledWith("serif");
     expect(onBaseTextScaleChange).toHaveBeenCalledWith("lg");
 
-    act(() => {
+    React.act(() => {
       editor.dispatchEvent(
         new KeyboardEvent("keydown", {
           key: "b",
@@ -381,7 +374,7 @@ test("PostRichTextAdapter opens slash menu and clears standalone slash content o
     if (!editor) throw new Error("missing editor");
 
     dispatchEditorEvent(editor, "focus");
-    act(() => {
+    React.act(() => {
       editor.innerHTML = "/quote";
       setSelectionAtEnd(editor);
       editor.dispatchEvent(new Event("input", { bubbles: true }));
@@ -413,16 +406,24 @@ test("PostRichTextAdapter routes native-inline and link commands", async () => {
     .mockReturnValueOnce("https://example.com")
     .mockReturnValueOnce("Example link")
     .mockReturnValueOnce("https://example.com/selected")
-    .mockReturnValueOnce("   ");
+    .mockReturnValueOnce("   ")
+    .mockReturnValueOnce("javascript:alert(1)");
   Object.defineProperty(window, "prompt", {
     value: prompt,
     configurable: true,
     writable: true,
   });
 
+  const unsafeLinkAttempt = vi.fn();
   const Harness = () => {
     const [value, setValue] = useState("<p>Link target</p>");
-    return <PostRichTextAdapter value={value} onChange={setValue} />;
+    return (
+      <PostRichTextAdapter
+        value={value}
+        onChange={setValue}
+        onUnsafeLinkAttempt={unsafeLinkAttempt}
+      />
+    );
   };
 
   const view = mount(<Harness />);
@@ -446,6 +447,8 @@ test("PostRichTextAdapter routes native-inline and link commands", async () => {
     setRangeSelection(targetNode, 0, targetNode, targetNode.nodeValue?.length ?? 6);
     clickByText(view.container, "link");
     clickByText(view.container, "link");
+    setRangeSelection(targetNode, 0, targetNode, targetNode.nodeValue?.length ?? 6);
+    clickByText(view.container, "link");
 
     expect(execCommand).toHaveBeenCalledWith("italic", false, undefined);
     expect(execCommand).toHaveBeenCalledWith("underline", false, undefined);
@@ -457,6 +460,8 @@ test("PostRichTextAdapter routes native-inline and link commands", async () => {
     );
     expect(execCommand).toHaveBeenCalledWith("createLink", false, "https://example.com/selected");
     expect(execCommand).toHaveBeenCalledWith("unlink", false, undefined);
+    expect(unsafeLinkAttempt).toHaveBeenCalledWith("javascript:alert(1)");
+    expect(execCommand).toHaveBeenCalledWith("createLink", false, "#");
   } finally {
     Object.defineProperty(window, "prompt", {
       value: originalPrompt,
@@ -547,7 +552,7 @@ test("PostRichTextAdapter falls back for block commands without block wrappers",
     await flush();
     expect(editor.innerHTML).toContain("<h1>Loose text</h1>");
 
-    act(() => {
+    React.act(() => {
       editor.innerHTML = "Loose text";
       setSelectionAtEnd(editor);
     });
@@ -785,15 +790,15 @@ test("PostRichTextAdapter uploads clipboard images and exposes image layout cont
 
     expect(view.container.textContent).toContain("Image uploaded and inserted.");
     expect(view.container.textContent).toContain("Selected image layout");
-    expect(onChangeSpy.mock.calls.some((call) => String(call[0]).includes('data-wrap="left"'))).toBe(
-      true
-    );
+    expect(
+      onChangeSpy.mock.calls.some((call) => String(call[0]).includes('data-wrap="left"'))
+    ).toBe(true);
     expect(onChangeSpy.mock.calls.some((call) => String(call[0]).includes('data-width="66"'))).toBe(
       true
     );
-    expect(onChangeSpy.mock.calls.some((call) => String(call[0]).includes('data-margin="lg"'))).toBe(
-      true
-    );
+    expect(
+      onChangeSpy.mock.calls.some((call) => String(call[0]).includes('data-margin="lg"'))
+    ).toBe(true);
   } finally {
     view.cleanup();
   }
@@ -917,7 +922,11 @@ test("PostRichTextAdapter reports insertion fallback, multiple uploads, generic 
     throw { boom: true };
   });
   const genericView = mount(
-    <PostRichTextAdapter value="" onChange={() => undefined} onUploadClipboardImage={genericUpload} />
+    <PostRichTextAdapter
+      value=""
+      onChange={() => undefined}
+      onUploadClipboardImage={genericUpload}
+    />
   );
   try {
     const editor = getEditor(genericView.container);
@@ -968,7 +977,7 @@ test("PostRichTextAdapter reports insertion fallback, multiple uploads, generic 
     if (!editor) throw new Error("missing editor");
 
     dispatchEditorEvent(editor, "focus");
-    act(() => {
+    React.act(() => {
       editor.innerHTML = "<p>Hello /quote</p>";
       setSelectionAtEnd(editor);
       editor.dispatchEvent(new Event("input", { bubbles: true }));
@@ -997,7 +1006,11 @@ test("PostRichTextAdapter forwards directives even when rich-text insertion fall
   const onPasteDirectives = vi.fn();
 
   const view = mount(
-    <PostRichTextAdapter value="" onChange={() => undefined} onPasteDirectives={onPasteDirectives} />
+    <PostRichTextAdapter
+      value=""
+      onChange={() => undefined}
+      onPasteDirectives={onPasteDirectives}
+    />
   );
 
   try {
@@ -1062,7 +1075,7 @@ test("PostRichTextAdapter closes slash menu and emits blur callback", async () =
     if (!editor) throw new Error("missing editor");
 
     dispatchEditorEvent(editor, "focus");
-    act(() => {
+    React.act(() => {
       editor.innerHTML = "/quote";
       setSelectionAtEnd(editor);
       editor.dispatchEvent(new Event("input", { bubbles: true }));
@@ -1074,7 +1087,7 @@ test("PostRichTextAdapter closes slash menu and emits blur callback", async () =
     clickByText(view.container, "slash-close");
     expect(view.container.textContent).toContain("slash:closed:");
 
-    act(() => {
+    React.act(() => {
       editor.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
       editor.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
     });
@@ -1086,11 +1099,7 @@ test("PostRichTextAdapter closes slash menu and emits blur callback", async () =
 
 test("PostRichTextAdapter closes slash menu on Escape and clears selected image layout on blur", async () => {
   const view = mount(
-    <PostRichTextAdapter
-      value=""
-      onChange={() => undefined}
-      onSlashInsertBlock={() => undefined}
-    />
+    <PostRichTextAdapter value="" onChange={() => undefined} onSlashInsertBlock={() => undefined} />
   );
 
   try {
@@ -1098,7 +1107,7 @@ test("PostRichTextAdapter closes slash menu on Escape and clears selected image 
     if (!editor) throw new Error("missing editor");
 
     dispatchEditorEvent(editor, "focus");
-    act(() => {
+    React.act(() => {
       editor.innerHTML = "/quote";
       setSelectionAtEnd(editor);
       editor.dispatchEvent(new Event("input", { bubbles: true }));
@@ -1106,14 +1115,12 @@ test("PostRichTextAdapter closes slash menu on Escape and clears selected image 
     await flush();
     expect(view.container.textContent).toContain("slash:open:quote");
 
-    act(() => {
-      editor.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
-      );
+    React.act(() => {
+      editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
     expect(view.container.textContent).toContain("slash:closed:");
 
-    act(() => {
+    React.act(() => {
       editor.innerHTML =
         '<p><img src="/media/example.png" data-wrap="left" data-width="66" data-margin="lg" alt="Example"></p>';
       const image = editor.querySelector("img");
@@ -1131,7 +1138,7 @@ test("PostRichTextAdapter closes slash menu on Escape and clears selected image 
 
     expect(view.container.textContent).toContain("Selected image layout");
 
-    act(() => {
+    React.act(() => {
       editor.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
       editor.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
     });
@@ -1146,11 +1153,7 @@ test("PostRichTextAdapter updates image layout on keyup and clears paste hint af
   vi.useFakeTimers();
 
   const timeoutView = mount(
-    <PostRichTextAdapter
-      value=""
-      onChange={() => undefined}
-      onSlashInsertBlock={() => undefined}
-    />
+    <PostRichTextAdapter value="" onChange={() => undefined} onSlashInsertBlock={() => undefined} />
   );
 
   try {
@@ -1174,12 +1177,12 @@ test("PostRichTextAdapter updates image layout on keyup and clears paste hint af
     );
     expect(timeoutView.container.textContent).toContain("Paste notice:");
 
-    await act(async () => {
+    await React.act(async () => {
       vi.advanceTimersByTime(7000);
     });
     expect(timeoutView.container.textContent).not.toContain("Paste notice:");
 
-    act(() => {
+    React.act(() => {
       editor.innerHTML =
         '<p><img src="/media/example.png" data-wrap="right" data-width="75" data-margin="md" alt="Example"></p>';
       const image = editor.querySelector("img");
@@ -1262,7 +1265,7 @@ test("PostRichTextAdapter handles quote shortcut and ignores paste payloads with
     const quotedNode = findTextNode(editor, "Quoted text");
     setRangeSelection(quotedNode, 0, quotedNode, quotedNode.nodeValue?.length ?? 11);
 
-    act(() => {
+    React.act(() => {
       editor.dispatchEvent(
         new KeyboardEvent("keydown", {
           key: "5",
@@ -1408,9 +1411,7 @@ test("PostRichTextAdapter surfaces multi-warning paste suffixes and default uplo
       })
     );
 
-    expect(view.container.textContent).toContain(
-      "Image upload failed: Image upload failed."
-    );
+    expect(view.container.textContent).toContain("Image upload failed: Image upload failed.");
   } finally {
     view.cleanup();
   }
@@ -1429,8 +1430,8 @@ test("PostRichTextAdapter applies placeholder and editor typography classes for 
   try {
     const placeholder = Array.from(serifView.container.querySelectorAll("div")).find(
       (candidate) =>
-        candidate.textContent?.includes("Start writing")
-        && candidate.className.includes("pointer-events-none")
+        candidate.textContent?.includes("Start writing") &&
+        candidate.className.includes("pointer-events-none")
     ) as HTMLDivElement | null | undefined;
     const editor = getEditor(serifView.container);
     if (!placeholder || !editor) {
@@ -1446,19 +1447,14 @@ test("PostRichTextAdapter applies placeholder and editor typography classes for 
   }
 
   const monoView = mount(
-    <PostRichTextAdapter
-      value=""
-      onChange={() => undefined}
-      fontFamily="mono"
-      baseTextScale="sm"
-    />
+    <PostRichTextAdapter value="" onChange={() => undefined} fontFamily="mono" baseTextScale="sm" />
   );
 
   try {
     const placeholder = Array.from(monoView.container.querySelectorAll("div")).find(
       (candidate) =>
-        candidate.textContent?.includes("Start writing")
-        && candidate.className.includes("pointer-events-none")
+        candidate.textContent?.includes("Start writing") &&
+        candidate.className.includes("pointer-events-none")
     ) as HTMLDivElement | null | undefined;
     const editor = getEditor(monoView.container);
     if (!placeholder || !editor) {
@@ -1489,7 +1485,7 @@ test("PostRichTextAdapter keeps slash menu closed without slash handler and resp
     if (!editor) throw new Error("missing editor");
 
     dispatchEditorEvent(editor, "focus");
-    act(() => {
+    React.act(() => {
       editor.innerHTML = "/quote";
       setSelectionAtEnd(editor);
       editor.dispatchEvent(new Event("input", { bubbles: true }));
@@ -1583,22 +1579,18 @@ test("PostRichTextAdapter inserts paragraphs on Enter outside lists but leaves l
 
     const alphaNode = findTextNode(editor, "Alpha");
     setCollapsedSelection(alphaNode, alphaNode.nodeValue?.length ?? 5);
-    act(() => {
-      editor.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
-      );
+    React.act(() => {
+      editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
 
     expect(execCommand).toHaveBeenCalledWith("insertParagraph", false, undefined);
 
     execCommand.mockClear();
-    act(() => {
+    React.act(() => {
       editor.innerHTML = "<ul><li>List item</li></ul>";
       const listNode = findTextNode(editor, "List item");
       setCollapsedSelection(listNode, listNode.nodeValue?.length ?? 9);
-      editor.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
-      );
+      editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
 
     expect(execCommand).not.toHaveBeenCalledWith("insertParagraph", false, undefined);
@@ -1702,11 +1694,7 @@ test("PostRichTextAdapter closes slash menu when content no longer matches slash
   const Harness = () => {
     const [value, setValue] = useState("");
     return (
-      <PostRichTextAdapter
-        value={value}
-        onChange={setValue}
-        onSlashInsertBlock={() => undefined}
-      />
+      <PostRichTextAdapter value={value} onChange={setValue} onSlashInsertBlock={() => undefined} />
     );
   };
 
@@ -1717,7 +1705,7 @@ test("PostRichTextAdapter closes slash menu when content no longer matches slash
     if (!editor) throw new Error("missing editor");
 
     dispatchEditorEvent(editor, "focus");
-    act(() => {
+    React.act(() => {
       editor.innerHTML = "/quote";
       setSelectionAtEnd(editor);
       editor.dispatchEvent(new Event("input", { bubbles: true }));
@@ -1725,7 +1713,7 @@ test("PostRichTextAdapter closes slash menu when content no longer matches slash
     await flush();
     expect(view.container.textContent).toContain("slash:open:quote");
 
-    act(() => {
+    React.act(() => {
       editor.innerHTML = "regular text";
       setSelectionAtEnd(editor);
       editor.dispatchEvent(new Event("input", { bubbles: true }));
@@ -1794,7 +1782,7 @@ test("PostRichTextAdapter uploads images from clipboard files fallback and norma
       onChangeSpy.mock.calls.some((call) => String(call[0]).includes("media-files-fallback"))
     ).toBe(true);
 
-    act(() => {
+    React.act(() => {
       editor.innerHTML =
         '<p><img src="/media/raw.png" data-wrap="diagonal" data-width="999" data-margin="huge" alt="Raw"></p>';
       const image = editor.querySelector("img");
@@ -1883,8 +1871,16 @@ test("PostRichTextAdapter leaves link commands inert when the URL prompt is canc
 
     clickByText(view.container, "link");
 
-    expect(execCommand).not.toHaveBeenCalledWith("insertHTML", expect.anything(), expect.anything());
-    expect(execCommand).not.toHaveBeenCalledWith("createLink", expect.anything(), expect.anything());
+    expect(execCommand).not.toHaveBeenCalledWith(
+      "insertHTML",
+      expect.anything(),
+      expect.anything()
+    );
+    expect(execCommand).not.toHaveBeenCalledWith(
+      "createLink",
+      expect.anything(),
+      expect.anything()
+    );
     expect(execCommand).not.toHaveBeenCalledWith("unlink", expect.anything(), expect.anything());
   } finally {
     Object.defineProperty(window, "prompt", {

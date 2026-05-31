@@ -57,7 +57,10 @@ const createActor = async (prefix: string) => {
     .returning();
   if (!actor) throw new Error("assistant_live_actor_create_failed");
   globalCleanup.add(`user:${actor.id}`, async () => {
-    await db.delete(users).where(eq(users.id, actor.id)).catch(() => undefined);
+    await db
+      .delete(users)
+      .where(eq(users.id, actor.id))
+      .catch(() => undefined);
   });
   return actor;
 };
@@ -79,13 +82,11 @@ const createContentTypeFixture = async (
   return contentType;
 };
 
-const createListingQueryFixture = async (
-  input: {
-    name: string;
-    contentTypeId: string;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createListingQueryFixture = async (input: {
+  name: string;
+  contentTypeId: string;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createListingQuery, deleteListingQuery } = await loadListingQueries();
   const query = await createListingQuery({
     name: input.name,
@@ -111,13 +112,11 @@ const createListingQueryFixture = async (
   return query;
 };
 
-const createListingTemplateFixture = async (
-  input: {
-    name: string;
-    slug: string;
-    cleanup: ReturnType<typeof createLiveCleanupStack>;
-  }
-) => {
+const createListingTemplateFixture = async (input: {
+  name: string;
+  slug: string;
+  cleanup: ReturnType<typeof createLiveCleanupStack>;
+}) => {
   const { createListingTemplate, deleteListingTemplate } = await loadListingTemplates();
   const template = await createListingTemplate({
     name: input.name,
@@ -138,11 +137,8 @@ const createListingTemplateFixture = async (
 };
 
 const buildListingsContext = async (): Promise<AssistantActionContext> => {
-  const [{ listContentTypes }, { listListingQueries }, { listListingTemplates }] = await Promise.all([
-    loadContentTypes(),
-    loadListingQueries(),
-    loadListingTemplates(),
-  ]);
+  const [{ listContentTypes }, { listListingQueries }, { listListingTemplates }] =
+    await Promise.all([loadContentTypes(), loadListingQueries(), loadListingTemplates()]);
   const [contentTypes, queries, templates] = await Promise.all([
     listContentTypes(),
     listListingQueries(),
@@ -151,6 +147,7 @@ const buildListingsContext = async (): Promise<AssistantActionContext> => {
   return {
     page: "/admin/advanced/listings",
     locale: "pl-PL",
+    includeResourceCatalog: true,
     resourceCatalog: {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
@@ -237,7 +234,10 @@ const runListingsMatrixForProvider = async (provider: LiveProviderRuntime) => {
     });
     expect(queryLookup.responseKind, provider.id).toBe("inspection");
     expect(queryLookup.inspection?.resourceKind, provider.id).toBe("listing-query");
-    expect(queryLookup.inspection?.candidates.map((candidate) => candidate.label), provider.id).toContain(query.name);
+    expect(
+      queryLookup.inspection?.candidates.map((candidate) => candidate.label),
+      provider.id
+    ).toContain(query.name);
 
     const templateLookup = await planWithLiveProvider({
       provider,
@@ -246,15 +246,23 @@ const runListingsMatrixForProvider = async (provider: LiveProviderRuntime) => {
     });
     expect(templateLookup.responseKind, provider.id).toBe("inspection");
     expect(templateLookup.inspection?.resourceKind, provider.id).toBe("listing-template");
-    expect(templateLookup.inspection?.candidates.map((candidate) => candidate.label), provider.id).toContain(template.name);
+    expect(
+      templateLookup.inspection?.candidates.map((candidate) => candidate.label),
+      provider.id
+    ).toContain(template.name);
 
     const updateQueryPlan = await planWithLiveProvider({
       provider,
       context: await buildListingsContext(),
       prompt: `Zmien limit listing query "${query.name}" na 24`,
     });
-    expect(updateQueryPlan.actions.map((action) => action.type), provider.id).toContain("listing-query.update");
-    const queryAction = updateQueryPlan.actions.find((action) => action.type === "listing-query.update");
+    expect(
+      updateQueryPlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("listing-query.update");
+    const queryAction = updateQueryPlan.actions.find(
+      (action) => action.type === "listing-query.update"
+    );
     expect(queryAction?.input.id, provider.id).toBe(query.id);
     expect(queryAction?.input.patch, provider.id).toMatchObject({ limit: 24 });
     expect((await dryRunLivePlan(updateQueryPlan)).readyToExecute, provider.id).toBe(true);
@@ -273,8 +281,13 @@ const runListingsMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildListingsContext(),
       prompt: `Zmien layout listing template o slug "${template.slug}" na "list"`,
     });
-    expect(updateTemplatePlan.actions.map((action) => action.type), provider.id).toContain("listing-template.update");
-    const templateAction = updateTemplatePlan.actions.find((action) => action.type === "listing-template.update");
+    expect(
+      updateTemplatePlan.actions.map((action) => action.type),
+      provider.id
+    ).toContain("listing-template.update");
+    const templateAction = updateTemplatePlan.actions.find(
+      (action) => action.type === "listing-template.update"
+    );
     expect(templateAction?.input.id, provider.id).toBe(template.id);
     expect(templateAction?.input.patch, provider.id).toMatchObject({ layout: "list" });
     expectSuccessfulExecution(
@@ -300,7 +313,10 @@ const runListingsMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildListingsContext(),
       prompt: `Usun listing query "${query.name}"`,
     });
-    expect(deleteQueryPlan.actions.map((action) => action.type), provider.id).toEqual(["listing-query.delete"]);
+    expect(
+      deleteQueryPlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["listing-query.delete"]);
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: deleteQueryPlan,
@@ -315,7 +331,10 @@ const runListingsMatrixForProvider = async (provider: LiveProviderRuntime) => {
       context: await buildListingsContext(),
       prompt: `Usun listing template "${template.name}"`,
     });
-    expect(deleteTemplatePlan.actions.map((action) => action.type), provider.id).toEqual(["listing-template.delete"]);
+    expect(
+      deleteTemplatePlan.actions.map((action) => action.type),
+      provider.id
+    ).toEqual(["listing-template.delete"]);
     expectSuccessfulExecution(
       await executeLivePlan({
         plan: deleteTemplatePlan,

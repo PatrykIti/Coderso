@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Blueprint Registry
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-01-01
-**Status:** To Do
+**Status:** Done (2026-05-05)
 
 ---
 
@@ -21,14 +21,10 @@ No child task files.
 ## Files to Change
 
 - Add `core/services/assistant/blueprints/blueprintCapabilityRegistry.ts`
-- Update:
-  - `core/services/assistant/blueprints/businessBlueprintTypes.ts`
-  - `core/services/assistant/blueprints/catalogFamilyPresets.ts`
-  - `core/services/assistant/blueprints/leadCaptureBlueprint.ts`
-  - `core/services/assistant/blueprints/productInquiryBlueprint.ts`
-  - `core/services/assistant/blueprints/editorialContentHubBlueprint.ts`
-  - `core/services/assistant/blueprints/bookingServiceBlueprint.ts`
 - Add `tests/vitest/assistant/blueprint-capability-registry.test.ts`
+
+This slice derives from the existing pack/preset exports and keeps those owner
+modules unchanged.
 
 ## Technical Scope
 

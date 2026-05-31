@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -75,17 +75,14 @@ vi.mock("@/components/ui/select", () => ({
   SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   SelectValue: () => null,
   SelectContent: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  SelectItem: ({
-    value,
-    children,
-  }: {
-    value: string;
-    children?: React.ReactNode;
-  }) => <option value={value}>{children}</option>,
+  SelectItem: ({ value, children }: { value: string; children?: React.ReactNode }) => (
+    <option value={value}>{children}</option>
+  ),
 }));
 
 vi.mock("@/services/commerceClient", () => ({
   listCommerceCollectionsCached: vi.fn(async () => []),
+  listCommerceProductsCached: vi.fn(async () => []),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -93,14 +90,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -113,11 +110,8 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
     throw new Error("Expected HTMLInputElement");
   }
 
-  act(() => {
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      "value"
-    );
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -129,11 +123,8 @@ const setTextareaValue = (element: Element | null | undefined, value: string) =>
     throw new Error("Expected HTMLTextAreaElement");
   }
 
-  act(() => {
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      "value"
-    );
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -145,11 +136,8 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
     throw new Error("Expected HTMLSelectElement");
   }
 
-  act(() => {
-    const descriptor = Object.getOwnPropertyDescriptor(
-      HTMLSelectElement.prototype,
-      "value"
-    );
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -160,7 +148,7 @@ const toggleCheckbox = (element: Element | null | undefined) => {
     throw new Error("Expected HTMLInputElement");
   }
 
-  act(() => {
+  React.act(() => {
     element.click();
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
@@ -201,14 +189,14 @@ test("utility helpers normalize csv and source defaults", () => {
 
   expect(
     normalizeSourceForEditor(
-      ({
+      {
         limit: 99,
         search: "  camera  ",
         collectionIds: [" featured ", "", "featured", "sale"],
         status: ["draft", "invalid", "published"],
         sortField: "invalid",
         sortDir: "invalid",
-      } as unknown as NormalizedCommerceWidgetSource),
+      } as unknown as NormalizedCommerceWidgetSource,
       {
         limit: 6,
         sortField: "title",
@@ -220,6 +208,30 @@ test("utility helpers normalize csv and source defaults", () => {
     search: "camera",
     collectionIds: ["featured", "sale"],
     status: ["draft", "published"],
+    sortField: "title",
+    sortDir: "asc",
+  });
+
+  expect(
+    normalizeSourceForEditor(
+      {
+        limit: 99,
+        search: "  camera  ",
+      } as unknown as NormalizedCommerceWidgetSource,
+      {
+        limit: 6,
+        sortField: "title",
+        sortDir: "asc",
+      },
+      {
+        limitMax: 12,
+      }
+    )
+  ).toEqual({
+    limit: 12,
+    search: "camera",
+    collectionIds: [],
+    status: [],
     sortField: "title",
     sortDir: "asc",
   });
@@ -294,6 +306,7 @@ test("source fields update limit, filters, sorting, and status toggles", () => {
           history.push(next);
           setValue(next);
         }}
+        options={{ allowCollectionFallbackInput: true }}
       />
     );
   };
@@ -347,6 +360,63 @@ test("source fields update limit, filters, sorting, and status toggles", () => {
       sortField: "publishedAt",
       sortDir: "desc",
       collectionIds: ["featured", "sale", "clearance"],
+    })
+  );
+
+  cleanup();
+});
+
+test("source fields honor widget-specific limit and copy options without changing defaults", () => {
+  const history: NormalizedCommerceWidgetSource[] = [];
+
+  const Harness = () => {
+    const [value, setValue] = useState<NormalizedCommerceWidgetSource>({
+      limit: 3,
+      search: "",
+      collectionIds: [],
+      status: [],
+      sortField: "title",
+      sortDir: "asc",
+    });
+
+    return (
+      <CommerceSourceFields
+        source={value}
+        onChange={(next) => {
+          history.push(next);
+          setValue(next);
+        }}
+        options={{
+          limitMax: 12,
+          allowCollectionFallbackInput: true,
+          copy: {
+            searchPlaceholder: "product title or slug",
+            searchHelpText: "Search narrows Product Compare candidates.",
+            collectionFallbackLabel: "Collection IDs (fallback)",
+            collectionHelpText: "Use saved collection IDs when the picker is empty.",
+            statusHelpText: "Use Published for public-ready comparisons.",
+          },
+        }}
+      />
+    );
+  };
+
+  const { container, cleanup } = mount(<Harness />);
+
+  expect((findInputByLabel(container, "Limit") as HTMLInputElement | undefined)?.max).toBe("12");
+  expect((findInputByLabel(container, "Search") as HTMLInputElement | undefined)?.placeholder).toBe(
+    "product title or slug"
+  );
+  expect(container.textContent).toContain("Search narrows Product Compare candidates.");
+  expect(container.textContent).toContain("Collection IDs (fallback)");
+  expect(container.textContent).toContain("Use saved collection IDs when the picker is empty.");
+  expect(container.textContent).toContain("Use Published for public-ready comparisons.");
+
+  setInputValue(findInputByLabel(container, "Limit"), "99");
+
+  expect(history.at(-1)).toEqual(
+    expect.objectContaining({
+      limit: 12,
     })
   );
 

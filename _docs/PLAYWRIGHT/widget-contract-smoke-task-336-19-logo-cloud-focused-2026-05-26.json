@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-05-26T01:26:50.000Z",
+  "session": "task-336-19-logo-cloud-focused-rerun",
+  "widgetType": "logo-cloud",
+  "adminPath": "http://localhost:5173/admin/pages/5958b461-fd78-4b65-b154-64692c0fa474",
+  "pageId": "5958b461-fd78-4b65-b154-64692c0fa474",
+  "checks": {
+    "initialWizardTabCount": 0,
+    "initialWizardRootCount": 0,
+    "setupAgainButtonCount": 1,
+    "visualRawColorTextInputs": 0,
+    "visualControlsWithoutPath": 0,
+    "visualInteractiveWithoutPath": 0,
+    "advancedWritablePathCount": 0,
+    "advancedPreCount": 0,
+    "advancedRawTextMatches": [],
+    "wizardPathsAfterRunSetupAgain": ["variant", "header.title", "logos.count", "logos.name"],
+    "wizardForbiddenTextMatches": []
+  }
+}

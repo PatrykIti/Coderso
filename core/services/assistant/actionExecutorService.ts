@@ -1,6 +1,7 @@
 import { getSetting, setSetting, type ContentRouteSetting } from "../settings/settingsService";
 import {
   createContentType,
+  getContentType,
   deleteContentType,
   getContentTypeBySlug,
   updateContentType,
@@ -28,6 +29,12 @@ import {
   listListingTemplates,
   updateListingTemplate,
 } from "../content/listingTemplatesService";
+import {
+  getDetailPageDocument,
+  prepareDetailPageDocumentUpsert,
+  upsertDetailPageDocument,
+} from "../content/detailPageDocumentService";
+import type { DetailPageDocument } from "../content/detailPageTypes";
 import {
   createEntry,
   deleteEntry,
@@ -84,6 +91,8 @@ import { logAudit } from "../audit/auditService";
 import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
 import { normalizeWidgetBlock } from "../../widgets/validator";
 import type { WidgetBlock } from "../../widgets/types";
+import { composeBlueprintPageData } from "./blueprints/blueprintPageSectionComposer";
+import { normalizePageCollectionLink, type PageCollectionLink } from "../pages/pageCollectionLink";
 import type {
   AssistantActionDryRunResult,
   AssistantActionExecuteResult,
@@ -105,6 +114,7 @@ import type {
   AssistantFormArchiveAction,
   AssistantFormUpdateAction,
   AssistantFormAutomationUpsertAction,
+  AssistantDetailPageUpsertAction,
   AssistantListingQueryFiltersPatchAction,
   AssistantListingQueryDeleteAction,
   AssistantListingQueryUpdateAction,
@@ -152,6 +162,9 @@ import { applyPageWidgetDataPatch } from "./pageWidgetPatch";
 
 type ExecutionCacheEntry = {
   result: AssistantActionExecuteResult;
+  actorId: string;
+  planId: string;
+  planHash: string;
   savedAt: number;
 };
 
@@ -164,6 +177,24 @@ const cleanupExecutionCache = (now = Date.now()) => {
       executionCache.delete(key);
     }
   }
+};
+
+const readMemoryExecutionResult = (input: {
+  idempotencyKey: string;
+  actorId: string;
+  planId: string;
+  planHash: string;
+}) => {
+  const cached = executionCache.get(input.idempotencyKey);
+  if (!cached) return null;
+  if (
+    cached.actorId !== input.actorId ||
+    cached.planId !== input.planId ||
+    cached.planHash !== input.planHash
+  ) {
+    throw new Error("assistant_action_idempotency_conflict");
+  }
+  return cached.result;
 };
 
 const countExecutionOperations = (items: AssistantActionExecutionItem[]) =>
@@ -216,6 +247,29 @@ const readCatalogBlockSource = (page: unknown) => {
   }
 
   return null;
+};
+
+const readStoredPageCollectionLink = (page: unknown) => {
+  if (!isRecord(page)) return null;
+  const sourceData = isRecord(page.currentData)
+    ? page.currentData
+    : isRecord(page.publishedData)
+      ? page.publishedData
+      : null;
+  if (!sourceData) return null;
+  const settings = isRecord(sourceData.settings) ? sourceData.settings : {};
+  return normalizePageCollectionLink(settings.collectionLink) ?? null;
+};
+
+const readPageCatalogSource = (page: unknown) => {
+  const stored = readStoredPageCollectionLink(page);
+  const blocks = readCatalogBlockSource(page);
+  if (!stored && !blocks) return null;
+  return {
+    listingQueryId: stored?.listingQueryId ?? blocks?.listingQueryId ?? null,
+    listingTemplateId: stored?.listingTemplateId ?? blocks?.listingTemplateId ?? null,
+    contentTypeId: stored?.contentTypeId ?? null,
+  };
 };
 
 const readFormEmbedSource = (page: unknown) => {
@@ -361,125 +415,19 @@ const buildCatalogPageData = (input: {
     submitLabel: string;
     successMessage: string;
   } | null;
-}) => ({
-  blocks: [
-    ...(input.listingFilters
-      ? [
-          {
-            id: "catalog-listing-filters",
-            type: "listing-filters",
-            variant: "default",
-            data: {
-              listingQueryId: input.listingQueryId,
-              title: input.listingFilters.title,
-              description: input.listingFilters.description,
-              autoApply: input.listingFilters.autoApply,
-              showSearch: input.listingFilters.showSearch,
-              searchPlaceholder: input.listingFilters.searchPlaceholder,
-              searchLabel: input.listingFilters.searchLabel,
-              applyLabel: input.listingFilters.applyLabel,
-              facets: input.listingFilters.facets,
-              resolved: {
-                listingQueryId: input.listingQueryId,
-                metrics: [],
-                searchQuery: "",
-                rejectedTokens: [],
-              },
-            },
-          },
-        ]
-      : []),
-    {
-      id: "catalog-content-list",
-      type: "content-list",
-      variant: "cards",
-      data: {
-        source: {
-          mode: "listing",
-          listingQueryId: input.listingQueryId,
-          listingTemplateId: input.listingTemplateId,
-          statusScope: "published",
-          limit: 9,
-          sort: "title-asc",
-        },
-        fields: {
-          showImage: true,
-          showExcerpt: true,
-          showMeta: true,
-          showCta: true,
-        },
-        emptyState: {
-          title: "No catalog items yet",
-          description: "Add your first catalog entry in Coderso to populate this page.",
-        },
-        style: {
-          columns: input.contentListStyle?.columns ?? "3",
-          gap: "md",
-          cardStyle: input.contentListStyle?.cardStyle ?? "outlined",
-          ctaLabel: input.ctaLabel,
-          backgroundColor: "var(--color-bg)",
-          borderColor: "var(--color-border)",
-          textColor: "var(--color-text)",
-        },
-        resolved: {
-          items: [],
-          total: 0,
-          sourceTypeId: "",
-          sourceTypeSlug: "",
-          listingQueryId: input.listingQueryId,
-          listingTemplateId: input.listingTemplateId,
-          resolvedAt: "",
-          runtime: {
-            rejectedTokens: [],
-            searchQuery: "",
-            page: 1,
-          },
-        },
-      },
-    },
-    ...(input.formEmbed
-      ? [
-          {
-            id: "catalog-inquiry-form",
-            type: "form-embed",
-            variant: "standard",
-            data: {
-              formId: input.formEmbed.formId,
-              title: input.formEmbed.title,
-              description: input.formEmbed.description,
-              submitLabel: input.formEmbed.submitLabel,
-              successMessage: input.formEmbed.successMessage,
-              layout: {
-                alignment: "start",
-                width: "lg",
-                spacing: "md",
-                buttonAlignment: "start",
-              },
-              style: {
-                background: "transparent",
-                surface: "var(--color-bg)",
-                borderColor: "var(--color-border)",
-                borderWidth: "1",
-                radius: "md",
-                inputSize: "md",
-              },
-              fields: {
-                showLabels: true,
-                showRequiredIndicator: true,
-              },
-            },
-          },
-        ]
-      : []),
-  ],
-  settings: {
-    showInNav: true,
-    seo: {
-      title: input.introTitle,
-      description: input.introBody,
-    },
-  },
-});
+  collectionLink?: PageCollectionLink | null;
+}) =>
+  composeBlueprintPageData({
+    introTitle: input.introTitle,
+    introBody: input.introBody,
+    listingQueryId: input.listingQueryId,
+    listingTemplateId: input.listingTemplateId,
+    ctaLabel: input.ctaLabel,
+    contentListStyle: input.contentListStyle,
+    listingFilters: input.listingFilters,
+    formEmbed: input.formEmbed,
+    collectionLink: input.collectionLink,
+  });
 
 const buildSimplePageData = (input: {
   introTitle: string;
@@ -492,56 +440,146 @@ const buildSimplePageData = (input: {
     submitLabel: string;
     successMessage: string;
   } | null;
-}) => ({
-  blocks: [
-    ...(input.blocks ?? []).map(normalizeAssistantPagePatchBlock),
-    ...(input.formEmbed
-      ? [
-          normalizeAssistantPagePatchBlock({
-            id: "lead-capture-form",
-            type: "form-embed",
-            data: {
-              formId: input.formEmbed.formId,
-              title: input.formEmbed.title,
-              description: input.formEmbed.description,
-              submitLabel: input.formEmbed.submitLabel,
-              successMessage: input.formEmbed.successMessage,
-              layout: {
-                alignment: "start",
-                width: "lg",
-                spacing: "md",
-                buttonAlignment: "start",
-              },
-              style: {
-                background: "transparent",
-                surface: "var(--color-bg)",
-                borderColor: "var(--color-border)",
-                borderWidth: "1",
-                radius: "md",
-                inputSize: "md",
-              },
-              fields: {
-                showLabels: true,
-                showRequiredIndicator: true,
-              },
-            },
-          }),
-        ]
-      : []),
-  ],
-  settings: {
-    showInNav: true,
-    seo: {
-      title: input.introTitle,
-      description: input.introBody,
-    },
-  },
-});
+  collectionLink?: PageCollectionLink | null;
+}) =>
+  composeBlueprintPageData({
+    introTitle: input.introTitle,
+    introBody: input.introBody,
+    blocks: input.blocks,
+    formEmbed: input.formEmbed,
+    collectionLink: input.collectionLink,
+  });
+
+const readListingQueryContentTypeId = (listingQuery: unknown) => {
+  if (!isRecord(listingQuery)) return null;
+  const query = isRecord(listingQuery.query) ? listingQuery.query : {};
+  const sourceConfig = isRecord(query.sourceConfig) ? query.sourceConfig : {};
+  return readString(sourceConfig.contentTypeId);
+};
+
+const resolveAssistantPageCollectionLink = async (input: {
+  action: AssistantPageUpsertAction;
+  existing: unknown;
+  simplePageMode: boolean;
+  listingQuery: unknown;
+  listingTemplate: unknown;
+  deps: Pick<ActionExecutorDeps, "getContentTypeBySlug">;
+}): Promise<PageCollectionLink | null> => {
+  const existingCollectionLink = readStoredPageCollectionLink(input.existing);
+  const requested = input.action.input.collectionLink;
+
+  if (!requested) {
+    if (existingCollectionLink) return existingCollectionLink;
+    if (input.simplePageMode) return null;
+
+    const contentTypeId = readListingQueryContentTypeId(input.listingQuery);
+    if (!contentTypeId) return null;
+
+    return {
+      contentTypeId,
+      pageRole: "canonical-list-page",
+      ...(isRecord(input.listingQuery) && typeof input.listingQuery.id === "string"
+        ? { listingQueryId: input.listingQuery.id }
+        : {}),
+      ...(isRecord(input.listingTemplate) && typeof input.listingTemplate.id === "string"
+        ? { listingTemplateId: input.listingTemplate.id }
+        : {}),
+    };
+  }
+
+  const requestedContentTypeId = readString(requested.contentTypeId);
+  const requestedContentTypeSlug = readString(requested.contentTypeSlug);
+  const requestedListingQueryId = readString(requested.listingQueryId);
+  const requestedListingTemplateId = readString(requested.listingTemplateId);
+  const requestedListingQueryName = readString(requested.listingQueryName);
+  const requestedListingTemplateSlug = readString(requested.listingTemplateSlug);
+  const resolvedListingQueryId =
+    isRecord(input.listingQuery) && typeof input.listingQuery.id === "string"
+      ? input.listingQuery.id
+      : null;
+  const resolvedListingTemplateId =
+    isRecord(input.listingTemplate) && typeof input.listingTemplate.id === "string"
+      ? input.listingTemplate.id
+      : null;
+  if (requestedListingQueryId && !input.listingQuery) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  if (requestedListingTemplateId && !input.listingTemplate) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  if (requestedListingQueryName && !input.listingQuery) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  if (requestedListingTemplateSlug && !input.listingTemplate) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  if (
+    requestedListingQueryId &&
+    resolvedListingQueryId &&
+    requestedListingQueryId !== resolvedListingQueryId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  if (
+    requestedListingTemplateId &&
+    resolvedListingTemplateId &&
+    requestedListingTemplateId !== resolvedListingTemplateId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  const requestedContentType =
+    !requestedContentTypeId && requestedContentTypeSlug
+      ? await input.deps.getContentTypeBySlug(requestedContentTypeSlug)
+      : null;
+  const requestedResolvedContentTypeId = requestedContentTypeId ?? requestedContentType?.id ?? null;
+  const listingQueryContentTypeId = readListingQueryContentTypeId(input.listingQuery);
+  if (
+    requestedResolvedContentTypeId &&
+    listingQueryContentTypeId &&
+    requestedResolvedContentTypeId !== listingQueryContentTypeId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  const contentTypeId =
+    requestedResolvedContentTypeId ??
+    listingQueryContentTypeId ??
+    existingCollectionLink?.contentTypeId ??
+    null;
+  if (!contentTypeId) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const compositionKey = requested.compositionKey ?? existingCollectionLink?.compositionKey ?? null;
+
+  return {
+    contentTypeId,
+    pageRole: requested.pageRole,
+    ...(compositionKey ? { compositionKey } : {}),
+    ...(requestedListingQueryId
+      ? { listingQueryId: requestedListingQueryId }
+      : resolvedListingQueryId
+        ? { listingQueryId: resolvedListingQueryId }
+        : existingCollectionLink?.listingQueryId
+          ? { listingQueryId: existingCollectionLink.listingQueryId }
+          : {}),
+    ...(requestedListingTemplateId
+      ? { listingTemplateId: requestedListingTemplateId }
+      : resolvedListingTemplateId
+        ? { listingTemplateId: resolvedListingTemplateId }
+        : existingCollectionLink?.listingTemplateId
+          ? { listingTemplateId: existingCollectionLink.listingTemplateId }
+          : {}),
+  };
+};
 
 type ActionExecutorDeps = {
   getSetting: typeof getSetting;
   setSetting: typeof setSetting;
+  getContentType: typeof getContentType;
   getContentTypeBySlug: (slug: string) => Promise<ContentTypeRecord | null>;
+  getDetailPageDocument: typeof getDetailPageDocument;
+  prepareDetailPageDocumentUpsert: typeof prepareDetailPageDocumentUpsert;
+  upsertDetailPageDocument: typeof upsertDetailPageDocument;
   createContentType: (input: CreateContentTypeInput) => Promise<ContentTypeRecord>;
   deleteContentType: (id: string) => Promise<ContentTypeRecord | null>;
   updateContentType: (
@@ -605,10 +643,31 @@ type ActionExecutorDeps = {
   saveExecutionResult?: typeof saveAssistantActionExecutionResult;
 };
 
+type CustomScreenRecord = Awaited<ReturnType<ActionExecutorDeps["listCustomScreens"]>>[number];
+type ListingQueryRecord = Awaited<ReturnType<ActionExecutorDeps["listListingQueries"]>>[number];
+
+const findListingQueryNameMatches = async (
+  name: string,
+  deps: ActionExecutorDeps
+): Promise<ListingQueryRecord[]> =>
+  (await deps.listListingQueries()).filter((entry) => entry.name === name);
+
+const listingQueryNameConflict = (
+  name: string
+): AssistantActionPreviewChange["conflicts"][number] => ({
+  code: "assistant_action_dependency_conflict",
+  severity: "error",
+  message: `Listing query name "${name}" is not unique. Re-run planning with an exact listing query id before updating it.`,
+});
+
 const defaultDeps: ActionExecutorDeps = {
   getSetting,
   setSetting,
+  getContentType,
   getContentTypeBySlug,
+  getDetailPageDocument,
+  prepareDetailPageDocumentUpsert,
+  upsertDetailPageDocument,
   createContentType,
   deleteContentType,
   updateContentType,
@@ -669,6 +728,82 @@ const defaultDeps: ActionExecutorDeps = {
   saveExecutionResult: saveAssistantActionExecutionResult,
 };
 
+const findExistingCustomScreenForUpsert = async (
+  action: AssistantCustomScreenUpsertAction,
+  deps: ActionExecutorDeps
+): Promise<{
+  contentType: ContentTypeRecord | null;
+  existing: CustomScreenRecord | null;
+  conflicts: AssistantActionPreviewChange["conflicts"];
+}> => {
+  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  if (!contentType) {
+    return { contentType: null, existing: null, conflicts: [] };
+  }
+
+  const role = action.input.collectionRole ?? null;
+  const compositionKey = action.input.compositionKey ?? null;
+  const screens = (await deps.listCustomScreens()).filter(
+    (entry) => entry.contentTypeId === contentType.id
+  );
+  const metadataCandidates = role
+    ? screens.filter(
+        (entry) =>
+          entry.collectionRole === role && (entry.compositionKey ?? null) === compositionKey
+      )
+    : [];
+  const nameCandidates = screens.filter((entry) => entry.name === action.input.name);
+  const legacyNameCandidates = role
+    ? nameCandidates.filter(
+        (entry) => entry.collectionRole === null && (entry.compositionKey ?? null) === null
+      )
+    : nameCandidates;
+  const hasConflictingMetadataName =
+    role &&
+    metadataCandidates.length === 0 &&
+    nameCandidates.length !== legacyNameCandidates.length;
+  const candidates =
+    metadataCandidates.length > 0
+      ? metadataCandidates
+      : hasConflictingMetadataName
+        ? []
+        : legacyNameCandidates;
+
+  if (hasConflictingMetadataName) {
+    return {
+      contentType,
+      existing: null,
+      conflicts: [
+        {
+          code: "assistant_action_dependency_conflict",
+          severity: "error",
+          message: `Custom screen "${action.input.name}" already belongs to another composition; choose the exact collection screen before composing an update.`,
+        },
+      ],
+    };
+  }
+
+  if (candidates.length > 1) {
+    return {
+      contentType,
+      existing: null,
+      conflicts: [
+        {
+          code: "assistant_action_dependency_conflict",
+          severity: "error",
+          message: `Custom screen target for "${action.input.name}" is ambiguous; choose the exact collection screen before composing an update.`,
+        },
+      ],
+    };
+  }
+
+  return {
+    contentType,
+    existing: candidates[0] ?? null,
+    conflicts: [],
+  };
+};
+
 const assertAssistantActionPlan = (value: unknown): AssistantActionPlan => {
   if (!isAssistantActionPlan(value)) {
     throw new Error("assistant_action_plan_invalid");
@@ -682,12 +817,7 @@ const buildContentRoutePreview = async (
 ) => {
   const current = ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
   const existing = current.find((entry) => entry.type === action.input.typeSlug) ?? null;
-  const nextValue = {
-    type: action.input.typeSlug,
-    listPath: action.input.listPath,
-    detailPath: action.input.detailPath,
-    enabled: action.input.enabled,
-  };
+  const nextValue = buildContentRouteRecord(existing, action.input);
   const warnings =
     action.input.listPath !== normalizeSitePath(action.input.detailPath.replace("/:slug", ""))
       ? [
@@ -771,17 +901,17 @@ const buildCustomScreenPreview = async (
   action: AssistantCustomScreenUpsertAction,
   deps: ActionExecutorDeps
 ) => {
-  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
-  const existing = contentType
-    ? ((await deps.listCustomScreens()).find(
-        (entry) => entry.contentTypeId === contentType.id && entry.name === action.input.name
-      ) ?? null)
-    : null;
+  const { contentType, existing, conflicts } = await findExistingCustomScreenForUpsert(
+    action,
+    deps
+  );
   const comparableExisting = existing
     ? {
         name: existing.name,
         contentTypeSlug: action.input.contentTypeSlug,
         status: existing.status,
+        collectionRole: existing.collectionRole ?? null,
+        compositionKey: existing.compositionKey ?? null,
         showInSidebar: existing.showInSidebar,
         sidebarLabel: existing.sidebarLabel,
         blocks:
@@ -800,6 +930,11 @@ const buildCustomScreenPreview = async (
             : existing.bindings,
       }
     : null;
+  const nextValue = {
+    ...action.input,
+    collectionRole: action.input.collectionRole ?? null,
+    compositionKey: action.input.compositionKey ?? null,
+  };
 
   return createPreviewChange({
     action,
@@ -809,8 +944,9 @@ const buildCustomScreenPreview = async (
     warnings: contentType
       ? []
       : ["The content type does not exist yet and will be created earlier in the plan."],
+    conflicts,
     beforeValue: comparableExisting,
-    nextValue: action.input,
+    nextValue,
   });
 };
 
@@ -885,6 +1021,10 @@ const applyCustomScreenUpdatePatch = (
   return {
     name: patch.name ?? existing.name,
     status: patch.status ?? existing.status,
+    collectionRole:
+      patch.collectionRole !== undefined ? patch.collectionRole : existing.collectionRole,
+    compositionKey:
+      patch.compositionKey !== undefined ? patch.compositionKey : existing.compositionKey,
     showInSidebar: patch.showInSidebar !== undefined ? patch.showInSidebar : existing.showInSidebar,
     sidebarLabel: patch.sidebarLabel !== undefined ? patch.sidebarLabel : existing.sidebarLabel,
     bindings,
@@ -1015,14 +1155,16 @@ const buildListingQueryPreview = async (
   action: AssistantListingQueryUpsertAction,
   deps: ActionExecutorDeps
 ) => {
-  const existing =
-    (await deps.listListingQueries()).find((entry) => entry.name === action.input.name) ?? null;
+  const matches = await findListingQueryNameMatches(action.input.name, deps);
+  const existing = matches.length === 1 ? matches[0] : null;
+  const ambiguousMatches = matches.length > 1;
   return createPreviewChange({
     action,
     targetType: "listing-query",
     targetKey: action.input.name,
-    summary: `${existing ? "Update" : "Create"} listing query "${action.input.name}"`,
-    beforeValue: existing,
+    summary: `${matches.length > 0 ? "Update" : "Create"} listing query "${action.input.name}"`,
+    conflicts: ambiguousMatches ? [listingQueryNameConflict(action.input.name)] : [],
+    beforeValue: ambiguousMatches ? matches : existing,
     nextValue: action.input,
   });
 };
@@ -2223,6 +2365,52 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
     !action.input.listingQueryName ||
     !action.input.listingTemplateSlug;
   const existingData = isRecord(existing?.currentData) ? existing.currentData : {};
+  const existingCollectionLink = readStoredPageCollectionLink(existing);
+  const currentCatalogSource = readPageCatalogSource(existing);
+  const listingQueries = await deps.listListingQueries();
+  const listingTemplates = await deps.listListingTemplates();
+  const requestedListingQueryName =
+    action.input.listingQueryName ?? action.input.collectionLink?.listingQueryName ?? null;
+  const requestedListingTemplateSlug =
+    action.input.listingTemplateSlug ?? action.input.collectionLink?.listingTemplateSlug ?? null;
+  const requestedListingQueryId = action.input.collectionLink?.listingQueryId ?? null;
+  const requestedListingTemplateId = action.input.collectionLink?.listingTemplateId ?? null;
+  const listingQueryById = requestedListingQueryId
+    ? (listingQueries.find((entry) => entry.id === requestedListingQueryId) ?? null)
+    : null;
+  const listingQueryByName = requestedListingQueryName
+    ? (listingQueries.find((entry) => entry.name === requestedListingQueryName) ?? null)
+    : null;
+  if (
+    requestedListingQueryId &&
+    listingQueryByName &&
+    listingQueryByName.id !== requestedListingQueryId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  const listingQueryFromCurrent = currentCatalogSource?.listingQueryId
+    ? (listingQueries.find((entry) => entry.id === currentCatalogSource.listingQueryId) ?? null)
+    : null;
+  const listingQuery = listingQueryById ?? listingQueryByName ?? listingQueryFromCurrent;
+  const listingTemplateById = requestedListingTemplateId
+    ? (listingTemplates.find((entry) => entry.id === requestedListingTemplateId) ?? null)
+    : null;
+  const listingTemplateBySlug = requestedListingTemplateSlug
+    ? (listingTemplates.find((entry) => entry.slug === requestedListingTemplateSlug) ?? null)
+    : null;
+  if (
+    requestedListingTemplateId &&
+    listingTemplateBySlug &&
+    listingTemplateBySlug.id !== requestedListingTemplateId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  const listingTemplateFromCurrent = currentCatalogSource?.listingTemplateId
+    ? (listingTemplates.find((entry) => entry.id === currentCatalogSource.listingTemplateId) ??
+      null)
+    : null;
+  const listingTemplate =
+    listingTemplateById ?? listingTemplateBySlug ?? listingTemplateFromCurrent;
   const forms = action.input.formEmbed ? await deps.listForms() : [];
   const form = action.input.formEmbed
     ? (forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
@@ -2231,6 +2419,96 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
         : null) ??
       null)
     : null;
+  const dependencyConflicts =
+    (!simplePageMode && (!listingQuery || !listingTemplate)) || (action.input.formEmbed && !form)
+      ? [
+          {
+            code: "assistant_action_dependency_missing" as const,
+            severity: "error" as const,
+            message:
+              "Page dependencies could not be resolved for this preview. Re-run planning after the linked resources exist.",
+          },
+        ]
+      : [];
+  let resolvedCollectionLink = existingCollectionLink;
+  if (dependencyConflicts.length === 0) {
+    try {
+      resolvedCollectionLink = await resolveAssistantPageCollectionLink({
+        action,
+        existing,
+        simplePageMode,
+        listingQuery,
+        listingTemplate,
+        deps,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "assistant_action_dependency_missing") {
+          return createPreviewChange({
+            action,
+            targetType: "page",
+            targetKey: action.input.slug,
+            summary: `${existing ? "Update" : "Create"} catalog page ${action.input.slug}`,
+            conflicts: [
+              {
+                code: "assistant_action_dependency_missing",
+                severity: "error",
+                message:
+                  "Page dependencies could not be resolved for this preview. Re-run planning after the linked resources exist.",
+              },
+            ],
+            beforeValue: existing
+              ? {
+                  title: existing.title,
+                  slug: existing.slug,
+                  status: existing.status,
+                  ...(simplePageMode
+                    ? {
+                        blocks: Array.isArray(existingData.blocks) ? existingData.blocks : [],
+                        formEmbed: action.input.formEmbed ?? null,
+                        collectionLink: existingCollectionLink,
+                      }
+                    : {}),
+                }
+              : null,
+            nextValue: null,
+          });
+        }
+        if (error.message === "assistant_action_dependency_conflict") {
+          return createPreviewChange({
+            action,
+            targetType: "page",
+            targetKey: action.input.slug,
+            summary: `${existing ? "Update" : "Create"} catalog page ${action.input.slug}`,
+            conflicts: [
+              {
+                code: "assistant_action_dependency_conflict",
+                severity: "error",
+                message:
+                  "Collection-link locators disagree with the linked listing resources and must be reconciled before execution.",
+              },
+            ],
+            beforeValue: existing
+              ? {
+                  title: existing.title,
+                  slug: existing.slug,
+                  status: existing.status,
+                  ...(simplePageMode
+                    ? {
+                        blocks: Array.isArray(existingData.blocks) ? existingData.blocks : [],
+                        formEmbed: action.input.formEmbed ?? null,
+                        collectionLink: existingCollectionLink,
+                      }
+                    : {}),
+                }
+              : null,
+            nextValue: null,
+          });
+        }
+      }
+      throw error;
+    }
+  }
   const nextValue = simplePageMode
     ? {
         title: action.input.title,
@@ -2255,6 +2533,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
             : []),
         ],
         formEmbed: action.input.formEmbed ?? null,
+        collectionLink: resolvedCollectionLink,
       }
     : {
         title: action.input.title,
@@ -2265,12 +2544,14 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
         contentListStyle: action.input.contentListStyle,
         listingFilters: action.input.listingFilters,
         formEmbed: action.input.formEmbed,
+        collectionLink: resolvedCollectionLink,
       };
   return createPreviewChange({
     action,
     targetType: "page",
     targetKey: action.input.slug,
     summary: `${existing ? "Update" : "Create"} catalog page ${action.input.slug}`,
+    conflicts: dependencyConflicts,
     beforeValue: existing
       ? {
           title: existing.title,
@@ -2280,12 +2561,97 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
             ? {
                 blocks: Array.isArray(existingData.blocks) ? existingData.blocks : [],
                 formEmbed: action.input.formEmbed ?? null,
+                collectionLink: existingCollectionLink,
               }
             : {}),
         }
       : null,
     nextValue,
   });
+};
+
+const summarizeDetailPageDocument = (document: DetailPageDocument) => ({
+  id: document.id,
+  name: document.name,
+  status: document.status,
+  contentTypeId: document.contentTypeId,
+  contentTypeSlug: document.contentTypeSlug,
+  titlePattern: document.titlePattern,
+  blocksCount: document.blocks.length,
+  bindingsCount: document.bindings.length,
+  relatedCount: document.related?.length ?? 0,
+  publicImpact:
+    document.status === "published" ? "published-detail-template" : "draft-detail-template",
+});
+
+const buildDetailPagePreview = async (
+  action: AssistantDetailPageUpsertAction,
+  deps: ActionExecutorDeps
+) => {
+  const targetKey = action.input.document.id;
+
+  try {
+    const prepared = await deps.prepareDetailPageDocumentUpsert({
+      document: action.input.document,
+      expectedExistingId: action.input.expectedExistingId,
+    });
+
+    return createPreviewChange({
+      action,
+      targetType: "detail-page",
+      targetKey,
+      summary: `${prepared.existing ? "Update" : "Create"} detail template ${prepared.document.name}`,
+      dependencies: [
+        {
+          actionId: null,
+          targetType: "content-type",
+          targetKey: prepared.contentType.id,
+          optional: false,
+        },
+      ],
+      beforeValue: prepared.existing
+        ? summarizeDetailPageDocument(prepared.existing.currentDocument)
+        : null,
+      nextValue: summarizeDetailPageDocument(prepared.document),
+    });
+  } catch (error) {
+    const code =
+      error instanceof Error &&
+      (error.message === "detail_page_conflict" ||
+        error.message === "detail_page_content_type_mismatch")
+        ? error.message
+        : "detail_page_invalid";
+    const message =
+      code === "detail_page_conflict"
+        ? "expectedExistingId does not match the detail template id being upserted."
+        : code === "detail_page_content_type_mismatch"
+          ? "The existing detail template id belongs to a different content type."
+          : "The detail template document or its linked content type is invalid.";
+
+    return createPreviewChange({
+      action,
+      targetType: "detail-page",
+      targetKey,
+      summary: `Create/update detail template ${action.input.document.name}`,
+      conflicts: [
+        {
+          code,
+          severity: "error",
+          message,
+        },
+      ],
+      dependencies: [
+        {
+          actionId: null,
+          targetType: "content-type",
+          targetKey: action.input.document.contentTypeId,
+          optional: false,
+        },
+      ],
+      beforeValue: null,
+      nextValue: summarizeDetailPageDocument(action.input.document),
+    });
+  }
 };
 
 const applyPageUpdatePatch = (
@@ -2688,18 +3054,29 @@ const mergeContentRoute = (current: ContentRouteSetting[], nextRoute: ContentRou
   return [...filtered, nextRoute].sort((left, right) => left.type.localeCompare(right.type));
 };
 
+const buildContentRouteRecord = (
+  existing: ContentRouteSetting | null,
+  input: AssistantContentRouteUpsertAction["input"]
+): ContentRouteSetting => ({
+  type: input.typeSlug,
+  listPath: input.listPath,
+  detailPath: input.detailPath,
+  enabled: input.enabled,
+  ...(Object.prototype.hasOwnProperty.call(input, "detailPageId")
+    ? { detailPageId: input.detailPageId ?? null }
+    : existing && Object.prototype.hasOwnProperty.call(existing, "detailPageId")
+      ? { detailPageId: existing.detailPageId ?? null }
+      : {}),
+});
+
 const executeContentRouteAction = async (
   action: AssistantContentRouteUpsertAction,
   preview: AssistantActionPreviewChange,
   deps: ActionExecutorDeps
 ): Promise<AssistantActionExecutionItem> => {
   const current = ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
-  const nextRoute: ContentRouteSetting = {
-    type: action.input.typeSlug,
-    listPath: action.input.listPath,
-    detailPath: action.input.detailPath,
-    enabled: action.input.enabled,
-  };
+  const existing = current.find((entry) => entry.type === action.input.typeSlug) ?? null;
+  const nextRoute = buildContentRouteRecord(existing, action.input);
 
   if (preview.operation !== "noop") {
     await deps.setSetting("site.contentRoutes", mergeContentRoute(current, nextRoute));
@@ -2792,15 +3169,16 @@ const executeCustomScreenAction = async (
   preview: AssistantActionPreviewChange,
   deps: ActionExecutorDeps
 ) => {
-  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  const { contentType, existing, conflicts } = await findExistingCustomScreenForUpsert(
+    action,
+    deps
+  );
   if (!contentType) {
     throw new Error("assistant_action_dependency_missing");
   }
-
-  const existing =
-    (await deps.listCustomScreens()).find(
-      (entry) => entry.contentTypeId === contentType.id && entry.name === action.input.name
-    ) ?? null;
+  if (conflicts.length > 0) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
 
   const record =
     preview.operation === "create"
@@ -2808,6 +3186,8 @@ const executeCustomScreenAction = async (
           name: action.input.name,
           contentTypeId: contentType.id,
           status: action.input.status,
+          collectionRole: action.input.collectionRole ?? null,
+          compositionKey: action.input.compositionKey ?? null,
           showInSidebar: action.input.showInSidebar,
           sidebarLabel: action.input.sidebarLabel,
           blocks: action.input.blocks as unknown as WidgetBlock[],
@@ -2818,6 +3198,8 @@ const executeCustomScreenAction = async (
             name: action.input.name,
             contentTypeId: contentType.id,
             status: action.input.status,
+            collectionRole: action.input.collectionRole ?? null,
+            compositionKey: action.input.compositionKey ?? null,
             showInSidebar: action.input.showInSidebar,
             sidebarLabel: action.input.sidebarLabel,
             blocks: action.input.blocks as unknown as WidgetBlock[],
@@ -2902,6 +3284,8 @@ const executeCustomScreenUpdateAction = async (
       : await deps.updateCustomScreen(existing.id, {
           name: nextValue.name,
           status: nextValue.status,
+          collectionRole: nextValue.collectionRole,
+          compositionKey: nextValue.compositionKey,
           showInSidebar: nextValue.showInSidebar,
           sidebarLabel: nextValue.sidebarLabel,
           bindings: nextValue.bindings,
@@ -2982,8 +3366,11 @@ const executeListingQueryAction = async (
     throw new Error("assistant_action_dependency_missing");
   }
 
-  const existing =
-    (await deps.listListingQueries()).find((entry) => entry.name === action.input.name) ?? null;
+  const matches = await findListingQueryNameMatches(action.input.name, deps);
+  if (matches.length > 1) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  const existing = matches[0] ?? null;
   const payload = {
     name: action.input.name,
     description: action.input.description,
@@ -4003,7 +4390,7 @@ const executePageAction = async (
   deps: ActionExecutorDeps
 ) => {
   const existing = await deps.getPageBySlug(action.input.slug);
-  const currentCatalogSource = readCatalogBlockSource(existing);
+  const currentCatalogSource = readPageCatalogSource(existing);
   const currentFormSource = readFormEmbedSource(existing);
   const listingQueries = await deps.listListingQueries();
   const listingTemplates = await deps.listListingTemplates();
@@ -4013,21 +4400,48 @@ const executePageAction = async (
     !action.input.listingQueryName ||
     !action.input.listingTemplateSlug;
 
-  const listingQueryByName = action.input.listingQueryName
-    ? (listingQueries.find((entry) => entry.name === action.input.listingQueryName) ?? null)
+  const requestedListingQueryName =
+    action.input.listingQueryName ?? action.input.collectionLink?.listingQueryName ?? null;
+  const requestedListingTemplateSlug =
+    action.input.listingTemplateSlug ?? action.input.collectionLink?.listingTemplateSlug ?? null;
+  const requestedListingQueryId = action.input.collectionLink?.listingQueryId ?? null;
+  const requestedListingTemplateId = action.input.collectionLink?.listingTemplateId ?? null;
+  const listingQueryById = requestedListingQueryId
+    ? (listingQueries.find((entry) => entry.id === requestedListingQueryId) ?? null)
     : null;
+  const listingQueryByName = requestedListingQueryName
+    ? (listingQueries.find((entry) => entry.name === requestedListingQueryName) ?? null)
+    : null;
+  if (
+    requestedListingQueryId &&
+    listingQueryByName &&
+    listingQueryByName.id !== requestedListingQueryId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
   const listingQueryFromCurrent = currentCatalogSource?.listingQueryId
     ? (listingQueries.find((entry) => entry.id === currentCatalogSource.listingQueryId) ?? null)
     : null;
-  const listingQuery = listingQueryByName ?? listingQueryFromCurrent;
-  const listingTemplateBySlug = action.input.listingTemplateSlug
-    ? (listingTemplates.find((entry) => entry.slug === action.input.listingTemplateSlug) ?? null)
+  const listingQuery = listingQueryById ?? listingQueryByName ?? listingQueryFromCurrent;
+  const listingTemplateById = requestedListingTemplateId
+    ? (listingTemplates.find((entry) => entry.id === requestedListingTemplateId) ?? null)
     : null;
+  const listingTemplateBySlug = requestedListingTemplateSlug
+    ? (listingTemplates.find((entry) => entry.slug === requestedListingTemplateSlug) ?? null)
+    : null;
+  if (
+    requestedListingTemplateId &&
+    listingTemplateBySlug &&
+    listingTemplateBySlug.id !== requestedListingTemplateId
+  ) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
   const listingTemplateFromCurrent = currentCatalogSource?.listingTemplateId
     ? (listingTemplates.find((entry) => entry.id === currentCatalogSource.listingTemplateId) ??
       null)
     : null;
-  const listingTemplate = listingTemplateBySlug ?? listingTemplateFromCurrent;
+  const listingTemplate =
+    listingTemplateById ?? listingTemplateBySlug ?? listingTemplateFromCurrent;
   const form = action.input.formEmbed
     ? (forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
       (currentFormSource?.formId
@@ -4053,12 +4467,21 @@ const executePageAction = async (
           successMessage: action.input.formEmbed.successMessage,
         }
       : null;
+  const resolvedCollectionLink = await resolveAssistantPageCollectionLink({
+    action,
+    existing,
+    simplePageMode,
+    listingQuery,
+    listingTemplate,
+    deps,
+  });
   const data = simplePageMode
     ? buildSimplePageData({
         introTitle: action.input.introTitle,
         introBody: action.input.introBody,
         blocks: action.input.blocks,
         formEmbed: resolvedFormEmbed,
+        collectionLink: resolvedCollectionLink,
       })
     : buildCatalogPageData({
         introTitle: action.input.introTitle,
@@ -4069,6 +4492,7 @@ const executePageAction = async (
         contentListStyle: action.input.contentListStyle,
         listingFilters: action.input.listingFilters,
         formEmbed: resolvedFormEmbed,
+        collectionLink: resolvedCollectionLink,
       });
 
   const page =
@@ -4110,6 +4534,51 @@ const executePageAction = async (
       preview.operation === "noop"
         ? "Catalog page already matched the plan."
         : "Public catalog page is ready at /projekty-domow.",
+  };
+};
+
+const executeDetailPageAction = async (
+  action: AssistantDetailPageUpsertAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const prepared = await deps.prepareDetailPageDocumentUpsert({
+    document: action.input.document,
+    expectedExistingId: action.input.expectedExistingId,
+  });
+  const targetKey = `${prepared.contentType.slug}/${prepared.document.id}`;
+  const beforeRecord = prepared.existing;
+  const record =
+    preview.operation === "noop"
+      ? prepared.existing
+      : (
+          await deps.upsertDetailPageDocument({
+            document: prepared.document,
+            expectedExistingId: action.input.expectedExistingId,
+          })
+        ).record;
+
+  const finalRecord = record ?? beforeRecord;
+  if (!finalRecord) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "detail-page",
+    targetKey,
+    operation: preview.operation,
+    status: "success",
+    resourceId: finalRecord.id,
+    adminHref: `/admin/advanced/engine/${encodeURIComponent(
+      prepared.contentType.id
+    )}/collection/detail-template/${encodeURIComponent(finalRecord.id)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Detail template already matched the planned document."
+        : `Detail template "${finalRecord.name}" is ready for ${prepared.contentType.slug}.`,
   };
 };
 
@@ -4751,6 +5220,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executePageAction(action, preview, ctx.actorId, ctx.deps)
         : unexpectedAction(),
   },
+  "detail-page.upsert": {
+    preview: (action, ctx) =>
+      action.type === "detail-page.upsert"
+        ? buildDetailPagePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "detail-page.upsert"
+        ? executeDetailPageAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
   "page.update": {
     preview: (action, ctx) =>
       action.type === "page.update" ? buildPageUpdatePreview(action, ctx.deps) : unexpectedAction(),
@@ -4892,7 +5371,12 @@ export const executeAssistantActionPlan = async (
         planId: plan.id,
         planHash,
       })
-    : (executionCache.get(input.idempotencyKey)?.result ?? null);
+    : readMemoryExecutionResult({
+        idempotencyKey: input.idempotencyKey,
+        actorId: input.actorId,
+        planId: plan.id,
+        planHash,
+      });
   if (cached) {
     recordAssistantActionMetric({
       failedCount: cached.summary.failed,
@@ -4975,6 +5459,9 @@ export const executeAssistantActionPlan = async (
   } else {
     executionCache.set(input.idempotencyKey, {
       result,
+      actorId: input.actorId,
+      planId: plan.id,
+      planHash,
       savedAt: Date.now(),
     });
   }

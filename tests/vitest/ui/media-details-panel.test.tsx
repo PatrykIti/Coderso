@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
@@ -95,14 +95,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -130,7 +130,7 @@ test("MediaDetailsPanel renders empty state when no item is selected", () => {
   const html = document.createElement("div");
   const root = createRoot(html);
 
-  act(() => {
+  React.act(() => {
     root.render(
       <MediaDetailsPanel
         item={null}
@@ -144,7 +144,7 @@ test("MediaDetailsPanel renders empty state when no item is selected", () => {
 
   expect(html.textContent).toContain("Select an asset to see details");
 
-  act(() => {
+  React.act(() => {
     root.unmount();
   });
 });
@@ -171,22 +171,21 @@ test("MediaDetailsPanel forwards edited metadata and action callbacks", () => {
     );
     expect(view.container.textContent).toContain("2400 x 1600");
 
-    act(() => {
-      Array.from(view.container.querySelectorAll("button[data-input-value]"))
-        .forEach((button) =>
-          button.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-        );
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button[data-input-value]")).forEach((button) =>
+        button.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+      );
       view.container
         .querySelector("button[data-textarea-action='change-caption']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     const clickByText = (label: string) =>
-      Array.from(view.container.querySelectorAll("button")).find(
-        (button) => button.textContent?.includes(label)
+      Array.from(view.container.querySelectorAll("button")).find((button) =>
+        button.textContent?.includes(label)
       );
 
-    act(() => {
+    React.act(() => {
       clickByText("Save Changes")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       clickByText("Copy Link")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       clickByText("Open in new tab")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));

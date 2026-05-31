@@ -1,5 +1,5 @@
 import { Eye, Save, Settings2 } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,9 @@ import { resolveCustomScreenId } from "./routeParams";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
+import { collectBookingFlowSummaries } from "@/ui/pages/builder/bookingFlowContext";
 import {
+  applyWidgetBlockPatch,
   appendSlotBlock,
   createBlock,
   deleteBlockById,
@@ -219,6 +221,8 @@ export function CustomScreenEditorPage() {
   const [selectedListColumnId, setSelectedListColumnId] = useState<string | null>(
     () => resolveScreenDefinition(screen).listView.columns[0]?.id ?? null
   );
+  const definitionRef = useRef(definition);
+  const blocksRef = useRef(blocks);
 
   const selectedContentType = useMemo(
     () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
@@ -271,17 +275,19 @@ export function CustomScreenEditorPage() {
     () => definition.listView.columns.find((column) => column.id === selectedListColumnId) ?? null,
     [definition.listView.columns, selectedListColumnId]
   );
+  const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
   const adminEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (activeBuilderTab !== "editor-view" || !selectedBlock) return undefined;
     return {
       surface: "admin-editor-view",
+      bookingFlows,
       jumpToBindingPropPath: (propPath: string) => {
         setActiveEditorDetailsTab("data");
         setFocusedBindingPropPath(propPath);
       },
       getBindingState: (propPath: string) => resolveBindingState(bindings, selectedId, propPath),
     };
-  }, [activeBuilderTab, bindings, selectedBlock, selectedId]);
+  }, [activeBuilderTab, bindings, bookingFlows, selectedBlock, selectedId]);
   const availableListFieldOptions = useMemo(() => {
     if (!selectedContentType) return [];
     const selectedKeys = new Set(
@@ -350,6 +356,8 @@ export function CustomScreenEditorPage() {
 
   const updateDefinition = useCallback(
     (next: CustomScreenDefinition) => {
+      definitionRef.current = next;
+      blocksRef.current = next.editorView.blocks as Block[];
       setDefinition(next);
       markDirty();
     },
@@ -359,14 +367,14 @@ export function CustomScreenEditorPage() {
   const updateBlocks = useCallback(
     (next: Block[]) => {
       updateDefinition({
-        ...definition,
+        ...definitionRef.current,
         editorView: {
-          ...definition.editorView,
+          ...definitionRef.current.editorView,
           blocks: next,
         },
       });
     },
-    [definition, updateDefinition]
+    [updateDefinition]
   );
 
   const updateListView = useCallback(
@@ -384,6 +392,8 @@ export function CustomScreenEditorPage() {
 
   const applyScreen = useCallback((record: CustomScreenRecord) => {
     const nextDefinition = resolveScreenDefinition(record);
+    definitionRef.current = nextDefinition;
+    blocksRef.current = nextDefinition.editorView.blocks as Block[];
     setScreen(record);
     setName(record.name);
     setContentTypeId(record.contentTypeId);
@@ -506,6 +516,17 @@ export function CustomScreenEditorPage() {
 
   const handleChangeBlock = (next: Block) => {
     updateBlocks(updateBlockById(blocks, next.id, () => next));
+  };
+
+  const handlePatchBlock = (
+    blockId: string,
+    patch: Parameters<typeof applyWidgetBlockPatch>[1]
+  ) => {
+    updateBlocks(
+      updateBlockById(blocksRef.current, blockId, (current) =>
+        applyWidgetBlockPatch(current, patch)
+      )
+    );
   };
 
   const handleAddListColumn = (option: ReturnType<typeof listSelectableListFields>[number]) => {
@@ -795,6 +816,9 @@ export function CustomScreenEditorPage() {
             block={selectedBlock}
             widget={selectedWidget ?? undefined}
             onChange={handleChangeBlock}
+            onBlockPatch={
+              selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
+            }
             editorContext={adminEditorWidgetContext}
           />
         </TabsContent>

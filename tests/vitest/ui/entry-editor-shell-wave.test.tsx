@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -154,7 +154,10 @@ vi.mock("@/components/ui/sheet", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-sheet-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -167,7 +170,9 @@ vi.mock("@/components/ui/tabs", () => ({
   Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
 }));
 
 vi.mock("@/components/ui/textarea", () => ({
@@ -279,7 +284,10 @@ vi.mock("@/services/siteSettingsClient", () => ({
     ],
   })),
   resolveContentSlugRouteContext: (
-    settings: { publicBaseUrl: string | null; contentRoutes: Array<{ type: string; detailPath: string; enabled: boolean }> } | null,
+    settings: {
+      publicBaseUrl: string | null;
+      contentRoutes: Array<{ type: string; detailPath: string; enabled: boolean }>;
+    } | null,
     contentTypeSlug: string
   ) => ({
     publicBaseUrl: settings?.publicBaseUrl ?? null,
@@ -355,23 +363,13 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
 }));
 
 vi.mock("../../../core/admin/ui/entries/EntryEditorHeader", () => ({
-  EntryEditorHeader: ({
-    entryLabel,
-    status,
-  }: {
-    entryLabel: string;
-    status: string;
-  }) => <div>{`${entryLabel}:${status}`}</div>,
+  EntryEditorHeader: ({ entryLabel, status }: { entryLabel: string; status: string }) => (
+    <div>{`${entryLabel}:${status}`}</div>
+  ),
 }));
 
 vi.mock("../../../core/admin/ui/entries/EntryDeleteDialog", () => ({
-  EntryDeleteDialog: ({
-    open,
-    onConfirm,
-  }: {
-    open: boolean;
-    onConfirm: () => void;
-  }) =>
+  EntryDeleteDialog: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
     open ? (
       <div data-entry-delete-dialog="true">
         <button type="button" data-entry-delete-confirm="true" onClick={onConfirm}>
@@ -482,14 +480,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -506,19 +504,18 @@ afterEach(() => {
 test("EntryEditor loads cached data and drives preview, save, publish, metadata, and refresh flows", async () => {
   window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
 
-  const { EntryEditor } = await import(
-    "../../../core/admin/ui/entries/EntryEditor"
-  );
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
 
   const view = mount(<EntryEditor />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
 
-    expect(view.container.textContent).toContain("Hello:draft");
+    expect(view.container.textContent).toContain("ContentArticlesHello");
+    expect(view.container.textContent).toContain("draft");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
     const textareas = Array.from(view.container.querySelectorAll("textarea"));
@@ -526,7 +523,7 @@ test("EntryEditor loads cached data and drives preview, save, publish, metadata,
       (input) => !input.getAttribute("type")
     );
 
-    act(() => {
+    React.act(() => {
       const titleArea = textareas[0];
       titleArea && (titleArea.value = "Updated title");
       titleArea?.dispatchEvent(new Event("input", { bubbles: true }));
@@ -547,12 +544,12 @@ test("EntryEditor loads cached data and drives preview, save, publish, metadata,
       buttons.find((button) => button.textContent === "save-metadata")?.click();
       buttons.find((button) => button.textContent === "delete-entry")?.click();
     });
-    act(() => {
+    React.act(() => {
       view.container
         .querySelector("button[data-entry-delete-confirm='true']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
@@ -570,24 +567,22 @@ test("EntryEditor loads cached data and drives preview, save, publish, metadata,
       { taxonomyId: "cat-taxonomy", input: { name: "Updates" } },
       { taxonomyId: "tag-taxonomy", input: { name: "Featured" } },
     ]);
-    expect(entryEditorState.deleteEntryCalls).toEqual([
-      { type: "articles", id: "entry-1" },
-    ]);
+    expect(entryEditorState.deleteEntryCalls).toEqual([{ type: "articles", id: "entry-1" }]);
     expect(entryEditorState.navigateCalls).toContain("/entries");
     expect(view.container.textContent).toContain("preview:open:");
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "field:summary")?.click();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       for (const subscriber of entryEditorState.subscribers) {
         subscriber({ key: "entry:articles:entry-1" });
       }
       await Promise.resolve();
     });
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "Refresh")?.click();
     });
 

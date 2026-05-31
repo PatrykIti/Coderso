@@ -10,12 +10,16 @@ import type {
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "./actionPlanTypes";
+import { assertTrustedAssistantMediaReferences } from "./assistantMediaTrust";
 import { assistantActionTypes } from "./actionRegistry";
 import {
   normalizeFormActionInput,
   type FormActionInput,
   type FormActionType,
 } from "../forms/formActionsContract";
+import { normalizeDetailPageDocument } from "../content/detailPageSchema";
+import { customScreenCollectionRoleValues } from "../customScreens/customScreenSchemas";
+import { normalizeOptionalDetailPageId } from "../settings/detailPageIdContract";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -72,6 +76,27 @@ const safeFormAutomationActionTypes = new Set<FormActionType>([
 ]);
 
 const actionTypes = new Set<AssistantExecutableActionType>(assistantActionTypes);
+const blueprintCompositionResourceKinds = new Set([
+  "content-type",
+  "content-route",
+  "entry",
+  "custom-screen",
+  "listing-query",
+  "listing-template",
+  "page",
+  "detail-page",
+  "media",
+  "form",
+  "menu",
+  "seo",
+  "widget-template",
+  "site-kit",
+] as const);
+const blueprintCompositionRoles = new Set(["primary", "adjunct", "gated"] as const);
+const blueprintCompositionMatchStatuses = new Set(["matched", "unresolved"] as const);
+const blueprintCompositionConflictSeverities = new Set(["warning", "error"] as const);
+const secretLikeMetadataPattern =
+  /\b[\w.-]*(token|secret|password|api[-_]?key|credential|cookie|session|csrf|authorization|bearer)[\w.-]*\b/gi;
 
 const isRecord = (value: unknown): value is JsonRecord =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -80,8 +105,7 @@ const fail = (): never => {
   throw new Error("assistant_action_plan_invalid");
 };
 
-const assertRecord = (value: unknown): JsonRecord =>
-  isRecord(value) ? value : fail();
+const assertRecord = (value: unknown): JsonRecord => (isRecord(value) ? value : fail());
 
 const assertKeys = (value: JsonRecord, allowed: Set<string>) => {
   for (const key of Object.keys(value)) {
@@ -102,6 +126,24 @@ const readText = (value: unknown) => {
 const readOptionalText = (value: unknown) => {
   if (value === undefined || value === null) return null;
   return readText(value);
+};
+
+const readOptionalContentRouteDetailPageId = (value: unknown) => {
+  try {
+    return normalizeOptionalDetailPageId(value);
+  } catch {
+    fail();
+  }
+};
+
+const redactMetadataText = (value: string) =>
+  value.replace(secretLikeMetadataPattern, "[redacted]");
+
+const readMetadataText = (value: unknown) => redactMetadataText(readText(value));
+
+const readOptionalMetadataText = (value: unknown) => {
+  const text = readOptionalText(value);
+  return text === null ? null : redactMetadataText(text);
 };
 
 const readBoolean = (value: unknown) => (typeof value === "boolean" ? value : fail());
@@ -127,6 +169,9 @@ const readOptionalRecord = (value: unknown) => {
 const readStringArray = (value: unknown) =>
   Array.isArray(value) ? value.map((item) => readText(item)) : fail();
 
+const readMetadataStringArray = (value: unknown) =>
+  Array.isArray(value) ? value.map((item) => readMetadataText(item)) : fail();
+
 const readOptionalStringArray = (value: unknown) => {
   if (value === undefined) return undefined;
   return readStringArray(value);
@@ -145,8 +190,13 @@ const readOptionalEnum = <T extends string>(value: unknown, allowed: Set<T>) => 
   return readEnum(value, allowed);
 };
 
-const normalizeConfidence = (value: unknown) =>
-  Math.max(0, Math.min(1, readFiniteNumber(value)));
+const readOptionalNullableEnum = <T extends string>(value: unknown, allowed: Set<T>) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return readEnum(value, allowed);
+};
+
+const normalizeConfidence = (value: unknown) => Math.max(0, Math.min(1, readFiniteNumber(value)));
 
 const normalizeQuestions = (value: unknown) =>
   readRecordArray(value).map((question) => {
@@ -159,14 +209,189 @@ const normalizeQuestions = (value: unknown) =>
     };
   });
 
+const normalizeBlueprintCompositionConflictMetadata = (value: unknown) => {
+  const conflict = assertRecord(value);
+  assertKeys(
+    conflict,
+    new Set(["code", "severity", "message", "capabilityId", "resourceKey", "actionType"])
+  );
+  return {
+    code: readMetadataText(conflict.code),
+    severity: readEnum(conflict.severity, blueprintCompositionConflictSeverities),
+    message: readMetadataText(conflict.message),
+    ...(conflict.capabilityId !== undefined
+      ? { capabilityId: readOptionalMetadataText(conflict.capabilityId) }
+      : {}),
+    ...(conflict.resourceKey !== undefined
+      ? { resourceKey: readOptionalMetadataText(conflict.resourceKey) }
+      : {}),
+    ...(conflict.actionType !== undefined
+      ? { actionType: readOptionalNullableEnum(conflict.actionType, actionTypes) }
+      : {}),
+  };
+};
+
+const normalizeBlueprintCompositionMetadata = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "schemaVersion",
+      "kind",
+      "primaryCapabilityId",
+      "adjunctCapabilityIds",
+      "gatedCapabilityIds",
+      "mergedResources",
+      "existingResourceMatches",
+      "resolvedConflicts",
+      "unresolvedConflicts",
+      "diagnostics",
+    ])
+  );
+  if (readFiniteNumber(input.schemaVersion) !== 1) fail();
+  const mergedResources = readRecordArray(input.mergedResources).map((resource) => {
+    assertKeys(resource, new Set(["key", "kind", "sourceCapabilityIds"]));
+    return {
+      key: readMetadataText(resource.key),
+      kind: readEnum(resource.kind, blueprintCompositionResourceKinds),
+      sourceCapabilityIds: readMetadataStringArray(resource.sourceCapabilityIds),
+    };
+  });
+  const existingResourceMatches = readRecordArray(input.existingResourceMatches).map((match) => {
+    assertKeys(
+      match,
+      new Set([
+        "actionId",
+        "actionType",
+        "resourceKey",
+        "existingId",
+        "status",
+        "reason",
+        "candidateIds",
+      ])
+    );
+    return {
+      actionId: readOptionalMetadataText(match.actionId),
+      actionType: readOptionalNullableEnum(match.actionType, actionTypes) ?? null,
+      resourceKey: readMetadataText(match.resourceKey),
+      existingId: readOptionalMetadataText(match.existingId),
+      status: readEnum(match.status, blueprintCompositionMatchStatuses),
+      reason: readOptionalMetadataText(match.reason),
+      candidateIds: readMetadataStringArray(match.candidateIds),
+    };
+  });
+  const diagnostics =
+    input.diagnostics === undefined
+      ? undefined
+      : (() => {
+          const diagnosticsInput = assertRecord(input.diagnostics);
+          assertKeys(diagnosticsInput, new Set(["candidateScores"]));
+          return {
+            ...(diagnosticsInput.candidateScores !== undefined
+              ? {
+                  candidateScores: readRecordArray(diagnosticsInput.candidateScores).map(
+                    (candidate) => {
+                      assertKeys(candidate, new Set(["id", "role", "score", "reasons"]));
+                      return {
+                        id: readMetadataText(candidate.id),
+                        role: readEnum(candidate.role, blueprintCompositionRoles),
+                        score: readFiniteNumber(candidate.score),
+                        reasons: readMetadataStringArray(candidate.reasons),
+                      };
+                    }
+                  ),
+                }
+              : {}),
+          };
+        })();
+
+  return {
+    schemaVersion: 1 as const,
+    kind: readEnum(input.kind, new Set(["blueprint-composition"] as const)),
+    primaryCapabilityId: readMetadataText(input.primaryCapabilityId),
+    adjunctCapabilityIds: readMetadataStringArray(input.adjunctCapabilityIds),
+    gatedCapabilityIds: readMetadataStringArray(input.gatedCapabilityIds),
+    mergedResources,
+    existingResourceMatches,
+    resolvedConflicts: readRecordArray(input.resolvedConflicts).map(
+      normalizeBlueprintCompositionConflictMetadata
+    ),
+    unresolvedConflicts: readRecordArray(input.unresolvedConflicts).map(
+      normalizeBlueprintCompositionConflictMetadata
+    ),
+    ...(diagnostics !== undefined ? { diagnostics } : {}),
+  };
+};
+
 const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | undefined => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
-  assertKeys(input, new Set(["planner", "providerDraftUsed", "providerId"]));
+  assertKeys(
+    input,
+    new Set([
+      "planner",
+      "providerDraftUsed",
+      "providerId",
+      "blueprintComposition",
+      "blueprintShadow",
+    ])
+  );
+  const blueprintShadow =
+    input.blueprintShadow === undefined
+      ? undefined
+      : (() => {
+          const shadow = assertRecord(input.blueprintShadow);
+          assertKeys(
+            shadow,
+            new Set([
+              "schemaVersion",
+              "currentIntentId",
+              "currentIntentFamily",
+              "primaryCapabilityId",
+              "adjunctCapabilityIds",
+              "gatedCapabilityIds",
+              "candidates",
+              "mismatchReason",
+            ])
+          );
+          const shadowSchemaVersion = readFiniteNumber(shadow.schemaVersion);
+          if (shadowSchemaVersion !== 1) fail();
+          const candidates = readRecordArray(shadow.candidates).map((candidate) => {
+            assertKeys(
+              candidate,
+              new Set(["capabilityId", "role", "score", "matchedSignals", "reasons"])
+            );
+            return {
+              capabilityId: readText(candidate.capabilityId),
+              role: readEnum(
+                candidate.role,
+                new Set<"primary" | "adjunct" | "gated">(["primary", "adjunct", "gated"])
+              ),
+              score: readFiniteNumber(candidate.score),
+              matchedSignals: readStringArray(candidate.matchedSignals),
+              reasons: readStringArray(candidate.reasons),
+            };
+          });
+          return {
+            schemaVersion: 1 as const,
+            currentIntentId: readText(shadow.currentIntentId),
+            currentIntentFamily:
+              readOptionalEnum(shadow.currentIntentFamily, intentFamilies) ?? null,
+            primaryCapabilityId: readOptionalText(shadow.primaryCapabilityId),
+            adjunctCapabilityIds: readStringArray(shadow.adjunctCapabilityIds),
+            gatedCapabilityIds: readStringArray(shadow.gatedCapabilityIds),
+            candidates,
+            mismatchReason: readOptionalText(shadow.mismatchReason),
+          };
+        })();
   return {
     planner: readEnum(input.planner, new Set(["local", "provider", "fallback"])),
     providerDraftUsed: readBoolean(input.providerDraftUsed),
     ...(input.providerId !== undefined ? { providerId: readOptionalText(input.providerId) } : {}),
+    ...(input.blueprintComposition !== undefined
+      ? { blueprintComposition: normalizeBlueprintCompositionMetadata(input.blueprintComposition) }
+      : {}),
+    ...(blueprintShadow !== undefined ? { blueprintShadow } : {}),
   };
 };
 
@@ -222,12 +447,15 @@ const normalizeSort = (value: unknown) =>
   });
 
 const normalizeContentRouteInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["typeSlug", "listPath", "detailPath", "enabled"]));
+  assertKeys(input, new Set(["typeSlug", "listPath", "detailPath", "enabled", "detailPageId"]));
   return {
     typeSlug: readText(input.typeSlug),
     listPath: readText(input.listPath),
     detailPath: readText(input.detailPath),
     enabled: readBoolean(input.enabled),
+    ...(Object.prototype.hasOwnProperty.call(input, "detailPageId")
+      ? { detailPageId: readOptionalContentRouteDetailPageId(input.detailPageId) }
+      : {}),
   };
 };
 
@@ -259,6 +487,8 @@ const normalizeCustomScreenInput = (input: JsonRecord) => {
       "name",
       "contentTypeSlug",
       "status",
+      "collectionRole",
+      "compositionKey",
       "showInSidebar",
       "sidebarLabel",
       "blocks",
@@ -269,6 +499,17 @@ const normalizeCustomScreenInput = (input: JsonRecord) => {
     name: readText(input.name),
     contentTypeSlug: readText(input.contentTypeSlug),
     status: readEnum(input.status, new Set(["draft", "active"])),
+    ...(Object.prototype.hasOwnProperty.call(input, "collectionRole")
+      ? {
+          collectionRole: readOptionalNullableEnum(
+            input.collectionRole,
+            new Set(customScreenCollectionRoleValues)
+          ),
+        }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(input, "compositionKey")
+      ? { compositionKey: readOptionalText(input.compositionKey) }
+      : {}),
     showInSidebar: readBoolean(input.showInSidebar),
     sidebarLabel: readOptionalText(input.sidebarLabel),
     blocks: readRecordArray(input.blocks),
@@ -300,11 +541,33 @@ const normalizeCustomScreenBindingPatch = (value: unknown) => {
 
 const normalizeCustomScreenUpdatePatch = (value: unknown) => {
   const input = assertRecord(value);
-  assertKeys(input, new Set(["name", "status", "showInSidebar", "sidebarLabel", "binding"]));
+  assertKeys(
+    input,
+    new Set([
+      "name",
+      "status",
+      "collectionRole",
+      "compositionKey",
+      "showInSidebar",
+      "sidebarLabel",
+      "binding",
+    ])
+  );
   return {
     ...(input.name !== undefined ? { name: readText(input.name) } : {}),
     ...(input.status !== undefined
       ? { status: readEnum(input.status, new Set(["draft", "active"])) }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(input, "collectionRole")
+      ? {
+          collectionRole: readOptionalNullableEnum(
+            input.collectionRole,
+            new Set(customScreenCollectionRoleValues)
+          ),
+        }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(input, "compositionKey")
+      ? { compositionKey: readOptionalText(input.compositionKey) }
       : {}),
     ...(input.showInSidebar !== undefined
       ? { showInSidebar: readBoolean(input.showInSidebar) }
@@ -356,15 +619,7 @@ const normalizeCustomScreenWidgetPatchInput = (input: JsonRecord) => {
 const normalizeListingQueryInput = (input: JsonRecord) => {
   assertKeys(
     input,
-    new Set([
-      "name",
-      "description",
-      "contentTypeSlug",
-      "fields",
-      "includeDrafts",
-      "limit",
-      "sort",
-    ])
+    new Set(["name", "description", "contentTypeSlug", "fields", "includeDrafts", "limit", "sort"])
   );
   return {
     name: readText(input.name),
@@ -680,7 +935,10 @@ const normalizeMenuItemUpdatePatch = (value: unknown) => {
 };
 
 const normalizeMenuItemUpdateInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["menuId", "itemId", "label", "expectedHref", "expectedParentId", "patch"]));
+  assertKeys(
+    input,
+    new Set(["menuId", "itemId", "label", "expectedHref", "expectedParentId", "patch"])
+  );
   return {
     menuId: readText(input.menuId),
     itemId: readText(input.itemId),
@@ -736,7 +994,10 @@ const normalizeSeoDocumentDeleteInput = (input: JsonRecord) => {
 };
 
 const normalizeSeoDocumentUpdateInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["id", "targetType", "targetId", "expectedSlug", "expectedTitle", "patch"]));
+  assertKeys(
+    input,
+    new Set(["id", "targetType", "targetId", "expectedSlug", "expectedTitle", "patch"])
+  );
   return {
     id: readText(input.id),
     targetType: readEnum(input.targetType, new Set(["page", "entry"])),
@@ -780,6 +1041,15 @@ const normalizeListingTemplateCardPatchInput = (input: JsonRecord) => {
 const normalizePageWidgetPatchBlock = (value: unknown) => {
   const input = assertRecord(value);
   assertKeys(input, new Set(["id", "type", "variant", "data", "layout", "visibility", "editor"]));
+  try {
+    assertTrustedAssistantMediaReferences(input.data);
+    if (input.layout !== undefined) assertTrustedAssistantMediaReferences(input.layout);
+    if (input.visibility !== undefined) assertTrustedAssistantMediaReferences(input.visibility);
+    if (input.editor !== undefined) assertTrustedAssistantMediaReferences(input.editor);
+  } catch (error) {
+    if (error instanceof Error && error.message === "assistant_media_reference_untrusted") fail();
+    throw error;
+  }
   return {
     id: readText(input.id),
     type: readText(input.type),
@@ -797,10 +1067,7 @@ const normalizeDataPath = (value: unknown) => {
   const path = readStringArray(value);
   if (path.length === 0 || path.length > 6) fail();
   for (const segment of path) {
-    if (
-      !/^[a-zA-Z0-9_-]+$/.test(segment) ||
-      unsafePatchPathSegments.has(segment)
-    ) {
+    if (!/^[a-zA-Z0-9_-]+$/.test(segment) || unsafePatchPathSegments.has(segment)) {
       fail();
     }
   }
@@ -823,15 +1090,7 @@ const normalizePatchValue = (value: unknown) => {
 const normalizePageWidgetPatchInput = (input: JsonRecord) => {
   assertKeys(
     input,
-    new Set([
-      "pageSlug",
-      "operation",
-      "block",
-      "blockId",
-      "expectedBlockType",
-      "dataPath",
-      "value",
-    ])
+    new Set(["pageSlug", "operation", "block", "blockId", "expectedBlockType", "dataPath", "value"])
   );
   const operation = readEnum(input.operation, new Set(["upsert-block", "patch-data"]));
   if (operation === "upsert-block") {
@@ -937,6 +1196,48 @@ const normalizeFormEmbed = (value: unknown) => {
   };
 };
 
+const normalizePageCollectionLinkInput = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "contentTypeId",
+      "contentTypeSlug",
+      "pageRole",
+      "compositionKey",
+      "listingQueryId",
+      "listingQueryName",
+      "listingTemplateId",
+      "listingTemplateSlug",
+    ])
+  );
+  const contentTypeId =
+    input.contentTypeId === undefined ? undefined : readOptionalText(input.contentTypeId);
+  const contentTypeSlug =
+    input.contentTypeSlug === undefined ? undefined : readOptionalText(input.contentTypeSlug);
+  if (!contentTypeId && !contentTypeSlug) fail();
+  return {
+    ...(contentTypeId !== undefined ? { contentTypeId } : {}),
+    ...(contentTypeSlug !== undefined ? { contentTypeSlug } : {}),
+    pageRole: readEnum(input.pageRole, new Set(["canonical-list-page", "supporting-page"])),
+    ...(input.compositionKey !== undefined
+      ? { compositionKey: readOptionalText(input.compositionKey) }
+      : {}),
+    ...(input.listingQueryId !== undefined
+      ? { listingQueryId: readOptionalText(input.listingQueryId) }
+      : {}),
+    ...(input.listingQueryName !== undefined
+      ? { listingQueryName: readOptionalText(input.listingQueryName) }
+      : {}),
+    ...(input.listingTemplateId !== undefined
+      ? { listingTemplateId: readOptionalText(input.listingTemplateId) }
+      : {}),
+    ...(input.listingTemplateSlug !== undefined
+      ? { listingTemplateSlug: readOptionalText(input.listingTemplateSlug) }
+      : {}),
+  };
+};
+
 const normalizePageInput = (input: JsonRecord) => {
   assertKeys(
     input,
@@ -953,6 +1254,7 @@ const normalizePageInput = (input: JsonRecord) => {
       "contentListStyle",
       "listingFilters",
       "formEmbed",
+      "collectionLink",
     ])
   );
   return {
@@ -977,8 +1279,19 @@ const normalizePageInput = (input: JsonRecord) => {
     ...(input.listingFilters !== undefined
       ? { listingFilters: normalizeListingFilters(input.listingFilters) }
       : {}),
-    ...(input.formEmbed !== undefined
-      ? { formEmbed: normalizeFormEmbed(input.formEmbed) }
+    ...(input.formEmbed !== undefined ? { formEmbed: normalizeFormEmbed(input.formEmbed) } : {}),
+    ...(input.collectionLink !== undefined
+      ? { collectionLink: normalizePageCollectionLinkInput(input.collectionLink) }
+      : {}),
+  };
+};
+
+const normalizeDetailPageUpsertInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["document", "expectedExistingId"]));
+  return {
+    document: normalizeDetailPageDocument(input.document),
+    ...(input.expectedExistingId !== undefined
+      ? { expectedExistingId: readOptionalText(input.expectedExistingId) }
       : {}),
   };
 };
@@ -1175,13 +1488,7 @@ const normalizeSiteKitRecommendInput = (input: JsonRecord) => {
 const normalizeSiteKitInstallInput = (input: JsonRecord) => {
   assertKeys(
     input,
-    new Set([
-      ...siteKitPlanKeys,
-      "dryRun",
-      "continueOnError",
-      "settingsPatch",
-      "notes",
-    ])
+    new Set([...siteKitPlanKeys, "dryRun", "continueOnError", "settingsPatch", "notes"])
   );
   return {
     ...normalizeSiteKitPlanBase(input),
@@ -1202,10 +1509,7 @@ const normalizeSiteKitValidateInput = (input: JsonRecord) => {
   return { runId: readText(input.runId) };
 };
 
-const normalizeActionInput = (
-  type: AssistantPlannedAction["type"],
-  input: unknown
-) => {
+const normalizeActionInput = (type: AssistantPlannedAction["type"], input: unknown) => {
   const record = assertRecord(input);
   switch (type) {
     case "setting.content-route.upsert":
@@ -1271,6 +1575,8 @@ const normalizeActionInput = (
       return normalizeFormAutomationUpsertInput(record);
     case "page.upsert":
       return normalizePageInput(record);
+    case "detail-page.upsert":
+      return normalizeDetailPageUpsertInput(record);
     case "page.update":
       return normalizePageUpdateInput(record);
     case "page.delete":
@@ -1321,7 +1627,10 @@ const resolvePlanResponseKind = (
 export const normalizeAssistantActionPlan = (value: unknown): AssistantActionPlan => {
   const input = assertRecord(value);
   assertKeys(input, planKeys);
-  const status = readEnum(input.status, new Set<AssistantActionPlanStatus>(["ready", "needs_input"]));
+  const status = readEnum(
+    input.status,
+    new Set<AssistantActionPlanStatus>(["ready", "needs_input"])
+  );
   const questions = normalizeQuestions(input.questions);
   const actions = normalizeActions(input.actions);
   const responseKind = resolvePlanResponseKind(input, status, questions, actions);
@@ -1331,7 +1640,8 @@ export const normalizeAssistantActionPlan = (value: unknown): AssistantActionPla
   if (responseKind === "docs" && actions.length > 0) fail();
   if (responseKind === "inspection" && input.inspection === undefined) fail();
   if (responseKind === "action_plan" && actions.length === 0) fail();
-  if ((responseKind === "needs_input" || responseKind === "gated") && status !== "needs_input") fail();
+  if ((responseKind === "needs_input" || responseKind === "gated") && status !== "needs_input")
+    fail();
 
   return {
     id: readText(input.id),

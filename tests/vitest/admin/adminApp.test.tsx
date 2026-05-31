@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { expect, test, vi } from "vitest";
@@ -56,6 +56,14 @@ vi.mock("@/ui/menus/MenuEditorPage", () => ({
   MenuEditorPage: () => <div>Menu Editor Route</div>,
 }));
 
+vi.mock("@/ui/content-types/CollectionWorkspacePage", () => ({
+  CollectionWorkspacePage: () => <div>Collection workspace ct-1</div>,
+}));
+
+vi.mock("@/ui/content-types/DetailTemplateEditorPage", () => ({
+  DetailTemplateEditorPage: () => <div>Detail template editor route</div>,
+}));
+
 import {
   AdminApp,
   resolveThemeUpdatedRefreshScope,
@@ -70,7 +78,7 @@ const mount = (path: string) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(
       <AdminRouterProvider initialPath={path}>
         <AdminApp path={path} />
@@ -81,7 +89,7 @@ const mount = (path: string) => {
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -90,7 +98,7 @@ const mount = (path: string) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -114,9 +122,7 @@ test("AdminApp resolves /menus to the menus list route", async () => {
     expect(view.container.textContent).toContain("Menus List Route");
     const toasters = view.container.querySelectorAll("[data-admin-toaster='true']");
     expect(toasters).toHaveLength(1);
-    expect(toasters[0]?.getAttribute("data-container-aria-label")).toBe(
-      "Admin notifications"
-    );
+    expect(toasters[0]?.getAttribute("data-container-aria-label")).toBe("Admin notifications");
     expect(toasters[0]?.getAttribute("data-close-button")).toBe("true");
     expect(toasters[0]?.getAttribute("data-duration")).toBe("4000");
     expect(toasters[0]?.getAttribute("data-position")).toBe("top-right");
@@ -132,6 +138,29 @@ test("AdminApp resolves /menus/:id to the menu editor route", async () => {
   try {
     await flush();
     expect(view.container.textContent).toContain("Menu Editor Route");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminApp resolves collection workspace under the Engine route family", async () => {
+  const view = mount("/admin/advanced/engine/ct-1/collection");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Collection workspace");
+    expect(view.container.textContent).toContain("ct-1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminApp resolves detail template editor under the collection workspace route family", async () => {
+  const view = mount("/admin/advanced/engine/ct-1/collection/detail-template/detail-1");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Detail template editor route");
   } finally {
     view.cleanup();
   }

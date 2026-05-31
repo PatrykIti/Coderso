@@ -10,10 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  previewListingFilters,
-  type ListingFiltersPreviewResult,
-} from "@/services/listingsClient";
+import { previewListingFilters, type ListingFiltersPreviewResult } from "@/services/listingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
@@ -62,19 +59,15 @@ export function ListingFiltersPage() {
   const activeListingLabel = useMemo(() => {
     if (!resolvedListingQueryId) return "No query selected";
     return (
-      items.find((item) => item.id === resolvedListingQueryId)?.name ??
-      "Selected listing query"
+      items.find((item) => item.id === resolvedListingQueryId)?.name ?? "Selected listing query"
     );
   }, [items, resolvedListingQueryId]);
 
-  const runtimeTokenPrefix = useMemo(
-    () => {
-      const fallbackQueryId = items[0]?.id ?? "<listingQueryId>";
-      const queryId = resolvedListingQueryId || fallbackQueryId;
-      return `lq.${queryId}`;
-    },
-    [items, resolvedListingQueryId]
-  );
+  const runtimeTokenPrefix = useMemo(() => {
+    const fallbackQueryId = items[0]?.id ?? "<listingQueryId>";
+    const queryId = resolvedListingQueryId || fallbackQueryId;
+    return `lq.${queryId}`;
+  }, [items, resolvedListingQueryId]);
 
   const queryExamples = useMemo<QueryExample[]>(
     () => [
@@ -146,9 +139,7 @@ export function ListingFiltersPage() {
       setPreview(result);
     } catch (error) {
       const message =
-        error instanceof Error && error.message
-          ? error.message
-          : "Failed to load filter preview.";
+        error instanceof Error && error.message ? error.message : "Failed to load filter preview.";
       setPreviewError(message);
       setPreview(null);
     } finally {
@@ -157,16 +148,7 @@ export function ListingFiltersPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/advanced/filters"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span className="text-foreground">Filters</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/advanced/filters" breadcrumbs={["Coderso", "Filters"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Filters"
@@ -176,9 +158,9 @@ export function ListingFiltersPage() {
         <section className="rounded-xl border border-border/70 bg-card/50 p-4 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">How this works</p>
           <p className="mt-1">
-            First define data logic in <code>Coderso → Listings</code> (source, filters,
-            sorting, pagination). Then use this Filters screen to test runtime URL tokens for
-            that listing query.
+            First define data logic in <code>Coderso → Listings</code> (source, filters, sorting,
+            pagination). Then use this Filters screen to test runtime URL tokens for that listing
+            query.
           </p>
           <p className="mt-1">
             Widgets and templates use the same listing query, so data logic stays in one place.
@@ -199,20 +181,14 @@ export function ListingFiltersPage() {
               <Select
                 value={resolvedListingQueryId || NO_LISTING_QUERY_VALUE}
                 onValueChange={(next) =>
-                  setSelectedListingQueryId(
-                    next === NO_LISTING_QUERY_VALUE ? "" : next
-                  )
+                  setSelectedListingQueryId(next === NO_LISTING_QUERY_VALUE ? "" : next)
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select listing query">
-                    {activeListingLabel}
-                  </SelectValue>
+                  <SelectValue placeholder="Select listing query">{activeListingLabel}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_LISTING_QUERY_VALUE}>
-                    No listing query selected
-                  </SelectItem>
+                  <SelectItem value={NO_LISTING_QUERY_VALUE}>No listing query selected</SelectItem>
                   {items.map((item) => (
                     <SelectItem key={item.id} value={item.id}>
                       {item.name}
@@ -221,9 +197,7 @@ export function ListingFiltersPage() {
                 </SelectContent>
               </Select>
               {isLoading ? (
-                <p className="text-xs text-muted-foreground">
-                  Loading listing queries...
-                </p>
+                <p className="text-xs text-muted-foreground">Loading listing queries...</p>
               ) : null}
               {resolvedListingQueryId ? (
                 <p className="text-xs text-muted-foreground">
@@ -242,11 +216,7 @@ export function ListingFiltersPage() {
                 placeholder="lq.<queryId>.<field>.<op>=value"
               />
             </div>
-            <Button
-              type="button"
-              onClick={runPreview}
-              disabled={isPreviewLoading}
-            >
+            <Button type="button" onClick={runPreview} disabled={isPreviewLoading}>
               {isPreviewLoading ? "Previewing..." : "Run preview"}
             </Button>
           </div>
@@ -291,10 +261,9 @@ export function ListingFiltersPage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Operators: <code>eq</code>, <code>neq</code>, <code>in</code>,{" "}
-                  <code>nin</code>, <code>contains</code>, <code>startsWith</code>,{" "}
-                  <code>gt</code>, <code>gte</code>, <code>lt</code>, <code>lte</code>,{" "}
-                  <code>between</code>, <code>exists</code>.
+                  Operators: <code>eq</code>, <code>neq</code>, <code>in</code>, <code>nin</code>,{" "}
+                  <code>contains</code>, <code>startsWith</code>, <code>gt</code>, <code>gte</code>,{" "}
+                  <code>lt</code>, <code>lte</code>, <code>between</code>, <code>exists</code>.
                 </p>
               </div>
 
@@ -365,9 +334,7 @@ export function ListingFiltersPage() {
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Runtime search
                 </p>
-                <p className="text-lg font-semibold">
-                  {preview.searchQuery ? "Enabled" : "None"}
-                </p>
+                <p className="text-lg font-semibold">{preview.searchQuery ? "Enabled" : "None"}</p>
               </div>
             </div>
 

@@ -336,6 +336,10 @@ export const previewTokens = pgTable(
     targetType: text("target_type").notNull(),
     targetId: uuid("target_id").notNull(),
     tokenHash: text("token_hash").notNull(),
+    context: jsonb("context").$type<null | {
+      kind: "detail-page";
+      sampleEntryId: string;
+    }>(),
     expiresAt: timestamp("expires_at").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -641,6 +645,54 @@ export const contentTypes = pgTable("content_types", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const detailPageDocuments = pgTable(
+  "detail_page_documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    contentTypeId: uuid("content_type_id")
+      .notNull()
+      .references(() => contentTypes.id),
+    status: text("status").notNull().default("draft"),
+    currentDocument: jsonb("current_document").notNull(),
+    publishedDocument: jsonb("published_document"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    publishedAt: timestamp("published_at"),
+  },
+  (t) => ({
+    contentTypeIdx: index("detail_page_documents_content_type_id_idx").on(t.contentTypeId),
+    statusIdx: index("detail_page_documents_status_idx").on(t.status),
+    updatedAtIdx: index("detail_page_documents_updated_at_idx").on(t.updatedAt),
+  })
+);
+
+export const detailPageRevisions = pgTable(
+  "detail_page_revisions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    detailPageId: uuid("detail_page_id")
+      .notNull()
+      .references(() => detailPageDocuments.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    kind: text("kind").notNull().default("publish"),
+    document: jsonb("document").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  },
+  (t) => ({
+    detailPageIdIdx: index("detail_page_revisions_detail_page_id_idx").on(t.detailPageId),
+    detailPageKindIdx: index("detail_page_revisions_detail_page_kind_idx").on(
+      t.detailPageId,
+      t.kind
+    ),
+    detailPageVersionIdx: uniqueIndex("detail_page_revisions_detail_page_version_idx").on(
+      t.detailPageId,
+      t.version
+    ),
+  })
+);
+
 export const customScreens = pgTable(
   "custom_screens",
   {
@@ -650,6 +702,8 @@ export const customScreens = pgTable(
       .notNull()
       .references(() => contentTypes.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("draft"),
+    collectionRole: text("collection_role"),
+    compositionKey: text("composition_key"),
     showInSidebar: boolean("show_in_sidebar").notNull().default(false),
     sidebarLabel: text("sidebar_label"),
     schemaVersion: integer("schema_version").notNull().default(1),
@@ -663,6 +717,11 @@ export const customScreens = pgTable(
     nameIdx: index("custom_screens_name_idx").on(t.name),
     contentTypeIdx: index("custom_screens_content_type_id_idx").on(t.contentTypeId),
     statusIdx: index("custom_screens_status_idx").on(t.status),
+    collectionRoleIdx: index("custom_screens_collection_role_idx").on(
+      t.contentTypeId,
+      t.collectionRole
+    ),
+    compositionKeyIdx: index("custom_screens_composition_key_idx").on(t.compositionKey),
     sidebarIdx: index("custom_screens_sidebar_idx").on(t.showInSidebar),
     updatedAtIdx: index("custom_screens_updated_at_idx").on(t.updatedAt),
   })

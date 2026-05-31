@@ -4,8 +4,8 @@
 **Priority:** High
 **Category:** Assistant/Core + Execution Safety
 **Estimated Effort:** Large
-**Dependencies:** TASK-190-03, TASK-190-04, TASK-190-05, TASK-190-06
-**Status:** To Do
+**Dependencies:** TASK-190-03, TASK-190-04, TASK-190-05, TASK-190-06 for full closure
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -22,6 +22,24 @@ Business value:
 - Mixed blueprint plans can execute safely.
 - Existing setups can be refined instead of reinstalled.
 - Review/dry-run can show clear resource ownership and changes.
+
+Current slice note:
+- assembler ordering/dedupe are landed for the current catalog/form/page
+  fragments,
+- the local setup planner now uses the composed path for supported
+  mixed-capability and primary-plus-gated setup requests,
+- listing query assembly now widens projection fields automatically when merged
+  listing facets or listing-template card bindings need additional runtime
+  fields, while schema-backed missing-field drift falls back to typed
+  `facet_field_missing`,
+- DB-backed no-duplicate checks and existing-resource reuse are landed through
+  the bounded resource catalog plus `blueprintExistingResourceMatcher.ts`;
+  broader review metadata now lands through `blueprintCompositionMetadata.ts`.
+- Composed ready/needs-input plans now carry strict `metadata.blueprintComposition`
+  diagnostics for primary/adjunct/gated choices, merged resources, reuse matches,
+  conflicts, and deterministic candidate scores.
+- Generic detail-page resource packaging remains owned by `TASK-190-05-03-08`,
+  not by this action-assembly closure.
 
 ## Sub-Tasks
 
@@ -71,6 +89,7 @@ Touched files:
 ## Testing Requirements
 
 - Vitest assembler tests.
+- Targeted planner tests for the supported live composed setup path.
 - Bun DB-backed no-duplicate tests in the existing `actionExecutorService`
   executor lane.
 - Existing assistant execute/dry-run tests remain green.

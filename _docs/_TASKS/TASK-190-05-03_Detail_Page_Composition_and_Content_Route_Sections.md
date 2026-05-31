@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Public Runtime + Page Sections
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-190-05-01, TASK-190-05-02
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -23,6 +23,43 @@ The runtime must render detail pages with the same level of visual control as
 normal Pages, while preserving the current CMS safety model: strict schemas,
 typed actions, reviewed execution, public read-only rendering, existing form
 hardening, and no provider-defined payloads.
+
+Current slice note:
+- `TASK-190-05-03-01` is landed: persisted detail-page document/revision
+  storage, strict schema normalization, deterministic UUID-compatible id rules,
+  and the content-type delete guard for `content_type_has_detail_pages` now
+  exist under the content-domain owner seam.
+- `TASK-190-05-03-02` is landed: detail-page blocks now resolve strict
+  entry-field/meta/computed bindings through the content-domain owner seam
+  using shared safe dot-path helpers, bounded `formContext`, and the existing
+  collection/listing runtime seams for `detailHref` / `relatedItems`.
+- `TASK-190-05-03-07-02` is landed: `site.contentRoutes` and
+  `contentRouteMatcher.ts` now round-trip structural `detailPageId` metadata
+  without introducing a second route registry, so the runtime leaf can consume
+  validated route linkage next.
+- `TASK-190-05-03-03` is landed: published content routes with linked
+  `detailPageId` now render composed detail-page blocks through the existing
+  page runtime shell, while unlinked routes stay on the legacy entry-detail
+  renderer.
+- `TASK-190-05-03-04` is landed: `preview_tokens.context` now stores strict
+  detail-page sample-entry context, the shared preview contract distinguishes
+  expired vs missing tokens, dedicated `type=detail-page` preview renders
+  `current_document`, and canonical content-route updates reuse shared
+  list/detail cache invalidation.
+- `TASK-190-05-03-05` is landed: `detail-page.upsert` now integrates with the
+  strict assistant action registry/schema/executor path through one
+  content-domain service seam, without introducing a second route-owner or
+  generic provider-side mutation path.
+- `TASK-190-05-03-07-01` and `TASK-190-05-03-07-02` are landed: the internal
+  `/admin/api/detail-pages*` CRUD/lifecycle/revision route family now exists,
+  and `setting.content-route.upsert` owns the structural `detailPageId`
+  round-trip for route linkage.
+- `TASK-190-05-03-08` is landed: `detail-page` is now in the generic assistant
+  resource vocabulary, provider planning packages include bounded detail-page
+  summaries, active-surface inference stays in `resolverPolicy.ts`, and target
+  resolution accepts only trusted ids, stable `contentTypeId`, exact
+  route/content-type linkage, or active detail-page context.
+- The detail-page composition and content-route section family is complete.
 
 This unlocks proper Mabudo-like/product/service/portfolio detail pages instead
 of generic entry detail output.
@@ -126,6 +163,13 @@ type DetailPageBinding = {
 };
 ```
 
+Public runtime and dedicated detail-page preview render `titlePattern` /
+`seo.titlePattern`, `seo.descriptionField`, and `seo.imageField` against the
+selected entry before falling back to entry-owned SEO metadata. Title patterns
+may reference safe entry meta/data tokens only; secret-like tokens such as
+`token`, `secret`, `password`, `apiKey`, `cookie`, `session`, or `csrf` reject at
+document normalization and are ignored defensively at public render time.
+
 Storage direction:
 
 - `detail_page_documents` is the required storage contract.
@@ -210,17 +254,20 @@ Touched existing modules:
    composer-created documents.
 2. Define binding resolution from entry fields/meta/computed sources using the
    existing dot-path binding model.
-3. Add runtime resolver and plug it into the current content-detail runtime
-   entry point with legacy fallback.
-4. Add required `detail-page.upsert` typed action schema/executor to
-   create/update detail page documents without mutating route ownership.
-5. Add internal admin detail page API plus explicit stable-id behavior for
-   assistant/composer upserts and manual admin create flows.
-6. Extend preview/cache/invalidation with detail-page-specific preview context
+3. Add `detailPageId` content-route round-trip and matcher metadata through the
+   current `site.contentRoutes` owner seam before any runtime leaf consumes
+   that route-link contract.
+4. Add runtime resolver and plug it into the current content-detail runtime
+   entry point with legacy fallback, consuming validated `detailPageId` route
+   metadata from step 3 instead of inventing a second lookup path.
+5. Extend preview/cache/invalidation with detail-page-specific preview context
    stored server-side, not trusted from ad-hoc query params.
-7. Add `detailPageId` content-route round-trip and runtime linkage after the
-   detail page document exists; live route ownership must stay in
-   `site.contentRoutes`.
+6. Add required `detail-page.upsert` typed action schema/executor to
+   create/update detail page documents without mutating route ownership.
+7. Internal admin detail page APIs plus explicit stable-id behavior for
+   assistant/composer upserts and manual admin create flows are landed; preview
+   lifecycle routes consume the shared preview contract from step 5, and the
+   remaining admin-client/cache parity must keep route-link ownership in step 3.
 8. Add manual Collection Workspace / Detail Template editing integration in
    `TASK-190-06-03`.
 9. Add generic assistant resource/policy integration for `detail-page` only

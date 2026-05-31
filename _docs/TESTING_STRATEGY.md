@@ -77,6 +77,9 @@ then that test should move to Vitest.
 - Public write protection and runtime security hardening.
 - Performance budgets.
 - Contract tests that must execute against the real Bun runtime.
+- The repo `test:bun` command runs the DB/runtime gate serially with a
+  `15000ms` per-test timeout because real database fixtures and runtime renders
+  can exceed Bun's default `5000ms` timeout under full-suite load.
 
 ### Vitest Owns
 
@@ -95,6 +98,16 @@ then that test should move to Vitest.
   provider draft strictness, exact `resourceKey`, policy gated/read-only behavior,
   active target resolution, selected-block patch mapping, and no provider repair
   fallback are validated in `tests/vitest/assistant/*`.
+- TASK-190 candidate/provider shadow work also stays in the Vitest-owned
+  assistant lane: capability registry context, capability-id draft schema, and
+  env-gated planner shadow diagnostics are pure planning contracts and must not
+  require Bun runtime coupling.
+- TASK-190 composition fixture and diagnostics work stays split by ownership:
+  `tests/vitest/assistant/blueprint-composition-fixtures.test.ts` and
+  `blueprint-composition-diagnostics.test.ts` own pure fixture/redaction
+  behavior, while `tests/integration/assistant-live/blueprintCompositionLiveMatrix.test.ts`
+  is an opt-in Bun live-provider matrix for OpenAI/OpenRouter local-first and
+  gated composition behavior.
 
 ### Vitest Happy-DOM Guardrails
 
@@ -110,6 +123,10 @@ then that test should move to Vitest.
 - Full `bun run test:vitest` should be both green and log-clean; happy-dom
   `AsyncTaskManager` errors or `ECONNREFUSED localhost:3000` output indicate a
   test harness or component-test isolation bug.
+- The repo `test:vitest` command loads `.env` when present and then forces
+  `NODE_ENV=test`; inherited production shell environments must not disable
+  React `act` or test-only assistant blueprint-shadow diagnostics. CI may
+  provide the same values directly through job environment variables.
 
 ### Do Not Do
 
@@ -125,7 +142,7 @@ Use Bun coverage only for Bun-owned suites.
 
 What it is good for:
 - showing uncovered lines in executed runtime files,
-- emitting `text` and `lcov`,
+- emitting `lcov` plus a compact text summary in CI,
 - validating runtime contract suites in CI.
 
 What it is not good for:
@@ -277,8 +294,8 @@ The `Coderso PR Gates` CI workflow mirrors the split after a database preflight:
 then `vitest-lane` runs Vitest tests and Vitest coverage while `bun-lane` runs
 curated Bun tests first and then Bun coverage. The local Bun lane helper can
 still skip env-dependent route suites when `DATABASE_URL` is unavailable, but
-repository PR gates require the secret so clean CI databases can be migrated
-before DB-backed suites run. Runtime jobs pin `BUN_VERSION=1.3.13` and
+repository PR gates require `DATABASE_URL` from a repository secret or variable
+so clean CI databases can be migrated before DB-backed suites run. Runtime jobs pin `BUN_VERSION=1.3.13` and
 `NODE_VERSION=22.14.0`; do not rely on the runner's default Node 20 for CI
 test or migration execution.
 
@@ -291,7 +308,12 @@ bun run test:assistant:live:cms:openai
 bun run test:assistant:live:cms:openrouter
 ```
 
-The live CMS matrix is Bun-owned, DB-backed, and intentionally opt-in. It must load `.env`, requires a disposable database behind `DATABASE_URL`, and uses test-only provider variables:
+The live CMS matrix is Bun-owned and intentionally opt-in. DB-backed live suites
+must load `.env` when present or receive equivalent job environment variables,
+and require a disposable database behind `DATABASE_URL`;
+provider-only composition suites may run without DB fixtures when they prove
+local-first/gated planner behavior. The matrix uses test-only provider
+variables:
 
 - `TEST_OPENAI_API_KEY`
 - `TEST_OPENAI_MODEL`

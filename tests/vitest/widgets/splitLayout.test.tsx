@@ -1,4 +1,3 @@
-import React from "react";
 import type { ComponentType } from "react";
 import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
@@ -11,6 +10,9 @@ import {
 import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
 import {
   createSplitLayoutWidget,
+  getSplitLayoutDiagnostics,
+  getSplitLayoutGapControlValue,
+  getSplitLayoutRatioDisclosure,
   normalizeSplitLayoutData,
   resolveSplitLayoutVariant,
   SplitLayoutBlock,
@@ -22,27 +24,27 @@ import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
-const StubSplitLayoutEditor: ComponentType<WidgetEditorProps<SplitLayoutData>> = () =>
-  null;
+const StubSplitLayoutEditor: ComponentType<WidgetEditorProps<SplitLayoutData>> = () => null;
 const StubHeroEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 
-test("split layout renders defaults", () => {
-  const html = renderToString(
-    <SplitLayoutBlock data={splitLayoutDefaults} variant="50-50" />
-  );
+test("split layout renders defaults with mobile markers", () => {
+  const html = renderToString(<SplitLayoutBlock data={splitLayoutDefaults} variant="50-50" />);
 
   expect(html).toContain('data-split-layout-variant="50-50"');
   expect(html).toContain('data-split-ratio-desktop="50-50"');
+  expect(html).toContain('data-split-ratio-tablet="50-50"');
+  expect(html).toContain('data-split-ratio-mobile="50-50"');
   expect(html).toContain('data-split-collapse-mobile="stack"');
   expect(html).toContain('data-split-side="left"');
   expect(html).toContain('data-split-side="right"');
 });
 
-test("split layout normalization keeps deterministic defaults", () => {
+test("split layout normalization keeps deterministic defaults and mobile fallback", () => {
   const normalized = normalizeSplitLayoutData(
     {
       ratio: {
         desktop: "invalid" as NonNullable<SplitLayoutData["ratio"]>["desktop"],
+        mobile: "invalid" as NonNullable<SplitLayoutData["ratio"]>["mobile"],
       },
       collapseMobile: "bad" as SplitLayoutData["collapseMobile"],
       gap: "bad" as SplitLayoutData["gap"],
@@ -53,13 +55,94 @@ test("split layout normalization keeps deterministic defaults", () => {
 
   expect(normalized.ratio?.desktop).toBe("60-40");
   expect(normalized.ratio?.tablet).toBe("50-50");
+  expect(normalized.ratio?.mobile).toBe("50-50");
   expect(normalized.collapseMobile).toBe("stack");
   expect(normalized.gap).toBe("6");
   expect(normalized.verticalAlign).toBe("stretch");
   expect(resolveSplitLayoutVariant("unknown")).toBe("50-50");
 });
 
-test("split layout validator accepts expanded model", () => {
+test("split layout preserves legacy zero gap while exposing none in controls", () => {
+  const normalized = normalizeSplitLayoutData(
+    {
+      ratio: {
+        tablet: "60-40",
+      },
+      collapseMobile: "keep",
+      gap: "0",
+    },
+    "40-60"
+  );
+  const disclosure = getSplitLayoutRatioDisclosure(
+    {
+      ratio: {
+        desktop: "40-60",
+        tablet: "60-40",
+      },
+      collapseMobile: "keep",
+      gap: "0",
+    },
+    "40-60"
+  );
+  const diagnostics = getSplitLayoutDiagnostics(
+    {
+      ratio: {
+        desktop: "40-60",
+        tablet: "60-40",
+      },
+      collapseMobile: "keep",
+      gap: "0",
+    },
+    "40-60"
+  );
+
+  expect(normalized.gap).toBe("0");
+  expect(normalized.ratio?.mobile).toBe("60-40");
+  expect(getSplitLayoutGapControlValue(normalized.gap)).toBe("none");
+  expect(disclosure.mobile).toBe("60-40");
+  expect(diagnostics.gap.controlValue).toBe("none");
+  expect(diagnostics.gap.description).toContain("Older saved zero-gap layouts are shown here.");
+});
+
+test("split layout disclosure separates starter matches from device-specific changes", () => {
+  const explicitStarterMatch = getSplitLayoutRatioDisclosure(
+    {
+      ratio: {
+        desktop: "60-40",
+        tablet: "60-40",
+        mobile: "60-40",
+      },
+    },
+    "60-40"
+  );
+  expect(explicitStarterMatch).toMatchObject({
+    hasExplicitMobile: true,
+    hasOverride: false,
+    hasDeviceSpecificChanges: false,
+    effectiveMatchesStarter: true,
+  });
+
+  const responsiveOverride = getSplitLayoutRatioDisclosure(
+    {
+      ratio: {
+        desktop: "50-50",
+        tablet: "40-60",
+        mobile: "60-40",
+      },
+    },
+    "60-40"
+  );
+  expect(responsiveOverride).toMatchObject({
+    desktop: "50-50",
+    tablet: "40-60",
+    mobile: "60-40",
+    hasOverride: true,
+    hasDeviceSpecificChanges: true,
+    effectiveMatchesStarter: false,
+  });
+});
+
+test("split layout validator accepts expanded model with mobile ratio", () => {
   clearWidgets();
   const widget = createSplitLayoutWidget({
     wizard: StubSplitLayoutEditor,
@@ -77,6 +160,7 @@ test("split layout validator accepts expanded model", () => {
         ratio: {
           desktop: "40-60",
           tablet: "60-40",
+          mobile: "50-50",
         },
         collapseMobile: "keep",
         reverseOnMobile: true,
@@ -110,6 +194,32 @@ test("split layout validator rejects invalid variant", () => {
       data: splitLayoutDefaults,
     })
   ).toThrow("widget_invalid_variant");
+});
+
+test("split layout hides empty pane guidance in public output and shows actionable preview placeholders", () => {
+  const publicHtml = renderToString(
+    <SplitLayoutBlock data={splitLayoutDefaults} variant="50-50" />
+  );
+  const previewHtml = renderToString(
+    <SplitLayoutBlock
+      data={splitLayoutDefaults}
+      variant="50-50"
+      renderContext={{ mode: "editor-preview" }}
+    />
+  );
+
+  expect(publicHtml).not.toContain("Empty left pane");
+  expect(publicHtml).not.toContain("Add a widget from Structure or the insert controls");
+  expect(publicHtml).not.toContain("data-split-empty-pane");
+
+  expect(previewHtml).toContain('data-split-empty-pane="left"');
+  expect(previewHtml).toContain('data-split-empty-pane="right"');
+  expect(previewHtml).toContain(
+    "Left pane is empty. Add a widget from Structure or the insert controls."
+  );
+  expect(previewHtml).toContain(
+    "Right pane is empty. Add a widget from Structure or the insert controls."
+  );
 });
 
 test("split layout renders left and right slot content", () => {
@@ -170,7 +280,7 @@ test("split layout renders left and right slot content", () => {
   expect(html).toContain('data-split-items-right="1"');
 });
 
-test("split layout editors render expected sections", () => {
+test("split layout editors render updated sections and diagnostics", () => {
   const wizardHtml = renderToString(
     <SplitLayoutWizardEditor
       value={splitLayoutDefaults}
@@ -179,8 +289,9 @@ test("split layout editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(wizardHtml).toContain("Split preset");
-  expect(wizardHtml).toContain("Mobile behavior");
+  expect(wizardHtml).toContain("Starter layout");
+  expect(wizardHtml).not.toContain("Mobile behavior");
+  expect(wizardHtml).not.toContain("Base gap");
 
   const visualHtml = renderToString(
     <SplitLayoutVisualEditor
@@ -190,9 +301,11 @@ test("split layout editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(visualHtml).toContain("Variant and pane ratio");
-  expect(visualHtml).toContain("Mobile collapse behavior");
-  expect(visualHtml).toContain("Spacing and vertical alignment");
+  expect(visualHtml).toContain("Pane layout");
+  expect(visualHtml).toContain("Phone behavior");
+  expect(visualHtml).toContain("Pane content");
+  expect(visualHtml).not.toContain("Pane slots");
+  expect(visualHtml).toContain("Current layout on devices");
 
   const advancedHtml = renderToString(
     <SplitLayoutAdvancedEditor
@@ -202,6 +315,15 @@ test("split layout editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Technical split tokens");
-  expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(advancedHtml).toContain("How this layout renders");
+  expect(advancedHtml).toContain("Saved layout summary");
+  expect(advancedHtml).not.toContain("Raw payload snapshot");
+  expect(advancedHtml).not.toContain("<pre");
+  expect(advancedHtml).not.toContain("raw JSON");
+  expect(advancedHtml).not.toContain("CSS class");
+  expect(advancedHtml).not.toContain("token");
+  expect(advancedHtml).not.toContain("payload");
+  expect(advancedHtml).not.toContain("using gap-");
+  expect(advancedHtml).not.toContain("using items-");
+  expect(advancedHtml).not.toContain("Technical split tokens");
 });

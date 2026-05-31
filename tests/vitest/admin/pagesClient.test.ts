@@ -22,10 +22,7 @@ import {
 } from "../../../core/admin/services/pagesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys, cacheTtlMs } from "../../../core/admin/services/cachePolicy";
-import {
-  subscribeCacheEvents,
-  type CacheEvent,
-} from "../../../core/admin/utils/cacheBus";
+import { subscribeCacheEvents, type CacheEvent } from "../../../core/admin/utils/cacheBus";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -98,14 +95,16 @@ const installFetch = (
   };
 };
 
-const pageSummary = (overrides: Partial<{
-  id: string;
-  title: string;
-  slug: string;
-  status: "draft" | "published" | "scheduled" | "archived";
-  updatedAt: string;
-  author: null;
-}> = {}) => ({
+const pageSummary = (
+  overrides: Partial<{
+    id: string;
+    title: string;
+    slug: string;
+    status: "draft" | "published" | "scheduled" | "archived";
+    updatedAt: string;
+    author: null;
+  }> = {}
+) => ({
   id: overrides.id ?? "page-1",
   title: overrides.title ?? "Home",
   slug: overrides.slug ?? "/",
@@ -114,15 +113,17 @@ const pageSummary = (overrides: Partial<{
   author: overrides.author ?? null,
 });
 
-const pageDetail = (overrides: Partial<{
-  id: string;
-  title: string;
-  slug: string;
-  status: "draft" | "published" | "scheduled" | "archived";
-  currentData: Record<string, unknown>;
-  updatedAt: string;
-  author: null;
-}> = {}) => ({
+const pageDetail = (
+  overrides: Partial<{
+    id: string;
+    title: string;
+    slug: string;
+    status: "draft" | "published" | "scheduled" | "archived";
+    currentData: Record<string, unknown>;
+    updatedAt: string;
+    author: null;
+  }> = {}
+) => ({
   id: overrides.id ?? "page-1",
   title: overrides.title ?? "Home",
   slug: overrides.slug ?? "/",
@@ -233,8 +234,7 @@ test("previewPage posts probe flag and normalizes redacted probe metadata", asyn
         ok: false,
         status: 503,
         reason: "http_error",
-        targetLabel:
-          "https://example.com/preview?type=page&token=secret-token&device=mobile",
+        targetLabel: "https://example.com/preview?type=page&token=secret-token&device=mobile",
       },
     });
   };
@@ -464,10 +464,7 @@ test("listPagesCached reads from local storage", async () => {
         author: null,
       },
     ];
-    storage.setItem(
-      cacheKeys.pagesList,
-      JSON.stringify({ value: cached, savedAt: Date.now() })
-    );
+    storage.setItem(cacheKeys.pagesList, JSON.stringify({ value: cached, savedAt: Date.now() }));
 
     const result = await listPagesCached();
     expect(result).toEqual(cached);
@@ -596,7 +593,17 @@ test("getPageCached forced fetch primes detail cache without creating an authorl
         id: "page-7",
         title: "Fetched detail",
         slug: "/fetched-detail",
-        currentData: { blocks: [{ id: "b1" }] },
+        currentData: {
+          blocks: [{ id: "b1" }],
+          settings: {
+            collectionLink: {
+              contentTypeId: "content-type-1",
+              pageRole: "canonical-list-page",
+              listingQueryId: "query-1",
+              listingTemplateId: "template-1",
+            },
+          },
+        },
       })
     )
   );
@@ -609,9 +616,31 @@ test("getPageCached forced fetch primes detail cache without creating an authorl
     expect(readCacheValue(storage, cacheKeys.pageDetail("page-7"))).toMatchObject({
       id: "page-7",
       title: "Fetched detail",
+      currentData: {
+        settings: {
+          collectionLink: {
+            contentTypeId: "content-type-1",
+            pageRole: "canonical-list-page",
+            listingQueryId: "query-1",
+            listingTemplateId: "template-1",
+          },
+        },
+      },
     });
     expect(readCacheValue(storage, cacheKeys.pagesList)).toBeNull();
     expect(getCachedPageDetail("page-7")?.title).toBe("Fetched detail");
+    expect(
+      (
+        getCachedPageDetail("page-7")?.currentData as {
+          settings?: { collectionLink?: Record<string, unknown> };
+        }
+      )?.settings?.collectionLink
+    ).toEqual({
+      contentTypeId: "content-type-1",
+      pageRole: "canonical-list-page",
+      listingQueryId: "query-1",
+      listingTemplateId: "template-1",
+    });
     expect(getCachedPages()).toBeNull();
   } finally {
     fetchMock.restore();
@@ -815,9 +844,7 @@ test("noop mutation responses do not corrupt existing page caches", async () => 
     await restorePageRevision("page-1", "rev-1");
 
     expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual(cachedList);
-    expect(readCacheValue(storage, cacheKeys.pageDetail("page-1"))).toEqual(
-      cachedDetail
-    );
+    expect(readCacheValue(storage, cacheKeys.pageDetail("page-1"))).toEqual(cachedDetail);
   } finally {
     fetchMock.restore();
     restoreStorage();
@@ -832,13 +859,9 @@ test("clearPagesCache clears memory and local list cache", async () => {
 
   try {
     resetCaches();
-    setCacheValue(storage, cacheKeys.pagesList, [
-      pageSummary({ id: "page-1", title: "Cached" }),
-    ]);
+    setCacheValue(storage, cacheKeys.pagesList, [pageSummary({ id: "page-1", title: "Cached" })]);
 
-    expect(await listPagesCached()).toEqual([
-      pageSummary({ id: "page-1", title: "Cached" }),
-    ]);
+    expect(await listPagesCached()).toEqual([pageSummary({ id: "page-1", title: "Cached" })]);
     clearPagesCache();
     expect(storage.getItem(cacheKeys.pagesList)).toBeNull();
     expect(await listPagesCached()).toEqual([

@@ -71,6 +71,8 @@ const createRow = (overrides: Record<string, unknown> = {}) => ({
   name: "Catalog",
   contentTypeId: "products",
   status: "active",
+  collectionRole: null,
+  compositionKey: null,
   showInSidebar: true,
   sidebarLabel: " Catalog ",
   schemaVersion: 1,
@@ -146,6 +148,8 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
     contentTypeId: "  products  ",
     showInSidebar: true,
     sidebarLabel: "  Catalog Tools  ",
+    collectionRole: "canonical-admin-screen",
+    compositionKey: "catalog-tools",
     blocks: [{ id: "section-1", type: "section", data: {} }],
     bindings: [
       {
@@ -162,6 +166,8 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
     name: "Catalog Tools",
     contentTypeId: "products",
     status: "draft",
+    collectionRole: "canonical-admin-screen",
+    compositionKey: "catalog-tools",
     showInSidebar: true,
     sidebarLabel: "Catalog Tools",
     schemaVersion: 3,
@@ -189,6 +195,7 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
   expect(mockDb.state.lastInsertValues?.createdAt).toBeInstanceOf(Date);
   expect(mockDb.state.lastInsertValues?.updatedAt).toBeInstanceOf(Date);
   expect(result.status).toBe("draft");
+  expect(result.collectionRole).toBeNull();
   expect(result.schemaVersion).toBe(3);
   expect(result.bindings[0]?.id).toBe("field-1-value");
   expect(result.capabilities.mode).toBe("editor");
@@ -209,6 +216,14 @@ test("createCustomScreen rejects invalid payloads", async () => {
       status: "archived" as never,
     })
   ).rejects.toThrow("custom_screen_status_invalid");
+
+  await expect(
+    createCustomScreen({
+      name: "Catalog",
+      contentTypeId: "products",
+      collectionRole: "unknown" as never,
+    })
+  ).rejects.toThrow("custom_screen_invalid");
 });
 
 test("updateCustomScreen returns null when the record is missing", async () => {
@@ -239,6 +254,8 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
   const result = await updateCustomScreen("screen-1", {
     name: "  Updated catalog  ",
     status: "active",
+    collectionRole: "secondary-admin-screen",
+    compositionKey: "catalog-secondary",
     sidebarLabel: "   ",
   });
 
@@ -246,6 +263,8 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
     name: "Updated catalog",
     contentTypeId: "products",
     status: "active",
+    collectionRole: "secondary-admin-screen",
+    compositionKey: "catalog-secondary",
     showInSidebar: false,
     sidebarLabel: null,
     schemaVersion: 3,
@@ -261,6 +280,7 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
   });
   expect(mockDb.state.lastUpdateValues?.updatedAt).toBeInstanceOf(Date);
   expect(result?.name).toBe("Updated catalog");
+  expect(result?.collectionRole).toBeNull();
   expect(result?.sidebarLabel).toBeNull();
   expect(result?.capabilities.mode).toBe("collection-only");
 });

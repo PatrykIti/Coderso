@@ -45,10 +45,17 @@ type QueryDraftSnapshot = {
 };
 
 const resolveListingId = (pathname: string) => {
-  const parts = pathname.split("/").filter(Boolean);
+  const normalizedPathname = pathname.split("?")[0]?.split("#")[0] ?? pathname;
+  const parts = normalizedPathname.split("/").filter(Boolean);
   const index = parts.findIndex((segment) => segment === "listings");
   if (index === -1) return null;
   return parts[index + 1] ?? null;
+};
+
+const resolveInitialContentTypeId = (path: string) => {
+  const queryString = path.split("?")[1]?.split("#")[0] ?? "";
+  const value = new URLSearchParams(queryString).get("contentTypeId");
+  return value?.trim() ?? "";
 };
 
 const stringifyFilterValue = (value: unknown) => {
@@ -131,18 +138,22 @@ const cloneDraftSnapshot = (value: QueryDraftSnapshot): QueryDraftSnapshot => ({
 });
 
 export function ListingEditorPage() {
-  const { navigate } = useAdminRouter();
+  const { navigate, path } = useAdminRouter();
   const [listingId] = useState<string | null>(() => {
+    if (path) return resolveListingId(path);
     if (typeof window === "undefined") return null;
     return resolveListingId(window.location.pathname);
   });
 
   const isCreateMode = !listingId || listingId === "new";
+  const initialContentTypeId = isCreateMode ? resolveInitialContentTypeId(path) : "";
 
   const [contentTypes, setContentTypes] = useState(() => getCachedContentTypes() ?? []);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [query, setQuery] = useState<ListingQueryPayload>(() => createDefaultListingQuery());
+  const [query, setQuery] = useState<ListingQueryPayload>(() =>
+    createDefaultListingQuery(initialContentTypeId)
+  );
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [previewRows, setPreviewRows] = useState<Record<string, unknown>[]>([]);
   const [previewTotal, setPreviewTotal] = useState(0);
@@ -157,7 +168,7 @@ export function ListingEditorPage() {
       ? {
           name: "",
           description: "",
-          query: createDefaultListingQuery(),
+          query: createDefaultListingQuery(initialContentTypeId),
           selectedTemplateId: "",
         }
       : null
@@ -366,17 +377,7 @@ export function ListingEditorPage() {
   return (
     <AdminShell
       activeHref="/admin/advanced/listings"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span>Listings</span>
-          <span>/</span>
-          <span className="text-foreground">
-            {isCreateMode ? "New query" : name || "Editor"}
-          </span>
-        </div>
-      }
+      breadcrumbs={["Coderso", "Listings", isCreateMode ? "New query" : name || "Editor"]}
     >
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -389,15 +390,29 @@ export function ListingEditorPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" className="gap-2" onClick={() => navigate("/advanced/listings")}>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => navigate("/advanced/listings")}
+            >
               <ArrowLeft className="h-4 w-4" />
               Back to list
             </Button>
-            <Button variant="outline" className="gap-2" onClick={handleDiscard} disabled={!hasUnsavedChanges}>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={handleDiscard}
+              disabled={!hasUnsavedChanges}
+            >
               <Trash2 className="h-4 w-4" />
               Discard
             </Button>
-            <Button variant="outline" className="gap-2" onClick={runPreview} disabled={isPreviewing}>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={runPreview}
+              disabled={isPreviewing}
+            >
               <RefreshCcw className="h-4 w-4" />
               {isPreviewing ? "Previewing..." : "Run preview"}
             </Button>
@@ -536,7 +551,7 @@ export function ListingEditorPage() {
                   </label>
                 ) : null}
 
-                {(query.source === "entries" || query.source === "posts") ? (
+                {query.source === "entries" || query.source === "posts" ? (
                   <label className="grid gap-1.5 text-sm md:col-span-2">
                     <span className="font-medium">Include drafts</span>
                     <Select

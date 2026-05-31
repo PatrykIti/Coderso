@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -66,7 +66,10 @@ vi.mock("@/components/ui/sheet", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-sheet-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -80,7 +83,9 @@ vi.mock("@/components/ui/tabs", () => ({
   Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
+    <button type="button">{children}</button>
+  ),
 }));
 
 vi.mock("@/components/ui/textarea", () => ({
@@ -112,14 +117,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -129,10 +134,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -165,7 +167,7 @@ const clickButtonByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
   return button;
@@ -187,15 +189,11 @@ const templateTimestamps = {
 };
 
 test("ThemeTemplateDrawer create mode updates tokens, inverts base colors, saves, and cancels", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onOpenChange = vi.fn();
   const onSave = vi.fn(async () => undefined);
-  const view = mount(
-    <ThemeTemplateDrawer open onOpenChange={onOpenChange} onSave={onSave} />
-  );
+  const view = mount(<ThemeTemplateDrawer open onOpenChange={onOpenChange} onSave={onSave} />);
 
   try {
     expect(view.container.textContent).toContain("New Theme Template");
@@ -204,7 +202,7 @@ test("ThemeTemplateDrawer create mode updates tokens, inverts base colors, saves
     const createButton = clickButtonByText(view.container, "Create Template");
     expect((createButton as HTMLButtonElement).disabled).toBe(true);
 
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Admin Pro"), "Admin Pro");
       setInputValue(findInputByPlaceholder(view.container, "Short summary"), "Primary admin theme");
     });
@@ -212,7 +210,7 @@ test("ThemeTemplateDrawer create mode updates tokens, inverts base colors, saves
     const colorInputs = Array.from(
       view.container.querySelectorAll("input[type='color']")
     ) as HTMLInputElement[];
-    act(() => {
+    React.act(() => {
       setInputValue(colorInputs[0], "#123456");
     });
 
@@ -240,9 +238,7 @@ test("ThemeTemplateDrawer create mode updates tokens, inverts base colors, saves
 });
 
 test("ThemeTemplateDrawer edit mode renders template values and respects saving state", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onOpenChange = vi.fn();
   const template = {
@@ -334,9 +330,7 @@ test("ThemeTemplateDrawer edit mode renders template values and respects saving 
 });
 
 test("ThemeTemplateDrawer edit mode updates tokens across typography, buttons, inputs, navigation, cards, and states", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onOpenChange = vi.fn();
   const onSave = vi.fn(async () => undefined);
@@ -395,36 +389,22 @@ test("ThemeTemplateDrawer edit mode updates tokens across typography, buttons, i
   };
 
   const view = mount(
-    <ThemeTemplateDrawer
-      open
-      onOpenChange={onOpenChange}
-      template={template}
-      onSave={onSave}
-    />
+    <ThemeTemplateDrawer open onOpenChange={onOpenChange} template={template} onSave={onSave} />
   );
 
   try {
     const colorInputs = findColorInputs(view.container);
 
-    act(() => {
+    React.act(() => {
       setInputValue(
-        findInputByPlaceholder(
-          view.container,
-          '"IBM Plex Sans", Arial, sans-serif'
-        ),
+        findInputByPlaceholder(view.container, '"IBM Plex Sans", Arial, sans-serif'),
         '"Work Sans", Arial, sans-serif'
       );
       setInputValue(
-        findInputByPlaceholder(
-          view.container,
-          '"Space Grotesk", Arial, sans-serif'
-        ),
+        findInputByPlaceholder(view.container, '"Space Grotesk", Arial, sans-serif'),
         '"Archivo Black", Arial, sans-serif'
       );
-      setInputValue(
-        findInputByPlaceholder(view.container, "1.5rem"),
-        "1.75rem"
-      );
+      setInputValue(findInputByPlaceholder(view.container, "1.5rem"), "1.75rem");
       setInputValue(colorInputs[5], "#123456");
       setInputValue(colorInputs[19], "#224466");
       setInputValue(colorInputs[24], "#335577");
@@ -436,7 +416,7 @@ test("ThemeTemplateDrawer edit mode updates tokens across typography, buttons, i
       (candidate) => candidate.textContent?.includes("Invert section")
     );
 
-    act(() => {
+    React.act(() => {
       invertButtons[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       invertButtons[2]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       invertButtons[3]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -448,9 +428,9 @@ test("ThemeTemplateDrawer edit mode updates tokens across typography, buttons, i
     clickButtonByText(view.container, "Save Template");
 
     const payload = (
-      onSave.mock.calls as unknown as Array<[
-        { name?: string; description?: string | null; tokens: typeof template.tokens },
-      ]>
+      onSave.mock.calls as unknown as Array<
+        [{ name?: string; description?: string | null; tokens: typeof template.tokens }]
+      >
     )[0]?.[0];
     if (!payload) throw new Error("missing_template_payload");
     expect(payload.name).toBe("Editorial");
@@ -474,9 +454,7 @@ test("ThemeTemplateDrawer edit mode updates tokens across typography, buttons, i
 });
 
 test("ThemeTemplateDrawer updates top bar, card, and state color tokens", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onSave = vi.fn(async () => undefined);
   const template = {
@@ -538,7 +516,7 @@ test("ThemeTemplateDrawer updates top bar, card, and state color tokens", async 
   );
 
   try {
-    act(() => {
+    React.act(() => {
       setInputValue(findColorInputByLabel(view.container, "Top Bar Border"), "#112233");
       setInputValue(findColorInputByLabel(view.container, "Card Border"), "#223344");
       setInputValue(findColorInputByLabel(view.container, "Success"), "#11aa22");
@@ -571,9 +549,7 @@ test("ThemeTemplateDrawer updates top bar, card, and state color tokens", async 
 });
 
 test("ThemeTemplateDrawer normalizes text-entered color values without hash prefixes", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onSave = vi.fn(async () => undefined);
   const template = {
@@ -635,7 +611,7 @@ test("ThemeTemplateDrawer normalizes text-entered color values without hash pref
   );
 
   try {
-    act(() => {
+    React.act(() => {
       setInputValue(findColorTextInputByLabel(view.container, "Background"), "112233");
       setInputValue(findColorTextInputByLabel(view.container, "Muted Text"), "445566");
       setInputValue(findColorTextInputByLabel(view.container, "Placeholder"), "778899");
@@ -676,9 +652,7 @@ test("ThemeTemplateDrawer normalizes text-entered color values without hash pref
 });
 
 test("ThemeTemplateDrawer normalizes blank and invalid color text inputs while preserving hashed values", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onSave = vi.fn(async () => undefined);
   const template = {
@@ -740,7 +714,7 @@ test("ThemeTemplateDrawer normalizes blank and invalid color text inputs while p
   );
 
   try {
-    act(() => {
+    React.act(() => {
       setInputValue(findColorTextInputByLabel(view.container, "Background"), "");
       setInputValue(findColorTextInputByLabel(view.container, "Surface"), "zzzzzz");
       setInputValue(findColorTextInputByLabel(view.container, "Border"), "#abcdef");
@@ -766,9 +740,7 @@ test("ThemeTemplateDrawer normalizes blank and invalid color text inputs while p
 });
 
 test("ThemeTemplateDrawer updates remaining typography, button, and input token callbacks", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onSave = vi.fn(async () => undefined);
   const template = {
@@ -832,7 +804,7 @@ test("ThemeTemplateDrawer updates remaining typography, button, and input token 
   try {
     const colorInputs = findColorInputs(view.container);
 
-    act(() => {
+    React.act(() => {
       setInputValue(colorInputs[3], "#010203");
       setInputValue(findInputByPlaceholder(view.container, "0.875rem"), "0.9375rem");
       setInputValue(findInputByPlaceholder(view.container, "1rem"), "1.0625rem");
@@ -910,15 +882,13 @@ test("ThemeTemplateDrawer updates remaining typography, button, and input token 
 });
 
 test("ThemeTemplateDrawer save is a no-op when onSave is omitted", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onOpenChange = vi.fn();
   const view = mount(<ThemeTemplateDrawer open onOpenChange={onOpenChange} />);
 
   try {
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Admin Pro"), "No Save Handler");
       setInputValue(findInputByPlaceholder(view.container, "Short summary"), "Still interactive");
     });
@@ -933,17 +903,13 @@ test("ThemeTemplateDrawer save is a no-op when onSave is omitted", async () => {
 });
 
 test("ThemeTemplateDrawer inverts shorthand hex values in base colors", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onSave = vi.fn(async () => undefined);
-  const view = mount(
-    <ThemeTemplateDrawer open onOpenChange={() => undefined} onSave={onSave} />
-  );
+  const view = mount(<ThemeTemplateDrawer open onOpenChange={() => undefined} onSave={onSave} />);
 
   try {
-    act(() => {
+    React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Admin Pro"), "Shorthand");
       setInputValue(findColorTextInputByLabel(view.container, "Background"), "#abc");
     });
@@ -966,9 +932,7 @@ test("ThemeTemplateDrawer inverts shorthand hex values in base colors", async ()
 });
 
 test("ThemeTemplateDrawer updates remaining input and navigation fields from text values", async () => {
-  const { ThemeTemplateDrawer } = await import(
-    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
-  );
+  const { ThemeTemplateDrawer } = await import("../../../core/admin/ui/themes/ThemeTemplateDrawer");
 
   const onSave = vi.fn(async () => undefined);
   const template = {
@@ -1030,7 +994,7 @@ test("ThemeTemplateDrawer updates remaining input and navigation fields from tex
   );
 
   try {
-    act(() => {
+    React.act(() => {
       setInputValue(findColorTextInputByLabel(view.container, "Focus Ring"), " 1122aa ");
       setInputValue(findColorTextInputByLabel(view.container, "Input Text"), "334455");
       setInputValue(findColorTextInputByLabel(view.container, "Sidebar Text"), "556677");

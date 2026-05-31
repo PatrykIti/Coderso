@@ -1,5 +1,6 @@
 import { matchRoute, normalizePath } from "../server/router";
 import type { ContentRouteSetting } from "../services/settings/settingsService";
+import { compareContentRouteDetailSpecificity } from "../services/settings/contentRoutePaths";
 
 export type ContentRouteMatch = {
   type: string;
@@ -7,6 +8,7 @@ export type ContentRouteMatch = {
   params: Record<string, string>;
   listPath: string;
   detailPath: string;
+  detailPageId: string | null;
 };
 
 export function matchContentRoute(
@@ -17,6 +19,24 @@ export function matchContentRoute(
 
   for (const route of routes) {
     if (!route.enabled) continue;
+    if (normalizePath(route.listPath) === normalizedPath) {
+      return {
+        type: route.type,
+        mode: "list",
+        params: {},
+        listPath: route.listPath,
+        detailPath: route.detailPath,
+        detailPageId: route.detailPageId ?? null,
+      };
+    }
+  }
+
+  const detailRoutes = routes
+    .filter((route) => route.enabled)
+    .sort((left, right) => compareContentRouteDetailSpecificity(left.detailPath, right.detailPath));
+
+  for (const route of detailRoutes) {
+    if (!route.enabled) continue;
     const detailMatch = matchRoute(route.detailPath, normalizedPath);
     if (detailMatch.matched) {
       return {
@@ -25,19 +45,7 @@ export function matchContentRoute(
         params: detailMatch.params,
         listPath: route.listPath,
         detailPath: route.detailPath,
-      };
-    }
-  }
-
-  for (const route of routes) {
-    if (!route.enabled) continue;
-    if (normalizePath(route.listPath) === normalizedPath) {
-      return {
-        type: route.type,
-        mode: "list",
-        params: {},
-        listPath: route.listPath,
-        detailPath: route.detailPath,
+        detailPageId: route.detailPageId ?? null,
       };
     }
   }

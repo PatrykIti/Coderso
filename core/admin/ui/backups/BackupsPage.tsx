@@ -32,10 +32,7 @@ export function BackupsPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const [nextBackups, nextSchedule] = await Promise.all([
-        listBackups(),
-        getBackupSchedule(),
-      ]);
+      const [nextBackups, nextSchedule] = await Promise.all([listBackups(), getBackupSchedule()]);
       setError(null);
       setBackups(nextBackups);
       setSchedule(nextSchedule);
@@ -150,27 +147,13 @@ export function BackupsPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/backups"
-      showSearch={false}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Admin</span>
-          <span>/</span>
-          <span className="text-foreground">Backups</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/backups" showSearch={false} breadcrumbs={["Admin", "Backups"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Backups"
           description="Manage scheduled backups for your database and assets."
           actions={
-            <Button
-              className="gap-2"
-              onClick={() => setBackupOpen(true)}
-              disabled={isSaving}
-            >
+            <Button className="gap-2" onClick={() => setBackupOpen(true)} disabled={isSaving}>
               <CloudUpload className="h-4 w-4" />
               Create Backup Now
             </Button>
@@ -204,8 +187,8 @@ export function BackupsPage() {
             <div className="space-y-1">
               <p className="text-sm font-semibold">Storage Information</p>
               <p className="text-xs text-blue-700/90 dark:text-blue-200/80">
-                Automated backups are retained for 30 days. To keep a backup
-                longer, download it to your local machine.
+                Automated backups are retained for 30 days. To keep a backup longer, download it to
+                your local machine.
               </p>
             </div>
           </div>

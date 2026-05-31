@@ -18,16 +18,10 @@ import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { useListPagination } from "@/ui/shared/useListPagination";
 
-import {
-  CommerceBulkActionsBar,
-  type CommerceBulkActionValue,
-} from "./CommerceBulkActionsBar";
+import { CommerceBulkActionsBar, type CommerceBulkActionValue } from "./CommerceBulkActionsBar";
 import { CommerceFilters } from "./CommerceFilters";
 import { CommerceTable } from "./CommerceTable";
-import {
-  commerceListToasts,
-  type CommerceListAction,
-} from "./commerceActionToasts";
+import { commerceListToasts, type CommerceListAction } from "./commerceActionToasts";
 import { useCommerceCatalog } from "./hooks/useCommerceCatalog";
 
 export type CommerceStatusFilter = "all" | CommerceProductStatus;
@@ -68,8 +62,7 @@ export function filterCommerceProducts(
       product.slug.toLowerCase().includes(normalized) ||
       (product.excerpt ?? "").toLowerCase().includes(normalized);
     const matchesStatus = status === "all" || product.status === status;
-    const matchesCollection =
-      collection === "all" || product.collectionIds.includes(collection);
+    const matchesCollection = collection === "all" || product.collectionIds.includes(collection);
     const matchesStock = stock === "all" || product.stock.state === stock;
     return matchesSearch && matchesStatus && matchesCollection && matchesStock;
   });
@@ -85,19 +78,12 @@ const statusForBulkAction = (
 
 export function CommerceListPage() {
   const { navigate } = useAdminRouter();
-  const {
-    products,
-    collections,
-    isLoadingProducts,
-    isLoadingCollections,
-    error,
-    refreshProducts,
-  } = useCommerceCatalog();
+  const { products, collections, isLoadingProducts, isLoadingCollections, error, refreshProducts } =
+    useCommerceCatalog();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CommerceStatusFilter>("all");
-  const [collectionFilter, setCollectionFilter] =
-    useState<CommerceCollectionFilter>("all");
+  const [collectionFilter, setCollectionFilter] = useState<CommerceCollectionFilter>("all");
   const [stockFilter, setStockFilter] = useState<CommerceStockFilter>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<CommerceBulkActionValue | "">("");
@@ -124,13 +110,7 @@ export function CommerceListPage() {
   );
   const filteredProducts = useMemo(
     () =>
-      filterCommerceProducts(
-        enrichedProducts,
-        search,
-        statusFilter,
-        collectionFilter,
-        stockFilter
-      ),
+      filterCommerceProducts(enrichedProducts, search, statusFilter, collectionFilter, stockFilter),
     [collectionFilter, enrichedProducts, search, statusFilter, stockFilter]
   );
   const pagination = useListPagination(filteredProducts, {
@@ -147,12 +127,10 @@ export function CommerceListPage() {
   );
   const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
   const selectedCount = visibleSelectedIds.length;
-  const isAllSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
-  const refreshProductList = () =>
-    refreshProducts({ force: true, background: true });
+  const refreshProductList = () => refreshProducts({ force: true, background: true });
 
   const handleSetStatus = async (
     id: string,
@@ -187,9 +165,7 @@ export function CommerceListPage() {
 
   const handleToggleProduct = (id: string) => {
     setSelectedIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((productId) => productId !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((productId) => productId !== id) : [...prev, id]
     );
   };
 
@@ -248,16 +224,7 @@ export function CommerceListPage() {
   const isLoading = isLoadingProducts || isLoadingCollections;
 
   return (
-    <AdminShell
-      activeHref="/admin/advanced/commerce"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span className="text-foreground">Commerce</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/advanced/commerce" breadcrumbs={["Coderso", "Commerce"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Commerce"
@@ -275,10 +242,7 @@ export function CommerceListPage() {
                   variant="inline"
                 />
               ) : null}
-              <Button
-                className="gap-2"
-                onClick={() => navigate("/advanced/commerce/new")}
-              >
+              <Button className="gap-2" onClick={() => navigate("/advanced/commerce/new")}>
                 <Plus className="h-4 w-4" />
                 New
               </Button>
@@ -319,9 +283,7 @@ export function CommerceListPage() {
           <CommerceTable
             items={pagination.visibleRows}
             emptyMessage={
-              products.length > 0
-                ? "No products match your current filters."
-                : undefined
+              products.length > 0 ? "No products match your current filters." : undefined
             }
             selectedIds={selectedIds}
             isAllSelected={isAllSelected}

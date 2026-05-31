@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -58,7 +58,11 @@ vi.mock("@/components/ui/sheet", () => ({
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div data-testid="details-sheet" data-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+    <div
+      data-testid="details-sheet"
+      data-open={String(Boolean(open))}
+      data-has-open-change={String(Boolean(onOpenChange))}
+    >
       {children}
     </div>
   ),
@@ -227,12 +231,15 @@ vi.mock("../../../core/admin/ui/users/UserEditor", () => ({
   }: {
     open: boolean;
     user?: { name?: string } | null;
-    onSave: (draft: {
-      name: string;
-      email: string;
-      roleIds: string[];
-      status: "active" | "inactive" | "pending";
-    }, mode: "create" | "edit") => void;
+    onSave: (
+      draft: {
+        name: string;
+        email: string;
+        roleIds: string[];
+        status: "active" | "inactive" | "pending";
+      },
+      mode: "create" | "edit"
+    ) => void;
     onOpenChange: (open: boolean) => void;
   }) =>
     open ? (
@@ -301,11 +308,14 @@ vi.mock("../../../core/admin/ui/roles/RoleEditor", () => ({
   }: {
     open: boolean;
     role?: { name?: string } | null;
-    onSave: (draft: {
-      name: string;
-      description: string;
-      permissions: string[];
-    }, mode: "create" | "edit") => void;
+    onSave: (
+      draft: {
+        name: string;
+        description: string;
+        permissions: string[];
+      },
+      mode: "create" | "edit"
+    ) => void;
     onOpenChange: (open: boolean) => void;
   }) =>
     open ? (
@@ -370,13 +380,7 @@ vi.mock("@/ui/shared/PageHeader", () => ({
 }));
 
 vi.mock("@/ui/shared/SectionHeader", () => ({
-  SectionHeader: ({
-    title,
-    action,
-  }: {
-    title: string;
-    action?: React.ReactNode;
-  }) => (
+  SectionHeader: ({ title, action }: { title: string; action?: React.ReactNode }) => (
     <div>
       <h2>{title}</h2>
       <div>{action}</div>
@@ -389,14 +393,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -405,7 +409,7 @@ const mount = (node: React.ReactNode) => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
   });
 };
@@ -417,7 +421,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
   return button;
@@ -624,9 +628,9 @@ test("UsersRolesPage respects read-only mode, URL-selected mobile details, and l
     expect(view.container.querySelector('[data-testid="role-list-can-manage"]')?.textContent).toBe(
       "false"
     );
-    expect(view.container.querySelector('[data-testid="details-sheet"]')?.getAttribute("data-open")).toBe(
-      "true"
-    );
+    expect(
+      view.container.querySelector('[data-testid="details-sheet"]')?.getAttribute("data-open")
+    ).toBe("true");
 
     const inviteButton = clickByText(view.container, "Invite User");
     const createRoleButton = clickByText(view.container, "Create Role");

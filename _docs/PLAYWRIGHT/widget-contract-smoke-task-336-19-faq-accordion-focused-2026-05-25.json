@@ -1,0 +1,57 @@
+{
+  "generatedAt": "2026-05-25T23:27:36.353Z",
+  "command": "bun .tmp/playwright-faq-accordion-focused-probe.ts",
+  "session": "task-336-19-faq-accordion-focused",
+  "probe": "faq-accordion explicit wizard re-entry and read-only advanced guard",
+  "passed": true,
+  "shell": {
+    "wizardBeforeCount": 0,
+    "wizardTabBeforeCount": 0,
+    "visualTabCount": 1,
+    "advancedTabCount": 1,
+    "wizardAdvancedTabCount": 0
+  },
+  "visual": {
+    "rootCount": 1,
+    "visibleSectionCount": 9,
+    "writablePaths": [
+      "style.surface",
+      "style.border",
+      "style.divider",
+      "style.questionTextColor",
+      "style.answerTextColor",
+      "style.headerTitleColor",
+      "style.headerDescriptionColor",
+      "layout.container",
+      "layout.padding.top",
+      "layout.padding.bottom",
+      "layout.margin.top",
+      "layout.margin.bottom",
+      "visibility.devices.desktop",
+      "visibility.devices.tablet",
+      "visibility.devices.mobile"
+    ],
+    "controlsWithoutPath": 0,
+    "styleRawInputCount": 0,
+    "rawText": false
+  },
+  "advanced": {
+    "rootCount": 1,
+    "visibleSectionCount": 5,
+    "writablePaths": [],
+    "controlsWithoutPath": 0,
+    "rawControlCount": 0,
+    "rawText": false
+  },
+  "wizard": {
+    "rootCount": 1,
+    "visibleSectionCount": 1,
+    "writablePaths": [],
+    "controlsWithoutPath": 0,
+    "rawText": false
+  },
+  "summary": {
+    "passed": true,
+    "status": "passed"
+  }
+}

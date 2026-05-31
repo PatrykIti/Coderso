@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -76,14 +76,7 @@ vi.mock("@/components/ui/input", () => ({
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     placeholder?: string;
     className?: string;
-  }) => (
-    <input
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      className={className}
-    />
-  ),
+  }) => <input value={value} onChange={onChange} placeholder={placeholder} className={className} />,
 }));
 
 vi.mock("@/components/ui/select", () => {
@@ -101,9 +94,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -142,27 +133,15 @@ vi.mock("@/components/ui/select", () => {
 vi.mock("@/components/ui/table", () => ({
   Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
   TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
-  TableCell: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <td className={className}>{children}</td>,
-  TableHead: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <th className={className}>{children}</th>,
-  TableHeader: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <thead className={className}>{children}</thead>,
+  TableCell: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <td className={className}>{children}</td>
+  ),
+  TableHead: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <th className={className}>{children}</th>
+  ),
+  TableHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <thead className={className}>{children}</thead>
+  ),
   TableRow: ({
     children,
     className,
@@ -183,14 +162,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -202,7 +181,7 @@ const click = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLElement)) {
     throw new Error("Missing clickable element");
   }
-  act(() => {
+  React.act(() => {
     element.click();
   });
 };
@@ -211,7 +190,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing input for value: ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -223,7 +202,7 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) {
     throw new Error(`Missing select for value: ${value}`);
   }
-  act(() => {
+  React.act(() => {
     const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));

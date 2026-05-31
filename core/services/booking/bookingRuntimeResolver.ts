@@ -4,8 +4,12 @@ import {
   listBookingServices,
 } from "./bookingService";
 import { createBookingSubmissionNonce } from "./bookingSubmissionNonce";
-import { createBookingSlotsToken } from "./bookingSlotsToken";
+import { createBookingSlotsToken, type BookingSlotsPolicyClaims } from "./bookingSlotsToken";
 import { resolveBookingAccessModeFromSettings } from "./bookingAccess";
+import {
+  getSecuritySettingsPublic,
+  type SecuritySettingsPublic,
+} from "../settings/securitySettings";
 
 export type BookingRuntimeResource = {
   id: string;
@@ -30,17 +34,40 @@ export type BookingRuntimeService = {
   submissionAccess: "public" | "internal";
 };
 
+export type BookingRuntimeCaptcha = {
+  provider: "recaptcha_v3";
+  siteKey: string;
+  action: "public_write";
+};
+
 export type BookingRuntimeResolution = {
   services: BookingRuntimeService[];
   resources: BookingRuntimeResource[];
   submissionNonce: string | null;
   slotsToken: string | null;
+  captcha: BookingRuntimeCaptcha | null;
   error?: string;
 };
 
 const unique = <T>(items: T[]) => Array.from(new Set(items));
 
-export async function resolveBookingRuntimeData(options: { preview: boolean }) {
+const resolveRuntimeCaptcha = (
+  settings: SecuritySettingsPublic["botProtection"]
+): BookingRuntimeCaptcha | null => {
+  if (!settings.enabled) return null;
+  const siteKey = settings.siteKey?.trim();
+  if (!siteKey) return null;
+  return {
+    provider: "recaptcha_v3",
+    siteKey,
+    action: "public_write",
+  };
+};
+
+export async function resolveBookingRuntimeData(options: {
+  preview: boolean;
+  slotPolicy?: BookingSlotsPolicyClaims;
+}) {
   const [serviceRows, resourceRows] = await Promise.all([
     listBookingServices(),
     listBookingResources(),
@@ -89,25 +116,27 @@ export async function resolveBookingRuntimeData(options: { preview: boolean }) {
 
   const runtimeResources: BookingRuntimeResource[] = resources.map<BookingRuntimeResource>(
     (resource) => ({
-    id: resource.id,
-    name: resource.name,
-    type:
-      resource.type === "staff" ||
-      resource.type === "bay" ||
-      resource.type === "tool" ||
-      resource.type === "vehicle"
-        ? resource.type
-        : "other",
-    timezone: resource.timezone,
-    capacity: resource.capacity,
-    status: resource.status === "inactive" ? "inactive" : "active",
-  })
+      id: resource.id,
+      name: resource.name,
+      type:
+        resource.type === "staff" ||
+        resource.type === "bay" ||
+        resource.type === "tool" ||
+        resource.type === "vehicle"
+          ? resource.type
+          : "other",
+      timezone: resource.timezone,
+      capacity: resource.capacity,
+      status: resource.status === "inactive" ? "inactive" : "active",
+    })
   );
 
   let submissionNonce: string | null = null;
   let slotsToken: string | null = null;
   const errorFlags: string[] = [];
   const hasPublicService = runtimeServices.some((service) => service.submissionAccess === "public");
+  const securitySettings = hasPublicService ? await getSecuritySettingsPublic() : null;
+  const captcha = securitySettings ? resolveRuntimeCaptcha(securitySettings.botProtection) : null;
 
   if (hasPublicService) {
     try {
@@ -120,7 +149,7 @@ export async function resolveBookingRuntimeData(options: { preview: boolean }) {
 
   if (runtimeServices.length > 0) {
     try {
-      slotsToken = createBookingSlotsToken();
+      slotsToken = createBookingSlotsToken(options.slotPolicy);
     } catch {
       slotsToken = null;
       errorFlags.push("booking_slots_token_unavailable");
@@ -132,6 +161,7 @@ export async function resolveBookingRuntimeData(options: { preview: boolean }) {
     resources: runtimeResources,
     submissionNonce,
     slotsToken,
+    captcha,
     ...(errorFlags.length > 0 ? { error: errorFlags.join("|") } : {}),
   } satisfies BookingRuntimeResolution;
 }

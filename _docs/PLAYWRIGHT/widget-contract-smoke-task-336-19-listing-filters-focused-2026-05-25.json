@@ -1,0 +1,24 @@
+{
+  "generatedAt": "2026-05-25T21:57:19.899Z",
+  "command": "bun .tmp/playwright-listing-filters-focused-probe.ts",
+  "session": "task-336-19-listing-filters-focused",
+  "probe": "listing-filters one-time wizard technical-input guard",
+  "rootCount": 1,
+  "sectionCount": 2,
+  "visibleSectionCount": 2,
+  "writablePaths": [
+    "listingQueryId",
+    "facets.0.kind",
+    "facets.0.sortOptions.0.field",
+    "facets.0.sortOptions.0.dir",
+    "facets.0.sortOptions.1.field",
+    "facets.0.sortOptions.1.dir"
+  ],
+  "controlsWithoutPath": 0,
+  "rawTechnicalInputCount": 0,
+  "passed": true,
+  "summary": {
+    "wizardPassed": true,
+    "status": "passed"
+  }
+}

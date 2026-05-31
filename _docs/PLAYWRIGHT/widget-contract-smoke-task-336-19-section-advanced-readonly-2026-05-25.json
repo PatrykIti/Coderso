@@ -1,0 +1,134 @@
+{
+  "generatedAt": "2026-05-25T13:03:14.216Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session task-336-19-section-final6 --widget section --admin http://localhost:5173/admin --front http://localhost:3000 --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-section-advanced-readonly-2026-05-25.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-section-advanced-readonly-2026-05-25.md --strict",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["section"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true,
+    "resolvedPlaywrightSession": "task-336-19-section-final6"
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "section",
+        "modes": [
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 7,
+            "visibleSectionCount": 7,
+            "writablePaths": [
+              "variant",
+              "heading.align",
+              "layout.containerWidth",
+              "layout.maxWidth",
+              "layout.paddingBlock",
+              "layout.paddingInline",
+              "layout.minHeight",
+              "layout.regionFlow",
+              "layout.regionColumns",
+              "layout.headingGap",
+              "layout.regionGap",
+              "style.borderWidth",
+              "style.radius",
+              "variant",
+              "heading.label",
+              "heading.title",
+              "heading.description",
+              "heading.level",
+              "heading.align",
+              "heading.labelSize",
+              "heading.titleSize",
+              "heading.descriptionSize",
+              "heading.labelColor",
+              "heading.titleColor",
+              "heading.descriptionColor",
+              "semantics.element",
+              "semantics.anchorId",
+              "semantics.ariaLabel",
+              "layout.containerWidth",
+              "layout.maxWidth",
+              "layout.minHeight",
+              "layout.regionFlow",
+              "layout.regionColumns",
+              "layout.paddingBlock",
+              "layout.paddingInline",
+              "layout.mobilePaddingBlock",
+              "layout.mobilePaddingInline",
+              "layout.desktopPaddingBlock",
+              "layout.desktopPaddingInline",
+              "layout.headingGap",
+              "layout.regionGap",
+              "style.backgroundColor",
+              "style.gradientFrom",
+              "style.gradientTo",
+              "style.gradientAngle",
+              "style.borderColor",
+              "style.borderWidth",
+              "style.radius",
+              "style.shadow",
+              "style.overlayColor",
+              "style.overlayOpacity",
+              "style.motion",
+              "style.backgroundMedia.type"
+            ],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "d37f900c-e8c2-4608-a71e-4a038300a048",
+        "adminPath": "http://localhost:5173/admin/pages/d37f900c-e8c2-4608-a71e-4a038300a048",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "section",
+        "publicPath": "/section-widget-test",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

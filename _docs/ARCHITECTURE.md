@@ -82,8 +82,18 @@ przez `setup.completed=true`.
 - W admin sidebar jest jeden nadrzedny modul techniczny: `Advanced`.
 - `Coderso` pozostaje nazwa produktu; nie jest nazwa grupy nawigacyjnej.
 - Domyslne moduly v1 (widoczne w sidebar):
-  - `Engine` (`/admin/advanced/engine`) - content model builder (content types + schema).
-  - `Entries` (`/admin/advanced/entries`) - wpisy rekordow typow z Engine.
+- `Engine` (`/admin/advanced/engine`) - content model builder (content types + schema).
+  - Collection workspace route:
+    `/admin/advanced/engine/:contentTypeId/collection`.
+- Admin breadcrumbs render through `AdminBreadcrumbs` in `TopBar`: screens
+  should pass terse label arrays, for example
+  `["Advanced", "Engine", "Collection"]` or `["Content", typeLabel, title]`.
+  Structured `{ label, href }` items are only needed when a crumb must override
+  the inferred route. Existing local breadcrumb JSX is normalized into clickable
+  admin links when labels map to known admin routes. Breadcrumb links must
+  continue to use `AdminLink` / admin route helpers instead of hand-built
+  anchors.
+- `Entries` (`/admin/advanced/entries`) - wpisy rekordow typow z Engine.
   - `Screens` (`/admin/advanced/custom-screens`) - custom admin screens z widgetow dla danych entry.
   - `Widgets` (`/admin/advanced/widgets`) - biblioteka widgetow i template editor.
   - `Forms` (`/admin/advanced/forms`) - lista i edytor formularzy.
@@ -252,7 +262,7 @@ Aktualny fundament asystenta (bez LLM) sklada sie z warstw:
 Przeplyw runtime:
 1. `assistantService` czyta official assistant corpus status z DB ingest tables.
 2. Runtime wykonuje retrieval na `assistant_doc_chunks`.
-3. Official assistant corpus w `docs/` jest uznawany za gotowy dopiero po seedzie do DB.
+3. Official assistant corpus w `docs/guide/` jest uznawany za gotowy dopiero po seedzie do DB.
 4. Gdy DB corpus nie jest gotowy, runtime zwraca stan `not ready`.
 5. `docsDbRetriever` stosuje ranking intent-aware: BM25 + section/path priors + metadata docs (`productArea`, `title`, `keywords`) + exact module/screen phrase boosts + cross-area penalties dla obcych domen.
 6. Confidence nie zalezy juz tylko od `topScore`; uwzglednia tez domain alignment, query coverage i score gap.
@@ -270,13 +280,13 @@ Przeplyw runtime:
 15. Response moze zawierac `followUpOptions[]`, ktore prowadza usera do kolejnego poziomu szczegolowosci lub trybu pomocniczego w tej samej tematyce.
 
 Przeplyw reindex:
-1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs`.
+1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs/guide`.
 2. Wyniki ingest trafiaja do `assistant_docs`, `assistant_doc_chunks`, `assistant_doc_ingest_runs`.
 3. Reindex wykonuje tez cleanup osieroconych rekordow `assistant_docs`, gdy plik
    zostal usuniety z aktualnego source root i nie powinien juz pozostawac w DB-only corpus.
 
 Zasady runtime:
-- Official assistant corpus korzysta z root `docs/` jako source-of-truth.
+- Official assistant corpus korzysta z root `docs/guide/` jako source-of-truth.
 - Seed do DB jest warunkiem gotowosci official assistant corpus.
 - Przy braku trafienia system zwraca `missing_answer` (bez halucynacji).
 
@@ -375,15 +385,34 @@ Zamiast tego:
 - Resource catalog snapshots now include bounded page summaries when the plan route
   requests server-side resource context; page data payloads stay out of the catalog.
 - `core/services/assistant/blueprints/businessBlueprintTypes.ts` defines the shared business blueprint pack contract used to wrap current catalog-family presets without changing their generated action plan output.
+- `core/services/assistant/blueprints/blueprintCapabilitySchema.ts` and `blueprintCapabilityRegistry.ts` now layer strict capability metadata on top of the current executable packs and adjunct/gated modules without introducing a second executor boundary.
+- `core/services/assistant/blueprints/blueprintCandidateResolver.ts`, `blueprintCompositionGraph.ts`, `blueprintConflictResolver.ts`, `blueprintSchemaMerger.ts`, `blueprintFacetMerger.ts`, `blueprintCardConfigMerger.ts`, `blueprintActionAssembler.ts`, `blueprintExistingResourceMatcher.ts`, `blueprintCompositionMetadata.ts`, and `blueprintCompositionDiagnostics.ts` provide the current `TASK-190` composition foundation: capability candidates, graph fragments, typed route/resource/field/media/permission conflict detection, validator-backed content schema merge, schema-backed listing facet/card merge, projection widening for required listing runtime fields, blocking gated-domain surfacing, catalog-backed existing-resource reuse, strict review diagnostics, internal redacted diagnostics serialization, and typed action assembly now keep supported multi-capability and primary-plus-gated setup requests on the composed planner path before provider drafting can bypass them. Single-pack setup/refinement still uses the existing legacy pack builders outside this bounded mixed-setup cutover.
+- `core/services/assistant/blueprints/blueprintPageSectionTypes.ts` and `blueprintPageSectionLibrary.ts` add the first `TASK-190-05` page-section layer: assistant-facing aliases/slots now resolve deterministically to existing page-builder widgets plus alias-specific `modulePackMatrix` helper mappings, unsupported aliases such as `steps` stay gated until a real widget/preset owner seam exists, and raw media URLs are rejected until the assistant has trusted media-library ids.
+- `core/services/assistant/blueprints/blueprintPageSectionComposer.ts` and the widened `page.upsert` contract add the next `TASK-190-05` slice: canonical collection pages now assemble listing/filter/form blocks through the existing widget owner, while `PageData.settings.collectionLink` persists canonical list-page linkage inside the current page owner seam for later workspace/no-duplicate leaves.
+- `core/services/assistant/blueprints/blueprintAdminSurfaceComposer.ts` adds the first `TASK-190-06` admin-surface slice: catalog admin review screens now merge deterministic admin groups into existing `screen-*` custom-screen blocks, validate referenced content schema fields, reject secret-like field references, and keep output on the current `custom-screen.upsert` `blocks` / `bindings` transport shape rather than adding an assistant-only layout schema.
+- `core/services/assistant/blueprints/blueprintBindingComposer.ts` adds the next `TASK-190-06` admin-surface slice: assistant-composed custom-screen bindings now validate existing `widgetId + propPath + field + mode` contracts against the composed content schema, reject unsafe/secret-like paths, and dedupe identical binding ids before handing payloads to the custom-screen owner seam. Canonical admin-screen metadata now lives as nullable top-level `collectionRole` / `compositionKey` fields on `custom_screens` and round-trips through custom-screen schemas, services, cached admin clients, resource catalog summaries, and `custom-screen.upsert` / `custom-screen.update`.
+- `core/services/content/detailPageTypes.ts`, `detailPageSchema.ts`, and the new `detail_page_documents` / `detail_page_revisions` tables add the persisted detail-page owner seam for `TASK-190-05-03`: strict normalized document storage, deterministic UUID-compatible ids, and the blocking `content_type_has_detail_pages` delete dependency are the source of truth consumed by generic detail-page resource packaging and no-duplicate reuse.
+- `core/services/content/detailPageDocumentService.ts` plus the executable `detail-page.upsert` contract extend that seam without introducing a second executor path: assistant dry-run/execute now persist strict detail-page documents, refresh advisory `contentTypeSlug` from the linked content type, and keep publish state owned by `DetailPageDocument.status`, while canonical route linkage remains owned by `setting.content-route.upsert.detailPageId`.
+- `core/server/routes/detailPageRoutes.ts` and `core/server/validation/detailPageSchemas.ts` now add the internal `/admin/api/detail-pages*` detail-page boundary for `TASK-190-05-03-07-01`: list/detail/create/update/delete, preview, publish/unpublish, autosave, revision list/restore, and autosave discard routes stay orchestration-only at the route layer, filter by stable `contentTypeId` where applicable, surface linked-route delete conflicts through `mapDetailPageError`, and keep route linkage outside the detail-page route family.
+- `core/services/content/detailPageRevisionService.ts` now owns detail-page revision list/restore/discard behavior for `TASK-190-05-03-07-01-03`: restore rewrites only `currentDocument`, keeps publish state on the dedicated lifecycle routes, and autosave discard is the only allowed revision delete path.
+- `core/services/assistant/blueprints/blueprintProviderContext.ts` and `blueprintCompositionDraftSchema.ts` add bounded provider-side capability summaries plus a strict capability-id draft schema for shadow/dev use, while the production provider contract for generic CMS/admin planning stays `cms_operation_draft`.
+- `core/services/assistant/blueprints/blueprintComposerShadow.ts` runs candidate-vs-current-plan comparisons behind a test/local env gate; it can surface diagnostics in planner metadata for QA, but it remains metadata-only and does not execute the composition graph/assembler itself.
 - `core/services/assistant/blueprints/leadCaptureBlueprint.ts` provides a lead-capture pack that creates a public inquiry form and a simple landing page through existing `form.upsert` and block-backed `page.upsert` actions.
 - `core/services/assistant/blueprints/bookingServiceBlueprint.ts` registers a gated booking pack (`requires-prerequisite`) that returns typed questions instead of creating booking resources until booking action adapters exist.
 - `core/services/assistant/blueprints/productInquiryBlueprint.ts` provides an executable product inquiry catalog pack and a gated checkout/payment needs-input path.
 - `core/services/assistant/blueprints/editorialContentHubBlueprint.ts` provides an editorial hub page with a posts-feed widget and does not create or mutate post records.
+- The current composition cutover is intentionally bounded to existing packs/modules. Capability manifests may already describe latent `detail-page` intent, and the landed `TASK-190` slices already cover persisted detail-page storage, published runtime rendering, shared preview handling, typed `detail-page.upsert`, the internal detail-page admin route family, admin client/cache parity, detail-page fixture/runtime acceptance, admin-screen layout composition, custom-screen binding/metadata safety, the collection-workspace route/read/cache/UI shell, the manual detail-template editor, assistant follow-up context for the workspace/detail-page surface, catalog-backed no-duplicate DB reuse, strict `metadata.blueprintComposition` review diagnostics, and generic assistant `detail-page` resource packaging through policy/provider/target-resolver seams.
+- `_docs/BLUEPRINT_COMPOSER.md` is the authoring guide for future capability ids,
+  stable resource keys, `provides`/`requires`, merge policies, fixtures,
+  security checklist, and diagnostics expectations. New capability work should
+  update that guide when the authoring contract changes.
+- Generic `detail-page` CMS operation drafts are resource-context only: provider guidance may describe the resource, target resolution accepts trusted catalog ids, stable `contentTypeId`, exact route/content-type linkage, or active detail-page surface identity, and generic mutations are policy-gated instead of creating a second executor path. Executable detail-page writes continue to come from the local composed-plan assembler through the strict `detail-page.upsert` action contract.
 
 Resource catalog context:
 - `POST /assistant/actions/plan` moze otrzymac `context.includeResourceCatalog=true`.
 - Route enrichuje wtedy context o `resourceCatalog` z:
   - content types,
+  - bounded detail-page summaries,
   - entries,
   - posts,
   - custom screens,
@@ -395,6 +424,10 @@ Resource catalog context:
   - solution kit summaries,
   - existing SEO documents,
   - widgets/templates.
+- `detail-page` summaries are also exposed through generic provider planning
+  packages as bounded catalog data. Matching prefers stable `contentTypeId` and
+  exact ids; route-facing slugs/linked route types are compatibility labels and
+  free-text detail-page names do not resolve mutation targets.
 - Snapshot jest schema-versioned, deterministic, limitowany budzetem i redaguje secret-like keys.
 - Docs-only chat nie hydratuje resource catalogu i pozostaje docs-corpus driven.
 
@@ -426,6 +459,7 @@ Planner schema/recovery:
   drafts cannot become executable actions. Provider drafts are not repaired into
   valid drafts after TASK-189-05.
 - `core/services/assistant/providerPlanningContext.ts` owns the bounded/redacted provider planning prompt package. It packages prompt text, docs evidence, advisory runtime context, resource catalog summaries, and model-capability output contracts for provider planning calls.
+- Provider planning packages now also include bounded blueprint capability summaries for setup/composer shadow evaluation, but provider adapters still request `cms_operation_draft` for the current production planning path.
 - Provider planning packages are passed through `assistantRedaction.ts` before the provider boundary.
 - `planAssistantActionsWithProviderDraft` is the async helper for controlled
   provider operation-draft planning. It requires injected provider availability,
@@ -500,7 +534,7 @@ Action family contract registry:
 - `page.update` edits active page title/slug/draft-published status and page-owned settings while preserving unrelated page data and blocks.
 - `page.widget.patch` supports selected block `patch-data` for existing data paths and preserves unrelated blocks/slots.
 - `widget-template.update` edits reusable template metadata/settings; `widget-template.block.patch` patches selected reusable template block data paths and preserves unrelated blocks/settings.
-- `custom-screen.update` edits custom screen metadata/sidebar/binding mode; `custom-screen.widget.patch` patches selected custom screen widget block data paths while preserving unrelated blocks/bindings.
+- `custom-screen.update` edits custom screen metadata/sidebar/canonical collection-link metadata/binding mode; `custom-screen.widget.patch` patches selected custom screen widget block data paths while preserving unrelated blocks/bindings.
 - `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update`, and `seo.document.update` cover remaining domain resource edits through existing domain services and preserve unrelated fields/config/tree items.
 - `menu.item.upsert` is executable and uses existing menu services to upsert safe relative navigation links without duplicating items on re-execution.
 - `seo.document.upsert` is executable and uses existing SEO services for explicit page/entry targets.
@@ -515,6 +549,47 @@ Action family contract registry:
 
 Aktualnie zaimplementowany business setup surface:
 - executable catalog-family packs tworza content type, custom screen, listing query, listing template, public catalog page i public detail routes,
+- canonical content-route ownership stays in `site.contentRoutes`; route rows may
+  now carry optional `detailPageId` metadata as the structural link to one
+  detail-page document, and the public runtime consumes that link through the
+  dedicated detail-page runtime resolver,
+- Engine collection workspace reads begin at
+  `GET /admin/api/content-types/:id/collection-workspace`. The server-owned
+  summary is bounded and separates `canonical`, `linkedSecondary`,
+  `unresolved`, and `candidates` buckets. Canonical content route, route-linked
+  detail template, explicit canonical list page, page-linked listing query /
+  template, and canonical admin screen now resolve from their current owner
+  seams; missing/ambiguous links stay unresolved with bounded candidates, and
+  `settings:read` gates route-derived canonical data. Admin access to that
+  summary stays under the existing content-types client/cache family through
+  `contentTypes:collectionWorkspace:<contentTypeId>`, and the
+  `/advanced/engine/:contentTypeId/collection` shell owns only route-local
+  refresh/pending UX,
+- the collection workspace is a navigation hub for canonical resources, not a
+  second owner for every resource type: detail-template create/delete remains
+  workspace-owned because it links `site.contentRoutes.detailPageId`, while
+  canonical list pages, listing queries, listing templates, admin screens, and
+  route settings link to their existing Pages, Listings, Custom Screens, and
+  Settings owner surfaces,
+- canonical detail templates can be opened from that workspace at
+  `/admin/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`.
+  The editor stays in the content-types admin family, reuses the existing
+  page-builder shell/components, warms the detail-page record plus bounded
+  sample entries through shared admin prefetch, and delegates save/autosave,
+  preview, publish/unpublish, and revision lifecycle to `detailPagesClient.ts`,
+- assistant follow-up context for the collection workspace stays in the existing
+  admin-context pipeline: `useAssistantAdminContext.ts` emits only
+  `collectionWorkspaceHint`, the detail-template editor publishes
+  `activeSurface.kind = "detail-page"` through `activeSurfaceContext.ts`, and
+  `assistantRoutes.ts` / `activeSurfaceHydration.ts` hydrate the bounded
+  server-owned `collectionWorkspace` summary plus detail-page identity before
+  provider packaging. Browser-owned workspace summaries are rejected, stale
+  detail-page ids drop to `null`, and `detail-page` planning context requires
+  `content:read` plus `widgets:read`,
+- published content routes that carry `detailPageId` now resolve normalized
+  detail-page documents and render them through the current page-builder
+  runtime shell; missing links continue to fall back to the legacy
+  `renderPublicEntry.tsx` detail renderer,
 - lead capture oraz product inquiry packs moga tworzyc public inquiry forms przez istniejacy Forms runtime,
 - portfolio case-study pack dodaje result/testimonial fields,
 - editorial content hub tworzy public hub page z `posts-feed` bez mutowania post records,
@@ -1260,7 +1335,7 @@ Pierwsza wersja core musi zawierac podstawowe widgety, ktore pozwalaja
 zbudowac pelnoprawna, zaawansowana strone (np. typu mabudo.pl):
 
 - hero section
-- timeline (bez dat; etapy/proces w formie osi)
+- timeline (proces, milestones, i datowane wydarzenia na osi)
 - compare timeline (porownanie dwoch procesow na jednej osi)
 - newsletter
 - kontakt
@@ -1271,8 +1346,11 @@ Wymagany model konfiguracji (dla wszystkich widgetow, pluginow i addonow):
 - Wizard: kreator pytan, wybor wariantu i szybka konfiguracja.
 - Visual: glowny tryb edycji content/style, warianty + sekcje wizualne;
   widget moze przejac wariant selector (`visualOwnsVariantSelection`).
-- Advanced: tryb techniczny (spacing/layout/responsive + pola eksperckie),
-  bez duplikowania podstawowych pol z Visual.
+  Block-level layout/visibility controls also live in Visual as daily
+  authoring controls.
+- Advanced: read-only diagnostics/support summaries and explicitly confirmed
+  support actions only; it must not duplicate Visual layout/style/visibility
+  controls as writable fields.
 - Zawsze mozna przejsc do Advanced po wstepnej konfiguracji.
 
 Composite-first delivery (Coderso):

@@ -33,7 +33,7 @@ Wymagane:
 - Spacer (kontrolowany pionowy rytm i odstepy miedzy sekcjami)
 - Divider (wizualny separator sekcji z opcjonalnym podpisem)
 - Hero section
-- Timeline (bez dat; etapy/proces w formie osi)
+- Timeline (proces, milestones, i datowane wydarzenia na osi)
 - Compare timeline (porownanie dwoch procesow na jednej osi)
 - Newsletter signup
 - Kontakt (formularz + dane kontaktowe)
@@ -63,26 +63,231 @@ Kazdy widget musi wspierac 3 tryby konfiguracji:
 2) Visual (warianty + podglad)
 - Uzytkownik wybiera wariant na podstawie podgladu.
 - To jest glowny tryb codziennej edycji:
-  - content i CTA
-  - media
+  - content i CTA przez przyjazne pola oraz pickery stron/linkow
+  - media przez biblioteke mediow i czytelne stany zastap/wyczysc
   - typography
   - colors/borders/background
 - Widget moze przejac kontrole nad selektorem wariantu (bez generycznego duplikatu)
   przez `editorCapabilities.visualOwnsVariantSelection = true`.
-- Core widgets `hero`, `navigation`, `footer` i `timeline` uzywaja tego podejscia i renderuja
-  sekcyjny Visual IA zamiast generycznej listy wariantow.
+- Core widgets `hero`, `navigation`, `footer`, `timeline`, `section`, `tabs`,
+  `accordion`, `toggle-block`, `grid-columns`, `split-layout`, `stack`,
+  `spacer`, `divider`, `template-section`, `feature-grid`, `testimonials`,
+  `pricing-plans`, `faq-accordion`, `cta-banner`, `logo-cloud`,
+  `gallery-mosaic`, `stats-kpi`, `team`, `rich-text-section`, `compare-timeline`,
+  `content-list`, `posts-feed`, `entry-teaser`, `product-gallery`,
+  `product-compare`, `product-table`, `listing-filters`, `search-box`,
+  `newsletter`, `booking-calendar`, `appointment-form`, `form-embed`, and
+  `contact` already render sectioned Visual IA instead of the generic variant
+  list.
 
 3) Advanced
 - Tryb ekspercki/techniczny:
-  - spacing, marginesy, alignment, layout, responsywnosc
-  - surowe pola techniczne
-  - bez duplikowania podstawowych pol content/style z Visual.
+  - diagnostyka, znormalizowany payload i techniczne podsumowania
+  - bez widocznego proszenia nietechnicznego uzytkownika o CSS, klasy, tokeny
+    albo inne webdeveloperskie wartosci tekstowe
+  - bez duplikowania podstawowych pol content/style/layout z Visual.
 - Tryb zaawansowany dostepny zawsze po wstepnej konfiguracji.
 
 Zasady:
 - Kazdy tryb mapuje do tego samego modelu danych.
 - Uzytkownik moze w kazdej chwili przelaczyc sie na Advanced.
 - Przejscie do Advanced nie resetuje danych.
+- Prawy inspector utrzymuje kompaktowy naglowek zaznaczonego widgetu; stale
+  helper copy nad zakladkami jest zastapione ikonami `Info`, a duze karty
+  informacyjne sa zarezerwowane dla blokujacych ostrzezen.
+- Tryby `Visual` i `Advanced` preferuja jedna opcje na linie. Responsywne
+  wielokolumnowe grupy kontroli sa redukowane do jednego stosu, aby etykiety i
+  inputy nie nachodzily na siebie w prawym inspectorze.
+- Tryby edytora emituja stabilne metadane automatyzacyjne:
+  `data-widget-editor`, `data-widget-editor-mode`,
+  `data-widget-editor-section`, `data-widget-editor-section-role`,
+  `data-widget-control`, `data-widget-control-path`,
+  `data-widget-control-ownership`, i `data-widget-control-readonly`.
+- `data-widget-control-path` oznacza sciezke persisted danych tylko wtedy, gdy
+  row realnie ja edytuje albo pokazuje jako read-only summary. Playwright i
+  Vitest licza writable ownership po `data-widget-control-path` z
+  `data-widget-control-readonly != "true"`.
+- Widgety z `slots` lub nested content przenosza kontrole struktury do nazwanej
+  sekcji `Visual` albo `Advanced`; nie wracamy do top-of-panel slot banners nad
+  zakladkami.
+- Deklaratywny `editorContract.version = 2` opisuje wspolny kontrakt
+  `wizard` / `visual` / `advanced`: lista sekcji, role IA, sciezki zapisu,
+  sciezki read-only i tymczasowe dopuszczenia duplikatow. Kontrakt nie
+  zastepuje komponentow `editor.*`, tylko jest testowalnym ownerem UX i danych.
+  W trakcie TASK-336 brak kontraktu jest dopuszczony w trybie migracyjnym, ale
+  walidacja strict musi byc wlaczona przed zamknieciem programu.
+- Powtarzalne kolekcje moga uzywac wildcard segmentu w kontrakcie, np.
+  `items.*.label`, podczas gdy DOM konkretnego kontrolera emituje indeksowana
+  sciezke `items.0.label`. Wildcard jest dozwolony tylko jako caly segment
+  sciezki.
+- `Wizard` nie powinien byc wlascicielem sciezek stylu/layoutu; `Visual`
+  wlada contentem i wygladem, a `Advanced` ogranicza sie do technicznych,
+  layoutowych i diagnostycznych ustawien. Sekcje diagnostyczne w `Advanced` sa
+  read-only.
+- Shared block-level `layout.*` i `visibility.devices.*` sa codziennymi
+  kontrolami w `Visual`, z wlasnym `data-widget-control-path`. `Advanced`
+  pokazuje dla nich tylko read-only summaries, zeby nie tworzyc drugiego
+  edytora layout/visibility pod diagnostyka.
+- `Wizard` jest one-time setup surface. Nowy lub jawnie ponownie otwarty widget
+  startuje w `Wizard`; po ukonczeniu setupu shell pokazuje read-only summary
+  `Setup complete`, codzienne zakladki `Visual` i `Advanced`, oraz akcje
+  `Run setup again`. `Wizard` nie jest stalym peer tabem po completion, a
+  ponowne uruchomienie setupu nie resetuje danych widgetu.
+- Persisted legacy blocks without `editor` state are normalized as setup
+  complete and open in daily `Visual`; only newly inserted widgets or explicit
+  `wizardCompleted=false` blocks enter `Wizard`.
+- Layout widgets (`section`, `grid-columns`, `split-layout`, `stack`, `spacer`,
+  `divider`) stosuja po TASK-336-14 zaostrzona polityke: `Wizard` jest
+  setup-only, `Visual` wlada codziennymi layout/style controls przez presety,
+  swatche, selecty i slidery, a `Advanced` pokazuje read-only summaries oraz
+  bezpieczne support summaries. Po TASK-336-19 `split-layout` nie pokazuje juz
+  widocznych developer-facing saved-data snapshots ani runtime implementation
+  labels w `Advanced`. Dopuszczalne legacy compatibility hooks musza byc
+  `hidden`, `aria-hidden`, bez tab focusu i nie moga byc widocznym kontraktem
+  UX.
+- `tabs` po TASK-336-19 stosuje ten sam beginner-safe kontrakt: Visual kolory
+  sa swatch-only bez widocznych raw CSS/token text inputs, Advanced pokazuje
+  tylko human summaries zamiast JSON/ID/suffix payloadow, a legacy
+  `triggerOverflow: "scroll"` normalizuje sie do zawijania, bo Tabs nie sa
+  zatwierdzonym publicznym regionem poziomego scrolla.
+- `accordion` po TASK-336-19 stosuje ten sam kontrakt: Visual nie nadpisuje
+  Wizard-owned `defaultOpenIds` przy zmianie trybu otwierania, kolory sa
+  swatch-only bez raw token inputow, a Advanced pokazuje behavior/item/display
+  summaries zamiast JSON payloadow i technicznych DOM id suffixow.
+- `content-list` po TASK-336-19 ma page-first `View all` destination picker,
+  truthful helper-search metadata, swatch-only color controls, Visual-owned
+  daily filters/presentation/pagination, oraz Advanced-only human summaries
+  bez raw JSON, runtime payloadow, internal IDs lub raw path guidance.
+- `search-box` po TASK-336-19 nie pokazuje juz endpointow, query-param names,
+  raw CSS/token inputs ani JSON runtime payloadow zwyklemu autorowi. Wizard
+  wybiera source i page-first results destination, Visual zarzadza copy,
+  interaction i swatches, a Advanced pokazuje human support diagnostics bez
+  raw provider/query values.
+- `listing-filters` po TASK-336-19 usuwa raw facet ID, field path, option
+  value, sort value, raw CSS/token inputs i JSON runtime payload z normalnego
+  authoringu. Wizard wybiera listing query, facet kind, query field i sort
+  direction przez pickery; option/data match values oraz hierarchy keys sa
+  support-owned. Visual edytuje labels/layout/presentation/swatches, a Advanced
+  pokazuje human runtime/source summaries.
+- `product-table` po TASK-336-19 ma wykrywalne `data-widget-control-path`
+  metadata na prawdziwych kontrolkach Wizard/Visual, Wizard preview jest
+  osobna sekcja kontraktu, a Advanced pokazuje human runtime/source summaries
+  zamiast raw query JSON lub payload dumpow.
+- `form-embed` po TASK-336-19 zachowuje Wizard-only form selection, ale Visual
+  pokazuje form preview jako summary, kolory sa swatch-only bez raw CSS/token
+  inputow, a Advanced zastapil normalized payload snapshot human runtime,
+  security, authoring i contract summaries bez raw endpointow/form ID/API
+  scope copy.
+- `booking-calendar` i `appointment-form` po TASK-336-19 nie prosza juz autora
+  o wpisywanie flow key, endpointow, raw URL-i ani BCP-47 locale tekstem.
+  Wizard wybiera/paruje booking flow pickerem, Visual uzywa presetow jezyka,
+  swatch-only kolorow i page-first destination pickerow, a Advanced pokazuje
+  read-only route/security/runtime summaries. Domyslne style nie seeduja juz
+  CSS-tokenow do danych; runtime korzysta z theme fallbackow do czasu wyboru
+  konkretnych swatchy.
+- Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
+  `feature-grid`, `testimonials`, `pricing-plans`, `faq-accordion`,
+  `cta-banner`, `logo-cloud`, `gallery-mosaic`, `rich-text-section`,
+  `entry-teaser`, `product-gallery`, `product-compare`, `timeline`,
+  `compare-timeline`, `newsletter`, `contact`, `navigation`, `footer`) now
+  export v2 contracts. The contract target is beginner-safe: Wizard is
+  setup-only, Visual owns daily content/appearance/behavior controls, and
+  Advanced diagnostics are read-only. Known UI drift where legacy editors still
+  expose raw CSS/JSON/HTML/IDs/technical URLs or writable Advanced controls is
+  routed to TASK-336-19 rather than hidden behind broad allowlists.
+- Normal media/image authoring in Wizard/Visual uses asset pickers instead of
+  raw image URL text inputs. Legacy external image URLs may remain in persisted
+  data for backward compatibility, but the editor presents them as read-only
+  replace/clear state and asks the user to pick a Media Library asset for
+  future changes.
+- Normal link destination authoring in Wizard/Visual is page-first. Navigation,
+  CTA Banner, Logo Cloud, Feature Grid, and Testimonials use the shared
+  destination picker to select published CMS pages while preserving existing
+  `href` strings. Legacy custom, hash, or external destinations remain
+  backward-compatible read-only replace/clear state in beginner modes instead
+  of editable raw URL/path inputs.
+- Contact map/social authoring follows the same beginner-safe rule. Visual asks
+  for a public map location/address or a known social profile name/handle and
+  builds the stored string destination itself; legacy custom sources remain
+  replace/clear state, and Advanced reports map metadata read-only.
+- Advanced cleanup slices convert second-editor controls into diagnostics.
+  FAQ Accordion Advanced is now read-only human runtime/style/saved-data
+  summaries with no raw payload snapshot or repair mutation. Newsletter Wizard
+  is now one-time/read-only after setup, Visual owns daily copy/Form/style
+  authoring with swatch-only colors, and Advanced reports human signup
+  readiness/authoring-boundary summaries with no payload normalization action.
+  Navigation layout/sticky/collapse controls live in Visual and
+  Advanced reports summaries only. CTA Banner style-token controls and Stats
+  KPI runtime style summaries are read-only diagnostics in Advanced, while
+  Visual uses swatch-only color controls plus clear actions where values are
+  clearable.
+- Feature Grid follows the same TASK-336-19 contract: Wizard stays setup-only,
+  Visual owns card copy/media/actions/layout and swatch-only colors with
+  explicit control-path metadata, and Advanced shows read-only layout/content/
+  presentation summaries without raw JSON payloads or normalization actions.
+- Logo Cloud follows the same TASK-336-19 contract: Wizard is now read-only
+  overview for current layout/count; Visual owns layout changes, logo images,
+  accessible descriptions, destinations, CTA, motion, tile presentation, and
+  swatch-only colors; Advanced shows read-only human diagnostics without raw
+  JSON payloads, CSS-token text inputs, or normalize/reset mutations.
+- Newsletter Visual follows the beginner-safe integration rule: Coderso Forms
+  are chosen from a Form picker, field mapping is selected from Form fields or
+  shown as safe defaults, and older external signup-service metadata is
+  summarized rather than edited as raw technical text. It also uses color
+  swatches plus clear/saved-custom summaries instead of raw CSS/token text
+  inputs.
+- Commerce widget authoring follows the same picker-first rule. Product Gallery
+  and Product Compare use collection/product/page pickers for normal
+  Wizard/Visual flows; raw product IDs, fallback collection IDs, route-prefix
+  strings, minor-unit price wording, raw color token inputs, raw media-ID
+  hints, and raw query JSON are not beginner-mode inputs. Existing saved
+  technical values remain backward-compatible and are summarized in Advanced
+  diagnostics.
+- Publiczny runtime nie moze ukrywac overflow globalnym clippingiem ani
+  dowolnym `data-overflow-intentional`. Celowy poziomy scroll jest dozwolony
+  tylko dla zatwierdzonych regionow produktowych z widoczna wskazowka,
+  focusowalnym kontenerem i allowlista w Playwright smoke. Obecnie zatwierdzone
+  sa: `testimonials` slider, `pricing-plans` comparison rows,
+  `product-compare` table i `product-table` table. Pozostale overflow jest
+  traktowane jako regresja layoutu.
+
+### Layout widget Advanced token policy
+
+| Widget | Visual owns | Advanced shows |
+|---|---|---|
+| `section` | variant, heading, semantics/anchor, width, spacing, surface, borders, background media | read-only layout/surface/semantics summaries and normalized payload |
+| `grid-columns` | variant, column structure/labels/spans, gaps, cardized surface, per-column behavior | read-only span totals, slot drift, cardized state, override summary, normalized payload |
+| `split-layout` | starter layout, pane ratio, phone layout, spacing, alignment, slot guidance | read-only human split/phone/spacing/alignment diagnostics and saved layout summary without developer-facing implementation labels |
+| `stack` | guidance-only Wizard slot framing; preset choice plus responsive direction, spacing, alignment, distribution, and wrapping in Visual | read-only runtime stack and support summaries without raw payload snapshots |
+| `spacer` | height presets and editor guide | read-only runtime spacing and support summaries without raw payload snapshots |
+| `divider` | variant/label, line, width presets, color swatch, spacing presets | read-only runtime divider and support summaries without raw payload snapshots |
+
+## Detail Template Content Bindings
+
+Detail templates moga mapowac wybrane sciezki propsow widgetu do danych wpisu
+przez `DetailPageDocument.bindings`. Prawy inspector detail template ma zakladke
+`Data`, ktora zapisuje bindingi dla zaznaczonego bloku.
+
+Detail template tworzy sie z workspace kolekcji:
+`Advanced -> Engine -> <content type> -> Collection -> Canonical resources`.
+Z edytora content type (`/admin/advanced/engine/:id`) prowadzi tam akcja
+`Collection workspace`.
+Karta `Detail page` pokazuje akcje `Create detail template`, gdy kolekcja nie
+ma jeszcze route-linked detail template. Akcja tworzy draft `DetailPageDocument`,
+podpina go do `site.contentRoutes.detailPageId`, odswieza workspace i otwiera
+ten sam builder-style edytor co route-linked detail template. Usuniecie z tej
+karty najpierw odpina `detailPageId` z route, a potem usuwa dokument.
+
+Zasady:
+
+- literalne `block.data` pozostaje defaultem i fallbackiem widocznym w edytorze;
+- runtime publicznego detail page nadpisuje tylko te propsy, ktore maja binding
+  w `document.bindings`;
+- zrodlem moga byc pola content type, bezpieczne entry meta (`title`, `slug`,
+  `publishedAt`, `author`) albo istniejace computed resolvery detail-page;
+- bindingi sa obslugiwane przez istniejacy `resolveDetailPageBlocks`, bez
+  osobnej warstwy runtime dla widgetow;
+- zwykle Pages nie dostaja automatycznego content-type bindingu w tym kontrakcie.
 
 ---
 
@@ -104,9 +309,16 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/_WIDGETS/TESTIMONIALS.md`
 - `_docs/_WIDGETS/PRICING_PLANS.md`
+- `_docs/_WIDGETS/PRODUCT_GALLERY.md`
+- `_docs/_WIDGETS/PRODUCT_COMPARE.md`
+- `_docs/_WIDGETS/PRODUCT_TABLE.md`
 - `_docs/_WIDGETS/RICH_TEXT_SECTION.md`
 - `_docs/_WIDGETS/CONTENT_LIST.md`
+- `_docs/_WIDGETS/LISTING_FILTERS.md`
+- `_docs/_WIDGETS/SEARCH_BOX.md`
 - `_docs/_WIDGETS/ENTRY_TEASER.md`
+- `_docs/_WIDGETS/BOOKING_CALENDAR.md`
+- `_docs/_WIDGETS/APPOINTMENT_FORM.md`
 - `_docs/_WIDGETS/FORM_EMBED.md`
 - `_docs/_WIDGETS/SCREEN_RECORD_HEADER.md`
 - `_docs/_WIDGETS/SCREEN_FIELD_VALUE.md`
@@ -116,6 +328,9 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/SECTION.md`
 - `_docs/_WIDGETS/TEMPLATE_SECTION.md`
 - `_docs/_WIDGETS/GRID_COLUMNS.md`
+- `_docs/_WIDGETS/TABS.md`
+- `_docs/_WIDGETS/ACCORDION.md`
+- `_docs/_WIDGETS/TOGGLE_BLOCK.md`
 - `_docs/_WIDGETS/STACK.md`
 - `_docs/_WIDGETS/SPLIT_LAYOUT.md`
 - `_docs/_WIDGETS/SPACER.md`
@@ -136,11 +351,11 @@ Use `none` only for visual styling controls that can be disabled:
 
 | Token family | Widgets and fields |
 |---|---|
-| Layout gap/spacing/padding | `stack.gap.*`, `splitLayout.gap`, `gridColumns.layout.gapX/gapY`, `gridColumns.style.columnPadding`, `screenTwoColumn.gap`, `statsKpi.style.spacing`, `featureGrid.style.gap`, `contentList.style.gap`, `postsFeed.style.gap`, `galleryMosaic.style.gap`, `pricingPlans.style.spacing`, `faqAccordion.style.spacing`, `team.style.gap`, `testimonials.style.spacing`, `contact.style.spacing`, `newsletter.style.spacing`, `ctaBanner.style.padding`, `logoCloud.style.gap`, `richTextSection.style.spacing`, `timeline.layout.spacing`, `compareTimeline.layout.trackSpacing` |
+| Layout gap/spacing/padding | `stack.gap.*`, `splitLayout.gap`, `gridColumns.layout.gapX/gapY`, `gridColumns.style.columnPadding`, `screenTwoColumn.gap`, `statsKpi.style.spacing`, `featureGrid.style.gap`, `contentList.style.gap`, `postsFeed.style.gap`, `galleryMosaic.style.gap`, `pricingPlans.style.spacing`, `faqAccordion.style.spacing`, `team.style.gap`, `testimonials.style.spacing`, `contact.style.spacing`, `newsletter.style.spacing`, `ctaBanner.style.padding`, `logoCloud.style.gap`, `richTextSection.style.spacing`, `timeline.layout.spacing/padding/sectionSpacing`, `compareTimeline.layout.trackSpacing` |
 | Vertical utility rhythm | `divider.marginTop/marginBottom`, `spacer.height.desktop/tablet/mobile` |
 | Radius | `hero.style.borderRadius/mediaRadius`, `entryTeaser.style.radius`, plus existing radius fields on `section`, `ctaBanner`, `featureGrid`, `galleryMosaic`, `pricingPlans`, `team`, and `gridColumns` |
-| Width and size | `hero.layout.maxWidth/contentWidth`, `navigation.layout.maxWidth`, `footer.layout.maxWidth`, `formEmbed.layout.width`, `logoCloud.style.logoHeight`, `formEmbed.style.inputSize`, `hero.style.primaryButtonSize/secondaryButtonSize` |
-| Typography | `hero.style.headlineSize/subheadSize/bodySize`, `navigation.style.fontSize/fontWeight`, `footer.style.fontSize`, `richTextSection.style.fontScale/lineHeight`, `timeline.style.titleSize/descriptionSize`, `compareTimeline.style.trackLabelSize/stepLabelSize/segmentLabelSize` |
+| Width and size | `hero.layout.maxWidth/contentWidth`, `navigation.layout.maxWidth`, `footer.layout.maxWidth`, `formEmbed.layout.width`, `timeline.layout.maxWidth`, `logoCloud.style.logoHeight`, `formEmbed.style.inputSize`, `hero.style.primaryButtonSize/secondaryButtonSize` |
+| Typography | `hero.style.headlineSize/subheadSize/bodySize`, `navigation.style.fontSize/fontWeight`, `footer.style.fontSize`, `richTextSection.style.fontScale/lineHeight`, `timeline.style.titleSize/titleWeight/descriptionSize`, `compareTimeline.style.trackLabelSize/stepLabelSize/segmentLabelSize` |
 
 Legacy numeric zero values remain backward compatible where they already existed
 and continue to render as zero spacing. Do not add `none` to structural choices
@@ -168,6 +383,10 @@ Widget editors must remove keys for clear actions and must not serialize
 `transparent` or an empty string as an off-state sentinel. Renderers should
 normalize clearable surface values through the shared clearable-style helpers and
 compact omitted style keys before output.
+
+Shared clearable inputs may also emit bounded undo feedback when the helper can
+restore the exact prior value. That undo path is editor-only feedback and must
+not persist extra sentinel state into widget JSON.
 
 ---
 
@@ -562,11 +781,19 @@ Katalog zawiera podstawowe metadata:
 - Count selectors w Wizard musza odpowiadac liczbie widocznych repeatable rows
   albo jawnie ograniczac zakres quick setup.
 - Routine rich text setup uzywa structured `body.blocks` i sanitizer-owned
-  output mode; raw HTML pozostaje sciezka Visual/Advanced.
+  output mode; raw HTML nie jest authoringiem w Advanced, a dzienna edycja
+  przechodzi przez Visual rich-text/structured controls.
 - Product widget collection selection korzysta z cached collection picker, z
   fallbackiem na jawne collection IDs tylko dla technicznej kompatybilnosci.
 - Media picker w Gallery Mosaic zapisuje tylko schema-owned, public-runtime-safe
   dane, a nie prywatne rekordy admin cache.
+- Gallery Mosaic Visual uses media/page pickers for image, video, poster, and
+  destination authoring. Saved legacy URLs remain visible only as
+  replace-or-clear compatibility state; new defaults must not seed fake
+  destinations such as `href: "#"`.
+- Pricing Plans Wizard and Visual use page-first destination pickers for plan
+  CTAs and swatch-first color controls for pricing surfaces/highlights.
+  Defaults must not seed fake CTA destinations such as `href: "#"`.
 
 ---
 

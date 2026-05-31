@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -28,13 +28,9 @@ vi.mock("@/components/ui/table", () => ({
 }));
 
 vi.mock("@/components/ui/badge", () => ({
-  Badge: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <span data-badge-class={className}>{children}</span>,
+  Badge: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span data-badge-class={className}>{children}</span>
+  ),
 }));
 
 vi.mock("@/components/ui/checkbox", () => ({
@@ -126,14 +122,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -148,7 +144,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -182,24 +178,24 @@ test("PageTable renders empty state and custom message", async () => {
 
 test("PageTable renders fallback status, author, and date values", async () => {
   const { PageTable } = await import("../../../core/admin/ui/pages/PageTable");
-  const dateSpy = vi
-    .spyOn(Date.prototype, "toLocaleDateString")
-    .mockImplementation(() => {
-      throw new Error("date failed");
-    });
+  const dateSpy = vi.spyOn(Date.prototype, "toLocaleDateString").mockImplementation(() => {
+    throw new Error("date failed");
+  });
 
   const view = mount(
     <PageTable
-      items={[
-        {
-          id: "page-1",
-          title: "Landing",
-          slug: "/landing",
-          status: "custom_status",
-          updatedAt: "2026-03-06T12:00:00.000Z",
-          author: null,
-        },
-      ] as never}
+      items={
+        [
+          {
+            id: "page-1",
+            title: "Landing",
+            slug: "/landing",
+            status: "custom_status",
+            updatedAt: "2026-03-06T12:00:00.000Z",
+            author: null,
+          },
+        ] as never
+      }
       onEdit={() => undefined}
       onPreview={() => undefined}
       onPublish={() => undefined}
@@ -227,16 +223,18 @@ test("PageTable wires controlled selection state", async () => {
 
   const view = mount(
     <PageTable
-      items={[
-        {
-          id: "page-1",
-          title: "Landing",
-          slug: "/landing",
-          status: "draft",
-          updatedAt: "2026-03-06T12:00:00.000Z",
-          author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
-        },
-      ] as never}
+      items={
+        [
+          {
+            id: "page-1",
+            title: "Landing",
+            slug: "/landing",
+            status: "draft",
+            updatedAt: "2026-03-06T12:00:00.000Z",
+            author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
+          },
+        ] as never
+      }
       selectedIds={["page-1"]}
       isAllSelected={false}
       isIndeterminate={true}
@@ -255,7 +253,7 @@ test("PageTable wires controlled selection state", async () => {
     expect(checkboxes[0]?.getAttribute("data-indeterminate")).toBe("true");
     expect((checkboxes[1] as HTMLInputElement | undefined)?.checked).toBe(true);
 
-    act(() => {
+    React.act(() => {
       (checkboxes[0] as HTMLInputElement | undefined)?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
@@ -330,16 +328,18 @@ test("PageTable omits delete action when onDelete is not provided", async () => 
 
   const view = mount(
     <PageTable
-      items={[
-        {
-          id: "page-1",
-          title: "Landing",
-          slug: "/landing",
-          status: "published",
-          updatedAt: "2026-03-06T12:00:00.000Z",
-          author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
-        },
-      ] as never}
+      items={
+        [
+          {
+            id: "page-1",
+            title: "Landing",
+            slug: "/landing",
+            status: "published",
+            updatedAt: "2026-03-06T12:00:00.000Z",
+            author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
+          },
+        ] as never
+      }
       onEdit={() => undefined}
       onPreview={() => undefined}
       onPublish={() => undefined}

@@ -16,10 +16,7 @@ import {
   type PageSummary,
   unpublishPage,
 } from "@/services/pagesClient";
-import {
-  getUserSettings,
-  setUserSetting,
-} from "@/services/userSettingsClient";
+import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
@@ -45,12 +42,7 @@ const pageListToasts = createListActionToastAdapter({
   },
 });
 
-export function filterPages(
-  pages: PageSummary[],
-  query: string,
-  status: string,
-  author: string
-) {
+export function filterPages(pages: PageSummary[], query: string, status: string, author: string) {
   const normalized = query.trim().toLowerCase();
   return pages.filter((page) => {
     const matchesQuery =
@@ -92,35 +84,32 @@ export function PageListPage() {
   const [openAfterCreate, setOpenAfterCreate] = useState(true);
   const hasHydratedRef = useRef(hasInitialCache);
 
-  const refresh = useCallback(
-    async (options?: { force?: boolean; background?: boolean }) => {
-      const force = options?.force ?? false;
-      const background = resolveCacheRefreshBackground({
-        explicitBackground: options?.background,
-        hasHydrated: hasHydratedRef.current,
-      });
+  const refresh = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
+    const force = options?.force ?? false;
+    const background = resolveCacheRefreshBackground({
+      explicitBackground: options?.background,
+      hasHydrated: hasHydratedRef.current,
+    });
+    if (!background) {
+      setIsLoading(true);
+    }
+    setError(null);
+    try {
+      const next = await listPagesCached({ force });
+      setItems(next);
+      hasHydratedRef.current = true;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load pages.");
+      }
+    } finally {
       if (!background) {
-        setIsLoading(true);
+        setIsLoading(false);
       }
-      setError(null);
-      try {
-        const next = await listPagesCached({ force });
-        setItems(next);
-        hasHydratedRef.current = true;
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load pages.");
-        }
-      } finally {
-        if (!background) {
-          setIsLoading(false);
-        }
-      }
-    },
-    []
-  );
+    }
+  }, []);
 
   useEffect(() => {
     const mountOptions = resolvePageListMountRefreshOptions(hasInitialCache);
@@ -198,8 +187,7 @@ export function PageListPage() {
   );
   const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
   const selectedCount = visibleSelectedIds.length;
-  const isAllSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
 
   const handleCreate = async (payload: {
@@ -321,10 +309,7 @@ export function PageListPage() {
     setBulkAction("");
   };
 
-  const runBulkAction = async (
-    action: PageBulkActionValue,
-    ids: string[]
-  ) => {
+  const runBulkAction = async (action: PageBulkActionValue, ids: string[]) => {
     if (ids.length === 0) return;
     setIsBulkWorking(true);
     setError(null);
@@ -381,16 +366,7 @@ export function PageListPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/pages"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span className="text-foreground">Pages</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/pages" breadcrumbs={["Content", "Pages"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Pages"
@@ -437,11 +413,7 @@ export function PageListPage() {
         ) : (
           <PageTable
             items={pagination.visibleRows}
-            emptyMessage={
-              items.length > 0
-                ? "No pages match your current filters."
-                : undefined
-            }
+            emptyMessage={items.length > 0 ? "No pages match your current filters." : undefined}
             selectedIds={visibleSelectedIds}
             isAllSelected={isAllSelected}
             isIndeterminate={isIndeterminate}
@@ -455,11 +427,7 @@ export function PageListPage() {
             onDelete={handleDelete}
           />
         )}
-        <ListPaginationFooter
-          resourceLabel="pages"
-          pagination={pagination}
-          isLoading={isLoading}
-        />
+        <ListPaginationFooter resourceLabel="pages" pagination={pagination} isLoading={isLoading} />
       </div>
       <PageCreateDrawer
         key={drawerKey}

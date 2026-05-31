@@ -3,6 +3,8 @@ import { expect, test, vi } from "vitest";
 import {
   createAdminPrefetcher,
   prefetchWarmupOptions,
+  resolveCollectionWorkspacePrefetchTarget,
+  resolveDetailTemplatePrefetchTarget,
   type AdminPrefetchEntry,
 } from "../../../core/admin/utils/adminPrefetch";
 
@@ -38,6 +40,32 @@ const createDeferred = () => {
 
 test("prefetch warmup options default to force false", () => {
   expect(prefetchWarmupOptions).toEqual({ force: false });
+});
+
+test("collection workspace prefetch target resolves only canonical engine workspace paths", () => {
+  expect(
+    resolveCollectionWorkspacePrefetchTarget("/advanced/engine/ct-products/collection")
+  ).toEqual({ contentTypeId: "ct-products" });
+  expect(resolveCollectionWorkspacePrefetchTarget("/content-types/ct-products/collection")).toEqual(
+    { contentTypeId: "ct-products" }
+  );
+  expect(resolveCollectionWorkspacePrefetchTarget("/advanced/engine")).toBeNull();
+  expect(resolveCollectionWorkspacePrefetchTarget("/advanced/engine/ct-products")).toBeNull();
+  expect(
+    resolveCollectionWorkspacePrefetchTarget(
+      "/advanced/engine/ct-products/collection/detail-template/detail-products"
+    )
+  ).toBeNull();
+});
+
+test("detail template prefetch target resolves only collection editor paths", () => {
+  expect(
+    resolveDetailTemplatePrefetchTarget(
+      "/advanced/engine/ct-products/collection/detail-template/detail-products"
+    )
+  ).toEqual({ contentTypeId: "ct-products", detailPageId: "detail-products" });
+  expect(resolveDetailTemplatePrefetchTarget("/advanced/engine/ct-products/collection")).toBeNull();
+  expect(resolveDetailTemplatePrefetchTarget("/advanced/engine/ct-products")).toBeNull();
 });
 
 test("prefetcher runs matched route once per cooldown", async () => {
@@ -200,9 +228,11 @@ test("default entries prefetch warms content types and all entries", async () =>
   await withWindow(async () => {
     vi.resetModules();
     const listContentTypesCached = vi.fn().mockResolvedValue([]);
+    const getContentTypeCollectionWorkspaceCached = vi.fn().mockResolvedValue(null);
     const listAllEntriesCached = vi.fn().mockResolvedValue([]);
 
     vi.doMock("@/services/contentTypesClient", () => ({
+      getContentTypeCollectionWorkspaceCached,
       listContentTypesCached,
     }));
     vi.doMock("@/services/entriesClient", () => ({
@@ -216,12 +246,8 @@ test("default entries prefetch warms content types and all entries", async () =>
       });
       await flushAsync();
 
-      expect(listContentTypesCached).toHaveBeenCalledWith(
-        module.prefetchWarmupOptions
-      );
-      expect(listAllEntriesCached).toHaveBeenCalledWith(
-        module.prefetchWarmupOptions
-      );
+      expect(listContentTypesCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+      expect(listAllEntriesCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
     } finally {
       vi.doUnmock("@/services/contentTypesClient");
       vi.doUnmock("@/services/entriesClient");
@@ -234,9 +260,11 @@ test("default custom screens prefetch warms screens and content type labels", as
   await withWindow(async () => {
     vi.resetModules();
     const listContentTypesCached = vi.fn().mockResolvedValue([]);
+    const getContentTypeCollectionWorkspaceCached = vi.fn().mockResolvedValue(null);
     const listCustomScreensCached = vi.fn().mockResolvedValue([]);
 
     vi.doMock("@/services/contentTypesClient", () => ({
+      getContentTypeCollectionWorkspaceCached,
       listContentTypesCached,
     }));
     vi.doMock("@/services/customScreensClient", () => ({
@@ -250,15 +278,99 @@ test("default custom screens prefetch warms screens and content type labels", as
       });
       await flushAsync();
 
-      expect(listCustomScreensCached).toHaveBeenCalledWith(
-        module.prefetchWarmupOptions
-      );
-      expect(listContentTypesCached).toHaveBeenCalledWith(
+      expect(listCustomScreensCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+      expect(listContentTypesCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+    } finally {
+      vi.doUnmock("@/services/contentTypesClient");
+      vi.doUnmock("@/services/customScreensClient");
+      vi.resetModules();
+    }
+  });
+});
+
+test("default collection workspace prefetch warms workspace through the engine seam", async () => {
+  await withWindow(async () => {
+    vi.resetModules();
+    const listContentTypesCached = vi.fn().mockResolvedValue([]);
+    const getContentTypeCollectionWorkspaceCached = vi.fn().mockResolvedValue({
+      contentType: { id: "ct-products" },
+    });
+
+    vi.doMock("@/services/contentTypesClient", () => ({
+      getContentTypeCollectionWorkspaceCached,
+      listContentTypesCached,
+    }));
+
+    try {
+      const module = await import("../../../core/admin/utils/adminPrefetch");
+      module.prefetchAdminRoute("/admin/advanced/engine/ct-products/collection", "/admin", {
+        activeHref: "/admin/pages",
+      });
+      await flushAsync();
+
+      expect(listContentTypesCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+      expect(getContentTypeCollectionWorkspaceCached).toHaveBeenCalledWith(
+        "ct-products",
         module.prefetchWarmupOptions
       );
     } finally {
       vi.doUnmock("@/services/contentTypesClient");
-      vi.doUnmock("@/services/customScreensClient");
+      vi.resetModules();
+    }
+  });
+});
+
+test("default detail template prefetch warms workspace, detail template, and sample entries", async () => {
+  await withWindow(async () => {
+    vi.resetModules();
+    const listContentTypesCached = vi.fn().mockResolvedValue([]);
+    const getContentTypeCollectionWorkspaceCached = vi.fn().mockResolvedValue({
+      contentType: { id: "ct-products" },
+    });
+    const getDetailPageCached = vi.fn().mockResolvedValue({
+      id: "detail-products",
+      contentTypeSlug: "products",
+    });
+    const listEntriesCached = vi.fn().mockResolvedValue([]);
+
+    vi.doMock("@/services/contentTypesClient", () => ({
+      getContentTypeCollectionWorkspaceCached,
+      listContentTypesCached,
+    }));
+    vi.doMock("@/services/detailPagesClient", () => ({
+      getDetailPageCached,
+    }));
+    vi.doMock("@/services/entriesClient", () => ({
+      getEntryCached: vi.fn(),
+      listAllEntriesCached: vi.fn(),
+      listEntriesCached,
+    }));
+
+    try {
+      const module = await import("../../../core/admin/utils/adminPrefetch");
+      module.prefetchAdminRoute(
+        "/admin/advanced/engine/ct-products/collection/detail-template/detail-products",
+        "/admin",
+        {
+          activeHref: "/admin/pages",
+        }
+      );
+      await flushAsync();
+
+      expect(listContentTypesCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+      expect(getContentTypeCollectionWorkspaceCached).toHaveBeenCalledWith(
+        "ct-products",
+        module.prefetchWarmupOptions
+      );
+      expect(getDetailPageCached).toHaveBeenCalledWith(
+        "detail-products",
+        module.prefetchWarmupOptions
+      );
+      expect(listEntriesCached).toHaveBeenCalledWith("products", module.prefetchWarmupOptions);
+    } finally {
+      vi.doUnmock("@/services/contentTypesClient");
+      vi.doUnmock("@/services/detailPagesClient");
+      vi.doUnmock("@/services/entriesClient");
       vi.resetModules();
     }
   });
@@ -306,12 +418,8 @@ test("default commerce prefetch warms products and collections with cached optio
       });
       await flushAsync();
 
-      expect(listCommerceProductsCached).toHaveBeenCalledWith(
-        module.prefetchWarmupOptions
-      );
-      expect(listCommerceCollectionsCached).toHaveBeenCalledWith(
-        module.prefetchWarmupOptions
-      );
+      expect(listCommerceProductsCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+      expect(listCommerceCollectionsCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
     } finally {
       vi.doUnmock("@/services/commerceClient");
       vi.resetModules();

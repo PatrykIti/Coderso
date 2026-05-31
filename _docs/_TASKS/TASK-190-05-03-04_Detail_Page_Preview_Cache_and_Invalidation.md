@@ -5,7 +5,7 @@
 **Category:** Runtime + Preview + Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-190-05-03-03
-**Status:** To Do
+**Status:** Done (2026-05-08)
 
 ---
 
@@ -18,6 +18,25 @@ documents change.
 This leaf owns the `detail-page` preview target and query-string contract.
 Later route/API leaves, including `/admin/api/detail-pages/:id/preview`, must
 reuse this contract instead of introducing a parallel preview target shape.
+
+Current slice note:
+- `preview_tokens` now carry strict nullable `context` JSONB owned by
+  `previewService.ts`, including the reviewed `detail-page` sample-entry
+  context contract.
+- Shared preview validation now distinguishes `expired` from `missing`, so the
+  public runtime can return `410` only for expired tokens and `404` for
+  disabled preview, missing targets, or invalid detail-page overrides.
+- `publicSite.tsx` now supports two detail-page preview paths:
+  dedicated `type=detail-page` preview uses `current_document` plus
+  server-stored `sampleEntryId`, while `type=content` preview can reuse either
+  a canonical route-linked published detail page or an explicit published
+  `detailPageId` override without exposing draft detail documents.
+- `previewUrls.ts` now preserves shared `detailPageId` query-path hints for
+  `type=content` and adds the dedicated `type=detail-page` target instead of
+  introducing route-local builders.
+- Site Settings writes now invalidate cached content list/detail HTML through a
+  shared route-matching cache seam whenever canonical `site.contentRoutes`
+  change.
 
 ## Sub-Tasks
 
@@ -155,10 +174,11 @@ Rules:
   validation stays the runtime authority,
 - `detailPageId` is optional; when omitted, runtime may use the active
   published detail document for the entry content type only after
-  `TASK-190-05-03-07` lands the canonical `site.contentRoutes.detailPageId`
-  link. Before that route-link seam exists, omitted-detail-page preview stays
-  on the current legacy preview/runtime fallback instead of adding a second
-  inferred detail-page lookup path.
+  `TASK-190-05-03-07-02` lands the canonical
+  `site.contentRoutes.detailPageId` structural link. Before that route-link
+  seam exists, omitted-detail-page preview stays on the current legacy
+  preview/runtime fallback instead of adding a second inferred detail-page
+  lookup path.
 - When `detailPageId` is provided, runtime may use only a published detail page
   document that belongs to the previewed entry content type.
 - `type=content` preview must never expose `current_document` of a detail-page

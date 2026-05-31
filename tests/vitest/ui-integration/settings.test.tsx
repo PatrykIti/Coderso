@@ -23,13 +23,9 @@ test("SettingsPage renders tokens editor and actions", () => {
 
 test("GeneralSettingsPage renders form actions", () => {
   const html = renderAdminUi(
-    <GeneralSettingsPage
-      values={{ siteName: "Coderso", siteLocale: "en" }}
-      onSave={noop}
-    />
+    <GeneralSettingsPage values={{ siteName: "Coderso", siteLocale: "en" }} onSave={noop} />
   );
 
-  expect(html).toContain("General Settings");
   expect(html).toContain("Site Identity");
   expect(html).toContain("Manage site identity and branding");
   expect(html).toContain("Save changes");

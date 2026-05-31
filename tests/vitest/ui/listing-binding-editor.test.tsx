@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -51,9 +51,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -92,14 +90,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -109,10 +107,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -120,10 +115,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -135,14 +127,14 @@ const clickButtonByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
 
 const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
-  act(() => {
+  React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -171,9 +163,8 @@ afterEach(() => {
 });
 
 test("BindingEditor adds bindings and conditions, parses values, and updates ordering", async () => {
-  const { BindingEditor } = await import(
-    "../../../core/admin/ui/listings/components/BindingEditor"
-  );
+  const { BindingEditor } =
+    await import("../../../core/admin/ui/listings/components/BindingEditor");
 
   const onChangeSpy = vi.fn();
 
@@ -209,7 +200,7 @@ test("BindingEditor adds bindings and conditions, parses values, and updates ord
       })
     );
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "Binding key (title, excerpt, image)"),
         "title"
@@ -222,15 +213,12 @@ test("BindingEditor adds bindings and conditions, parses values, and updates ord
         findSelectsByOptions(view.container, ["text", "date", "badge", "currency"])[0],
         "currency"
       );
-      setInputValue(
-        findInputByPlaceholder(view.container, "Fallback value (optional)"),
-        "N/A"
-      );
+      setInputValue(findInputByPlaceholder(view.container, "Fallback value (optional)"), "N/A");
     });
 
     clickButtonByText(view.container, "Add condition");
 
-    act(() => {
+    React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "Row field path (status, price, tags)"),
         "price"
@@ -251,11 +239,8 @@ test("BindingEditor adds bindings and conditions, parses values, and updates ord
       );
     });
 
-    act(() => {
-      setInputValue(
-        findInputByPlaceholder(view.container, "a, b, c"),
-        "12, true, null"
-      );
+    React.act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "a, b, c"), "12, true, null");
     });
 
     bindings = onChangeSpy.mock.lastCall?.[0] as ListingTemplateField[];
@@ -276,7 +261,9 @@ test("BindingEditor adds bindings and conditions, parses values, and updates ord
     );
 
     clickButtonByText(view.container, "Add binding");
-    const sections = Array.from(view.container.querySelectorAll(".space-y-3.rounded-lg.border.p-3"));
+    const sections = Array.from(
+      view.container.querySelectorAll(".space-y-3.rounded-lg.border.p-3")
+    );
     const firstSectionButtons = Array.from((sections[0] as HTMLElement).querySelectorAll("button"));
     clickElement(firstSectionButtons[1]);
 
@@ -288,9 +275,8 @@ test("BindingEditor adds bindings and conditions, parses values, and updates ord
 });
 
 test("BindingEditor handles exists conditions, condition removal, and binding deletion", async () => {
-  const { BindingEditor } = await import(
-    "../../../core/admin/ui/listings/components/BindingEditor"
-  );
+  const { BindingEditor } =
+    await import("../../../core/admin/ui/listings/components/BindingEditor");
 
   const onChangeSpy = vi.fn();
   const initialValue: ListingTemplateField[] = [
@@ -327,7 +313,7 @@ test("BindingEditor handles exists conditions, condition removal, and binding de
   const view = mount(<Harness />);
 
   try {
-    act(() => {
+    React.act(() => {
       setSelectValue(
         findSelectsByOptions(view.container, [
           "eq",
@@ -344,11 +330,8 @@ test("BindingEditor handles exists conditions, condition removal, and binding de
       );
     });
 
-    act(() => {
-      setSelectValue(
-        findSelectsByOptions(view.container, ["true", "false"])[0],
-        "false"
-      );
+    React.act(() => {
+      setSelectValue(findSelectsByOptions(view.container, ["true", "false"])[0], "false");
     });
 
     let bindings = onChangeSpy.mock.lastCall?.[0] as ListingTemplateField[];
@@ -377,9 +360,8 @@ test("BindingEditor handles exists conditions, condition removal, and binding de
 });
 
 test("BindingEditor reorders conditions and clears blank fallback values", async () => {
-  const { BindingEditor } = await import(
-    "../../../core/admin/ui/listings/components/BindingEditor"
-  );
+  const { BindingEditor } =
+    await import("../../../core/admin/ui/listings/components/BindingEditor");
 
   const onChangeSpy = vi.fn();
   const initialValue: ListingTemplateField[] = [
@@ -425,7 +407,7 @@ test("BindingEditor reorders conditions and clears blank fallback values", async
     const section = view.container.querySelector(".space-y-3.rounded-lg.border.p-3") as HTMLElement;
     const fallbackInput = findInputByPlaceholder(view.container, "Fallback value (optional)");
 
-    act(() => {
+    React.act(() => {
       setInputValue(fallbackInput, "   ");
     });
 
@@ -433,7 +415,9 @@ test("BindingEditor reorders conditions and clears blank fallback values", async
     expect(bindings[0]?.fallback).toBeNull();
 
     const conditionRows = Array.from(
-      section.querySelectorAll(".grid.gap-2.md\\:grid-cols-\\[minmax\\(0\\,1fr\\)_180px_minmax\\(0\\,1fr\\)_auto\\]")
+      section.querySelectorAll(
+        ".grid.gap-2.md\\:grid-cols-\\[minmax\\(0\\,1fr\\)_180px_minmax\\(0\\,1fr\\)_auto\\]"
+      )
     );
     const secondConditionButtons = Array.from(
       (conditionRows[1] as HTMLElement).querySelectorAll("button")
@@ -442,13 +426,12 @@ test("BindingEditor reorders conditions and clears blank fallback values", async
     clickElement(secondConditionButtons[0]);
 
     bindings = onChangeSpy.mock.lastCall?.[0] as ListingTemplateField[];
-    expect(bindings[0]?.conditions?.map((condition) => condition.id)).toEqual([
-      "cond-2",
-      "cond-1",
-    ]);
+    expect(bindings[0]?.conditions?.map((condition) => condition.id)).toEqual(["cond-2", "cond-1"]);
 
     const updatedConditionRows = Array.from(
-      section.querySelectorAll(".grid.gap-2.md\\:grid-cols-\\[minmax\\(0\\,1fr\\)_180px_minmax\\(0\\,1fr\\)_auto\\]")
+      section.querySelectorAll(
+        ".grid.gap-2.md\\:grid-cols-\\[minmax\\(0\\,1fr\\)_180px_minmax\\(0\\,1fr\\)_auto\\]"
+      )
     );
     const firstConditionButtons = Array.from(
       (updatedConditionRows[0] as HTMLElement).querySelectorAll("button")
@@ -456,10 +439,7 @@ test("BindingEditor reorders conditions and clears blank fallback values", async
     clickElement(firstConditionButtons[1]);
 
     bindings = onChangeSpy.mock.lastCall?.[0] as ListingTemplateField[];
-    expect(bindings[0]?.conditions?.map((condition) => condition.id)).toEqual([
-      "cond-1",
-      "cond-2",
-    ]);
+    expect(bindings[0]?.conditions?.map((condition) => condition.id)).toEqual(["cond-1", "cond-2"]);
   } finally {
     view.cleanup();
   }

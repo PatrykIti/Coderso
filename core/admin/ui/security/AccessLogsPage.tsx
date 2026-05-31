@@ -101,12 +101,8 @@ const mapAccessLog = (log: AccessLogRecord): AccessLogItem => {
       icon: device.icon,
     },
     timestamp: {
-      date: Number.isNaN(timestamp.getTime())
-        ? "Unknown"
-        : timestamp.toLocaleDateString(),
-      time: Number.isNaN(timestamp.getTime())
-        ? "Unknown"
-        : timestamp.toLocaleTimeString(),
+      date: Number.isNaN(timestamp.getTime()) ? "Unknown" : timestamp.toLocaleDateString(),
+      time: Number.isNaN(timestamp.getTime()) ? "Unknown" : timestamp.toLocaleTimeString(),
     },
     status,
   };
@@ -171,16 +167,7 @@ export function AccessLogsPage() {
   }, [filters]);
 
   return (
-    <AdminShell
-      activeHref="/admin/access-logs"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Security</span>
-          <span>/</span>
-          <span className="text-foreground">Access Logs</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/access-logs" breadcrumbs={["Security", "Access Logs"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Access Logs"
@@ -230,7 +217,10 @@ export function AccessLogsPage() {
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AccessFilterStatus)}>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter(value as AccessFilterStatus)}
+            >
               <SelectTrigger className="h-9 w-[150px]">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Status" />
@@ -255,11 +245,7 @@ export function AccessLogsPage() {
         ) : null}
         <AccessLogsTable logs={logs} isLoading={isLoading} onView={handleViewLog} />
       </div>
-      <AccessLogDetailsDrawer
-        log={selectedLog}
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-      />
+      <AccessLogDetailsDrawer log={selectedLog} open={drawerOpen} onOpenChange={setDrawerOpen} />
       <ExportDialog
         open={exportOpen}
         onOpenChange={setExportOpen}

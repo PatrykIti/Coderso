@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -74,14 +74,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -96,7 +96,7 @@ const clickByText = (container: HTMLElement, text: string) => {
   if (!button) {
     throw new Error(`Missing button-like element: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
@@ -157,6 +157,37 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
             style: { width: "half", labelPosition: "hidden" },
           },
         },
+        {
+          id: "field-radio",
+          label: "Contact method",
+          type: "radio",
+          required: false,
+          settings: {
+            options: ["Email", "Phone"],
+            defaultValue: "Email",
+            style: { width: "full", labelPosition: "above" },
+          },
+        },
+        {
+          id: "field-range",
+          label: "Priority",
+          type: "range",
+          required: false,
+          settings: {
+            defaultValue: "4",
+            style: { width: "half", labelPosition: "above" },
+          },
+        },
+        {
+          id: "field-hidden",
+          label: "Segment",
+          type: "hidden",
+          required: false,
+          settings: {
+            defaultValue: "enterprise",
+            style: { width: "full", labelPosition: "hidden" },
+          },
+        },
       ]}
       onSelectField={onSelectField}
       onSelectForm={onSelectForm}
@@ -168,6 +199,12 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
     expect(view.container.textContent).toContain("Lead form");
     expect(view.container.textContent).toContain("Collect leads");
     expect(view.container.textContent).toContain("Yes, I agree");
+    expect(view.container.textContent).toContain("Contact method");
+    expect(view.container.textContent).toContain("Email");
+    expect(view.container.textContent).toContain("Phone");
+    expect(view.container.textContent).toContain("Priority");
+    expect(view.container.textContent).toContain("4");
+    expect(view.container.textContent).toContain("Hidden field submits trusted value: enterprise");
     expect(view.container.textContent).not.toContain("Consent</label>");
     expect(view.container.innerHTML).toContain("md:col-span-1");
     expect(view.container.innerHTML).toContain("md:col-span-2");
@@ -180,13 +217,12 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
     ) as HTMLElement[];
     const fieldButton = fieldButtons.find(
       (button) =>
-        button.textContent?.includes("Notes")
-        && !button.textContent?.includes("Lead form")
+        button.textContent?.includes("Notes") && !button.textContent?.includes("Lead form")
     );
     if (!fieldButton) {
       throw new Error("Missing field button");
     }
-    act(() => {
+    React.act(() => {
       fieldButton.click();
     });
     expect(onSelectForm).toHaveBeenCalledTimes(1);
@@ -197,7 +233,7 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
     if (!removeButton) {
       throw new Error("Missing remove button");
     }
-    act(() => {
+    React.act(() => {
       removeButton.click();
     });
 
@@ -253,12 +289,8 @@ test("FormCanvas normalizes invalid steps and fallback step titles in multi-step
     expect(view.container.textContent).toContain("Add a short description for this form.");
     expect(view.container.textContent).toContain("Customer");
     expect(view.container.textContent).toContain("Step 3");
-    expect(
-      view.container.querySelector('input[placeholder="name@example.com"]')
-    ).not.toBeNull();
-    expect(
-      view.container.querySelector('textarea[placeholder="Optional notes"]')
-    ).not.toBeNull();
+    expect(view.container.querySelector('input[placeholder="name@example.com"]')).not.toBeNull();
+    expect(view.container.querySelector('textarea[placeholder="Optional notes"]')).not.toBeNull();
     expect(view.container.innerHTML).toContain("md:col-span-1");
     expect(view.container.innerHTML).toContain("md:col-span-2");
   } finally {

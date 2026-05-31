@@ -1,24 +1,10 @@
-import {
-  CheckCircle2,
-  History,
-  Info,
-  KeyRound,
-  Send,
-  User,
-  Wifi,
-} from "lucide-react";
+import { CheckCircle2, History, Info, KeyRound, Send, User, Wifi } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { isApiClientError } from "@/services/apiClient";
@@ -47,12 +33,7 @@ const toLogItem = (log: EmailDeliveryLog): EmailLogItem => ({
   id: log.id,
   recipient: log.recipient,
   subject: log.subject,
-  status:
-    log.status === "failed"
-      ? "failed"
-      : log.status === "delivered"
-        ? "delivered"
-        : "queued",
+  status: log.status === "failed" ? "failed" : log.status === "delivered" ? "delivered" : "queued",
   timestamp: formatTimestamp(log.createdAt),
 });
 
@@ -76,8 +57,7 @@ export function EmailSettingsPage() {
   const [isTesting, setIsTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
-    useSettingsAutoSave();
+  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
 
   const loadSettings = useCallback(async () => {
     setIsLoading(true);
@@ -166,16 +146,7 @@ export function EmailSettingsPage() {
       fromName,
       fromEmail,
     }),
-    [
-      smtpHost,
-      smtpPort,
-      smtpSecure,
-      smtpUser,
-      smtpPassword,
-      updatePassword,
-      fromName,
-      fromEmail,
-    ]
+    [smtpHost, smtpPort, smtpSecure, smtpUser, smtpPassword, updatePassword, fromName, fromEmail]
   );
 
   const portValue = smtpPort.trim();
@@ -303,13 +274,7 @@ export function EmailSettingsPage() {
     <SettingsShell
       activeHref="/admin/settings"
       sidebar={<SettingsSidebar activeId="email" />}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Settings</span>
-          <span className="text-muted-foreground/50">/</span>
-          <span className="text-foreground">Email</span>
-        </div>
-      }
+      breadcrumbs={["Settings", "Email"]}
       topbarActions={
         <div className="flex items-center gap-3">
           <Badge
@@ -335,9 +300,7 @@ export function EmailSettingsPage() {
           <div className="border-b bg-background/70 px-6 py-4">
             <div className="space-y-1">
               <h1 className="text-2xl font-semibold">Email Settings</h1>
-              <p className="text-sm text-muted-foreground">
-                System configuration - SMTP outbound
-              </p>
+              <p className="text-sm text-muted-foreground">System configuration - SMTP outbound</p>
             </div>
           </div>
           <div className="flex-1 p-6">
@@ -469,9 +432,7 @@ export function EmailSettingsPage() {
                       <div className="h-2 rounded-full bg-muted">
                         <div
                           className={`h-full rounded-full ${
-                            statusConfigured
-                              ? "w-full bg-emerald-500"
-                              : "w-1/2 bg-amber-500"
+                            statusConfigured ? "w-full bg-emerald-500" : "w-1/2 bg-amber-500"
                           }`}
                         />
                       </div>
@@ -484,9 +445,7 @@ export function EmailSettingsPage() {
                             </div>
                             <div>
                               <p className="text-sm font-semibold">{title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {description}
-                              </p>
+                              <p className="text-xs text-muted-foreground">{description}</p>
                             </div>
                           </div>
                         ))}
@@ -511,9 +470,9 @@ export function EmailSettingsPage() {
                         <span className="font-semibold">Security Note</span>
                       </div>
                       <p className="text-xs text-blue-700">
-                        For production environments, we recommend using dedicated
-                        providers like Postmark or Resend rather than generic SMTP
-                        servers for better deliverability.
+                        For production environments, we recommend using dedicated providers like
+                        Postmark or Resend rather than generic SMTP servers for better
+                        deliverability.
                       </p>
                     </CardContent>
                   </Card>
@@ -521,12 +480,8 @@ export function EmailSettingsPage() {
               </div>
             </div>
           </div>
-          {error ? (
-            <div className="px-6 pb-6 text-sm text-destructive">{error}</div>
-          ) : null}
-          {success ? (
-            <div className="px-6 pb-6 text-sm text-emerald-600">{success}</div>
-          ) : null}
+          {error ? <div className="px-6 pb-6 text-sm text-destructive">{error}</div> : null}
+          {success ? <div className="px-6 pb-6 text-sm text-emerald-600">{success}</div> : null}
         </div>
         <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">

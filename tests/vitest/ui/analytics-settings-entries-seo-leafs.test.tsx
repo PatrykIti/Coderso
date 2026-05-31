@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { expect, test, vi } from "vitest";
@@ -55,13 +55,9 @@ vi.mock("@/components/ui/card", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-  }) => <div data-dialog-open={String(Boolean(open))}>{children}</div>,
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
+    <div data-dialog-open={String(Boolean(open))}>{children}</div>
+  ),
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -99,9 +95,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -145,13 +139,9 @@ vi.mock("@/components/ui/separator", () => ({
 }));
 
 vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({
-    children,
-    open,
-  }: {
-    children: React.ReactNode;
-    open?: boolean;
-  }) => <div data-sheet-open={String(Boolean(open))}>{children}</div>,
+  Sheet: ({ children, open }: { children: React.ReactNode; open?: boolean }) => (
+    <div data-sheet-open={String(Boolean(open))}>{children}</div>
+  ),
   SheetClose: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -191,13 +181,9 @@ vi.mock("@/components/ui/table", () => ({
     </td>
   ),
   TableHead: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
-  TableHeader: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <thead className={className}>{children}</thead>,
+  TableHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <thead className={className}>{children}</thead>
+  ),
   TableRow: ({
     children,
     className,
@@ -230,13 +216,7 @@ vi.mock("@/ui/shared/AdminLink", () => ({
 }));
 
 vi.mock("@/ui/shared/SectionHeader", () => ({
-  SectionHeader: ({
-    title,
-    action,
-  }: {
-    title: string;
-    action?: React.ReactNode;
-  }) => (
+  SectionHeader: ({ title, action }: { title: string; action?: React.ReactNode }) => (
     <div>
       <h3>{title}</h3>
       {action}
@@ -245,8 +225,7 @@ vi.mock("@/ui/shared/SectionHeader", () => ({
 }));
 
 vi.mock("@/lib/utils", () => ({
-  cn: (...values: Array<string | boolean | null | undefined>) =>
-    values.filter(Boolean).join(" "),
+  cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -254,14 +233,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -271,10 +250,7 @@ const mount = (node: React.ReactNode) => {
 
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -282,10 +258,7 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
@@ -381,9 +354,11 @@ test("top content components render rows and forward actions", () => {
     expect(view.container.textContent).toContain("Top Content");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("View all"))?.click();
-      buttons.find((button) => button.getAttribute("aria-label") === "Close top content drawer")?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Close top content drawer")
+        ?.click();
       buttons.find((button) => button.textContent === "Close")?.click();
       buttons.find((button) => button.textContent === "Export")?.click();
     });
@@ -423,16 +398,13 @@ test("settings leaf components forward copy, field changes, and revoke actions",
   const onPasswordChange = vi.fn();
   const onTogglePassword = vi.fn();
   const onRevoke = vi.fn();
-  const SessionIcon = React.forwardRef<SVGSVGElement, React.ComponentProps<"svg">>((props, ref) => <svg ref={ref} {...props} />);
+  const SessionIcon = React.forwardRef<SVGSVGElement, React.ComponentProps<"svg">>((props, ref) => (
+    <svg ref={ref} {...props} />
+  ));
 
   const view = mount(
     <>
-      <ApiKeySecretDialog
-        open
-        onOpenChange={onOpenChange}
-        name="Primary"
-        secret="secret-value"
-      />
+      <ApiKeySecretDialog open onOpenChange={onOpenChange} name="Primary" secret="secret-value" />
       <SmtpCard
         host="smtp.example.com"
         port="587"
@@ -487,9 +459,11 @@ test("settings leaf components forward copy, field changes, and revoke actions",
     const selects = Array.from(view.container.querySelectorAll("select"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent?.includes("Copy"))?.click();
-      buttons.find((button) => button.getAttribute("aria-label") === "Close API key dialog")?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Close API key dialog")
+        ?.click();
       buttons.find((button) => button.textContent === "Done")?.click();
 
       setInputValue(inputs[1], "smtp.coderso.test");
@@ -510,23 +484,19 @@ test("settings leaf components forward copy, field changes, and revoke actions",
     expect(onTogglePassword).toHaveBeenCalledWith(true);
     expect(onUserChange).toHaveBeenCalledWith("mailer-user");
     expect(onPasswordChange).toHaveBeenCalledWith("super-secret");
-    expect(onRevoke).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "session-2" })
-    );
+    expect(onRevoke).toHaveBeenCalledWith(expect.objectContaining({ id: "session-2" }));
   } finally {
     view.cleanup();
   }
 });
 
 test("sessions table renders loading and empty fallbacks", () => {
-  const SessionIcon = React.forwardRef<SVGSVGElement, React.ComponentProps<"svg">>((props, ref) => <svg ref={ref} {...props} />);
+  const SessionIcon = React.forwardRef<SVGSVGElement, React.ComponentProps<"svg">>((props, ref) => (
+    <svg ref={ref} {...props} />
+  ));
   const html = renderToString(
     <>
-      <SessionsTable
-        sessions={[]}
-        isLoading
-        onRevoke={() => undefined}
-      />
+      <SessionsTable sessions={[]} isLoading onRevoke={() => undefined} />
       <SessionsTable
         sessions={[
           {
@@ -583,11 +553,7 @@ test("entry leaf components forward filter and entry actions", () => {
         onAdvancedOpenChange={onAdvancedOpenChange}
         onClear={onClear}
       />
-      <EntryGrid
-        entries={[]}
-        onEdit={onEdit}
-        emptyMessage="Nothing here"
-      />
+      <EntryGrid entries={[]} onEdit={onEdit} emptyMessage="Nothing here" />
       <EntryGrid
         entries={[
           {
@@ -625,7 +591,7 @@ test("entry leaf components forward filter and entry actions", () => {
     const selects = Array.from(view.container.querySelectorAll("select"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       setInputValue(input ?? undefined, "pricing");
       setSelectValue(selects[0], "published");
       setSelectValue(selects[1], "post");
@@ -694,7 +660,7 @@ test("seo table renders empty row and edit action", () => {
       (item) => item.getAttribute("aria-label") === "Edit Pricing"
     );
 
-    act(() => {
+    React.act(() => {
       button?.click();
     });
 

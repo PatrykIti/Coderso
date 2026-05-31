@@ -6,11 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
-import {
-  deletePopup,
-  updatePopupStatus,
-  type PopupRecord,
-} from "@/services/popupsClient";
+import { deletePopup, updatePopupStatus, type PopupRecord } from "@/services/popupsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
@@ -33,10 +29,7 @@ export function PopupsListPage() {
     return items.filter((item) => {
       if (statusFilter !== "all" && item.status !== statusFilter) return false;
       if (!needle) return true;
-      return (
-        item.name.toLowerCase().includes(needle) ||
-        item.slug.toLowerCase().includes(needle)
-      );
+      return item.name.toLowerCase().includes(needle) || item.slug.toLowerCase().includes(needle);
     });
   }, [items, search, statusFilter]);
 
@@ -79,16 +72,7 @@ export function PopupsListPage() {
   };
 
   return (
-    <AdminShell
-      activeHref="/admin/advanced/popups"
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
-          <span>/</span>
-          <span className="text-foreground">Popups</span>
-        </div>
-      }
-    >
+    <AdminShell activeHref="/admin/advanced/popups" breadcrumbs={["Coderso", "Popups"]}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <PageHeader
           title="Popups"

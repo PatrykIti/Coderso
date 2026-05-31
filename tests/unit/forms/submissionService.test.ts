@@ -48,9 +48,7 @@ testIfDb("submitForm validates required fields", async () => {
     { type: "email", label: "Email", name: "email", required: true },
   ]);
 
-  await expect(submitForm(form.id, { name: "Patryk" })).rejects.toThrow(
-    "form_payload_required"
-  );
+  await expect(submitForm(form.id, { name: "Patryk" })).rejects.toThrow("form_payload_required");
 });
 
 testIfDb("submitForm accepts valid payload", async () => {
@@ -70,11 +68,31 @@ testIfDb("submitForm accepts valid payload", async () => {
 
 testIfDb("submitForm rejects unknown fields", async () => {
   const form = await createForm({ name: "Support" });
+  await setFormFields(form.id, [{ type: "text", label: "Name", name: "name", required: true }]);
+
+  await expect(submitForm(form.id, { name: "Patryk", extra: "nope" })).rejects.toThrow(
+    "form_payload_unknown_field"
+  );
+});
+
+testIfDb("submitForm accepts Contact runtime bridge field names", async () => {
+  const form = await createForm({ name: "Contact bridge" });
   await setFormFields(form.id, [
-    { type: "text", label: "Name", name: "name", required: true },
+    { type: "text", label: "Full name", name: "full_name", required: true },
+    { type: "email", label: "Reply email", name: "reply_email", required: true },
+    { type: "textarea", label: "Message", name: "message_body", required: true },
   ]);
 
-  await expect(
-    submitForm(form.id, { name: "Patryk", extra: "nope" })
-  ).rejects.toThrow("form_payload_unknown_field");
+  const submission = await submitForm(form.id, {
+    full_name: "Patryk",
+    reply_email: "patryk@example.com",
+    message_body: "Need help with Contact runtime.",
+  });
+
+  expect(submission?.formId).toBe(form.id);
+  expect(submission?.payload).toMatchObject({
+    full_name: "Patryk",
+    reply_email: "patryk@example.com",
+    message_body: "Need help with Contact runtime.",
+  });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -238,7 +238,7 @@ const mountPage = () => {
   document.body.appendChild(host);
   const root = createRoot(host);
 
-  act(() => {
+  React.act(() => {
     root.render(
       <AdminRouterProvider initialPath="/admin/settings/integrations">
         <IntegrationsPage />
@@ -249,7 +249,7 @@ const mountPage = () => {
   return {
     host,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       host.remove();
@@ -258,14 +258,14 @@ const mountPage = () => {
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
 };
 
 const setControlValue = async (element: Element | null | undefined, value: string) => {
-  await act(async () => {
+  await React.act(async () => {
     if (element instanceof HTMLInputElement) {
       const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
       descriptor?.set?.call(element, value);
@@ -315,14 +315,14 @@ test("IntegrationsPage applies search and category filters before opening the dr
     await setControlValue(searchInput, "");
     await flush();
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Communication")?.click();
     });
 
     expect(view.host.textContent).toContain("Slack");
     expect(view.host.textContent).not.toContain("OpenAI");
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Connect")?.click();
     });
 
@@ -345,7 +345,7 @@ test("IntegrationsPage trims request payload and clears stale request state afte
   try {
     await flush();
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Request new")?.click();
     });
 
@@ -362,7 +362,7 @@ test("IntegrationsPage trims request payload and clears stale request state afte
       "  Need webhook support  "
     );
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Submit Request")?.click();
       await Promise.resolve();
     });
@@ -374,13 +374,13 @@ test("IntegrationsPage trims request payload and clears stale request state afte
     });
     expect(view.host.textContent).toContain("Request failed.");
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Cancel")?.click();
     });
 
     expect(view.host.textContent).not.toContain("Request New Integration");
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Request new")?.click();
     });
 
@@ -412,11 +412,11 @@ test("IntegrationsPage clears unsaved secret edits when reopening the same drawe
   try {
     await flush();
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Connect")?.click();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Update secret")?.click();
     });
 
@@ -426,11 +426,11 @@ test("IntegrationsPage clears unsaved secret edits when reopening the same drawe
     await setControlValue(secretInput, "temporary-secret");
     expect(secretInput?.value).toBe("temporary-secret");
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Cancel")?.click();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Connect")?.click();
     });
 
@@ -471,11 +471,11 @@ test("IntegrationsPage trims drawer payload before saving integration updates", 
   try {
     await flush();
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Connect")?.click();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Update secret")?.click();
     });
 
@@ -486,7 +486,7 @@ test("IntegrationsPage trims drawer payload before saving integration updates", 
     await setControlValue(secretInput, "  https://hooks.slack.com/services/test  ");
     await setControlValue(channelInput, "  #ops  ");
 
-    await act(async () => {
+    await React.act(async () => {
       findButton(view.host, "Save Changes")?.click();
       await Promise.resolve();
     });

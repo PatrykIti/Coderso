@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,24 +13,49 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { listMediaCached, type MediaRecord } from "@/services/mediaClient";
+import { MediaPicker } from "@/ui/media/MediaPicker";
+import { formatBytes } from "@/ui/media/utils";
+import { PostRichTextAdapter } from "@/ui/posts/editor/richtext/PostRichTextAdapter";
 
 import {
   normalizeRichTextBlocks,
+  normalizeRichTextSanitizerDiagnostics,
   normalizeRichTextSectionData,
+  renderRichTextSectionHtmlPreview,
+  resolveRichTextDropcapStatus,
+  resolveRichTextRenderedSource,
   resolveRichTextSectionVariant,
+  resolveRichTextSanitizerReport,
+  resolveRichTextSourceDrift,
   richTextBlockMax,
-  richTextSectionDefaults,
+  sanitizeRichTextHtmlWithDiagnostics,
+  summarizeRichTextBlockPreview,
+  type RichTextRenderedSourceState,
+  type RichTextSanitizerDiagnostic,
+  type RichTextSectionAttachmentBlock,
   type RichTextSectionBlock,
+  type RichTextSectionBlockHeadingLevel,
   type RichTextSectionData,
+  type RichTextSectionEmbedAspectRatio,
   type RichTextSectionFontScale,
+  type RichTextSectionImageBlock,
   type RichTextSectionLineHeight,
   type RichTextSectionMaxWidth,
   type RichTextSectionOutputMode,
   type RichTextSectionSpacing,
+  type RichTextSectionTextBlock,
+  type RichTextSectionTitleHeadingLevel,
   type RichTextSectionVariantId,
 } from "../../../../widgets/core/richTextSection";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import type { WidgetEditorProps, WidgetEditorSectionRole } from "../../../../widgets/types";
+import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
+import { SharedColorControl } from "./SharedColorControl";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: RichTextSectionVariantId;
@@ -82,116 +107,139 @@ const spacingOptions: Array<{ id: RichTextSectionSpacing; label: string }> = [
   { id: "lg", label: "Spacious" },
 ];
 
-const outputModeOptions: Array<{ id: RichTextSectionOutputMode; label: string }> = [
-  { id: "html", label: "HTML only" },
-  { id: "blocks-fallback", label: "HTML with blocks fallback" },
-  { id: "blocks", label: "Blocks only" },
+const outputModeOptions: Array<{
+  id: RichTextSectionOutputMode;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "html",
+    label: "Prefer rich text body",
+    description: "Render the Visual body copy only.",
+  },
+  {
+    id: "blocks-fallback",
+    label: "Use body, then blocks",
+    description: "Render body copy when present, otherwise use structured blocks.",
+  },
+  {
+    id: "blocks",
+    label: "Use structured blocks only",
+    description: "Render the structured blocks and keep body copy on standby.",
+  },
+];
+
+const titleHeadingLevelOptions: Array<{
+  id: RichTextSectionTitleHeadingLevel;
+  label: string;
+}> = [
+  { id: 1, label: "H1" },
+  { id: 2, label: "H2" },
+  { id: 3, label: "H3" },
+];
+
+const blockHeadingLevelOptions: Array<{
+  id: RichTextSectionBlockHeadingLevel;
+  label: string;
+}> = [
+  { id: 2, label: "H2" },
+  { id: 3, label: "H3" },
+  { id: 4, label: "H4" },
+];
+
+const embedAspectRatioOptions: Array<{
+  id: RichTextSectionEmbedAspectRatio;
+  label: string;
+}> = [
+  { id: "16:9", label: "16:9" },
+  { id: "4:3", label: "4:3" },
+  { id: "1:1", label: "1:1" },
 ];
 
 const blockCountOptions = Array.from({ length: richTextBlockMax + 1 }, (_, index) => String(index));
-const wizardBlockCount = Math.max(richTextSectionDefaults.body?.blocks?.length ?? 2, 2);
-
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+const blockPageSize = 5;
 
 type TitleBlockData = NonNullable<RichTextSectionData["titleBlock"]>;
 type BodyData = NonNullable<RichTextSectionData["body"]>;
 type OptionsData = NonNullable<RichTextSectionData["options"]>;
 type StyleData = NonNullable<RichTextSectionData["style"]>;
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
+type PendingUndoState = {
+  label: string;
+  blocks: RichTextSectionBlock[];
+};
 
 function normalizeValue(value: RichTextSectionData): RichTextSectionData {
   return normalizeRichTextSectionData(value);
 }
 
 function EditorSection({
+  id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
+  id?: string;
+  mode?: "wizard" | "visual" | "advanced";
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
+  const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
+      {children}
+    </WidgetEditorSection>
   );
 }
 
 function VariantCards({
   value,
   onChange,
+  compact = false,
 }: {
   value: RichTextSectionVariantId;
   onChange?: (next: string) => void;
+  compact?: boolean;
 }) {
   return (
-    <div className="space-y-2">
+    <div className={compact ? "grid gap-2 sm:grid-cols-3" : "space-y-2"}>
       {variantOptions.map((option) => (
         <button
           key={option.id}
           type="button"
           onClick={() => onChange?.(option.id)}
           className={cn(
-            "w-full rounded-lg border p-3 text-left transition",
+            "rounded-lg border text-left transition",
+            compact ? "p-2.5" : "w-full p-3",
             value === option.id
               ? "border-primary bg-primary/5"
               : "border-border bg-background hover:border-primary/50"
           )}
         >
           <div className="flex w-full items-start justify-between gap-2">
-            <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+            <p
+              className={cn("min-w-0 font-semibold leading-tight", compact ? "text-xs" : "text-sm")}
+            >
+              {option.label}
+            </p>
             <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
               {value === option.id ? "Selected" : "Pick"}
             </Badge>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+          <p className={cn("mt-1 text-muted-foreground", compact ? "text-[11px]" : "text-xs")}>
+            {option.description}
+          </p>
         </button>
       ))}
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  pickerFallback,
-  onClear,
-}: {
-  label: string;
-  value: string | undefined;
-  onChange: (next: string) => void;
-  placeholder: string;
-  pickerFallback: string;
-  onClear?: () => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <ClearableFieldHeader label={label} value={value} onClear={onClear} />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
     </div>
   );
 }
@@ -276,233 +324,369 @@ function clearStyleField(
   });
 }
 
-function updateBlock(
+function replaceBlocks(
   value: RichTextSectionData,
   onChange: (next: RichTextSectionData) => void,
-  index: number,
-  patch: Partial<RichTextSectionBlock>
+  nextBlocks: RichTextSectionBlock[]
+) {
+  updateBody(value, onChange, { blocks: normalizeRichTextBlocks(nextBlocks) });
+}
+
+function updateBlocks(
+  value: RichTextSectionData,
+  onChange: (next: RichTextSectionData) => void,
+  updater: (blocks: RichTextSectionBlock[]) => RichTextSectionBlock[]
 ) {
   updateValue(value, onChange, (current) => {
-    const blocks = normalizeRichTextBlocks(current.body?.blocks);
-    if (!blocks[index]) return current;
-
-    const nextBlocks = [...blocks];
-    nextBlocks[index] = {
-      ...nextBlocks[index],
-      ...patch,
-    };
-
+    const nextBlocks = updater(normalizeRichTextBlocks(current.body?.blocks));
     return {
       ...current,
       body: {
         ...current.body,
-        blocks: nextBlocks,
+        blocks: normalizeRichTextBlocks(nextBlocks),
       },
     };
   });
 }
 
-function updateWizardBlock(
-  value: RichTextSectionData,
-  onChange: (next: RichTextSectionData) => void,
-  index: number,
-  patch: Partial<RichTextSectionBlock>
-) {
-  updateValue(value, onChange, (current) => {
-    const blocks = normalizeRichTextBlocks(
-      current.body?.blocks,
-      Math.max(wizardBlockCount, index + 1)
-    );
-    if (!blocks[index]) return current;
-
-    const nextBlocks = [...blocks];
-    nextBlocks[index] = {
-      ...nextBlocks[index],
-      ...patch,
-    };
-
-    return {
-      ...current,
-      body: {
-        ...current.body,
-        blocks: nextBlocks,
-      },
-      options: {
-        ...current.options,
-        outputMode: "blocks",
-      },
-    };
-  });
+function createTextBlock(index: number): RichTextSectionTextBlock {
+  return {
+    id: `block-${index + 1}`,
+    kind: "text",
+    heading: `Heading ${index + 1}`,
+    headingLevel: index === 0 ? 2 : 3,
+    contentHtml: "<p>Paragraph content.</p>",
+  };
 }
 
-function setBlocksCount(
-  value: RichTextSectionData,
-  onChange: (next: RichTextSectionData) => void,
-  count: number
-) {
-  updateValue(value, onChange, (current) => ({
-    ...current,
-    body: {
-      ...current.body,
-      blocks: normalizeRichTextBlocks(current.body?.blocks, count),
-    },
-  }));
+function createImageBlock(index: number): RichTextSectionImageBlock {
+  return {
+    id: `block-${index + 1}`,
+    kind: "image",
+    width: "wide",
+    align: "center",
+  };
 }
 
-function addBlock(value: RichTextSectionData, onChange: (next: RichTextSectionData) => void) {
-  updateValue(value, onChange, (current) => {
-    const blocks = normalizeRichTextBlocks(current.body?.blocks);
-    if (blocks.length >= richTextBlockMax) return current;
-
-    return {
-      ...current,
-      body: {
-        ...current.body,
-        blocks: normalizeRichTextBlocks(
-          [
-            ...blocks,
-            {
-              heading: `Heading ${blocks.length + 1}`,
-              content: "Paragraph content.",
-            },
-          ],
-          blocks.length + 1
-        ),
-      },
-    };
-  });
+function createAttachmentBlock(index: number): RichTextSectionAttachmentBlock {
+  return {
+    id: `block-${index + 1}`,
+    kind: "attachment",
+    label: `Attachment ${index + 1}`,
+  };
 }
 
-function removeBlock(
-  value: RichTextSectionData,
-  onChange: (next: RichTextSectionData) => void,
+function createEmbedBlock(index: number): RichTextSectionBlock {
+  return {
+    id: `block-${index + 1}`,
+    kind: "embed",
+    title: `Shared link ${index + 1}`,
+    aspectRatio: "16:9",
+    renderMode: "link-card",
+  };
+}
+
+function createBlockByKind(
+  kind: RichTextSectionBlock["kind"],
   index: number
-) {
-  updateValue(value, onChange, (current) => {
-    const blocks = normalizeRichTextBlocks(current.body?.blocks);
-    const nextBlocks = blocks.filter((_, currentIndex) => currentIndex !== index);
-
-    return {
-      ...current,
-      body: {
-        ...current.body,
-        blocks: normalizeRichTextBlocks(nextBlocks, nextBlocks.length),
-      },
-    };
-  });
+): RichTextSectionBlock {
+  if (kind === "image") return createImageBlock(index);
+  if (kind === "attachment") return createAttachmentBlock(index);
+  if (kind === "embed") return createEmbedBlock(index);
+  return createTextBlock(index);
 }
 
-function moveBlock(
-  value: RichTextSectionData,
-  onChange: (next: RichTextSectionData) => void,
-  fromIndex: number,
-  toIndex: number
-) {
-  updateValue(value, onChange, (current) => {
-    const blocks = normalizeRichTextBlocks(current.body?.blocks);
-    if (toIndex < 0 || toIndex >= blocks.length) return current;
+function ensureBlocksCount(blocks: RichTextSectionBlock[], desiredCount: number) {
+  const normalized = normalizeRichTextBlocks(blocks);
+  if (normalized.length >= desiredCount) {
+    return normalized.slice(0, desiredCount);
+  }
 
-    const nextBlocks = [...blocks];
-    const [moved] = nextBlocks.splice(fromIndex, 1);
-    if (!moved) return current;
-    nextBlocks.splice(toIndex, 0, moved);
-
-    return {
-      ...current,
-      body: {
-        ...current.body,
-        blocks: nextBlocks,
-      },
-    };
-  });
+  const nextBlocks = [...normalized];
+  while (nextBlocks.length < desiredCount) {
+    nextBlocks.push(createTextBlock(nextBlocks.length));
+  }
+  return normalizeRichTextBlocks(nextBlocks, desiredCount);
 }
 
-function DiagnosticsSnapshot({ value }: { value: RichTextSectionData }) {
+function escapePlainText(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function resolveTextBlockEditorValue(block: RichTextSectionTextBlock) {
+  if (typeof block.contentHtml === "string" && block.contentHtml.trim().length > 0) {
+    return block.contentHtml;
+  }
+  if (typeof block.content === "string" && block.content.trim().length > 0) {
+    return `<p>${escapePlainText(block.content.trim()).replace(/\n/g, "<br />")}</p>`;
+  }
+  return "";
+}
+
+function resolveMediaRecordLabel(media: MediaRecord) {
+  const title = media.title?.trim();
+  if (title) return title;
+  const originalName = media.originalName?.trim();
+  if (originalName) return originalName;
+  const keyPart = media.key?.split("/").pop()?.trim();
+  if (keyPart) return keyPart;
+  const urlPart = media.url?.split("/").pop()?.trim();
+  return urlPart || "asset";
+}
+
+function formatSanitizerMessage(diagnostic: RichTextSanitizerDiagnostic) {
+  if (diagnostic.code === "href_rewritten") {
+    return "Unsafe link URLs are rewritten to a safe placeholder before save.";
+  }
+
+  if (diagnostic.code === "tag_removed") {
+    if (diagnostic.tagName === "img") {
+      return "Pasted images are removed from HTML. Use a structured image block instead.";
+    }
+    if (
+      diagnostic.tagName === "iframe" ||
+      diagnostic.tagName === "embed" ||
+      diagnostic.tagName === "object"
+    ) {
+      return "Raw embeds and iframes are removed. Use a safe embed or attachment block instead.";
+    }
+    if (diagnostic.tagName === "script" || diagnostic.tagName === "style") {
+      return "Executable or styling tags are removed from public rich text.";
+    }
+    if (diagnostic.tagName === "h1") {
+      return "H1 is removed from the body. Use the section title or H2/H3/H4 headings instead.";
+    }
+    return `Unsupported <${diagnostic.tagName}> markup is removed before save.`;
+  }
+
+  if (diagnostic.attributeName?.startsWith("on")) {
+    return "Inline event handlers are removed from rich text content.";
+  }
+
+  if (diagnostic.attributeName) {
+    return `Unsupported ${diagnostic.attributeName} attributes are removed from public rich text.`;
+  }
+
+  return "Unsupported rich text markup is removed before save.";
+}
+
+const unsafeHrefDiagnostic: RichTextSanitizerDiagnostic = {
+  code: "href_rewritten",
+  tagName: "a",
+  attributeName: "href",
+};
+
+const mergeSanitizerDiagnostics = (...groups: Array<RichTextSanitizerDiagnostic[] | undefined>) =>
+  normalizeRichTextSanitizerDiagnostics(groups.flatMap((group) => group ?? []));
+
+function RichTextSanitizerNotice({ diagnostics }: { diagnostics: RichTextSanitizerDiagnostic[] }) {
+  if (diagnostics.length === 0) return null;
+
   return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
+    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900">
+      <p className="font-medium">Sanitizer guidance</p>
+      <ul className="mt-2 space-y-1 text-xs text-amber-950/85">
+        {diagnostics.map((diagnostic, index) => (
+          <li
+            key={`${diagnostic.code}-${diagnostic.tagName ?? "tag"}-${diagnostic.attributeName ?? index}`}
+          >
+            {formatSanitizerMessage(diagnostic)}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
+}
+
+function RichTextSourceStatus({
+  source,
+  section,
+}: {
+  source: RichTextRenderedSourceState;
+  section: "html" | "blocks";
+}) {
+  const isActive = section === "html" ? source.htmlIsActive : source.blocksAreActive;
+  const label = section === "html" ? "Rich text body" : "Structured blocks";
+
+  let description = "";
+  if (section === "html") {
+    description =
+      source.mode === "html"
+        ? "Rich text body is the only rendered source for this preference."
+        : source.reason === "fallback-html-present"
+          ? "Rich text body currently renders because it has content."
+          : source.reason === "fallback-html-empty"
+            ? "Rich text body is empty, so blocks currently render instead."
+            : "Choose a body-first source preference to render this source.";
+  } else {
+    description =
+      source.mode === "blocks"
+        ? "Structured blocks are the only rendered source for this preference."
+        : source.reason === "fallback-html-empty"
+          ? "Blocks currently render because the rich text body is empty."
+          : source.reason === "fallback-html-present"
+            ? "Blocks are on standby until the rich text body becomes empty."
+            : "Choose structured blocks only to render this source.";
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/20 px-3 py-2">
+      <Badge variant={isActive ? "default" : "outline"}>{isActive ? "Active" : "Inactive"}</Badge>
+      <p className="text-sm font-medium">{label}</p>
+      <p className="text-xs text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function UndoNotice({
+  pendingUndo,
+  onUndo,
+  onDismiss,
+}: {
+  pendingUndo: PendingUndoState | null;
+  onUndo: () => void;
+  onDismiss: () => void;
+}) {
+  if (!pendingUndo) return null;
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed bg-muted/10 p-3">
+      <p className="text-sm text-foreground/80">{pendingUndo.label}. Undo is available.</p>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onUndo}>
+          Undo
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onDismiss}>
+          Dismiss
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function resolveBlockLabel(block: RichTextSectionBlock, index: number) {
+  if (block.kind === "image") {
+    return block.caption?.trim() || block.alt?.trim() || `Image ${index + 1}`;
+  }
+  if (block.kind === "attachment") {
+    return block.label?.trim() || `Attachment ${index + 1}`;
+  }
+  if (block.kind === "embed") {
+    return block.title?.trim() || `Embed ${index + 1}`;
+  }
+  return block.heading?.trim() || `Text block ${index + 1}`;
+}
+
+function resolveBlockKindLabel(block: RichTextSectionBlock) {
+  if (block.kind === "image") return "Image";
+  if (block.kind === "attachment") return "Attachment";
+  if (block.kind === "embed") return "Embed";
+  return "Text";
 }
 
 export function RichTextSectionWizardEditor({
   value,
-  onChange,
   variant,
   onVariantChange,
 }: WidgetEditorProps<RichTextSectionData>) {
   const normalized = normalizeValue(value);
-  const blocks = normalizeRichTextBlocks(normalized.body?.blocks, wizardBlockCount);
+  const source = resolveRichTextRenderedSource(normalized);
+  const blocks = normalizeRichTextBlocks(normalized.body?.blocks);
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Rich text layout</p>
-        <Select
-          value={resolveRichTextSectionVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
+    <WidgetEditorSection
+      id="rich-text-section.wizard.starter-copy"
+      mode="wizard"
+      role="setup"
+      title="Starter copy"
+      description="Seed the rich text layout and review the first structured text blocks. Title copy stays in Visual."
+    >
+      <div className="space-y-4">
+        <WidgetControlRow
+          id="rich-text-section.wizard.variant"
+          label="Rich text layout"
+          path="variant"
         >
-          <SelectTrigger>
-            <SelectValue placeholder="Select variant" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          {(fieldProps) => (
+            <Select
+              value={resolveRichTextSectionVariant(variant)}
+              onValueChange={(next) => onVariantChange?.(next)}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select layout" />
+              </SelectTrigger>
+              <SelectContent>
+                {variantOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Eyebrow</p>
-        <Input
-          value={normalized.titleBlock?.eyebrow ?? ""}
-          onChange={(event) => updateTitleBlock(value, onChange, { eyebrow: event.target.value })}
-          placeholder="Editorial"
-        />
-      </div>
+        <div className="space-y-2 rounded-md border bg-muted/20 px-3 py-2">
+          <p className="text-sm font-medium">Output mode stays untouched in Wizard</p>
+          <p className="text-xs text-muted-foreground">
+            Current mode: {source.mode}. Wizard updates the first two structured text blocks without
+            changing which source renders publicly.
+          </p>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Title</p>
-        <Input
-          value={normalized.titleBlock?.title ?? ""}
-          onChange={(event) => updateTitleBlock(value, onChange, { title: event.target.value })}
-          placeholder="Long-form content section"
-        />
-      </div>
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          Use Visual to edit the eyebrow, title, heading level, output preference, and presentation
+          of the section.
+        </div>
 
-      <div className="space-y-3">
-        <p className="text-sm font-medium">Body blocks</p>
-        <p className="text-xs text-muted-foreground">
-          Routine editing uses structured blocks. Raw HTML remains available in Visual and Advanced.
-        </p>
-        {blocks.slice(0, 2).map((block, index) => (
-          <div key={block.id ?? `wizard-block-${index + 1}`} className="space-y-2">
-            <Input
-              value={block.heading ?? ""}
-              onInput={(event) =>
-                updateWizardBlock(value, onChange, index, {
-                  heading: event.currentTarget.value,
-                })
-              }
-              placeholder={`Heading ${index + 1}`}
-            />
-            <Textarea
-              value={block.content ?? ""}
-              onInput={(event) =>
-                updateWizardBlock(value, onChange, index, {
-                  content: event.currentTarget.value,
-                })
-              }
-              placeholder={`Paragraph ${index + 1}`}
-              className="min-h-28"
-            />
-          </div>
-        ))}
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Structured quick-start blocks</p>
+          <p className="text-xs text-muted-foreground">
+            Wizard previews the first two text blocks only. Media, attachments, embeds, and raw HTML
+            stay in Visual and Advanced.
+          </p>
+          {blocks.slice(0, 2).map((block, index) => {
+            if (block.kind && block.kind !== "text") {
+              return (
+                <div
+                  key={block.id ?? `wizard-block-${index + 1}`}
+                  className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground"
+                >
+                  Block {index + 1} currently contains {resolveBlockKindLabel(block).toLowerCase()}.
+                  Use Visual mode to edit non-text structured blocks.
+                </div>
+              );
+            }
+
+            return (
+              <div key={block.id ?? `wizard-block-${index + 1}`} className="space-y-2">
+                <ReadonlyWidgetSummaryRow
+                  id={`rich-text-section.wizard.blocks.${index}.heading`}
+                  label={`Heading ${index + 1}`}
+                  path="body.blocks"
+                  value={block.heading?.trim() || `No heading ${index + 1}`}
+                />
+                <ReadonlyWidgetSummaryRow
+                  id={`rich-text-section.wizard.blocks.${index}.content`}
+                  label={`Paragraph ${index + 1}`}
+                  path="body.blocks"
+                  value={summarizeRichTextBlockPreview(block) || "No paragraph text yet"}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </WidgetEditorSection>
   );
 }
 
@@ -513,11 +697,320 @@ export function RichTextSectionVisualEditor({
   onVariantChange,
 }: WidgetEditorProps<RichTextSectionData>) {
   const normalized = normalizeValue(value);
+  const source = resolveRichTextRenderedSource(normalized);
+  const sourceDrift = resolveRichTextSourceDrift(normalized);
+  const dropcapStatus = resolveRichTextDropcapStatus(normalized);
+  const selectedOutputMode =
+    outputModeOptions.find(
+      (option) => option.id === (normalized.options?.outputMode ?? "blocks-fallback")
+    ) ?? outputModeOptions[1];
   const blocks = normalizeRichTextBlocks(normalized.body?.blocks);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(blocks[0]?.id ?? null);
+  const [blockPage, setBlockPage] = useState(0);
+  const [pendingRemoveBlockId, setPendingRemoveBlockId] = useState<string | null>(null);
+  const [pendingBlockCount, setPendingBlockCount] = useState<number | null>(null);
+  const [pendingUndo, setPendingUndo] = useState<PendingUndoState | null>(null);
+  const [bodyDiagnostics, setBodyDiagnostics] = useState<RichTextSanitizerDiagnostic[]>(() =>
+    normalizeRichTextSanitizerDiagnostics(normalized.body?.sanitizerDiagnostics)
+  );
+  const [blockDiagnosticsById, setBlockDiagnosticsById] = useState<
+    Record<string, RichTextSanitizerDiagnostic[]>
+  >({});
+  const pendingUnsafeLinkDiagnosticsRef = useRef<RichTextSanitizerDiagnostic[]>([]);
+  const [selectedMediaIdsByBlockId, setSelectedMediaIdsByBlockId] = useState<
+    Record<string, string | null>
+  >({});
+  const [mediaPickerErrorsByBlockId, setMediaPickerErrorsByBlockId] = useState<
+    Record<string, string>
+  >({});
+
+  const maxPage = Math.max(0, Math.ceil(blocks.length / blockPageSize) - 1);
+  const safePage = Math.min(blockPage, maxPage);
+  const visibleBlocks = blocks.slice(
+    safePage * blockPageSize,
+    safePage * blockPageSize + blockPageSize
+  );
+  const activeBlock =
+    blocks.find((block) => block.id === selectedBlockId) ?? visibleBlocks[0] ?? blocks[0] ?? null;
+  const activeBlockId = activeBlock?.id ?? null;
+  const activeBlockIndex = activeBlockId
+    ? blocks.findIndex((block) => block.id === activeBlockId)
+    : -1;
+  const pendingRemoveBlock =
+    pendingRemoveBlockId !== null
+      ? blocks.find((block) => block.id === pendingRemoveBlockId)
+      : undefined;
+
+  const handleBodyRichTextChange = (nextHtml: string) => {
+    const result = sanitizeRichTextHtmlWithDiagnostics(nextHtml);
+    const diagnostics = mergeSanitizerDiagnostics(
+      pendingUnsafeLinkDiagnosticsRef.current,
+      result.diagnostics
+    );
+    pendingUnsafeLinkDiagnosticsRef.current = [];
+    setBodyDiagnostics(diagnostics);
+    updateBody(value, onChange, { html: result.html, sanitizerDiagnostics: diagnostics });
+  };
+
+  const handleBlockRichTextChange = (blockId: string, nextHtml: string) => {
+    const result = sanitizeRichTextHtmlWithDiagnostics(nextHtml);
+    const diagnostics = mergeSanitizerDiagnostics(
+      pendingUnsafeLinkDiagnosticsRef.current,
+      result.diagnostics
+    );
+    pendingUnsafeLinkDiagnosticsRef.current = [];
+    setBlockDiagnosticsById((current) => ({
+      ...current,
+      [blockId]: diagnostics,
+    }));
+    updateValue(value, onChange, (current) => {
+      const currentBlocks = normalizeRichTextBlocks(current.body?.blocks);
+      const nextBlocks = [...currentBlocks];
+      const blockIndex = nextBlocks.findIndex((block) => block.id === blockId);
+      if (blockIndex < 0) {
+        return {
+          ...current,
+          body: {
+            ...current.body,
+            sanitizerDiagnostics: diagnostics,
+          },
+        };
+      }
+      const currentBlock = nextBlocks[blockIndex];
+      if (!currentBlock || (currentBlock.kind && currentBlock.kind !== "text")) {
+        return {
+          ...current,
+          body: {
+            ...current.body,
+            sanitizerDiagnostics: diagnostics,
+          },
+        };
+      }
+      nextBlocks[blockIndex] = {
+        ...(currentBlock as RichTextSectionTextBlock),
+        kind: "text",
+        contentHtml: result.html,
+        content: undefined,
+      };
+      return {
+        ...current,
+        body: {
+          ...current.body,
+          blocks: normalizeRichTextBlocks(nextBlocks),
+          sanitizerDiagnostics: diagnostics,
+        },
+      };
+    });
+  };
+
+  const handleUnsafeLinkAttempt = () => {
+    pendingUnsafeLinkDiagnosticsRef.current = mergeSanitizerDiagnostics(
+      pendingUnsafeLinkDiagnosticsRef.current,
+      [unsafeHrefDiagnostic]
+    );
+  };
+
+  const handleAddBlock = (kind: RichTextSectionBlock["kind"]) => {
+    updateBlocks(value, onChange, (currentBlocks) => {
+      if (currentBlocks.length >= richTextBlockMax) return currentBlocks;
+      const nextBlocks = [...currentBlocks, createBlockByKind(kind, currentBlocks.length)];
+      return normalizeRichTextBlocks(nextBlocks);
+    });
+    const nextIndex = Math.min(blocks.length, richTextBlockMax - 1);
+    setSelectedBlockId(`block-${nextIndex + 1}`);
+    setBlockPage(Math.floor(nextIndex / blockPageSize));
+  };
+
+  const handleRequestBlockCount = (nextCount: number) => {
+    if (nextCount < blocks.length) {
+      setPendingBlockCount(nextCount);
+      return;
+    }
+    replaceBlocks(value, onChange, ensureBlocksCount(blocks, nextCount));
+  };
+
+  const handleConfirmBlockCountReduction = () => {
+    if (pendingBlockCount === null) return;
+    setPendingUndo({
+      label: `Reduced structured blocks from ${blocks.length} to ${pendingBlockCount}`,
+      blocks,
+    });
+    replaceBlocks(value, onChange, ensureBlocksCount(blocks, pendingBlockCount));
+    setPendingBlockCount(null);
+  };
+
+  const handleUndo = () => {
+    if (!pendingUndo) return;
+    replaceBlocks(value, onChange, pendingUndo.blocks);
+    setPendingUndo(null);
+  };
+
+  const handleDismissUndo = () => setPendingUndo(null);
+
+  const handleMoveBlock = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= blocks.length) return;
+    updateBlocks(value, onChange, (currentBlocks) => {
+      const nextBlocks = [...currentBlocks];
+      const [moved] = nextBlocks.splice(fromIndex, 1);
+      if (!moved) return currentBlocks;
+      nextBlocks.splice(toIndex, 0, moved);
+      return nextBlocks;
+    });
+  };
+
+  const handleConfirmRemoveBlock = () => {
+    if (!pendingRemoveBlockId) return;
+    setPendingUndo({
+      label: `${
+        pendingRemoveBlock?.id
+          ? resolveBlockLabel(
+              pendingRemoveBlock,
+              blocks.findIndex((entry) => entry.id === pendingRemoveBlock.id)
+            )
+          : "Block"
+      } removed`,
+      blocks,
+    });
+    updateBlocks(value, onChange, (currentBlocks) =>
+      currentBlocks.filter((block) => block.id !== pendingRemoveBlockId)
+    );
+    setPendingRemoveBlockId(null);
+  };
+
+  const setBlockMediaError = (blockId: string, message?: string) => {
+    setMediaPickerErrorsByBlockId((current) => {
+      if (!message) {
+        const next = { ...current };
+        delete next[blockId];
+        return next;
+      }
+      return {
+        ...current,
+        [blockId]: message,
+      };
+    });
+  };
+
+  const handleImageMediaSelection = async (blockId: string, nextValue: unknown) => {
+    const mediaId = typeof nextValue === "string" && nextValue.trim().length > 0 ? nextValue : null;
+    setSelectedMediaIdsByBlockId((current) => ({ ...current, [blockId]: mediaId }));
+    setBlockMediaError(blockId);
+
+    if (!mediaId) {
+      updateBlocks(value, onChange, (currentBlocks) => {
+        const nextBlocks = [...currentBlocks];
+        const blockIndex = nextBlocks.findIndex((block) => block.id === blockId);
+        const currentBlock = nextBlocks[blockIndex];
+        if (!currentBlock || currentBlock.kind !== "image") return currentBlocks;
+        nextBlocks[blockIndex] = {
+          ...currentBlock,
+          mediaId: undefined,
+          src: undefined,
+        };
+        return nextBlocks;
+      });
+      return;
+    }
+
+    try {
+      const mediaItems = await listMediaCached({ force: false });
+      const media = mediaItems.find((item) => item.id === mediaId);
+      if (!media || !media.url || !media.mimeType.toLowerCase().startsWith("image/")) {
+        throw new Error("rich_text_image_media_invalid");
+      }
+
+      updateBlocks(value, onChange, (currentBlocks) => {
+        const nextBlocks = [...currentBlocks];
+        const blockIndex = nextBlocks.findIndex((block) => block.id === blockId);
+        const currentBlock = nextBlocks[blockIndex];
+        if (!currentBlock || currentBlock.kind !== "image") return currentBlocks;
+        nextBlocks[blockIndex] = {
+          ...currentBlock,
+          mediaId: media.id,
+          src: media.url,
+          alt:
+            currentBlock.alt?.trim() ||
+            media.alt?.trim() ||
+            media.title?.trim() ||
+            media.caption?.trim() ||
+            media.originalName?.trim() ||
+            undefined,
+          caption: currentBlock.caption ?? media.caption ?? undefined,
+        };
+        return nextBlocks;
+      });
+    } catch {
+      setBlockMediaError(blockId, "Selected image is unavailable or missing a public render URL.");
+    }
+  };
+
+  const handleAttachmentMediaSelection = async (blockId: string, nextValue: unknown) => {
+    const mediaId = typeof nextValue === "string" && nextValue.trim().length > 0 ? nextValue : null;
+    setSelectedMediaIdsByBlockId((current) => ({ ...current, [blockId]: mediaId }));
+    setBlockMediaError(blockId);
+
+    if (!mediaId) {
+      updateBlocks(value, onChange, (currentBlocks) => {
+        const nextBlocks = [...currentBlocks];
+        const blockIndex = nextBlocks.findIndex((block) => block.id === blockId);
+        const currentBlock = nextBlocks[blockIndex];
+        if (!currentBlock || currentBlock.kind !== "attachment") return currentBlocks;
+        nextBlocks[blockIndex] = {
+          ...currentBlock,
+          mediaId: undefined,
+          src: undefined,
+        };
+        return nextBlocks;
+      });
+      return;
+    }
+
+    try {
+      const mediaItems = await listMediaCached({ force: false });
+      const media = mediaItems.find((item) => item.id === mediaId);
+      if (!media || !media.url) {
+        throw new Error("rich_text_attachment_media_invalid");
+      }
+      if (media.mimeType.toLowerCase().startsWith("image/")) {
+        throw new Error("rich_text_attachment_image_invalid");
+      }
+
+      updateBlocks(value, onChange, (currentBlocks) => {
+        const nextBlocks = [...currentBlocks];
+        const blockIndex = nextBlocks.findIndex((block) => block.id === blockId);
+        const currentBlock = nextBlocks[blockIndex];
+        if (!currentBlock || currentBlock.kind !== "attachment") return currentBlocks;
+        nextBlocks[blockIndex] = {
+          ...currentBlock,
+          mediaId: media.id,
+          src: media.url,
+          label: currentBlock.label?.trim() || resolveMediaRecordLabel(media),
+          mimeType: media.mimeType,
+          sizeLabel: formatBytes(media.size),
+        };
+        return nextBlocks;
+      });
+    } catch {
+      setBlockMediaError(blockId, "Selected asset cannot be used as a public attachment card.");
+    }
+  };
+
+  const activeTextBlock =
+    activeBlock && (!activeBlock.kind || activeBlock.kind === "text")
+      ? (activeBlock as RichTextSectionTextBlock)
+      : null;
+  const activeImageBlock =
+    activeBlock?.kind === "image" ? (activeBlock as RichTextSectionImageBlock) : null;
+  const activeAttachmentBlock =
+    activeBlock?.kind === "attachment" ? (activeBlock as RichTextSectionAttachmentBlock) : null;
+  const activeEmbedBlock = activeBlock?.kind === "embed" ? activeBlock : null;
 
   return (
     <div className="space-y-4">
       <EditorSection
+        id="rich-text-section.visual.variant-layout-structure"
+        mode="visual"
+        role="visual"
         title="Variant and layout structure"
         description="Choose reading layout and container width."
       >
@@ -531,7 +1024,7 @@ export function RichTextSectionVisualEditor({
               updateOptions(value, onChange, { maxWidth: next as RichTextSectionMaxWidth })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Content max width">
               <SelectValue placeholder="Select max width" />
             </SelectTrigger>
             <SelectContent>
@@ -546,8 +1039,11 @@ export function RichTextSectionVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="rich-text-section.visual.title-block-copy"
+        mode="visual"
+        role="content"
         title="Title block copy"
-        description="Edit eyebrow and title shown above content."
+        description="Edit the section eyebrow, title, and heading semantics."
       >
         <div className="space-y-2">
           <p className="text-sm font-medium">Eyebrow</p>
@@ -555,6 +1051,7 @@ export function RichTextSectionVisualEditor({
             value={normalized.titleBlock?.eyebrow ?? ""}
             onChange={(event) => updateTitleBlock(value, onChange, { eyebrow: event.target.value })}
             placeholder="Editorial"
+            aria-label="Eyebrow"
           />
         </div>
         <div className="space-y-2">
@@ -563,36 +1060,103 @@ export function RichTextSectionVisualEditor({
             value={normalized.titleBlock?.title ?? ""}
             onChange={(event) => updateTitleBlock(value, onChange, { title: event.target.value })}
             placeholder="Long-form content section"
+            aria-label="Title"
           />
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Title heading level</p>
+          <Select
+            value={String(normalized.titleBlock?.headingLevel ?? 2)}
+            onValueChange={(next) =>
+              updateTitleBlock(value, onChange, {
+                headingLevel: Number(next) as RichTextSectionTitleHeadingLevel,
+              })
+            }
+          >
+            <SelectTrigger aria-label="Title heading level">
+              <SelectValue placeholder="Select title heading level" />
+            </SelectTrigger>
+            <SelectContent>
+              {titleHeadingLevelOptions.map((option) => (
+                <SelectItem key={option.id} value={String(option.id)}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </EditorSection>
 
       <EditorSection
+        id="rich-text-section.visual.body-content"
+        mode="visual"
+        role="content"
         title="Body content"
-        description="Edit the main HTML payload for rendered copy."
+        description="Edit the primary HTML source with safe rich-text authoring instead of raw HTML."
       >
         <div className="space-y-2">
-          <p className="text-sm font-medium">HTML body</p>
-          <Textarea
-            value={normalized.body?.html ?? ""}
-            onChange={(event) => updateBody(value, onChange, { html: event.target.value })}
-            className="min-h-52"
-            placeholder="<h2>Section heading</h2><p>Paragraph content...</p>"
-          />
+          <p className="text-sm font-medium">Source preference</p>
+          <Select
+            value={normalized.options?.outputMode ?? "blocks-fallback"}
+            onValueChange={(next) =>
+              updateOptions(value, onChange, { outputMode: next as RichTextSectionOutputMode })
+            }
+          >
+            <SelectTrigger aria-label="Source preference">
+              <SelectValue placeholder="Select source preference" />
+            </SelectTrigger>
+            <SelectContent>
+              {outputModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{selectedOutputMode.description}</p>
         </div>
+        <RichTextSourceStatus source={source} section="html" />
+        {sourceDrift.hasDrift ? (
+          <div
+            className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900"
+            data-rich-text-source-drift="true"
+          >
+            Body HTML and structured blocks contain different text. The current preference renders{" "}
+            {source.renderedSource}, so review the standby source before switching output modes.
+          </div>
+        ) : null}
+        <PostRichTextAdapter
+          value={normalized.body?.html ?? ""}
+          onChange={handleBodyRichTextChange}
+          placeholder="Write the primary story body here..."
+          ariaLabel="Rich text body editor"
+          minHeightClassName="min-h-52"
+          toolbarProfile="writing-canvas"
+          onUnsafeLinkAttempt={handleUnsafeLinkAttempt}
+        />
+        <p className="text-xs text-muted-foreground">
+          Allowed body markup stays within the widget contract. Images, raw embeds, H1, and unsafe
+          attributes are stripped before save and surfaced below.
+        </p>
+        <RichTextSanitizerNotice diagnostics={bodyDiagnostics} />
       </EditorSection>
 
       <EditorSection
-        title="Structured fallback blocks"
-        description="Manage fallback blocks used when output mode uses structured content."
+        id="rich-text-section.visual.structured-content-blocks"
+        mode="visual"
+        role="content"
+        title="Structured content blocks"
+        description="Manage fallback blocks, inline media, attachments, and safe embed link cards."
       >
+        <RichTextSourceStatus source={source} section="blocks" />
+
         <div className="space-y-2">
           <p className="text-sm font-medium">Blocks count</p>
           <Select
             value={String(blocks.length)}
-            onValueChange={(next) => setBlocksCount(value, onChange, Number(next))}
+            onValueChange={(next) => handleRequestBlockCount(Number(next))}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Blocks count">
               <SelectValue placeholder="Select block count" />
             </SelectTrigger>
             <SelectContent>
@@ -603,79 +1167,579 @@ export function RichTextSectionVisualEditor({
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Reducing the count requires confirmation and can be undone.
+          </p>
         </div>
 
-        {blocks.map((block, index) => (
-          <div
-            key={block.id ?? `fallback-block-${index + 1}`}
-            className="space-y-3 rounded-lg border p-3"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold">Block {index + 1}</p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveBlock(value, onChange, index, index - 1)}
-                  disabled={index === 0}
-                >
-                  Move up
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveBlock(value, onChange, index, index + 1)}
-                  disabled={index === blocks.length - 1}
-                >
-                  Move down
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeBlock(value, onChange, index)}
-                >
-                  Remove
-                </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={() => handleAddBlock("text")}>
+            Add text block
+          </Button>
+          <Button type="button" variant="outline" onClick={() => handleAddBlock("image")}>
+            Add image block
+          </Button>
+          <Button type="button" variant="outline" onClick={() => handleAddBlock("attachment")}>
+            Add attachment block
+          </Button>
+          <Button type="button" variant="outline" onClick={() => handleAddBlock("embed")}>
+            Add embed block
+          </Button>
+        </div>
+
+        <UndoNotice pendingUndo={pendingUndo} onUndo={handleUndo} onDismiss={handleDismissUndo} />
+
+        {blocks.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            No structured blocks yet. Add a text, image, attachment, or embed block to create a
+            fallback reading flow.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium">Block navigator</p>
+                {blocks.length > blockPageSize ? (
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const nextPage = Math.max(0, safePage - 1);
+                        setBlockPage(nextPage);
+                        setSelectedBlockId(blocks[nextPage * blockPageSize]?.id ?? selectedBlockId);
+                      }}
+                      disabled={safePage === 0}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const nextPage = Math.min(maxPage, safePage + 1);
+                        setBlockPage(nextPage);
+                        setSelectedBlockId(blocks[nextPage * blockPageSize]?.id ?? selectedBlockId);
+                      }}
+                      disabled={safePage >= maxPage}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleBlocks.map((block, index) => {
+                  const blockIndex = safePage * blockPageSize + index;
+                  const isActive = block.id === activeBlockId;
+                  return (
+                    <button
+                      key={block.id ?? `block-${blockIndex + 1}`}
+                      type="button"
+                      onClick={() => setSelectedBlockId(block.id ?? null)}
+                      className={cn(
+                        "rounded-lg border p-3 text-left transition",
+                        isActive
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-background hover:border-primary/50"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold leading-tight">
+                          {resolveBlockLabel(block, blockIndex)}
+                        </p>
+                        <Badge variant={isActive ? "default" : "outline"}>
+                          {resolveBlockKindLabel(block)}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">Block {blockIndex + 1}</p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Heading</p>
-              <Input
-                value={block.heading ?? ""}
-                onChange={(event) =>
-                  updateBlock(value, onChange, index, { heading: event.target.value })
-                }
-                placeholder="Heading"
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Content</p>
-              <Textarea
-                value={block.content ?? ""}
-                onChange={(event) =>
-                  updateBlock(value, onChange, index, { content: event.target.value })
-                }
-                placeholder="Paragraph content"
-              />
-            </div>
-          </div>
-        ))}
+            {activeBlock && activeBlockIndex >= 0 ? (
+              <div className="space-y-4 rounded-lg border p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold">
+                      {resolveBlockLabel(activeBlock, activeBlockIndex)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {resolveBlockKindLabel(activeBlock)} block · position {activeBlockIndex + 1}{" "}
+                      of {blocks.length}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleMoveBlock(activeBlockIndex, activeBlockIndex - 1)}
+                      disabled={activeBlockIndex === 0}
+                    >
+                      Move up
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleMoveBlock(activeBlockIndex, activeBlockIndex + 1)}
+                      disabled={activeBlockIndex === blocks.length - 1}
+                    >
+                      Move down
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPendingRemoveBlockId(activeBlock.id ?? null)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => addBlock(value, onChange)}
-          disabled={blocks.length >= richTextBlockMax}
-        >
-          Add fallback block
-        </Button>
+                {activeTextBlock ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Heading</p>
+                        <Input
+                          value={activeTextBlock.heading ?? ""}
+                          onChange={(event) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionTextBlock),
+                                kind: "text",
+                                heading: event.target.value,
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                          placeholder="Heading"
+                          aria-label="Heading"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Heading level</p>
+                        <Select
+                          value={String(activeTextBlock.headingLevel ?? 3)}
+                          onValueChange={(next) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionTextBlock),
+                                kind: "text",
+                                headingLevel: Number(next) as RichTextSectionBlockHeadingLevel,
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                        >
+                          <SelectTrigger aria-label="Heading level">
+                            <SelectValue placeholder="Select heading level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {blockHeadingLevelOptions.map((option) => (
+                              <SelectItem key={option.id} value={String(option.id)}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Rich block content</p>
+                      <PostRichTextAdapter
+                        value={resolveTextBlockEditorValue(activeTextBlock)}
+                        onChange={(next) => handleBlockRichTextChange(activeBlock.id ?? "", next)}
+                        placeholder="Add the supporting copy for this block..."
+                        ariaLabel={`Structured text block ${activeBlockIndex + 1}`}
+                        minHeightClassName="min-h-40"
+                        toolbarProfile="writing-canvas"
+                        onUnsafeLinkAttempt={handleUnsafeLinkAttempt}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Legacy plain text is preserved until you edit it here. Rich block content is
+                        sanitized through the same allowlist as the main HTML body.
+                      </p>
+                      <RichTextSanitizerNotice
+                        diagnostics={blockDiagnosticsById[activeBlock.id ?? ""] ?? []}
+                      />
+                    </div>
+                  </>
+                ) : null}
+
+                {activeImageBlock ? (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Image asset</p>
+                      <MediaPicker
+                        value={
+                          selectedMediaIdsByBlockId[activeImageBlock.id ?? ""] ??
+                          activeImageBlock.mediaId ??
+                          null
+                        }
+                        onChange={(next) => {
+                          void handleImageMediaSelection(activeImageBlock.id ?? "", next);
+                        }}
+                        multiple={false}
+                        accept={["image/*"]}
+                      />
+                      {mediaPickerErrorsByBlockId[activeImageBlock.id ?? ""] ? (
+                        <p className="text-xs text-destructive">
+                          {mediaPickerErrorsByBlockId[activeImageBlock.id ?? ""]}
+                        </p>
+                      ) : null}
+                      {!activeImageBlock.src ? (
+                        <p className="text-xs text-amber-700">
+                          Pick a public image to render this block. Raw image HTML stays
+                          unsupported.
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Alt text</p>
+                        <Input
+                          value={activeImageBlock.alt ?? ""}
+                          onChange={(event) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionImageBlock),
+                                alt: event.target.value,
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                          placeholder="Describe the image"
+                          aria-label="Alt text"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                        <div>
+                          <p className="text-sm font-medium">Decorative image</p>
+                          <p className="text-xs text-muted-foreground">
+                            Decorative images render empty alt text.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={Boolean(activeImageBlock.decorative)}
+                          aria-label="Decorative image"
+                          onCheckedChange={(checked) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionImageBlock),
+                                decorative: Boolean(checked),
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Caption</p>
+                      <Textarea
+                        value={activeImageBlock.caption ?? ""}
+                        onChange={(event) =>
+                          updateBlocks(value, onChange, (currentBlocks) => {
+                            const nextBlocks = [...currentBlocks];
+                            nextBlocks[activeBlockIndex] = {
+                              ...(nextBlocks[activeBlockIndex] as RichTextSectionImageBlock),
+                              caption: event.target.value,
+                            };
+                            return nextBlocks;
+                          })
+                        }
+                        placeholder="Optional caption"
+                        aria-label="Caption"
+                      />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Link URL</p>
+                        <Input
+                          value={activeImageBlock.href ?? ""}
+                          onChange={(event) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionImageBlock),
+                                href: event.target.value,
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                          placeholder="https://example.com/story"
+                          aria-label="Link URL"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Width</p>
+                        <Select
+                          value={activeImageBlock.width ?? "wide"}
+                          onValueChange={(next) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionImageBlock),
+                                width: next as RichTextSectionImageBlock["width"],
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                        >
+                          <SelectTrigger aria-label="Width">
+                            <SelectValue placeholder="Select width" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="content">Content</SelectItem>
+                            <SelectItem value="wide">Wide</SelectItem>
+                            <SelectItem value="full">Full</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Alignment</p>
+                        <Select
+                          value={activeImageBlock.align ?? "center"}
+                          onValueChange={(next) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionImageBlock),
+                                align: next as RichTextSectionImageBlock["align"],
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                        >
+                          <SelectTrigger aria-label="Alignment">
+                            <SelectValue placeholder="Select alignment" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="left">Left</SelectItem>
+                            <SelectItem value="center">Center</SelectItem>
+                            <SelectItem value="right">Right</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeAttachmentBlock ? (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Attachment asset</p>
+                      <MediaPicker
+                        value={
+                          selectedMediaIdsByBlockId[activeAttachmentBlock.id ?? ""] ??
+                          activeAttachmentBlock.mediaId ??
+                          null
+                        }
+                        onChange={(next) => {
+                          void handleAttachmentMediaSelection(activeAttachmentBlock.id ?? "", next);
+                        }}
+                        multiple={false}
+                        accept={["application/*", "audio/*", "video/*", "text/*"]}
+                      />
+                      {mediaPickerErrorsByBlockId[activeAttachmentBlock.id ?? ""] ? (
+                        <p className="text-xs text-destructive">
+                          {mediaPickerErrorsByBlockId[activeAttachmentBlock.id ?? ""]}
+                        </p>
+                      ) : null}
+                      {!activeAttachmentBlock.src ? (
+                        <p className="text-xs text-amber-700">
+                          Pick a public document, audio, or video file to render an attachment card.
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Label</p>
+                        <Input
+                          value={activeAttachmentBlock.label ?? ""}
+                          onChange={(event) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionAttachmentBlock),
+                                label: event.target.value,
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                          placeholder="Download attachment"
+                          aria-label="Label"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Description</p>
+                        <Input
+                          value={activeAttachmentBlock.description ?? ""}
+                          onChange={(event) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionAttachmentBlock),
+                                description: event.target.value,
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                          placeholder="Optional context or summary"
+                          aria-label="Description"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">MIME type</p>
+                        <Input
+                          value={activeAttachmentBlock.mimeType ?? ""}
+                          onChange={(event) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionAttachmentBlock),
+                                mimeType: event.target.value,
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                          placeholder="application/pdf"
+                          aria-label="MIME type"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Size label</p>
+                        <Input
+                          value={activeAttachmentBlock.sizeLabel ?? ""}
+                          onChange={(event) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...(nextBlocks[activeBlockIndex] as RichTextSectionAttachmentBlock),
+                                sizeLabel: event.target.value,
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                          placeholder="2.4 MB"
+                          aria-label="Size label"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeEmbedBlock && activeEmbedBlock.kind === "embed" ? (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Embed URL</p>
+                      <Input
+                        value={activeEmbedBlock.url ?? ""}
+                        onChange={(event) =>
+                          updateBlocks(value, onChange, (currentBlocks) => {
+                            const nextBlocks = [...currentBlocks];
+                            nextBlocks[activeBlockIndex] = {
+                              ...nextBlocks[activeBlockIndex],
+                              kind: "embed",
+                              url: event.target.value,
+                            };
+                            return nextBlocks;
+                          })
+                        }
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        aria-label="Embed URL"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Safe embeds render as provider-validated link cards. Raw iframe HTML is
+                        removed by the sanitizer.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Card title</p>
+                        <Input
+                          value={activeEmbedBlock.title ?? ""}
+                          onChange={(event) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...nextBlocks[activeBlockIndex],
+                                kind: "embed",
+                                title: event.target.value,
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                          placeholder="Shared link title"
+                          aria-label="Card title"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Aspect ratio token</p>
+                        <Select
+                          value={activeEmbedBlock.aspectRatio ?? "16:9"}
+                          disabled
+                          onValueChange={(next) =>
+                            updateBlocks(value, onChange, (currentBlocks) => {
+                              const nextBlocks = [...currentBlocks];
+                              nextBlocks[activeBlockIndex] = {
+                                ...nextBlocks[activeBlockIndex],
+                                kind: "embed",
+                                aspectRatio: next as RichTextSectionEmbedAspectRatio,
+                              };
+                              return nextBlocks;
+                            })
+                          }
+                        >
+                          <SelectTrigger aria-label="Aspect ratio token">
+                            <SelectValue placeholder="Select ratio" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {embedAspectRatioOptions.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Current embeds render as link cards, so aspect ratio is kept as legacy
+                          metadata and has no visual effect.
+                        </p>
+                      </div>
+                    </div>
+                    {!activeEmbedBlock.url ? (
+                      <p className="text-xs text-amber-700">
+                        Add a safe public URL to render this link-card embed block.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        )}
       </EditorSection>
 
       <EditorSection
+        id="rich-text-section.visual.reader-options"
+        mode="visual"
+        role="content"
         title="Reader options"
         description="Control dropcap and optional table of contents."
       >
@@ -683,33 +1747,46 @@ export function RichTextSectionVisualEditor({
           <div>
             <p className="text-sm font-medium">Enable dropcap</p>
             <p className="text-xs text-muted-foreground">
-              Styles first letter in the first paragraph.
+              Styles the first paragraph in the active rendered source.
             </p>
           </div>
           <Switch
             checked={Boolean(normalized.options?.dropcap)}
+            aria-label="Enable dropcap"
             onCheckedChange={(checked) =>
               updateOptions(value, onChange, { dropcap: Boolean(checked) })
             }
           />
         </div>
+        <p className="text-xs text-muted-foreground">
+          {dropcapStatus.enabled
+            ? dropcapStatus.applies
+              ? `Dropcap will style the first paragraph from the ${dropcapStatus.source} source.`
+              : `Dropcap is enabled, but the active ${dropcapStatus.source} source does not currently contain a paragraph.`
+            : "Dropcap is off until you enable it."}
+        </p>
         <div className="flex items-center justify-between rounded-md border px-3 py-2">
           <div>
             <p className="text-sm font-medium">Show table of contents</p>
             <p className="text-xs text-muted-foreground">
-              Builds TOC from rendered H2/H3/H4 headings.
+              Builds TOC from rendered body H2, H3, and H4 headings. The section title stays the
+              page heading and is not repeated in the TOC.
             </p>
           </div>
           <Switch
             checked={Boolean(normalized.options?.toc)}
+            aria-label="Show table of contents"
             onCheckedChange={(checked) => updateOptions(value, onChange, { toc: Boolean(checked) })}
           />
         </div>
       </EditorSection>
 
       <EditorSection
+        id="rich-text-section.visual.typography-colors"
+        mode="visual"
+        role="visual"
         title="Typography and colors"
-        description="Adjust text scale, line height, spacing, and colors."
+        description="Adjust the reader-facing text scale, spacing, and color swatches."
       >
         <div className="space-y-2">
           <p className="text-sm font-medium">Font scale</p>
@@ -719,7 +1796,7 @@ export function RichTextSectionVisualEditor({
               updateStyle(value, onChange, { fontScale: next as RichTextSectionFontScale })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Font scale">
               <SelectValue placeholder="Select font scale" />
             </SelectTrigger>
             <SelectContent>
@@ -739,7 +1816,7 @@ export function RichTextSectionVisualEditor({
               updateStyle(value, onChange, { lineHeight: next as RichTextSectionLineHeight })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Line height">
               <SelectValue placeholder="Select line height" />
             </SelectTrigger>
             <SelectContent>
@@ -759,7 +1836,7 @@ export function RichTextSectionVisualEditor({
               updateStyle(value, onChange, { spacing: next as RichTextSectionSpacing })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Spacing density">
               <SelectValue placeholder="Select spacing" />
             </SelectTrigger>
             <SelectContent>
@@ -771,146 +1848,202 @@ export function RichTextSectionVisualEditor({
             </SelectContent>
           </Select>
         </div>
-        <ColorField
+        <SharedColorControl
           label="Text color"
           value={normalized.style?.textColor}
           onChange={(next) => updateStyle(value, onChange, { textColor: next })}
-          placeholder="var(--color-text)"
+          onClear={() => clearStyleField(value, onChange, "textColor")}
           pickerFallback="#0f172a"
+          showValueInput={false}
+          treatAsThemeDefaultValues={["var(--color-text)"]}
+          swatchAriaLabel="Text color"
         />
-        <ColorField
+        <SharedColorControl
           label="Background color"
           value={normalized.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
           onClear={() => clearStyleField(value, onChange, "background")}
-          placeholder="transparent"
           pickerFallback="#ffffff"
+          showValueInput={false}
+          allowTransparent
+          swatchAriaLabel="Background color"
         />
       </EditorSection>
+
+      <ConfirmActionDialog
+        open={pendingRemoveBlockId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRemoveBlockId(null);
+        }}
+        title="Remove structured block"
+        description={
+          pendingRemoveBlock
+            ? `Remove ${resolveBlockLabel(
+                pendingRemoveBlock,
+                blocks.findIndex((entry) => entry.id === pendingRemoveBlock.id)
+              )}? This action can be undone from the editor notice.`
+            : "Remove this block? This action can be undone from the editor notice."
+        }
+        confirmLabel="Remove"
+        onConfirm={handleConfirmRemoveBlock}
+      />
+
+      <ConfirmActionDialog
+        open={pendingBlockCount !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingBlockCount(null);
+        }}
+        title="Reduce structured block count"
+        description={`Reduce blocks from ${blocks.length} to ${pendingBlockCount ?? blocks.length}? Extra blocks will be removed, but you can undo this change immediately from the editor notice.`}
+        confirmLabel="Reduce"
+        onConfirm={handleConfirmBlockCountReduction}
+      />
     </div>
   );
 }
 
 export function RichTextSectionAdvancedEditor({
   value,
-  onChange,
+  variant,
 }: WidgetEditorProps<RichTextSectionData>) {
   const normalized = normalizeValue(value);
   const blocks = normalizeRichTextBlocks(normalized.body?.blocks);
+  const source = resolveRichTextRenderedSource(normalized);
+  const sourceDrift = resolveRichTextSourceDrift(normalized);
+  const sanitizerReport = resolveRichTextSanitizerReport(normalized);
+  const mediaBlockCount = blocks.filter(
+    (block) => block.kind === "image" || block.kind === "attachment"
+  ).length;
+  const embedBlockCount = blocks.filter((block) => block.kind === "embed").length;
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Output mode and fallback"
-        description="Control whether runtime uses HTML payload or structured blocks."
+        id="rich-text-section.advanced.output-source-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Output mode and source diagnostics"
+        description="Read-only output mode and rendered-source summary."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Output mode</p>
-          <Select
-            value={normalized.options?.outputMode ?? "blocks-fallback"}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, { outputMode: next as RichTextSectionOutputMode })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select output mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {outputModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Current structured fallback block count: {blocks.length}
+        <p className="text-sm text-muted-foreground">
+          Advanced mode is read-only. Use Visual for public-facing rich content, output preference,
+          structured blocks, reader options, and typography changes.
         </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Output mode</p>
+            <p className="mt-1 text-muted-foreground">
+              {normalized.options?.outputMode ?? "blocks-fallback"}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Rendered source</p>
+            <p className="mt-1 text-muted-foreground">{source.renderedSource}</p>
+          </div>
+        </div>
+        <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+          <p className="font-medium">Source status</p>
+          <p className="mt-1 text-muted-foreground">
+            Variant: {resolveRichTextSectionVariant(variant)} · Block count: {blocks.length}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Reason: {source.reason}. Rich content, output preference, typography, spacing, and color
+            swatches stay in Visual mode.
+          </p>
+        </div>
+        {sourceDrift.hasDrift ? (
+          <div
+            className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900"
+            data-rich-text-source-drift="true"
+          >
+            Body HTML and structured blocks contain different text. Current rendering uses{" "}
+            {source.renderedSource}; review the standby source in Visual before switching output
+            modes.
+          </div>
+        ) : null}
       </EditorSection>
 
       <EditorSection
-        title="Technical typography tokens"
-        description="Low-level style tokens for output control."
+        id="rich-text-section.advanced.sanitizer-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Sanitizer diagnostics"
+        description="Read-only sanitizer status for the active HTML source."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Font scale token</p>
-          <Select
-            value={normalized.style?.fontScale ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { fontScale: next as RichTextSectionFontScale })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select font scale token" />
-            </SelectTrigger>
-            <SelectContent>
-              {fontScaleOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <RichTextSanitizerNotice diagnostics={sanitizerReport.diagnostics} />
+        <div className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
+          <p>
+            Stored HTML length: {sanitizerReport.html.length} characters · Diagnostics:{" "}
+            {sanitizerReport.diagnostics.length}
+          </p>
+          <p className="mt-1 text-xs">
+            Latest editor events: {sanitizerReport.storedDiagnostics.length} · Stored HTML scan:{" "}
+            {sanitizerReport.htmlDiagnostics.length}. Edit body copy and structured blocks in Visual
+            mode.
+          </p>
         </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Line height token</p>
-          <Select
-            value={normalized.style?.lineHeight ?? "normal"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { lineHeight: next as RichTextSectionLineHeight })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select line height token" />
-            </SelectTrigger>
-            <SelectContent>
-              {lineHeightOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Spacing token</p>
-          <Select
-            value={normalized.style?.spacing ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { spacing: next as RichTextSectionSpacing })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select spacing token" />
-            </SelectTrigger>
-            <SelectContent>
-              {spacingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <p className="text-sm font-medium">Sanitized preview</p>
+          <div className="rounded-md border bg-background p-3 text-sm text-muted-foreground">
+            {sanitizerReport.html.length > 0 ? (
+              <div>{renderRichTextSectionHtmlPreview(sanitizerReport.html)}</div>
+            ) : (
+              <p>No rendered HTML after sanitization.</p>
+            )}
+          </div>
         </div>
       </EditorSection>
 
       <EditorSection
-        title="Normalization and safeguards"
-        description="Apply deterministic fallback values and payload shape."
+        id="rich-text-section.advanced.saved-content-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Saved content summary"
+        description="Human diagnostics only. Advanced does not show raw rich-text JSON."
       >
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => onChange(normalizeValue(value))}>
-            Normalize now
-          </Button>
-          <Button type="button" variant="outline" onClick={() => onChange(richTextSectionDefaults)}>
-            Reset to defaults
-          </Button>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Structured blocks</p>
+            <p className="mt-1 text-muted-foreground">
+              {blocks.length} total · {mediaBlockCount} media/attachment · {embedBlockCount} embed
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">HTML source</p>
+            <p className="mt-1 text-muted-foreground">
+              {sanitizerReport.html.length > 0
+                ? `${sanitizerReport.html.length} sanitized characters`
+                : "No rendered HTML source"}
+            </p>
+          </div>
         </div>
       </EditorSection>
 
-      <EditorSection title="Raw payload snapshot">
-        <DiagnosticsSnapshot value={normalized} />
+      <EditorSection
+        id="rich-text-section.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Editor ownership split for the Rich Text Section v2 contract."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="rich-text-section.advanced.wizard-owner"
+          label="Wizard owns"
+          path="variant"
+          value="One-time layout seed plus the first structured-block preview."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="rich-text-section.advanced.visual-owner"
+          label="Visual owns"
+          path="titleBlock"
+          value="Title copy, rendered-source preference, structured blocks, reader options, typography, spacing, and colors."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="rich-text-section.advanced.advanced-owner"
+          label="Advanced owns"
+          path="editorContract"
+          value="Read-only output/source diagnostics, sanitizer reporting, saved content summaries, and contract ownership."
+        />
       </EditorSection>
     </div>
   );

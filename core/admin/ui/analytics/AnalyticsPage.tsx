@@ -134,13 +134,7 @@ export function AnalyticsPage() {
     <AdminShell
       activeHref="/admin/analytics"
       showSearch={false}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Admin</span>
-          <span>/</span>
-          <span className="text-foreground">Analytics</span>
-        </div>
-      }
+      breadcrumbs={["Admin", "Analytics"]}
       topbarActions={
         <Select
           value={rangeValue}
@@ -186,11 +180,7 @@ export function AnalyticsPage() {
           </>
         )}
       </div>
-      <TopContentDrawer
-        open={topContentOpen}
-        onOpenChange={setTopContentOpen}
-        items={topRows}
-      />
+      <TopContentDrawer open={topContentOpen} onOpenChange={setTopContentOpen} items={topRows} />
     </AdminShell>
   );
 }

@@ -65,6 +65,8 @@ const context = buildAssistantAdminContext({
         name: "Products Screen",
         contentTypeId: "ct-products",
         status: "draft",
+        collectionRole: null,
+        compositionKey: null,
         showInSidebar: false,
         sidebarLabel: null,
         writableBindingFields: [],
@@ -75,6 +77,8 @@ const context = buildAssistantAdminContext({
         name: "Archive Screen",
         contentTypeId: "ct-products",
         status: "draft",
+        collectionRole: null,
+        compositionKey: null,
         showInSidebar: false,
         sidebarLabel: null,
         writableBindingFields: [],
@@ -85,10 +89,25 @@ const context = buildAssistantAdminContext({
         name: "Products Archive Screen",
         contentTypeId: "ct-products",
         status: "draft",
+        collectionRole: null,
+        compositionKey: null,
         showInSidebar: false,
         sidebarLabel: null,
         writableBindingFields: [],
         bindings: [],
+      },
+    ],
+    detailPages: [
+      {
+        id: "detail-products",
+        name: "Product Detail",
+        status: "draft",
+        contentTypeId: "ct-products",
+        contentTypeSlug: "products",
+        linkedRouteType: "products",
+        updatedAt: "2026-04-17T10:00:00.000Z",
+        blockCount: 2,
+        bindingCount: 1,
       },
     ],
     listings: {
@@ -247,103 +266,140 @@ const planFor = (draft: unknown) =>
   });
 
 test("mapCmsOperationToActionPlan maps generic delete drafts to existing typed actions", () => {
-  expect(planFor({
-    operation: "delete",
-    resourceKind: "page",
-    targetQuery: { exactName: "Pysiek Mysiek" },
-  })?.actions[0]).toMatchObject({
+  expect(
+    planFor({
+      operation: "delete",
+      resourceKind: "page",
+      targetQuery: { exactName: "Pysiek Mysiek" },
+    })?.actions[0]
+  ).toMatchObject({
     type: "page.delete",
     input: { id: "page-pysiek", title: "Pysiek Mysiek" },
   });
 
-  expect(planFor({
-    operation: "delete",
-    resourceKind: "custom-screen",
-    targetQuery: { exactName: "Products Screen" },
-  })?.actions[0]).toMatchObject({
+  expect(
+    planFor({
+      operation: "delete",
+      resourceKind: "custom-screen",
+      targetQuery: { exactName: "Products Screen" },
+    })?.actions[0]
+  ).toMatchObject({
     type: "custom-screen.delete",
     input: { id: "screen-products", name: "Products Screen" },
   });
 
-  expect(planFor({
-    operation: "archive",
-    resourceKind: "form",
-    targetQuery: { exactName: "Lead Form" },
-  })?.actions[0]).toMatchObject({
+  expect(
+    planFor({
+      operation: "archive",
+      resourceKind: "form",
+      targetQuery: { exactName: "Lead Form" },
+    })?.actions[0]
+  ).toMatchObject({
     type: "form.archive",
     input: { id: "form-lead", slug: "lead-form" },
   });
 });
 
 test("mapCmsOperationToActionPlan maps generic update drafts to existing typed actions", () => {
-  expect(planFor({
-    operation: "update",
-    resourceKind: "listing-query",
-    targetQuery: { exactName: "Products Query" },
-    mutation: { fieldIntent: "limit", value: 24 },
-  })?.actions[0]).toMatchObject({
+  expect(
+    planFor({
+      operation: "update",
+      resourceKind: "listing-query",
+      targetQuery: { exactName: "Products Query" },
+      mutation: { fieldIntent: "limit", value: 24 },
+    })?.actions[0]
+  ).toMatchObject({
     type: "listing-query.update",
     input: { id: "query-products", patch: { limit: 24 } },
   });
 
-  expect(planFor({
-    operation: "update",
-    resourceKind: "listing-template",
-    targetQuery: { exactName: "Products Grid" },
-    mutation: { fieldIntent: "layout", value: "list" },
-  })?.actions[0]).toMatchObject({
+  expect(
+    planFor({
+      operation: "update",
+      resourceKind: "listing-template",
+      targetQuery: { exactName: "Products Grid" },
+      mutation: { fieldIntent: "layout", value: "list" },
+    })?.actions[0]
+  ).toMatchObject({
     type: "listing-template.update",
     input: { id: "template-products", patch: { layout: "list" } },
   });
 
-  expect(planFor({
-    operation: "update",
-    resourceKind: "menu-item",
-    targetQuery: { exactName: "Products" },
-    mutation: { fieldIntent: "href", value: "/catalog" },
-  })?.actions[0]).toMatchObject({
+  expect(
+    planFor({
+      operation: "update",
+      resourceKind: "menu-item",
+      targetQuery: { exactName: "Products" },
+      mutation: { fieldIntent: "href", value: "/catalog" },
+    })?.actions[0]
+  ).toMatchObject({
     type: "menu.item.update",
     input: { menuId: "menu-primary", itemId: "menu-products", patch: { href: "/catalog" } },
   });
 
-  expect(planFor({
-    operation: "update",
-    resourceKind: "seo-document",
-    targetQuery: { exactName: "Products" },
-    mutation: { fieldIntent: "description", value: "Browse products." },
-  })?.actions[0]).toMatchObject({
+  expect(
+    planFor({
+      operation: "update",
+      resourceKind: "seo-document",
+      targetQuery: { exactName: "Products" },
+      mutation: { fieldIntent: "description", value: "Browse products." },
+    })?.actions[0]
+  ).toMatchObject({
     type: "seo.document.update",
     input: { id: "seo-products", patch: { description: "Browse products." } },
   });
 
-  expect(planFor({
-    operation: "update",
-    resourceKind: "widget-template",
-    targetQuery: { exactName: "Hero Template" },
-    mutation: { fieldIntent: "name", value: "Hero Template Updated" },
-  })?.actions[0]).toMatchObject({
+  expect(
+    planFor({
+      operation: "update",
+      resourceKind: "widget-template",
+      targetQuery: { exactName: "Hero Template" },
+      mutation: { fieldIntent: "name", value: "Hero Template Updated" },
+    })?.actions[0]
+  ).toMatchObject({
     type: "widget-template.update",
     input: { id: "widget-template-hero", patch: { name: "Hero Template Updated" } },
   });
 });
 
-test("mapCmsOperationToActionPlan resolves update fields through policy aliases", () => {
-  expect(planFor({
+test("mapCmsOperationToActionPlan keeps generic detail-page updates gated", () => {
+  const plan = planFor({
     operation: "update",
-    resourceKind: "page",
-    targetQuery: { exactName: "Pysiek Mysiek" },
-    mutation: { fieldIntent: "show in nav", value: true },
-  })?.actions[0]).toMatchObject({
+    resourceKind: "detail-page",
+    resourceKey: "detail-page",
+    targetQuery: { exactName: "ct-products" },
+    mutation: { fieldIntent: "status", value: "published" },
+  });
+
+  expect(plan).toMatchObject({
+    status: "needs_input",
+    responseKind: "gated",
+    actions: [],
+    summary: "Detail Pages update is gated by assistant operation policy.",
+  });
+});
+
+test("mapCmsOperationToActionPlan resolves update fields through policy aliases", () => {
+  expect(
+    planFor({
+      operation: "update",
+      resourceKind: "page",
+      targetQuery: { exactName: "Pysiek Mysiek" },
+      mutation: { fieldIntent: "show in nav", value: true },
+    })?.actions[0]
+  ).toMatchObject({
     type: "page.update",
     input: { id: "page-pysiek", patch: { settings: { showInNav: true } } },
   });
 
-  expect(planFor({
-    operation: "update",
-    resourceKind: "seo-document",
-    targetQuery: { exactName: "Products" },
-    mutation: { fieldIntent: "meta description", value: "Browse products." },
-  })?.actions[0]).toMatchObject({
+  expect(
+    planFor({
+      operation: "update",
+      resourceKind: "seo-document",
+      targetQuery: { exactName: "Products" },
+      mutation: { fieldIntent: "meta description", value: "Browse products." },
+    })?.actions[0]
+  ).toMatchObject({
     type: "seo.document.update",
     input: { id: "seo-products", patch: { description: "Browse products." } },
   });
@@ -371,13 +427,8 @@ test("mapCmsOperationToActionPlan maps counted partial page deletes to multiple 
   expect(plan?.status).toBe("ready");
   expect(plan?.actions.map((action) => action.type)).toEqual(["page.delete", "page.delete"]);
   expect(
-    plan?.actions.map((action) =>
-      action.type === "page.delete" ? action.input.title : null
-    )
-  ).toEqual([
-    "Katalog Projektów Domów 33151341",
-    "Katalog Projektów Domów a3afbe30",
-  ]);
+    plan?.actions.map((action) => (action.type === "page.delete" ? action.input.title : null))
+  ).toEqual(["Katalog Projektów Domów 33151341", "Katalog Projektów Domów a3afbe30"]);
 });
 
 test("mapCmsOperationToActionPlan maps counted destructive prompts for non-page families", () => {

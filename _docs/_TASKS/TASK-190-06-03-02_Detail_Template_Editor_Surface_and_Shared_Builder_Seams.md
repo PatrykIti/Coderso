@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Detail Templates + Builder Reuse
 **Estimated Effort:** Large
 **Dependencies:** TASK-190-05-03-04, TASK-190-05-03-07, TASK-190-06-03-01
-**Status:** To Do
+**Status:** Done (2026-05-10)
 
 ---
 
@@ -68,7 +68,7 @@ Rules:
 - editor chrome and lifecycle behavior should come from extracted shared seams
   where practical,
 - route shell, cache warmup, and admin navigation ownership stay in the current
-  `Coderso/Engine` / `content-types` family; `detailPagesClient.ts` remains the
+  `Advanced/Engine` / `content-types` family; `detailPagesClient.ts` remains the
   owner only for detail-page document CRUD/preview/revision lifecycle,
 - no ad-hoc route-local fetch helpers; use dedicated detail-page admin client
   wrappers,
@@ -91,6 +91,44 @@ Collection Workspace
   -> inspect bindings
   -> preview runtime
   -> autosave / publish / revisions
+```
+
+## Implementation Notes
+
+- Added the canonical internal admin route
+  `/admin/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId`
+  under the existing Engine route family.
+- `DetailTemplateEditorPage.tsx` reuses the existing page-builder surface:
+  `EditorShell`, `LibraryPanel`, `BlockList`, `BlockSettings`, block utilities,
+  widget registry, and `RuntimePreviewDialog`.
+- `detailTemplateEditorModel.ts` owns route parsing, canonical editor hrefs, and
+  browser-safe `DetailPageDocument` draft normalization without importing the
+  server-side `node:crypto` detail-page schema.
+- Save, autosave, publish, unpublish, preview, restore, and autosave discard
+  use `detailPagesClient.ts` owner helpers. The editor does not add route-local
+  fetch helpers.
+- Preview sample selection uses `entriesClient.ts` bounded reads for the linked
+  content type and passes only the selected `sampleEntryId` into the existing
+  detail-page preview route.
+- Collection workspace detail-page rows now link to the editor through
+  `AdminLink` with shared admin prefetch.
+
+## Pseudocode
+
+```ts
+export const DetailTemplateEditorPage = ({ detailPageId, contentTypeId }) => {
+  const document = useDetailPageDocument(detailPageId);
+  const sampleEntry = useSampleEntryPreview(contentTypeId);
+
+  return (
+    <SharedBuilderSurface
+      mode="detail-page"
+      document={document}
+      onSave={detailPagesClient.save}
+      onPreview={() => detailPagesClient.preview(detailPageId, sampleEntry.id)}
+    />
+  );
+};
 ```
 
 ## Security Contract
@@ -125,6 +163,10 @@ Collection Workspace
 - binding inspector/state behaves deterministically.
 - shared extraction does not regress the existing page/widget-template/custom
   screen editors.
+
+Validation landed with:
+
+- `bun run test:vitest -- tests/vitest/ui/detail-template-editor.test.tsx tests/vitest/admin/adminPrefetch.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/collection-workspace.test.tsx`
 
 ## Documentation Updates Required
 

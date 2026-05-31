@@ -1,0 +1,276 @@
+# TASK-252-05-10: Toggle Block State Switch and Accessible Content Swap
+
+# FileName: TASK-252-05-10_Toggle_Block_State_Switch_and_Accessible_Content_Swap.md
+
+**Priority:** High
+**Category:** Widgets + Admin UI + Runtime Render
+**Estimated Effort:** Medium
+**Dependencies:** TASK-252-01, TASK-252-02
+**Status:** Done
+**Started:** 2026-05-11
+**Completed:** 2026-05-12
+
+---
+
+## Overview
+
+Define Toggle Block as a finite state switch/content swap with segmented labels, default state, and accessible state announcement.
+
+This is an execution leaf under `TASK-252-05`. It must not re-open the
+research phase; use `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md` and the widget README under
+`_docs/_WIDGETS/tmp/toggle-block/` as the source evidence for Keep, Adapt,
+and Reject decisions.
+
+## Business Requirements
+
+- Use `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md` as the binding research evidence for the final option set.
+- Consume shared TASK-252 editor sections, rows, labels, info tips, and `data-widget-control` metadata from TASK-252-01; do not create a widget-local control framework.
+- Keep schema/default/normalizer/render/editor/docs changes together and preserve existing saved payload compatibility.
+- Keep layout choices beginner-readable through presets and bounded tokens rather than arbitrary CSS controls.
+
+## Research Decisions
+
+- Keep: finite `states[]` with segmented labels, default state, state labels,
+  and accessible state announcement from `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md`;
+  map the current fixed `primary`/`secondary` labels and slots into canonical
+  two-item `states[]` in `core/widgets/core/toggleBlock.tsx`.
+- Adapt: rows marked `Adapt` are conditional scope, not required scope. New card
+  presentation options are conditional, but the existing live `cards` variant is
+  current compatibility scope and must remain supported while the state model
+  changes.
+- Reject: arbitrary CSS show/hide rules and more than two states without a new product contract.
+
+## Editor Mode Ownership
+
+- `Wizard`: first-run setup for the safest useful defaults for `toggle-block`.
+- `Visual`: `States`, `Labels`, `Default state`, `A11y state announcement`.
+- `Advanced`: `A11y diagnostics`, `Legacy active-state mapping`.
+
+## Sub-Tasks
+
+- None. This is an execution leaf.
+
+## Files to Change
+
+- `core/widgets/core/toggleBlock.tsx`
+- `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
+- `tests/vitest/widgets/renderer.test.tsx` if slot or shared renderer output changes.
+- `tests/unit/widgets/validator.test.ts` when schema validation or slot normalization changes.
+- `tests/vitest/widgets/toggleBlock.test.tsx`
+- `tests/vitest/ui/toggle-block-editor-wave.test.tsx`
+- `_docs/WIDGETS.md`
+- `_docs/_WIDGETS/TOGGLE_BLOCK.md`
+- `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md` for evidence reference only; do not rewrite research
+  unless implementation finds a concrete source mismatch.
+- `_docs/_TASKS/TASK-252-05-10_Toggle_Block_State_Switch_and_Accessible_Content_Swap.md` for status updates during execution.
+- `_docs/_TASKS/README.md` on status changes.
+
+## New Files to Create
+
+- `_docs/_WIDGETS/TOGGLE_BLOCK.md` if no canonical toggle block widget page
+  exists when this leaf is implemented.
+
+## Implementation Pseudocode
+
+```tsx
+type ToggleBlockState = {
+  id: "primary" | "secondary";
+  label: string;
+  slotId: "primary" | "secondary";
+};
+
+function normalizeToggleBlockData(data: ToggleBlockData): ToggleBlockData {
+  return {
+    states: normalizeToggleBlockStates(data.states ?? statesFromLegacyToggleBlock(data.labels, {
+      primarySlotId: "primary",
+      secondarySlotId: "secondary",
+    }), {
+      allowedSlotIds: ["primary", "secondary"],
+      maxItems: 2,
+    }),
+    labels: normalizeToggleBlockLabels(data.labels),
+    options: normalizeToggleBlockOptions({
+      ...data.options,
+      defaultState: data.options?.defaultState ?? data.states?.[0]?.id ?? "primary",
+    }),
+    style: normalizeToggleBlockStyle(data.style),
+  };
+}
+
+function ToggleBlockVisualEditor(props: WidgetEditorProps<ToggleBlockData>) {
+  const value = props.value;
+  return (
+    <WidgetEditorSection id="toggle-block.options" title="State labels">
+      <WidgetControlRow id="toggle-block.options.defaultState" label="Default state" data-widget-control="toggle-block.options.defaultState">
+        <SegmentedControl value={value.options?.defaultState ?? "primary"} onChange={handleControlChange} />
+      </WidgetControlRow>
+      <WidgetControlRow id="toggle-block.states" label="States" data-widget-control="toggle-block.states">
+        <StateListEditor value={value.states ?? statesFromLegacyToggleBlock(value.labels, { primarySlotId: "primary", secondarySlotId: "secondary" })} onChange={(states) => props.onChange(updateToggleBlockStates(value, states))} lockedSlotIds={["primary", "secondary"]} maxItems={2} />
+      </WidgetControlRow>
+    </WidgetEditorSection>
+  );
+}
+
+function renderToggleRuntime(states: ToggleBlockState[], options: ToggleBlockOptions) {
+  const activeState = resolveToggleDefaultState(states, options.defaultState);
+  return (
+    <div
+      data-nextless-toggle-block="1"
+      data-nextless-toggle-state={activeState.id}
+      aria-live="polite"
+    >
+      <div role="radiogroup" aria-label="Toggle content view">
+        {states.map((state) => (
+          <button
+            key={state.id}
+            type="button"
+            role="radio"
+            aria-checked={state.id === activeState.id}
+            aria-controls={`toggle-pane-${state.slotId}`}
+            tabIndex={state.id === activeState.id ? 0 : -1}
+            data-nextless-toggle-trigger
+            data-nextless-toggle-state-id={state.id}
+            data-state={state.id === activeState.id ? "active" : "inactive"}
+          >
+            {state.label}
+          </button>
+        ))}
+      </div>
+      {states.map((state) => (
+        <div
+          id={`toggle-pane-${state.slotId}`}
+          data-nextless-toggle-pane={state.slotId}
+          hidden={state.id !== activeState.id}
+        />
+      ))}
+      <span className="sr-only" data-nextless-toggle-status>
+        {activeState.label} selected
+      </span>
+    </div>
+  );
+}
+
+function syncToggleState(root: HTMLElement, nextStateId: ToggleBlockState["id"], options?: { focus?: boolean }) {
+  // The inline runtime script owns public interactivity because widget runtime
+  // output is server-rendered HTML. It must update aria-checked, roving
+  // tabIndex, hidden panes, data-nextless-toggle-state, the live/status target,
+  // and optional focus together through the existing runtime selectors.
+}
+
+function bindToggleRuntime(root: HTMLElement) {
+  // Attach delegated click and keydown listeners to [data-nextless-toggle-trigger].
+  // ArrowLeft/ArrowUp choose the previous enabled state; ArrowRight/ArrowDown
+  // choose the next enabled state. Home/End jump to first/last enabled state.
+  // Both click and keyboard paths call syncToggleState(root, nextStateId, { focus: true }).
+}
+
+function getNextToggleState({
+  key,
+  currentState,
+  states,
+}: {
+  key: string;
+  currentState: ToggleBlockState;
+  states: ToggleBlockState[];
+}): ToggleBlockState {
+  // Return the next state for Arrow/Home/End keys without changing slot ids.
+  return currentState;
+}
+```
+
+Implementation checklist:
+
+- Read `_docs/_WIDGETS/tmp/toggle-block/MATRIX.md` before changing the schema or editor.
+- Keep `primary` and `secondary` slot ownership in the widget-definition/page-model
+  slot contract. `states[]` may own labels, ordering, and default state, but
+  each state must carry a stable `slotId` so existing pane content cannot be
+  orphaned by renaming or reordering states.
+- Extend or reorganize `core/widgets/core/toggleBlock.tsx` schema/defaults/normalizer/rendering
+  only for fields approved by the research decisions above.
+- Preserve the current `switch` and `cards` variants from runtime/editor code.
+  TASK-252-05-10 may reorganize state labels/defaults, but it must not treat the
+  existing `cards` variant as future-only or remove it from variant selection.
+- Refactor `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` to shared TASK-252 editor primitives from
+  TASK-252-01; do not create widget-local replacements for sections, rows, info
+  tips, or metadata.
+- Keep legacy payloads non-destructive: missing new fields must normalize to the
+  current rendered behavior.
+- Render both state triggers as an accessible finite state control rather than
+  a single ambiguous "swap" button. The runtime must update `aria-checked`,
+  `aria-controls`, roving `tabIndex`, hidden panes, `data-nextless-toggle-state`,
+  and an announcement/status target together.
+- Implement public interaction in the existing inline delegated runtime script,
+  not as JSX `onKeyDown` handlers. React event handlers do not survive
+  `renderToString`; click and keyboard paths must share one script-owned
+  `syncToggleState(root, nextStateId, { focus })` function.
+- Keyboard tests must cover Arrow/Home/End movement across the two states and
+  verify that renamed/reordered labels do not rename the stable `primary` /
+  `secondary` slot ids.
+- Current gap to fix: `core/widgets/core/toggleBlock.tsx` still uses the legacy
+  single `aria-pressed` swap button and `tests/vitest/widgets/toggleBlock.test.tsx`
+  does not yet cover roving focus, keydown movement, status text, or stable
+  slot ownership. The implementation must replace that runtime/test contract
+  before this leaf can move to `Done`.
+- Add or update runtime/widget tests and editor-wave tests in the files listed
+  above.
+
+## Security Contract
+
+- Visibility:
+  - editor controls are internal admin UI;
+  - rendered `toggle-block` output is public page/runtime output.
+- Auth model:
+  - no new endpoint is introduced by this leaf;
+  - edits persist through existing authenticated admin page/template save flows.
+- RBAC:
+  - unchanged page/template/widget-template write permissions.
+- CSRF:
+  - unchanged admin write CSRF handling.
+- Rate-limit bucket:
+  - unchanged admin write buckets.
+- Reject-unknown validation:
+  - changed `toggle-block` schema fields must reject unknown fields and
+    normalize legacy payloads through `core/widgets/core/toggleBlock.tsx`.
+- Anti-abuse:
+  - No raw class-name interpolation from user-controlled fields.
+  - No public write endpoint is introduced.
+
+## Testing Requirements
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso` before marking this leaf `Done` or record the exact blocker.
+- `bun test tests/unit/widgets/validator.test.ts` when schema validation, slot normalization, or widget validation changes.
+- `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
+  must cover the accessible state control, `aria-checked`,
+  `aria-controls`, roving `tabIndex`, Arrow/Home/End keyboard movement with
+  focus transfer, status announcement target, default state, and stable
+  `primary`/`secondary` slot ownership.
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer,
+  slot, or shared output behavior changes.
+- `bun run test:vitest -- tests/vitest/widgets/styleNoneTokens.test.tsx` if
+  token/clear/default adjacency changes.
+- Add Bun-owned route/security tests when endpoint behavior, public writes,
+  provider fetches, or runtime-kernel scripts change.
+
+## Documentation Updates Required
+
+- `_docs/WIDGETS.md`
+- `_docs/_WIDGETS/TOGGLE_BLOCK.md`
+- `_docs/_WIDGETS/README.md`; `TOGGLE_BLOCK.md` does not currently exist, so
+  completing this leaf must create the page and index entry.
+- `_docs/_TASKS/TASK-252-05-10_Toggle_Block_State_Switch_and_Accessible_Content_Swap.md` status notes during execution.
+- `_docs/_TASKS/README.md` on status changes.
+- `_docs/_CHANGELOG/README.md` and a changelog entry only when the leaf is
+  completed.
+
+## Acceptance Criteria
+
+- `toggle-block` Visual mode is sectioned, accessible, and metadata-backed.
+- Final `toggle-block` options match Keep/Adapt/Reject decisions from the research matrix.
+- Existing saved widget payloads remain backward compatible.
+- Documentation names the research decisions that explain both added and
+  rejected options.
+- Validation commands and any skipped suites are recorded before marking this
+  leaf `Done`.

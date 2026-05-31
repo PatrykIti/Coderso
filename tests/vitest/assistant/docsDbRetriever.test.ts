@@ -5,7 +5,7 @@ import { rankAssistantDocsDbRows } from "../../../core/services/assistant/docsDb
 const rows = [
   {
     id: "chunk-hero",
-    docPath: "docs/coderso/widget-template-editor.md",
+    docPath: "docs/guide/coderso/widget-template-editor.md",
     docTitle: "Widget Template Editor",
     productArea: "coderso-widgets",
     keywords: [
@@ -29,7 +29,7 @@ const rows = [
   },
   {
     id: "chunk-library",
-    docPath: "docs/coderso/widget-library.md",
+    docPath: "docs/guide/coderso/widget-library.md",
     docTitle: "Widget Library",
     productArea: "coderso-widgets",
     keywords: ["widgets", "widget library", "reusable blocks", "favorites"],
@@ -45,7 +45,7 @@ const rows = [
   },
   {
     id: "chunk-themes",
-    docPath: "docs/screens/themes.md",
+    docPath: "docs/guide/screens/themes.md",
     docTitle: "Themes",
     productArea: "themes",
     keywords: ["themes", "tokens", "templates", "presentation"],
@@ -61,7 +61,7 @@ const rows = [
   },
   {
     id: "chunk-booking",
-    docPath: "docs/coderso/booking.md",
+    docPath: "docs/guide/coderso/booking.md",
     docTitle: "Coderso Booking",
     productArea: "coderso-booking",
     keywords: ["booking", "reservations", "availability", "services"],
@@ -92,11 +92,11 @@ test("rankAssistantDocsDbRows prefers widgets product area over themes for hero 
     topK: 3,
   });
 
-  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/widget-template-editor.md");
+  expect(hits[0]?.chunk.docPath).toBe("docs/guide/coderso/widget-template-editor.md");
   expect(hits[0]?.rankingSignals?.matchedQueryCoverage ?? 0).toBeGreaterThanOrEqual(0.8);
   expect(hits[0]?.rankingSignals?.domainScore ?? 0).toBeGreaterThan(0);
-  expect(hits[1]?.chunk.docPath).toBe("docs/coderso/widget-library.md");
-  expect(hits.some((hit) => hit.chunk.docPath === "docs/screens/themes.md")).toBe(false);
+  expect(hits[1]?.chunk.docPath).toBe("docs/guide/coderso/widget-library.md");
+  expect(hits.some((hit) => hit.chunk.docPath === "docs/guide/screens/themes.md")).toBe(false);
 });
 
 test("rankAssistantDocsDbRows prefers step-by-step over examples for config questions", () => {
@@ -105,7 +105,7 @@ test("rankAssistantDocsDbRows prefers step-by-step over examples for config ques
       ...rows,
       {
         id: "chunk-examples",
-        docPath: "docs/coderso/widget-template-editor.md",
+        docPath: "docs/guide/coderso/widget-template-editor.md",
         docTitle: "Widget Template Editor",
         productArea: "coderso-widgets",
         keywords: ["widgets", "templates", "widget library", "template editor"],
@@ -134,7 +134,7 @@ test("rankAssistantDocsDbRows prefers what-is-it over common-mistakes for capabi
       ...rows,
       {
         id: "chunk-what-is-it",
-        docPath: "docs/coderso/widget-template-editor.md",
+        docPath: "docs/guide/coderso/widget-template-editor.md",
         docTitle: "Widget Template Editor",
         productArea: "coderso-widgets",
         keywords: ["widgets", "templates", "widget library", "template editor"],
@@ -150,7 +150,7 @@ test("rankAssistantDocsDbRows prefers what-is-it over common-mistakes for capabi
       },
       {
         id: "chunk-common-mistakes",
-        docPath: "docs/coderso/widget-template-editor.md",
+        docPath: "docs/guide/coderso/widget-template-editor.md",
         docTitle: "Widget Template Editor",
         productArea: "coderso-widgets",
         keywords: ["widgets", "templates", "widget library", "template editor"],
@@ -180,7 +180,7 @@ test("rankAssistantDocsDbRows prefers step-by-step over when-to-use for procedur
       ...rows,
       {
         id: "chunk-engine-step-by-step",
-        docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+        docPath: "docs/guide/coderso/content-type-editor-and-schema-builder.md",
         docTitle: "Content Type Editor and Schema Builder",
         productArea: "coderso-engine",
         keywords: ["engine", "schema", "content type", "fields"],
@@ -196,7 +196,7 @@ test("rankAssistantDocsDbRows prefers step-by-step over when-to-use for procedur
       },
       {
         id: "chunk-engine-when-to-use",
-        docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+        docPath: "docs/guide/coderso/content-type-editor-and-schema-builder.md",
         docTitle: "Content Type Editor and Schema Builder",
         productArea: "coderso-engine",
         keywords: ["engine", "schema", "content type", "fields"],
@@ -217,7 +217,9 @@ test("rankAssistantDocsDbRows prefers step-by-step over when-to-use for procedur
     }
   );
 
-  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/content-type-editor-and-schema-builder.md");
+  expect(hits[0]?.chunk.docPath).toBe(
+    "docs/guide/coderso/content-type-editor-and-schema-builder.md"
+  );
   expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("step by step");
 });
 
@@ -227,7 +229,7 @@ test("rankAssistantDocsDbRows prioritizes troubleshooting sections for troublesh
       ...rows,
       {
         id: "chunk-entries-instruction",
-        docPath: "docs/coderso/entry-editor-and-metadata.md",
+        docPath: "docs/guide/coderso/entry-editor-and-metadata.md",
         docTitle: "Entry Editor and Metadata Workflow",
         productArea: "coderso-entries",
         keywords: ["entries", "records", "validation"],
@@ -241,7 +243,7 @@ test("rankAssistantDocsDbRows prioritizes troubleshooting sections for troublesh
       },
       {
         id: "chunk-entries-troubleshooting",
-        docPath: "docs/coderso/entry-editor-and-metadata.md",
+        docPath: "docs/guide/coderso/entry-editor-and-metadata.md",
         docTitle: "Entry Editor and Metadata Workflow",
         productArea: "coderso-entries",
         keywords: ["entries", "records", "validation"],
@@ -249,8 +251,7 @@ test("rankAssistantDocsDbRows prioritizes troubleshooting sections for troublesh
         heading: "Troubleshooting",
         lineStart: 46,
         lineEnd: 58,
-        content:
-          "If save fails, verify required fields and schema constraints before retrying.",
+        content: "If save fails, verify required fields and schema constraints before retrying.",
         normalizedText:
           "if save fails verify required fields and schema constraints before retrying",
         tokenCount: 13,
@@ -262,7 +263,7 @@ test("rankAssistantDocsDbRows prioritizes troubleshooting sections for troublesh
     }
   );
 
-  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/entry-editor-and-metadata.md");
+  expect(hits[0]?.chunk.docPath).toBe("docs/guide/coderso/entry-editor-and-metadata.md");
   expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("troubleshooting");
 });
 
@@ -272,17 +273,10 @@ test("rankAssistantDocsDbRows prioritizes widget security section for hero secur
       ...rows,
       {
         id: "chunk-widget-security",
-        docPath: "docs/coderso/widget-template-editor.md",
+        docPath: "docs/guide/coderso/widget-template-editor.md",
         docTitle: "Widget Template Editor",
         productArea: "coderso-widgets",
-        keywords: [
-          "widgets",
-          "template editor",
-          "hero",
-          "security",
-          "hardening",
-          "button urls",
-        ],
+        keywords: ["widgets", "template editor", "hero", "security", "hardening", "button urls"],
         headingPath: ["Widget Template Editor", "Security"],
         heading: "Security",
         lineStart: 140,
@@ -300,7 +294,7 @@ test("rankAssistantDocsDbRows prioritizes widget security section for hero secur
     }
   );
 
-  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/widget-template-editor.md");
+  expect(hits[0]?.chunk.docPath).toBe("docs/guide/coderso/widget-template-editor.md");
   expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("security");
 });
 
@@ -317,7 +311,5 @@ test("rankAssistantDocsDbRows supports token expansion via docs tokenizer", () =
     topK: 3,
   });
 
-  expect(
-    hits.some((hit) => hit.chunk.docPath.includes("widget-template-editor.md"))
-  ).toBe(true);
+  expect(hits.some((hit) => hit.chunk.docPath.includes("widget-template-editor.md"))).toBe(true);
 });

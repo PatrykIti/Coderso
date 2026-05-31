@@ -2,13 +2,14 @@ import { afterAll, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
-import { contentEntries, contentTypes } from "../../../core/db/schema";
+import { contentEntries, contentTypes, detailPageDocuments } from "../../../core/db/schema";
 import {
   createContentType,
   deleteContentType,
   duplicateContentType,
   updateContentType,
 } from "../../../core/services/content/typeService";
+import { normalizeDetailPageDocument } from "../../../core/services/content/detailPageSchema";
 import {
   getSetting,
   setSetting,
@@ -41,6 +42,7 @@ const cleanupTypeIds = new Set<string>();
 afterAll(async () => {
   for (const id of cleanupTypeIds) {
     await db.delete(contentEntries).where(eq(contentEntries.typeId, id));
+    await db.delete(detailPageDocuments).where(eq(detailPageDocuments.contentTypeId, id));
     await db.delete(contentTypes).where(eq(contentTypes.id, id));
   }
 });
@@ -113,6 +115,57 @@ testIfDb("delete content type is blocked while entries exist", async () => {
   await expect(deleteContentType(created.id)).rejects.toThrow("content_type_has_entries");
 });
 
+testIfDb("delete content type is blocked while detail page documents exist", async () => {
+  const created = await createContentType({
+    name: `Detail Guarded ${randomUUID()}`,
+    slug: `detail-guarded-${randomUUID()}`,
+    schema,
+  });
+  cleanupTypeIds.add(created.id);
+
+  await db.insert(detailPageDocuments).values({
+    id: randomUUID(),
+    name: "Product detail",
+    contentTypeId: created.id,
+    status: "draft",
+    currentDocument: normalizeDetailPageDocument({
+      schemaVersion: 1,
+      id: randomUUID(),
+      name: "Product detail",
+      contentTypeId: created.id,
+      contentTypeSlug: created.slug,
+      status: "draft",
+      titlePattern: "{{ title }}",
+      settings: {
+        template: "detail",
+        layout: {},
+      },
+      blocks: [
+        {
+          id: "hero",
+          type: "hero",
+          data: {
+            headline: "Product detail",
+          },
+        },
+      ],
+      bindings: [
+        {
+          id: "binding-title",
+          blockId: "hero",
+          propPath: "headline",
+          source: {
+            kind: "entry-meta",
+            field: "title",
+          },
+        },
+      ],
+    }),
+  });
+
+  await expect(deleteContentType(created.id)).rejects.toThrow("content_type_has_detail_pages");
+});
+
 testIfDb("delete content type removes its auto content route reference", async () => {
   const originalContentRoutes = await getSetting("site.contentRoutes");
   const created = await createContentType({
@@ -124,7 +177,9 @@ testIfDb("delete content type removes its auto content route reference", async (
 
   try {
     await setSetting("site.contentRoutes", [
-      ...((Array.isArray(originalContentRoutes) ? originalContentRoutes : []) as ContentRouteSetting[]),
+      ...((Array.isArray(originalContentRoutes)
+        ? originalContentRoutes
+        : []) as ContentRouteSetting[]),
       {
         type: created.slug,
         listPath: `/${created.slug}`,

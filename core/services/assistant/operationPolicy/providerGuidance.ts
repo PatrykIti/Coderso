@@ -157,8 +157,8 @@ export const buildProviderPolicyRegistry = (policy: AssistantOperationPolicy) =>
     };
     current.aliases = unique([...current.aliases, ...resource.aliases]).slice(0, 24);
     current.supportedOperations = sortText(
-      unique([...current.supportedOperations, ...resource.operations]).filter((item): item is CmsOperation =>
-        operationSet.has(item)
+      unique([...current.supportedOperations, ...resource.operations]).filter(
+        (item): item is CmsOperation => operationSet.has(item)
       ),
       cmsOperationValues
     );
@@ -277,13 +277,13 @@ const exampleFor = (
   };
 };
 
-export const buildProviderOperationDraftGuidance = (
-  policy: AssistantOperationPolicy
-) => {
+export const buildProviderOperationDraftGuidance = (policy: AssistantOperationPolicy) => {
   const guidance = buildProviderPolicyGuidance(policy);
   const filterSummary = guidance.resources
     .flatMap((resource) =>
-      resource.filters.map((filter) => `${resource.kind}.${filter.field}:${filter.operators.join("/")}`)
+      resource.filters.map(
+        (filter) => `${resource.kind}.${filter.field}:${filter.operators.join("/")}`
+      )
     )
     .slice(0, 24);
   const examples = [
@@ -298,6 +298,9 @@ export const buildProviderOperationDraftGuidance = (
     exampleFor(guidance.resources, "form", "is Lead Form public?", {
       targetQuery: { exactName: "Lead Form" },
       filters: [{ field: "visibility", operator: "eq", value: "public" }],
+    }),
+    exampleFor(guidance.resources, "detail-page", "which detail page is linked to Products?", {
+      targetQuery: { exactName: "ct-products" },
     }),
     exampleFor(guidance.resources, "listing-query", "which listing queries are for products?", {
       targetQuery: { text: "products" },

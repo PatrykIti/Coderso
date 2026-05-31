@@ -59,20 +59,14 @@ test("AssistantPanel launcher uses avatar asset when configured", () => {
 });
 
 test("AssistantModeSwitch renders readiness badge without mode selector", () => {
-  const html = renderAdminUi(
-    <AssistantModeSwitch
-      llmAvailable={false}
-    />
-  );
+  const html = renderAdminUi(<AssistantModeSwitch llmAvailable={false} />);
 
   expect(html).toContain("Docs only");
   expect(html).not.toContain("Assistant mode");
 });
 
 test("AssistantEmptyState renders starter prompts", () => {
-  const html = renderAdminUi(
-    <AssistantEmptyState onPromptSelect={() => undefined} />
-  );
+  const html = renderAdminUi(<AssistantEmptyState onPromptSelect={() => undefined} />);
 
   expect(html).toContain("Ask where something is in docs");
   expect(html).toContain("Hero widget colors");
@@ -251,6 +245,43 @@ test("ActionPlanReview renders planned guide actions", () => {
           planner: "provider",
           providerDraftUsed: true,
           providerId: "fake",
+          blueprintComposition: {
+            schemaVersion: 1,
+            kind: "blueprint-composition",
+            primaryCapabilityId: "product-catalog",
+            adjunctCapabilityIds: ["product-inquiry-catalog"],
+            gatedCapabilityIds: [],
+            mergedResources: [
+              {
+                key: "content-type:products",
+                kind: "content-type",
+                sourceCapabilityIds: ["product-catalog", "product-inquiry-catalog"],
+              },
+            ],
+            existingResourceMatches: [
+              {
+                actionId: "page-products",
+                actionType: "page.upsert",
+                resourceKey: "page-collection-link:ct-products",
+                existingId: "page-products",
+                status: "matched",
+                reason: "collection_link",
+                candidateIds: ["page-products"],
+              },
+            ],
+            resolvedConflicts: [],
+            unresolvedConflicts: [],
+            diagnostics: {
+              candidateScores: [
+                {
+                  id: "product-catalog",
+                  role: "primary",
+                  score: 100,
+                  reasons: ["Primary product catalog."],
+                },
+              ],
+            },
+          },
         },
         assumptions: ["Use existing Coderso surfaces."],
         questions: [],
@@ -318,6 +349,13 @@ test("ActionPlanReview renders planned guide actions", () => {
   expect(html).toContain("LLM Guide Plan");
   expect(html).toContain("House Projects Catalog");
   expect(html).toContain("Provider draft");
+  expect(html).toContain("Composition diagnostics");
+  expect(html).toContain("Primary");
+  expect(html).toContain("product catalog");
+  expect(html).toContain("Adjunct");
+  expect(html).toContain("product inquiry catalog");
+  expect(html).toContain("Merged");
+  expect(html).toContain("Reused");
   expect(html).toContain("Add products to navigation");
   expect(html).toContain("Menu item");
   expect(html).toContain("Target:");

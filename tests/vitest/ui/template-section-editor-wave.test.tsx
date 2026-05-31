@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -14,12 +14,14 @@ const templateState = vi.hoisted(() => ({
         name: "Hero banner",
         status: "published",
         description: "Published hero template",
+        blocks: [{ id: "hero-1", type: "hero" }],
       },
       {
         id: "template-2",
         name: "Promo grid",
         status: "draft",
         description: "Draft promotional grid",
+        blocks: [{ id: "grid-1", type: "feature-grid" }],
       },
     ],
     isLoading: false,
@@ -37,6 +39,20 @@ vi.mock("@/components/ui/alert", () => ({
 
 vi.mock("@/components/ui/badge", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}));
+
+vi.mock("@/components/ui/input", () => ({
+  Input: ({
+    value,
+    onChange,
+    placeholder,
+    ...props
+  }: {
+    value?: string;
+    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder?: string;
+    [key: string]: unknown;
+  }) => <input value={value} onChange={onChange} placeholder={placeholder} {...props} />,
 }));
 
 vi.mock("@/components/ui/select", () => {
@@ -79,21 +95,29 @@ vi.mock("@/components/ui/select", () => {
       value?: string;
       disabled?: boolean;
     }) => (
-      <select
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onValueChange?.(event.target.value)}
-      >
-        {collectOptions(children).map((option) => (
-          <option key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <>
+        <select
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onValueChange?.(event.target.value)}
+        >
+          {collectOptions(children).map((option) => (
+            <option key={option.value} value={option.value} disabled={option.disabled}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {children}
+      </>
     ),
     SelectContent: () => null,
     SelectItem: () => null,
-    SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children ?? null}</>,
+    SelectTrigger: ({
+      children,
+      ...props
+    }: React.HTMLAttributes<HTMLSpanElement> & { children?: React.ReactNode }) => (
+      <span {...props}>{children ?? null}</span>
+    ),
     SelectValue: ({
       children,
       placeholder,
@@ -113,14 +137,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -130,12 +154,19 @@ const mount = (node: React.ReactNode) => {
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
-  act(() => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  React.act(() => {
     descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
+const setInputValue = (element: Element | null | undefined, value: string) => {
+  if (!(element instanceof HTMLInputElement)) return;
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  React.act(() => {
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
 };
@@ -148,12 +179,14 @@ afterEach(() => {
         name: "Hero banner",
         status: "published",
         description: "Published hero template",
+        blocks: [{ id: "hero-1", type: "hero" }],
       },
       {
         id: "template-2",
         name: "Promo grid",
         status: "draft",
         description: "Draft promotional grid",
+        blocks: [{ id: "grid-1", type: "feature-grid" }],
       },
     ],
     isLoading: false,
@@ -162,7 +195,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("TemplateSection editors cover template selection, draft badge, reset, and advanced payload preview", async () => {
+test("TemplateSection editors cover template selection, draft badge, reset, and advanced summaries", async () => {
   const {
     TemplateSectionAdvancedEditor,
     TemplateSectionVisualEditor,
@@ -221,34 +254,84 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Select a widget template to render in this section.");
+    expect(view.container.textContent).toContain(
+      "Select a widget template to render in this section."
+    );
     expect(view.container.textContent).toContain("Runtime behavior");
+    expect(view.container.textContent).toContain("Template presentation");
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain("Resolved content summary");
+    expect(view.container.textContent).toContain("1 content block resolved: Rich Text.");
+    expect(view.container.textContent).toContain("No template selected.");
+    expect(view.container.textContent).not.toContain("Template ID");
+    expect(
+      view.container
+        .querySelector("[data-widget-editor-section='template-section.wizard.template-setup']")
+        ?.getAttribute("data-widget-editor-mode")
+    ).toBe("wizard");
+    const wizardTemplateField = view.container.querySelector(
+      "#template-section-wizard-template-id-field"
+    );
+    expect(wizardTemplateField?.getAttribute("aria-labelledby")).toBe(
+      "template-section-wizard-template-id-label"
+    );
 
     const selects = Array.from(view.container.querySelectorAll("select"));
     setSelectValue(selects[0], "template-2");
+    const inputs = Array.from(view.container.querySelectorAll("input"));
+    const previewLabelInput = inputs.find((input) => input.placeholder === "Homepage Hero Cluster");
+    const categoryInput = inputs.find((input) => input.placeholder === "Marketing");
+
+    if (!(previewLabelInput instanceof HTMLInputElement)) {
+      throw new Error("Missing preview label input");
+    }
+    if (!(categoryInput instanceof HTMLInputElement)) {
+      throw new Error("Missing category input");
+    }
+
+    setInputValue(previewLabelInput, "Landing Hero");
+    setInputValue(categoryInput, "Marketing");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.templateId).toBe("template-2");
     expect(latestValue.templateName).toBe("Promo grid");
+    expect(latestValue.metadata).toMatchObject({
+      previewLabel: "Landing Hero",
+      category: "Marketing",
+    });
+    expect(
+      Array.from(view.container.querySelectorAll("[data-widget-control-path]"))
+        .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+        .map((element) => element.getAttribute("data-widget-control-path"))
+    ).toEqual(["templateId", "metadata.previewLabel", "metadata.category"]);
     expect(view.container.textContent).toContain("Draft");
     expect(view.container.textContent).toContain("Active template:");
     expect(view.container.textContent).toContain("Promo grid");
     expect(view.container.textContent).toContain("Draft promotional grid");
 
-    const preview = view.container.querySelector("pre");
-    expect(preview?.textContent).toContain('"id": "block-1"');
-    expect(preview?.textContent).toContain('"error": "template_unpublished"');
+    expect(view.container.textContent).toContain("Resolved content summary");
+    expect(view.container.textContent).toContain("No content blocks resolved.");
+    expect(view.container.textContent).toContain(
+      "template_unpublished: selected template is still a draft for public runtime."
+    );
+    expect(view.container.textContent).toContain("1 source block in the draft template.");
+    expect(view.container.textContent).toContain("Category");
+    expect(view.container.textContent).toContain("Marketing");
+    expect(view.container.textContent).not.toContain("Template ID");
+    expect(view.container.textContent).not.toContain("No resolution problem detected.");
 
     setSelectValue(selects[0], "__no-template__");
 
     expect(latestValue.templateId).toBe("");
     expect(latestValue.templateName).toBe("");
-    expect(latestValue.resolved?.blocks).toHaveLength(1);
-    expect(view.container.textContent).toContain("Select a widget template to render in this section.");
+    expect(latestValue.resolved).toBeUndefined();
+    expect(view.container.textContent).toContain(
+      "Select a widget template to render in this section."
+    );
   } finally {
     view.cleanup();
   }
-});
+}, 10000);
 
 test("TemplateSection editors surface error state from the template hook while keeping the empty placeholder", async () => {
   templateState.current = {
@@ -257,9 +340,8 @@ test("TemplateSection editors surface error state from the template hook while k
     error: "Failed to load templates.",
   };
 
-  const { TemplateSectionWizardEditor } = await import(
-    "../../../core/admin/ui/widgets/editors/TemplateSectionEditors"
-  );
+  const { TemplateSectionWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TemplateSectionEditors");
 
   const view = mount(
     <TemplateSectionWizardEditor
@@ -273,7 +355,11 @@ test("TemplateSection editors surface error state from the template hook while k
   try {
     expect(view.container.textContent).toContain("Failed to load templates.");
     expect(view.container.textContent).toContain("No template");
-    expect(view.container.textContent).toContain("Select a widget template to render in this section.");
+    expect(view.container.textContent).toContain("Template setup");
+    expect(view.container.textContent).not.toContain("Template presentation");
+    expect(view.container.textContent).toContain(
+      "Select a widget template to render in this section."
+    );
   } finally {
     view.cleanup();
   }

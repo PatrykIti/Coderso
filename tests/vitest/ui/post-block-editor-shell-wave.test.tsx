@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
@@ -195,9 +195,7 @@ const postShellState = vi.hoisted(() => ({
     toastState.success.mockReset();
     toastState.error.mockReset();
     taxonomyClientState.getTaxonomyOverview.mockReset();
-    taxonomyClientState.getTaxonomyOverview.mockResolvedValue(
-      taxonomyClientState.overview
-    );
+    taxonomyClientState.getTaxonomyOverview.mockResolvedValue(taxonomyClientState.overview);
   },
 }));
 
@@ -250,13 +248,9 @@ vi.mock("@/components/ui/alert", () => ({
 }));
 
 vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
-  RuntimePreviewDialog: ({
-    open,
-    title,
-  }: {
-    open: boolean;
-    title: string;
-  }) => <div>{`${title}:${open ? "open" : "closed"}`}</div>,
+  RuntimePreviewDialog: ({ open, title }: { open: boolean; title: string }) => (
+    <div>{`${title}:${open ? "open" : "closed"}`}</div>
+  ),
 }));
 
 vi.mock("@/services/taxonomyClient", () => ({
@@ -282,10 +276,12 @@ vi.mock("@/services/siteSettingsClient", () => ({
       },
     ],
   })),
-  resolvePostSlugRouteContext: (settings: {
-    publicBaseUrl?: string | null;
-    contentRoutes?: Array<{ detailPath: string; enabled: boolean; type: string }>;
-  } | null) => ({
+  resolvePostSlugRouteContext: (
+    settings: {
+      publicBaseUrl?: string | null;
+      contentRoutes?: Array<{ detailPath: string; enabled: boolean; type: string }>;
+    } | null
+  ) => ({
     publicBaseUrl: settings?.publicBaseUrl ?? null,
     detailPathPattern:
       settings?.contentRoutes?.find((route) => route.enabled)?.detailPath ?? "/post/:slug",
@@ -533,13 +529,7 @@ vi.mock("../../../core/admin/ui/posts/editor/hooks/usePostEditorState", () => ({
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/settings/PostEditorSettingsDialog", () => ({
-  PostEditorSettingsDialog: ({
-    open,
-    onReset,
-  }: {
-    open: boolean;
-    onReset: () => void;
-  }) => (
+  PostEditorSettingsDialog: ({ open, onReset }: { open: boolean; onReset: () => void }) => (
     <div>
       <span>{`settings:${open ? "open" : "closed"}`}</span>
       <button type="button" onClick={onReset}>
@@ -572,19 +562,19 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     rerender: (next: React.ReactNode) => {
-      act(() => {
+      React.act(() => {
         root.render(next);
       });
     },
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -603,9 +593,8 @@ const flushMicrotasks = async () => {
 };
 
 test("PostBlockEditorShell renders alerts and wires topbar, sidebar, and settings actions", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   const view = mount(<PostBlockEditorShell />);
 
@@ -618,7 +607,7 @@ test("PostBlockEditorShell renders alerts and wires topbar, sidebar, and setting
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    await act(async () => {
+    await React.act(async () => {
       buttons.find((button) => button.textContent === "preview-post")?.click();
       buttons.find((button) => button.textContent === "publish-post")?.click();
       buttons.find((button) => button.textContent === "open-revisions")?.click();
@@ -660,16 +649,15 @@ test("PostBlockEditorShell renders alerts and wires topbar, sidebar, and setting
 });
 
 test("PostBlockEditorShell retries autosave and emits publish success toast through shared adapter", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   const view = mount(<PostBlockEditorShell />);
 
   try {
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    await act(async () => {
+    await React.act(async () => {
       buttons.find((button) => button.textContent === "Retry now")?.click();
       buttons.find((button) => button.textContent === "publish-post")?.click();
       await flushMicrotasks();
@@ -686,9 +674,8 @@ test("PostBlockEditorShell retries autosave and emits publish success toast thro
 
 test("PostBlockEditorShell emits update success and bounded failure toasts", async () => {
   const { ApiClientError } = await import("../../../core/admin/services/apiClient");
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   postShellState.editor.status = "published";
   const updateView = mount(<PostBlockEditorShell />);
@@ -696,7 +683,7 @@ test("PostBlockEditorShell emits update success and bounded failure toasts", asy
   try {
     const buttons = Array.from(updateView.container.querySelectorAll("button"));
 
-    await act(async () => {
+    await React.act(async () => {
       buttons.find((button) => button.textContent === "publish-post")?.click();
       await flushMicrotasks();
     });
@@ -715,7 +702,7 @@ test("PostBlockEditorShell emits update success and bounded failure toasts", asy
   try {
     const buttons = Array.from(failureView.container.querySelectorAll("button"));
 
-    await act(async () => {
+    await React.act(async () => {
       buttons.find((button) => button.textContent === "publish-post")?.click();
       await flushMicrotasks();
     });
@@ -729,9 +716,8 @@ test("PostBlockEditorShell emits update success and bounded failure toasts", asy
 
 test("PostBlockEditorShell hides raw taxonomy errors and retries overview loading", async () => {
   const { ApiClientError } = await import("../../../core/admin/services/apiClient");
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   postShellState.editor.post = {
     ...postShellState.editor.post,
@@ -750,7 +736,7 @@ test("PostBlockEditorShell hides raw taxonomy errors and retries overview loadin
   const view = mount(<PostBlockEditorShell />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await flushMicrotasks();
     });
 
@@ -763,7 +749,7 @@ test("PostBlockEditorShell hides raw taxonomy errors and retries overview loadin
     );
     expect(retryButton).toBeInstanceOf(HTMLButtonElement);
 
-    await act(async () => {
+    await React.act(async () => {
       (retryButton as HTMLButtonElement).click();
       await flushMicrotasks();
     });
@@ -779,9 +765,8 @@ test("PostBlockEditorShell hides raw taxonomy errors and retries overview loadin
 });
 
 test("PostBlockEditorShell handles move-to-trash confirm flow and list-view interactions", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   postShellState.layout.showInserter = false;
   postShellState.layout.showListView = true;
@@ -802,7 +787,7 @@ test("PostBlockEditorShell handles move-to-trash confirm flow and list-view inte
   try {
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "select-list-block")?.click();
       buttons.find((button) => button.textContent === "delete-list-block")?.click();
       buttons.find((button) => button.textContent === "move-list-block")?.click();
@@ -829,9 +814,8 @@ test("PostBlockEditorShell handles move-to-trash confirm flow and list-view inte
 });
 
 test("PostBlockEditorShell handles loading shell, details reopen, and cancelled trash flow", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   postShellState.layout.secondarySidebarOpen = false;
   postShellState.layout.detailsSidebarOpen = false;
@@ -856,7 +840,7 @@ test("PostBlockEditorShell handles loading shell, details reopen, and cancelled 
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "toggle-details")?.click();
       buttons.find((button) => button.textContent === "open-secondary-shell")?.click();
       buttons.find((button) => button.textContent === "move-to-trash")?.click();
@@ -873,9 +857,8 @@ test("PostBlockEditorShell handles loading shell, details reopen, and cancelled 
 });
 
 test("PostBlockEditorShell persists focus mode, clears stored layout when restore is disabled, and only navigates on successful trash", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   postShellState.layout.focusMode = true;
   postShellState.layout.state.focusMode = true;
@@ -904,7 +887,7 @@ test("PostBlockEditorShell persists focus mode, clears stored layout when restor
   const view = mount(<PostBlockEditorShell />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -913,12 +896,12 @@ test("PostBlockEditorShell persists focus mode, clears stored layout when restor
     expect(window.localStorage.getItem("coderso.posts.editor.focusMode")).toBe("1");
     expect(window.localStorage.getItem("coderso.posts.editor.layout.v1")).toBeNull();
 
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "move-to-trash")?.click();
       buttons.find((button) => button.textContent === "move-to-trash")?.click();
     });
 
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -940,9 +923,8 @@ test("PostBlockEditorShell persists focus mode, clears stored layout when restor
 });
 
 test("PostBlockEditorShell persists focus-restore layout values while focus mode is enabled", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   postShellState.layout.focusMode = true;
   postShellState.layout.state.focusMode = true;
@@ -958,7 +940,7 @@ test("PostBlockEditorShell persists focus-restore layout values while focus mode
   const view = mount(<PostBlockEditorShell />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -986,9 +968,8 @@ test("PostBlockEditorShell persists focus-restore layout values while focus mode
 });
 
 test("PostBlockEditorShell seeds layout hook options from stored layout and focus-mode preferences", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   postShellState.preferences.initialPreferences.focusModeOnOpen = true;
   postShellState.preferences.initialPreferences.defaultInspectorTab = "block" as never;
@@ -1006,7 +987,7 @@ test("PostBlockEditorShell seeds layout hook options from stored layout and focu
   const view = mount(<PostBlockEditorShell />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
@@ -1026,23 +1007,20 @@ test("PostBlockEditorShell seeds layout hook options from stored layout and focu
 });
 
 test("PostBlockEditorShell escape shortcut closes inserter, outline, and details in priority order", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   const view = mount(<PostBlockEditorShell />);
 
   try {
-    const shortcuts = postShellState.shortcutCalls.at(-1) as
-      | { onEscape?: () => void }
-      | undefined;
+    const shortcuts = postShellState.shortcutCalls.at(-1) as { onEscape?: () => void } | undefined;
     if (!shortcuts?.onEscape) {
       throw new Error("Missing escape shortcut");
     }
 
     postShellState.layout.showInserter = true;
     postShellState.layout.secondarySidebarOpen = true;
-    act(() => {
+    React.act(() => {
       shortcuts.onEscape?.();
     });
     expect(postShellState.layout.closeSecondarySidebar).toHaveBeenCalled();
@@ -1052,7 +1030,7 @@ test("PostBlockEditorShell escape shortcut closes inserter, outline, and details
     postShellState.focusReturn.mockClear();
     postShellState.layout.showInserter = false;
     postShellState.layout.secondarySidebarOpen = true;
-    act(() => {
+    React.act(() => {
       shortcuts.onEscape?.();
     });
     expect(postShellState.layout.closeSecondarySidebar).toHaveBeenCalled();
@@ -1062,7 +1040,7 @@ test("PostBlockEditorShell escape shortcut closes inserter, outline, and details
     postShellState.focusReturn.mockClear();
     postShellState.layout.secondarySidebarOpen = false;
     postShellState.layout.detailsSidebarOpen = true;
-    act(() => {
+    React.act(() => {
       shortcuts.onEscape?.();
     });
     expect(postShellState.layout.closeDetails).toHaveBeenCalled();
@@ -1073,9 +1051,8 @@ test("PostBlockEditorShell escape shortcut closes inserter, outline, and details
 });
 
 test("PostBlockEditorShell closes already-open outline or inserter toggles", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   postShellState.layout.secondarySidebarOpen = true;
   postShellState.layout.showInserter = false;
@@ -1086,12 +1063,12 @@ test("PostBlockEditorShell closes already-open outline or inserter toggles", asy
   const view = mount(<PostBlockEditorShell />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    act(() => {
+    React.act(() => {
       buttons.find((button) => button.textContent === "toggle-outline")?.click();
     });
 
@@ -1102,7 +1079,7 @@ test("PostBlockEditorShell closes already-open outline or inserter toggles", asy
     postShellState.layout.state.secondarySidebar = "inserter";
     view.rerender(<PostBlockEditorShell />);
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "toggle-inserter")
         ?.click();
@@ -1115,9 +1092,8 @@ test("PostBlockEditorShell closes already-open outline or inserter toggles", asy
 });
 
 test("PostBlockEditorShell closes list-view sidebars through the shell callback and returns focus to outline", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   postShellState.layout.secondarySidebarOpen = true;
   postShellState.layout.showInserter = false;
@@ -1129,11 +1105,11 @@ test("PostBlockEditorShell closes list-view sidebars through the shell callback 
   const view = mount(<PostBlockEditorShell />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 
-    act(() => {
+    React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "close-secondary-shell")
         ?.click();
@@ -1151,9 +1127,8 @@ test("PostBlockEditorShell closes list-view sidebars through the shell callback 
 });
 
 test("PostBlockEditorShell tolerates malformed stored layout fields and falls back to default inspector tab", async () => {
-  const { PostBlockEditorShell } = await import(
-    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
-  );
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
   postShellState.preferences.initialPreferences.defaultInspectorTab = "post" as never;
   window.localStorage.setItem(
@@ -1169,7 +1144,7 @@ test("PostBlockEditorShell tolerates malformed stored layout fields and falls ba
   const view = mount(<PostBlockEditorShell />);
 
   try {
-    await act(async () => {
+    await React.act(async () => {
       await Promise.resolve();
     });
 

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { act } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
@@ -14,22 +14,15 @@ type RefreshCommerceProductsMock = (
   options?: boolean | { force?: boolean; background?: boolean }
 ) => Promise<void>;
 
-type UpdateCommerceProductMock = (
-  id: string,
-  input: CommerceProductUpdateInput
-) => Promise<void>;
+type UpdateCommerceProductMock = (id: string, input: CommerceProductUpdateInput) => Promise<void>;
 
 type DeleteCommerceProductMock = (id: string) => Promise<void>;
 
 const commercePageState = vi.hoisted(() => ({
   navigate: vi.fn(),
   refreshProducts: vi.fn<RefreshCommerceProductsMock>(async () => undefined),
-  updateCommerceProduct: vi.fn<UpdateCommerceProductMock>(
-    async () => undefined
-  ),
-  deleteCommerceProduct: vi.fn<DeleteCommerceProductMock>(
-    async () => undefined
-  ),
+  updateCommerceProduct: vi.fn<UpdateCommerceProductMock>(async () => undefined),
+  deleteCommerceProduct: vi.fn<DeleteCommerceProductMock>(async () => undefined),
   products: [
     {
       id: "product-1",
@@ -97,15 +90,12 @@ const commercePageState = vi.hoisted(() => ({
   },
 }));
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
-  true;
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/alert", () => ({
   Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-  AlertDescription: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
+  AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -291,14 +281,8 @@ vi.mock("../../../core/admin/ui/commerce/commerceActionToasts", () => ({
       error instanceof Error ? error.message : "Commerce action failed."
     ),
     summarizeBulkAction: vi.fn(
-      (
-        _action: string,
-        ids: string[],
-        results: PromiseSettledResult<unknown>[]
-      ) => {
-        const failedTargets = ids.filter(
-          (_id, index) => results[index]?.status === "rejected"
-        );
+      (_action: string, ids: string[], results: PromiseSettledResult<unknown>[]) => {
+        const failedTargets = ids.filter((_id, index) => results[index]?.status === "rejected");
         return {
           ok: failedTargets.length === 0,
           toastMessage: "bulk product result",
@@ -324,14 +308,14 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  act(() => {
+  React.act(() => {
     root.render(node);
   });
 
   return {
     container,
     cleanup: () => {
-      act(() => {
+      React.act(() => {
         root.unmount();
       });
       container.remove();
@@ -340,19 +324,19 @@ const mount = (node: React.ReactNode) => {
 };
 
 const clickByText = (container: HTMLElement, text: string) => {
-  const button = Array.from(container.querySelectorAll("button")).find(
-    (candidate) => candidate.textContent?.includes(text)
+  const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(text)
   );
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error(`Missing button: ${text}`);
   }
-  act(() => {
+  React.act(() => {
     button.click();
   });
 };
 
 const flush = async () => {
-  await act(async () => {
+  await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -375,19 +359,13 @@ test("Commerce list helpers enrich collections and filter product rows", () => {
   expect(enriched[0]?.collectionLabels).toEqual(["Premium"]);
   expect(enriched[1]?.collectionLabels).toEqual(["Missing collection"]);
   expect(
-    filterCommerceProducts(enriched, "storage", "all", "all", "all").map(
-      (item) => item.id
-    )
+    filterCommerceProducts(enriched, "storage", "all", "all", "all").map((item) => item.id)
   ).toEqual(["product-2"]);
   expect(
-    filterCommerceProducts(enriched, "", "published", "all", "backorder").map(
-      (item) => item.id
-    )
+    filterCommerceProducts(enriched, "", "published", "all", "backorder").map((item) => item.id)
   ).toEqual(["product-2"]);
   expect(
-    filterCommerceProducts(enriched, "", "all", "collection-1", "all").map(
-      (item) => item.id
-    )
+    filterCommerceProducts(enriched, "", "all", "collection-1", "all").map((item) => item.id)
   ).toEqual(["product-1"]);
 });
 
@@ -396,21 +374,16 @@ test("CommerceListPage routes New, updates lifecycle, and confirms row delete", 
 
   try {
     clickByText(view.container, "New");
-    expect(commercePageState.navigate).toHaveBeenCalledWith(
-      "/advanced/commerce/new"
-    );
+    expect(commercePageState.navigate).toHaveBeenCalledWith("/advanced/commerce/new");
 
     clickByText(view.container, "edit-product:Oak Desk");
-    expect(commercePageState.navigate).toHaveBeenCalledWith(
-      "/advanced/commerce/product-1"
-    );
+    expect(commercePageState.navigate).toHaveBeenCalledWith("/advanced/commerce/product-1");
 
     clickByText(view.container, "publish-product:Oak Desk");
     await flush();
-    expect(commercePageState.updateCommerceProduct).toHaveBeenCalledWith(
-      "product-1",
-      { status: "published" }
-    );
+    expect(commercePageState.updateCommerceProduct).toHaveBeenCalledWith("product-1", {
+      status: "published",
+    });
     expect(commercePageState.refreshProducts).toHaveBeenCalledWith({
       force: true,
       background: true,
@@ -420,9 +393,7 @@ test("CommerceListPage routes New, updates lifecycle, and confirms row delete", 
     expect(commercePageState.deleteCommerceProduct).not.toHaveBeenCalled();
     clickByText(view.container, "Delete product");
     await flush();
-    expect(commercePageState.deleteCommerceProduct).toHaveBeenCalledWith(
-      "product-1"
-    );
+    expect(commercePageState.deleteCommerceProduct).toHaveBeenCalledWith("product-1");
   } finally {
     view.cleanup();
   }
@@ -441,14 +412,12 @@ test("CommerceListPage bulk actions use visible selection and keep failed rows s
     clickByText(view.container, "apply-bulk");
     await flush();
 
-    expect(commercePageState.updateCommerceProduct).toHaveBeenCalledWith(
-      "product-1",
-      { status: "archived" }
-    );
-    expect(commercePageState.updateCommerceProduct).toHaveBeenCalledWith(
-      "product-2",
-      { status: "archived" }
-    );
+    expect(commercePageState.updateCommerceProduct).toHaveBeenCalledWith("product-1", {
+      status: "archived",
+    });
+    expect(commercePageState.updateCommerceProduct).toHaveBeenCalledWith("product-2", {
+      status: "archived",
+    });
     expect(view.container.textContent).toContain("selected:product-2");
     expect(view.container.textContent).toContain("bulk product result");
   } finally {
@@ -468,9 +437,7 @@ test("CommerceListPage confirms bulk delete before mutating products", async () 
     clickByText(view.container, "Delete selected");
     await flush();
 
-    expect(commercePageState.deleteCommerceProduct).toHaveBeenCalledWith(
-      "product-1"
-    );
+    expect(commercePageState.deleteCommerceProduct).toHaveBeenCalledWith("product-1");
   } finally {
     view.cleanup();
   }

@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-05-24T23:33:33.888Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session=widget-contract-smoke-task-336-19-team-authoring --widget=team --output-json=_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-team-authoring-2026-05-24.json --output-md=_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-team-authoring-2026-05-24.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["team"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "team",
+        "modes": [
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "fb31e030-07df-4dce-9243-a3c8904d3269",
+        "adminPath": "http://localhost:5173/admin/pages/fb31e030-07df-4dce-9243-a3c8904d3269",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "team",
+        "publicPath": "/test-team-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-team.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

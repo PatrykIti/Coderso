@@ -122,19 +122,16 @@ test("utility widgets preserve none token values in rendered markers", () => {
   expect(divider.marginTop).toBe("none");
   expect(divider.marginBottom).toBe("none");
   const dividerHtml = renderToString(<DividerBlock data={divider} variant="line" />);
-  expect(dividerHtml).toContain('data-divider-margin-top="none"');
-  expect(dividerHtml).toContain('data-divider-margin-bottom="none"');
+  expect(dividerHtml).toContain('data-divider-margin-top-kind="none"');
+  expect(dividerHtml).toContain('data-divider-margin-bottom-kind="none"');
 
-  const spacer = normalizeSpacerData(
-    {
-      height: {
-        desktop: "none",
-        tablet: "none",
-        mobile: "none",
-      },
+  const spacer = normalizeSpacerData({
+    height: {
+      desktop: "none",
+      tablet: "none",
+      mobile: "none",
     },
-    "responsive"
-  );
+  });
   expect(spacer.height).toEqual({
     desktop: "none",
     tablet: "none",
@@ -240,12 +237,23 @@ test("marketing widgets preserve none spacing and radius tokens", () => {
       <FaqAccordionBlock
         data={normalizeFaqAccordionData({
           ...faqAccordionDefaults,
-          style: { ...faqAccordionDefaults.style, spacing: "none" },
+          style: { ...faqAccordionDefaults.style, spacing: "none", borderWidth: "2" },
         })}
         variant="single-column"
       />
     )
   ).toContain('data-faq-spacing="none"');
+  expect(
+    renderToString(
+      <FaqAccordionBlock
+        data={normalizeFaqAccordionData({
+          ...faqAccordionDefaults,
+          style: { ...faqAccordionDefaults.style, spacing: "none", borderWidth: "2" },
+        })}
+        variant="single-column"
+      />
+    )
+  ).toContain("margin-top:calc(-1 * 2px)");
 });
 
 test("people and form widgets preserve none style tokens", () => {
@@ -324,12 +332,21 @@ test("people and form widgets preserve none style tokens", () => {
 test("brand and text widgets preserve none typography tokens", () => {
   const logoCloud = normalizeLogoCloudData({
     ...logoCloudDefaults,
+    logos: [
+      {
+        id: "logo-1",
+        name: "Acme",
+        image: "https://cdn.example.com/acme.svg",
+        href: "#",
+      },
+    ],
     style: { ...logoCloudDefaults.style, logoHeight: "none", gap: "none" },
   });
   expect(logoCloud.style).toMatchObject({ logoHeight: "none", gap: "none" });
   const logoCloudHtml = renderToString(<LogoCloudBlock data={logoCloud} variant="grid" />);
   expect(logoCloudHtml).toContain('data-logo-cloud-height="none"');
   expect(logoCloudHtml).toContain('data-logo-cloud-gap="none"');
+  expect(logoCloudHtml).toContain("max-h-16");
 
   const richText = normalizeRichTextSectionData({
     style: {
@@ -406,6 +423,7 @@ test("hero, navigation, footer, and timelines accept none as visual off tokens",
           ...footerDefaults.layout,
           maxWidth: "none",
           columnGap: "none",
+          paddingX: "none",
           sectionPaddingY: "none",
         },
         style: {
@@ -416,6 +434,7 @@ test("hero, navigation, footer, and timelines accept none as visual off tokens",
       variant="columns-2"
     />
   );
+  expect(footerHtml).toContain("px-0");
   expect(footerHtml).toContain("py-0");
   expect(footerHtml).toContain("gap-0");
 
@@ -434,7 +453,7 @@ test("hero, navigation, footer, and timelines accept none as visual off tokens",
       <TimelineBlock
         data={{
           ...timelineDefaults,
-          layout: { ...timelineDefaults.layout, spacing: "none" },
+          layout: { ...timelineDefaults.layout, orientation: "vertical", spacing: "none" },
           style: {
             ...timelineDefaults.style,
             titleSize: "none",
