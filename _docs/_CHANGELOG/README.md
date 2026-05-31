@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1031 | 2026-05-31 | Bun coverage WriteFailed stabilization | CI/Testing/Tooling/Docs |
 | 1030 | 2026-05-31 | CI env loading for test lanes | CI/Testing/Docs |
 | 1029 | 2026-05-30 | TASK-343-02 Appointment Form phone validation | CMS Widgets/Appointment Form/Admin UI/Runtime/QA/Docs |
 | 1028 | 2026-05-30 | TASK-343-04 Accordion preview truthfulness | CMS Widgets/Accordion/Admin UI/Runtime/Accessibility/QA/Docs |

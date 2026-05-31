@@ -142,7 +142,7 @@ Use Bun coverage only for Bun-owned suites.
 
 What it is good for:
 - showing uncovered lines in executed runtime files,
-- emitting `text` and `lcov`,
+- emitting `lcov` plus a compact text summary in CI,
 - validating runtime contract suites in CI.
 
 What it is not good for:

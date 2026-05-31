@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2003 tasks
+- **Done:** 2004 tasks
 
 ---
 
@@ -64,6 +64,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-344 | Bun Coverage WriteFailed Reporter Stabilization | High | Small | Done (2026-05-31): `test:coverage:bun` now keeps the LCOV artifact while replacing Bun's huge text coverage table with a compact LCOV-derived summary to avoid CI `WriteFailed` exits. |
 | TASK-343 | Widget Report-Driven Remediation After the 28-05-2026 Audit Wave | High | Very Large | Done (2026-05-30): all 31 promoted remediation families are closed with report/docs/changelog updates and final Appointment Form strict smoke passing. |
 | TASK-343-02 | Appointment Form Audit Remediation Family | High | Medium | Done (2026-05-30): preserved the `No extra validation` phone preset and omitted runtime phone validation attributes when disabled. |
 | TASK-343-04 | Accordion Audit Remediation Family | High | Large | Done (2026-05-30): retired Wizard count ownership, isolated admin preview single-open groups, and synchronized preview `aria-expanded`. |

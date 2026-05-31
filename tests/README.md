@@ -52,6 +52,8 @@ the lane exercises real database and runtime flows that can exceed Bun's default
 `5000ms` timeout under full-suite load.
 `test:bun:lane` runs curated Bun-owned route/plugin/perf suites without coverage.
 `test:coverage:bun` uses the same curated Bun-owned route/plugin/perf suites through `scripts/run-bun-lane.ts`.
+It writes `coverage/bun/lcov.info` and prints a compact LCOV-derived summary,
+instead of streaming Bun's full per-file text coverage table into CI logs.
 `test:coverage` now uses `scripts/run-vitest-coverage.ts` and the canonical full-lane report path `coverage/vitest/coverage-summary.json`.
 
 ## Manual Smoke
