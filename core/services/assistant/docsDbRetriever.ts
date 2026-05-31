@@ -82,12 +82,7 @@ const CHECKLIST_HINTS = [
 const SECURITY_HINTS = ["security", "secure", "csrf", "rbac", "auth", "hardening"];
 
 type DocsDetailLevel = "basic" | "medium" | "instruction" | "advanced";
-type DocsGuideMode =
-  | "default"
-  | "troubleshooting"
-  | "decision_guide"
-  | "checklist"
-  | "security";
+type DocsGuideMode = "default" | "troubleshooting" | "decision_guide" | "checklist" | "security";
 
 type SectionKind =
   | "step_by_step"
@@ -177,7 +172,10 @@ const buildQueryPhrases = (tokens: string[]) => {
   const phrases: string[] = [];
   for (let size = 2; size <= Math.min(tokens.length, 4); size += 1) {
     for (let index = 0; index <= tokens.length - size; index += 1) {
-      const phrase = tokens.slice(index, index + size).join(" ").trim();
+      const phrase = tokens
+        .slice(index, index + size)
+        .join(" ")
+        .trim();
       if (phrase.length > 2) {
         phrases.push(phrase);
       }
@@ -258,10 +256,7 @@ const inferSectionKind = (headingPath: string[]): SectionKind => {
   return "other";
 };
 
-const scoreDetailLevelSectionWeight = (
-  sectionKind: SectionKind,
-  detailLevel: DocsDetailLevel
-) => {
+const scoreDetailLevelSectionWeight = (sectionKind: SectionKind, detailLevel: DocsDetailLevel) => {
   if (detailLevel === "basic") {
     if (sectionKind === "basic") return 1.4;
     if (sectionKind === "what_is_it") return 1.15;
@@ -299,10 +294,7 @@ const scoreDetailLevelSectionWeight = (
   return 0;
 };
 
-const scoreGuideModeSectionWeight = (
-  sectionKind: SectionKind,
-  guideMode: DocsGuideMode
-) => {
+const scoreGuideModeSectionWeight = (sectionKind: SectionKind, guideMode: DocsGuideMode) => {
   if (guideMode === "troubleshooting") {
     if (sectionKind === "troubleshooting") return 8;
     if (sectionKind === "common_mistakes") return 2;
@@ -383,14 +375,20 @@ const scorePathWeight = (docPath: string, context: RankingContext) => {
   const normalizedPath = normalizeDocsText(docPath);
   let score = 0;
 
-  if (normalizedPath.includes("docs screens")) score += 0.7;
-  if (normalizedPath.includes("docs coderso")) score += 0.6;
-  if (normalizedPath.includes("docs solution kits")) score += 0.2;
-  if (normalizedPath.includes("docs playbooks")) score += 0.1;
-  if ((context.intent.location || context.intent.asksForScreen) && normalizedPath.includes("docs playbooks")) {
+  if (normalizedPath.includes("docs guide screens")) score += 0.7;
+  if (normalizedPath.includes("docs guide coderso")) score += 0.6;
+  if (normalizedPath.includes("docs guide solution kits")) score += 0.2;
+  if (normalizedPath.includes("docs guide playbooks")) score += 0.1;
+  if (
+    (context.intent.location || context.intent.asksForScreen) &&
+    normalizedPath.includes("docs guide playbooks")
+  ) {
     score -= 0.45;
   }
-  if ((context.intent.location || context.intent.asksForScreen) && normalizedPath.includes("docs solution kits")) {
+  if (
+    (context.intent.location || context.intent.asksForScreen) &&
+    normalizedPath.includes("docs guide solution kits")
+  ) {
     score -= 0.2;
   }
 
@@ -444,8 +442,7 @@ const bm25TermScore = (input: {
   const docFrequency = Math.max(input.documentFrequency, 0);
   const idf = Math.log((docCount - docFrequency + 0.5) / (docFrequency + 0.5) + 1);
   const avgLength = Math.max(input.averageChunkLength, 1);
-  const lengthNorm =
-    BM25_K1 * (1 - BM25_B + BM25_B * (Math.max(input.chunkLength, 1) / avgLength));
+  const lengthNorm = BM25_K1 * (1 - BM25_B + BM25_B * (Math.max(input.chunkLength, 1) / avgLength));
   const tf = (input.termFrequency * (BM25_K1 + 1)) / (input.termFrequency + lengthNorm);
   return idf * tf;
 };
@@ -530,7 +527,7 @@ const scoreIntentAlignment = (row: RankedChunkRow, context: RankingContext) => {
   const titleAndPath = `${row.docTitleNormalized} ${row.pathNormalized}`;
 
   if (context.intent.asksForScreen) {
-    if (row.docPath.startsWith("docs/screens/")) score += 0.4;
+    if (row.docPath.startsWith("docs/guide/screens/")) score += 0.4;
     if (/(screen|settings|editor|page|tab|panel)/.test(titleAndPath)) score += 0.35;
   }
 
@@ -581,16 +578,12 @@ const loadDbModules = async () => {
 
 const toHeadingPath = (value: unknown) => {
   if (!Array.isArray(value)) return [] as string[];
-  return value
-    .map((entry) => String(entry).trim())
-    .filter((entry) => entry.length > 0);
+  return value.map((entry) => String(entry).trim()).filter((entry) => entry.length > 0);
 };
 
 const toKeywords = (value: unknown) => {
   if (!Array.isArray(value)) return [] as string[];
-  return value
-    .map((entry) => String(entry).trim())
-    .filter((entry) => entry.length > 0);
+  return value.map((entry) => String(entry).trim()).filter((entry) => entry.length > 0);
 };
 
 export const rankAssistantDocsDbRows = (
@@ -688,8 +681,7 @@ export const rankAssistantDocsDbRows = (
           ? 0
           : Math.min(
               1,
-              intent.tokens.filter((token) => matchedTerms.has(token)).length /
-                intent.tokens.length
+              intent.tokens.filter((token) => matchedTerms.has(token)).length / intent.tokens.length
             ),
     });
   }
@@ -777,10 +769,7 @@ export const searchAssistantDocsDb = async (
         lineEnd: Number(row.lineEnd ?? 0),
         content: String(row.content ?? ""),
         normalizedText,
-        tokenCount: Math.max(
-          Number(row.tokenCount ?? 0),
-          tokenizeDocsText(normalizedText).length
-        ),
+        tokenCount: Math.max(Number(row.tokenCount ?? 0), tokenizeDocsText(normalizedText).length),
       };
     });
 

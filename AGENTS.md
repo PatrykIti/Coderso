@@ -26,7 +26,15 @@ Root project docs:
 - `.github/PULL_REQUEST_TEMPLATE.md` - pull request summary, validation, and
   release notes template
 
-Primary docs live in `_docs/`:
+Human-facing documentation lives in `docs/`:
+
+- `docs/README.md` - documentation hub (routes users vs developers)
+- `docs/guide/` - end-user product docs; also the AI assistant knowledge corpus
+  (ingested from `docs/guide/` via `POST /assistant/reindex`)
+- `docs/develop/` - developer/contributor handbook (setup, architecture, runtime
+  model, content/widgets, plugins, assistant, testing, security, contributing)
+
+Primary internal/agent docs live in `_docs/`:
 
 - `AGENTS.md` - agent guidelines
 - `_docs/ARCHITECTURE.md` - core architecture and system rules

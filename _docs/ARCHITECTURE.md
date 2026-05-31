@@ -262,7 +262,7 @@ Aktualny fundament asystenta (bez LLM) sklada sie z warstw:
 Przeplyw runtime:
 1. `assistantService` czyta official assistant corpus status z DB ingest tables.
 2. Runtime wykonuje retrieval na `assistant_doc_chunks`.
-3. Official assistant corpus w `docs/` jest uznawany za gotowy dopiero po seedzie do DB.
+3. Official assistant corpus w `docs/guide/` jest uznawany za gotowy dopiero po seedzie do DB.
 4. Gdy DB corpus nie jest gotowy, runtime zwraca stan `not ready`.
 5. `docsDbRetriever` stosuje ranking intent-aware: BM25 + section/path priors + metadata docs (`productArea`, `title`, `keywords`) + exact module/screen phrase boosts + cross-area penalties dla obcych domen.
 6. Confidence nie zalezy juz tylko od `topScore`; uwzglednia tez domain alignment, query coverage i score gap.
@@ -280,13 +280,13 @@ Przeplyw runtime:
 15. Response moze zawierac `followUpOptions[]`, ktore prowadza usera do kolejnego poziomu szczegolowosci lub trybu pomocniczego w tej samej tematyce.
 
 Przeplyw reindex:
-1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs`.
+1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs/guide`.
 2. Wyniki ingest trafiaja do `assistant_docs`, `assistant_doc_chunks`, `assistant_doc_ingest_runs`.
 3. Reindex wykonuje tez cleanup osieroconych rekordow `assistant_docs`, gdy plik
    zostal usuniety z aktualnego source root i nie powinien juz pozostawac w DB-only corpus.
 
 Zasady runtime:
-- Official assistant corpus korzysta z root `docs/` jako source-of-truth.
+- Official assistant corpus korzysta z root `docs/guide/` jako source-of-truth.
 - Seed do DB jest warunkiem gotowosci official assistant corpus.
 - Przy braku trafienia system zwraca `missing_answer` (bez halucynacji).
 

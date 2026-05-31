@@ -38,7 +38,7 @@ test("createOpenRouterProvider maps request and response", async () => {
     userMessage: "Where are hero settings?",
     snippets: [
       {
-        path: "docs/coderso/widget-template-editor.md",
+        path: "docs/guide/coderso/widget-template-editor.md",
         heading: "Step By Step",
         content: "Open Widgets and choose Hero visual tab.",
       },
@@ -68,7 +68,9 @@ test("createOpenRouterProvider maps request and response", async () => {
   expect(requestBody.model).toBe("google/gemma-3n-e2b-it:free");
   expect(requestBody.max_tokens).toBe(512);
   expect(requestBody.messages[1]?.content).toContain("Documentation snippets");
-  expect(requestBody.messages[1]?.content).toContain("docs/coderso/widget-template-editor.md");
+  expect(requestBody.messages[1]?.content).toContain(
+    "docs/guide/coderso/widget-template-editor.md"
+  );
 });
 
 test("createOpenRouterProvider sends raw user message for planning calls without snippets", async () => {
@@ -81,7 +83,7 @@ test("createOpenRouterProvider sends raw user message for planning calls without
         choices: [
           {
             message: {
-              content: "{\"operation\":\"inspect\",\"resourceKind\":\"custom-screen\"}",
+              content: '{"operation":"inspect","resourceKind":"custom-screen"}',
             },
           },
         ],
@@ -99,7 +101,7 @@ test("createOpenRouterProvider sends raw user message for planning calls without
 
   await provider.complete({
     systemPrompt: "Return JSON",
-    userMessage: "{\"prompt\":\"inspect screens\"}",
+    userMessage: '{"prompt":"inspect screens"}',
     snippets: [],
     limits: {
       maxInputTokens: 8192,
@@ -111,7 +113,7 @@ test("createOpenRouterProvider sends raw user message for planning calls without
   const requestBody = JSON.parse(String(calls[0]?.init?.body)) as {
     messages: Array<{ role: string; content: string }>;
   };
-  expect(requestBody.messages[1]?.content).toBe("{\"prompt\":\"inspect screens\"}");
+  expect(requestBody.messages[1]?.content).toBe('{"prompt":"inspect screens"}');
   expect(requestBody.messages[1]?.content).not.toContain("Documentation snippets");
 });
 
@@ -125,7 +127,7 @@ test("createOpenRouterProvider maps generic JSON schema response contract", asyn
         choices: [
           {
             message: {
-              content: "{\"operation\":\"inspect\",\"resourceKind\":\"custom-screen\"}",
+              content: '{"operation":"inspect","resourceKind":"custom-screen"}',
             },
           },
         ],

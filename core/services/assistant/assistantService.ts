@@ -1,17 +1,15 @@
 import { logAudit } from "../audit/auditService";
-import { getSetting, type AssistantLlmProvider, type AssistantMode } from "../settings/settingsService";
-import { composeDocsAnswer } from "./docsAnswerComposer";
 import {
-  getAssistantDocsDbStatus,
-  ingestInternalDocsToDb,
-} from "./docsIngestService";
+  getSetting,
+  type AssistantLlmProvider,
+  type AssistantMode,
+} from "../settings/settingsService";
+import { composeDocsAnswer } from "./docsAnswerComposer";
+import { getAssistantDocsDbStatus, ingestInternalDocsToDb } from "./docsIngestService";
 import { searchAssistantDocsDb } from "./docsDbRetriever";
 import { recordAssistantMetric } from "./assistantMetrics";
 import { enforceAssistantQuota } from "./assistantQuota";
-import {
-  redactAssistantMetadata,
-  redactAssistantText,
-} from "./assistantRedaction";
+import { redactAssistantMetadata, redactAssistantText } from "./assistantRedaction";
 import { resolveAssistantProvider } from "./providers";
 import type { AssistantProviderResponse } from "./providers/providerTypes";
 import type {
@@ -32,7 +30,7 @@ const BLOCKED_MARKERS = [
   "prompt injection",
 ] as const;
 
-const DEFAULT_ASSISTANT_SOURCE_ROOT = "docs";
+const DEFAULT_ASSISTANT_SOURCE_ROOT = "docs/guide";
 const DEFAULT_ASSISTANT_LLM_MODEL = "google/gemma-3n-e2b-it:free";
 const DEFAULT_ASSISTANT_LLM_MAX_INPUT_TOKENS = 8192;
 const DEFAULT_ASSISTANT_LLM_MAX_OUTPUT_TOKENS = 2048;
@@ -208,11 +206,7 @@ const normalizeGuideMode = (value: unknown, fallback: DocsGuideMode): DocsGuideM
 const normalizeConfidence = (value: number) =>
   Math.min(0.97, Math.max(0.2, Number(value.toFixed(4))));
 
-const getSettingSafe = async (
-  deps: AssistantServiceDeps,
-  key: string,
-  fallback: unknown
-) => {
+const getSettingSafe = async (deps: AssistantServiceDeps, key: string, fallback: unknown) => {
   try {
     return await deps.getSetting(key);
   } catch {
@@ -244,16 +238,8 @@ const readRuntimeSettings = async (
     getSettingSafe(deps, "assistant.llm.enabled", false),
     getSettingSafe(deps, "assistant.llm.provider", "none"),
     getSettingSafe(deps, "assistant.llm.model", DEFAULT_ASSISTANT_LLM_MODEL),
-    getSettingSafe(
-      deps,
-      "assistant.llm.maxInputTokens",
-      DEFAULT_ASSISTANT_LLM_MAX_INPUT_TOKENS
-    ),
-    getSettingSafe(
-      deps,
-      "assistant.llm.maxOutputTokens",
-      DEFAULT_ASSISTANT_LLM_MAX_OUTPUT_TOKENS
-    ),
+    getSettingSafe(deps, "assistant.llm.maxInputTokens", DEFAULT_ASSISTANT_LLM_MAX_INPUT_TOKENS),
+    getSettingSafe(deps, "assistant.llm.maxOutputTokens", DEFAULT_ASSISTANT_LLM_MAX_OUTPUT_TOKENS),
     getSettingSafe(deps, "assistant.llm.timeoutMs", DEFAULT_ASSISTANT_LLM_TIMEOUT_MS),
     getSettingSafe(
       deps,
@@ -302,10 +288,7 @@ const readRuntimeSettings = async (
       llmMaxOutputTokensRaw,
       DEFAULT_ASSISTANT_LLM_MAX_OUTPUT_TOKENS
     ),
-    llmTimeoutMs: normalizePositiveInteger(
-      llmTimeoutMsRaw,
-      DEFAULT_ASSISTANT_LLM_TIMEOUT_MS
-    ),
+    llmTimeoutMs: normalizePositiveInteger(llmTimeoutMsRaw, DEFAULT_ASSISTANT_LLM_TIMEOUT_MS),
     quotaRequestsPerMinute: normalizePositiveInteger(
       quotaRequestsPerMinuteRaw,
       DEFAULT_ASSISTANT_QUOTA_REQUESTS_PER_MINUTE
@@ -355,10 +338,7 @@ export const sanitizeAssistantMessage = (message: string) => {
   return normalized;
 };
 
-const resolveMode = (
-  requestedMode: AssistantMode,
-  settings: AssistantRuntimeSettings
-) => {
+const resolveMode = (requestedMode: AssistantMode, settings: AssistantRuntimeSettings) => {
   if (requestedMode === "llm-guide") {
     if (!settings.llmEnabled || settings.llmProvider === "none") {
       return {
@@ -563,8 +543,7 @@ export const answerAssistantQuestion = async (
       {
         actorId: input.actorId ?? null,
         mode: mode.effectiveMode,
-        estimatedLlmTokens:
-          mode.effectiveMode === "llm-guide" ? settings.llmMaxOutputTokens : 0,
+        estimatedLlmTokens: mode.effectiveMode === "llm-guide" ? settings.llmMaxOutputTokens : 0,
         nowMs: startedAtMs,
       }
     );

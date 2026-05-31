@@ -188,13 +188,13 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
     maxResourceItemsPerGroup: 1,
     evidence: [
       {
-        path: "docs/coderso/products.md",
+        path: "docs/guide/coderso/products.md",
         heading: "Products",
         content: "This is a long documentation passage for product catalogs.",
         score: 3,
       },
       {
-        path: "docs/coderso/other.md",
+        path: "docs/guide/coderso/other.md",
         heading: "Other",
         content: "Other content",
         score: 1,
@@ -437,7 +437,7 @@ test("buildProviderPlanningPromptPackage reads retrieval-shaped evidence chunks"
     evidence: [
       {
         chunk: {
-          docPath: "docs/coderso/retrieval.md",
+          docPath: "docs/guide/coderso/retrieval.md",
           docTitle: "Retrieval Title",
           heading: "Chunk Heading",
           content: "Chunk content for retrieval evidence.",
@@ -454,7 +454,7 @@ test("buildProviderPlanningPromptPackage reads retrieval-shaped evidence chunks"
 
   expect(prompt.docs).toEqual([
     {
-      path: "docs/coderso/retrieval.md",
+      path: "docs/guide/coderso/retrieval.md",
       heading: "Chunk Heading",
       content: "Chunk content for retrieval evidence.",
       score: 7,
