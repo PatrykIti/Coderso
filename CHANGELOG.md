@@ -3,6 +3,48 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.2.0] - 2026-05-31
+### Added
+- Detail-page (per-entry detail template) subsystem: document, revision, runtime, binding, and schema services with an internal admin API (CRUD, autosave, preview, publish/unpublish, revision restore) and public rendering on content routes (TASK-190)
+- Collection-workspace read model that canonically resolves a content type's content routes, detail page, list page, listing query/template, and admin screen (TASK-190)
+- Assistant blueprint-composition layer: capability registry/schema, page-section library, schema/facet/card mergers, conflict resolver, existing-resource matcher, and admin-surface composer (TASK-190)
+- Widget editor contract v2 validator enforcing stable section ids, single-owner writable paths, known section roles, and read-only advanced diagnostics across all 38 page-builder widgets
+- DOM ownership metadata on widget editor controls (data-widget-control-path, data-widget-control-ownership, data-widget-editor-section-role) for automated contract verification
+- Path-aware shared editor controls: SharedColorControl, LinkDestinationField, TokenOrPixelField, ClearableFields, and ReadonlyWidgetSummaryRow
+- Bun-owned Playwright widget-contract smoke harness classifying admin-mode, public-CSS, fixture-gap, metadata-gap, and environment failures across the 38-widget inventory
+- docs/develop/ developer handbook (12 pages) and a docs/README.md hub routing users (docs/guide), developers (docs/develop), and internal reference (_docs)
+- Configurable booking-nonce TTL (FORM_SUBMIT_NONCE_TTL_MINUTES) and typed form field contracts for number, hidden, time, and rating fields
+- Widget preview routes for entry teaser, product compare, product gallery, and product table
+
+### Changed
+- Brought navigation, contact, cta-banner, testimonials, pricing-plans, faq-accordion, gallery-mosaic, team, rich-text-section, entry-teaser, product-gallery, product-compare, and timeline editors to hero parity with truthful section ids/titles/roles
+- Made advanced-mode widget diagnostics read-only and converted the widget wizard into a one-time setup step
+- Threaded a WidgetRenderContext (public / editor-preview / admin-preview modes, nested row-flow surface) through the widget renderer
+- Relocated all end-user product docs under docs/guide/ and moved the assistant knowledge-corpus source root from docs/ to docs/guide/ (POST /assistant/reindex now ingests docs/guide)
+- Replaced raw widget color value inputs with swatch-first shared color controls
+- site.contentRoutes settings now carry a validated detailPageId and invalidate the content-route cache on transition
+- Hardened Bun/Vitest test scripts to source .env, run single-threaded with a 15s timeout under NODE_ENV=test, and extended coverage globs to assistant blueprint/provider/action-planner modules
+
+### Fixed
+- Hero single-CTA selection now persists through save/reload instead of silently restoring the secondary CTA
+- Hero overlay color is preserved when only overlay strength changes, and background-image overlays use a valid layered composition instead of invalid background-image: rgba(),url()
+- Closed missing control-path ownership metadata on pricing-plans, faq-accordion, cta-banner, and contact Visual controls
+- Widget device-visibility filtering no longer hides blocks when no preview device is set
+- Forms reject file-upload fields and invalid number/time/rating field definitions at validation time
+- Legacy content-list pagination residuals corrected and navigation runtime menu mapping hardened with safe-href normalization (TASK-262, TASK-275)
+- Stale references to docs/ as the assistant source-of-truth corrected to docs/guide/ across ARCHITECTURE and ingest documentation
+
+### Removed
+- Shared BlockSettings live-preview row from the daily Visual and Advanced editor tabs
+- Raw advanced widget payload, media-url, and link-text inputs in favor of structured safe controls
+- Legacy single docs root for assistant doc ingestion (replaced by docs/guide)
+
+### Security
+- Booking/form submission nonces are HMAC-SHA256 signed, scope- and claim-bound, and verified with timingSafeEqual to prevent forgery and timing attacks
+- Widget link/href inputs are normalized through normalizeWidgetSafeHref, blocking javascript:, data:, vbscript:, and protocol-relative URLs and adding rel=noopener noreferrer on external targets
+- Editor contract path validation rejects unsafe dot-path segments (__proto__, prototype, constructor) to prevent prototype-pollution-style writable paths
+- Detail-page ids and preview-token contexts validated against a strict UUID format, and public detail-page title tokens are allowlist-checked before binding
+- Closed strict security dependency advisories by pinning fast-uri (^3.1.2) and fast-xml-builder (^1.1.7) transitive overrides and refreshing the lockfile (TASK-190)
 ## [1.1.1] - 2026-05-04
 ### Changed
 - Changed local pre-commit hook setup to an explicit contributor step with `git config core.hooksPath .githooks` instead of an install-time lifecycle hook.
