@@ -544,6 +544,9 @@ const richTextPlainTextBlockTags = new Set(["p", "li", "blockquote", "h2", "h3",
 
 const extractHeadingText = (value: string) => htmlToPlainText(value, headingTextBlockTags);
 
+export const richTextHtmlToPlainText = (html: string) =>
+  htmlToPlainText(html, richTextPlainTextBlockTags);
+
 const slugifyHeading = (value: string, fallbackIndex: number) => {
   const normalized = value
     .toLowerCase()

@@ -926,6 +926,18 @@ test("HeroVisualEditor updates rich copy and social proof fields", async () => {
     expect(latestValue.richBody).toBe("<p>Keep this</p>");
     expect(view.container.textContent).toContain("Formatting adjusted");
     expect(view.container.textContent).toContain("Pasted images are removed from styled copy.");
+
+    React.act(() => {
+      setTextareaValue(
+        view.container.querySelector('[data-widget-control="hero.richHeadline"] textarea'),
+        "<script>alert(1)</script><p><br></p>"
+      );
+    });
+
+    expect(latestValue.richHeadline).toBe("");
+    expect(view.container.textContent).toContain(
+      "Executable or styling markup is removed from styled copy."
+    );
   } finally {
     view.cleanup();
   }

@@ -9,9 +9,56 @@ import {
   getWidgetSlotKind,
 } from "./slots";
 
-const ajv = new Ajv({ allErrors: true, strict: true });
+const ajv = new Ajv({ allErrors: false, strict: true });
 const validators = new Map<string, ValidateFunction>();
 const hasOwn = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
+
+const validationBudget = {
+  maxDepth: 32,
+  maxNodes: 12000,
+  maxArrayItems: 2000,
+  maxObjectKeys: 200,
+};
+
+function assertValidationBudget(value: unknown) {
+  const pending: Array<{ value: unknown; depth: number }> = [{ value, depth: 0 }];
+  const seen = new WeakSet<object>();
+  let nodes = 0;
+
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    if (!current.value || typeof current.value !== "object") continue;
+
+    if (seen.has(current.value)) continue;
+    seen.add(current.value);
+
+    nodes += 1;
+    if (nodes > validationBudget.maxNodes) {
+      throw new Error("widget_schema_invalid: payload_too_complex");
+    }
+    if (current.depth > validationBudget.maxDepth) {
+      throw new Error("widget_schema_invalid: payload_too_deep");
+    }
+
+    if (Array.isArray(current.value)) {
+      if (current.value.length > validationBudget.maxArrayItems) {
+        throw new Error("widget_schema_invalid: payload_too_complex");
+      }
+      for (const item of current.value) {
+        pending.push({ value: item, depth: current.depth + 1 });
+      }
+      continue;
+    }
+
+    const values = Object.values(current.value as Record<string, unknown>);
+    if (values.length > validationBudget.maxObjectKeys) {
+      throw new Error("widget_schema_invalid: payload_too_complex");
+    }
+    for (const item of values) {
+      pending.push({ value: item, depth: current.depth + 1 });
+    }
+  }
+}
 
 function getValidator(def: WidgetDefinition<any>) {
   const cached = validators.get(def.type);
@@ -119,6 +166,8 @@ export function normalizeWidgetBlock(block: WidgetBlock): WidgetBlock {
       }
     }
   }
+
+  assertValidationBudget(merged);
 
   const validate = getValidator(def);
   const valid = validate(merged);

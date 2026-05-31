@@ -41,6 +41,7 @@ import type {
 } from "../../../../widgets/core/hero";
 import { normalizeHeroData, normalizeHeroHref } from "../../../../widgets/core/hero";
 import {
+  richTextHtmlToPlainText,
   sanitizeRichTextHtmlWithDiagnostics,
   type RichTextSanitizerDiagnostic,
 } from "../../../../widgets/core/richTextSection";
@@ -701,12 +702,7 @@ function HeroAvatarAssetField({
   );
 }
 
-const isEmptyRichTextHtml = (html: string) =>
-  html
-    .replace(/<br\s*\/?>/gi, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/<[^>]+>/g, "")
-    .trim().length === 0;
+const isEmptyRichTextHtml = (html: string) => richTextHtmlToPlainText(html).length === 0;
 
 const normalizeHeroRichTextEditorValue = (next: string) => {
   const result = sanitizeRichTextHtmlWithDiagnostics(next);

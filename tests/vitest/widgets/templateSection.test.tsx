@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { afterEach, expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
 
+import { richTextHtmlToPlainText } from "../../../core/widgets/core/richTextSection";
 import {
   createTemplateSectionWidget,
   TemplateSectionBlock,
@@ -63,7 +64,7 @@ test("template section placeholder does not expose raw template ids", () => {
       variant="default"
     />
   );
-  const visibleText = html.replace(/<[^>]*>/g, "");
+  const visibleText = richTextHtmlToPlainText(html);
 
   expect(html).toContain("Template section");
   expect(html).toContain("Template not found. Pick another template.");
