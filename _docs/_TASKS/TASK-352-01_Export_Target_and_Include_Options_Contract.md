@@ -14,10 +14,16 @@
 Make export cards truthful. The UI presents Content Types, Pages, and Media
 cards with option checkboxes, but every Download returns the same full
 configuration bundle.
+Current `exportConfig()` does not include content type, page, or media payloads;
+it exports settings, menus, theme profiles, admin themes, and redirects.
 
 ## Sub-Tasks
 
-- Define an `ExportTarget` enum and per-target include option enums.
+- Define an `ExportTarget` enum and per-target include option enums that match
+  real service capabilities.
+- Decide explicitly whether to implement real Content Types/Pages/Media
+  exporters or replace/rename the visible cards to the current configuration
+  bundle modules.
 - Convert export card checkboxes to controlled state keyed by card ID.
 - Send target/include options through the client to the server.
 - Add strict export request validation.
@@ -30,7 +36,8 @@ configuration bundle.
 | File | Required change |
 |---|---|
 | `core/services/tools/importExportTypes.ts` | Add export target/options types if not already present. |
-| `core/services/tools/importExportService.ts` | Add `exportConfig(input)` filtering by target/include while preserving full export compatibility. |
+| `core/services/tools/importExportService.ts` | Add `exportConfig(input)` for supported targets, and add real Content Types/Pages/Media exporters before exposing those cards. |
+| `core/services/content/typeService.ts`, `core/services/pages/pageService.ts`, `core/services/media/*` | Touch only if Content Types/Pages/Media export targets are implemented. |
 | `core/server/validation/importExportSchemas.ts` | Add strict export query/body schema with target/include enums. |
 | `core/server/routes/importExportRoutes.ts` | Parse and validate export request. |
 | `core/admin/services/importExportClient.ts` | Serialize target/include options. |
@@ -43,7 +50,15 @@ configuration bundle.
 ## Implementation Pseudocode
 
 ```ts
-type ExportTarget = "full" | "content-types" | "pages" | "media";
+type ExportTarget =
+  | "full"
+  | "settings"
+  | "menus"
+  | "themes"
+  | "redirects"
+  | "content-types"
+  | "pages"
+  | "media";
 type ExportIncludeOption =
   | "field-definitions"
   | "validation-rules"
@@ -53,9 +68,19 @@ type ExportIncludeOption =
   | "alt-text";
 
 export async function exportConfig(input: ExportRequest = { target: "full" }) {
-  const full = await buildFullBundle();
+  assertExportTargetSupported(input.target);
+  const full = await buildCurrentConfigBundle();
   if (input.target === "full") return full;
+  if (input.target === "content-types" || input.target === "pages" || input.target === "media") {
+    return buildResourceExportBundle(input); // only after real exporters exist
+  }
   return filterBundleForTarget(full, input);
+}
+
+function resolveVisibleExportCards(capabilities) {
+  return capabilities.resourceExports
+    ? ["content-types", "pages", "media"]
+    : ["settings", "menus", "themes", "redirects"];
 }
 
 function handleDownload(cardId) {
@@ -65,6 +90,7 @@ function handleDownload(cardId) {
 
 Data flow:
 
+- Visible cards are derived from service-supported export capabilities.
 - Card state -> `ImportExportPage.handleExport(request)` ->
   `importExportClient.exportConfig(request)` -> route validation -> service
   bundle filtering -> browser download.
@@ -76,12 +102,16 @@ Error handling:
 - Unknown target/options must be rejected before service execution.
 - If media binaries/ZIP are unsupported, do not advertise them as selectable
   options.
+- If Content Types/Pages/Media exporters are not implemented, do not render
+  those cards as downloadable targets.
 
 Regression-test shape:
 
 - Toggle off Pages SEO and assert export request excludes `seo-metadata`.
 - Export Content Types only and assert Pages/Media sections are absent or empty
   per documented bundle contract.
+- If the UI is reduced to current config modules, assert Content Types/Pages/Media
+  cards are absent and supported module cards export matching sections.
 - Unknown include option returns validation error.
 
 ## Security Contract
@@ -107,6 +137,7 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Import / Export report with export option resolution.
+- Update `_docs/CMS_API.md` for export target/include query or body shape.
 - Update user docs if export targets become documented.
 
 ## Acceptance Criteria
@@ -114,3 +145,4 @@ Regression-test shape:
 - Export checkboxes are not visual-only.
 - Download payload and bundle shape reflect selected target/options.
 - Unsupported export options are not presented as available.
+- The UI and service agree on whether Content Types/Pages/Media export exists.

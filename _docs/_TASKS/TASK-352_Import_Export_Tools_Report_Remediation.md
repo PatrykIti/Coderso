@@ -20,6 +20,8 @@ The deep pass proved a valid JSON bundle can roundtrip and restore the original
 configuration. The remaining issues are:
 
 - Export option checkboxes do not affect downloads.
+- Export cards advertise Content Types, Pages, and Media, while the current
+  bundle contains settings, menus, theme profiles, admin themes, and redirects.
 - Per-card option chevrons and Activity Log are UI-only.
 - Visible file-type copy advertises CSV/ZIP while the input/parser only accept
   JSON.
@@ -88,6 +90,12 @@ Import/export routes are internal admin settings operations:
 - `_docs/PLAYWRIGHT/31-05-2026-tools/REPORT_TOOLS_SECTION_OVERVIEW.md`
 - Import/export user guide if file types, export targets, or activity behavior
   changes
+- `_docs/CMS_API.md`, `_docs/ARCHITECTURE.md`, and `_docs/SECURITY_SPEC.md` if
+  export target shape, import activity storage, retry behavior, or secret
+  redaction policy changes
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if import/export
+  activity or exports become cached; otherwise document the intentional uncached
+  rationale
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 
@@ -95,6 +103,8 @@ Import/export routes are internal admin settings operations:
 
 - Every visible export option either changes the export or is not presented as
   interactive.
+- No export card claims Content Types/Pages/Media unless the service can export
+  those resources.
 - Import preview rejects malformed bundles before apply.
 - Errors are user-facing and machine-readable, not raw DB 500s.
 - Recent Imports/activity/progress rows are real or explicitly marked static /

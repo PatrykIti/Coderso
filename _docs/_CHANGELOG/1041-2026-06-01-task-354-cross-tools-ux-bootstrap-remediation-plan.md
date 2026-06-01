@@ -2,7 +2,7 @@
 
 Date: 2026-06-01
 Version: Unreleased
-Tasks: TASK-354
+Tasks: TASK-354, TASK-354-01, TASK-354-02, TASK-354-03, TASK-354-04, TASK-354-05
 
 ## Key Changes
 
@@ -18,9 +18,14 @@ Tasks: TASK-354
   isolated by the assigned task numbers.
 - Tightened TASK-354-03 after follow-up audit with an explicit regression-test
   shape for pepper-aware seed-admin coverage.
+- Refined TASK-354 after cross-audit with controlled option-group payload
+  truthfulness, runtime-effect matrix evidence, Backups pagination coverage,
+  stronger seed-admin path tests, and an explicit audit-run security contract.
 
 ## Validation
 
 - Planning was based on the Tools overview report, Claude UX addendum, current
   Tools source files, `core/db/seed.ts`, auth password helpers, relevant tests,
   and the repo task/changelog format rules.
+- Follow-up drift audit compared cross-tools findings against per-tool leaves,
+  current source paths, and fixture-backed Playwright/security expectations.

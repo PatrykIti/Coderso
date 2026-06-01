@@ -115,8 +115,8 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update SEO report with scoring and audit-scope resolution.
-- Update API docs only if the SEO audit payload becomes a documented admin API
-  contract.
+- Update `_docs/CMS_API.md` because `/seo/audit` is already a documented admin
+  endpoint and the payload/response semantics change.
 
 ## Acceptance Criteria
 
@@ -124,4 +124,6 @@ Regression-test shape:
 - Audit checkboxes are controlled and affect the request, or are removed/marked
   unavailable with disabled semantics.
 - Unknown audit checks are rejected.
+- Route registration and `mapSeoError` / validation-error coverage prove
+  machine-readable failures at the API boundary.
 - Service error codes stay machine-readable and route-mapped.

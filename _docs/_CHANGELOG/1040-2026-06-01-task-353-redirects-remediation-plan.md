@@ -15,9 +15,14 @@ Tasks: TASK-353
   closure.
 - Captured the bridge security contract between internal redirect CRUD and
   public read redirect execution, including loop/open-redirect hardening.
+- Refined Redirects leaves after drift audit to require visited-set/max-hop
+  chain loop handling, route error mapping, cache-contract decisions, and
+  current source references.
 
 ## Validation
 
 - Planning was based on the Redirects report, Tools overview report, Claude UX
   addendum, current Redirects UI/client/route/service/public-runtime files,
   current tests, and the repo task/changelog format rules.
+- Follow-up drift audit checked current redirect service/routes, runtime
+  routing, and admin cache policy.

@@ -39,14 +39,21 @@ does not explain how users can generate meaningful analytics.
 ## Implementation Pseudocode
 
 ```ts
-function calcChange(current: number, previous: number): AnalyticsChange {
-  if (current === 0 && previous === 0) {
-    return { kind: "no-data", label: "No data yet", trend: "neutral" };
+function calcChange(input: {
+  current: number;
+  previous: number;
+  totalKnownItems: number;
+}): AnalyticsChange {
+  if (input.totalKnownItems === 0) {
+    return { kind: "no-workspace-data", label: "No data yet", trend: "neutral" };
   }
-  if (previous === 0) {
+  if (input.current === 0 && input.previous === 0) {
+    return { kind: "no-period-activity", label: "No activity in range", trend: "neutral" };
+  }
+  if (input.previous === 0) {
     return { kind: "new-data", label: "New", trend: "up" };
   }
-  const delta = ((current - previous) / previous) * 100;
+  const delta = ((input.current - input.previous) / input.previous) * 100;
   return { kind: "change", label: `${Math.abs(Math.round(delta))}%`, trend: delta >= 0 ? "up" : "down" };
 }
 
@@ -59,7 +66,8 @@ const emptyTopContentMessage =
 Data flow:
 
 - Service still returns counts.
-- UI derives display state from `current`, `previous`, and `totals`.
+- UI derives display state from `current`, `previous`, and workspace/content
+  totals so an existing site with no period activity is not labeled as empty.
 - Components render display state rather than recomputing ambiguous percentages.
 
 Error handling:
@@ -72,6 +80,8 @@ Error handling:
 Regression-test shape:
 
 - Mock overview with zero current/previous/totals and assert `No data yet`.
+- Mock totals > 0 with current = 0 and previous = 0 and assert
+  `No activity in range`, not `No data yet`.
 - Mock current > 0 and previous = 0 and assert a non-percentage new-data label.
 - Mock populated top content and assert existing rows remain unchanged.
 - Mock empty top content and assert next-action guidance appears in table and

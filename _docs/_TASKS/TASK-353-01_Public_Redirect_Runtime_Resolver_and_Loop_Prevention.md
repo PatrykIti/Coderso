@@ -30,9 +30,11 @@ on the source URL.
 
 | File | Required change |
 |---|---|
-| `core/services/redirects/redirectService.ts` | Add `resolvePublicRedirect` with normalization, enabled filter, and loop validation helpers. |
+| `core/services/redirects/redirectService.ts` | Add `resolvePublicRedirect` with normalization, enabled filter, visited-set/max-hop loop validation, and destination policy helpers. |
 | `core/server/publicSite.tsx` | Call redirect resolver before content/page resolution and return `Response.redirect` or explicit Response with status. |
 | `core/server/httpServer.ts` | Touch only if redirect must sit before media/admin routing; default should stay inside public site handling. |
+| `core/server/validation/redirectSchemas.ts` | Enforce source/destination policy at create/update where possible. |
+| `core/server/routes/redirectRoutes.ts` | Map redirect domain errors through `mapRedirectError`. |
 | `tests/unit/redirects/redirectService.test.ts` | Cover path normalization, disabled rows, duplicates, loops, destination policy. |
 | `tests/integration/runtime/` | Add public runtime redirect tests for status codes and no-match paths. |
 
@@ -41,13 +43,30 @@ on the source URL.
 ```ts
 export async function resolvePublicRedirect(pathname: string) {
   const fromPath = normalizePath(pathname);
-  const row = await findEnabledRedirectByFromPath(fromPath);
-  if (!row) return null;
-  const toPath = normalizeTarget(row.toPath);
-  if (toPath === fromPath) throw new Error("redirect_loop");
+  const visited = new Set<string>();
+  let current = fromPath;
+
+  for (let hop = 0; hop < MAX_REDIRECT_HOPS; hop += 1) {
+    if (visited.has(current)) throw new Error("redirect_loop");
+    visited.add(current);
+
+    const row = await findEnabledRedirectByFromPath(current);
+    if (!row) return current === fromPath ? null : buildRedirectResult(current);
+
+    const toPath = normalizeTarget(row.toPath);
+    if (toPath === current) throw new Error("redirect_loop");
+    if (isExternalDestination(toPath)) return buildRedirectResult(toPath, row.statusCode);
+
+    current = normalizePath(toPath);
+  }
+
+  throw new Error("redirect_loop");
+}
+
+function buildRedirectResult(location: string, statusCode = 301) {
   return {
-    statusCode: normalizeStatusCode(row.statusCode),
-    location: toPath,
+    statusCode: normalizeStatusCode(statusCode),
+    location,
   };
 }
 
@@ -67,15 +86,19 @@ Data flow:
 Error handling:
 
 - Disabled redirect rows are ignored.
-- Self-redirect and known loop chains fail closed with no redirect or a safe
-  508/500 policy documented in tests.
+- Self-redirect and chain loops (`A -> B -> A`) fail closed with no redirect or
+  a safe 508/500 policy documented in tests.
+- Long non-loop chains are bounded by `MAX_REDIRECT_HOPS`.
 - Unsafe external destinations are rejected at create/update or ignored at
   runtime according to product policy.
+- Route/service errors map through `mapRedirectError`.
 
 Regression-test shape:
 
 - Seed 301/302/307/308 rows and assert public response status/location.
 - Assert disabled row falls through to page/content/404.
+- Assert `A -> B -> A`, `A -> B -> C`, disabled intermediates, max-hop
+  exhaustion, and external destination policy.
 - Assert `/admin`, `/admin/api`, `/media`, `/site/assets`, `/preview`, and
   `/api/search` are not shadowed unexpectedly.
 - Assert self-loop does not redirect endlessly.
@@ -103,6 +126,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Redirects report with public runtime behavior.
+- Update `_docs/CMS_API.md`, `_docs/ARCHITECTURE.md`, and
+  `_docs/SECURITY_SPEC.md` with runtime execution, loop, and open-redirect
+  policy.
 - Update security/user docs if external destination policy is documented.
 
 ## Acceptance Criteria
@@ -111,3 +137,4 @@ Regression-test shape:
   destination.
 - Disabled/no-match/loop paths are safe.
 - Public redirect lookup does not shadow admin/API/media/asset routes.
+- Chain loops and unsafe destination policies are enforced and route-mapped.

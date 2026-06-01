@@ -36,10 +36,12 @@ is not stored, not sent to `/admin/api/search`, and not applied by
 | `core/server/routes/searchRoutes.ts` | Parse `dateRange`, validate strict enum values, pass it to `searchAll`, and include it in recent-search metadata when applicable. |
 | `core/admin/services/searchClient.ts` | Extend `searchAll` options with `dateRange` and serialize it as a query parameter. |
 | `core/admin/ui/search/useSearchResults.ts` | Accept `dateRange`, include it in effect dependencies, and pass it to the client. |
+| `core/admin/ui/search/SearchBar.tsx` | Update the global search caller or preserve a backwards-compatible hook overload so it does not break when `useSearchResults` changes. |
 | `core/admin/ui/search/SearchPage.tsx` | Store Date Range as controlled state and reset stale categories when the effective request changes. |
 | `tests/integration/routes/search.test.ts` | Add route-level date-range validation/filter coverage. |
 | `tests/vitest/admin/searchClient.test.ts` | Assert query-string serialization for each date range. |
 | `tests/vitest/ui/search-page.test.tsx` | Assert the UI sends the selected range and refreshes rendered state. |
+| `tests/vitest/ui/search-bar.test.tsx` | Cover the global search bar with the updated hook/client signature. |
 
 ## Implementation Pseudocode
 
@@ -71,6 +73,8 @@ Data flow:
 - `SearchPage.dateRange` -> `useSearchResults(query, { limit, dateRange })`
   -> `searchClient.searchAll` -> `/admin/api/search?q=&limit=&dateRange=`
   -> `registerSearchRoutes` -> `searchService.searchAll`.
+- Global `SearchBar` keeps its existing compact-result behavior through an
+  explicit `{ limit: 8 }` options call or a tested backwards-compatible overload.
 
 Error handling:
 
@@ -87,6 +91,8 @@ Regression-test shape:
 - Assert `all-time` returns both fixtures.
 - Assert the client serializes `dateRange=last-30-days`.
 - Assert selecting a range in the UI triggers a new request with that value.
+- Assert the global SearchBar still fetches compact results after the hook
+  signature change.
 
 ## Security Contract
 
@@ -112,6 +118,8 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update the Search report with the implemented date-range contract.
+- Update `_docs/CMS_API.md` and `_docs/SEARCH_SPEC.md` for the `dateRange`
+  query parameter and validation behavior.
 - Update user docs only if visible Date Range labels or default behavior change.
 
 ## Acceptance Criteria
@@ -122,3 +130,5 @@ Regression-test shape:
 - Search results change deterministically when fixtures fall inside/outside the
   selected range.
 - Unknown date-range values cannot reach DB query construction.
+- Existing global SearchBar behavior remains covered and compatible with the
+  updated hook/client contract.

@@ -11,8 +11,8 @@
 
 ## Overview
 
-Close the Backups family after include options, lifecycle/artifacts, and table
-UX are proven in the current tree.
+Close the Backups family after include options, the v1 external-worker boundary
+or artifact lifecycle, and table UX are proven in the current tree.
 
 ## Sub-Tasks
 
@@ -39,7 +39,7 @@ UX are proven in the current tree.
 1. Load repo env with `set -a && source .env && set +a`.
 2. Verify DATABASE_URL connectivity before DB tests.
 3. Create a uniquely scoped manual backup through the UI.
-4. Capture include payload, row state, status transition, artifact metadata, and action availability.
+4. Capture include payload, row state, worker boundary or status transition, artifact metadata when supported, and action availability.
 5. Exercise download/restore/delete only against the created backup.
 6. Restore schedule settings changed during the test.
 7. Update reports and closure docs.
@@ -55,7 +55,7 @@ Error handling:
 - If DB is unavailable, pause DB/runtime tests and record the blocker; do not
   claim closure.
 - If backup execution is intentionally external, prove the UI exposes that
-  external-worker boundary.
+  external-worker boundary and keep artifact actions truthfully unavailable.
 
 Regression-test shape:
 
@@ -91,5 +91,6 @@ No additional route changes are expected in this closure leaf.
 ## Acceptance Criteria
 
 - Backups report has no unclassified findings.
-- Queue/artifact/action behavior is proven or explicitly documented as external.
+- Queue/artifact/action behavior is proven or explicitly documented as
+  external-worker-backed.
 - DB fixtures and artifacts from validation are cleaned up safely.

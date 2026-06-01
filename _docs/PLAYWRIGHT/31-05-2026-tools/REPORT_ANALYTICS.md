@@ -61,5 +61,5 @@ How to fix:
 - `core/admin/ui/analytics/AnalyticsCharts.tsx`
 - `core/admin/ui/analytics/TopContentTable.tsx`
 - `core/admin/ui/analytics/TopContentDrawer.tsx`
-- `core/admin/api/analyticsClient.ts`
-- `core/server/routes/admin/analyticsRoutes.ts`
+- `core/admin/services/analyticsClient.ts`
+- `core/server/routes/analyticsRoutes.ts`

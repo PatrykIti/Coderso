@@ -104,6 +104,8 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Backups report with selected include contract.
+- Update `_docs/CMS_API.md` for the create payload and strict validation
+  contract.
 - Update user docs if include options are product-supported.
 
 ## Acceptance Criteria

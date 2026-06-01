@@ -26,6 +26,9 @@ does not filter.
 - Add retry action for retryable failed imports, or explain why retry is not
   possible.
 - Render real progress for in-progress imports and avoid fake static rows.
+- Decide cache behavior for import activity. If retained activity contains
+  filenames/status only and is cached, add admin cache keys/invalidation; if not
+  cached because payloads can be sensitive, document the uncached rationale.
 
 ## Files To Change
 
@@ -35,10 +38,12 @@ does not filter.
 | `core/server/routes/importExportRoutes.ts` | Add list/retry activity routes if product-supported. |
 | `core/server/validation/importExportSchemas.ts` | Add strict activity list/retry schemas if routes are added. |
 | `core/admin/services/importExportClient.ts` | Add activity list/retry client methods. |
+| `core/admin/services/cachePolicy.ts` | Add import activity cache keys only if the activity surface becomes cached. |
 | `core/admin/ui/import-export/ImportExportPage.tsx` | Wire Activity Log button. |
 | `core/admin/ui/import-export/ImportDropzone.tsx` | Replace static `importHistory`, wire search/progress/failure/retry. |
 | `tests/vitest/ui/import-export.test.tsx` | Cover search, progress, failure reason, retry, Activity Log behavior. |
 | `tests/integration/routes/importExport.test.ts` | Cover activity routes if added. |
+| `_docs/ADMIN_CACHE.md` / `_docs/ADMIN_CACHE_MAP.md` | Document cached or intentionally uncached import/export activity. |
 
 ## Implementation Pseudocode
 
@@ -78,6 +83,8 @@ Error handling:
   retry; show a "Upload the file again" action instead.
 - Progress values must be clamped 0-100.
 - Failure reason must be user-safe and bounded.
+- Route errors must map through `mapImportExportError` instead of leaking raw DB
+  or parser internals.
 
 Regression-test shape:
 
@@ -109,6 +116,9 @@ If new activity routes are added:
 ## Documentation Updates Required
 
 - Update Import / Export report with activity/progress/retry decision.
+- Update `_docs/CMS_API.md` for activity/retry routes if added.
+- Update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` for cache
+  behavior or uncached rationale.
 - Update user docs if Activity Log becomes a supported screen/modal.
 
 ## Acceptance Criteria

@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin Tools + UX Consistency + Accessibility
 **Estimated Effort:** Large
-**Dependencies:** TASK-348, TASK-349, TASK-350, TASK-352, TASK-353
+**Dependencies:** TASK-348, TASK-349, TASK-350, TASK-351, TASK-352, TASK-353
 **Status:** To Do
 
 ---
@@ -21,12 +21,14 @@ per-tool families land.
 ## Sub-Tasks
 
 - Define a lightweight Tools UX checklist: cause, next action, disabled reason,
-  accessible label, and no-op prohibition.
+  accessible label, controlled payload option, and no-op prohibition.
 - Identify repeated empty/action components that can be shared without forcing a
   broad design-system refactor.
 - Add tests that fail when known Tools buttons are clickable no-ops.
 - Ensure each per-tool implementation maps its local empty states to the shared
   rule.
+- Ensure SEO audit checks, Backup include options, and Import / Export include
+  options either alter submitted payloads or are disabled/removed as static copy.
 - Add report notes that classify intentional unavailable controls separately
   from bugs.
 
@@ -79,10 +81,15 @@ Regression-test shape:
 
 - Search `Try:` fallback and no-match states.
 - SEO filter button disabled or opens panel.
+- SEO audit checkbox toggles affect the audit payload or are unavailable.
 - Analytics export disabled or downloads.
 - Import / Export Activity Log disabled or opens route/modal.
+- Import / Export include checkboxes affect export payload or are unavailable.
 - Redirects empty CTA opens create drawer.
+- Backups include checkboxes affect create payload or are unavailable.
 - Backups disabled actions expose reason.
+- Backups pagination is hidden/disabled when unavailable or emits page
+  state/API params with observable row changes.
 
 ## Security Contract
 
@@ -109,5 +116,6 @@ No route changes are required by the shared standard.
 ## Acceptance Criteria
 
 - No report-listed Tools control remains a clickable no-op.
+- No report-listed checkbox group remains uncontrolled payload theater.
 - Empty states across Tools name cause and next action.
 - Disabled/unavailable controls are accessible and intentional.

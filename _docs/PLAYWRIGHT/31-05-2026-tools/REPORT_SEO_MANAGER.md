@@ -142,5 +142,5 @@ How to fix:
 - `core/admin/ui/seo/SeoAuditDialog.tsx`
 - `core/admin/ui/seo/SeoTable.tsx`
 - `core/admin/ui/seo/SeoDrawer.tsx`
-- `core/admin/api/seoClient.ts`
-- `core/server/routes/admin/seoRoutes.ts`
+- `core/admin/services/seoClient.ts`
+- `core/server/routes/seoRoutes.ts`

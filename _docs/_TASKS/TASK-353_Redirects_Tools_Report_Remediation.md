@@ -82,6 +82,11 @@ Redirects bridge internal admin writes and public read behavior:
 - `_docs/PLAYWRIGHT/31-05-2026-tools/REPORT_REDIRECTS.md`
 - `_docs/PLAYWRIGHT/31-05-2026-tools/REPORT_TOOLS_SECTION_OVERVIEW.md`
 - Redirects user guide if public runtime/delete/pagination behavior changes
+- `_docs/CMS_API.md`, `_docs/ARCHITECTURE.md`, and `_docs/SECURITY_SPEC.md` for
+  public redirect execution, loop/open-redirect policy, delete/pagination
+  shape, and error mapping
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if Redirects becomes a
+  cached admin resource; otherwise document the intentional uncached rationale
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 
@@ -92,3 +97,5 @@ Redirects bridge internal admin writes and public read behavior:
 - Drawer opens without Radix accessibility console errors.
 - Pagination and delete controls are no longer placeholders or hidden API-only
   behavior.
+- Route registration and `mapRedirectError` coverage prove known redirect
+  failures are machine-readable at the route boundary.

@@ -16,9 +16,15 @@ Tasks: TASK-351
 - Captured the internal Backups security contract for backup artifacts,
   destructive restore/delete actions, strict validation, and secret-safe audit
   metadata.
+- Refined Backups leaves after drift audit to respect the current v1
+  metadata-only architecture, require an explicit external-worker boundary or
+  architecture/API/security doc updates before artifact execution, and add
+  admin cache-contract decisions.
 
 ## Validation
 
 - Planning was based on the Backups report, Tools overview report, Claude UX
   addendum, current Backups UI/client/route/service files, current Backups
   tests, and the repo task/changelog format rules.
+- Follow-up drift audit checked `_docs/ARCHITECTURE.md`, `_docs/CMS_API.md`,
+  current backup service/routes, and admin cache policy.

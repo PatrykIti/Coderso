@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin Tools + QA + Docs + Changelog
 **Estimated Effort:** Medium
-**Dependencies:** TASK-354-01, TASK-354-02, TASK-354-03, TASK-354-04
+**Dependencies:** TASK-348-03, TASK-349-04, TASK-350-03, TASK-351-04, TASK-352-05, TASK-353-04, TASK-354-01, TASK-354-02, TASK-354-03, TASK-354-04
 **Status:** To Do
 
 ---
@@ -18,6 +18,8 @@ Playwright/report guard are proven.
 
 - Reconcile statuses of TASK-348 through TASK-353 and confirm no finding is
   hidden under TASK-354.
+- Confirm the six per-tool closure leaves are Done or have explicit residual
+  task ownership before closing this family.
 - Run or inspect the final Tools matrix output.
 - Verify seed-admin pepper behavior in targeted tests.
 - Update overview and Claude UX reports with final resolution notes.

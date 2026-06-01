@@ -23,6 +23,9 @@ end-to-end behavior for every tool.
 - Add report drift checks so each per-tool report includes Worked, Did Not Work,
   Why, Fix Path, Source References, and final classification.
 - Add no-op button detection for report-listed controls.
+- Add controlled-option payload checks for SEO audit checks, Backup include
+  options, and Import / Export include options.
+- Add runtime-effect evidence rows for SEO, Backups, and Redirects.
 - Add fixture lifecycle helpers that create and clean only scoped test data.
 - Document how to run the Tools audit locally.
 
@@ -47,6 +50,14 @@ type ToolAuditCase = {
     selector: string;
     expected: "download" | "route-change" | "dialog" | "api-call" | "disabled";
   }>;
+  effects: Array<{
+    name: string;
+    expected:
+      | "public-html"
+      | "artifact-or-external-worker"
+      | "public-redirect"
+      | "payload-change";
+  }>;
   fixtures: ToolFixturePlan;
   cleanup: ToolCleanupPlan;
 };
@@ -57,12 +68,20 @@ for (const testCase of matrix) {
   for (const control of testCase.controls) {
     await assertObservableControlEffect(page, control);
   }
+  for (const effect of testCase.effects) {
+    await assertRuntimeEffectEvidence(page, effect);
+  }
 }
 ```
 
 Data flow:
 
 - Matrix defines routes/controls/fixtures.
+- Matrix defines runtime-effect rows:
+  - SEO Manager save -> public page `<title>`/description.
+  - Backups create -> completed artifact or explicit external-worker boundary.
+  - Redirect create -> public HTTP redirect response.
+  - Option-group toggles -> request payload change or disabled/static state.
 - Script runs browser checks and writes evidence.
 - Report validator ensures docs match matrix output.
 
@@ -78,21 +97,40 @@ Regression-test shape:
 - Unit test validates report files exist for each matrix route.
 - Playwright script fails when a control has no observable effect and is not
   disabled.
+- Playwright/report validator fails closure if runtime-effect evidence rows are
+  missing for SEO, Backups, or Redirects.
+- Payload tests fail if report-listed option groups are uncontrolled and still
+  submitted with default/static payloads.
 
 ## Security Contract
 
-No product route changes are required.
+No product route changes are required, but the audit creates scoped fixtures and
+exercises admin writes:
 
-- Endpoint visibility/auth/RBAC/CSRF/rate-limit: unchanged.
-- Anti-abuse: audit must not create public write endpoints or bypass nonce
-  contracts.
+- Endpoint visibility: all writes use existing internal admin routes; public
+  checks are read-only runtime checks.
+- Auth model: authenticated admin session only, or a scoped internal API key
+  where the existing route supports it.
+- RBAC: use the route-required permissions (`content:read/write`,
+  `settings:read/write`, `backups:read/write`).
+- CSRF: required for admin POST/PATCH/DELETE requests; the audit must use the
+  normal admin client/session flow.
+- Rate-limit bucket: `admin_read`/`admin_write` for admin calls and
+  `public_read` for public runtime checks.
+- Reject-unknown validation: fixture payloads must pass the same strict schemas
+  as production; the audit must not use raw DB writes to bypass route schemas
+  except for documented cleanup fallbacks.
+- Anti-abuse: audit must not create public write endpoints or bypass nonce,
+  signature/HMAC, CAPTCHA, or other public-write contracts.
 - Secret handling: scripts/reports must not commit credentials, cookies,
-  session IDs, provider keys, or backup/import artifact contents.
+  session IDs, provider keys, pepper values, or backup/import artifact contents.
+- Fixture hygiene: create uniquely scoped IDs/slugs and clean only those rows.
 
 ## Testing Requirements
 
 - Matrix/report unit tests if added.
 - Focused Tools Playwright script against local admin.
+- Runtime-effect evidence checks for SEO, Backups, and Redirects.
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -108,3 +146,5 @@ No product route changes are required.
 - Tools audit coverage is executable and not just prose.
 - All six Tools routes have route, control, fixture, and cleanup coverage.
 - No report can claim closure without a matching matrix evidence row.
+- No report can claim runtime completion without public/effect evidence for the
+  surfaces that claimed a runtime effect.

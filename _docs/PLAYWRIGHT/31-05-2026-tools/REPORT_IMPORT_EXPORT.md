@@ -151,5 +151,5 @@ How to fix:
 - `core/admin/ui/import-export/ImportExportPage.tsx`
 - `core/admin/ui/import-export/ExportCards.tsx`
 - `core/admin/ui/import-export/ImportDropzone.tsx`
-- `core/admin/api/importExportClient.ts`
-- `core/server/routes/admin/importExportRoutes.ts`
+- `core/admin/services/importExportClient.ts`
+- `core/server/routes/importExportRoutes.ts`

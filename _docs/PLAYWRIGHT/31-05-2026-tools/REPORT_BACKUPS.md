@@ -109,6 +109,6 @@ How to fix:
 - `core/admin/ui/backups/BackupScheduleCard.tsx`
 - `core/admin/ui/backups/BackupNowDialog.tsx`
 - `core/admin/ui/backups/BackupsTable.tsx`
-- `core/admin/api/backupsClient.ts`
-- `core/server/routes/admin/backupRoutes.ts`
-- `core/server/services/backupService.ts`
+- `core/admin/services/backupsClient.ts`
+- `core/server/routes/backupRoutes.ts`
+- `core/services/backups/backupService.ts`

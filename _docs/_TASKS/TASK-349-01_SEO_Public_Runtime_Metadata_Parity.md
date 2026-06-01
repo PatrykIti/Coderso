@@ -27,10 +27,11 @@ Do not keep two divergent sources of truth.
 
 - Add a public-safe SEO resolver for page and entry targets.
 - Decide precedence between `seoDocuments`, page published SEO data, entry SEO
-  data, and detail-page SEO rules.
+  data, root page `publishedData.seo`, and detail-page SEO rules.
 - Render title, meta description, canonical URL, robots, and social image only
   when backed by published/public-safe data.
-- Invalidate or bypass public HTML cache when SEO Manager changes public output.
+- Invalidate or bypass the server-side public HTML cache when SEO Manager
+  changes public output.
 - Add admin-save -> public-render regression coverage.
 
 ## Files To Change
@@ -38,10 +39,10 @@ Do not keep two divergent sources of truth.
 | File | Required change |
 |---|---|
 | `core/services/seo/seoService.ts` | Add `getPublicSeoForTarget` or equivalent resolver that returns public-safe metadata by target type/id/slug. |
+| `core/server/routes/seoRoutes.ts` | Trigger server-side site cache invalidation after SEO mutations that can affect public HTML. |
 | `core/server/publicSite.tsx` | Resolve SEO metadata before `renderPublicPageRuntimeHtml` for published pages and relevant entry/detail routes. |
 | `core/site/renderPublicPage.tsx` | Ensure title/meta/canonical/robots props render safely and are escaped. |
-| `core/admin/services/seoClient.ts` | Broadcast any required site-cache invalidation event if admin cache utilities own it. |
-| `core/site/cache/siteCache.ts` | Touch only if SEO mutations require a precise public cache invalidation helper. |
+| `core/site/cache/siteCache.ts` | Use `invalidateSiteCachePath`, `invalidateContentEntryCache`, or `clearSiteCache`; do not rely on browser `cacheBus` for server HTML cache invalidation. |
 | `tests/unit/seo/seoService.test.ts` | Cover resolver precedence and missing-target behavior. |
 | `tests/integration/routes/seo.test.ts` | Cover route-level save and returned row shape. |
 | `tests/integration/runtime/` | Add or extend Bun runtime test for public HTML after SEO save. |
@@ -75,6 +76,8 @@ export async function resolvePublicSeoMetadata(input: {
 Data flow:
 
 - Admin drawer saves `seoDocuments`.
+- Server mutation path invalidates the relevant public cache key before the next
+  public request.
 - Public request loads the published page/entry.
 - Public render calls the SEO resolver using target type/id/slug.
 - Render receives one merged metadata object and emits HTML tags.
@@ -86,15 +89,21 @@ Error handling:
 - If canonical/robots values are invalid, fail closed by omitting the tag and
   record a machine-readable issue during audit.
 - Do not use current/draft page data for public non-preview requests.
+- Cached public HTML must not continue serving old metadata after a successful
+  SEO save.
 
 Regression-test shape:
 
 - Create a published page fixture.
 - Run SEO audit or ensure document exists.
 - PATCH title/description through `/admin/api/seo/:id`.
+- Prime public HTML cache before the patch, if cache is enabled in the test
+  harness.
 - Request the public slug.
 - Assert `<title>` contains the saved title and
   `<meta name="description">` contains the saved description.
+- Request the public slug again and assert the cached response has the updated
+  metadata.
 - Assert a draft-only SEO value does not leak into public output.
 
 ## Security Contract
@@ -122,6 +131,8 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update SEO Manager report with chosen source-of-truth and public parity proof.
+- Update `_docs/CMS_API.md` and `_docs/PAGE_MODEL.md` with SEO precedence and
+  cache invalidation behavior.
 - Update SEO guide if public precedence changes.
 
 ## Acceptance Criteria

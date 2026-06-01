@@ -26,6 +26,9 @@ health or reason for disabled actions.
 - Add optional auto-refresh or manual refresh for queued/running rows.
 - Keep search filtering consistent with pagination: document and test whether
   search is local-on-current-page or server-side.
+- Decide the admin cache contract for Backups. If intentionally uncached because
+  backup state is sensitive/fast-changing, document that in admin cache docs;
+  otherwise add cache keys, TTLs, invalidation, and cacheBus behavior.
 
 ## Files To Change
 
@@ -35,10 +38,12 @@ health or reason for disabled actions.
 | `core/server/validation/backupSchemas.ts` | Add strict pagination query schema. |
 | `core/server/routes/backupRoutes.ts` | Parse/validate pagination and return list metadata. |
 | `core/admin/services/backupsClient.ts` | Return paginated payload and optional worker health. |
+| `core/admin/services/cachePolicy.ts` | Add Backups cache keys/TTLs only if the resource becomes cached; otherwise document the uncached decision. |
 | `core/admin/ui/backups/BackupsPage.tsx` | Own page/search/refresh state and avoid mount-force loops. |
 | `core/admin/ui/backups/BackupsTable.tsx` | Render stateful pagination, queue warnings, and disabled-action reasons. |
 | `tests/vitest/ui/backups-page-wave.test.tsx` | Cover pagination, queued warning, refresh, disabled reasons. |
 | `tests/integration/routes/backups.test.ts` | Cover pagination query validation and list metadata. |
+| `_docs/ADMIN_CACHE.md` / `_docs/ADMIN_CACHE_MAP.md` | Document cached or intentionally uncached Backups behavior. |
 
 ## Implementation Pseudocode
 
@@ -73,6 +78,8 @@ Error handling:
   page.
 - Auto-refresh must pause when the component unmounts and avoid overwriting a
   visible error with stale data.
+- Cached state, if introduced, must not overwrite queued/running refresh
+  results or dirty UI state.
 
 Regression-test shape:
 
@@ -81,6 +88,7 @@ Regression-test shape:
 - Multi-page list changes API params on Next/Previous.
 - Queued row older than threshold shows an explanatory warning.
 - Disabled action buttons expose accessible labels/reasons.
+- Cache behavior is tested or the uncached decision is documented.
 
 ## Security Contract
 
@@ -105,6 +113,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Backups report with pagination/queue UX resolution.
+- Update `_docs/CMS_API.md` for pagination and worker-health fields.
+- Update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` for cache
+  behavior or explicit uncached rationale.
 - Update user docs if queue health or refresh policy becomes visible.
 
 ## Acceptance Criteria

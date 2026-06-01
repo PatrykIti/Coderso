@@ -29,7 +29,7 @@ the UI claims public SEO control.
 
 | Area | Current evidence | Owner files |
 |---|---|---|
-| Public runtime parity | `updateSeoDocumentById` persists into `seoDocuments`; `renderPublicPageHtmlInternal` reads only `publishedData.settings.seo.description`. | `core/services/seo/seoService.ts`, `core/server/publicSite.tsx`, `core/site/renderPublicPage.tsx` |
+| Public runtime parity | `updateSeoDocumentById` persists into `seoDocuments`; `renderPublicPageHtmlInternal` currently reads root `publishedData.seo.description` / page render metadata instead of `seoDocuments`. | `core/services/seo/seoService.ts`, `core/server/publicSite.tsx`, `core/site/renderPublicPage.tsx`, `_docs/PAGE_MODEL.md` |
 | Score drift | `updateSeoDocumentById` updates fields but does not recompute score/status/issues. | `core/services/seo/seoService.ts`, `tests/unit/seo/seoService.test.ts` |
 | Audit scope | `SeoAuditDialog` uses uncontrolled checkboxes and calls `onRun()` without selected checks. | `core/admin/ui/seo/SeoAuditDialog.tsx`, `core/admin/ui/seo/SeoManagerPage.tsx`, `core/admin/services/seoClient.ts`, `core/server/routes/seoRoutes.ts` |
 | Dead controls | Filter icon has no handler; Drawer `Discard` and `Add Keyword` are UI-only. | `core/admin/ui/seo/SeoManagerPage.tsx`, `core/admin/ui/seo/SeoDrawer.tsx` |
@@ -87,6 +87,8 @@ routes and public read rendering:
 - `_docs/PLAYWRIGHT/31-05-2026-tools/REPORT_SEO_MANAGER.md`
 - `_docs/PLAYWRIGHT/31-05-2026-tools/REPORT_TOOLS_SECTION_OVERVIEW.md`
 - `docs/guide/screens/` SEO Manager guide if public SEO semantics change
+- `_docs/CMS_API.md` and `_docs/PAGE_MODEL.md` if SEO precedence or audit
+  payloads change
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - New closure changelog when implementation is Done

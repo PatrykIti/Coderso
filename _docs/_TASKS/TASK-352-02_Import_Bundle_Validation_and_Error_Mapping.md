@@ -17,7 +17,8 @@ database insert time.
 
 ## Sub-Tasks
 
-- Add UUID format validation for optional imported IDs that are persisted.
+- Add UUID format validation for every optional imported ID/reference that is
+  persisted or used as a foreign key.
 - Decide where imported IDs are allowed and where server-generated UUIDs should
   always be used.
 - Normalize or discard unsafe IDs before persistence.
@@ -28,9 +29,9 @@ database insert time.
 
 | File | Required change |
 |---|---|
-| `core/server/validation/importExportSchemas.ts` | Add UUID pattern/format checks for optional IDs or remove ID acceptance from schema. |
+| `core/server/validation/importExportSchemas.ts` | Add UUID pattern/format checks for optional menu, menu item, page, theme profile, theme route, admin theme template/profile, template reference, and redirect IDs, or remove ID acceptance from schema. |
 | `core/services/tools/importExportService.ts` | Normalize imported IDs once and reuse in preview/apply; throw machine-readable errors. |
-| `core/server/routes/importExportRoutes.ts` | Map known import errors to user-facing API errors. |
+| `core/server/routes/importExportRoutes.ts` | Centralize `mapImportExportError` and map known import errors to user-facing API errors. |
 | `core/admin/ui/import-export/ImportDropzone.tsx` | Render validation messages without raw DB text. |
 | `tests/unit/tools/importExport.test.ts` | Cover invalid IDs, duplicate route paths, and preview/apply parity. |
 | `tests/integration/routes/importExport.test.ts` | Cover malformed bundle returns 400 from preview/apply. |
@@ -46,10 +47,25 @@ function normalizeOptionalUuid(value: unknown, code: string) {
   return value;
 }
 
+const persistedIdFields = [
+  ["menus", "id", "import_menu_id_invalid"],
+  ["menus.items", "id", "import_menu_item_id_invalid"],
+  ["menus.items", "pageId", "import_menu_item_page_id_invalid"],
+  ["menus.items", "parentId", "import_menu_item_parent_id_invalid"],
+  ["themeProfiles", "id", "import_theme_profile_id_invalid"],
+  ["themeProfiles.routes", "id", "import_theme_route_id_invalid"],
+  ["themeProfiles.routes", "pageId", "import_theme_route_page_id_invalid"],
+  ["adminThemes.templates", "id", "import_admin_theme_template_id_invalid"],
+  ["adminThemes.profiles", "id", "import_admin_theme_profile_id_invalid"],
+  ["adminThemes.profiles", "templateId", "import_admin_theme_template_ref_invalid"],
+  ["redirects", "id", "import_redirect_id_invalid"],
+] as const;
+
 function normalizeImportBundle(bundle: ExportBundle): NormalizedImportBundle {
+  const normalized = normalizePersistedIds(bundle, persistedIdFields);
   return {
-    ...bundle,
-    menus: bundle.menus.map((menu) => ({
+    ...normalized,
+    menus: normalized.menus.map((menu) => ({
       ...menu,
       id: normalizeOptionalUuid(menu.id, "import_menu_id_invalid") ?? randomUUID(),
       items: menu.items.map(normalizeMenuItemForImport),
@@ -58,8 +74,9 @@ function normalizeImportBundle(bundle: ExportBundle): NormalizedImportBundle {
 }
 
 function mapImportExportError(error) {
-  if (error.message === "import_menu_id_invalid") {
-    return new ApiError("import_menu_id_invalid", "Menu id is invalid.", 400);
+  const code = error instanceof Error ? error.message : "import_failed";
+  if (code.startsWith("import_") && code.endsWith("_invalid")) {
+    return new ApiError(code, "Import bundle contains an invalid identifier.", 400);
   }
 }
 ```
@@ -74,6 +91,8 @@ Data flow:
 Error handling:
 
 - Preview and apply must reject the same malformed bundle.
+- Every persisted ID/reference family must produce a specific machine-readable
+  error code.
 - DB constraint errors should be prevented by validation where possible and
   mapped where unavoidable.
 - Error messages must be actionable and not include SQL, filesystem paths, or
@@ -83,6 +102,8 @@ Regression-test shape:
 
 - Preview malformed non-UUID ID returns 400.
 - Apply the same malformed bundle returns the same machine-readable code.
+- Add malformed-ID cases for menu IDs, menu item parent/page refs, theme/admin
+  theme IDs, template refs, route refs, and redirect IDs.
 - Valid bundle roundtrip still succeeds.
 
 ## Security Contract
@@ -108,10 +129,12 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Import / Export report with malformed-bundle resolution.
-- Update admin API docs if import error codes are documented.
+- Update `_docs/CMS_API.md` with import validation and error-code contracts.
 
 ## Acceptance Criteria
 
 - Malformed IDs cannot pass preview.
 - Apply does not return raw DB 500 for validation-owned problems.
 - Preview/apply validation behavior is consistent.
+- Route registration and `mapImportExportError` coverage prove validation-owned
+  failures never leak raw DB errors.

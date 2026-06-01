@@ -55,8 +55,13 @@ Regression-test shape:
   `AUTH_PASSWORD_PEPPER` unset and proves `verifyPassword` accepts the raw
   password.
 - Add one Bun unit case that sets `AUTH_PASSWORD_PEPPER`, runs the same seed
-  hashing path, and proves verification only succeeds through the shared
-  pepper-aware helper.
+  hashing path used by `seedAdmin`, and proves verification only succeeds
+  through the shared pepper-aware helper.
+- Test the actual seed path, not only `hashPassword` directly: use a scoped
+  DB-backed `seedAdmin` fixture or extract a tiny `hashSeedAdminPassword`
+  helper that `seedAdmin` calls.
+- Add a static regression assertion that `core/db/seed.ts` no longer imports
+  direct `hash` or `Algorithm` from `@node-rs/argon2`.
 - Restore the original env value in `afterEach` / `finally`, and assert seed
   logs do not include the raw password, pepper, or hash.
 
@@ -74,6 +79,8 @@ Data flow:
 
 - `.env` / shell env -> `seedAdmin` -> `hashPassword` -> stored hash -> login
   `verifyPassword`.
+- Tests must execute that same `seedAdmin`/seed helper path so direct Argon2
+  hashing cannot regress unnoticed.
 
 Error handling:
 
@@ -97,6 +104,7 @@ Error handling:
 
 - `bun test tests/unit/tools/packageScripts.test.ts`
 - New targeted Bun test for seed/password helper behavior
+- Static import regression for `core/db/seed.ts` direct Argon2 usage
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Manual local smoke with `AUTH_PASSWORD_PEPPER` if DB is available:

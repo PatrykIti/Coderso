@@ -92,3 +92,5 @@ No additional route changes are expected in this closure leaf.
 - Valid JSON roundtrip still works.
 - Malformed bundles fail during preview/apply validation with user-safe errors.
 - Activity/history and UI-only controls are resolved or truthfully unavailable.
+- Source references in reports point to current `core/admin/services/*` and
+  `core/server/routes/*` paths before the family is closed.

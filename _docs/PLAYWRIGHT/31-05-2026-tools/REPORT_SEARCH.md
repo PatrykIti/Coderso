@@ -69,5 +69,5 @@ How to fix:
 
 - `core/admin/ui/search/SearchPage.tsx`
 - `core/admin/ui/search/useSearchResults.ts`
-- `core/admin/api/searchClient.ts`
-- `core/server/routes/admin/searchRoutes.ts`
+- `core/admin/services/searchClient.ts`
+- `core/server/routes/searchRoutes.ts`

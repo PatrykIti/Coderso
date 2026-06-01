@@ -126,5 +126,5 @@ How to fix:
 - `core/admin/ui/redirects/RedirectsPage.tsx`
 - `core/admin/ui/redirects/RedirectDrawer.tsx`
 - `core/admin/ui/redirects/RedirectsTable.tsx`
-- `core/admin/api/redirectsClient.ts`
-- `core/server/routes/admin/redirectRoutes.ts`
+- `core/admin/services/redirectsClient.ts`
+- `core/server/routes/redirectRoutes.ts`

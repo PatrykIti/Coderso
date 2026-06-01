@@ -20,7 +20,9 @@ The report proves manual backup rows can be created and schedule settings can be
 updated/restored. The unresolved gaps are product-contract level:
 
 - Backup content checkboxes are uncontrolled and not sent to the service.
-- Created backups remain queued with no artifact path/size.
+- Created backups remain queued with no artifact path/size; current
+  `_docs/ARCHITECTURE.md` and `_docs/CMS_API.md` still describe v1 backups as
+  metadata-only with future worker/plugin artifact creation.
 - Restore/download/delete affordances are unavailable without explanation.
 - Pagination buttons are placeholders.
 - The UI does not expose queue/worker health or aged queued-job warnings.
@@ -45,8 +47,9 @@ updated/restored. The unresolved gaps are product-contract level:
 
 1. Land request/include schema first so the UI can truthfully describe what a
    manual backup contains.
-2. Land execution/artifact lifecycle next; otherwise table actions cannot become
-   real.
+2. Land either a documented external-worker boundary for v1 or an architecture
+   update plus execution/artifact lifecycle. Do not silently implement a local
+   artifact path while architecture still says metadata-only.
 3. Add pagination and worker-health UI after list responses contain enough
    metadata.
 4. Close with DB-backed lifecycle tests and Playwright proof.
@@ -85,14 +88,20 @@ Backups are internal admin operations with destructive potential:
 - `_docs/PLAYWRIGHT/31-05-2026-tools/REPORT_BACKUPS.md`
 - `_docs/PLAYWRIGHT/31-05-2026-tools/REPORT_TOOLS_SECTION_OVERVIEW.md`
 - Backup user guide if artifact/restore/delete behavior changes
+- `_docs/ARCHITECTURE.md`, `_docs/CMS_API.md`, and `_docs/SECURITY_SPEC.md` if
+  backup artifact policy, include payloads, delete/restore behavior, or worker
+  ownership changes
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if Backups becomes an
+  admin cached resource; otherwise document the intentional uncached rationale
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
 - Manual backup options are either persisted/sent or removed as unavailable.
-- A local/dev backup can move past queued into completed or failed with an
-  explainable state.
+- Backups either remain metadata-only with explicit external-worker state,
+  worker health, disabled-action reasons, and docs, or architecture/API/security
+  docs are updated before implementing local artifact execution.
 - Download/restore/delete actions are real when enabled and explain why they are
   disabled otherwise.
 - Pagination controls are stateful or hidden/disabled truthfully.

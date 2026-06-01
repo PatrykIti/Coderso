@@ -20,6 +20,8 @@ error path.
 - Define the product scope for Analytics export: Top Content CSV/JSON for the
   selected date range, or disabled/unavailable for now.
 - If supported, add a route/client method that exports current top-content rows.
+- Align Top Content data itself with the active Analytics range, or explicitly
+  reclassify Top Content as non-range-scoped in UI/docs before adding export.
 - Wire `TopContentDrawer` Export to a real download with loading and error
   feedback.
 - Include the active range and item limit/type in the export request.
@@ -29,11 +31,11 @@ error path.
 
 | File | Required change |
 |---|---|
-| `core/services/analytics/analyticsService.ts` | Add a pure `exportTopContent` or CSV serialization helper if export is implemented. |
+| `core/services/analytics/analyticsService.ts` | Add range-aware `getTopContent`/`exportTopContent` helpers or document and test a non-range-scoped Top Content contract. |
 | `core/server/validation/analyticsSchemas.ts` | Add strict export query/body schema with format enum and clamped limits. |
-| `core/server/routes/analyticsRoutes.ts` | Register export endpoint or explicitly avoid adding one if UI disables export. |
+| `core/server/routes/analyticsRoutes.ts` | Parse `rangeDays` for Top Content/export, register export endpoint, or explicitly avoid adding one if UI disables export. |
 | `core/admin/services/analyticsClient.ts` | Add `exportTopContent` client method returning blob/text payload. |
-| `core/admin/ui/analytics/AnalyticsPage.tsx` | Pass selected range/export callback into drawer. |
+| `core/admin/ui/analytics/AnalyticsPage.tsx` | Pass selected range into Top Content loading and export callback. |
 | `core/admin/ui/analytics/TopContentDrawer.tsx` | Replace close-only Export handler with real export or disabled state. |
 | `tests/integration/routes/analytics.test.ts` | Cover export route registration, validation, and response shape. |
 | `tests/vitest/admin/analyticsClient.test.ts` | Cover export client serialization. |
@@ -51,9 +53,14 @@ export function serializeTopContentCsv(items: TopContentItem[]) {
 
 router.get("/analytics/top-content/export", requirePermission("content:read"), async (ctx) => {
   const limit = parseNumber(ctx.query.limit) ?? 50;
+  const rangeDays = parseRangeDays(ctx.query.rangeDays) ?? 30;
   const type = normalizeTopContentType(ctx.query.type);
-  validate(topContentExportQuerySchema, { limit, type, format: ctx.query.format ?? "csv" });
-  return { fileName, contentType: "text/csv", content: serializeTopContentCsv(await getTopContent(limit, type)) };
+  validate(topContentExportQuerySchema, { limit, rangeDays, type, format: ctx.query.format ?? "csv" });
+  return {
+    fileName,
+    contentType: "text/csv",
+    content: serializeTopContentCsv(await getTopContent({ limit, type, rangeDays })),
+  };
 });
 
 async function handleExport() {
@@ -65,8 +72,8 @@ async function handleExport() {
 
 Data flow:
 
-- Analytics page range state -> drawer export callback -> admin client -> route
-  -> service helper -> browser download.
+- Analytics page range state -> top-content query + drawer export callback ->
+  admin client -> route -> service helper -> browser download.
 
 Error handling:
 
@@ -78,7 +85,8 @@ Error handling:
 Regression-test shape:
 
 - Route test asserts unknown `format` is rejected.
-- Client test asserts query params include selected limit/type/range.
+- Route/client tests assert query params include selected limit/type/range and
+  that range affects the exported rows when the range-scoped contract is chosen.
 - UI test clicks Export and observes download callback or disabled explanatory
   state.
 
@@ -104,10 +112,13 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Analytics report with export decision and evidence.
+- Update `_docs/CMS_API.md` for Top Content/export query parameters and response
+  format.
 - Update user docs if an export format becomes part of the product contract.
 
 ## Acceptance Criteria
 
 - Export no longer closes the drawer as its only behavior.
 - Export either downloads a deterministic file or is visibly unavailable.
+- Export and Top Content agree on whether the active range is applied.
 - Error/loading/empty-row states are explicit and tested.

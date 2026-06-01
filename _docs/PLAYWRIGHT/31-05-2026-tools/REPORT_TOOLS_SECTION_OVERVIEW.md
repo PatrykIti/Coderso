@@ -166,5 +166,5 @@ How to fix:
 - `core/admin/ui/backups/*`
 - `core/admin/ui/import-export/*`
 - `core/admin/ui/redirects/*`
-- `core/admin/api/*Client.ts`
-- `core/server/routes/admin/*Routes.ts`
+- `core/admin/services/*Client.ts`
+- `core/server/routes/*Routes.ts`

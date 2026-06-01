@@ -15,9 +15,14 @@ Tasks: TASK-348
 - Captured the internal admin Search security contract so date-range changes
   preserve session auth, `content:read` RBAC, `admin_read` rate limiting, and
   strict enum validation.
+- Refined the Search leaves after drift audit to include SearchBar compatibility,
+  aggregate empty-index metadata, and `_docs/CMS_API.md` / `_docs/SEARCH_SPEC.md`
+  updates for API-visible changes.
 
 ## Validation
 
 - Planning was based on the Search report, Tools overview report, Claude UX
   addendum, current Search UI/client/route/service files, current Search tests,
   and the repo task/changelog format rules.
+- Follow-up drift audit compared the leaves with current `SearchBar`,
+  `searchRoutes`, `searchService`, and Search specs.

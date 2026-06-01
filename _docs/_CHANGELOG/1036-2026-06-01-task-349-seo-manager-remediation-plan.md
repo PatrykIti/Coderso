@@ -14,9 +14,14 @@ Tasks: TASK-349
   contract repair, UI-only control cleanup, and final QA/docs closure.
 - Captured the internal SEO route security contract and public-read constraints
   for rendering SEO metadata without leaking draft or privileged data.
+- Refined SEO leaves after drift audit to use root `publishedData.seo`
+  terminology, require server-side public HTML cache invalidation, and make
+  `_docs/CMS_API.md` / `_docs/PAGE_MODEL.md` updates explicit.
 
 ## Validation
 
 - Planning was based on the SEO Manager report, Tools overview report, Claude
   UX addendum, current SEO UI/client/route/service/public-render files, current
   SEO tests, and the repo task/changelog format rules.
+- Follow-up drift audit checked public render/cache paths and existing SEO API
+  documentation.

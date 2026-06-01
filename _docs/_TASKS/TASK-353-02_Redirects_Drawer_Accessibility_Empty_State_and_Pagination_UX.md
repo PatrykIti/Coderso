@@ -26,6 +26,8 @@ Fix the Redirects admin UX findings:
   visible.
 - If server pagination is added, pass `page`, `limit`, `total`,
   `hasNext`, `hasPrevious` through route/client/UI.
+- Decide admin cache behavior for Redirects list/detail if pagination is added;
+  document uncached behavior if the resource remains direct-fetch only.
 
 ## Files To Change
 
@@ -36,9 +38,11 @@ Fix the Redirects admin UX findings:
 | `core/admin/ui/redirects/RedirectsPage.tsx` | Own create callback and optional page state. |
 | `core/admin/services/redirectsClient.ts` | Add list pagination options only if server pagination is implemented. |
 | `core/server/routes/redirectRoutes.ts` | Add pagination query parsing only if server pagination is implemented. |
+| `core/admin/services/cachePolicy.ts` | Add Redirects cache keys/TTLs only if the resource becomes cached. |
 | `tests/vitest/ui/redirects.test.tsx` | Cover drawer accessibility and empty CTA. |
 | `tests/vitest/ui/redirects-page-leaf.test.tsx` | Cover pagination disabled/page state. |
 | `tests/integration/routes/redirects.test.ts` | Cover pagination validation if added. |
+| `_docs/ADMIN_CACHE.md` / `_docs/ADMIN_CACHE_MAP.md` | Document cached or intentionally uncached Redirects behavior. |
 
 ## Implementation Pseudocode
 
@@ -102,6 +106,8 @@ Pagination route changes, if added:
 
 - Update Redirects report with accessibility and pagination/empty-state
   resolution.
+- Update `_docs/CMS_API.md` and admin cache docs if pagination/cache behavior
+  changes.
 
 ## Acceptance Criteria
 

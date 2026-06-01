@@ -1,4 +1,11 @@
-# TASK-038-07 - Form Submission Access Modes (Public vs Internal)
+# TASK-038-07: Form Submission Access Modes (Public vs Internal)
+# FileName: TASK-038-07_Form_Submission_Access_Modes.md
+
+**Priority:** Medium
+**Category:** CMS/Forms + Security
+**Estimated Effort:** Medium
+**Dependencies:** TASK-038-06
+**Status:** Done (2026-02-17)
 
 ## Goal
 Add a per‑form submission access mode so forms can be **Public** (default) or **Internal** (requires auth/API key). This keeps public UX WordPress‑like while enabling internal pages to lock submissions behind credentials.
@@ -194,4 +201,3 @@ if (submissionAccess === "internal") {
 1. For **internal** submissions: should we accept only API key (recommended) or admin session as well? (Default in task: **either**.)
 2. Should internal forms bypass rate limiting entirely or keep a high limit? (Default: keep limit.)
 3. Do you want internal forms hidden from the public Form Embed picker by default, or just warned?
-
