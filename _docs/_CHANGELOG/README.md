@@ -35,6 +35,7 @@ matching remediation family is implemented or closed.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1051 | 2026-06-01 | Section widget 31-05 UI audit remediation | CMS Widgets/Section/Admin UI/Runtime/Security/QA/Docs |
 | 1033 | 2026-05-31 | Admin seed package command | Developer Tooling/Auth Bootstrap/Docs |
 | 1032 | 2026-05-31 | CodeQL widget sanitizer and validation DoS remediation | Security/CodeQL/Widgets/Testing |
 | 1031 | 2026-05-31 | Bun coverage WriteFailed stabilization | CI/Testing/Tooling/Docs |

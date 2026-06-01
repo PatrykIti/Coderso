@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 142 tasks
+- **To Do:** 138 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2006 tasks
+- **Done:** 2010 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-361 | Section 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_SECTION_WIDGET.md`; 3 findings routed to implementation/tests/docs |
 | TASK-362 | Template Section 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_TEMPLATE_SECTION_WIDGET.md`; 2 findings routed to implementation/tests/docs |
 | TASK-363 | Grid Columns 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_GRID_COLUMNS_WIDGET.md`; 1 finding routed to implementation/tests/docs |
 | TASK-364 | Split Layout 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_SPLIT_LAYOUT_WIDGET.md`; 2 findings routed to implementation/tests/docs |
@@ -80,9 +79,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
 | TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-361-01 | SC-31-05-01 - Sanitize unsafe style/color strings before public inline CSS | High | Medium | Leaf task for TASK-361; source `REPORT_SECTION_WIDGET.md` |
-| TASK-361-02 | SC-31-05-02 - Reject or normalize invalid Section payloads on admin save/publish/import | High | Medium | Leaf task for TASK-361; source `REPORT_SECTION_WIDGET.md` |
-| TASK-361-03 | SC-31-05-03 - Complete metadata for builder-owned Region actions and labels | High | Medium | Leaf task for TASK-361; source `REPORT_SECTION_WIDGET.md` |
 | TASK-362-01 | TS-31-05-01 - Non-UUID `templateId` must render a safe placeholder, not HTTP 500 | High | Medium | Leaf task for TASK-362; source `REPORT_TEMPLATE_SECTION_WIDGET.md` |
 | TASK-362-02 | TS-31-05-02 - Propagate loop resolution to parent markers | High | Small | Leaf task for TASK-362; source `REPORT_TEMPLATE_SECTION_WIDGET.md` |
 | TASK-363-01 | GC-31-05-01 - Add metadata for `Reapply asymmetric desktop widths` and shared `Add Column` | Medium | Medium | Leaf task for TASK-363; source `REPORT_GRID_COLUMNS_WIDGET.md` |
@@ -200,6 +196,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-361 | Section 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-01): sanitized Section inline color output, rejected invalid page-builder Section payloads before persistence/publication, and completed Region control metadata. |
+| TASK-361-03 | SC-31-05-03 - Complete metadata for builder-owned Region actions and labels | High | Medium | Done (2026-06-01): Add Region and Region label controls now expose stable `regions` / `regions.<instanceId>.label` metadata. |
+| TASK-361-02 | SC-31-05-02 - Reject or normalize invalid Section payloads on admin save/publish/import | High | Medium | Done (2026-06-01): page service validates widget blocks before page create/update/autosave snapshots and publish. |
+| TASK-361-01 | SC-31-05-01 - Sanitize unsafe style/color strings before public inline CSS | High | Medium | Done (2026-06-01): Section public inline colors now use an allowlist sanitizer and fail closed for unsafe strings. |
 | TASK-346 | Admin Seed Package Command | Medium | Small | Done (2026-05-31): added root `db:seed:admin` command, package-script regression coverage, and local setup docs for bootstrap administrator seeding. |
 | TASK-345 | CodeQL Widget Sanitizer and Validation DoS Remediation | High | Small | Done (2026-05-31): replaced regex HTML pseudo-sanitization in Hero/Template Section paths and hardened widget AJV validation with fail-fast plus structural budget checks. |
 | TASK-344 | Bun Coverage WriteFailed Reporter Stabilization | High | Small | Done (2026-05-31): `test:coverage:bun` now keeps the LCOV artifact while replacing Bun's huge text coverage table with a compact LCOV-derived summary to avoid CI `WriteFailed` exits. |

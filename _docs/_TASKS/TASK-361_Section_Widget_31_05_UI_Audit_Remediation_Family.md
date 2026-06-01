@@ -5,7 +5,7 @@
 **Category:** Widgets + Section + Admin UI + Runtime + Security + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_SECTION_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -25,9 +25,9 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-361-01](TASK-361-01_SC_31_05_01_Sanitize_Unsafe_Style_Color_Strings_Before_Public_Inline.md): SC-31-05-01 - Sanitize unsafe style/color strings before public inline CSS
-- [ ] [TASK-361-02](TASK-361-02_SC_31_05_02_Reject_Or_Normalize_Invalid_Section_Payloads_On_Admin.md): SC-31-05-02 - Reject or normalize invalid Section payloads on admin save/publish/import
-- [ ] [TASK-361-03](TASK-361-03_SC_31_05_03_Complete_Metadata_For_Builder_Owned_Region_Actions_And.md): SC-31-05-03 - Complete metadata for builder-owned Region actions and labels
+- [x] [TASK-361-01](TASK-361-01_SC_31_05_01_Sanitize_Unsafe_Style_Color_Strings_Before_Public_Inline.md): SC-31-05-01 - Sanitize unsafe style/color strings before public inline CSS
+- [x] [TASK-361-02](TASK-361-02_SC_31_05_02_Reject_Or_Normalize_Invalid_Section_Payloads_On_Admin.md): SC-31-05-02 - Reject or normalize invalid Section payloads on admin save/publish/import
+- [x] [TASK-361-03](TASK-361-03_SC_31_05_03_Complete_Metadata_For_Builder_Owned_Region_Actions_And.md): SC-31-05-03 - Complete metadata for builder-owned Region actions and labels
 
 ## Implementation Pseudocode
 
@@ -72,3 +72,29 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Completion Notes (2026-06-01)
+
+- Added shared `resolveClearableCssColorValue()` and routed Section public inline
+  color sinks through it, so unsafe `url(...)`, `javascript:`, `expression(...)`,
+  arbitrary CSS functions, and non-`--color-*` variables fail closed at render
+  time while safe color grammar still renders.
+- Added page-service widget-block normalization before create/update/autosave
+  snapshots and publish, so invalid Section enum payloads now fail with
+  `widget_schema_invalid` before `currentData` or `publishedData` persistence.
+  The current import/export bundle does not import page-builder data, so no
+  page import route was widened.
+- Added stable builder metadata for Section Region controls: Add Region maps to
+  `regions`, each region row maps to `regions.<instanceId>`, and the label input
+  maps to `regions.<instanceId>.label` with writable ownership.
+- Cross-checked the diff with Claude CLI in read-only mode; no blocking drift
+  was reported.
+
+## Validation Executed (2026-06-01)
+
+- `bun test tests/unit/pages/pageWidgetData.test.ts`
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/clearableStyle.test.ts tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
+- `set -a && source .env && set +a && bun test tests/integration/routes/pages.test.ts --test-name-pattern "page routes reject invalid Section widget payloads before persistence"`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`

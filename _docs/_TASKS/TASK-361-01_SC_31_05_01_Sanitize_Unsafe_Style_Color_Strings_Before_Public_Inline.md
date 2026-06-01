@@ -5,7 +5,7 @@
 **Category:** Widgets + Section + Admin UI + Runtime + Security + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-361
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Section currently forwards imported background, gradient, border, overlay, and h
 
 ## Sub-Tasks
 
-- [ ] Reproduce SC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce SC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -91,3 +91,20 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Completion Notes (2026-06-01)
+
+- Report fixture evidence showed unsafe `url(javascript:)`, `javascript:`, and
+  `expression(...)` strings reaching Section public inline styles while media
+  URLs already failed closed.
+- Added shared allowlist color normalization in `clearableStyle.ts` and applied
+  it to Section heading colors, surface background, gradient endpoints, border,
+  and overlay color at render time.
+- Kept editor replace-or-clear compatibility for saved custom strings; unsafe
+  saved values are simply omitted from public inline CSS.
+
+## Validation Executed (2026-06-01)
+
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/clearableStyle.test.ts tests/vitest/widgets/section.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

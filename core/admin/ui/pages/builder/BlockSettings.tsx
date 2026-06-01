@@ -261,6 +261,11 @@ export function BlockSettings({
         }
       : nextBlock;
 
+  const resolveSectionRegionControlPath = (slotId: string, suffix?: string) => {
+    const instanceId = parseRepeatableSlotId(slotId)?.instanceId;
+    return instanceId ? ["regions", instanceId, suffix].filter(Boolean).join(".") : "regions";
+  };
+
   const handleAddRepeatableSlotInstance = (definitionId: string) => {
     const definition = slotDefinitions.find((slot) => slot.id === definitionId);
     if (!definition || getWidgetSlotKind(definition) !== "repeatable") return;
@@ -330,9 +335,12 @@ export function BlockSettings({
             const maximum = Number.isFinite(slot.maxItems)
               ? Math.max(0, Math.floor(slot.maxItems ?? 0))
               : undefined;
+            const isSectionRegion = widget.type === "section" && slot.id === sectionRegionSlot.id;
             return {
-              id: `add-${slot.id}`,
+              id: isSectionRegion ? "section.regions.add-region" : `add-${slot.id}`,
               label: `Add ${slot.label}`,
+              path: isSectionRegion ? "regions" : undefined,
+              ownership: "action" as const,
               disabled: typeof maximum === "number" && count >= maximum,
               onClick: () => handleAddRepeatableSlotInstance(slot.id),
             };
@@ -364,9 +372,14 @@ export function BlockSettings({
               repeatableCount > repeatableMinimum;
             const isSectionRegion =
               widget.type === "section" && slot.definitionId === sectionRegionSlot.id;
+            const sectionRegionPath = isSectionRegion
+              ? resolveSectionRegionControlPath(slot.slotId)
+              : undefined;
             return {
               id: `${widget.type}.slot.${slot.slotId}`,
               label: `${slot.label} slot`,
+              path: sectionRegionPath,
+              ownership: "action" as const,
               labelValue: isSectionRegion
                 ? resolveSectionRegionLabelValue(
                     block.data as SectionData | undefined,
@@ -375,6 +388,9 @@ export function BlockSettings({
                   )
                 : undefined,
               labelPlaceholder: isSectionRegion ? rawSlot.label : undefined,
+              labelPath: isSectionRegion
+                ? resolveSectionRegionControlPath(slot.slotId, "label")
+                : undefined,
               onLabelChange: isSectionRegion
                 ? (nextLabel: string) =>
                     patchBlock((current) => ({

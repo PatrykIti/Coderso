@@ -9,6 +9,7 @@ import {
   type RouteContext,
   type RouteHandler,
 } from "../../../core/server/routes/pageRoutes";
+import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
 
 type Route = { method: string; path: string; handlers: RouteHandler[] };
 
@@ -525,6 +526,64 @@ testIfDb("page preview route returns sanitized probe metadata", async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+testIfDb("page routes reject invalid Section widget payloads before persistence", async () => {
+  ensureRuntimeWidgetsRegistered();
+  const { router, routes } = makeRouter();
+  const deps = makeValidatingDeps();
+  const actor = await createRouteActor();
+  const page = await createPageDirectly("Invalid Section Payload Page");
+  const invalidData = {
+    blocks: [
+      {
+        id: "section-invalid",
+        type: "section",
+        variant: "default",
+        data: {
+          heading: {
+            level: "h8",
+          },
+          style: {
+            borderWidth: "9",
+            radius: "circle",
+          },
+        },
+        layout: {
+          container: "inherit",
+          padding: { top: "inherit", bottom: "inherit" },
+          margin: { top: "inherit", bottom: "inherit" },
+          background: { color: "transparent", image: null },
+        },
+        visibility: { devices: ["desktop", "tablet", "mobile"], enabled: true },
+        editor: { mode: "visual", wizardCompleted: true },
+      },
+    ],
+  };
+
+  registerPageRoutes(router, deps);
+
+  await expect(
+    runRoute(routes, "PATCH", "/pages/:id", {
+      params: { id: page.id },
+      body: { data: invalidData },
+    })
+  ).rejects.toThrow("widget_schema_invalid");
+
+  const afterSaveAttempt = await db.select().from(pages).where(eq(pages.id, page.id));
+  expect(afterSaveAttempt[0]?.currentData).toEqual({ blocks: [] });
+
+  await expect(
+    runRoute(routes, "POST", "/pages/:id/publish", {
+      params: { id: page.id },
+      user: { id: actor.id },
+      body: { data: invalidData },
+    })
+  ).rejects.toThrow("widget_schema_invalid");
+
+  const afterPublishAttempt = await db.select().from(pages).where(eq(pages.id, page.id));
+  expect(afterPublishAttempt[0]?.status).toBe("draft");
+  expect(afterPublishAttempt[0]?.publishedData).toBeNull();
 });
 
 testIfDb("page route handlers surface not-found and revision guard errors", async () => {

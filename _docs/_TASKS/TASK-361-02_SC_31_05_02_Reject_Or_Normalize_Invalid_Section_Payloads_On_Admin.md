@@ -5,7 +5,7 @@
 **Category:** Widgets + Section + Admin UI + Runtime + Security + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-361
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Admin write paths accepted `heading.level=h8`, invalid border/radius enums, then
 
 ## Sub-Tasks
 
-- [ ] Reproduce SC-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce SC-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -91,3 +91,24 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Completion Notes (2026-06-01)
+
+- Report fixture evidence showed admin page save/publish accepting
+  `heading.level="h8"`, `borderWidth="9"`, and `radius="circle"` before public
+  render replaced the widget with an invalid-data placeholder.
+- Added `normalizePageWidgetData()` in the page service/domain layer and call it
+  from page data preparation before create/update/autosave snapshots and
+  publish. Assistant page mutations use the same page service dependency path.
+- Chose strict rejection instead of enum fallback at the write boundary, so
+  invalid Section schema payloads do not enter `currentData` or `publishedData`.
+  Current import/export routes do not import page-builder data, so no page
+  import validation route exists to update for this leaf.
+
+## Validation Executed (2026-06-01)
+
+- `bun test tests/unit/pages/pageWidgetData.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/pages.test.ts --test-name-pattern "page routes reject invalid Section widget payloads before persistence"`
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

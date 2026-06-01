@@ -7,6 +7,7 @@
 > **Dodatkowe runtime routes:** `/audit-31-05-section-rich`, `/audit-31-05-section-div`, `/audit-31-05-section-unsafe`, `/audit-31-05-section-unsafe-strings`
 > **Playwright sessions:** `section-fixture-31`, `section-admin-31`, `section-admin-advanced-31`, `section-public-31`
 > **Claude:** lokalny CLI nadal blokuje wspolprace: `401 Invalid authentication credentials`. Raport opiera sie na Playwright + audycie kodu Codex.
+> **Remediation 2026-06-01:** TASK-361 zamknal wszystkie trzy findings. Claude CLI zostal uzyty ponownie do read-only diff review i nie zglosil blockerow.
 
 ## Metoda
 
@@ -80,6 +81,31 @@ Przetestowane:
 | Sticky child containment | Code/runtime DOM | Nie testowano sticky motion przez brak CSS assets, ale DOM structure widoczny. | Content flow nie ma starego `relative w-full overflow-hidden`; clipping siedzi w decorative layer `absolute inset-0 overflow-hidden`. | Dziala kontrakt HTML | TASK-318 wrapper split jest obecny. | Brak. |
 
 ## Znaleziska do poprawy
+
+### Remediation status (2026-06-01)
+
+- `SC-31-05-01`: fixed. Section public inline color sinks now use
+  `resolveClearableCssColorValue()`, which allowlists hex, bounded
+  `rgb/rgba/hsl/hsla`, `var(--color-*)`, and
+  `transparent/currentColor/inherit`. Unsafe strings from the report fixture are
+  omitted or fall back to `var(--color-border)` / `#000000`.
+- `SC-31-05-02`: fixed by strict write-boundary validation. Page service data
+  preparation normalizes widget blocks before create/update/autosave snapshots
+  and publish; invalid Section enum payloads now throw `widget_schema_invalid`
+  before `currentData` or `publishedData` persistence. Current import/export
+  routes do not import page-builder data.
+- `SC-31-05-03`: fixed. Builder-owned Section Region controls expose stable
+  metadata: Add Region maps to `regions`, region rows map to
+  `regions.<instanceId>`, and label inputs map to
+  `regions.<instanceId>.label` with writable ownership.
+
+Regression coverage added:
+
+- `tests/vitest/widgets/clearableStyle.test.ts`
+- `tests/vitest/widgets/section.test.tsx`
+- `tests/vitest/ui/section-editor-wave.test.tsx`
+- `tests/unit/pages/pageWidgetData.test.ts`
+- `tests/integration/routes/pages.test.ts`
 
 ### SC-31-05-01 - Unsafe style/color strings przechodza do public inline style
 
@@ -197,9 +223,12 @@ rows.
 
 ## Walidacja
 
-Do wykonania po zapisie raportu:
+Remediation validation wykonane 2026-06-01:
 
-- `bun run test:vitest -- tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
+- `bun test tests/unit/pages/pageWidgetData.test.ts`
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/clearableStyle.test.ts tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
+- `set -a && source .env && set +a && bun test tests/integration/routes/pages.test.ts --test-name-pattern "page routes reject invalid Section widget payloads before persistence"`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `git diff --check -- _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_SECTION_WIDGET.md _docs/PLAYWRIGHT/31-05-2026-widgets/README.md`
+- `git diff --check`
+- `claude -p` read-only diff review for TASK-361
