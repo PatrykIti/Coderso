@@ -98,6 +98,17 @@ fall back through `motion-reduce:*` classes instead of forced animation.
 
 Root color fields are optional in fresh payloads. When omitted, runtime applies
 theme fallbacks without persisting CSS variable strings as saved custom values.
+Imported/admin/API payloads are normalized before public rendering. Unsafe CSS
+strings such as `url(...)`, `expression(...)`, `javascript:`, `data:`,
+delimiter injection, unknown functions, and malformed colors are rejected before
+they can reach inline styles or Toggle Block CSS custom properties.
+
+Allowed root color values are bounded CSS colors from the shared clearable color
+contract:
+- hex colors (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`)
+- bounded `rgb/rgba` and `hsl/hsla` values
+- `var(--color-*)` theme tokens
+- `transparent`, `currentColor`, and `inherit`
 
 `style.surfaceColor`
 - Clearable.
@@ -172,6 +183,9 @@ fallbacks in editor/runtime code.
 - Visual color authoring is swatch-only for normal users. Saved theme tokens or
   custom legacy color values remain compatible as replace-or-clear state instead
   of editable raw CSS/text fields.
+- Advanced diagnostics report the normalized/effective root color state. Rejected
+  imported values are shown as theme defaults instead of active configured
+  colors.
 
 ## TASK-336-19 Editor Contract Cleanup
 

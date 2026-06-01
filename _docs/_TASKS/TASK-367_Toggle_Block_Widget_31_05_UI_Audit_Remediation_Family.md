@@ -5,7 +5,7 @@
 **Category:** Widgets + Toggle Block + Runtime Security + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_TOGGLE_BLOCK_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-367-01](TASK-367-01_TGL_31_05_01_Sanitize_Toggle_Block_Clearable_Color_Fields.md): TGL-31-05-01 - Sanitize Toggle Block clearable color fields
+- [x] [TASK-367-01](TASK-367-01_TGL_31_05_01_Sanitize_Toggle_Block_Clearable_Color_Fields.md): TGL-31-05-01 - Sanitize Toggle Block clearable color fields
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,14 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced the report drift in code: Toggle Block root colors used trim-only normalization and reached public inline styles plus `--nextless-toggle-*` custom properties.
+- Toggle Block now owns `normalizeToggleBlockColorValue()` around the shared bounded CSS color helper and applies it at normalization plus render-time style assembly.
+- The widget schema now rejects obvious unsafe import/API color strings for the four clearable color fields, while the renderer still fails closed for legacy saved data that bypassed schema validation.
+- Advanced style diagnostics now read normalized/effective root colors, so unsafe saved strings are not presented as active configured behavior.
+- Kuhn read-only agent confirmed the report drift and flagged the Advanced diagnostics raw-value drift before closure.
+- Claude staged-diff review returned no blockers; its non-blocking schema case-sensitivity note was fixed before closure.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx`; broader Toggle Block/UI lane with renderer and shared block-layout coverage; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1057` together with TASK-367-01.

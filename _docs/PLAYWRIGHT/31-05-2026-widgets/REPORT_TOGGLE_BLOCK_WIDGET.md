@@ -5,7 +5,7 @@
 > **Admin page id:** `2ff7ca6a-9032-4664-8666-b94cbfac13f2`
 > **Public routes:** `/audit-31-05-toggle-block`, `/audit-31-05-toggle-block-rich`, `/audit-31-05-toggle-block-empty`, `/audit-31-05-toggle-block-unsafe-style`, `/audit-31-05-toggle-block-invalid`
 > **Playwright sessions:** `codex-31-05-ui-toggle-fixture`, `codex-31-05-ui-toggle-public`, `codex-31-05-ui-toggle-interaction`, `codex-31-05-ui-toggle-admin`
-> **Claude:** lokalny CLI nadal blokuje wspolprace: `401 Invalid authentication credentials`. Raport opiera sie na Playwright + audycie kodu Codex.
+> **Claude:** remediation review z lokalnego CLI (2026-06-01) zakonczony wynikiem `No blockers`; non-blocking schema case-sensitivity note fixed before closure.
 
 ## Metoda
 
@@ -78,9 +78,9 @@ Przetestowane:
 | Advanced diagnostics | Rich admin after returning from Wizard | Advanced root exists, `writablePaths=[]`, `rawControlCount=0`, unwrapped controls `[]`; summaries mirror saved variant, default, motion, labels and style. | Nie dotyczy bez zapisu. | Dziala | Advanced uses readonly summary rows and shared readonly layout/visibility summaries. | Brak. |
 | Shared Structure | Visual rich | Fixed `Primary Pane slot` and `Secondary Pane slot`, each `1 item`; no add action; Move up/down disabled. | Public slot content renders as spacer child in both panes. | Dziala | Toggle Block intentionally owns exactly two fixed slots. Disabled fixed-slot move actions are not product actions. | Brak. |
 | Invalid payload | `/audit-31-05-toggle-block-invalid` | Nieosiagalne przez normalny UI; API/import edge. | HTTP 200, rootCount `0`, `Invalid widget data`, no raw invalid strings. | Dziala fail-closed; route gap shared | Widget schema rejects invalid enums, but admin API allowed save/publish fixture. | Wspolna walidacja save/publish/import widget blocks. |
-| Unsafe style strings | `/audit-31-05-toggle-block-unsafe-style` | Nieosiagalne przez normalny UI color picker; API/import edge. | HTTP 200 and widget renders raw `url(javascript:...)` / `expression(...)` in inline style and CSS custom properties. | Nie dziala security/value validation | Style schema accepts any string, shared normalizer only trims, renderer emits inline style. | Patrz `TGL-31-05-01`. |
+| Unsafe style strings | `/audit-31-05-toggle-block-unsafe-style` | Nieosiagalne przez normalny UI color picker; API/import edge. Advanced diagnostics now reports normalized/effective color state. | Unsafe `url(javascript:...)` / `expression(...)` values are dropped before inline styles and CSS custom properties; safe hex/theme-token values still render. | Dziala po remediacji | TASK-367 wires Toggle Block root colors to the shared bounded CSS color helper at schema, normalization, render, and Advanced diagnostics boundaries. | Naprawione w `TGL-31-05-01`. |
 
-## Znaleziska do poprawy
+## Znaleziska i remediacja
 
 ### TGL-31-05-01 - Unsafe style strings z import/API trafiaja do public inline CSS
 
@@ -127,6 +127,13 @@ renderer emituje go w inline CSS.
 5. Dodac regression w `tests/vitest/widgets/toggleBlock.test.tsx`: unsafe
    imported strings nie pojawiaja sie w SSR HTML, a UI-safe hex nadal renderuje.
 
+**Status remediacji 2026-06-01:** Naprawione w TASK-367. Toggle Block ma teraz
+owner-side `normalizeToggleBlockColorValue()` oparty o shared bounded CSS color
+helper. `surfaceColor`, `borderColor`, `accentColor` and `accentContrastColor`
+sa sanitizowane przed SSR inline styles/custom properties, schema odrzuca
+oczywiste unsafe import/API payloady, a Advanced diagnostics pokazuje stan
+efektywny po normalizacji zamiast raw zapisanych stringow.
+
 ## Co dziala
 
 - Two-state runtime jest interaktywny: click, ArrowLeft/Right/Up/Down, Home,
@@ -139,8 +146,28 @@ renderer emituje go w inline CSS.
   slot content renders on public.
 - Empty-slot placeholder does not leak to public runtime.
 - Invalid enum payload fails closed in public renderer.
+- Unsafe imported root color strings are dropped before public inline styles and
+  Toggle Block CSS custom properties; safe hex and `var(--color-*)` values still
+  render.
+- Advanced style diagnostics mirror normalized/effective root colors instead of
+  raw unsafe saved values.
 
 ## Walidacja
+
+### Remediacja TASK-367
+
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx` -
+  passed, 2 files / 19 tests.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx` -
+  passed, 4 files / 55 tests.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `git diff --check` - passed.
+- `timeout 180s claude -p --dangerously-skip-permissions --max-budget-usd 1 "Review the staged git diff for TASK-367 Toggle Block only..."` -
+  passed, no blockers; non-blocking schema case-sensitivity note fixed before
+  closure.
+
+### UI-first audit 31-05
 
 - `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx`
   - PASS: 4 files, 50 tests.

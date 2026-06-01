@@ -5,7 +5,7 @@
 **Category:** Widgets + Toggle Block + Runtime Security + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-367
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Surface, border, accent, and accent-contrast strings are trimmed and emitted as 
 
 ## Sub-Tasks
 
-- [ ] Reproduce TGL-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce TGL-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -89,3 +89,14 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced TGL-31-05-01 against current code: `surfaceColor`, `borderColor`, `accentColor`, and `accentContrastColor` accepted raw strings and reached SSR inline CSS/custom properties.
+- Added owner-side color normalization through `normalizeToggleBlockColorValue()`, backed by the shared bounded CSS color helper, and reused it in public style assembly.
+- Added schema pattern coverage for import/API validation so obvious unsafe functions and injection fragments are rejected before persistence through the widget validator.
+- Advanced diagnostics now report normalized effective color state, which turns rejected unsafe saved strings into theme-default diagnostics instead of raw active values.
+- Added regressions for normalizer behavior, public SSR sanitization, safe hex/theme-token preservation, validator rejection, and Advanced diagnostic sanitization.
+- Claude staged-diff review returned no blockers; its non-blocking schema case-sensitivity note was fixed before closure.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx`; broader Toggle Block/UI lane with renderer and shared block-layout coverage; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1057`.

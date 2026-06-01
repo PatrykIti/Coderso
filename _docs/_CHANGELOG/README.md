@@ -35,6 +35,7 @@ matching remediation family is implemented or closed.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1057 | 2026-06-01 | Toggle Block widget 31-05 UI audit remediation | CMS Widgets/Toggle Block/Runtime Security/Admin UI/QA/Docs |
 | 1056 | 2026-06-01 | Accordion widget 31-05 UI audit remediation | CMS Widgets/Accordion/Runtime Security/Admin UI/Builder Metadata/QA/Docs |
 | 1055 | 2026-06-01 | Tabs widget 31-05 UI audit remediation | CMS Widgets/Tabs/Runtime Security/Admin UI/Builder Metadata/QA/Docs |
 | 1054 | 2026-06-01 | Split Layout widget 31-05 UI audit remediation | CMS Widgets/Split Layout/Admin UI/Builder Metadata/QA/Docs |
