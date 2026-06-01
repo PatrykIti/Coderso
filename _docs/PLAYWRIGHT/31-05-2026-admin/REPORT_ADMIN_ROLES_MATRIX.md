@@ -7,6 +7,27 @@ Trasa: `/admin/roles`. Źródła: `core/admin/ui/roles/PermissionsMatrixPage.tsx
 
 ## Co faktycznie kliknięto
 
+### Druga fala E2E - 2026-06-01
+
+- Przez dialog `Create new role` utworzono testową rolę
+  `QA Admin Matrix 20260601050816` z trzema uprawnieniami:
+  `users:read`, `roles:read`, `audit:read`.
+- Jako admin w `/admin/roles` wyszukano `View settings`, kliknięto checkbox
+  `View settings for QA Admin Matrix 20260601050816` i zapisano macierz;
+  `PATCH /admin-roles/:id` zwrócił `200`.
+- Następnie cofnięto tę samą zmianę w macierzy i zapisano ponownie; rola wróciła
+  do pierwotnych trzech uprawnień.
+- Jako restricted user z tą rolą otwarto `/admin/roles`: kolumna roli była
+  widoczna, `Add Role` było aktywne, checkboxy dały się przełączać lokalnie,
+  a `Save changes` aktywował się po zmianie.
+- Restricted user próbował zapisać zmianę `View settings`; backend zwrócił
+  `403 forbidden`, więc RBAC API działa, ale UI pozwala dojść do błędnego
+  submitu.
+- Po zakończeniu testu rola została usunięta przez UI z `/admin/users` po
+  wcześniejszym usunięciu testowego usera.
+
+### Pierwsza fala - 2026-05-31
+
 - Wejście w `Roles Matrix`.
 - Search `media`; tabela zawęziła widoczne grupy uprawnień do media-related.
 - `Add Role`; dialog otworzył się bez zapisu.
@@ -15,7 +36,9 @@ Trasa: `/admin/roles`. Źródła: `core/admin/ui/roles/PermissionsMatrixPage.tsx
 - Jeden checkbox uprawnienia w macierzy; footer zmienił się na dirty state.
 - `Cancel`; footer wrócił do `No pending permission changes.`
 
-Nie klikano finalnie: `Save changes`, tworzenie roli, zapis pełnego dostępu.
+W pierwszej fali nie klikano finalnie `Save changes`, tworzenia roli ani zapisu
+pełnego dostępu. W drugiej fali wykonano create role i save matrix na
+jednorazowej roli testowej oraz przywrócono stan.
 
 ## Co działało
 
@@ -24,11 +47,16 @@ Nie klikano finalnie: `Save changes`, tworzenie roli, zapis pełnego dostępu.
 - Pojedynczy toggle uprawnienia poprawnie ustawia dirty state.
 - `Cancel` przywraca draft do stanu z backendu.
 - Dialog `Add Role` ma title/description i guard wizualny `Full access`.
+- Pozytywny save macierzy działa dla admina: dodanie i usunięcie
+  `settings:read` zapisało się przez `PATCH /admin-roles/:id`.
+- API poprawnie odrzuca zapis macierzy dla restricted usera bez `roles:write`.
 
 ## Co nie działało / co jest ryzykowne
 
 | Problem | Dowód z kodu | Skutek |
 | --- | --- | --- |
+| Roles Matrix nie jest bramkowany uprawnieniami użytkownika | `PermissionsMatrixPage.tsx` nie przyjmuje permissions/current user, a `AdminApp.tsx` renderuje `<PermissionsMatrixPage />` bez kontekstu RBAC | restricted user może lokalnie zmieniać checkboxy i klikać save, dopiero API zwraca 403 |
+| `Add Role` jest aktywne dla restricted usera | brak `can("roles:write")` w topbar actions | user dostaje aktywny create dialog mimo braku prawa do zapisu |
 | `Save changes` zapisuje masowe zmiany bez potwierdzenia | `handleSaveChanges` buduje update dla zmienionych ról i od razu woła `updateAdminRole` | jeden błędny klik może zmienić RBAC wielu ról |
 | `Select all` w RoleEditor przełącza pełen dostęp bez confirm | `handleSelectAll` ustawia `fullAccess` i wszystkie permissions | UI ostrzega badge, ale nie wymusza świadomego potwierdzenia |
 | Brak podsumowania diffu przed zapisem | footer pokazuje tylko dirty/clean | admin nie widzi dokładnie, które role i scopes zmienia |
@@ -41,6 +69,9 @@ dla szerokich zmian.
 
 ## Jak naprawić
 
+- Dodać backendowy/current-user `can(permission)` do route shell i przekazać go
+  do `PermissionsMatrixPage`; dla braku `roles:write` matrix powinien być
+  read-only, a `Add Role`/`Save changes` ukryte albo disabled.
 - Przed `Save changes` pokazać modal z listą ról i liczbą dodanych/usuniętych
   permissions.
 - Dla `*`/full access wymagać dodatkowego confirm z nazwą roli.

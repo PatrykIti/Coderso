@@ -8,6 +8,16 @@ Trasa: `/admin/audit`. Źródła: `core/admin/ui/audit/AuditList.tsx`,
 
 ## Co faktycznie kliknięto
 
+### Druga fala E2E - 2026-06-01
+
+- Zalogowano restricted usera z rolą zawierającą `audit:read`.
+- Wejście w `/admin/audit` działało bez `Forbidden`.
+- Tabela pokazała 200 wierszy przy limicie UI/API.
+- Search `Auth` zawęził widok do 153 wierszy.
+- `Export CSV` otworzył dialog `Export Audit Logs`.
+
+### Pierwsza fala - 2026-05-31
+
 - Wejście w `Audit Logs`.
 - Search `auth`; tabela pokazała wyniki związane z auth.
 - Klik wiersza; otworzył się drawer `Event Details`.
@@ -26,6 +36,7 @@ zewnętrzna.
 - Severity i event type są podpięte w filtrze klienta.
 - Drawer szczegółów pokazuje request/resource/status/payload.
 - Export dialog otwiera się i ma poprawny title/description.
+- Uprawnienie `audit:read` wystarcza do odczytu Audit Logs w restricted session.
 
 ## Co nie działało / co jest mylące
 

@@ -4,8 +4,8 @@
 
 Pogłębiony, klikany audyt sekcji **Admin** w panelu CMS, na żywej lokalnej
 instancji, z `playwright-cli`, `claude` i przeglądem kodu. Nacisk: realnie
-przeklikać bezpieczne kontrolki, a dla akcji destrukcyjnych sprawdzić kod i
-opisać, dlaczego nie były wyzwalane na żywo.
+przeklikać kontrolki, a dla akcji destrukcyjnych używać kontrolowanych
+fixture'ów albo jasno opisać, dlaczego dana akcja nie była wyzwalana.
 
 To nie jest smoke-report. Każdy raport dokumentuje:
 
@@ -26,10 +26,11 @@ IP Allowlist**.
 
 ## Środowisko i metoda
 
-- Data: 2026-05-31.
+- Data: 2026-05-31 i uzupełnienie 2026-06-01.
 - Admin: `http://coderso-a.localhost:5173/admin/`.
 - Frontend: `http://coderso-a.localhost:3000`.
-- Sesja Playwright: `codex-31-05-admin-audit`.
+- Sesje Playwright: `codex-31-05-admin-audit`, `codex-01-06-admin-e2e`,
+  `codex-01-06-admin-rbac-user`, `codex-01-06-settings-cache`.
 - Serwer lokalny: helper `coderso-dev-core-host`.
 - Narzędzia: `playwright-cli`, `claude`, subagenci do równoległego source
   review, ręczny przegląd `core/admin/ui/**`.
@@ -37,10 +38,17 @@ IP Allowlist**.
   **Max sessions per user = 30** i zapisano ustawienie w UI. Późniejsze
   ostrzeżenie dashboardu o zbyt permisywnej polityce sesji jest oczekiwane.
 
-Klikane były wyłącznie kontrolki bezpieczne: search, filtry, otwieranie
-dialogów/drawerów, menu wierszy, export dialog bez finalnego eksportu, toggle
-RBAC z `Cancel`, formularze bez zapisu. Akcje destrukcyjne i akcje wysyłające
-ruch zewnętrzny były oceniane z kodu.
+Pierwsza fala klikała wyłącznie kontrolki bezpieczne: search, filtry,
+otwieranie dialogów/drawerów, menu wierszy, export dialog bez finalnego
+eksportu, toggle RBAC z `Cancel`, formularze bez zapisu. Druga fala dodała
+kontrolowany fixture: testową rolę i testowego usera, login tym userem,
+pozytywne zapisy admina oraz negatywne próby RBAC jako restricted user. Akcje
+destrukcyjne wykonano tylko na fixture i posprzątano po teście.
+
+Trzecia fala doprecyzowała Settings: kliknięto wszystkie opcje Settings przez
+lokalny sidebar, zmierzono requesty/cache behavior, wykonano odwracalne zapisy
+General/Site/Security i sprawdzono martwe kontrolki typu logo upload oraz
+Storage `Test Connection`.
 
 ## Zawartość
 
@@ -53,13 +61,30 @@ ruch zewnętrzny były oceniane z kodu.
   Sessions, Login Alerts, IP Allowlist, API Keys, Webhooks, Email, Storage,
   Integrations.
 
-## Akcje świadomie nie wyzwolone
+## Akcje świadomie nie wyzwolone albo ograniczone
 
-Nie klikano finalnie: revoke session / revoke all, delete/deactivate user,
-zapis RBAC, create/rotate/revoke API key, send test email, test webhook, zmiany
-CORS/CSRF/rate-limit/security headers/admin path/IP allowlist. To są realne
-mutacje albo działania zewnętrzne; w raportach opisano je na podstawie kodu i
-bezpiecznego otwarcia UI.
+Nie klikano finalnie: revoke session / revoke all, create/rotate/revoke API
+key, send test email, test webhook, zmiany CORS/CSRF/rate-limit/security
+headers/admin path/IP allowlist. To są realne mutacje albo działania zewnętrzne;
+w raportach opisano je na podstawie kodu i bezpiecznego otwarcia UI.
+
+W Settings kliknięto i przywrócono tylko pola niskiego ryzyka: General
+`Site name`, Site `Cache TTL (seconds)` i Security
+`Password reset TTL (minutes)`. Nie zmieniano sekretów, providerów storage,
+maili, webhooków, admin path, CORS/CSRF ani IP allowlist.
+
+Kliknięto finalnie na fixture: create role, invite user, edit user, deactivate
+user, activate user, save Roles Matrix, duplicate role, delete user i delete
+role. Cleanup potwierdził brak pozostałych testowych rekordów.
+
+## Uwaga o Claude
+
+Claude był użyty w obu falach. W drugiej fali próba niezależnego UI pass przez
+Claude uruchomiła własny Playwright daemon, ale przekroczyła timeout 240 sekund
+i nie zwróciła raportu. Krótka próba review evidence/source przez Claude
+zwróciła niezależne potwierdzenie głównych wniosków RBAC. W trzeciej fali
+Claude został uruchomiony w węższym zakresie Settings source/UX i potwierdził
+brak cache layera dla wartości Settings oraz listę UI-only controls.
 
 ## Uwaga o evidence
 

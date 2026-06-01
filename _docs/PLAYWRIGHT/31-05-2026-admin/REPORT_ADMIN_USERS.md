@@ -8,6 +8,33 @@ Trasa: `/admin/users`. Źródła: `core/admin/ui/users/UsersRolesPage.tsx`,
 
 ## Co faktycznie kliknięto
 
+### Druga fala E2E - 2026-06-01
+
+- Utworzono przez UI rolę `QA Admin Matrix 20260601050816` z uprawnieniami
+  `users:read`, `roles:read`, `audit:read`.
+- Utworzono przez UI testowego użytkownika
+  `coderso.e2e.admin.20260601050816@example.test` i przypisano mu wyłącznie
+  tę rolę.
+- Ponieważ Invite User nie ma pola hasła, ustawiono znane hasło i status
+  `active` kontrolowanym wywołaniem admin API na tym samym testowym userze;
+  później zalogowano się tym użytkownikiem w osobnej sesji Playwright.
+- W restricted session sprawdzono `/admin/users`: lista ładowała dane, ale
+  `Create Role`, `Invite User`, `Edit permissions`, `Reset password` i menu
+  wiersza były aktywne mimo braku `users:write`/`roles:write`.
+- W restricted session wykonano kontrolowane próby `Invite User` i `Create
+  Role`; oba submit requesty dostały `403 forbidden`, więc backend RBAC działa,
+  ale UI nie blokuje akcji wcześniej.
+- Jako admin na tym samym testowym userze realnie kliknięto: search po emailu,
+  panel szczegółów, `Reset password`, `Edit user` + save, `Deactivate user`,
+  `Activate user`, `Delete user`.
+- Jako admin na testowej roli realnie kliknięto: menu role card, `Duplicate`,
+  `Delete role` dla kopii oraz `Delete role` dla roli źródłowej po usunięciu
+  usera.
+- Cleanup potwierdzony API: testowy user, testowa rola i kopia roli nie
+  pozostały w bazie.
+
+### Pierwsza fala - 2026-05-31
+
 - Wejście w `Users` z sekcji Admin sidebar.
 - Search `Patryk` w polu users search; tabela zawęziła się do jednego wiersza.
 - Klik wiersza użytkownika; prawy panel szczegółów uzupełnił dane usera.
@@ -19,7 +46,9 @@ Trasa: `/admin/users`. Źródła: `core/admin/ui/users/UsersRolesPage.tsx`,
   `Reset password`, `Deactivate user`, `Delete user`.
 - `Edit user`; dialog edycji usera otworzył się, bez zapisu.
 
-Nie klikano finalnie: delete, deactivate, save user/role, reset password.
+W pierwszej fali nie klikano finalnie delete, deactivate, save user/role ani
+reset password na realnych danych. W drugiej fali te akcje wykonano na
+jednorazowym fixture user/role i posprzątano po teście.
 
 ## Co działało
 
@@ -30,15 +59,21 @@ Nie klikano finalnie: delete, deactivate, save user/role, reset password.
 - Dialog Edit User pokazuje dane użytkownika i pola status/role.
 - Dialog Role Editor ma poprawny title/description i pozwala podejrzeć scope
   uprawnień bez zapisu.
+- Admin API poprawnie egzekwuje RBAC: restricted user dostał `403 forbidden`
+  przy `POST /admin-users` i `POST /admin-roles`.
+- Edycja usera, zmiana statusu active/inactive, duplicate role, delete user i
+  delete role działają na kontrolowanym fixture.
 
 ## Co nie działało / co jest ryzykowne
 
 | Problem | Dowód z kodu | Skutek |
 | --- | --- | --- |
+| UI nie zna efektywnych uprawnień bieżącego usera | `authClient.AuthUser` ma tylko `id/email/name`; `AdminApp.tsx` renderuje `<UsersRolesPage />` bez permissions; `UsersRolesPage` domyślnie ustawia `users/roles` read+write | restricted user widzi aktywne write-actions, które backend odrzuca 403 |
 | `Reset password` jest no-op | `UsersRolesPage.tsx` przekazuje `onResetPassword={() => undefined}` do listy i drawera | user klika akcję bezpieczeństwa i nie dostaje efektu ani feedbacku |
+| Invite User nie pozwala ustawić hasła | `InviteUserDialog.tsx` ma tylko name/email/role, mimo że `adminUsersClient.ts` i service obsługują `password` | nie da się pełnie stworzyć login-capable usera samym UI bez zewnętrznego resetu/API fixture |
 | Ikona filtra obok selectów nie ma handlera | `UserFilters.tsx` renderuje ghost button z ikoną `Filter`, bez `onClick` | wygląda jak dodatkowy panel filtrów, ale nic nie robi |
 | Switches w `Email notifications` są lokalne/statyczne | `UserDetailsDrawer.tsx` ma `Switch defaultChecked` bez zapisu | user może założyć, że zmienia preferencje usera |
-| `Deactivate user`, `Delete user`, `Delete role` wywołują mutacje bez confirm dialogu | `handleToggleStatus`, `handleDeleteUser`, `handleDeleteRole` od razu wołają API | łatwo wykonać destrukcyjną akcję z menu wiersza |
+| `Deactivate user`, `Delete user`, `Delete role` wywołują mutacje bez confirm dialogu | potwierdzone na fixture; `handleToggleStatus`, `handleDeleteUser`, `handleDeleteRole` od razu wołają API | łatwo wykonać destrukcyjną akcję z menu wiersza |
 | Mobile details sheet nie ma semantycznego `SheetTitle` | mobile `SheetContent` w `UsersRolesPage.tsx`, zawartość `UserDetailsDrawer` używa zwykłego `h3` | błąd/warning Radix i gorsza dostępność na mobile |
 
 ## Dlaczego
@@ -50,8 +85,14 @@ które akcje są realne.
 
 ## Jak naprawić
 
+- Przestać hardcodować default write permissions w `UsersRolesPage`; źródłem
+  prawdy powinien być backendowy `can(permission)` z `/auth/me` albo osobnego
+  endpointu efektywnych uprawnień.
 - `Reset password`: dodać backend/API flow lub ukryć/disable do czasu
   implementacji; po kliknięciu musi być toast albo dialog z wynikiem.
+- Invite User: dodać świadomy password/set-password flow albo jasno wymusić
+  zaproszenie mailowe z działającym reset tokenem; nie zostawiać UI bez drogi
+  do testowalnego logowania.
 - `Deactivate/Delete`: dodać confirm dialog z nazwą użytkownika/roli i testy
   regresyjne dla cancel/confirm.
 - Filter icon: albo otwiera advanced filters drawer, albo znika.

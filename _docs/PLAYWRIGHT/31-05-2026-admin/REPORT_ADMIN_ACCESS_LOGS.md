@@ -8,6 +8,20 @@ Trasa: `/admin/access-logs`. Źródła:
 
 ## Co faktycznie kliknięto
 
+### Druga fala E2E - 2026-06-01
+
+- Zalogowano restricted usera z rolą zawierającą `audit:read`.
+- Wejście w `/admin/access-logs` działało bez `Forbidden`.
+- Tabela pokazała 200 wierszy przy domyślnym limicie.
+- Search po testowym emailu usera zwrócił 61 wierszy, ale email nie był
+  widoczny w samych komórkach wyników, więc dopasowanie query jest dla usera
+  mało wyjaśnialne.
+- `Export CSV` otworzył dialog `Export Access Logs`.
+- Kliknięcie ikonowego sliders/advanced filters buttona nie otworzyło żadnego
+  dialogu ani panelu.
+
+### Pierwsza fala - 2026-05-31
+
 - Wejście w `Access Logs`.
 - Search `Patryk`; tabela pokazała logi pasujące do zapytania.
 - Klik akcji wiersza; otworzył się drawer `Access Log Details`.
@@ -25,6 +39,8 @@ Nie klikano: `Revoke access`, finalny export, zewnętrzne akcje sesji.
   są mapowane do requestu API.
 - Details drawer otwiera się z realnymi danymi rekordu.
 - `Previous` na pierwszej stronie jest disabled.
+- Uprawnienie `audit:read` wystarcza do odczytu Access Logs w restricted
+  session.
 
 ## Co nie działało / co jest mylące
 
