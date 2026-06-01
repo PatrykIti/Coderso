@@ -595,6 +595,39 @@ test("renderer outputs spacer markers", () => {
   expect(html).toContain("--spacer-desktop-height:6rem");
 });
 
+test("renderer fails closed for invalid spacer variant", () => {
+  clearWidgets();
+  registerWidget(
+    createSpacerWidget({
+      wizard: StubSpacerEditor,
+      visual: StubSpacerEditor,
+      advanced: StubSpacerEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "spacer-invalid",
+        type: "spacer",
+        variant: "scripted-spacer",
+        data: {
+          height: {
+            desktop: "24",
+            tablet: "20",
+            mobile: "16",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain("Invalid widget data");
+  expect(html).toContain("widget_invalid_variant");
+  expect(html).not.toContain('data-spacer="true"');
+  expect(html).not.toContain("scripted-spacer");
+});
+
 test("renderer outputs divider markers", () => {
   clearWidgets();
   registerWidget(

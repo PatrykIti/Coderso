@@ -5,7 +5,7 @@
 **Category:** Widgets + Spacer + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-368
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ The report confirms responsive heights, fixed lengths, guide gating, unsafe leng
 
 ## Sub-Tasks
 
-- [ ] Reproduce SPC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce SPC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +90,13 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced SPC-31-05-01 as an intentional no-new-defect closure path: current Spacer code already normalizes unsafe lengths, preserves fixed-mode responsive fallbacks, gates guide output, and rejects invalid variants.
+- Added focused renderer guards for the exact responsive `24/20/16` report fixture, fixed `10vh` reuse across all breakpoints, explicit public no-guide marker, and public guide text absence; existing unsafe length fallback coverage remains part of the guard lane.
+- Added `WidgetRenderer` coverage for invalid Spacer variant fail-closed output: invalid blocks render the shared invalid-data fallback and do not emit `data-spacer` runtime markers or raw invalid variant strings.
+- The automated guard locks SSR markers/classes/vars; browser computed-height behavior remains covered by the 31-05 Playwright report evidence.
+- Claude staged-diff review returned no blockers; its non-blocking wording note about pre-existing unsafe fallback coverage was fixed before closure.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx`; broader Spacer/UI lane with renderer, `styleNoneTokens`, and shared block-layout coverage; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1058`.

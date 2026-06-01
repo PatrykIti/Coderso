@@ -5,7 +5,7 @@
 > **Admin page id:** `bfed4886-897e-41f8-be1f-649290f2ef5f`
 > **Public routes:** `/audit-31-05-spacer`, `/audit-31-05-spacer-fixed`, `/audit-31-05-spacer-no-guide`, `/audit-31-05-spacer-unsafe`, `/audit-31-05-spacer-invalid`
 > **Playwright sessions:** `codex-31-05-ui-spacer-fixture`, `codex-31-05-ui-spacer-public`, `codex-31-05-ui-spacer-breakpoints`, `codex-31-05-ui-spacer-admin`
-> **Claude:** lokalny CLI nadal blokuje wspolprace: `401 Invalid authentication credentials`. Raport opiera sie na Playwright + audycie kodu Codex.
+> **Claude:** remediation review z lokalnego CLI (2026-06-01) zakonczony wynikiem `No blockers`; non-blocking wording note fixed before closure.
 
 ## Metoda
 
@@ -74,6 +74,14 @@ Przetestowane:
 
 Brak nowych defektow funkcjonalnych w current-state pass.
 
+**Status guardu 2026-06-01:** Zamkniete w TASK-368 jako regression guard.
+Kod produkcyjny Spacera nie wymagal zmiany. Dodano automatyczne testy SSR dla
+responsive `24/20/16`, fixed `10vh`, public guide gating, explicit
+`showGuideInEditor=false`, unsafe length fallback and invalid-variant
+fail-closed output. Browser computed-height evidence at 375/800/1280 px remains
+the Playwright proof from this report; automated guards lock the deterministic
+markers/classes/CSS vars that drive those heights.
+
 Stare ryzyka z raportu 28/29-05 wygladaja na zamkniete:
 
 - duplicate `none` / `0` is hidden in UI through shared token helper,
@@ -92,6 +100,8 @@ Stare ryzyka z raportu 28/29-05 wygladaja na zamkniete:
 - Safe custom length compatibility works for `vh` and bounded `clamp(...)`.
 - Unsafe custom length strings are rejected by normalizer and do not leak to
   public inline style.
+- Invalid variant payloads fail closed through the shared widget renderer and do
+  not emit Spacer runtime markers.
 - Wizard and Advanced are read-only; Visual owns daily editing.
 - Spacer remains decorative (`aria-hidden=true`) and has no slots/actions.
 
@@ -111,6 +121,20 @@ Stare ryzyka z raportu 28/29-05 wygladaja na zamkniete:
   `core/admin/ui/widgets/editors/SpacerEditors.tsx:253-292`.
 
 ## Walidacja
+
+### Guard TASK-368
+
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx` -
+  passed, 2 files / 17 tests.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx` -
+  passed, 5 files / 60 tests.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `git diff --check` - passed.
+- `timeout 120s claude -p --dangerously-skip-permissions --max-budget-usd 0.8 "Review current staged TASK-368 Spacer diff only..."` -
+  passed, no blockers; non-blocking wording note fixed before closure.
+
+### UI-first audit 31-05
 
 - `bun run test:vitest -- tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx`
   - PASS: 5 files, 58 tests.

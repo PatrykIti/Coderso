@@ -5,7 +5,7 @@
 **Category:** Widgets + Spacer + QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_SPACER_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-368-01](TASK-368-01_SPC_31_05_01_Lock_Responsive_Fixed_Unsafe_Length_Behavior_As_A.md): SPC-31-05-01 - Lock responsive/fixed/unsafe-length behavior as a regression guard
+- [x] [TASK-368-01](TASK-368-01_SPC_31_05_01_Lock_Responsive_Fixed_Unsafe_Length_Behavior_As_A.md): SPC-31-05-01 - Lock responsive/fixed/unsafe-length behavior as a regression guard
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,13 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Confirmed the report remains a closure/guard family: no production Spacer contract change was required.
+- Added renderer regressions that lock the 31-05 responsive `24/20/16` public markers and CSS variables, fixed-mode desktop reuse, public guide gating, explicit `showGuideInEditor=false`, and invalid variant fail-closed behavior through `WidgetRenderer`; existing unsafe length fallback coverage remains part of the guard lane.
+- Ramanujan read-only agent confirmed existing coverage for fixed reuse, unsafe fallback, guide gating, and read-only editors; its suggested no-guide and invalid-variant public guards were added before closure.
+- Claude staged-diff review returned no blockers; its non-blocking wording note about pre-existing unsafe fallback coverage was fixed before closure.
+- Browser breakpoint computed-height proof remains the 31-05 Playwright evidence; the new automated guard asserts the deterministic SSR markers/classes/vars that drive those browser heights.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx`; broader Spacer/UI lane with renderer, `styleNoneTokens`, and shared block-layout coverage; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1058` together with TASK-368-01.
