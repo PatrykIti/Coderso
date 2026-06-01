@@ -86,6 +86,10 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
   aktywnie zamykac sie bez handlera, `xlsx` nie jest oferowany jako no-op, a
   Audit/Access Logs pokazuja explicit unavailable copy do czasu TASK-357-03 i
   TASK-358-03.
+- `TASK-360-05` jest zaimplementowany: mobile user sheet, Audit details, Access
+  Log details oraz Settings drawers (IP Allowlist, Webhooks, Email Logs,
+  Integrations) maja `SheetTitle`/`SheetDescription` i wspolny Vitest gate na
+  brak Radix title/description warnings.
 - Pozostale pozycje z raportu pozostaja przypisane do rodzin TASK-355..360 i
   wymagaja osobnych implementacji oraz re-audytu UI.
 

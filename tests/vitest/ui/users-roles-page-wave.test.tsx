@@ -67,6 +67,8 @@ vi.mock("@/components/ui/sheet", () => ({
     </div>
   ),
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SheetDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  SheetTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
 vi.mock("@/services/adminRolesClient", () => ({

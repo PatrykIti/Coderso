@@ -4,7 +4,7 @@ import { UserPlus, UserCog } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import {
   createAdminRole,
@@ -543,6 +543,12 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
       {!isLargeScreen ? (
         <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
           <SheetContent side="right" className="w-full sm:max-w-md">
+            <SheetTitle className="sr-only">User details</SheetTitle>
+            <SheetDescription className="sr-only">
+              {selectedUser
+                ? "Review the selected user's roles, permissions, and account activity."
+                : "Select a user to review permissions and activity."}
+            </SheetDescription>
             <UserDetailsDrawer
               user={selectedUser}
               roles={roles}

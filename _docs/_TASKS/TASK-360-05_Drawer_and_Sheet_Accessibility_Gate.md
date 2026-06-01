@@ -5,7 +5,7 @@
 **Category:** Admin UI + Accessibility + QA Gates
 **Estimated Effort:** Medium
 **Dependencies:** TASK-360
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -102,3 +102,17 @@ Error handling:
 - Audited Admin drawers open without Radix title/description warnings.
 - Each drawer has an accessible title and description in all states.
 - Shared helper is available to future drawer tests.
+
+## Completion Notes - 2026-06-01
+
+- Added the shared Vitest helper for dialog `aria-labelledby`,
+  `aria-describedby`, and Radix title/description console-warning assertions.
+- Bound Radix `SheetTitle`/`SheetDescription` semantics for mobile user
+  details, Audit details, Access Log details, IP Allowlist, Webhooks, Email
+  Logs, and Integration drawers.
+- Preserved the IP Allowlist preview panel outside a Radix sheet by enabling
+  sheet semantics only for the drawer render path.
+
+## Validation - 2026-06-01
+
+- `bun run test:vitest -- tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/webhooks.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui-integration/integrations.test.tsx`

@@ -41,12 +41,17 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
   requires `onExport`, unsupported surfaces show unavailable copy, Excel is no
   longer offered as an active no-op, and `downloadAdminExport()` covers JSON
   file/job export responses under canonical admin API paths.
+- Completed `TASK-360-05` drawer and sheet accessibility gate: mobile user
+  details, Audit details, Access Log details, IP Allowlist, Webhooks, Email
+  Logs, and Integration drawers now bind Radix title/description semantics, and
+  future drawer tests can reuse the shared no-warning assertion helper.
 
 ## Validation
 
 - `bun test tests/unit/auth/rbac.test.ts tests/integration/routes/auth.test.ts`
 - `bun run test:vitest -- tests/vitest/admin/apiClient.test.ts tests/vitest/admin/authClient.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/shared-dialog-contracts.test.tsx tests/vitest/ui/dialogs.test.tsx tests/vitest/admin/adminExportClient.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/webhooks.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui-integration/integrations.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Source evidence:

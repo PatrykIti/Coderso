@@ -10,19 +10,18 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 
 type IpAllowlistDrawerPanelProps = {
-  onSubmit?: (payload: {
-    cidr: string;
-    label?: string;
-    description?: string;
-  }) => void;
+  onSubmit?: (payload: { cidr: string; label?: string; description?: string }) => void;
   isSubmitting?: boolean;
   error?: string | null;
   readOnly?: boolean;
+  useSheetHeaderSemantics?: boolean;
   closeAction?: React.ReactNode;
   cancelAction?: React.ReactNode;
 };
@@ -36,6 +35,7 @@ export function IpAllowlistDrawerPanel({
   isSubmitting = false,
   error,
   readOnly = false,
+  useSheetHeaderSemantics = false,
   closeAction,
   cancelAction,
 }: IpAllowlistDrawerPanelProps) {
@@ -69,10 +69,21 @@ export function IpAllowlistDrawerPanel({
             <ShieldCheck className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-foreground">Add New IP Range</p>
-            <p className="text-xs text-muted-foreground">
-              Restrict admin access by CIDR.
-            </p>
+            {useSheetHeaderSemantics ? (
+              <>
+                <SheetTitle className="text-sm font-semibold text-foreground">
+                  Add New IP Range
+                </SheetTitle>
+                <SheetDescription className="text-xs text-muted-foreground">
+                  Restrict admin access by CIDR.
+                </SheetDescription>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-foreground">Add New IP Range</p>
+                <p className="text-xs text-muted-foreground">Restrict admin access by CIDR.</p>
+              </>
+            )}
           </div>
         </div>
         {closeAction ?? (
@@ -152,19 +163,15 @@ export function IpAllowlistDrawerPanel({
               </Badge>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Allowing wide ranges (like /0 or /8) is not recommended as it may expose
-              your admin interface to unwanted traffic.
+              Allowing wide ranges (like /0 or /8) is not recommended as it may expose your admin
+              interface to unwanted traffic.
             </p>
           </div>
         </div>
       </ScrollArea>
       <div className="border-t bg-muted/30 px-6 py-4">
         <div className="space-y-2">
-          <Button
-            className="w-full"
-            onClick={handleSubmit}
-            disabled={readOnly || isSubmitting}
-          >
+          <Button className="w-full" onClick={handleSubmit} disabled={readOnly || isSubmitting}>
             {isSubmitting ? "Adding..." : "Add to Allowlist"}
           </Button>
           {cancelAction ?? (
@@ -223,6 +230,7 @@ export function IpAllowlistDrawer({
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           error={error ?? undefined}
+          useSheetHeaderSemantics
           closeAction={
             <SheetClose asChild>
               <Button variant="ghost" size="icon" aria-label="Close drawer">

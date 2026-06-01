@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 43 tasks
+- **To Do:** 42 tasks
 - **In Progress:** 5 tasks
-- **Done:** 2009 tasks
+- **Done:** 2010 tasks
 
 ---
 
@@ -40,7 +40,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-360-07 | Final Evidence, Reports, and QA Closure | High | Large | Physical cross-cutting leaf for final Playwright evidence, six-report closure, QA override cleanup, and Claude evidence labeling |
 | TASK-360-06 | Admin Server-Side Query and Pagination Conventions | High | Large | Physical cross-cutting leaf for strict query schemas, truthful filter labels, cursor metadata, and fake-total prevention |
-| TASK-360-05 | Drawer and Sheet Accessibility Gate | High | Medium | Physical cross-cutting leaf for Radix title/description warning gates across audited Admin drawers and sheets |
 | TASK-360-04 | Admin No-Op Control Audit Gate | High | Large | Physical cross-cutting leaf for report-driven active-control truthfulness expectations and no-op regression prevention |
 | TASK-359 | Admin Settings Report Remediation Family | High | Very Large | Full Settings remediation family: RBAC guard, SPA/cache behavior, dirty/mobile nav, placeholders, high-risk confirms, secret-safe cache, and action truthfulness |
 | TASK-359-07 | Login Alerts and Sessions Placeholder Cleanup | High | Medium | Physical Settings leaf for Login Alerts persistence/unavailable states and Sessions link-button truthfulness |
@@ -91,13 +90,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-360-01 through TASK-360-03 are implemented; no-op/a11y/query/final-evidence leaves remain. |
+| TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-360-01 through TASK-360-03 and TASK-360-05 are implemented; no-op/query/final-evidence leaves remain. |
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-360-05 | Drawer and Sheet Accessibility Gate | High | Medium | Done (2026-06-01): audited Admin drawers now bind Radix title/description semantics and share a warning-free Vitest gate for future drawer tests. |
 | TASK-360-03 | Shared Export Dialog Contract | High | Large | Done (2026-06-01): shared export dialogs now require a real `onExport` handler or explicit unavailable copy, remove active Excel no-op state, and expose JSON file/job helper coverage. |
 | TASK-360-02 | Shared Confirm Action Pattern | High | Large | Done (2026-06-01): shared confirm dialogs now support action objects, typed confirmation, internal pending/error handling, focus return, and backward-compatible existing callsites. |
 | TASK-360-01 | Admin Permission Snapshot Contract | High | Large | Done (2026-06-01): `/auth/me` now returns a redacted effective-permission snapshot, admin UI exposes shared `can(permission)`, sidebar/route guards consume it, and stale permission 403s refresh auth bootstrap. |

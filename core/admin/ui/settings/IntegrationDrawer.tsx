@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 import type { IntegrationStatus } from "./IntegrationCard";
@@ -59,10 +65,9 @@ export function IntegrationDrawer({
   });
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const scopesLabel =
-    integration?.scopes?.length
-      ? integration.scopes.join(", ")
-      : "No scopes available.";
+  const scopesLabel = integration?.scopes?.length
+    ? integration.scopes.join(", ")
+    : "No scopes available.";
 
   const handleChange = (key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -101,9 +106,9 @@ export function IntegrationDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>{integration?.name ?? "Integration"}</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               {integration?.description ?? "Configure connection settings."}
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close integration drawer">
@@ -172,9 +177,7 @@ export function IntegrationDrawer({
                       />
                     </div>
                     {field.required ? (
-                      <p className="text-[11px] text-muted-foreground">
-                        Required
-                      </p>
+                      <p className="text-[11px] text-muted-foreground">Required</p>
                     ) : null}
                   </div>
                 );

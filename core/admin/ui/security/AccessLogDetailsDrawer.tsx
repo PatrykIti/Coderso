@@ -4,7 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 import type { AccessLogItem } from "./types";
 
@@ -14,11 +20,7 @@ type AccessLogDetailsDrawerProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-export function AccessLogDetailsDrawer({
-  log,
-  open,
-  onOpenChange,
-}: AccessLogDetailsDrawerProps) {
+export function AccessLogDetailsDrawer({ log, open, onOpenChange }: AccessLogDetailsDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -29,9 +31,9 @@ export function AccessLogDetailsDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div>
             <SheetTitle>Access Log Details</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               {log ? log.user.detail : "Select a log to review details."}
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close access log drawer">
@@ -60,17 +62,13 @@ export function AccessLogDetailsDrawer({
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       IP Address
                     </span>
-                    <span className="font-mono text-xs text-foreground">
-                      {log.ipAddress}
-                    </span>
+                    <span className="font-mono text-xs text-foreground">{log.ipAddress}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Device
                     </span>
-                    <span className="text-xs text-foreground">
-                      {log.device.label}
-                    </span>
+                    <span className="text-xs text-foreground">{log.device.label}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <span className="text-xs font-semibold uppercase text-muted-foreground">

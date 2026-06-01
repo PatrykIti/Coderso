@@ -9,6 +9,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
@@ -147,7 +148,14 @@ export function WebhookDrawer({
         showCloseButton={false}
       >
         <div className="flex items-center justify-between border-b px-6 py-4">
-          <SheetTitle>{mode === "create" ? "Create New Webhook" : "Edit Webhook"}</SheetTitle>
+          <div className="space-y-1">
+            <SheetTitle>{mode === "create" ? "Create New Webhook" : "Edit Webhook"}</SheetTitle>
+            <SheetDescription className="text-xs text-muted-foreground">
+              {mode === "create"
+                ? "Configure the endpoint, signing secret, and event triggers for this webhook."
+                : "Update the endpoint, signing secret, and event triggers for this webhook."}
+            </SheetDescription>
+          </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close webhook drawer">
               <X className="h-4 w-4" />
@@ -197,17 +205,11 @@ export function WebhookDrawer({
                     <Checkbox
                       className="mt-1"
                       checked={events.includes(event.id)}
-                      onCheckedChange={(value) =>
-                        handleToggleEvent(event.id, value === true)
-                      }
+                      onCheckedChange={(value) => handleToggleEvent(event.id, value === true)}
                     />
                     <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {event.label}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {event.description}
-                      </p>
+                      <p className="text-sm font-semibold text-foreground">{event.label}</p>
+                      <p className="text-xs text-muted-foreground">{event.description}</p>
                     </div>
                   </label>
                 ))}

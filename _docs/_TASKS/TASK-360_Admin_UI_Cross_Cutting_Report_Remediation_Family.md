@@ -51,7 +51,7 @@ The summary report identifies the repeated root causes:
 | Current-user `can(permission)` missing in UI | Shared contract here; area adoption in TASK-355, TASK-356, TASK-359. |
 | UI-only active controls | Shared no-op audit/gate here; area fixes in TASK-355, TASK-357, TASK-358, TASK-359. |
 | Destructive actions without confirm | Shared confirm pattern here; area adoption in TASK-355, TASK-356, TASK-358, TASK-359. |
-| Sheet/Drawer a11y warnings | Shared test/gate here; component fixes in area tasks. |
+| Sheet/Drawer a11y warnings | `TASK-360-05` completed the shared helper and audited component fixes; area tasks can reuse the helper for new drawers. |
 | Export dialog close-only behavior | Shared export contract here; audit/access adoption in TASK-357/TASK-358. |
 | Server-side filters/pagination/export | Shared API conventions here; area implementation in TASK-357/TASK-358. |
 | Settings SPA/cache drift | Gate and docs here; implementation in TASK-359. |
@@ -107,13 +107,13 @@ Physical execution leaves:
 3. Land `TASK-360-03` export dialog contract before TASK-357 and TASK-358
    exports.
 4. Add no-op/a11y/query gates after the first area implementations prove the
-   shared shape.
+   shared shape. `TASK-360-05` is complete; no-op and query gates remain.
 5. Use `TASK-360-07` only after TASK-355 through TASK-359 implementation work
    has landed and can be re-audited end to end.
 
 ### TASK-360-01: Admin Permission Snapshot Contract
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Own the shared contract that area tasks consume:
 
@@ -151,7 +151,7 @@ Acceptance for this sub-task:
 
 ### TASK-360-02: Shared Confirm Action Pattern
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Own a reusable pattern for destructive and lockout-prone Admin actions.
 
@@ -188,7 +188,7 @@ Area adoption:
 
 ### TASK-360-03: Shared Export Dialog Contract
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Replace the close-only shared `ExportDialog` with a real contract:
 
@@ -290,7 +290,7 @@ Validation:
 
 ### TASK-360-05: Drawer and Sheet Accessibility Gate
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 - Add a Playwright/Vitest assertion that opening the audited admin drawers does
   not produce Radix missing title/description warnings.
