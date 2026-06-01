@@ -61,6 +61,29 @@ are placeholders.
 | Assistant reindex side effect | Add confirm/dry-run with document/chunk counts. |
 | QA `Max sessions per user = 30` remains | Restore default/target value or track explicit QA override. |
 
+## Refinement Checklist
+
+21. **Per-section action matrix:** before implementation, create a table for
+    each Settings subpage listing read endpoints, write endpoints, external
+    side effects, destructive actions, cache policy, and required permission.
+22. **Secret denylist tests:** cache and debug payload tests must scan nested
+    keys for `password`, `secret`, `token`, `accessKey`, `apiKey`,
+    `connectionString`, and provider-specific credential names.
+23. **Auto-save semantics:** global auto-save must not silently save high-risk
+    security changes. Classify which fields can auto-save and which require
+    manual confirm.
+24. **Current-session/current-IP safety:** session/IP/admin path/base URL
+    changes must protect the current operator from accidental lockout or require
+    typed confirmation.
+25. **Settings request budget:** add a performance/request budget assertion for
+    Settings transitions after `AdminLink` and cache changes land.
+26. **QA override cleanup:** closure must either restore `Max sessions per user`
+    to the product default or document the exact intentional QA override with
+    date and owner.
+27. **External action sandboxing:** email send, webhook test, storage test, and
+    assistant reindex must have environment-aware copy/confirm so local QA does
+    not accidentally affect production services.
+
 ## Sub-Tasks
 
 ### TASK-359-01: Settings RBAC Guard and Bootstrap Discipline
@@ -423,4 +446,5 @@ sessions, API keys, webhooks, IP allowlist, assistant reindex.
 - Every active-looking Settings control works or is disabled/read-only.
 - High-risk actions require confirmation and audit.
 - Report findings are updated with test evidence.
-
+- Settings cache documentation names every cached field class and every
+  intentionally uncached secret-bearing field class.

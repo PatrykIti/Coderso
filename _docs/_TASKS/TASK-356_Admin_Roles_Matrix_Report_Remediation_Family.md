@@ -42,6 +42,26 @@ or confirmation.
 | Missing diff summary | Dirty footer shows counts and opens full diff review. |
 | Missing audit-level diff contract | Server audit event records added/removed scopes by role where feasible. |
 
+## Refinement Checklist
+
+These refinements are mandatory for implementation planning and closure.
+
+6. **High-risk taxonomy:** define one shared list of high-risk permissions
+   before UI work (`*`, `roles:*`, `users:*`, `settings:*`, security/session/API
+   key scopes) and reuse it in footer badges, review modal, and tests.
+7. **Stale-role protection:** role saves must detect stale source data. If the
+   backend supports version/update timestamps, send them; otherwise refresh and
+   show conflict copy when a save returns conflict/412.
+8. **Partial failure handling:** when several role PATCH calls are needed,
+   define whether saves are atomic server-side or best-effort client-side. The
+   UI must report exactly which roles failed and must not mark the draft clean
+   for failed roles.
+9. **Read-only semantics:** restricted users should still be able to search and
+   inspect role permissions, but checkboxes must be disabled with accessible
+   reason copy, not merely visually muted.
+10. **RoleEditor reuse:** `RoleEditor` is used from Users and Roles surfaces;
+   full-access confirmation and write gating must be consistent in both places.
+
 ## Sub-Tasks
 
 ### TASK-356-01: Roles Matrix Permission-Aware Read-Only Mode
@@ -285,4 +305,5 @@ Route family: admin roles.
 - Full access cannot be selected or saved without explicit confirmation.
 - Role update audit events include added/removed permission details.
 - Report findings are updated with implementation evidence and test commands.
-
+- Conflict/partial-failure behavior is covered by tests and documented in the
+  report after implementation.

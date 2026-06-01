@@ -50,6 +50,25 @@ This family must close all Users report rows:
 | Destructive user/role actions lack confirmation | Add confirm dialogs for deactivate, activate where risky, delete user, delete role, and duplicate/delete role cleanup paths. |
 | Mobile details sheet lacks semantic title/description | Add `SheetTitle` and `SheetDescription` or visually hidden equivalents. |
 
+## Refinement Checklist
+
+These refinements are part of the execution contract, not optional polish.
+
+1. **Endpoint inventory:** before coding, list every route/client used by
+   `UsersRolesPage` and classify it as read, write, destructive, or
+   auth-sensitive. The implementation may not add UI gating without preserving
+   backend RBAC tests for the same route.
+2. **Fixture lifecycle:** the Playwright regression must create role/user,
+   exercise restricted UI, exercise admin destructive cleanup, and assert no
+   test records remain by stable unique email/role slug.
+3. **Permission refresh:** when a write receives 403 after the UI allowed it,
+   the page must refresh the permission snapshot instead of leaving stale
+   controls active.
+4. **Keyboard/a11y:** every new confirm/reset/invite flow must be operable by
+   keyboard, preserve focus return, and expose title/description semantics.
+5. **No placeholder replacement:** a disabled control is acceptable only when it
+   has user-facing unavailable copy and a test asserting it cannot submit.
+
 ## Sub-Tasks
 
 ### TASK-355-01: Current User Permission Propagation for Users
@@ -316,4 +335,6 @@ Minimum validation for the implementation PR:
   disabled/read-only.
 - Mobile details sheet opens without Radix title/description warnings.
 - Report findings are updated with fix evidence and test commands.
-
+- The final report explicitly states whether Invite User supports password,
+  invitation reset token, or a disabled/unavailable state; no ambiguous partial
+  login path remains.

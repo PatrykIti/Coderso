@@ -41,6 +41,24 @@ advanced filter, static pagination, and close-only export.
 | Export dialog does not export | Hook into shared export contract or hide final submit. |
 | Search result match is unexplained | Show matched actor/email/resource context or adjust searchable fields/copy. |
 
+## Refinement Checklist
+
+16. **Revoke matrix:** before implementing revoke, classify every row state:
+    current session, already revoked, no session id, expired session, other
+    user's active session, and blocked/failed access attempt. Each state needs
+    deterministic UI copy and tests.
+17. **Actor privacy:** dynamic user/actor filters must not leak extra user PII
+    to an `audit:read` user beyond the access log contract. Add a privacy test
+    for restricted users.
+18. **Search explanation:** when query matches hidden fields, show a matched
+    field hint or adjust row columns so the user understands why the row is
+    present.
+19. **Custom range URL state:** custom date ranges should survive refresh/back
+    navigation through query params, or the task must explicitly reject URL
+    persistence and explain why.
+20. **Export/revoke separation:** export can be available to `audit:read`, but
+    revoke must require a stronger permission; tests must prove this split.
+
 ## Sub-Tasks
 
 ### TASK-358-01: Access Logs Query, Filters, and Pagination
@@ -259,4 +277,5 @@ Route family: access logs and session revoke.
 - Export works or is visibly unavailable.
 - Restricted users with only `audit:read` cannot revoke sessions/access.
 - Report findings are updated with implementation evidence and tests.
-
+- Every access-log row action has an explicit enabled, disabled, or unavailable
+  state for each revoke matrix case.

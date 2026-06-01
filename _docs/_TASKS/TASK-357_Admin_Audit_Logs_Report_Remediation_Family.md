@@ -41,6 +41,22 @@ view of log volume.
 | Export dialog closes without file | Export flow calls backend or deterministic client download and reports success/failure. |
 | Pagination/table count is placeholder | Real count/cursor/page state replaces hard-coded `2,459 logs` and inert `Next`. |
 
+## Refinement Checklist
+
+11. **Export field allowlist:** define an explicit export column allowlist and
+    reject unknown fields server-side; never trust field names sent from the UI.
+12. **Large export behavior:** decide sync download vs async job before coding.
+    If sync, clamp export rows and communicate truncation; if async, add job
+    status UI and tests.
+13. **Retention awareness:** date range and pagination copy must not imply logs
+    exist beyond retention windows. If retention policy is available, surface it
+    in empty states/export copy.
+14. **Redaction parity:** copied JSON, single-entry export, bulk export, and
+    details drawer must use the same redaction helper for sensitive payload
+    keys.
+15. **Local-vs-server filters:** the UI must not mix server and local filters
+    silently. All visible filter chips/counts must reflect server query state.
+
 ## Sub-Tasks
 
 ### TASK-357-01: Server-Side Audit Query Contract
@@ -270,4 +286,5 @@ Route family: audit logs.
 - Export produces a file or is visibly unavailable.
 - Copy JSON works with redaction and feedback.
 - Report findings are updated with evidence and tests.
-
+- No export/copy/share path can include raw cookies, auth headers, reset tokens,
+  CSRF tokens, or password-like fields in tests.

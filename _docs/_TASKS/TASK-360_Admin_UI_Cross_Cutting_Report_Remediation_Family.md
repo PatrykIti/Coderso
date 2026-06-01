@@ -57,6 +57,26 @@ The summary report identifies the repeated root causes:
 | Settings SPA/cache drift | Gate and docs here; implementation in TASK-359. |
 | QA setting `Max sessions per user = 30` | Closure/evidence here unless TASK-359 owns restoration. |
 
+## Refinement Checklist
+
+28. **Coverage matrix:** maintain a cross-report matrix mapping every finding in
+    the six reports to exactly one owner task and, when relevant, one shared
+    contract. No finding may be left as "covered by summary" only.
+29. **Gate naming:** if new tests become release gates, update the owning script,
+    workflow, and `_docs/CODERSO_RELEASE_GATES.md` in the same implementation
+    task.
+30. **Claude evidence labeling:** final reports must distinguish Claude source
+    review from actual Claude UI clicking; do not imply Claude clicked UI unless
+    the run completed and produced UI evidence.
+31. **Shared component migration:** shared `ConfirmActionDialog` and
+    `ExportDialog` changes must include a migration audit of all existing
+    callsites, not only the six audited reports.
+32. **Regression fixture isolation:** all Playwright fixtures must use unique
+    names/emails and clean only their own records; no broad table truncation.
+33. **No-op prevention policy:** add contributor guidance that active controls
+    must have real handlers or explicit disabled/unavailable state before
+    merging.
+
 ## Sub-Tasks
 
 ### TASK-360-01: Admin Permission Snapshot Contract
@@ -345,4 +365,5 @@ query, and confirm patterns.
 - Audit/access export and pagination are truthful.
 - Final reports are updated with live Playwright evidence, source review, and
   validation commands.
-
+- The final closure can prove all six report findings are either fixed,
+  intentionally disabled with tests, or explicitly deferred with owner/date.
