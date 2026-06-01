@@ -26,10 +26,26 @@ Route: `/admin/search`
 - Clear reset the search field.
 - A non-matching query rendered the no-results state.
 - Recent search data was returned by the admin search API.
+- Resolution pass on 2026-06-01 wired Date Range through the page state,
+  `/admin/api/search`, and `searchAll`; the service now filters finite ranges
+  by page/entry/user `updatedAt` and media `createdAt`.
+- Resolution pass on 2026-06-01 added fallback `Try:` chips, aggregate Search
+  response metadata, cause-specific empty states, and current-result category
+  helper copy.
+- Focused Playwright CLI proof on 2026-06-01 used temporary admin/page
+  fixtures and verified: login 200, fallback `Try:` chip visible, recent page
+  visible in the default range, older page hidden in `Last 7 days`, older page
+  visible after switching to `All time`, and result click navigation to
+  `/admin/pages/:id`.
+- Result destination mapping is covered for page, entry, media, and user rows
+  through `resolveSearchDestination`, with row prefetch/select callbacks covered
+  in UI tests.
 
 ## What Did Not Work
 
 ### [ISSUE] Date range select does not affect search
+
+Status: resolved in TASK-348 on 2026-06-01.
 
 Evidence:
 
@@ -56,14 +72,33 @@ How to fix:
 - Add a UI/API regression test that changes the range and asserts the request
   query plus filtered results.
 
+Resolution:
+
+- `core/services/search/searchContract.ts` owns the strict `dateRange` enum,
+  default, normalizer, and finite-range resolver.
+- `core/services/search/searchService.ts` applies the selected range to page,
+  content entry, media, and user timestamp predicates while preserving the
+  `searchAll` `SearchItem[]` return contract.
+- `core/server/routes/searchRoutes.ts` rejects unknown `dateRange` values with
+  `search_date_range_invalid`, records the effective date range in recent-search
+  metadata, and returns aggregate-only `meta`.
+- `core/admin/ui/search/SearchPage.tsx` now controls the Date Range select and
+  uses Search metadata for no-data/no-match/date-filter/category-filter copy.
+- Regression coverage: `tests/unit/search/searchServiceDateRange.test.ts`,
+  `tests/integration/routes/search.test.ts`,
+  `tests/vitest/admin/searchClient.test.ts`,
+  `tests/vitest/ui/search-page.test.tsx`,
+  `tests/vitest/ui/search-results.test.tsx`, and
+  `tests/vitest/ui/search-navigation.test.tsx`.
+
 ## Data Notes
 
 - The first pass used an existing admin user because the checkout had little
   content.
 - The follow-up pass created a published page fixture and verified Search found
   it by title. The fixture was deleted after the test.
-- Result drawer behavior still needs a richer fixture if the product expects
-  opening/editing specific result types from Search.
+- Result navigation has unit/UI proof for supported admin destinations and
+  focused Playwright proof for page-result navigation from `/admin/search`.
 
 ## Source References
 
@@ -71,3 +106,7 @@ How to fix:
 - `core/admin/ui/search/useSearchResults.ts`
 - `core/admin/services/searchClient.ts`
 - `core/server/routes/searchRoutes.ts`
+- `core/services/search/searchContract.ts`
+- `tests/unit/search/searchServiceDateRange.test.ts`
+- `tests/vitest/ui/search-navigation.test.tsx`
+- `tests/vitest/ui/search-results.test.tsx`

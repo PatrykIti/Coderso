@@ -22,8 +22,9 @@ real fixtures and checked the actual backend/public effects.
 
 Current classification:
 
-- Works end-to-end: Search can find a real page fixture; Analytics can surface a
-  real published page in top content; Import / Export can roundtrip a valid JSON
+- Works end-to-end: Search can find a real page fixture and now applies Date
+  Range filtering through the API/service contract; Analytics can surface a real
+  published page in top content; Import / Export can roundtrip a valid JSON
   bundle.
 - Partially works: SEO Manager saves metadata into `seoDocuments`, but not into
   the public page output; Backups enqueue rows but do not create artifacts;
@@ -31,7 +32,8 @@ Current classification:
 - Still UI-only/incomplete: Search date range, SEO audit checkboxes, SEO filter
   icon, Analytics export, Backup include checkboxes, Import / Export card
   options, Activity Log, Recent Imports search, and Backups/Redirects
-  pagination.
+  pagination. Search date range and Search empty-state/suggestion drift were
+  closed by TASK-348 on 2026-06-01.
 
 ## Evidence
 

@@ -5,7 +5,7 @@
 **Category:** Admin Tools + Search + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-348-01, TASK-348-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -116,3 +116,13 @@ No production route changes are required by the closure leaf.
 - The report clearly supersedes the original unresolved note.
 - TASK-348 is closed only after code, tests, Playwright evidence, docs, and
   changelog are synchronized.
+
+## Completion Evidence
+
+- Done (2026-06-01): `resolveSearchDestination` covers page, entry, media, and
+  user result destinations.
+- Done (2026-06-01): `SearchResults` row tests cover prefetch and select
+  callbacks, and focused Playwright CLI evidence proves page result navigation
+  from `/admin/search` to `/admin/pages/:id`.
+- Done (2026-06-01): Search reports, API/spec docs, user guide, task board, and
+  changelog closure entry are synchronized.

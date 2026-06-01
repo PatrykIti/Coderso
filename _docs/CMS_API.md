@@ -2366,8 +2366,13 @@ Taxonomy overview error contract:
 
 Permissions: `content:read`
 
-- `GET /search?q=...&limit=20`
+- `GET /search?q=...&limit=20&dateRange=last-7-days`
 - `GET /search/recent`
+
+`dateRange` is optional and defaults to `last-7-days`. Allowed values are
+`last-7-days`, `last-30-days`, `last-12-months`, and `all-time`; unknown values
+return `search_date_range_invalid` with HTTP 400. Finite ranges filter page,
+entry, and user `updatedAt` timestamps plus media `createdAt` timestamps.
 
 Response:
 
@@ -2396,7 +2401,14 @@ Response:
     { "id": "page", "label": "Pages", "count": 4 },
     { "id": "entry:blog", "label": "Blog", "count": 2 },
     { "id": "media", "label": "Media", "count": 1 }
-  ]
+  ],
+  "meta": {
+    "dateRange": "last-7-days",
+    "hasSearchableContent": true,
+    "hasQueryMatches": true,
+    "hasMatchesOutsideDateRange": false,
+    "returnedItems": 7
+  }
 }
 ```
 
@@ -2410,6 +2422,10 @@ Recent response (summary):
   ]
 }
 ```
+
+`meta` is aggregate-only and supports Search empty states without exposing
+private row data. `hasSearchableContent` is `null` only for minimum-length
+requests that do not execute search.
 
 Category labels can be overridden via settings key `search.categoryOverrides` (map of categoryId -> { label, hidden }).
 
@@ -3771,9 +3787,9 @@ Permissions: `themes:read`, `themes:write`
 
 ## Search
 
-Permissions: `content:read`, `media:read`
+Permissions: `content:read`
 
-- `GET /search?q=...`
+- `GET /search?q=...&limit=20&dateRange=last-7-days`
 
 ---
 

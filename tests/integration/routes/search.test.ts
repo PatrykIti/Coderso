@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { ApiError } from "../../../core/server/errorHandler";
 import { registerSearchRoutes } from "../../../core/server/routes/searchRoutes";
 
 type RouteContext = {
@@ -18,12 +19,9 @@ const makeRouter = () => {
     router: {
       get: (path: string, ...handlers: RouteHandler[]) =>
         routes.push({ method: "GET", path, handlers }),
-      post: (path: string) =>
-        routes.push({ method: "POST", path, handlers: [] }),
-      patch: (path: string) =>
-        routes.push({ method: "PATCH", path, handlers: [] }),
-      delete: (path: string) =>
-        routes.push({ method: "DELETE", path, handlers: [] }),
+      post: (path: string) => routes.push({ method: "POST", path, handlers: [] }),
+      patch: (path: string) => routes.push({ method: "PATCH", path, handlers: [] }),
+      delete: (path: string) => routes.push({ method: "DELETE", path, handlers: [] }),
     },
   };
 };
@@ -38,11 +36,7 @@ test("registerSearchRoutes wires endpoints", () => {
   const paths = routes.map((route) => `${route.method} ${route.path}`);
 
   expect(paths).toEqual(
-    expect.arrayContaining([
-      "GET /search",
-      "GET /search/recent",
-      "GET /search/public-preview",
-    ])
+    expect.arrayContaining(["GET /search", "GET /search/recent", "GET /search/public-preview"])
   );
 });
 
@@ -57,5 +51,39 @@ test("search route enforces minimum query length", async () => {
   const handler = route?.handlers[route.handlers.length - 1];
   const result = await handler?.({ params: {}, query: { q: "a" }, body: null });
 
-  expect(result).toEqual({ items: [], categories: [] });
+  expect(result).toEqual({
+    items: [],
+    categories: [],
+    meta: {
+      dateRange: "last-7-days",
+      hasSearchableContent: null,
+      hasQueryMatches: false,
+      hasMatchesOutsideDateRange: false,
+      returnedItems: 0,
+    },
+  });
+});
+
+test("search route rejects invalid date range", async () => {
+  const { router, routes } = makeRouter();
+
+  registerSearchRoutes(router, {
+    requirePermission: () => async () => undefined,
+  });
+
+  const route = routes.find((item) => item.path === "/search");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: { q: "a", dateRange: "future" },
+      body: null,
+    });
+    throw new Error("expected_invalid_date_range");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe("search_date_range_invalid");
+    expect((error as ApiError).status).toBe(400);
+  }
 });

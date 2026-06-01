@@ -5,7 +5,7 @@
 **Category:** Admin Tools + Search + API + UI + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-347
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -42,9 +42,9 @@ navigation or reopen unrelated widget search-box work.
 
 ## Sub-Tasks
 
-- [ ] TASK-348-01: Search Date Range API and Service Contract
-- [ ] TASK-348-02: Search Suggestions, Empty States, and Category UX
-- [ ] TASK-348-03: Search Result Navigation Proof, Docs, and Closure
+- [x] TASK-348-01: Search Date Range API and Service Contract
+- [x] TASK-348-02: Search Suggestions, Empty States, and Category UX
+- [x] TASK-348-03: Search Result Navigation Proof, Docs, and Closure
 
 ## Implementation Order
 
@@ -103,3 +103,16 @@ admin read route and must preserve this contract:
   affordances.
 - Search navigation is proven with fixture rows for each supported result type
   or the unsupported types are documented as intentional.
+
+## Completion Evidence
+
+- Done (2026-06-01): Date Range is controlled in the Search page, serialized by
+  the admin client/hook, validated by `/admin/api/search`, applied in
+  `searchAll`, and documented in `_docs/CMS_API.md` plus `_docs/SEARCH_SPEC.md`.
+- Done (2026-06-01): Search response metadata and UI state now distinguish
+  minimum query length, no searchable content, no match, date range too narrow,
+  and category filters too narrow; fallback `Try:` chips prevent empty
+  affordances.
+- Done (2026-06-01): Search navigation is covered by destination tests,
+  row prefetch/select tests, and a focused Playwright CLI pass for page-result
+  navigation from `/admin/search`.

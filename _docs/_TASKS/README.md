@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 45 tasks
+- **To Do:** 41 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2007 tasks
+- **Done:** 2011 tasks
 
 ---
 
@@ -69,10 +69,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-349-02 | SEO Audit Scope and Scoring Recalculation Contract | High | Large | Recompute score/issues on save and make audit checkbox selections controlled or truthfully unavailable. |
 | TASK-349-03 | SEO Manager UI-Only Controls and Empty-State UX | Medium | Medium | Wire, disable, or remove dead controls and add truthful pre-scan/table empty states. |
 | TASK-349-04 | SEO Manager QA, Docs, and Closure | Medium | Medium | Prove admin save to public metadata parity, update reports, and close docs/changelog evidence. |
-| TASK-348 | Search Tools Report Remediation | High | Large | New report-driven family for Search date-range truthfulness, empty-state UX, suggestions, and result-navigation proof. |
-| TASK-348-01 | Search Date Range API and Service Contract | High | Medium | Make the Date Range select controlled, validated, serialized, and applied by the Search service. |
-| TASK-348-02 | Search Suggestions, Empty States, and Category UX | High | Medium | Fill empty `Try:` suggestions and split no-data/no-match/filter-empty/category helper states. |
-| TASK-348-03 | Search Result Navigation Proof, Docs, and Closure | Medium | Medium | Prove supported result destinations with richer fixtures and close Search report/docs/changelog evidence. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -99,6 +95,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-348 | Search Tools Report Remediation | High | Large | Done (2026-06-01): Date Range now flows through UI/API/service filtering, Search metadata drives truthful empty states and fallback suggestions, and focused Playwright proof covers page-result navigation. |
+| TASK-348-01 | Search Date Range API and Service Contract | High | Medium | Done (2026-06-01): strict `dateRange` contract, client serialization, route validation, service timestamp filtering, and DB-backed range proof are complete. |
+| TASK-348-02 | Search Suggestions, Empty States, and Category UX | High | Medium | Done (2026-06-01): fallback `Try:` chips, aggregate metadata, category helper copy, and cause-specific empty states are implemented and covered. |
+| TASK-348-03 | Search Result Navigation Proof, Docs, and Closure | Medium | Medium | Done (2026-06-01): destination mapping, prefetch/select callbacks, focused Playwright page navigation, reports, docs, board, and changelog are synchronized. |
 | TASK-347 | Admin Tools Playwright Audit Reports | Medium | Medium | Done (2026-05-31): audited all six admin Tools routes through Playwright and source review, then published overview plus per-tool findings under `_docs/PLAYWRIGHT/31-05-2026-tools/`. |
 | TASK-346 | Admin Seed Package Command | Medium | Small | Done (2026-05-31): added root `db:seed:admin` command, package-script regression coverage, and local setup docs for bootstrap administrator seeding. |
 | TASK-345 | CodeQL Widget Sanitizer and Validation DoS Remediation | High | Small | Done (2026-05-31): replaced regex HTML pseudo-sanitization in Hero/Template Section paths and hardened widget AJV validation with fail-fast plus structural budget checks. |

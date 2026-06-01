@@ -1,9 +1,6 @@
 import { expect, test } from "vitest";
 
-import {
-  listRecentSearches,
-  searchAll,
-} from "../../../core/admin/services/searchClient";
+import { listRecentSearches, searchAll } from "../../../core/admin/services/searchClient";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -24,6 +21,28 @@ test("searchAll hits GET /search with query params", async () => {
     await searchAll("homepage", { limit: 12 });
     expect(calls).toHaveLength(1);
     expect(calls[0]?.input).toBe("/admin/api/search?q=homepage&limit=12");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("searchAll serializes dateRange", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ items: [], meta: { dateRange: "last-30-days" } });
+  };
+
+  try {
+    await searchAll("homepage", {
+      limit: 12,
+      dateRange: "last-30-days",
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/search?q=homepage&limit=12&dateRange=last-30-days");
     expect(calls[0]?.init?.method).toBe("GET");
   } finally {
     globalThis.fetch = originalFetch;

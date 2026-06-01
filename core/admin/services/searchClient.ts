@@ -1,4 +1,12 @@
 import { apiRequest } from "./apiClient";
+import type { SearchDateRange, SearchResponseMeta } from "../../services/search/searchContract";
+
+export {
+  DEFAULT_SEARCH_DATE_RANGE,
+  normalizeSearchDateRange,
+  searchDateRanges,
+} from "../../services/search/searchContract";
+export type { SearchDateRange, SearchResponseMeta } from "../../services/search/searchContract";
 
 export type SearchResultItem = {
   id: string;
@@ -18,6 +26,7 @@ export type SearchResponse = {
     label: string;
     count: number;
   }>;
+  meta?: SearchResponseMeta;
 };
 
 export type RecentSearchItem = {
@@ -27,11 +36,12 @@ export type RecentSearchItem = {
 
 export async function searchAll(
   query: string,
-  options?: { limit?: number; signal?: AbortSignal }
+  options?: { limit?: number; dateRange?: SearchDateRange; signal?: AbortSignal }
 ) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   if (options?.limit) params.set("limit", String(options.limit));
+  if (options?.dateRange) params.set("dateRange", options.dateRange);
   const suffix = params.toString();
   const path = suffix ? `/search?${suffix}` : "/search";
   return apiRequest<SearchResponse>(path, {
@@ -41,9 +51,8 @@ export async function searchAll(
 }
 
 export async function listRecentSearches() {
-  const response = await apiRequest<{ items: RecentSearchItem[] }>(
-    "/search/recent",
-    { method: "GET" }
-  );
+  const response = await apiRequest<{ items: RecentSearchItem[] }>("/search/recent", {
+    method: "GET",
+  });
   return response.items ?? [];
 }

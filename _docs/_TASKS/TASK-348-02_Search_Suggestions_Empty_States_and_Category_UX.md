@@ -5,7 +5,7 @@
 **Category:** Admin Tools + Search + UX + Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-348-01
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -142,3 +142,13 @@ No route changes are required by this leaf.
 - Category helper text is not stale after a completed query.
 - The implementation avoids synchronous effect-driven state churn under React
   Hooks lint rules.
+
+## Completion Evidence
+
+- Done (2026-06-01): The Search page renders deterministic fallback `Try:` chips
+  when recent searches are empty or unavailable.
+- Done (2026-06-01): `/admin/api/search` returns aggregate-only metadata for
+  searchable-content, query-match, date-range, and returned-item state.
+- Done (2026-06-01): Category filtering derives active selections from current
+  categories, and empty-state copy names no data, no match, date-filtered, tab,
+  and category-filtered states.

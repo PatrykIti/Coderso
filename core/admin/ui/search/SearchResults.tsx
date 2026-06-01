@@ -27,6 +27,11 @@ export type SearchGroup = {
   items: SearchItem[];
 };
 
+export type SearchEmptyStateCopy = {
+  title: string;
+  description?: string;
+};
+
 const typeLabels: Record<SearchItemType, string> = {
   page: "Pages",
   entry: "Content",
@@ -36,10 +41,7 @@ const typeLabels: Record<SearchItemType, string> = {
 
 const typeOrder: SearchItemType[] = ["page", "entry", "media", "user"];
 
-const typeStyles: Record<
-  SearchItemType,
-  { icon: typeof FileText; className: string }
-> = {
+const typeStyles: Record<SearchItemType, { icon: typeof FileText; className: string }> = {
   page: { icon: FileText, className: "bg-blue-500/10 text-blue-600" },
   entry: { icon: File, className: "bg-emerald-500/10 text-emerald-600" },
   media: { icon: Image, className: "bg-amber-500/10 text-amber-600" },
@@ -71,6 +73,7 @@ type SearchResultsProps = {
   onSelect?: (item: SearchItem) => void;
   onPrefetch?: (item: SearchItem) => void;
   onViewAll?: (type: SearchItemType) => void;
+  emptyState?: SearchEmptyStateCopy;
   variant?: "dropdown" | "page";
 };
 
@@ -83,9 +86,7 @@ function highlight(text: string, query: string) {
   const matcher = new RegExp(`(${escaped.join("|")})`, "ig");
   const parts = text.split(matcher);
   return parts.map((part, index) => {
-    const isMatch = terms.some(
-      (term) => term.toLowerCase() === part.toLowerCase()
-    );
+    const isMatch = terms.some((term) => term.toLowerCase() === part.toLowerCase());
     if (!isMatch) return part;
     return (
       <span key={`${part}-${index}`} className="rounded bg-primary/10 px-1 text-primary">
@@ -113,20 +114,14 @@ function renderMediaCard(
       <Card className="overflow-hidden border-muted/60 p-0 transition hover:border-primary/30">
         <div className="relative aspect-video bg-muted">
           {item.image ? (
-            <img
-              src={item.image}
-              alt={item.title}
-              className="h-full w-full object-cover"
-            />
+            <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-muted-foreground">
               <Image className="h-6 w-6" />
             </div>
           )}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2">
-            <p className="text-xs font-semibold text-white">
-              {highlight(item.title, query)}
-            </p>
+            <p className="text-xs font-semibold text-white">{highlight(item.title, query)}</p>
           </div>
         </div>
       </Card>
@@ -152,18 +147,11 @@ function renderListCard(
     >
       <Card className="gap-0 border-muted/60 py-4 shadow-sm transition hover:border-primary/30 hover:bg-muted/30">
         <div className="flex items-center gap-4 px-4">
-          <div
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-lg",
-              className
-            )}
-          >
+          <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", className)}>
             <Icon className="h-5 w-5" />
           </div>
           <div className="flex-1 space-y-1">
-            <p className="text-sm font-semibold text-foreground">
-              {highlight(item.title, query)}
-            </p>
+            <p className="text-sm font-semibold text-foreground">{highlight(item.title, query)}</p>
             {item.subtitle || item.meta ? (
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {item.meta ? (
@@ -202,13 +190,9 @@ function renderUserCard(
             {item.initials ?? "?"}
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">
-              {highlight(item.title, query)}
-            </p>
+            <p className="text-sm font-semibold text-foreground">{highlight(item.title, query)}</p>
             {item.subtitle ? (
-              <p className="text-xs text-muted-foreground">
-                {highlight(item.subtitle, query)}
-              </p>
+              <p className="text-xs text-muted-foreground">{highlight(item.subtitle, query)}</p>
             ) : null}
           </div>
         </div>
@@ -224,18 +208,20 @@ export function SearchResults({
   onSelect,
   onPrefetch,
   onViewAll,
+  emptyState,
   variant = "dropdown",
 }: SearchResultsProps) {
   if (groups.length === 0) {
+    const title = emptyState?.title ?? `No results for "${query}".`;
+    const description = emptyState?.description;
     return variant === "page" ? (
       <Card className="items-center border-dashed py-8 text-center">
-        <p className="text-sm text-muted-foreground">
-          No results for &quot;{query}&quot;.
-        </p>
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        {description ? <p className="mt-1 text-xs text-muted-foreground">{description}</p> : null}
       </Card>
     ) : (
       <div className="rounded-xl border bg-background p-4 text-sm text-muted-foreground shadow-lg">
-        No results for &quot;{query}&quot;.
+        {title}
       </div>
     );
   }
@@ -260,21 +246,15 @@ export function SearchResults({
             </div>
             {group.type === "media" ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {group.items.map((item) =>
-                  renderMediaCard(item, query, onSelect, onPrefetch)
-                )}
+                {group.items.map((item) => renderMediaCard(item, query, onSelect, onPrefetch))}
               </div>
             ) : group.type === "user" ? (
               <div className="grid gap-3 sm:grid-cols-2">
-                {group.items.map((item) =>
-                  renderUserCard(item, query, onSelect, onPrefetch)
-                )}
+                {group.items.map((item) => renderUserCard(item, query, onSelect, onPrefetch))}
               </div>
             ) : (
               <div className="grid gap-3">
-                {group.items.map((item) =>
-                  renderListCard(item, query, onSelect, onPrefetch)
-                )}
+                {group.items.map((item) => renderListCard(item, query, onSelect, onPrefetch))}
               </div>
             )}
             {index < groups.length - 1 ? <Separator className="mt-8" /> : null}
@@ -285,9 +265,7 @@ export function SearchResults({
   }
 
   const groupOffsets = groups.map((_, index) =>
-    groups
-      .slice(0, index)
-      .reduce((sum, group) => sum + group.items.length, 0)
+    groups.slice(0, index).reduce((sum, group) => sum + group.items.length, 0)
   );
 
   return (
@@ -308,9 +286,7 @@ export function SearchResults({
                   data-active={isActive}
                   className={cn(
                     "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-muted/40"
+                    isActive ? "bg-primary/10 text-primary" : "hover:bg-muted/40"
                   )}
                   onMouseDown={(event) => {
                     event.preventDefault();
@@ -322,9 +298,7 @@ export function SearchResults({
                   <div>
                     <p className="font-medium">{highlight(item.title, query)}</p>
                     {item.subtitle ? (
-                      <p className="text-xs text-muted-foreground">
-                        {item.subtitle}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{item.subtitle}</p>
                     ) : null}
                   </div>
                   <Badge variant="secondary" className="text-[10px] uppercase">

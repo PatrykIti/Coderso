@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { searchAll, type SearchResponse } from "@/services/searchClient";
+import {
+  DEFAULT_SEARCH_DATE_RANGE,
+  searchAll,
+  type SearchDateRange,
+  type SearchResponse,
+  type SearchResponseMeta,
+} from "@/services/searchClient";
 
 import { groupResults, type SearchItem } from "./SearchResults";
 
@@ -8,6 +14,18 @@ type ApiSearchItem = SearchResponse["items"][number];
 type ApiSearchCategory = NonNullable<SearchResponse["categories"]>[number];
 
 const DEBOUNCE_MS = 250;
+
+type UseSearchResultsOptions = {
+  limit?: number;
+  dateRange?: SearchDateRange;
+};
+
+type SearchResultState = {
+  key: string;
+  items: SearchItem[];
+  categories: ApiSearchCategory[];
+  meta: SearchResponseMeta | null;
+};
 
 function normalizeQuery(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -66,11 +84,30 @@ function mapSearchItem(item: ApiSearchItem): SearchItem {
   };
 }
 
-export function useSearchResults(query: string, limit?: number) {
+function normalizeOptions(
+  options?: number | UseSearchResultsOptions
+): Required<UseSearchResultsOptions> {
+  if (typeof options === "number") {
+    return { limit: options, dateRange: "all-time" };
+  }
+
+  return {
+    limit: options?.limit ?? 20,
+    dateRange: options?.dateRange ?? DEFAULT_SEARCH_DATE_RANGE,
+  };
+}
+
+export function useSearchResults(query: string, options?: number | UseSearchResultsOptions) {
+  const { limit, dateRange } = normalizeOptions(options);
   const normalizedQuery = useMemo(() => normalizeQuery(query), [query]);
   const shouldSearch = normalizedQuery.length >= 2;
-  const [items, setItems] = useState<SearchItem[]>([]);
-  const [categories, setCategories] = useState<ApiSearchCategory[]>([]);
+  const requestKey = `${normalizedQuery}:${limit}:${dateRange}`;
+  const [result, setResult] = useState<SearchResultState>({
+    key: "",
+    items: [],
+    categories: [],
+    meta: null,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
@@ -85,15 +122,24 @@ export function useSearchResults(query: string, limit?: number) {
     const timer = setTimeout(() => {
       setLoading(true);
       setError(null);
-      searchAll(normalizedQuery, { limit })
+      searchAll(normalizedQuery, { limit, dateRange })
         .then((response) => {
           if (requestId.current !== current) return;
-          setItems(response.items.map(mapSearchItem));
-          setCategories(response.categories ?? []);
+          setResult({
+            key: requestKey,
+            items: response.items.map(mapSearchItem),
+            categories: response.categories ?? [],
+            meta: response.meta ?? null,
+          });
         })
         .catch(() => {
           if (requestId.current !== current) return;
-          setItems([]);
+          setResult({
+            key: requestKey,
+            items: [],
+            categories: [],
+            meta: null,
+          });
           setError("search_failed");
         })
         .finally(() => {
@@ -104,17 +150,19 @@ export function useSearchResults(query: string, limit?: number) {
     return () => {
       clearTimeout(timer);
     };
-  }, [normalizedQuery, shouldSearch, limit]);
+  }, [normalizedQuery, shouldSearch, limit, dateRange, requestKey]);
 
+  const hasCurrentResult = result.key === requestKey;
   const visibleItems = useMemo(
-    () => (shouldSearch ? items : []),
-    [items, shouldSearch]
+    () => (shouldSearch && hasCurrentResult ? result.items : []),
+    [result.items, shouldSearch, hasCurrentResult]
   );
   const visibleCategories = useMemo(
-    () => (shouldSearch ? categories : []),
-    [categories, shouldSearch]
+    () => (shouldSearch && hasCurrentResult ? result.categories : []),
+    [result.categories, shouldSearch, hasCurrentResult]
   );
   const groups = useMemo(() => groupResults(visibleItems), [visibleItems]);
+  const hasCompletedSearch = shouldSearch && hasCurrentResult && !loading && error === null;
 
   return {
     normalizedQuery,
@@ -122,6 +170,8 @@ export function useSearchResults(query: string, limit?: number) {
     items: visibleItems,
     groups,
     categories: visibleCategories,
+    meta: shouldSearch && hasCurrentResult ? result.meta : null,
+    hasCompletedSearch,
     loading: shouldSearch ? loading : false,
     error: shouldSearch ? error : null,
   };

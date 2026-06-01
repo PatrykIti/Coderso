@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1037 | 2026-06-01 | TASK-348 Search Tools remediation closure | Admin Tools/Search/API/UI/QA/Docs |
 | 1036 | 2026-06-01 | TASK-348-354 Tools remediation refinement | Admin Tools/Tasks/Reports/API Docs/Security/Cache |
 | 1035 | 2026-06-01 | TASK-348-354 Tools remediation planning | Admin Tools/Search/SEO/Analytics/Backups/Import Export/Redirects/Cross Tools |
 | 1034 | 2026-05-31 | Admin Tools Playwright audit reports | QA/Admin UI/Playwright/Docs |

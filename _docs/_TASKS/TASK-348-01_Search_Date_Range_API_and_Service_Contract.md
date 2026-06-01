@@ -5,7 +5,7 @@
 **Category:** Admin Tools + Search + API + Service
 **Estimated Effort:** Medium
 **Dependencies:** TASK-348
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -132,3 +132,13 @@ Regression-test shape:
 - Unknown date-range values cannot reach DB query construction.
 - Existing global SearchBar behavior remains covered and compatible with the
   updated hook/client contract.
+
+## Completion Evidence
+
+- Done (2026-06-01): `core/services/search/searchContract.ts` owns the strict
+  date-range enum, default, normalizer, and finite-range resolver.
+- Done (2026-06-01): `/admin/api/search` rejects unknown `dateRange` values,
+  records the effective range in recent-search metadata, and passes the range
+  to `searchAll`.
+- Done (2026-06-01): DB-backed Search service proof confirms
+  `last-7-days` excludes an older page fixture while `all-time` includes it.
