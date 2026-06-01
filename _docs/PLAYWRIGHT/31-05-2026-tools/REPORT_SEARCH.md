@@ -19,6 +19,8 @@ Route: `/admin/search`
 - Empty input showed the expected prompt to type at least two characters.
 - A one-character query stayed in the minimum-length state.
 - A matching query returned a user result and rendered the Users category count.
+- Deep pass: after creating and publishing a real page fixture, searching for
+  its title returned the page in the UI.
 - Tabs could be selected and reflected the selected state.
 - Category checkboxes could be toggled.
 - Clear reset the search field.
@@ -56,10 +58,12 @@ How to fix:
 
 ## Data Notes
 
-- The checkout had very little searchable content. The positive search path was
-  validated against an existing admin user result.
-- No content/page/media result drawer behavior could be meaningfully tested
-  because the dataset was empty for those types.
+- The first pass used an existing admin user because the checkout had little
+  content.
+- The follow-up pass created a published page fixture and verified Search found
+  it by title. The fixture was deleted after the test.
+- Result drawer behavior still needs a richer fixture if the product expects
+  opening/editing specific result types from Search.
 
 ## Source References
 
@@ -67,4 +71,3 @@ How to fix:
 - `core/admin/ui/search/useSearchResults.ts`
 - `core/admin/api/searchClient.ts`
 - `core/server/routes/admin/searchRoutes.ts`
-

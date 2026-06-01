@@ -29,6 +29,8 @@ Route: `/admin/redirects`
 - Active switch toggled correctly.
 - Creating a redirect returned a successful backend response and the row appeared
   in the table.
+- Deep pass: creating a 301 redirect through the drawer returned HTTP 200, the
+  row was visible, and API cleanup succeeded.
 - Searching by the created redirect found the row.
 - Editing the row prefilled the drawer fields.
 - Updating destination/status returned a successful backend response.
@@ -36,6 +38,29 @@ Route: `/admin/redirects`
 - The created redirect was cleaned up through the API after the test.
 
 ## What Did Not Work
+
+### [ISSUE] Admin redirects do not affect the public runtime
+
+Evidence:
+
+- The deep pass created a 301 redirect from a unique source path to a target
+  path.
+- Requesting the public source path returned HTTP 404 and the final URL stayed
+  on the source path instead of redirecting to the target.
+
+Why:
+
+- The admin redirect service persists redirect rows.
+- Source review did not find a public request lookup that checks the redirects
+  table before resolving pages/content.
+
+How to fix:
+
+- Add a public runtime middleware/lookup before page/content resolution:
+  normalize the request path, find an enabled redirect, and return a redirect
+  response with the stored status code and destination.
+- Add integration tests for 301/302/307/308, disabled redirects, no-match paths,
+  and loop prevention.
 
 ### [ISSUE] Redirect drawer is missing Radix dialog accessibility wiring
 
@@ -103,4 +128,3 @@ How to fix:
 - `core/admin/ui/redirects/RedirectsTable.tsx`
 - `core/admin/api/redirectsClient.ts`
 - `core/server/routes/admin/redirectRoutes.ts`
-

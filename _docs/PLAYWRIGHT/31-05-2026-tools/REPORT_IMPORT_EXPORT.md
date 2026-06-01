@@ -24,6 +24,9 @@ Route: `/admin/tools/import-export`
 - Invalid JSON produced an import error.
 - A valid export bundle produced an import preview.
 - Apply Import returned a successful backend response.
+- Deep pass: a valid exported JSON bundle was modified with a temporary menu,
+  uploaded through the file input, previewed, applied, verified by a follow-up
+  export, and then restored to the original bundle.
 
 ## What Did Not Work
 
@@ -34,6 +37,8 @@ Evidence:
 - Playwright toggled every checkbox on all export cards.
 - Each Download action still called the same export endpoint and returned the
   same full bundle shape.
+- Deep pass confirmed the downloaded bundle is the full configuration bundle,
+  not a per-card Pages/Media/Content Types export.
 
 Why:
 
@@ -101,6 +106,28 @@ How to fix:
   validation.
 - Keep the input `accept`, help text, client parser, and route schema aligned.
 
+### [ISSUE] Import preview accepts a bundle that apply rejects with a 500
+
+Evidence:
+
+- A deliberately malformed bundle with a non-UUID menu id passed preview.
+- Apply Import failed with a server 500 from the database insert instead of a
+  validation error.
+- A valid bundle without the malformed id applied successfully.
+
+Why:
+
+- The import schema accepts optional menu ids as strings without UUID validation.
+- `importConfig` passes the id to the database insert, where the UUID column
+  rejects invalid ids.
+
+How to fix:
+
+- Validate optional ids in `importBundleSchema` as UUIDs, or ignore incoming ids
+  and always generate server-side UUIDs for imported records.
+- Map import domain errors to user-facing `ApiError` responses instead of raw
+  database failures.
+
 ### [ISSUE] Recent Imports search does not filter
 
 Evidence:
@@ -126,4 +153,3 @@ How to fix:
 - `core/admin/ui/import-export/ImportDropzone.tsx`
 - `core/admin/api/importExportClient.ts`
 - `core/server/routes/admin/importExportRoutes.ts`
-

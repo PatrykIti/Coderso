@@ -18,6 +18,10 @@ Route: `/admin/analytics`
 - The empty Top Performing Content table rendered without crashing.
 - View all opened the top-content drawer.
 - The drawer could be closed.
+- Deep pass: after creating and publishing a real page fixture, the Analytics
+  API reported published pages and `top-content` included the fixture.
+- Deep pass: the Analytics UI showed the fixture in Top Performing Content and
+  the drawer opened from View all.
 
 ## What Did Not Work
 
@@ -27,6 +31,8 @@ Evidence:
 
 - Playwright opened the Top Content drawer and clicked Export.
 - The drawer closed, but no download or export request occurred.
+- In the deep pass with real top-content data, clicking Export still only left
+  the drawer state/UI changed; no export endpoint or file download was observed.
 
 Why:
 
@@ -43,11 +49,10 @@ How to fix:
 
 ## Data Notes
 
-- The local dataset had no published pages, content entries, media items, or top
-  content rows. The dashboard correctly rendered zero/empty states.
-- Initial automation sampled one loading state too early during rapid range
-  changes. A follow-up focused pass waited for loading to settle and confirmed
-  stable KPI/empty-table rendering for all ranges.
+- The initial pass only proved empty-state behavior.
+- The deep pass created a published page fixture. API evidence:
+  `publishedPages` was non-zero and `top-content` included the fixture.
+- The fixture was deleted after the pass.
 
 ## Source References
 
@@ -58,4 +63,3 @@ How to fix:
 - `core/admin/ui/analytics/TopContentDrawer.tsx`
 - `core/admin/api/analyticsClient.ts`
 - `core/server/routes/admin/analyticsRoutes.ts`
-

@@ -21,8 +21,53 @@ Route: `/admin/seo`
 - SEO audit dialog opened.
 - Audit checkboxes could be toggled visually.
 - Start Audit called the backend and returned a successful response.
+- Deep pass: a published page fixture appeared in the SEO table after audit.
+- Deep pass: editing Meta Title and Meta Description in the drawer sent
+  `PATCH /seo/:id` and persisted the new values in the SEO document.
 
 ## What Did Not Work
+
+### [ISSUE] SEO Manager metadata does not update the public page output
+
+Evidence:
+
+- The deep pass saved a unique Meta Title and Meta Description for a real
+  published page.
+- A follow-up `GET /seo` confirmed both values persisted in `seoDocuments`.
+- Loading the public page returned HTTP 200, but the rendered HTML did not
+  contain the SEO Manager title or description.
+
+Why:
+
+- `SeoManagerPage` updates the SEO route/service (`seoDocuments`).
+- The public page renderer reads page data/published data; no public render path
+  was found that consumes `seoDocuments`.
+
+How to fix:
+
+- Either wire public rendering to resolve SEO metadata from `seoDocuments`, or
+  synchronize SEO Manager saves back into the page SEO data used by the public
+  renderer.
+- Add a regression test that edits SEO in the admin UI, loads the public page,
+  and asserts the title/meta description.
+
+### [ISSUE] Saving SEO does not recompute score/issues immediately
+
+Evidence:
+
+- The save response persisted the new description but still returned the stale
+  audit score/issues from before the edit.
+
+Why:
+
+- `updateSeoDocumentById` writes title/description/canonical/robots and returns
+  the row without recalculating score/status/issues.
+- `runSeoAudit` owns scoring separately.
+
+How to fix:
+
+- Recompute score/status/issues during save, or trigger a scoped audit after a
+  successful save and refresh the drawer/table from the audited row.
 
 ### [ISSUE] Audit checkbox selections are not used
 
@@ -84,10 +129,12 @@ How to fix:
 
 ## Data Notes
 
-- The local dataset had no SEO page records, so drawer editing could not be
-  validated end-to-end from the UI.
-- Source review shows additional drawer controls that should be checked with a
-  populated fixture: Discard and Add Keyword currently appear to be UI-only.
+- The deep pass used a real page fixture. Drawer editing is now verified for
+  title/description persistence into `seoDocuments`.
+- Public runtime SEO remains unverified as working because the page HTML did not
+  include the saved SEO Manager metadata.
+- Source review still shows drawer controls that are UI-only: Discard and Add
+  Keyword.
 
 ## Source References
 
@@ -97,4 +144,3 @@ How to fix:
 - `core/admin/ui/seo/SeoDrawer.tsx`
 - `core/admin/api/seoClient.ts`
 - `core/server/routes/admin/seoRoutes.ts`
-

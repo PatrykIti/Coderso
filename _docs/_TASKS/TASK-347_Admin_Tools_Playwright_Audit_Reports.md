@@ -115,11 +115,22 @@ No production API routes are added or changed.
   issue.
 - A follow-up explorer audit found no missing sidebar Tools coverage, no missing
   per-tool report files, and no missing clicked/worked/failed/fix sections.
+- A deeper follow-up pass on 2026-06-01 added real fixture coverage after the
+  first report set was found too shallow:
+  - Search found a published test page.
+  - SEO Manager persisted title/description to `seoDocuments`, but the public
+    page HTML did not contain those values.
+  - Analytics surfaced the published page in top content.
+  - Backups created only a queued row with no artifact.
+  - Import / Export roundtripped a valid JSON bundle and restored the original.
+  - Redirects created an admin row, but the public runtime still returned 404.
+- Test fixtures from the deeper pass were cleaned up directly after evidence
+  capture where the UI/API had no cleanup path.
 - Claude CLI was retried through the correct non-interactive stdin flow and
   still failed on its own API authentication with
   `401 Invalid authentication credentials`.
 - The local security session policy was verified at `maxPerUser: 30`.
 - Validation passed:
-  - `git diff --check`
-  - `bun --cwd core lint`
-  - `bun --cwd core lint:types`
+  - `git diff --check` after the deep-pass report updates
+  - `bun --cwd core lint` after the deep-pass report updates
+  - `bun --cwd core lint:types` after the deep-pass report updates

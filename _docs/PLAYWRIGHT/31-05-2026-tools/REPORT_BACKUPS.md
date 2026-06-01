@@ -23,8 +23,9 @@ Route: `/admin/backups`
 - Update Schedule returned a successful backend response.
 - The original schedule was restored after the audit.
 - Create Backup Now opened the dialog.
-- Start Backup returned a successful backend response.
-- The backup count increased after creation.
+- Deep pass: Start Backup returned HTTP 200 from `POST /backups`.
+- Deep pass: backup count increased and the created row was visible through the
+  API.
 - Search showed a clear empty state for a non-matching term.
 - Restore, Download, and Delete were disabled for queued backups.
 
@@ -36,6 +37,7 @@ Evidence:
 
 - Playwright toggled Database snapshot, Media assets, and Settings & tokens.
 - Start Backup still created the same manual backup request.
+- Deep pass request body was only `{ "kind": "manual" }`.
 
 Why:
 
@@ -51,17 +53,22 @@ How to fix:
 - Add a regression test that toggles each checkbox and asserts the request
   payload.
 
-### [ISSUE] Created backups remain queued in local UI flow
+### [ISSUE] Created backups remain queued and no backup artifact is produced
 
 Evidence:
 
 - Starting a backup inserted a new backup row and increased the list count.
-- The row remained queued; Restore and Download stayed disabled.
+- The created row had `status: "queued"`, `artifactPath: null`, and
+  `sizeBytes: null`.
+- Restore and Download stayed disabled.
 
 Why:
 
 - The UI/API path creates a queued backup record.
-- No local worker/artifact completion path was observed during the audit.
+- `createBackup` only inserts a queued row.
+- No worker/artifact completion path was observed during the audit.
+- `restoreBackup` currently returns the backup record; it does not restore a
+  database or media snapshot.
 
 How to fix:
 
@@ -91,8 +98,8 @@ How to fix:
 ## Side Effects
 
 - The audit created queued backup rows through the real UI/API path.
-- No delete action was available for queued rows in the UI, so these rows were
-  intentionally left in place.
+- There is no UI delete action for queued rows. Test rows created by this audit
+  were removed directly from the database after evidence capture.
 - The schedule settings changed during the test were restored to their original
   values.
 
@@ -105,4 +112,3 @@ How to fix:
 - `core/admin/api/backupsClient.ts`
 - `core/server/routes/admin/backupRoutes.ts`
 - `core/server/services/backupService.ts`
-

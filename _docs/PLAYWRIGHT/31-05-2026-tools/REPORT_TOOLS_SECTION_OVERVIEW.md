@@ -16,12 +16,22 @@ fatal page crash:
 - Import / Export
 - Redirects
 
-The strongest flows were Search, Analytics read-only dashboards, Backup
-schedule updates, Import / Export API execution, and Redirect CRUD. The weakest
-parts were controls that look functional but are currently UI-only: Search date
-range, SEO audit checkbox selection, SEO filter icon, Analytics export, Backup
-content-type checkboxes, Import / Export options, Activity Log, Recent Imports
-search, and table pagination in Backups/Redirects.
+The first pass was not deep enough: it clicked controls, but it did not prove
+end-to-end behavior for every tool. A deeper follow-up pass on 2026-06-01 added
+real fixtures and checked the actual backend/public effects.
+
+Current classification:
+
+- Works end-to-end: Search can find a real page fixture; Analytics can surface a
+  real published page in top content; Import / Export can roundtrip a valid JSON
+  bundle.
+- Partially works: SEO Manager saves metadata into `seoDocuments`, but not into
+  the public page output; Backups enqueue rows but do not create artifacts;
+  Redirects save admin rows but do not affect public routing.
+- Still UI-only/incomplete: Search date range, SEO audit checkboxes, SEO filter
+  icon, Analytics export, Backup include checkboxes, Import / Export card
+  options, Activity Log, Recent Imports search, and Backups/Redirects
+  pagination.
 
 ## Evidence
 
@@ -32,6 +42,15 @@ search, and table pagination in Backups/Redirects.
   state where possible.
 - Related source files were reviewed for each issue to distinguish data-empty
   states from broken UI wiring.
+- Deep pass evidence:
+  - Published page fixture was created, found in Search, edited in SEO Manager,
+    surfaced in Analytics, and deleted after the pass.
+  - Manual backup was started through the UI and verified as queued with no
+    artifact.
+  - Import / Export valid JSON bundle was downloaded, modified, uploaded,
+    previewed, applied, verified through export, and restored.
+  - Redirect was created in the UI, checked against the public runtime, and
+    deleted.
 
 ## Environment Notes
 
@@ -94,6 +113,30 @@ How to fix:
   preview-only details.
 - Add tests that toggle each option and assert the request payload.
 
+### [ISSUE] Admin-saved data is not always connected to runtime behavior
+
+Affected surfaces:
+
+- SEO Manager
+- Redirects
+- Backups
+
+Evidence:
+
+- SEO Manager persisted a test title/description in `seoDocuments`, but the
+  public page HTML did not contain those values.
+- Redirects persisted a 301 redirect row, but requesting the public source path
+  returned 404 and stayed on the source URL.
+- Backups persisted a queued row, but no artifact path, size, download, restore,
+  or completion was produced.
+
+How to fix:
+
+- Connect SEO documents to page render metadata, or make the UI explicit that it
+  edits an internal audit table only.
+- Add a public redirect lookup before public page/content resolution.
+- Add a backup worker/artifact creation path and status polling.
+
 ### [ISSUE] Pagination controls are placeholders
 
 Affected surfaces:
@@ -125,4 +168,3 @@ How to fix:
 - `core/admin/ui/redirects/*`
 - `core/admin/api/*Client.ts`
 - `core/server/routes/admin/*Routes.ts`
-
