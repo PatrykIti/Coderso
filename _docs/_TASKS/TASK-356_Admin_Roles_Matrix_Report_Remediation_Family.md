@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + RBAC + Roles Matrix + Audit + QA + Docs
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-355 current-user permission propagation, TASK-1034 audit evidence
+**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-355 shared Users/RoleEditor gating adoption, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md` audit evidence
 **Status:** To Do
 
 ---
@@ -63,6 +63,16 @@ These refinements are mandatory for implementation planning and closure.
    full-access confirmation and write gating must be consistent in both places.
 
 ## Sub-Tasks
+
+## Implementation Order
+
+1. Consume `TASK-360-01` shared permission snapshot and read-only route mode.
+2. Implement matrix read-only gating before changing save behavior.
+3. Add pure diff builder and footer summary.
+4. Add review modal and partial-failure/conflict behavior.
+5. Add full-access confirmation in both `RoleEditor` and matrix promotion
+   paths.
+6. Add audit diff payload and final Playwright proof.
 
 ### TASK-356-01: Roles Matrix Permission-Aware Read-Only Mode
 

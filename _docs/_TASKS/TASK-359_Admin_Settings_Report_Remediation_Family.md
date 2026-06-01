@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Settings + Cache + Security UX + RBAC + QA + Docs
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-355 current-user permission propagation, TASK-356 RBAC guard pattern, TASK-1034 audit evidence
+**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm pattern, TASK-360-04 no-op gate, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md` audit evidence
 **Status:** To Do
 
 ---
@@ -85,6 +85,19 @@ are placeholders.
     not accidentally affect production services.
 
 ## Sub-Tasks
+
+## Implementation Order
+
+1. Consume `TASK-360-01` shared permission snapshot and block Settings shell
+   leaks before adding cache/navigation changes.
+2. Replace Settings navigation with `AdminLink`, then add dirty-state and mobile
+   navigation behavior.
+3. Decide and implement the redacted settings cache contract before any
+   section-specific caching.
+4. Fix General/Site placeholders and high-risk confirm flows.
+5. Fix Email/Storage/Integrations/Assistant external action truthfulness.
+6. Fix Login Alerts/Sessions placeholders.
+7. Update cache/security docs and rerun full Settings Playwright evidence.
 
 ### TASK-359-01: Settings RBAC Guard and Bootstrap Discipline
 

@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Cross-Cutting RBAC + Accessibility + QA Gates + Docs
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-355, TASK-356, TASK-357, TASK-358, TASK-359, TASK-1034 audit evidence
+**Dependencies:** changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md` audit evidence
 **Status:** To Do
 
 ---
@@ -78,6 +78,19 @@ The summary report identifies the repeated root causes:
     merging.
 
 ## Sub-Tasks
+
+## Implementation Order
+
+1. Land `TASK-360-01` permission snapshot before TASK-355, TASK-356, and
+   TASK-359 consume it.
+2. Land `TASK-360-02` confirm pattern before area-specific destructive action
+   confirmations.
+3. Land `TASK-360-03` export dialog contract before TASK-357 and TASK-358
+   exports.
+4. Add no-op/a11y/query gates after the first area implementations prove the
+   shared shape.
+5. Use `TASK-360-07` only after TASK-355 through TASK-359 implementation work
+   has landed and can be re-audited end to end.
 
 ### TASK-360-01: Admin Permission Snapshot Contract
 

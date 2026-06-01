@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Audit Logs + Compliance Export + Pagination + QA + Docs
 **Estimated Effort:** Large
-**Dependencies:** TASK-1034 audit evidence
+**Dependencies:** TASK-360-03 shared export dialog contract, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md` audit evidence
 **Status:** To Do
 
 ---

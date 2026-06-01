@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Access Logs + Security Sessions + Export + QA + Docs
 **Estimated Effort:** Large
-**Dependencies:** TASK-357 shared export/query decisions, TASK-1034 audit evidence
+**Dependencies:** TASK-357 shared audit/access export-query decisions, TASK-360-03 shared export dialog contract, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ACCESS_LOGS.md` audit evidence
 **Status:** To Do
 
 ---

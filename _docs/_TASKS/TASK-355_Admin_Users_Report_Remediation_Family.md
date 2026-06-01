@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + RBAC + Users + Security UX + QA + Docs
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-1034 audit evidence, TASK-001 auth foundation
+**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-001 auth foundation, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_USERS.md` audit evidence
 **Status:** To Do
 
 ---
@@ -70,6 +70,18 @@ These refinements are part of the execution contract, not optional polish.
    has user-facing unavailable copy and a test asserting it cannot submit.
 
 ## Sub-Tasks
+
+## Implementation Order
+
+1. Consume the shared permission snapshot from `TASK-360-01` before changing
+   Users UI controls; do not create a second local permission model.
+2. Add route/client tests for permission bootstrap and Users/Roles partial-read
+   modes before hiding controls.
+3. Implement reset/invite and destructive-confirm flows after write gating is
+   in place, so restricted fixtures prove controls are unavailable before API
+   submit.
+4. Close filter/notification/mobile-a11y truthfulness once the security flows
+   are stable.
 
 ### TASK-355-01: Current User Permission Propagation for Users
 
