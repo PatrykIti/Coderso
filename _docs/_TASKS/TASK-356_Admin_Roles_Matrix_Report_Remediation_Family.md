@@ -5,7 +5,7 @@
 **Category:** Admin UI + RBAC + Roles Matrix + Audit + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm action pattern, TASK-355-01 Users/RoleEditor permission propagation, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md` audit evidence
-**Status:** In Progress (2026-06-01)
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -307,7 +307,7 @@ Completion notes:
 
 ### TASK-356-04: RBAC Audit Event Diff
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation shape:
 
@@ -338,6 +338,29 @@ Regression tests:
 - Service/domain tests for diff output.
 - Route audit test verifies update event contains role id/name and diff arrays.
 - No audit payload includes secrets or request cookies.
+
+Completion notes:
+
+- Added a role audit metadata helper for redacted permission snapshots and
+  deterministic added/removed diffs.
+- Role updates now use a service-level transaction and locked before snapshot
+  through `updateRoleWithTransition`, so audit diff data comes from the same
+  update flow as the write.
+- Create, duplicate, update, and delete audit metadata now records role id/name,
+  sorted stored permission snapshots, and explicit `fullAccess` state.
+- Update audit metadata records sorted `addedPermissions` and
+  `removedPermissions`; full-access grants expand `*` against the permission
+  catalog for machine-readable review.
+- Bun route tests cover create/duplicate metadata, update diffs,
+  full-access-expanded diffs, delete metadata, route permission guard wiring,
+  and centralized role error mapping.
+- DB-backed service tests cover `updateRoleWithTransition` before/after
+  snapshots directly.
+- Secret redaction coverage now proves audit metadata strips cookies,
+  authorization headers, tokens, and passwords, including nested headers.
+- This leaf changes backend audit metadata only; the required real UI evidence
+  for role editing, review, restricted read-only mode, and full-access confirm
+  was captured in `TASK-356-01` through `TASK-356-03`.
 
 ## Security Contract
 

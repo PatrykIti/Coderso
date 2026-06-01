@@ -1,5 +1,11 @@
-import { createRole, deleteRole, listRoles, updateRole } from "../../services/admin/rolesService";
-import { listPermissions } from "../../services/admin/permissionsCatalog";
+import {
+  createRole,
+  deleteRole,
+  listRoles,
+  updateRoleWithTransition,
+} from "../../services/admin/rolesService";
+import { listPermissionIds, listPermissions } from "../../services/admin/permissionsCatalog";
+import { buildRoleAuditDiff, buildRoleAuditSnapshot } from "../../services/admin/roleAuditMetadata";
 import { logAudit } from "../../services/audit/auditService";
 import { ApiError } from "../errorHandler";
 import { adminRoleCreateSchema, adminRoleUpdateSchema } from "../validation/adminRoleSchemas";
@@ -26,7 +32,7 @@ export type AdminRoleRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
   createRole?: typeof createRole;
-  updateRole?: typeof updateRole;
+  updateRoleWithTransition?: typeof updateRoleWithTransition;
   deleteRole?: typeof deleteRole;
   logAudit?: typeof logAudit;
 };
@@ -63,7 +69,7 @@ const withAdminRoleErrors = async <T>(operation: () => Promise<T>) => {
 export function registerAdminRolesRoutes(router: Router, deps: AdminRoleRouteDeps) {
   const { requirePermission, validate } = deps;
   const createRoleRecord = deps.createRole ?? createRole;
-  const updateRoleRecord = deps.updateRole ?? updateRole;
+  const updateRoleTransition = deps.updateRoleWithTransition ?? updateRoleWithTransition;
   const deleteRoleRecord = deps.deleteRole ?? deleteRole;
   const writeAudit = deps.logAudit ?? logAudit;
 
@@ -97,8 +103,9 @@ export function registerAdminRolesRoutes(router: Router, deps: AdminRoleRouteDep
         targetType: "role",
         targetId: created.id,
         metadata: {
+          roleId: created.id,
           name: created.name,
-          permissions: created.permissions,
+          ...buildRoleAuditSnapshot(created.permissions),
           ...(sourceRoleId ? { sourceRoleId } : {}),
           ...(sourceRoleName ? { sourceRoleName } : {}),
         },
@@ -112,18 +119,27 @@ export function registerAdminRolesRoutes(router: Router, deps: AdminRoleRouteDep
 
   router.patch("/admin-roles/:id", requirePermission("roles:write"), async (ctx) => {
     validate(adminRoleUpdateSchema, ctx.body);
-    const updated = await withAdminRoleErrors(() =>
-      updateRoleRecord(ctx.params.id, ctx.body as Parameters<typeof updateRoleRecord>[1])
+    const transition = await withAdminRoleErrors(() =>
+      updateRoleTransition(ctx.params.id, ctx.body as Parameters<typeof updateRoleTransition>[1])
     );
-    if (!updated) throw new ApiError("role_not_found", "Role not found", 404);
+    if (!transition) throw new ApiError("role_not_found", "Role not found", 404);
+    const { before, after: updated } = transition;
+    const permissionDiff = buildRoleAuditDiff(
+      before.permissions,
+      updated.permissions,
+      listPermissionIds()
+    );
     await writeAudit({
       actorId: ctx.user?.id ?? null,
       action: "admin.role.update",
       targetType: "role",
       targetId: updated.id,
       metadata: {
+        roleId: updated.id,
         name: updated.name,
-        permissions: updated.permissions,
+        ...buildRoleAuditSnapshot(updated.permissions),
+        addedPermissions: permissionDiff.addedPermissions,
+        removedPermissions: permissionDiff.removedPermissions,
       },
       ip: ctx.ip,
       userAgent: ctx.userAgent,
@@ -143,8 +159,9 @@ export function registerAdminRolesRoutes(router: Router, deps: AdminRoleRouteDep
       targetType: "role",
       targetId: deleted.id,
       metadata: {
+        roleId: deleted.id,
         name: deleted.name,
-        permissions: deletedPermissions,
+        ...buildRoleAuditSnapshot(deletedPermissions),
       },
       ip: ctx.ip,
       userAgent: ctx.userAgent,

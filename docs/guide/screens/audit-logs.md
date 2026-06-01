@@ -101,6 +101,9 @@ Use this safe audit-review order when you want fewer false conclusions:
   the drawer is the real reference when events must be compared precisely.
 - `Event Details` matters because the payload and request metadata often carry
   the evidence that the table alone cannot show.
+- Role change events expose machine-readable permission evidence: role id/name,
+  stored permission snapshot, full-access state, and added/removed permission
+  arrays for updates.
 - Export should be treated as a filtered evidence snapshot, not as a substitute
   for narrowing the view properly first.
 - Audit Logs helps with both security review and operational debugging; the same

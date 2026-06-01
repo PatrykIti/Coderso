@@ -44,6 +44,15 @@ Minimalne logowanie zdarzen administracyjnych.
 - `action` ma format `domain.action` (np. `pages.publish`).
 - Role duplicate metadata may include `sourceRoleId` and `sourceRoleName`; reset
   and invite metadata must never include set-password tokens.
+- Role create, duplicate, update, and delete metadata must include `roleId`,
+  role `name`, sorted stored `permissions`, and `fullAccess`.
+- Role update metadata must also include sorted `addedPermissions` and
+  `removedPermissions`. For diff purposes, stored `*` full access expands to
+  the current permission catalog; the snapshot remains the stored value
+  `["*"]` plus `fullAccess: true`.
+- Role audit metadata must stay machine-readable and redacted: no session
+  cookies, request headers, authorization values, tokens, passwords, or
+  unrelated user payloads.
 
 ## API
 

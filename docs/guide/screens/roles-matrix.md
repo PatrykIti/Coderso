@@ -168,5 +168,7 @@ Use this safe role-design order when you want fewer access mistakes:
   matrix changes.
 - Permission changes here can widen or restrict access across the whole admin
   workspace.
+- Role writes emit audit metadata with the role id/name, stored permission
+  snapshot, full-access state, and update diffs for added/removed permissions.
 - Full-access roles should be rare and explicitly justified, because this screen
   can change the blast radius of every other surface in the product.

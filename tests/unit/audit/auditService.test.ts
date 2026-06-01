@@ -6,11 +6,21 @@ test("sanitizeMetadata strips sensitive keys", () => {
   const meta = sanitizeMetadata({
     token: "secret",
     password: "hidden",
+    cookie: "session=secret",
     keep: "ok",
     authorization: "bearer",
+    headers: {
+      authorization: "Bearer sk-testsecret",
+      accept: "application/json",
+    },
   });
 
-  expect(meta).toEqual({ keep: "ok" });
+  expect(meta).toEqual({
+    keep: "ok",
+    headers: {
+      accept: "application/json",
+    },
+  });
 });
 
 test("sanitizeMetadata redacts token-like values in nested structures", () => {

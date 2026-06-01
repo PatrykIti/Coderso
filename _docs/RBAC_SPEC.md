@@ -96,6 +96,11 @@ UI behavior:
   scopes i inne high-risk additions wymagaja osobnego confirm dialogu przed
   mutacja draftu albo finalnym zapisem. Read-only scopes takie jak `roles:read`
   nie sa high-risk same w sobie.
+- Role create/duplicate/update/delete writes emit audit metadata with role
+  id/name, sorted stored permission snapshots, and `fullAccess`. Role update
+  events additionally include sorted `addedPermissions` and
+  `removedPermissions`; diff semantics expand stored `*` to the current
+  permission catalog while keeping the snapshot literal.
 - Widoki Users/Roles wylaczaja akcje edycji bez odpowiedniego write
   permission, a stale 403 wymusza odswiezenie permission snapshotu.
 - Ostatni admin nie moze zostac usuniety ani pozbawiony roli admin.

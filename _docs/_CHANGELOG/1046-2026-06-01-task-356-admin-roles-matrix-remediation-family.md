@@ -87,10 +87,30 @@ Tasks: TASK-356, TASK-356-01, TASK-356-02, TASK-356-03, TASK-356-04
   matrix bulk full-access promotion; the temporary role was verified as `["*"]`
   after confirmation and then removed.
 
+### TASK-356-04 RBAC Audit Event Diff
+
+- Added a role audit metadata helper for redacted permission snapshots and
+  deterministic added/removed permission diffs.
+- Role updates now use a service-level transaction with a locked before
+  snapshot, and return before/after role snapshots for audit metadata.
+- Role create, duplicate, update, and delete audit events now include
+  `roleId`, role name, sorted stored permission snapshots, and explicit
+  `fullAccess` state.
+- Role update audit metadata now records sorted `addedPermissions` and
+  `removedPermissions`; full-access grants expand `*` against the permission
+  catalog for reviewable audit evidence.
+- Route tests now cover `roles:read`/`roles:write` guard wiring and exact
+  expanded full-access diff output.
+- DB-backed role service tests now cover `updateRoleWithTransition` before/after
+  snapshots directly.
+- Audit redaction tests now prove cookie, authorization header, token, and
+  password metadata is stripped before persistence.
+
 ## Validation
 
 - `bun run test:vitest -- tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/role-editor-wave.test.tsx tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/routes/adminRoles.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/admin/rolesService.test.ts tests/unit/admin/roleAuditMetadata.test.ts tests/unit/audit/auditService.test.ts tests/integration/routes/adminRoles.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/role-permission-diff.test.ts tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/role-permission-diff.test.ts tests/vitest/ui/role-editor-wave.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/role-editor-wave.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/role-permission-diff.test.ts tests/vitest/ui/role-permission-risk.test.ts tests/vitest/admin/adminRolesClient.test.ts tests/vitest/ui/shared-dialog-contracts.test.tsx`

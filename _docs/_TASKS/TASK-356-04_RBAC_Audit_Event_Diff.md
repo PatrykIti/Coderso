@@ -5,7 +5,7 @@
 **Category:** Admin API + Roles + Audit + Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-356-02, TASK-356-03
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -116,3 +116,25 @@ Error handling:
   permission metadata, and updates include added/removed permission arrays.
 - Audit payloads remain redacted and machine-readable.
 - Audit semantics match the diff review users saw before save.
+
+## Completion Notes
+
+- Added `roleAuditMetadata` as the domain owner for redacted permission
+  snapshots and deterministic added/removed role permission diffs.
+- `updateRoleWithTransition` now reads the locked current role row and writes
+  the update in one service transaction, returning before/after snapshots for
+  audit metadata instead of letting the route perform a separate stale lookup.
+- Role create/duplicate/delete audit metadata now includes `roleId`, `name`,
+  sorted stored `permissions`, and `fullAccess`.
+- Role update audit metadata now includes `roleId`, `name`, sorted stored
+  `permissions`, `fullAccess`, and sorted `addedPermissions` /
+  `removedPermissions`; full-access grants expand `*` against the current
+  permission catalog for reviewability.
+- DB-backed service coverage verifies `updateRoleWithTransition` returns the
+  persisted before/after snapshots used by audit metadata.
+- Route tests now assert `roles:read`/`roles:write` guard wiring and exact
+  expanded full-access diff output.
+- Audit metadata tests cover cookie/header/token/password redaction, including
+  nested request header payloads.
+- No `_docs/CMS_API.md` change was required because response and error
+  semantics for `/admin-roles` did not change.

@@ -8,6 +8,7 @@ import {
   createRole,
   deleteRole,
   updateRole,
+  updateRoleWithTransition,
 } from "../../../core/services/admin/rolesService";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
@@ -22,10 +23,10 @@ async function canConnect() {
   }
 }
 
-let roleId: string | undefined;
+const roleIds = new Set<string>();
 
 afterAll(async () => {
-  if (roleId) {
+  for (const roleId of roleIds) {
     await db.delete(roles).where(eq(roles.id, roleId));
   }
 });
@@ -37,7 +38,7 @@ testIfDb("create/update/delete role", async () => {
     permissions: ["content:read"],
   });
 
-  roleId = created?.id;
+  if (created) roleIds.add(created.id);
   if (!created) throw new Error("missing_created_role");
 
   const updated = await updateRole(created.id, {
@@ -49,5 +50,45 @@ testIfDb("create/update/delete role", async () => {
   const deleted = await deleteRole(created.id);
   expect(deleted?.id).toBe(created.id);
 
-  roleId = undefined;
+  roleIds.delete(created.id);
+});
+
+testIfDb("updateRoleWithTransition returns locked before and after role snapshots", async () => {
+  const created = await createRole({
+    name: `transition-role-${randomUUID()}`,
+    description: "Transition source",
+    permissions: ["content:read"],
+  });
+
+  if (!created) throw new Error("missing_created_role");
+  roleIds.add(created.id);
+  const nextName = `transition-role-renamed-${randomUUID()}`;
+
+  const transition = await updateRoleWithTransition(created.id, {
+    name: nextName,
+    permissions: ["content:read", "roles:write"],
+  });
+
+  expect(transition?.before).toEqual(
+    expect.objectContaining({
+      id: created.id,
+      name: created.name,
+      description: "Transition source",
+      permissions: ["content:read"],
+      system: false,
+    })
+  );
+  expect(transition?.after).toEqual(
+    expect.objectContaining({
+      id: created.id,
+      name: nextName,
+      description: "Transition source",
+      permissions: ["content:read", "roles:write"],
+      system: false,
+    })
+  );
+
+  const deleted = await deleteRole(created.id);
+  expect(deleted?.id).toBe(created.id);
+  roleIds.delete(created.id);
 });

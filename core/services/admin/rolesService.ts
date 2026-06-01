@@ -5,6 +5,20 @@ import { roles, userRoles } from "../../db/schema";
 import { listPermissionIds } from "./permissionsCatalog";
 
 export type RoleRecord = typeof roles.$inferSelect;
+type DbClient = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export type AdminRoleRecord = {
+  id: string;
+  name: string;
+  description?: string;
+  permissions: string[];
+  system: boolean;
+};
+
+export type RoleUpdateTransition = {
+  before: AdminRoleRecord;
+  after: AdminRoleRecord;
+};
 
 export type RoleCreateInput = {
   name: string;
@@ -22,7 +36,7 @@ function normalizePermissions(raw: string[]) {
     .filter((permission) => permission.length > 0);
 
   if (cleaned.includes("*")) {
-    return ["*"]; 
+    return ["*"];
   }
 
   const unique = Array.from(new Set(cleaned));
@@ -36,9 +50,7 @@ function normalizePermissions(raw: string[]) {
 }
 
 export function hasFullAccess(role: RoleRecord) {
-  const permissions = Array.isArray(role.permissions)
-    ? (role.permissions as string[])
-    : [];
+  const permissions = Array.isArray(role.permissions) ? (role.permissions as string[]) : [];
   return permissions.includes("*");
 }
 
@@ -46,29 +58,40 @@ export function isSystemRole(role: RoleRecord) {
   return role.name === "admin" || hasFullAccess(role);
 }
 
-export async function getAdminRoleIds(excludeRoleId?: string) {
-  const rows = await db.select().from(roles);
+function toAdminRoleRecord(role: RoleRecord): AdminRoleRecord {
+  const permissions = Array.isArray(role.permissions) ? (role.permissions as string[]) : [];
+  return {
+    id: role.id,
+    name: role.name,
+    description: role.description ?? undefined,
+    permissions,
+    system: isSystemRole(role),
+  };
+}
+
+export async function getAdminRoleIds(excludeRoleId?: string, client: DbClient = db) {
+  const rows = await client.select().from(roles);
   return rows
     .filter((role) => hasFullAccess(role))
     .map((role) => role.id)
     .filter((id) => (excludeRoleId ? id !== excludeRoleId : true));
 }
 
-async function countUsersWithRoles(roleIds: string[]) {
+async function countUsersWithRoles(roleIds: string[], client: DbClient = db) {
   if (roleIds.length === 0) return 0;
-  const rows = await db
+  const rows = await client
     .select({ userId: userRoles.userId })
     .from(userRoles)
     .where(inArray(userRoles.roleId, roleIds));
   return new Set(rows.map((row) => row.userId)).size;
 }
 
-async function ensureAdminRoleRemains(excludingRoleId?: string) {
-  const adminRoleIds = await getAdminRoleIds(excludingRoleId);
+async function ensureAdminRoleRemains(excludingRoleId?: string, client: DbClient = db) {
+  const adminRoleIds = await getAdminRoleIds(excludingRoleId, client);
   if (adminRoleIds.length === 0) {
     throw new Error("last_admin");
   }
-  const adminUsers = await countUsersWithRoles(adminRoleIds);
+  const adminUsers = await countUsersWithRoles(adminRoleIds, client);
   if (adminUsers === 0) {
     throw new Error("last_admin");
   }
@@ -76,33 +99,13 @@ async function ensureAdminRoleRemains(excludingRoleId?: string) {
 
 export async function listRoles() {
   const rows = await db.select().from(roles);
-  return rows.map((role) => {
-    const permissions = Array.isArray(role.permissions)
-      ? (role.permissions as string[])
-      : [];
-    return {
-      id: role.id,
-      name: role.name,
-      description: role.description ?? undefined,
-      permissions,
-      system: isSystemRole(role),
-    };
-  });
+  return rows.map((role) => toAdminRoleRecord(role));
 }
 
 export async function getRole(id: string) {
   const [row] = await db.select().from(roles).where(eq(roles.id, id));
   if (!row) return null;
-  const permissions = Array.isArray(row.permissions)
-    ? (row.permissions as string[])
-    : [];
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description ?? undefined,
-    permissions,
-    system: isSystemRole(row),
-  };
+  return toAdminRoleRecord(row);
 }
 
 export async function createRole(input: RoleCreateInput) {
@@ -112,10 +115,7 @@ export async function createRole(input: RoleCreateInput) {
   const permissions = normalizePermissions(input.permissions ?? []);
   const description = input.description?.trim() || null;
 
-  const existing = await db
-    .select({ id: roles.id })
-    .from(roles)
-    .where(eq(roles.name, name));
+  const existing = await db.select({ id: roles.id }).from(roles).where(eq(roles.name, name));
   if (existing.length > 0) {
     throw new Error("role_exists");
   }
@@ -131,37 +131,33 @@ export async function createRole(input: RoleCreateInput) {
     .returning();
 
   if (!row) return null;
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description ?? undefined,
-    permissions: Array.isArray(row.permissions)
-      ? (row.permissions as string[])
-      : [],
-    system: isSystemRole(row),
-  };
+  return toAdminRoleRecord(row);
 }
 
-export async function updateRole(id: string, input: RoleUpdateInput) {
-  const [existing] = await db.select().from(roles).where(eq(roles.id, id));
+async function updateRoleWithTransitionInClient(
+  client: DbClient,
+  id: string,
+  input: RoleUpdateInput
+): Promise<RoleUpdateTransition | null> {
+  const [existing] = await client.select().from(roles).where(eq(roles.id, id)).for("update");
   if (!existing) return null;
 
   const nextName = input.name?.trim() ?? existing.name;
   const nextDescription =
     input.description !== undefined
       ? input.description?.trim() || null
-      : existing.description ?? null;
+      : (existing.description ?? null);
   const nextPermissions =
     input.permissions !== undefined
       ? normalizePermissions(input.permissions)
       : Array.isArray(existing.permissions)
-      ? (existing.permissions as string[])
-      : [];
+        ? (existing.permissions as string[])
+        : [];
 
   if (!nextName) throw new Error("role_invalid");
 
   if (nextName !== existing.name) {
-    const nameConflict = await db
+    const nameConflict = await client
       .select({ id: roles.id })
       .from(roles)
       .where(and(eq(roles.name, nextName), ne(roles.id, id)));
@@ -174,10 +170,10 @@ export async function updateRole(id: string, input: RoleUpdateInput) {
   const nextAdmin = Array.isArray(nextPermissions) && nextPermissions.includes("*");
 
   if (wasAdmin && !nextAdmin) {
-    await ensureAdminRoleRemains(id);
+    await ensureAdminRoleRemains(id, client);
   }
 
-  const [row] = await db
+  const [row] = await client
     .update(roles)
     .set({
       name: nextName,
@@ -189,14 +185,18 @@ export async function updateRole(id: string, input: RoleUpdateInput) {
 
   if (!row) return null;
   return {
-    id: row.id,
-    name: row.name,
-    description: row.description ?? undefined,
-    permissions: Array.isArray(row.permissions)
-      ? (row.permissions as string[])
-      : [],
-    system: isSystemRole(row),
+    before: toAdminRoleRecord(existing),
+    after: toAdminRoleRecord(row),
   };
+}
+
+export async function updateRoleWithTransition(id: string, input: RoleUpdateInput) {
+  return db.transaction((tx) => updateRoleWithTransitionInClient(tx, id, input));
+}
+
+export async function updateRole(id: string, input: RoleUpdateInput) {
+  const transition = await updateRoleWithTransition(id, input);
+  return transition?.after ?? null;
 }
 
 export async function deleteRole(id: string) {
@@ -207,10 +207,7 @@ export async function deleteRole(id: string) {
     await ensureAdminRoleRemains(id);
   }
 
-  const [row] = await db
-    .delete(roles)
-    .where(eq(roles.id, id))
-    .returning();
+  const [row] = await db.delete(roles).where(eq(roles.id, id)).returning();
 
   return row ?? null;
 }

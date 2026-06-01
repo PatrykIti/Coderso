@@ -3,7 +3,8 @@
 ## Zakres i źródła
 
 Trasa: `/admin/roles`. Źródła: `core/admin/ui/roles/PermissionsMatrixPage.tsx`,
-`PermissionsMatrix.tsx`, `PermissionsMatrixSearch.tsx`, `RoleEditor.tsx`.
+`PermissionsMatrix.tsx`, local `PermissionsMatrixSearch` in
+`PermissionsMatrixPage.tsx`, `RoleEditor.tsx`.
 
 ## Co faktycznie kliknięto
 
@@ -80,6 +81,12 @@ jednorazowej roli testowej oraz przywrócono stan.
   dla tymczasowej roli. DB potwierdzila `permissions: ["*"]` dopiero po
   high-risk confirm; fixture zostal usuniety po weryfikacji. Lokalny
   screenshot: `.tmp/task-356-03-full-access-confirm.png`.
+- Po `TASK-356-04` backendowe audit events dla role create/duplicate/update/delete
+  maja machine-readable metadata: `roleId`, `name`, sorted stored
+  `permissions`, `fullAccess`, a update events dodatkowo
+  `addedPermissions`/`removedPermissions`. Full-access grant rozwija `*`
+  przeciw aktualnemu katalogowi permissions w diffie, ale snapshot zostaje
+  literalnym `["*"]`.
 
 ## Co nie działało / co jest ryzykowne
 
@@ -90,6 +97,7 @@ jednorazowej roli testowej oraz przywrócono stan.
 | `Save changes` zapisywało masowe zmiany bez potwierdzenia | `handleSaveChanges` budował update dla zmienionych ról i od razu wołał `updateAdminRole` | jeden błędny klik mógł zmienić RBAC wielu ról | Zamknięte w `TASK-356-02` |
 | `Select all` w RoleEditor przełączał pełen dostęp bez confirm | `handleSelectAll` ustawiał `fullAccess` i wszystkie permissions | UI ostrzegał badge, ale nie wymuszał świadomego potwierdzenia | Zamknięte w `TASK-356-03` |
 | Brak podsumowania diffu przed zapisem | footer pokazywał tylko dirty/clean | admin nie widział dokładnie, które role i scopes zmienia | Zamknięte w `TASK-356-02` |
+| Audit role update zapisywał fakt zmiany bez deterministycznego permission diffu | wcześniejszy event nie dawał added/removed scopes per rola | po zapisie RBAC trudniej bylo odtworzyc, co realnie sie zmienilo | Zamknięte w `TASK-356-04` |
 
 Status po `TASK-356-01`:
 
@@ -106,8 +114,8 @@ Status po `TASK-356-01`:
 - Po `TASK-356-02` diff review jest zamkniety w kodzie, testach i realnym UI.
 - Po `TASK-356-03` high-risk/full-access confirm jest zamkniety w kodzie,
   testach i realnym UI.
-- Pozostaly problem jest nadal celowo w rodzinie `TASK-356`: audit diff
-  (`TASK-356-04`).
+- Po `TASK-356-04` audit diff jest zamkniety w kodzie, testach i dokumentacji;
+  rodzina `TASK-356` nie ma juz otwartego findings driftu.
 
 ## Dlaczego
 
@@ -131,3 +139,4 @@ szerokich/full-access oraz high-risk grants.
   pokryte w `TASK-356-02`; full access/high-risk confirm pokryte w
   `TASK-356-03`.
 - Rozważyć audit log event opisujący diff RBAC, nie tylko fakt zapisu.
+  Status: zamkniete w `TASK-356-04`.
