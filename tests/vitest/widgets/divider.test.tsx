@@ -12,6 +12,7 @@ import {
   createDividerWidget,
   DividerBlock,
   dividerDefaults,
+  normalizeDividerColorValue,
   normalizeDividerData,
   resolveDividerVariant,
   type DividerData,
@@ -83,6 +84,29 @@ test("divider normalization expands label and layout defaults without breaking l
   expect(normalized.customWidth).toBe("320px");
 });
 
+test("divider normalization drops unsafe colors and preserves bounded values", () => {
+  expect(normalizeDividerColorValue("url(javascript:alert(1))")).toBeUndefined();
+  expect(normalizeDividerColorValue("expression(alert(2))")).toBeUndefined();
+  expect(normalizeDividerColorValue("var(--color-border)")).toBe("var(--color-border)");
+  expect(normalizeDividerColorValue("RGBA(12, 24, 36, 0.5)")).toBe("RGBA(12, 24, 36, 0.5)");
+
+  const unsafe = normalizeDividerData({
+    color: "url(javascript:alert(1))",
+    labelColor: "expression(alert(2))",
+  });
+
+  expect(unsafe.color).toBe("var(--color-border)");
+  expect(unsafe.labelColor).toBe("var(--color-border)");
+
+  const safe = normalizeDividerData({
+    color: "#00897b",
+    labelColor: "hsl(210, 50%, 40%)",
+  });
+
+  expect(safe.color).toBe("#00897b");
+  expect(safe.labelColor).toBe("hsl(210, 50%, 40%)");
+});
+
 test("divider validator accepts expanded model", () => {
   clearWidgets();
   const widget = createDividerWidget({
@@ -119,6 +143,30 @@ test("divider validator accepts expanded model", () => {
     })
   ).not.toThrow();
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("divider validator rejects unsafe color strings", () => {
+  clearWidgets();
+  registerWidget(
+    createDividerWidget({
+      wizard: StubDividerEditor,
+      visual: StubDividerEditor,
+      advanced: StubDividerEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "divider-unsafe",
+      type: "divider",
+      variant: "label-center",
+      data: {
+        label: "Unsafe",
+        color: "url(javascript:alert(1))",
+        labelColor: "expression(alert(2))",
+      },
+    })
+  ).toThrow(/widget_schema_invalid/);
 });
 
 test("divider validator rejects invalid variant", () => {
@@ -175,6 +223,60 @@ test("divider label-center variant renders label marker and text", () => {
   expect(html).toContain("whitespace-nowrap");
   expect(html).toContain("tracking-normal");
   expect(html).toContain("Features");
+});
+
+test("divider sanitizes imported colors before public inline styles", () => {
+  const html = renderToString(
+    <DividerBlock
+      data={{
+        ...dividerDefaults,
+        label: "Unsafe color",
+        color: "url(javascript:alert(1))",
+        labelColor: "expression(alert(2))",
+        lineStyle: "dashed",
+        dashPattern: "wide",
+      }}
+      variant="label-center"
+    />
+  );
+
+  expect(html).not.toContain("javascript:");
+  expect(html).not.toContain("url(javascript");
+  expect(html).not.toContain("expression(");
+  expect(html).toContain("repeating-linear-gradient(90deg, var(--color-border)");
+  expect(html).toContain("color:var(--color-border)");
+});
+
+test("divider preserves safe colors for dotted and dashed output", () => {
+  const dottedHtml = renderToString(
+    <DividerBlock
+      data={{
+        ...dividerDefaults,
+        color: "#d81b60",
+        lineStyle: "dotted",
+        thickness: 4,
+      }}
+      variant="line"
+    />
+  );
+  const dashedHtml = renderToString(
+    <DividerBlock
+      data={{
+        ...dividerDefaults,
+        label: "Token label",
+        color: "var(--color-border)",
+        labelColor: "#0f172a",
+        lineStyle: "dashed",
+      }}
+      variant="label-center"
+    />
+  );
+
+  expect(dottedHtml).toContain("radial-gradient(circle, #d81b60 58%, transparent 60%)");
+  expect(dottedHtml).toContain('data-divider-color-kind="hex"');
+  expect(dashedHtml).toContain("repeating-linear-gradient(90deg, var(--color-border)");
+  expect(dashedHtml).toContain("color:#0f172a");
+  expect(dashedHtml).toContain('data-divider-color-kind="token"');
 });
 
 test("divider spacer-only mode keeps markers but hides visible line and label output", () => {

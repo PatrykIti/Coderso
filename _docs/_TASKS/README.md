@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 119 tasks
+- **To Do:** 117 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2029 tasks
+- **Done:** 2031 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-369 | Divider 31-05 UI Audit Remediation Family | High | Medium | Report-driven family from `REPORT_DIVIDER_WIDGET.md`; 1 finding routed to implementation/tests/docs |
 | TASK-370 | Stack 31-05 UI Audit Remediation Family | High | Medium | Report-driven family from `REPORT_STACK_WIDGET.md`; 1 finding routed to implementation/tests/docs |
 | TASK-371 | Hero 31-05 UI Audit Continuation and Remediation Family | High | Large | Report-driven family from `REPORT_HERO_WIDGET.md`; partial audit continuation plus 2 findings routed to implementation/tests/docs |
 | TASK-372 | Feature Grid 31-05 UI Audit Remediation Family | Medium | Small | Report-driven family from `REPORT_FEATURE_GRID_WIDGET.md`; 1 finding routed to implementation/tests/docs |
@@ -72,7 +71,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
 | TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-369-01 | DIV-31-05-01 - Unsafe `color` and `labelColor` must be normalized | High | Medium | Leaf task for TASK-369; source `REPORT_DIVIDER_WIDGET.md` |
 | TASK-370-01 | STK-31-05-01 - Preserve absent `direction` until Stack variant defaults can apply | High | Medium | Leaf task for TASK-370; source `REPORT_STACK_WIDGET.md` |
 | TASK-371-01 | HERO-31-05-01 - Dual CTA should restore a useful secondary CTA after Single CTA | High | Medium | Leaf task for TASK-371; source `REPORT_HERO_WIDGET.md` |
 | TASK-371-02 | HERO-31-05-02 - Finish the remaining Hero option matrix from the report | High | Medium | Leaf task for TASK-371; source `REPORT_HERO_WIDGET.md` |
@@ -177,6 +175,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-369 | Divider 31-05 UI Audit Remediation Family | High | Medium | Done (2026-06-01): Divider line and label colors now use bounded color normalization before schema acceptance, public gradients, inline styles, and Advanced preview output. |
+| TASK-369-01 | DIV-31-05-01 - Unsafe `color` and `labelColor` must be normalized | High | Medium | Done (2026-06-01): unsafe imported colors are dropped before SSR while safe hex, theme-token, and functional colors remain supported. |
 | TASK-368 | Spacer 31-05 UI Audit Closure and Regression Guard Family | Medium | Small | Done (2026-06-01): no new Spacer defect was found, and responsive/fixed/unsafe/public-invalid behavior is locked with focused regression guards. |
 | TASK-368-01 | SPC-31-05-01 - Lock responsive/fixed/unsafe-length behavior as a regression guard | Medium | Medium | Done (2026-06-01): renderer tests now cover report fixture markers, fixed desktop reuse, guide gating, no-guide state, unsafe fallback, and invalid variant fail-closed output. |
 | TASK-367 | Toggle Block 31-05 UI Audit Remediation Family | High | Medium | Done (2026-06-01): clearable root colors now use bounded color normalization, unsafe import/API CSS is rejected or dropped before SSR, and Advanced diagnostics report effective color state. |

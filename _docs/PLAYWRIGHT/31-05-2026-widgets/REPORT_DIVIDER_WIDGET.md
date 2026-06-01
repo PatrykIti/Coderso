@@ -14,6 +14,8 @@
 > **Claude:** cross-check uruchomiony po naprawie lokalnego logowania. Claude
 > potwierdzil glowny finding Playwright i doprecyzowal wage jako CSS-injection /
 > contract violation, bez potwierdzonego XSS w nowoczesnej przegladarce.
+> Remediation review z lokalnego CLI (2026-06-01) zakonczony wynikiem
+> `No blockers`; non-blocking wording note fixed before closure.
 
 ## Metoda
 
@@ -86,7 +88,7 @@ Przetestowane:
 | Top / bottom spacing | Rich, dotted and spacer-only fixtures | Top/bottom comboboxes wrapped under `marginTop` / `marginBottom`. | Hero/Standard => `96px/48px`; none/Large section => `0px/80px`; Section/Card => `64px/32px`. | Dziala | Token map resolves spacing values; `none` kind is marked separately. | Brak. |
 | Breakpoints and overflow | 375/800/1280 on rich and dotted fixtures | Nie dotyczy admin. | No horizontal overflow. Rich wrapper: 375/800/1024px; custom 75% wrapper: 281.25/600/768px. | Dziala | `min(100%, 64rem)` and percent custom width stay bounded. | Brak. |
 | Unsafe custom width and spacing | `/audit-31-05-divider-unsafe` | Nieosiagalne przez normalny UI; API/import edge. | `customWidth` falls back to `320px`; invalid spacing falls back to token defaults `24px/24px`; no raw unsafe width/spacing strings. | Dziala fail-safe | `resolveCustomWidth()` and `resolveTokenOrPx()` validate length grammar. | Brak. |
-| Unsafe color strings | `/audit-31-05-divider-unsafe` | Nieosiagalne przez normalny UI; API/import edge. | Raw `url(javascript:alert(1))` and `expression(alert(2))` appear in inline style attributes. | Nie dziala | `color` and `labelColor` are plain strings normalized only by non-empty check. | Add bounded color sanitizer at `normalizeDividerData()` and tests. |
+| Unsafe color strings | `/audit-31-05-divider-unsafe` | Nieosiagalne przez normalny UI; API/import edge. Advanced preview now reflects sanitized effective color state. | Unsafe `url(javascript:alert(1))` and `expression(alert(2))` values are dropped before inline style attributes and gradient strings; safe hex/theme-token/functional colors still render. | Dziala po remediacji | TASK-369 wires `color` and `labelColor` through the shared bounded CSS color helper at schema, normalization, render, and Advanced preview boundaries. | Naprawione w `DIV-31-05-01`. |
 | Invalid variant | `/audit-31-05-divider-invalid` | Nieosiagalne przez normalny UI; API/import edge. | HTTP 200, rootCount `0`, body contains `Invalid widget data`, no raw invalid payload rendered. | Dziala fail-closed | Widget validator rejects invalid variant. | Brak. |
 | Wizard | `Run setup again` | Wizard root exists; `writablePaths=[]`, `readonlyPaths=["variant"]`, preview matches rich state. | Nie dotyczy bez zapisu. | Dziala | Contract marks Wizard as setup/read-only. | Brak. |
 | Visual ownership | Rich admin inspect | Sections: Preview, Variant and label, Line style and width, Spacing around divider, Block layout, Visibility; duplicate writable paths `[]`, unwrapped controls `[]`. | Public output matches saved Visual-owned values. | Dziala | Editor contract and metadata align. | Brak. |
@@ -148,6 +150,13 @@ attributes.
   `var(--color-border)`.
 - Re-run the unsafe Playwright route and assert `styleAttributesWithUnsafe=[]`.
 
+**Status remediacji 2026-06-01:** Naprawione w TASK-369. Divider ma teraz
+owner-side `normalizeDividerColorValue()` oparty o shared bounded CSS color
+helper. `color` and `labelColor` sa sanitizowane przed public inline styles,
+dashed/dotted gradient output and Advanced preview output. Schema odrzuca
+oczywiste unsafe import/API payloady, a legacy saved data fails closed at render
+time.
+
 ## Claude cross-check
 
 Claude was run after local auth was repaired, in read-only mode with `Read/Grep`
@@ -175,6 +184,9 @@ fix it as a normalization trust-boundary and CSS-injection contract issue.
   overflow.
 - `customWidth` and spacing values reject unsafe imported strings and fall back
   safely.
+- `color` and `labelColor` reject unsafe imported CSS strings before inline
+  style and gradient output while preserving safe hex, theme-token and bounded
+  functional colors.
 - Wizard and Advanced are read-only; Visual owns daily editing.
 - Invalid variants fail closed with `Invalid widget data`.
 
@@ -196,6 +208,20 @@ fix it as a normalization trust-boundary and CSS-injection contract issue.
   `core/admin/ui/widgets/editors/DividerEditors.tsx:261-283`.
 
 ## Walidacja
+
+### Remediacja TASK-369
+
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/divider.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx` -
+  passed, 2 files / 15 tests.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/divider.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx` -
+  passed, 5 files / 58 tests.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `git diff --check` - passed.
+- `timeout 120s claude -p --dangerously-skip-permissions --max-budget-usd 0.8 "Review current staged TASK-369 Divider diff only..."` -
+  passed, no blockers; non-blocking wording note fixed before closure.
+
+### UI-first audit 31-05
 
 - `bun run test:vitest -- tests/vitest/widgets/divider.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx`
   - PASS: 5 files, 52 tests.

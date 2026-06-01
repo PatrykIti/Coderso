@@ -5,7 +5,7 @@
 **Category:** Widgets + Divider + Runtime Security + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-369
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Divider accepts plain strings for `color` and `labelColor`, so imported `url(jav
 
 ## Sub-Tasks
 
-- [ ] Reproduce DIV-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce DIV-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -89,3 +89,14 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced DIV-31-05-01 against current code: raw `color` and `labelColor` strings could flow into `backgroundColor`, `radial-gradient`, `repeating-linear-gradient`, and label `color`.
+- Added owner-side color normalization through `normalizeDividerColorValue()`, backed by the shared bounded CSS color helper.
+- Added schema pattern coverage for import/API validation while preserving render-time fail-closed behavior for legacy saved data.
+- `labelColor` now falls back to the sanitized line color, and unsafe line color falls back to `var(--color-border)`.
+- Added regressions for normalizer behavior, public SSR sanitization, safe dotted/dashed color output, validator rejection, and Advanced preview/summary sanitization through the shared render path.
+- Claude staged-diff review returned no blockers; its non-blocking wording note about Advanced being fixed through the shared render path was applied before closure.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/divider.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx`; broader Divider/UI lane with renderer, `styleNoneTokens`, and shared block-layout coverage; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1059`.

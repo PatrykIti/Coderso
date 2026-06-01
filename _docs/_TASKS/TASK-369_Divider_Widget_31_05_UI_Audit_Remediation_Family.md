@@ -5,7 +5,7 @@
 **Category:** Widgets + Divider + Runtime Security + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_DIVIDER_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-369-01](TASK-369-01_DIV_31_05_01_Unsafe_Color_And_LabelColor_Must_Be_Normalized.md): DIV-31-05-01 - Unsafe `color` and `labelColor` must be normalized
+- [x] [TASK-369-01](TASK-369-01_DIV_31_05_01_Unsafe_Color_And_LabelColor_Must_Be_Normalized.md): DIV-31-05-01 - Unsafe `color` and `labelColor` must be normalized
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,14 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced the report drift in code: Divider `color` and `labelColor` used non-empty string normalization and reached public inline styles plus dashed/dotted gradient strings.
+- Divider now owns `normalizeDividerColorValue()` around the shared bounded CSS color helper and applies it at schema, normalization, and render-time style assembly boundaries.
+- Unsafe imported `url(...)`, `expression(...)`, `javascript:`, `data:`, delimiter injection, and malformed colors now fall back to `var(--color-border)` or the sanitized line color before public output.
+- Advanced preview/summary now reflects normalized effective colors through the shared Divider render/normalization path and no longer surfaces raw unsafe saved values.
+- Bernoulli read-only agent confirmed the report drift before the fix and pointed to the same shared helper pattern used by Toggle Block, Tabs, and Accordion.
+- Claude staged-diff review returned no blockers; its non-blocking wording note about Advanced being fixed through the shared render path was applied before closure.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/divider.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx`; broader Divider/UI lane with renderer, `styleNoneTokens`, and shared block-layout coverage; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1059` together with TASK-369-01.
