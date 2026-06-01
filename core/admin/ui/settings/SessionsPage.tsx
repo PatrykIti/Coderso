@@ -13,6 +13,7 @@ import {
   type SessionRecord,
 } from "@/services/sessionsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
 
 import { SessionsTable, type SessionItem } from "./SessionsTable";
 import { SettingsSidebar } from "./SettingsSidebar";
@@ -89,17 +90,34 @@ const mapSessionItem = (session: SessionRecord): SessionItem => {
   };
 };
 
+const readSessionSelection = (path: string) => {
+  if (!path) return { selectedSessionId: null, selectedUserId: null };
+  const params = new URL(path, "https://admin.local").searchParams;
+  return {
+    selectedSessionId: params.get("sessionId"),
+    selectedUserId: params.get("userId"),
+  };
+};
+
 export function SessionsPage() {
+  const adminRouter = useOptionalAdminRouter();
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRevoking, setIsRevoking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { selectedSessionId, selectedUserId } = useMemo(() => {
+    const path =
+      adminRouter?.path ??
+      (typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : "");
+    return readSessionSelection(path);
+  }, [adminRouter?.path]);
+
   const refresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const items = await listSessions();
+      const items = await listSessions(selectedUserId ?? undefined);
       setSessions(items.map(mapSessionItem));
     } catch (err) {
       if (isApiClientError(err)) {
@@ -110,11 +128,11 @@ export function SessionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedUserId]);
 
   useEffect(() => {
     let active = true;
-    listSessions()
+    listSessions(selectedUserId ?? undefined)
       .then((items) => {
         if (active) setSessions(items.map(mapSessionItem));
       })
@@ -132,7 +150,13 @@ export function SessionsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [selectedUserId]);
+
+  const selectedSessionAvailable = useMemo(
+    () =>
+      Boolean(selectedSessionId && sessions.some((session) => session.id === selectedSessionId)),
+    [selectedSessionId, sessions]
+  );
 
   const activeCount = useMemo(() => sessions.length, [sessions.length]);
 
@@ -158,7 +182,7 @@ export function SessionsPage() {
     setIsRevoking(true);
     setError(null);
     try {
-      await revokeAllSessions();
+      await revokeAllSessions(selectedUserId ?? undefined);
       await refresh();
     } catch (err) {
       if (isApiClientError(err)) {
@@ -238,10 +262,18 @@ export function SessionsPage() {
                 {error}
               </div>
             ) : null}
+            {selectedSessionId && !isLoading ? (
+              <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+                {selectedSessionAvailable
+                  ? "Showing the active session selected from access logs."
+                  : "The session selected from access logs is not active or is no longer available."}
+              </div>
+            ) : null}
             <SessionsTable
               sessions={sessions}
               isLoading={isLoading}
               isRevoking={isRevoking}
+              selectedSessionId={selectedSessionId}
               onRevoke={handleRevoke}
             />
             <div className="rounded-xl border border-blue-200/60 bg-blue-50/60 p-6 text-blue-900 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200">

@@ -28,6 +28,29 @@ Tasks: TASK-358, TASK-358-01, TASK-358-02, TASK-358-03, TASK-358-04
 - Updated Access Logs API/spec/user docs and the clickable Playwright report
   with the new query, cursor, and match-context behavior.
 
+### TASK-358-02 Session Detail and Revoke Access Contract
+
+- Added nullable `access_logs.session_id` with SQL and Drizzle metadata
+  migration artifacts, plus runtime access logging of the authenticated
+  `ctx.sessionId` for future rows.
+- Added deterministic access-log session state/capability resolution for
+  active, current, revoked, expired, missing, failed, system, and historical
+  rows.
+- Gated raw session detail fields (`sessionId`, `userId`, `current`,
+  `expiresAt`, `revokedAt`) behind `settings:read`; `audit:read` users receive
+  only row state and unavailable copy.
+- Added `POST /admin/api/access-logs/:id/revoke` with strict UUID params,
+  strict body validation, `settings:write`, CSRF, `admin_write`, server-side
+  target resolution from `access_logs.session_id`, self-lockout protection,
+  expired/missing mapped errors, and already-revoked idempotency.
+- Wired `/admin/access-logs` drawer actions to real Settings Sessions focus and
+  typed revoke confirmation, including cross-user session focus through gated
+  `userId`.
+- Updated Settings Sessions to honor `sessionId`/`userId` query focus and mark
+  the selected linked session.
+- Removed the old access-log view/revoke no-op controls from the no-op audit
+  gate and updated API, audit, guide, task, and Playwright report docs.
+
 ### Planning / QA
 
 - Added the report-driven remediation family for the Admin Access Logs audit.
@@ -66,9 +89,30 @@ Tasks: TASK-358, TASK-358-01, TASK-358-02, TASK-358-03, TASK-358-04
   verifying custom range request params, exact userId filtering, Next with
   cursor, Previous without cursor, and `Matched user email` labels. Evidence
   screenshot: `.tmp/task-358-01-access-pagination.png`.
+- `bun test tests/unit/access/accessLogService.test.ts tests/integration/routes/accessLogs.test.ts`
+  passed after TASK-358-02 for session state resolution, strict revoke params,
+  self-lockout, expired/missing session handling, already-revoked idempotency,
+  route validation, and audit refs.
+- `bun run test:vitest -- tests/vitest/admin/accessLogsClient.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/access-logs-table.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/analytics-settings-entries-seo-leafs.test.tsx`
+  passed after TASK-358-02 for CSRF client behavior, strict schemas, real
+  view/revoke UI flow, drawer fixtures, no-op gate updates, and related settings
+  UI coverage.
+- `bun --cwd core lint` passed after TASK-358-02.
+- `bun --cwd core lint:types` passed after TASK-358-02.
+- Playwright TASK-358-02 cross-user smoke passed with a restricted
+  `audit:read` user and a `settings:read/write` user: restricted view/revoke
+  stayed disabled without leaking `sessionId`, settings user opened
+  `/admin/settings/security/sessions?sessionId=<id>&userId=<targetUserId>`,
+  sent one `POST /admin/api/access-logs/<id>/revoke`, and saw
+  `Session already revoked`. Evidence screenshot:
+  `.tmp/task-358-02-session-revoke.png`.
 - Agent and Claude review both flagged the same drift before implementation:
   static pagination, disabled custom range, misleading user filter, lost response
   metadata, and missing match context. The cursor error-code discrepancy was
   resolved in favor of the task/API contract `access_log_cursor_invalid`.
+- Agent and Claude review for TASK-358-02 flagged cross-user session focus,
+  strict revoke param validation, and audit-only session detail redaction drift;
+  the final implementation threads gated `userId` to Settings Sessions, validates
+  UUID params, and redacts raw session detail without `settings:read`.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ACCESS_LOGS.md`.

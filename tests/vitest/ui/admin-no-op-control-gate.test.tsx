@@ -185,6 +185,19 @@ const accessLog: AccessLogItem = {
   device: { label: "Chrome / macOS", icon: Monitor },
   timestamp: { date: "Jun 1", time: "12:00" },
   status: "success",
+  session: {
+    state: "none",
+    label: "Historical log without session link",
+    reason: "historical",
+    view: {
+      enabled: false,
+      reason: "Historical log without session link",
+    },
+    revoke: {
+      enabled: false,
+      reason: "Historical log without session link",
+    },
+  },
 };
 
 const user = {
@@ -342,20 +355,6 @@ test("Access Logs report no-op controls are disabled with explicit reasons", () 
       area: "Access Logs",
       controlId: "access-next-page",
       expected: "hidden",
-      report: "REPORT_ADMIN_ACCESS_LOGS.md",
-    },
-    {
-      area: "Access Logs",
-      controlId: "access-view-full-session",
-      expected: "disabled",
-      reasonPattern: /Full session details.*TASK-358-02/,
-      report: "REPORT_ADMIN_ACCESS_LOGS.md",
-    },
-    {
-      area: "Access Logs",
-      controlId: "access-revoke-access",
-      expected: "disabled",
-      reasonPattern: /Revoke access.*TASK-358-02/,
       report: "REPORT_ADMIN_ACCESS_LOGS.md",
     },
   ]);

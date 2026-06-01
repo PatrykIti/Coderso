@@ -11,13 +11,17 @@ import type {
 } from "../../../core/admin/services/accessLogsClient";
 
 type ListAccessLogsMock = (query?: AccessLogQuery) => Promise<AccessLogListResponse>;
+type RevokeAccessFromLogMock = (accessLogId: string) => Promise<{ ok: boolean }>;
 
 const accessState = vi.hoisted(() => ({
   nextError: null as unknown,
   listAccessLogs: vi.fn<ListAccessLogsMock>(async () => ({ items: [], nextCursor: null })),
+  revokeAccessFromLog: vi.fn<RevokeAccessFromLogMock>(async () => ({ ok: true })),
   reset() {
     this.nextError = null;
     this.listAccessLogs.mockReset();
+    this.revokeAccessFromLog.mockReset();
+    this.revokeAccessFromLog.mockResolvedValue({ ok: true });
     this.listAccessLogs.mockImplementation(async (query) => {
       if (this.nextError) {
         const error = this.nextError;
@@ -68,6 +72,13 @@ const accessState = vi.hoisted(() => ({
   },
 }));
 
+const routerState = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  reset() {
+    this.navigate.mockReset();
+  },
+}));
+
 function accessRecord(overrides: Partial<AccessLogListResponse["items"][number]> = {}) {
   return {
     id: "access-1",
@@ -82,12 +93,23 @@ function accessRecord(overrides: Partial<AccessLogListResponse["items"][number]>
     durationMs: 42,
     createdAt: "2026-06-01T10:00:00.000Z",
     matchContext: null,
+    session: {
+      state: "active" as const,
+      label: "Active session",
+      sessionId: "session-1",
+      current: false,
+      expiresAt: "2026-06-02T10:00:00.000Z",
+      revokedAt: null,
+      view: { enabled: true },
+      revoke: { enabled: true },
+    },
     ...overrides,
   };
 }
 
 vi.mock("../../../core/admin/services/accessLogsClient", () => ({
   listAccessLogs: accessState.listAccessLogs,
+  revokeAccessFromLog: accessState.revokeAccessFromLog,
 }));
 
 vi.mock("@/services/apiClient", () => ({
@@ -167,16 +189,91 @@ vi.mock("@/ui/shared/ExportDialog", () => ({
   ),
 }));
 
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    onOpenChange,
+    onConfirm,
+    confirmLabel,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void | Promise<void>;
+    confirmLabel: string;
+  }) =>
+    open ? (
+      <div>
+        confirm-dialog
+        <button type="button" onClick={() => onOpenChange(false)}>
+          cancel-confirm
+        </button>
+        <button type="button" onClick={() => void onConfirm()}>
+          {`confirm-${confirmLabel}`}
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock("@/ui/contexts/AdminRouterContext", () => ({
+  useOptionalAdminRouter: () => ({
+    navigate: routerState.navigate,
+  }),
+}));
+
 vi.mock("../../../core/admin/ui/security/AccessLogDetailsDrawer", () => ({
-  AccessLogDetailsDrawer: () => <div>drawer</div>,
+  AccessLogDetailsDrawer: ({
+    log,
+    onViewSession,
+    onRequestRevoke,
+  }: {
+    log: {
+      id: string;
+      session: {
+        label: string;
+        view: { enabled: boolean; reason?: string };
+        revoke: { enabled: boolean; reason?: string };
+      };
+    } | null;
+    onViewSession?: (log: never) => void;
+    onRequestRevoke?: (log: never) => void;
+  }) => (
+    <div>
+      drawer
+      {log ? (
+        <>
+          <span>{`session:${log.session.label}`}</span>
+          <button
+            type="button"
+            disabled={!log.session.view.enabled}
+            onClick={() => onViewSession?.(log as never)}
+          >
+            view-session
+          </button>
+          <button
+            type="button"
+            disabled={!log.session.revoke.enabled}
+            onClick={() => onRequestRevoke?.(log as never)}
+          >
+            request-revoke
+          </button>
+        </>
+      ) : null}
+    </div>
+  ),
 }));
 
 vi.mock("../../../core/admin/ui/security/AccessLogsTable", () => ({
   AccessLogsTable: ({
     logs,
     pageInfo,
+    onView,
   }: {
-    logs: Array<{ id: string; user: { name: string }; matchContext?: { label: string } | null }>;
+    logs: Array<{
+      id: string;
+      user: { name: string };
+      matchContext?: { label: string } | null;
+    }>;
+    onView?: (log: never) => void;
     pageInfo?: {
       countCopy: string;
       canNext: boolean;
@@ -198,6 +295,9 @@ vi.mock("../../../core/admin/ui/security/AccessLogsTable", () => ({
         <div key={log.id}>
           {log.user.name}
           {log.matchContext?.label}
+          <button type="button" onClick={() => onView?.(log as never)}>
+            {`open-${log.id}`}
+          </button>
         </div>
       ))}
     </div>
@@ -264,6 +364,7 @@ function lastAccessQuery() {
 
 beforeEach(() => {
   accessState.reset();
+  routerState.reset();
 });
 
 afterEach(() => {
@@ -390,6 +491,43 @@ test("AccessLogsPage renders match context without exposing new values", async (
 
     expect(view.container.textContent).toContain("Matched user email");
     expect(view.container.textContent).toContain("Hidden Match");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsPage routes view session and confirms revoke with one API call", async () => {
+  const view = mount(<AccessLogsPage />);
+
+  try {
+    await flush();
+    clickByText(view.container, "open-access-1");
+    await flush();
+    expect(view.container.textContent).toContain("session:Active session");
+
+    clickByText(view.container, "view-session");
+    expect(routerState.navigate).toHaveBeenCalledWith(
+      "/settings/security/sessions?sessionId=session-1"
+    );
+
+    clickByText(view.container, "open-access-1");
+    await flush();
+    clickByText(view.container, "request-revoke");
+    await flush();
+    expect(view.container.textContent).toContain("confirm-dialog");
+
+    clickByText(view.container, "cancel-confirm");
+    await flush();
+    expect(accessState.revokeAccessFromLog).not.toHaveBeenCalled();
+
+    clickByText(view.container, "request-revoke");
+    await flush();
+    clickByText(view.container, "confirm-Revoke access");
+    await flush();
+
+    expect(accessState.revokeAccessFromLog).toHaveBeenCalledTimes(1);
+    expect(accessState.revokeAccessFromLog).toHaveBeenCalledWith("access-1");
+    expect(view.container.textContent).toContain("Access session revoked.");
   } finally {
     view.cleanup();
   }

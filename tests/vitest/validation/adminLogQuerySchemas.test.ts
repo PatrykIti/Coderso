@@ -1,7 +1,11 @@
 import { expect, test } from "vitest";
 
 import { ApiError } from "../../../core/server/errorHandler";
-import { accessLogQuerySchema } from "../../../core/server/validation/accessLogSchemas";
+import {
+  accessLogQuerySchema,
+  accessLogRevokeParamsSchema,
+  accessLogRevokeSchema,
+} from "../../../core/server/validation/accessLogSchemas";
 import {
   adminCursorQueryParamSchema,
   adminDateTimeQueryParamSchema,
@@ -51,6 +55,27 @@ test("accessLogQuerySchema validates raw URL query strings strictly", () => {
   expect(() => validate(accessLogQuerySchema, { status: "pending" })).toThrow(ApiError);
   expect(() => validate(accessLogQuerySchema, { from: "2026-06-01" })).toThrow(ApiError);
   expect(() => validate(accessLogQuerySchema, { unknown: "1" })).toThrow(ApiError);
+});
+
+test("accessLogRevokeSchema accepts only the manual revoke reason", () => {
+  expect(() =>
+    validate(accessLogRevokeParamsSchema, { id: "018f1f3a-2561-7af2-8bc1-4b924c8a1220" })
+  ).not.toThrow();
+  expect(() => validate(accessLogRevokeParamsSchema, { id: "access-1" })).toThrow(ApiError);
+  expect(() =>
+    validate(accessLogRevokeParamsSchema, {
+      id: "018f1f3a-2561-7af2-8bc1-4b924c8a1220",
+      sessionId: "client-hint",
+    })
+  ).toThrow(ApiError);
+
+  expect(() => validate(accessLogRevokeSchema, { reason: "admin_manual_revoke" })).not.toThrow();
+
+  expect(() => validate(accessLogRevokeSchema, {})).toThrow(ApiError);
+  expect(() => validate(accessLogRevokeSchema, { reason: "other" })).toThrow(ApiError);
+  expect(() =>
+    validate(accessLogRevokeSchema, { reason: "admin_manual_revoke", sessionId: "client-hint" })
+  ).toThrow(ApiError);
 });
 
 test("shared admin query schema fragments keep log routes consistent", () => {

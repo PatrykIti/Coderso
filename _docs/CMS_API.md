@@ -2872,9 +2872,13 @@ output escapes commas, quotes, newlines, and formula prefixes.
 
 ## Access logs
 
-Permissions: `audit:read`
+Permissions:
+
+- `audit:read` for `GET /access-logs`.
+- `settings:write` for `POST /access-logs/:id/revoke`.
 
 - `GET /access-logs?limit=100`
+- `POST /access-logs/:id/revoke`
 - Optional strict filters: `status=success|failed`, `q=search`, `userId`,
   `method`, `ip`, `from`, `to`, `cursor`.
 - `from` and `to` must be RFC3339 `date-time` values. Reversed ranges are
@@ -2902,6 +2906,17 @@ Response:
       "matchContext": {
         "field": "email",
         "label": "Matched user email"
+      },
+      "session": {
+        "state": "active",
+        "label": "Active session",
+        "sessionId": "session-id",
+        "userId": "user-id",
+        "current": false,
+        "expiresAt": "2026-02-01T10:00:00Z",
+        "revokedAt": null,
+        "view": { "enabled": true },
+        "revoke": { "enabled": true }
       }
     }
   ],
@@ -2915,6 +2930,42 @@ konwencje query. Wyniki sa sortowane `createdAt DESC, id DESC`; `Next` i
 `Previous` w UI korzystaja wylacznie z `nextCursor` i lokalnego stosu
 zaladowanych cursorow. `matchContext` wyjasnia dopasowania query do pol, ktore
 nie zawsze sa oczywiste w tabeli, bez dodawania nowych wartosci PII.
+
+`session` opisuje deterministyczny stan sesji zwiazanej z access logiem:
+`active`, `current`, `revoked`, `expired`, `none`, albo `missing`. Raw
+`sessionId`, `userId`, `current`, `expiresAt`, and `revokedAt` are returned only
+when the current admin also has `settings:read`; `audit:read` without settings
+access sees only state and unavailable copy. `userId` lets the Settings Sessions
+surface focus a linked active session that belongs to another user without
+guessing from browser hints. Historical rows without `session_id` and
+failed/system rows do not call session actions.
+
+`POST /access-logs/:id/revoke` strict JSON body:
+
+```json
+{
+  "reason": "admin_manual_revoke"
+}
+```
+
+The revoke route is internal admin-only, uses the global admin CSRF pipeline and
+`admin_write` rate-limit bucket, and requires `settings:write`; `audit:read`
+alone is never sufficient. The browser sends only the reason. The server
+resolves the target session from `access_logs.session_id`, blocks current-session
+self-lockout, treats already-revoked sessions idempotently, and emits a redacted
+audit event with `accessLogRef`, `revokedSessionRef`, `targetUserRef`, `reason`,
+and `result`.
+
+Known errors:
+
+- `access_log_query_invalid`: invalid/unknown list query params.
+- `access_log_cursor_invalid`: malformed list cursor.
+- `access_log_revoke_invalid`: invalid revoke body or reason.
+- `access_log_not_found`: access log row does not exist.
+- `access_log_session_not_found`: row has no resolvable session relation.
+- `access_log_session_expired`: linked session is already expired.
+- `access_log_current_session_revoke_blocked`: linked session is the current
+  admin session.
 
 ---
 

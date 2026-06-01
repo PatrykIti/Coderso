@@ -8,6 +8,30 @@ Trasa: `/admin/access-logs`. Źródła:
 
 ## Co faktycznie kliknięto
 
+### TASK-358-02 verification - 2026-06-01
+
+- Przygotowano restricted usera z rolą `audit:read` oraz drugiego usera z
+  `audit:read`, `settings:read`, `settings:write`.
+- Po zalogowaniu restricted usera dosiano aktywną sesję i access log z
+  `session_id`; wejście w `/admin/access-logs` i filtr po markerze/userId
+  pokazały rekord.
+- Otworzono `Access Log Details`; drawer pokazał `Active session`, ale
+  `View full session` i `Revoke access` były disabled, `sessionId` nie był
+  widoczny w UI, a żaden request `/revoke` nie został wysłany.
+- Po zalogowaniu usera z settings permissions wyszukano ten sam access log
+  należący do innego usera.
+- Kliknięto `View full session`; UI przeszło do
+  `/admin/settings/security/sessions?sessionId=<id>&userId=<targetUserId>` i
+  pokazało `Showing the active session selected from access logs.` oraz
+  `Selected from access log`.
+- Wrócono do access loga, kliknięto `Revoke access`, wpisano `REVOKE` w
+  confirm dialogu i potwierdzono destructive action.
+- Zarejestrowano dokładnie jeden request
+  `POST /admin/api/access-logs/<accessLogId>/revoke`.
+- Po refetchu drawer pokazał `Session already revoked`, a revoke button był
+  disabled.
+- Dowód screenshot: `.tmp/task-358-02-session-revoke.png`.
+
 ### TASK-358-01 verification - 2026-06-01
 
 - Przygotowano restricted usera z rolą zawierającą `audit:read` oraz 55
@@ -43,7 +67,8 @@ Trasa: `/admin/access-logs`. Źródła:
 - `Export CSV`; otworzył się export dialog z pięcioma checkboxami pól.
 - Próba paginacji: `Previous` był disabled, widoczne były strony 1/2/3.
 
-Nie klikano: `Revoke access`, finalny export, zewnętrzne akcje sesji.
+W pierwszej fali nie klikano: `Revoke access`, finalny export, zewnętrzne akcje
+sesji. Po TASK-358-02 realnie kliknięto view session i revoke.
 
 ## Co działało
 
@@ -60,13 +85,21 @@ Nie klikano: `Revoke access`, finalny export, zewnętrzne akcje sesji.
   pasuje po polu niewidocznym w głównej komórce.
 - Uprawnienie `audit:read` wystarcza do odczytu Access Logs w restricted
   session.
+- Session state w drawerze jest deterministyczny: aktywna sesja pokazuje
+  dostępne akcje tylko wtedy, gdy użytkownik ma wymagane settings permissions.
+- `View full session` jest podpięte do Settings Security Sessions i działa
+  także dla aktywnej sesji innego usera przez query `sessionId` + `userId`.
+- `Revoke access` używa typed confirm, CSRF-backed POST i po sukcesie odświeża
+  drawer do `Session already revoked`.
+- Restricted `audit:read` user nie widzi raw `sessionId` i nie może odpalić
+  revoke.
 
 ## Co nie działało / co jest mylące
 
 | Problem | Stan po TASK-358-01 | Skutek / dalszy owner |
 | --- | --- | --- |
-| `View full session` nie ma handlera | nadal niezamknięte | TASK-358-02 musi dodać realny session detail albo deterministyczny unavailable state |
-| `Revoke access` nie ma handlera | nadal niezamknięte | TASK-358-02 musi dodać confirm/RBAC/audit albo deterministyczny unavailable state |
+| `View full session` nie ma handlera | zamknięte: aktywne/current sesje z `settings:read` przechodzą do Settings Sessions z `sessionId` i gated `userId`; audit-only dostaje disabled unavailable state | brak dalszego ownera dla podstawowego view session |
+| `Revoke access` nie ma handlera | zamknięte: `settings:write` + CSRF + typed confirm wykonuje jeden POST revoke, blokuje current session i odświeża row state | brak dalszego ownera dla podstawowego revoke |
 | User filter ma hard-coded role, nie użytkowników | zamknięte częściowo: static role select zastąpiony exact `User ID`, który wysyła `userId` | TASK-358-04 może dodać dynamiczny user picker/chips bez dodatkowego PII dla restricted `audit:read` |
 | `Custom range` nie pokazuje pickera | zamknięte: custom range pokazuje start/end date inputs i waliduje kompletność/kolejność | brak dalszego ownera dla podstawowego custom range |
 | Sliders button nie ma handlera | nadal niezamknięte, jawnie oznaczone jako unavailable `TASK-358-04` | TASK-358-04 musi dodać drawer albo usunąć przycisk |
@@ -79,15 +112,14 @@ Nie klikano: `Revoke access`, finalny export, zewnętrzne akcje sesji.
 Pierwotnie widok miał sensowny API client dla listy, ale UI wyprzedzał backend
 contract: szczegóły sesji, revoke, custom range, zaawansowane filtry,
 paginacja i export nie miały kontraktu wykonawczego. Po TASK-358-01 część
-listowa ma już server-side contract i realną paginację; nadal brakuje kontraktu
-sesji/revoke, exportu i advanced filters.
+listowa ma już server-side contract i realną paginację. Po TASK-358-02 kontrakt
+sesji/revoke też jest wykonawczy; nadal brakuje exportu i advanced filters.
 
 ## Jak naprawić
 
-- TASK-358-02: dodać session relation/realny session detail i revoke z
-  confirm modal, CSRF, RBAC silniejszym niż `audit:read`, self-lockout guard i
-  audit event; historyczne rows bez session relation muszą mieć unavailable
-  copy.
+- TASK-358-02: zamknięte przez `access_logs.session_id`, realny session focus,
+  confirm modal, CSRF, `settings:write`, self-lockout guard, audit event i
+  unavailable copy dla rows bez aktywnej sesji.
 - TASK-358-03: podłączyć export do API z aktywnymi filtrami, allowlistą kolumn,
   redakcją sekretów i download feedbackiem albo pokazać jawnie unavailable.
 - TASK-358-04: podłączyć sliders/advanced filters drawer i ewentualny dynamiczny

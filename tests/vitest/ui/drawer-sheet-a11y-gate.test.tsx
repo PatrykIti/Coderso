@@ -168,6 +168,16 @@ const accessLog: AccessLogItem = {
   method: "GET",
   path: "/admin",
   statusCode: 200,
+  session: {
+    state: "active",
+    label: "Active session",
+    sessionId: "session-1",
+    current: false,
+    expiresAt: "2026-06-02T10:00:00.000Z",
+    revokedAt: null,
+    view: { enabled: true },
+    revoke: { enabled: true },
+  },
 };
 
 const integration = {

@@ -16,6 +16,39 @@ export type AccessLogRecord = {
     field: "path" | "ip" | "user" | "email";
     label: string;
   } | null;
+  session: AccessLogSessionContext;
+};
+
+export type AccessLogSessionState =
+  | "none"
+  | "missing"
+  | "active"
+  | "current"
+  | "revoked"
+  | "expired";
+
+export type AccessLogSessionReason =
+  | "historical"
+  | "failed_attempt"
+  | "system"
+  | "missing_relation";
+
+export type AccessLogSessionAction = {
+  enabled: boolean;
+  reason?: string;
+};
+
+export type AccessLogSessionContext = {
+  state: AccessLogSessionState;
+  label: string;
+  reason?: AccessLogSessionReason;
+  sessionId?: string;
+  userId?: string;
+  current?: boolean;
+  expiresAt?: string | null;
+  revokedAt?: string | null;
+  view: AccessLogSessionAction;
+  revoke: AccessLogSessionAction;
 };
 
 export type AccessLogQuery = {
@@ -62,4 +95,23 @@ export async function listAccessLogs(query: AccessLogQuery = {}) {
     totalCount: response.totalCount ?? null,
     totalApprox: response.totalApprox ?? null,
   };
+}
+
+export async function revokeAccessFromLog(accessLogId: string) {
+  return apiRequest<{
+    ok: boolean;
+    accessLogId: string;
+    revokedSessionRef?: string;
+    targetUserRef?: string | null;
+    sessionState?: "revoked";
+    alreadyRevoked?: boolean;
+  }>(
+    `/access-logs/${encodeURIComponent(accessLogId)}/revoke`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "admin_manual_revoke" }),
+    },
+    { withCsrf: true }
+  );
 }

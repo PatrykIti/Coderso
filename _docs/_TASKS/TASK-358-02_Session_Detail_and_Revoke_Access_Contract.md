@@ -5,7 +5,7 @@
 **Category:** Admin UI + Access Logs + Sessions + Security
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-358-01, TASK-359-05, TASK-360-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -147,3 +147,26 @@ Error handling:
 - View/revoke actions are real or deterministically unavailable per row state.
 - Revoke uses a stronger permission than `audit:read`.
 - Self-lockout and already-revoked cases are explicitly handled and tested.
+
+## Completion Notes
+
+- Added nullable `access_logs.session_id` with migration `0057_known_nuke`,
+  snapshot metadata, and future request logging through `ctx.sessionId`.
+- Access log list rows now include deterministic session context for active,
+  current, revoked, expired, missing, failed, system, and historical rows.
+- Raw session details (`sessionId`, `userId`, `current`, `expiresAt`,
+  `revokedAt`) are only returned with `settings:read`; `audit:read` alone sees
+  state and unavailable copy.
+- `View full session` now navigates through canonical admin routing to
+  Settings Security Sessions with `sessionId` and, when permitted, `userId` so
+  another user's linked active session can be focused truthfully.
+- `POST /admin/api/access-logs/:id/revoke` is strict params/body validated,
+  protected by `settings:write`, CSRF, and `admin_write`, server-resolves the
+  target session from `access_logs.session_id`, blocks self-lockout, treats
+  already-revoked sessions idempotently, and emits safe audit refs.
+- The drawer uses real shared typed confirmation for revoke, refreshes the row
+  after success, and no longer exposes the old view/revoke no-op controls.
+- Playwright verified an `audit:read` restricted user can inspect the access log
+  but cannot view/revoke the linked session, while a `settings:read/write` user
+  can view and revoke another user's active linked session. Evidence screenshot:
+  `.tmp/task-358-02-session-revoke.png`.

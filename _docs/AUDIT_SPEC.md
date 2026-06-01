@@ -26,6 +26,7 @@ Minimalne logowanie zdarzen administracyjnych.
 - admin.role.duplicate
 - admin.role.delete
 - audit.export
+- access_logs.revoke_session
 
 ## Data model
 
@@ -62,6 +63,10 @@ Minimalne logowanie zdarzen administracyjnych.
   payloads. Export audit events record only format, selected columns, sanitized
   filter summary, row count, and request id; they must never store exported row
   contents.
+- Access-log session revoke audit events use safe reference keys only:
+  `accessLogRef`, `revokedSessionRef`, `targetUserRef`, `reason`, and `result`.
+  They must not include session cookies, token hashes, CSRF hashes, request
+  headers, or raw session secrets.
 
 ## API
 
@@ -167,6 +172,25 @@ reset the cursor stack. Malformed cursors map to `access_log_cursor_invalid` so
 the UI can reload the first page non-destructively. Search results may include
 `matchContext` labels such as `Matched user email` to explain hidden-field
 matches without adding new raw values to the table.
+
+Rows may include a `session` context derived from nullable
+`access_logs.session_id`. The list route remains `audit:read`, so raw
+`sessionId`, `userId`, `current`, `expiresAt`, and `revokedAt` are only included
+when the current admin also has `settings:read`. `userId` is used by the backed
+Settings Sessions focus flow for another user's active session; it is not
+accepted back from the browser by the revoke route. Session states are
+deterministic: `active`, `current`, `revoked`, `expired`, `none`, or `missing`.
+Historical rows without a session relation and failed/system rows render
+unavailable session actions and must not call revoke.
+
+`POST /access-logs/:id/revoke` is an internal admin write route protected by
+`settings:write`, global admin CSRF, and the `admin_write` rate-limit bucket.
+The browser sends only `{ "reason": "admin_manual_revoke" }`; the server resolves
+the target session from `access_logs.session_id`. Current-session revoke is
+blocked as `access_log_current_session_revoke_blocked`, missing session relation
+maps to `access_log_session_not_found`, expired sessions map to
+`access_log_session_expired`, and already-revoked sessions return idempotent
+success with `alreadyRevoked: true`.
 
 ## Admin Entry Copy Payload
 

@@ -170,7 +170,7 @@ Completion notes:
 
 ### TASK-358-02: Session Detail and Revoke Access Contract
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation decision:
 
@@ -238,6 +238,25 @@ Regression tests:
 - Confirm calls API once and refreshes row/session state.
 - Current session/self-lockout guard.
 - Backend RBAC/CSRF validation.
+
+Completion notes:
+
+- Added nullable `access_logs.session_id` plus full Drizzle migration artifacts
+  and logging updates so future post-auth access rows resolve deterministically
+  to sessions.
+- Access log rows now expose truthful session states and permission-gated
+  capabilities; audit-only users do not receive raw session ids, user ids,
+  session timing, or current-session booleans.
+- `View full session` is backed by Settings Security Sessions and carries
+  `sessionId` plus gated `userId` for another user's active linked session.
+- `Revoke access` posts one CSRF-protected `settings:write` request, resolves
+  the target session server-side, blocks self-lockout, handles expired/missing
+  sessions with mapped errors, and treats already-revoked sessions idempotently.
+- The access-log drawer uses the shared typed confirm dialog and refreshes the
+  open row to `Session already revoked` after success.
+- Playwright verified restricted `audit:read` disabled states and cross-user
+  settings-write view/revoke with screenshot evidence
+  `.tmp/task-358-02-session-revoke.png`.
 
 ### TASK-358-03: Access Logs Export
 

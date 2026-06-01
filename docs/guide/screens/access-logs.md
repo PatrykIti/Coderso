@@ -26,6 +26,8 @@ In the current UI, this screen includes:
   user, IP address, device/browser, timestamp, status, actions,
 - cursor-backed Previous/Next navigation,
 - a right-side `Access Log Details` drawer,
+- per-row session state with session detail/revoke actions when the linked
+  session is active and permissions allow it,
 - an export dialog scoped to the current filters.
 
 # Medium
@@ -70,11 +72,17 @@ events and their operational security context.
    - timestamp,
    - request,
    - duration,
-   - location & risk signal.
-11. `View full session` and `Revoke access` are unavailable until a supported
-    session workflow is enabled for the row.
-12. Use `Export CSV` only after the current filters match the right scope.
-13. In the export dialog, review:
+   - location & risk signal,
+   - session state.
+11. Use `View full session` only when the row shows an active/current linked
+    session and your account has session settings access. The target opens
+    `Security Sessions` focused on that session, including another user's
+    active session when your permissions allow it.
+12. Use `Revoke access` only when the row shows an active linked session and
+    your account has the required high-risk settings write permission. Confirm
+    the destructive action before revoking.
+13. Use `Export CSV` only after the current filters match the right scope.
+14. In the export dialog, review:
    - file format,
    - included fields,
    - filename,
@@ -102,6 +110,9 @@ Use this safe access-review order when you want fewer wrong conclusions:
   metadata.
 - Search results can show match labels such as `Matched user email` when the
   query matched a field that is not otherwise obvious in the row.
+- Session action availability is row-specific. Historical rows, failed attempts
+  without a session, expired sessions, already-revoked sessions, and the current
+  admin session show unavailable copy instead of firing a hidden request.
 - Successful and failed access events both matter. Repeated failures can be as
   important as a successful login from the wrong context.
 
@@ -115,8 +126,14 @@ Use this safe access-review order when you want fewer wrong conclusions:
   confirm both start and end dates are present and that the start date is not
   after the end date.
 - One event looks odd:
-  open `Access Log Details` and review request, duration, and device before
-  escalating.
+  open `Access Log Details` and review request, duration, device, and session
+  state before escalating.
+- `View full session` is disabled:
+  confirm the row has an active linked session and that your account can read
+  security session settings.
+- `Revoke access` is disabled:
+  confirm the linked session is active, is not your current session, and that
+  your account has the required settings write permission.
 - Export feels too broad:
   refine the filters first because the export uses the current filtered view.
 
@@ -146,4 +163,5 @@ Use this safe access-review order when you want fewer wrong conclusions:
 - Access-log exports can contain sensitive user and infrastructure context, so
   they should be handled as controlled security artifacts.
 - `Revoke access` is a real security action and should be used with deliberate
-  operational intent.
+  operational intent. It requires a stronger permission than `audit:read` and
+  is protected by CSRF plus a confirmation step.

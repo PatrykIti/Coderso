@@ -25,6 +25,7 @@ import {
 import { isApiClientError } from "@/services/apiClient";
 import {
   listAccessLogs,
+  revokeAccessFromLog,
   type AccessLogListResponse,
   type AccessLogQuery,
   type AccessLogRecord,
@@ -32,6 +33,9 @@ import {
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { ExportDialog } from "@/ui/shared/ExportDialog";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
+import { resolveAdminBasePath, resolveAdminHref } from "@/utils/adminPaths";
 import { resolveTruthfulCountCopy } from "../../../services/admin/adminQueryConventions";
 
 import { AccessLogDetailsDrawer } from "./AccessLogDetailsDrawer";
@@ -56,6 +60,20 @@ const firstAccessPageState = (): AccessPageState => ({
 
 const buildAccessCountCopy = (response: AccessLogListResponse) => {
   return resolveTruthfulCountCopy(response, { resourceLabel: "access logs" });
+};
+
+const unresolvedSessionContext = {
+  state: "none" as const,
+  label: "Historical log without session link",
+  reason: "historical" as const,
+  view: {
+    enabled: false,
+    reason: "Historical log without session link",
+  },
+  revoke: {
+    enabled: false,
+    reason: "Historical log without session link",
+  },
 };
 
 const toDateBoundary = (value: string, boundary: "start" | "end") =>
@@ -181,6 +199,7 @@ const mapAccessLog = (log: AccessLogRecord): AccessLogItem => {
     durationMs: log.durationMs ?? null,
     userAgent: log.userAgent ?? null,
     matchContext: log.matchContext ?? null,
+    session: log.session ?? unresolvedSessionContext,
     device: {
       label: device.label,
       icon: device.icon,
@@ -194,9 +213,12 @@ const mapAccessLog = (log: AccessLogRecord): AccessLogItem => {
 };
 
 export function AccessLogsPage() {
+  const adminRouter = useOptionalAdminRouter();
   const [selectedLog, setSelectedLog] = useState<AccessLogItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [pendingRevokeLog, setPendingRevokeLog] = useState<AccessLogItem | null>(null);
+  const [isRevoking, setIsRevoking] = useState(false);
   const [query, setQuery] = useState("");
   const [userIdFilter, setUserIdFilter] = useState("");
   const [dateRange, setDateRange] = useState<AccessDateRange>("last-7-days");
@@ -211,11 +233,36 @@ export function AccessLogsPage() {
   const [nextCursor, setNextCursor] = useState<AccessCursor>(null);
   const [pageRequest, setPageRequest] = useState<AccessPageState>(() => firstAccessPageState());
   const [loadedPage, setLoadedPage] = useState<AccessPageState>(() => firstAccessPageState());
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   const handleViewLog = (log: AccessLogItem) => {
     setSelectedLog(log);
     setDrawerOpen(true);
   };
+
+  const handleViewSession = useCallback(
+    (log: AccessLogItem) => {
+      if (!log.session.view.enabled || !log.session.sessionId) return;
+      const params = new URLSearchParams({ sessionId: log.session.sessionId });
+      if (log.session.userId) params.set("userId", log.session.userId);
+      const href = `/settings/security/sessions?${params.toString()}`;
+      setDrawerOpen(false);
+      if (adminRouter) {
+        adminRouter.navigate(href);
+        return;
+      }
+      if (typeof window !== "undefined") {
+        const basePath = resolveAdminBasePath(window.location.pathname);
+        window.location.assign(resolveAdminHref(basePath, href));
+      }
+    },
+    [adminRouter]
+  );
+
+  const handleRequestRevoke = useCallback((log: AccessLogItem) => {
+    if (!log.session.revoke.enabled) return;
+    setPendingRevokeLog(log);
+  }, []);
 
   const { query: baseAccessQuery, validationError } = useMemo(
     () =>
@@ -249,8 +296,13 @@ export function AccessLogsPage() {
     listAccessLogs(accessQuery)
       .then((response) => {
         if (!active) return;
+        const mappedLogs = response.items.map(mapAccessLog);
         setError(null);
-        setLogs(response.items.map(mapAccessLog));
+        setLogs(mappedLogs);
+        setSelectedLog((current) => {
+          if (!current) return current;
+          return mappedLogs.find((item) => item.id === current.id) ?? current;
+        });
         setCountCopy(buildAccessCountCopy(response));
         setNextCursor(response.nextCursor ?? null);
         setLoadedPage(requestedPage);
@@ -276,7 +328,28 @@ export function AccessLogsPage() {
     return () => {
       active = false;
     };
-  }, [accessQuery, pageRequest, validationError]);
+  }, [accessQuery, pageRequest, reloadNonce, validationError]);
+
+  const handleConfirmRevoke = useCallback(async () => {
+    if (!pendingRevokeLog) return;
+    setIsRevoking(true);
+    try {
+      const result = await revokeAccessFromLog(pendingRevokeLog.id);
+      setNotice(
+        result.alreadyRevoked
+          ? "Access session was already revoked. Showing refreshed access logs."
+          : "Access session revoked. Showing refreshed access logs."
+      );
+      setReloadNonce((value) => value + 1);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        throw new Error(err.message);
+      }
+      throw err;
+    } finally {
+      setIsRevoking(false);
+    }
+  }, [pendingRevokeLog]);
 
   const startFilterRefresh = () => {
     setIsLoading(true);
@@ -456,7 +529,35 @@ export function AccessLogsPage() {
           }}
         />
       </div>
-      <AccessLogDetailsDrawer log={selectedLog} open={drawerOpen} onOpenChange={setDrawerOpen} />
+      <AccessLogDetailsDrawer
+        log={selectedLog}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onViewSession={handleViewSession}
+        onRequestRevoke={handleRequestRevoke}
+        isRevoking={isRevoking}
+      />
+      <ConfirmActionDialog
+        open={Boolean(pendingRevokeLog)}
+        onOpenChange={(open) => {
+          if (!open) setPendingRevokeLog(null);
+        }}
+        title="Revoke access session"
+        description="This will end the active session linked to the selected access log."
+        confirmLabel="Revoke access"
+        confirmingLabel="Revoking..."
+        isConfirming={isRevoking}
+        targetLabel={
+          pendingRevokeLog
+            ? `${pendingRevokeLog.user.name} · ${pendingRevokeLog.ipAddress} · ${pendingRevokeLog.device.label}`
+            : undefined
+        }
+        requireTypedValue="REVOKE"
+        onConfirm={handleConfirmRevoke}
+      >
+        The user will be signed out from that session. Current sessions cannot be revoked from
+        access logs.
+      </ConfirmActionDialog>
       <ExportDialog
         open={exportOpen}
         onOpenChange={setExportOpen}

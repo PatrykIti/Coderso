@@ -14,18 +14,26 @@ import {
 
 import type { AccessLogItem } from "./types";
 
-const sessionDetailsUnavailableReason =
-  "Full session details are not wired yet. TASK-358-02 owns the session detail route.";
-const revokeAccessUnavailableReason =
-  "Revoke access is not wired yet. TASK-358-02 owns revoke security and confirmation.";
-
 type AccessLogDetailsDrawerProps = {
   log: AccessLogItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onViewSession?: (log: AccessLogItem) => void;
+  onRequestRevoke?: (log: AccessLogItem) => void;
+  isRevoking?: boolean;
 };
 
-export function AccessLogDetailsDrawer({ log, open, onOpenChange }: AccessLogDetailsDrawerProps) {
+export function AccessLogDetailsDrawer({
+  log,
+  open,
+  onOpenChange,
+  onViewSession,
+  onRequestRevoke,
+  isRevoking = false,
+}: AccessLogDetailsDrawerProps) {
+  const canViewSession = Boolean(log?.session.view.enabled);
+  const canRevokeSession = Boolean(log?.session.revoke.enabled);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -110,6 +118,22 @@ export function AccessLogDetailsDrawer({ log, open, onOpenChange }: AccessLogDet
                     Signal: Low risk · Known device · No geo anomalies detected.
                   </div>
                 </div>
+                <Separator />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    Session state
+                  </div>
+                  <div className="rounded-xl border bg-muted/30 p-4 text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground">{log.session.label}</p>
+                    {!log.session.view.enabled && log.session.view.reason ? (
+                      <p className="mt-1">{log.session.view.reason}</p>
+                    ) : null}
+                    {!log.session.revoke.enabled && log.session.revoke.reason ? (
+                      <p className="mt-1">{log.session.revoke.reason}</p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             </ScrollArea>
             <Separator />
@@ -118,9 +142,11 @@ export function AccessLogDetailsDrawer({ log, open, onOpenChange }: AccessLogDet
                 <Button
                   variant="outline"
                   className="gap-2"
-                  disabled
-                  title={sessionDetailsUnavailableReason}
-                  data-no-op-control="access-view-full-session"
+                  disabled={!canViewSession}
+                  title={canViewSession ? undefined : log.session.view.reason}
+                  onClick={() => {
+                    if (log.session.view.enabled) onViewSession?.(log);
+                  }}
                 >
                   <Clock className="h-4 w-4" />
                   View full session
@@ -128,12 +154,14 @@ export function AccessLogDetailsDrawer({ log, open, onOpenChange }: AccessLogDet
                 <Button
                   variant="destructive"
                   className="gap-2"
-                  disabled
-                  title={revokeAccessUnavailableReason}
-                  data-no-op-control="access-revoke-access"
+                  disabled={!canRevokeSession || isRevoking}
+                  title={canRevokeSession ? undefined : log.session.revoke.reason}
+                  onClick={() => {
+                    if (log.session.revoke.enabled) onRequestRevoke?.(log);
+                  }}
                 >
                   <Lock className="h-4 w-4" />
-                  Revoke access
+                  {isRevoking ? "Revoking..." : "Revoke access"}
                 </Button>
               </div>
             </div>
