@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1040 | 2026-06-01 | TASK-353 Redirects remediation plan | Admin Tools/Redirects/Public Runtime/API/UI/QA/Docs |
 | 1039 | 2026-06-01 | TASK-352 Import Export remediation plan | Admin Tools/Import Export/API/Validation/UI/QA/Docs |
 | 1038 | 2026-06-01 | TASK-351 Backups remediation plan | Admin Tools/Backups/API/Runtime/Storage/QA/Docs |
 | 1037 | 2026-06-01 | TASK-350 Analytics remediation plan | Admin Tools/Analytics/API/UI/QA/Docs |

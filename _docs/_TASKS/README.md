@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 34 tasks
+- **To Do:** 39 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2007 tasks
 
@@ -38,6 +38,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-353 | Redirects Tools Report Remediation | High | Very Large | New report-driven family for public redirect execution, drawer a11y, pagination/empty state, delete UI, and closure proof. |
+| TASK-353-01 | Public Redirect Runtime Resolver and Loop Prevention | High | Large | Make enabled admin redirects affect public HTTP responses with status-code and loop/open-redirect safeguards. |
+| TASK-353-02 | Redirects Drawer Accessibility, Empty State, and Pagination UX | High | Medium | Add Sheet title/description wiring, inline empty create CTA, and real or disabled pagination. |
+| TASK-353-03 | Redirect Delete UI, Confirmation, and Cache State Contract | Medium | Medium | Expose supported redirect deletion through confirmed UI or document API-only rationale. |
+| TASK-353-04 | Redirects QA, Docs, and Closure | Medium | Medium | Prove public statuses, disabled/no-match/loop behavior, admin UI, and report/changelog closure. |
 | TASK-352 | Import Export Tools Report Remediation | High | Very Large | New report-driven family for export options, import validation, activity/progress/retry, file-type truthfulness, and closure proof. |
 | TASK-352-01 | Export Target and Include Options Contract | High | Large | Make export card targets/options affect bundle shape or remove unsupported controls. |
 | TASK-352-02 | Import Bundle Validation and Error Mapping | High | Large | Reject malformed IDs during preview/apply and map import errors without raw DB 500s. |
