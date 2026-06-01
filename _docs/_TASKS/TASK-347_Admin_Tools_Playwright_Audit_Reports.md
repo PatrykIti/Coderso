@@ -129,8 +129,21 @@ No production API routes are added or changed.
 - Claude CLI was retried through the correct non-interactive stdin flow and
   still failed on its own API authentication with
   `401 Invalid authentication credentials`.
+- After Claude authentication was restored, Claude CLI was rerun outside the
+  Codex sandbox with `--dangerously-skip-permissions`; it reused a logged-in
+  Playwright session and clicked through all six Tools routes for a user-facing
+  UX review.
+- The Claude UX addendum was added under
+  `_docs/PLAYWRIGHT/31-05-2026-tools/REPORT_CLAUDE_UX_REVIEW.md`.
+- The temporary admin user created only for the isolated Playwright login was
+  removed after the pass.
+- A local setup issue was discovered during that run: the seed-admin script
+  hashes the bootstrap password without the pepper-aware `hashPassword` helper,
+  while login verification uses the pepper-aware path.
 - The local security session policy was verified at `maxPerUser: 30`.
 - Validation passed:
   - `git diff --check` after the deep-pass report updates
   - `bun --cwd core lint` after the deep-pass report updates
   - `bun --cwd core lint:types` after the deep-pass report updates
+  - `git diff --check` after the Claude UX addendum
+  - `bun run precommit` after the Claude UX addendum

@@ -24,6 +24,7 @@ sidebar:
 - [Backups](REPORT_BACKUPS.md)
 - [Import / Export](REPORT_IMPORT_EXPORT.md)
 - [Redirects](REPORT_REDIRECTS.md)
+- [Claude UX review](REPORT_CLAUDE_UX_REVIEW.md)
 
 ## Method
 
@@ -40,9 +41,12 @@ sidebar:
 - The credential note available during the task was stale for this checkout, so
   the audit used a temporary backend-created admin session instead of resetting
   the shared admin password.
-- Claude CLI was attempted outside its sandbox, but its own API authentication
-  failed with `401 Invalid authentication credentials`; the reports therefore
-  rely on Playwright evidence and local code review.
+- Claude CLI was initially attempted outside its sandbox, but its own API
+  authentication failed with `401 Invalid authentication credentials`.
+- After Claude authentication was restored on 2026-06-01, Claude CLI was rerun
+  outside the Codex sandbox with `--dangerously-skip-permissions` and a
+  logged-in Playwright session. That pass clicked through all Tools routes and
+  produced the dedicated UX addendum linked above.
 
 ## Deep-Pass Outcome
 
@@ -58,3 +62,7 @@ sidebar:
   during apply with a server 500.
 - Redirects created an admin redirect row, but the public runtime returned 404
   for the source path instead of redirecting.
+- Claude's later UX pass independently flagged the same rough edges from a user
+  perspective: unclear empty states, queued backups with disabled actions,
+  incomplete Search suggestions, missing Import / Export error details, and
+  zero-result pagination/CTA gaps.

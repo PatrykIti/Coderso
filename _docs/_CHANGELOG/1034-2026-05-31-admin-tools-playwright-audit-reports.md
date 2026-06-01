@@ -17,6 +17,11 @@ Tasks: TASK-347
 - Expanded the report set with deeper 2026-06-01 evidence using real fixtures:
   Search page lookup, SEO save/public-page check, Analytics top-content data,
   manual backup creation, Import / Export roundtrip, and public redirect check.
+- Added a Claude CLI UX addendum after Claude authentication was restored and
+  rerun outside the Codex sandbox against a logged-in Playwright session.
+- Recorded the setup finding that the seed-admin path can create unusable
+  credentials when `AUTH_PASSWORD_PEPPER` is configured because it bypasses the
+  pepper-aware password helper used by login.
 
 ## Validation
 
@@ -28,6 +33,11 @@ Tasks: TASK-347
 - A deeper Playwright pass created/cleaned test fixtures and captured the
   remaining end-to-end failures for SEO runtime output, backup artifacts, and
   public redirects.
+- Claude CLI clicked through all Tools routes in a logged-in browser session and
+  returned UX findings for Search, SEO Manager, Analytics, Backups, Import /
+  Export, and Redirects.
 - Passed `git diff --check` after the deep-pass report updates.
 - Passed `bun --cwd core lint` and `bun --cwd core lint:types` after the
   deep-pass report updates.
+- Passed `git diff --check` and `bun run precommit` after the Claude UX
+  addendum.
