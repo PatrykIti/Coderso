@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 10 tasks
+- **To Do:** 14 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2007 tasks
 
@@ -38,6 +38,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-348 | Search Tools Report Remediation | High | Large | New report-driven family for Search date-range truthfulness, empty-state UX, suggestions, and result-navigation proof. |
+| TASK-348-01 | Search Date Range API and Service Contract | High | Medium | Make the Date Range select controlled, validated, serialized, and applied by the Search service. |
+| TASK-348-02 | Search Suggestions, Empty States, and Category UX | High | Medium | Fill empty `Try:` suggestions and split no-data/no-match/filter-empty/category helper states. |
+| TASK-348-03 | Search Result Navigation Proof, Docs, and Closure | Medium | Medium | Prove supported result destinations with richer fixtures and close Search report/docs/changelog evidence. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
