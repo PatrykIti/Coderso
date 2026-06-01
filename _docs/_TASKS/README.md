@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 27 tasks
+- **To Do:** 21 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2025 tasks
+- **Done:** 2031 tasks
 
 ---
 
@@ -49,12 +49,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-353-02 | Redirects Drawer Accessibility, Empty State, and Pagination UX | High | Medium | Add Sheet title/description wiring, inline empty create CTA, and real or disabled pagination. |
 | TASK-353-03 | Redirect Delete UI, Confirmation, and Cache State Contract | Medium | Medium | Expose supported redirect deletion through confirmed UI or document API-only rationale. |
 | TASK-353-04 | Redirects QA, Docs, and Closure | Medium | Medium | Prove public statuses, disabled/no-match/loop behavior, admin UI, and report/changelog closure. |
-| TASK-352 | Import Export Tools Report Remediation | High | Very Large | New report-driven family for export options, import validation, activity/progress/retry, file-type truthfulness, and closure proof. |
-| TASK-352-01 | Export Target and Include Options Contract | High | Large | Make export card targets/options affect bundle shape or remove unsupported controls. |
-| TASK-352-02 | Import Bundle Validation and Error Mapping | High | Large | Reject malformed IDs during preview/apply and map import errors without raw DB 500s. |
-| TASK-352-03 | Import Activity History, Progress, Failure Reason, and Retry UX | Medium | Large | Replace static Recent Imports with searchable, truthful activity/progress/retry behavior or explicit unavailable state. |
-| TASK-352-04 | Import Export File-Type and Options-Control Truthfulness | Medium | Medium | Align supported file-type copy/input/parser and wire or disable per-card chevrons. |
-| TASK-352-05 | Import Export QA, Docs, and Closure | Medium | Medium | Prove export/import roundtrip, malformed-bundle rejection, activity controls, and docs/changelog closure. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -81,6 +75,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-352 | Import Export Tools Report Remediation | High | Very Large | Done (2026-06-01): export target/include options are real, partial bundle scope is safe, import validation rejects malformed IDs, JSON-only copy is aligned, and session activity/search/progress is truthful. |
+| TASK-352-01 | Export Target and Include Options Contract | High | Large | Done (2026-06-01): supported configuration export cards serialize target/include options and filtered JSON bundle scope. |
+| TASK-352-02 | Import Bundle Validation and Error Mapping | High | Large | Done (2026-06-01): preview/apply share UUID, duplicate path, and admin-theme reference validation with mapped API errors. |
+| TASK-352-03 | Import Activity History, Progress, Failure Reason, and Retry UX | Medium | Large | Done (2026-06-01): session-local Recent Imports search, progress, failure reason, and Upload again action replaced static fixture rows. |
+| TASK-352-04 | Import Export File-Type and Options-Control Truthfulness | Medium | Medium | Done (2026-06-01): import is JSON-only and per-card advanced chevrons are disabled with explanatory labels. |
+| TASK-352-05 | Import Export QA, Docs, and Closure | Medium | Medium | Done (2026-06-01): focused tests, lint/typecheck, browser proof, reports, docs, and changelog are synchronized. |
 | TASK-351 | Backups Tools Report Remediation | High | Very Large | Done (2026-06-01): include options are controlled/validated, v1 external-worker queue semantics are explicit, restore/download/delete are status-aware, pagination is real, and docs/browser proof are synchronized. |
 | TASK-351-01 | Backup Include Options Schema and Manual Request Contract | High | Medium | Done (2026-06-01): manual backup include checkboxes now serialize through client/route/service validation and audit option-key metadata. |
 | TASK-351-02 | Backup Execution, Artifact, Restore, Download, and Delete Contract | High | Very Large | Done (2026-06-01): metadata-only external-worker boundary is explicit, download/restore reject unsafe states, and delete removes only target backup metadata rows. |

@@ -5,7 +5,7 @@
 **Category:** Admin Tools + Import Export + API + Validation + UI + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-347
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -41,11 +41,30 @@ configuration. The remaining issues are:
 
 ## Sub-Tasks
 
-- [ ] TASK-352-01: Export Target and Include Options Contract
-- [ ] TASK-352-02: Import Bundle Validation and Error Mapping
-- [ ] TASK-352-03: Import Activity History, Progress, Failure Reason, and Retry UX
-- [ ] TASK-352-04: Import Export File-Type and Options-Control Truthfulness
-- [ ] TASK-352-05: Import Export QA, Docs, and Closure
+- [x] TASK-352-01: Export Target and Include Options Contract
+- [x] TASK-352-02: Import Bundle Validation and Error Mapping
+- [x] TASK-352-03: Import Activity History, Progress, Failure Reason, and Retry UX
+- [x] TASK-352-04: Import Export File-Type and Options-Control Truthfulness
+- [x] TASK-352-05: Import Export QA, Docs, and Closure
+
+## Closure Notes
+
+Done (2026-06-01):
+
+- Export cards now match the real supported configuration bundle surfaces:
+  Site Settings, Navigation Menus, Theme Configuration, and Redirect Rules.
+- Export target/include options are controlled in the UI, serialized by the
+  admin client, validated at the route boundary, and reflected in bundle shape.
+- Partial exports carry `scope` metadata so importing a targeted bundle mutates
+  only the selected sections instead of treating omitted sections as deletes.
+- Import preview/apply share UUID, duplicate-route, duplicate-redirect, admin
+  theme reference, and redirect validation, with known domain failures mapped
+  to `ApiError` responses.
+- Recent Imports is session-local, searchable, shows real operation status,
+  progress and failure reason, and offers a truthful `Upload again` action
+  instead of static CSV/ZIP fixture rows.
+- CSV/ZIP copy was removed; the import surface is JSON-only until real parsers
+  and backend contracts exist.
 
 ## Implementation Order
 

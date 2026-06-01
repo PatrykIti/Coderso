@@ -218,6 +218,12 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cached APIs: none; intentionally uncached because list pagination, queued
     jobs, worker health, artifact readiness, and destructive action state must
     come from the current server response.
+- Import / Export
+  - UI: `core/admin/ui/import-export/ImportExportPage.tsx`,
+    `core/admin/ui/import-export/ImportDropzone.tsx`
+  - Cached APIs: none; intentionally uncached because exports can contain
+    controlled configuration data and Recent Imports is session-local React
+    state only.
 - Admin UI themes
   - UI: `core/admin/ui/themes/ThemesPage.tsx`
   - Cached APIs: `listAdminThemeTemplatesCached`, `getCachedAdminThemeTemplates`, `listAdminThemeProfilesCached`, `getCachedAdminThemeProfiles`

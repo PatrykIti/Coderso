@@ -5,7 +5,7 @@
 **Category:** Import Export + Admin UI + UX + Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-352-01, TASK-352-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -107,3 +107,9 @@ added:
 - The dropzone no longer advertises unsupported formats.
 - Per-card chevrons are functional or visibly unavailable.
 - File-type validation copy, input accept list, and parser behavior are aligned.
+
+## Closure Notes
+
+Done (2026-06-01): import copy, file input accept list, client parser, and
+validation messages are JSON-only. Per-card chevrons are disabled and labeled
+as unavailable until an advanced export menu exists.

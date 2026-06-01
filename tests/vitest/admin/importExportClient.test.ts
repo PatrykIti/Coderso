@@ -31,6 +31,27 @@ test("exportConfig hits GET /tools/export", async () => {
   }
 });
 
+test("exportConfig serializes target and include options", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ version: 1, exportedAt: "now" });
+  };
+
+  try {
+    await exportConfig({
+      target: "menus",
+      include: ["menus", "menu-items"],
+    });
+    expect(calls[0]?.input).toBe("/admin/api/tools/export?target=menus&include=menus%2Cmenu-items");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("previewImport uses CSRF and POST", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -41,7 +62,19 @@ test("previewImport uses CSRF and POST", async () => {
     if (url.endsWith("/auth/csrf")) {
       return jsonResponse({ token: "csrf-token" });
     }
-    return jsonResponse({ summary: { settings: 0, menus: 0, menuItems: 0, themeProfiles: 0, themeRoutes: 0, adminThemeTemplates: 0, adminThemeProfiles: 0, redirects: 0, warnings: [] } });
+    return jsonResponse({
+      summary: {
+        settings: 0,
+        menus: 0,
+        menuItems: 0,
+        themeProfiles: 0,
+        themeRoutes: 0,
+        adminThemeTemplates: 0,
+        adminThemeProfiles: 0,
+        redirects: 0,
+        warnings: [],
+      },
+    });
   };
 
   try {
@@ -73,7 +106,19 @@ test("importConfig uses CSRF and POST", async () => {
     if (url.endsWith("/auth/csrf")) {
       return jsonResponse({ token: "csrf-token" });
     }
-    return jsonResponse({ summary: { settings: 0, menus: 0, menuItems: 0, themeProfiles: 0, themeRoutes: 0, adminThemeTemplates: 0, adminThemeProfiles: 0, redirects: 0, warnings: [] } });
+    return jsonResponse({
+      summary: {
+        settings: 0,
+        menus: 0,
+        menuItems: 0,
+        themeProfiles: 0,
+        themeRoutes: 0,
+        adminThemeTemplates: 0,
+        adminThemeProfiles: 0,
+        redirects: 0,
+        warnings: [],
+      },
+    });
   };
 
   try {

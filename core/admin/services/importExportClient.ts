@@ -3,6 +3,7 @@ import { apiRequest } from "./apiClient";
 export type ExportBundle = {
   version: number;
   exportedAt: string;
+  scope?: ExportScope;
   settings: Record<string, unknown>;
   menus: Array<{
     id?: string;
@@ -47,10 +48,33 @@ export type ExportBundle = {
   };
   redirects: Array<{
     id?: string;
-    from: string;
-    to: string;
-    status: number;
+    fromPath: string;
+    toPath: string;
+    statusCode: 301 | 302 | 307 | 308;
+    enabled: boolean;
   }>;
+};
+
+export type ExportTarget = "full" | "settings" | "menus" | "themes" | "redirects";
+
+export type ExportIncludeOption =
+  | "settings"
+  | "menus"
+  | "menu-items"
+  | "theme-profiles"
+  | "theme-routes"
+  | "admin-theme-templates"
+  | "admin-theme-profiles"
+  | "redirects";
+
+export type ExportScope = {
+  target: ExportTarget;
+  include: ExportIncludeOption[];
+};
+
+export type ExportRequest = {
+  target?: ExportTarget;
+  include?: ExportIncludeOption[];
 };
 
 export type ImportSummary = {
@@ -69,8 +93,16 @@ export type ImportResult = {
   summary: ImportSummary;
 };
 
-export async function exportConfig() {
-  return apiRequest<ExportBundle>("/tools/export", { method: "GET" });
+export async function exportConfig(request: ExportRequest = {}) {
+  const params = new URLSearchParams();
+  if (request.target) params.set("target", request.target);
+  if (request.include && request.include.length > 0) {
+    params.set("include", request.include.join(","));
+  }
+  const query = params.toString();
+  return apiRequest<ExportBundle>(`/tools/export${query ? `?${query}` : ""}`, {
+    method: "GET",
+  });
 }
 
 export async function previewImport(bundle: ExportBundle) {

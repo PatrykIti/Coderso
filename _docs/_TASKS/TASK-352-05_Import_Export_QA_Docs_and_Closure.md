@@ -5,7 +5,7 @@
 **Category:** Import Export + Playwright + Docs + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-352-01, TASK-352-02, TASK-352-03, TASK-352-04
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -94,3 +94,11 @@ No additional route changes are expected in this closure leaf.
 - Activity/history and UI-only controls are resolved or truthfully unavailable.
 - Source references in reports point to current `core/admin/services/*` and
   `core/server/routes/*` paths before the family is closed.
+
+## Closure Notes
+
+Done (2026-06-01): focused Bun/Vitest/lint/typecheck coverage passed for the
+route, service, client, and UI contracts. Focused Chromium proof was run after
+implementation to verify target/include export, invalid JSON and malformed-ID
+rejection, valid JSON preview/apply/restore, local activity search/progress,
+and disabled unavailable controls.

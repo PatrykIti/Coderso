@@ -5,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { isApiClientError } from "@/services/apiClient";
-import { exportConfig } from "@/services/importExportClient";
+import { exportConfig, type ExportRequest } from "@/services/importExportClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
@@ -16,18 +16,20 @@ export function ImportExportPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleExport = useCallback(async () => {
+  const handleExport = useCallback(async (request: ExportRequest) => {
     setIsExporting(true);
     setError(null);
     try {
-      const bundle = await exportConfig();
+      const bundle = await exportConfig(request);
       const blob = new Blob([JSON.stringify(bundle, null, 2)], {
         type: "application/json",
       });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `coderso-export-${bundle.exportedAt}.json`;
+      const target = request.target ?? bundle.scope?.target ?? "full";
+      const exportedAt = bundle.exportedAt.replace(/[:.]/g, "-");
+      anchor.download = `coderso-export-${target}-${exportedAt}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -46,7 +48,13 @@ export function ImportExportPage() {
       activeHref="/admin/tools/import-export"
       breadcrumbs={["Data", "Import & Export"]}
       topbarActions={
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          disabled
+          title="Import activity is shown in Recent Imports for this session."
+        >
           <History className="h-4 w-4" />
           Activity Log
         </Button>
@@ -65,7 +73,7 @@ export function ImportExportPage() {
           <div className="space-y-1">
             <h2 className="text-xl font-semibold">Export Data</h2>
             <p className="text-sm text-muted-foreground">
-              Select modules and data types to download as portable files.
+              Select supported configuration sections to download as JSON bundles.
             </p>
           </div>
           <ExportCards onExport={handleExport} isExporting={isExporting} />
@@ -77,7 +85,7 @@ export function ImportExportPage() {
           <div className="space-y-1">
             <h2 className="text-xl font-semibold">Import Data</h2>
             <p className="text-sm text-muted-foreground">
-              Upload JSON or CSV files to populate your CMS content.
+              Upload JSON configuration bundles to preview and apply changes.
             </p>
           </div>
           <ImportDropzone />

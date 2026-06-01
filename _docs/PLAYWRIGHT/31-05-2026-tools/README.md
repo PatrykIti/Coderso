@@ -58,8 +58,9 @@ sidebar:
 - Backups created a queued backup row, but no artifact, size, download, restore,
   or completion path was produced.
 - Import / Export successfully downloaded, previewed, applied, verified, and
-  restored a valid JSON bundle. A malformed menu id passed preview but failed
-  during apply with a server 500.
+  restored a valid JSON bundle. TASK-352 later closed the malformed menu-id
+  drift: preview/apply now reject invalid UUIDs with mapped validation errors
+  before database persistence.
 - Redirects created an admin redirect row, but the public runtime returned 404
   for the source path instead of redirecting.
 - Claude's later UX pass independently flagged the same rough edges from a user

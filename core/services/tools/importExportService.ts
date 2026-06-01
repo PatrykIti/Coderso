@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import {
@@ -7,6 +7,7 @@ import {
   adminThemeTemplates,
   menus,
   pages,
+  redirects,
   themeProfiles,
   themeRoutes,
 } from "../../db/schema";
@@ -18,42 +19,120 @@ import { listSettings, setSettings } from "../settings/settingsService";
 import { listThemeProfiles } from "../themes/themeProfileService";
 import { assertTokenOverrides } from "../theme/tokenValidation";
 import { listThemes } from "../themes/themeService";
-import type {
-  ExportAdminThemeProfile,
-  ExportAdminThemeTemplate,
-  ExportBundle,
-  ExportMenu,
-  ExportMenuItem,
-  ExportRedirect,
-  ExportThemeProfile,
-  ImportResult,
-  ImportSummary,
+import {
+  exportIncludeOptions,
+  exportTargets,
+  type ExportAdminThemeProfile,
+  type ExportAdminThemeTemplate,
+  type ExportBundle,
+  type ExportIncludeOption,
+  type ExportMenu,
+  type ExportMenuItem,
+  type ExportRedirect,
+  type ExportRequest,
+  type ExportScope,
+  type ExportTarget,
+  type ExportThemeProfile,
+  type ImportResult,
+  type ImportSummary,
 } from "./importExportTypes";
 
 const BUNDLE_VERSION = 1;
+const uuidPattern =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
+const redirectStatusCodes = new Set([301, 302, 307, 308]);
+
+const targetIncludeOptions: Record<ExportTarget, ExportIncludeOption[]> = {
+  full: [...exportIncludeOptions],
+  settings: ["settings"],
+  menus: ["menus", "menu-items"],
+  themes: ["theme-profiles", "theme-routes", "admin-theme-templates", "admin-theme-profiles"],
+  redirects: ["redirects"],
+};
+
+const isExportTarget = (value: unknown): value is ExportTarget =>
+  typeof value === "string" && (exportTargets as readonly string[]).includes(value);
+
+const isExportIncludeOption = (value: unknown): value is ExportIncludeOption =>
+  typeof value === "string" && (exportIncludeOptions as readonly string[]).includes(value);
+
+export function normalizeExportRequest(input: ExportRequest = {}): ExportScope {
+  const target = input.target ?? "full";
+  if (!isExportTarget(target)) {
+    throw new Error("export_target_invalid");
+  }
+
+  if (input.include !== undefined && !Array.isArray(input.include)) {
+    throw new Error("export_include_invalid");
+  }
+
+  const allowed = targetIncludeOptions[target];
+  const include = input.include === undefined ? allowed : Array.from(new Set(input.include));
+  if (include.length === 0) {
+    throw new Error("export_include_required");
+  }
+
+  for (const option of include) {
+    if (!isExportIncludeOption(option) || !allowed.includes(option)) {
+      throw new Error("export_include_invalid");
+    }
+  }
+
+  return { target, include };
+}
+
+const resolveImportScope = (bundle: ExportBundle): ExportScope => {
+  if (!bundle.scope) {
+    return normalizeExportRequest({ target: "full" });
+  }
+  return normalizeExportRequest(bundle.scope);
+};
+
+const includesOption = (scope: ExportScope, option: ExportIncludeOption) =>
+  scope.include.includes(option);
+
+const assertOptionalUuid = (value: unknown, code: string) => {
+  if (value === undefined || value === null) return;
+  if (typeof value !== "string" || !uuidPattern.test(value)) {
+    throw new Error(code);
+  }
+};
+
+const assertRequiredUuid = (value: unknown, code: string) => {
+  if (typeof value !== "string" || !uuidPattern.test(value)) {
+    throw new Error(code);
+  }
+};
 
 const buildSummary = (bundle: ExportBundle, warnings: string[] = []): ImportSummary => {
-  const menusCount = bundle.menus.length;
-  const menuItemsCount = bundle.menus.reduce(
-    (total, menu) => total + menu.items.length,
-    0
-  );
-  const themeProfilesCount = bundle.themeProfiles.length;
-  const themeRoutesCount = bundle.themeProfiles.reduce(
-    (total, profile) => total + profile.routes.length,
-    0
-  );
-  const adminTemplatesCount = bundle.adminThemes.templates.length;
-  const adminProfilesCount = bundle.adminThemes.profiles.length;
+  const scope = resolveImportScope(bundle);
+  const menusCount = includesOption(scope, "menus") ? bundle.menus.length : 0;
+  const menuItemsCount =
+    includesOption(scope, "menus") && includesOption(scope, "menu-items")
+      ? bundle.menus.reduce((total, menu) => total + menu.items.length, 0)
+      : 0;
+  const themeProfilesCount = includesOption(scope, "theme-profiles")
+    ? bundle.themeProfiles.length
+    : 0;
+  const themeRoutesCount =
+    includesOption(scope, "theme-profiles") && includesOption(scope, "theme-routes")
+      ? bundle.themeProfiles.reduce((total, profile) => total + profile.routes.length, 0)
+      : 0;
+  const adminTemplatesCount = includesOption(scope, "admin-theme-templates")
+    ? bundle.adminThemes.templates.length
+    : 0;
+  const adminProfilesCount = includesOption(scope, "admin-theme-profiles")
+    ? bundle.adminThemes.profiles.length
+    : 0;
   return {
-    settings: Object.keys(bundle.settings ?? {}).length,
+    settings: includesOption(scope, "settings") ? Object.keys(bundle.settings ?? {}).length : 0,
     menus: menusCount,
     menuItems: menuItemsCount,
     themeProfiles: themeProfilesCount,
     themeRoutes: themeRoutesCount,
     adminThemeTemplates: adminTemplatesCount,
     adminThemeProfiles: adminProfilesCount,
-    redirects: bundle.redirects.length,
+    redirects: includesOption(scope, "redirects") ? bundle.redirects.length : 0,
     warnings,
   };
 };
@@ -65,6 +144,55 @@ const normalizePath = (value: string) => {
   const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   return normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
 };
+
+const normalizeRedirectFromPath = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.includes("://")) {
+    throw new Error("redirect_invalid");
+  }
+  if (trimmed === "/") return "/";
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+};
+
+const normalizeRedirectTarget = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error("redirect_invalid");
+  return trimmed;
+};
+
+const normalizeRedirectStatusCode = (value: unknown): 301 | 302 | 307 | 308 => {
+  if (typeof value !== "number" || !redirectStatusCodes.has(value)) {
+    throw new Error("redirect_invalid");
+  }
+  return value as 301 | 302 | 307 | 308;
+};
+
+export const filterExportBundleForScope = (
+  bundle: ExportBundle,
+  scope: ExportScope
+): ExportBundle => ({
+  version: bundle.version,
+  exportedAt: bundle.exportedAt,
+  scope,
+  settings: includesOption(scope, "settings") ? bundle.settings : {},
+  menus: includesOption(scope, "menus")
+    ? bundle.menus.map((menu) => ({
+        ...menu,
+        items: includesOption(scope, "menu-items") ? menu.items : [],
+      }))
+    : [],
+  themeProfiles: includesOption(scope, "theme-profiles")
+    ? bundle.themeProfiles.map((profile) => ({
+        ...profile,
+        routes: includesOption(scope, "theme-routes") ? profile.routes : [],
+      }))
+    : [],
+  adminThemes: {
+    templates: includesOption(scope, "admin-theme-templates") ? bundle.adminThemes.templates : [],
+    profiles: includesOption(scope, "admin-theme-profiles") ? bundle.adminThemes.profiles : [],
+  },
+  redirects: includesOption(scope, "redirects") ? bundle.redirects : [],
+});
 
 const normalizeMenuItem = (item: ExportMenuItem, pageIds: Set<string>, index: number) => {
   const label = item.label?.trim();
@@ -82,9 +210,7 @@ const normalizeMenuItem = (item: ExportMenuItem, pageIds: Set<string>, index: nu
     href,
     pageId,
     parentId: item.parentId ?? null,
-    orderIndex: Number.isFinite(item.orderIndex)
-      ? Number(item.orderIndex)
-      : index,
+    orderIndex: Number.isFinite(item.orderIndex) ? Number(item.orderIndex) : index,
   };
 };
 
@@ -92,29 +218,90 @@ const validateBundle = async (bundle: ExportBundle) => {
   if (bundle.version !== BUNDLE_VERSION) {
     throw new Error("import_bundle_version_invalid");
   }
+  if (!Number.isFinite(Date.parse(bundle.exportedAt))) {
+    throw new Error("import_bundle_exported_at_invalid");
+  }
+
+  resolveImportScope(bundle);
+
+  for (const menu of bundle.menus) {
+    assertOptionalUuid(menu.id, "import_menu_id_invalid");
+    for (const item of menu.items) {
+      assertOptionalUuid(item.id, "import_menu_item_id_invalid");
+      assertOptionalUuid(item.pageId, "import_menu_item_page_id_invalid");
+      assertOptionalUuid(item.parentId, "import_menu_item_parent_id_invalid");
+    }
+  }
 
   for (const profile of bundle.themeProfiles) {
+    assertOptionalUuid(profile.id, "import_theme_profile_id_invalid");
     if (!profile.name.trim() || !profile.themeName.trim()) {
       throw new Error("theme_profile_invalid");
     }
     assertTokenOverrides(profile.tokens ?? {});
+
+    const routePaths = new Set<string>();
+    for (const route of profile.routes) {
+      assertOptionalUuid(route.id, "import_theme_route_id_invalid");
+      assertOptionalUuid(route.pageId, "import_theme_route_page_id_invalid");
+      const path = normalizePath(route.path);
+      if (routePaths.has(path)) {
+        throw new Error("theme_routes_duplicate");
+      }
+      routePaths.add(path);
+    }
   }
 
+  const bundleTemplateIds = new Set<string>();
   for (const template of bundle.adminThemes.templates) {
+    assertOptionalUuid(template.id, "import_admin_theme_template_id_invalid");
     if (!template.name.trim()) {
       throw new Error("admin_theme_template_invalid");
     }
     assertAdminThemeTokens(template.tokens);
+    if (template.id) bundleTemplateIds.add(template.id);
   }
 
+  const externalTemplateIds = new Set<string>();
   for (const profile of bundle.adminThemes.profiles) {
+    assertOptionalUuid(profile.id, "import_admin_theme_profile_id_invalid");
+    assertRequiredUuid(profile.templateId, "import_admin_theme_template_ref_invalid");
     if (!profile.name.trim()) {
       throw new Error("admin_theme_profile_invalid");
     }
+    if (!bundleTemplateIds.has(profile.templateId)) {
+      externalTemplateIds.add(profile.templateId);
+    }
+  }
+
+  if (externalTemplateIds.size > 0) {
+    const existing = await db
+      .select({ id: adminThemeTemplates.id })
+      .from(adminThemeTemplates)
+      .where(inArray(adminThemeTemplates.id, Array.from(externalTemplateIds)));
+    const existingIds = new Set(existing.map((row) => row.id));
+    for (const templateId of externalTemplateIds) {
+      if (!existingIds.has(templateId)) {
+        throw new Error("admin_theme_template_not_found");
+      }
+    }
+  }
+
+  const redirectPaths = new Set<string>();
+  for (const redirect of bundle.redirects) {
+    assertOptionalUuid(redirect.id, "import_redirect_id_invalid");
+    const fromPath = normalizeRedirectFromPath(redirect.fromPath);
+    normalizeRedirectTarget(redirect.toPath);
+    normalizeRedirectStatusCode(redirect.statusCode);
+    if (redirectPaths.has(fromPath)) {
+      throw new Error("redirects_duplicate");
+    }
+    redirectPaths.add(fromPath);
   }
 };
 
-export async function exportConfig(): Promise<ExportBundle> {
+export async function exportConfig(input: ExportRequest = {}): Promise<ExportBundle> {
+  const scope = normalizeExportRequest(input);
   const settings = await listSettings();
   const menusList = await listMenus();
   const menuBundles: ExportMenu[] = [];
@@ -182,18 +369,30 @@ export async function exportConfig(): Promise<ExportBundle> {
     isActive: profile.isActive,
   }));
 
-  return {
-    version: BUNDLE_VERSION,
-    exportedAt: new Date().toISOString(),
-    settings,
-    menus: menuBundles,
-    themeProfiles: themeBundles,
-    adminThemes: {
-      templates: adminTemplateBundles,
-      profiles: adminProfileBundles,
+  const redirectRows = await db.select().from(redirects);
+  const redirectBundles: ExportRedirect[] = redirectRows.map((redirect) => ({
+    id: redirect.id,
+    fromPath: redirect.fromPath,
+    toPath: redirect.toPath,
+    statusCode: normalizeRedirectStatusCode(redirect.statusCode),
+    enabled: redirect.enabled,
+  }));
+
+  return filterExportBundleForScope(
+    {
+      version: BUNDLE_VERSION,
+      exportedAt: new Date().toISOString(),
+      settings,
+      menus: menuBundles,
+      themeProfiles: themeBundles,
+      adminThemes: {
+        templates: adminTemplateBundles,
+        profiles: adminProfileBundles,
+      },
+      redirects: redirectBundles,
     },
-    redirects: [] as ExportRedirect[],
-  };
+    scope
+  );
 }
 
 export async function previewImport(bundle: ExportBundle): Promise<ImportResult> {
@@ -213,188 +412,193 @@ export async function previewImport(bundle: ExportBundle): Promise<ImportResult>
 
 export async function importConfig(bundle: ExportBundle): Promise<ImportResult> {
   await validateBundle(bundle);
+  const scope = resolveImportScope(bundle);
 
   const warnings: string[] = [];
   const pageRows = await db.select({ id: pages.id }).from(pages);
   const pageIds = new Set(pageRows.map((row) => row.id));
 
-  await setSettings(bundle.settings);
-
-  const bundleMenuNames = new Set(
-    bundle.menus.map((menu) => menu.name.trim())
-  );
-  const existingMenus = await db.select().from(menus);
-  for (const menu of existingMenus) {
-    if (!bundleMenuNames.has(menu.name)) {
-      await db.delete(menus).where(eq(menus.id, menu.id));
-    }
+  if (includesOption(scope, "settings")) {
+    await setSettings(bundle.settings);
   }
 
-  for (const menu of bundle.menus) {
-    const name = menu.name.trim();
-    if (!name) throw new Error("menu_invalid");
-    const [existing] = await db
-      .select()
-      .from(menus)
-      .where(eq(menus.name, name));
-    let menuId = existing?.id ?? null;
-
-    if (existing) {
-      await db
-        .update(menus)
-        .set({ location: menu.location ?? null })
-        .where(eq(menus.id, existing.id));
-    } else {
-      menuId = menu.id ?? randomUUID();
-      const [created] = await db
-        .insert(menus)
-        .values({
-          id: menuId,
-          name,
-          location: menu.location ?? null,
-        })
-        .returning();
-      menuId = created?.id ?? menuId;
+  if (includesOption(scope, "menus")) {
+    const bundleMenuNames = new Set(bundle.menus.map((menu) => menu.name.trim()));
+    const existingMenus = await db.select().from(menus);
+    for (const menu of existingMenus) {
+      if (!bundleMenuNames.has(menu.name)) {
+        await db.delete(menus).where(eq(menus.id, menu.id));
+      }
     }
 
-    const normalizedItems = menu.items.map((item, index) =>
-      normalizeMenuItem(item, pageIds, index)
-    );
+    for (const menu of bundle.menus) {
+      const name = menu.name.trim();
+      if (!name) throw new Error("menu_invalid");
+      const [existing] = await db.select().from(menus).where(eq(menus.name, name));
+      let menuId = existing?.id ?? null;
 
-    await replaceMenuItems(menuId ?? randomUUID(), normalizedItems);
+      if (existing) {
+        await db
+          .update(menus)
+          .set({ location: menu.location ?? null })
+          .where(eq(menus.id, existing.id));
+      } else {
+        menuId = menu.id ?? randomUUID();
+        const [created] = await db
+          .insert(menus)
+          .values({
+            id: menuId,
+            name,
+            location: menu.location ?? null,
+          })
+          .returning();
+        menuId = created?.id ?? menuId;
+      }
+
+      const normalizedItems = includesOption(scope, "menu-items")
+        ? menu.items.map((item, index) => normalizeMenuItem(item, pageIds, index))
+        : [];
+
+      await replaceMenuItems(menuId ?? randomUUID(), normalizedItems);
+    }
   }
 
   const templateIdMap = new Map<string, string>();
 
-  for (const template of bundle.adminThemes.templates) {
-    const name = template.name.trim();
-    const [existing] = await db
-      .select()
-      .from(adminThemeTemplates)
-      .where(eq(adminThemeTemplates.name, name));
+  if (includesOption(scope, "admin-theme-templates")) {
+    for (const template of bundle.adminThemes.templates) {
+      const name = template.name.trim();
+      const [existing] = await db
+        .select()
+        .from(adminThemeTemplates)
+        .where(eq(adminThemeTemplates.name, name));
 
-    if (existing) {
-      await db
-        .update(adminThemeTemplates)
-        .set({
+      if (existing) {
+        await db
+          .update(adminThemeTemplates)
+          .set({
+            description: template.description ?? null,
+            tokens: template.tokens,
+            updatedAt: new Date(),
+          })
+          .where(eq(adminThemeTemplates.id, existing.id));
+        templateIdMap.set(template.id ?? existing.id, existing.id);
+        continue;
+      }
+
+      const [created] = await db
+        .insert(adminThemeTemplates)
+        .values({
+          id: template.id ?? randomUUID(),
+          name,
           description: template.description ?? null,
           tokens: template.tokens,
+          createdAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(adminThemeTemplates.id, existing.id));
-      templateIdMap.set(template.id ?? existing.id, existing.id);
-      continue;
-    }
+        .returning();
 
-    const [created] = await db
-      .insert(adminThemeTemplates)
-      .values({
-        id: template.id ?? randomUUID(),
-        name,
-        description: template.description ?? null,
-        tokens: template.tokens,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning();
-
-    if (created) {
-      templateIdMap.set(template.id ?? created.id, created.id);
+      if (created) {
+        templateIdMap.set(template.id ?? created.id, created.id);
+      }
     }
   }
 
-  for (const profile of bundle.adminThemes.profiles) {
-    const mappedTemplateId = templateIdMap.get(profile.templateId) ?? profile.templateId;
-    if (!mappedTemplateId) {
-      throw new Error("admin_theme_template_not_found");
-    }
+  if (includesOption(scope, "admin-theme-profiles")) {
+    for (const profile of bundle.adminThemes.profiles) {
+      const mappedTemplateId = templateIdMap.get(profile.templateId) ?? profile.templateId;
+      if (!mappedTemplateId) {
+        throw new Error("admin_theme_template_not_found");
+      }
 
-    await db
-      .insert(adminThemeProfiles)
-      .values({
-        id: profile.id ?? randomUUID(),
-        name: profile.name.trim(),
-        description: profile.description ?? null,
-        templateId: mappedTemplateId,
-        isActive: profile.isActive,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: adminThemeProfiles.id,
-        set: {
+      await db
+        .insert(adminThemeProfiles)
+        .values({
+          id: profile.id ?? randomUUID(),
           name: profile.name.trim(),
           description: profile.description ?? null,
           templateId: mappedTemplateId,
           isActive: profile.isActive,
+          createdAt: new Date(),
           updatedAt: new Date(),
-        },
-      });
-  }
+        })
+        .onConflictDoUpdate({
+          target: adminThemeProfiles.id,
+          set: {
+            name: profile.name.trim(),
+            description: profile.description ?? null,
+            templateId: mappedTemplateId,
+            isActive: profile.isActive,
+            updatedAt: new Date(),
+          },
+        });
+    }
 
-  const activeAdminProfile = bundle.adminThemes.profiles.find((profile) => profile.isActive);
-  if (activeAdminProfile?.id) {
-    await db.update(adminThemeProfiles).set({ isActive: false });
-    await db
-      .update(adminThemeProfiles)
-      .set({ isActive: true, updatedAt: new Date() })
-      .where(eq(adminThemeProfiles.id, activeAdminProfile.id));
+    const activeAdminProfile = bundle.adminThemes.profiles.find((profile) => profile.isActive);
+    if (activeAdminProfile?.id) {
+      await db.update(adminThemeProfiles).set({ isActive: false });
+      await db
+        .update(adminThemeProfiles)
+        .set({ isActive: true, updatedAt: new Date() })
+        .where(eq(adminThemeProfiles.id, activeAdminProfile.id));
+    }
   }
 
   const themeRegistry = await listThemes();
   const knownThemeNames = new Set(themeRegistry.map((theme) => theme.name));
 
   const profileIdMap = new Map<string, string>();
-  for (const profile of bundle.themeProfiles) {
-    if (!knownThemeNames.has(profile.themeName)) {
-      warnings.push(`Theme '${profile.themeName}' is not installed.`);
-    }
+  if (includesOption(scope, "theme-profiles")) {
+    for (const profile of bundle.themeProfiles) {
+      if (!knownThemeNames.has(profile.themeName)) {
+        warnings.push(`Theme '${profile.themeName}' is not installed.`);
+      }
 
-    const profileId = profile.id ?? randomUUID();
-    await db
-      .insert(themeProfiles)
-      .values({
-        id: profileId,
-        name: profile.name.trim(),
-        description: profile.description ?? null,
-        themeName: profile.themeName.trim(),
-        tokens: profile.tokens ?? {},
-        isActive: profile.isActive,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: themeProfiles.id,
-        set: {
+      const profileId = profile.id ?? randomUUID();
+      await db
+        .insert(themeProfiles)
+        .values({
+          id: profileId,
           name: profile.name.trim(),
           description: profile.description ?? null,
           themeName: profile.themeName.trim(),
           tokens: profile.tokens ?? {},
           isActive: profile.isActive,
+          createdAt: new Date(),
           updatedAt: new Date(),
-        },
-      });
-    profileIdMap.set(profile.id ?? profileId, profileId);
+        })
+        .onConflictDoUpdate({
+          target: themeProfiles.id,
+          set: {
+            name: profile.name.trim(),
+            description: profile.description ?? null,
+            themeName: profile.themeName.trim(),
+            tokens: profile.tokens ?? {},
+            isActive: profile.isActive,
+            updatedAt: new Date(),
+          },
+        });
+      profileIdMap.set(profile.id ?? profileId, profileId);
 
-    const routes = profile.routes.map((route) => ({
-      id: route.id ?? randomUUID(),
-      path: normalizePath(route.path),
-      pageId: route.pageId && pageIds.has(route.pageId) ? route.pageId : null,
-    }));
+      const routes = includesOption(scope, "theme-routes")
+        ? profile.routes.map((route) => ({
+            id: route.id ?? randomUUID(),
+            path: normalizePath(route.path),
+            pageId: route.pageId && pageIds.has(route.pageId) ? route.pageId : null,
+          }))
+        : [];
 
-    const uniquePaths = new Set<string>();
-    for (const route of routes) {
-      if (uniquePaths.has(route.path)) {
-        throw new Error("theme_routes_duplicate");
+      const uniquePaths = new Set<string>();
+      for (const route of routes) {
+        if (uniquePaths.has(route.path)) {
+          throw new Error("theme_routes_duplicate");
+        }
+        uniquePaths.add(route.path);
       }
-      uniquePaths.add(route.path);
-    }
 
-    await db.delete(themeRoutes).where(eq(themeRoutes.profileId, profileId));
-    if (routes.length > 0) {
-      await db
-        .insert(themeRoutes)
-        .values(
+      await db.delete(themeRoutes).where(eq(themeRoutes.profileId, profileId));
+      if (routes.length > 0) {
+        await db.insert(themeRoutes).values(
           routes.map((route) => ({
             id: route.id,
             profileId,
@@ -403,17 +607,59 @@ export async function importConfig(bundle: ExportBundle): Promise<ImportResult> 
             createdAt: new Date(),
           }))
         );
+      }
+    }
+
+    const activeThemeProfile = bundle.themeProfiles.find((profile) => profile.isActive);
+    if (activeThemeProfile?.id) {
+      const mappedId = profileIdMap.get(activeThemeProfile.id) ?? activeThemeProfile.id;
+      await db.update(themeProfiles).set({ isActive: false });
+      await db
+        .update(themeProfiles)
+        .set({ isActive: true, updatedAt: new Date() })
+        .where(eq(themeProfiles.id, mappedId));
     }
   }
 
-  const activeThemeProfile = bundle.themeProfiles.find((profile) => profile.isActive);
-  if (activeThemeProfile?.id) {
-    const mappedId = profileIdMap.get(activeThemeProfile.id) ?? activeThemeProfile.id;
-    await db.update(themeProfiles).set({ isActive: false });
-    await db
-      .update(themeProfiles)
-      .set({ isActive: true, updatedAt: new Date() })
-      .where(eq(themeProfiles.id, mappedId));
+  if (includesOption(scope, "redirects")) {
+    const bundleRedirectPaths = new Set(
+      bundle.redirects.map((redirect) => normalizeRedirectFromPath(redirect.fromPath))
+    );
+    const existingRedirects = await db.select().from(redirects);
+    for (const redirect of existingRedirects) {
+      if (!bundleRedirectPaths.has(redirect.fromPath)) {
+        await db.delete(redirects).where(eq(redirects.id, redirect.id));
+      }
+    }
+
+    for (const redirect of bundle.redirects) {
+      const fromPath = normalizeRedirectFromPath(redirect.fromPath);
+      const toPath = normalizeRedirectTarget(redirect.toPath);
+      const statusCode = normalizeRedirectStatusCode(redirect.statusCode);
+      const [existing] = await db.select().from(redirects).where(eq(redirects.fromPath, fromPath));
+
+      if (existing) {
+        await db
+          .update(redirects)
+          .set({
+            toPath,
+            statusCode,
+            enabled: redirect.enabled,
+            updatedAt: new Date(),
+          })
+          .where(eq(redirects.id, existing.id));
+      } else {
+        await db.insert(redirects).values({
+          id: redirect.id ?? randomUUID(),
+          fromPath,
+          toPath,
+          statusCode,
+          enabled: redirect.enabled,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
   }
 
   return { summary: buildSummary(bundle, warnings) };

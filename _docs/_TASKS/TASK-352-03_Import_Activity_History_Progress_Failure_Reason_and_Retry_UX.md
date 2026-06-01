@@ -5,7 +5,7 @@
 **Category:** Import Export + Admin UI + API + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-352-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -127,3 +127,10 @@ If new activity routes are added:
 - Failed imports show user-safe reasons and a real next action.
 - In-progress rows do not fake progress from static fixtures.
 - Activity Log is not clickable without behavior.
+
+## Closure Notes
+
+Done (2026-06-01): Recent Imports is session-local and intentionally
+uncached, search filters real session rows, failed rows show user-safe reasons
+plus `Upload again`, progress values are tied to preview/apply state, and the
+Activity Log topbar action is disabled with explanatory copy.

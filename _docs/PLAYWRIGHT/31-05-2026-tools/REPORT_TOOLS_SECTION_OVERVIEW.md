@@ -28,16 +28,19 @@ Current classification:
   published page in range-scoped Top Content and export that ranking as CSV;
   Backups enqueue metadata rows with a documented external-worker boundary,
   controlled include payloads, stateful pagination, disabled action reasons,
-  and real metadata-row delete; Import / Export can roundtrip a valid JSON
-  bundle.
+  and real metadata-row delete; Import / Export has controlled target/include
+  export, JSON-only import, mapped malformed-bundle rejection, searchable
+  session activity, and valid JSON roundtrip.
 - Partially works: Redirects save admin rows but do not affect public routing.
-- Still UI-only/incomplete: Import / Export card options, Activity Log, Recent
-  Imports search, and Redirects pagination. Search date range and Search
+- Still UI-only/incomplete: Redirects pagination. Search date range and Search
   empty-state / suggestion drift were
   closed by TASK-348 on 2026-06-01; SEO audit/filter/save drift was closed by
   TASK-349 on 2026-06-01; Analytics export/no-data/top-content range drift was
   closed by TASK-350 on 2026-06-01; Backups include/pagination/action-state
-  drift was closed by TASK-351 on 2026-06-01.
+  drift was closed by TASK-351 on 2026-06-01; Import / Export export options,
+  Activity Log availability, Recent Imports search/progress/failure, JSON-only
+  copy, and malformed-ID validation drift were closed by TASK-352 on
+  2026-06-01.
 
 ## Evidence
 
@@ -62,8 +65,16 @@ Current classification:
     serialization, external-worker queued state, real pagination, disabled
     restore/download reasons, real delete, and zero browser console/page
     errors through a focused Chrome DevTools Protocol pass.
-  - Import / Export valid JSON bundle was downloaded, modified, uploaded,
-    previewed, applied, verified through export, and restored.
+  - TASK-352 follow-up proof on 2026-06-01 verified Import / Export
+    target/include export shape, disabled unavailable controls, invalid JSON
+    rejection, malformed UUID rejection, valid JSON preview/apply/restore,
+    local activity search/progress, and zero unexpected browser page/network
+    errors through a focused Chrome DevTools Protocol pass. The expected
+    malformed-bundle 400 was observed and excluded from unexpected-error
+    counts.
+  - Original Import / Export pass also proved a valid JSON bundle could be
+    downloaded, modified, uploaded, previewed, applied, verified through export,
+    and restored.
   - Redirect was created in the UI, checked against the public runtime, and
     deleted.
 
@@ -87,9 +98,10 @@ Current classification:
 
 Affected surfaces:
 
-- Import / Export Activity Log button
-- Import / Export per-card options chevron
 - Redirects pagination buttons
+
+TASK-352 status: Import / Export Activity Log and per-card chevrons are now
+disabled with explanatory labels until real routes/menus exist.
 
 Why it happens:
 
@@ -110,6 +122,10 @@ How to fix:
 Affected surfaces:
 
 - Import / Export include options
+
+TASK-352 status: resolved on 2026-06-01. Include options are controlled,
+serialized to `GET /tools/export`, validated, and reflected in bundle scope and
+shape.
 
 Why it happens:
 

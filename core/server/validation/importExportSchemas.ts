@@ -1,13 +1,73 @@
+const uuidPattern =
+  "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$";
+
+const optionalUuidSchema = {
+  type: "string",
+  pattern: uuidPattern,
+  minLength: 36,
+  maxLength: 36,
+};
+
+const nullableUuidSchema = {
+  type: ["string", "null"],
+  pattern: uuidPattern,
+  minLength: 36,
+  maxLength: 36,
+};
+
+const exportTargetValues = ["full", "settings", "menus", "themes", "redirects"];
+const exportIncludeValues = [
+  "settings",
+  "menus",
+  "menu-items",
+  "theme-profiles",
+  "theme-routes",
+  "admin-theme-templates",
+  "admin-theme-profiles",
+  "redirects",
+];
+
+const exportScopeSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["target", "include"],
+  properties: {
+    target: { type: "string", enum: exportTargetValues },
+    include: {
+      type: "array",
+      minItems: 1,
+      maxItems: exportIncludeValues.length,
+      uniqueItems: true,
+      items: { type: "string", enum: exportIncludeValues },
+    },
+  },
+};
+
+export const exportRequestSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    target: { type: "string", enum: exportTargetValues },
+    include: {
+      type: "array",
+      minItems: 1,
+      maxItems: exportIncludeValues.length,
+      uniqueItems: true,
+      items: { type: "string", enum: exportIncludeValues },
+    },
+  },
+};
+
 const menuItemSchema = {
   type: "object",
   additionalProperties: false,
   required: ["label"],
   properties: {
-    id: { type: "string" },
-    label: { type: "string" },
-    href: { type: ["string", "null"] },
-    pageId: { type: ["string", "null"] },
-    parentId: { type: ["string", "null"] },
+    id: optionalUuidSchema,
+    label: { type: "string", minLength: 1, maxLength: 160 },
+    href: { type: ["string", "null"], maxLength: 2048 },
+    pageId: nullableUuidSchema,
+    parentId: nullableUuidSchema,
     orderIndex: { type: "integer" },
   },
 };
@@ -17,10 +77,10 @@ const menuSchema = {
   additionalProperties: false,
   required: ["name", "items"],
   properties: {
-    id: { type: "string" },
-    name: { type: "string" },
-    location: { type: ["string", "null"] },
-    items: { type: "array", items: menuItemSchema },
+    id: optionalUuidSchema,
+    name: { type: "string", minLength: 1, maxLength: 160 },
+    location: { type: ["string", "null"], maxLength: 120 },
+    items: { type: "array", maxItems: 2000, items: menuItemSchema },
   },
 };
 
@@ -29,9 +89,9 @@ const themeRouteSchema = {
   additionalProperties: false,
   required: ["path"],
   properties: {
-    id: { type: "string" },
-    path: { type: "string" },
-    pageId: { type: ["string", "null"] },
+    id: optionalUuidSchema,
+    path: { type: "string", minLength: 1, maxLength: 512 },
+    pageId: nullableUuidSchema,
   },
 };
 
@@ -40,13 +100,13 @@ const themeProfileSchema = {
   additionalProperties: false,
   required: ["name", "themeName", "tokens", "routes"],
   properties: {
-    id: { type: "string" },
-    name: { type: "string" },
-    description: { type: ["string", "null"] },
-    themeName: { type: "string" },
+    id: optionalUuidSchema,
+    name: { type: "string", minLength: 1, maxLength: 160 },
+    description: { type: ["string", "null"], maxLength: 1000 },
+    themeName: { type: "string", minLength: 1, maxLength: 160 },
     tokens: { type: "object", additionalProperties: true },
     isActive: { type: "boolean" },
-    routes: { type: "array", items: themeRouteSchema },
+    routes: { type: "array", maxItems: 500, items: themeRouteSchema },
   },
 };
 
@@ -55,9 +115,9 @@ const adminThemeTemplateSchema = {
   additionalProperties: false,
   required: ["name", "tokens"],
   properties: {
-    id: { type: "string" },
-    name: { type: "string" },
-    description: { type: ["string", "null"] },
+    id: optionalUuidSchema,
+    name: { type: "string", minLength: 1, maxLength: 160 },
+    description: { type: ["string", "null"], maxLength: 1000 },
     tokens: { type: "object", additionalProperties: true },
   },
 };
@@ -67,10 +127,10 @@ const adminThemeProfileSchema = {
   additionalProperties: false,
   required: ["name", "templateId"],
   properties: {
-    id: { type: "string" },
-    name: { type: "string" },
-    description: { type: ["string", "null"] },
-    templateId: { type: "string" },
+    id: optionalUuidSchema,
+    name: { type: "string", minLength: 1, maxLength: 160 },
+    description: { type: ["string", "null"], maxLength: 1000 },
+    templateId: optionalUuidSchema,
     isActive: { type: "boolean" },
   },
 };
@@ -80,20 +140,21 @@ const adminThemesSchema = {
   additionalProperties: false,
   required: ["templates", "profiles"],
   properties: {
-    templates: { type: "array", items: adminThemeTemplateSchema },
-    profiles: { type: "array", items: adminThemeProfileSchema },
+    templates: { type: "array", maxItems: 200, items: adminThemeTemplateSchema },
+    profiles: { type: "array", maxItems: 200, items: adminThemeProfileSchema },
   },
 };
 
 const redirectSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["from", "to", "status"],
+  required: ["fromPath", "toPath", "statusCode", "enabled"],
   properties: {
-    id: { type: "string" },
-    from: { type: "string" },
-    to: { type: "string" },
-    status: { type: "integer" },
+    id: optionalUuidSchema,
+    fromPath: { type: "string", minLength: 1, maxLength: 512 },
+    toPath: { type: "string", minLength: 1, maxLength: 2048 },
+    statusCode: { type: "integer", enum: [301, 302, 307, 308] },
+    enabled: { type: "boolean" },
   },
 };
 
@@ -111,12 +172,13 @@ export const importBundleSchema = {
   ],
   properties: {
     version: { type: "integer", const: 1 },
-    exportedAt: { type: "string" },
+    exportedAt: { type: "string", format: "date-time" },
+    scope: exportScopeSchema,
     settings: { type: "object", additionalProperties: true },
-    menus: { type: "array", items: menuSchema },
-    themeProfiles: { type: "array", items: themeProfileSchema },
+    menus: { type: "array", maxItems: 200, items: menuSchema },
+    themeProfiles: { type: "array", maxItems: 200, items: themeProfileSchema },
     adminThemes: adminThemesSchema,
-    redirects: { type: "array", items: redirectSchema },
+    redirects: { type: "array", maxItems: 1000, items: redirectSchema },
   },
 };
 

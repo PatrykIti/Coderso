@@ -5,7 +5,7 @@
 **Category:** Import Export + API + Service + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-352
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -146,3 +146,10 @@ Regression-test shape:
 - Download payload and bundle shape reflect selected target/options.
 - Unsupported export options are not presented as available.
 - The UI and service agree on whether Content Types/Pages/Media export exists.
+
+## Closure Notes
+
+Done (2026-06-01): the UI now exposes supported configuration export targets
+only, sends controlled target/include options through the client, validates
+them in `GET /tools/export`, and filters the generated JSON bundle with scope
+metadata.

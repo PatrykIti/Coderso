@@ -432,6 +432,16 @@ Clients update caches and broadcast events on:
   response and immediate refetch remain the source of truth for list totals,
   pagination, and disabled-action reasons.
 
+### Import / Export uncached note
+
+- Import / Export intentionally does not use localStorage/admin cache keys.
+- `core/admin/ui/import-export/ImportExportPage.tsx` calls export/import
+  endpoints directly because exported bundles can contain controlled
+  configuration data and import activity is session-local.
+- `core/admin/ui/import-export/ImportDropzone.tsx` keeps Recent Imports in
+  React state only. It does not cache filenames, failure reasons, parsed
+  bundles, or upload payloads across tabs or reloads.
+
 ## Extending The Cache
 When adding a new resource:
 1. Add cache keys + TTLs to `core/admin/services/cachePolicy.ts`.

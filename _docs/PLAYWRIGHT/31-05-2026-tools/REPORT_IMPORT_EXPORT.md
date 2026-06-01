@@ -30,6 +30,44 @@ Route: `/admin/tools/import-export`
 
 ## What Did Not Work
 
+## Final Resolution - 2026-06-01
+
+Status: resolved by TASK-352.
+
+- Export cards now match the implemented bundle surfaces: Site Settings,
+  Navigation Menus, Theme Configuration, and Redirect Rules. Content
+  Types/Pages/Media are no longer advertised as exportable until real exporters
+  exist.
+- Export checkboxes are controlled, serialized as `target`/`include`, validated
+  by `GET /tools/export`, and reflected in the returned bundle. Targeted bundles
+  include `scope` metadata so omitted sections are not treated as deletes on
+  import.
+- Per-card advanced chevrons and the topbar Activity Log are disabled with
+  accessible explanatory labels while no advanced menu or durable activity route
+  exists.
+- Import is JSON-only in copy, input accept list, parser, and client-side
+  rejection. CSV/ZIP are not presented as supported formats.
+- Import preview/apply now share UUID-backed ID/reference validation and
+  mapped `ApiError` responses, preventing malformed IDs from passing preview
+  and failing later as raw DB errors.
+- Recent Imports is no longer static fixture data. It is session-local,
+  searchable, shows real preview/apply progress, records failure reasons, and
+  offers an `Upload again` action for failed rows.
+
+Validation evidence:
+
+- `bun test tests/unit/tools/importExport.test.ts`
+- `bun test tests/integration/routes/importExport.test.ts`
+- `bun run test:vitest -- tests/vitest/admin/importExportClient.test.ts tests/vitest/ui/import-export.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- Focused Chromium CDP proof for `/admin/tools/import-export`: target/include
+  export shape, disabled unavailable controls, invalid JSON rejection,
+  malformed UUID rejection, valid JSON preview/apply/restore, local activity
+  search/progress, and zero unexpected browser page/network errors. The
+  expected malformed-bundle 400 was observed and excluded from unexpected-error
+  counts.
+
 ### [ISSUE] Export option checkboxes do not affect the download
 
 Evidence:

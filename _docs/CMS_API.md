@@ -2752,12 +2752,38 @@ Permissions: `settings:read`, `settings:write`
 - `POST /tools/import/preview`
 - `POST /tools/import`
 
+Export query:
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `target` | `full` \| `settings` \| `menus` \| `themes` \| `redirects` | `full` | Selects the export surface. Unsupported Content Types, Pages, Media, CSV, and ZIP exports are not exposed by v1. |
+| `include` | comma-separated include options | target defaults | Allowed values: `settings`, `menus`, `menu-items`, `theme-profiles`, `theme-routes`, `admin-theme-templates`, `admin-theme-profiles`, `redirects`. Values must belong to the selected target. |
+
+Example targeted export:
+
+```http
+GET /tools/export?target=menus&include=menus,menu-items
+```
+
 Export response (bundle):
 
 ```json
 {
   "version": 1,
   "exportedAt": "2026-01-30T10:00:00Z",
+  "scope": {
+    "target": "full",
+    "include": [
+      "settings",
+      "menus",
+      "menu-items",
+      "theme-profiles",
+      "theme-routes",
+      "admin-theme-templates",
+      "admin-theme-profiles",
+      "redirects"
+    ]
+  },
   "settings": {
     "site.name": "Coderso",
     "site.locale": "en",
@@ -2769,29 +2795,68 @@ Export response (bundle):
   },
   "menus": [
     {
+      "id": "11111111-1111-4111-8111-111111111111",
       "name": "Main",
       "location": "primary",
-      "items": [{ "id": "item-1", "label": "Home", "href": "/", "orderIndex": 0 }]
+      "items": [
+        {
+          "id": "22222222-2222-4222-8222-222222222222",
+          "label": "Home",
+          "href": "/",
+          "orderIndex": 0
+        }
+      ]
     }
   ],
   "themeProfiles": [
     {
-      "id": "profile-1",
+      "id": "33333333-3333-4333-8333-333333333333",
       "name": "Default",
       "description": null,
       "themeName": "admin-default",
       "tokens": {},
       "isActive": true,
-      "routes": [{ "id": "route-1", "path": "/", "pageId": null }]
+      "routes": [
+        {
+          "id": "44444444-4444-4444-8444-444444444444",
+          "path": "/",
+          "pageId": null
+        }
+      ]
     }
   ],
   "adminThemes": {
-    "templates": [{ "id": "template-1", "name": "Admin Default", "tokens": {} }],
-    "profiles": [{ "id": "admin-profile-1", "name": "Admin", "templateId": "template-1", "isActive": true }]
+    "templates": [
+      {
+        "id": "55555555-5555-4555-8555-555555555555",
+        "name": "Admin Default",
+        "tokens": {}
+      }
+    ],
+    "profiles": [
+      {
+        "id": "66666666-6666-4666-8666-666666666666",
+        "name": "Admin",
+        "templateId": "55555555-5555-4555-8555-555555555555",
+        "isActive": true
+      }
+    ]
   },
-  "redirects": []
+  "redirects": [
+    {
+      "id": "77777777-7777-4777-8777-777777777777",
+      "fromPath": "/old",
+      "toPath": "/new",
+      "statusCode": 301,
+      "enabled": true
+    }
+  ]
 }
 ```
+
+Targeted export bundles include empty arrays/objects for omitted sections and
+carry `scope`. Import preview/apply use that scope so omitted sections are not
+treated as delete instructions.
 
 Preview/import response:
 
@@ -2810,6 +2875,20 @@ Preview/import response:
   }
 }
 ```
+
+Known import/export error codes:
+
+- `export_target_invalid`
+- `export_include_required`
+- `export_include_invalid`
+- `import_bundle_version_invalid`
+- `import_bundle_exported_at_invalid`
+- `import_*_invalid` for malformed UUID-backed IDs/references
+- `theme_routes_duplicate`
+- `redirects_duplicate`
+- `admin_theme_template_not_found`
+- `menu_item_link_invalid`
+- `redirect_invalid`
 
 ---
 

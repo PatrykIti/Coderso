@@ -4,11 +4,39 @@ import type { DesignTokenOverrides } from "../theme/tokenTypes";
 export type ExportBundle = {
   version: 1;
   exportedAt: string;
+  scope?: ExportScope;
   settings: Record<string, unknown>;
   menus: ExportMenu[];
   themeProfiles: ExportThemeProfile[];
   adminThemes: ExportAdminThemes;
   redirects: ExportRedirect[];
+};
+
+export const exportTargets = ["full", "settings", "menus", "themes", "redirects"] as const;
+
+export type ExportTarget = (typeof exportTargets)[number];
+
+export const exportIncludeOptions = [
+  "settings",
+  "menus",
+  "menu-items",
+  "theme-profiles",
+  "theme-routes",
+  "admin-theme-templates",
+  "admin-theme-profiles",
+  "redirects",
+] as const;
+
+export type ExportIncludeOption = (typeof exportIncludeOptions)[number];
+
+export type ExportRequest = {
+  target?: ExportTarget;
+  include?: ExportIncludeOption[];
+};
+
+export type ExportScope = {
+  target: ExportTarget;
+  include: ExportIncludeOption[];
 };
 
 export type ExportMenu = {
@@ -65,9 +93,10 @@ export type ExportAdminThemeProfile = {
 
 export type ExportRedirect = {
   id?: string;
-  from: string;
-  to: string;
-  status: number;
+  fromPath: string;
+  toPath: string;
+  statusCode: 301 | 302 | 307 | 308;
+  enabled: boolean;
 };
 
 export type ImportSummary = {

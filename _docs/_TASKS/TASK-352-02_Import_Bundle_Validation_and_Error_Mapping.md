@@ -5,7 +5,7 @@
 **Category:** Import Export + Validation + API + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-352
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -138,3 +138,10 @@ Regression-test shape:
 - Preview/apply validation behavior is consistent.
 - Route registration and `mapImportExportError` coverage prove validation-owned
   failures never leak raw DB errors.
+
+## Closure Notes
+
+Done (2026-06-01): import bundle schemas now validate UUID-backed IDs and
+references, preview/apply share service validation, duplicate route/redirect
+paths are rejected before persistence, and `mapImportExportError` maps known
+domain failures to user-safe `ApiError` responses.
