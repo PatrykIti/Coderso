@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 23 tasks
+- **To Do:** 28 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2007 tasks
 
@@ -38,6 +38,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-351 | Backups Tools Report Remediation | High | Very Large | New report-driven family for include options, artifact lifecycle, restore/download/delete, pagination, queue health, and closure proof. |
+| TASK-351-01 | Backup Include Options Schema and Manual Request Contract | High | Medium | Make manual backup checkboxes controlled, validated, serialized, and safe for audit metadata. |
+| TASK-351-02 | Backup Execution, Artifact, Restore, Download, and Delete Contract | High | Very Large | Add real local/dev backup lifecycle or document an explicit external-worker boundary with safe actions. |
+| TASK-351-03 | Backups Pagination, Queue Health, and Table UX | Medium | Large | Replace placeholder pagination and explain queued/action-disabled states with tested UI. |
+| TASK-351-04 | Backups QA, Docs, and Closure | Medium | Medium | Prove DB-backed lifecycle behavior, Playwright evidence, cleanup, and docs/changelog closure. |
 | TASK-350 | Analytics Tools Report Remediation | Medium | Large | New report-driven family for Top Content export behavior, no-data semantics, and Analytics closure proof. |
 | TASK-350-01 | Analytics Export Contract and Download Flow | High | Medium | Replace drawer close-only Export with a real download or truthful disabled/unavailable state. |
 | TASK-350-02 | Analytics Empty Data Semantics and Guidance | Medium | Medium | Distinguish no data from zero change and add compact next-action empty states. |
