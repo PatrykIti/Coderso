@@ -143,6 +143,18 @@ jednorazowym fixture user/role i posprzątano po teście.
 - Po `TASK-355-04` pozostały problem z raportu należy do `TASK-355-05`
   mobile a11y.
 
+### Status po TASK-355-05 - 2026-06-01
+
+- Mobile details sheet ma teraz semantyczny, wizualnie ukryty `SheetTitle` i
+  `SheetDescription` w wrapperze `SheetContent` z `UsersRolesPage`.
+- Opis ma wariant dla wybranego usera i fallback, gdy user nie jest jeszcze
+  wybrany, więc loading/empty state nadal spełnia kontrakt dialogu.
+- Shared `drawer-sheet-a11y-gate` otwiera Users mobile sheet i sprawdza
+  `aria-labelledby`, `aria-describedby` oraz brak Radix warningów.
+- Wszystkie problemy z tabeli ryzyk Users zostały przypisane i zaadresowane w
+  `TASK-355-01` through `TASK-355-05`; finalna przeklikana ewidencja zostaje w
+  `TASK-360-07`.
+
 ## Dlaczego
 
 Widok miesza gotowe, produkcyjne flow (`save user`, `invite user`, `delete user`)
@@ -165,5 +177,5 @@ które akcje są realne.
   realne filtry search/role/status pozostają aktywne.
 - Notification switches: zrealizowane w `TASK-355-04` jako read-only managed
   state bez lokalnego submitu.
-- Mobile sheet: dodać `SheetTitle`/`SheetDescription`, ewentualnie przez
-  `VisuallyHidden`.
+- Mobile sheet: zrealizowane w `TASK-355-05` przez wizualnie ukryte
+  `SheetTitle`/`SheetDescription` oraz warning-free regression gate.

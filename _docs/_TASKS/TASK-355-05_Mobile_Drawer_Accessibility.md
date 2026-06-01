@@ -5,7 +5,7 @@
 **Category:** Admin UI + Users + Accessibility
 **Estimated Effort:** Small
 **Dependencies:** TASK-355, TASK-360-05
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -75,12 +75,18 @@ Error handling:
 
 ## Testing Requirements
 
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
+- `bun --cwd core lint` (passed 2026-06-01)
+- `bun --cwd core lint:types` (passed 2026-06-01)
 - Targeted Vitest UI test that opens the mobile details sheet and asserts
   accessible name/description.
 - Console-warning regression test for the Radix title/description warning.
 - Playwright mobile pass for `/admin/users` details drawer.
+
+Validation run:
+
+- `bun run test:vitest -- tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
@@ -94,3 +100,13 @@ Error handling:
   every state.
 - The Radix dialog warning no longer appears during mobile drawer open.
 - Visual layout remains consistent with the existing admin drawer pattern.
+
+## Completion Notes
+
+- The mobile Users sheet uses visually hidden `SheetTitle` and
+  `SheetDescription` around `UserDetailsDrawer`, with selected and empty-state
+  descriptions.
+- The shared drawer/sheet a11y gate opens `/admin/users?user=user-1` under a
+  mobile viewport and asserts `aria-labelledby`, `aria-describedby`, and no
+  Radix title/description warnings.
+- Final screenshot/evidence capture remains owned by `TASK-360-07`.

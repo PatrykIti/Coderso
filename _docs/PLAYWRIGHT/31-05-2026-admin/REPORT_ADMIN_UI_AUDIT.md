@@ -110,6 +110,8 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
 - `TASK-355-04` jest zaimplementowany: Users advanced filter icon jest
   truthful disabled/unavailable, a notification switches sa read-only managed
   states objete shared no-op gate.
+- `TASK-355-05` jest zaimplementowany: Users mobile details sheet ma
+  `SheetTitle`/`SheetDescription` i warning-free drawer a11y regression gate.
 - Pozostale pozycje z raportu pozostaja przypisane do rodzin TASK-355..360.
   Część no-opow jest teraz jawnie niedostepna albo zaimplementowana, ale
   Settings cache/navigation, Audit/Access funkcje i finalny re-audyt UI nadal

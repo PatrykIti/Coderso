@@ -97,6 +97,15 @@ Tasks: TASK-355, TASK-355-01, TASK-355-02, TASK-355-03, TASK-355-04, TASK-355-05
 - Updated user docs and audit reports so the unavailable/read-only path is
   documented as the shipped product behavior, not as a lingering placeholder.
 
+### TASK-355-05 Mobile Drawer Accessibility
+
+- Closed the Users mobile details sheet a11y gap with visually hidden
+  `SheetTitle` and `SheetDescription` semantics around `UserDetailsDrawer`.
+- Added selected-user and empty-state descriptions so mobile drawer semantics
+  stay valid while data loads or no user is selected.
+- Reused the shared drawer/sheet a11y gate to assert accessible title,
+  description, and no Radix title/description warnings for the Users sheet.
+
 ## Validation
 
 - `bun run test:vitest -- tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/users-roles.test.tsx tests/vitest/ui-integration/users.test.tsx tests/vitest/ui-integration/roles.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx tests/vitest/ui/user-list-filters-wave.test.tsx`
@@ -106,6 +115,7 @@ Tasks: TASK-355, TASK-355-01, TASK-355-02, TASK-355-03, TASK-355-04, TASK-355-05
 - `bun run test:vitest -- tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/role-list-wave.test.tsx tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/shared-dialog-contracts.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/routes/adminUsers.test.ts tests/integration/routes/adminRoles.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/user-list-filters-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`

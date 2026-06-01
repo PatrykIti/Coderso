@@ -5,7 +5,7 @@
 **Category:** Admin UI + RBAC + Users + Security UX + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm action pattern, TASK-360-04 no-op control gate, TASK-360-05 drawer/sheet accessibility gate, TASK-360-06 server-side query conventions, TASK-001 auth foundation, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_USERS.md` audit evidence
-**Status:** In Progress (2026-06-01)
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -388,7 +388,7 @@ Regression tests:
 
 ### TASK-355-05: Mobile Drawer Accessibility
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 - Add `SheetTitle` and `SheetDescription` to the mobile user details sheet.
 - If the visual design already has headings, use visually hidden title/desc to
