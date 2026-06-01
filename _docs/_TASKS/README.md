@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 10 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2006 tasks
 
@@ -38,6 +38,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | Shared contracts and gates for the 31-05/01-06 Admin UI audit findings across RBAC, no-op controls, confirms, export, a11y, pagination, and final evidence closure |
+| TASK-359 | Admin Settings Report Remediation Family | High | Very Large | Full Settings remediation family: RBAC guard, SPA/cache behavior, dirty/mobile nav, placeholders, high-risk confirms, secret-safe cache, and action truthfulness |
+| TASK-358 | Admin Access Logs Report Remediation Family | High | Large | Access Logs remediation family: real filters/pagination/export, session detail/revoke truthfulness, custom range, advanced filters, and revoke security contract |
+| TASK-357 | Admin Audit Logs Report Remediation Family | High | Large | Audit Logs remediation family: server-side filtering/date range, real pagination/export, copy/export/share/report truthfulness, and redacted compliance actions |
+| TASK-356 | Admin Roles Matrix Report Remediation Family | High | Very Large | Roles Matrix remediation family: permission-aware read-only mode, RBAC diff review, full-access confirm, mass-save confirm, and audit diff payloads |
+| TASK-355 | Admin Users Report Remediation Family | High | Very Large | Users remediation family: permission-aware UI, reset-password truthfulness, login-capable invite, destructive confirms, filters, notifications, and mobile a11y |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |

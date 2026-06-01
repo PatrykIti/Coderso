@@ -25,6 +25,12 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1050 | 2026-06-01 | TASK-360 Admin UI cross-cutting remediation family | Planning/Admin UI/RBAC/QA/Docs |
+| 1049 | 2026-06-01 | TASK-359 Admin Settings remediation family | Planning/Admin UI/Settings/Security/QA/Docs |
+| 1048 | 2026-06-01 | TASK-358 Admin Access Logs remediation family | Planning/Admin UI/Access Logs/Security/QA/Docs |
+| 1047 | 2026-06-01 | TASK-357 Admin Audit Logs remediation family | Planning/Admin UI/Audit Logs/Compliance/QA/Docs |
+| 1046 | 2026-06-01 | TASK-356 Admin Roles Matrix remediation family | Planning/Admin UI/RBAC/QA/Docs |
+| 1045 | 2026-06-01 | TASK-355 Admin Users remediation family | Planning/Admin UI/Users/RBAC/QA/Docs |
 | 1034 | 2026-05-31 | Admin UI Playwright audit | QA/Admin UI/Playwright/Docs |
 | 1033 | 2026-05-31 | Admin seed package command | Developer Tooling/Auth Bootstrap/Docs |
 | 1032 | 2026-05-31 | CodeQL widget sanitizer and validation DoS remediation | Security/CodeQL/Widgets/Testing |
