@@ -46,7 +46,7 @@ type AccessLogExportRequest = {
 };
 
 async function exportAccessLogs(request: AccessLogExportRequest) {
-  return downloadAdminExport("/admin/api/access-logs/export", request, {
+  return downloadAdminExport("/access-logs/export", request, {
     filenamePrefix: "access-logs",
     withCsrf: true,
   });
@@ -57,10 +57,13 @@ Data flow:
 
 - Export dialog receives the current Access Logs query state.
 - User selects format and allowlisted columns.
-- Client posts to `POST /admin/api/access-logs/export`.
+- Client passes API-relative `/access-logs/export` to the shared helper, which
+  resolves and posts to `POST /admin/api/access-logs/export`.
 - Server re-validates query filters, columns, RBAC, CSRF, and row limits.
 - Server returns redacted CSV/JSON blob or async export job metadata.
 - UI downloads blob or displays job status with retry-capable error state.
+- If `ExportDialog` still contains `xlsx`, remove/disable that option as
+  unavailable unless a real Excel export contract is implemented and tested.
 
 Error handling:
 
@@ -77,12 +80,13 @@ Error handling:
 - Auth model: authenticated admin session.
 - RBAC: `audit:read` for export.
 - CSRF: required.
-- Rate-limit bucket: export/admin write bucket.
+- Rate-limit bucket: `admin_write`.
 - Reject unknown validation: strict body schema, selected column allowlist,
   normalized query filters, clamped rows.
 - Anti-abuse: internal session route; no nonce, HMAC, or captcha.
 - Redaction: output excludes cookies, authorization headers, CSRF tokens, reset
-  tokens, raw secrets, and session tokens.
+  tokens, raw secrets, session tokens, and session ids unless the documented
+  access log export contract explicitly allows a redacted identifier.
 - Audit: export emits summary event with format/filter scope, never payload.
 
 ## Testing Requirements
@@ -94,6 +98,10 @@ Error handling:
 - Bun route/service tests: route registration, `audit:read`, CSRF, unknown
   body rejection, invalid columns, row limit, redaction, and CSV escaping for
   commas/newlines/quotes in user agent.
+- Redaction tests include cookies, authorization headers, CSRF tokens, reset
+  tokens, session tokens, session ids, and raw secret-like keys.
+- Vitest UI tests prove `xlsx` is not an active no-op when only CSV/JSON are
+  implemented.
 - Centralized `mapAccessLogError` coverage for export-specific errors.
 - Playwright export fixture verifies real file/job outcome.
 
@@ -111,4 +119,3 @@ Error handling:
 - Access Logs export submit produces a real download/job result.
 - Export uses current filters and selected allowlisted fields.
 - Output is redacted and safe for CSV/JSON.
-

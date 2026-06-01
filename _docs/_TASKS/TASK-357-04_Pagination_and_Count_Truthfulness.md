@@ -76,7 +76,7 @@ Error handling:
 - Auth model: authenticated admin session.
 - RBAC: `audit:read` required.
 - CSRF: none; read-only.
-- Rate-limit bucket: admin read.
+- Rate-limit bucket: `admin_read`.
 - Reject unknown validation: strict query schema and cursor validation from
   `TASK-357-01`.
 - Anti-abuse: internal session route; no nonce, HMAC, or captcha.
@@ -104,6 +104,5 @@ Error handling:
 ## Acceptance Criteria
 
 - Audit list shows exact totals only when returned by backend.
-- Next/Previous state follows real cursor/page metadata.
+- Next/Previous state follows real cursor metadata.
 - Search/filter changes reset pagination state.
-

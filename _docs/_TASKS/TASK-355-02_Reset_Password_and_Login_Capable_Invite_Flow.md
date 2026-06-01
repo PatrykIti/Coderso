@@ -35,7 +35,8 @@ the supported flow, log in as that user, and verify RBAC behavior.
 | File | Required change |
 |---|---|
 | Admin users route/service modules | Add schema-first invite and password-reset endpoints or wire existing equivalents. |
-| Auth set-password route/service modules | Add or reuse a public single-use token confirmation endpoint. |
+| Auth reset-confirm route/service modules | Reuse the existing public single-use token confirmation endpoint, externally `POST /admin/api/auth/reset/confirm` and client path `/auth/reset/confirm`. |
+| Admin user schemas/services | Decide the legacy `password` field contract: deprecate/reject it for normal admin UI create/update or keep a tightly audited compatibility path with tests. |
 | `core/admin/services/adminUsersClient.ts` | Add typed `inviteUserWithSetPassword` and `requestAdminPasswordReset` clients with CSRF for admin writes. |
 | `core/admin/ui/users/InviteUserDialog.tsx` | Create a login-capable invited user and show delivery/blocking error states. |
 | `core/admin/ui/users/UserDetailsDrawer.tsx` | Replace no-op reset with a real confirm + submit flow. |
@@ -82,8 +83,9 @@ Data flow:
   outstanding set-password tokens and creates a new token.
 - Delivery uses email when configured; if delivery is unavailable, the UI shows
   a blocking error instead of pretending the user can log in.
-- `POST /admin/api/auth/set-password` accepts a public token plus password,
-  validates TTL/single-use/hash lookup, sets the password, and consumes token.
+- Existing `POST /admin/api/auth/reset/confirm` accepts the public token plus
+  password, validates TTL/single-use/hash lookup, sets the password, and
+  consumes token.
 
 Error handling:
 
@@ -94,6 +96,10 @@ Error handling:
 - Do not log, cache, copy to reports, or return passwords/reset tokens outside
   an explicitly designed one-time display boundary.
 - Admins do not type another user's password.
+- Existing `password` fields in admin user create/update schemas and services
+  must be explicitly retired from normal UI flows or kept only behind a
+  documented audited compatibility path; do not leave a silent parallel way to
+  set another user's password.
 
 ## Security Contract
 
@@ -104,8 +110,8 @@ Admin invite/reset endpoints:
 - RBAC: `users:write` required; password reset also emits an explicit audit
   event.
 - CSRF: required for POST/PATCH/DELETE/PUT admin writes.
-- Rate-limit bucket: admin write plus security-sensitive password reset bucket
-  where available.
+- Rate-limit bucket: `admin_write` for admin invite/reset-token generation.
+  Public reset-confirm uses the existing `auth` bucket.
 - Reject unknown validation: strict body schemas for invite and reset payloads.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
 - Secret handling: no password hashes or reset tokens in browser cache, logs,
@@ -114,12 +120,12 @@ Admin invite/reset endpoints:
 Public set-password endpoint:
 
 - Endpoint visibility: public auth endpoint, e.g.
-  `POST /admin/api/auth/set-password` or existing equivalent.
+  `POST /admin/api/auth/reset/confirm` existing reset confirmation route.
 - Auth model: unauthenticated token bearer; authenticated sessions may use it
   only when the token belongs to that account.
 - RBAC: none; valid unguessable single-use token is the authorization factor.
 - CSRF: match existing auth reset convention.
-- Rate-limit bucket: auth reset/set-password by IP and token hash.
+- Rate-limit bucket: existing `auth` bucket by IP and token hash.
 - Reject unknown validation: strict `token` and `password` body schema.
 - Anti-abuse: unguessable nonce plus signature/HMAC-backed token, hashed at
   rest, single-use, TTL, optional captcha only if existing reset policy requires

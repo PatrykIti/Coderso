@@ -96,7 +96,8 @@ Error handling:
 - RBAC: `settings:write` for branding/site writes; existing media RBAC for
   selecting/uploading media.
 - CSRF: required for writes/uploads.
-- Rate-limit bucket: admin write/media bucket as existing routes define.
+- Rate-limit bucket: `admin_write` for settings writes; media picker keeps the
+  existing media route bucket.
 - Reject unknown validation: strict branding/site schemas and media type/size
   validation.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
@@ -130,4 +131,3 @@ Error handling:
 - General/Site controls either perform real work or are truthfully unavailable.
 - Routing/base URL/security-header changes require explicit review.
 - Saves update redacted cache without overwriting dirty drafts.
-

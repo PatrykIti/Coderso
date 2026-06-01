@@ -20,7 +20,7 @@ roles, and matrix bulk/toggle-all paths.
 - `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md`
 - `core/admin/ui/roles/PermissionsMatrixPage.tsx`
 - `core/admin/ui/roles/PermissionsMatrix.tsx`
-- `core/admin/ui/users/RoleEditor.tsx`
+- `core/admin/ui/roles/RoleEditor.tsx`
 - `core/admin/services/adminRolesClient.ts`
 
 ## Sub-Tasks
@@ -31,8 +31,8 @@ roles, and matrix bulk/toggle-all paths.
 
 | File | Required change |
 |---|---|
-| Shared RBAC helper module | Define one high-risk permission taxonomy used by UI, tests, and audit. |
-| `core/admin/ui/users/RoleEditor.tsx` | Confirm `Select all`, create with full access, and save promotion to full access. |
+| Shared RBAC helper module from `TASK-356-02` | Consume the high-risk permission taxonomy used by UI, tests, and audit. |
+| `core/admin/ui/roles/RoleEditor.tsx` | Confirm `Select all`, create with full access, and save promotion to full access through one shared callsite contract used by Users and Roles Matrix. |
 | `core/admin/ui/roles/PermissionsMatrixPage.tsx` | Mark matrix diffs that require full-access confirmation and block final save until confirmed. |
 | `core/admin/ui/roles/PermissionsMatrix.tsx` | Ensure bulk toggle/all-permission paths cannot bypass confirmation. |
 | Tests | Cover cancel/confirm, keyboard submit, new role, existing role, and matrix bulk paths. |
@@ -40,23 +40,6 @@ roles, and matrix bulk/toggle-all paths.
 ## Implementation Pseudocode
 
 ```ts
-const HIGH_RISK_PERMISSIONS = new Set([
-  "*",
-  "roles:*",
-  "users:*",
-  "settings:*",
-  "sessions:write",
-  "api-keys:write",
-]);
-
-function isHighRiskPermission(permission: string) {
-  return permission === "*" ||
-    permission.startsWith("roles:") ||
-    permission.startsWith("users:") ||
-    permission.startsWith("settings:") ||
-    HIGH_RISK_PERMISSIONS.has(permission);
-}
-
 function requiresFullAccessConfirm(nextPermissions: string[]) {
   return nextPermissions.includes("*") ||
     nextPermissions.length >= ALL_PERMISSIONS.length ||
@@ -89,7 +72,7 @@ Error handling:
 - Auth model: authenticated admin session.
 - RBAC: `roles:write` required for role create/update.
 - CSRF: required for writes.
-- Rate-limit bucket: admin write.
+- Rate-limit bucket: `admin_write`.
 - Reject unknown validation: unchanged strict role payload schemas.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
 - Audit: full-access grants and high-risk permission additions must be
@@ -121,6 +104,7 @@ Error handling:
 
 - Any path that grants full access or high-risk scopes requires explicit
   confirmation.
+- Read-only scopes such as `roles:read` are not high-risk by default unless a
+  later product/security decision documents that stricter behavior.
 - Cancel leaves role permissions unchanged.
 - RoleEditor and Roles Matrix use the same high-risk taxonomy.
-

@@ -21,7 +21,7 @@ search the matrix, but not toggle permissions, add roles, or save changes.
 - `core/admin/ui/roles/PermissionsMatrixPage.tsx`
 - `core/admin/ui/roles/PermissionsMatrix.tsx`
 - `core/admin/ui/roles/PermissionsMatrixSearch.tsx`
-- `core/admin/ui/users/RoleEditor.tsx`
+- `core/admin/ui/roles/RoleEditor.tsx`
 - `core/admin/services/adminRolesClient.ts`
 - `core/admin/app/AdminApp.tsx`
 
@@ -36,7 +36,7 @@ search the matrix, but not toggle permissions, add roles, or save changes.
 | `core/admin/app/AdminApp.tsx` or auth provider | Pass shared permission flags into the Roles Matrix route. |
 | `core/admin/ui/roles/PermissionsMatrixPage.tsx` | Resolve denied/read-only/editable mode and avoid fetching when read is denied. |
 | `core/admin/ui/roles/PermissionsMatrix.tsx` | Disable checkboxes and bulk toggles with accessible reason text in read-only mode. |
-| `core/admin/ui/users/RoleEditor.tsx` | Hide/disable Add Role and editor save paths without `roles:write`. |
+| `core/admin/ui/roles/RoleEditor.tsx` | Hide/disable Add Role and editor save paths without `roles:write`, using the same prop/helper contract as the Users surface. |
 | `core/admin/services/adminRolesClient.ts` | Preserve 403 handling and expose refresh-required errors to the page. |
 | Tests | Cover denied, read-only, editable, search, and stale-403 refresh behavior. |
 
@@ -84,7 +84,7 @@ Error handling:
 - RBAC: `roles:read` for matrix/list read; `roles:write` for create/update/
   delete/duplicate/full-access changes.
 - CSRF: required for all role writes; not required for read-only GET.
-- Rate-limit bucket: admin read for list, admin write for mutations.
+- Rate-limit bucket: `admin_read` for list and `admin_write` for mutations.
 - Reject unknown validation: unchanged role schemas remain strict.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
 - Audit: no new writes in this leaf beyond existing role write audit behavior.
@@ -98,7 +98,8 @@ Error handling:
 - Vitest UI: admin user keeps editable behavior.
 - Vitest UI: search works in read-only and editable modes.
 - Bun route tests remain green for `roles:read` and `roles:write` enforcement.
-- Playwright restricted fixture proves local toggles cannot dirty the matrix.
+- Playwright restricted fixture proves local toggles cannot dirty the matrix and
+  that the Add Role dialog cannot be opened as a submit-ready write flow.
 
 ## Documentation Updates Required
 
@@ -114,4 +115,3 @@ Error handling:
 - Read-only users can inspect/search without local edits or write-capable
   controls.
 - Admin editable behavior remains intact.
-

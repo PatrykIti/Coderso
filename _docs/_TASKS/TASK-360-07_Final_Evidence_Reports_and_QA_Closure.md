@@ -79,8 +79,8 @@ Error handling:
 - If Claude UI clicking times out, record source-only result and do not claim
   Claude clicked UI.
 - If DB/network blocks Playwright, record blocker and rerun before closure.
-- Restore `Max sessions per user` from QA value `30` or document exact
-  intentional override with date and owner.
+- Verify `TASK-359-05` restored `Max sessions per user` from QA value `30` or
+  documented an exact intentional override with date and owner.
 
 ## Security Contract
 
@@ -123,4 +123,3 @@ Error handling:
   evidence and owner.
 - Final Playwright evidence covers real restricted-user login and UI clicks.
 - Claude evidence is labeled truthfully as UI-clicking or source-only.
-

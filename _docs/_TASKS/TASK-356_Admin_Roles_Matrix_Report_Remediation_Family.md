@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + RBAC + Roles Matrix + Audit + QA + Docs
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-355 shared Users/RoleEditor gating adoption, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md` audit evidence
+**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm action pattern, TASK-355-01 Users/RoleEditor permission propagation, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md` audit evidence
 **Status:** To Do
 
 ---
@@ -26,7 +26,7 @@ or confirmation.
 - `core/admin/ui/roles/PermissionsMatrixPage.tsx`
 - `core/admin/ui/roles/PermissionsMatrix.tsx`
 - `core/admin/ui/roles/PermissionsMatrixSearch.tsx`
-- `core/admin/ui/users/RoleEditor.tsx`
+- `core/admin/ui/roles/RoleEditor.tsx`
 - `core/admin/services/adminRolesClient.ts`
 - `core/admin/app/AdminApp.tsx`
 
@@ -46,9 +46,12 @@ or confirmation.
 
 These refinements are mandatory for implementation planning and closure.
 
-6. **High-risk taxonomy:** define one shared list of high-risk permissions
-   before UI work (`*`, `roles:*`, `users:*`, `settings:*`, security/session/API
-   key scopes) and reuse it in footer badges, review modal, and tests.
+6. **High-risk taxonomy:** define one shared list of high-risk permission
+   promotions before UI work. It must include `*`, wildcard grants such as
+   `roles:*`, write/admin grants such as `roles:write`, `users:write`, and
+   `settings:write`, plus security/session/API-key scopes. Read-only scopes
+   such as `roles:read` must not be treated as high-risk unless the
+   implementation deliberately documents that product decision.
 7. **Stale-role protection:** role saves must detect stale source data. If the
    backend supports version/update timestamps, send them; otherwise refresh and
    show conflict copy when a save returns conflict/412.
@@ -61,6 +64,8 @@ These refinements are mandatory for implementation planning and closure.
    reason copy, not merely visually muted.
 10. **RoleEditor reuse:** `RoleEditor` is used from Users and Roles surfaces;
    full-access confirmation and write gating must be consistent in both places.
+   Thread the same `canWriteRoles`/high-risk helpers through every callsite
+   instead of creating separate Users-vs-Roles permission branches.
 11. **Matrix full-access path:** matrix-level bulk/toggle-all controls must not
     bypass full-access confirmation through the save-review modal. Any path
     that grants `*` or all permissions to a role must be classified as
@@ -79,8 +84,8 @@ Physical execution leaves:
 
 1. Consume `TASK-360-01` shared permission snapshot and read-only route mode.
 2. Implement matrix read-only gating before changing save behavior.
-3. Add pure diff builder and footer summary.
-4. Add review modal and partial-failure/conflict behavior.
+3. Add shared high-risk taxonomy, pure diff builder, and footer summary.
+4. Add review modal and explicit best-effort partial-failure/conflict behavior.
 5. Add full-access confirmation in both `RoleEditor` and matrix promotion
    paths.
 6. Add audit diff payload and final Playwright proof.
@@ -223,7 +228,9 @@ Pseudocode:
 
 ```ts
 function requiresFullAccessConfirm(nextPermissions: string[]) {
-  return nextPermissions.includes("*") || nextPermissions.length >= ALL_PERMISSIONS.length;
+  return nextPermissions.includes("*") ||
+    nextPermissions.length >= ALL_PERMISSIONS.length ||
+    nextPermissions.some(isHighRiskPermission);
 }
 
 function classifyMatrixDiffForConfirm(diff: RolePermissionDiff) {
@@ -253,6 +260,8 @@ Regression tests:
 - Create/save with full access cannot bypass confirm through keyboard submit.
 - Matrix bulk toggle/review-save cannot grant full access without the same
   confirmation.
+- Adding high-risk write/security scopes without full access also requires the
+  same confirmation, while read-only scopes do not unless explicitly documented.
 
 ### TASK-356-04: RBAC Audit Event Diff
 
@@ -260,9 +269,10 @@ Regression tests:
 
 Implementation shape:
 
-- Server-side role update audit events should include machine-readable
-  `addedPermissions` and `removedPermissions` where the route/service can safely
-  compare previous vs next permissions.
+- Server-side role create/update/delete audit events should include
+  machine-readable metadata. Updates and full-access grants include
+  `addedPermissions` and `removedPermissions` where the route/service can
+  safely compare previous vs next permissions.
 - Keep audit payload redacted: no session cookies, no request headers, no
   unrelated user data.
 - UI review modal diff and backend audit diff should use the same semantics
@@ -297,12 +307,14 @@ Route family: admin roles.
   - `roles:read` for list/matrix read.
   - `roles:write` for create/update/delete/duplicate/full-access changes.
 - CSRF: required for all role writes.
-- Rate-limit bucket: admin write.
+- Rate-limit bucket: `admin_write`.
 - Reject unknown validation: all role write payloads schema-first and
   unknown-field rejecting.
 - Anti-abuse: no public write endpoint; no nonce/HMAC/captcha required.
 - Audit: role creates, deletes, full-access grants, and permission diff saves
-  must emit audit events with role id/name and added/removed scopes.
+  must emit audit events with role id/name. Permission-changing updates and
+  full-access grants include added/removed scopes; deletes include the final
+  permission snapshot redacted to permission ids only.
 - High-risk guard: adding `*`, `settings:*`, `roles:*`, `users:*`, or security
   permissions requires explicit UI confirmation before submit.
 

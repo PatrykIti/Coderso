@@ -39,14 +39,14 @@ actual actor/user semantics without leaking extra PII.
 
 ```ts
 type AccessAdvancedFilters = {
-  actorId?: string;
+  userId?: string;
   actorRole?: string;
   method?: string;
   ip?: string;
 };
 
 function resolveAccessFilterLabel(filter: AccessAdvancedFilters) {
-  if (filter.actorId) return "User";
+  if (filter.userId) return "User";
   if (filter.actorRole) return "Role";
   return "Advanced filters";
 }
@@ -57,7 +57,7 @@ function buildAccessLogQueryFromFilters(
 ): AccessLogQuery {
   return normalizeAccessLogQuery({
     ...base,
-    actorId: advanced.actorId,
+    userId: advanced.userId,
     actorRole: advanced.actorRole,
     method: advanced.method,
     ip: advanced.ip,
@@ -72,13 +72,13 @@ Data flow:
 - Apply validates draft values and normalizes them into URL/query state.
 - List reloads from server through the Access Logs query contract.
 - Active chips show exact query semantics, e.g. User vs Role.
-- Dynamic actor/user summaries are cached/read-through and redacted based on
+- Dynamic user/actor summaries are cached/read-through and redacted based on
   the current user's permissions.
 
 Error handling:
 
 - Invalid IP/method values block apply and show field errors.
-- Actor lookup failure leaves text query usable and marks actor filter
+- User/actor lookup failure leaves text query usable and marks user filter
   unavailable.
 - Restricted users receive redacted actor summaries and no extra email list
   unless the access log contract already permits it.
@@ -90,7 +90,7 @@ Error handling:
 - RBAC: `audit:read` for access-log filter metadata; any broader user lookup
   must require the repo's user-read permission and return only safe summaries.
 - CSRF: none for read-only filter metadata.
-- Rate-limit bucket: admin read.
+- Rate-limit bucket: `admin_read`.
 - Reject unknown validation: strict query/filter schemas.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
 - Privacy: filter metadata must not leak email/name/PII beyond what the current
@@ -122,4 +122,3 @@ Error handling:
 - Sliders advanced-filter affordance is real or truthfully unavailable.
 - `User` and `Role` labels match actual query behavior.
 - Restricted filter metadata does not leak extra PII.
-

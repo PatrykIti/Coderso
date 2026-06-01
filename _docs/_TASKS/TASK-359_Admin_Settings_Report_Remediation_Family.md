@@ -59,7 +59,7 @@ are placeholders.
 | Storage `Test Connection` no-op | Implement backend test endpoint or disable. |
 | Email `Export Logs` no-op | Implement export or disable. |
 | Assistant reindex side effect | Add confirm/dry-run with document/chunk counts. |
-| QA `Max sessions per user = 30` remains | Restore default/target value or track explicit QA override. |
+| QA `Max sessions per user = 30` remains | TASK-359-05 owns restoring the default/target value or recording an explicit QA override; TASK-360-07 only verifies final evidence. |
 
 ## Refinement Checklist
 
@@ -77,9 +77,9 @@ are placeholders.
     typed confirmation.
 25. **Settings request budget:** add a performance/request budget assertion for
     Settings transitions after `AdminLink` and cache changes land.
-26. **QA override cleanup:** closure must either restore `Max sessions per user`
-    to the product default or document the exact intentional QA override with
-    date and owner.
+26. **QA override cleanup:** `TASK-359-05` must either restore `Max sessions per
+    user` to the product default or document the exact intentional QA override
+    with date and owner; `TASK-360-07` verifies this evidence during closure.
 27. **External action sandboxing:** email send, webhook test, storage test, and
     assistant reindex must have environment-aware copy/confirm so local QA does
     not accidentally affect production services.
@@ -118,7 +118,7 @@ Physical execution leaves:
 
 Implementation shape:
 
-- Use the permission snapshot from TASK-355 to gate `/admin/settings/**`.
+- Use the permission snapshot from `TASK-360-01` to gate `/admin/settings/**`.
 - Hide Settings sidebar item for users without `settings:read`.
 - Do not call global `getSettings()` after login when the current user lacks
   `settings:read`.
@@ -533,17 +533,22 @@ sessions, API keys, webhooks, IP allowlist, assistant reindex.
 - RBAC:
   - `settings:read` for settings read routes.
   - `settings:write` for general/site/assistant settings writes.
-  - Security/session/API key/webhook/IP allowlist changes must require the
-    most-specific high-risk permission. If the permission does not exist yet,
-    define it before implementation rather than widening `settings:write`
-    silently.
+  - Security/session/API key/webhook/IP allowlist changes must use the current
+    v1 `settings:write` contract unless the implementation deliberately
+    introduces narrower high-risk permissions. Any new permission must update
+    default roles/seeds, route tests, `_docs/RBAC_SPEC.md`, and
+    `_docs/CMS_API.md` in the same task.
 - CSRF: required for all writes, tests, reindex, revokes, deletes, exports, and
   external side-effect actions.
 - Rate-limit bucket:
-  - admin read for settings reads,
-  - admin write/security-sensitive for settings writes,
-  - auth/security-sensitive for sessions/IP allowlist/API keys,
-  - external action bucket for email/webhook/storage tests/reindex if present.
+  - `admin_read` for settings reads,
+  - `admin_write` for settings writes, sessions/IP allowlist/API keys, email,
+    webhook, and storage tests,
+  - `assistant` for assistant reindex/action endpoints that already use the
+    assistant route family,
+  - `auth` only for public auth/reset endpoints.
+  A new security-sensitive or external-action bucket must first be added to
+  `_docs/SECURITY_SPEC.md`, runtime bucket selection, route tests, and gates.
 - Reject unknown validation: strict schema-first payloads for all changed routes.
 - Anti-abuse: no public write endpoint; no nonce/HMAC/captcha required for
   internal admin session writes.
@@ -563,12 +568,12 @@ Per-subtask API contract matrix:
 
 | Subtask | Endpoint family | Visibility/auth/RBAC | CSRF/rate-limit | Validation/anti-abuse |
 |---|---|---|---|---|
-| 359-01 | `GET /admin/api/settings`, `GET /admin/api/settings/*` | internal admin session + `settings:read` | read-only, admin read bucket | strict no-body/no-unknown query, no public write |
-| 359-03 | cached settings reads/mutations | internal admin session + settings permission matching source route | writes require CSRF, admin write bucket | redacted cache only, secret denylist tests |
-| 359-04 | branding/site settings PATCH and media selection | internal admin session + `settings:write`; media picker keeps existing media RBAC | CSRF, admin write bucket | strict settings/media schema, high-risk site confirm |
-| 359-05 | security/sessions/API keys/webhooks/IP allowlist | internal admin session + most-specific security/session/API-key/webhook permission | CSRF, security-sensitive/admin write bucket | strict schemas, typed confirm, lockout guards |
-| 359-06 | email/storage/integrations/assistant external actions | internal admin session + settings/security/integration-specific permission | CSRF, external-action/security-sensitive bucket | strict schemas, no secret echo, environment confirm |
-| 359-07 | login alerts/sessions placeholder cleanup | internal admin session + security/settings write as applicable | CSRF for writes, admin write bucket | strict login-alerts schema, no public write |
+| 359-01 | `GET /admin/api/settings`, `GET /admin/api/settings/*` | internal admin session + `settings:read` | read-only, `admin_read` | strict no-body/no-unknown query, no public write |
+| 359-03 | cached settings reads/mutations | internal admin session + settings permission matching source route | writes require CSRF, `admin_write` | redacted cache only, secret denylist tests |
+| 359-04 | branding/site settings PATCH and media selection | internal admin session + `settings:write`; media picker keeps existing media RBAC | CSRF, `admin_write` | strict settings/media schema, high-risk site confirm |
+| 359-05 | security/sessions/API keys/webhooks/IP allowlist | internal admin session + current `settings:write` or fully migrated narrower permission | CSRF, `admin_write` | strict schemas, typed confirm, lockout guards |
+| 359-06 | email/storage/integrations/assistant external actions | internal admin session + current settings permission or fully migrated narrower permission | CSRF, `admin_write` for settings tests and `assistant` for assistant reindex/action endpoints | strict schemas, no secret echo, environment confirm |
+| 359-07 | login alerts/sessions placeholder cleanup | internal admin session + security/settings write as applicable | CSRF for writes, `admin_write` | strict login-alerts schema, no public write |
 
 ## Testing Requirements
 

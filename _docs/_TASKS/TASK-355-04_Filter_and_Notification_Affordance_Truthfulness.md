@@ -41,7 +41,7 @@ notification switches.
 
 ```ts
 type UserAdvancedFilters = {
-  status?: "active" | "inactive" | "invited";
+  status?: "active" | "inactive" | "pending";
   roleId?: string;
 };
 
@@ -84,7 +84,7 @@ Error handling:
 - RBAC: `users:read` for filters/list query; `users:write` or a narrower
   preferences permission for notification preference writes if added.
 - CSRF: required for preferences writes; not required for read-only GET.
-- Rate-limit bucket: admin read for query, admin write for preferences.
+- Rate-limit bucket: `admin_read` for query and `admin_write` for preferences.
 - Reject unknown validation: strict schemas for query params and any
   preferences payload.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
@@ -118,4 +118,3 @@ Error handling:
 - Notification switches no longer appear as active writable controls when no
   persistence exists.
 - No remaining Users no-op controls are reported by the shared audit gate.
-

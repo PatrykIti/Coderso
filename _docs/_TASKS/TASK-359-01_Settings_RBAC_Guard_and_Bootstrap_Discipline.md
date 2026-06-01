@@ -77,7 +77,7 @@ Error handling:
 - RBAC: `settings:read` for settings reads; writes remain gated by their
   specific write/security permissions.
 - CSRF: unchanged; not required for read-only GET.
-- Rate-limit bucket: admin read for settings reads.
+- Rate-limit bucket: `admin_read` for settings reads.
 - Reject unknown validation: no request body on reads; strict validation for
   existing writes remains required.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
@@ -109,4 +109,3 @@ Error handling:
 - Settings route/nav are fail-closed for users without `settings:read`.
 - Restricted users do not trigger normal-UX settings 403s.
 - Backend RBAC coverage remains intact.
-

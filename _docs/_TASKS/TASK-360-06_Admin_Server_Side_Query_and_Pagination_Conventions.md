@@ -66,7 +66,7 @@ Data flow:
 
 - Surface owns typed filter state with source labels.
 - Query serializer rejects label/source mismatches in tests.
-- Server validates query params and returns cursor/page metadata.
+- Server validates query params and returns cursor metadata.
 - UI renders count copy only from response metadata.
 - Custom date range option must expose real date inputs before applying.
 
@@ -84,7 +84,7 @@ Error handling:
 - Auth model: authenticated admin session.
 - RBAC: route-specific read permission, e.g. `audit:read`.
 - CSRF: none for read-only queries.
-- Rate-limit bucket: admin read.
+- Rate-limit bucket: `admin_read`.
 - Reject unknown validation: strict schemas, clamped limits, validated
   date/cursor params.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
@@ -113,4 +113,3 @@ Error handling:
 - Audit/Access tasks have a shared convention for strict query and pagination.
 - Fake totals/static pagination are explicitly forbidden.
 - Filter labels must match their actual data source.
-

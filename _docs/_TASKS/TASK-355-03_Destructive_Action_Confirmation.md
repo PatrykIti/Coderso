@@ -20,7 +20,7 @@ access without review.
 - `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_USERS.md`
 - `core/admin/ui/users/UserDetailsDrawer.tsx`
 - `core/admin/ui/users/UserList.tsx`
-- `core/admin/ui/users/RoleEditor.tsx`
+- `core/admin/ui/roles/RoleEditor.tsx`
 - `core/admin/services/adminUsersClient.ts`
 - `core/admin/services/adminRolesClient.ts`
 
@@ -34,7 +34,9 @@ access without review.
 |---|---|
 | `core/admin/ui/users/UserDetailsDrawer.tsx` | Confirm deactivate, risky reactivate, delete user, and reset-password handoff from TASK-355-02. |
 | `core/admin/ui/users/UserList.tsx` | Ensure row destructive actions delegate to the same confirm pattern. |
-| `core/admin/ui/users/RoleEditor.tsx` | Confirm delete role and high-risk duplicate role actions. |
+| `core/admin/ui/users/UsersRolesPage.tsx` | Confirm user delete/status changes and role duplicate/delete orchestration. |
+| `core/admin/ui/roles/RoleList.tsx` | Ensure role card duplicate/delete menu actions route through confirm flows. |
+| `core/admin/ui/roles/RoleEditor.tsx` | Keep create/edit save gating aligned with confirm/high-risk role flows from TASK-356. |
 | Shared confirm component from `TASK-360-02` | Reuse the canonical confirmation UI and focus handling. |
 | UI/Playwright tests | Cover cancel, confirm, RBAC-hidden controls, and cleanup flows. |
 
@@ -72,7 +74,9 @@ Error handling:
 - `last_admin`, conflict, and not-found domain errors remain machine-readable
   and map through the route boundary.
 - Duplicate role requires confirm only when the source role contains `*` or
-  high-risk scopes.
+  high-risk scopes, and the create payload/audit metadata must preserve
+  `sourceRoleId` or equivalent source-role context instead of looking like an
+  unrelated role create.
 
 ## Security Contract
 
@@ -81,12 +85,15 @@ Error handling:
 - RBAC: `users:write` for user status/delete; `roles:write` for role
   duplicate/delete.
 - CSRF: required for all mutations.
-- Rate-limit bucket: admin write.
+- Rate-limit bucket: `admin_write`.
 - Reject unknown validation: unchanged existing mutation schemas; strict
   validation remains required.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
 - Audit: deactivate, reactivate, delete user, duplicate role, and delete role
-  emit machine-readable audit events with redacted target metadata.
+  emit machine-readable audit events with redacted target metadata. Duplicate
+  role audit must include source role id/name when available; if the route
+  remains a generic create endpoint, the client/service contract must add
+  source metadata before claiming duplicate-role audit coverage.
 
 ## Testing Requirements
 
@@ -112,4 +119,3 @@ Error handling:
   click.
 - Confirm dialogs include target identity and are keyboard accessible.
 - Cancel paths are proven side-effect-free.
-

@@ -55,7 +55,7 @@ The summary report identifies the repeated root causes:
 | Export dialog close-only behavior | Shared export contract here; audit/access adoption in TASK-357/TASK-358. |
 | Server-side filters/pagination/export | Shared API conventions here; area implementation in TASK-357/TASK-358. |
 | Settings SPA/cache drift | Gate and docs here; implementation in TASK-359. |
-| QA setting `Max sessions per user = 30` | Closure/evidence here unless TASK-359 owns restoration. |
+| QA setting `Max sessions per user = 30` | Actual restoration/override note is owned by TASK-359-05; TASK-360-07 verifies final evidence. |
 
 ## Refinement Checklist
 
@@ -82,6 +82,9 @@ The summary report identifies the repeated root causes:
 35. **Filter-label truthfulness:** shared query conventions must require filter
     labels to match their actual data source, e.g. Access Logs cannot label a
     static role dropdown as `User`.
+36. **Stable control locators:** TASK-360-04/TASK-360-05 must promote the audit
+    finding about brittle Radix Selects and icon-only controls into explicit
+    acceptance criteria for accessible names and/or stable test ids.
 
 ## Sub-Tasks
 
@@ -215,6 +218,24 @@ type ExportDialogProps = {
 function canSubmitExport(props: ExportDialogProps, selectedFields: string[]) {
   return Boolean(props.onExport) && selectedFields.length > 0 && !props.unavailableReason;
 }
+
+async function downloadAdminExport(
+  apiPath: `/${string}`,
+  payload: unknown,
+  options: { filenamePrefix: string; withCsrf: true }
+) {
+  // Resolve through the same admin API base convention as apiRequest, then
+  // handle either a blob response or async export-job JSON.
+  return resolveExportDownload(
+    await adminApiFetch(apiPath, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      withCsrf: options.withCsrf,
+      accept: "blob-or-json-job",
+    }),
+    options.filenamePrefix
+  );
+}
 ```
 
 Area adoption:
@@ -223,6 +244,8 @@ Area adoption:
 - Access Logs export.
 - Any existing import/export surface using this component must remain backward
   compatible or be migrated in the same PR.
+- Remove or disable the current active `xlsx` option unless an adopting task
+  implements a real Excel export route/content type and tests.
 
 ### TASK-360-04: Admin No-Op Control Audit Gate
 
@@ -300,7 +323,7 @@ Own shared conventions used by TASK-357 and TASK-358:
 
 - strict query schemas,
 - clamped limits,
-- cursor/page metadata,
+- cursor metadata,
 - date boundary normalization,
 - active filter reset behavior,
 - user-facing count copy rules.
@@ -373,8 +396,8 @@ After TASK-355 through TASK-359 land:
   - backend 403 defense-in-depth still covered,
   - cleanup via UI.
 - Update all six reports with final evidence.
-- Restore or explicitly document `Max sessions per user` from the QA value of
-  30.
+- Verify that `TASK-359-05` restored or explicitly documented
+  `Max sessions per user` from the QA value of 30.
 - Run Claude/source review after implementation and record whether it clicked
   UI or only reviewed source.
 
@@ -424,10 +447,14 @@ query, and confirm patterns.
   fail closed when absent/stale.
 - CSRF: required for all write/export/revoke/test actions.
 - Rate-limit bucket:
-  - admin read for read/query routes,
-  - admin write for mutations,
-  - security-sensitive bucket for auth/session/password/API-key/IP allowlist
-    actions.
+  - `admin_read` for read/query routes,
+  - `admin_write` for mutations, exports, revoke, settings tests, API-key, IP
+    allowlist, and admin security actions,
+  - `auth` for public auth/reset routes,
+  - `assistant` for assistant action/reindex endpoints that already use the
+    assistant route family.
+  A new security-sensitive bucket requires `_docs/SECURITY_SPEC.md`, runtime
+  bucket selection, tests, and gate updates before any task may depend on it.
 - Reject unknown validation: every new/changed route body/query strict and
   schema-first.
 - Anti-abuse: no public write endpoint in this family. If any public endpoint

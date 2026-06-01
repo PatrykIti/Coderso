@@ -18,6 +18,11 @@ Tasks: TASK-358, TASK-358-01, TASK-358-02, TASK-358-03, TASK-358-04
 - Split the family into physical execution leaf files:
   `TASK-358-01` through `TASK-358-04`, each with pseudocode, data flow, error
   handling, security contract, tests, docs plan, and acceptance criteria.
+- Refined drift found by agent/Claude review: preserved current
+  `success|failed`/`userId` query vocabulary, added method/IP query ownership,
+  required a real session relation before revoke/session-detail actions,
+  aligned export helper paths and rate buckets, and separated query vs
+  advanced-filter leaf ownership.
 
 ## Validation
 

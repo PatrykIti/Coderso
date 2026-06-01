@@ -18,6 +18,10 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
 - Split the family into physical execution leaf files:
   `TASK-360-01` through `TASK-360-07`, each with pseudocode, data flow, error
   handling, security contract, tests, docs plan, and acceptance criteria.
+- Refined drift found by agent/Claude review: added shared
+  `downloadAdminExport` helper ownership, explicit `xlsx` no-op prevention,
+  canonical rate-limit bucket names, stable locator requirements, and final QA
+  evidence ownership for Settings cleanup.
 
 ## Validation
 

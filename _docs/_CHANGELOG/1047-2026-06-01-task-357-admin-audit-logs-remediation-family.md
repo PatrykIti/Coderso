@@ -18,6 +18,11 @@ Tasks: TASK-357, TASK-357-01, TASK-357-02, TASK-357-03, TASK-357-04
 - Split the family into physical execution leaf files:
   `TASK-357-01` through `TASK-357-04`, each with pseudocode, data flow, error
   handling, security contract, tests, docs plan, and acceptance criteria.
+- Refined drift found by agent/Claude review: replaced unsupported blob
+  `apiRequest` usage with shared export helper ownership, changed audit query
+  semantics to category/severity/cursor, removed the 200-row local-filter
+  ambiguity, aligned rate buckets, and required explicit `xlsx` unavailable
+  handling.
 
 ## Validation
 

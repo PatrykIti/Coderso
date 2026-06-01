@@ -18,6 +18,7 @@ dirty forms, and add mobile section navigation.
 ## Source Findings
 
 - `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md`
+- `core/admin/ui/settings/SettingsSidebar.tsx`
 - `core/admin/ui/layouts/SettingsShell.tsx`
 - `core/admin/app/AdminApp.tsx`
 - `core/admin/ui/settings/**`
@@ -31,7 +32,8 @@ dirty forms, and add mobile section navigation.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/layouts/SettingsShell.tsx` | Replace raw anchors with `AdminLink`, canonical paths, prefetch, dirty guard, and mobile nav. |
+| `core/admin/ui/settings/SettingsSidebar.tsx` | Replace raw anchors with `AdminLink`, canonical paths, and prefetch. |
+| `core/admin/ui/layouts/SettingsShell.tsx` | Keep layout ownership for dirty guard wiring and mobile section navigation. |
 | Settings pages/forms | Expose dirty state and save/discard hooks to shell or shared guard. |
 | Admin route helpers | Use `adminPaths`, `AdminLink`, and `prefetchAdminRoute`; no hand-built href matching. |
 | Tests | Cover SPA transitions, request budget, dirty cancel/preserve, and mobile navigation. |
@@ -110,4 +112,3 @@ Error handling:
 - Settings section switches are SPA transitions.
 - Dirty Settings drafts cannot be lost silently.
 - Mobile users can reach every Settings section.
-

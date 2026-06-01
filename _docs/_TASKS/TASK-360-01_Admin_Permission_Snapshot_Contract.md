@@ -82,7 +82,8 @@ Error handling:
 - RBAC: no extra permission to read the caller's own effective permission
   snapshot.
 - CSRF: none for read-only GET.
-- Rate-limit bucket: admin/auth bootstrap read with in-flight client dedupe.
+- Rate-limit bucket: `admin_read` for admin permission bootstrap reads, with
+  in-flight client dedupe.
 - Reject unknown validation: no body; reject unsupported query params.
 - Anti-abuse: internal session route; no nonce, HMAC, or captcha.
 - Secret handling: no cookies, session ids, password hashes, reset tokens, API
@@ -111,4 +112,3 @@ Error handling:
 - Users, Roles Matrix, and Settings consume one shared permission contract.
 - Sidebar route links and route guards use the same helper.
 - Missing/stale permission data fails closed without leaking secrets.
-

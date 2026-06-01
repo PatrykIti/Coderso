@@ -79,11 +79,11 @@ Error handling:
 
 - Endpoint visibility: internal admin settings/sessions endpoints.
 - Auth model: authenticated admin session.
-- RBAC: `settings:read` for read; `settings:write` or specific security
-  permission for Login Alerts writes; session revokes remain owned by
-  `TASK-359-05`.
+- RBAC: `settings:read` for read; current v1 `settings:write` for Login Alerts
+  writes unless a narrower security permission is introduced with docs/default
+  role migration; session revokes remain owned by `TASK-359-05`.
 - CSRF: required for writes.
-- Rate-limit bucket: admin write/security-sensitive where applicable.
+- Rate-limit bucket: `admin_write` where applicable.
 - Reject unknown validation: strict Login Alerts schema and email recipient
   validation.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
@@ -117,4 +117,3 @@ Error handling:
 - Login Alerts controls are persisted or truthfully unavailable.
 - Sticky and topbar actions do not diverge.
 - Sessions buttons do not remain active no-ops.
-

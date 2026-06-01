@@ -19,6 +19,10 @@ Tasks: TASK-359, TASK-359-01, TASK-359-02, TASK-359-03, TASK-359-04, TASK-359-05
 - Split the family into physical execution leaf files:
   `TASK-359-01` through `TASK-359-07`, each with pseudocode, data flow, error
   handling, security contract, tests, docs plan, and acceptance criteria.
+- Refined drift found by agent/Claude review: aligned Settings rate buckets
+  with `admin_read`, `admin_write`, and `assistant`, clarified current
+  `settings:write` security-session RBAC, assigned raw sidebar anchor cleanup,
+  and made Max Sessions restoration owner explicit.
 
 ## Validation
 

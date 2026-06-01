@@ -24,7 +24,7 @@ support read-only and partial-read modes without avoidable UI-originated 403s.
 - `core/admin/ui/users/UserDetailsDrawer.tsx`
 - `core/admin/ui/users/UserEditor.tsx`
 - `core/admin/ui/users/InviteUserDialog.tsx`
-- `core/admin/ui/users/RoleEditor.tsx`
+- `core/admin/ui/roles/RoleEditor.tsx`
 - `core/admin/services/adminUsersClient.ts`
 - `core/admin/services/adminRolesClient.ts`
 - `core/admin/services/authClient.ts`
@@ -103,8 +103,8 @@ Error handling:
 - RBAC: no extra permission is required to read the caller's own effective
   permission snapshot; payload is scoped to the current user only.
 - CSRF: not required for GET; the route must remain read-only.
-- Rate-limit bucket: admin/auth bootstrap read bucket with client in-flight
-  dedupe to avoid request bursts.
+- Rate-limit bucket: `admin_read` for admin permission bootstrap reads, with
+  client in-flight dedupe to avoid request bursts.
 - Reject unknown validation: no request body; reject unsupported query params.
 - Anti-abuse: internal session route only; no nonce, HMAC, or captcha.
 - Secret handling: no password hashes, reset tokens, session IDs, cookies, API
@@ -140,4 +140,3 @@ Error handling:
   missing.
 - Backend RBAC remains the source of truth and still rejects unauthorized
   writes.
-

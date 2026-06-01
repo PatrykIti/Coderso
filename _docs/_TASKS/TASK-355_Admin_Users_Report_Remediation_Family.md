@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + RBAC + Users + Security UX + QA + Docs
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-001 auth foundation, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_USERS.md` audit evidence
+**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm action pattern, TASK-360-04 no-op control gate, TASK-360-05 drawer/sheet accessibility gate, TASK-360-06 server-side query conventions, TASK-001 auth foundation, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_USERS.md` audit evidence
 **Status:** To Do
 
 ---
@@ -31,7 +31,7 @@ misleading.
 - `core/admin/ui/users/UserDetailsDrawer.tsx`
 - `core/admin/ui/users/UserEditor.tsx`
 - `core/admin/ui/users/InviteUserDialog.tsx`
-- `core/admin/ui/users/RoleEditor.tsx`
+- `core/admin/ui/roles/RoleEditor.tsx`
 - `core/admin/services/adminUsersClient.ts`
 - `core/admin/services/adminRolesClient.ts`
 - `core/admin/services/authClient.ts`
@@ -87,12 +87,15 @@ Physical execution leaves:
 
 1. Consume the shared permission snapshot from `TASK-360-01` before changing
    Users UI controls; do not create a second local permission model.
-2. Add route/client tests for permission bootstrap and Users/Roles partial-read
+2. Land the shared confirm, no-op, drawer a11y, and query conventions required
+   by `TASK-360-02`, `TASK-360-04`, `TASK-360-05`, and `TASK-360-06` before
+   closing the dependent Users leaves.
+3. Add route/client tests for permission bootstrap and Users/Roles partial-read
    modes before hiding controls.
-3. Implement reset/invite and destructive-confirm flows after write gating is
+4. Implement reset/invite and destructive-confirm flows after write gating is
    in place, so restricted fixtures prove controls are unavailable before API
    submit.
-4. Close filter/notification/mobile-a11y truthfulness once the security flows
+5. Close filter/notification/mobile-a11y truthfulness once the security flows
    are stable.
 
 ### TASK-355-01: Current User Permission Propagation for Users
@@ -189,8 +192,8 @@ Security Contract for permission bootstrap:
 - RBAC: no additional permission required to read the caller's own effective
   permission snapshot, but payload is scoped to current user only.
 - CSRF: not required for GET; route must remain read-only.
-- Rate-limit bucket: admin/auth bootstrap read bucket with in-flight client
-  dedupe to avoid Settings-style `auth/me` request bursts.
+- Rate-limit bucket: `admin_read` for admin permission bootstrap reads, with
+  in-flight client dedupe to avoid Settings-style `auth/me` request bursts.
 - Reject unknown validation: no request body; query params rejected unless
   explicitly supported.
 - Anti-abuse: internal session route only; no nonce/HMAC/captcha.
@@ -263,8 +266,9 @@ Routes and client shape:
 - `POST /admin/api/admin-users/:id/password-reset`
   - body: `ResetPasswordRequest`
   - invalidates older outstanding set-password tokens and creates a new token.
-- `POST /admin/api/auth/set-password`
-  - public token-confirm endpoint for the invited user.
+- `POST /admin/api/auth/reset/confirm`
+  - public token-confirm endpoint reused from the existing reset-password
+    flow; admin client path is `/auth/reset/confirm`.
   - body: `SetPasswordRequest`.
 
 Token rules:
@@ -337,7 +341,7 @@ Pseudocode:
 
 ```ts
 type UserAdvancedFilters = {
-  status?: "active" | "inactive" | "invited";
+  status?: "active" | "inactive" | "pending";
   roleId?: string;
 };
 
@@ -377,13 +381,15 @@ Route family: admin users and roles.
   - Writes require `users:write` / `roles:write`.
   - Password reset requires `users:write` plus explicit audit event.
 - CSRF: required for all POST/PATCH/DELETE/PUT admin writes.
-- Rate-limit bucket: admin write for mutations; password reset/set-password
-  routes must use an auth/security-sensitive bucket, defining one first if the
-  current route layer does not expose it.
+- Rate-limit bucket: `admin_write` for mutations; public reset-confirm uses the
+  existing `auth` bucket. A new security-sensitive bucket must be defined in
+  `_docs/SECURITY_SPEC.md`, runtime bucket selection, route tests, and gates
+  before this task depends on it.
 - Reject unknown validation: all new request payloads schema-first and
   unknown-field rejecting.
-- Anti-abuse: no public write endpoint. No nonce/HMAC/captcha required because
-  routes are internal admin session routes.
+- Anti-abuse: admin users/roles routes have no public write endpoint. No
+  nonce/HMAC/captcha required because those routes are internal admin session
+  routes; the public reset-confirm route is covered separately below.
 - Secret handling: passwords/reset tokens may appear only in one-time server
   responses when explicitly designed; never in localStorage, reports, logs, or
   cache payloads.
@@ -393,14 +399,14 @@ Route family: admin users and roles.
 Set-password public endpoint contract:
 
 - Endpoint visibility: public auth endpoint
-  (`POST /admin/api/auth/set-password` or existing auth reset equivalent).
+  (`POST /admin/api/auth/reset/confirm` existing auth reset equivalent).
 - Auth model: unauthenticated token bearer; authenticated sessions may use it
   only when token belongs to that account.
 - RBAC: none; possession of a valid single-use token is the authorization
   factor.
 - CSRF: not required for token-auth public write if existing reset-password
   route is CSRF-free; otherwise match the existing auth reset convention.
-- Rate-limit bucket: auth reset/set-password bucket by IP and token hash.
+- Rate-limit bucket: existing `auth` bucket by IP and token hash.
 - Reject unknown validation: strict body schema for `token` and `password`.
 - Anti-abuse: unguessable nonce plus signature/HMAC-backed token, hashed at
   rest, single-use, TTL, optional captcha only if existing auth reset policy

@@ -18,6 +18,9 @@ Tasks: TASK-356, TASK-356-01, TASK-356-02, TASK-356-03, TASK-356-04
 - Split the family into physical execution leaf files:
   `TASK-356-01` through `TASK-356-04`, each with pseudocode, data flow, error
   handling, security contract, tests, docs plan, and acceptance criteria.
+- Refined drift found by agent/Claude review: moved high-risk permission
+  taxonomy into the diff-builder leaf, aligned rate buckets, clarified
+  RoleEditor ownership, and expanded audit coverage beyond update-only diffs.
 
 ## Validation
 

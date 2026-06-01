@@ -93,7 +93,7 @@ Error handling:
 - RBAC: `settings:read` for cached reads; matching write permissions for
   invalidating mutations.
 - CSRF: unchanged; writes require CSRF.
-- Rate-limit bucket: admin read/write as source endpoints define.
+- Rate-limit bucket: `admin_read`/`admin_write` as source endpoints define.
 - Reject unknown validation: unchanged endpoint schemas; cache normalizer
   rejects unknown unsafe fields by omission.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
@@ -128,4 +128,3 @@ Error handling:
 - Safe Settings values hydrate from redacted cache and revalidate in background.
 - Secrets never enter browser cache/localStorage/debug payloads.
 - Mutations invalidate/update cache consistently.
-

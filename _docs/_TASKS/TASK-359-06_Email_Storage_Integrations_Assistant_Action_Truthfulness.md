@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Settings + External Actions + Accessibility
 **Estimated Effort:** Large
-**Dependencies:** TASK-359-01, TASK-360-02, TASK-360-05
+**Dependencies:** TASK-359-01, TASK-360-02, TASK-360-04, TASK-360-05
 **Status:** To Do
 
 ---
@@ -35,7 +35,7 @@ Allowlist drawer semantics, and Assistant reindex.
 |---|---|
 | Email settings UI/client/routes | Implement or disable Export Logs; confirm Send Test Email with recipient/environment preview. |
 | Storage settings UI/client/routes | Implement or disable Test Connection for local/S3/Azure with redacted result payloads. |
-| Integrations/Webhooks UI/client/routes | Confirm/audit secret save and webhook test/delete side effects. |
+| Integrations/Webhooks UI/client/routes | Confirm/audit secret save and webhook test side effects; webhook delete confirm remains owned by `TASK-359-05`. |
 | Assistant settings UI/client/routes | Add confirm/dry-run with document/chunk counts before reindex. |
 | Drawers/sheets | Add `SheetTitle` and `SheetDescription` for Webhook, Email, Integrations, and IP Allowlist drawers. |
 | Tests | Cover no-op removal, external confirms, redaction, timeouts, and drawer warning-free behavior. |
@@ -80,11 +80,15 @@ Error handling:
 - Endpoint visibility: internal admin settings/email/storage/integrations/
   assistant routes.
 - Auth model: authenticated admin session.
-- RBAC: settings/security/integration-specific permission matching each action;
-  do not use broad write permission where a narrower high-risk permission exists.
+- RBAC: use the current settings/security route permission for each action
+  unless a narrower high-risk permission already exists or is introduced with
+  default-role/seed migration, docs, and route tests in the same task.
 - CSRF: required for tests, sends, exports, reindex, secret saves, and webhook
   actions.
-- Rate-limit bucket: external action/security-sensitive bucket.
+- Rate-limit bucket: `admin_write` for email/webhook/storage settings tests and
+  `assistant` for assistant reindex/action endpoints. A new external-action or
+  security-sensitive bucket requires `_docs/SECURITY_SPEC.md`, runtime bucket
+  selection, tests, and gates first.
 - Reject unknown validation: strict schemas for all action descriptors.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
 - Secret handling: no SMTP/storage/integration/webhook secret echo; redacted
@@ -120,4 +124,3 @@ Error handling:
   truthfully unavailable.
 - Side-effect actions require confirmation and redacted audit.
 - Settings drawers expose valid title/description semantics.
-

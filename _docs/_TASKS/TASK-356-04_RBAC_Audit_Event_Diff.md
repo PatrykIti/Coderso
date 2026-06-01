@@ -11,9 +11,10 @@
 
 ## Overview
 
-Record machine-readable added/removed permission diffs in role update audit
-events so RBAC changes can be reviewed after the fact with the same semantics
-shown in the Roles Matrix review modal.
+Record machine-readable role audit metadata for role create/update/delete and
+added/removed permission diffs in role update audit events so RBAC changes can
+be reviewed after the fact with the same semantics shown in the Roles Matrix
+review modal.
 
 ## Source Findings
 
@@ -31,7 +32,7 @@ shown in the Roles Matrix review modal.
 
 | File | Required change |
 |---|---|
-| Admin role service/domain module | Build before/after permission diffs during role update. |
+| Admin role service/domain module | Build before/after permission diffs during role update and role snapshot metadata for create/delete. |
 | Audit service/domain module | Accept redacted role permission diff metadata. |
 | Admin role route tests | Assert audit event contains role id/name and added/removed permission arrays. |
 | Audit docs/tests | Cover secret redaction and stable machine-readable fields. |
@@ -61,6 +62,8 @@ Data flow:
 - Service builds a diff before writing or inside the same transaction when
   available.
 - Audit event records role id/name plus sorted added/removed arrays.
+- Create/delete audit events record role id/name and redacted permission ids;
+  full-access grants are tagged explicitly.
 - UI review diff and backend audit diff use the same semantics even if they are
   implemented by separate helpers.
 
@@ -78,10 +81,11 @@ Error handling:
 - Auth model: authenticated admin session.
 - RBAC: `roles:write` for role updates.
 - CSRF: required for role writes.
-- Rate-limit bucket: admin write.
+- Rate-limit bucket: `admin_write`.
 - Reject unknown validation: strict role update schema remains required.
 - Anti-abuse: internal session route; no nonce, HMAC, or captcha.
-- Audit: payload includes role id/name and sorted added/removed permissions;
+- Audit: payload includes role id/name, action type, sorted added/removed
+  permissions for updates, and redacted permission snapshots for create/delete;
   excludes session cookies, request headers, auth tokens, password material,
   and unrelated user data.
 
@@ -91,7 +95,8 @@ Error handling:
 - `bun --cwd core lint:types`
 - Service/domain tests for diff output: added, removed, no-op, sorted,
   duplicate-normalized inputs.
-- Bun route audit test for update event metadata.
+- Bun route audit tests for create, update diff, full-access grant, and delete
+  event metadata.
 - Secret redaction test proving audit payload excludes cookies/headers/tokens.
 - Route registration and centralized `map*Error` coverage for audit-write
   failure if the route maps that error class.
@@ -107,8 +112,7 @@ Error handling:
 
 ## Acceptance Criteria
 
-- Role update audit events include deterministic added/removed permission
-  arrays.
+- Role create/update/delete audit events include deterministic redacted
+  permission metadata, and updates include added/removed permission arrays.
 - Audit payloads remain redacted and machine-readable.
 - Audit semantics match the diff review users saw before save.
-

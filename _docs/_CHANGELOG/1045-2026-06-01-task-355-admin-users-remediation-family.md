@@ -19,6 +19,10 @@ Tasks: TASK-355, TASK-355-01, TASK-355-02, TASK-355-03, TASK-355-04, TASK-355-05
 - Split the family into physical execution leaf files:
   `TASK-355-01` through `TASK-355-05`, each with pseudocode, data flow, error
   handling, security contract, tests, docs plan, and acceptance criteria.
+- Refined drift found by agent/Claude review: aligned bootstrap rate buckets
+  with `_docs/SECURITY_SPEC.md`, kept invite/reset on the existing
+  reset-confirm auth route, fixed role editor ownership paths, and clarified
+  destructive/notification/mobile leaf ownership.
 
 ## Validation
 

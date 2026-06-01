@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Access Logs + Security Sessions + Export + QA + Docs
 **Estimated Effort:** Large
-**Dependencies:** TASK-357 shared audit/access export-query decisions, TASK-360-03 shared export dialog contract, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ACCESS_LOGS.md` audit evidence
+**Dependencies:** TASK-359-05 settings security session contract, TASK-360-02 shared confirm pattern, TASK-360-03 shared export dialog contract, TASK-360-04 no-op control gate, TASK-360-06 server-side query and pagination conventions, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ACCESS_LOGS.md` audit evidence
 **Status:** To Do
 
 ---
@@ -37,7 +37,7 @@ advanced filter, static pagination, and close-only export.
 | User filter is hard-coded roles | Use dynamic users/actors or relabel as role/query filter. |
 | `Custom range` has no picker | Add date picker with validation or remove option. |
 | Sliders button has no handler | Connect advanced filters drawer or remove/disable. |
-| Pagination is static | Replace with real cursor/page state. |
+| Pagination is static | Replace with real cursor state. |
 | Export dialog does not export | Hook into shared export contract or hide final submit. |
 | Search result match is unexplained | Show matched actor/email/resource context or adjust searchable fields/copy. |
 
@@ -81,7 +81,7 @@ Implementation shape:
   - custom `dateFrom` / `dateTo`,
   - user/actor filter,
   - limit,
-  - cursor/page.
+  - cursor.
 - Replace hard-coded page buttons with backend metadata.
 - Search results should display why a row matched when the visible row cells do
   not contain the searched email/user.
@@ -91,9 +91,11 @@ Pseudocode:
 ```ts
 type AccessLogQuery = {
   query?: string;
-  status?: "allowed" | "blocked" | "failed";
-  actorId?: string;
+  status?: "success" | "failed";
+  userId?: string;
   actorRole?: string;
+  method?: string;
+  ip?: string;
   dateFrom?: string;
   dateTo?: string;
   limit: number;
@@ -113,11 +115,15 @@ function resolveAccessLogDateRange(range: DateRangeSelection) {
 
 Data flow:
 
-1. Filters update a single query state.
-2. Query state reloads list through access logs client.
-3. Response metadata drives page buttons.
-4. Drawer uses the selected row object from current results.
-5. Search match context is rendered from backend highlight/matched field if
+1. `TASK-358-01` owns the backend list query, date/status/search/user filters,
+   cursor metadata, and search match explanation.
+2. `TASK-358-04` owns the sliders/advanced drawer and adds method/IP/user-role
+   UI affordances on top of the query contract.
+3. Filters update a single query state.
+4. Query state reloads list through access logs client.
+5. Response metadata drives page buttons.
+6. Drawer uses the selected row object from current results.
+7. Search match context is rendered from backend highlight/matched field if
    available, otherwise from deterministic local explanation.
 
 Regression tests:
@@ -136,13 +142,19 @@ Implementation decision:
 - Preferred full-scope path is required: access log rows that include or can
   resolve an active session id must support `View full session` and
   `Revoke access`.
+- Current `access_logs` rows do not include `sessionId`. Before enabling real
+  view/revoke, add a deterministic session relation such as nullable
+  `session_id` on `access_logs`, update `logAccess` for future rows, and ship
+  full migration artifacts (SQL, `meta/*_snapshot.json`, `_journal.json`). Old
+  rows without a session relation must render unavailable states.
 - Rows without a resolvable active session must render both actions disabled
   with deterministic unavailable copy. Do not leave this as a product decision
   for implementers.
-- Revoke must require a newly defined or existing explicit high-risk permission
-  before implementation. If neither `sessions:write` nor `security:write`
-  exists, define a dedicated `sessions:write`/equivalent permission in the
-  task implementation; never fall back to `audit:read`.
+- Revoke must require a high-risk write permission and must never fall back to
+  `audit:read`. The current v1 sessions routes use `settings:write`; if the
+  implementation introduces a narrower `sessions:write`/`security:write`
+  permission, it must update RBAC defaults, route tests, `_docs/RBAC_SPEC.md`,
+  and `_docs/CMS_API.md` in the same task.
 
 Preferred revoke implementation:
 
@@ -150,7 +162,7 @@ Preferred revoke implementation:
 type RevokeAccessRequest = {
   accessLogId: string;
   sessionId?: string;
-  actorId?: string;
+  userId?: string;
   reason: "admin_manual_revoke";
 };
 
@@ -173,12 +185,17 @@ Route/client contract:
 - Server route: `POST /admin/api/access-logs/:id/revoke`.
 - Session detail navigation:
   `/admin/settings/security/sessions?sessionId=<id>` or a shared session drawer
-  must be backed by the existing sessions client.
+  must be backed by the existing sessions client and current settings session
+  RBAC. Users with only `audit:read` may see access log details but must see
+  full session/revoke as unavailable unless they also have the required settings
+  session permission.
 
 Error handling:
 
 - Missing session relation returns a domain error like
   `access_log_session_not_found`.
+- Historical rows without `sessionId` render unavailable copy and must not call
+  the revoke route.
 - Already revoked sessions return idempotent success or clear conflict copy.
 - Current session revoke must require extra confirmation or be blocked.
 
@@ -208,7 +225,7 @@ type AccessLogExportRequest = {
 };
 
 async function exportAccessLogs(request: AccessLogExportRequest) {
-  return downloadAdminExport("/admin/api/access-logs/export", request, {
+  return downloadAdminExport("/access-logs/export", request, {
     filenamePrefix: "access-logs",
     withCsrf: true,
   });
@@ -218,9 +235,12 @@ async function exportAccessLogs(request: AccessLogExportRequest) {
 Admin API path:
 
 - Route registration must expose `POST /admin/api/access-logs/export`.
-- If the existing `apiRequest` helper expects paths relative to
-  `/admin/api`, the client wrapper may pass `/access-logs/export`, but the task
-  acceptance evidence must name the concrete registered route.
+- The shared `downloadAdminExport` helper from `TASK-360-03` accepts admin
+  API-relative `/access-logs/export` and resolves it to
+  `/admin/api/access-logs/export`; acceptance evidence must name the concrete
+  registered route.
+- If the shared dialog still exposes `xlsx`, remove/disable it as unavailable
+  unless a real Excel content type, backend export, and tests are implemented.
 
 Error handling:
 
@@ -254,14 +274,14 @@ Pseudocode:
 
 ```ts
 type AccessAdvancedFilters = {
-  actorId?: string;
+  userId?: string;
   actorRole?: string;
   method?: string;
   ip?: string;
 };
 
 function resolveAccessFilterLabel(filter: AccessAdvancedFilters) {
-  if (filter.actorId) return "User";
+  if (filter.userId) return "User";
   if (filter.actorRole) return "Role";
   return "Advanced filters";
 }
@@ -272,7 +292,7 @@ function buildAccessLogQueryFromFilters(
 ): AccessLogQuery {
   return normalizeAccessLogQuery({
     ...base,
-    actorId: advanced.actorId,
+    userId: advanced.userId,
     actorRole: advanced.actorRole,
     method: advanced.method,
     ip: advanced.ip,
@@ -311,11 +331,16 @@ Route family: access logs and session revoke.
 - Auth model: authenticated admin session.
 - RBAC:
   - `audit:read` for list/detail/export.
-  - Revoke requires `sessions:write`, `security:write`, or a newly defined
-    equivalent high-risk permission. It must not fall back to `audit:read`.
+  - Revoke uses the current v1 `settings:write` session-management contract
+    unless the implementation deliberately migrates to `sessions:write`,
+    `security:write`, or another high-risk permission with RBAC defaults, route
+    tests, `_docs/RBAC_SPEC.md`, and `_docs/CMS_API.md` updated in the same
+    task. It must not fall back to `audit:read`.
 - CSRF: required for export POST and revoke POST.
-- Rate-limit bucket: admin read for list/detail, admin write/security-sensitive
-  bucket for revoke.
+- Rate-limit bucket: `admin_read` for list/detail and `admin_write` for export
+  and revoke. If a narrower security-sensitive bucket is introduced later, it
+  must first be added to `_docs/SECURITY_SPEC.md`, runtime bucket selection,
+  route tests, and release gates.
 - Reject unknown validation: strict query/body schemas.
 - Anti-abuse: no public write endpoint; no nonce/HMAC/captcha required.
 - Redaction: exports and details must not include cookies, authorization
@@ -328,10 +353,10 @@ Per-endpoint contract matrix:
 
 | Endpoint | Visibility | Auth/RBAC | CSRF | Rate bucket | Validation | Anti-abuse |
 |---|---|---|---|---|---|---|
-| `GET /admin/api/access-logs` | internal admin | session + `audit:read` | none, read-only | admin read | strict query schema, clamped limit/cursor | no public write |
-| `GET /admin/api/access-logs/:id` if added | internal admin | session + `audit:read` | none, read-only | admin read | strict id param | no public write |
-| `POST /admin/api/access-logs/export` | internal admin | session + `audit:read` | required | export/admin write bucket | strict body schema, column allowlist | no public write, redacted output |
-| `POST /admin/api/access-logs/:id/revoke` | internal admin | session + high-risk session/security write permission | required | security-sensitive/admin write | strict id/body schema, self-lockout guard | no public write, audit event |
+| `GET /admin/api/access-logs` | internal admin | session + `audit:read` | none, read-only | `admin_read` | strict query schema, clamped limit/cursor | no public write |
+| `GET /admin/api/access-logs/:id` if added | internal admin | session + `audit:read` | none, read-only | `admin_read` | strict id param | no public write |
+| `POST /admin/api/access-logs/export` | internal admin | session + `audit:read` | required | `admin_write` | strict body schema, column allowlist | no public write, redacted output |
+| `POST /admin/api/access-logs/:id/revoke` | internal admin | session + current `settings:write` or fully migrated high-risk session/security write permission | required | `admin_write` | strict id/body schema, self-lockout guard | no public write, audit event |
 
 ## Testing Requirements
 
@@ -346,6 +371,8 @@ Per-endpoint contract matrix:
   `access_log_cursor_invalid`, `access_log_not_found`,
   `access_log_session_not_found`, `access_log_revoke_forbidden`,
   `access_log_export_invalid_columns`, and `access_log_export_too_large`.
+- DB-backed tests for new `session_id` relation must use uniquely scoped
+  fixtures and only clean up rows they create.
 - Playwright:
   - restricted `audit:read` can read but cannot revoke,
   - custom range affects request,

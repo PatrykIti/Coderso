@@ -54,6 +54,8 @@ Data flow:
 - Test asserts no Radix title/description warnings.
 - Test also checks accessible name/description when the test runner can inspect
   the dialog role.
+- Audited drawer triggers and icon-only open controls expose stable accessible
+  names and/or test ids so the warning regression is not locator-fragile.
 
 Error handling:
 
@@ -93,4 +95,3 @@ Error handling:
 - Audited Admin drawers open without Radix title/description warnings.
 - Each drawer has an accessible title and description in all states.
 - Shared helper is available to future drawer tests.
-

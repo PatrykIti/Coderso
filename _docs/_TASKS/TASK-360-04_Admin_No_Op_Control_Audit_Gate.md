@@ -59,6 +59,8 @@ Error handling:
 - Icon-only controls require accessible names or stable test ids.
 - Controls with async handlers must prove visible success/error or route change,
   not just a click event.
+- Radix Selects and icon-only controls from the audited surfaces require stable
+  accessible names and/or test ids before the gate can be considered closed.
 
 ## Security Contract
 
@@ -92,5 +94,6 @@ Error handling:
 
 - Every known no-op control has a test expectation.
 - Intentional unavailable controls are disabled/hidden with explicit copy.
+- Audited icon-only controls and Radix Select triggers have stable names or test
+  ids for regression automation.
 - New active no-op regressions are caught by targeted tests or documented gate.
-

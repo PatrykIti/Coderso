@@ -42,9 +42,11 @@ and match explanation.
 ```ts
 type AccessLogQuery = {
   query?: string;
-  status?: "allowed" | "blocked" | "failed";
-  actorId?: string;
+  status?: "success" | "failed";
+  userId?: string;
   actorRole?: string;
+  method?: string;
+  ip?: string;
   dateFrom?: string;
   dateTo?: string;
   limit: number;
@@ -66,11 +68,16 @@ Data flow:
 
 - Filters update one query state, optionally mirrored into URL params if the
   route already follows that pattern.
+- The implementation preserves the current backend status vocabulary
+  `success|failed` unless it deliberately extends the schema, docs, and tests
+  to distinguish blocked/allowed states.
 - Query state reloads the list through the access logs client.
 - Response metadata drives page buttons and count copy.
 - Details drawer receives the selected row from current results.
 - Search match context renders backend highlight/matched field if available, or
   deterministic local explanation when query matches non-visible fields.
+- Advanced method/IP drawer controls are owned by `TASK-358-04`; this leaf only
+  owns the server query fields and cursor contract they submit into.
 
 Error handling:
 
@@ -85,11 +92,11 @@ Error handling:
 - Auth model: authenticated admin session.
 - RBAC: `audit:read` required.
 - CSRF: none; read-only.
-- Rate-limit bucket: admin read.
+- Rate-limit bucket: `admin_read`.
 - Reject unknown validation: strict query schema, clamped limit, validated
   date range and cursor.
 - Anti-abuse: internal session route; no nonce, HMAC, or captcha.
-- Privacy/redaction: actor/user filter and match context must not leak extra
+- Privacy/redaction: user/actor filter and match context must not leak extra
   PII beyond the access log contract.
 
 ## Testing Requirements
@@ -100,7 +107,8 @@ Error handling:
   RBAC, cursor validation, and route registration.
 - Vitest UI tests: custom range validation, query param propagation,
   backend-driven Next/Previous, search match explanation, and no static `1/2/3`
-  pagination.
+  pagination. Sliders/advanced-filter trigger behavior is covered by
+  `TASK-358-04`.
 - Playwright restricted `audit:read` fixture verifies list/read access and
   truthful pagination.
 
@@ -115,7 +123,7 @@ Error handling:
 
 ## Acceptance Criteria
 
-- Custom range, status, search, actor, limit, and cursor affect server query.
+- Custom range, status, search, user/role, limit, and cursor affect server
+  query.
 - Pagination is backend-driven.
 - Search results explain hidden-field matches or avoid hidden-field confusion.
-

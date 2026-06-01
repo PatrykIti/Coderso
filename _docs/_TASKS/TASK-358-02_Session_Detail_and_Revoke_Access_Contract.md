@@ -32,6 +32,7 @@ states for rows that do not.
 | File | Required change |
 |---|---|
 | Access log route/service modules | Register `POST /admin/api/access-logs/:id/revoke` and resolve session state. |
+| DB schema/migrations if needed | Add nullable `session_id` relation or another deterministic session correlation; include SQL migration, `meta/*_snapshot.json`, and `_journal.json`. |
 | Sessions route/service modules | Reuse existing session detail/revoke primitives where available. |
 | Access logs admin client | Add typed revoke client with CSRF and mapped errors. |
 | Access logs UI components | Wire View full session navigation/drawer and revoke confirm/unavailable states. |
@@ -43,7 +44,7 @@ states for rows that do not.
 type RevokeAccessRequest = {
   accessLogId: string;
   sessionId?: string;
-  actorId?: string;
+  userId?: string;
   reason: "admin_manual_revoke";
 };
 
@@ -62,6 +63,11 @@ async function revokeAccessFromLog(input: RevokeAccessRequest) {
 
 Data flow:
 
+- Add or reuse a deterministic session relation. The current `access_logs`
+  schema has no `sessionId`, so enabling real session actions requires a
+  migration and logging update for future rows, or an explicitly tested
+  deterministic correlation contract. Historical rows without a relation render
+  unavailable state.
 - Access log row classifies session state: current session, already revoked, no
   session id, expired session, other user's active session, or blocked/failed
   attempt.
@@ -69,7 +75,9 @@ Data flow:
   gated `Revoke access`.
 - View full session navigates to
   `/admin/settings/security/sessions?sessionId=<id>` or opens a backed session
-  detail drawer.
+  detail drawer. Use the existing Settings Security sessions RBAC; an
+  `audit:read`-only user sees this action unavailable rather than receiving
+  session detail data.
 - Revoke opens shared confirm, posts to
   `POST /admin/api/access-logs/:id/revoke`, refreshes row/session state, and
   emits audit.
@@ -77,10 +85,14 @@ Data flow:
 Error handling:
 
 - Missing session relation maps to `access_log_session_not_found`.
+- Rows without `sessionId` never call the revoke route and show deterministic
+  historical/no-session copy.
 - Already revoked sessions return idempotent success or clear conflict copy.
 - Current session revoke requires extra confirmation or is blocked.
-- Revoke cannot fall back to `audit:read`; it requires `sessions:write`,
-  `security:write`, or a newly defined equivalent high-risk permission.
+- Revoke cannot fall back to `audit:read`. The current v1 sessions routes use
+  `settings:write`; if the implementation introduces a narrower
+  `sessions:write`/`security:write` permission, it must update RBAC defaults,
+  route tests, `_docs/RBAC_SPEC.md`, and `_docs/CMS_API.md` in the same task.
 
 ## Security Contract
 
@@ -88,13 +100,16 @@ Error handling:
   `POST /admin/api/access-logs/:id/revoke`.
 - Auth model: authenticated admin session.
 - RBAC: high-risk session/security write permission required; `audit:read`
-  alone is insufficient.
+  alone is insufficient. Use the existing `settings:write` contract unless a
+  narrower permission is introduced with complete docs/default-role migration.
 - CSRF: required.
-- Rate-limit bucket: security-sensitive/admin write.
+- Rate-limit bucket: `admin_write`. A new security-sensitive bucket may only be
+  used after `_docs/SECURITY_SPEC.md`, runtime bucket selection, tests, and
+  release gates define it.
 - Reject unknown validation: strict id/body schema and self-lockout guard.
 - Anti-abuse: internal session route; no nonce, HMAC, or captcha.
 - Audit: revoke emits summary audit event with access log id, revoked session
-  id when available, actor id when permitted, and reason.
+  id when available, user id when permitted, and reason.
 - Secret handling: no cookies, authorization headers, session secrets, or raw
   tokens in UI/API/audit payloads.
 
@@ -105,8 +120,13 @@ Error handling:
 - Bun route/service tests for RBAC split, CSRF, strict body validation,
   missing session relation, already revoked session, current-session guard, and
   audit event.
+- DB migration/schema tests for the session relation when the implementation
+  adds `access_logs.session_id`.
 - Vitest UI tests for disabled unavailable states, view session link/drawer,
   revoke confirm cancel no API call, confirm one API call, and refresh state.
+- Vitest/Bun tests prove `audit:read` only cannot view full session or revoke,
+  settings read can view session detail where that route allows it, and current
+  `settings:write` or a fully migrated narrower permission can revoke.
 - Playwright admin/restricted fixtures prove `audit:read` can view logs but
   cannot revoke, while high-risk permission can revoke with confirm.
 
@@ -125,4 +145,3 @@ Error handling:
 - View/revoke actions are real or deterministically unavailable per row state.
 - Revoke uses a stronger permission than `audit:read`.
 - Self-lockout and already-revoked cases are explicitly handled and tested.
-

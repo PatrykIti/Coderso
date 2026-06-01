@@ -29,6 +29,7 @@ warnings.
 
 | File | Required change |
 |---|---|
+| `core/admin/ui/users/UsersRolesPage.tsx` | Add title/description semantics to the mobile `SheetContent` wrapper that owns the Radix sheet. |
 | `core/admin/ui/users/UserDetailsDrawer.tsx` | Add `SheetTitle` and `SheetDescription`, using visually hidden text if visible headings already exist. |
 | Shared drawer tests or Users UI tests | Assert the mobile open path has title/description and no console warning. |
 | Playwright Users audit fixture | Re-open mobile details drawer and capture clean a11y evidence. |
@@ -93,4 +94,3 @@ Error handling:
   every state.
 - The Radix dialog warning no longer appears during mobile drawer open.
 - Visual layout remains consistent with the existing admin drawer pattern.
-

@@ -32,6 +32,7 @@ redacts sensitive values, and downloads CSV/JSON or returns async job metadata.
 |---|---|
 | `core/admin/ui/shared/ExportDialog.tsx` | Accept `onExport(payload)`, loading state, validation errors, and retry behavior. |
 | Audit admin client | Add `exportAuditLogs` returning blob or async export metadata. |
+| Shared/admin export download helper | Add or reuse a blob-capable helper; the current `apiRequest` helper parses JSON and must not receive fake `responseType` options. |
 | Audit route/service modules | Register `POST /admin/api/audit/export`, validate body, enforce RBAC/CSRF, and generate redacted CSV/JSON. |
 | Audit export domain module | Own column allowlist, filename scope, row limit, redaction, and CSV escaping. |
 | Tests | Cover UI dialog, route validation, RBAC, CSV escaping, and redaction. |
@@ -46,16 +47,10 @@ type AuditExportRequest = {
 };
 
 async function exportAuditLogs(request: AuditExportRequest) {
-  const response = await apiRequest<Blob>(
-    "/audit/export",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-    },
-    { withCsrf: true, responseType: "blob" }
-  );
-  downloadBlob(response, buildAuditExportFilename(request));
+  return downloadAdminExport("/audit/export", request, {
+    filenamePrefix: "audit-logs",
+    withCsrf: true,
+  });
 }
 ```
 
@@ -65,9 +60,15 @@ Data flow:
 - Dialog receives active filter state from `AuditList`.
 - Dialog validates format and at least one selected allowlisted column.
 - Client posts to registered route `POST /admin/api/audit/export`.
+- The client passes API-relative `/audit/export` to the shared helper, which
+  resolves the concrete HTTP route `/admin/api/audit/export`.
 - Server re-validates filters, columns, RBAC, CSRF, and row limit.
 - Server returns a redacted blob or async export job metadata.
 - UI downloads blob or shows job status and success/error feedback.
+- Tests must prove the helper resolves the API-relative path to the registered
+  route.
+- If the shared dialog still contains `xlsx`, remove/disable it as unavailable
+  unless this task also implements a real Excel content type and route tests.
 
 Error handling:
 
@@ -83,7 +84,7 @@ Error handling:
 - Auth model: authenticated admin session.
 - RBAC: `audit:read` required.
 - CSRF: required.
-- Rate-limit bucket: export/admin write bucket.
+- Rate-limit bucket: `admin_write`.
 - Reject unknown validation: strict body schema, column allowlist, normalized
   filter schema, clamped row limit.
 - Anti-abuse: internal session route; no nonce, HMAC, or captcha.
@@ -98,6 +99,8 @@ Error handling:
 - `bun --cwd core lint:types`
 - Vitest UI tests for at-least-one-column validation, active filters in submit
   payload, loading state, retry, and download success/error.
+- Vitest UI tests prove `xlsx` is not an active no-op when only CSV/JSON are
+  implemented.
 - Bun route/service tests for route registration, `audit:read`, CSRF, unknown
   body rejection, invalid columns, row limit, redaction, and CSV escaping.
 - Centralized `mapAuditError` coverage for `audit_export_invalid_columns`,
@@ -118,4 +121,3 @@ Error handling:
 - Export dialog submit no longer just closes.
 - Server export validates filter/column payload and returns a real outcome.
 - Exported data is redacted and CSV/JSON safe.
-

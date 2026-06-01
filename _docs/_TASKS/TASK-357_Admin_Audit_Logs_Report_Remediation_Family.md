@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Audit Logs + Compliance Export + Pagination + QA + Docs
 **Estimated Effort:** Large
-**Dependencies:** TASK-360-03 shared export dialog contract, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md` audit evidence
+**Dependencies:** TASK-360-03 shared export dialog contract, TASK-360-04 no-op control gate, TASK-360-06 server-side query/pagination conventions, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md` audit evidence
 **Status:** To Do
 
 ---
@@ -36,10 +36,11 @@ view of log volume.
 | Finding | Required outcome |
 |---|---|
 | Date range does not affect results | Date range is sent to the server or clearly labeled as local-only; preferred fix is server-side query. |
+| Type/severity are local-only filters | Migrate category/severity semantics to the server, or explicitly keep the UI local-only with truthful count copy. Preferred fix is strict server query using existing Audit UI vocabulary. |
 | `Copy JSON` does not copy | Clipboard API action with success/error feedback and test coverage. |
 | `Export entry`, `Share Log`, `Report` are UI-only | Implement supported actions or disable/hide with explicit unavailable state. |
 | Export dialog closes without file | Export flow calls backend or deterministic client download and reports success/failure. |
-| Pagination/table count is placeholder | Real count/cursor/page state replaces hard-coded `2,459 logs` and inert `Next`. |
+| Pagination/table count is placeholder | Real count/cursor state replaces hard-coded `2,459 logs` and inert `Next`. |
 
 ## Refinement Checklist
 
@@ -74,12 +75,14 @@ Implementation shape:
 
 - Extend or normalize the audit list query to include:
   - `query`
-  - `eventType`
-  - `severity`
+  - `category` (`authentication|content|system`; UI label may stay "Event type")
+  - `severity` (`info|warning|error`)
   - `dateFrom`
   - `dateTo`
   - `limit`
-  - `cursor` or `page`
+  - `cursor`
+- Decommission the current fetch-all/top-200 UI filtering pattern; no visible
+  count, chip, or export scope may be based on an unlabelled 200-row sample.
 - Reject unknown query params.
 - Clamp `limit`.
 - Normalize date range to UTC instants.
@@ -90,8 +93,8 @@ Pseudocode:
 ```ts
 type AuditLogQuery = {
   query?: string;
-  eventType?: string;
-  severity?: "debug" | "info" | "warn" | "error";
+  category?: "authentication" | "content" | "system";
+  severity?: "info" | "warning" | "error";
   dateFrom?: string;
   dateTo?: string;
   limit: number;
@@ -102,7 +105,7 @@ function normalizeAuditLogQuery(input: unknown): AuditLogQuery {
   const parsed = auditLogQuerySchema.parse(input); // strict/reject unknown
   return {
     query: parsed.query?.trim() || undefined,
-    eventType: parsed.eventType || undefined,
+    category: parsed.category || undefined,
     severity: parsed.severity || undefined,
     dateFrom: normalizeIsoDateBoundary(parsed.dateFrom, "start"),
     dateTo: normalizeIsoDateBoundary(parsed.dateTo, "end"),
@@ -118,7 +121,10 @@ Data flow:
 2. `AuditList` builds a strict query object.
 3. Audit client sends query params.
 4. Server validates and returns `{ items, nextCursor, totalApprox? }`.
-5. Table renders truthful count/page copy from response metadata only.
+5. Server derives or stores category/severity from current audit action,
+   targetType, metadata, or an explicit normalized contract; do not silently
+   pretend nonexistent DB columns exist.
+6. Table renders truthful count/page copy from response metadata only.
 
 Error handling:
 
@@ -178,6 +184,8 @@ Regression tests:
 
 - Clipboard success and failure.
 - Redaction helper removes tokens/cookies/password-like keys.
+- Redaction helper removes auth headers, reset tokens, CSRF tokens, and session
+  ids in addition to tokens/cookies/password-like keys.
 - Disabled actions are not focusable as active commands.
 - Drawer and row menu use the same action implementation.
 
@@ -206,25 +214,23 @@ type AuditExportRequest = {
 };
 
 async function exportAuditLogs(request: AuditExportRequest) {
-  const response = await apiRequest<Blob>(
-    "/admin/api/audit/export",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-    },
-    { withCsrf: true, responseType: "blob" }
-  );
-  downloadBlob(response, buildAuditExportFilename(request));
+  return downloadAdminExport("/audit/export", request, {
+    filenamePrefix: "audit-logs",
+    withCsrf: true,
+  });
 }
 ```
 
 Admin API path:
 
 - Route registration must expose `POST /admin/api/audit/export`.
-- If the existing `apiRequest` helper expects paths relative to
-  `/admin/api`, the client wrapper may pass `/audit/export`, but the task
-  acceptance evidence must name the concrete registered route.
+- The shared `downloadAdminExport` helper from `TASK-360-03` accepts admin
+  API-relative paths like `/audit/export` and resolves them to
+  `/admin/api/audit/export`; acceptance evidence must name the concrete
+  registered route.
+- The current `apiRequest` helper parses JSON only; this task must add or reuse
+  a blob-capable `downloadAdminExport`/fetch helper instead of passing an
+  unsupported `responseType` option to `apiRequest`.
 
 Data flow:
 
@@ -247,6 +253,9 @@ Error handling:
 Regression tests:
 
 - Dialog validates at least one selected column.
+- Dialog must not expose an active `xlsx` option unless a real Excel export
+  route, content type, and tests are implemented; otherwise `xlsx` is removed or
+  disabled as unavailable by `TASK-360-03`.
 - Export submit calls route with active filters.
 - Route rejects unknown fields and unauthorized users.
 - CSV escaping covers commas, quotes, and newlines.
@@ -318,8 +327,8 @@ Route family: audit logs.
 - RBAC: `audit:read` for list/detail/export/read actions. Any future report
   mutation must require a dedicated write/report permission.
 - CSRF: required for export POST if implemented as a write-like admin action.
-- Rate-limit bucket: admin read for list/detail, admin write or export bucket
-  for export generation.
+- Rate-limit bucket: `admin_read` for list/detail and `admin_write` for export
+  generation, matching `_docs/SECURITY_SPEC.md` bucket names.
 - Reject unknown validation: strict query/body schemas for list/export.
 - Anti-abuse: no public write endpoint; no nonce/HMAC/captcha required.
 - Data redaction: export/copy/share must remove secrets, cookies, auth headers,
@@ -332,9 +341,9 @@ Per-endpoint contract matrix:
 
 | Endpoint | Visibility | Auth/RBAC | CSRF | Rate bucket | Validation | Anti-abuse |
 |---|---|---|---|---|---|---|
-| `GET /admin/api/audit` | internal admin | session + `audit:read` | none, read-only | admin read | strict query schema, clamped limit/cursor | no public write |
-| `GET /admin/api/audit/:id` if added | internal admin | session + `audit:read` | none, read-only | admin read | strict id param | no public write |
-| `POST /admin/api/audit/export` | internal admin | session + `audit:read` | required | export/admin write bucket | strict body schema, column allowlist, clamped rows | no public write, redacted output |
+| `GET /admin/api/audit` | internal admin | session + `audit:read` | none, read-only | `admin_read` | strict query schema, clamped limit/cursor | no public write |
+| `GET /admin/api/audit/:id` if added | internal admin | session + `audit:read` | none, read-only | `admin_read` | strict id param | no public write |
+| `POST /admin/api/audit/export` | internal admin | session + `audit:read` | required | `admin_write` | strict body schema, column allowlist, clamped rows | no public write, redacted output |
 
 ## Testing Requirements
 
@@ -343,9 +352,11 @@ Per-endpoint contract matrix:
 - Targeted Vitest UI tests for filters, copy, export dialog, pagination.
 - Bun route/service tests for audit query normalization, RBAC, export, and CSV.
 - Route registration tests for every new/changed audit route.
-- Centralized `mapAuditError` coverage for `audit_query_invalid`,
-  `audit_cursor_invalid`, `audit_export_invalid_columns`,
-  `audit_export_too_large`, `audit_log_not_found`, and `audit_forbidden`.
+- Centralized `mapAuditError` coverage:
+  - `TASK-357-01` owns `audit_query_invalid`, `audit_cursor_invalid`,
+    `audit_forbidden`, and `audit_log_not_found` if a detail route is added.
+  - `TASK-357-03` owns `audit_export_invalid_columns`,
+    `audit_export_too_large`, and `audit_export_forbidden`.
 - Playwright:
   - date range affects request/results,
   - copy JSON shows feedback,

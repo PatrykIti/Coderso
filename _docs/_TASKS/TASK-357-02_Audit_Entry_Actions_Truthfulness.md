@@ -92,7 +92,8 @@ Error handling:
 - `bun --cwd core lint:types`
 - Vitest UI tests for clipboard success, clipboard failure, and disabled
   unsupported actions.
-- Redaction unit tests for tokens/cookies/password-like keys.
+- Redaction unit tests for tokens, cookies, password-like keys, authorization
+  headers, reset tokens, CSRF tokens, and session IDs.
 - Vitest UI test proving row menu and drawer use equivalent action behavior.
 - No-op audit gate from `TASK-360-04` must not flag remaining Audit actions.
 
@@ -109,4 +110,3 @@ Error handling:
 - `Copy JSON` copies redacted JSON and reports success/failure.
 - Unsupported Audit actions no longer appear as active commands.
 - Row and drawer actions behave consistently.
-

@@ -12,8 +12,8 @@
 ## Overview
 
 Move `/admin/audit` filters to a strict server-side query contract so date
-range, search, type, severity, limit, and cursor state drive real results and
-not local-only or placeholder UI.
+range, search, category/type, severity, limit, and cursor state drive real
+results and not local-only or placeholder UI.
 
 ## Source Findings
 
@@ -43,8 +43,8 @@ not local-only or placeholder UI.
 ```ts
 type AuditLogQuery = {
   query?: string;
-  eventType?: string;
-  severity?: "debug" | "info" | "warn" | "error";
+  category?: "authentication" | "content" | "system";
+  severity?: "info" | "warning" | "error";
   dateFrom?: string;
   dateTo?: string;
   limit: number;
@@ -55,7 +55,7 @@ function normalizeAuditLogQuery(input: unknown): AuditLogQuery {
   const parsed = auditLogQuerySchema.parse(input);
   return {
     query: parsed.query?.trim() || undefined,
-    eventType: parsed.eventType || undefined,
+    category: parsed.category || undefined,
     severity: parsed.severity || undefined,
     dateFrom: normalizeIsoDateBoundary(parsed.dateFrom, "start"),
     dateTo: normalizeIsoDateBoundary(parsed.dateTo, "end"),
@@ -71,7 +71,14 @@ Data flow:
 - `AuditList` builds a strict query object and passes it to the audit client.
 - Server validates query params, applies RBAC, normalizes date boundaries to
   UTC instants, and returns `{ items, nextCursor, totalApprox? }`.
+- Category/severity filtering must be backed by a real server contract. The
+  current DB table owns `action`, `targetType`, `metadata`, and `createdAt`,
+  while the UI owns `category`/`severity`; implementation must either derive
+  those values deterministically or add a documented schema change with tests.
 - Table count and pagination copy use response metadata only.
+- Remove the current unlabelled fetch-all/top-200 local filtering behavior; no
+  count, chip, pagination state, or export scope may imply full-server results
+  when only a capped local sample was filtered.
 
 Error handling:
 
@@ -88,7 +95,7 @@ Error handling:
 - Auth model: authenticated admin session.
 - RBAC: `audit:read` required.
 - CSRF: none; route is read-only.
-- Rate-limit bucket: admin read.
+- Rate-limit bucket: `admin_read`.
 - Reject unknown validation: strict query schema, clamped limit, validated date
   range and cursor.
 - Anti-abuse: internal session route; no nonce, HMAC, or captcha.
@@ -100,10 +107,12 @@ Error handling:
 - `bun --cwd core lint:types`
 - Bun domain/service tests for query normalization, unknown-param rejection,
   limit clamping, date boundary normalization, and invalid cursor mapping.
+- Bun tests for server-backed category/severity filtering or the documented
+  deterministic derivation used to preserve the UI semantics.
 - Bun route tests for `audit:read`, missing permission access denied, strict
   query validation, and route registration.
-- Vitest UI tests for date range query params, search/type/severity propagation,
-  API error banner, and no fake totals.
+- Vitest UI tests for date range query params, search/category/severity
+  propagation, API error banner, and no fake totals.
 - Playwright restricted `audit:read` fixture verifies read access with real
   date range query behavior.
 
@@ -121,4 +130,5 @@ Error handling:
 - Date range changes affect server query state.
 - Unknown query params are rejected.
 - Audit table count/page copy is derived only from backend metadata.
-
+- The previous 200-row client-filter cap is removed or clearly replaced by a
+  truthful server-backed response contract.

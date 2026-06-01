@@ -29,11 +29,12 @@ reviewed role-by-role before any PATCH calls are submitted.
 
 | File | Required change |
 |---|---|
-| New or existing roles matrix helper module | Add pure `buildRolePermissionDiffs` and high-risk classification helpers. |
+| New or existing roles matrix helper module | Add pure `isHighRiskPermission`, `buildRolePermissionDiffs`, and high-risk classification helpers. |
 | `core/admin/ui/roles/PermissionsMatrixPage.tsx` | Derive pending diffs, footer counts, review modal state, and confirm submit flow. |
 | `core/admin/ui/roles/PermissionsMatrix.tsx` | Preserve draft updates while leaving final save to the review modal. |
-| `core/admin/services/adminRolesClient.ts` | Ensure PATCH payloads are sent only for changed roles. |
-| Tests | Cover pure diff helper, footer, cancel, confirm, partial failure, and conflict handling. |
+| `core/admin/services/adminRolesClient.ts` | Ensure PATCH payloads are sent only for changed roles and include version/updated-at preconditions when the backend exposes them. |
+| Admin role route/service modules | Preserve or add stale-role conflict handling (`409`/`412`) and stable mapped errors. |
+| Tests | Cover pure diff helper, footer, cancel, confirm, partial failure, stale-role conflict, and conflict handling. |
 
 ## Implementation Pseudocode
 
@@ -45,6 +46,24 @@ type RolePermissionDiff = {
   removed: string[];
   highRisk: boolean;
 };
+
+const HIGH_RISK_PERMISSIONS = new Set([
+  "*",
+  "roles:*",
+  "roles:write",
+  "users:*",
+  "users:write",
+  "settings:*",
+  "settings:write",
+  "sessions:write",
+  "api-keys:write",
+]);
+
+function isHighRiskPermission(permission: string) {
+  return permission === "*" ||
+    permission.endsWith(":*") ||
+    HIGH_RISK_PERMISSIONS.has(permission);
+}
 
 function buildRolePermissionDiffs(
   original: AdminRole[],
@@ -81,6 +100,11 @@ Data flow:
   high-risk marker.
 - Save opens a review modal listing role-by-role added/removed scopes.
 - Confirm calls `updateAdminRole` only for roles with diffs.
+- Confirm sends the source `version`/`updatedAt` precondition when available;
+  if the backend lacks one, a conflict/412 response forces refresh before retry.
+- Until a transactional bulk-role endpoint exists, saves are best-effort one
+  role at a time: successful roles refresh into `originalRoles`; failed roles
+  remain dirty with exact role/error reporting.
 - Full success replaces `originalRoles` and clears dirty state.
 
 Error handling:
@@ -97,7 +121,7 @@ Error handling:
 - Auth model: authenticated admin session.
 - RBAC: `roles:write` required for all PATCH calls.
 - CSRF: required for PATCH.
-- Rate-limit bucket: admin write.
+- Rate-limit bucket: `admin_write`.
 - Reject unknown validation: PATCH payloads must be schema-first and reject
   unknown fields.
 - Anti-abuse: internal session routes; no nonce, HMAC, or captcha.
@@ -111,8 +135,10 @@ Error handling:
 - Vitest pure helper tests for add, remove, no-op, sorted output, unknown draft
   role, and high-risk additions.
 - Vitest UI tests for footer counts, review modal contents, cancel no client
-  call, confirm one PATCH per changed role, API error visible, and draft kept.
-- Bun route/service tests for existing role update validation/RBAC remain green.
+  call, confirm one PATCH per changed role, API error visible, stale-role
+  conflict copy, and draft kept.
+- Bun route/service tests for existing role update validation/RBAC remain green;
+  add coverage for stale-version/updated-at conflict mapping when implemented.
 - Playwright admin fixture adds/removes one permission, reviews diff, confirms,
   and verifies final matrix state.
 
@@ -129,4 +155,3 @@ Error handling:
 - `Save changes` cannot commit matrix edits without a diff review.
 - Review modal lists added and removed scopes per role.
 - Cancel is side-effect-free, and failed saves do not mark the draft clean.
-
