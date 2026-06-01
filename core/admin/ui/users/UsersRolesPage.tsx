@@ -32,6 +32,7 @@ import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
 import { RoleEditor } from "../roles/RoleEditor";
 import { RoleList } from "../roles/RoleList";
+import { hasHighRiskPermissions } from "../roles/rolePermissionRisk";
 import type { RoleDraft, RoleSummary } from "../roles/types";
 import { fallbackPermissionGroups } from "../roles/permissionCatalog";
 import { InviteUserDialog, type InviteUserValues } from "./InviteUserDialog";
@@ -78,6 +79,26 @@ export type UsersRolesPageProps = {
   permissions?: string[];
 };
 
+type ConfirmActionRequest =
+  | {
+      kind: "user-status";
+      user: UserSummary;
+      nextStatus: "active" | "inactive";
+      highRisk: boolean;
+    }
+  | {
+      kind: "user-delete";
+      user: UserSummary;
+    }
+  | {
+      kind: "role-delete";
+      role: RoleSummary;
+    }
+  | {
+      kind: "role-duplicate";
+      role: RoleSummary;
+    };
+
 export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
   const adminAuth = useAdminAuth();
   const canAccess = useCallback(
@@ -107,6 +128,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
   const [roleEditorOpen, setRoleEditorOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [passwordResetUser, setPasswordResetUser] = useState<UserSummary | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmActionRequest | null>(null);
   const [userEditorSeed, setUserEditorSeed] = useState(0);
   const [roleEditorSeed, setRoleEditorSeed] = useState(0);
   const [inviteDialogSeed, setInviteDialogSeed] = useState(0);
@@ -274,6 +296,16 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
 
   const protectedUserIds = adminUsers.length === 1 ? [adminUsers[0]?.id] : [];
 
+  const highRiskRoleIds = useMemo(
+    () => roles.filter((role) => hasHighRiskPermissions(role.permissions)).map((role) => role.id),
+    [roles]
+  );
+
+  const isHighRiskUser = useCallback(
+    (user: UserSummary) => user.roleIds.some((roleId) => highRiskRoleIds.includes(roleId)),
+    [highRiskRoleIds]
+  );
+
   const roleUsageCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     users.forEach((user) => {
@@ -383,7 +415,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
     }
   };
 
-  const handleToggleStatus = async (user: UserSummary) => {
+  const performToggleStatus = async (user: UserSummary, options?: { rethrow?: boolean }) => {
     if (!canReadUsers || !canManageUsers) {
       setError("User status changes require users:write permission.");
       return;
@@ -400,13 +432,34 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
       await refresh();
       setPendingSelectUserId(user.id);
     } catch (err) {
-      setError(resolveErrorMessage(err, "Failed to update user status."));
+      const message = resolveErrorMessage(err, "Failed to update user status.");
+      setError(message);
+      if (options?.rethrow) throw new Error(message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteUser = async (user: UserSummary) => {
+  const handleToggleStatus = (user: UserSummary) => {
+    if (!canReadUsers || !canManageUsers) {
+      setError("User status changes require users:write permission.");
+      return;
+    }
+    const nextStatus = user.status === "inactive" ? "active" : "inactive";
+    const highRisk = !canReadRoles || isHighRiskUser(user);
+    if (nextStatus === "active" && !highRisk) {
+      void performToggleStatus(user);
+      return;
+    }
+    setConfirmAction({
+      kind: "user-status",
+      user,
+      nextStatus,
+      highRisk,
+    });
+  };
+
+  const performDeleteUser = async (user: UserSummary, options?: { rethrow?: boolean }) => {
     if (!canReadUsers || !canManageUsers) {
       setError("Deleting users requires users:write permission.");
       return;
@@ -419,13 +472,24 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
       await deleteAdminUser(user.id);
       await refresh();
     } catch (err) {
-      setError(resolveErrorMessage(err, "Failed to delete user."));
+      const message = resolveErrorMessage(err, "Failed to delete user.");
+      setError(message);
+      if (options?.rethrow) throw new Error(message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteRole = async (role: RoleSummary) => {
+  const handleDeleteUser = (user: UserSummary) => {
+    if (!canReadUsers || !canManageUsers) {
+      setError("Deleting users requires users:write permission.");
+      return;
+    }
+    if (protectedUserIds.includes(user.id)) return;
+    setConfirmAction({ kind: "user-delete", user });
+  };
+
+  const performDeleteRole = async (role: RoleSummary, options?: { rethrow?: boolean }) => {
     if (!canReadRoles || !canManageRoles) {
       setError("Deleting roles requires roles:write permission.");
       return;
@@ -438,13 +502,24 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
       await deleteAdminRole(role.id);
       await refresh();
     } catch (err) {
-      setError(resolveErrorMessage(err, "Failed to delete role."));
+      const message = resolveErrorMessage(err, "Failed to delete role.");
+      setError(message);
+      if (options?.rethrow) throw new Error(message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDuplicateRole = async (role: RoleSummary) => {
+  const handleDeleteRole = (role: RoleSummary) => {
+    if (!canReadRoles || !canManageRoles) {
+      setError("Deleting roles requires roles:write permission.");
+      return;
+    }
+    if (role.system || role.name.toLowerCase() === "admin") return;
+    setConfirmAction({ kind: "role-delete", role });
+  };
+
+  const performDuplicateRole = async (role: RoleSummary, options?: { rethrow?: boolean }) => {
     if (!canReadRoles || !canManageRoles) {
       setError("Duplicating roles requires roles:write permission.");
       return;
@@ -457,14 +532,30 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
         name: `${role.name} copy`,
         description: role.description,
         permissions: role.permissions,
+        sourceRoleId: role.id,
+        sourceRoleName: role.name,
       });
       await refresh();
       setPendingSelectRoleId(created.id);
     } catch (err) {
-      setError(resolveErrorMessage(err, "Failed to duplicate role."));
+      const message = resolveErrorMessage(err, "Failed to duplicate role.");
+      setError(message);
+      if (options?.rethrow) throw new Error(message);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleDuplicateRole = (role: RoleSummary) => {
+    if (!canReadRoles || !canManageRoles) {
+      setError("Duplicating roles requires roles:write permission.");
+      return;
+    }
+    if (hasHighRiskPermissions(role.permissions)) {
+      setConfirmAction({ kind: "role-duplicate", role });
+      return;
+    }
+    void performDuplicateRole(role);
   };
 
   const openUserEditor = (user?: UserSummary) => {
@@ -522,6 +613,88 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
     }
   };
 
+  const confirmActionConfig = useMemo(() => {
+    if (!confirmAction) {
+      return {
+        title: "Confirm action",
+        description: "Review the target before continuing.",
+        targetLabel: undefined,
+        confirmLabel: "Confirm",
+        confirmingLabel: "Working...",
+        tone: "destructive" as const,
+      };
+    }
+
+    switch (confirmAction.kind) {
+      case "user-status":
+        return {
+          title:
+            confirmAction.nextStatus === "inactive"
+              ? "Deactivate user?"
+              : "Activate high-risk user?",
+          description:
+            confirmAction.nextStatus === "inactive"
+              ? "This blocks the admin user from signing in until reactivated."
+              : "This account may have high-risk access. Confirm before restoring access.",
+          targetLabel: `${confirmAction.user.name} <${confirmAction.user.email}>`,
+          confirmLabel:
+            confirmAction.nextStatus === "inactive" ? "Deactivate user" : "Activate user",
+          confirmingLabel:
+            confirmAction.nextStatus === "inactive" ? "Deactivating..." : "Activating...",
+          tone:
+            confirmAction.nextStatus === "inactive"
+              ? ("destructive" as const)
+              : ("warning" as const),
+        };
+      case "user-delete":
+        return {
+          title: "Delete user?",
+          description: "This removes the admin user and cannot be undone.",
+          targetLabel: `${confirmAction.user.name} <${confirmAction.user.email}>`,
+          confirmLabel: "Delete user",
+          confirmingLabel: "Deleting...",
+          tone: "destructive" as const,
+        };
+      case "role-delete":
+        return {
+          title: "Delete role?",
+          description: "This removes the role from the admin RBAC catalog and cannot be undone.",
+          targetLabel: confirmAction.role.name,
+          confirmLabel: "Delete role",
+          confirmingLabel: "Deleting...",
+          tone: "destructive" as const,
+        };
+      case "role-duplicate":
+        return {
+          title: "Duplicate high-risk role?",
+          description:
+            "This copies a role that grants sensitive permissions. Review the source role before creating the copy.",
+          targetLabel: confirmAction.role.name,
+          confirmLabel: "Duplicate role",
+          confirmingLabel: "Duplicating...",
+          tone: "warning" as const,
+        };
+    }
+  }, [confirmAction]);
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+    switch (confirmAction.kind) {
+      case "user-status":
+        await performToggleStatus(confirmAction.user, { rethrow: true });
+        return;
+      case "user-delete":
+        await performDeleteUser(confirmAction.user, { rethrow: true });
+        return;
+      case "role-delete":
+        await performDeleteRole(confirmAction.role, { rethrow: true });
+        return;
+      case "role-duplicate":
+        await performDuplicateRole(confirmAction.role, { rethrow: true });
+        return;
+    }
+  };
+
   const readOnly =
     hasAnyReadAccess && (!canManageUsers || !canManageRoles || !canReadUsers || !canReadRoles);
   const userActionsEnabled =
@@ -566,9 +739,13 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
           canManageUsers={userActionsEnabled}
           canEditUser={userActionsEnabled}
           canResetPassword={userLifecycleActionsEnabled}
+          canManageUserLifecycle={userLifecycleActionsEnabled}
+          isProtectedUser={selectedUser ? protectedUserIds.includes(selectedUser.id) : false}
           roleDetailsUnavailableReason={canReadRoles ? undefined : roleDetailsUnavailableReason}
           onEditUser={() => selectedUser && openUserEditor(selectedUser)}
           onResetPassword={() => selectedUser && openPasswordResetDialog(selectedUser)}
+          onToggleStatus={() => selectedUser && handleToggleStatus(selectedUser)}
+          onDeleteUser={() => selectedUser && handleDeleteUser(selectedUser)}
         />
       }
       breadcrumbs={["Settings", "Users & Roles"]}
@@ -751,6 +928,21 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
         isConfirming={isSaving}
         onConfirm={handleConfirmPasswordReset}
       />
+      <ConfirmActionDialog
+        open={Boolean(confirmAction)}
+        onOpenChange={(open) => {
+          if (!open) setConfirmAction(null);
+        }}
+        title={confirmActionConfig.title}
+        description={confirmActionConfig.description}
+        targetLabel={confirmActionConfig.targetLabel}
+        confirmLabel={confirmActionConfig.confirmLabel}
+        confirmingLabel={confirmActionConfig.confirmingLabel}
+        tone={confirmActionConfig.tone}
+        closeOnSuccess
+        isConfirming={isSaving}
+        onConfirm={handleConfirmAction}
+      />
       {!isLargeScreen ? (
         <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
           <SheetContent side="right" className="w-full sm:max-w-md">
@@ -766,9 +958,13 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
               canManageUsers={userActionsEnabled}
               canEditUser={userActionsEnabled}
               canResetPassword={userLifecycleActionsEnabled}
+              canManageUserLifecycle={userLifecycleActionsEnabled}
+              isProtectedUser={selectedUser ? protectedUserIds.includes(selectedUser.id) : false}
               roleDetailsUnavailableReason={canReadRoles ? undefined : roleDetailsUnavailableReason}
               onEditUser={() => selectedUser && openUserEditor(selectedUser)}
               onResetPassword={() => selectedUser && openPasswordResetDialog(selectedUser)}
+              onToggleStatus={() => selectedUser && handleToggleStatus(selectedUser)}
+              onDeleteUser={() => selectedUser && handleDeleteUser(selectedUser)}
             />
           </SheetContent>
         </Sheet>

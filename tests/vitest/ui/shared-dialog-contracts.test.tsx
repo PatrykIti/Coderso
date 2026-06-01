@@ -78,6 +78,38 @@ test("ConfirmActionDialog keeps cancel side-effect free and submits once", async
   }
 });
 
+test("ConfirmActionDialog restores focus to the opener after cancel", async () => {
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.textContent = "Open risky action";
+  document.body.appendChild(trigger);
+  trigger.focus();
+
+  function StatefulConfirm() {
+    const [open, setOpen] = React.useState(true);
+    return (
+      <ConfirmActionDialog
+        open={open}
+        title="Delete record?"
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        onOpenChange={setOpen}
+        onConfirm={() => undefined}
+      />
+    );
+  }
+
+  const view = mount(<StatefulConfirm />);
+
+  try {
+    await clickButton("Cancel");
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    expect(document.activeElement).toBe(trigger);
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("ConfirmActionDialog blocks typed confirmations until the value matches", async () => {
   const onConfirm = vi.fn();
   const view = mount(

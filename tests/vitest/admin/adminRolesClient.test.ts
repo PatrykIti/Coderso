@@ -66,10 +66,21 @@ test("createAdminRole uses CSRF and POST", async () => {
 
   try {
     resetCsrfToken();
-    await createAdminRole({ name: "Editor", permissions: ["content:read"] });
+    await createAdminRole({
+      name: "Editor",
+      permissions: ["content:read"],
+      sourceRoleId: "source-role",
+      sourceRoleName: "Source Role",
+    });
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/admin-roles");
     expect(calls[1]?.init?.method).toBe("POST");
+    expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({
+      name: "Editor",
+      permissions: ["content:read"],
+      sourceRoleId: "source-role",
+      sourceRoleName: "Source Role",
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }

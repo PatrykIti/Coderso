@@ -3,6 +3,7 @@ import { ApiError } from "../../../core/server/errorHandler";
 import type { RouteContext, RouteHandler } from "../../../core/server/router";
 import { registerAdminUsersRoutes } from "../../../core/server/routes/adminUsersRoutes";
 import { validate } from "../../../core/server/validation/schemaValidator";
+import type { UserRecord } from "../../../core/services/admin/usersService";
 import type { AuditEvent, AuditRecord } from "../../../core/services/audit/auditService";
 
 type Route = { method: string; path: string; handlers: RouteHandler[] };
@@ -54,6 +55,20 @@ const makeAuditRecord = (event: AuditEvent): AuditRecord => ({
   targetId: event.targetId,
   metadata: event.metadata ?? {},
   createdAt: new Date("2026-06-01T10:00:00.000Z"),
+});
+
+const makeUserRecord = (overrides: Partial<UserRecord> = {}): UserRecord => ({
+  id: "user-1",
+  email: "user@example.com",
+  emailHash: null,
+  emailEncrypted: null,
+  passwordHash: "hash",
+  name: "User",
+  status: "active",
+  createdAt: new Date("2026-06-01T10:00:00.000Z"),
+  updatedAt: new Date("2026-06-01T10:00:00.000Z"),
+  lastLoginAt: null,
+  ...overrides,
 });
 
 test("registerAdminUsersRoutes wires endpoints", () => {
@@ -249,4 +264,55 @@ test("admin password reset maps delivery unavailable", async () => {
     expect((error as ApiError).code).toBe("email_not_configured");
     expect((error as ApiError).status).toBe(400);
   }
+});
+
+test("admin user lifecycle routes audit destructive actions", async () => {
+  const { router, routes } = makeRouter();
+  const auditEvents: AuditEvent[] = [];
+
+  registerAdminUsersRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate,
+    disableUser: async (id) => makeUserRecord({ id, status: "inactive" }),
+    enableUser: async (id) => makeUserRecord({ id, status: "active" }),
+    deleteUser: async (id) => makeUserRecord({ id, status: "inactive" }),
+    logAudit: async (entry) => {
+      auditEvents.push(entry);
+      return makeAuditRecord(entry);
+    },
+  });
+
+  await runRoute(findRoute(routes, "POST", "/admin-users/:id/disable"), {
+    params: { id: "user-1" },
+    user: { id: "admin-1" },
+  });
+  await runRoute(findRoute(routes, "POST", "/admin-users/:id/enable"), {
+    params: { id: "user-1" },
+    user: { id: "admin-1" },
+  });
+  await runRoute(findRoute(routes, "DELETE", "/admin-users/:id"), {
+    params: { id: "user-1" },
+    user: { id: "admin-1" },
+  });
+
+  expect(auditEvents).toEqual([
+    expect.objectContaining({
+      actorId: "admin-1",
+      action: "admin.user.disable",
+      targetId: "user-1",
+      metadata: { status: "inactive" },
+    }),
+    expect.objectContaining({
+      actorId: "admin-1",
+      action: "admin.user.enable",
+      targetId: "user-1",
+      metadata: { status: "active" },
+    }),
+    expect.objectContaining({
+      actorId: "admin-1",
+      action: "admin.user.delete",
+      targetId: "user-1",
+      metadata: { status: "inactive" },
+    }),
+  ]);
 });

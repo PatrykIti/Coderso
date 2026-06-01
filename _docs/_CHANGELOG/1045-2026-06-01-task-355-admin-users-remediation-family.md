@@ -71,12 +71,30 @@ Tasks: TASK-355, TASK-355-01, TASK-355-02, TASK-355-03, TASK-355-04, TASK-355-05
   visible without closing the dialog, removes the reset no-op marker, and routes
   `UserEditor` create mode through the same invitation delivery path.
 
+### TASK-355-03 Destructive Action Confirmation
+
+- Users row actions and details drawer lifecycle actions now route deactivate
+  and delete through the shared confirm dialog with target identity, cancel
+  safety, retryable errors, and focus-return coverage.
+- Reactivating an account requires confirmation when the role risk is high or
+  cannot be verified because the current admin lacks `roles:read`.
+- Role delete always requires confirmation, while duplicate role requires
+  confirmation only for `*` or high-risk permission scopes imported from the
+  shared roles risk helper.
+- Role duplicate payloads now carry `sourceRoleId` and `sourceRoleName` for
+  audit metadata; the route strips those fields before persistence.
+- Added redacted audit events for user disable/enable/delete and role
+  create/update/duplicate/delete, plus centralized role error mapping for
+  `role_not_found`, `role_exists`, `permission_invalid`, and `last_admin`.
+
 ## Validation
 
 - `bun run test:vitest -- tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/users-roles.test.tsx tests/vitest/ui-integration/users.test.tsx tests/vitest/ui-integration/roles.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx tests/vitest/ui/user-list-filters-wave.test.tsx`
 - `set -a && source .env && set +a && bun test tests/integration/routes/auth.test.ts tests/integration/routes/adminUsers.test.ts tests/integration/routes/adminRoles.test.ts tests/unit/auth/rbac.test.ts`
 - `bun run test:vitest -- tests/vitest/admin/adminUsersClient.test.ts tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/invite-user.test.tsx tests/vitest/ui/user-editor-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx`
 - `set -a && source .env && set +a && bun test tests/unit/auth/passwordResetService.test.ts tests/integration/routes/adminUsers.test.ts tests/integration/routes/auth.test.ts tests/unit/admin/usersService.test.ts tests/unit/email/emailSettingsService.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/role-list-wave.test.tsx tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/shared-dialog-contracts.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/adminUsers.test.ts tests/integration/routes/adminRoles.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`

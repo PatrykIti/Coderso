@@ -151,12 +151,30 @@ export function registerAdminUsersRoutes(router: Router, deps: AdminUserRouteDep
   router.post("/admin-users/:id/disable", requirePermission("users:write"), async (ctx) => {
     const updated = await withAdminUserErrors(() => disableUserRecord(ctx.params.id));
     if (!updated) throw new ApiError("user_not_found", "User not found", 404);
+    await writeAudit({
+      actorId: ctx.user?.id ?? null,
+      action: "admin.user.disable",
+      targetType: "user",
+      targetId: ctx.params.id,
+      metadata: { status: "inactive" },
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    });
     return updated;
   });
 
   router.post("/admin-users/:id/enable", requirePermission("users:write"), async (ctx) => {
     const updated = await withAdminUserErrors(() => enableUserRecord(ctx.params.id));
     if (!updated) throw new ApiError("user_not_found", "User not found", 404);
+    await writeAudit({
+      actorId: ctx.user?.id ?? null,
+      action: "admin.user.enable",
+      targetType: "user",
+      targetId: ctx.params.id,
+      metadata: { status: "active" },
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    });
     return updated;
   });
 
@@ -172,6 +190,15 @@ export function registerAdminUsersRoutes(router: Router, deps: AdminUserRouteDep
   router.delete("/admin-users/:id", requirePermission("users:write"), async (ctx) => {
     const deleted = await withAdminUserErrors(() => deleteUserRecord(ctx.params.id));
     if (!deleted) throw new ApiError("user_not_found", "User not found", 404);
+    await writeAudit({
+      actorId: ctx.user?.id ?? null,
+      action: "admin.user.delete",
+      targetType: "user",
+      targetId: ctx.params.id,
+      metadata: { status: deleted.status },
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    });
     return { ok: true };
   });
 

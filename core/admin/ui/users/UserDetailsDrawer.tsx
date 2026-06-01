@@ -16,10 +16,14 @@ export type UserDetailsDrawerProps = {
   canManageUsers?: boolean;
   canEditUser?: boolean;
   canResetPassword?: boolean;
+  canManageUserLifecycle?: boolean;
+  isProtectedUser?: boolean;
   roleDetailsUnavailableReason?: string;
   resetPasswordUnavailableReason?: string;
   onEditUser: () => void;
   onResetPassword: () => void;
+  onToggleStatus?: () => void;
+  onDeleteUser?: () => void;
 };
 
 const notificationPreferencesUnavailableReason =
@@ -62,10 +66,14 @@ export function UserDetailsDrawer({
   canManageUsers = true,
   canEditUser,
   canResetPassword,
+  canManageUserLifecycle,
+  isProtectedUser = false,
   roleDetailsUnavailableReason,
   resetPasswordUnavailableReason,
   onEditUser,
   onResetPassword,
+  onToggleStatus,
+  onDeleteUser,
 }: UserDetailsDrawerProps) {
   if (!user) {
     return (
@@ -88,6 +96,7 @@ export function UserDetailsDrawer({
     : getPermissionSummary(user, roles);
   const editEnabled = canEditUser ?? canManageUsers;
   const resetEnabled = canResetPassword ?? canManageUsers;
+  const lifecycleEnabled = canManageUserLifecycle ?? canManageUsers;
 
   return (
     <div className="flex h-full flex-col">
@@ -189,6 +198,27 @@ export function UserDetailsDrawer({
         >
           Reset password
         </Button>
+        {onToggleStatus ? (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={onToggleStatus}
+            disabled={!lifecycleEnabled}
+          >
+            {user.status === "inactive" ? "Activate user" : "Deactivate user"}
+          </Button>
+        ) : null}
+        {onDeleteUser ? (
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={onDeleteUser}
+            disabled={!lifecycleEnabled || isProtectedUser}
+            title={isProtectedUser ? "The last admin cannot be deleted." : undefined}
+          >
+            Delete user
+          </Button>
+        ) : null}
       </div>
     </div>
   );

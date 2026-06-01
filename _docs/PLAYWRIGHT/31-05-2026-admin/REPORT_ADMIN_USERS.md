@@ -110,6 +110,22 @@ jednorazowym fixture user/role i posprzątano po teście.
   `TASK-355-03` destructive confirms, `TASK-355-04` filters/notifications,
   `TASK-355-05` mobile a11y.
 
+### Status po TASK-355-03 - 2026-06-01
+
+- Naprawiono problem destrukcyjnych akcji bez confirm dialogu: deactivate,
+  delete user i delete role wymagają teraz wspólnego `ConfirmActionDialog` z
+  nazwą/adresem celu.
+- Re-aktywacja usera wymaga confirm, gdy konto ma high-risk role albo UI nie ma
+  `roles:read` i nie może zweryfikować ryzyka.
+- Duplicate role działa bez confirm tylko dla zwykłych ról; role z `*` albo
+  high-risk permissions wymagają potwierdzenia i wysyłają `sourceRoleId` /
+  `sourceRoleName` jako metadane audytu, nie jako dane trwałe roli.
+- Backend emituje audyty dla `admin.user.disable`, `admin.user.enable`,
+  `admin.user.delete`, `admin.role.duplicate` i `admin.role.delete`; role errors
+  mapują się na stabilne `ApiError`.
+- Pozostałe problemy z raportu nadal należą do kolejnych liści:
+  `TASK-355-04` filters/notifications i `TASK-355-05` mobile a11y.
+
 ## Dlaczego
 
 Widok miesza gotowe, produkcyjne flow (`save user`, `invite user`, `delete user`)
@@ -126,8 +142,8 @@ które akcje są realne.
   klikana z mailbox fixture należy do final evidence pass.
 - Invite User: zrealizowane w `TASK-355-02`; wymaga skonfigurowanego email
   delivery i nie zwraca tokenu do browsera ani raportów.
-- `Deactivate/Delete`: dodać confirm dialog z nazwą użytkownika/roli i testy
-  regresyjne dla cancel/confirm.
+- `Deactivate/Delete`: zrealizowane w `TASK-355-03`; dalsza pełna weryfikacja
+  klikana cleanup fixture należy do final evidence pass.
 - Filter icon: albo otwiera advanced filters drawer, albo znika.
 - Notification switches: podłączyć do modelu user preferences albo oznaczyć
   jako read-only.

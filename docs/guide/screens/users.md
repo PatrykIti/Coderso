@@ -83,7 +83,13 @@ screen.
     - reset password,
     - activate/deactivate,
     - delete.
-12. Treat the bottom `Roles` section as supporting context for user assignment,
+12. Review the confirmation dialog before destructive or high-risk actions:
+    - deactivate user,
+    - delete user,
+    - delete role,
+    - duplicate a role with sensitive permissions,
+    - reactivate a user when role risk is high or cannot be verified.
+13. Treat the bottom `Roles` section as supporting context for user assignment,
     not as the full permissions-matrix replacement.
 
 Use this safe user-management order when you want fewer access mistakes:
@@ -104,6 +110,8 @@ Use this safe user-management order when you want fewer access mistakes:
   over-permissioning before the user is even created.
 - `Reset password` sends a single-use set-password email. It does not reveal or
   cache the token in the browser.
+- Deactivate, delete, delete-role, and high-risk duplicate actions require an
+  explicit confirmation that names the target user or role.
 - The route’s details panel exposes notification and two-factor context, which
   makes it stronger than a simple members list.
 - Missing role-read access hides role filters and role names/details. Missing

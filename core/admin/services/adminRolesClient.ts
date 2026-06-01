@@ -24,6 +24,8 @@ export type AdminRoleCreate = {
   name: string;
   description?: string;
   permissions: string[];
+  sourceRoleId?: string;
+  sourceRoleName?: string;
 };
 
 export type AdminRoleUpdate = Partial<AdminRoleCreate>;

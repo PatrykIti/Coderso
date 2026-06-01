@@ -104,11 +104,13 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
   no-opem, invite/create-mode wysylaja set-password email, admin HTTP
   `password` field jest odrzucony, a tokeny resetu sa TTL-bound, single-use i
   nie sa zwracane do browsera.
+- `TASK-355-03` jest zaimplementowany: Users/Roles destructive actions uzywaja
+  shared confirm dialogu, role duplicate ma high-risk confirm i source-role
+  audit context, a user/role destructive routes emituja redacted audit events.
 - Pozostale pozycje z raportu pozostaja przypisane do rodzin TASK-355..360.
   Część no-opow jest teraz jawnie niedostepna albo zaimplementowana, ale
-  destructive confirms, Settings cache/navigation, Audit/Access funkcje i
-  finalny re-audyt UI nadal wymagaja osobnych implementacji w taskach
-  obszarowych.
+  Settings cache/navigation, Audit/Access funkcje i finalny re-audyt UI nadal
+  wymagaja osobnych implementacji w taskach obszarowych.
 
 ## Uwaga o Claude - 2026-06-01
 

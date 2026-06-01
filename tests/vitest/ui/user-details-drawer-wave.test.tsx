@@ -121,6 +121,8 @@ test("UserDetailsDrawer renders empty fallback when no user is selected", () => 
 test("UserDetailsDrawer renders user details, permission summaries, and action guards", () => {
   const onEditUser = vi.fn();
   const onResetPassword = vi.fn();
+  const onToggleStatus = vi.fn();
+  const onDeleteUser = vi.fn();
 
   const managedView = mount(
     <UserDetailsDrawer
@@ -136,6 +138,8 @@ test("UserDetailsDrawer renders user details, permission summaries, and action g
       roles={roles}
       onEditUser={onEditUser}
       onResetPassword={onResetPassword}
+      onToggleStatus={onToggleStatus}
+      onDeleteUser={onDeleteUser}
     />
   );
 
@@ -153,9 +157,13 @@ test("UserDetailsDrawer renders user details, permission summaries, and action g
 
     clickByText(managedView.container, "Edit permissions");
     clickByText(managedView.container, "Reset password");
+    clickByText(managedView.container, "Deactivate user");
+    clickByText(managedView.container, "Delete user");
 
     expect(onEditUser).toHaveBeenCalled();
     expect(onResetPassword).toHaveBeenCalled();
+    expect(onToggleStatus).toHaveBeenCalled();
+    expect(onDeleteUser).toHaveBeenCalled();
   } finally {
     managedView.cleanup();
   }
@@ -173,6 +181,8 @@ test("UserDetailsDrawer renders user details, permission summaries, and action g
       }}
       roles={roles}
       canManageUsers={false}
+      onToggleStatus={onToggleStatus}
+      onDeleteUser={onDeleteUser}
       onEditUser={onEditUser}
       onResetPassword={onResetPassword}
     />

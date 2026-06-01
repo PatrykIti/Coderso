@@ -178,9 +178,22 @@ Create role payload (summary):
 {
   "name": "editor",
   "description": "Content editors",
-  "permissions": ["content:read", "content:write", "media:read"]
+  "permissions": ["content:read", "content:write", "media:read"],
+  "sourceRoleId": "optional-source-role-id",
+  "sourceRoleName": "optional source role name"
 }
 ```
+
+`sourceRoleId` and `sourceRoleName` are accepted only as duplicate-role audit
+context. The route strips them before persistence and records
+`admin.role.duplicate` audit metadata when `sourceRoleId` is present.
+
+Relevant role errors:
+
+- `role_not_found` when the target role does not exist.
+- `role_invalid` or `permission_invalid` for invalid payloads.
+- `role_exists` on name conflicts.
+- `last_admin` when a role mutation would remove the last administrator path.
 
 Permissions catalog response (summary):
 

@@ -5,7 +5,7 @@
 **Category:** Admin UI + Users + Roles + Safety UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-355-01, TASK-356-02, TASK-360-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -100,14 +100,23 @@ Error handling:
 
 ## Testing Requirements
 
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
+- `bun --cwd core lint` (passed 2026-06-01)
+- `bun --cwd core lint:types` (passed 2026-06-01)
 - Vitest UI tests: cancel path no client call, confirm path exact payload,
   restricted user cannot open confirm, focus returns after close.
 - Bun route/service tests: existing destructive route RBAC/CSRF coverage stays
   green; add missing mapped error coverage if absent.
 - Playwright fixture verifies admin delete user/delete role cleanup requires
-  confirm and still removes test records.
+  confirm and still removes test records; final click evidence is owned by
+  `TASK-360-07`.
+
+Validation run:
+
+- `bun run test:vitest -- tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/role-list-wave.test.tsx tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/shared-dialog-contracts.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/adminUsers.test.ts tests/integration/routes/adminRoles.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso`
 
 ## Documentation Updates Required
 
@@ -122,3 +131,16 @@ Error handling:
   click.
 - Confirm dialogs include target identity and are keyboard accessible.
 - Cancel paths are proven side-effect-free.
+
+## Completion Notes
+
+- Users row actions and user details drawer actions now route deactivate/delete
+  through the shared `ConfirmActionDialog`; reactivation confirms when role risk
+  is high or cannot be verified without `roles:read`.
+- Role delete always confirms, while role duplicate confirms only for `*` or
+  high-risk permissions imported from the shared roles helper seeded for
+  `TASK-356-02`.
+- Duplicate role payloads carry source-role context for route-level audit only;
+  the route strips source fields before persistence.
+- User lifecycle and role create/update/duplicate/delete routes emit redacted,
+  machine-readable audit events, and admin role domain errors map to `ApiError`.

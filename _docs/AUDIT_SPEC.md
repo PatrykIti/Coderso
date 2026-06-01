@@ -16,6 +16,15 @@ Minimalne logowanie zdarzen administracyjnych.
 - widgets.template.update
 - widgets.template.delete
 - widgets.template.restore
+- admin.user.invite
+- admin.user.password_reset
+- admin.user.disable
+- admin.user.enable
+- admin.user.delete
+- admin.role.create
+- admin.role.update
+- admin.role.duplicate
+- admin.role.delete
 
 ## Data model
 
@@ -33,6 +42,8 @@ Minimalne logowanie zdarzen administracyjnych.
 - Nie zapisujemy sekretow (password/token/secret/authorization/cookie).
 - `ip` i `userAgent` trafiaja do metadata, jezeli dostepne.
 - `action` ma format `domain.action` (np. `pages.publish`).
+- Role duplicate metadata may include `sourceRoleId` and `sourceRoleName`; reset
+  and invite metadata must never include set-password tokens.
 
 ## API
 

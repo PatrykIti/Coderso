@@ -82,6 +82,12 @@ UI behavior:
 - Widoki Users/Roles wylaczaja akcje edycji bez odpowiedniego write
   permission, a stale 403 wymusza odswiezenie permission snapshotu.
 - Ostatni admin nie moze zostac usuniety ani pozbawiony roli admin.
+- Destrukcyjne akcje Users/Roles wymagaja confirm dialogu. Re-aktywacja usera
+  wymaga confirm, gdy role sa high-risk albo UI nie ma `roles:read` i nie moze
+  potwierdzic ryzyka. Duplicate role wymaga confirm dla `*`, wildcard scopes i
+  high-risk permissions (`roles:write`, `users:write`, `settings:write`,
+  `plugins:manage`, `backups:write`, `themes:write`, `solution-kits:write`,
+  `audit:read`).
 
 ## Enforcement
 

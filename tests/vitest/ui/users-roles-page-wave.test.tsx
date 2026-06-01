@@ -97,12 +97,14 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
   ConfirmActionDialog: ({
     open,
     title,
+    confirmLabel,
     targetLabel,
     onConfirm,
     onOpenChange,
   }: {
     open: boolean;
     title?: string;
+    confirmLabel?: string;
     targetLabel?: string;
     onConfirm?: () => void | Promise<void>;
     onOpenChange?: (open: boolean) => void;
@@ -114,13 +116,15 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
         <button
           type="button"
           onClick={() => {
-            void Promise.resolve(onConfirm?.()).then(() => onOpenChange?.(false));
+            void Promise.resolve(onConfirm?.())
+              .then(() => onOpenChange?.(false))
+              .catch(() => undefined);
           }}
         >
-          confirm-password-reset
+          {confirmLabel ?? "Confirm"}
         </button>
         <button type="button" onClick={() => onOpenChange?.(false)}>
-          cancel-password-reset
+          Cancel
         </button>
       </div>
     ) : null,
@@ -184,7 +188,12 @@ vi.mock("../../../core/admin/ui/users/UserList", () => ({
     onResetPassword,
     onDelete,
   }: {
-    items: Array<{ id: string; name: string }>;
+    items: Array<{
+      id: string;
+      name: string;
+      email: string;
+      status: "active" | "inactive" | "pending";
+    }>;
     selectedId?: string;
     protectedIds?: string[];
     canManageUsers?: boolean;
@@ -193,11 +202,36 @@ vi.mock("../../../core/admin/ui/users/UserList", () => ({
     canResetPassword?: boolean;
     roleDetailsUnavailableReason?: string;
     onSelect: (id: string) => void;
-    onViewProfile?: (user: { id: string; name: string }) => void;
-    onEdit: (user: { id: string; name: string }) => void;
-    onToggleStatus: (user: { id: string; name: string }) => void;
-    onResetPassword: (user: { id: string; name: string }) => void;
-    onDelete: (user: { id: string; name: string }) => void;
+    onViewProfile?: (user: {
+      id: string;
+      name: string;
+      email: string;
+      status: "active" | "inactive" | "pending";
+    }) => void;
+    onEdit: (user: {
+      id: string;
+      name: string;
+      email: string;
+      status: "active" | "inactive" | "pending";
+    }) => void;
+    onToggleStatus: (user: {
+      id: string;
+      name: string;
+      email: string;
+      status: "active" | "inactive" | "pending";
+    }) => void;
+    onResetPassword: (user: {
+      id: string;
+      name: string;
+      email: string;
+      status: "active" | "inactive" | "pending";
+    }) => void;
+    onDelete: (user: {
+      id: string;
+      name: string;
+      email: string;
+      status: "active" | "inactive" | "pending";
+    }) => void;
   }) => (
     <div>
       <div data-testid="user-list-items">{items.map((item) => item.name).join("|")}</div>
@@ -252,13 +286,37 @@ vi.mock("../../../core/admin/ui/roles/RoleList", () => ({
     onDuplicate,
     onDelete,
   }: {
-    roles: Array<{ id: string; name: string }>;
+    roles: Array<{
+      id: string;
+      name: string;
+      description?: string;
+      permissions: string[];
+      system?: boolean;
+    }>;
     selectedId?: string;
     canManageRoles?: boolean;
     onSelect: (id: string) => void;
-    onEdit: (role: { id: string; name: string }) => void;
-    onDuplicate: (role: { id: string; name: string }) => void;
-    onDelete: (role: { id: string; name: string }) => void;
+    onEdit: (role: {
+      id: string;
+      name: string;
+      description?: string;
+      permissions: string[];
+      system?: boolean;
+    }) => void;
+    onDuplicate: (role: {
+      id: string;
+      name: string;
+      description?: string;
+      permissions: string[];
+      system?: boolean;
+    }) => void;
+    onDelete: (role: {
+      id: string;
+      name: string;
+      description?: string;
+      permissions: string[];
+      system?: boolean;
+    }) => void;
   }) => (
     <div>
       <div data-testid="role-list-items">{roles.map((role) => role.name).join("|")}</div>
@@ -276,6 +334,9 @@ vi.mock("../../../core/admin/ui/roles/RoleList", () => ({
       <button type="button" onClick={() => roles[0] && onDelete(roles[0])}>
         delete-first-role
       </button>
+      <button type="button" onClick={() => roles[1] && onDuplicate(roles[1])}>
+        duplicate-second-role
+      </button>
     </div>
   ),
 }));
@@ -286,13 +347,19 @@ vi.mock("../../../core/admin/ui/users/UserDetailsDrawer", () => ({
     canManageUsers,
     onEditUser,
     onResetPassword,
+    onToggleStatus,
+    onDeleteUser,
     canResetPassword,
+    canManageUserLifecycle,
   }: {
     user?: { name?: string } | null;
     canManageUsers?: boolean;
     onEditUser?: () => void;
     onResetPassword?: () => void;
+    onToggleStatus?: () => void;
+    onDeleteUser?: () => void;
     canResetPassword?: boolean;
+    canManageUserLifecycle?: boolean;
   }) => (
     <div>
       <div data-testid="details-user">{user?.name ?? "none"}</div>
@@ -302,6 +369,12 @@ vi.mock("../../../core/admin/ui/users/UserDetailsDrawer", () => ({
       </button>
       <button type="button" disabled={!canResetPassword} onClick={onResetPassword}>
         details-reset-password
+      </button>
+      <button type="button" disabled={!canManageUserLifecycle} onClick={onToggleStatus}>
+        details-toggle-user
+      </button>
+      <button type="button" disabled={!canManageUserLifecycle} onClick={onDeleteUser}>
+        details-delete-user
       </button>
     </div>
   ),
@@ -653,7 +726,7 @@ test("UsersRolesPage orchestrates filters and user-role management flows", async
     expect(view.container.querySelector('[data-testid="confirm-target"]')?.textContent).toContain(
       "bob@example.com"
     );
-    clickByText(view.container, "confirm-password-reset");
+    clickByText(view.container, "Send reset email");
     await flush();
 
     clickByText(view.container, "Invite User");
@@ -671,6 +744,10 @@ test("UsersRolesPage orchestrates filters and user-role management flows", async
     await flush();
 
     clickByText(view.container, "delete-first-user");
+    expect(view.container.querySelector('[data-testid="confirm-target"]')?.textContent).toContain(
+      "bob@example.com"
+    );
+    clickByText(view.container, "Delete user");
     await flush();
 
     clickByText(view.container, "Create Role");
@@ -688,6 +765,10 @@ test("UsersRolesPage orchestrates filters and user-role management flows", async
     await flush();
 
     clickByText(view.container, "delete-first-role");
+    expect(view.container.querySelector('[data-testid="confirm-target"]')?.textContent).toContain(
+      "Editor"
+    );
+    clickByText(view.container, "Delete role");
     await flush();
 
     expect(requestAdminPasswordReset).toHaveBeenCalledWith("user-2");
@@ -716,6 +797,8 @@ test("UsersRolesPage orchestrates filters and user-role management flows", async
       name: "Editor copy",
       description: "Content team",
       permissions: ["content.write"],
+      sourceRoleId: "editor",
+      sourceRoleName: "Editor",
     });
     expect(updateAdminRole).toHaveBeenCalledWith("editor", {
       name: "Editor Updated",
@@ -723,6 +806,90 @@ test("UsersRolesPage orchestrates filters and user-role management flows", async
       permissions: ["content.write"],
     });
     expect(deleteAdminRole).toHaveBeenCalledWith("editor");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UsersRolesPage keeps destructive user cancel side-effect free", async () => {
+  const { UsersRolesPage } = await import("../../../core/admin/ui/users/UsersRolesPage");
+
+  const view = mount(
+    <UsersRolesPage permissions={["users:read", "users:write", "roles:read", "roles:write"]} />
+  );
+
+  try {
+    await flush();
+    await flush();
+
+    clickByText(view.container, "filter-query-bob");
+    clickByText(view.container, "filter-role-editor");
+    clickByText(view.container, "filter-status-inactive");
+
+    clickByText(view.container, "delete-first-user");
+    expect(view.container.querySelector('[data-testid="confirm-target"]')?.textContent).toContain(
+      "bob@example.com"
+    );
+    clickByText(view.container, "Cancel");
+    await flush();
+
+    expect(deleteAdminUser).not.toHaveBeenCalled();
+
+    clickByText(view.container, "delete-first-user");
+    clickByText(view.container, "Delete user");
+    await flush();
+
+    expect(deleteAdminUser).toHaveBeenCalledTimes(1);
+    expect(deleteAdminUser).toHaveBeenCalledWith("user-2");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UsersRolesPage confirms only high-risk role duplication", async () => {
+  const { UsersRolesPage } = await import("../../../core/admin/ui/users/UsersRolesPage");
+
+  const view = mount(
+    <UsersRolesPage permissions={["users:read", "users:write", "roles:read", "roles:write"]} />
+  );
+
+  try {
+    await flush();
+    await flush();
+
+    clickByText(view.container, "duplicate-first-role");
+    await flush();
+
+    expect(createAdminRole).toHaveBeenCalledTimes(1);
+    expect(createAdminRole).toHaveBeenCalledWith({
+      name: "Editor copy",
+      description: "Content team",
+      permissions: ["content.write"],
+      sourceRoleId: "editor",
+      sourceRoleName: "Editor",
+    });
+
+    clickByText(view.container, "duplicate-second-role");
+    expect(createAdminRole).toHaveBeenCalledTimes(1);
+    expect(view.container.querySelector('[data-testid="confirm-target"]')?.textContent).toContain(
+      "Admin"
+    );
+    clickByText(view.container, "Cancel");
+    await flush();
+    expect(createAdminRole).toHaveBeenCalledTimes(1);
+
+    clickByText(view.container, "duplicate-second-role");
+    clickByText(view.container, "Duplicate role");
+    await flush();
+
+    expect(createAdminRole).toHaveBeenCalledTimes(2);
+    expect(createAdminRole).toHaveBeenLastCalledWith({
+      name: "Admin copy",
+      description: "Full access",
+      permissions: ["*"],
+      sourceRoleId: "admin",
+      sourceRoleName: "Admin",
+    });
   } finally {
     view.cleanup();
   }
@@ -788,16 +955,49 @@ test("UsersRolesPage separates user lifecycle writes from role-assignment writes
     expect(findButtonByText(view.container, "delete-first-user")?.disabled).toBe(false);
 
     clickByText(view.container, "reset-first-user");
-    clickByText(view.container, "confirm-password-reset");
+    clickByText(view.container, "Send reset email");
     await flush();
     clickByText(view.container, "toggle-first-user");
+    expect(disableAdminUser).not.toHaveBeenCalled();
+    clickByText(view.container, "Deactivate user");
     await flush();
     clickByText(view.container, "delete-first-user");
+    expect(deleteAdminUser).not.toHaveBeenCalled();
+    clickByText(view.container, "Delete user");
     await flush();
 
     expect(requestAdminPasswordReset).toHaveBeenCalledWith("user-1");
     expect(disableAdminUser).toHaveBeenCalledWith("user-1");
     expect(deleteAdminUser).toHaveBeenCalledWith("user-1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UsersRolesPage confirms activation when role risk cannot be verified", async () => {
+  const { UsersRolesPage } = await import("../../../core/admin/ui/users/UsersRolesPage");
+
+  const view = mount(<UsersRolesPage permissions={["users:read", "users:write"]} />);
+
+  try {
+    await flush();
+    await flush();
+
+    clickByText(view.container, "filter-status-inactive");
+    expect(view.container.querySelector('[data-testid="user-list-items"]')?.textContent).toBe(
+      "Bob Editor"
+    );
+
+    clickByText(view.container, "toggle-first-user");
+    expect(enableAdminUser).not.toHaveBeenCalled();
+    expect(view.container.querySelector('[data-testid="confirm-target"]')?.textContent).toContain(
+      "bob@example.com"
+    );
+
+    clickByText(view.container, "Activate user");
+    await flush();
+
+    expect(enableAdminUser).toHaveBeenCalledWith("user-2");
   } finally {
     view.cleanup();
   }
@@ -877,6 +1077,7 @@ test("UsersRolesPage refreshes permissions after stale write 403s", async () => 
     await flush();
 
     clickByText(view.container, "toggle-first-user");
+    clickByText(view.container, "Deactivate user");
     await flush();
 
     expect(disableAdminUser).toHaveBeenCalledWith("user-1");
