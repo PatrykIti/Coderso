@@ -192,13 +192,24 @@ test("VisualPanel renders repeatable slot move controls with disabled boundaries
       block={baseBlock}
       onChange={() => undefined}
       slotControls={{
-        sectionId: "accordion.structure",
+        sectionId: "tabs.structure",
         title: "Structure",
-        addActions: [],
+        addActions: [
+          {
+            id: "add-panel",
+            label: "Add Panel",
+            path: "slots.panel",
+            ownership: "action",
+            disabled: false,
+            onClick: () => undefined,
+          },
+        ],
         items: [
           {
-            id: "accordion.slot.item-1",
-            label: "Item 1 slot",
+            id: "tabs.slot.panel:1",
+            label: "Panel 1 slot",
+            path: "slots.panel",
+            ownership: "action",
             count: 1,
             empty: false,
             canRemove: true,
@@ -213,8 +224,15 @@ test("VisualPanel renders repeatable slot move controls with disabled boundaries
     />
   );
 
+  expect(html).toContain('data-widget-control="add-panel"');
+  expect(html).toContain('data-widget-control-path="slots.panel"');
+  expect(html).toContain('data-widget-control="tabs.slot.panel:1"');
+  expect(html).toContain('data-widget-control="tabs.slot.panel:1.move-up"');
+  expect(html).toContain('data-widget-control="tabs.slot.panel:1.move-down"');
+  expect(html).toContain('data-widget-control="tabs.slot.panel:1.remove"');
   expect(html).toContain("Move up");
   expect(html).toContain("Move down");
+  expect(html).toContain("Remove");
   expect(html).toContain("disabled");
 });
 

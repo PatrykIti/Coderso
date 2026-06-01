@@ -5,7 +5,7 @@
 > **Admin page id:** `6aea4b4b-1f25-4fbc-a452-d2fd244f3dc8`
 > **Public routes:** `/audit-31-05-tabs`, `/audit-31-05-tabs-rich`, `/audit-31-05-tabs-all-disabled`, `/audit-31-05-tabs-empty-panel`, `/audit-31-05-tabs-unsafe-style`, `/audit-31-05-tabs-invalid`
 > **Playwright sessions:** `codex-31-05-ui-tabs-fixture`, `codex-31-05-ui-tabs-public`, `codex-31-05-ui-tabs-admin`, `codex-31-05-ui-tabs-advanced`, `codex-31-05-ui-tabs-interaction`
-> **Claude:** lokalny CLI nadal blokuje wspolprace: `401 Invalid authentication credentials`. Raport opiera sie na Playwright + audycie kodu Codex.
+> **Claude:** remediation review z lokalnego CLI (2026-06-01) zakonczony wynikiem `No blockers`.
 
 ## Metoda
 
@@ -71,13 +71,13 @@ Przetestowane:
 | Label style / motion | Rich fixture | Base / Semibold / Slide visible in Visual and Advanced. | Public triggers `text-base font-semibold`; panels maja slide motion classes. | Dziala | Token maps + bounded motion enum. | Brak. |
 | Colors and clears | Inspect Visual | 6 color controls, 6 Clear buttons, picker swatches; Advanced reports `6 saved color choices`. | Safe fixture styles renderuja expected hex/token inline values. | Dziala dla UI-safe values | UI color picker ogranicza normalne author input do safe color values. | Brak dla UI; patrz unsafe import gap. |
 | Empty public panels | `/audit-31-05-tabs-empty-panel` | Admin preview moze pokazac editor guidance. | Public nie zawiera `Add widgets to this tab panel.` i nie overflowuje. | Dziala | Placeholder idzie przez `renderEditorPlaceholder()` i jest render-context gated. | Brak. |
-| Shared Structure | Visual Structure on rich fixture | `Add Panel`, Move up/down, Remove widoczne; row actions dzialaja jako repeatable slot controls. | Public panel order/rendering stable through `panel:1..4`. | Dziala funkcjonalnie, metadata niepelna | `Add Panel` jest unwrapped; row actions maja ownership `action`, ale path `null`. | Patrz `TABS-31-05-02`. |
+| Shared Structure | Visual Structure on rich fixture | `Add Panel`, Move up/down, Remove widoczne; add action, row, and row action metadata expose `slots.panel` with action ids scoped to `panel:<id>`. | Public panel order/rendering stable through `panel:1..4`. | Dziala | `VisualPanel` wraps add and row actions in metadata and mirrors action metadata onto native buttons. | Naprawione w `TABS-31-05-02` / TASK-365. |
 | Shared block layout / visibility | Inspect Visual | Shared paths `layout.container`, padding/margin, `visibility.devices.*`. | Fixture pages renderuja bez body overflow. | Dziala | Shared builder controls poza widget-local data. | Brak. |
 | Advanced diagnostics | Click builder tab `Advanced` | `writablePaths=[]`, `rawControlCount=0`, no unwrapped controls; legacy scroll, unavailable count and saved display summaries visible. | Nie dotyczy. | Dziala | `TabsAdvancedEditor` uzywa read-only summary rows. | Brak. |
 | Invalid payload | `/audit-31-05-tabs-invalid` | Nieosiagalne przez normalny UI; API/import edge. | HTTP 200, rootCount `0`, `Invalid widget data`, no raw invalid strings. | Dziala fail-closed; route gap shared | Widget schema rejects invalid minItems/enums/unknown fields, ale admin API allowed save/publish. | Wspolna walidacja save/publish/import widget blocks. |
-| Unsafe style strings | `/audit-31-05-tabs-unsafe-style` | Nieosiagalne przez normalny UI color picker; API/import edge. | HTTP 200 i widget renderuje, ale inline style zawiera `url(javascript:alert(...))` oraz `expression(alert(...))`. | Nie dziala security/value validation | Style schema dopuszcza any string, normalizer tylko trimuje, renderer uzywa stringow jako inline style. | Patrz `TABS-31-05-01`. |
+| Unsafe style strings | `/audit-31-05-tabs-unsafe-style` | Nieosiagalne przez normalny UI color picker; API/import edge. | Unsafe strings normalize to empty style values; public SSR no longer emits raw `javascript:`, `expression(`, `data:`, `url(...)`, or semicolon-injection fragments. | Dziala | Tabs uses `resolveClearableCssColorValue()` for all six style fields and revalidates before inline style assembly. | Naprawione w `TABS-31-05-01` / TASK-365. |
 
-## Znaleziska do poprawy
+## Znaleziska i remediacja
 
 ### TABS-31-05-01 - Unsafe style strings z import/API trafiaja do public inline CSS
 
@@ -121,6 +121,19 @@ deterministyczny: nie emitujemy raw attacker-controlled style strings do HTML.
 4. Dodac Vitest regression: unsafe style strings nie pojawiaja sie w
    `renderToString(<TabsBlock ... />)` i public invalid/import path nie emituje
    raw `javascript:` / `expression(`.
+
+**Status po remediacji (2026-06-01): Naprawione.**
+
+- `normalizeTabsData()` uses `resolveClearableCssColorValue()` for all six
+  Tabs color fields.
+- `TabsBlock` revalidates normalized style values before assigning
+  `backgroundColor`, `borderColor`, or `color`.
+- Unsafe imports containing `javascript:`, `expression(`, `data:`, raw URLs,
+  semicolon injection, braces, or HTML-like fragments drop to `undefined`.
+- Safe hex, `rgb/rgba`, `hsl/hsla`, `transparent`, `currentColor`, and
+  `var(--color-*)` values remain valid.
+- Renderer regressions cover both unsafe-string removal and safe-value
+  preservation.
 
 ### TABS-31-05-02 - Repeatable Structure actions sa funkcjonalne, ale niepelne dla audytu/automatyzacji
 
@@ -173,6 +186,20 @@ panelu.
 4. Dodac page-builder DOM test dla repeatable-slot widgetu: `Add Panel`,
    Move/Remove maja metadata i nie pojawiaja sie w `unwrappedControls`.
 
+**Status po remediacji (2026-06-01): Naprawione.**
+
+- `Add Panel` remains wrapped by shared `WidgetControlRow` with
+  `data-widget-control-path="slots.panel"`.
+- Panel rows keep `data-widget-control="tabs.slot.panel:<id>"` and path
+  `slots.panel`.
+- Move up, Move down, and Remove actions now expose per-action metadata both on
+  their `WidgetControlRow` wrapper and on the native button, e.g.
+  `tabs.slot.panel:1.move-up` with path `slots.panel`.
+- Disabled repeatable boundary buttons remain rendered and disabled for
+  repeatable slots.
+- VisualPanel regression coverage confirms Add Panel, row, and row-action
+  metadata.
+
 ## Co dziala
 
 - Public click activation, disabled click no-op and keyboard navigation dzialaja
@@ -186,10 +213,15 @@ panelu.
 - Empty-panel admin placeholder nie leakuje do public runtime.
 - Invalid enum/minItems/unknown payload jest fail-closed przez public widget
   validator.
+- Unsafe imported style strings are dropped before public inline style output.
+- Repeatable panel add/row/action controls now expose stable `slots.panel`
+  metadata for automation.
 
 ## Walidacja
 
-- `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/ui-integration/tabs-preview-activation.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx` - passed, 5 files / 60 tests.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/tabs.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 4 files / 52 tests.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/tabs.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/ui-integration/tabs-preview-activation.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 7 files / 92 tests.
 - `bun --cwd core lint` - passed.
 - `bun --cwd core lint:types` - passed.
-- `git diff --check -- _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_TABS_WIDGET.md _docs/PLAYWRIGHT/31-05-2026-widgets/README.md .tmp/playwright-tabs-fixture.js .tmp/playwright-tabs-public-probe.js .tmp/playwright-tabs-admin-inspect.js .tmp/playwright-tabs-advanced-check.js .tmp/playwright-tabs-admin-interaction.js` - passed.
+- `git diff --check` and `git diff --cached --check` - passed.
+- `timeout 120s claude -p --dangerously-skip-permissions --max-budget-usd 1 "Review staged diff for TASK-365 Tabs only..."` - passed, no blockers.

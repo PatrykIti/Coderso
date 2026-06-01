@@ -5,7 +5,7 @@
 **Category:** Widgets + Tabs + Runtime Security + Builder Metadata + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-365
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Add Panel, Move up/down, and Remove work but lack stable path/target metadata.
 
 ## Sub-Tasks
 
-- [ ] Reproduce TABS-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce TABS-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +90,12 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced the report drift against current code: TASK-363/364 already gave Tabs `Add Panel` and row wrappers `slots.panel`, but Move up / Move down / Remove still had no per-action metadata.
+- `VisualPanel` now wraps repeatable row actions in `WidgetControlRow` and mirrors stable `data-widget-control`, path, and ownership metadata onto each action button.
+- Tabs panel actions now expose ids such as `tabs.slot.panel:1.move-up`, `tabs.slot.panel:1.move-down`, and `tabs.slot.panel:1.remove`, all on path `slots.panel`.
+- Added a VisualPanel regression covering Add Panel, row metadata, and per-action metadata with disabled repeatable boundaries intact.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/tabs.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`; broader Tabs/UI lane with runtime renderer, preview integration, and shared block-layout coverage; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; `git diff --cached --check`; Claude staged-diff review returned no blockers.
+- Covered by changelog `1055`.

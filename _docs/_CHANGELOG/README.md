@@ -35,6 +35,7 @@ matching remediation family is implemented or closed.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1055 | 2026-06-01 | Tabs widget 31-05 UI audit remediation | CMS Widgets/Tabs/Runtime Security/Admin UI/Builder Metadata/QA/Docs |
 | 1054 | 2026-06-01 | Split Layout widget 31-05 UI audit remediation | CMS Widgets/Split Layout/Admin UI/Builder Metadata/QA/Docs |
 | 1053 | 2026-06-01 | Grid Columns widget 31-05 UI audit remediation | CMS Widgets/Grid Columns/Admin UI/Builder Metadata/QA/Docs |
 | 1052 | 2026-06-01 | Template Section widget 31-05 UI audit remediation | CMS Widgets/Template Section/Admin UI/Runtime/Security/QA/Docs |

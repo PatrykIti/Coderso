@@ -17,7 +17,7 @@ import type {
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
-import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { renderSharedWidgetRuntimeScript } from "../runtimeScripts";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
@@ -527,22 +527,22 @@ export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsDa
     },
     style: {
       surfaceColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.surfaceColor)
+        ? resolveClearableCssColorValue(data.style?.surfaceColor)
         : (tabsDefaults.style?.surfaceColor ?? "var(--color-surface)"),
       borderColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.borderColor)
+        ? resolveClearableCssColorValue(data.style?.borderColor)
         : (tabsDefaults.style?.borderColor ?? "var(--color-border)"),
       activeBackgroundColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.activeBackgroundColor)
+        ? resolveClearableCssColorValue(data.style?.activeBackgroundColor)
         : (tabsDefaults.style?.activeBackgroundColor ?? "var(--color-text)"),
       activeTextColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.activeTextColor)
+        ? resolveClearableCssColorValue(data.style?.activeTextColor)
         : (tabsDefaults.style?.activeTextColor ?? "var(--color-background)"),
       inactiveTextColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.inactiveTextColor)
+        ? resolveClearableCssColorValue(data.style?.inactiveTextColor)
         : (tabsDefaults.style?.inactiveTextColor ?? "var(--color-text)"),
       panelBackgroundColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.panelBackgroundColor)
+        ? resolveClearableCssColorValue(data.style?.panelBackgroundColor)
         : (tabsDefaults.style?.panelBackgroundColor ?? "var(--color-surface)"),
     },
   };
@@ -803,25 +803,27 @@ export function TabsBlock({
 
   const containerStyle: CSSProperties =
     compactStyle({
-      borderColor: style.borderColor,
-      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
+      borderColor: resolveClearableCssColorValue(style.borderColor),
+      backgroundColor: resolveClearableCssColorValue(style.surfaceColor),
     }) ?? {};
 
   const triggerStyle: CSSProperties = {
-    color: style.inactiveTextColor,
+    color: resolveClearableCssColorValue(style.inactiveTextColor),
   };
 
   const activeTriggerStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableStyleValue(style.activeBackgroundColor),
-      color: style.activeTextColor,
-      borderColor: resolveClearableStyleValue(style.activeBackgroundColor) ?? style.borderColor,
+      backgroundColor: resolveClearableCssColorValue(style.activeBackgroundColor),
+      color: resolveClearableCssColorValue(style.activeTextColor),
+      borderColor:
+        resolveClearableCssColorValue(style.activeBackgroundColor) ??
+        resolveClearableCssColorValue(style.borderColor),
     }) ?? {};
 
   const panelStyle: CSSProperties =
     compactStyle({
-      borderColor: style.borderColor,
-      backgroundColor: resolveClearableStyleValue(style.panelBackgroundColor),
+      borderColor: resolveClearableCssColorValue(style.borderColor),
+      backgroundColor: resolveClearableCssColorValue(style.panelBackgroundColor),
     }) ?? {};
 
   const enabledPanels = panels.filter((panel) => panel.disabled !== true);

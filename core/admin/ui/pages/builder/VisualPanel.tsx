@@ -217,39 +217,87 @@ export function VisualPanel({
                       {item.count} {item.count === 1 ? "item" : "items"}
                     </span>
                     {typeof item.canMoveUp === "boolean" ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-[10px]"
-                        onClick={item.onMoveUp}
-                        disabled={!item.canMoveUp}
+                      <WidgetControlRow
+                        id={`${item.id}.move-up`}
+                        label={`Move up ${item.label}`}
+                        path={item.path}
+                        ownership={item.ownership ?? "action"}
+                        hideLabel
+                        className="space-y-0"
                       >
-                        Move up
-                      </Button>
+                        {(fieldProps) => (
+                          <Button
+                            id={fieldProps.id}
+                            aria-labelledby={fieldProps["aria-labelledby"]}
+                            data-widget-control={`${item.id}.move-up`}
+                            data-widget-control-path={item.path}
+                            data-widget-control-ownership={item.ownership ?? "action"}
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={item.onMoveUp}
+                            disabled={!item.canMoveUp}
+                          >
+                            Move up
+                          </Button>
+                        )}
+                      </WidgetControlRow>
                     ) : null}
                     {typeof item.canMoveDown === "boolean" ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-[10px]"
-                        onClick={item.onMoveDown}
-                        disabled={!item.canMoveDown}
+                      <WidgetControlRow
+                        id={`${item.id}.move-down`}
+                        label={`Move down ${item.label}`}
+                        path={item.path}
+                        ownership={item.ownership ?? "action"}
+                        hideLabel
+                        className="space-y-0"
                       >
-                        Move down
-                      </Button>
+                        {(fieldProps) => (
+                          <Button
+                            id={fieldProps.id}
+                            aria-labelledby={fieldProps["aria-labelledby"]}
+                            data-widget-control={`${item.id}.move-down`}
+                            data-widget-control-path={item.path}
+                            data-widget-control-ownership={item.ownership ?? "action"}
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={item.onMoveDown}
+                            disabled={!item.canMoveDown}
+                          >
+                            Move down
+                          </Button>
+                        )}
+                      </WidgetControlRow>
                     ) : null}
                     {item.canRemove && item.onRemove ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-[10px]"
-                        onClick={item.onRemove}
+                      <WidgetControlRow
+                        id={`${item.id}.remove`}
+                        label={`Remove ${item.label}`}
+                        path={item.path}
+                        ownership={item.ownership ?? "action"}
+                        hideLabel
+                        className="space-y-0"
                       >
-                        Remove
-                      </Button>
+                        {(fieldProps) => (
+                          <Button
+                            id={fieldProps.id}
+                            aria-labelledby={fieldProps["aria-labelledby"]}
+                            data-widget-control={`${item.id}.remove`}
+                            data-widget-control-path={item.path}
+                            data-widget-control-ownership={item.ownership ?? "action"}
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={item.onRemove}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </WidgetControlRow>
                     ) : null}
                   </div>
                 </div>

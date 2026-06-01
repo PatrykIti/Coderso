@@ -5,7 +5,7 @@
 **Category:** Widgets + Tabs + Runtime Security + Builder Metadata + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_TABS_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -24,8 +24,8 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-365-01](TASK-365-01_TABS_31_05_01_Sanitize_Six_Tabs_Style_Fields_Before_Inline_CSS.md): TABS-31-05-01 - Sanitize six Tabs style fields before inline CSS
-- [ ] [TASK-365-02](TASK-365-02_TABS_31_05_02_Complete_Repeatable_Structure_Metadata_For_Panel_Actions.md): TABS-31-05-02 - Complete repeatable Structure metadata for panel actions
+- [x] [TASK-365-01](TASK-365-01_TABS_31_05_01_Sanitize_Six_Tabs_Style_Fields_Before_Inline_CSS.md): TABS-31-05-01 - Sanitize six Tabs style fields before inline CSS
+- [x] [TASK-365-02](TASK-365-02_TABS_31_05_02_Complete_Repeatable_Structure_Metadata_For_Panel_Actions.md): TABS-31-05-02 - Complete repeatable Structure metadata for panel actions
 
 ## Implementation Pseudocode
 
@@ -69,3 +69,12 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Tabs style normalization now uses the shared bounded CSS color helper for all six clearable color fields, so unsafe imported strings normalize to `undefined` before public rendering.
+- `TabsBlock` defensively applies the same color normalizer when composing runtime inline styles.
+- Shared Visual Structure action buttons now carry stable action metadata for repeatable slot row actions, including `tabs.slot.panel:<id>.move-up`, `.move-down`, and `.remove` with path `slots.panel`.
+- Raman read-only agent confirmed the sanitizer helper choice and the remaining per-action metadata risk; both were addressed before closure.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/tabs.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`; `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/tabs.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/ui-integration/tabs-preview-activation.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; `git diff --cached --check`; Claude staged-diff review returned no blockers.
+- Covered by changelog `1055` together with TASK-365-01 and TASK-365-02.
