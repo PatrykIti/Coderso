@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 32 tasks
+- **To Do:** 31 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2019 tasks
+- **Done:** 2020 tasks
 
 ---
 
@@ -59,7 +59,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-357-01 | Server-Side Audit Query Contract | High | Large | Physical Audit Logs leaf for strict query/date/severity filters, RBAC, cursor metadata, and route mapping |
 | TASK-356-04 | RBAC Audit Event Diff | High | Medium | Physical Roles Matrix leaf for server-side added/removed permission diff audit payloads and redaction |
 | TASK-356-03 | Full Access and High-Risk Permission Confirmation | High | Large | Physical Roles Matrix leaf for full-access/high-risk taxonomy, RoleEditor confirm, and matrix promotion guard |
-| TASK-356-02 | RBAC Diff Builder and Review Modal | High | Large | Physical Roles Matrix leaf for pure diff helper, dirty footer, review modal, partial failure, and conflict handling |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -80,7 +79,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-356 | Admin Roles Matrix Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-356-01 is implemented; diff review, full-access confirmation, and audit diff leaves remain. |
+| TASK-356 | Admin Roles Matrix Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-356-01 and TASK-356-02 are implemented; full-access confirmation and audit diff leaves remain. |
 | TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-360-01 through TASK-360-06 are implemented; final-evidence closure remains. |
 ---
 
@@ -95,6 +94,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-355-05 | Mobile Drawer Accessibility | High | Small | Done (2026-06-01): Users mobile details sheet now has hidden title/description semantics and a Radix-warning-free drawer a11y gate. |
 | TASK-355 | Admin Users Report Remediation Family | High | Very Large | Done (2026-06-01): TASK-355-01 through TASK-355-05 close Users permission, invite/reset, destructive confirm, no-op, and mobile sheet a11y findings; final click evidence remains in TASK-360-07. |
 | TASK-356-01 | Roles Matrix Permission-Aware Read-Only Mode | High | Large | Done (2026-06-01): Roles Matrix now has denied/read-only/editable modes, searchable read-only inspection, disabled write controls, and stale 403 permission refresh coverage. |
+| TASK-356-02 | RBAC Diff Builder and Review Modal | High | Large | Done (2026-06-01): Roles Matrix saves now require role-by-role diff review, PATCH only changed roles, keep failed diffs dirty, and have pure diff helper plus Playwright evidence. |
 | TASK-360-06 | Admin Server-Side Query and Pagination Conventions | High | Large | Done (2026-06-01): shared Admin query helpers, AJV fragments, strict log query schemas, and area-specific query error mapping now prevent silent fake-filter/pagination drift. |
 | TASK-360-04 | Admin No-Op Control Audit Gate | High | Large | Done (2026-06-01): audited Users, Audit Logs, Access Logs, and Settings no-op controls now have disabled/unavailable states with stable regression expectations. |
 | TASK-360-05 | Drawer and Sheet Accessibility Gate | High | Medium | Done (2026-06-01): audited Admin drawers now bind Radix title/description semantics and share a warning-free Vitest gate for future drawer tests. |

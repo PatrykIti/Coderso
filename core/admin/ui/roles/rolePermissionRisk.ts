@@ -1,6 +1,8 @@
 const HIGH_RISK_PERMISSIONS = new Set([
   "*",
   "roles:write",
+  "sessions:write",
+  "api-keys:write",
   "users:write",
   "settings:write",
   "plugins:manage",

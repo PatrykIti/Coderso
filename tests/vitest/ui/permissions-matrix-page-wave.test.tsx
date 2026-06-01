@@ -231,7 +231,14 @@ beforeEach(() => {
   listAdminRoles.mockResolvedValue(roles);
   listPermissionCatalog.mockResolvedValue(permissionGroups);
   createAdminRole.mockResolvedValue({ id: "new-role" });
-  updateAdminRole.mockResolvedValue({ id: "editor" });
+  updateAdminRole.mockImplementation(async (id: string, payload: { permissions?: string[] }) => {
+    const role = roles.find((item) => item.id === id);
+    return {
+      ...(role ?? roles[0]),
+      id,
+      permissions: payload.permissions ?? role?.permissions ?? [],
+    };
+  });
 });
 
 afterEach(() => {
@@ -281,7 +288,7 @@ test("PermissionsMatrixPage lets roles:read users search but not edit", async ()
 
     expect(addRole).toBeInstanceOf(HTMLButtonElement);
     expect((addRole as HTMLButtonElement).disabled).toBe(true);
-    expect(findButtonByText(view.container, "Save changes")).toBeUndefined();
+    expect(findButtonByText(view.container, "Review changes")).toBeUndefined();
     expect((bulkToggle as HTMLButtonElement).disabled).toBe(true);
     expect((writeToggle as HTMLButtonElement).disabled).toBe(true);
     expect(writeToggle?.getAttribute("aria-describedby")).toBe(
@@ -318,11 +325,15 @@ test("PermissionsMatrixPage preserves editable matrix behavior for roles:write u
 
     clickByLabel(view.container, "Write content for Editor");
 
-    const save = findButtonByText(view.container, "Save changes");
-    expect(save).toBeInstanceOf(HTMLButtonElement);
-    expect((save as HTMLButtonElement).disabled).toBe(false);
+    const review = findButtonByText(view.container, "Review changes");
+    expect(review).toBeInstanceOf(HTMLButtonElement);
+    expect((review as HTMLButtonElement).disabled).toBe(false);
+    expect(view.container.textContent).toContain("1 role changed: +1 / -0.");
 
-    clickByText(view.container, "Save changes");
+    clickByText(view.container, "Review changes");
+    expect(view.container.textContent).toContain("Review permission changes");
+    expect(view.container.textContent).toContain("+ content:write");
+    clickByText(view.container, "Confirm changes");
     await flush();
 
     expect(updateAdminRole).toHaveBeenCalledWith("editor", {
@@ -404,13 +415,128 @@ test("PermissionsMatrixPage keeps the draft and refreshes permissions after stal
     await flush();
 
     clickByLabel(view.container, "Write content for Editor");
-    clickByText(view.container, "Save changes");
+    clickByText(view.container, "Review changes");
+    clickByText(view.container, "Confirm changes");
     await flush();
 
     expect(refreshPermissions).toHaveBeenCalledTimes(1);
     expect(view.container.textContent).toContain("Permissions changed; refresh required.");
-    expect(view.container.textContent).toContain("Unsaved permission changes detected.");
-    expect(findButtonByText(view.container, "Save changes")).toBeDefined();
+    expect(view.container.textContent).toContain("Some role permission changes failed.");
+    expect(view.container.textContent).toContain("1 role changed: +1 / -0.");
+    expect(findButtonByText(view.container, "Confirm changes")).toBeDefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PermissionsMatrixPage reports stale role conflicts without clearing the draft", async () => {
+  const { ApiClientError } = await import("../../../core/admin/services/apiClient");
+  const { PermissionsMatrixPage } =
+    await import("../../../core/admin/ui/roles/PermissionsMatrixPage");
+  updateAdminRole.mockRejectedValueOnce(new ApiClientError("role_conflict", "Role conflict", 409));
+
+  const view = mount(<PermissionsMatrixPage permissions={["roles:read", "roles:write"]} />);
+
+  try {
+    await flush();
+
+    clickByLabel(view.container, "Write content for Editor");
+    clickByText(view.container, "Review changes");
+    clickByText(view.container, "Confirm changes");
+    await flush();
+
+    expect(view.container.textContent).toContain(
+      "Editor: Role changed on the server. Refresh roles before retrying."
+    );
+    expect(view.container.textContent).toContain("1 role changed: +1 / -0.");
+    const confirm = findButtonByText(view.container, "Confirm changes");
+    expect(confirm).toBeInstanceOf(HTMLButtonElement);
+    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+
+    clickByText(view.container, "Confirm changes");
+    expect(updateAdminRole).toHaveBeenCalledTimes(1);
+
+    clickByText(view.container, "Refresh roles");
+    await flush();
+
+    expect(listAdminRoles).toHaveBeenCalledTimes(2);
+    expect(view.container.textContent).not.toContain("Review permission changes");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PermissionsMatrixPage keeps only failed role diffs dirty after partial save failure", async () => {
+  const { ApiClientError } = await import("../../../core/admin/services/apiClient");
+  const { PermissionsMatrixPage } =
+    await import("../../../core/admin/ui/roles/PermissionsMatrixPage");
+  updateAdminRole.mockImplementation(async (id: string, payload: { permissions?: string[] }) => {
+    if (id === "admin") {
+      throw new ApiClientError("permission_invalid", "Invalid permission assignment", 400);
+    }
+    const role = roles.find((item) => item.id === id);
+    return {
+      ...(role ?? roles[0]),
+      id,
+      permissions: payload.permissions ?? role?.permissions ?? [],
+    };
+  });
+
+  const view = mount(<PermissionsMatrixPage permissions={["roles:read", "roles:write"]} />);
+
+  try {
+    await flush();
+
+    clickByLabel(view.container, "Write content for Editor");
+    clickByLabel(view.container, "Write settings for Admin");
+    expect(view.container.textContent).toContain("2 roles changed: +1 / -1.");
+
+    clickByText(view.container, "Review changes");
+    clickByText(view.container, "Confirm changes");
+    await flush();
+
+    expect(updateAdminRole).toHaveBeenCalledTimes(2);
+    expect(updateAdminRole).toHaveBeenNthCalledWith(1, "editor", {
+      permissions: ["content:read", "content:write"],
+    });
+    expect(updateAdminRole).toHaveBeenNthCalledWith(2, "admin", {
+      permissions: ["content:read", "content:write"],
+    });
+    expect(view.container.textContent).toContain("Admin: Invalid permission assignment");
+    expect(view.container.textContent).toContain("1 role changed: +0 / -1.");
+    expect(view.container.textContent).not.toContain("+ content:write");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PermissionsMatrixPage review cancel is side-effect-free", async () => {
+  const { PermissionsMatrixPage } =
+    await import("../../../core/admin/ui/roles/PermissionsMatrixPage");
+
+  const view = mount(<PermissionsMatrixPage permissions={["roles:read", "roles:write"]} />);
+
+  try {
+    await flush();
+
+    clickByLabel(view.container, "Write content for Editor");
+    clickByText(view.container, "Review changes");
+
+    const openDialog = view.container.querySelector('[data-dialog-open="true"]');
+    expect(openDialog?.textContent).toContain("Review permission changes");
+    expect(openDialog?.textContent).toContain("+ content:write");
+
+    const cancel = Array.from(openDialog?.querySelectorAll("button") ?? []).find((button) =>
+      button.textContent?.includes("Cancel")
+    );
+    expect(cancel).toBeInstanceOf(HTMLButtonElement);
+    React.act(() => {
+      (cancel as HTMLButtonElement).click();
+    });
+
+    expect(updateAdminRole).not.toHaveBeenCalled();
+    expect(view.container.textContent).not.toContain("Review permission changes");
+    expect(view.container.textContent).toContain("1 role changed: +1 / -0.");
   } finally {
     view.cleanup();
   }

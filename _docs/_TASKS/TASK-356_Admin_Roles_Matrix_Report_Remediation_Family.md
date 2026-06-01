@@ -156,7 +156,7 @@ Completion notes:
 
 ### TASK-356-02: RBAC Diff Builder and Review Modal
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation shape:
 
@@ -221,6 +221,21 @@ Regression tests:
 - Save cancel does not call `updateAdminRole`.
 - Save confirm calls one PATCH per changed role, not every role.
 - API error keeps draft and modal error visible.
+
+Completion notes:
+
+- Added the normalized RBAC diff helper and tests for add/remove/no-op/sorted
+  output/unknown role/high-risk/`*` expansion.
+- Save now opens a review modal with role-by-role added/removed scopes and
+  high-risk markers. Confirm PATCHes only changed roles.
+- Because roles currently expose no version or `updatedAt`, the save path uses
+  the documented best-effort per-role fallback instead of sending unsupported
+  precondition fields. Successful role updates are cleaned locally; failed role
+  diffs remain dirty with exact role/error copy.
+- Stale role conflicts keep the review open but disable retry until roles are
+  explicitly refreshed.
+- Playwright CLI admin evidence verified add-permission -> review diff ->
+  confirm -> backend update with temporary fixtures that were cleaned up.
 
 ### TASK-356-03: Full Access and High-Risk Permission Confirmation
 

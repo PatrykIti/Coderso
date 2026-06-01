@@ -3,6 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { isApiClientError } from "@/services/apiClient";
 import {
@@ -19,6 +27,12 @@ import { PermissionsMatrix, type RolePermissionsMap } from "./PermissionsMatrix"
 import { RoleEditor } from "./RoleEditor";
 import type { RoleDraft, RoleSummary } from "./types";
 import { fallbackPermissionGroups, flattenPermissionGroups } from "./permissionCatalog";
+import {
+  buildRolePermissionDiffs,
+  normalizeRolePermissionSet,
+  summarizeRolePermissionDiffs,
+  type RolePermissionDiff,
+} from "./rolePermissionDiff";
 
 const hasPermission = (permissions: string[], permission: string) =>
   permissions.includes("*") || permissions.includes(permission);
@@ -38,6 +52,10 @@ const resolveMatrixMode = (access: RolesMatrixAccess): MatrixMode => {
 
 const readOnlyReason = "roles:write permission is required to edit roles.";
 const stalePermissionMessage = "Permissions changed; refresh required.";
+
+const isStaleRoleError = (err: unknown) =>
+  isApiClientError(err) &&
+  (err.status === 412 || err.code === "role_conflict" || err.code === "role_stale");
 
 function PermissionsMatrixSearch({
   value,
@@ -83,6 +101,9 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
   const [draftPermissions, setDraftPermissions] = useState<RolePermissionsMap>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [roleEditorOpen, setRoleEditorOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [roleRefreshRequired, setRoleRefreshRequired] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,6 +172,8 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
       setRoles(rolesData);
       setPermissionGroups(resolvedPermissions);
       setDraftPermissions(buildRolePermissions(rolesData, resolvedPermissions));
+      setReviewError(null);
+      setRoleRefreshRequired(false);
     } catch (err) {
       const message = resolveErrorMessage(
         err,
@@ -192,6 +215,8 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
         setRoles(rolesData);
         setPermissionGroups(resolvedPermissions);
         setDraftPermissions(buildRolePermissions(rolesData, resolvedPermissions));
+        setReviewError(null);
+        setRoleRefreshRequired(false);
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -216,16 +241,33 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
     };
   }, [buildRolePermissions, matrixMode, resolveErrorMessage]);
 
-  const hasUnsavedChanges = useMemo(() => {
-    return roles.some((role) => {
-      const current = role.permissions.includes("*") ? allPermissionIds : role.permissions;
-      const next = draftPermissions[role.id] ?? [];
-      const sortedCurrent = [...new Set(current)].sort();
-      const sortedNext = [...new Set(next)].sort();
-      if (sortedCurrent.length !== sortedNext.length) return true;
-      return sortedCurrent.some((permission, index) => permission !== sortedNext[index]);
-    });
-  }, [allPermissionIds, draftPermissions, roles]);
+  const pendingDiffs = useMemo(
+    () => buildRolePermissionDiffs(roles, draftPermissions, allPermissionIds),
+    [allPermissionIds, draftPermissions, roles]
+  );
+  const diffSummary = useMemo(() => summarizeRolePermissionDiffs(pendingDiffs), [pendingDiffs]);
+  const hasUnsavedChanges = pendingDiffs.length > 0;
+
+  const formatDiffSummary = useMemo(() => {
+    if (!hasUnsavedChanges) return "No pending permission changes.";
+    const roleLabel = diffSummary.changedRoles === 1 ? "role" : "roles";
+    const riskCopy = diffSummary.highRisk ? " High-risk permission grant included." : "";
+    return `${diffSummary.changedRoles} ${roleLabel} changed: +${diffSummary.addedPermissions} / -${diffSummary.removedPermissions}.${riskCopy}`;
+  }, [diffSummary, hasUnsavedChanges]);
+
+  const draftPermissionsForRole = useCallback(
+    (roleId: string) =>
+      normalizeRolePermissionSet(draftPermissions[roleId] ?? [], allPermissionIds),
+    [allPermissionIds, draftPermissions]
+  );
+
+  const toRoleUpdatePayload = useCallback(
+    (roleId: string) => {
+      const next = draftPermissionsForRole(roleId);
+      return next.length === allPermissionIds.length ? ["*"] : next;
+    },
+    [allPermissionIds, draftPermissionsForRole]
+  );
 
   const handleSaveRole = async (draft: RoleDraft) => {
     if (!canEditMatrix) {
@@ -269,35 +311,90 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
     });
   };
 
-  const handleSaveChanges = async () => {
+  const openReviewModal = () => {
     if (!canEditMatrix) {
       setError("Permission matrix changes require roles:write permission.");
       return;
     }
     if (!hasUnsavedChanges) return;
+    setReviewError(
+      roleRefreshRequired ? "Role changed on the server. Refresh roles before retrying." : null
+    );
+    setReviewOpen(true);
+  };
+
+  const handleConfirmSaveChanges = async () => {
+    if (!canEditMatrix || pendingDiffs.length === 0 || roleRefreshRequired) return;
     setIsSaving(true);
     setError(null);
+    setReviewError(null);
+
+    const successfulUpdates = new Map<string, RoleSummary>();
+    const failures: Array<{ diff: RolePermissionDiff; message: string; stale: boolean }> = [];
+
     try {
-      const updates = roles.filter((role) => {
-        const current = role.permissions.includes("*") ? allPermissionIds : role.permissions;
-        const next = draftPermissions[role.id] ?? [];
-        const sortedCurrent = [...new Set(current)].sort();
-        const sortedNext = [...new Set(next)].sort();
-        if (sortedCurrent.length !== sortedNext.length) return true;
-        return sortedCurrent.some((permission, index) => permission !== sortedNext[index]);
-      });
+      for (const diff of pendingDiffs) {
+        try {
+          const updated = await updateAdminRole(diff.roleId, {
+            permissions: toRoleUpdatePayload(diff.roleId),
+          });
+          successfulUpdates.set(updated.id, updated);
+        } catch (err) {
+          const stale = isStaleRoleError(err);
+          const message = stale
+            ? "Role changed on the server. Refresh roles before retrying."
+            : resolveErrorMessage(
+                err,
+                "Failed to save role permissions.",
+                "Permissions changed; refresh required."
+              );
+          failures.push({
+            diff,
+            message,
+            stale,
+          });
+        }
+      }
 
-      await Promise.all(
-        updates.map((role) => {
-          const next = draftPermissions[role.id] ?? [];
-          const payload = next.length === allPermissionIds.length ? ["*"] : next;
-          return updateAdminRole(role.id, { permissions: payload });
-        })
-      );
+      if (successfulUpdates.size > 0) {
+        const nextRoles = roles.map((role) => successfulUpdates.get(role.id) ?? role);
+        setRoles(nextRoles);
+        setDraftPermissions((prev) => {
+          const nextDraft = { ...prev };
+          for (const updated of successfulUpdates.values()) {
+            nextDraft[updated.id] = normalizeRolePermissionSet(
+              updated.permissions,
+              allPermissionIds
+            );
+          }
+          return nextDraft;
+        });
+      }
 
+      if (failures.length > 0) {
+        if (failures.some((failure) => failure.stale)) {
+          setRoleRefreshRequired(true);
+        }
+        const message = failures
+          .map(({ diff, message: failureMessage }) => `${diff.roleName}: ${failureMessage}`)
+          .join("; ");
+        setReviewError(message);
+        setError("Some role permission changes failed. Review the remaining diffs.");
+        return;
+      }
+
+      setReviewOpen(false);
       await refresh();
-    } catch (err) {
-      setError(resolveErrorMessage(err, "Failed to save permission changes."));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRefreshRoles = async () => {
+    setIsSaving(true);
+    try {
+      await refresh();
+      setReviewOpen(false);
     } finally {
       setIsSaving(false);
     }
@@ -306,6 +403,9 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
   const handleCancelChanges = () => {
     if (!canEditMatrix) return;
     setDraftPermissions(buildRolePermissions(roles, permissionGroups));
+    setReviewError(null);
+    setRoleRefreshRequired(false);
+    setReviewOpen(false);
   };
 
   return (
@@ -387,9 +487,7 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
                 <span>
                   {matrixMode === "readonly"
                     ? "Role permissions are read-only for this account."
-                    : hasUnsavedChanges
-                      ? "Unsaved permission changes detected."
-                      : "No pending permission changes."}
+                    : formatDiffSummary}
                 </span>
               </div>
               {canEditMatrix ? (
@@ -405,11 +503,11 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
                   <Button
                     size="sm"
                     className="gap-2"
-                    onClick={handleSaveChanges}
+                    onClick={openReviewModal}
                     disabled={!hasUnsavedChanges || isSaving}
                   >
                     <Save className="h-4 w-4" />
-                    {isSaving ? "Saving..." : "Save changes"}
+                    Review changes
                   </Button>
                 </div>
               ) : null}
@@ -424,6 +522,88 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
         canManageRoles={canEditMatrix}
         permissionGroups={permissionGroups}
       />
+      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Review permission changes</DialogTitle>
+            <DialogDescription>
+              Confirm role-by-role permission changes before updating RBAC.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+              <p className="font-semibold">{formatDiffSummary}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Only roles with listed diffs will be patched.
+              </p>
+            </div>
+            {reviewError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Some roles were not saved</AlertTitle>
+                <AlertDescription>{reviewError}</AlertDescription>
+              </Alert>
+            ) : null}
+            <div className="space-y-3">
+              {pendingDiffs.map((diff) => (
+                <div key={diff.roleId} className="rounded-lg border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold">{diff.roleName}</p>
+                    {diff.highRisk ? (
+                      <span className="rounded-full bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive">
+                        High-risk grant
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">Added</p>
+                      {diff.added.length > 0 ? (
+                        <ul className="mt-2 space-y-1 text-xs">
+                          {diff.added.map((permission) => (
+                            <li key={permission}>+ {permission}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-xs text-muted-foreground">No additions</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-muted-foreground">
+                        Removed
+                      </p>
+                      {diff.removed.length > 0 ? (
+                        <ul className="mt-2 space-y-1 text-xs">
+                          {diff.removed.map((permission) => (
+                            <li key={permission}>- {permission}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-xs text-muted-foreground">No removals</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReviewOpen(false)} disabled={isSaving}>
+              Cancel
+            </Button>
+            {roleRefreshRequired ? (
+              <Button variant="outline" onClick={handleRefreshRoles} disabled={isSaving}>
+                Refresh roles
+              </Button>
+            ) : null}
+            <Button
+              onClick={handleConfirmSaveChanges}
+              disabled={!hasUnsavedChanges || isSaving || roleRefreshRequired}
+            >
+              {isSaving ? "Saving..." : "Confirm changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminShell>
   );
 }

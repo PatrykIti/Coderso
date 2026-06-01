@@ -84,6 +84,13 @@ UI behavior:
   `roles:write` pokazuje searchable read-only matrix, ale nie aktywuje Add Role,
   bulk toggles, checkbox toggles ani Save changes. Stale 403 z odczytu albo
   zapisu wymusza odswiezenie permission snapshotu.
+- `/admin/roles` zapisuje matrix przez review-first flow: footer pokazuje
+  liczbe zmienionych rol oraz dodanych/usunietych permissions, `Review changes`
+  otwiera role-by-role diff modal, Cancel nie wysyla zadnego PATCH, a Confirm
+  PATCHuje tylko role z faktycznym diffem. Partial failure zostawia failed role
+  dirty z role-specific error. Stale role conflicts (`409`/`412`,
+  `role_conflict`, `role_stale`) blokuja retry do czasu jawnego odswiezenia
+  rol.
 - Widoki Users/Roles wylaczaja akcje edycji bez odpowiedniego write
   permission, a stale 403 wymusza odswiezenie permission snapshotu.
 - Ostatni admin nie moze zostac usuniety ani pozbawiony roli admin.

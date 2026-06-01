@@ -105,6 +105,7 @@ test("updateAdminRole uses CSRF and PATCH", async () => {
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/admin-roles/role-1");
     expect(calls[1]?.init?.method).toBe("PATCH");
+    expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({ name: "Updated" });
   } finally {
     globalThis.fetch = originalFetch;
   }

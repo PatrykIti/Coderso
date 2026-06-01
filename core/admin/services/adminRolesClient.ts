@@ -28,7 +28,9 @@ export type AdminRoleCreate = {
   sourceRoleName?: string;
 };
 
-export type AdminRoleUpdate = Partial<AdminRoleCreate>;
+export type AdminRoleUpdate = Partial<
+  Pick<AdminRoleCreate, "name" | "description" | "permissions">
+>;
 
 export async function listAdminRoles() {
   return apiRequest<AdminRole[]>("/admin-roles", { method: "GET" });

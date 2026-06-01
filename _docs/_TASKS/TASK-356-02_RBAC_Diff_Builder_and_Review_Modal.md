@@ -5,7 +5,7 @@
 **Category:** Admin UI + Roles Matrix + RBAC + Safety UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-356-01, TASK-360-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -155,3 +155,35 @@ Error handling:
 - `Save changes` cannot commit matrix edits without a diff review.
 - Review modal lists added and removed scopes per role.
 - Cancel is side-effect-free, and failed saves do not mark the draft clean.
+
+## Completion Notes
+
+- Added `rolePermissionDiff.ts` as the pure owner for normalized permission
+  diffs, summary counts, high-risk detection, and `*` expansion against the
+  catalog.
+- Roles Matrix footer now shows changed role count, added/removed permission
+  counts, and high-risk grant copy before save.
+- Matrix save now opens a review modal instead of committing directly. The
+  modal lists each changed role with added and removed scopes, and Cancel does
+  not call the client.
+- Confirm saves only roles with diffs. Saves run best-effort per role because
+  the current backend has no `version` or `updatedAt` precondition; successful
+  role updates are marked clean while failed roles stay dirty with exact
+  role-level error copy.
+- Stale role conflicts keep the draft visible but block repeat confirm attempts
+  until the admin explicitly refreshes roles.
+- `AdminRoleUpdate` is now narrowed to PATCH-supported fields so duplicate-only
+  source metadata is not typed as valid update payload.
+- Playwright CLI admin pass used temporary QA admin and role fixtures, added
+  `content:write` through `/admin/roles`, verified the review modal diff, and
+  confirmed the backend update. Fixtures and temporary script were removed
+  after the pass; local screenshot:
+  `.tmp/task-356-02-review-modal.png`.
+
+Validation completed:
+
+- `bun run test:vitest -- tests/vitest/ui/role-permission-diff.test.ts tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/adminRoles.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `playwright-cli -s task-356-02-review-modal ...` admin review-modal pass

@@ -46,15 +46,41 @@ Tasks: TASK-356, TASK-356-01, TASK-356-02, TASK-356-03, TASK-356-04
   `roles:read`-only user could inspect/search the matrix but could not enable
   Add Role, Save changes, checkbox toggles, bulk toggles, or dirty state.
 
+### TASK-356-02 RBAC Diff Builder and Review Modal
+
+- Added a pure roles-matrix diff helper that normalizes permission sets,
+  expands `*` against the catalog, ignores missing draft entries, and summarizes
+  changed roles plus added/removed/high-risk permissions.
+- Roles Matrix dirty footer now shows exact changed-role and added/removed
+  permission counts before save.
+- Matrix saves now open a review modal that lists role-by-role added and
+  removed scopes; Cancel closes the modal without client writes.
+- Confirm PATCHes only roles with actual diffs. Because the current roles API
+  exposes no `version` or `updatedAt`, the client uses the documented
+  best-effort per-role fallback instead of sending unsupported precondition
+  fields.
+- Partial failures keep failed role diffs dirty with role-specific error copy
+  while successful role updates are marked clean locally.
+- Stale role conflicts keep the review visible but block repeat confirm attempts
+  until roles are explicitly refreshed.
+- Narrowed `AdminRoleUpdate` to PATCH-supported fields so duplicate-only source
+  metadata is not typed as valid update payload.
+- Added Playwright CLI admin evidence for add-permission -> review diff ->
+  confirm -> backend update with temporary fixtures removed after the pass.
+
 ## Validation
 
 - `bun run test:vitest -- tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/role-editor-wave.test.tsx tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/routes/adminRoles.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/role-permission-diff.test.ts tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
 - `playwright-cli -s task-356-01-roles-readonly open http://localhost:5173/admin/login`
 - `playwright-cli -s task-356-01-roles-readonly run-code ...` with restricted
   read-only assertions; temporary script and DB fixture removed after the pass.
+- `playwright-cli -s task-356-02-review-modal run-code ...` with admin
+  review-modal assertions; temporary script and DB fixtures removed after the
+  pass. Local screenshot: `.tmp/task-356-02-review-modal.png`.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md`.

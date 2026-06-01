@@ -56,6 +56,19 @@ jednorazowej roli testowej oraz przywrócono stan.
   bulk toggles ani `Save changes`.
 - Stale `403 permission_denied` na load/save odswieza permission snapshot; save
   403 zostawia dirty draft i pokazuje refresh-required copy.
+- Po `TASK-356-02` dirty footer pokazuje role-by-role diff summary
+  (`changed roles`, `+added`, `-removed`) zamiast samego dirty/clean.
+- `Review changes` otwiera modal z dodanymi/usunietymi scopes per rola; Cancel
+  w modalu nie wykonuje zadnego PATCH.
+- Confirm w review modalu wysyla PATCH tylko dla rol z faktycznym diffem.
+  Partial failure zostawia tylko nieudane role dirty, pokazuje role-specific
+  error i nie oznacza ich jako zapisanych.
+- Stale role conflict (`409`/`412`/`role_conflict`/`role_stale`) pokazuje
+  refresh-required copy i blokuje retry do czasu jawnego odswiezenia rol.
+- Playwright CLI pass `task-356-02-review-modal` potwierdzil realny admin flow:
+  tymczasowa rola dostala `content:write` przez matrix, review modal pokazal
+  `+ content:write`, confirm zapisal backend, a fixture user/role zostaly
+  usuniete. Lokalny screenshot: `.tmp/task-356-02-review-modal.png`.
 
 ## Co nie działało / co jest ryzykowne
 
@@ -79,24 +92,27 @@ Status po `TASK-356-01`:
   checkbox/bulk toggles byly disabled, forced click nie ustawil dirty state, a
   search nadal dzialal. Fixture user/role zostaly usuniete po tescie; lokalny
   screenshot: `.tmp/task-356-01-roles-readonly.png`.
-- Pozostale problemy sa nadal celowo w rodzinie `TASK-356`: diff review
-  (`TASK-356-02`), high-risk/full-access confirm (`TASK-356-03`) i audit diff
-  (`TASK-356-04`).
+- Po `TASK-356-02` diff review jest zamkniety w kodzie, testach i realnym UI.
+  Pozostale problemy sa nadal celowo w rodzinie `TASK-356`:
+  high-risk/full-access confirm (`TASK-356-03`) i audit diff (`TASK-356-04`).
 
 ## Dlaczego
 
-Macierz działa jako draft state po stronie klienta, ale moment zapisu jest zbyt
-lekki jak na RBAC. Kod ma poprawny `Cancel`, ale nie ma review step ani confirm
-dla szerokich zmian.
+Macierz działa jako draft state po stronie klienta. Przed `TASK-356-02` moment
+zapisu byl zbyt lekki jak na RBAC: kod mial poprawny `Cancel`, ale nie mial
+review step ani confirm dla szerokich zmian. `TASK-356-02` dodal review step i
+partial-failure handling; osobny confirm dla szerokich/full-access zmian nadal
+nalezy do `TASK-356-03`.
 
 ## Jak naprawić
 
 - Dodać backendowy/current-user `can(permission)` do route shell i przekazać go
   do `PermissionsMatrixPage`; dla braku `roles:write` matrix powinien być
   read-only, a `Add Role`/`Save changes` ukryte albo disabled.
-- Przed `Save changes` pokazać modal z listą ról i liczbą dodanych/usuniętych
-  permissions.
+- Przed zapisem pokazać modal z listą ról i liczbą dodanych/usuniętych
+  permissions. Status: zamkniete w `TASK-356-02`.
 - Dla `*`/full access wymagać dodatkowego confirm z nazwą roli.
 - Dodać testy: dirty state, cancel reset, save payload dla jednej roli, save
-  payload dla full access, confirm cancel.
+  payload dla full access, confirm cancel. Status: diff review/cancel/payload
+  pokryte w `TASK-356-02`; full access confirm pozostaje w `TASK-356-03`.
 - Rozważyć audit log event opisujący diff RBAC, nie tylko fakt zapisu.
