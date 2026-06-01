@@ -47,6 +47,9 @@ import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSetting
 import { SettingsSidebar } from "./SettingsSidebar";
 import { StorageProviderCard, type StorageProviderId } from "./StorageProviderCard";
 
+const storageTestUnavailableReason =
+  "Storage connection testing is not wired yet. TASK-359-06 owns provider test feedback.";
+
 type StorageProviderDefinition = {
   id: StorageProviderId;
   title: string;
@@ -657,7 +660,14 @@ export function StorageSettingsPage() {
                         <CardDescription>{activeConfig.description}</CardDescription>
                       </div>
                       <CardAction>
-                        <Button variant="outline" size="sm" className="gap-2" disabled={isLoading}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          disabled
+                          title={storageTestUnavailableReason}
+                          data-no-op-control="settings-storage-test-connection"
+                        >
                           <Wifi className="h-4 w-4" />
                           Test Connection
                         </Button>
@@ -665,6 +675,9 @@ export function StorageSettingsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-5">
+                    <p className="rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                      {storageTestUnavailableReason}
+                    </p>
                     {activeConfig.fields.map((field) => {
                       const FieldIcon = field.icon;
                       return (

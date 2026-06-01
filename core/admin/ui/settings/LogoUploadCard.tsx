@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-const labelClassName =
-  "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
+const labelClassName = "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
+
+const brandingUploadUnavailableReason =
+  "Brand asset uploads are not wired yet. TASK-359-04 owns logo and favicon persistence.";
 
 export function LogoUploadCard() {
   return (
@@ -17,9 +19,7 @@ export function LogoUploadCard() {
           </div>
           <div>
             <CardTitle>Branding</CardTitle>
-            <CardDescription>
-              Upload a logo and favicon for the admin experience.
-            </CardDescription>
+            <CardDescription>Upload a logo and favicon for the admin experience.</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -29,16 +29,20 @@ export function LogoUploadCard() {
             <label className={labelClassName}>Site logo</label>
             <button
               type="button"
+              disabled
               className="flex w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 p-6 text-center transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Upload site logo"
+              title={brandingUploadUnavailableReason}
+              data-no-op-control="settings-logo-upload"
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-muted-foreground shadow-sm">
                 <UploadCloud className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-sm font-medium">Click to upload logo</p>
-                <p className="text-xs text-muted-foreground">
-                  PNG, SVG or WebP (max. 2MB)
+                <p className="text-xs text-muted-foreground">PNG, SVG or WebP (max. 2MB)</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {brandingUploadUnavailableReason}
                 </p>
               </div>
             </button>
@@ -52,13 +56,23 @@ export function LogoUploadCard() {
                 <Image className="h-6 w-6 text-muted-foreground" />
               </div>
               <div className="flex flex-1 flex-col gap-2">
-                <Button variant="outline" size="sm" className="w-full">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled
+                  title={brandingUploadUnavailableReason}
+                  data-no-op-control="settings-favicon-upload"
+                >
                   Upload new
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled
+                  title={brandingUploadUnavailableReason}
+                  data-no-op-control="settings-favicon-remove"
                 >
                   Remove
                 </Button>

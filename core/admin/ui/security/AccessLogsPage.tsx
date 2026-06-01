@@ -34,6 +34,11 @@ import type { AccessLogItem } from "./types";
 
 type AccessFilterStatus = "all" | "success" | "failed";
 
+const advancedFiltersUnavailableReason =
+  "Advanced access log filters are not wired yet. Use search, status, and date filters for now.";
+const customRangeUnavailableReason =
+  "Custom date range is not wired yet. TASK-358-01 owns custom range validation.";
+
 const resolveDateRange = (value: string) => {
   const now = new Date();
   if (value === "last-7-days") {
@@ -213,7 +218,14 @@ export function AccessLogsPage() {
                 <SelectItem value="last-7-days">Last 7 days</SelectItem>
                 <SelectItem value="last-30-days">Last 30 days</SelectItem>
                 <SelectItem value="this-month">This month</SelectItem>
-                <SelectItem value="custom">Custom range</SelectItem>
+                <SelectItem
+                  value="custom"
+                  disabled
+                  title={customRangeUnavailableReason}
+                  data-no-op-control="access-custom-range"
+                >
+                  Custom range unavailable
+                </SelectItem>
               </SelectContent>
             </Select>
 
@@ -232,9 +244,18 @@ export function AccessLogsPage() {
               </SelectContent>
             </Select>
 
-            <Button variant="ghost" size="icon" className="h-9 w-9">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              disabled
+              aria-label="Advanced access log filters unavailable"
+              title={advancedFiltersUnavailableReason}
+              data-no-op-control="access-advanced-filters"
+            >
               <SlidersHorizontal className="h-4 w-4" />
             </Button>
+            <span className="sr-only">{customRangeUnavailableReason}</span>
           </div>
         </div>
 

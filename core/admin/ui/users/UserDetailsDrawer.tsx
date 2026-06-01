@@ -14,9 +14,13 @@ export type UserDetailsDrawerProps = {
   user?: UserSummary | null;
   roles: RoleSummary[];
   canManageUsers?: boolean;
+  resetPasswordUnavailableReason?: string;
   onEditUser: () => void;
   onResetPassword: () => void;
 };
+
+const notificationPreferencesUnavailableReason =
+  "Notification preferences are read-only until TASK-355-04 connects persistence.";
 
 const getInitials = (name: string) =>
   name
@@ -45,9 +49,7 @@ const getPermissionSummary = (user: UserSummary, roles: RoleSummary[]) => {
   return {
     hasFullAccess,
     count: hasFullAccess ? "Full access" : `${permissions.size} permissions`,
-    items: hasFullAccess
-      ? ["All admin capabilities"]
-      : Array.from(permissions).slice(0, 3),
+    items: hasFullAccess ? ["All admin capabilities"] : Array.from(permissions).slice(0, 3),
   };
 };
 
@@ -55,6 +57,7 @@ export function UserDetailsDrawer({
   user,
   roles,
   canManageUsers = true,
+  resetPasswordUnavailableReason,
   onEditUser,
   onResetPassword,
 }: UserDetailsDrawerProps) {
@@ -91,9 +94,7 @@ export function UserDetailsDrawer({
       <ScrollArea className="flex-1 pr-2">
         <div className="space-y-4">
           <div className="rounded-lg border bg-muted/30 p-4">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">
-              Last active
-            </p>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Last active</p>
             <p className="mt-1 text-sm font-medium">{user.lastActive}</p>
           </div>
           <div className="space-y-3">
@@ -102,9 +103,7 @@ export function UserDetailsDrawer({
               Permissions summary
             </div>
             <div className="rounded-lg border bg-background p-3">
-              <p className="text-xs text-muted-foreground">
-                {permissionSummary.count}
-              </p>
+              <p className="text-xs text-muted-foreground">{permissionSummary.count}</p>
               <ul className="mt-2 space-y-1 text-sm">
                 {permissionSummary.items.map((permission) => (
                   <li key={permission}>{permission}</li>
@@ -117,23 +116,34 @@ export function UserDetailsDrawer({
               <Mail className="h-4 w-4 text-muted-foreground" />
               Email notifications
             </div>
+            <p className="text-xs text-muted-foreground">
+              {notificationPreferencesUnavailableReason}
+            </p>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <p className="text-sm font-medium">Weekly summary</p>
-                <p className="text-xs text-muted-foreground">
-                  Digest of changes and alerts
-                </p>
+                <p className="text-xs text-muted-foreground">Digest of changes and alerts</p>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                defaultChecked
+                disabled
+                aria-label="Weekly summary notifications unavailable"
+                title={notificationPreferencesUnavailableReason}
+                data-no-op-control="users-notification-weekly-summary"
+              />
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <p className="text-sm font-medium">Security alerts</p>
-                <p className="text-xs text-muted-foreground">
-                  Login + permission changes
-                </p>
+                <p className="text-xs text-muted-foreground">Login + permission changes</p>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                defaultChecked
+                disabled
+                aria-label="Security alert notifications unavailable"
+                title={notificationPreferencesUnavailableReason}
+                data-no-op-control="users-notification-security-alerts"
+              />
             </div>
           </div>
           <div className="space-y-3">
@@ -158,7 +168,9 @@ export function UserDetailsDrawer({
           variant="outline"
           className="w-full"
           onClick={onResetPassword}
-          disabled={!canManageUsers}
+          disabled={!canManageUsers || Boolean(resetPasswordUnavailableReason)}
+          title={resetPasswordUnavailableReason}
+          data-no-op-control={resetPasswordUnavailableReason ? "users-reset-password" : undefined}
         >
           Reset password
         </Button>

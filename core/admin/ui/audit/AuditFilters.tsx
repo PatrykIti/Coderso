@@ -20,6 +20,9 @@ export type AuditFiltersProps = {
   onSeverityChange: (value: string) => void;
 };
 
+const dateRangeUnavailableReason =
+  "Date range filtering is not wired yet. TASK-357-01 owns server-side audit query filters.";
+
 export function AuditFilters({
   query,
   dateRange,
@@ -41,8 +44,13 @@ export function AuditFilters({
           onChange={(event) => onQueryChange(event.target.value)}
         />
       </div>
-      <Select value={dateRange} onValueChange={onDateRangeChange}>
-        <SelectTrigger className="h-10 w-full">
+      <Select value={dateRange} onValueChange={onDateRangeChange} disabled>
+        <SelectTrigger
+          className="h-10 w-full"
+          aria-label="Audit date range unavailable"
+          title={dateRangeUnavailableReason}
+          data-no-op-control="audit-date-range"
+        >
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Date range" />
         </SelectTrigger>

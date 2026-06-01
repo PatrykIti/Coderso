@@ -5,7 +5,7 @@
 **Category:** Admin UI + QA Gates + UX Truthfulness
 **Estimated Effort:** Large
 **Dependencies:** TASK-360
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -100,3 +100,25 @@ Error handling:
 - Audited icon-only controls and Radix Select triggers have stable names or test
   ids for regression automation.
 - New active no-op regressions are caught by targeted tests or documented gate.
+
+## Completion Notes - 2026-06-01
+
+- Added a reusable Vitest no-op control expectation helper that reports the
+  owning area, control id, and source report when audited controls regress.
+- Added the Admin UI no-op gate for Users, Audit Logs, Access Logs, and
+  Settings controls identified in the 31-05-2026 Playwright reports.
+- Converted currently unsupported audited controls from active-looking actions
+  into disabled unavailable states with explicit task-owned copy and stable
+  `data-no-op-control` ids.
+- Removed the hard-coded Audit Logs `2,459 logs` footer claim and disabled the
+  active-looking Audit and Access Logs next-page controls until server
+  pagination lands in the area tasks.
+- This gate was added to the targeted Admin UI Vitest lane only; it was not
+  promoted into `gates:coderso` in this leaf.
+
+## Validation - 2026-06-01
+
+- `bun run test:vitest -- tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/user-list-filters-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/audit-table-wave.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/storage-settings.test.tsx tests/vitest/ui/login-alerts.test.tsx tests/vitest/ui/security-sessions.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run precommit`

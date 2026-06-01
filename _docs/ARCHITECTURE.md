@@ -1264,6 +1264,11 @@ Kontrakt pluginu (client):
 - Shared export helpers handle JSON file/job metadata under canonical
   `/admin/api/*` paths. Direct blob downloads require explicit router
   `Response` passthrough before adoption.
+- Active-looking Admin UI controls must have a real handler that produces
+  observable success/error/route-change feedback. Unsupported or deferred
+  controls must render as disabled/hidden with user-facing unavailable copy and
+  a targeted regression expectation; placeholder buttons, fake totals, and
+  inert pagination controls are not valid shipped states.
 
 ---
 

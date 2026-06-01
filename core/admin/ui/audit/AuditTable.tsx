@@ -23,6 +23,13 @@ import { cn } from "@/lib/utils";
 import { auditCategoryMeta, auditStatusMeta } from "./auditMeta";
 import type { AuditLog } from "./types";
 
+const copyJsonUnavailableReason =
+  "Copy JSON is not wired yet. TASK-357-02 owns clipboard feedback.";
+const exportEntryUnavailableReason =
+  "Single-entry export is not wired yet. TASK-357-02 owns entry actions.";
+const paginationUnavailableReason =
+  "Server pagination is not wired yet. TASK-357-04 owns cursor state and totals.";
+
 export type AuditTableProps = {
   logs: AuditLog[];
   selectedId?: string | null;
@@ -81,9 +88,7 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-foreground">
-                          {log.event}
-                        </span>
+                        <span className="text-sm font-semibold text-foreground">{log.event}</span>
                         <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                           {category.label}
                         </span>
@@ -98,14 +103,10 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
                         </div>
                       ) : (
                         <Avatar size="sm">
-                          <AvatarFallback>
-                            {getInitials(log.actor.name)}
-                          </AvatarFallback>
+                          <AvatarFallback>{getInitials(log.actor.name)}</AvatarFallback>
                         </Avatar>
                       )}
-                      <span className="text-sm text-muted-foreground">
-                        {log.actor.name}
-                      </span>
+                      <span className="text-sm text-muted-foreground">{log.actor.name}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
@@ -116,19 +117,14 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="text-sm text-foreground">
-                        {log.timestamp}
-                      </span>
+                      <span className="text-sm text-foreground">{log.timestamp}</span>
                       <span className="text-[11px] text-muted-foreground">
                         {log.timestampLabel}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={cn("rounded-md", status.className)}
-                    >
+                    <Badge variant="outline" className={cn("rounded-md", status.className)}>
                       {status.label}
                     </Badge>
                   </TableCell>
@@ -147,9 +143,21 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
                         <DropdownMenuItem onClick={() => onSelect(log)}>
                           View details
                         </DropdownMenuItem>
-                        <DropdownMenuItem>Copy JSON</DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled
+                          title={copyJsonUnavailableReason}
+                          data-no-op-control="audit-copy-json-menu"
+                        >
+                          Copy JSON
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>Export entry</DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled
+                          title={exportEntryUnavailableReason}
+                          data-no-op-control="audit-export-entry"
+                        >
+                          Export entry
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -161,13 +169,19 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-4 py-3">
         <span className="text-sm text-muted-foreground">
-          Showing 1 to {logs.length} of 2,459 logs
+          Showing {logs.length} loaded audit logs. {paginationUnavailableReason}
         </span>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm" disabled title={paginationUnavailableReason}>
             Previous
           </Button>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            title={paginationUnavailableReason}
+            data-no-op-control="audit-next-page"
+          >
             Next
           </Button>
         </div>

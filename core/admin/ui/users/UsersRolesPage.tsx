@@ -43,6 +43,9 @@ const defaultPermissions = ["users:read", "users:write", "roles:read", "roles:wr
 const hasPermission = (permissions: string[], permission: string) =>
   permissions.includes("*") || permissions.includes(permission);
 
+const resetPasswordUnavailableReason =
+  "Reset password is not wired yet. TASK-355-02 owns the reset-token flow.";
+
 const formatLastActive = (value?: string | null) => {
   if (!value) return "Never";
   const date = new Date(value);
@@ -411,6 +414,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
           user={selectedUser}
           roles={roles}
           canManageUsers={canManageUsers}
+          resetPasswordUnavailableReason={resetPasswordUnavailableReason}
           onEditUser={() => selectedUser && openUserEditor(selectedUser)}
           onResetPassword={() => undefined}
         />
@@ -478,6 +482,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
           selectedId={selectedUser?.id}
           protectedIds={protectedUserIds}
           canManageUsers={userActionsEnabled}
+          resetPasswordUnavailableReason={resetPasswordUnavailableReason}
           onSelect={handleSelectUser}
           onViewProfile={handleViewProfile}
           onEdit={openUserEditor}
@@ -553,6 +558,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
               user={selectedUser}
               roles={roles}
               canManageUsers={canManageUsers}
+              resetPasswordUnavailableReason={resetPasswordUnavailableReason}
               onEditUser={() => selectedUser && openUserEditor(selectedUser)}
               onResetPassword={() => undefined}
             />

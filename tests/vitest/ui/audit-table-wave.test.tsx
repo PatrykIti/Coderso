@@ -183,7 +183,9 @@ test("AuditTable renders user and system rows, selected state, and footer contro
     expect(view.container.textContent).toContain("AL");
     expect(view.container.textContent).toContain("Backup failed");
     expect(view.container.textContent).toContain("Scheduler");
-    expect(view.container.textContent).toContain("Showing 1 to 2 of 2,459 logs");
+    expect(view.container.textContent).toContain("Showing 2 loaded audit logs.");
+    expect(view.container.textContent).toContain("Server pagination is not wired yet.");
+    expect(view.container.textContent).not.toContain("2,459 logs");
     expect(view.container.textContent).toContain("Previous");
     expect(view.container.textContent).toContain("Next");
 

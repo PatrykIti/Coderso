@@ -14,6 +14,11 @@ import {
 
 import type { AccessLogItem } from "./types";
 
+const sessionDetailsUnavailableReason =
+  "Full session details are not wired yet. TASK-358-02 owns the session detail route.";
+const revokeAccessUnavailableReason =
+  "Revoke access is not wired yet. TASK-358-02 owns revoke security and confirmation.";
+
 type AccessLogDetailsDrawerProps = {
   log: AccessLogItem | null;
   open: boolean;
@@ -110,11 +115,23 @@ export function AccessLogDetailsDrawer({ log, open, onOpenChange }: AccessLogDet
             <Separator />
             <div className="bg-muted/30 px-6 py-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <Button variant="outline" className="gap-2">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  disabled
+                  title={sessionDetailsUnavailableReason}
+                  data-no-op-control="access-view-full-session"
+                >
                   <Clock className="h-4 w-4" />
                   View full session
                 </Button>
-                <Button variant="destructive" className="gap-2">
+                <Button
+                  variant="destructive"
+                  className="gap-2"
+                  disabled
+                  title={revokeAccessUnavailableReason}
+                  data-no-op-control="access-revoke-access"
+                >
                   <Lock className="h-4 w-4" />
                   Revoke access
                 </Button>

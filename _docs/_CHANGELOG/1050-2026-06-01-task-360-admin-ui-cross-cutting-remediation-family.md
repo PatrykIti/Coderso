@@ -41,6 +41,10 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
   requires `onExport`, unsupported surfaces show unavailable copy, Excel is no
   longer offered as an active no-op, and `downloadAdminExport()` covers JSON
   file/job export responses under canonical admin API paths.
+- Completed `TASK-360-04` no-op control audit gate: audited Users, Audit Logs,
+  Access Logs, and Settings placeholder controls now render as disabled
+  unavailable states with explicit owning-task copy and stable
+  `data-no-op-control` regression expectations.
 - Completed `TASK-360-05` drawer and sheet accessibility gate: mobile user
   details, Audit details, Access Log details, IP Allowlist, Webhooks, Email
   Logs, and Integration drawers now bind Radix title/description semantics, and
@@ -51,8 +55,10 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
 - `bun test tests/unit/auth/rbac.test.ts tests/integration/routes/auth.test.ts`
 - `bun run test:vitest -- tests/vitest/admin/apiClient.test.ts tests/vitest/admin/authClient.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/shared-dialog-contracts.test.tsx tests/vitest/ui/dialogs.test.tsx tests/vitest/admin/adminExportClient.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/user-list-filters-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/audit-table-wave.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/storage-settings.test.tsx tests/vitest/ui/login-alerts.test.tsx tests/vitest/ui/security-sessions.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/webhooks.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui-integration/integrations.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run precommit`
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md`.

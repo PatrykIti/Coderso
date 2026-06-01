@@ -12,6 +12,9 @@ import {
 
 import type { RoleSummary } from "../roles/types";
 
+const advancedFiltersUnavailableReason =
+  "Advanced user filters are not wired yet. Use search, role, and status filters for now.";
+
 export type UserFiltersProps = {
   query: string;
   roleFilter: string;
@@ -69,7 +72,15 @@ export function UserFilters({
             <SelectItem value="pending">Pending</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          disabled
+          aria-label="Advanced user filters unavailable"
+          title={advancedFiltersUnavailableReason}
+          data-no-op-control="users-advanced-filters"
+        >
           <Filter className="h-4 w-4" />
         </Button>
       </div>

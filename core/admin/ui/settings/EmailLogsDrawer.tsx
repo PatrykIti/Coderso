@@ -34,6 +34,9 @@ const statusStyles: Record<string, string> = {
   failed: "border-rose-500/20 bg-rose-500/10 text-rose-600",
 };
 
+const emailLogsExportUnavailableReason =
+  "Delivery log export is not wired yet. TASK-359-06 owns the export action.";
+
 export function EmailLogsDrawer({
   open,
   onOpenChange,
@@ -99,7 +102,12 @@ export function EmailLogsDrawer({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button className="gap-2">
+          <Button
+            className="gap-2"
+            disabled
+            title={emailLogsExportUnavailableReason}
+            data-no-op-control="settings-email-export-logs"
+          >
             <Mail className="h-4 w-4" />
             Export Logs
           </Button>

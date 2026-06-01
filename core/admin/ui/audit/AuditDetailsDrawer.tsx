@@ -17,6 +17,13 @@ import { cn } from "@/lib/utils";
 import { auditCategoryMeta, auditStatusMeta } from "./auditMeta";
 import type { AuditLog } from "./types";
 
+const copyJsonUnavailableReason =
+  "Copy JSON is not wired yet. TASK-357-02 owns clipboard feedback.";
+const shareLogUnavailableReason =
+  "Share Log is not wired yet. TASK-357-02 owns compliance sharing actions.";
+const reportLogUnavailableReason =
+  "Report is not wired yet. TASK-357-02 owns compliance report actions.";
+
 export type AuditDetailsDrawerProps = {
   log?: AuditLog | null;
   open: boolean;
@@ -139,7 +146,14 @@ export function AuditDetailsDrawer({ log, open, onOpenChange }: AuditDetailsDraw
                     <h5 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       JSON Payload
                     </h5>
-                    <Button variant="link" size="sm" className="h-auto p-0 text-xs">
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs"
+                      disabled
+                      title={copyJsonUnavailableReason}
+                      data-no-op-control="audit-copy-json-drawer"
+                    >
                       <Copy className="h-3.5 w-3.5" />
                       Copy JSON
                     </Button>
@@ -155,11 +169,21 @@ export function AuditDetailsDrawer({ log, open, onOpenChange }: AuditDetailsDraw
             </ScrollArea>
             <Separator className="my-4" />
             <div className="flex gap-2 pb-2">
-              <Button className="flex-1">
+              <Button
+                className="flex-1"
+                disabled
+                title={shareLogUnavailableReason}
+                data-no-op-control="audit-share-log"
+              >
                 <Share2 className="h-4 w-4" />
                 Share Log
               </Button>
-              <Button variant="outline">
+              <Button
+                variant="outline"
+                disabled
+                title={reportLogUnavailableReason}
+                data-no-op-control="audit-report-log"
+              >
                 <Flag className="h-4 w-4" />
                 Report
               </Button>

@@ -26,16 +26,15 @@ const timezoneOptions = [
   { value: "utc+09", label: "(UTC+09:00) Tokyo" },
 ];
 
-const labelClassName =
-  "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
+const labelClassName = "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
+
+const timezoneUnavailableReason =
+  "Timezone is not wired into the settings save payload yet. TASK-359-04 owns persistence.";
 
 type BrandingCardProps = {
   siteName: string;
   siteLocale: string;
-  onChange?: (next: {
-    siteName: string;
-    siteLocale: string;
-  }) => void;
+  onChange?: (next: { siteName: string; siteLocale: string }) => void;
   disabled?: boolean;
 };
 
@@ -58,7 +57,6 @@ export function BrandingCard({
     onChange?.({ siteName, siteLocale: value });
   };
 
-
   return (
     <Card className="border-border/60">
       <CardHeader className="border-b">
@@ -68,9 +66,7 @@ export function BrandingCard({
           </div>
           <div>
             <CardTitle>Site Identity</CardTitle>
-            <CardDescription>
-              Update the name and locale defaults for your site.
-            </CardDescription>
+            <CardDescription>Update the name and locale defaults for your site.</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -109,8 +105,13 @@ export function BrandingCard({
             <label className={labelClassName} htmlFor="site-timezone">
               Timezone
             </label>
-            <Select defaultValue="utc-08" disabled={disabled}>
-              <SelectTrigger id="site-timezone" className="w-full">
+            <Select defaultValue="utc-08" disabled>
+              <SelectTrigger
+                id="site-timezone"
+                className="w-full"
+                title={timezoneUnavailableReason}
+                data-no-op-control="settings-timezone"
+              >
                 <SelectValue placeholder="Select timezone" />
               </SelectTrigger>
               <SelectContent>
@@ -121,6 +122,7 @@ export function BrandingCard({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">{timezoneUnavailableReason}</p>
           </div>
         </div>
       </CardContent>

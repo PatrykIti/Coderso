@@ -17,6 +17,9 @@ import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { SessionsTable, type SessionItem } from "./SessionsTable";
 import { SettingsSidebar } from "./SettingsSidebar";
 
+const accountSecurityLinksUnavailableReason =
+  "Account security links are not wired yet. TASK-359-07 owns navigation targets.";
+
 const tabs = [
   { id: "general", label: "General" },
   { id: "sessions", label: "Active Sessions" },
@@ -260,6 +263,9 @@ export function SessionsPage() {
                       variant="link"
                       size="sm"
                       className="h-auto px-0 py-0 text-blue-700 dark:text-blue-300"
+                      disabled
+                      title={accountSecurityLinksUnavailableReason}
+                      data-no-op-control="settings-sessions-change-password"
                     >
                       Change Password
                     </Button>
@@ -267,6 +273,9 @@ export function SessionsPage() {
                       variant="link"
                       size="sm"
                       className="h-auto px-0 py-0 text-blue-700 dark:text-blue-300"
+                      disabled
+                      title={accountSecurityLinksUnavailableReason}
+                      data-no-op-control="settings-sessions-security-settings"
                     >
                       Security Settings
                     </Button>

@@ -14,7 +14,9 @@ export type LoginAlertsCardProps = {
   className?: string;
   contentClassName?: string;
   iconWrapperClassName?: string;
+  noOpControlId?: string;
   switchSize?: "default" | "sm";
+  unavailableReason?: string;
 };
 
 export function LoginAlertsCard({
@@ -27,17 +29,15 @@ export function LoginAlertsCard({
   className,
   contentClassName,
   iconWrapperClassName,
+  noOpControlId,
   switchSize = "default",
+  unavailableReason,
 }: LoginAlertsCardProps) {
-  const switchProps = onCheckedChange
-    ? { checked, onCheckedChange }
-    : { defaultChecked: checked };
+  const switchProps = onCheckedChange ? { checked, onCheckedChange } : { defaultChecked: checked };
 
   return (
     <Card className={cn("border-border/60 shadow-sm", className)}>
-      <CardContent
-        className={cn("flex items-start justify-between gap-4", contentClassName)}
-      >
+      <CardContent className={cn("flex items-start justify-between gap-4", contentClassName)}>
         <div className="flex gap-4">
           {icon ? (
             <div
@@ -58,6 +58,8 @@ export function LoginAlertsCard({
         <Switch
           size={switchSize}
           disabled={disabled}
+          title={unavailableReason}
+          data-no-op-control={noOpControlId}
           {...switchProps}
           aria-label={`${title} toggle`}
         />

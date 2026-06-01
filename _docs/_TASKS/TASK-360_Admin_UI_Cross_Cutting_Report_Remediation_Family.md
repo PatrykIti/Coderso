@@ -249,7 +249,7 @@ Area adoption:
 
 ### TASK-360-04: Admin No-Op Control Audit Gate
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Create a repeatable test/review gate so active-looking controls cannot silently
 ship without handlers.
@@ -285,8 +285,9 @@ type ControlExpectation =
 
 Validation:
 
-- Add this gate to a relevant admin UI test command and release-gate docs if it
-  becomes part of `gates:coderso`.
+- `bun run test:vitest -- tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/user-list-filters-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/audit-table-wave.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/storage-settings.test.tsx tests/vitest/ui/login-alerts.test.tsx tests/vitest/ui/security-sessions.test.tsx`
+- The gate was not promoted to `gates:coderso` in this leaf, so release-gate
+  docs/scripts are unchanged.
 
 ### TASK-360-05: Drawer and Sheet Accessibility Gate
 
