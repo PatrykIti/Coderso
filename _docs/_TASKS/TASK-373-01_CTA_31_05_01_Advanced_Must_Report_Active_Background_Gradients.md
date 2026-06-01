@@ -5,7 +5,7 @@
 **Category:** Widgets + CTA Banner + Admin UI + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-373
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Runtime preview renders `background-image`, but Advanced `Style diagnostics` say
 
 ## Sub-Tasks
 
-- [ ] Reproduce CTA-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce CTA-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +90,13 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced CTA-31-05-01 with a focused Advanced UI regression: `background.gradient` was active in the fixture, but `Style diagnostics` had no gradient row and therefore did not describe the effective runtime background.
+- Added a `Background gradient` diagnostic row in `CtaBannerAdvancedEditor` using a bounded `Configured` / `Not configured` summary instead of the raw CSS gradient value.
+- No route, public write, renderer, persistence, or sanitizer contract changed; runtime still resolves gradients through the existing CTA Banner renderer.
+- Added regression coverage in `tests/vitest/ui/cta-banner-editor-wave.test.tsx` to confirm the gradient diagnostic appears and does not leak the raw `linear-gradient(...)` string.
+- Claude staged review reported no blockers for the Advanced truthfulness, no raw CSS exposure, regression coverage, and no runtime-regression scope.
+- Validation: focused regression failed before the fix and passed after; CTA Banner Vitest lane passed; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1063`.

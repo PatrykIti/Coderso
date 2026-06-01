@@ -5,7 +5,7 @@
 **Category:** Widgets + CTA Banner + Admin UI + QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_CTA_BANNER_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-373-01](TASK-373-01_CTA_31_05_01_Advanced_Must_Report_Active_Background_Gradients.md): CTA-31-05-01 - Advanced must report active background gradients
+- [x] [TASK-373-01](TASK-373-01_CTA_31_05_01_Advanced_Must_Report_Active_Background_Gradients.md): CTA-31-05-01 - Advanced must report active background gradients
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,14 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced CTA-31-05-01 with a failing Advanced UI regression: an active `background.gradient` rendered in runtime but Advanced `Style diagnostics` omitted it and only showed the background color fallback.
+- CTA Banner Advanced now includes a read-only `Background gradient` diagnostic with `Configured` or `Not configured`, so gradient-only backgrounds are no longer reported as theme-default color state.
+- The diagnostic intentionally does not print the raw gradient CSS string; runtime rendering and normalization stay owned by the existing CTA Banner widget contract.
+- Added a focused Advanced regression that asserts the configured gradient state appears and the raw `linear-gradient(...)` value is not exposed.
+- Epicurus read-only agent confirmed the source/report drift and the expected no-raw-CSS Advanced diagnostics fix.
+- Claude staged review reported no blockers and confirmed gradient diagnostic truthfulness, no raw CSS exposure, test coverage, docs/task/changelog consistency, and no runtime regression.
+- Validation: focused regression failed before the fix and passed after; `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx tests/vitest/widgets/ctaBanner.test.tsx`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1063` together with TASK-373-01.

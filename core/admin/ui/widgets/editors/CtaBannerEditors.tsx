@@ -1439,6 +1439,10 @@ export function CtaBannerAdvancedEditor({
       label: "Background",
       value: normalized.background?.color ?? normalized.style?.background,
     },
+    {
+      label: "Background gradient",
+      value: normalized.background?.gradient?.trim() ? "Configured" : "Not configured",
+    },
     { label: "Text", value: normalized.style?.text },
     { label: "Border", value: normalized.style?.border },
     { label: "Primary button border", value: normalized.style?.primaryButtonBorder },

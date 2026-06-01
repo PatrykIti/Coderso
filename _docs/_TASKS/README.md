@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 110 tasks
+- **To Do:** 108 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2038 tasks
+- **Done:** 2040 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-373 | CTA Banner 31-05 UI Audit Remediation Family | Medium | Small | Report-driven family from `REPORT_CTA_BANNER_WIDGET.md`; 1 finding routed to implementation/tests/docs |
 | TASK-374 | FAQ Accordion 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_FAQ_ACCORDION_WIDGET.md`; 1 finding routed to implementation/tests/docs |
 | TASK-375 | Stats KPI 31-05 UI Audit UX Guard Family | Low | Small | Report-driven family from `REPORT_STATS_KPI_WIDGET.md`; no product defect, UX guard routed to tests/docs |
 | TASK-376 | Testimonials 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_TESTIMONIALS_WIDGET.md`; 1 finding routed to implementation/tests/docs |
@@ -68,7 +67,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
 | TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-373-01 | CTA-31-05-01 - Advanced must report active background gradients | Medium | Medium | Leaf task for TASK-373; source `REPORT_CTA_BANNER_WIDGET.md` |
 | TASK-374-01 | FAQ-31-05-01 - Admin preview click must sync `summary[aria-expanded]` or show a boundary notice | Medium | Medium | Leaf task for TASK-374; source `REPORT_FAQ_ACCORDION_WIDGET.md` |
 | TASK-375-01 | SKPI-31-05-01 - Explain per-metric accent precedence over global value color | Low | Medium | Leaf task for TASK-375; source `REPORT_STATS_KPI_WIDGET.md` |
 | TASK-376-01 | TST-31-05-01 - Treat `<br>`-only quote HTML as empty | Medium | Medium | Leaf task for TASK-376; source `REPORT_TESTIMONIALS_WIDGET.md` |
@@ -168,6 +166,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-373 | CTA Banner 31-05 UI Audit Remediation Family | Medium | Small | Done (2026-06-01): Advanced diagnostics now report active background gradients without exposing raw CSS while runtime rendering stays unchanged. |
+| TASK-373-01 | CTA-31-05-01 - Advanced must report active background gradients | Medium | Medium | Done (2026-06-01): Style diagnostics include a Background gradient Configured/Not configured row with focused UI regression coverage. |
 | TASK-372 | Feature Grid 31-05 UI Audit Remediation Family | Medium | Small | Done (2026-06-01): Advanced color summaries now reuse the shared color state labels so theme tokens are no longer described as saved custom colors. |
 | TASK-372-01 | FG-31-05-01 - Theme token border colors must not be described as saved custom colors | Medium | Medium | Done (2026-06-01): `surfaceColor`, `borderColor`, and `sectionBackground` token summaries are covered by a focused Advanced regression. |
 | TASK-371 | Hero 31-05 UI Audit Continuation and Remediation Family | High | Large | Done (2026-06-01): Visual now restores a useful secondary CTA on `Single -> Dual`, and the remaining Hero matrix is closed with UI replay coverage plus documented Playwright environment gaps. |

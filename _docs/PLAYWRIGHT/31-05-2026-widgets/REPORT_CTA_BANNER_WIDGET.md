@@ -61,7 +61,7 @@ Przetestowane:
 | Background media type None | Select `None` | Pola media znikaja; gradient zostaje, bo to osobny background field. | Nie publikowano tej zmiany. | Dziala | `background.media.type` nie kasuje `background.gradient`. | Brak. |
 | Entrance motion Slide up | Select `Slide up` | Outer ma `data-cta-banner-motion="slide-up"`, klasy motion-safe i `animation-duration: 500ms`. | Nie publikowano tej zmiany. | Dziala | `motionClassMap.slide-up` jest stosowany na outer section. | Brak. |
 | Advanced Normalize | Klik `Normalize now`, confirm | Pokazuje status `CTA banner data normalized.` | Nie dotyczy. | Dziala | `ConfirmActionDialog` wywoluje `onChange(normalizeValue(value))` i status. | Brak. |
-| Advanced style diagnostics przy aktywnym gradientzie | Po ustawieniu gradientu przejscie do Advanced | Runtime preview ma `background-image`, ale Advanced `Style diagnostics` pokazuje `Background Theme default`; gradient nie jest nigdzie wymieniony. | Nie dotyczy. | **Nie dziala / misleading UI** | `styleRows` w `CtaBannerAdvancedEditor` ma tylko `Background = normalized.background?.color ?? normalized.style?.background`; nie ma `background.gradient`, mimo ze `resolveBackgroundStyle` renderuje gradient. | Dodac row `Background gradient` lub opis `Background` jako `Gradient configured` gdy `normalized.background?.gradient` jest ustawione. Dodac test Advanced diagnostics. |
+| Advanced style diagnostics przy aktywnym gradientzie | Po ustawieniu gradientu przejscie do Advanced | Runtime preview ma `background-image`, a Advanced `Style diagnostics` pokazuje `Background gradient Configured` bez wypisywania surowego CSS. | Nie dotyczy. | Dziala po remediacji | `CtaBannerAdvancedEditor` dodaje osobny read-only row dla `normalized.background?.gradient`, a `resolveBackgroundStyle` nadal renderuje gradient jako `backgroundImage`. | Zamkniete w TASK-373/TASK-373-01; regresja Advanced potwierdza row i brak raw `linear-gradient(...)` w diagnostyce. |
 
 ## Public baseline
 
@@ -78,25 +78,34 @@ To potwierdza, ze swieza strona audytowa publikuje domyslny CTA Banner.
 Zmiany z klikanej sesji admin nie byly publikowane jako finalny stan publiczny
 w tym pass.
 
-## Kod-owner dla znalezionego dryftu
+## Znaleziska i remediacja
 
-- `core/admin/ui/widgets/editors/CtaBannerEditors.tsx`
-  - `CtaBannerAdvancedEditor`, `styleRows` okolice linii 1437-1446.
-  - Problem: diagnostyka nie pokazuje `background.gradient`.
-- `core/widgets/core/ctaBanner.tsx`
-  - `resolveBackgroundStyle` okolice linii 818-835 poprawnie renderuje
-    `background.gradient` jako `backgroundImage`.
+- CTA-31-05-01 zostalo potwierdzone jako drift: runtime renderowal
+  `background.gradient`, ale Advanced `Style diagnostics` nie opisywalo
+  aktywnego gradientu.
+- `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` dodaje row
+  `Background gradient` z wartoscia `Configured` albo `Not configured`.
+- Diagnostyka nie wypisuje surowego CSS gradientu; pokazuje tylko bounded stan
+  konfiguracji.
+- `core/widgets/core/ctaBanner.tsx` nie wymagal zmiany, bo
+  `resolveBackgroundStyle` juz renderowal gradient jako `backgroundImage`.
 
-## Rekomendowana poprawka
+## Walidacja remediacji
 
-1. W Advanced dodac diagnostyke gradientu:
-   - `Background gradient: Configured` albo konkretna wartosc gradientu,
-   - ewentualnie `Background: Gradient configured` gdy gradient nadpisuje brak
-     `background.color`.
-2. Dodac regresje w `tests/vitest/ui/cta-banner-editor-wave.test.tsx`:
-   - render Advanced z `background.gradient`,
-   - oczekuj tekstu o skonfigurowanym gradiencie,
-   - oczekuj, ze sam `Background Theme default` nie jest jedynym sygnalem tla.
+- Focused Advanced regression failed before the fix because `Background gradient`
+  was absent from diagnostics.
+- Focused Advanced regression passed after the fix and confirms
+  `Background gradient Configured` appears while raw `linear-gradient(...)` does
+  not.
+- `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx tests/vitest/widgets/ctaBanner.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- Epicurus read-only agent confirmed the same source/report drift before the
+  implementation.
+- Claude staged review reported no blockers for gradient diagnostic
+  truthfulness, no raw CSS exposure, tests, docs/changelog/task closure, or
+  runtime regression.
 
 ## Console / srodowisko
 
