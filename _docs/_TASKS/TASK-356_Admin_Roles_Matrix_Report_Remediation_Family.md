@@ -61,6 +61,10 @@ These refinements are mandatory for implementation planning and closure.
    reason copy, not merely visually muted.
 10. **RoleEditor reuse:** `RoleEditor` is used from Users and Roles surfaces;
    full-access confirmation and write gating must be consistent in both places.
+11. **Matrix full-access path:** matrix-level bulk/toggle-all controls must not
+    bypass full-access confirmation through the save-review modal. Any path
+    that grants `*` or all permissions to a role must be classified as
+    full-access promotion.
 
 ## Sub-Tasks
 
@@ -204,12 +208,23 @@ Implementation shape:
 - The confirmation should include the role name and count of scopes.
 - New roles with full access must require confirm before create.
 - Existing roles promoted to full access must require confirm before save.
+- Matrix column/row bulk toggles that produce full access must mark the pending
+  diff as `requiresFullAccessConfirm` and the review modal must block final
+  save until that confirmation is complete.
 
 Pseudocode:
 
 ```ts
 function requiresFullAccessConfirm(nextPermissions: string[]) {
   return nextPermissions.includes("*") || nextPermissions.length >= ALL_PERMISSIONS.length;
+}
+
+function classifyMatrixDiffForConfirm(diff: RolePermissionDiff) {
+  const nextPermissions = applyDiffToRole(diff);
+  return {
+    ...diff,
+    requiresFullAccessConfirm: requiresFullAccessConfirm(nextPermissions),
+  };
 }
 
 async function handleSelectAll() {
@@ -229,6 +244,8 @@ Regression tests:
 - Cancel leaves permissions unchanged.
 - Confirm applies full access.
 - Create/save with full access cannot bypass confirm through keyboard submit.
+- Matrix bulk toggle/review-save cannot grant full access without the same
+  confirmation.
 
 ### TASK-356-04: RBAC Audit Event Diff
 
@@ -290,6 +307,9 @@ Route family: admin roles.
   confirm, and API error handling.
 - Bun service/route tests for role update validation, RBAC, CSRF, and audit
   diff payload.
+- Route registration tests and centralized `map*Error` coverage for
+  `admin_role_invalid`, `admin_role_not_found`, `admin_role_conflict`,
+  `admin_role_last_admin`, stale-version conflicts, and audit-write failures.
 - Playwright:
   - admin can add/remove one permission and confirm diff,
   - restricted user cannot edit,
@@ -304,6 +324,8 @@ Route family: admin roles.
 - `_docs/RBAC_SPEC.md`
 - `_docs/AUDIT_SPEC.md` if audit payload changes.
 - `_docs/CMS_API.md` for any route contract change.
+- `docs/guide/screens/roles-matrix.md` for read-only mode, diff review,
+  full-access confirmation, and cancel/save behavior.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/1046-2026-06-01-task-356-admin-roles-matrix-remediation-family.md`
 

@@ -68,6 +68,10 @@ These refinements are part of the execution contract, not optional polish.
    keyboard, preserve focus return, and expose title/description semantics.
 5. **No placeholder replacement:** a disabled control is acceptable only when it
    has user-facing unavailable copy and a test asserting it cannot submit.
+6. **Partial-read modes:** `/admin/users` must support `users:read` without
+   `roles:read` and `roles:read` without `users:read` without triggering
+   avoidable UI-originated 403s. Role cards, role filters, user rows, and empty
+   states must degrade independently.
 
 ## Sub-Tasks
 
@@ -104,6 +108,13 @@ Implementation shape:
     `users:write`.
   - `Create Role`, duplicate role, delete role, role editor save: require
     `roles:write`.
+- Partial-read mode:
+  - `users:read` only: fetch users, hide role cards, replace role filter with
+    unavailable copy, and display role names only when already included in the
+    user payload.
+  - `roles:read` only: fetch roles/cards, hide user table and invite controls,
+    and show a "User list unavailable" read-only state.
+  - neither read permission: access denied before any users/roles fetch.
 
 Pseudocode:
 
@@ -151,30 +162,55 @@ Regression tests:
 
 - Vitest UI: restricted user sees read-only Users and no write controls.
 - Vitest UI: admin user sees write controls.
+- Vitest UI: `users:read` only and `roles:read` only modes do not call
+  unauthorized clients.
 - Playwright: restricted fixture can search/read but cannot open submit-ready
   create/edit/delete flows.
 - Route registration/auth test: `/admin/api/auth/me` or equivalent current-user
   endpoint returns the permission snapshot with redacted user fields only.
+- `mapAuthBootstrapError` or equivalent mapping covers permission snapshot
+  failures as stable `auth_permission_snapshot_invalid` /
+  `auth_permission_snapshot_forbidden` API errors.
+
+Security Contract for permission bootstrap:
+
+- Endpoint visibility: internal admin bootstrap (`GET /admin/api/auth/me` or
+  equivalent).
+- Auth model: authenticated admin session; anonymous users receive the existing
+  unauthenticated response.
+- RBAC: no additional permission required to read the caller's own effective
+  permission snapshot, but payload is scoped to current user only.
+- CSRF: not required for GET; route must remain read-only.
+- Rate-limit bucket: admin/auth bootstrap read bucket with in-flight client
+  dedupe to avoid Settings-style `auth/me` request bursts.
+- Reject unknown validation: no request body; query params rejected unless
+  explicitly supported.
+- Anti-abuse: internal session route only; no nonce/HMAC/captcha.
+- Secret handling: no password hashes, reset tokens, session ids, cookies, API
+  keys, or provider secrets in the response/cache/debug payload.
+- Tests: route registration, unauthenticated response, authenticated redacted
+  payload, stale/invalid permission source mapping, and client 403-refresh.
 
 ### TASK-355-02: Reset Password and Login-Capable Invite Flow
 
 **Status:** To Do
 
-Implementation options must be decided explicitly before coding:
+Implementation decision:
 
-1. Preferred product flow: Invite sends a reset/set-password token and the UI
-   displays a clear "Invitation sent" state.
-2. Admin-set password flow: Role-protected admin can set a temporary password
-   at invite time and optionally force password change on next login.
-3. Temporary deferral: hide/disable reset and password fields with a tooltip
-   until the backend contract exists.
+- Use a set-password invitation flow. Admins do not type another user's
+  password. Invite and reset actions create a single-use set-password token,
+  deliver it by email when email is configured, and expose a one-time admin
+  review state only in local/test mode if the product already supports that
+  pattern. If delivery is unavailable, the UI must show a blocking error rather
+  than silently creating a user who cannot log in.
 
 Required behavior if implemented:
 
 - `Reset password` opens a confirm dialog.
 - Submit calls a real endpoint and shows success/error feedback.
-- Invite User can create a login-capable user through a supported path; QA must
-  no longer need a direct API fixture to activate/set password.
+- Invite User creates the user and sends a set-password invitation token in the
+  same supported flow; QA must no longer need a direct API fixture to
+  activate/set password.
 - Passwords or reset tokens must never be logged, cached, copied into reports,
   or returned after the one-time display boundary.
 
@@ -183,8 +219,7 @@ Pseudocode:
 ```ts
 type ResetPasswordRequest = {
   userId: string;
-  delivery: "email" | "one_time_token";
-  forceChangeOnLogin?: boolean;
+  delivery: "email";
 };
 
 async function requestAdminPasswordReset(input: ResetPasswordRequest) {
@@ -198,12 +233,48 @@ async function requestAdminPasswordReset(input: ResetPasswordRequest) {
     { withCsrf: true }
   );
 }
+
+type InviteUserRequest = {
+  email: string;
+  name?: string;
+  roleIds: string[];
+  sendSetPasswordInvite: true;
+};
+
+type SetPasswordRequest = {
+  token: string;
+  password: string;
+};
 ```
+
+Routes and client shape:
+
+- `POST /admin/api/admin-users`
+  - body: `InviteUserRequest`
+  - creates invited/active-pending-password user and token transactionally.
+- `POST /admin/api/admin-users/:id/password-reset`
+  - body: `ResetPasswordRequest`
+  - invalidates older outstanding set-password tokens and creates a new token.
+- `POST /admin/api/auth/set-password`
+  - public token-confirm endpoint for the invited user.
+  - body: `SetPasswordRequest`.
+
+Token rules:
+
+- Single use.
+- TTL: use the existing auth reset TTL setting.
+- Store only hashed token server-side.
+- Token errors map to `set_password_token_invalid`,
+  `set_password_token_expired`, or `set_password_token_used`.
+- Public endpoint is rate-limited and may add captcha only if existing auth
+  reset flows already require it.
 
 Regression tests:
 
 - Service schema rejects unknown fields and missing `userId`.
 - Route tests cover `users:write`, CSRF, and 403 without permission.
+- Public set-password route tests cover TTL, single-use, token hash lookup,
+  strict body validation, rate limit, and mapped token errors.
 - UI tests cover confirm cancel, confirm submit success, and API error state.
 - Playwright fixture creates a user through the UI and logs in without direct
   database/API mutation.
@@ -310,6 +381,23 @@ Route family: admin users and roles.
 - Audit: user status changes, delete user, delete role, duplicate role, invite,
   and reset-password actions must emit machine-readable audit events.
 
+Set-password public endpoint contract:
+
+- Endpoint visibility: public auth endpoint
+  (`POST /admin/api/auth/set-password` or existing auth reset equivalent).
+- Auth model: unauthenticated token bearer; authenticated sessions may use it
+  only when token belongs to that account.
+- RBAC: none; possession of a valid single-use token is the authorization
+  factor.
+- CSRF: not required for token-auth public write if existing reset-password
+  route is CSRF-free; otherwise match the existing auth reset convention.
+- Rate-limit bucket: auth reset/set-password bucket by IP and token hash.
+- Reject unknown validation: strict body schema for `token` and `password`.
+- Anti-abuse: signed/unguessable nonce token, hashed at rest, single-use, TTL,
+  optional captcha only if existing auth reset policy requires it.
+- Secret handling: token never logged or cached; password is validated and
+  hashed immediately.
+
 ## Testing Requirements
 
 Minimum validation for the implementation PR:
@@ -318,6 +406,10 @@ Minimum validation for the implementation PR:
 - `bun --cwd core lint:types`
 - Targeted Vitest UI suites for Users components.
 - Targeted Bun route/service tests for admin users/roles/password reset routes.
+- Route registration tests and centralized `map*Error` coverage for
+  `admin_user_invalid`, `admin_user_not_found`, `admin_user_conflict`,
+  `admin_role_invalid`, `admin_role_not_found`, `admin_role_conflict`,
+  `last_admin`, and set-password token errors.
 - Playwright fixture test:
   - create role,
   - invite/create login-capable user,
@@ -333,6 +425,8 @@ Minimum validation for the implementation PR:
 - `_docs/AUTH_SPEC.md` if current-user permission shape changes.
 - `_docs/RBAC_SPEC.md` for permission propagation and reset-password role.
 - `_docs/CMS_API.md` for new/changed admin user routes.
+- `docs/guide/screens/users.md` for read-only modes, invite/set-password,
+  reset-password, and destructive confirmations.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/1045-2026-06-01-task-355-admin-users-remediation-family.md`
 
