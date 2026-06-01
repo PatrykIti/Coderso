@@ -5,7 +5,7 @@
 **Category:** Widgets + Hero + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_HERO_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -24,8 +24,8 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-371-01](TASK-371-01_HERO_31_05_01_Dual_CTA_Should_Restore_A_Useful_Secondary_CTA.md): HERO-31-05-01 - Dual CTA should restore a useful secondary CTA after Single CTA
-- [ ] [TASK-371-02](TASK-371-02_HERO_31_05_02_Finish_The_Remaining_Hero_Option_Matrix_From_The.md): HERO-31-05-02 - Finish the remaining Hero option matrix from the report
+- [x] [TASK-371-01](TASK-371-01_HERO_31_05_01_Dual_CTA_Should_Restore_A_Useful_Secondary_CTA.md): HERO-31-05-01 - Dual CTA should restore a useful secondary CTA after Single CTA
+- [x] [TASK-371-02](TASK-371-02_HERO_31_05_02_Finish_The_Remaining_Hero_Option_Matrix_From_The.md): HERO-31-05-02 - Finish the remaining Hero option matrix from the report
 
 ## Implementation Pseudocode
 
@@ -70,3 +70,14 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced HERO-31-05-01 with a failing UI regression: `Single CTA -> Dual CTA` restored `{ label: "", href: "" }`, so the editor showed Dual while runtime still rendered only one CTA.
+- Fixed `HeroVisualEditor` only. Runtime normalization remains unchanged: truly empty secondary CTAs are still omitted, while Visual now stores the last useful secondary CTA in a ref during Single mode and restores it on Dual, falling back to `heroDefaults.secondaryCta` when no useful authored value exists.
+- Completed the remaining Hero matrix with the existing Hero editor wave coverage: destination picker, background color/gradient/media/overlay, inline media picker, social proof avatars, rich copy toolbar, layout/spacing, typography, appearance, colors/borders, Advanced read-only summaries, and renderer/public SSR guards.
+- Targeted Playwright contract smoke was attempted for Hero. The generated artifacts show environment/fixture gaps rather than a Hero code failure: admin health reported `admin_unreachable`, and the inventory public path `/homepage` returned 404 in this local DB.
+- Socrates read-only agent confirmed the live CTA drift, renderer correctness, required tests, docs, and reserved changelog number.
+- Claude staged review reported no blockers and confirmed the hooks/compiler shape, CTA restoration contract, runtime contract, tests, task board/changelog, and honest Playwright smoke gap wording.
+- Validation: failing focused CTA regression before the fix; passing focused CTA regression after the fix; `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/hero.test.tsx tests/vitest/ui/hero-editor-wave.test.tsx`; `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/hero.test.tsx tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; attempted Hero Playwright contract smoke with documented environment/fixture gap.
+- Covered by changelog `1061` together with TASK-371-01 and TASK-371-02.

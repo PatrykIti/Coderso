@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { heroEditorContract, type HeroData } from "../../../core/widgets/core/hero";
+import { heroDefaults, heroEditorContract, type HeroData } from "../../../core/widgets/core/hero";
 
 const heroState = vi.hoisted(() => {
   const createMediaItems = () => [
@@ -1240,6 +1240,70 @@ test("HeroVisualEditor keeps single CTA and colored overlay opacity changes roun
     expect(findColorInputByControl(view.container, "hero.media.overlay")?.value).toBe("#ff0000");
   } finally {
     view.cleanup();
+  }
+});
+
+test("HeroVisualEditor restores a useful secondary CTA when switching Single back to Dual", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Hero",
+    primaryCta: { label: "Only CTA", href: "/start" },
+    secondaryCta: { label: "Read case study", href: "/case-study" },
+  };
+
+  const Harness = ({ initialValue }: { initialValue: HeroData }) => {
+    const [value, setValue] = useState<HeroData>(initialValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="centered"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness initialValue={latestValue} />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "single");
+    });
+    expect(latestValue.secondaryCta).toBeUndefined();
+
+    React.act(() => {
+      setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "dual");
+    });
+    expect(latestValue.secondaryCta).toEqual({
+      label: "Read case study",
+      href: "/case-study",
+    });
+    expect(findInputByPlaceholder(view.container, "Learn more")?.value).toBe("Read case study");
+  } finally {
+    view.cleanup();
+  }
+
+  latestValue = {
+    headline: "Hero",
+    primaryCta: { label: "Only CTA", href: "/start" },
+  };
+  const fallbackView = mount(<Harness initialValue={latestValue} />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      setSelectValue(findSelectByOptions(fallbackView.container, ["single", "dual"]), "dual");
+    });
+    expect(latestValue.secondaryCta).toEqual(heroDefaults.secondaryCta);
+  } finally {
+    fallbackView.cleanup();
   }
 });
 

@@ -5,7 +5,7 @@
 **Category:** Widgets + Hero + Admin UI + Runtime + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-371
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Single CTA deletes `secondaryCta`; switching back to Dual recreates an empty obj
 
 ## Sub-Tasks
 
-- [ ] Reproduce HERO-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce HERO-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -91,3 +91,13 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced the report bug with a focused UI regression: switching to Single removed `secondaryCta`, and switching back to Dual restored an empty secondary CTA object.
+- Fixed Visual mode by preserving the last non-empty secondary CTA in editor-local ref state while Single is selected, restoring it on Dual, and falling back to `heroDefaults.secondaryCta` when no authored secondary CTA exists.
+- Kept renderer and domain behavior unchanged: `normalizeHeroData()` still drops empty CTA data, and saved single-CTA Hero blocks still preserve absent `secondaryCta`.
+- Regression coverage proves both restoration paths: authored secondary CTA survives `Single -> Dual`, and an initially single-CTA Hero restores the default useful secondary CTA when Dual is selected.
+- Claude staged review reported no blockers for hooks compiler shape, CTA restoration correctness, and runtime/domain contract preservation.
+- Validation: focused regression failed before the fix and passed after; Hero Vitest lane and `heroEditors` tests passed; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1061`.

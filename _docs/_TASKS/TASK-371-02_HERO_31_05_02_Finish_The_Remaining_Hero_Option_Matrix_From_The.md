@@ -5,7 +5,7 @@
 **Category:** Widgets + Hero + Admin UI + Runtime + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-371
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ The report explicitly marks typography, media/background picker flows, gradient,
 
 ## Sub-Tasks
 
-- [ ] Reproduce HERO-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce HERO-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -91,3 +91,13 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Closed the partial report gap by mapping every listed remaining Hero option to existing or new automated UI replay coverage in `tests/vitest/ui/hero-editor-wave.test.tsx`.
+- Covered destination picker, background color/gradient/media/overlay, media type and picker flows, social proof avatars, rich-copy toolbar, layout/spacing, typography, shadow/border/radius/motion, Advanced read-only summaries, and public renderer contracts.
+- No additional product defect was confirmed while finishing the matrix beyond HERO-31-05-01.
+- Targeted Playwright contract smoke was attempted for Hero, but the local environment could not complete it: admin health reported `admin_unreachable`, and the public inventory path `/homepage` returned 404. Artifacts are recorded under `_docs/PLAYWRIGHT/widget-contract-smoke-task-371-hero-2026-06-01.*` and `_docs/PLAYWRIGHT/widget-contract-smoke-task-371-hero-admin-2026-06-01.*`.
+- Claude staged review reported no blockers and confirmed the matrix-closure claim is backed by Hero UI replay tests while Playwright smoke is documented as an environment/fixture gap.
+- Validation: Hero Vitest lane and `heroEditors` tests passed; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; Playwright smoke attempted with documented environment/fixture gap.
+- Covered by changelog `1061`.
