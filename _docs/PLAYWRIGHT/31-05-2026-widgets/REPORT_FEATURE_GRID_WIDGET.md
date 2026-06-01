@@ -61,7 +61,7 @@ Przetestowane:
 | Border width + radius | Select `3px`, `Extra large` | Card style ma `border-width: 3px`; class ma `rounded-xl`. | Nie publikowano tej zmiany. | Dziala | `borderWidthValueMap` i `radiusClassMap` dzialaja. | Brak. |
 | Container / typography / hover | Select `Full`, `Large`, `Large`, `Lift` | Section `max-w-none`; header `text-3xl`; card title `text-xl`; karta ma klasy hover lift. | Nie publikowano tej zmiany. | Dziala | `maxWidthClassMap`, `headerSizeClassMap`, `cardTitleSizeClassMap`, `hoverEffectClassMap`. | Brak. |
 | Advanced: layout/content summaries | Klik `Advanced` | Pokazuje read-only: layout Cards 3, 2 cards, desktop rhythm 2 column, spacing Spacious, header configured, media/action summaries. | Nie dotyczy. | Dziala | Advanced jest diagnostyczne i nie wystawia writable controls. | Brak. |
-| Advanced: color summary for theme tokens | Otworz Advanced na stanie z domyslnym `style.borderColor=var(--color-border)` | Border summary pokazuje `Saved custom color`, mimo ze to theme token. | Nie dotyczy. | **Nie dziala / misleading UI** | Lokalny helper `describeFeatureGridColor` w `FeatureGridEditors.tsx` rozpoznaje tylko pusty string i hex; kazde `var(...)` wpada w `Saved custom color`. | Zastapic helper wspolnym `describeSharedColorControlState` albo dodac rozpoznanie `var(`/`color-mix(` jako `Theme token`. Dodac regresje dla Advanced summary. |
+| Advanced: color summary for theme tokens | Otworz Advanced na stanie z domyslnym `style.borderColor=var(--color-border)` plus `var(...)`/`color-mix(...)` values | Card background, border and section background summarize token values as `Theme token`; no token state says `Saved custom color`. | Nie dotyczy. | Dziala po remediacji | TASK-372 reuses shared `describeSharedColorControlState()` in Advanced summaries, matching Visual color-control wording. | Naprawione w TASK-372; covered by focused Advanced regression. |
 
 ## Public baseline
 
@@ -77,28 +77,26 @@ To potwierdza, ze swieza strona audytowa publikuje domyslny Feature Grid.
 Zmiany z klikanej sesji admin nie byly publikowane jako finalny stan publiczny
 w tym pass.
 
-## Kod-owner dla znalezionego dryftu
+## Znaleziska i remediacja
 
-- `core/admin/ui/widgets/editors/FeatureGridEditors.tsx`
-  - `describeFeatureGridColor` okolice linii 476-480.
-  - Advanced summary uzywa tego helpera dla `style.surfaceColor`,
-    `style.borderColor`, `style.sectionBackground` w okolicach linii
-    1698-1714.
-  - Problem: helper nie zna tokenow CSS, wiec `var(--color-border)` i podobne
-    wartosci sa opisane jako `Saved custom color`.
+### FG-31-05-01 - Theme token border colors must not be described as saved custom colors
 
-## Rekomendowana poprawka
+**Status:** fixed in TASK-372 on 2026-06-01.
 
-1. Wyeksportowac/uzyc wspolnej logiki `describeSharedColorControlState` dla
-   Advanced summary albo rozszerzyc `describeFeatureGridColor`:
-   - pusty: `Theme default`,
-   - `transparent`: `Transparent`,
-   - `var(`/`color-mix(`: `Theme token`,
-   - hex/picker value: `Selected swatch`,
-   - reszta: `Saved custom color`.
-2. Dodac test w `tests/vitest/ui/feature-grid-editor-wave.test.tsx`, ktory
-   renderuje Advanced z `borderColor: "var(--color-border)"` i oczekuje
-   `Theme token`, nie `Saved custom color`.
+**Original evidence:** Advanced used a local `describeFeatureGridColor()` helper
+that only knew empty values and hex swatches, so `var(--color-border)` and
+other CSS token states were reported as `Saved custom color`.
+
+**Fix:** Advanced summaries now reuse `describeSharedColorControlState()`, the
+same shared color-state contract used by shared color controls. `var(...)` and
+`color-mix(...)` values summarize as `Theme token`; non-token custom values can
+still summarize as `Saved custom color`.
+
+**Regression:** `tests/vitest/ui/feature-grid-editor-wave.test.tsx` renders
+Advanced with `style.surfaceColor`, `style.borderColor`, and
+`style.sectionBackground` set to `var(...)`/`color-mix(...)` values and asserts
+the Presentation summary contains three `Theme token` states and no
+`Saved custom color`.
 
 ## Console / srodowisko
 
@@ -106,3 +104,19 @@ w tym pass.
 - Kolory weryfikowano natywnym setterem inputa `type=color`; zwykle
   przypisanie `input.value` nie wyzwala Reactowego `onChange` i moze dac falszywy
   negatywny wynik w automatyzacji.
+
+## Walidacja TASK-372
+
+- Focused Advanced regression before fix:
+  - FAIL: all three token values rendered as `Saved custom color`.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/feature-grid-editor-wave.test.tsx -t "describes theme token colors"`
+  - PASS: 1 test, 8 skipped.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/feature-grid-editor-wave.test.tsx tests/vitest/widgets/featureGrid.test.tsx`
+  - PASS: 2 files, 24 tests.
+- `bun --cwd core lint` - PASS.
+- `bun --cwd core lint:types` - PASS.
+- `git diff --check` - PASS.
+- `timeout 180s claude -p --dangerously-skip-permissions --max-budget-usd 0.6 "Review the current staged TASK-372 Feature Grid diff only..."`
+  - PASS: no blockers; Claude confirmed shared color contract alignment,
+    Advanced wording, focused regression, docs/task board/changelog, and
+    read-only runtime/security scope.

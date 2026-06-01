@@ -5,7 +5,7 @@
 **Category:** Widgets + Feature Grid + Admin UI + QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FEATURE_GRID_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-372-01](TASK-372-01_FG_31_05_01_Theme_Token_Border_Colors_Must_Not_Be_Described.md): FG-31-05-01 - Theme token border colors must not be described as saved custom colors
+- [x] [TASK-372-01](TASK-372-01_FG_31_05_01_Theme_Token_Border_Colors_Must_Not_Be_Described.md): FG-31-05-01 - Theme token border colors must not be described as saved custom colors
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,13 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced FG-31-05-01 with a failing Advanced UI regression: `var(...)` and `color-mix(...)` style values were summarized as `Saved custom color`.
+- Feature Grid Advanced now reuses `describeSharedColorControlState()` for color summaries, so Visual and Advanced use the same cleared, transparent, theme-token, selected-color, and custom-color labels.
+- Added a focused Advanced regression covering `style.surfaceColor`, `style.borderColor`, and `style.sectionBackground` with `var(...)` and `color-mix(...)` values.
+- Mill read-only agent confirmed the drift and flagged the need to align `color-mix(...)` wording with the shared color helper; the final implementation uses the shared `Theme token` label.
+- Claude staged review reported no blockers and confirmed the shared color contract, Advanced wording, focused test, docs/task board/changelog, and read-only runtime/security scope.
+- Validation: focused regression failed before the fix and passed after; `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/feature-grid-editor-wave.test.tsx tests/vitest/widgets/featureGrid.test.tsx`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1062` together with TASK-372-01.

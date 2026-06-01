@@ -137,6 +137,10 @@ media-first cards, CTA actions, and bounded layout/style controls.
   normalization buttons.
 - Advanced summaries use human labels instead of token/raw enum wording and
   expose no writable controls.
+- Advanced color summaries reuse the shared color-control state labels:
+  `Theme default`, `Transparent`, `Theme token`, selected picker color, or
+  `Saved custom color`. CSS tokens such as `var(...)` and `color-mix(...)` are
+  theme-token states, not saved custom colors.
 - Visual color controls are swatch-only and carry explicit
   `data-widget-control-path` metadata for the persisted style fields.
 - Wizard/Visual duplicate allowances now point at the active setup-only
