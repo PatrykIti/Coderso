@@ -3,14 +3,20 @@ import {
   AdminQueryConventionError,
   encodeAdminCursor,
 } from "../../../core/services/admin/adminQueryConventions";
+import { AuditExportError } from "../../../core/services/audit/auditExportContract";
 import { ApiError } from "../../../core/server/errorHandler";
-import { mapAuditQueryError, registerAuditRoutes } from "../../../core/server/routes/auditRoutes";
+import {
+  mapAuditError,
+  mapAuditQueryError,
+  registerAuditRoutes,
+} from "../../../core/server/routes/auditRoutes";
 import { validate } from "../../../core/server/validation/schemaValidator";
 
 type RouteContext = {
   params: Record<string, string>;
   query: Record<string, string | undefined>;
   body: unknown;
+  user?: { id: string };
 };
 
 type RouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
@@ -24,6 +30,8 @@ const makeRouter = () => {
     router: {
       get: (path: string, ...handlers: RouteHandler[]) =>
         routes.push({ method: "GET", path, handlers }),
+      post: (path: string, ...handlers: RouteHandler[]) =>
+        routes.push({ method: "POST", path, handlers }),
     },
   };
 };
@@ -50,7 +58,7 @@ test("registerAuditRoutes wires endpoints", () => {
 
   const paths = routes.map((route) => `${route.method} ${route.path}`);
 
-  expect(paths).toEqual(expect.arrayContaining(["GET /audit"]));
+  expect(paths).toEqual(expect.arrayContaining(["GET /audit", "POST /audit/export"]));
   expect(requiredPermissions).toEqual(["audit:read"]);
 });
 
@@ -74,6 +82,39 @@ test("mapAuditQueryError maps validation and convention failures to route errors
   );
   expect(cursorError?.code).toBe("audit_cursor_invalid");
   expect(cursorError?.status).toBe(400);
+});
+
+test("mapAuditError maps export validation, column, limit, and forbidden failures", () => {
+  const columnValidationError = mapAuditError(
+    new ApiError("validation_error", "Invalid payload", 400, [
+      { path: "columns.0", message: "must be equal to one of the allowed values" },
+    ]),
+    "export"
+  );
+  const unknownValidationError = mapAuditError(
+    new ApiError("validation_error", "Invalid payload", 400, [
+      { path: "extra", message: "must NOT have additional properties" },
+    ]),
+    "export"
+  );
+  const tooLargeError = mapAuditError(
+    new AuditExportError("audit_export_too_large", "Too many rows", {
+      field: "filters.limit",
+    }),
+    "export"
+  );
+  const forbiddenError = mapAuditError(
+    new ApiError("permission_denied", "Forbidden", 403),
+    "export"
+  );
+
+  expect(columnValidationError?.code).toBe("audit_export_invalid_columns");
+  expect(columnValidationError?.status).toBe(400);
+  expect(unknownValidationError?.code).toBe("audit_export_invalid");
+  expect(tooLargeError?.code).toBe("audit_export_too_large");
+  expect(tooLargeError?.status).toBe(413);
+  expect(forbiddenError?.code).toBe("audit_export_forbidden");
+  expect(forbiddenError?.status).toBe(403);
 });
 
 test("audit query handler rejects unknown and malformed query params before service work", async () => {
@@ -197,5 +238,165 @@ test("audit route requires audit read before service work", async () => {
       body: undefined,
     })
   ).rejects.toMatchObject({ code: "permission_denied", status: 403 });
+  expect(serviceCalls).toBe(0);
+});
+
+test("audit export handler rejects unknown body params and invalid columns before service work", async () => {
+  const { router, routes } = makeRouter();
+  let serviceCalls = 0;
+
+  registerAuditRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate,
+    exportAuditLogs: async () => {
+      serviceCalls += 1;
+      return {
+        type: "file",
+        filename: "audit-logs.csv",
+        mimeType: "text/csv",
+        content: "",
+      };
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/audit/export");
+  if (!route) throw new Error("Missing audit export route");
+
+  await expect(
+    runRoute(route, {
+      params: {},
+      query: {},
+      body: {
+        format: "csv",
+        columns: ["event"],
+        filters: {},
+        extra: true,
+      },
+      user: { id: "user-1" },
+    })
+  ).rejects.toMatchObject({ code: "audit_export_invalid", status: 400 });
+
+  await expect(
+    runRoute(route, {
+      params: {},
+      query: {},
+      body: {
+        format: "csv",
+        columns: ["metadata.secret"],
+        filters: {},
+      },
+      user: { id: "user-1" },
+    })
+  ).rejects.toMatchObject({ code: "audit_export_invalid_columns", status: 400 });
+
+  expect(serviceCalls).toBe(0);
+});
+
+test("audit export handler passes normalized context and returns file metadata", async () => {
+  const { router, routes } = makeRouter();
+  const requests: unknown[] = [];
+  const contexts: unknown[] = [];
+
+  registerAuditRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate,
+    exportAuditLogs: async (request, context) => {
+      requests.push(request);
+      contexts.push(context);
+      return {
+        type: "file",
+        filename: "audit-logs-2026-06-01-all.csv",
+        mimeType: "text/csv",
+        content: "Event\ncontent.publish",
+      };
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/audit/export");
+  if (!route) throw new Error("Missing audit export route");
+
+  const result = await runRoute(route, {
+    params: {},
+    query: {},
+    body: {
+      format: "csv",
+      columns: ["event", "timestamp"],
+      filters: {
+        limit: 50,
+        query: "auth",
+        category: "authentication",
+        severity: "warning",
+        from: "2026-06-01T00:00:00.000Z",
+        to: "2026-06-02T00:00:00.000Z",
+      },
+    },
+    user: { id: "user-1" },
+  });
+
+  expect(result).toEqual({
+    type: "file",
+    filename: "audit-logs-2026-06-01-all.csv",
+    mimeType: "text/csv",
+    content: "Event\ncontent.publish",
+  });
+  expect(requests).toEqual([
+    {
+      format: "csv",
+      columns: ["event", "timestamp"],
+      filters: {
+        limit: 50,
+        query: "auth",
+        category: "authentication",
+        severity: "warning",
+        from: "2026-06-01T00:00:00.000Z",
+        to: "2026-06-02T00:00:00.000Z",
+      },
+    },
+  ]);
+  expect(contexts).toEqual([
+    {
+      actorId: "user-1",
+      requestId: undefined,
+      ip: undefined,
+      userAgent: undefined,
+    },
+  ]);
+});
+
+test("audit export route maps permission failures before service work", async () => {
+  const { router, routes } = makeRouter();
+  let serviceCalls = 0;
+
+  registerAuditRoutes(router, {
+    requirePermission: () => async () => {
+      throw new ApiError("permission_denied", "Forbidden", 403);
+    },
+    validate,
+    exportAuditLogs: async () => {
+      serviceCalls += 1;
+      return {
+        type: "file",
+        filename: "audit-logs.csv",
+        mimeType: "text/csv",
+        content: "",
+      };
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/audit/export");
+  if (!route) throw new Error("Missing audit export route");
+
+  await expect(
+    runRoute(route, {
+      params: {},
+      query: {},
+      body: {
+        format: "csv",
+        columns: ["event"],
+        filters: {},
+      },
+      user: { id: "user-1" },
+    })
+  ).rejects.toMatchObject({ code: "audit_export_forbidden", status: 403 });
   expect(serviceCalls).toBe(0);
 });

@@ -4,6 +4,7 @@ import {
   adminLimitQueryParamSchema,
   adminQueryTextParamSchema,
 } from "./adminQuerySchemas";
+export { auditExportRequestSchema } from "../../services/audit/auditExportContract";
 
 export const auditLogQuerySchema = {
   type: "object",

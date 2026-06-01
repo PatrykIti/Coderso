@@ -283,7 +283,7 @@ test("Audit Logs report no-op controls are disabled with explicit reasons", () =
       area: "Audit Logs",
       controlId: "audit-export-entry",
       expected: "disabled",
-      reasonPattern: /Single-entry export.*TASK-357-03/,
+      reasonPattern: /Single-entry export.*page export/,
       report: "REPORT_ADMIN_AUDIT_LOGS.md",
     },
     {

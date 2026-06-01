@@ -37,8 +37,22 @@ Trasa: `/admin/audit`. Źródła: `core/admin/ui/audit/AuditList.tsx`,
   nie sa wyswietlane ani kopiowane.
 - Brak Clipboard API albo odmowa zapisu pokazuje toast bledu.
 - `Export entry`, `Share Log` i `Report` pozostaja disabled z jawna informacja,
-  ze workflow jest niedostepny; export pozostaje w `TASK-357-03`.
+  ze workflow jest niedostepny; page-level export pozostaje w `TASK-357-03`.
 - Screenshot: `.tmp/task-357-02-copy-json.png`.
+
+### TASK-357-03 verification - 2026-06-01
+
+- Playwright CLI zalogowal tymczasowego restricted usera z rola `audit:read`.
+- Search po unikalnym request/target id zwezil widok do jednego wiersza.
+- `Export` otworzyl dialog `Export Audit Logs` bez dawnego komunikatu
+  `not wired`.
+- W dialogu wlaczono kolumne `Payload` i uruchomiono realny export CSV.
+- Request trafil do `/admin/api/audit/export` z aktywnym `filters.query`,
+  formatem `csv` i allowlistowanymi kolumnami, w tym `payload`.
+- Pobrany plik `audit-logs-2026-06-01-search.csv` zawieral safe payload value,
+  ale nie zawieral password, CSRF tokenu ani API key z fixture.
+- Screenshot: `.tmp/task-357-03-audit-export.png`; CSV proof:
+  `.tmp/task-357-03-export.csv`.
 
 ### Pierwsza fala - 2026-05-31
 
@@ -72,8 +86,8 @@ zewnętrzna.
 | --- | --- | --- | --- |
 | Date range nie wpływa na wyniki | `dateRange` jest state i propem do `AuditFilters`, ale `filteredLogs` używa tylko query/type/severity | user wybiera datę, a lista zostaje filtrowana bez daty | Zamknięte w `TASK-357-01` |
 | `Copy JSON` nie kopiuje | pozycja menu i button w drawerze nie mają handlera | aktywna akcja bez efektu | Zamknięte w `TASK-357-02` |
-| `Export entry`, `Share Log`, `Report` są UI-only | brak `onClick` w `AuditTable`/`AuditDetailsDrawer` | user widzi funkcje compliance, które nie działają | Zamknięte w `TASK-357-02`: akcje są disabled/unavailable; realny export zostaje w `TASK-357-03` |
-| Export dialog nie generuje pliku | `ExportDialog` finalnie tylko `onOpenChange(false)` | wygląda jak export, ale tylko zamyka dialog | Otwarte w `TASK-357-03` |
+| `Export entry`, `Share Log`, `Report` są UI-only | brak `onClick` w `AuditTable`/`AuditDetailsDrawer` | user widzi funkcje compliance, które nie działają | Zamknięte w `TASK-357-02`: akcje są disabled/unavailable; page-level export zamknięty w `TASK-357-03` |
+| Export dialog nie generuje pliku | `ExportDialog` finalnie tylko `onOpenChange(false)` | wygląda jak export, ale tylko zamyka dialog | Zamknięte w `TASK-357-03`: export pobiera redacted CSV/JSON przez `/admin/api/audit/export` |
 | Paginacja/table count jest placeholderem | table pokazuje `Showing 1 to X of 2,459 logs`, `Next` bez realnego page state | mylący obraz rozmiaru danych | Count copy zamkniete w `TASK-357-01`; interaktywne Prev/Next zostaje w `TASK-357-04` |
 
 ## Dlaczego
@@ -82,9 +96,11 @@ Widok ma UI dla pełnego compliance workflow, ale część zachowań była jeszc
 mockowana lokalnie. Przed `TASK-357-01` API ładowało limit 200 i filtrowało
 część danych po stronie klienta. Po `TASK-357-01` listowanie jest
 server-side dla search/date/category/severity i zwraca cursor metadata; export
-i interaktywna paginacja nadal sa osobnymi leafami. Po `TASK-357-02` row/drawer
-`Copy JSON` kopiuje zredagowany JSON z feedbackiem, a pozostale akcje entry sa
-jawnie niedostepne zamiast wygladac jak dzialajace.
+i interaktywna paginacja zostaly rozbite na osobne leafy. Po `TASK-357-02`
+row/drawer `Copy JSON` kopiuje zredagowany JSON z feedbackiem, a pozostale
+akcje entry sa jawnie niedostepne zamiast wygladac jak dzialajace. Po
+`TASK-357-03` page-level export jest realnym flow CSV/JSON z redakcja payloadu;
+interaktywna paginacja nadal zostaje w `TASK-357-04`.
 
 ## Jak naprawić
 
@@ -95,8 +111,9 @@ jawnie niedostepne zamiast wygladac jak dzialajace.
 - `Copy JSON`: Clipboard API, toast success/error i redaction helper. Status:
   zamkniete w `TASK-357-02`.
 - `Export entry`/`Share`/`Report`: implementować lub disable z tooltipem.
-  Status: disabled/unavailable zamkniete w `TASK-357-02`; realny export
-  zostaje w `TASK-357-03`.
-- `ExportDialog`: przyjmować `onExport(payload)` i generować plik przez API;
-  dopisać test formatu i pól.
+  Status: disabled/unavailable zamkniete w `TASK-357-02`; page-level export
+  zamkniety w `TASK-357-03`.
+- `ExportDialog`: przyjmować `onExport(payload)` i generować plik przez API.
+  Status: zamkniete w `TASK-357-03`; page-level export uzywa
+  `/admin/api/audit/export`, allowlisty kolumn i redacted CSV/JSON.
 - Paginacja: zastąpić hard-coded count i `Next` realnym cursor/page state.

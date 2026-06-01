@@ -1,4 +1,9 @@
 import { apiRequest } from "./apiClient";
+import { downloadAdminExport, type AdminExportResult } from "./adminExportClient";
+import type {
+  AuditExportColumn,
+  AuditExportFormat,
+} from "../../services/audit/auditExportContract";
 
 export type AuditRecord = {
   id: string;
@@ -27,6 +32,12 @@ export type AuditLogListResponse = {
   totalApprox?: number | null;
 };
 
+export type AuditExportRequest = {
+  format: AuditExportFormat;
+  columns: AuditExportColumn[];
+  filters: AuditLogQuery;
+};
+
 const buildQuery = (query: AuditLogQuery) => {
   const params = new URLSearchParams();
   if (query.limit) params.set("limit", String(query.limit));
@@ -51,4 +62,11 @@ export async function listAuditLogs(query: AuditLogQuery | number = {}) {
     totalCount: response.totalCount ?? null,
     totalApprox: response.totalApprox ?? null,
   };
+}
+
+export async function exportAuditLogs(request: AuditExportRequest): Promise<AdminExportResult> {
+  return downloadAdminExport("/audit/export", request, {
+    filenamePrefix: "audit-logs",
+    withCsrf: true,
+  });
 }

@@ -224,13 +224,13 @@ Completion notes:
   context, and redacted metadata.
 - The drawer JSON textarea renders the same redacted payload helper.
 - `Export entry`, `Share Log`, and `Report` remain disabled with explicit
-  unavailable reasons; export remains owned by `TASK-357-03`.
+  unavailable reasons; page-level export is owned by `TASK-357-03`.
 - The Audit no-op gate now treats Copy JSON as implemented and keeps unsupported
   actions plus cursor navigation in the expected disabled set.
 
 ### TASK-357-03: Audit Export Contract
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation shape:
 
@@ -300,6 +300,23 @@ Regression tests:
 - Export submit calls route with active filters.
 - Route rejects unknown fields and unauthorized users.
 - CSV escaping covers commas, quotes, and newlines.
+
+Completion notes:
+
+- Audit Logs page export now calls `exportAuditLogs()` with current filters and
+  selected columns instead of showing unavailable copy.
+- `POST /admin/api/audit/export` is backed by a strict body schema and the
+  domain-owned format/column allowlist.
+- Server export reuses `normalizeAuditLogQuery` and `listAudit`, redacts
+  payload values, applies a 200-row sync limit, and returns the shared JSON file
+  contract consumed by `downloadAdminExport`.
+- CSV output escapes commas, quotes, newlines, and formula prefixes.
+- JSON output includes exported-at metadata, selected columns, sanitized filter
+  summary, row count, max rows, and redacted rows.
+- Export attempts emit `audit.export` summary events without exported payload
+  contents.
+- Playwright downloaded a real CSV as a restricted `audit:read` user and proved
+  the payload column was redacted.
 
 ### TASK-357-04: Pagination and Count Truthfulness
 

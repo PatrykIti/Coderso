@@ -128,6 +128,6 @@ Error handling:
   write redacted JSON to the Clipboard API, and emit success/error toasts.
 - Clipboard unavailable or rejected paths show explicit failure feedback.
 - `Export entry`, `Share Log`, and `Report` remain disabled with stable
-  unavailable copy. Single-entry/bulk export stays owned by `TASK-357-03`.
+  unavailable copy. Page-level export is owned by `TASK-357-03`.
 - The Audit no-op gate no longer expects `Copy JSON` to be disabled and still
   verifies unsupported Audit actions are disabled with reasons.

@@ -1,9 +1,11 @@
 import { Download } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import {
+  exportAuditLogs,
   listAuditLogs,
   type AuditLogListResponse,
   type AuditLogQuery,
@@ -17,12 +19,18 @@ import {
   resolveAuditCategory,
   resolveAuditSeverity,
 } from "../../../services/audit/auditClassification";
+import {
+  auditExportColumnLabels,
+  isAuditExportColumn,
+  type AuditExportColumn,
+} from "../../../services/audit/auditExportContract";
 
 import { copyAuditEntryJson } from "./auditEntryActions";
 import { AuditDetailsDrawer } from "./AuditDetailsDrawer";
 import { AuditFilters } from "./AuditFilters";
 import { AuditTable } from "./AuditTable";
 import type { AuditCategory, AuditDateRange, AuditLog, AuditSeverity, AuditStatus } from "./types";
+import type { ExportDialogPayload, ExportField } from "@/ui/shared/ExportDialog";
 
 const formatTitle = (value: string) =>
   value
@@ -146,6 +154,24 @@ const buildAuditCountCopy = (response: AuditLogListResponse) => {
   return resolveTruthfulCountCopy(response, { resourceLabel: "audit logs" });
 };
 
+const auditExportColumns: AuditExportColumn[] = [
+  "event",
+  "actor",
+  "resource",
+  "ip",
+  "timestamp",
+  "status",
+  "severity",
+  "requestId",
+  "payload",
+];
+
+const auditExportFields: ExportField[] = auditExportColumns.map((column) => ({
+  id: column,
+  label: auditExportColumnLabels[column],
+  defaultChecked: ["event", "actor", "resource", "timestamp", "status"].includes(column),
+}));
+
 export function AuditList() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -229,6 +255,27 @@ export function AuditList() {
     void copyAuditEntryJson(log);
   }, []);
 
+  const handleExport = useCallback(
+    async (payload: ExportDialogPayload) => {
+      const columns = payload.fields.filter(isAuditExportColumn);
+      if (columns.length !== payload.fields.length) {
+        throw new Error("Audit export fields are invalid.");
+      }
+      const result = await exportAuditLogs({
+        format: payload.format,
+        columns,
+        filters: auditQuery,
+      });
+      if (result.status === "queued") {
+        toast.success("Audit export queued.");
+      } else {
+        toast.success(`Audit export downloaded: ${result.filename}`);
+      }
+      setExportOpen(false);
+    },
+    [auditQuery]
+  );
+
   const handleDrawerChange = (open: boolean) => {
     setDrawerOpen(open);
     if (!open) {
@@ -245,7 +292,7 @@ export function AuditList() {
           actions={
             <Button variant="outline" className="gap-2" onClick={() => setExportOpen(true)}>
               <Download className="h-4 w-4" />
-              Export CSV
+              Export
             </Button>
           }
         />
@@ -297,16 +344,9 @@ export function AuditList() {
         onOpenChange={setExportOpen}
         title="Export Audit Logs"
         description="Download audit events for compliance reviews."
-        filename="audit-logs.csv"
-        unavailableReason="Audit log export is not wired yet. TASK-357-03 owns the export route and payload."
-        fields={[
-          { id: "event", label: "Event", defaultChecked: true },
-          { id: "actor", label: "Actor", defaultChecked: true },
-          { id: "resource", label: "Resource", defaultChecked: true },
-          { id: "ip", label: "IP address" },
-          { id: "timestamp", label: "Timestamp", defaultChecked: true },
-          { id: "status", label: "Status" },
-        ]}
+        filename="audit-logs-current-filters.csv"
+        fields={auditExportFields}
+        onExport={handleExport}
       />
     </AdminShell>
   );

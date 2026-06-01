@@ -72,14 +72,36 @@ Tasks: TASK-357, TASK-357-01, TASK-357-02, TASK-357-03, TASK-357-04
 - The details drawer renders the redacted payload, matching copied JSON
   behavior for secret-safe inspection.
 - `Export entry`, `Share Log`, and `Report` remain disabled with stable
-  unavailable reasons; export remains owned by `TASK-357-03`.
+  unavailable reasons; page-level export is implemented in `TASK-357-03`.
 - The Audit no-op gate no longer expects `Copy JSON` to be disabled and still
   verifies unsupported Audit actions plus cursor navigation.
+
+### TASK-357-03 Audit Export Contract
+
+- `/admin/audit` now wires the shared export dialog to `exportAuditLogs()`
+  instead of unavailable copy, sending selected columns and active filters to
+  the server.
+- Added `POST /admin/api/audit/export` through the internal `POST
+  /audit/export` route, protected by `audit:read` plus the global admin POST
+  CSRF and `admin_write` rate-limit pipeline.
+- Added an audit export contract module that owns CSV/JSON formats, the column
+  allowlist, strict body schema, 200-row synchronous export cap, scoped
+  filenames, and machine-readable `audit_export_*` errors.
+- Export serialization reuses the audit list query normalization and redaction
+  helper, supports redacted CSV/JSON output, and escapes CSV commas, quotes,
+  newlines, and formula prefixes.
+- Every export writes an `audit.export` summary event with format, columns,
+  sanitized filter summary, row count, and request id only.
+- Playwright verified a restricted `audit:read` user could filter Audit Logs,
+  include the `Payload` column, download a real CSV, and keep password, CSRF,
+  and API-key fixture values out of the file.
 
 ## Validation
 
 - `bun test tests/unit/audit/auditService.test.ts tests/integration/routes/audit.test.ts`
+- `bun test tests/unit/audit/auditExport.test.ts tests/integration/routes/audit.test.ts`
 - `bun run test:vitest -- tests/vitest/admin/auditClient.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/ui/audit-list-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+- `bun run test:vitest -- tests/vitest/admin/auditClient.test.ts tests/vitest/admin/adminExportClient.test.ts tests/vitest/ui/audit-list-wave.test.tsx tests/vitest/ui/audit-list.test.tsx tests/vitest/ui/shared-dialog-contracts.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/audit-entry-actions.test.ts tests/vitest/ui/audit-table-wave.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/audit-list-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -92,10 +114,19 @@ Tasks: TASK-357, TASK-357-01, TASK-357-02, TASK-357-03, TASK-357-04
   (restricted `audit:read` user; row and drawer `Copy JSON`, redacted drawer
   payload, disabled unsupported entry actions; screenshot:
   `.tmp/task-357-02-copy-json.png`)
+- `set -a && source .env && set +a && bun .tmp/task-357-03-playwright-runner.ts`
+  (restricted `audit:read` user; filtered page-level export, payload column,
+  real CSV download, redacted password/CSRF/API-key values; screenshot:
+  `.tmp/task-357-03-audit-export.png`; CSV proof:
+  `.tmp/task-357-03-export.csv`)
 - Claude final blocker review: no blockers after the category precedence,
   service error mapping, shared count helper, and initial-load error-state fixes.
 - Claude final blocker review for `TASK-357-02`: no blockers after shared
   redacted copy behavior, drawer payload redaction, `createdAt` clipboard
   payloads, and truthful disabled entry actions.
+- Claude read-only plan review for `TASK-357-03`: reuse 1047, reuse
+  `downloadAdminExport`, keep route JSON file contract instead of raw
+  `Response`, enforce server column allowlist, redaction, CSV formula guard, and
+  explicit export error mapping.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md`.

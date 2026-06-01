@@ -25,6 +25,7 @@ Minimalne logowanie zdarzen administracyjnych.
 - admin.role.update
 - admin.role.duplicate
 - admin.role.delete
+- audit.export
 
 ## Data model
 
@@ -57,10 +58,16 @@ Minimalne logowanie zdarzen administracyjnych.
 - Admin UI audit entry copy/details rendering applies the same redaction helper
   before exposing payload JSON. Redaction removes sensitive fields recursively
   and redacts token-like strings inside nested values.
+- Audit export output applies the same redaction helper before serializing row
+  payloads. Export audit events record only format, selected columns, sanitized
+  filter summary, row count, and request id; they must never store exported row
+  contents.
 
 ## API
 
 - `GET /audit` (admin, read-only, `audit:read`)
+- `POST /audit/export` (admin, read-only data export, `audit:read`; concrete
+  HTTP path is `POST /admin/api/audit/export`)
 
 `GET /audit` strict query params:
 
@@ -78,6 +85,32 @@ Response:
 - `items`: audit rows ordered by `createdAt DESC, id DESC`.
 - `nextCursor`: next keyset cursor when more matching rows are available,
   otherwise `null`. Cursor payloads preserve database timestamp precision.
+
+`POST /audit/export` strict JSON body:
+
+- `format`: `csv` or `json`.
+- `columns`: non-empty allowlisted array. Supported columns: `id`, `event`,
+  `category`, `actor`, `resource`, `ip`, `timestamp`, `status`, `severity`,
+  `requestId`, `description`, `payload`.
+- `filters`: same normalized audit list filter contract as `GET /audit`, but
+  body uses `query` instead of URL param `q`.
+- `filters.limit`: optional positive integer, capped at 200 for synchronous
+  exports. Values above 200 are rejected as `audit_export_too_large`.
+
+Export response uses the shared admin export JSON file contract:
+
+```json
+{
+  "type": "file",
+  "filename": "audit-logs-2026-06-01-search.csv",
+  "mimeType": "text/csv",
+  "content": "Event,Timestamp\ncontent.publish,2026-06-01T10:30:00.000Z"
+}
+```
+
+CSV output escapes commas, quotes, newlines, and leading formula characters
+(`=`, `+`, `-`, `@`). JSON output includes `exportedAt`, selected columns,
+sanitized filter summary, row count, max rows, and redacted rows.
 
 Derived audit categories:
 
@@ -101,6 +134,11 @@ Errors:
 
 - `audit_query_invalid`: invalid/unknown query params or invalid date ranges.
 - `audit_cursor_invalid`: malformed cursor.
+- `audit_export_invalid`: invalid/unknown export payload.
+- `audit_export_invalid_columns`: unsupported or empty export column selection.
+- `audit_export_too_large`: requested synchronous export limit is above the
+  supported cap.
+- `audit_export_forbidden`: `audit:read` is missing for export.
 
 ## Admin Entry Copy Payload
 

@@ -25,7 +25,7 @@ import { auditCategoryMeta, auditStatusMeta } from "./auditMeta";
 import type { AuditLog } from "./types";
 
 const exportEntryUnavailableReason =
-  "Single-entry export is unavailable until the audited export route is shipped in TASK-357-03.";
+  "Single-entry export is unavailable. Use the Audit Logs page export for filtered CSV or JSON evidence.";
 const paginationUnavailableReason =
   "Cursor navigation is not wired yet. TASK-357-04 owns page controls.";
 

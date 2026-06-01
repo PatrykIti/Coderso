@@ -2801,6 +2801,7 @@ inputs before they can be applied, and filter labels must match their source
 Permissions: `audit:read`
 
 - `GET /audit?limit=100`
+- `POST /audit/export`
 - Optional strict filters: `q=search`, `category=authentication|content|system`,
   `severity=info|warning|error`, `from`, `to`, `cursor`.
 - `from` and `to` must be RFC3339 `date-time` values. Reversed ranges are
@@ -2832,6 +2833,40 @@ walidowany jako dodatnia liczba calkowita i clampowany do 200 przez wspolne
 konwencje query. `category` i `severity` sa deterministycznie wyprowadzane z
 `action`, `targetType` i `metadata.severity`; odpowiedz jest sortowana po
 `createdAt DESC, id DESC`.
+
+`POST /audit/export` body:
+
+```json
+{
+  "format": "csv",
+  "columns": ["event", "actor", "resource", "timestamp", "status", "payload"],
+  "filters": {
+    "limit": 50,
+    "query": "auth",
+    "category": "authentication",
+    "from": "2026-06-01T00:00:00.000Z",
+    "to": "2026-06-01T23:59:59.999Z"
+  }
+}
+```
+
+The export route is an internal admin POST (`/admin/api/audit/export` over
+HTTP), uses the global admin CSRF and `admin_write` rate-limit pipeline, and
+requires `audit:read`. It rejects unknown body fields and unsupported columns.
+Supported formats are `csv` and `json`; synchronous exports are limited to 200
+rows. Responses use the shared admin export JSON contract:
+
+```json
+{
+  "type": "file",
+  "filename": "audit-logs-2026-06-01-search.csv",
+  "mimeType": "text/csv",
+  "content": "Event,Timestamp\ncontent.publish,2026-06-01T10:30:00.000Z"
+}
+```
+
+Exported payload values are redacted recursively before serialization. CSV
+output escapes commas, quotes, newlines, and formula prefixes.
 
 ---
 
@@ -3859,8 +3894,11 @@ Permissions: `content:read`, `media:read`
 Permissions: `audit:read`
 
 - `GET /audit`
+- `POST /audit/export`
 - Optional strict filters: `limit`, `q`, `category`, `severity`, `from`, `to`,
   `cursor`
+- Export body filters use `query` instead of `q`, plus `format` (`csv`/`json`)
+  and allowlisted `columns`.
 
 ---
 

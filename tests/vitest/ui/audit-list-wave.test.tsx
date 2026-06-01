@@ -39,10 +39,21 @@ const auditState = vi.hoisted(() => ({
     ],
     nextCursor: null,
   })),
+  exportAuditLogs: vi.fn(async () => ({
+    status: "downloaded" as const,
+    filename: "audit-logs-2026-06-01-authentication.csv",
+    mimeType: "text/csv",
+  })),
   nextError: null as unknown,
   reset() {
     this.listAuditLogs.mockReset();
+    this.exportAuditLogs.mockReset();
     this.nextError = null;
+    this.exportAuditLogs.mockResolvedValue({
+      status: "downloaded",
+      filename: "audit-logs-2026-06-01-authentication.csv",
+      mimeType: "text/csv",
+    });
     this.listAuditLogs.mockImplementation(async (query) => {
       const auditQuery = typeof query === "object" ? query : undefined;
       if (this.nextError) {
@@ -136,6 +147,7 @@ vi.mock("@/services/apiClient", () => ({
 }));
 
 vi.mock("@/services/auditClient", () => ({
+  exportAuditLogs: auditState.exportAuditLogs,
   listAuditLogs: auditState.listAuditLogs,
 }));
 
@@ -177,14 +189,31 @@ vi.mock("@/ui/shared/ExportDialog", () => ({
     open,
     onOpenChange,
     title,
+    fields,
+    onExport,
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     title: string;
+    fields: Array<{ id: string; defaultChecked?: boolean }>;
+    onExport?: (payload: { format: "csv" | "json"; fields: string[] }) => Promise<void> | void;
   }) =>
     open ? (
       <div>
         <span>{title}</span>
+        <button
+          type="button"
+          onClick={() =>
+            void onExport?.({
+              format: "csv",
+              fields: fields
+                .filter((field) => field.defaultChecked !== false)
+                .map((field) => field.id),
+            })
+          }
+        >
+          submit-export
+        </button>
         <button type="button" onClick={() => onOpenChange(false)}>
           close-export
         </button>
@@ -406,7 +435,26 @@ test("AuditList loads logs, filters them, opens export dialog, and clears select
     );
     expect(view.container.textContent).toContain("No audit logs match the current filters.");
 
-    clickByText(view.container, "Export CSV");
+    clickByText(view.container, "Export");
+    expect(view.container.textContent).toContain("Export Audit Logs");
+    clickByText(view.container, "submit-export");
+    await flush();
+    expect(auditState.exportAuditLogs).toHaveBeenCalledWith({
+      format: "csv",
+      columns: ["event", "actor", "resource", "timestamp", "status"],
+      filters: expect.objectContaining({
+        limit: 50,
+        category: "authentication",
+        severity: "warning",
+        query: "zzz",
+      }),
+    });
+    expect(auditActionState.toastSuccess).toHaveBeenCalledWith(
+      "Audit export downloaded: audit-logs-2026-06-01-authentication.csv"
+    );
+    expect(view.container.textContent).not.toContain("Export Audit Logs");
+
+    clickByText(view.container, "Export");
     expect(view.container.textContent).toContain("Export Audit Logs");
     clickByText(view.container, "close-export");
     expect(view.container.textContent).not.toContain("Export Audit Logs");

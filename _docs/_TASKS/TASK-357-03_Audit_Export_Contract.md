@@ -5,7 +5,7 @@
 **Category:** Admin API + Audit Logs + Export + Compliance
 **Estimated Effort:** Large
 **Dependencies:** TASK-357-01, TASK-360-03
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -127,3 +127,22 @@ Error handling:
 - Export dialog submit no longer just closes.
 - Server export validates filter/column payload and returns a real outcome.
 - Exported data is redacted and CSV/JSON safe.
+
+## Completion Notes
+
+- `AuditList` now wires the shared `ExportDialog` through
+  `exportAuditLogs()`, sending active server-side filters and selected
+  allowlisted columns to `/admin/api/audit/export`.
+- The export route is registered as `POST /audit/export` internally, maps to
+  `POST /admin/api/audit/export`, enforces `audit:read`, and relies on the
+  global admin POST CSRF and `admin_write` rate-limit pipeline.
+- The audit export domain owns format and column allowlists, a 200-row
+  synchronous export limit, scoped filenames, redacted payload rendering,
+  formula-safe CSV escaping, JSON export content, and machine-readable
+  `audit_export_*` errors.
+- Each export emits an `audit.export` summary event with format, columns,
+  sanitized filter summary, row count, and request id only; exported row
+  contents are not written into the audit event.
+- Playwright verified a restricted `audit:read` user could filter Audit Logs,
+  include `Payload`, download a real CSV, and receive redacted output without
+  password, CSRF, or API-key values.
