@@ -5,7 +5,7 @@
 **Category:** Admin UI + Cross-Cutting RBAC + Accessibility + QA Gates + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md` audit evidence
-**Status:** To Do
+**Status:** In Progress (2026-06-01)
 
 ---
 

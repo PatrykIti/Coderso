@@ -11,11 +11,7 @@ import {
   SESSION_COOKIE_NAME,
   setCsrfToken,
 } from "../../services/auth/sessionService";
-import {
-  getUserByEmail,
-  updateLastLogin,
-  updatePassword,
-} from "../../services/auth/userService";
+import { getUserByEmail, updateLastLogin, updatePassword } from "../../services/auth/userService";
 import { resolveEmailValue } from "../../services/security/piiEmail";
 import { hashPassword, verifyPassword } from "../../services/auth/password";
 import { enforceBotProtection } from "../../services/security/botProtection";
@@ -27,14 +23,16 @@ import {
   authResetSchema,
   authVerifyOtpSchema,
 } from "../validation/authSchemas";
+import { consumeResetToken, createResetToken } from "../../services/auth/passwordResetService";
 import {
-  consumeResetToken,
-  createResetToken,
-} from "../../services/auth/passwordResetService";
+  getAdminPermissionSnapshot,
+  type AdminPermissionSnapshot,
+} from "../../services/auth/roleService";
 
 export type AuthRouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
   validate: (schema: unknown, payload: unknown) => void;
+  resolvePermissionSnapshot?: (userId: string) => Promise<AdminPermissionSnapshot>;
 };
 
 type LoginBody = { email: string; password: string; captchaToken?: string };
@@ -46,6 +44,10 @@ type PublicUser = {
   id: string;
   email: string;
   name?: string | null;
+};
+
+type CurrentAdminUser = PublicUser & {
+  permissionSnapshot: AdminPermissionSnapshot;
 };
 
 const resolveUserEmail = (user: { email: string; emailEncrypted?: unknown }) =>
@@ -63,8 +65,84 @@ function toPublicUser(user: {
   return { id: user.id, email: resolveUserEmail(user), name: user.name ?? null };
 }
 
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+function assertPermissionSnapshot(value: unknown): asserts value is AdminPermissionSnapshot {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new ApiError(
+      "auth_permission_snapshot_invalid",
+      "Current user permission snapshot is invalid",
+      500
+    );
+  }
+  const snapshot = value as Partial<AdminPermissionSnapshot>;
+  if (!isStringArray(snapshot.permissions) || !Array.isArray(snapshot.roles)) {
+    throw new ApiError(
+      "auth_permission_snapshot_invalid",
+      "Current user permission snapshot is invalid",
+      500
+    );
+  }
+  for (const role of snapshot.roles) {
+    if (
+      !role ||
+      typeof role !== "object" ||
+      Array.isArray(role) ||
+      typeof (role as AdminPermissionSnapshot["roles"][number]).id !== "string" ||
+      typeof (role as AdminPermissionSnapshot["roles"][number]).slug !== "string" ||
+      typeof (role as AdminPermissionSnapshot["roles"][number]).name !== "string"
+    ) {
+      throw new ApiError(
+        "auth_permission_snapshot_invalid",
+        "Current user permission snapshot is invalid",
+        500
+      );
+    }
+  }
+}
+
+function assertNoAuthMeQuery(query: RouteContext["query"]) {
+  const unsupported = Object.entries(query ?? {}).filter(([, value]) => value !== undefined);
+  if (unsupported.length === 0) return;
+  throw new ApiError("auth_me_query_invalid", "Unsupported auth/me query parameter", 400, {
+    fields: unsupported.map(([field]) => field),
+  });
+}
+
+const mapPermissionSnapshotError = (error: unknown) => {
+  if (error instanceof ApiError) return error;
+  if (error instanceof Error && error.message === "forbidden") {
+    return new ApiError(
+      "auth_permission_snapshot_forbidden",
+      "Current user permission snapshot is unavailable",
+      403
+    );
+  }
+  return new ApiError(
+    "auth_permission_snapshot_invalid",
+    "Current user permission snapshot is unavailable",
+    500
+  );
+};
+
+function toCurrentAdminUser(
+  user: {
+    id: string;
+    email: string;
+    emailEncrypted?: unknown;
+    name?: string | null;
+  },
+  permissionSnapshot: AdminPermissionSnapshot
+): CurrentAdminUser {
+  return {
+    ...toPublicUser(user),
+    permissionSnapshot,
+  };
+}
+
 export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
-  const { requireAuth, validate } = deps;
+  const { requireAuth, validate, resolvePermissionSnapshot = getAdminPermissionSnapshot } = deps;
 
   router.get("/auth/bot-protection", async () => {
     const settings = await getSecuritySettings();
@@ -172,7 +250,26 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
 
   router.get("/auth/me", requireAuth, async (ctx) => {
     if (!ctx.user) throw new ApiError("auth_required", "Not authenticated", 401);
-    return { user: ctx.user };
+    if (typeof ctx.user.email !== "string" || ctx.user.email.length === 0) {
+      throw new ApiError("auth_user_invalid", "Current user payload is invalid", 500);
+    }
+    assertNoAuthMeQuery(ctx.query);
+    try {
+      const permissionSnapshot = await resolvePermissionSnapshot(ctx.user.id);
+      assertPermissionSnapshot(permissionSnapshot);
+      return {
+        user: toCurrentAdminUser(
+          {
+            id: ctx.user.id,
+            email: ctx.user.email,
+            name: ctx.user.name ?? null,
+          },
+          permissionSnapshot
+        ),
+      };
+    } catch (error) {
+      throw mapPermissionSnapshotError(error);
+    }
   });
 
   router.get("/auth/csrf", requireAuth, async (ctx) => {

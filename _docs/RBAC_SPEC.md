@@ -68,6 +68,10 @@ Notes:
 - Audit: audit:read
 
 UI behavior:
+- Admin UI buduje `can(permission)` z redacted `permissionSnapshot` zwracanego
+  przez `GET /auth/me`; brak lub malformed snapshot fail-closed.
+- Sidebar i admin route guards uzywaja tego samego helpera, a API 403 pozostaje
+  defense-in-depth i wyzwala odswiezenie permission snapshotu.
 - Widoki Users/Roles wylaczaja akcje edycji bez `users:write` lub `roles:write`.
 - Ostatni admin nie moze zostac usuniety ani pozbawiony roli admin.
 

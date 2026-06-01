@@ -12,7 +12,13 @@ Poza zakresem v1:
 - Po poprawnym loginie tworzymy session cookie (httpOnly).
 - UI pokazuje bledy walidacji pod polami i alert ogolny przy `auth_failed`.
 - Po sukcesie przekierowanie do `/admin`.
-- Admin UI weryfikuje sesje przez `GET /auth/me` (zwraca `user`).
+- Admin UI weryfikuje sesje przez `GET /auth/me`.
+- `GET /auth/me` zwraca redacted current-user payload:
+  `{ user: { id, email, name, permissionSnapshot } }`.
+- `permissionSnapshot` zawiera tylko effective permission ids oraz bezpieczne
+  role labels: `{ permissions: string[], roles: { id, slug, name }[] }`.
+- Endpoint odrzuca nieznane query params i nie zwraca session ids, tokenow,
+  password hashy, cookie, API key secrets ani zaszyfrowanych PII.
 - CSRF token pobierany przez `GET /auth/csrf` i uzywany w mutacjach (`X-CSRF-Token`).
 
 ## Sessions
@@ -35,6 +41,10 @@ Poza zakresem v1:
 - Role: admin, editor, viewer.
 - Permissions jako lista stringow w `roles.permissions`.
 - Middleware sprawdza access per route.
+- Admin UI korzysta z permission snapshot z `/auth/me` jako jednego zrodla dla
+  `can(permission)`, sidebar route visibility i route guards. Backend 403
+  pozostaje defense-in-depth i wymusza odswiezenie snapshotu po stale permission
+  failure.
 
 ## Admin UI (v1)
 

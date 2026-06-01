@@ -5,7 +5,7 @@
 **Category:** Admin UI + Auth Bootstrap + RBAC
 **Estimated Effort:** Large
 **Dependencies:** TASK-360
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -112,3 +112,14 @@ Error handling:
 - Users, Roles Matrix, and Settings consume one shared permission contract.
 - Sidebar route links and route guards use the same helper.
 - Missing/stale permission data fails closed without leaking secrets.
+
+## Completion Notes
+
+- Implemented `getAdminPermissionSnapshot()` with redacted role labels and
+  effective permission ids.
+- Extended `GET /auth/me` to return the snapshot, reject unknown query params,
+  and map malformed/forbidden snapshot failures.
+- Added admin-side snapshot normalization, `canAdmin`, `AdminAuthProvider`, and
+  route/sidebar permission gating.
+- Added permission-denied API failure notifications so stale 403s refresh the
+  auth snapshot through `AdminApp`.

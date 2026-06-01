@@ -37,6 +37,7 @@ import {
 } from "@/services/solutionKitsClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import { useAdminCan } from "@/ui/contexts/AdminAuthContext";
 
 const NAV_GROUP_STATE_KEY = "coderso.admin.navGroupState";
 const LEGACY_NAV_GROUP_STATE_KEY = "nextless.admin.navGroupState";
@@ -112,6 +113,7 @@ export function AdminShell({
   const [activeSolutionKitId, setActiveSolutionKitId] = useState<SolutionKitId | null>(() =>
     getActiveSolutionKitId()
   );
+  const canAccess = useAdminCan();
   const adminBasePath = useAdminBasePath();
   const activeSolutionKit = useMemo(
     () => solutionKits.find((item) => item.id === activeSolutionKitId) ?? null,
@@ -217,6 +219,7 @@ export function AdminShell({
         sections={resolvedSections}
         footerItems={resolvedFooter}
         activeHref={resolvedActiveHref}
+        canAccess={canAccess}
         groupState={resolvedNavGroupState}
         onGroupToggle={(groupId, nextExpanded) =>
           setNavGroupState((prev) => ({
@@ -255,6 +258,7 @@ export function AdminShell({
             sections={resolvedSections}
             footerItems={resolvedFooter}
             activeHref={resolvedActiveHref}
+            canAccess={canAccess}
             variant="mobile"
             groupState={resolvedNavGroupState}
             onGroupToggle={(groupId, nextExpanded) =>

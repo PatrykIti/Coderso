@@ -56,11 +56,11 @@ export const buildDefaultNavSections = (
   {
     title: "Main",
     items: [
-      { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-      { label: "Pages", href: "/admin/pages", icon: FileText },
-      { label: "Posts", href: "/admin/posts", icon: Newspaper },
-      { label: "Menus", href: "/admin/menus", icon: List },
-      { label: "Media", href: "/admin/media", icon: Image },
+      { label: "Dashboard", href: "/admin", icon: LayoutDashboard, permission: "content:read" },
+      { label: "Pages", href: "/admin/pages", icon: FileText, permission: "content:read" },
+      { label: "Posts", href: "/admin/posts", icon: Newspaper, permission: "content:read" },
+      { label: "Menus", href: "/admin/menus", icon: List, permission: "menus:read" },
+      { label: "Media", href: "/admin/media", icon: Image, permission: "media:read" },
     ],
     groups: [
       {
@@ -74,35 +74,50 @@ export const buildDefaultNavSections = (
   },
   {
     title: "Store",
-    items: [{ label: "Plugin Store", href: "/admin/store", icon: Store }],
+    items: [
+      { label: "Plugin Store", href: "/admin/store", icon: Store, permission: "store:browse" },
+    ],
   },
   {
     title: "Visual",
-    items: [{ label: "Admin UI Theme", href: "/admin/themes", icon: Palette }],
+    items: [
+      {
+        label: "Admin UI Theme",
+        href: "/admin/themes",
+        icon: Palette,
+        permission: "themes:read",
+      },
+    ],
   },
   {
     title: "Tools",
     items: [
-      { label: "Search", href: "/admin/search", icon: Search },
-      { label: "SEO Manager", href: "/admin/seo", icon: ShieldCheck },
-      { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-      { label: "Backups", href: "/admin/backups", icon: HardDrive },
+      { label: "Search", href: "/admin/search", icon: Search, permission: "content:read" },
+      { label: "SEO Manager", href: "/admin/seo", icon: ShieldCheck, permission: "content:read" },
+      { label: "Analytics", href: "/admin/analytics", icon: BarChart3, permission: "content:read" },
+      { label: "Backups", href: "/admin/backups", icon: HardDrive, permission: "backups:read" },
       {
         label: "Import / Export",
         href: "/admin/tools/import-export",
         icon: ArrowLeftRight,
+        permission: "settings:read",
       },
-      { label: "Redirects", href: "/admin/redirects", icon: Shuffle },
+      { label: "Redirects", href: "/admin/redirects", icon: Shuffle, permission: "settings:read" },
     ],
   },
   {
     title: "Admin",
     items: [
-      { label: "Users", href: "/admin/users", icon: Users },
-      { label: "Roles Matrix", href: "/admin/roles", icon: ShieldCheck },
-      { label: "Audit Logs", href: "/admin/audit", icon: Shield },
-      { label: "Access Logs", href: "/admin/access-logs", icon: Activity },
-      { label: "Settings", href: "/admin/settings", icon: Settings },
+      { label: "Users", href: "/admin/users", icon: Users, permission: "users:read" },
+      { label: "Roles Matrix", href: "/admin/roles", icon: ShieldCheck, permission: "roles:read" },
+      { label: "Audit Logs", href: "/admin/audit", icon: Shield, permission: "audit:read" },
+      {
+        label: "Access Logs",
+        href: "/admin/access-logs",
+        icon: Activity,
+        permission: "audit:read",
+      },
+      { label: "Settings", href: "/admin/settings", icon: Settings, permission: "settings:read" },
     ],
   },
 ];

@@ -7,7 +7,9 @@ import { Database } from "lucide-react";
 import { renderToString } from "react-dom/server";
 
 import { AdminBasePathProvider } from "../../../core/admin/ui/contexts/AdminBasePathContext";
+import { AdminAuthProvider } from "../../../core/admin/ui/contexts/AdminAuthContext";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
+import { AdminShell } from "../../../core/admin/ui/layouts/AdminShell";
 import {
   appendNavItemsAfterGroup,
   defaultNavSections,
@@ -153,6 +155,44 @@ test("SidebarNav hides Advanced group when all children are unauthorized", () =>
 
   expect(html).not.toContain("Advanced");
   expect(html).not.toContain("/admin/advanced/engine");
+});
+
+test("AdminShell filters navigation through the shared permission snapshot", () => {
+  const sections: NavSection[] = [
+    {
+      title: "Admin",
+      items: [
+        { label: "Users", href: "/admin/users", icon: Database, permission: "users:read" },
+        { label: "Settings", href: "/admin/settings", icon: Database, permission: "settings:read" },
+      ],
+    },
+  ];
+
+  const html = renderToString(
+    <AdminRouterProvider initialPath="/admin/users">
+      <AdminBasePathProvider value="/admin">
+        <AdminAuthProvider
+          user={{
+            id: "user-1",
+            email: "restricted@example.com",
+            name: null,
+            permissionSnapshot: {
+              permissions: ["users:read"],
+              roles: [{ id: "role-1", slug: "users-reader", name: "Users Reader" }],
+            },
+          }}
+        >
+          <AdminShell navSections={sections} showSearch={false}>
+            <div>Users content</div>
+          </AdminShell>
+        </AdminAuthProvider>
+      </AdminBasePathProvider>
+    </AdminRouterProvider>
+  );
+
+  expect(html).toContain("Users");
+  expect(html).toContain("/admin/users");
+  expect(html).not.toContain("/admin/settings");
 });
 
 test("SidebarNav renders custom screen shortcuts after the Advanced group", () => {

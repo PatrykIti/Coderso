@@ -27,8 +27,19 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
   expanded drawer accessibility coverage to Audit and Access Logs detail
   drawers.
 
+### Implementation
+
+- Completed `TASK-360-01` permission snapshot contract: `/auth/me` now returns
+  redacted effective permissions and safe role labels, admin client code
+  normalizes the snapshot, `AdminAuthProvider` exposes shared `can(permission)`,
+  sidebar/route guards consume the helper, and permission-denied API failures
+  trigger auth snapshot refresh.
+
 ## Validation
 
-- Planning entry only; implementation validation is owned by TASK-360.
+- `bun test tests/unit/auth/rbac.test.ts tests/integration/routes/auth.test.ts`
+- `bun run test:vitest -- tests/vitest/admin/apiClient.test.ts tests/vitest/admin/authClient.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md`.

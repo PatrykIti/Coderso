@@ -3,10 +3,27 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
-import { expect, test, vi } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
+
+const adminAuthState = vi.hoisted(() => ({
+  bootstrap: {
+    state: "authenticated" as const,
+    user: {
+      id: "admin-1",
+      email: "admin@example.com",
+      name: "Admin",
+      permissionSnapshot: {
+        permissions: ["*"],
+        roles: [{ id: "role-1", slug: "admin", name: "Admin" }],
+      },
+    },
+  },
+}));
 
 vi.mock("@/services/authClient", () => ({
-  resolveAuthBootstrap: vi.fn().mockResolvedValue({ state: "authenticated" }),
+  canAdmin: (permission: string, snapshot: { permissions?: string[] } | null | undefined) =>
+    Boolean(snapshot?.permissions?.includes("*") || snapshot?.permissions?.includes(permission)),
+  resolveAuthBootstrap: vi.fn(() => Promise.resolve(adminAuthState.bootstrap)),
 }));
 
 vi.mock("@/services/settingsClient", () => ({
@@ -104,6 +121,21 @@ const flush = async () => {
   });
 };
 
+beforeEach(() => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "admin-1",
+      email: "admin@example.com",
+      name: "Admin",
+      permissionSnapshot: {
+        permissions: ["*"],
+        roles: [{ id: "role-1", slug: "admin", name: "Admin" }],
+      },
+    },
+  };
+});
+
 test("AdminApp renders theme tokens during loading state", () => {
   const html = renderToString(
     <AdminRouterProvider initialPath="/admin/pages">
@@ -112,6 +144,32 @@ test("AdminApp renders theme tokens during loading state", () => {
   );
   expect(html).toContain("coderso-theme-tokens");
   expect(html).toContain("Loading...");
+});
+
+test("AdminApp denies guarded routes when the permission snapshot is missing the route permission", async () => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "restricted-1",
+      email: "restricted@example.com",
+      name: "Restricted",
+      permissionSnapshot: {
+        permissions: ["settings:read"],
+        roles: [{ id: "role-2", slug: "settings-reader", name: "Settings Reader" }],
+      },
+    },
+  };
+  const view = mount("/admin/users");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Access denied");
+    expect(view.container.textContent).toContain(
+      "Your account does not have permission to open this admin area."
+    );
+  } finally {
+    view.cleanup();
+  }
 });
 
 test("AdminApp resolves /menus to the menus list route", async () => {

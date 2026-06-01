@@ -75,6 +75,14 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
 7. Po audycie przywrócić `Max sessions per user` do wartości bezpiecznej
    (domyślnie 3) albo zostawić świadomie jako QA override z osobną notatką.
 
+## Status napraw - 2026-06-01
+
+- `TASK-360-01` jest zaimplementowany: `/auth/me` zwraca redacted
+  `permissionSnapshot`, Admin UI ma wspolny `can(permission)`, sidebar i route
+  guards korzystaja z jednego helpera, a stale permission 403 odswieza snapshot.
+- Pozostale pozycje z raportu pozostaja przypisane do rodzin TASK-355..360 i
+  wymagaja osobnych implementacji oraz re-audytu UI.
+
 ## Uwaga o Claude - 2026-06-01
 
 Claude został uruchomiony także w drugiej fali. Próba samodzielnego przejścia

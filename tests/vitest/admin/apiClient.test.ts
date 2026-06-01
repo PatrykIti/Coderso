@@ -7,6 +7,7 @@ import {
   getCsrfToken,
   isSessionExpiredApiError,
   resetCsrfToken,
+  subscribeAdminPermissionFailure,
 } from "../../../core/admin/services/apiClient";
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -127,6 +128,15 @@ test("apiRequest does not retry non-csrf forbidden responses", async () => {
     return jsonResponse({ error: { code: "forbidden", message: "Forbidden" } }, 403);
   });
 
+  const permissionFailures: Array<{ path: string; method: string; code: string }> = [];
+  const unsubscribe = subscribeAdminPermissionFailure((event) => {
+    permissionFailures.push({
+      path: event.path,
+      method: event.method,
+      code: event.error.code,
+    });
+  });
+
   try {
     await expect(
       apiRequest<{ ok: boolean }>(
@@ -137,13 +147,18 @@ test("apiRequest does not retry non-csrf forbidden responses", async () => {
     ).rejects.toMatchObject({
       code: "forbidden",
       status: 403,
+      sharedFailureKind: "permission_denied",
     });
 
     expect(fetchMock.calls.map((call) => String(call.input))).toEqual([
       "/admin/api/auth/csrf",
       "/admin/api/pages/page-1",
     ]);
+    expect(permissionFailures).toEqual([
+      { path: "/pages/page-1", method: "PATCH", code: "forbidden" },
+    ]);
   } finally {
+    unsubscribe();
     fetchMock.restore();
   }
 });
@@ -184,7 +199,9 @@ test("apiRequest classifies 401 responses as session-expired without retrying cs
 
 test("shared api client helpers classify session-expired and csrf-refreshable failures distinctly", () => {
   const authRequired = new ApiClientError("auth_required", "Authentication required", 401);
+  const forbidden = new ApiClientError("forbidden", "Forbidden", 403);
 
   expect(classifyAdminApiFailure(authRequired)).toBe("session_expired");
+  expect(classifyAdminApiFailure(forbidden)).toBe("permission_denied");
   expect(isSessionExpiredApiError(authRequired)).toBe(true);
 });
