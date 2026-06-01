@@ -16,6 +16,8 @@ Tasks: TASK-354
 - Recorded that TASK-348 through TASK-354 create 28 execution leaves, exceeding
   the requested minimum of 20 task refinements while keeping each report family
   isolated by the assigned task numbers.
+- Tightened TASK-354-03 after follow-up audit with an explicit regression-test
+  shape for pepper-aware seed-admin coverage.
 
 ## Validation
 

@@ -49,7 +49,18 @@ if (!user) {
 }
 ```
 
-Regression-test helper:
+Regression-test shape:
+
+- Add one Bun unit case that seeds/hashes a new admin password with
+  `AUTH_PASSWORD_PEPPER` unset and proves `verifyPassword` accepts the raw
+  password.
+- Add one Bun unit case that sets `AUTH_PASSWORD_PEPPER`, runs the same seed
+  hashing path, and proves verification only succeeds through the shared
+  pepper-aware helper.
+- Restore the original env value in `afterEach` / `finally`, and assert seed
+  logs do not include the raw password, pepper, or hash.
+
+Helper sketch:
 
 ```ts
 const originalPepper = process.env.AUTH_PASSWORD_PEPPER;
