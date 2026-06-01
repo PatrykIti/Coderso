@@ -1,6 +1,9 @@
 import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys } from "@/services/cachePolicy";
+import { seoAuditCheckIds, type SeoAuditCheckId } from "../../services/seo/seoTypes";
+
+export { seoAuditCheckIds, type SeoAuditCheckId };
 
 export type SeoIssue = {
   code: string;
@@ -29,6 +32,7 @@ export type SeoDocumentItem = {
 export type SeoAuditPayload = {
   targetType?: "page" | "entry";
   targetId?: string;
+  checks?: SeoAuditCheckId[];
 };
 
 export async function listSeo() {

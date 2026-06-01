@@ -2465,14 +2465,30 @@ Example item:
 `POST /seo/audit` payload:
 
 ```json
-{ "targetType": "page", "targetId": "uuid" }
+{
+  "targetType": "page",
+  "targetId": "uuid",
+  "checks": ["meta", "links", "robots"]
+}
 ```
+
+`targetType` and `targetId` are optional, but must be provided together for a
+scoped audit. `checks` is optional and defaults to all supported checks. Unknown
+checks are rejected with `validation_error`; an empty array is rejected before
+the audit runs.
 
 Response:
 
 ```json
 { "audited": 12 }
 ```
+
+Saving `/seo/:id` recalculates `score`, `status`, and `issues` from the saved
+metadata and clears the server-side public HTML cache. Public page rendering
+uses SEO Manager documents as the first public source of truth for page title,
+description, canonical URL, and robots directives, then falls back to published
+page SEO data and page title. Detail-page explicit SEO title/description field
+mappings keep precedence over entry SEO document fallbacks.
 
 ---
 

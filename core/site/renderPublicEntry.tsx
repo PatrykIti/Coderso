@@ -31,14 +31,12 @@ export type PublicEntrySummary = {
 
 export type PublicEntryDetailRecord = PublicEntrySummary & {
   taxonomy?: unknown;
-  seo?:
-    | {
-        title?: string | null;
-        description?: string | null;
-        canonicalUrl?: string | null;
-        robots?: string | null;
-      }
-    | null;
+  seo?: {
+    title?: string | null;
+    description?: string | null;
+    canonicalUrl?: string | null;
+    robots?: string | null;
+  } | null;
 };
 
 export type PublicEntryListItem = {
@@ -72,9 +70,7 @@ export type ContentDetailTemplateProps = {
   isPreview?: boolean;
 };
 
-export type ContentTemplateProps =
-  | ContentListTemplateProps
-  | ContentDetailTemplateProps;
+export type ContentTemplateProps = ContentListTemplateProps | ContentDetailTemplateProps;
 
 export type PublicEntryListOptions = {
   title: string;
@@ -87,6 +83,7 @@ export type PublicEntryListOptions = {
   isPreview?: boolean;
   metaDescription?: string | null;
   canonicalUrl?: string | null;
+  robots?: string | null;
 };
 
 export type PublicEntryDetailOptions = {
@@ -100,6 +97,7 @@ export type PublicEntryDetailOptions = {
   isPreview?: boolean;
   metaDescription?: string | null;
   canonicalUrl?: string | null;
+  robots?: string | null;
 };
 
 type TemplateComponent<Props> = (props: Props) => ReactNode;
@@ -133,9 +131,7 @@ const resolveContentTemplatePath = async (options: {
   return resolveTemplate({ themeName, type: "content", cache });
 };
 
-const loadTemplateComponent = async <Props extends ContentTemplateProps>(
-  templatePath: string
-) => {
+const loadTemplateComponent = async <Props extends ContentTemplateProps>(templatePath: string) => {
   try {
     const mod = await import(pathToFileURL(templatePath).href);
     if (typeof mod.default === "function") {
@@ -154,27 +150,26 @@ const renderDocument = (
   inlineCss?: string | null,
   metaDescription?: string | null,
   canonicalUrl?: string | null,
+  robots?: string | null,
   devModuleScripts?: string[] | null,
   isPreview?: boolean
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
-    <meta
-      key="viewport"
-      name="viewport"
-      content="width=device-width, initial-scale=1"
-    />,
+    <meta key="viewport" name="viewport" content="width=device-width, initial-scale=1" />,
     <title key="title">{title}</title>,
   ];
 
   if (metaDescription) {
-    headTags.push(
-      <meta key="description" name="description" content={metaDescription} />
-    );
+    headTags.push(<meta key="description" name="description" content={metaDescription} />);
   }
 
   if (canonicalUrl) {
     headTags.push(<link key="canonical" rel="canonical" href={canonicalUrl} />);
+  }
+
+  if (robots) {
+    headTags.push(<meta key="robots" name="robots" content={robots} />);
   }
 
   if (inlineCss) {
@@ -187,26 +182,21 @@ const renderDocument = (
       <script
         key="preview-show"
         dangerouslySetInnerHTML={{
-          __html:
-            "window.addEventListener(\"load\",()=>{document.body.style.opacity=\"1\";});",
+          __html: 'window.addEventListener("load",()=>{document.body.style.opacity="1";});',
         }}
       />
     );
   }
 
   if (cssHref) {
-    headTags.push(
-      <link key="css-preload" rel="preload" as="style" href={cssHref} />
-    );
+    headTags.push(<link key="css-preload" rel="preload" as="style" href={cssHref} />);
     headTags.push(<link key="css" rel="stylesheet" href={cssHref} />);
   }
 
   if (Array.isArray(devModuleScripts)) {
     for (const [index, src] of devModuleScripts.entries()) {
       if (!src) continue;
-      headTags.push(
-        <script key={`dev-module-${index}`} type="module" src={src}></script>
-      );
+      headTags.push(<script key={`dev-module-${index}`} type="module" src={src}></script>);
     }
   }
 
@@ -267,9 +257,7 @@ const DefaultDetailTemplate = ({
   </main>
 );
 
-export async function renderPublicEntryListHtml(
-  options: PublicEntryListOptions
-) {
+export async function renderPublicEntryListHtml(options: PublicEntryListOptions) {
   const {
     title,
     contentType,
@@ -280,6 +268,7 @@ export async function renderPublicEntryListHtml(
     isPreview,
     metaDescription,
     canonicalUrl,
+    robots,
     themeName,
   } = options;
 
@@ -303,11 +292,7 @@ export async function renderPublicEntryListHtml(
   const body = (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
       {isPreview ? <PreviewBanner /> : null}
-      {Template ? (
-        <Template {...templateProps} />
-      ) : (
-        <DefaultListTemplate {...templateProps} />
-      )}
+      {Template ? <Template {...templateProps} /> : <DefaultListTemplate {...templateProps} />}
     </div>
   );
 
@@ -318,14 +303,13 @@ export async function renderPublicEntryListHtml(
     inlineCss,
     metaDescription,
     canonicalUrl,
+    robots,
     devModuleScripts,
     isPreview
   );
 }
 
-export async function renderPublicEntryDetailHtml(
-  options: PublicEntryDetailOptions
-) {
+export async function renderPublicEntryDetailHtml(options: PublicEntryDetailOptions) {
   const {
     title,
     contentType,
@@ -336,6 +320,7 @@ export async function renderPublicEntryDetailHtml(
     isPreview,
     metaDescription,
     canonicalUrl,
+    robots,
     themeName,
   } = options;
 
@@ -364,11 +349,7 @@ export async function renderPublicEntryDetailHtml(
   const body = (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
       {isPreview ? <PreviewBanner /> : null}
-      {Template ? (
-        <Template {...templateProps} />
-      ) : (
-        <DefaultDetailTemplate {...templateProps} />
-      )}
+      {Template ? <Template {...templateProps} /> : <DefaultDetailTemplate {...templateProps} />}
     </div>
   );
 
@@ -379,6 +360,7 @@ export async function renderPublicEntryDetailHtml(
     inlineCss,
     metaDescription,
     canonicalUrl,
+    robots,
     devModuleScripts,
     isPreview
   );

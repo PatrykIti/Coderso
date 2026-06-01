@@ -5,7 +5,7 @@
 **Category:** SEO + Playwright + Docs + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-349-01, TASK-349-02, TASK-349-03
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -93,3 +93,9 @@ No new route changes are expected in this closure leaf.
 - The original SEO report has no unclassified findings.
 - Current evidence proves admin SEO save -> public HTML output.
 - Task and changelog indexes match the final statuses.
+
+## Closure Notes
+
+Done (2026-06-01): reports, user/API/page-model docs, task board, and changelog
+entry `1038` were synchronized after Bun runtime tests, Vitest UI/client tests,
+lint/typecheck, and focused Playwright evidence.

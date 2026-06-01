@@ -9,7 +9,9 @@ import {
   getSeoDocumentByTarget,
   listExistingSeoDocuments,
   listSeoDocuments,
+  resolvePublicSeoMetadata,
   runSeoAudit,
+  updateSeoDocumentById,
   upsertSeoDocument,
 } from "../../../core/services/seo/seoService";
 
@@ -73,6 +75,131 @@ testIfDb("upsert and audit score SEO document", async () => {
   expect(doc?.issues.length).toBe(0);
 });
 
+testIfDb("updateSeoDocumentById preserves omitted fields and recalculates score", async () => {
+  if (!pageId) throw new Error("missing_test_page");
+
+  const doc = await upsertSeoDocument({
+    targetType: "page",
+    targetId: pageId,
+    slug: "/seo-test",
+    title: "Short title",
+    description: null,
+    canonicalUrl: "https://example.com/seo-test",
+    robots: "index,follow",
+  });
+  if (!doc) throw new Error("missing_seo_doc");
+
+  const updated = await updateSeoDocumentById(doc.id, {
+    title: "This is a properly sized updated title",
+    description:
+      "This updated meta description is long enough to satisfy the recommended SEO preview length.",
+  });
+
+  expect(updated?.canonicalUrl).toBe("https://example.com/seo-test");
+  expect(updated?.robots).toBe("index,follow");
+  expect(updated?.score).toBe(100);
+  expect(updated?.status).toBe("ok");
+  expect(updated?.issues).toEqual([]);
+});
+
+testIfDb("runSeoAudit applies selected checks with normalized score", async () => {
+  if (!pageId) throw new Error("missing_test_page");
+
+  await upsertSeoDocument({
+    targetType: "page",
+    targetId: pageId,
+    slug: "/seo-test",
+    title: "This is a properly sized meta title",
+    description:
+      "This meta description is long enough to satisfy the recommended length range for SEO previews.",
+    canonicalUrl: null,
+    robots: null,
+  });
+
+  await runSeoAudit("page", pageId, ["meta"]);
+
+  const doc = await getSeoDocumentByTarget("page", pageId);
+  expect(doc?.score).toBe(100);
+  expect(doc?.status).toBe("ok");
+  expect(doc?.issues.map((issue) => issue.code)).not.toContain("canonical_missing");
+  expect(doc?.issues.map((issue) => issue.code)).not.toContain("robots_missing");
+});
+
+testIfDb(
+  "resolvePublicSeoMetadata prefers target document and ignores orphan slug rows",
+  async () => {
+    if (!pageId) throw new Error("missing_test_page");
+
+    const doc = await upsertSeoDocument({
+      targetType: "page",
+      targetId: pageId,
+      slug: "/seo-test",
+      title: "SEO document title wins over fallback",
+      description:
+        "SEO document description wins over the page-published fallback description for public HTML.",
+      canonicalUrl: "https://example.com/seo-test",
+      robots: "index,follow",
+    });
+    if (!doc) throw new Error("missing_seo_doc");
+
+    await expect(
+      resolvePublicSeoMetadata({
+        targetType: "page",
+        targetId: pageId,
+        slug: "/seo-test",
+        fallback: {
+          title: "Fallback title",
+          description: "Fallback description",
+          canonicalUrl: "/fallback",
+          robots: "noindex",
+        },
+      })
+    ).resolves.toMatchObject({
+      title: "SEO document title wins over fallback",
+      description:
+        "SEO document description wins over the page-published fallback description for public HTML.",
+      canonicalUrl: "https://example.com/seo-test",
+      robots: "index,follow",
+    });
+
+    await db.delete(seoDocuments).where(eq(seoDocuments.id, doc.id));
+    const [orphanDoc] = await db
+      .insert(seoDocuments)
+      .values({
+        targetType: "page",
+        targetId: randomUUID(),
+        slug: "/seo-test",
+        title: "Orphan slug title must not render",
+        status: "warning",
+        issues: [],
+      })
+      .returning();
+
+    await expect(
+      resolvePublicSeoMetadata({
+        targetType: "page",
+        targetId: pageId,
+        slug: "/seo-test",
+        fallback: {
+          title: "Fallback title",
+          description: "Fallback description",
+          canonicalUrl: "/fallback",
+          robots: "noindex",
+        },
+      })
+    ).resolves.toMatchObject({
+      title: "Fallback title",
+      description: "Fallback description",
+      canonicalUrl: "/fallback",
+      robots: "noindex",
+    });
+
+    if (orphanDoc) {
+      await db.delete(seoDocuments).where(eq(seoDocuments.id, orphanDoc.id));
+    }
+  }
+);
+
 testIfDb("listSeoDocuments includes target title", async () => {
   if (!pageId) throw new Error("missing_test_page");
   const list = await listSeoDocuments();
@@ -98,37 +225,40 @@ testIfDb("listExistingSeoDocuments and deleteSeoDocument do not create missing d
   await expect(getSeoDocumentByTarget("page", pageId)).resolves.toBeNull();
 });
 
-testIfDb("listExistingSeoDocuments prioritizes existing target titles over orphan docs", async () => {
-  if (!pageId) throw new Error("missing_test_page");
-  const matchedDoc = await upsertSeoDocument({
-    targetType: "page",
-    targetId: pageId,
-    slug: "/seo-test",
-    title: null,
-  });
-  if (!matchedDoc) throw new Error("missing_matched_seo_doc");
-  const orphanTargetId = randomUUID();
-  const [orphanDoc] = await db
-    .insert(seoDocuments)
-    .values({
+testIfDb(
+  "listExistingSeoDocuments prioritizes existing target titles over orphan docs",
+  async () => {
+    if (!pageId) throw new Error("missing_test_page");
+    const matchedDoc = await upsertSeoDocument({
       targetType: "page",
-      targetId: orphanTargetId,
-      slug: `/entry-${orphanTargetId}`,
+      targetId: pageId,
+      slug: "/seo-test",
       title: null,
-      status: "warning",
-      issues: [],
-    })
-    .returning();
-  if (!orphanDoc) throw new Error("missing_orphan_seo_doc");
+    });
+    if (!matchedDoc) throw new Error("missing_matched_seo_doc");
+    const orphanTargetId = randomUUID();
+    const [orphanDoc] = await db
+      .insert(seoDocuments)
+      .values({
+        targetType: "page",
+        targetId: orphanTargetId,
+        slug: `/entry-${orphanTargetId}`,
+        title: null,
+        status: "warning",
+        issues: [],
+      })
+      .returning();
+    if (!orphanDoc) throw new Error("missing_orphan_seo_doc");
 
-  const list = await listExistingSeoDocuments();
-  const matchedIndex = list.findIndex((row) => row.id === matchedDoc.id);
-  const orphanIndex = list.findIndex((row) => row.id === orphanDoc.id);
-  expect(list[matchedIndex]?.targetTitle).toBe("SEO Test Page");
-  expect(matchedIndex).toBeGreaterThanOrEqual(0);
-  expect(orphanIndex).toBeGreaterThanOrEqual(0);
-  expect(matchedIndex).toBeLessThan(orphanIndex);
+    const list = await listExistingSeoDocuments();
+    const matchedIndex = list.findIndex((row) => row.id === matchedDoc.id);
+    const orphanIndex = list.findIndex((row) => row.id === orphanDoc.id);
+    expect(list[matchedIndex]?.targetTitle).toBe("SEO Test Page");
+    expect(matchedIndex).toBeGreaterThanOrEqual(0);
+    expect(orphanIndex).toBeGreaterThanOrEqual(0);
+    expect(matchedIndex).toBeLessThan(orphanIndex);
 
-  await db.delete(seoDocuments).where(eq(seoDocuments.id, orphanDoc.id));
-  await db.delete(seoDocuments).where(eq(seoDocuments.id, matchedDoc.id));
-});
+    await db.delete(seoDocuments).where(eq(seoDocuments.id, orphanDoc.id));
+    await db.delete(seoDocuments).where(eq(seoDocuments.id, matchedDoc.id));
+  }
+);

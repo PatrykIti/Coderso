@@ -5,7 +5,7 @@
 **Category:** SEO + Public Runtime + API + QA
 **Estimated Effort:** Large
 **Dependencies:** TASK-349
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -141,3 +141,9 @@ Regression-test shape:
 - Public preview and public published requests do not leak draft-only metadata.
 - The implementation has a single documented precedence order.
 - Site cache behavior cannot keep serving stale SEO metadata after an admin save.
+
+## Closure Notes
+
+Done (2026-06-01): public page rendering resolves `seoDocuments` before
+published page SEO fallback, runtime preview stays draft-local, robots/canonical
+tags render safely, and SEO mutations clear the server-side HTML cache.

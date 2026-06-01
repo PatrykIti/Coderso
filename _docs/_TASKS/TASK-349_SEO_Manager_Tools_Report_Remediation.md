@@ -5,7 +5,7 @@
 **Category:** Admin Tools + SEO + Public Runtime + API + UI + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-347
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -37,10 +37,10 @@ the UI claims public SEO control.
 
 ## Sub-Tasks
 
-- [ ] TASK-349-01: SEO Public Runtime Metadata Parity
-- [ ] TASK-349-02: SEO Audit Scope and Scoring Recalculation Contract
-- [ ] TASK-349-03: SEO Manager UI-Only Controls and Empty-State UX
-- [ ] TASK-349-04: SEO Manager QA, Docs, and Closure
+- [x] TASK-349-01: SEO Public Runtime Metadata Parity
+- [x] TASK-349-02: SEO Audit Scope and Scoring Recalculation Contract
+- [x] TASK-349-03: SEO Manager UI-Only Controls and Empty-State UX
+- [x] TASK-349-04: SEO Manager QA, Docs, and Closure
 
 ## Implementation Order
 
@@ -103,3 +103,11 @@ routes and public read rendering:
 - Dead controls are wired, disabled, or removed.
 - Empty/pre-scan states explain the actual state without implying a stalled
   scan.
+
+## Closure Notes
+
+Done (2026-06-01): SEO Manager saves now affect public page HTML, preserve and
+recalculate saved SEO fields, clear public HTML cache, serialize strict audit
+checks, remove or disable UI-only controls, and render truthful pre-scan/table
+empty states. Focused Playwright proof covered `/admin/seo` audit + drawer save
+-> public `<title>`/meta description output with temporary fixtures cleaned.

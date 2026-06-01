@@ -14,6 +14,7 @@ import {
   pageRevisions,
   pages,
   previewTokens,
+  seoDocuments,
   users,
 } from "../../../core/db/schema";
 import { createContentType } from "../../../core/services/content/typeService";
@@ -25,6 +26,7 @@ import {
 } from "../../../core/services/booking/bookingService";
 import { createPage, publishPage, updatePage } from "../../../core/services/pages/pageService";
 import { createPreviewToken } from "../../../core/services/pages/previewService";
+import { upsertSeoDocument } from "../../../core/services/seo/seoService";
 import {
   deleteSetting,
   getSettingRecord,
@@ -127,6 +129,7 @@ const cleanupTrackedRows = async () => {
   const bookingServiceIds = [...trackedBookingServiceIds];
 
   if (pageIds.length > 0) {
+    await db.delete(seoDocuments).where(inArray(seoDocuments.targetId, pageIds));
     await db.delete(previewTokens).where(inArray(previewTokens.targetId, pageIds));
     await db.delete(pageRevisions).where(inArray(pageRevisions.pageId, pageIds));
     await db.delete(pages).where(inArray(pages.id, pageIds));
@@ -287,6 +290,47 @@ testIfDbWithOptions(
     expect(previewHtml).toContain(fixture.draftHeadline);
     expect(previewHtml).not.toContain(fixture.publishedHeadline);
     expect(previewHtml).toContain("Preview mode");
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "public page runtime renders SEO Manager metadata after a cached page save",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 60);
+    await setTestSetting("site.contentRoutes", []);
+
+    const fixture = await createPublishedPageWithDraft();
+    const initialResponse = await requestPublicPath(fixture.slug);
+    expect(initialResponse.status).toBe(200);
+    const initialHtml = await initialResponse.text();
+    expect(initialHtml).toContain(`<title>Runtime Page ${fixture.token}</title>`);
+    expect(initialHtml).toContain(
+      `name="description" content="${fixture.publishedHeadline} meta description"`
+    );
+
+    const seoTitle = `SEO Manager Runtime Title ${fixture.token}`;
+    const seoDescription = `SEO Manager runtime description ${fixture.token} is long enough to render publicly.`;
+    await upsertSeoDocument({
+      targetType: "page",
+      targetId: fixture.page.id,
+      slug: fixture.slug,
+      title: seoTitle,
+      description: seoDescription,
+      canonicalUrl: `https://example.test${fixture.slug}`,
+      robots: "index,follow",
+    });
+
+    const updatedResponse = await requestPublicPath(fixture.slug);
+    expect(updatedResponse.status).toBe(200);
+    const updatedHtml = await updatedResponse.text();
+    expect(updatedHtml).toContain(`<title>${seoTitle}</title>`);
+    expect(updatedHtml).toContain(`name="description" content="${seoDescription}"`);
+    expect(updatedHtml).toContain(`rel="canonical" href="https://example.test${fixture.slug}"`);
+    expect(updatedHtml).toContain('name="robots" content="index,follow"');
+    expect(updatedHtml).toContain(fixture.publishedHeadline);
+    expect(updatedHtml).not.toContain(fixture.draftHeadline);
   },
   { timeout: dbRuntimeTimeout }
 );

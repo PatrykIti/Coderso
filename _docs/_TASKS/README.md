@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 41 tasks
+- **To Do:** 36 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2011 tasks
+- **Done:** 2016 tasks
 
 ---
 
@@ -64,11 +64,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-350-01 | Analytics Export Contract and Download Flow | High | Medium | Replace drawer close-only Export with a real download or truthful disabled/unavailable state. |
 | TASK-350-02 | Analytics Empty Data Semantics and Guidance | Medium | Medium | Distinguish no data from zero change and add compact next-action empty states. |
 | TASK-350-03 | Analytics QA, Docs, and Closure | Medium | Medium | Re-prove empty/populated/range/export behavior and close report/docs/changelog evidence. |
-| TASK-349 | SEO Manager Tools Report Remediation | High | Very Large | New report-driven family for public SEO metadata parity, audit/scoring truthfulness, UI-only controls, and closure proof. |
-| TASK-349-01 | SEO Public Runtime Metadata Parity | High | Large | Make SEO Manager saves affect public page HTML through one documented source-of-truth path. |
-| TASK-349-02 | SEO Audit Scope and Scoring Recalculation Contract | High | Large | Recompute score/issues on save and make audit checkbox selections controlled or truthfully unavailable. |
-| TASK-349-03 | SEO Manager UI-Only Controls and Empty-State UX | Medium | Medium | Wire, disable, or remove dead controls and add truthful pre-scan/table empty states. |
-| TASK-349-04 | SEO Manager QA, Docs, and Closure | Medium | Medium | Prove admin save to public metadata parity, update reports, and close docs/changelog evidence. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -95,6 +90,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-349 | SEO Manager Tools Report Remediation | High | Very Large | Done (2026-06-01): public SEO metadata parity, save scoring, strict audit scope, no-op UI cleanup, reports, docs, and Playwright proof are complete. |
+| TASK-349-01 | SEO Public Runtime Metadata Parity | High | Large | Done (2026-06-01): SEO Manager documents now render into public page HTML with documented fallback precedence and public cache invalidation. |
+| TASK-349-02 | SEO Audit Scope and Scoring Recalculation Contract | High | Large | Done (2026-06-01): shared scoring now runs on save/audit and strict selected checks flow through client, route validation, and service. |
+| TASK-349-03 | SEO Manager UI-Only Controls and Empty-State UX | Medium | Medium | Done (2026-06-01): pre-scan/empty states are truthful, filter is disabled, drawer discard resets drafts, and keyword no-op UI was removed. |
+| TASK-349-04 | SEO Manager QA, Docs, and Closure | Medium | Medium | Done (2026-06-01): Bun/Vitest/lint/typecheck plus focused Playwright evidence, reports, docs, board, and changelog are synchronized. |
 | TASK-348 | Search Tools Report Remediation | High | Large | Done (2026-06-01): Date Range now flows through UI/API/service filtering, Search metadata drives truthful empty states and fallback suggestions, and focused Playwright proof covers page-result navigation. |
 | TASK-348-01 | Search Date Range API and Service Contract | High | Medium | Done (2026-06-01): strict `dateRange` contract, client serialization, route validation, service timestamp filtering, and DB-backed range proof are complete. |
 | TASK-348-02 | Search Suggestions, Empty States, and Category UX | High | Medium | Done (2026-06-01): fallback `Try:` chips, aggregate metadata, category helper copy, and cause-specific empty states are implemented and covered. |

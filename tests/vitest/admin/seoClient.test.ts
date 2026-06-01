@@ -67,10 +67,13 @@ test("runSeoAudit uses CSRF and POST", async () => {
 
   try {
     resetCsrfToken();
-    await runSeoAudit({ targetType: "page", targetId: "page-1" });
+    await runSeoAudit({ targetType: "page", targetId: "page-1", checks: ["meta", "links"] });
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/seo/audit");
     expect(calls[1]?.init?.method).toBe("POST");
+    expect(calls[1]?.init?.body).toBe(
+      JSON.stringify({ targetType: "page", targetId: "page-1", checks: ["meta", "links"] })
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

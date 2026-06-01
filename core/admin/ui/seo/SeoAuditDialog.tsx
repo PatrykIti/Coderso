@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { RefreshCw, SearchCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { seoAuditCheckIds, type SeoAuditCheckId } from "@/services/seoClient";
 import {
   Dialog,
   DialogContent,
@@ -16,31 +18,27 @@ const auditChecks = [
     id: "meta",
     label: "Meta titles & descriptions",
     description: "Validate length, uniqueness, and missing tags.",
-    defaultChecked: true,
-  },
-  {
-    id: "og",
-    label: "Open Graph & social cards",
-    description: "Verify OG tags and preview assets.",
-    defaultChecked: true,
   },
   {
     id: "links",
-    label: "Internal links",
-    description: "Check for broken links and missing canonical URLs.",
-    defaultChecked: true,
+    label: "Canonical links",
+    description: "Check missing or invalid canonical URLs.",
   },
   {
-    id: "performance",
-    label: "Performance snapshot",
-    description: "Collect Lighthouse metrics for critical pages.",
+    id: "robots",
+    label: "Robots directives",
+    description: "Validate index and follow directives.",
   },
-];
+] satisfies Array<{
+  id: SeoAuditCheckId;
+  label: string;
+  description: string;
+}>;
 
 type SeoAuditDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRun: () => Promise<void> | void;
+  onRun: (checks: SeoAuditCheckId[]) => Promise<void> | void;
   isRunning?: boolean;
 };
 
@@ -50,6 +48,15 @@ export function SeoAuditDialog({
   onRun,
   isRunning = false,
 }: SeoAuditDialogProps) {
+  const [selectedChecks, setSelectedChecks] = useState<SeoAuditCheckId[]>([...seoAuditCheckIds]);
+
+  const updateCheck = (checkId: SeoAuditCheckId, checked: boolean) => {
+    setSelectedChecks((current) => {
+      if (checked) return current.includes(checkId) ? current : [...current, checkId];
+      return current.filter((item) => item !== checkId);
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] gap-0 p-0 sm:max-w-lg">
@@ -75,14 +82,14 @@ export function SeoAuditDialog({
                 key={check.id}
                 className="flex items-start gap-3 rounded-xl border bg-background/60 p-3"
               >
-                <Checkbox defaultChecked={check.defaultChecked} className="mt-1" />
+                <Checkbox
+                  checked={selectedChecks.includes(check.id)}
+                  onCheckedChange={(checked) => updateCheck(check.id, checked === true)}
+                  className="mt-1"
+                />
                 <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {check.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {check.description}
-                  </p>
+                  <p className="text-sm font-semibold text-foreground">{check.label}</p>
+                  <p className="text-xs text-muted-foreground">{check.description}</p>
                 </div>
               </label>
             ))}
@@ -96,10 +103,10 @@ export function SeoAuditDialog({
           <Button
             className="gap-2"
             onClick={async () => {
-              await onRun();
+              await onRun(selectedChecks);
               onOpenChange(false);
             }}
-            disabled={isRunning}
+            disabled={isRunning || selectedChecks.length === 0}
           >
             <RefreshCw className="h-4 w-4" />
             {isRunning ? "Running..." : "Start Audit"}

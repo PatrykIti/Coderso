@@ -18,6 +18,26 @@ Model musi byc stabilny i wersjonowany.
 }
 ```
 
+## Public SEO precedence (v1)
+
+For published, non-preview page requests, public HTML resolves SEO metadata in
+this order:
+
+1. `seo_documents` row managed by SEO Manager for the page target.
+2. Published root `pages.published_data.seo` fields.
+3. Page row title for `<title>` fallback.
+
+SEO Manager values can override public `<title>`, meta description, canonical
+URL, and robots directives. Runtime preview keeps using `pages.current_data` and
+does not read `seo_documents`, so draft preview data cannot leak into public
+published responses.
+
+For composed content detail pages, explicit detail-page SEO title patterns and
+description/image field mappings keep precedence. Entry `seo_documents` values
+fill remaining entry metadata such as canonical URL and robots directives.
+Successful SEO Manager writes clear the server-side public HTML cache so cached
+public pages cannot keep serving stale SEO metadata.
+
 ## Page-level settings.layout (v1)
 
 `page.data.settings.layout` controls wrapper-level layout for runtime preview and

@@ -1,6 +1,8 @@
 export type SeoTargetType = "page" | "entry";
 export type SeoStatus = "ok" | "warning" | "issue";
 export type SeoIssueSeverity = "error" | "warning";
+export const seoAuditCheckIds = ["meta", "links", "robots"] as const;
+export type SeoAuditCheckId = (typeof seoAuditCheckIds)[number];
 
 export type SeoIssue = {
   code: string;
@@ -37,4 +39,11 @@ export type SeoUpsertInput = {
   description?: string | null;
   canonicalUrl?: string | null;
   robots?: string | null;
+};
+
+export type PublicSeoMetadata = {
+  title: string | null;
+  description: string | null;
+  canonicalUrl: string | null;
+  robots: string | null;
 };

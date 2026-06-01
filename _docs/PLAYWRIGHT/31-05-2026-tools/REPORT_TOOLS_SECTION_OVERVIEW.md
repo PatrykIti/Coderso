@@ -23,17 +23,17 @@ real fixtures and checked the actual backend/public effects.
 Current classification:
 
 - Works end-to-end: Search can find a real page fixture and now applies Date
-  Range filtering through the API/service contract; Analytics can surface a real
+  Range filtering through the API/service contract; SEO Manager saves now update
+  public page HTML metadata and refresh scores; Analytics can surface a real
   published page in top content; Import / Export can roundtrip a valid JSON
   bundle.
-- Partially works: SEO Manager saves metadata into `seoDocuments`, but not into
-  the public page output; Backups enqueue rows but do not create artifacts;
-  Redirects save admin rows but do not affect public routing.
-- Still UI-only/incomplete: Search date range, SEO audit checkboxes, SEO filter
-  icon, Analytics export, Backup include checkboxes, Import / Export card
-  options, Activity Log, Recent Imports search, and Backups/Redirects
-  pagination. Search date range and Search empty-state/suggestion drift were
-  closed by TASK-348 on 2026-06-01.
+- Partially works: Backups enqueue rows but do not create artifacts; Redirects
+  save admin rows but do not affect public routing.
+- Still UI-only/incomplete: Analytics export, Backup include checkboxes, Import
+  / Export card options, Activity Log, Recent Imports search, and
+  Backups/Redirects pagination. Search date range and Search empty-state /
+  suggestion drift were closed by TASK-348 on 2026-06-01; SEO audit/filter/save
+  drift was closed by TASK-349 on 2026-06-01.
 
 ## Evidence
 
@@ -47,6 +47,9 @@ Current classification:
 - Deep pass evidence:
   - Published page fixture was created, found in Search, edited in SEO Manager,
     surfaced in Analytics, and deleted after the pass.
+  - TASK-349 follow-up proof on 2026-06-01 ran SEO Manager audit and drawer save
+    through Playwright, then verified the public page `<title>` and meta
+    description contained the saved SEO Manager values.
   - Manual backup was started through the UI and verified as queued with no
     artifact.
   - Import / Export valid JSON bundle was downloaded, modified, uploaded,
@@ -74,7 +77,6 @@ Current classification:
 
 Affected surfaces:
 
-- SEO filter button
 - Import / Export Activity Log button
 - Import / Export per-card options chevron
 - Analytics drawer Export button
@@ -98,7 +100,6 @@ How to fix:
 
 Affected surfaces:
 
-- SEO audit checks
 - Backup content selection
 - Import / Export include options
 
@@ -119,14 +120,11 @@ How to fix:
 
 Affected surfaces:
 
-- SEO Manager
 - Redirects
 - Backups
 
 Evidence:
 
-- SEO Manager persisted a test title/description in `seoDocuments`, but the
-  public page HTML did not contain those values.
 - Redirects persisted a 301 redirect row, but requesting the public source path
   returned 404 and stayed on the source URL.
 - Backups persisted a queued row, but no artifact path, size, download, restore,
@@ -134,8 +132,6 @@ Evidence:
 
 How to fix:
 
-- Connect SEO documents to page render metadata, or make the UI explicit that it
-  edits an internal audit table only.
 - Add a public redirect lookup before public page/content resolution.
 - Add a backup worker/artifact creation path and status polling.
 

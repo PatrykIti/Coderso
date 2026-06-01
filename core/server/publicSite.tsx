@@ -43,6 +43,7 @@ import {
 } from "../services/commerce/commerceWidgetRuntime";
 import { getWidgetTemplatePreviewModel } from "../services/widgets/widgetTemplatePreviewService";
 import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
+import { resolvePublicSeoMetadata } from "../services/seo/seoService";
 import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
 import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
@@ -98,6 +99,7 @@ import { handlePublicBookingApi } from "./publicBookingApi";
 import { readBindingPathValue } from "../services/utils/bindingPath";
 
 export type PublicPageData = {
+  id: string;
   title: string;
   slug: string;
   status: string;
@@ -605,8 +607,10 @@ const jsonResponse = (payload: unknown, status = 200) =>
   });
 
 type DetailPageRuntimeEntrySeo = {
+  title?: string | null;
   description?: string | null;
   canonicalUrl?: string | null;
+  robots?: string | null;
 };
 
 type DetailPageRuntimeEntry = {
@@ -745,10 +749,21 @@ const renderPublicPageHtmlInternal = async (
   const settingsRecord = ensureRecord(sourceRecord.settings);
   const seoRecord = ensureRecord(sourceRecord.seo);
   const themeName = options?.themeName ?? (await resolvePublicThemeName());
-  const metaDescription =
-    typeof seoRecord.description === "string" && seoRecord.description.trim().length > 0
-      ? seoRecord.description.trim()
-      : null;
+  const fallbackSeo = {
+    title: toPublicSeoText(seoRecord.title) ?? page.title ?? "Page",
+    description: toPublicSeoText(seoRecord.description),
+    canonicalUrl: toPublicSeoText(seoRecord.canonicalUrl),
+    robots: toPublicSeoText(seoRecord.robots),
+  };
+  const resolvedSeo = options?.preview
+    ? fallbackSeo
+    : await resolvePublicSeoMetadata({
+        targetType: "page",
+        targetId: page.id,
+        slug: page.slug,
+        fallback: fallbackSeo,
+      });
+  const imageUrl = resolveDetailPageImageUrl(seoRecord.imageUrl ?? seoRecord.socialImage);
   const blocks = await hydrateRuntimeBlocks(toBlocks(sourceData), {
     preview: options?.preview ?? false,
     contentRoutes,
@@ -758,7 +773,7 @@ const renderPublicPageHtmlInternal = async (
 
   return {
     html: await renderPublicPageRuntimeHtml({
-      title: page.title ?? "Page",
+      title: resolvedSeo.title ?? page.title ?? "Page",
       blocks,
       cssHref,
       inlineCss,
@@ -766,7 +781,10 @@ const renderPublicPageHtmlInternal = async (
       previewDevice: options?.previewDevice,
       layoutSettings: getPageLayoutSettingsFromData(sourceData),
       devModuleScripts,
-      metaDescription,
+      metaDescription: resolvedSeo.description,
+      canonicalUrl: resolvedSeo.canonicalUrl,
+      robots: resolvedSeo.robots,
+      imageUrl,
       themeName,
       templateKey: settingsRecord.template,
     }),
@@ -933,7 +951,7 @@ const renderEntryDetailHtml = async (
 
     const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
     return renderPublicEntryDetailHtml({
-      title: post.title ?? POST_CONTENT_TYPE_NAME,
+      title: post.seo?.title ?? post.title ?? POST_CONTENT_TYPE_NAME,
       contentType: {
         id: POST_CONTENT_TYPE_SLUG,
         name: POST_CONTENT_TYPE_NAME,
@@ -948,6 +966,7 @@ const renderEntryDetailHtml = async (
       themeName: options?.themeName ?? (await resolvePublicThemeName()),
       metaDescription: post.seo?.description ?? resolvePostRuntimeMetaDescription(post.data),
       canonicalUrl: post.seo?.canonicalUrl ?? null,
+      robots: post.seo?.robots ?? null,
     });
   }
 
@@ -1039,6 +1058,24 @@ const renderEntryDetailHtml = async (
       entry: entryDetail,
       contentTypeName: contentType.name,
     });
+    const resolvedSeo = options?.preview
+      ? {
+          title: detailSeo.title,
+          description: detailSeo.metaDescription,
+          canonicalUrl: detailSeo.canonicalUrl,
+          robots: entryDetail.seo?.robots ?? null,
+        }
+      : await resolvePublicSeoMetadata({
+          targetType: "entry",
+          targetId: entryDetail.id,
+          slug: entryDetail.slug,
+          fallback: {
+            title: detailSeo.title,
+            description: detailSeo.metaDescription,
+            canonicalUrl: detailSeo.canonicalUrl,
+            robots: entryDetail.seo?.robots ?? null,
+          },
+        });
     const blocks = await hydrateRuntimeBlocks(detailPage.blocks, {
       preview: options?.preview ?? false,
       contentRoutes,
@@ -1047,7 +1084,10 @@ const renderEntryDetailHtml = async (
     });
     return {
       html: await renderPublicPageRuntimeHtml({
-        title: detailSeo.title,
+        title:
+          detailPage.document.seo?.titlePattern || detailPage.document.titlePattern
+            ? detailSeo.title
+            : (resolvedSeo.title ?? detailSeo.title),
         blocks,
         cssHref,
         inlineCss,
@@ -1055,8 +1095,11 @@ const renderEntryDetailHtml = async (
         isPreview: options?.preview ?? false,
         previewDevice: options?.previewDevice,
         layoutSettings: detailPage.document.settings.layout,
-        metaDescription: detailSeo.metaDescription,
-        canonicalUrl: detailSeo.canonicalUrl,
+        metaDescription: detailPage.document.seo?.descriptionField
+          ? detailSeo.metaDescription
+          : resolvedSeo.description,
+        canonicalUrl: resolvedSeo.canonicalUrl,
+        robots: resolvedSeo.robots,
         imageUrl: detailSeo.imageUrl,
         themeName: options?.themeName ?? (await resolvePublicThemeName()),
         templateKey: detailPage.document.settings.template,
@@ -1065,8 +1108,27 @@ const renderEntryDetailHtml = async (
     };
   }
 
+  const fallbackSeo = {
+    title: entryDetail.seo?.title ?? entryDetail.title ?? contentType.name,
+    description:
+      "seo" in entryDetail && entryDetail.seo
+        ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
+        : resolvePostRuntimeMetaDescription(entryDetail.data),
+    canonicalUrl:
+      "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
+    robots: "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.robots ?? null) : null,
+  };
+  const resolvedSeo = options?.preview
+    ? fallbackSeo
+    : await resolvePublicSeoMetadata({
+        targetType: "entry",
+        targetId: entryDetail.id,
+        slug: entryDetail.slug,
+        fallback: fallbackSeo,
+      });
+
   return renderPublicEntryDetailHtml({
-    title: entryDetail.title ?? contentType.name,
+    title: resolvedSeo.title ?? entryDetail.title ?? contentType.name,
     contentType: contentTypeSnapshot,
     entry: entryDetail,
     cssHref,
@@ -1074,12 +1136,9 @@ const renderEntryDetailHtml = async (
     devModuleScripts,
     isPreview: options?.preview ?? false,
     themeName: options?.themeName ?? (await resolvePublicThemeName()),
-    metaDescription:
-      "seo" in entryDetail && entryDetail.seo
-        ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
-        : resolvePostRuntimeMetaDescription(entryDetail.data),
-    canonicalUrl:
-      "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
+    metaDescription: resolvedSeo.description,
+    canonicalUrl: resolvedSeo.canonicalUrl,
+    robots: resolvedSeo.robots,
   });
 };
 
@@ -1145,6 +1204,7 @@ const renderDetailPagePreviewHtml = async (input: {
     layoutSettings: detailPage.document.settings.layout,
     metaDescription: detailSeo.metaDescription,
     canonicalUrl: detailSeo.canonicalUrl,
+    robots: entryDetail.seo?.robots ?? null,
     imageUrl: detailSeo.imageUrl,
     themeName: await resolvePublicThemeName(),
     templateKey: detailPage.document.settings.template,

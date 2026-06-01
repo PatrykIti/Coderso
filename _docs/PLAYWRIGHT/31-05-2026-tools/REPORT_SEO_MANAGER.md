@@ -25,7 +25,28 @@ Route: `/admin/seo`
 - Deep pass: editing Meta Title and Meta Description in the drawer sent
   `PATCH /seo/:id` and persisted the new values in the SEO document.
 
-## What Did Not Work
+## Resolution Notes - 2026-06-01
+
+- Resolved by TASK-349. Public page rendering now resolves published page SEO
+  metadata from `seoDocuments` first, then falls back to published page SEO data
+  and page title. Runtime preview remains draft-local and does not read SEO
+  Manager documents.
+- `PATCH /seo/:id` now preserves omitted canonical/robots fields, recalculates
+  score/status/issues, and clears the server-side public HTML cache.
+- `/seo/audit` now accepts strict selected checks (`meta`, `links`, `robots`);
+  unknown checks and empty arrays are rejected before service execution.
+- The audit dialog checkboxes are controlled and serialized to the API. The
+  unsupported social/performance checks were removed from the active dialog.
+- The filter icon is disabled instead of clickable, the drawer `Discard` button
+  resets local edits, keyword authoring no longer shows as a no-op control, and
+  the table renders a dedicated empty row with a real audit CTA.
+- Final focused Playwright proof on 2026-06-01 used a temporary published page
+  fixture through `/admin/seo`, ran audit, saved title/description in the
+  drawer, and verified the public page HTML contained the saved `<title>` and
+  meta description with no browser console errors. The fixture was deleted after
+  the pass.
+
+## Original Findings Closed by TASK-349
 
 ### [ISSUE] SEO Manager metadata does not update the public page output
 
@@ -131,10 +152,10 @@ How to fix:
 
 - The deep pass used a real page fixture. Drawer editing is now verified for
   title/description persistence into `seoDocuments`.
-- Public runtime SEO remains unverified as working because the page HTML did not
-  include the saved SEO Manager metadata.
-- Source review still shows drawer controls that are UI-only: Discard and Add
-  Keyword.
+- Public runtime SEO is now verified through Bun runtime coverage and a focused
+  Playwright admin save -> public HTML pass.
+- Drawer no-op drift is closed: `Discard` resets drafts and focus keyword
+  authoring is not exposed as a clickable placeholder.
 
 ## Source References
 

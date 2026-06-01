@@ -5,7 +5,7 @@
 **Category:** SEO + Admin UI + UX + Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-349-01, TASK-349-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -118,3 +118,10 @@ If keyword persistence is added:
 - Empty and pre-scan states are truthful.
 - Drawer reset/keyword behavior cannot silently discard or fake persistence.
 - Accessibility console stays clean when opening the drawer/dialog.
+
+## Closure Notes
+
+Done (2026-06-01): the pre-scan badge no longer shows false `0%`, the SEO table
+has explicit empty/filtered-empty copy with a real audit CTA, the filter icon is
+disabled, drawer `Discard` resets local edits, and focus keyword authoring is no
+longer exposed as a placeholder action.

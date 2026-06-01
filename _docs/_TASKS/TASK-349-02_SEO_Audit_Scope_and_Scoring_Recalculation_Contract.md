@@ -5,7 +5,7 @@
 **Category:** SEO + API + Service + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-349-01
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -127,3 +127,10 @@ Regression-test shape:
 - Route registration and `mapSeoError` / validation-error coverage prove
   machine-readable failures at the API boundary.
 - Service error codes stay machine-readable and route-mapped.
+
+## Closure Notes
+
+Done (2026-06-01): scoring is shared by save and audit paths, partial PATCH
+preserves omitted canonical/robots fields, audit checks are strict
+`meta | links | robots`, and route validation/error tests cover unknown checks
+and scoped-target failures.
