@@ -5,7 +5,7 @@
 **Category:** Auth Bootstrap + Security + Developer Tooling
 **Estimated Effort:** Medium
 **Dependencies:** TASK-346, TASK-347
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -121,3 +121,11 @@ Error handling:
 - Newly seeded admin users can authenticate when `AUTH_PASSWORD_PEPPER` is set.
 - Existing no-pepper behavior remains valid.
 - Logs do not expose secrets.
+
+## Closure Notes
+
+Done (2026-06-01): `seedAdmin` delegates password hashing to
+`hashSeedAdminPassword`, which uses the shared pepper-aware auth helper. Tests
+cover pepper and no-pepper verification plus a static guard against direct
+Argon2 imports, and a scoped DB smoke verified a seeded peppered password before
+removing the temporary user.

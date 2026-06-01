@@ -25,6 +25,7 @@ import { BackupScheduleCard } from "./BackupScheduleCard";
 import { BackupsTable } from "./BackupsTable";
 
 const backupPageSize = 10;
+const backupPollingIntervalMs = 30_000;
 
 const emptyBackupList: BackupListResult = {
   items: [],
@@ -125,6 +126,19 @@ export function BackupsPage() {
       active = false;
     };
   }, []);
+
+  const shouldPollBackups =
+    !backupList.worker.healthy ||
+    backupList.worker.queuedCount > 0 ||
+    backupList.items.some((item) => item.status === "queued" || item.status === "running");
+
+  useEffect(() => {
+    if (!shouldPollBackups) return undefined;
+    const interval = window.setInterval(() => {
+      void loadBackups();
+    }, backupPollingIntervalMs);
+    return () => window.clearInterval(interval);
+  }, [loadBackups, shouldPollBackups]);
 
   const handleCreateBackup = async (include: BackupIncludeOption[]) => {
     setIsSaving(true);

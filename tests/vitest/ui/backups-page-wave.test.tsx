@@ -38,7 +38,7 @@ const backupsState = vi.hoisted(() => ({
       oldestQueuedAt: null,
       message: "No backup jobs are waiting for the external backup worker.",
     },
-  } satisfies Omit<BackupListResult, "items">,
+  } as Omit<BackupListResult, "items">,
   scheduleResult: {
     id: "schedule-1",
     enabled: true,
@@ -417,6 +417,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   document.body.innerHTML = "";
 });
 
@@ -547,6 +548,56 @@ test("BackupsPage surfaces load and action errors, including missing download UR
     clickByText(view.container, "delete:backup-1");
     await flush();
     expect(view.container.textContent).toContain("Delete denied");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BackupsPage polls while backup jobs are queued", async () => {
+  vi.useFakeTimers();
+  backupsState.listItems = [
+    {
+      id: "backup-queued",
+      kind: "manual",
+      status: "queued",
+      storageDriver: "local",
+      artifactPath: null,
+      sizeBytes: null,
+      error: null,
+      createdAt: "2026-03-15T08:00:00.000Z",
+      finishedAt: null,
+    },
+  ];
+  backupsState.listMeta = {
+    ...backupsState.listMeta,
+    total: 1,
+    worker: {
+      mode: "external",
+      healthy: true,
+      queuedCount: 1,
+      oldestQueuedAt: "2026-03-15T08:00:00.000Z",
+      message: "Backup jobs are still waiting for the external backup worker.",
+    },
+  };
+
+  const view = mount(<BackupsPage />);
+
+  try {
+    await flush();
+    expect(backupsState.listBackups).toHaveBeenCalledTimes(1);
+
+    await React.act(async () => {
+      vi.advanceTimersByTime(30_000);
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(backupsState.listBackups).toHaveBeenCalledTimes(2);
+    expect(backupsState.listBackups).toHaveBeenLastCalledWith({
+      page: 1,
+      limit: 10,
+      query: "",
+    });
   } finally {
     view.cleanup();
   }

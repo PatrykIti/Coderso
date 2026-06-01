@@ -26,6 +26,18 @@ sidebar:
 - [Redirects](REPORT_REDIRECTS.md)
 - [Claude UX review](REPORT_CLAUDE_UX_REVIEW.md)
 
+## Matrix Guard
+
+TASK-354 adds a machine-readable matrix for the six Tools routes:
+
+```bash
+bun scripts/tools-audit-matrix.ts --validate
+```
+
+The guard validates route coverage, report files, resolved finding sections,
+observable control effects, empty-state next actions, async-state ownership, and
+runtime-effect evidence for SEO, Backups, and Redirects.
+
 ## Method
 
 - Browser automation used Playwright against the running local admin UI.

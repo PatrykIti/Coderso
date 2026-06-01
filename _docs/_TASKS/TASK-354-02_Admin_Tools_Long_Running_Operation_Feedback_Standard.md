@@ -5,7 +5,7 @@
 **Category:** Admin Tools + Async UX + Reliability
 **Estimated Effort:** Large
 **Dependencies:** TASK-349, TASK-351, TASK-352
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -102,3 +102,11 @@ No new route changes are required by the standard itself.
   zeros.
 - Long-running operations expose refresh/health behavior clearly.
 - Failure messages are useful without leaking internals.
+
+## Closure Notes
+
+Done (2026-06-01): the matrix locks the shared async vocabulary for SEO,
+Backups, and Import / Export. Backups now auto-refreshes only while queued,
+running, or external-worker-unhealthy states are present, and existing Vitest
+coverage proves queued worker copy, disabled reasons, progress, failure, and
+retry behavior.

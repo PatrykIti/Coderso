@@ -5,7 +5,7 @@
 **Category:** Admin Tools + UX Consistency + Auth Bootstrap + Playwright + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-347, TASK-348, TASK-349, TASK-350, TASK-351, TASK-352, TASK-353
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -50,11 +50,20 @@ TASK-354, satisfying the requested minimum of 20 refinements.
 
 ## Sub-Tasks
 
-- [ ] TASK-354-01: Admin Tools Empty State and Action Availability Standard
-- [ ] TASK-354-02: Admin Tools Long-Running Operation Feedback Standard
-- [ ] TASK-354-03: Seed Admin Pepper-Aware Bootstrap Credentials
-- [ ] TASK-354-04: Tools Playwright Regression Matrix and Report Drift Guard
-- [ ] TASK-354-05: Cross Tools QA, Docs, and Closure
+- [x] TASK-354-01: Admin Tools Empty State and Action Availability Standard
+- [x] TASK-354-02: Admin Tools Long-Running Operation Feedback Standard
+- [x] TASK-354-03: Seed Admin Pepper-Aware Bootstrap Credentials
+- [x] TASK-354-04: Tools Playwright Regression Matrix and Report Drift Guard
+- [x] TASK-354-05: Cross Tools QA, Docs, and Closure
+
+## Closure Notes
+
+Done (2026-06-01): `scripts/tools-audit-matrix.ts` now machine-validates all
+six Tools routes for observable controls, empty-state next actions, async-state
+ownership, runtime-effect evidence, scoped fixture/cleanup plans, and report
+drift. Seed-admin now hashes through the pepper-aware password helper, Backups
+polls only while queued/running or worker-unhealthy states exist, Claude
+read-only review found no blockers, and changelog 1043 closes the family.
 
 ## Implementation Order
 

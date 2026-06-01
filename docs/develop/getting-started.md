@@ -82,7 +82,11 @@ After migrations are applied, seed the bootstrap admin user into the database na
 bun run db:seed:admin
 ```
 
-The command sources `.env`, reads `ADMIN_EMAIL` and `ADMIN_PASSWORD`, creates the `admin` role when missing, creates the user when missing, and attaches the role idempotently. Override the credentials inline for one-off local databases, for example:
+The command sources `.env`, reads `ADMIN_EMAIL` and `ADMIN_PASSWORD`, hashes the
+password through the same optional `AUTH_PASSWORD_PEPPER` path used by login,
+creates the `admin` role when missing, creates the user when missing, and
+attaches the role idempotently. Override the credentials inline for one-off
+local databases, for example:
 
 ```bash
 ADMIN_EMAIL=admin@example.test ADMIN_PASSWORD=local-password bun run db:seed:admin

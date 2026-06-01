@@ -45,6 +45,9 @@ Current classification:
   copy, and malformed-ID validation drift were closed by TASK-352 on
   2026-06-01; Redirects public runtime, drawer accessibility,
   empty/pagination/delete drift was closed by TASK-353 on 2026-06-01.
+- TASK-354 adds the cross-tools guard: `scripts/tools-audit-matrix.ts` now
+  machine-validates the route/control/empty-state/async/runtime-effect/report
+  matrix so future audit closures cannot rely on shallow click evidence alone.
 
 ## Evidence
 
@@ -106,6 +109,20 @@ Current classification:
   `401 Invalid authentication credentials`.
 
 ## Cross-Cutting Findings
+
+### TASK-354 Shared Guard - 2026-06-01
+
+- Visible controls must be `enabled` with an observable route/API/download/dialog
+  effect, `disabled` with an accessible reason, or removed until the product
+  contract exists.
+- Empty states must name the cause and next action.
+- Long-running Tools states use the shared vocabulary:
+  `not-run`, `queued`, `running`, `completed`, `failed`, `external-worker`, and
+  `no-data`.
+- Runtime-effect claims are matrix rows, not prose only:
+  SEO requires public HTML evidence, Backups requires artifact or explicit
+  external-worker evidence, and Redirects requires public redirect evidence.
+- Local validation command: `bun scripts/tools-audit-matrix.ts --validate`.
 
 ### [ISSUE] Several icon/buttons are visually actionable but have no behavior
 

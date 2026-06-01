@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 16 tasks
+- **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2036 tasks
+- **Done:** 2042 tasks
 
 ---
 
@@ -38,12 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-354 | Cross Tools UX and Bootstrap Report Remediation | High | Very Large | New cross-report family for shared Tools UX standards, async feedback, seed-admin pepper fix, Playwright drift guard, and closure. |
-| TASK-354-01 | Admin Tools Empty State and Action Availability Standard | High | Large | Enforce no clickable no-op controls and cause-specific empty states across the Tools section. |
-| TASK-354-02 | Admin Tools Long-Running Operation Feedback Standard | Medium | Large | Standardize not-run/queued/running/completed/failed/no-data feedback for SEO, Backups, and Import / Export. |
-| TASK-354-03 | Seed Admin Pepper-Aware Bootstrap Credentials | High | Medium | Make `db:seed:admin` use the same pepper-aware password helper as login and test both pepper/no-pepper paths. |
-| TASK-354-04 | Tools Playwright Regression Matrix and Report Drift Guard | High | Large | Add durable route/control/fixture/report coverage so future Tools audits cannot miss no-op controls or shallow evidence. |
-| TASK-354-05 | Cross Tools QA, Docs, and Closure | Medium | Medium | Reconcile all Tools report findings, final matrix evidence, seed-admin tests, and docs/changelog closure. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -70,6 +64,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-354 | Cross Tools UX and Bootstrap Report Remediation | High | Very Large | Done (2026-06-01): machine-readable Tools matrix, report drift guard, seed-admin pepper fix, Backups queued polling, Claude review, docs, and changelog 1043 are synchronized. |
+| TASK-354-01 | Admin Tools Empty State and Action Availability Standard | High | Large | Done (2026-06-01): matrix validates observable controls, disabled reasons, option payload ownership, and cause-specific empty states across all six Tools routes. |
+| TASK-354-02 | Admin Tools Long-Running Operation Feedback Standard | Medium | Large | Done (2026-06-01): async vocabulary is matrix-owned and Backups polls only while queued/running or worker-unhealthy states exist. |
+| TASK-354-03 | Seed Admin Pepper-Aware Bootstrap Credentials | High | Medium | Done (2026-06-01): seed-admin hashing now uses the pepper-aware auth helper and is covered by pepper/no-pepper tests plus scoped DB smoke. |
+| TASK-354-04 | Tools Playwright Regression Matrix and Report Drift Guard | High | Large | Done (2026-06-01): `scripts/tools-audit-matrix.ts` validates route/control/runtime/fixture/report coverage and README runbook. |
+| TASK-354-05 | Cross Tools QA, Docs, and Closure | Medium | Medium | Done (2026-06-01): cross-tools findings are reconciled to TASK-348 through TASK-354 evidence with final tests/docs/changelog closure. |
 | TASK-353 | Redirects Tools Report Remediation | High | Very Large | Done (2026-06-01): public runtime executes enabled redirects, unsafe destinations and loops are blocked, drawer a11y is wired, pagination/empty state/delete UI are truthful, and docs/changelog 1042 are synchronized. |
 | TASK-353-01 | Public Redirect Runtime Resolver and Loop Prevention | High | Large | Done (2026-06-01): enabled redirects return configured public status/location with loop/open-redirect safeguards and excluded route coverage. |
 | TASK-353-02 | Redirects Drawer Accessibility, Empty State, and Pagination UX | High | Medium | Done (2026-06-01): Sheet title/description wiring, first-time empty CTA, filtered empty copy, and local pagination state are implemented and tested. |

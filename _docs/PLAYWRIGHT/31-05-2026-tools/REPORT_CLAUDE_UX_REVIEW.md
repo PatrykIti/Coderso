@@ -25,6 +25,20 @@ The pass avoided destructive operations. It typed a test query into Search and
 reviewed the visible page states, empty states, status tables, and primary
 actions.
 
+## TASK-354 Resolution - 2026-06-01
+
+- Seed admin now hashes bootstrap passwords through the same pepper-aware helper
+  used by login verification, with tests for pepper and no-pepper behavior.
+- Search, SEO Manager, Analytics, Backups, Import / Export, and Redirects are
+  mapped into `scripts/tools-audit-matrix.ts`, which requires observable control
+  effects, cause-specific empty states, async-state ownership, runtime-effect
+  evidence, scoped fixtures, cleanup paths, and report drift checks.
+- Backups now has a bounded polling policy for queued/running or unhealthy
+  external-worker states instead of relying only on manual refresh.
+- The original findings below remain as source evidence; the final status is
+  resolved through TASK-348 through TASK-354 unless a future task explicitly
+  reopens a surface.
+
 ## Environment Notes
 
 - A fresh isolated Playwright profile did not inherit the user's browser login.

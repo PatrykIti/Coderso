@@ -5,7 +5,7 @@
 **Category:** Admin Tools + QA + Docs + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-348-03, TASK-349-04, TASK-350-03, TASK-351-04, TASK-352-05, TASK-353-04, TASK-354-01, TASK-354-02, TASK-354-03, TASK-354-04
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -94,3 +94,11 @@ No additional route changes are expected in this closure leaf.
   residual tasks.
 - Seed-admin pepper behavior is fixed and tested.
 - The final Tools audit matrix is current.
+
+## Closure Notes
+
+Done (2026-06-01): final closure reconciled TASK-348 through TASK-353, added
+TASK-354 report/Claude UX resolution notes, ran the matrix validator, seed-admin
+tests, package-script guard, all Tools screen Vitests, focused Playwright CLI
+route smoke across all six Tools routes, Claude read-only review, and scoped
+peppered seed smoke, then synchronized board and changelog 1043.

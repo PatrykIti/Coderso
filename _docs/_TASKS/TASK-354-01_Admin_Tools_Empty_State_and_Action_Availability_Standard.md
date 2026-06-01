@@ -5,7 +5,7 @@
 **Category:** Admin Tools + UX Consistency + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-348, TASK-349, TASK-350, TASK-351, TASK-352, TASK-353
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -119,3 +119,10 @@ No route changes are required by the shared standard.
 - No report-listed checkbox group remains uncontrolled payload theater.
 - Empty states across Tools name cause and next action.
 - Disabled/unavailable controls are accessible and intentional.
+
+## Closure Notes
+
+Done (2026-06-01): the Tools matrix now enforces enabled/disabled/removed
+control states, observable effects, disabled reasons, option payload ownership,
+cause-specific empty states, and next actions across Search, SEO, Analytics,
+Backups, Import / Export, and Redirects.

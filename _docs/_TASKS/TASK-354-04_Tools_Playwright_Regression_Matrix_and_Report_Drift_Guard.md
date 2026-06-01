@@ -5,7 +5,7 @@
 **Category:** Playwright + Admin Tools + QA Automation + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-348, TASK-349, TASK-350, TASK-351, TASK-352, TASK-353
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -148,3 +148,11 @@ exercises admin writes:
 - No report can claim closure without a matching matrix evidence row.
 - No report can claim runtime completion without public/effect evidence for the
   surfaces that claimed a runtime effect.
+
+## Closure Notes
+
+Done (2026-06-01): `scripts/tools-audit-matrix.ts` and
+`tests/unit/tools/toolsAuditMatrix.test.ts` validate all six Tools routes,
+report files, report sections, per-task closure IDs, no stale Redirects partial
+status, observable control effects, runtime-effect rows, fixture plans, and
+cleanup plans. The Tools README now documents the matrix run command.
