@@ -66,9 +66,9 @@ browser work:
 - Command mode: `claude -p --permission-mode bypassPermissions`
 - Result: `401 Invalid authentication credentials`
 
-Until local Claude authentication is repaired, the audit proceeds with
-`playwright-cli` plus Codex/sub-agent review. This is an environment blocker for
-the requested Claude collaboration, not a widget result.
+After local Claude authentication was repaired on 2026-06-01, the audit uses
+Claude as a read-only cross-check for remaining widget reports. Earlier reports
+before that point remain based on `playwright-cli` plus Codex code review.
 
 ## Baseline smoke notes
 
@@ -115,6 +115,41 @@ the requested Claude collaboration, not a widget result.
   read-only Advanced and Visual ownership work, with findings for unsafe
   imported style strings leaking to inline CSS and incomplete shared Structure
   action metadata for repeatable panels.
+- `REPORT_ACCORDION_WIDGET.md` — completed Wizard / Visual / Advanced UI pass
+  and public runtime pass with default, rich multiple, custom-id default,
+  locked-open, all-collapsed, unsafe-style and invalid-payload fixtures; public
+  details/ARIA sync, multiple/single/collapsible behavior, Wizard slot-count
+  truthfulness, Visual ownership and read-only Advanced work, with findings for
+  custom item ids losing default-open state in public runtime, unsafe imported
+  style strings leaking to inline CSS, and incomplete shared Structure action
+  metadata for repeatable items.
+- `REPORT_TOGGLE_BLOCK_WIDGET.md` — completed Wizard / Visual / Advanced UI
+  pass and public runtime pass with default, rich two-instance, empty-pane,
+  unsafe-style and invalid-payload fixtures; click/keyboard switching, roving
+  tab index, ARIA/status sync, runtime script dedupe, fixed two-pane Structure,
+  mobile overflow, Visual ownership and read-only Advanced diagnostics work,
+  with one finding for unsafe imported style strings leaking to public inline
+  CSS.
+- `REPORT_SPACER_WIDGET.md` — completed Wizard / Visual / Advanced UI pass and
+  public runtime pass with responsive, fixed, no-guide, unsafe-length and
+  invalid-variant fixtures; rhythm presets, desktop/tablet/mobile height
+  markers, breakpoint measurements, editor guide gating, safe custom length
+  compatibility, unsafe length fallback, Visual ownership and read-only
+  Advanced diagnostics work, with no new functional findings.
+- `REPORT_DIVIDER_WIDGET.md` — completed Wizard / Visual / Advanced UI pass and
+  public runtime pass with label-center, line, dotted custom, spacer-only,
+  unsafe-style and invalid-variant fixtures; variants, label controls, line
+  style, width/alignment, opacity, spacing, breakpoint overflow, Visual
+  ownership and read-only Advanced diagnostics work, with one Claude-confirmed
+  finding for unsafe imported `color` and `labelColor` strings leaking to public
+  inline CSS.
+- `REPORT_STACK_WIDGET.md` — completed Wizard / Visual / Advanced UI pass and
+  public runtime pass with rich responsive, empty, legacy-scalar, CSS-probe,
+  invalid-variant and invalid-data fixtures; variant cards, responsive
+  direction/gap/axis/wrap, row-flow child wrappers, empty placeholder, current
+  responsive CSS and read-only Advanced diagnostics work, with one
+  Claude-confirmed finding for non-vertical variants losing their direction
+  preset when imported non-empty data omits `direction`.
 - `REPORT_HERO_WIDGET.md` — started; UI-first partial pass with one confirmed
   CTA-layout behavior issue and code owner notes.
 - `REPORT_FEATURE_GRID_WIDGET.md` — completed main UI option pass; one
