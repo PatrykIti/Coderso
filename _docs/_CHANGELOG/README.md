@@ -25,14 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
-| 1042 | 2026-06-01 | TASK-348-354 drift refinement | Admin Tools/Tasks/Reports/API Docs/Security/Cache |
-| 1041 | 2026-06-01 | TASK-354 cross Tools UX and bootstrap remediation plan | Admin Tools/UX/Auth Bootstrap/Playwright/QA/Docs |
-| 1040 | 2026-06-01 | TASK-353 Redirects remediation plan | Admin Tools/Redirects/Public Runtime/API/UI/QA/Docs |
-| 1039 | 2026-06-01 | TASK-352 Import Export remediation plan | Admin Tools/Import Export/API/Validation/UI/QA/Docs |
-| 1038 | 2026-06-01 | TASK-351 Backups remediation plan | Admin Tools/Backups/API/Runtime/Storage/QA/Docs |
-| 1037 | 2026-06-01 | TASK-350 Analytics remediation plan | Admin Tools/Analytics/API/UI/QA/Docs |
-| 1036 | 2026-06-01 | TASK-349 SEO Manager remediation plan | Admin Tools/SEO/Public Runtime/API/UI/QA/Docs |
-| 1035 | 2026-06-01 | TASK-348 Search Tools remediation plan | Admin Tools/Search/API/UI/QA/Docs |
+| 1036 | 2026-06-01 | TASK-348-354 Tools remediation refinement | Admin Tools/Tasks/Reports/API Docs/Security/Cache |
+| 1035 | 2026-06-01 | TASK-348-354 Tools remediation planning | Admin Tools/Search/SEO/Analytics/Backups/Import Export/Redirects/Cross Tools |
 | 1034 | 2026-05-31 | Admin Tools Playwright audit reports | QA/Admin UI/Playwright/Docs |
 | 1033 | 2026-05-31 | Admin seed package command | Developer Tooling/Auth Bootstrap/Docs |
 | 1032 | 2026-05-31 | CodeQL widget sanitizer and validation DoS remediation | Security/CodeQL/Widgets/Testing |
