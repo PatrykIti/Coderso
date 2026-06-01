@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 39 tasks
+- **To Do:** 45 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2007 tasks
 
@@ -38,6 +38,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-354 | Cross Tools UX and Bootstrap Report Remediation | High | Very Large | New cross-report family for shared Tools UX standards, async feedback, seed-admin pepper fix, Playwright drift guard, and closure. |
+| TASK-354-01 | Admin Tools Empty State and Action Availability Standard | High | Large | Enforce no clickable no-op controls and cause-specific empty states across the Tools section. |
+| TASK-354-02 | Admin Tools Long-Running Operation Feedback Standard | Medium | Large | Standardize not-run/queued/running/completed/failed/no-data feedback for SEO, Backups, and Import / Export. |
+| TASK-354-03 | Seed Admin Pepper-Aware Bootstrap Credentials | High | Medium | Make `db:seed:admin` use the same pepper-aware password helper as login and test both pepper/no-pepper paths. |
+| TASK-354-04 | Tools Playwright Regression Matrix and Report Drift Guard | High | Large | Add durable route/control/fixture/report coverage so future Tools audits cannot miss no-op controls or shallow evidence. |
+| TASK-354-05 | Cross Tools QA, Docs, and Closure | Medium | Medium | Reconcile all Tools report findings, final matrix evidence, seed-admin tests, and docs/changelog closure. |
 | TASK-353 | Redirects Tools Report Remediation | High | Very Large | New report-driven family for public redirect execution, drawer a11y, pagination/empty state, delete UI, and closure proof. |
 | TASK-353-01 | Public Redirect Runtime Resolver and Loop Prevention | High | Large | Make enabled admin redirects affect public HTTP responses with status-code and loop/open-redirect safeguards. |
 | TASK-353-02 | Redirects Drawer Accessibility, Empty State, and Pagination UX | High | Medium | Add Sheet title/description wiring, inline empty create CTA, and real or disabled pagination. |
