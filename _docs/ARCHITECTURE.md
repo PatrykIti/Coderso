@@ -1269,6 +1269,10 @@ Kontrakt pluginu (client):
   controls must render as disabled/hidden with user-facing unavailable copy and
   a targeted regression expectation; placeholder buttons, fake totals, and
   inert pagination controls are not valid shipped states.
+- Admin log/query surfaces use shared query conventions: strict raw query
+  schemas reject unknown params, limits are normalized through one helper, date
+  ranges validate before service work, count copy is derived from response
+  metadata only, and filter labels must match the source field they query.
 
 ---
 

@@ -2,6 +2,7 @@ import { and, desc, eq, gte, ilike, lt, lte, or, type SQL } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { accessLogs, users } from "../../db/schema";
+import { normalizeAdminQueryLimit } from "../admin/adminQueryConventions";
 import { hashEmail, isLikelyEmail, normalizeEmail, resolveEmailValue } from "../security/piiEmail";
 
 export type AccessLogInput = {
@@ -93,7 +94,10 @@ export async function listAccessLogs(filters: AccessLogFilters = {}) {
     }
   }
 
-  const limit = Math.min(Math.max(filters.limit ?? 100, 1), 200);
+  const limit = normalizeAdminQueryLimit(filters.limit, {
+    defaultLimit: 100,
+    maxLimit: 200,
+  });
 
   const rows = await db
     .select({

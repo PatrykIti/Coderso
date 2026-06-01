@@ -2735,11 +2735,25 @@ List response (array):
 
 ---
 
+## Admin log query conventions
+
+Admin log list endpoints use strict query validation. Unknown query parameters
+are rejected, `limit` is normalized through the shared Admin query helper after
+raw string validation, and date query params must be RFC3339 `date-time` values
+when a route accepts them. UI copy must not invent totals: exact totals may
+only be shown when response metadata supplies them; otherwise copy must describe
+loaded rows and cursor availability. Custom ranges must expose real `from`/`to`
+inputs before they can be applied, and filter labels must match their source
+(`User` for user ids, `Role` for role ids).
+
+---
+
 ## Audit logs
 
 Permissions: `audit:read`
 
 - `GET /audit?limit=100`
+- Strict query params: `limit`.
 
 Response:
 
@@ -2759,7 +2773,9 @@ Response:
 }
 ```
 
-Uwaga: Admin UI korzysta z `GET /audit` do listowania logow (limit 200).
+Uwaga: Admin UI korzysta z `GET /audit` do listowania logow. `limit` jest
+walidowany jako dodatnia liczba calkowita i clampowany do 200 przez wspolne
+konwencje query.
 
 ---
 
@@ -2768,7 +2784,10 @@ Uwaga: Admin UI korzysta z `GET /audit` do listowania logow (limit 200).
 Permissions: `audit:read`
 
 - `GET /access-logs?limit=100`
-- Optional filters: `status=success|failed`, `q=search`, `from`, `to`
+- Optional strict filters: `status=success|failed`, `q=search`, `userId`,
+  `from`, `to`.
+- `from` and `to` must be RFC3339 `date-time` values. Reversed ranges are
+  rejected as `access_log_query_invalid`.
 
 Response:
 
@@ -2792,7 +2811,9 @@ Response:
 }
 ```
 
-Uwaga: Admin UI korzysta z `GET /access-logs` do listowania (limit 200).
+Uwaga: Admin UI korzysta z `GET /access-logs` do listowania. `limit` jest
+walidowany jako dodatnia liczba calkowita i clampowany do 200 przez wspolne
+konwencje query.
 
 ---
 

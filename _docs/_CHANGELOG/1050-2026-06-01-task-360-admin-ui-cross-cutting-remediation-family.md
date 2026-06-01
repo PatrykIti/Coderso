@@ -49,6 +49,11 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
   details, Audit details, Access Log details, IP Allowlist, Webhooks, Email
   Logs, and Integration drawers now bind Radix title/description semantics, and
   future drawer tests can reuse the shared no-warning assertion helper.
+- Completed `TASK-360-06` Admin server-side query and pagination conventions:
+  shared helpers now own strict limits, query text, date ranges, cursor
+  encoding, filter-label truthfulness, and count copy, while Audit and Access
+  routes reject invalid log queries through area-specific `*_query_invalid`
+  errors.
 
 ## Validation
 
@@ -57,6 +62,9 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
 - `bun run test:vitest -- tests/vitest/ui/shared-dialog-contracts.test.tsx tests/vitest/ui/dialogs.test.tsx tests/vitest/admin/adminExportClient.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/user-list-filters-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/audit-table-wave.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/storage-settings.test.tsx tests/vitest/ui/login-alerts.test.tsx tests/vitest/ui/security-sessions.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/webhooks.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui-integration/integrations.test.tsx`
+- `bun run test:vitest -- tests/vitest/admin/adminQueryConventions.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/admin/accessLogsClient.test.ts tests/vitest/admin/auditClient.test.ts`
+- `bun test tests/integration/routes/audit.test.ts tests/integration/routes/accessLogs.test.ts`
+- `bun test tests/integration/routes/audit.test.ts tests/integration/routes/accessLogs.test.ts tests/unit/audit/auditService.test.ts tests/unit/access/accessLogService.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run precommit`

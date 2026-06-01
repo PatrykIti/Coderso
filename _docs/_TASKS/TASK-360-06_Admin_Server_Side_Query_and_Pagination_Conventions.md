@@ -5,7 +5,7 @@
 **Category:** Admin API + Query Conventions + Pagination + UX Truthfulness
 **Estimated Effort:** Large
 **Dependencies:** TASK-360
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -113,3 +113,26 @@ Error handling:
 - Audit/Access tasks have a shared convention for strict query and pagination.
 - Fake totals/static pagination are explicitly forbidden.
 - Filter labels must match their actual data source.
+
+## Completion Notes - 2026-06-01
+
+- Added shared Admin query convention helpers for strict limit normalization,
+  query text trimming, date/date-range validation, UTC date-only boundaries,
+  opaque keyset cursor encoding/decoding, filter-label/source checks, truthful
+  count copy, and cursor page state construction.
+- Added shared AJV query schema fragments plus raw query schemas for Audit Logs
+  and Access Logs.
+- Threaded route validation into Audit Logs, mapped Audit and Access query
+  failures to area-specific `*_query_invalid` API errors, and rejected invalid
+  log query params before service work.
+- Kept full cursor UI/client adoption out of this leaf; TASK-357 and TASK-358
+  still own backend cursor metadata and UI integration.
+
+## Validation - 2026-06-01
+
+- `bun run test:vitest -- tests/vitest/admin/adminQueryConventions.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/admin/accessLogsClient.test.ts tests/vitest/admin/auditClient.test.ts`
+- `bun test tests/integration/routes/audit.test.ts tests/integration/routes/accessLogs.test.ts`
+- `bun test tests/integration/routes/audit.test.ts tests/integration/routes/accessLogs.test.ts tests/unit/audit/auditService.test.ts tests/unit/access/accessLogService.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run precommit`

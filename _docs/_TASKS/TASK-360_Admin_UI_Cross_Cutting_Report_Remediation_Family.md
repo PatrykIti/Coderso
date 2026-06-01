@@ -320,7 +320,7 @@ async function expectNoRadixDialogDescriptionWarnings(openDrawer: () => Promise<
 
 ### TASK-360-06: Admin Server-Side Query and Pagination Conventions
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Own shared conventions used by TASK-357 and TASK-358:
 
@@ -382,6 +382,11 @@ Error handling:
   `*_query_invalid` to field errors.
 - Invalid/expired cursor resets to first page with non-destructive copy.
 - Unknown query params map through centralized `map*Error` helpers.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/admin/adminQueryConventions.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/admin/accessLogsClient.test.ts tests/vitest/admin/auditClient.test.ts`
+- `bun test tests/integration/routes/audit.test.ts tests/integration/routes/accessLogs.test.ts`
 
 ### TASK-360-07: Final Evidence, Reports, and QA Closure
 

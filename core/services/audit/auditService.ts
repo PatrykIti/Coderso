@@ -2,6 +2,7 @@ import { desc } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { auditLogs } from "../../db/schema";
+import { normalizeAdminQueryLimit } from "../admin/adminQueryConventions";
 
 export type AuditEvent = {
   actorId?: string | null;
@@ -88,9 +89,10 @@ export async function logAudit(event: AuditEvent) {
 }
 
 export async function listAudit(limit = 50) {
-  return db
-    .select()
-    .from(auditLogs)
-    .orderBy(desc(auditLogs.createdAt))
-    .limit(limit);
+  const normalizedLimit = normalizeAdminQueryLimit(limit, {
+    defaultLimit: 50,
+    maxLimit: 200,
+  });
+
+  return db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(normalizedLimit);
 }

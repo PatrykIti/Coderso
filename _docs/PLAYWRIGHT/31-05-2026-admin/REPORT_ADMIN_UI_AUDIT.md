@@ -93,6 +93,10 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
   Log details oraz Settings drawers (IP Allowlist, Webhooks, Email Logs,
   Integrations) maja `SheetTitle`/`SheetDescription` i wspolny Vitest gate na
   brak Radix title/description warnings.
+- `TASK-360-06` jest zaimplementowany: Audit/Access maja wspolne konwencje
+  strict query, limit clamp, date-range validation, cursor/count-copy helpers i
+  area-specific `*_query_invalid` errors. Pelna adopcja cursor UI zostaje w
+  TASK-357/TASK-358.
 - Pozostale pozycje z raportu pozostaja przypisane do rodzin TASK-355..360.
   Część no-opow jest teraz jawnie niedostepna, ale pelne funkcje backendowe
   nadal wymagaja osobnych implementacji w taskach obszarowych oraz re-audytu UI.
