@@ -25,15 +25,16 @@ Current classification:
 - Works end-to-end: Search can find a real page fixture and now applies Date
   Range filtering through the API/service contract; SEO Manager saves now update
   public page HTML metadata and refresh scores; Analytics can surface a real
-  published page in top content; Import / Export can roundtrip a valid JSON
-  bundle.
+  published page in range-scoped Top Content and export that ranking as CSV;
+  Import / Export can roundtrip a valid JSON bundle.
 - Partially works: Backups enqueue rows but do not create artifacts; Redirects
   save admin rows but do not affect public routing.
-- Still UI-only/incomplete: Analytics export, Backup include checkboxes, Import
-  / Export card options, Activity Log, Recent Imports search, and
-  Backups/Redirects pagination. Search date range and Search empty-state /
-  suggestion drift were closed by TASK-348 on 2026-06-01; SEO audit/filter/save
-  drift was closed by TASK-349 on 2026-06-01.
+- Still UI-only/incomplete: Backup include checkboxes, Import / Export card
+  options, Activity Log, Recent Imports search, and Backups/Redirects
+  pagination. Search date range and Search empty-state / suggestion drift were
+  closed by TASK-348 on 2026-06-01; SEO audit/filter/save drift was closed by
+  TASK-349 on 2026-06-01; Analytics export/no-data/top-content range drift was
+  closed by TASK-350 on 2026-06-01.
 
 ## Evidence
 
@@ -50,6 +51,10 @@ Current classification:
   - TASK-349 follow-up proof on 2026-06-01 ran SEO Manager audit and drawer save
     through Playwright, then verified the public page `<title>` and meta
     description contained the saved SEO Manager values.
+  - TASK-350 follow-up proof on 2026-06-01 verified Analytics empty no-data
+    labels, a temporary published fixture across all visible date ranges,
+    drawer CSV export, and zero browser console/page errors through a focused
+    Chrome DevTools Protocol pass.
   - Manual backup was started through the UI and verified as queued with no
     artifact.
   - Import / Export valid JSON bundle was downloaded, modified, uploaded,
@@ -79,13 +84,12 @@ Affected surfaces:
 
 - Import / Export Activity Log button
 - Import / Export per-card options chevron
-- Analytics drawer Export button
 - Backups and Redirects pagination buttons
 
 Why it happens:
 
 - The React components render buttons without `onClick` handlers, or with
-  placeholder handlers that only close a drawer.
+  placeholder handlers that do not execute a real product action.
 
 How to fix:
 

@@ -55,7 +55,7 @@ export function TopContentTable({ items, onViewAll }: TopContentTableProps) {
           }
         />
         <p className="text-sm text-muted-foreground">
-          Recently updated items with engagement score.
+          Updated items in the selected date range with activity score.
         </p>
       </CardHeader>
       <Separator className="mx-6" />
@@ -78,12 +78,8 @@ export function TopContentTable({ items, onViewAll }: TopContentTableProps) {
                 <TableRow key={row.id}>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="font-semibold text-foreground">
-                        {row.title}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {row.path}
-                      </span>
+                      <span className="font-semibold text-foreground">{row.title}</span>
+                      <span className="text-xs text-muted-foreground">{row.path}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
@@ -107,7 +103,7 @@ export function TopContentTable({ items, onViewAll }: TopContentTableProps) {
             {items.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                  No activity for this period.
+                  No content activity yet. Publish content or widen the date range.
                 </TableCell>
               </TableRow>
             ) : null}

@@ -5,7 +5,7 @@
 **Category:** Analytics + API + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-350
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -122,3 +122,12 @@ Regression-test shape:
 - Export either downloads a deterministic file or is visibly unavailable.
 - Export and Top Content agree on whether the active range is applied.
 - Error/loading/empty-row states are explicit and tested.
+
+## Closure Notes
+
+Done (2026-06-01): `GET /analytics/top-content/export` now returns a strict
+CSV payload envelope for the selected range/type/limit, `getTopContent` filters
+by `rangeDays`, the admin client serializes export and Top Content range
+queries, and `TopContentDrawer` downloads the CSV with loading/error/empty-row
+states instead of closing the drawer. CSV serialization escapes values and
+guards formula-like cells.

@@ -5,7 +5,7 @@
 **Category:** Analytics + Playwright + Docs + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-350-01, TASK-350-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -86,3 +86,10 @@ No additional route changes are expected in this closure leaf.
 - Analytics report has no unclassified findings.
 - Export behavior is proven as real or explicitly unavailable.
 - Empty data states are truthful in current UI evidence.
+
+## Closure Notes
+
+Done (2026-06-01): route/service/client/UI tests, lint, typecheck, and focused
+browser proof are complete. The Analytics report, Tools overview report,
+Analytics guide, CMS API contract, task board, and changelog index are
+synchronized for changelog `1039`.

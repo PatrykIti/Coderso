@@ -5,7 +5,7 @@
 **Category:** Admin Tools + Analytics + API + UI + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-347
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -34,9 +34,9 @@ published page in Top Content. The unresolved contract gaps are:
 
 ## Sub-Tasks
 
-- [ ] TASK-350-01: Analytics Export Contract and Download Flow
-- [ ] TASK-350-02: Analytics Empty Data Semantics and Guidance
-- [ ] TASK-350-03: Analytics QA, Docs, and Closure
+- [x] TASK-350-01: Analytics Export Contract and Download Flow
+- [x] TASK-350-02: Analytics Empty Data Semantics and Guidance
+- [x] TASK-350-03: Analytics QA, Docs, and Closure
 
 ## Implementation Order
 
@@ -86,3 +86,13 @@ Analytics routes remain internal admin read routes:
 - Empty analytics data is visibly different from zero change.
 - Users get a clear next action for empty analytics.
 - Top Content with real fixtures still renders and opens the drawer.
+
+## Closure Notes
+
+Done (2026-06-01): Analytics Top Content now honors the selected range through
+the admin client, route, and service; drawer Export downloads a CSV through a
+strict internal admin endpoint; KPI cards distinguish `No data yet`,
+`No activity in range`, and `New`; empty Top Content states tell users to
+publish content or widen the date range. Focused browser proof covered empty
+data, a temporary published page fixture across all visible ranges, CSV export,
+and zero console/page errors; temporary fixtures were cleaned up.

@@ -1,5 +1,5 @@
 import { CalendarDays } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   Select,
@@ -11,6 +11,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isApiClientError } from "@/services/apiClient";
 import {
+  exportTopContent,
   getOverview,
   getTopContent,
   type AnalyticsOverview,
@@ -23,6 +24,52 @@ import { AnalyticsCharts } from "./AnalyticsCharts";
 import { KpiCards, type KpiCard } from "./KpiCards";
 import { TopContentTable, type TopContentRow } from "./TopContentTable";
 import { TopContentDrawer } from "./TopContentDrawer";
+
+type AnalyticsMetricKey = "publishedPages" | "entries" | "media";
+
+const metricLabels: Record<AnalyticsMetricKey, string> = {
+  publishedPages: "Published Pages",
+  entries: "Content Entries",
+  media: "Media Items",
+};
+
+const formatMetricValue = (value: number) => (value === 0 ? "-" : value.toLocaleString("en-US"));
+
+const calcChange = (input: { total: number; current: number; previous: number }) => {
+  if (input.total === 0) {
+    return { change: "No data yet", trend: "neutral" as const };
+  }
+  if (input.current === 0 && input.previous === 0) {
+    return { change: "No activity in range", trend: "neutral" as const };
+  }
+  if (input.previous === 0) {
+    return { change: "New", trend: "up" as const };
+  }
+  const delta = ((input.current - input.previous) / input.previous) * 100;
+  return {
+    change: `${Math.abs(Math.round(delta))}%`,
+    trend: delta >= 0 ? ("up" as const) : ("down" as const),
+  };
+};
+
+export function buildAnalyticsKpiCards(overview: AnalyticsOverview | null): KpiCard[] {
+  if (!overview) return [];
+  const keys: AnalyticsMetricKey[] = ["publishedPages", "entries", "media"];
+  return keys.map((key) => {
+    const change = calcChange({
+      total: overview.totals[key],
+      current: overview.current[key],
+      previous: overview.previous[key],
+    });
+    return {
+      id: key,
+      label: metricLabels[key],
+      value: formatMetricValue(overview.totals[key]),
+      change: change.change,
+      trend: change.trend,
+    };
+  });
+}
 
 export function AnalyticsPage() {
   const [topContentOpen, setTopContentOpen] = useState(false);
@@ -41,7 +88,7 @@ export function AnalyticsPage() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([getOverview(rangeDays), getTopContent({ limit: 12 })])
+    Promise.all([getOverview(rangeDays), getTopContent({ limit: 50, rangeDays })])
       .then(([nextOverview, nextTop]) => {
         if (!active) return;
         setError(null);
@@ -50,6 +97,8 @@ export function AnalyticsPage() {
       })
       .catch((err: unknown) => {
         if (!active) return;
+        setOverview(null);
+        setTopContent([]);
         if (isApiClientError(err)) {
           setError(err.message);
         } else {
@@ -64,50 +113,7 @@ export function AnalyticsPage() {
     };
   }, [rangeDays]);
 
-  const metrics: KpiCard[] = (() => {
-    if (!overview) return [];
-    const format = (value: number) => value.toLocaleString("en-US");
-    const calcChange = (current: number, previous: number) => {
-      if (previous === 0) {
-        return current === 0
-          ? { change: "0%", trend: "down" as const }
-          : { change: "100%", trend: "up" as const };
-      }
-      const delta = ((current - previous) / previous) * 100;
-      return {
-        change: `${Math.abs(Math.round(delta))}%`,
-        trend: delta >= 0 ? ("up" as const) : ("down" as const),
-      };
-    };
-
-    const published = calcChange(overview.current.publishedPages, overview.previous.publishedPages);
-    const entries = calcChange(overview.current.entries, overview.previous.entries);
-    const media = calcChange(overview.current.media, overview.previous.media);
-
-    return [
-      {
-        id: "publishedPages",
-        label: "Published Pages",
-        value: format(overview.totals.publishedPages),
-        change: published.change,
-        trend: published.trend,
-      },
-      {
-        id: "entries",
-        label: "Content Entries",
-        value: format(overview.totals.entries),
-        change: entries.change,
-        trend: entries.trend,
-      },
-      {
-        id: "media",
-        label: "Media Items",
-        value: format(overview.totals.media),
-        change: media.change,
-        trend: media.trend,
-      },
-    ];
-  })();
+  const metrics = useMemo(() => buildAnalyticsKpiCards(overview), [overview]);
 
   const topRows = useMemo((): TopContentRow[] => {
     return topContent.map((item) => ({
@@ -120,6 +126,8 @@ export function AnalyticsPage() {
     }));
   }, [topContent]);
 
+  const tableRows = useMemo(() => topRows.slice(0, 12), [topRows]);
+
   const topPages = useMemo(
     () =>
       topRows.slice(0, 4).map((row) => ({
@@ -128,6 +136,11 @@ export function AnalyticsPage() {
         score: row.score,
       })),
     [topRows]
+  );
+
+  const handleExportTopContent = useCallback(
+    () => exportTopContent({ limit: 50, rangeDays }),
+    [rangeDays]
   );
 
   return (
@@ -141,6 +154,8 @@ export function AnalyticsPage() {
           onValueChange={(nextValue) => {
             setIsLoading(true);
             setError(null);
+            setOverview(null);
+            setTopContent([]);
             setRangeValue(nextValue);
           }}
         >
@@ -176,11 +191,16 @@ export function AnalyticsPage() {
           <>
             <KpiCards items={metrics} />
             <AnalyticsCharts trend={overview?.trend ?? []} topPages={topPages} />
-            <TopContentTable items={topRows} onViewAll={() => setTopContentOpen(true)} />
+            <TopContentTable items={tableRows} onViewAll={() => setTopContentOpen(true)} />
           </>
         )}
       </div>
-      <TopContentDrawer open={topContentOpen} onOpenChange={setTopContentOpen} items={topRows} />
+      <TopContentDrawer
+        open={topContentOpen}
+        onOpenChange={setTopContentOpen}
+        items={topRows}
+        onExport={handleExportTopContent}
+      />
     </AdminShell>
   );
 }

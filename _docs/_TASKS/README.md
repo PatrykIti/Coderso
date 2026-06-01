@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 36 tasks
+- **To Do:** 32 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2016 tasks
+- **Done:** 2020 tasks
 
 ---
 
@@ -60,10 +60,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-351-02 | Backup Execution, Artifact, Restore, Download, and Delete Contract | High | Very Large | Add real local/dev backup lifecycle or document an explicit external-worker boundary with safe actions. |
 | TASK-351-03 | Backups Pagination, Queue Health, and Table UX | Medium | Large | Replace placeholder pagination and explain queued/action-disabled states with tested UI. |
 | TASK-351-04 | Backups QA, Docs, and Closure | Medium | Medium | Prove DB-backed lifecycle behavior, Playwright evidence, cleanup, and docs/changelog closure. |
-| TASK-350 | Analytics Tools Report Remediation | Medium | Large | New report-driven family for Top Content export behavior, no-data semantics, and Analytics closure proof. |
-| TASK-350-01 | Analytics Export Contract and Download Flow | High | Medium | Replace drawer close-only Export with a real download or truthful disabled/unavailable state. |
-| TASK-350-02 | Analytics Empty Data Semantics and Guidance | Medium | Medium | Distinguish no data from zero change and add compact next-action empty states. |
-| TASK-350-03 | Analytics QA, Docs, and Closure | Medium | Medium | Re-prove empty/populated/range/export behavior and close report/docs/changelog evidence. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -90,6 +86,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-350 | Analytics Tools Report Remediation | Medium | Large | Done (2026-06-01): Top Content is range-scoped, drawer Export downloads CSV, no-data KPI semantics are truthful, reports, docs, and browser proof are synchronized. |
+| TASK-350-01 | Analytics Export Contract and Download Flow | High | Medium | Done (2026-06-01): strict export route/client/service CSV contract, range-aware Top Content, and drawer download/loading/error states are complete. |
+| TASK-350-02 | Analytics Empty Data Semantics and Guidance | Medium | Medium | Done (2026-06-01): KPI cards distinguish no data/no period activity/new data and Top Content empty states include publish-or-widen-range guidance. |
+| TASK-350-03 | Analytics QA, Docs, and Closure | Medium | Medium | Done (2026-06-01): Bun/Vitest/lint/typecheck plus focused browser proof, reports, docs, board, and changelog are synchronized. |
 | TASK-349 | SEO Manager Tools Report Remediation | High | Very Large | Done (2026-06-01): public SEO metadata parity, save scoring, strict audit scope, no-op UI cleanup, reports, docs, and Playwright proof are complete. |
 | TASK-349-01 | SEO Public Runtime Metadata Parity | High | Large | Done (2026-06-01): SEO Manager documents now render into public page HTML with documented fallback precedence and public cache invalidation. |
 | TASK-349-02 | SEO Audit Scope and Scoring Recalculation Contract | High | Large | Done (2026-06-01): shared scoring now runs on save/audit and strict selected checks flow through client, route validation, and service. |

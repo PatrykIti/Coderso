@@ -31,6 +31,20 @@ export type TopContentItem = {
   score: number;
 };
 
+export type TopContentExport = {
+  fileName: string;
+  contentType: "text/csv";
+  content: string;
+  rangeDays: number;
+  totalRows: number;
+};
+
+export type TopContentRequest = {
+  limit: number;
+  rangeDays: number;
+  type?: "page" | "entry";
+};
+
 export async function getOverview(rangeDays: number) {
   const params = new URLSearchParams({ rangeDays: String(rangeDays) });
   return apiRequest<AnalyticsOverview>(`/analytics/overview?${params}`, {
@@ -38,10 +52,25 @@ export async function getOverview(rangeDays: number) {
   });
 }
 
-export async function getTopContent(options: { limit: number; type?: "page" | "entry" }) {
-  const params = new URLSearchParams({ limit: String(options.limit) });
+export async function getTopContent(options: TopContentRequest) {
+  const params = new URLSearchParams({
+    limit: String(options.limit),
+    rangeDays: String(options.rangeDays),
+  });
   if (options.type) params.set("type", options.type);
   return apiRequest<TopContentItem[]>(`/analytics/top-content?${params}`, {
+    method: "GET",
+  });
+}
+
+export async function exportTopContent(options: TopContentRequest) {
+  const params = new URLSearchParams({
+    limit: String(options.limit),
+    rangeDays: String(options.rangeDays),
+    format: "csv",
+  });
+  if (options.type) params.set("type", options.type);
+  return apiRequest<TopContentExport>(`/analytics/top-content/export?${params}`, {
     method: "GET",
   });
 }

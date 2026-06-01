@@ -2499,7 +2499,14 @@ Permissions: `content:read`
 Note: v1 analytics are derived from CMS data (counts + recent updates), not real traffic.
 
 - `GET /analytics/overview?rangeDays=30`
-- `GET /analytics/top-content?limit=10&type=page`
+- `GET /analytics/top-content?limit=10&rangeDays=30&type=page`
+- `GET /analytics/top-content/export?limit=50&rangeDays=30&format=csv&type=page`
+
+All Analytics endpoints are internal admin reads. They require the existing
+session cookie and `content:read`; GET requests use the `admin_read` rate-limit
+bucket and do not require CSRF. Query strings are strict: unknown parameters,
+invalid `type`, unsupported export formats, and out-of-range `limit`/
+`rangeDays` values are rejected with `validation_error`.
 
 Overview response:
 
@@ -2523,6 +2530,21 @@ Top content response:
 [
   { "id": "page-id", "type": "page", "title": "Homepage", "slug": "/", "updatedAt": "2026-01-30T09:00:00Z", "score": 90 }
 ]
+```
+
+Top content is scoped to items updated inside the selected `rangeDays` window.
+`type` is optional and may be `page` or `entry`. Export currently supports CSV
+only and returns the file payload in a JSON envelope so the admin UI can create
+the browser download:
+
+```json
+{
+  "fileName": "coderso-analytics-top-content-30d-2026-01-30.csv",
+  "contentType": "text/csv",
+  "content": "type,title,slug,updatedAt,score\npage,Homepage,/,2026-01-30T09:00:00.000Z,90",
+  "rangeDays": 30,
+  "totalRows": 1
+}
 ```
 
 ---

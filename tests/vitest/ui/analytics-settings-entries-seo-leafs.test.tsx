@@ -302,7 +302,7 @@ test("analytics leaf components render empty and populated states", () => {
     </>
   );
 
-  expect(emptyHtml).toContain("No content activity yet.");
+  expect(emptyHtml).toContain("No content activity yet. Publish content or widen the date range.");
   expect(populatedHtml).toContain("Mar 1");
   expect(populatedHtml).toContain("Mar 7");
   expect(populatedHtml).toContain("/pricing");
@@ -313,9 +313,24 @@ test("analytics leaf components render empty and populated states", () => {
   expect(populatedHtml).toContain("-3%");
 });
 
-test("top content components render rows and forward actions", () => {
+test("top content components render rows and forward actions", async () => {
   const onViewAll = vi.fn();
   const onOpenChange = vi.fn();
+  const onExport = vi.fn(async () => ({
+    fileName: "analytics.csv",
+    contentType: "text/csv",
+    content: "type,title,slug,updatedAt,score",
+  }));
+  const originalCreateObjectUrl = URL.createObjectURL;
+  const originalRevokeObjectUrl = URL.revokeObjectURL;
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: vi.fn(() => "blob:analytics"),
+  });
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: vi.fn(),
+  });
   const view = mount(
     <>
       <TopContentTable
@@ -334,6 +349,7 @@ test("top content components render rows and forward actions", () => {
       <TopContentDrawer
         open
         onOpenChange={onOpenChange}
+        onExport={onExport}
         items={[
           {
             id: "item-1",
@@ -360,13 +376,26 @@ test("top content components render rows and forward actions", () => {
         .find((button) => button.getAttribute("aria-label") === "Close top content drawer")
         ?.click();
       buttons.find((button) => button.textContent === "Close")?.click();
+    });
+    await React.act(async () => {
       buttons.find((button) => button.textContent === "Export")?.click();
+      await Promise.resolve();
     });
 
     expect(onViewAll).toHaveBeenCalledOnce();
+    expect(onOpenChange).toHaveBeenCalledOnce();
     expect(onOpenChange).toHaveBeenNthCalledWith(1, false);
-    expect(onOpenChange).toHaveBeenNthCalledWith(2, false);
+    expect(onExport).toHaveBeenCalledOnce();
+    expect(URL.createObjectURL).toHaveBeenCalledOnce();
   } finally {
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: originalCreateObjectUrl,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: originalRevokeObjectUrl,
+    });
     view.cleanup();
   }
 });
@@ -375,12 +404,21 @@ test("top content table and drawer render empty states", () => {
   const html = renderToString(
     <>
       <TopContentTable items={[]} />
-      <TopContentDrawer open onOpenChange={() => undefined} items={[]} />
+      <TopContentDrawer
+        open
+        onOpenChange={() => undefined}
+        onExport={async () => ({
+          fileName: "analytics.csv",
+          contentType: "text/csv",
+          content: "",
+        })}
+        items={[]}
+      />
     </>
   );
 
-  expect(html).toContain("No activity for this period.");
-  expect(html).toContain("No content activity yet.");
+  expect(html).toContain("No content activity yet. Publish content or widen the date range.");
+  expect(html).toContain("No rows to export.");
 });
 
 test("settings leaf components forward copy, field changes, and revoke actions", () => {

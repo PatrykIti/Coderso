@@ -57,7 +57,9 @@ This is not a deep BI workspace. It is a focused admin overview that helps you:
    - `Content Entries`
    - `Media Items`
 5. Use the delta badges on the KPI cards to understand whether the selected
-   period is trending up or down against the previous one.
+   period is trending up or down against the previous one. When there is not
+   enough baseline data, the badge says `No data yet`, `No activity in range`,
+   or `New` instead of showing a fake percentage.
 6. Move to `Content Activity`.
 7. Read the chart as a period-over-period activity view:
    - `Current period`
@@ -74,8 +76,8 @@ This is not a deep BI workspace. It is a focused admin overview that helps you:
 11. Use `View all` when you want the full ranking in the drawer.
 12. In `Top Content`, review the full ordered list for the selected date range.
 13. Use `Close` when the ranking review is finished.
-14. Use `Export` when the ranking needs to be handed off or reviewed outside the
-    drawer.
+14. Use `Export` to download the selected range's top-content ranking as CSV
+    when the ranking needs to be handed off or reviewed outside the drawer.
 
 Use this safe analytics-reading order when you want faster signal extraction:
 1. Set the date range.
@@ -110,6 +112,14 @@ Use this safe analytics-reading order when you want faster signal extraction:
   full ranking rather than only the top summary cards.
 - Analytics seems static:
   review whether the current period simply had little recent publishing activity.
+- `No data yet` appears:
+  publish content or upload media first; Analytics is derived from CMS content
+  activity, not external traffic tracking.
+- `No activity in range` appears:
+  widen the date range or confirm whether the current period had no new content
+  changes.
+- Export is disabled:
+  there are no top-content rows in the selected range.
 
 # Decision Guide
 
@@ -137,6 +147,7 @@ Use this safe analytics-reading order when you want faster signal extraction:
   with reporting or content-visibility permissions appropriate for workspace
   metrics.
 - Exporting rankings should be treated as a data-sharing action, not just a UI
-  convenience.
+  convenience. The CSV contains only the summary fields visible in the Top
+  Content ranking: type, title, slug, updated date, and score.
 - Analytics summaries can shape operational decisions, so they should be read in
   context rather than forwarded without range and source awareness.

@@ -5,7 +5,7 @@
 **Category:** Analytics + Admin UI + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-350
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -114,3 +114,12 @@ No route changes are required.
 - Empty Analytics does not imply a stalled or measured 0% trend.
 - Top Content empty states tell users what to do next.
 - Populated Analytics remains compact and scannable.
+
+## Closure Notes
+
+Done (2026-06-01): KPI display now derives neutral states from workspace totals
+and period counts, showing `No data yet`, `No activity in range`, or `New`
+instead of fake `0%`/`100%` trends. Range changes clear stale overview/top
+content before reloading, failed reloads do not leave old rows visible, and Top
+Content panel/table/drawer empty states now include the publish-or-widen-range
+next action.

@@ -22,30 +22,64 @@ Route: `/admin/analytics`
   API reported published pages and `top-content` included the fixture.
 - Deep pass: the Analytics UI showed the fixture in Top Performing Content and
   the drawer opened from View all.
+- TASK-350 closure pass on 2026-06-01 verified that empty Analytics renders
+  `No data yet` and next-action empty guidance instead of fake `0%` trend
+  badges.
+- TASK-350 closure pass verified a published page fixture in Top Content across
+  Last 7 days, Last 30 days, Last 90 days, and Year to date.
+- TASK-350 closure pass verified drawer Export creates a CSV file payload named
+  `coderso-analytics-top-content-7d-2026-06-01.csv` containing the fixture row,
+  with no browser console errors or page errors.
 
 ## What Did Not Work
 
-### [ISSUE] Drawer Export button does not export
+Resolved by TASK-350 on 2026-06-01. No unresolved Analytics findings remain in
+this report.
 
-Evidence:
+### [RESOLVED] Drawer Export button does not export
+
+Original evidence:
 
 - Playwright opened the Top Content drawer and clicked Export.
 - The drawer closed, but no download or export request occurred.
 - In the deep pass with real top-content data, clicking Export still only left
   the drawer state/UI changed; no export endpoint or file download was observed.
 
-Why:
+Resolution:
 
-- `TopContentDrawer` wires the Export button to `onOpenChange(false)`.
-- There is no client call, generated file, or route handoff for analytics export.
+- Added range-scoped `GET /analytics/top-content/export` with strict query
+  validation and CSV-only format support.
+- Added `exportTopContent` admin client behavior and wired `TopContentDrawer`
+  Export to a real CSV Blob download with loading/error/empty-row states.
+- Added CSV escaping and formula-guarding in the Analytics service.
+- Export no longer closes the drawer as its only action.
 
-How to fix:
+### [RESOLVED] Empty KPI semantics were ambiguous
 
-- Add an analytics export endpoint or reuse an existing export service if one is
-  intended.
-- Make the button initiate a real download and show error/loading states.
-- If export is out of scope, disable the button or remove it.
-- Add a Playwright/component test that expects a download or disabled state.
+Original evidence:
+
+- Empty Analytics rendered `0` totals and `0%`/down trend badges, which made
+  "no data yet" look like measured negative activity.
+
+Resolution:
+
+- KPI derivation now distinguishes `No data yet`, `No activity in range`, and
+  `New`.
+- Empty workspace values render as `-` with neutral badges; existing workspaces
+  with quiet selected ranges keep their real totals and show `No activity in
+  range`.
+
+### [RESOLVED] Top Content empty states lacked next action
+
+Original evidence:
+
+- Top Content table/drawer/panel only said "No content activity yet" or
+  "No activity for this period."
+
+Resolution:
+
+- Empty Top Content states now say: "No content activity yet. Publish content or
+  widen the date range."
 
 ## Data Notes
 
@@ -53,6 +87,12 @@ How to fix:
 - The deep pass created a published page fixture. API evidence:
   `publishedPages` was non-zero and `top-content` included the fixture.
 - The fixture was deleted after the pass.
+- TASK-350 closure proof created a temporary admin user/session and page fixture,
+  then deleted the fixture, session, user, and role after the pass.
+- The focused browser proof used Chrome DevTools Protocol against local
+  Chromium. The first run exposed a stale Vite optimized dependency cache
+  (`504 Outdated Optimize Dep`); the cache was regenerated before the passing
+  proof.
 
 ## Source References
 

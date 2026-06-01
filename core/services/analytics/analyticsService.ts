@@ -2,13 +2,16 @@ import { and, desc, eq, gte, lt, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 
 import { db } from "../../db/client";
-import {
-  contentEntries,
-  media,
-  pages,
-  users,
-} from "../../db/schema";
-import type { AnalyticsOverview, AnalyticsTotals, TopContentItem, TrendPoint } from "./analyticsTypes";
+import { contentEntries, media, pages, users } from "../../db/schema";
+import type {
+  AnalyticsOverview,
+  AnalyticsTotals,
+  TopContentExport,
+  TopContentItem,
+  TopContentQuery,
+  TopContentType,
+  TrendPoint,
+} from "./analyticsTypes";
 
 const clampRangeDays = (value: number) => Math.min(Math.max(Math.floor(value), 1), 365);
 
@@ -46,11 +49,7 @@ async function dailyCounts(table: AnyPgTable, column: AnyPgColumn, start: Date) 
   return map;
 }
 
-function buildTrend(
-  start: Date,
-  days: number,
-  maps: Array<Map<string, number>>
-): TrendPoint[] {
+function buildTrend(start: Date, days: number, maps: Array<Map<string, number>>): TrendPoint[] {
   const points: TrendPoint[] = [];
   for (let i = 0; i < days; i += 1) {
     const date = addDays(start, i);
@@ -134,11 +133,28 @@ const computeScore = (index: number, total: number) => {
   return Math.max(10, Math.round(100 - index * step));
 };
 
-export async function getTopContent(limit: number, type?: "page" | "entry") {
-  const capped = Math.min(Math.max(Math.floor(limit), 1), 50);
+type NormalizedTopContentQuery = {
+  limit: number;
+  rangeDays: number;
+  type?: TopContentType;
+  now: Date;
+};
+
+export function normalizeTopContentQuery(input: TopContentQuery): NormalizedTopContentQuery {
+  return {
+    limit: Math.min(Math.max(Math.floor(input.limit), 1), 50),
+    rangeDays: clampRangeDays(input.rangeDays),
+    type: input.type,
+    now: input.now ?? new Date(),
+  };
+}
+
+export async function getTopContent(input: TopContentQuery) {
+  const options = normalizeTopContentQuery(input);
+  const start = addDays(options.now, -(options.rangeDays - 1));
 
   const pagesRows =
-    type === "entry"
+    options.type === "entry"
       ? []
       : await db
           .select({
@@ -148,11 +164,12 @@ export async function getTopContent(limit: number, type?: "page" | "entry") {
             updatedAt: pages.updatedAt,
           })
           .from(pages)
+          .where(gte(pages.updatedAt, start))
           .orderBy(desc(pages.updatedAt))
-          .limit(capped);
+          .limit(options.limit);
 
   const entryRows =
-    type === "page"
+    options.type === "page"
       ? []
       : await db
           .select({
@@ -162,26 +179,64 @@ export async function getTopContent(limit: number, type?: "page" | "entry") {
             updatedAt: contentEntries.updatedAt,
           })
           .from(contentEntries)
+          .where(gte(contentEntries.updatedAt, start))
           .orderBy(desc(contentEntries.updatedAt))
-          .limit(capped);
+          .limit(options.limit);
 
   const merged = [
     ...pagesRows.map((row) => ({ ...row, type: "page" as const })),
     ...entryRows.map((row) => ({ ...row, type: "entry" as const })),
   ];
 
-  merged.sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+  const top = merged.slice(0, options.limit);
+
+  return top.map(
+    (row, index): TopContentItem => ({
+      id: row.id,
+      type: row.type,
+      title: row.title,
+      slug: row.slug,
+      updatedAt: row.updatedAt.toISOString(),
+      score: computeScore(index, top.length),
+    })
   );
-
-  const top = merged.slice(0, capped);
-
-  return top.map((row, index): TopContentItem => ({
-    id: row.id,
-    type: row.type,
-    title: row.title,
-    slug: row.slug,
-    updatedAt: row.updatedAt.toISOString(),
-    score: computeScore(index, top.length),
-  }));
 }
+
+const csvHeaders = ["type", "title", "slug", "updatedAt", "score"] as const;
+
+const shouldGuardCsvCell = (value: string) => /^[=+\-@\t\r]/.test(value.trimStart());
+
+const escapeCsvCell = (value: string) => {
+  const guarded = shouldGuardCsvCell(value) ? `'${value}` : value;
+  if (/[",\r\n]/.test(guarded)) {
+    return `"${guarded.replace(/"/g, '""')}"`;
+  }
+  return guarded;
+};
+
+const serializeCsvRow = (values: readonly string[]) => values.map(escapeCsvCell).join(",");
+
+export function serializeTopContentCsv(items: TopContentItem[]) {
+  return [
+    serializeCsvRow(csvHeaders),
+    ...items.map((item) =>
+      serializeCsvRow([item.type, item.title, item.slug ?? "", item.updatedAt, String(item.score)])
+    ),
+  ].join("\n");
+}
+
+export async function exportTopContentCsv(input: TopContentQuery): Promise<TopContentExport> {
+  const options = normalizeTopContentQuery(input);
+  const items = await getTopContent(options);
+  return {
+    fileName: `coderso-analytics-top-content-${options.rangeDays}d-${formatDay(options.now)}.csv`,
+    contentType: "text/csv",
+    content: serializeTopContentCsv(items),
+    rangeDays: options.rangeDays,
+    totalRows: items.length,
+  };
+}
+
+export type { TopContentType };
