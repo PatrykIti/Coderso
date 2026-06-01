@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2006 tasks
+- **Done:** 2007 tasks
 
 ---
 
@@ -64,6 +64,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-347 | Admin Tools Playwright Audit Reports | Medium | Medium | Done (2026-05-31): audited all six admin Tools routes through Playwright and source review, then published overview plus per-tool findings under `_docs/PLAYWRIGHT/31-05-2026-tools/`. |
 | TASK-346 | Admin Seed Package Command | Medium | Small | Done (2026-05-31): added root `db:seed:admin` command, package-script regression coverage, and local setup docs for bootstrap administrator seeding. |
 | TASK-345 | CodeQL Widget Sanitizer and Validation DoS Remediation | High | Small | Done (2026-05-31): replaced regex HTML pseudo-sanitization in Hero/Template Section paths and hardened widget AJV validation with fail-fast plus structural budget checks. |
 | TASK-344 | Bun Coverage WriteFailed Reporter Stabilization | High | Small | Done (2026-05-31): `test:coverage:bun` now keeps the LCOV artifact while replacing Bun's huge text coverage table with a compact LCOV-derived summary to avoid CI `WriteFailed` exits. |
