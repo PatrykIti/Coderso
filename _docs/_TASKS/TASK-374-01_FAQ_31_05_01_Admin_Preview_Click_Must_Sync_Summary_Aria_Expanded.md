@@ -5,7 +5,7 @@
 **Category:** Widgets + FAQ Accordion + Admin Preview + Accessibility + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-374
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Public runtime synchronizes `aria-expanded`, but dynamic admin React preview doe
 
 ## Sub-Tasks
 
-- [ ] Reproduce FAQ-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce FAQ-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +90,13 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced FAQ-31-05-01 with a focused UI regression: rendering FAQ in the admin preview bridge fixture failed before implementation because no admin-side disclosure binder existed.
+- Added FAQ-owned DOM sync helpers for `[data-coderso-faq="1"]` roots and a page-builder `AdminWidgetPreviewRuntimeBridge` that binds those helpers after React preview render.
+- Wired the bridge into `BlockList` canvas preview, `BlockSettings` shared live preview, and custom-screen read-only widget preview so admin disclosure toggles update `summary[aria-expanded]` like public runtime.
+- No route, public write, persistence, or arbitrary script execution behavior changed.
+- Claude staged review reported no blockers for the base page-builder bridge diff; final re-review after the custom-screen bridge delta was unavailable due budget/timeout.
+- Validation: focused regression failed before the fix and passed after; FAQ Accordion Vitest lane passed; `tests/vitest/widgets/screenWidgets.test.tsx` passed for custom-screen read-only preview; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1064`.

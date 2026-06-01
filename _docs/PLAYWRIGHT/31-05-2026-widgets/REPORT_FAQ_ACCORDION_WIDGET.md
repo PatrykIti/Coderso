@@ -49,7 +49,7 @@ Przetestowane:
 | Answer mode Markdown | Select `Markdown`, wpis `**Bold answer** with [link](/audit-31-05-hero).` | Answer renderuje `Bold answer with link.` jako sformatowana tresc; link jest bezpieczny. | Nie publikowano tej zmiany. | Dziala | `renderFaqMarkdownAnswer` renderuje ograniczony markdown i safe href. | Brak. |
 | Allow multiple open | Toggle on | `data-faq-multiple-open="true"`; po kliknieciu dwa `details` moga byc otwarte naraz. | Nie publikowano tej zmiany. | Dziala | Renderer usuwa `name` z `details`, gdy multiple open jest true. | Brak. |
 | Default open item: None | Select `None (all collapsed)` | `data-faq-default-open="-1"` i wszystkie `details.open=false` przed kliknieciem. | Nie publikowano tej zmiany. | Dziala | `resolveDefaultOpenIndex` akceptuje `-1`. | Brak. |
-| Admin disclosure click | Klik pierwsze i drugie summary | `details.open` zmienia sie poprawnie (`true,true,...` przy multiple open). `summary[aria-expanded]` zostaje `null`. | Public runtime synchronizuje `aria-expanded`, patrz nizszy wiersz. | **Czesciowo** | W admin React preview dynamicznie wstawiony `<script>` z widgetu nie wykonuje sie tak jak parser HTML na public SSR. Sam disclosure dziala, ale atrybut a11y nie jest dosynchronizowany w adminie. | Jesli admin preview ma byc pelnym runtime mirror, uruchamiac runtime scripts po renderze canvasu albo dodac preview-only effect dla FAQ. |
+| Admin disclosure click | Klik pierwsze i drugie summary | `details.open` zmienia sie poprawnie, a admin preview bridge synchronizuje `summary[aria-expanded]` do `true` / `false` po toggle. | Public runtime synchronizuje `aria-expanded`, patrz nizszy wiersz. | Dziala po remediacji | FAQ ma bounded disclosure sync helper, a page-builder canvas/live preview oraz custom-screen read-only preview uzywaja `AdminWidgetPreviewRuntimeBridge`; admin nie wykonuje dowolnych `<script>` z widgetu. | Zamkniete w TASK-374/TASK-374-01; regresja UI potwierdza sync w admin preview. |
 | Public disclosure `aria-expanded` | Otworz public route w Playwright i kliknij drugi summary | Initial: `["true","false","false"]`; po kliknieciu: `["false","true","false"]`; root ma `data-coderso-faq-bound="true"`. | Dziala. | Dziala publicznie | `faqRuntimeClientScript` binduje root i synchronizuje summary atrybuty po `toggle`. | Brak dla public. |
 | Spacing | Select `Spacious` | `data-faq-spacing="lg"`, list `gap-4`, summary/answer padding `px-6 py-5`. | Nie publikowano tej zmiany. | Dziala | `spacingClassMap` i `panelPaddingClassMap` sa spiete. | Brak. |
 | Layout/typography | Select Full width, Right, Extra large title, Roomy padding, Smooth motion | Root `max-w-none px-6 py-12`; heading `text-3xl`; `motion=smooth`; answer wrapper uzywa smooth classes. | Nie publikowano tej zmiany. | Dziala | Mapy max width, padding, title size i motion dzialaja. | Brak. |
@@ -70,27 +70,36 @@ W publicznym Playwright po wykonaniu skryptu:
 
 To potwierdza, ze publiczny runtime FAQ synchronizuje disclosure state.
 
-## Kod-owner dla dryftu admin/public
+## Znaleziska i remediacja
 
-- `core/widgets/core/faqAccordion.tsx`
-  - `faqRuntimeClientScript` okolice linii 152-180 synchronizuje
-    `aria-expanded`.
-  - `FaqAccordionBlock` renderuje `<script dangerouslySetInnerHTML=...>` przy
-    koncu sekcji.
-- Admin preview/canvas renderuje Reactowy widget dynamicznie; w takim trybie
-  wstawione `<script>` nie zachowuje sie tak jak parser HTML na public SSR.
+- FAQ-31-05-01 zostalo potwierdzone jako drift admin/public: public runtime
+  synchronizowal `summary[aria-expanded]`, ale admin React preview nie
+  wykonywal dynamicznie wstawionego `<script>` z widgetu.
+- `core/widgets/core/faqAccordion.tsx` eksportuje bounded disclosure sync
+  helper dla `[data-coderso-faq="1"]`.
+- `core/admin/ui/pages/builder/AdminWidgetPreviewRuntimeBridge.tsx` binduje ten
+  helper po renderze admin preview.
+- `core/admin/ui/pages/builder/BlockList.tsx`,
+  `core/admin/ui/pages/builder/BlockSettings.tsx` i
+  `core/admin/ui/custom-screens/screenWidgetRenderBridge.tsx` uzywaja bridge
+  dla page-builder canvas preview, shared live preview i custom-screen
+  read-only widget preview.
+- Admin preview nadal nie wykonuje arbitrary/persisted widget scripts.
 
-## Rekomendowana poprawka
+## Walidacja remediacji
 
-Jesli wymagamy pelnej zgodnosci admin preview z public runtime:
-
-1. Dodac wspolny mechanizm uruchamiania widget runtime scripts po renderze
-   admin canvasu, albo
-2. Dodac FAQ preview effect, ktory po renderze admin preview wywoluje ten sam
-   sync logic dla `[data-coderso-faq='1']`.
-
-Do tego regresja UI: w admin preview klikniecie summary powinno aktualizowac
-`aria-expanded`, tak jak public runtime.
+- Focused admin-preview regression failed before the fix because the FAQ preview
+  bridge did not exist.
+- Focused admin-preview regression passed after the fix and confirms
+  `summary[aria-expanded]` changes from `["true", "false", "false"]` to
+  `["false", "true", "false"]` after a disclosure toggle.
+- `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- Maxwell read-only agent confirmed the same report/source drift and the need
+  to sync rather than reclassify to a boundary notice.
 
 ## Console / srodowisko
 

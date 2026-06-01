@@ -35,6 +35,7 @@ matching remediation family is implemented or closed.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1064 | 2026-06-01 | FAQ Accordion widget 31-05 UI audit remediation | CMS Widgets/FAQ Accordion/Admin Preview/Accessibility/QA/Docs |
 | 1063 | 2026-06-01 | CTA Banner widget 31-05 UI audit remediation | CMS Widgets/CTA Banner/Admin UI/Runtime QA/Docs |
 | 1062 | 2026-06-01 | Feature Grid widget 31-05 UI audit remediation | CMS Widgets/Feature Grid/Admin UI/QA/Docs |
 | 1061 | 2026-06-01 | Hero widget 31-05 UI audit continuation and remediation | CMS Widgets/Hero/Admin UI/Runtime QA/Docs |

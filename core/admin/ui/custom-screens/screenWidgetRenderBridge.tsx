@@ -4,6 +4,7 @@ import type { CustomScreenBinding } from "../../../services/customScreens/custom
 import { applyBindingsToBlocks } from "../../../services/customScreens/bindingResolver";
 import { WidgetRenderer } from "../../../widgets/renderers/widgetRenderer";
 import type { DeviceTarget, WidgetBlock, WidgetLayoutDefaults } from "../../../widgets/types";
+import { AdminWidgetPreviewRuntimeBridge } from "../pages/builder/AdminWidgetPreviewRuntimeBridge";
 
 export function resolveScreenWidgetBlock(input: {
   block: WidgetBlock;
@@ -25,11 +26,13 @@ export function ScreenWidgetReadOnlyBlock({
   renderNestedBlock?: (block: WidgetBlock) => ReactNode;
 }) {
   return (
-    <WidgetRenderer
-      block={block}
-      previewDevice={previewDevice}
-      pageDefaults={pageDefaults}
-      renderBlock={renderNestedBlock}
-    />
+    <AdminWidgetPreviewRuntimeBridge>
+      <WidgetRenderer
+        block={block}
+        previewDevice={previewDevice}
+        pageDefaults={pageDefaults}
+        renderBlock={renderNestedBlock}
+      />
+    </AdminWidgetPreviewRuntimeBridge>
   );
 }

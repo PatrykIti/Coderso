@@ -149,28 +149,35 @@ const headerTitleSizeClassMap: Record<Exclude<FaqAccordionHeaderTitleSize, "auto
   xl: "text-3xl",
 };
 
+const faqRootSelector = "[data-coderso-faq='1']";
+const faqDetailsSelector = "[data-coderso-faq-item-details]";
+const faqSummarySelector = "[data-coderso-faq-summary]";
+
 const faqRuntimeClientScript = `
 (() => {
   if (typeof document === "undefined") return;
 
+  const detailsSelector = ${JSON.stringify(faqDetailsSelector)};
+  const summarySelector = ${JSON.stringify(faqSummarySelector)};
+
   const syncState = (root) => {
-    const items = Array.from(root.querySelectorAll("[data-coderso-faq-item-details]")).filter(
+    const items = Array.from(root.querySelectorAll(detailsSelector)).filter(
       (node) => node instanceof HTMLDetailsElement
     );
 
     items.forEach((details) => {
-      const summary = details.querySelector("[data-coderso-faq-summary]");
+      const summary = details.querySelector(summarySelector);
       if (!(summary instanceof HTMLElement)) return;
       summary.setAttribute("aria-expanded", details.open ? "true" : "false");
     });
   };
 
-  document.querySelectorAll("[data-coderso-faq='1']").forEach((root) => {
+  document.querySelectorAll(${JSON.stringify(faqRootSelector)}).forEach((root) => {
     if (!(root instanceof HTMLElement)) return;
     if (root.dataset.codersoFaqBound === "true") return;
     root.dataset.codersoFaqBound = "true";
 
-    const items = Array.from(root.querySelectorAll("[data-coderso-faq-item-details]")).filter(
+    const items = Array.from(root.querySelectorAll(detailsSelector)).filter(
       (node) => node instanceof HTMLDetailsElement
     );
 
@@ -184,6 +191,68 @@ const faqRuntimeClientScript = `
   });
 })();
 `;
+
+const getFaqAccordionDetails = (root: ParentNode): HTMLDetailsElement[] => {
+  if (typeof HTMLDetailsElement === "undefined") return [];
+  return Array.from(root.querySelectorAll(faqDetailsSelector)).filter(
+    (node): node is HTMLDetailsElement => node instanceof HTMLDetailsElement
+  );
+};
+
+export function syncFaqAccordionDisclosureRoot(root: HTMLElement): void {
+  getFaqAccordionDetails(root).forEach((details) => {
+    const summary = details.querySelector(faqSummarySelector);
+    if (!(summary instanceof HTMLElement)) return;
+    summary.setAttribute("aria-expanded", details.open ? "true" : "false");
+  });
+}
+
+export function bindFaqAccordionDisclosureRoot(root: HTMLElement): () => void {
+  if (root.dataset.codersoFaqBound === "true") {
+    syncFaqAccordionDisclosureRoot(root);
+    return () => undefined;
+  }
+
+  root.dataset.codersoFaqBound = "true";
+  const cleanupEntries = getFaqAccordionDetails(root).map((details) => {
+    const listener = () => syncFaqAccordionDisclosureRoot(root);
+    details.addEventListener("toggle", listener);
+    return { details, listener };
+  });
+  syncFaqAccordionDisclosureRoot(root);
+
+  return () => {
+    cleanupEntries.forEach(({ details, listener }) => {
+      details.removeEventListener("toggle", listener);
+    });
+    if (root.dataset.codersoFaqBound === "true") {
+      delete root.dataset.codersoFaqBound;
+    }
+  };
+}
+
+const findFaqAccordionRoots = (container: ParentNode): HTMLElement[] => {
+  if (typeof HTMLElement === "undefined") return [];
+  const roots: HTMLElement[] = [];
+  if (container instanceof HTMLElement && container.matches(faqRootSelector)) {
+    roots.push(container);
+  }
+  roots.push(
+    ...Array.from(container.querySelectorAll(faqRootSelector)).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement
+    )
+  );
+  return roots;
+};
+
+export function bindFaqAccordionDisclosureRoots(container: ParentNode): () => void {
+  const cleanups = findFaqAccordionRoots(container).map((root) =>
+    bindFaqAccordionDisclosureRoot(root)
+  );
+  return () => {
+    cleanups.forEach((cleanup) => cleanup());
+  };
+}
 
 export const faqAccordionSchema = {
   type: "object",

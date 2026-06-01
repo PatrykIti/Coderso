@@ -41,6 +41,7 @@ import {
   reopenWidgetSetup,
   resolveWidgetEditorState,
 } from "./blockUtils";
+import { AdminWidgetPreviewRuntimeBridge } from "./AdminWidgetPreviewRuntimeBridge";
 
 export type BlockSettingsProps = {
   block?: Block | null;
@@ -186,11 +187,13 @@ function WidgetEditorLivePreview({
             </div>
           }
         >
-          <WidgetRenderer
-            block={previewBlock}
-            pageDefaults={pageDefaults}
-            renderContext={{ mode: "editor-preview", previewState: previewState ?? null }}
-          />
+          <AdminWidgetPreviewRuntimeBridge>
+            <WidgetRenderer
+              block={previewBlock}
+              pageDefaults={pageDefaults}
+              renderContext={{ mode: "editor-preview", previewState: previewState ?? null }}
+            />
+          </AdminWidgetPreviewRuntimeBridge>
         </WidgetPreviewErrorBoundary>
       </div>
     </section>

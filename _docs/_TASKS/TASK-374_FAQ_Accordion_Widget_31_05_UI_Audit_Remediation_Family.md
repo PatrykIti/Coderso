@@ -5,7 +5,7 @@
 **Category:** Widgets + FAQ Accordion + Admin Preview + Accessibility + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FAQ_ACCORDION_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-374-01](TASK-374-01_FAQ_31_05_01_Admin_Preview_Click_Must_Sync_Summary_Aria_Expanded.md): FAQ-31-05-01 - Admin preview click must sync `summary[aria-expanded]` or show a boundary notice
+- [x] [TASK-374-01](TASK-374-01_FAQ_31_05_01_Admin_Preview_Click_Must_Sync_Summary_Aria_Expanded.md): FAQ-31-05-01 - Admin preview click must sync `summary[aria-expanded]` or show a boundary notice
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,14 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced FAQ-31-05-01 with a failing focused UI regression: admin-preview FAQ summaries had no `aria-expanded` sync because dynamically rendered widget scripts are not executed by the React preview shell.
+- FAQ now owns reusable disclosure sync helpers, and admin preview wraps rendered widgets with `AdminWidgetPreviewRuntimeBridge`, which binds only the bounded FAQ disclosure contract.
+- The bridge is used by page-builder canvas preview, shared editor live preview, and custom-screen read-only widget preview; it does not execute arbitrary persisted scripts.
+- Public SSR behavior remains runtime-owned and does not emit stale static `aria-expanded`; public runtime still binds the same disclosure state contract after load.
+- Maxwell read-only agent confirmed the report/source drift and recommended sync rather than reclassifying to a boundary notice.
+- Claude staged review reported no blockers for the base page-builder bridge diff; final re-review after the custom-screen bridge delta was attempted but returned a budget error once and then timed out, so final Claude status is unavailable.
+- Validation: focused regression failed before the fix and passed after; `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/ui/faq-accordion-editor-wave.test.tsx`; `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/screenWidgets.test.tsx`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1064` together with TASK-374-01.
