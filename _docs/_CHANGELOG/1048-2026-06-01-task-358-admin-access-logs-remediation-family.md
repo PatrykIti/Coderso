@@ -51,6 +51,32 @@ Tasks: TASK-358, TASK-358-01, TASK-358-02, TASK-358-03, TASK-358-04
 - Removed the old access-log view/revoke no-op controls from the no-op audit
   gate and updated API, audit, guide, task, and Playwright report docs.
 
+### TASK-358-03 Access Logs Export
+
+- Added `POST /admin/api/access-logs/export` with `audit:read`, strict body
+  validation, export-specific error mapping, selected-column allowlist, 200-row
+  synchronous cap, and shared admin file response semantics.
+- Added access-log export domain contracts for CSV/JSON format normalization,
+  column labels, row serialization, CSV injection escaping, filter summaries,
+  filename generation, and `access_log_export_*` machine-readable errors.
+- Added access-log export redaction for secret-bearing request text including
+  cookies, authorization headers, CSRF/reset/session tokens, API keys,
+  passwords, and raw secret-like values in path/user-agent fields.
+- Wired `/admin/access-logs` export to the shared admin export helper with CSRF,
+  active base filters, selected allowlisted fields, and success toast feedback.
+- Renamed the Access Logs action from `Export CSV` to neutral `Export` and made
+  the preview filename format-aware so CSV/JSON selection is not mislabeled.
+- Expanded the Access Logs export dialog field list to match the backend
+  allowlist, keeping sensitive fields opt-in and defaulting only
+  `user`/`ip`/`timestamp`/`status`.
+- Fixed shared `ExportDialog` overflow so larger field lists keep the action
+  footer reachable while the dialog body scrolls.
+- Emitted `access_logs.export` audit events with format, columns, sanitized
+  filter summary, row count, and request id only; exported rows and raw
+  search/user/IP filter values are not stored in audit metadata.
+- Updated API, audit, user guide, task board, and clickable Access Logs report
+  documentation for the real export contract.
+
 ### Planning / QA
 
 - Added the report-driven remediation family for the Admin Access Logs audit.
@@ -114,5 +140,25 @@ Tasks: TASK-358, TASK-358-01, TASK-358-02, TASK-358-03, TASK-358-04
   strict revoke param validation, and audit-only session detail redaction drift;
   the final implementation threads gated `userId` to Settings Sessions, validates
   UUID params, and redacts raw session detail without `settings:read`.
+- `bun test tests/unit/access/accessLogExport.test.ts tests/integration/routes/accessLogs.test.ts`
+  passed after TASK-358-03 for export row redaction, CSV escaping, JSON output,
+  audit summary metadata, invalid columns, row-limit errors, route registration,
+  strict body validation, context passing, and permission-denied mapping.
+- `bun run test:vitest -- tests/vitest/admin/accessLogsClient.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/access-logs-table.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/shared-dialog-contracts.test.tsx tests/vitest/ui/dialogs.test.tsx`
+  passed after TASK-358-03 for CSRF export client behavior, strict export schema,
+  active-filter UI export payloads, table/no-op guard stability, and shared
+  export dialog overflow/submit behavior.
+- Playwright TASK-358-03 access export smoke passed with an `audit:read` user:
+  filtered by marker/user/status, selected `Path` and `User agent`, submitted
+  CSV and JSON exports through the UI, verified two real
+  `POST /admin/api/access-logs/export` payloads without `cursor`, and saved
+  redacted file-contract output. Evidence:
+  `.tmp/task-358-03-access-export.png`,
+  `.tmp/task-358-03-access-export.csv`,
+  `.tmp/task-358-03-access-export.json`.
+- Agent and Claude review for TASK-358-03 flagged the Audit export pattern,
+  strict body validation, `audit:read`/CSRF mapping, redaction of path/user-agent
+  secret carriers, and Playwright file evidence requirements. The UI pass also
+  found and fixed field-list drift (`userAgent` missing) and dialog overflow.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ACCESS_LOGS.md`.

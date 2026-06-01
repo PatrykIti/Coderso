@@ -12,6 +12,7 @@ import {
   User,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { isApiClientError } from "@/services/apiClient";
 import {
+  exportAccessLogs,
   listAccessLogs,
   revokeAccessFromLog,
   type AccessLogListResponse,
@@ -32,11 +34,16 @@ import {
 } from "@/services/accessLogsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
-import { ExportDialog } from "@/ui/shared/ExportDialog";
+import { ExportDialog, type ExportDialogPayload, type ExportField } from "@/ui/shared/ExportDialog";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { resolveAdminBasePath, resolveAdminHref } from "@/utils/adminPaths";
 import { resolveTruthfulCountCopy } from "../../../services/admin/adminQueryConventions";
+import {
+  accessLogExportColumnLabels,
+  isAccessLogExportColumn,
+  type AccessLogExportColumn,
+} from "../../../services/access/accessLogExportContract";
 
 import { AccessLogDetailsDrawer } from "./AccessLogDetailsDrawer";
 import { AccessLogsTable } from "./AccessLogsTable";
@@ -75,6 +82,28 @@ const unresolvedSessionContext = {
     reason: "Historical log without session link",
   },
 };
+
+const accessLogExportColumns: AccessLogExportColumn[] = [
+  "id",
+  "user",
+  "userId",
+  "ip",
+  "device",
+  "userAgent",
+  "timestamp",
+  "status",
+  "method",
+  "path",
+  "durationMs",
+  "sessionState",
+  "match",
+];
+
+const accessLogExportFields: ExportField[] = accessLogExportColumns.map((column) => ({
+  id: column,
+  label: accessLogExportColumnLabels[column],
+  defaultChecked: ["user", "ip", "timestamp", "status"].includes(column),
+}));
 
 const toDateBoundary = (value: string, boundary: "start" | "end") =>
   `${value}T${boundary === "start" ? "00:00:00.000" : "23:59:59.999"}Z`;
@@ -351,6 +380,27 @@ export function AccessLogsPage() {
     }
   }, [pendingRevokeLog]);
 
+  const handleExport = useCallback(
+    async (payload: ExportDialogPayload) => {
+      const columns = payload.fields.filter(isAccessLogExportColumn);
+      if (columns.length !== payload.fields.length) {
+        throw new Error("Access log export fields are invalid.");
+      }
+      const result = await exportAccessLogs({
+        format: payload.format,
+        columns,
+        filters: baseAccessQuery,
+      });
+      if (result.status === "queued") {
+        toast.success("Access log export queued.");
+      } else {
+        toast.success(`Access log export downloaded: ${result.filename}`);
+      }
+      setExportOpen(false);
+    },
+    [baseAccessQuery]
+  );
+
   const startFilterRefresh = () => {
     setIsLoading(true);
     setPageRequest(firstAccessPageState());
@@ -421,7 +471,7 @@ export function AccessLogsPage() {
           actions={
             <Button variant="outline" className="gap-2" onClick={() => setExportOpen(true)}>
               <Download className="h-4 w-4" />
-              Export CSV
+              Export
             </Button>
           }
         />
@@ -563,15 +613,9 @@ export function AccessLogsPage() {
         onOpenChange={setExportOpen}
         title="Export Access Logs"
         description="Download access logs based on the current filters."
-        filename="access-logs.csv"
-        unavailableReason="Access log export is not wired yet. TASK-358-03 owns the export route and payload."
-        fields={[
-          { id: "user", label: "User", defaultChecked: true },
-          { id: "ip", label: "IP address", defaultChecked: true },
-          { id: "device", label: "Device" },
-          { id: "timestamp", label: "Timestamp", defaultChecked: true },
-          { id: "status", label: "Status" },
-        ]}
+        filename="access-logs-current-filters.{format}"
+        fields={accessLogExportFields}
+        onExport={handleExport}
       />
     </AdminShell>
   );

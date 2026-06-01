@@ -19,7 +19,7 @@ and request records, inspect one access event in detail, and export the current
 slice for security review.
 
 In the current UI, this screen includes:
-- `Export CSV`,
+- `Export`,
 - filters for:
   user ID, date range, status, and search,
 - a table with:
@@ -28,7 +28,8 @@ In the current UI, this screen includes:
 - a right-side `Access Log Details` drawer,
 - per-row session state with session detail/revoke actions when the linked
   session is active and permissions allow it,
-- an export dialog scoped to the current filters.
+- an export dialog scoped to the current filters, with CSV/JSON format and
+  allowlisted fields.
 
 # Medium
 
@@ -81,12 +82,14 @@ events and their operational security context.
 12. Use `Revoke access` only when the row shows an active linked session and
     your account has the required high-risk settings write permission. Confirm
     the destructive action before revoking.
-13. Use `Export CSV` only after the current filters match the right scope.
+13. Use `Export` only after the current filters match the right scope.
 14. In the export dialog, review:
    - file format,
    - included fields,
    - filename,
    - reminder that export follows the current filters.
+15. Start the export. The downloaded CSV or JSON file contains only the selected
+    allowlisted fields from the current filtered slice.
 
 Use this safe access-review order when you want fewer wrong conclusions:
 1. Narrow the time window.
@@ -105,6 +108,9 @@ Use this safe access-review order when you want fewer wrong conclusions:
   not replace it.
 - Export should be treated as a filtered evidence snapshot rather than a default
   first step.
+- Export supports CSV and JSON. CSV escapes spreadsheet formula prefixes and
+  quoted values; JSON includes export metadata, selected columns, sanitized
+  filter summary, row count, and redacted rows.
 - Count copy describes loaded rows and cursor availability. It should not be
   read as an exact total unless the UI explicitly shows response-provided total
   metadata.
@@ -136,6 +142,9 @@ Use this safe access-review order when you want fewer wrong conclusions:
   your account has the required settings write permission.
 - Export feels too broad:
   refine the filters first because the export uses the current filtered view.
+- An export is rejected:
+  reduce the requested row limit, remove unsupported fields, or confirm your
+  account still has access-log review permission.
 
 # Decision Guide
 
@@ -162,6 +171,9 @@ Use this safe access-review order when you want fewer wrong conclusions:
   with security or high-trust review permissions.
 - Access-log exports can contain sensitive user and infrastructure context, so
   they should be handled as controlled security artifacts.
+- Exports redact cookies, authorization headers, CSRF/reset/session tokens, API
+  keys, passwords, and secret-like values from request-oriented fields before
+  the file is returned.
 - `Revoke access` is a real security action and should be used with deliberate
   operational intent. It requires a stronger permission than `audit:read` and
   is protected by CSRF plus a confirmation step.

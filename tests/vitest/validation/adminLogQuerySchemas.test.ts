@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 
 import { ApiError } from "../../../core/server/errorHandler";
 import {
+  accessLogExportRequestSchema,
   accessLogQuerySchema,
   accessLogRevokeParamsSchema,
   accessLogRevokeSchema,
@@ -75,6 +76,71 @@ test("accessLogRevokeSchema accepts only the manual revoke reason", () => {
   expect(() => validate(accessLogRevokeSchema, { reason: "other" })).toThrow(ApiError);
   expect(() =>
     validate(accessLogRevokeSchema, { reason: "admin_manual_revoke", sessionId: "client-hint" })
+  ).toThrow(ApiError);
+});
+
+test("accessLogExportRequestSchema validates strict CSV and JSON export payloads", () => {
+  expect(() =>
+    validate(accessLogExportRequestSchema, {
+      format: "csv",
+      columns: ["user", "timestamp", "status", "path"],
+      filters: {
+        limit: 50,
+        status: "failed",
+        query: "login",
+        userId: "user-1",
+        method: "POST",
+        ip: "127.0.0.1",
+        from: "2026-06-01T00:00:00.000Z",
+        to: "2026-06-02T23:59:59.999Z",
+        cursor: "cursor-1",
+      },
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    validate(accessLogExportRequestSchema, {
+      format: "json",
+      columns: ["user", "sessionState"],
+      filters: {},
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    validate(accessLogExportRequestSchema, {
+      format: "xlsx",
+      columns: ["user"],
+      filters: {},
+    })
+  ).toThrow(ApiError);
+  expect(() =>
+    validate(accessLogExportRequestSchema, {
+      format: "csv",
+      columns: ["sessionId"],
+      filters: {},
+    })
+  ).toThrow(ApiError);
+  expect(() =>
+    validate(accessLogExportRequestSchema, {
+      format: "csv",
+      columns: [],
+      filters: {},
+    })
+  ).toThrow(ApiError);
+  expect(() =>
+    validate(accessLogExportRequestSchema, {
+      format: "csv",
+      columns: ["user"],
+      filters: { q: "login" },
+    })
+  ).toThrow(ApiError);
+  expect(() =>
+    validate(accessLogExportRequestSchema, {
+      format: "csv",
+      columns: ["user"],
+      filters: {},
+      extra: true,
+    })
   ).toThrow(ApiError);
 });
 

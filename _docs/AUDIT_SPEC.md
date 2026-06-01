@@ -26,6 +26,7 @@ Minimalne logowanie zdarzen administracyjnych.
 - admin.role.duplicate
 - admin.role.delete
 - audit.export
+- access_logs.export
 - access_logs.revoke_session
 
 ## Data model
@@ -63,6 +64,11 @@ Minimalne logowanie zdarzen administracyjnych.
   payloads. Export audit events record only format, selected columns, sanitized
   filter summary, row count, and request id; they must never store exported row
   contents.
+- Access-log export output redacts sensitive text from request path, user agent,
+  IP, and user labels before serialization. Export audit events record only
+  format, selected columns, sanitized filter summary, row count, and request id;
+  they must never store exported row contents or raw search/user/IP filter
+  values.
 - Access-log session revoke audit events use safe reference keys only:
   `accessLogRef`, `revokedSessionRef`, `targetUserRef`, `reason`, and `result`.
   They must not include session cookies, token hashes, CSRF hashes, request
@@ -191,6 +197,27 @@ blocked as `access_log_current_session_revoke_blocked`, missing session relation
 maps to `access_log_session_not_found`, expired sessions map to
 `access_log_session_expired`, and already-revoked sessions return idempotent
 success with `alreadyRevoked: true`.
+
+`POST /access-logs/export` is an internal admin data export route protected by
+`audit:read`, global admin CSRF, and the `admin_write` rate-limit bucket. The
+strict body accepts:
+
+- `format`: `csv` or `json`.
+- `columns`: non-empty allowlisted array. Supported columns: `id`, `user`,
+  `userId`, `method`, `path`, `status`, `ip`, `device`, `userAgent`,
+  `timestamp`, `durationMs`, `sessionState`, and `match`. Raw `sessionId` is
+  not exportable.
+- `filters`: same normalized access log filter contract as `GET /access-logs`,
+  but body uses `query` instead of URL param `q`.
+- `filters.limit`: optional positive integer, capped at 200 for synchronous
+  exports. Values above 200 are rejected as `access_log_export_too_large`.
+
+Export response uses the shared admin export JSON file contract. CSV output
+escapes commas, quotes, newlines, and leading formula characters (`=`, `+`,
+`-`, `@`). JSON output includes `exportedAt`, selected columns, sanitized
+filter summary, row count, max rows, and redacted rows. Errors map to
+`access_log_export_invalid`, `access_log_export_invalid_columns`,
+`access_log_export_too_large`, or `access_log_export_forbidden`.
 
 ## Admin Entry Copy Payload
 

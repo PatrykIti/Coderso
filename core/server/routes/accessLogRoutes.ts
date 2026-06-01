@@ -1,4 +1,6 @@
 import { AdminQueryConventionError } from "../../services/admin/adminQueryConventions";
+import { exportAccessLogs } from "../../services/access/accessLogExport";
+import { AccessLogExportError } from "../../services/access/accessLogExportContract";
 import {
   AccessLogDomainError,
   listAccessLogs,
@@ -9,6 +11,7 @@ import { logAudit } from "../../services/audit/auditService";
 import { getUserPermissions, hasPermission } from "../../services/auth/roleService";
 import { ApiError } from "../errorHandler";
 import {
+  accessLogExportRequestSchema,
   accessLogQuerySchema,
   accessLogRevokeParamsSchema,
   accessLogRevokeSchema,
@@ -22,6 +25,7 @@ export type RouteContext = {
   sessionId?: string;
   ip?: string;
   userAgent?: string;
+  requestId?: string;
 };
 
 export type RouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
@@ -35,6 +39,7 @@ export type AccessLogRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
   listAccessLogs?: typeof listAccessLogs;
+  exportAccessLogs?: typeof exportAccessLogs;
   revokeAccessLogSession?: typeof revokeAccessLogSession;
   logAudit?: typeof logAudit;
   resolvePermissions?: (ctx: RouteContext) => Promise<string[]> | string[];
@@ -85,6 +90,51 @@ export function mapAccessLogMutationError(error: unknown) {
   return null;
 }
 
+const mapAccessLogExportValidationError = (error: ApiError) => {
+  const details = Array.isArray(error.details) ? (error.details as Array<{ path?: string }>) : [];
+  const columnFailure = details.some((detail) => detail.path?.startsWith("columns"));
+  if (columnFailure) {
+    return new ApiError(
+      "access_log_export_invalid_columns",
+      "Access log export columns are invalid",
+      400,
+      error.details
+    );
+  }
+  return new ApiError(
+    "access_log_export_invalid",
+    "Access log export request is invalid",
+    400,
+    error.details
+  );
+};
+
+export function mapAccessLogExportError(error: unknown) {
+  if (error instanceof AccessLogExportError) {
+    return new ApiError(error.code, error.message, error.status, {
+      field: error.field,
+    });
+  }
+  if (error instanceof ApiError && (error.code === "permission_denied" || error.status === 403)) {
+    return new ApiError(
+      "access_log_export_forbidden",
+      "Access log export is forbidden",
+      403,
+      error.details
+    );
+  }
+  if (error instanceof AdminQueryConventionError) {
+    return new ApiError("access_log_export_invalid", "Access log export filters are invalid", 400, {
+      code: error.code,
+      field: error.field,
+    });
+  }
+  if (error instanceof ApiError && error.code === "validation_error") {
+    return mapAccessLogExportValidationError(error);
+  }
+  return null;
+}
+
 const resolveDefaultPermissions = async (ctx: RouteContext) => {
   if (!ctx.user?.id) return [];
   return getUserPermissions(ctx.user.id);
@@ -92,12 +142,14 @@ const resolveDefaultPermissions = async (ctx: RouteContext) => {
 
 export function registerAccessLogRoutes(router: Router, deps: AccessLogRouteDeps) {
   const { requirePermission, validate } = deps;
+  const requireAuditRead = requirePermission("audit:read");
   const listAccessLogRecords = deps.listAccessLogs ?? listAccessLogs;
+  const exportAccessLogRecords = deps.exportAccessLogs ?? exportAccessLogs;
   const revokeAccessLog = deps.revokeAccessLogSession ?? revokeAccessLogSession;
   const auditLogger = deps.logAudit ?? logAudit;
   const resolvePermissions = deps.resolvePermissions ?? resolveDefaultPermissions;
 
-  router.get("/access-logs", requirePermission("audit:read"), async (ctx) => {
+  router.get("/access-logs", requireAuditRead, async (ctx) => {
     try {
       validate(accessLogQuerySchema, ctx.query);
       const permissions = await resolvePermissions(ctx);
@@ -123,6 +175,34 @@ export function registerAccessLogRoutes(router: Router, deps: AccessLogRouteDeps
       throw error;
     }
   });
+
+  router.post(
+    "/access-logs/export",
+    async (ctx) => {
+      try {
+        await requireAuditRead(ctx);
+      } catch (error) {
+        const mapped = mapAccessLogExportError(error);
+        if (mapped) throw mapped;
+        throw error;
+      }
+    },
+    async (ctx) => {
+      try {
+        validate(accessLogExportRequestSchema, ctx.body);
+        return await exportAccessLogRecords(ctx.body as Parameters<typeof exportAccessLogs>[0], {
+          actorId: ctx.user?.id ?? null,
+          requestId: ctx.requestId,
+          ip: ctx.ip,
+          userAgent: ctx.userAgent,
+        });
+      } catch (error) {
+        const mapped = mapAccessLogExportError(error);
+        if (mapped) throw mapped;
+        throw error;
+      }
+    }
+  );
 
   router.post("/access-logs/:id/revoke", requirePermission("settings:write"), async (ctx) => {
     try {

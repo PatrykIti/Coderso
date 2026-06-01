@@ -78,6 +78,7 @@ export function ExportDialog({
     unavailableReason ?? (!onExport ? "Export is not available for this surface yet." : null);
   const canSubmit = Boolean(onExport) && !unavailableCopy && selectedFields.length > 0;
   const isSubmitting = status === "submitting";
+  const displayFilename = filename.replace("{format}", format);
 
   const resetDialogState = () => {
     setFormat("csv");
@@ -122,12 +123,12 @@ export function ExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[85vh] gap-0 p-0 sm:max-w-lg">
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-5 px-6 py-5">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase text-muted-foreground">
               File format
@@ -177,7 +178,7 @@ export function ExportDialog({
           ) : null}
           <div className="rounded-xl border bg-muted/30 p-4 text-xs text-muted-foreground">
             Export will include data from the current filters. File name:{" "}
-            <span className="font-semibold text-foreground">{filename}</span>
+            <span className="font-semibold text-foreground">{displayFilename}</span>
           </div>
         </div>
         <Separator />

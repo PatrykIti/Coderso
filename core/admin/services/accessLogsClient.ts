@@ -1,4 +1,9 @@
 import { apiRequest } from "./apiClient";
+import { downloadAdminExport, type AdminExportResult } from "./adminExportClient";
+import type {
+  AccessLogExportColumn,
+  AccessLogExportFormat,
+} from "../../services/access/accessLogExportContract";
 
 export type AccessLogRecord = {
   id: string;
@@ -70,6 +75,12 @@ export type AccessLogListResponse = {
   totalApprox?: number | null;
 };
 
+export type AccessLogExportRequest = {
+  format: AccessLogExportFormat;
+  columns: AccessLogExportColumn[];
+  filters: AccessLogQuery;
+};
+
 const buildQuery = (query: AccessLogQuery) => {
   const params = new URLSearchParams();
   if (query.limit) params.set("limit", String(query.limit));
@@ -114,4 +125,13 @@ export async function revokeAccessFromLog(accessLogId: string) {
     },
     { withCsrf: true }
   );
+}
+
+export async function exportAccessLogs(
+  request: AccessLogExportRequest
+): Promise<AdminExportResult> {
+  return downloadAdminExport("/access-logs/export", request, {
+    filenamePrefix: "access-logs",
+    withCsrf: true,
+  });
 }

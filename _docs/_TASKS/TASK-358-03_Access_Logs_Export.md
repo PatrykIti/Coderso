@@ -5,7 +5,7 @@
 **Category:** Admin API + Access Logs + Export + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-358-01, TASK-360-03
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -125,3 +125,14 @@ Error handling:
 - Access Logs export submit produces a real download/job result.
 - Export uses current filters and selected allowlisted fields.
 - Output is redacted and safe for CSV/JSON.
+
+## Completion Evidence
+
+- Implemented `POST /admin/api/access-logs/export` with `audit:read`, CSRF via
+  shared admin export helper, strict body validation, selected column allowlist,
+  200-row cap, CSV/JSON serializers, and `access_logs.export` summary audit.
+- Playwright UI pass clicked Access Logs filters, selected `Path` and
+  `User agent`, submitted CSV and JSON exports, and verified redacted
+  file-contract output in `.tmp/task-358-03-access-export.*`.
+- Validation covered Bun service/route tests plus Vitest admin client, strict
+  schema, Access Logs UI, no-op gate, and shared export dialog behavior.

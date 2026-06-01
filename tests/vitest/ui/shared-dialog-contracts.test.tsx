@@ -175,7 +175,7 @@ test("ExportDialog submits selected fields and removes unsupported Excel export"
       onOpenChange={() => undefined}
       title="Export Audit Logs"
       description="Download records."
-      filename="audit-logs.csv"
+      filename="audit-logs.{format}"
       fields={[
         { id: "event", label: "Event", defaultChecked: true },
         { id: "actor", label: "Actor", defaultChecked: false },
@@ -187,6 +187,7 @@ test("ExportDialog submits selected fields and removes unsupported Excel export"
   try {
     expect(document.body.textContent).toContain("Export Audit Logs");
     expect(document.body.textContent).not.toContain("Excel");
+    expect(document.body.textContent).toContain("audit-logs.csv");
     await clickButton("Export");
     expect(onExport).toHaveBeenCalledWith({ format: "csv", fields: ["event"] });
     expect(document.body.textContent).toContain("Export started.");

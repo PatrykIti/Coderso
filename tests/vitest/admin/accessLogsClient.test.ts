@@ -1,6 +1,10 @@
-import { expect, test } from "vitest";
+import { afterEach, expect, test } from "vitest";
 
-import { listAccessLogs, revokeAccessFromLog } from "../../../core/admin/services/accessLogsClient";
+import {
+  exportAccessLogs,
+  listAccessLogs,
+  revokeAccessFromLog,
+} from "../../../core/admin/services/accessLogsClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -8,6 +12,10 @@ const jsonResponse = (payload: unknown, status = 200) =>
     status,
     headers: { "Content-Type": "application/json" },
   });
+
+afterEach(() => {
+  resetCsrfToken();
+});
 
 test("listAccessLogs hits GET /access-logs with query params", async () => {
   const originalFetch = globalThis.fetch;
@@ -45,6 +53,73 @@ test("listAccessLogs hits GET /access-logs with query params", async () => {
       totalCount: 120,
       totalApprox: 125,
     });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("exportAccessLogs posts active filters and selected columns through admin export helper", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  resetCsrfToken();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      type: "file",
+      filename: "access-logs-2026-06-01-failed-POST-search-user-ip.csv",
+      mimeType: "text/csv",
+      content: "User,Status",
+    });
+  };
+
+  try {
+    await expect(
+      exportAccessLogs({
+        format: "csv",
+        columns: ["user", "timestamp", "status", "path"],
+        filters: {
+          limit: 50,
+          status: "failed",
+          query: "login",
+          userId: "user-1",
+          method: "POST",
+          ip: "127.0.0.1",
+          from: "2026-06-01T00:00:00.000Z",
+          to: "2026-06-02T23:59:59.999Z",
+        },
+      })
+    ).resolves.toEqual({
+      status: "downloaded",
+      filename: "access-logs-2026-06-01-failed-POST-search-user-ip.csv",
+      mimeType: "text/csv",
+    });
+
+    expect(calls.map((call) => String(call.input))).toEqual([
+      "/admin/api/auth/csrf",
+      "/admin/api/access-logs/export",
+    ]);
+    expect(new Headers(calls[1]?.init?.headers).get("X-CSRF-Token")).toBe("csrf-token");
+    expect(calls[1]?.init?.body).toBe(
+      JSON.stringify({
+        format: "csv",
+        columns: ["user", "timestamp", "status", "path"],
+        filters: {
+          limit: 50,
+          status: "failed",
+          query: "login",
+          userId: "user-1",
+          method: "POST",
+          ip: "127.0.0.1",
+          from: "2026-06-01T00:00:00.000Z",
+          to: "2026-06-02T23:59:59.999Z",
+        },
+      })
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

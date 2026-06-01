@@ -2875,9 +2875,11 @@ output escapes commas, quotes, newlines, and formula prefixes.
 Permissions:
 
 - `audit:read` for `GET /access-logs`.
+- `audit:read` for `POST /access-logs/export`.
 - `settings:write` for `POST /access-logs/:id/revoke`.
 
 - `GET /access-logs?limit=100`
+- `POST /access-logs/export`
 - `POST /access-logs/:id/revoke`
 - Optional strict filters: `status=success|failed`, `q=search`, `userId`,
   `method`, `ip`, `from`, `to`, `cursor`.
@@ -2940,6 +2942,51 @@ surface focus a linked active session that belongs to another user without
 guessing from browser hints. Historical rows without `session_id` and
 failed/system rows do not call session actions.
 
+`POST /access-logs/export` body:
+
+```json
+{
+  "format": "csv",
+  "columns": ["user", "ip", "timestamp", "status", "path"],
+  "filters": {
+    "limit": 50,
+    "status": "failed",
+    "query": "login",
+    "userId": "user-id",
+    "method": "POST",
+    "ip": "127.0.0.1",
+    "from": "2026-06-01T00:00:00.000Z",
+    "to": "2026-06-01T23:59:59.999Z"
+  }
+}
+```
+
+The export route is an internal admin POST (`/admin/api/access-logs/export`
+over HTTP), uses the global admin CSRF and `admin_write` rate-limit pipeline,
+and requires `audit:read`. It rejects unknown body fields and unsupported
+columns. Supported formats are `csv` and `json`; synchronous exports are
+limited to 200 rows. The body uses `query` instead of the URL `q` parameter.
+Supported columns are `id`, `user`, `userId`, `method`, `path`, `status`, `ip`,
+`device`, `userAgent`, `timestamp`, `durationMs`, `sessionState`, and `match`.
+Raw `sessionId` is not an export column.
+
+Responses use the shared admin export JSON contract:
+
+```json
+{
+  "type": "file",
+  "filename": "access-logs-2026-06-01-failed-POST-search-user-ip.csv",
+  "mimeType": "text/csv",
+  "content": "User,Status\nAdmin,401"
+}
+```
+
+Exported `path`, `userAgent`, IP, and user labels are redacted for cookies,
+authorization headers, CSRF/reset/session tokens, API keys, passwords, and raw
+secret-like values before serialization. CSV output escapes commas, quotes,
+newlines, and formula prefixes. Export emits `access_logs.export` with format,
+selected columns, sanitized filter summary, row count, and request id only.
+
 `POST /access-logs/:id/revoke` strict JSON body:
 
 ```json
@@ -2960,6 +3007,12 @@ Known errors:
 
 - `access_log_query_invalid`: invalid/unknown list query params.
 - `access_log_cursor_invalid`: malformed list cursor.
+- `access_log_export_invalid`: invalid/unknown export payload.
+- `access_log_export_invalid_columns`: unsupported or empty export column
+  selection.
+- `access_log_export_too_large`: requested synchronous export limit is above
+  the supported cap.
+- `access_log_export_forbidden`: `audit:read` is missing for export.
 - `access_log_revoke_invalid`: invalid revoke body or reason.
 - `access_log_not_found`: access log row does not exist.
 - `access_log_session_not_found`: row has no resolvable session relation.

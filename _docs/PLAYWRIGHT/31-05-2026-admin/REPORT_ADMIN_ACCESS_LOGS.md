@@ -8,6 +8,38 @@ Trasa: `/admin/access-logs`. Źródła:
 
 ## Co faktycznie kliknięto
 
+### TASK-358-03 verification - 2026-06-01
+
+- Przygotowano restricted usera z rolą `audit:read` oraz kontrolowany failed
+  access log z markerem w request path i sekretami w `path`/`userAgent`
+  (`token`, `Cookie`, `Authorization`, `password`).
+- Po zalogowaniu weszliśmy w `/admin/access-logs`, ustawiliśmy search po
+  markerze, exact `User ID` i status `Failed`; tabela pokazała
+  `TASK 358-03 Access Export` oraz `Matched request path`.
+- Kliknięto `Export`, otwarto `Export Access Logs`, zaznaczono opt-in pola
+  `Path` i `User agent`, a następnie wykonano realny submit do
+  `POST /admin/api/access-logs/export`.
+- CSV file contract zwrócił
+  `access-logs-2026-06-01-failed-search-user.csv` z kolumnami
+  `user`, `ip`, `timestamp`, `status`, `path`, `userAgent`; content został
+  zapisany jako `.tmp/task-358-03-access-export.csv`.
+- Ponownie otwarto dialog, przełączono format na `JSON` i wykonano drugi realny
+  submit do tego samego endpointu. JSON file contract zwrócił
+  `access-logs-2026-06-01-failed-search-user.json`; content został zapisany jako
+  `.tmp/task-358-03-access-export.json`.
+- Oba payloady eksportu zawierały aktywne filtry `limit`, `query`, `userId`,
+  `status`, `from` i nie zawierały `cursor`.
+- Oba pliki zawierały marker publicznego path, ale nie zawierały surowych
+  sekretów; `token`, `Cookie`, `Authorization` i `password` były zastąpione
+  `[REDACTED]`.
+- Playwright pass wykrył dwa drifty, które zostały naprawione w tym liściu:
+  dialog nie wystawiał pola `User agent` mimo backendowej allowlisty, a shared
+  export dialog przy większej liczbie pól wypychał przycisk `Export` poza
+  viewport zamiast przewijać środek.
+- Dowody: `.tmp/task-358-03-access-export.png`,
+  `.tmp/task-358-03-access-export.csv`,
+  `.tmp/task-358-03-access-export.json`.
+
 ### TASK-358-02 verification - 2026-06-01
 
 - Przygotowano restricted usera z rolą `audit:read` oraz drugiego usera z
@@ -74,9 +106,10 @@ sesji. Po TASK-358-02 realnie kliknięto view session i revoke.
 
 - Lista pobiera dane z API z limitem 50 w UI i strict server query contract.
 - Search buduje query i przeładowuje listę przez `q`.
-- Status filter, exact `User ID`, `method`, `ip`, date range
+- Status filter, exact `User ID`, date range
   `last-7-days`/`last-30-days`/`this-month`, custom `from`/`to` oraz `cursor`
-  są mapowane do requestu API.
+  są mapowane do requestu API. Server contract obsługuje też `method` i `ip`;
+  UI dla advanced method/IP filters pozostaje w `TASK-358-04`.
 - Details drawer otwiera się z realnymi danymi rekordu.
 - `Previous` na pierwszej stronie jest disabled.
 - `Next` jest sterowany przez backend `nextCursor`, a `Previous` wraca do
@@ -93,6 +126,9 @@ sesji. Po TASK-358-02 realnie kliknięto view session i revoke.
   drawer do `Session already revoked`.
 - Restricted `audit:read` user nie widzi raw `sessionId` i nie może odpalić
   revoke.
+- `Export` wysyła CSV/JSON z aktywnymi filtrami i selected allowlisted fields do
+  `POST /admin/api/access-logs/export`, zwraca shared file contract oraz
+  redaguje secret-bearing `path` i `userAgent`.
 
 ## Co nie działało / co jest mylące
 
@@ -105,7 +141,7 @@ sesji. Po TASK-358-02 realnie kliknięto view session i revoke.
 | Sliders button nie ma handlera | nadal niezamknięte, jawnie oznaczone jako unavailable `TASK-358-04` | TASK-358-04 musi dodać drawer albo usunąć przycisk |
 | Paginacja jest statyczna | zamknięte: brak page 1/2/3, jest backend `nextCursor` i Previous/Next | brak dalszego ownera dla podstawowej paginacji |
 | Search result match jest niewyjaśniony | zamknięte: row pokazuje `Matched user email`/inne match labels | brak dalszego ownera dla podstawowego wyjaśnienia wyników |
-| Export dialog nie eksportuje | nadal niezamknięte | TASK-358-03 musi podłączyć CSV/JSON export do API lub pokazać unavailable state |
+| Export dialog nie eksportuje | zamknięte: CSV/JSON export używa `/admin/api/access-logs/export`, aktywnych filtrów, allowlisty kolumn, CSRF i redakcji sekretów | brak dalszego ownera dla podstawowego exportu |
 
 ## Dlaczego
 
@@ -113,14 +149,16 @@ Pierwotnie widok miał sensowny API client dla listy, ale UI wyprzedzał backend
 contract: szczegóły sesji, revoke, custom range, zaawansowane filtry,
 paginacja i export nie miały kontraktu wykonawczego. Po TASK-358-01 część
 listowa ma już server-side contract i realną paginację. Po TASK-358-02 kontrakt
-sesji/revoke też jest wykonawczy; nadal brakuje exportu i advanced filters.
+sesji/revoke też jest wykonawczy. Po TASK-358-03 podstawowy CSV/JSON export
+jest wykonawczy; nadal brakuje advanced filters.
 
 ## Jak naprawić
 
 - TASK-358-02: zamknięte przez `access_logs.session_id`, realny session focus,
   confirm modal, CSRF, `settings:write`, self-lockout guard, audit event i
   unavailable copy dla rows bez aktywnej sesji.
-- TASK-358-03: podłączyć export do API z aktywnymi filtrami, allowlistą kolumn,
-  redakcją sekretów i download feedbackiem albo pokazać jawnie unavailable.
+- TASK-358-03: zamknięte przez `/admin/api/access-logs/export`, shared export
+  helper, CSV/JSON file contract, allowlistę pól, redakcję sekretów,
+  `access_logs.export` audit event i realny Playwright UI export pass.
 - TASK-358-04: podłączyć sliders/advanced filters drawer i ewentualny dynamiczny
   user picker/chips, zachowując privacy dla restricted `audit:read`.

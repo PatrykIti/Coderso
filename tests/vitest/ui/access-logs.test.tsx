@@ -12,16 +12,32 @@ import type {
 
 type ListAccessLogsMock = (query?: AccessLogQuery) => Promise<AccessLogListResponse>;
 type RevokeAccessFromLogMock = (accessLogId: string) => Promise<{ ok: boolean }>;
+type ExportAccessLogsMock = (request: {
+  format: "csv" | "json";
+  columns: string[];
+  filters: AccessLogQuery;
+}) => Promise<{ status: "downloaded"; filename: string; mimeType: string }>;
 
 const accessState = vi.hoisted(() => ({
   nextError: null as unknown,
   listAccessLogs: vi.fn<ListAccessLogsMock>(async () => ({ items: [], nextCursor: null })),
   revokeAccessFromLog: vi.fn<RevokeAccessFromLogMock>(async () => ({ ok: true })),
+  exportAccessLogs: vi.fn<ExportAccessLogsMock>(async () => ({
+    status: "downloaded",
+    filename: "access-logs-2026-06-01-all.csv",
+    mimeType: "text/csv",
+  })),
   reset() {
     this.nextError = null;
     this.listAccessLogs.mockReset();
     this.revokeAccessFromLog.mockReset();
+    this.exportAccessLogs.mockReset();
     this.revokeAccessFromLog.mockResolvedValue({ ok: true });
+    this.exportAccessLogs.mockResolvedValue({
+      status: "downloaded",
+      filename: "access-logs-2026-06-01-all.csv",
+      mimeType: "text/csv",
+    });
     this.listAccessLogs.mockImplementation(async (query) => {
       if (this.nextError) {
         const error = this.nextError;
@@ -79,6 +95,13 @@ const routerState = vi.hoisted(() => ({
   },
 }));
 
+const toastState = vi.hoisted(() => ({
+  success: vi.fn(),
+  reset() {
+    this.success.mockReset();
+  },
+}));
+
 function accessRecord(overrides: Partial<AccessLogListResponse["items"][number]> = {}) {
   return {
     id: "access-1",
@@ -108,8 +131,15 @@ function accessRecord(overrides: Partial<AccessLogListResponse["items"][number]>
 }
 
 vi.mock("../../../core/admin/services/accessLogsClient", () => ({
+  exportAccessLogs: accessState.exportAccessLogs,
   listAccessLogs: accessState.listAccessLogs,
   revokeAccessFromLog: accessState.revokeAccessFromLog,
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: toastState.success,
+  },
 }));
 
 vi.mock("@/services/apiClient", () => ({
@@ -181,12 +211,40 @@ vi.mock("@/ui/shared/PageHeader", () => ({
 }));
 
 vi.mock("@/ui/shared/ExportDialog", () => ({
-  ExportDialog: ({ title, unavailableReason }: { title: string; unavailableReason?: string }) => (
-    <div>
-      {title}
-      {unavailableReason}
-    </div>
-  ),
+  ExportDialog: ({
+    open,
+    onOpenChange,
+    title,
+    fields,
+    onExport,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    title: string;
+    fields: Array<{ id: string; defaultChecked?: boolean }>;
+    onExport?: (payload: { format: "csv" | "json"; fields: string[] }) => Promise<void> | void;
+  }) =>
+    open ? (
+      <div>
+        <span>{title}</span>
+        <button
+          type="button"
+          onClick={() =>
+            void onExport?.({
+              format: "csv",
+              fields: fields
+                .filter((field) => field.defaultChecked !== false)
+                .map((field) => field.id),
+            })
+          }
+        >
+          submit-export
+        </button>
+        <button type="button" onClick={() => onOpenChange(false)}>
+          close-export
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
@@ -365,6 +423,7 @@ function lastAccessQuery() {
 beforeEach(() => {
   accessState.reset();
   routerState.reset();
+  toastState.reset();
 });
 
 afterEach(() => {
@@ -429,6 +488,67 @@ test("AccessLogsPage sends server filters and drives cursor pagination", async (
       })
     );
     expect(lastAccessQuery()).toEqual(expect.not.objectContaining({ cursor: expect.any(String) }));
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsPage exports current base filters without page cursor", async () => {
+  const view = mount(<AccessLogsPage />);
+
+  try {
+    await flush();
+    const searchInput = view.container.querySelector(
+      'input[placeholder="Search user or IP..."]'
+    ) as HTMLInputElement;
+    const userIdInput = view.container.querySelector(
+      'input[placeholder="User ID"]'
+    ) as HTMLInputElement;
+    setInputValue(searchInput, "ada");
+    setInputValue(userIdInput, "user-1");
+    await flush();
+
+    clickByText(view.container, "next-page");
+    await flush();
+    expect(lastAccessQuery()).toEqual(expect.objectContaining({ cursor: "cursor-1" }));
+
+    const selects = view.container.querySelectorAll("select");
+    setSelectValue(selects[0] as HTMLSelectElement, "custom");
+    await flush();
+    setInputValue(
+      view.container.querySelector('input[aria-label="Custom range start"]') as HTMLInputElement,
+      "2026-05-01"
+    );
+    setInputValue(
+      view.container.querySelector('input[aria-label="Custom range end"]') as HTMLInputElement,
+      "2026-05-31"
+    );
+    setSelectValue(selects[1] as HTMLSelectElement, "failed");
+    await flush();
+
+    clickByText(view.container, "Export");
+    await flush();
+    expect(view.container.textContent).toContain("Export Access Logs");
+
+    clickByText(view.container, "submit-export");
+    await flush();
+
+    expect(accessState.exportAccessLogs).toHaveBeenCalledWith({
+      format: "csv",
+      columns: ["user", "ip", "timestamp", "status"],
+      filters: {
+        limit: 50,
+        query: "ada",
+        userId: "user-1",
+        status: "failed",
+        from: "2026-05-01T00:00:00.000Z",
+        to: "2026-05-31T23:59:59.999Z",
+      },
+    });
+    expect(toastState.success).toHaveBeenCalledWith(
+      "Access log export downloaded: access-logs-2026-06-01-all.csv"
+    );
+    expect(view.container.textContent).not.toContain("Export Access Logs");
   } finally {
     view.cleanup();
   }
