@@ -24,6 +24,7 @@ export type PermissionsMatrixProps = {
   roles?: RoleSummary[];
   permissionGroups?: PermissionGroup[];
   rolePermissions?: RolePermissionsMap;
+  readOnlyReason?: string;
   onTogglePermission?: (roleId: string, permissionId: string) => void;
   onToggleRoleAll?: (roleId: string) => void;
 };
@@ -32,21 +33,18 @@ export function PermissionsMatrix({
   roles = [],
   permissionGroups,
   rolePermissions = {},
+  readOnlyReason,
   onTogglePermission,
   onToggleRoleAll,
 }: PermissionsMatrixProps) {
   const resolvedGroups =
-    permissionGroups && permissionGroups.length > 0
-      ? permissionGroups
-      : fallbackPermissionGroups;
-  const allPermissionIds = useMemo(
-    () => flattenPermissionGroups(resolvedGroups),
-    [resolvedGroups]
-  );
+    permissionGroups && permissionGroups.length > 0 ? permissionGroups : fallbackPermissionGroups;
+  const allPermissionIds = useMemo(() => flattenPermissionGroups(resolvedGroups), [resolvedGroups]);
   const permissionCount = resolvedGroups.reduce(
     (total, group) => total + group.permissions.length,
     0
   );
+  const readOnlyReasonId = readOnlyReason ? "permissions-matrix-readonly-reason" : undefined;
 
   const rolePermissionSets = useMemo(() => {
     const map = new Map<string, Set<string>>();
@@ -58,6 +56,11 @@ export function PermissionsMatrix({
 
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+      {readOnlyReason ? (
+        <p id={readOnlyReasonId} className="sr-only">
+          {readOnlyReason}
+        </p>
+      ) : null}
       <div className="flex flex-col gap-3 px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
@@ -79,23 +82,26 @@ export function PermissionsMatrix({
           {roles.map((role) => {
             const selected = rolePermissionSets.get(role.id) ?? new Set();
             const hasAll =
-              allPermissionIds.length > 0 &&
-              allPermissionIds.every((id) => selected.has(id));
+              allPermissionIds.length > 0 && allPermissionIds.every((id) => selected.has(id));
 
             return (
-            <label
-              key={role.id}
-              className="flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
-            >
-              <Checkbox
-                checked={hasAll}
-                aria-label={`Toggle all ${role.name} permissions`}
-                onCheckedChange={() => onToggleRoleAll?.(role.id)}
-                disabled={!onToggleRoleAll}
-              />
-              <span>{role.name}</span>
-            </label>
-          )})}
+              <label
+                key={role.id}
+                className="flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                title={readOnlyReason}
+              >
+                <Checkbox
+                  checked={hasAll}
+                  aria-label={`Toggle all ${role.name} permissions`}
+                  aria-describedby={readOnlyReasonId}
+                  title={readOnlyReason}
+                  onCheckedChange={() => onToggleRoleAll?.(role.id)}
+                  disabled={Boolean(readOnlyReason) || !onToggleRoleAll}
+                />
+                <span>{role.name}</span>
+              </label>
+            );
+          })}
         </div>
       </div>
       <Separator />
@@ -153,10 +159,10 @@ export function PermissionsMatrix({
                             <Checkbox
                               checked={isChecked}
                               aria-label={`${permission.label} for ${role.name}`}
-                              onCheckedChange={() =>
-                                onTogglePermission?.(role.id, permission.id)
-                              }
-                              disabled={!onTogglePermission}
+                              aria-describedby={readOnlyReasonId}
+                              title={readOnlyReason}
+                              onCheckedChange={() => onTogglePermission?.(role.id, permission.id)}
+                              disabled={Boolean(readOnlyReason) || !onTogglePermission}
                             />
                           </div>
                         </TableCell>

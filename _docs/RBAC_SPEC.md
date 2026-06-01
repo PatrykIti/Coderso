@@ -79,6 +79,11 @@ UI behavior:
   uprawnien UI nie wykonuje fetchy Users/Roles.
 - `users:read`-only pokazuje liste users bez role filter/details; `roles:read`
   -only pokazuje role cards/catalog bez tabeli users i invite.
+- `/admin/roles` wymaga `roles:read` do odczytu macierzy. Bez `roles:read` UI
+  renderuje access denied przed roles/catalog fetch. `roles:read` bez
+  `roles:write` pokazuje searchable read-only matrix, ale nie aktywuje Add Role,
+  bulk toggles, checkbox toggles ani Save changes. Stale 403 z odczytu albo
+  zapisu wymusza odswiezenie permission snapshotu.
 - Widoki Users/Roles wylaczaja akcje edycji bez odpowiedniego write
   permission, a stale 403 wymusza odswiezenie permission snapshotu.
 - Ostatni admin nie moze zostac usuniety ani pozbawiony roli admin.

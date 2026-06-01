@@ -50,6 +50,12 @@ jednorazowej roli testowej oraz przywrócono stan.
 - Pozytywny save macierzy działa dla admina: dodanie i usunięcie
   `settings:read` zapisało się przez `PATCH /admin-roles/:id`.
 - API poprawnie odrzuca zapis macierzy dla restricted usera bez `roles:write`.
+- Po `TASK-356-01` UI ma denied/read-only/editable mode: brak `roles:read` nie
+  wykonuje roles/catalog fetch, a `roles:read` bez `roles:write` pozwala
+  wyszukiwac i ogladac matrix bez aktywnego `Add Role`, checkbox toggles,
+  bulk toggles ani `Save changes`.
+- Stale `403 permission_denied` na load/save odswieza permission snapshot; save
+  403 zostawia dirty draft i pokazuje refresh-required copy.
 
 ## Co nie działało / co jest ryzykowne
 
@@ -60,6 +66,22 @@ jednorazowej roli testowej oraz przywrócono stan.
 | `Save changes` zapisuje masowe zmiany bez potwierdzenia | `handleSaveChanges` buduje update dla zmienionych ról i od razu woła `updateAdminRole` | jeden błędny klik może zmienić RBAC wielu ról |
 | `Select all` w RoleEditor przełącza pełen dostęp bez confirm | `handleSelectAll` ustawia `fullAccess` i wszystkie permissions | UI ostrzega badge, ale nie wymusza świadomego potwierdzenia |
 | Brak podsumowania diffu przed zapisem | footer pokazuje tylko dirty/clean | admin nie widzi dokładnie, które role i scopes zmienia |
+
+Status po `TASK-356-01`:
+
+- Pierwsze dwa problemy z tabeli sa zamkniete w kodzie i Vitest: Roles Matrix
+  konsumuje shared permission snapshot, a restricted `roles:read` user dostaje
+  searchable read-only matrix bez lokalnego dirty state i bez aktywnego
+  role-create/save flow.
+- Playwright CLI pass `task-356-01-roles-readonly` potwierdzil ten sam kontrakt
+  w realnym UI: tymczasowy `roles:read`-only user zalogowal sie na
+  `/admin/roles`, `Add Role` bylo disabled, `Save changes` bylo nieobecne,
+  checkbox/bulk toggles byly disabled, forced click nie ustawil dirty state, a
+  search nadal dzialal. Fixture user/role zostaly usuniete po tescie; lokalny
+  screenshot: `.tmp/task-356-01-roles-readonly.png`.
+- Pozostale problemy sa nadal celowo w rodzinie `TASK-356`: diff review
+  (`TASK-356-02`), high-risk/full-access confirm (`TASK-356-03`) i audit diff
+  (`TASK-356-04`).
 
 ## Dlaczego
 

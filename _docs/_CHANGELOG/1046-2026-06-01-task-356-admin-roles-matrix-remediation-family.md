@@ -25,8 +25,36 @@ Tasks: TASK-356, TASK-356-01, TASK-356-02, TASK-356-03, TASK-356-04
   ownership to `PermissionsMatrixPage.tsx` so the read-only leaf no longer
   references a nonexistent component file.
 
+### TASK-356-01 Permission-Aware Read-Only Mode
+
+- Roles Matrix now consumes the shared admin permission snapshot through the
+  same optional `permissions` prop plus `useAdminAuth()` fallback as the Users
+  surface.
+- `/admin/roles` has explicit denied/read-only/editable modes: denied mode
+  avoids roles/catalog fetches, read-only mode keeps inspection/search active,
+  and editable mode preserves current draft/save behavior.
+- Read-only users no longer get active Add Role, Save changes, checkbox toggle,
+  or bulk-toggle write controls; disabled matrix controls expose an accessible
+  reason tied to `roles:write`.
+- Stale `403` or `permission_denied` load/save failures refresh the shared
+  permission snapshot, and stale save failures keep the dirty draft visible
+  with refresh-required copy.
+- Added page-level and leaf-level Vitest coverage for denied fetch prevention,
+  searchable read-only mode, editable save behavior, route permission snapshot
+  propagation, and stale-403 refresh.
+- Added a Playwright CLI restricted-user pass for `/admin/roles`; the temporary
+  `roles:read`-only user could inspect/search the matrix but could not enable
+  Add Role, Save changes, checkbox toggles, bulk toggles, or dirty state.
+
 ## Validation
 
-- Planning entry only; implementation validation is owned by TASK-356.
+- `bun run test:vitest -- tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/role-editor-wave.test.tsx tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/adminRoles.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `playwright-cli -s task-356-01-roles-readonly open http://localhost:5173/admin/login`
+- `playwright-cli -s task-356-01-roles-readonly run-code ...` with restricted
+  read-only assertions; temporary script and DB fixture removed after the pass.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md`.

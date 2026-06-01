@@ -690,7 +690,11 @@ export function AdminApp({ path }: AdminAppProps) {
         element: <UsersRolesPage permissions={authPermissions} />,
         anyPermissions: ["users:read", "roles:read"],
       },
-      { pattern: "/roles", element: <PermissionsMatrixPage />, permission: "roles:read" },
+      {
+        pattern: "/roles",
+        element: <PermissionsMatrixPage permissions={authPermissions} />,
+        permission: "roles:read",
+      },
       { pattern: "/themes", element: <ThemesPage />, permission: "themes:read" },
       { pattern: "/advanced/widgets", element: <WidgetLibraryPage />, permission: "widgets:read" },
       {

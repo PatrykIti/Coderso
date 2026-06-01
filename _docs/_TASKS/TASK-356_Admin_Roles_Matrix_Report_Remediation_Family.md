@@ -5,7 +5,7 @@
 **Category:** Admin UI + RBAC + Roles Matrix + Audit + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm action pattern, TASK-355-01 Users/RoleEditor permission propagation, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md` audit evidence
-**Status:** To Do
+**Status:** In Progress (2026-06-01)
 
 ---
 
@@ -93,7 +93,7 @@ Physical execution leaves:
 
 ### TASK-356-01: Roles Matrix Permission-Aware Read-Only Mode
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation shape:
 
@@ -139,6 +139,20 @@ Regression tests:
 - Restricted user has no active `Add Role` or `Save changes`.
 - Admin user keeps existing editable behavior.
 - Search works in read-only and editable modes.
+
+Completion notes:
+
+- `PermissionsMatrixPage` now resolves denied/read-only/editable modes from the
+  shared permission snapshot and skips roles/catalog fetches without
+  `roles:read`.
+- `roles:read` without `roles:write` can inspect and search the matrix, while
+  Add Role, save actions, checkbox toggles, and bulk toggles are inert with
+  accessible read-only reason copy.
+- Stale load/save 403s refresh the permission snapshot; stale save keeps the
+  draft dirty for explicit follow-up.
+- Playwright CLI evidence used a temporary `roles:read`-only account and
+  verified `/admin/roles` stays read-only under real UI interaction; the
+  temporary user/role were cleaned up after the pass.
 
 ### TASK-356-02: RBAC Diff Builder and Review Modal
 

@@ -93,6 +93,12 @@ vi.mock("@/ui/users/UsersRolesPage", () => ({
   ),
 }));
 
+vi.mock("@/ui/roles/PermissionsMatrixPage", () => ({
+  PermissionsMatrixPage: ({ permissions = [] }: { permissions?: string[] }) => (
+    <div>Roles matrix route {permissions.join("|")}</div>
+  ),
+}));
+
 import {
   AdminApp,
   resolveThemeUpdatedRefreshScope,
@@ -207,6 +213,54 @@ test("AdminApp allows the Users route when the user only has roles:read", async 
     expect(adminAppServiceMocks.getSettings).not.toHaveBeenCalled();
     expect(adminAppServiceMocks.listAdminThemeProfilesCached).not.toHaveBeenCalled();
     expect(adminAppServiceMocks.listAdminThemeTemplatesCached).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminApp passes the permission snapshot into the Roles Matrix route", async () => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "roles-reader-1",
+      email: "roles-reader@example.com",
+      name: "Roles Reader",
+      permissionSnapshot: {
+        permissions: ["roles:read"],
+        roles: [{ id: "role-3", slug: "roles-reader", name: "Roles Reader" }],
+      },
+    },
+  };
+  const view = mount("/admin/roles");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Roles matrix route roles:read");
+    expect(view.container.textContent).not.toContain("Access denied");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminApp denies the Roles Matrix route without roles:read", async () => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "settings-reader-1",
+      email: "settings-reader@example.com",
+      name: "Settings Reader",
+      permissionSnapshot: {
+        permissions: ["settings:read"],
+        roles: [{ id: "role-4", slug: "settings-reader", name: "Settings Reader" }],
+      },
+    },
+  };
+  const view = mount("/admin/roles");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Access denied");
+    expect(view.container.textContent).not.toContain("Roles matrix route");
   } finally {
     view.cleanup();
   }

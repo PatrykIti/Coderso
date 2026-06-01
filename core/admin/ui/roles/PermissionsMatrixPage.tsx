@@ -13,11 +13,31 @@ import {
   type PermissionGroup,
 } from "@/services/adminRolesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { useAdminAuth } from "@/ui/contexts/AdminAuthContext";
 
 import { PermissionsMatrix, type RolePermissionsMap } from "./PermissionsMatrix";
 import { RoleEditor } from "./RoleEditor";
 import type { RoleDraft, RoleSummary } from "./types";
 import { fallbackPermissionGroups, flattenPermissionGroups } from "./permissionCatalog";
+
+const hasPermission = (permissions: string[], permission: string) =>
+  permissions.includes("*") || permissions.includes(permission);
+
+type MatrixMode = "denied" | "readonly" | "editable";
+
+type RolesMatrixAccess = {
+  canReadRoles: boolean;
+  canWriteRoles: boolean;
+};
+
+const resolveMatrixMode = (access: RolesMatrixAccess): MatrixMode => {
+  if (!access.canReadRoles) return "denied";
+  if (!access.canWriteRoles) return "readonly";
+  return "editable";
+};
+
+const readOnlyReason = "roles:write permission is required to edit roles.";
+const stalePermissionMessage = "Permissions changed; refresh required.";
 
 function PermissionsMatrixSearch({
   value,
@@ -39,7 +59,24 @@ function PermissionsMatrixSearch({
   );
 }
 
-export function PermissionsMatrixPage() {
+export type PermissionsMatrixPageProps = {
+  permissions?: string[];
+};
+
+export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProps = {}) {
+  const adminAuth = useAdminAuth();
+  const canAccess = useCallback(
+    (permission: string) =>
+      permissions ? hasPermission(permissions, permission) : adminAuth.can(permission),
+    [adminAuth, permissions]
+  );
+  const canReadRoles = canAccess("roles:read");
+  const canWriteRoles = canAccess("roles:write");
+  const [serverAccessDenied, setServerAccessDenied] = useState(false);
+  const matrixMode = serverAccessDenied
+    ? "denied"
+    : resolveMatrixMode({ canReadRoles, canWriteRoles });
+  const canEditMatrix = matrixMode === "editable";
   const [roles, setRoles] = useState<RoleSummary[]>([]);
   const [permissionGroups, setPermissionGroups] =
     useState<PermissionGroup[]>(fallbackPermissionGroups);
@@ -81,7 +118,28 @@ export function PermissionsMatrixPage() {
     return map;
   }, []);
 
+  const refreshPermissionsOnDenied = useCallback(() => {
+    void adminAuth.refreshPermissions().catch(() => undefined);
+  }, [adminAuth]);
+
+  const resolveErrorMessage = useCallback(
+    (err: unknown, fallback: string, permissionFallback = stalePermissionMessage) => {
+      if (isApiClientError(err)) {
+        if (err.sharedFailureKind === "permission_denied" || err.status === 403) {
+          refreshPermissionsOnDenied();
+          return permissionFallback;
+        }
+        return err.message;
+      }
+      return fallback;
+    },
+    [refreshPermissionsOnDenied]
+  );
+
   const refresh = useCallback(async () => {
+    if (matrixMode === "denied") {
+      return;
+    }
     try {
       const [rolesData, permissionsData] = await Promise.all([
         listAdminRoles(),
@@ -94,21 +152,40 @@ export function PermissionsMatrixPage() {
       setPermissionGroups(resolvedPermissions);
       setDraftPermissions(buildRolePermissions(rolesData, resolvedPermissions));
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load roles and permissions.");
+      const message = resolveErrorMessage(
+        err,
+        "Failed to load roles and permissions.",
+        "Your permissions changed. Refreshing access before enabling actions."
+      );
+      setError(message);
+      if (
+        isApiClientError(err) &&
+        (err.sharedFailureKind === "permission_denied" || err.status === 403)
+      ) {
+        setServerAccessDenied(true);
       }
     } finally {
       setIsLoading(false);
     }
-  }, [buildRolePermissions]);
+  }, [buildRolePermissions, matrixMode, resolveErrorMessage, setServerAccessDenied]);
 
   useEffect(() => {
     let active = true;
-    Promise.all([listAdminRoles(), listPermissionCatalog()])
-      .then(([rolesData, permissionsData]) => {
-        if (!active) return;
+    if (matrixMode === "denied") {
+      return () => {
+        active = false;
+      };
+    }
+    Promise.resolve()
+      .then(() => {
+        if (!active) return null;
+        setIsLoading(true);
+        setServerAccessDenied(false);
+        return Promise.all([listAdminRoles(), listPermissionCatalog()]);
+      })
+      .then((resources) => {
+        if (!active || !resources) return;
+        const [rolesData, permissionsData] = resources;
         const resolvedPermissions =
           permissionsData.length > 0 ? permissionsData : fallbackPermissionGroups;
         setError(null);
@@ -118,10 +195,17 @@ export function PermissionsMatrixPage() {
       })
       .catch((err: unknown) => {
         if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load roles and permissions.");
+        const message = resolveErrorMessage(
+          err,
+          "Failed to load roles and permissions.",
+          "Your permissions changed. Refreshing access before enabling actions."
+        );
+        setError(message);
+        if (
+          isApiClientError(err) &&
+          (err.sharedFailureKind === "permission_denied" || err.status === 403)
+        ) {
+          setServerAccessDenied(true);
         }
       })
       .finally(() => {
@@ -130,7 +214,7 @@ export function PermissionsMatrixPage() {
     return () => {
       active = false;
     };
-  }, [buildRolePermissions]);
+  }, [buildRolePermissions, matrixMode, resolveErrorMessage]);
 
   const hasUnsavedChanges = useMemo(() => {
     return roles.some((role) => {
@@ -144,6 +228,10 @@ export function PermissionsMatrixPage() {
   }, [allPermissionIds, draftPermissions, roles]);
 
   const handleSaveRole = async (draft: RoleDraft) => {
+    if (!canEditMatrix) {
+      setError("Role changes require roles:write permission.");
+      return;
+    }
     setIsSaving(true);
     setError(null);
     try {
@@ -151,17 +239,14 @@ export function PermissionsMatrixPage() {
       await refresh();
       setRoleEditorOpen(false);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to create role.");
-      }
+      setError(resolveErrorMessage(err, "Failed to create role."));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleTogglePermission = (roleId: string, permissionId: string) => {
+    if (!canEditMatrix) return;
     setDraftPermissions((prev) => {
       const current = new Set(prev[roleId] ?? []);
       if (current.has(permissionId)) {
@@ -174,6 +259,7 @@ export function PermissionsMatrixPage() {
   };
 
   const handleToggleRoleAll = (roleId: string) => {
+    if (!canEditMatrix) return;
     setDraftPermissions((prev) => {
       const current = new Set(prev[roleId] ?? []);
       const hasAll =
@@ -184,6 +270,10 @@ export function PermissionsMatrixPage() {
   };
 
   const handleSaveChanges = async () => {
+    if (!canEditMatrix) {
+      setError("Permission matrix changes require roles:write permission.");
+      return;
+    }
     if (!hasUnsavedChanges) return;
     setIsSaving(true);
     setError(null);
@@ -207,17 +297,14 @@ export function PermissionsMatrixPage() {
 
       await refresh();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to save permission changes.");
-      }
+      setError(resolveErrorMessage(err, "Failed to save permission changes."));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleCancelChanges = () => {
+    if (!canEditMatrix) return;
     setDraftPermissions(buildRolePermissions(roles, permissionGroups));
   };
 
@@ -225,14 +312,24 @@ export function PermissionsMatrixPage() {
     <AdminShell
       activeHref="/admin/roles"
       breadcrumbs={["Settings", "Permissions Matrix"]}
-      search={<PermissionsMatrixSearch value={searchQuery} onChange={setSearchQuery} />}
+      search={
+        matrixMode === "denied" ? undefined : (
+          <PermissionsMatrixSearch value={searchQuery} onChange={setSearchQuery} />
+        )
+      }
       topbarActions={
         <Button
           variant="outline"
           size="sm"
           className="gap-2"
           onClick={() => setRoleEditorOpen(true)}
-          disabled={isLoading || isSaving}
+          disabled={!canEditMatrix || isLoading || isSaving}
+          title={!canEditMatrix && matrixMode !== "denied" ? readOnlyReason : undefined}
+          aria-label={
+            !canEditMatrix && matrixMode !== "denied"
+              ? `Add Role unavailable: ${readOnlyReason}`
+              : undefined
+          }
         >
           <Plus className="h-4 w-4" />
           Add Role
@@ -243,63 +340,88 @@ export function PermissionsMatrixPage() {
       <div className="flex min-h-full flex-col">
         <div className="flex-1">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-8 pb-28">
-            {error ? (
+            {matrixMode === "denied" ? (
+              <Alert variant="destructive">
+                <AlertTitle>Access denied</AlertTitle>
+                <AlertDescription>
+                  {error ?? "You need roles:read permission to open the permissions matrix."}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {error && matrixMode !== "denied" ? (
               <Alert variant="destructive">
                 <AlertTitle>Permissions unavailable</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : null}
-            {isLoading ? (
+            {matrixMode === "readonly" ? (
+              <Alert>
+                <AlertTitle>Read-only permissions</AlertTitle>
+                <AlertDescription>
+                  You can inspect and search role permissions. Editing requires roles:write
+                  permission.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {isLoading && matrixMode !== "denied" ? (
               <div className="rounded-2xl border bg-card/60 p-6 text-sm text-muted-foreground">
                 Loading permissions matrix...
               </div>
-            ) : (
+            ) : matrixMode !== "denied" ? (
               <PermissionsMatrix
                 roles={roles}
                 permissionGroups={filteredGroups}
                 rolePermissions={draftPermissions}
-                onTogglePermission={handleTogglePermission}
-                onToggleRoleAll={handleToggleRoleAll}
+                readOnlyReason={matrixMode === "readonly" ? readOnlyReason : undefined}
+                onTogglePermission={canEditMatrix ? handleTogglePermission : undefined}
+                onToggleRoleAll={canEditMatrix ? handleToggleRoleAll : undefined}
               />
-            )}
+            ) : null}
           </div>
         </div>
-        <div className="sticky bottom-0 z-10 border-t bg-background/80 px-6 py-4 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Info className="h-4 w-4" />
-              <span>
-                {hasUnsavedChanges
-                  ? "Unsaved permission changes detected."
-                  : "No pending permission changes."}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelChanges}
-                disabled={!hasUnsavedChanges || isSaving}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={handleSaveChanges}
-                disabled={!hasUnsavedChanges || isSaving}
-              >
-                <Save className="h-4 w-4" />
-                {isSaving ? "Saving..." : "Save changes"}
-              </Button>
+        {matrixMode !== "denied" ? (
+          <div className="sticky bottom-0 z-10 border-t bg-background/80 px-6 py-4 backdrop-blur">
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Info className="h-4 w-4" />
+                <span>
+                  {matrixMode === "readonly"
+                    ? "Role permissions are read-only for this account."
+                    : hasUnsavedChanges
+                      ? "Unsaved permission changes detected."
+                      : "No pending permission changes."}
+                </span>
+              </div>
+              {canEditMatrix ? (
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelChanges}
+                    disabled={!hasUnsavedChanges || isSaving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleSaveChanges}
+                    disabled={!hasUnsavedChanges || isSaving}
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Saving..." : "Save changes"}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           </div>
-        </div>
+        ) : null}
       </div>
       <RoleEditor
         open={roleEditorOpen}
         onOpenChange={setRoleEditorOpen}
         onSave={(draft) => handleSaveRole(draft)}
+        canManageRoles={canEditMatrix}
         permissionGroups={permissionGroups}
       />
     </AdminShell>
