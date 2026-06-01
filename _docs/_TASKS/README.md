@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 24 tasks
-- **In Progress:** 5 tasks
-- **Done:** 2028 tasks
+- **To Do:** 22 tasks
+- **In Progress:** 6 tasks
+- **Done:** 2029 tasks
 
 ---
 
@@ -47,11 +47,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-359-03 | Redacted Settings Cache Contract | High | Large | Physical Settings leaf for safe cache keys, secret denylist tests, hydration, invalidation, and docs |
 | TASK-359-02 | Settings SPA Navigation, Dirty Guard, and Mobile Navigation | High | Large | Physical Settings leaf for AdminLink navigation, request-budget behavior, dirty draft protection, and mobile section nav |
 | TASK-359-01 | Settings RBAC Guard and Bootstrap Discipline | High | Large | Physical Settings leaf for `settings:read` route/nav gating and avoiding unauthorized global settings bootstrap |
-| TASK-358 | Admin Access Logs Report Remediation Family | High | Large | Access Logs remediation family: real filters/pagination/export, session detail/revoke truthfulness, custom range, advanced filters, and revoke security contract |
 | TASK-358-04 | Advanced Filters and User Filter Truthfulness | High | Medium | Physical Access Logs leaf for sliders/advanced filters, User vs Role label truthfulness, actor privacy, and chips |
 | TASK-358-03 | Access Logs Export | High | Large | Physical Access Logs leaf for filtered CSV/JSON export, column allowlist, redaction, CSRF, and download feedback |
 | TASK-358-02 | Session Detail and Revoke Access Contract | High | Very Large | Physical Access Logs leaf for session detail, revoke access, row-state matrix, stronger RBAC, self-lockout guard, and audit |
-| TASK-358-01 | Access Logs Query, Filters, and Pagination | High | Large | Physical Access Logs leaf for strict query/date/actor filters, truthful pagination, and search match explanation |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -73,6 +71,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-360-01 through TASK-360-06 are implemented; final-evidence closure remains. |
+| TASK-358 | Admin Access Logs Report Remediation Family | High | Large | In progress (2026-06-01): TASK-358-01 implemented; session detail/revoke, export, and advanced filters remain. |
 ---
 
 ## Done
@@ -95,6 +94,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-357-03 | Audit Export Contract | High | Large | Done (2026-06-01): Audit Logs export now posts active filters and allowlisted columns to `/admin/api/audit/export`, returns redacted CSV/JSON file content, and has Playwright download evidence. |
 | TASK-357-04 | Pagination and Count Truthfulness | High | Medium | Done (2026-06-01): Audit Logs now use server-provided cursors for Next/Previous, reset cursor state on filter changes, recover expired cursors, and avoid placeholder totals. |
 | TASK-357 | Admin Audit Logs Report Remediation Family | High | Large | Done (2026-06-01): TASK-357-01 through TASK-357-04 close Audit Logs server query, redacted copy, filtered export, and real cursor pagination findings. |
+| TASK-358-01 | Access Logs Query, Filters, and Pagination | High | Large | Done (2026-06-01): Access Logs now use strict server query params for search/status/userId/method/ip/date/cursor, custom range inputs, cursor Next/Previous, and match labels. |
 | TASK-360-06 | Admin Server-Side Query and Pagination Conventions | High | Large | Done (2026-06-01): shared Admin query helpers, AJV fragments, strict log query schemas, and area-specific query error mapping now prevent silent fake-filter/pagination drift. |
 | TASK-360-04 | Admin No-Op Control Audit Gate | High | Large | Done (2026-06-01): audited Users, Audit Logs, Access Logs, and Settings no-op controls now have disabled/unavailable states with stable regression expectations. |
 | TASK-360-05 | Drawer and Sheet Accessibility Gate | High | Medium | Done (2026-06-01): audited Admin drawers now bind Radix title/description semantics and share a warning-free Vitest gate for future drawer tests. |

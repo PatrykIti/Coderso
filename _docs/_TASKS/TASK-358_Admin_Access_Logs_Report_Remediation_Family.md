@@ -5,7 +5,7 @@
 **Category:** Admin UI + Access Logs + Security Sessions + Export + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-359-05 settings security session contract, TASK-360-02 shared confirm pattern, TASK-360-03 shared export dialog contract, TASK-360-04 no-op control gate, TASK-360-06 server-side query and pagination conventions, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ACCESS_LOGS.md` audit evidence
-**Status:** To Do
+**Status:** In Progress (2026-06-01)
 
 ---
 
@@ -70,7 +70,7 @@ Physical execution leaves:
 
 ### TASK-358-01: Access Logs Query, Filters, and Pagination
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation shape:
 
@@ -148,6 +148,25 @@ Regression tests:
 - Role filtering is not part of the server query unless the implementation adds
   explicit current-role join or historical role snapshot semantics with tests.
 - Pagination uses backend `nextCursor` and no static `1/2/3`.
+
+Completion notes:
+
+- Access log query normalization moved into the access service contract and now
+  covers `limit`, `q`/`query`, `status`, `userId`, `method`, `ip`, `from`, `to`,
+  and `cursor`.
+- `GET /admin/api/access-logs` validates strict query params, maps malformed
+  cursors to `access_log_cursor_invalid`, and returns `{ items, nextCursor }`.
+- The service uses keyset pagination ordered by `createdAt DESC, id DESC` and
+  returns an opaque `nextCursor` from `limit + 1` fetching.
+- `/admin/access-logs` now uses real custom date inputs, exact `User ID`
+  filtering, cursor-backed Next/Previous controls, and match labels for hidden
+  query matches such as email.
+- Custom range validation preserves the previous rows and blocks refetch until
+  the range is complete and ordered.
+- `access-custom-range` and `access-next-page` are no longer no-op controls.
+  `access-advanced-filters` remains explicitly owned by `TASK-358-04`.
+- Playwright verified restricted `audit:read` access, custom range params,
+  Next/Previous cursor behavior, and email match labels.
 
 ### TASK-358-02: Session Detail and Revoke Access Contract
 

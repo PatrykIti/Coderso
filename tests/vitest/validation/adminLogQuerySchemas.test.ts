@@ -39,8 +39,11 @@ test("accessLogQuerySchema validates raw URL query strings strictly", () => {
       status: "failed",
       q: "login",
       userId: "user-1",
+      method: "POST",
+      ip: "127.0.0.1",
       from: "2026-06-01T00:00:00.000Z",
       to: "2026-06-02T00:00:00.000Z",
+      cursor: "cursor-1",
     })
   ).not.toThrow();
 

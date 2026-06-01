@@ -146,6 +146,28 @@ Errors:
   supported cap.
 - `audit_export_forbidden`: `audit:read` is missing for export.
 
+## Access Log Read Contract
+
+`GET /access-logs` is an internal admin read route protected by `audit:read`.
+It accepts strict query params:
+
+- `limit`: positive integer, clamped to 200.
+- `q`: optional search text matched against request path, IP, user name, and
+  email when the query is email-shaped.
+- `status`: optional `success` or `failed`.
+- `userId`: optional actor/user id filter.
+- `method`: optional normalized HTTP method.
+- `ip`: optional IP substring filter.
+- `from` / `to`: optional RFC3339 date-time bounds.
+- `cursor`: optional opaque keyset cursor.
+
+Responses return rows ordered by `createdAt DESC, id DESC` plus `nextCursor`
+when more rows match. Admin UI pagination must be cursor-driven; filter changes
+reset the cursor stack. Malformed cursors map to `access_log_cursor_invalid` so
+the UI can reload the first page non-destructively. Search results may include
+`matchContext` labels such as `Matched user email` to explain hidden-field
+matches without adding new raw values to the table.
+
 ## Admin Entry Copy Payload
 
 `Copy JSON` in Audit Logs writes a redacted public entry payload to the

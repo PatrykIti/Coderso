@@ -11,7 +11,7 @@ import {
   Tablet,
   User,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,23 +23,45 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { isApiClientError } from "@/services/apiClient";
-import { listAccessLogs, type AccessLogRecord } from "@/services/accessLogsClient";
+import {
+  listAccessLogs,
+  type AccessLogListResponse,
+  type AccessLogQuery,
+  type AccessLogRecord,
+} from "@/services/accessLogsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { ExportDialog } from "@/ui/shared/ExportDialog";
+import { resolveTruthfulCountCopy } from "../../../services/admin/adminQueryConventions";
 
 import { AccessLogDetailsDrawer } from "./AccessLogDetailsDrawer";
 import { AccessLogsTable } from "./AccessLogsTable";
 import type { AccessLogItem } from "./types";
 
 type AccessFilterStatus = "all" | "success" | "failed";
+type AccessDateRange = "last-7-days" | "last-30-days" | "this-month" | "custom";
+type AccessCursor = string | null;
+type AccessPageState = {
+  cursor: AccessCursor;
+  previousCursors: AccessCursor[];
+};
 
 const advancedFiltersUnavailableReason =
-  "Advanced access log filters are not wired yet. Use search, status, and date filters for now.";
-const customRangeUnavailableReason =
-  "Custom date range is not wired yet. TASK-358-01 owns custom range validation.";
+  "Advanced access log filters are not wired yet. TASK-358-04 owns method, IP, and saved advanced filter controls.";
 
-const resolveDateRange = (value: string) => {
+const firstAccessPageState = (): AccessPageState => ({
+  cursor: null,
+  previousCursors: [],
+});
+
+const buildAccessCountCopy = (response: AccessLogListResponse) => {
+  return resolveTruthfulCountCopy(response, { resourceLabel: "access logs" });
+};
+
+const toDateBoundary = (value: string, boundary: "start" | "end") =>
+  `${value}T${boundary === "start" ? "00:00:00.000" : "23:59:59.999"}Z`;
+
+const resolveDateRange = (value: AccessDateRange) => {
   const now = new Date();
   if (value === "last-7-days") {
     return { from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) };
@@ -51,6 +73,63 @@ const resolveDateRange = (value: string) => {
     return { from: new Date(now.getFullYear(), now.getMonth(), 1) };
   }
   return {};
+};
+
+const buildAccessLogQueryFromFilters = ({
+  query,
+  userId,
+  dateRange,
+  customFrom,
+  customTo,
+  status,
+}: {
+  query: string;
+  userId: string;
+  dateRange: AccessDateRange;
+  customFrom: string;
+  customTo: string;
+  status: AccessFilterStatus;
+}): { query: AccessLogQuery; validationError: string | null } => {
+  const normalizedQuery = query.trim();
+  const normalizedUserId = userId.trim();
+  const baseQuery: AccessLogQuery = {
+    limit: 50,
+    ...(normalizedQuery ? { query: normalizedQuery } : {}),
+    ...(normalizedUserId ? { userId: normalizedUserId } : {}),
+    ...(status === "all" ? {} : { status }),
+  };
+
+  if (dateRange === "custom") {
+    if (!customFrom || !customTo) {
+      return {
+        query: baseQuery,
+        validationError: "Custom range requires both start and end dates.",
+      };
+    }
+    if (customFrom > customTo) {
+      return {
+        query: baseQuery,
+        validationError: "Custom range must start before it ends.",
+      };
+    }
+    return {
+      query: {
+        ...baseQuery,
+        from: toDateBoundary(customFrom, "start"),
+        to: toDateBoundary(customTo, "end"),
+      },
+      validationError: null,
+    };
+  }
+
+  const range = resolveDateRange(dateRange);
+  return {
+    query: {
+      ...baseQuery,
+      ...(range.from ? { from: range.from.toISOString() } : {}),
+    },
+    validationError: null,
+  };
 };
 
 const resolveDevice = (userAgent: string | null) => {
@@ -101,6 +180,7 @@ const mapAccessLog = (log: AccessLogRecord): AccessLogItem => {
     statusCode: log.status,
     durationMs: log.durationMs ?? null,
     userAgent: log.userAgent ?? null,
+    matchContext: log.matchContext ?? null,
     device: {
       label: device.label,
       icon: device.icon,
@@ -118,46 +198,73 @@ export function AccessLogsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [userFilter, setUserFilter] = useState("all");
-  const [dateRange, setDateRange] = useState("last-7-days");
+  const [userIdFilter, setUserIdFilter] = useState("");
+  const [dateRange, setDateRange] = useState<AccessDateRange>("last-7-days");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [statusFilter, setStatusFilter] = useState<AccessFilterStatus>("all");
   const [logs, setLogs] = useState<AccessLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [countCopy, setCountCopy] = useState("Showing 0 loaded access logs.");
+  const [nextCursor, setNextCursor] = useState<AccessCursor>(null);
+  const [pageRequest, setPageRequest] = useState<AccessPageState>(() => firstAccessPageState());
+  const [loadedPage, setLoadedPage] = useState<AccessPageState>(() => firstAccessPageState());
 
   const handleViewLog = (log: AccessLogItem) => {
     setSelectedLog(log);
     setDrawerOpen(true);
   };
 
-  const filters = useMemo(() => {
-    const range = resolveDateRange(dateRange);
-    const normalizedQuery = [query.trim(), userFilter === "all" ? "" : userFilter]
-      .filter(Boolean)
-      .join(" ");
-    return {
-      query: normalizedQuery || undefined,
-      status: statusFilter === "all" ? undefined : statusFilter,
-      from: range.from?.toISOString(),
-    };
-  }, [query, statusFilter, dateRange, userFilter]);
+  const { query: baseAccessQuery, validationError } = useMemo(
+    () =>
+      buildAccessLogQueryFromFilters({
+        query,
+        userId: userIdFilter,
+        dateRange,
+        customFrom,
+        customTo,
+        status: statusFilter,
+      }),
+    [customFrom, customTo, dateRange, query, statusFilter, userIdFilter]
+  );
+
+  const accessQuery = useMemo(
+    () => ({
+      ...baseAccessQuery,
+      ...(pageRequest.cursor ? { cursor: pageRequest.cursor } : {}),
+    }),
+    [baseAccessQuery, pageRequest]
+  );
 
   useEffect(() => {
     let active = true;
-    listAccessLogs({
-      limit: 200,
-      status: filters.status,
-      query: filters.query,
-      from: filters.from,
-    })
-      .then((items) => {
+    if (validationError) {
+      return () => {
+        active = false;
+      };
+    }
+    const requestedPage = pageRequest;
+    listAccessLogs(accessQuery)
+      .then((response) => {
         if (!active) return;
         setError(null);
-        setLogs(items.map(mapAccessLog));
+        setLogs(response.items.map(mapAccessLog));
+        setCountCopy(buildAccessCountCopy(response));
+        setNextCursor(response.nextCursor ?? null);
+        setLoadedPage(requestedPage);
       })
       .catch((err: unknown) => {
         if (!active) return;
         if (isApiClientError(err)) {
+          if (err.code === "access_log_cursor_invalid") {
+            setError(null);
+            setNotice("Access log cursor expired. Showing the first page again.");
+            setNextCursor(null);
+            setPageRequest(firstAccessPageState());
+            return;
+          }
           setError(err.message);
         } else {
           setError("Failed to load access logs.");
@@ -169,7 +276,68 @@ export function AccessLogsPage() {
     return () => {
       active = false;
     };
-  }, [filters]);
+  }, [accessQuery, pageRequest, validationError]);
+
+  const startFilterRefresh = () => {
+    setIsLoading(true);
+    setPageRequest(firstAccessPageState());
+    setNextCursor(null);
+    setNotice(null);
+  };
+
+  const handleQueryChange = (value: string) => {
+    startFilterRefresh();
+    setQuery(value);
+  };
+
+  const handleUserIdChange = (value: string) => {
+    startFilterRefresh();
+    setUserIdFilter(value);
+  };
+
+  const handleDateRangeChange = (value: string) => {
+    startFilterRefresh();
+    setDateRange(value as AccessDateRange);
+  };
+
+  const handleCustomFromChange = (value: string) => {
+    startFilterRefresh();
+    setCustomFrom(value);
+  };
+
+  const handleCustomToChange = (value: string) => {
+    startFilterRefresh();
+    setCustomTo(value);
+  };
+
+  const handleStatusChange = (value: string) => {
+    startFilterRefresh();
+    setStatusFilter(value as AccessFilterStatus);
+  };
+
+  const handleNextPage = useCallback(() => {
+    if (!nextCursor) return;
+    setIsLoading(true);
+    setNotice(null);
+    setPageRequest({
+      cursor: nextCursor,
+      previousCursors: [...loadedPage.previousCursors, loadedPage.cursor],
+    });
+  }, [loadedPage, nextCursor]);
+
+  const handlePreviousPage = useCallback(() => {
+    if (loadedPage.previousCursors.length === 0) return;
+    const previousCursor = loadedPage.previousCursors.at(-1) ?? null;
+    setIsLoading(true);
+    setNotice(null);
+    setPageRequest({
+      cursor: previousCursor,
+      previousCursors: loadedPage.previousCursors.slice(0, -1),
+    });
+  }, [loadedPage]);
+
+  const visibleError = validationError ?? error;
+  const tableIsLoading = validationError ? false : isLoading;
 
   return (
     <AdminShell activeHref="/admin/access-logs" breadcrumbs={["Security", "Access Logs"]}>
@@ -192,24 +360,22 @@ export function AccessLogsPage() {
               placeholder="Search user or IP..."
               className="pl-9"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => handleQueryChange(event.target.value)}
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={userFilter} onValueChange={setUserFilter}>
-              <SelectTrigger className="h-9 w-[160px]">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="User" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All users</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="editor">Editor</SelectItem>
-                <SelectItem value="viewer">Viewer</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={userIdFilter}
+                onChange={(event) => handleUserIdChange(event.target.value)}
+                placeholder="User ID"
+                className="h-9 w-[180px] pl-9"
+                aria-label="Filter by user ID"
+              />
+            </div>
 
-            <Select value={dateRange} onValueChange={setDateRange}>
+            <Select value={dateRange} onValueChange={handleDateRangeChange}>
               <SelectTrigger className="h-9 w-[180px]">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Date range" />
@@ -218,21 +384,29 @@ export function AccessLogsPage() {
                 <SelectItem value="last-7-days">Last 7 days</SelectItem>
                 <SelectItem value="last-30-days">Last 30 days</SelectItem>
                 <SelectItem value="this-month">This month</SelectItem>
-                <SelectItem
-                  value="custom"
-                  disabled
-                  title={customRangeUnavailableReason}
-                  data-no-op-control="access-custom-range"
-                >
-                  Custom range unavailable
-                </SelectItem>
+                <SelectItem value="custom">Custom range</SelectItem>
               </SelectContent>
             </Select>
+            {dateRange === "custom" ? (
+              <>
+                <Input
+                  type="date"
+                  value={customFrom}
+                  onChange={(event) => handleCustomFromChange(event.target.value)}
+                  className="h-9 w-[150px]"
+                  aria-label="Custom range start"
+                />
+                <Input
+                  type="date"
+                  value={customTo}
+                  onChange={(event) => handleCustomToChange(event.target.value)}
+                  className="h-9 w-[150px]"
+                  aria-label="Custom range end"
+                />
+              </>
+            ) : null}
 
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as AccessFilterStatus)}
-            >
+            <Select value={statusFilter} onValueChange={handleStatusChange}>
               <SelectTrigger className="h-9 w-[150px]">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Status" />
@@ -255,16 +429,32 @@ export function AccessLogsPage() {
             >
               <SlidersHorizontal className="h-4 w-4" />
             </Button>
-            <span className="sr-only">{customRangeUnavailableReason}</span>
           </div>
         </div>
 
-        {error ? (
+        {visibleError ? (
           <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-            {error}
+            {visibleError}
           </div>
         ) : null}
-        <AccessLogsTable logs={logs} isLoading={isLoading} onView={handleViewLog} />
+        {notice ? (
+          <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+            {notice}
+          </div>
+        ) : null}
+        <AccessLogsTable
+          logs={logs}
+          isLoading={tableIsLoading}
+          onView={handleViewLog}
+          pageInfo={{
+            countCopy,
+            canNext: Boolean(nextCursor),
+            canPrevious: loadedPage.previousCursors.length > 0,
+            isLoading: tableIsLoading,
+            onNext: handleNextPage,
+            onPrevious: handlePreviousPage,
+          }}
+        />
       </div>
       <AccessLogDetailsDrawer log={selectedLog} open={drawerOpen} onOpenChange={setDrawerOpen} />
       <ExportDialog

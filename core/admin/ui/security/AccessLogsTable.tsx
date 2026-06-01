@@ -21,9 +21,6 @@ const statusStyles: Record<AccessLogStatus, string> = {
   failed: "bg-rose-500/10 text-rose-600 border-rose-500/20",
 };
 
-const paginationUnavailableReason =
-  "Server pagination is not wired yet. TASK-358-01 owns cursor state and totals.";
-
 function getInitials(name: string) {
   return name
     .split(" ")
@@ -35,11 +32,22 @@ type AccessLogsTableProps = {
   logs: AccessLogItem[];
   isLoading?: boolean;
   onView?: (log: AccessLogItem) => void;
+  pageInfo?: {
+    countCopy: string;
+    canNext: boolean;
+    canPrevious: boolean;
+    isLoading?: boolean;
+    onNext: () => void;
+    onPrevious: () => void;
+  };
 };
 
-export function AccessLogsTable({ logs, isLoading = false, onView }: AccessLogsTableProps) {
-  const countLabel = logs.length === 0 ? "0" : `1 - ${logs.length}`;
-
+export function AccessLogsTable({
+  logs,
+  isLoading = false,
+  onView,
+  pageInfo,
+}: AccessLogsTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -92,6 +100,11 @@ export function AccessLogsTable({ logs, isLoading = false, onView }: AccessLogsT
                       <div>
                         <p className="text-sm font-semibold text-foreground">{log.user.name}</p>
                         <p className="text-xs text-muted-foreground">{log.user.detail}</p>
+                        {log.matchContext ? (
+                          <p className="mt-1 text-[11px] font-medium text-muted-foreground">
+                            {log.matchContext.label}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </TableCell>
@@ -137,24 +150,22 @@ export function AccessLogsTable({ logs, isLoading = false, onView }: AccessLogsT
       </Table>
       <Separator />
       <div className="flex flex-col gap-3 px-6 py-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <p>
-          Showing <span className="font-semibold text-foreground">{countLabel}</span> of{" "}
-          {logs.length} loaded logs. {paginationUnavailableReason}
-        </p>
+        <p>{pageInfo?.countCopy ?? `Showing ${logs.length} loaded access logs.`}</p>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon-sm" disabled title={paginationUnavailableReason}>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            disabled={!pageInfo?.canPrevious || pageInfo?.isLoading}
+            onClick={pageInfo?.onPrevious}
+          >
             <span className="sr-only">Previous page</span>
             <ChevronLeft className="h-4 w-4" aria-hidden />
-          </Button>
-          <Button variant="secondary" size="xs" className="h-7 px-2.5" disabled>
-            1
           </Button>
           <Button
             variant="outline"
             size="icon-sm"
-            disabled
-            title={paginationUnavailableReason}
-            data-no-op-control="access-next-page"
+            disabled={!pageInfo?.canNext || pageInfo?.isLoading}
+            onClick={pageInfo?.onNext}
           >
             <span className="sr-only">Next page</span>
             <ChevronRight className="h-4 w-4" aria-hidden />

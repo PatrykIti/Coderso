@@ -21,9 +21,10 @@ slice for security review.
 In the current UI, this screen includes:
 - `Export CSV`,
 - filters for:
-  user, date range, status, and search,
+  user ID, date range, status, and search,
 - a table with:
   user, IP address, device/browser, timestamp, status, actions,
+- cursor-backed Previous/Next navigation,
 - a right-side `Access Log Details` drawer,
 - an export dialog scoped to the current filters.
 
@@ -33,6 +34,7 @@ Use Access Logs when the question is about who accessed the system, from what
 device, at what time, and with what outcome. The current route is designed for:
 - filtering recent access activity quickly,
 - separating success and failure patterns,
+- moving through large result sets with cursor-backed navigation,
 - inspecting one access event in more detail,
 - exporting the current slice for operational or security follow-up.
 
@@ -44,20 +46,23 @@ events and their operational security context.
 1. Open `Access Logs`.
 2. Start with the filter row at the top.
 3. Use the search field when you already know a likely user or IP clue.
-4. Use `All users` to narrow by role when needed.
+4. Use `User ID` only when you know the exact actor/user id to filter.
 5. Use the date-range selector to keep the review inside the right incident
-   window.
+   window. Choose `Custom range` when you need exact start and end dates.
 6. Use the status selector to separate:
    - `Success`
    - `Failed`
-7. Review the table columns in order:
+7. Use `Next` and `Previous` when the current filter scope has more rows than
+   the loaded page. Changing search, user ID, date range, or status starts from
+   the first page again.
+8. Review the table columns in order:
    - user,
    - IP address,
    - device / browser,
    - timestamp,
    - status.
-8. Open the row action to inspect one event more deeply.
-9. In `Access Log Details`, review:
+9. Open the row action to inspect one event more deeply.
+10. In `Access Log Details`, review:
    - user identity,
    - status code,
    - IP address,
@@ -66,8 +71,8 @@ events and their operational security context.
    - request,
    - duration,
    - location & risk signal.
-10. Use `View full session` when one event is not enough context.
-11. Use `Revoke access` when the security response requires it.
+11. `View full session` and `Revoke access` are unavailable until a supported
+    session workflow is enabled for the row.
 12. Use `Export CSV` only after the current filters match the right scope.
 13. In the export dialog, review:
    - file format,
@@ -92,6 +97,11 @@ Use this safe access-review order when you want fewer wrong conclusions:
   not replace it.
 - Export should be treated as a filtered evidence snapshot rather than a default
   first step.
+- Count copy describes loaded rows and cursor availability. It should not be
+  read as an exact total unless the UI explicitly shows response-provided total
+  metadata.
+- Search results can show match labels such as `Matched user email` when the
+  query matched a field that is not otherwise obvious in the row.
 - Successful and failed access events both matter. Repeated failures can be as
   important as a successful login from the wrong context.
 
@@ -100,7 +110,10 @@ Use this safe access-review order when you want fewer wrong conclusions:
 - There are too many access events:
   start with date range and status before scanning row by row.
 - A user looks suspicious but the table is still noisy:
-  combine the search field with the role/user filter.
+  combine the search field with a date range, status, or exact user ID.
+- A custom range fails:
+  confirm both start and end dates are present and that the start date is not
+  after the end date.
 - One event looks odd:
   open `Access Log Details` and review request, duration, and device before
   escalating.

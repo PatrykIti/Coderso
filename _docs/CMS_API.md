@@ -2876,9 +2876,11 @@ Permissions: `audit:read`
 
 - `GET /access-logs?limit=100`
 - Optional strict filters: `status=success|failed`, `q=search`, `userId`,
-  `from`, `to`.
+  `method`, `ip`, `from`, `to`, `cursor`.
 - `from` and `to` must be RFC3339 `date-time` values. Reversed ranges are
   rejected as `access_log_query_invalid`.
+- `cursor` is an opaque keyset cursor returned by the previous response.
+  Malformed cursors are rejected as `access_log_cursor_invalid`.
 
 Response:
 
@@ -2896,15 +2898,23 @@ Response:
       "userName": "Admin",
       "userEmail": "admin@example.com",
       "durationMs": 120,
-      "createdAt": "2026-01-31T10:00:00Z"
+      "createdAt": "2026-01-31T10:00:00Z",
+      "matchContext": {
+        "field": "email",
+        "label": "Matched user email"
+      }
     }
-  ]
+  ],
+  "nextCursor": null
 }
 ```
 
 Uwaga: Admin UI korzysta z `GET /access-logs` do listowania. `limit` jest
 walidowany jako dodatnia liczba calkowita i clampowany do 200 przez wspolne
-konwencje query.
+konwencje query. Wyniki sa sortowane `createdAt DESC, id DESC`; `Next` i
+`Previous` w UI korzystaja wylacznie z `nextCursor` i lokalnego stosu
+zaladowanych cursorow. `matchContext` wyjasnia dopasowania query do pol, ktore
+nie zawsze sa oczywiste w tabeli, bez dodawania nowych wartosci PII.
 
 ---
 

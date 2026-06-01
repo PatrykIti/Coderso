@@ -5,7 +5,7 @@
 **Category:** Admin API + Access Logs + Query + Pagination
 **Estimated Effort:** Large
 **Dependencies:** TASK-358, TASK-360-06
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -147,3 +147,24 @@ Error handling:
   query.
 - Pagination is backend-driven.
 - Search results explain hidden-field matches or avoid hidden-field confusion.
+
+## Completion Notes
+
+- Access log query normalization is now service-owned and covers `limit`,
+  `q`/`query`, `status`, `userId`, `method`, `ip`, `from`, `to`, and `cursor`.
+- `GET /admin/api/access-logs` accepts strict `cursor`, `method`, and `ip`
+  query params, maps malformed cursors to `access_log_cursor_invalid`, and
+  returns `{ items, nextCursor }`.
+- `listAccessLogs` uses keyset pagination ordered by `createdAt DESC, id DESC`,
+  fetches `limit + 1`, and returns an opaque `nextCursor`.
+- Access Logs UI now uses `limit=50`, real custom range `from`/`to` inputs,
+  exact `User ID` filtering, and loaded-vs-requested cursor page state for
+  Next/Previous.
+- Custom range validation blocks reversed or incomplete ranges without
+  refetching and preserves the last successful rows.
+- Search match labels such as `Matched user email` explain hidden-field
+  matches without adding new raw PII values.
+- The old `access-custom-range` and `access-next-page` no-op markers are gone;
+  advanced filters remain explicitly owned by `TASK-358-04`.
+- Playwright verified restricted `audit:read` access, custom range request
+  params, Next with cursor, Previous without cursor, and email match labels.
