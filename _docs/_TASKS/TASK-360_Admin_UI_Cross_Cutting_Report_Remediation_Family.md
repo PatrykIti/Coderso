@@ -85,6 +85,16 @@ The summary report identifies the repeated root causes:
 
 ## Sub-Tasks
 
+Physical execution leaves:
+
+- `TASK-360-01_Admin_Permission_Snapshot_Contract.md`
+- `TASK-360-02_Shared_Confirm_Action_Pattern.md`
+- `TASK-360-03_Shared_Export_Dialog_Contract.md`
+- `TASK-360-04_Admin_No_Op_Control_Audit_Gate.md`
+- `TASK-360-05_Drawer_and_Sheet_Accessibility_Gate.md`
+- `TASK-360-06_Admin_Server_Side_Query_and_Pagination_Conventions.md`
+- `TASK-360-07_Final_Evidence_Reports_and_QA_Closure.md`
+
 ## Implementation Order
 
 1. Land `TASK-360-01` permission snapshot before TASK-355, TASK-356, and

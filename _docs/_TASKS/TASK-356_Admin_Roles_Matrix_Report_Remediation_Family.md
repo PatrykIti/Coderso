@@ -68,6 +68,13 @@ These refinements are mandatory for implementation planning and closure.
 
 ## Sub-Tasks
 
+Physical execution leaves:
+
+- `TASK-356-01_Roles_Matrix_Permission_Aware_Read_Only_Mode.md`
+- `TASK-356-02_RBAC_Diff_Builder_and_Review_Modal.md`
+- `TASK-356-03_Full_Access_and_High_Risk_Permission_Confirmation.md`
+- `TASK-356-04_RBAC_Audit_Event_Diff.md`
+
 ## Implementation Order
 
 1. Consume `TASK-360-01` shared permission snapshot and read-only route mode.

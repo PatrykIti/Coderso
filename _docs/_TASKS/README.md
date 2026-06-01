@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 16 tasks
+- **To Do:** 47 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2006 tasks
 
@@ -39,11 +39,42 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | Shared contracts and gates for the 31-05/01-06 Admin UI audit findings across RBAC, no-op controls, confirms, export, a11y, pagination, and final evidence closure |
+| TASK-360-07 | Final Evidence, Reports, and QA Closure | High | Large | Physical cross-cutting leaf for final Playwright evidence, six-report closure, QA override cleanup, and Claude evidence labeling |
+| TASK-360-06 | Admin Server-Side Query and Pagination Conventions | High | Large | Physical cross-cutting leaf for strict query schemas, truthful filter labels, cursor metadata, and fake-total prevention |
+| TASK-360-05 | Drawer and Sheet Accessibility Gate | High | Medium | Physical cross-cutting leaf for Radix title/description warning gates across audited Admin drawers and sheets |
+| TASK-360-04 | Admin No-Op Control Audit Gate | High | Large | Physical cross-cutting leaf for report-driven active-control truthfulness expectations and no-op regression prevention |
+| TASK-360-03 | Shared Export Dialog Contract | High | Large | Physical cross-cutting leaf for real export submit/loading/error behavior and unavailable export states |
+| TASK-360-02 | Shared Confirm Action Pattern | High | Large | Physical cross-cutting leaf for destructive/high-risk confirm dialogs with typed confirmation, loading/error, and a11y |
+| TASK-360-01 | Admin Permission Snapshot Contract | High | Large | Physical cross-cutting leaf for shared effective-permission payload, `can(permission)`, route/menu gating, and fail-closed UI |
 | TASK-359 | Admin Settings Report Remediation Family | High | Very Large | Full Settings remediation family: RBAC guard, SPA/cache behavior, dirty/mobile nav, placeholders, high-risk confirms, secret-safe cache, and action truthfulness |
+| TASK-359-07 | Login Alerts and Sessions Placeholder Cleanup | High | Medium | Physical Settings leaf for Login Alerts persistence/unavailable states and Sessions link-button truthfulness |
+| TASK-359-06 | Email, Storage, Integrations, Assistant Action Truthfulness | High | Large | Physical Settings leaf for external action confirms, redaction, drawer a11y, and no-op cleanup |
+| TASK-359-05 | Security, Sessions, API Keys, Webhooks, IP Allowlist Confirms | High | Very Large | Physical Settings leaf for high-risk confirms, current-session/IP safety, one-time secrets, and redacted audit |
+| TASK-359-04 | General and Site Placeholder Truthfulness | High | Large | Physical Settings leaf for logo/favicon/timezone, Site Performance, routing/security-header review, and cache update behavior |
+| TASK-359-03 | Redacted Settings Cache Contract | High | Large | Physical Settings leaf for safe cache keys, secret denylist tests, hydration, invalidation, and docs |
+| TASK-359-02 | Settings SPA Navigation, Dirty Guard, and Mobile Navigation | High | Large | Physical Settings leaf for AdminLink navigation, request-budget behavior, dirty draft protection, and mobile section nav |
+| TASK-359-01 | Settings RBAC Guard and Bootstrap Discipline | High | Large | Physical Settings leaf for `settings:read` route/nav gating and avoiding unauthorized global settings bootstrap |
 | TASK-358 | Admin Access Logs Report Remediation Family | High | Large | Access Logs remediation family: real filters/pagination/export, session detail/revoke truthfulness, custom range, advanced filters, and revoke security contract |
+| TASK-358-04 | Advanced Filters and User Filter Truthfulness | High | Medium | Physical Access Logs leaf for sliders/advanced filters, User vs Role label truthfulness, actor privacy, and chips |
+| TASK-358-03 | Access Logs Export | High | Large | Physical Access Logs leaf for filtered CSV/JSON export, column allowlist, redaction, CSRF, and download feedback |
+| TASK-358-02 | Session Detail and Revoke Access Contract | High | Very Large | Physical Access Logs leaf for session detail, revoke access, row-state matrix, stronger RBAC, self-lockout guard, and audit |
+| TASK-358-01 | Access Logs Query, Filters, and Pagination | High | Large | Physical Access Logs leaf for strict query/date/actor filters, truthful pagination, and search match explanation |
 | TASK-357 | Admin Audit Logs Report Remediation Family | High | Large | Audit Logs remediation family: server-side filtering/date range, real pagination/export, copy/export/share/report truthfulness, and redacted compliance actions |
+| TASK-357-04 | Pagination and Count Truthfulness | High | Medium | Physical Audit Logs leaf for backend-driven counts, cursor state, and removal of placeholder totals |
+| TASK-357-03 | Audit Export Contract | High | Large | Physical Audit Logs leaf for real export route/dialog, column allowlist, redaction, CSRF, CSV/JSON, and audit event |
+| TASK-357-02 | Audit Entry Actions Truthfulness | High | Medium | Physical Audit Logs leaf for copy JSON, unsupported action states, shared handlers, and redacted payloads |
+| TASK-357-01 | Server-Side Audit Query Contract | High | Large | Physical Audit Logs leaf for strict query/date/severity filters, RBAC, cursor metadata, and route mapping |
 | TASK-356 | Admin Roles Matrix Report Remediation Family | High | Very Large | Roles Matrix remediation family: permission-aware read-only mode, RBAC diff review, full-access confirm, mass-save confirm, and audit diff payloads |
+| TASK-356-04 | RBAC Audit Event Diff | High | Medium | Physical Roles Matrix leaf for server-side added/removed permission diff audit payloads and redaction |
+| TASK-356-03 | Full Access and High-Risk Permission Confirmation | High | Large | Physical Roles Matrix leaf for full-access/high-risk taxonomy, RoleEditor confirm, and matrix promotion guard |
+| TASK-356-02 | RBAC Diff Builder and Review Modal | High | Large | Physical Roles Matrix leaf for pure diff helper, dirty footer, review modal, partial failure, and conflict handling |
+| TASK-356-01 | Roles Matrix Permission-Aware Read-Only Mode | High | Large | Physical Roles Matrix leaf for denied/read-only/editable modes, search, and stale 403 permission refresh |
 | TASK-355 | Admin Users Report Remediation Family | High | Very Large | Users remediation family: permission-aware UI, reset-password truthfulness, login-capable invite, destructive confirms, filters, notifications, and mobile a11y |
+| TASK-355-05 | Mobile Drawer Accessibility | High | Small | Physical Users leaf for mobile sheet title/description semantics and Radix warning regression |
+| TASK-355-04 | Filter and Notification Affordance Truthfulness | High | Medium | Physical Users leaf for advanced filters or unavailable state, notification persistence/read-only behavior, and no-op cleanup |
+| TASK-355-03 | Destructive Action Confirmation | High | Medium | Physical Users leaf for user/role destructive confirms, cancel safety, and targeted cleanup fixture coverage |
+| TASK-355-02 | Reset Password and Login-Capable Invite Flow | High | Very Large | Physical Users leaf for set-password invite/reset token flow, CSRF/RBAC, token TTL, and login-capable QA fixture |
+| TASK-355-01 | Current User Permission Propagation for Users | High | Large | Physical Users leaf for `users:*`/`roles:*` access flags, partial-read modes, and stale permission refresh |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |

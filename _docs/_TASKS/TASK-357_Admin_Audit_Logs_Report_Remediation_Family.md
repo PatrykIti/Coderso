@@ -59,6 +59,13 @@ view of log volume.
 
 ## Sub-Tasks
 
+Physical execution leaves:
+
+- `TASK-357-01_Server_Side_Audit_Query_Contract.md`
+- `TASK-357-02_Audit_Entry_Actions_Truthfulness.md`
+- `TASK-357-03_Audit_Export_Contract.md`
+- `TASK-357-04_Pagination_and_Count_Truthfulness.md`
+
 ### TASK-357-01: Server-Side Audit Query Contract
 
 **Status:** To Do

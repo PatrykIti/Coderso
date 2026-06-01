@@ -2,7 +2,7 @@
 
 Date: 2026-06-01
 Version: Unreleased
-Tasks: TASK-355
+Tasks: TASK-355, TASK-355-01, TASK-355-02, TASK-355-03, TASK-355-04, TASK-355-05
 
 ## Key Changes
 
@@ -16,9 +16,11 @@ Tasks: TASK-355
 - Recorded the security contract for internal admin users/roles routes,
   password reset handling, CSRF, RBAC, rate limiting, strict validation, audit
   events, and secret handling.
+- Split the family into physical execution leaf files:
+  `TASK-355-01` through `TASK-355-05`, each with pseudocode, data flow, error
+  handling, security contract, tests, docs plan, and acceptance criteria.
 
 ## Validation
 
 - Planning entry only; implementation validation is owned by TASK-355.
 - Source evidence: `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_USERS.md`.
-

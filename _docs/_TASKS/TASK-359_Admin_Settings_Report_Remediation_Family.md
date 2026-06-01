@@ -89,6 +89,16 @@ are placeholders.
 
 ## Sub-Tasks
 
+Physical execution leaves:
+
+- `TASK-359-01_Settings_RBAC_Guard_and_Bootstrap_Discipline.md`
+- `TASK-359-02_Settings_SPA_Navigation_Dirty_Guard_and_Mobile_Navigation.md`
+- `TASK-359-03_Redacted_Settings_Cache_Contract.md`
+- `TASK-359-04_General_and_Site_Placeholder_Truthfulness.md`
+- `TASK-359-05_Security_Sessions_API_Keys_Webhooks_IP_Allowlist_Confirms.md`
+- `TASK-359-06_Email_Storage_Integrations_Assistant_Action_Truthfulness.md`
+- `TASK-359-07_Login_Alerts_and_Sessions_Placeholder_Cleanup.md`
+
 ## Implementation Order
 
 1. Consume `TASK-360-01` shared permission snapshot and block Settings shell

@@ -75,6 +75,14 @@ These refinements are part of the execution contract, not optional polish.
 
 ## Sub-Tasks
 
+Physical execution leaves:
+
+- `TASK-355-01_Current_User_Permission_Propagation_for_Users.md`
+- `TASK-355-02_Reset_Password_and_Login_Capable_Invite_Flow.md`
+- `TASK-355-03_Destructive_Action_Confirmation.md`
+- `TASK-355-04_Filter_and_Notification_Affordance_Truthfulness.md`
+- `TASK-355-05_Mobile_Drawer_Accessibility.md`
+
 ## Implementation Order
 
 1. Consume the shared permission snapshot from `TASK-360-01` before changing
@@ -394,8 +402,9 @@ Set-password public endpoint contract:
   route is CSRF-free; otherwise match the existing auth reset convention.
 - Rate-limit bucket: auth reset/set-password bucket by IP and token hash.
 - Reject unknown validation: strict body schema for `token` and `password`.
-- Anti-abuse: signed/unguessable nonce token, hashed at rest, single-use, TTL,
-  optional captcha only if existing auth reset policy requires it.
+- Anti-abuse: unguessable nonce plus signature/HMAC-backed token, hashed at
+  rest, single-use, TTL, optional captcha only if existing auth reset policy
+  requires it.
 - Secret handling: token never logged or cached; password is validated and
   hashed immediately.
 

@@ -61,6 +61,13 @@ advanced filter, static pagination, and close-only export.
 
 ## Sub-Tasks
 
+Physical execution leaves:
+
+- `TASK-358-01_Access_Logs_Query_Filters_and_Pagination.md`
+- `TASK-358-02_Session_Detail_and_Revoke_Access_Contract.md`
+- `TASK-358-03_Access_Logs_Export.md`
+- `TASK-358-04_Advanced_Filters_and_User_Filter_Truthfulness.md`
+
 ### TASK-358-01: Access Logs Query, Filters, and Pagination
 
 **Status:** To Do

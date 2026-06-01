@@ -2,7 +2,7 @@
 
 Date: 2026-06-01
 Version: Unreleased
-Tasks: TASK-360
+Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05, TASK-360-06, TASK-360-07
 
 ## Key Changes
 
@@ -15,10 +15,12 @@ Tasks: TASK-360
   gates, server-side query/pagination conventions, and final evidence closure.
 - Linked the shared work to TASK-355 through TASK-359 so area tasks can adopt
   common patterns instead of one-off fixes.
+- Split the family into physical execution leaf files:
+  `TASK-360-01` through `TASK-360-07`, each with pseudocode, data flow, error
+  handling, security contract, tests, docs plan, and acceptance criteria.
 
 ## Validation
 
 - Planning entry only; implementation validation is owned by TASK-360.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md`.
-
