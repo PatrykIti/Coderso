@@ -5,7 +5,7 @@
 **Category:** Admin UI + Audit Logs + Compliance Export + Pagination + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-360-03 shared export dialog contract, TASK-360-04 no-op control gate, TASK-360-06 server-side query/pagination conventions, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md` audit evidence
-**Status:** To Do
+**Status:** In Progress (2026-06-01)
 
 ---
 
@@ -69,7 +69,7 @@ Physical execution leaves:
 
 ### TASK-357-01: Server-Side Audit Query Contract
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation shape:
 
@@ -140,6 +140,32 @@ Regression tests:
 - Pagination uses returned cursor and does not show fake totals.
 - Restricted user with `audit:read` can read; user without `audit:read` gets
   access denied.
+
+Completion notes:
+
+- Audit list query now uses strict server params `limit`, `q`, `category`,
+  `severity`, `from`, `to`, and `cursor`.
+- The route maps validation/convention failures to `audit_query_invalid` and
+  invalid cursors to `audit_cursor_invalid`.
+- Audit category/severity classification is a shared DB-free helper; server SQL
+  predicates mirror it for `targetType=session`, singular/plural session
+  actions, case-insensitive content targets, authentication precedence over
+  content, and explicit metadata severity.
+- Invalid category/severity values map through admin query convention errors as
+  a service-level fallback to the strict route schema.
+- The service applies filters before keyset pagination, orders by
+  `createdAt DESC, id DESC`, fetches `limit + 1`, and returns `nextCursor`
+  without losing database timestamp precision at same-millisecond boundaries.
+- `AuditList` no longer filters an unlabelled top-200 sample locally; date
+  presets, search, category, and severity all trigger server requests.
+- Count copy is derived through the shared truthful count helper from response
+  rows/cursor availability. Actual Previous/Next cursor controls remain
+  explicitly owned by `TASK-357-04`.
+- API refresh failures keep the previous rows visible with an error banner.
+- The date range no-op gate was removed; remaining disabled audit controls stay
+  assigned to `TASK-357-02`, `TASK-357-03`, or `TASK-357-04`.
+- Playwright CLI verified restricted `audit:read` access and real query params
+  for date preset, category, severity, and search.
 
 ### TASK-357-02: Audit Entry Actions Truthfulness
 

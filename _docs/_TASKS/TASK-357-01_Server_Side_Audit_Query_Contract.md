@@ -5,7 +5,7 @@
 **Category:** Admin API + Audit Logs + Query + Pagination
 **Estimated Effort:** Large
 **Dependencies:** TASK-357, TASK-360-06
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -132,3 +132,42 @@ Error handling:
 - Audit table count/page copy is derived only from backend metadata.
 - The previous 200-row client-filter cap is removed or clearly replaced by a
   truthful server-backed response contract.
+
+## Completion Notes
+
+- `/admin/api/audit` now uses strict query params `limit`, `q`, `category`,
+  `severity`, `from`, `to`, and `cursor`; unknown params are rejected before
+  service work.
+- The route maps invalid query payloads to `audit_query_invalid` and invalid
+  cursors to `audit_cursor_invalid`, while keeping `audit:read` as the route
+  permission guard.
+- Audit query normalization owns limit clamping, trimmed search text, UTC date
+  boundary normalization, date range validation, and cursor validation in the
+  audit service contract.
+- Audit category/severity derivation moved into a DB-free audit classification
+  helper. Server SQL predicates mirror the same rules, including
+  `targetType=session`, singular/plural session actions, case-insensitive
+  content targets, authentication precedence over content, and explicit
+  `metadata.severity` precedence.
+- Service-level category/severity validation uses admin query convention errors
+  so invalid values map to `audit_query_invalid` even outside the route schema.
+- `listAudit` now applies search/category/severity/date/cursor filters before
+  limit, orders by `createdAt DESC, id DESC`, fetches `limit + 1`, and returns
+  `nextCursor`. Cursor payloads preserve database timestamp precision so
+  same-millisecond rows are not skipped at page boundaries.
+- `AuditList` now sends server query params for search, date preset,
+  category/type, and severity instead of filtering an unlabelled top-200 sample
+  locally. Failed refreshes preserve the previously visible rows with an error
+  banner.
+- The date range control is no longer a no-op. The custom range option remains
+  out of scope until real `from`/`to` inputs are added; current presets are
+  `Last 7 days`, `Last 30 days`, and `This month`.
+- `AuditTable` count copy is derived through the shared truthful count helper
+  from backend response metadata (`items.length` and `nextCursor`) and no longer
+  invents placeholder totals; interactive cursor navigation remains owned by
+  `TASK-357-04`.
+- Audit list remains uncached. No `_docs/ADMIN_CACHE.md` or
+  `_docs/ADMIN_CACHE_MAP.md` update is required for this leaf.
+- Playwright CLI verified a restricted `audit:read` user can log in, load
+  `/admin/audit`, change date/category/severity/search filters, and produce
+  strict `/admin/api/audit` query params without the old fake total.

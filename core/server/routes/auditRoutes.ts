@@ -1,8 +1,5 @@
-import {
-  AdminQueryConventionError,
-  normalizeAdminQueryLimit,
-} from "../../services/admin/adminQueryConventions";
-import { listAudit } from "../../services/audit/auditService";
+import { AdminQueryConventionError } from "../../services/admin/adminQueryConventions";
+import { listAudit, normalizeAuditLogQuery } from "../../services/audit/auditService";
 import { ApiError } from "../errorHandler";
 import { auditLogQuerySchema } from "../validation/auditSchemas";
 
@@ -22,10 +19,17 @@ export type Router = {
 export type AuditRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
+  listAudit?: typeof listAudit;
 };
 
 export function mapAuditQueryError(error: unknown) {
   if (error instanceof AdminQueryConventionError) {
+    if (error.code === "admin_query_cursor_invalid") {
+      return new ApiError("audit_cursor_invalid", "Audit cursor is invalid", 400, {
+        code: error.code,
+        field: error.field,
+      });
+    }
     return new ApiError("audit_query_invalid", "Audit query is invalid", 400, {
       code: error.code,
       field: error.field,
@@ -39,16 +43,21 @@ export function mapAuditQueryError(error: unknown) {
 
 export function registerAuditRoutes(router: Router, deps: AuditRouteDeps) {
   const { requirePermission, validate } = deps;
+  const listAuditRecords = deps.listAudit ?? listAudit;
 
   router.get("/audit", requirePermission("audit:read"), async (ctx) => {
     try {
       validate(auditLogQuerySchema, ctx.query);
-      const limit = normalizeAdminQueryLimit(ctx.query.limit, {
-        defaultLimit: 50,
-        maxLimit: 200,
+      const query = normalizeAuditLogQuery({
+        limit: ctx.query.limit,
+        query: ctx.query.q,
+        category: ctx.query.category,
+        severity: ctx.query.severity,
+        from: ctx.query.from,
+        to: ctx.query.to,
+        cursor: ctx.query.cursor,
       });
-      const items = await listAudit(limit);
-      return { items };
+      return await listAuditRecords(query);
     } catch (error) {
       const mapped = mapAuditQueryError(error);
       if (mapped) throw mapped;

@@ -3,27 +3,25 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
-import { listAuditLogs, type AuditRecord } from "@/services/auditClient";
+import {
+  listAuditLogs,
+  type AuditLogListResponse,
+  type AuditLogQuery,
+  type AuditRecord,
+} from "@/services/auditClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { ExportDialog } from "@/ui/shared/ExportDialog";
+import { resolveTruthfulCountCopy } from "../../../services/admin/adminQueryConventions";
+import {
+  resolveAuditCategory,
+  resolveAuditSeverity,
+} from "../../../services/audit/auditClassification";
 
 import { AuditDetailsDrawer } from "./AuditDetailsDrawer";
 import { AuditFilters } from "./AuditFilters";
 import { AuditTable } from "./AuditTable";
-import type { AuditCategory, AuditLog, AuditSeverity, AuditStatus } from "./types";
-
-const categoryByTarget = new Set([
-  "page",
-  "content",
-  "entry",
-  "menu",
-  "media",
-  "seo",
-  "redirect",
-  "theme",
-  "admin-theme",
-]);
+import type { AuditCategory, AuditDateRange, AuditLog, AuditSeverity, AuditStatus } from "./types";
 
 const formatTitle = (value: string) =>
   value
@@ -44,29 +42,6 @@ const formatRelative = (value: string) => {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days} days ago`;
   return date.toLocaleDateString();
-};
-
-const resolveCategory = (record: AuditRecord): AuditCategory => {
-  const action = record.action.toLowerCase();
-  if (action.startsWith("auth.") || action.startsWith("sessions.")) {
-    return "authentication";
-  }
-  if (categoryByTarget.has(record.targetType.toLowerCase())) {
-    return "content";
-  }
-  return "system";
-};
-
-const resolveSeverity = (record: AuditRecord, metadata: Record<string, unknown>): AuditSeverity => {
-  const metaSeverity = typeof metadata.severity === "string" ? metadata.severity : null;
-  if (metaSeverity === "info" || metaSeverity === "warning" || metaSeverity === "error") {
-    return metaSeverity;
-  }
-
-  const action = record.action.toLowerCase();
-  if (action.includes("error") || action.includes("fail")) return "error";
-  if (action.includes("warn") || action.includes("denied")) return "warning";
-  return "info";
 };
 
 const resolveStatus = (severity: AuditSeverity): AuditStatus => {
@@ -99,15 +74,15 @@ const resolveDescription = (record: AuditRecord, metadata: Record<string, unknow
 
 const mapAuditRecord = (record: AuditRecord): AuditLog => {
   const metadata = record.metadata ?? {};
-  const category = resolveCategory(record);
-  const severity = resolveSeverity(record, metadata);
+  const category = resolveAuditCategory(record);
+  const severity = resolveAuditSeverity(record, metadata);
   const status = resolveStatus(severity);
   const actorName = resolveActorName(record, metadata);
 
   return {
     id: record.id,
     event: formatTitle(record.action),
-    category,
+    category: category as AuditCategory,
     actor: {
       name: actorName,
       role: record.actorId ? "Admin" : "System",
@@ -119,11 +94,54 @@ const mapAuditRecord = (record: AuditRecord): AuditLog => {
     timestamp: formatRelative(record.createdAt),
     timestampLabel: new Date(record.createdAt).toLocaleString(),
     status,
-    severity,
+    severity: severity as AuditSeverity,
     requestId: resolveRequestId(metadata),
     description: resolveDescription(record, metadata),
     payload: metadata,
   };
+};
+
+const startOfUtcDay = (date: Date) =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+
+const endOfUtcDay = (date: Date) =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+
+export function buildAuditQueryFromFilters(input: {
+  query: string;
+  dateRange: AuditDateRange;
+  eventType: "all" | AuditCategory;
+  severity: "all" | AuditSeverity;
+  now?: Date;
+}): AuditLogQuery {
+  const now = input.now ?? new Date();
+  const to = endOfUtcDay(now);
+  const from =
+    input.dateRange === "this-month"
+      ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+      : startOfUtcDay(
+          new Date(
+            Date.UTC(
+              now.getUTCFullYear(),
+              now.getUTCMonth(),
+              now.getUTCDate() - (input.dateRange === "last-30-days" ? 29 : 6)
+            )
+          )
+        );
+  const trimmedQuery = input.query.trim();
+
+  return {
+    limit: 50,
+    ...(trimmedQuery ? { query: trimmedQuery } : {}),
+    ...(input.eventType !== "all" ? { category: input.eventType } : {}),
+    ...(input.severity !== "all" ? { severity: input.severity } : {}),
+    from: from.toISOString(),
+    to: to.toISOString(),
+  };
+}
+
+const buildAuditCountCopy = (response: AuditLogListResponse) => {
+  return resolveTruthfulCountCopy(response, { resourceLabel: "audit logs" });
 };
 
 export function AuditList() {
@@ -131,20 +149,29 @@ export function AuditList() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [dateRange, setDateRange] = useState("last-7-days");
-  const [eventType, setEventType] = useState("all");
-  const [severity, setSeverity] = useState("all");
+  const [dateRange, setDateRange] = useState<AuditDateRange>("last-7-days");
+  const [eventType, setEventType] = useState<"all" | AuditCategory>("all");
+  const [severity, setSeverity] = useState<"all" | AuditSeverity>("all");
+  const [countCopy, setCountCopy] = useState("Showing 0 loaded audit logs.");
+  const [hasMore, setHasMore] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
+  const auditQuery = useMemo(
+    () => buildAuditQueryFromFilters({ query, dateRange, eventType, severity }),
+    [dateRange, eventType, query, severity]
+  );
+
   useEffect(() => {
     let active = true;
-    listAuditLogs(200)
-      .then((items) => {
+    listAuditLogs(auditQuery)
+      .then((response) => {
         if (!active) return;
         setError(null);
-        setLogs(items.map(mapAuditRecord));
+        setLogs(response.items.map(mapAuditRecord));
+        setCountCopy(buildAuditCountCopy(response));
+        setHasMore(Boolean(response.nextCursor));
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -160,23 +187,31 @@ export function AuditList() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [auditQuery]);
 
-  const filteredLogs = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+  const startFilterRefresh = () => {
+    setIsLoading(true);
+  };
 
-    return logs.filter((log) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        log.event.toLowerCase().includes(normalizedQuery) ||
-        log.actor.name.toLowerCase().includes(normalizedQuery) ||
-        log.resource.toLowerCase().includes(normalizedQuery);
-      const matchesType = eventType === "all" || log.category === eventType;
-      const matchesSeverity = severity === "all" || log.severity === severity;
+  const handleQueryChange = (value: string) => {
+    startFilterRefresh();
+    setQuery(value);
+  };
 
-      return matchesQuery && matchesType && matchesSeverity;
-    });
-  }, [logs, query, eventType, severity]);
+  const handleDateRangeChange = (value: AuditDateRange) => {
+    startFilterRefresh();
+    setDateRange(value);
+  };
+
+  const handleEventTypeChange = (value: "all" | AuditCategory) => {
+    startFilterRefresh();
+    setEventType(value);
+  };
+
+  const handleSeverityChange = (value: "all" | AuditSeverity) => {
+    startFilterRefresh();
+    setSeverity(value);
+  };
 
   const selectedLog = useMemo(
     () => logs.find((log) => log.id === selectedId) ?? null,
@@ -213,26 +248,35 @@ export function AuditList() {
           dateRange={dateRange}
           eventType={eventType}
           severity={severity}
-          onQueryChange={setQuery}
-          onDateRangeChange={setDateRange}
-          onEventTypeChange={setEventType}
-          onSeverityChange={setSeverity}
+          onQueryChange={handleQueryChange}
+          onDateRangeChange={handleDateRangeChange}
+          onEventTypeChange={handleEventTypeChange}
+          onSeverityChange={handleSeverityChange}
         />
         {error ? (
           <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
             {error}
           </div>
         ) : null}
-        {isLoading ? (
+        {isLoading && logs.length === 0 ? (
           <div className="rounded-xl border bg-muted/20 p-6 text-sm text-muted-foreground">
             Loading audit logs...
           </div>
-        ) : filteredLogs.length === 0 ? (
+        ) : logs.length === 0 && error ? (
+          <div className="rounded-xl border border-dashed bg-muted/10 p-6 text-sm text-muted-foreground">
+            Audit logs could not be loaded.
+          </div>
+        ) : logs.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-muted/10 p-6 text-sm text-muted-foreground">
             No audit logs match the current filters.
           </div>
         ) : (
-          <AuditTable logs={filteredLogs} selectedId={selectedId} onSelect={handleSelect} />
+          <AuditTable
+            logs={logs}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            pageInfo={{ countCopy, hasMore }}
+          />
         )}
       </div>
       <AuditDetailsDrawer log={selectedLog} open={drawerOpen} onOpenChange={handleDrawerChange} />

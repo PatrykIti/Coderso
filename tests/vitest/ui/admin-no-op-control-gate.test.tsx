@@ -274,13 +274,6 @@ test("Audit Logs report no-op controls are disabled with explicit reasons", () =
   expectNoOpControlExpectations(root, [
     {
       area: "Audit Logs",
-      controlId: "audit-date-range",
-      expected: "disabled",
-      reasonPattern: /Date range.*TASK-357-01/,
-      report: "REPORT_ADMIN_AUDIT_LOGS.md",
-    },
-    {
-      area: "Audit Logs",
       controlId: "audit-copy-json-menu",
       expected: "disabled",
       reasonPattern: /Copy JSON.*TASK-357-02/,
@@ -318,7 +311,7 @@ test("Audit Logs report no-op controls are disabled with explicit reasons", () =
       area: "Audit Logs",
       controlId: "audit-next-page",
       expected: "disabled",
-      reasonPattern: /Server pagination.*TASK-357-04/,
+      reasonPattern: /Cursor navigation.*TASK-357-04/,
       report: "REPORT_ADMIN_AUDIT_LOGS.md",
     },
   ]);

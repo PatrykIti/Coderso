@@ -2801,7 +2801,12 @@ inputs before they can be applied, and filter labels must match their source
 Permissions: `audit:read`
 
 - `GET /audit?limit=100`
-- Strict query params: `limit`.
+- Optional strict filters: `q=search`, `category=authentication|content|system`,
+  `severity=info|warning|error`, `from`, `to`, `cursor`.
+- `from` and `to` must be RFC3339 `date-time` values. Reversed ranges are
+  rejected as `audit_query_invalid`.
+- Cursors are opaque keyset cursors that preserve database timestamp precision.
+  Malformed cursors are rejected as `audit_cursor_invalid`.
 
 Response:
 
@@ -2817,13 +2822,16 @@ Response:
       "metadata": { "slug": "home" },
       "createdAt": "2026-01-27T10:00:00Z"
     }
-  ]
+  ],
+  "nextCursor": null
 }
 ```
 
 Uwaga: Admin UI korzysta z `GET /audit` do listowania logow. `limit` jest
 walidowany jako dodatnia liczba calkowita i clampowany do 200 przez wspolne
-konwencje query.
+konwencje query. `category` i `severity` sa deterministycznie wyprowadzane z
+`action`, `targetType` i `metadata.severity`; odpowiedz jest sortowana po
+`createdAt DESC, id DESC`.
 
 ---
 
@@ -3851,6 +3859,8 @@ Permissions: `content:read`, `media:read`
 Permissions: `audit:read`
 
 - `GET /audit`
+- Optional strict filters: `limit`, `q`, `category`, `severity`, `from`, `to`,
+  `cursor`
 
 ---
 

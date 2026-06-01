@@ -28,12 +28,16 @@ const copyJsonUnavailableReason =
 const exportEntryUnavailableReason =
   "Single-entry export is not wired yet. TASK-357-02 owns entry actions.";
 const paginationUnavailableReason =
-  "Server pagination is not wired yet. TASK-357-04 owns cursor state and totals.";
+  "Cursor navigation is not wired yet. TASK-357-04 owns page controls.";
 
 export type AuditTableProps = {
   logs: AuditLog[];
   selectedId?: string | null;
   onSelect: (log: AuditLog) => void;
+  pageInfo?: {
+    countCopy: string;
+    hasMore: boolean;
+  };
 };
 
 const getInitials = (name: string) =>
@@ -45,7 +49,7 @@ const getInitials = (name: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
+export function AuditTable({ logs, selectedId, onSelect, pageInfo }: AuditTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className="overflow-x-auto">
@@ -169,7 +173,7 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-4 py-3">
         <span className="text-sm text-muted-foreground">
-          Showing {logs.length} loaded audit logs. {paginationUnavailableReason}
+          {pageInfo?.countCopy ?? `Showing ${logs.length} loaded audit logs.`}
         </span>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" disabled title={paginationUnavailableReason}>
@@ -182,7 +186,7 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
             title={paginationUnavailableReason}
             data-no-op-control="audit-next-page"
           >
-            Next
+            {pageInfo?.hasMore ? "Next page unavailable" : "Next"}
           </Button>
         </div>
       </div>

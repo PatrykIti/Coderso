@@ -38,8 +38,7 @@ The current route is designed for:
 
 This screen is not just a passive log dump. It is an operational investigation
 workspace with:
-- query-based narrowing,
-- category and severity filters,
+- server-backed query/date/category/severity narrowing,
 - row-level details,
 - payload inspection,
 - structured export.
@@ -76,9 +75,12 @@ workspace with:
    - severity,
    - event type,
    - JSON payload.
-9. Use `Copy JSON` when the raw payload is the important artifact.
-10. Use `Share Log` or `Report` when the event needs escalation or handoff.
-11. Use `Export CSV` when the current filtered view needs to leave the page.
+9. Use `Copy JSON` when it is enabled and the raw payload is the important
+   artifact.
+10. Use `Share Log` or `Report` only when those actions are enabled by the
+    current workflow.
+11. Use `Export CSV` when the current filtered view needs to leave the page and
+    export is available.
 12. In the export dialog, review:
    - file format,
    - included fields,
@@ -96,7 +98,9 @@ Use this safe audit-review order when you want fewer false conclusions:
 # Advanced
 
 - The search field is most useful when combined with type and severity filters.
-  Treat it as one layer of narrowing, not the only tool.
+  Treat it as one layer of server-side narrowing, not the only tool.
+- Date range presets are applied by the server. Custom date ranges should only
+  be used after the UI exposes explicit `from` and `to` inputs.
 - Relative timestamps are useful for scanning, but the exact timestamp label in
   the drawer is the real reference when events must be compared precisely.
 - `Event Details` matters because the payload and request metadata often carry
@@ -108,6 +112,9 @@ Use this safe audit-review order when you want fewer false conclusions:
   for narrowing the view properly first.
 - Audit Logs helps with both security review and operational debugging; the same
   surface serves more than one kind of investigation.
+- Count copy describes loaded rows and cursor availability. It should not be
+  read as an exact total unless the UI explicitly shows response-provided total
+  metadata.
 
 # Troubleshooting
 
@@ -119,6 +126,9 @@ Use this safe audit-review order when you want fewer false conclusions:
   use `Event Details` and inspect the JSON payload.
 - Export feels too broad:
   refine the filters first because export follows the current filtered scope.
+- A filter refresh fails:
+  keep the visible rows as the last successful slice and retry after checking
+  the filter values.
 
 # Decision Guide
 
@@ -149,3 +159,5 @@ Use this safe audit-review order when you want fewer false conclusions:
   handled as controlled evidence rather than casual downloads.
 - JSON payloads may expose more context than the table view, so review and share
   them carefully.
+- Audit query filters are server-side and require `audit:read`; unsupported
+  row actions remain disabled until their workflow is implemented.

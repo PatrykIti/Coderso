@@ -12,10 +12,23 @@ import { auditLogQuerySchema } from "../../../core/server/validation/auditSchema
 import { validate } from "../../../core/server/validation/schemaValidator";
 
 test("auditLogQuerySchema rejects unknown and malformed query params", () => {
-  expect(() => validate(auditLogQuerySchema, { limit: "50" })).not.toThrow();
+  expect(() =>
+    validate(auditLogQuerySchema, {
+      limit: "50",
+      q: "auth",
+      category: "authentication",
+      severity: "warning",
+      from: "2026-06-01T00:00:00.000Z",
+      to: "2026-06-02T00:00:00.000Z",
+      cursor: "cursor-1",
+    })
+  ).not.toThrow();
   expect(() => validate(auditLogQuerySchema, {})).not.toThrow();
 
   expect(() => validate(auditLogQuerySchema, { limit: "0" })).toThrow(ApiError);
+  expect(() => validate(auditLogQuerySchema, { category: "billing" })).toThrow(ApiError);
+  expect(() => validate(auditLogQuerySchema, { severity: "critical" })).toThrow(ApiError);
+  expect(() => validate(auditLogQuerySchema, { from: "2026-06-01" })).toThrow(ApiError);
   expect(() => validate(auditLogQuerySchema, { page: "2" })).toThrow(ApiError);
 });
 

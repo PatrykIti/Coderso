@@ -56,4 +56,44 @@ Minimalne logowanie zdarzen administracyjnych.
 
 ## API
 
-- `GET /audit` (admin, read-only)
+- `GET /audit` (admin, read-only, `audit:read`)
+
+`GET /audit` strict query params:
+
+- `limit`: positive integer, clamped to 200.
+- `q`: optional search text matched against stored action, target, actor id,
+  and redacted metadata text.
+- `category`: optional `authentication`, `content`, or `system`.
+- `severity`: optional `info`, `warning`, or `error`.
+- `from` / `to`: optional RFC3339 date-time bounds. Reversed ranges are
+  rejected.
+- `cursor`: optional opaque keyset cursor returned by the previous response.
+
+Response:
+
+- `items`: audit rows ordered by `createdAt DESC, id DESC`.
+- `nextCursor`: next keyset cursor when more matching rows are available,
+  otherwise `null`. Cursor payloads preserve database timestamp precision.
+
+Derived audit categories:
+
+- `authentication`: actions beginning with `auth.`, `session.`, or
+  `sessions.`, or `targetType=session`.
+- `content`: case-insensitive target types `page`, `content`, `entry`, `menu`,
+  `media`, `seo`, `redirect`, `theme`, or `admin-theme`.
+- `system`: everything else.
+
+Category precedence is deterministic: authentication wins over content, and
+system applies only after both authentication and content checks fail.
+
+Derived audit severity:
+
+- Explicit `metadata.severity` of `info`, `warning`, or `error` wins.
+- Actions containing `error` or `fail` derive `error`.
+- Actions containing `warn` or `denied` derive `warning`.
+- Everything else derives `info`.
+
+Errors:
+
+- `audit_query_invalid`: invalid/unknown query params or invalid date ranges.
+- `audit_cursor_invalid`: malformed cursor.

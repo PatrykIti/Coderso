@@ -4,71 +4,85 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
+import type { AuditLogListResponse, AuditLogQuery } from "../../../core/admin/services/auditClient";
+
+type ListAuditLogsMock = (query?: AuditLogQuery | number) => Promise<AuditLogListResponse>;
+
 const auditState = vi.hoisted(() => ({
-  listAuditLogs: vi.fn(async () => [
-    {
-      id: "audit-1",
-      action: "content.publish",
-      actorId: "user-1",
-      targetType: "page",
-      targetId: "home",
-      createdAt: "2026-03-15T10:00:00.000Z",
-      metadata: {
-        actorName: "Ada Lovelace",
-        ip: "127.0.0.1",
-        requestId: "req-1",
+  listAuditLogs: vi.fn<ListAuditLogsMock>(async () => ({
+    items: [
+      {
+        id: "audit-1",
+        action: "content.publish",
+        actorId: "user-1",
+        targetType: "page",
+        targetId: "home",
+        createdAt: "2026-03-15T10:00:00.000Z",
+        metadata: {
+          actorName: "Ada Lovelace",
+          ip: "127.0.0.1",
+          requestId: "req-1",
+        },
       },
-    },
-    {
-      id: "audit-2",
-      action: "auth.denied",
-      actorId: "user-2",
-      targetType: "session",
-      targetId: "sess-1",
-      createdAt: "2026-03-15T09:00:00.000Z",
-      metadata: {
-        actorEmail: "grace@example.com",
-        severity: "warning",
+      {
+        id: "audit-2",
+        action: "auth.denied",
+        actorId: "user-2",
+        targetType: "session",
+        targetId: "sess-1",
+        createdAt: "2026-03-15T09:00:00.000Z",
+        metadata: {
+          actorEmail: "grace@example.com",
+          severity: "warning",
+        },
       },
-    },
-  ]),
+    ],
+    nextCursor: null,
+  })),
   nextError: null as unknown,
   reset() {
     this.listAuditLogs.mockReset();
     this.nextError = null;
-    this.listAuditLogs.mockImplementation(async () => {
+    this.listAuditLogs.mockImplementation(async (query) => {
+      const auditQuery = typeof query === "object" ? query : undefined;
       if (this.nextError) {
         const error = this.nextError;
         this.nextError = null;
         throw error;
       }
-      return [
-        {
-          id: "audit-1",
-          action: "content.publish",
-          actorId: "user-1",
-          targetType: "page",
-          targetId: "home",
-          createdAt: "2026-03-15T10:00:00.000Z",
-          metadata: {
-            actorName: "Ada Lovelace",
-            ip: "127.0.0.1",
-            requestId: "req-1",
+      if (auditQuery?.query === "zzz") {
+        return { items: [], nextCursor: null };
+      }
+      return {
+        items: [
+          {
+            id: "audit-1",
+            action: "content.publish",
+            actorId: "user-1",
+            targetType: "page",
+            targetId: "home",
+            createdAt: "2026-03-15T10:00:00.000Z",
+            metadata: {
+              actorName: "Ada Lovelace",
+              ip: "127.0.0.1",
+              requestId: "req-1",
+            },
           },
-        },
-        {
-          id: "audit-2",
-          action: "auth.denied",
-          actorId: "user-2",
-          targetType: "session",
-          targetId: "sess-1",
-          createdAt: "2026-03-15T09:00:00.000Z",
-          metadata: {
-            actorEmail: "grace@example.com",
-            severity: "warning",
+          {
+            id: "audit-2",
+            action: "auth.denied",
+            actorId: "user-2",
+            targetType: "session",
+            targetId: "sess-1",
+            createdAt: "2026-03-15T09:00:00.000Z",
+            metadata: {
+              actorEmail: "grace@example.com",
+              severity: "warning",
+            },
           },
-        },
-      ];
+        ],
+        nextCursor: auditQuery?.query === "ada" ? "cursor-1" : null,
+      };
     });
   },
   apiError(message: string) {
@@ -162,23 +176,30 @@ vi.mock("@/ui/shared/ExportDialog", () => ({
 vi.mock("../../../core/admin/ui/audit/AuditFilters", () => ({
   AuditFilters: ({
     query,
+    dateRange,
     eventType,
     severity,
     onQueryChange,
+    onDateRangeChange,
     onEventTypeChange,
     onSeverityChange,
   }: {
     query: string;
+    dateRange: string;
     eventType: string;
     severity: string;
     onQueryChange: (value: string) => void;
+    onDateRangeChange: (value: string) => void;
     onEventTypeChange: (value: string) => void;
     onSeverityChange: (value: string) => void;
   }) => (
     <div>
-      <span>{`filters:${query}:${eventType}:${severity}`}</span>
+      <span>{`filters:${query}:${dateRange}:${eventType}:${severity}`}</span>
       <button type="button" onClick={() => onQueryChange("ada")}>
         filter-query
+      </button>
+      <button type="button" onClick={() => onDateRangeChange("last-30-days")}>
+        filter-date
       </button>
       <button type="button" onClick={() => onEventTypeChange("authentication")}>
         filter-type
@@ -197,14 +218,17 @@ vi.mock("../../../core/admin/ui/audit/AuditTable", () => ({
   AuditTable: ({
     logs,
     selectedId,
+    pageInfo,
     onSelect,
   }: {
     logs: Array<{ id: string; event: string }>;
     selectedId?: string | null;
+    pageInfo?: { countCopy: string; hasMore: boolean };
     onSelect: (log: { id: string; event: string }) => void;
   }) => (
     <div>
       <span>{`audit-table:${logs.length}:${selectedId ?? "none"}`}</span>
+      <span>{`page-info:${pageInfo?.countCopy ?? "none"}:${pageInfo?.hasMore ?? false}`}</span>
       {logs.map((log) => (
         <button key={log.id} type="button" onClick={() => onSelect(log)}>
           {`select:${log.event}`}
@@ -275,6 +299,14 @@ const flush = async () => {
   });
 };
 
+const lastAuditQuery = () => {
+  const query = auditState.listAuditLogs.mock.calls.at(-1)?.[0];
+  if (!query || typeof query === "number") {
+    throw new Error("Expected the latest audit call to use an object query.");
+  }
+  return query;
+};
+
 beforeEach(() => {
   auditState.reset();
 });
@@ -288,7 +320,9 @@ test("AuditList loads logs, filters them, opens export dialog, and clears select
 
   try {
     await flush();
-    expect(auditState.listAuditLogs).toHaveBeenCalledWith(200);
+    expect(auditState.listAuditLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 50, from: expect.any(String), to: expect.any(String) })
+    );
     expect(view.container.textContent).toContain("audit-table:2:none");
 
     clickByText(view.container, "select:Content Publish");
@@ -299,12 +333,31 @@ test("AuditList loads logs, filters them, opens export dialog, and clears select
 
     clickByText(view.container, "filter-query");
     await flush();
-    expect(view.container.textContent).toContain("audit-table:1:none");
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "ada" })
+    );
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 2 loaded audit logs. More results are available.:true"
+    );
+
+    const queryBeforeDate = lastAuditQuery();
+    clickByText(view.container, "filter-date");
+    await flush();
+    const queryAfterDate = lastAuditQuery();
+    expect(queryAfterDate.from).not.toBe(queryBeforeDate.from);
+    expect(queryAfterDate.to).toEqual(expect.any(String));
 
     clickByText(view.container, "filter-type");
     clickByText(view.container, "filter-severity");
     clickByText(view.container, "filter-empty");
     await flush();
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        category: "authentication",
+        severity: "warning",
+        query: "zzz",
+      })
+    );
     expect(view.container.textContent).toContain("No audit logs match the current filters.");
 
     clickByText(view.container, "Export CSV");
@@ -323,6 +376,8 @@ test("AuditList surfaces api and generic load failures", async () => {
   try {
     await flush();
     expect(apiView.container.textContent).toContain("Load denied");
+    expect(apiView.container.textContent).toContain("Audit logs could not be loaded.");
+    expect(apiView.container.textContent).not.toContain("No audit logs match the current filters.");
   } finally {
     apiView.cleanup();
   }
@@ -336,5 +391,23 @@ test("AuditList surfaces api and generic load failures", async () => {
     expect(genericView.container.textContent).toContain("Failed to load audit logs.");
   } finally {
     genericView.cleanup();
+  }
+});
+
+test("AuditList preserves visible rows when a server-filter refresh fails", async () => {
+  const view = mount(<AuditList />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("audit-table:2:none");
+
+    auditState.nextError = auditState.apiError("Filter failed");
+    clickByText(view.container, "filter-query");
+    await flush();
+
+    expect(view.container.textContent).toContain("Filter failed");
+    expect(view.container.textContent).toContain("audit-table:2:none");
+  } finally {
+    view.cleanup();
   }
 });
