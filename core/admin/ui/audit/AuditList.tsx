@@ -1,5 +1,5 @@
 import { Download } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
@@ -18,6 +18,7 @@ import {
   resolveAuditSeverity,
 } from "../../../services/audit/auditClassification";
 
+import { copyAuditEntryJson } from "./auditEntryActions";
 import { AuditDetailsDrawer } from "./AuditDetailsDrawer";
 import { AuditFilters } from "./AuditFilters";
 import { AuditTable } from "./AuditTable";
@@ -91,6 +92,7 @@ const mapAuditRecord = (record: AuditRecord): AuditLog => {
     resource: `/${record.targetType}/${record.targetId}`,
     resourceLabel: `${formatTitle(record.targetType)} ${record.targetId}`,
     ipAddress: resolveIp(metadata),
+    createdAt: record.createdAt,
     timestamp: formatRelative(record.createdAt),
     timestampLabel: new Date(record.createdAt).toLocaleString(),
     status,
@@ -223,6 +225,10 @@ export function AuditList() {
     setDrawerOpen(true);
   };
 
+  const handleCopyJson = useCallback((log: AuditLog) => {
+    void copyAuditEntryJson(log);
+  }, []);
+
   const handleDrawerChange = (open: boolean) => {
     setDrawerOpen(open);
     if (!open) {
@@ -275,11 +281,17 @@ export function AuditList() {
             logs={logs}
             selectedId={selectedId}
             onSelect={handleSelect}
+            onCopyJson={handleCopyJson}
             pageInfo={{ countCopy, hasMore }}
           />
         )}
       </div>
-      <AuditDetailsDrawer log={selectedLog} open={drawerOpen} onOpenChange={handleDrawerChange} />
+      <AuditDetailsDrawer
+        log={selectedLog}
+        open={drawerOpen}
+        onOpenChange={handleDrawerChange}
+        onCopyJson={handleCopyJson}
+      />
       <ExportDialog
         open={exportOpen}
         onOpenChange={setExportOpen}

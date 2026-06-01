@@ -169,7 +169,7 @@ Completion notes:
 
 ### TASK-357-02: Audit Entry Actions Truthfulness
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Actions:
 
@@ -214,6 +214,19 @@ Regression tests:
   ids in addition to tokens/cookies/password-like keys.
 - Disabled actions are not focusable as active commands.
 - Drawer and row menu use the same action implementation.
+
+Completion notes:
+
+- `Copy JSON` is active in both the row menu and details drawer.
+- Both surfaces call the same shared copy implementation and write a redacted
+  public payload to the Clipboard API with success/error toast feedback.
+- The copied payload includes stable `createdAt`, display timestamp, visible row
+  context, and redacted metadata.
+- The drawer JSON textarea renders the same redacted payload helper.
+- `Export entry`, `Share Log`, and `Report` remain disabled with explicit
+  unavailable reasons; export remains owned by `TASK-357-03`.
+- The Audit no-op gate now treats Copy JSON as implemented and keeps unsupported
+  actions plus cursor navigation in the expected disabled set.
 
 ### TASK-357-03: Audit Export Contract
 

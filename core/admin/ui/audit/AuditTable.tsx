@@ -20,13 +20,12 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+import { copyAuditEntryJson } from "./auditEntryActions";
 import { auditCategoryMeta, auditStatusMeta } from "./auditMeta";
 import type { AuditLog } from "./types";
 
-const copyJsonUnavailableReason =
-  "Copy JSON is not wired yet. TASK-357-02 owns clipboard feedback.";
 const exportEntryUnavailableReason =
-  "Single-entry export is not wired yet. TASK-357-02 owns entry actions.";
+  "Single-entry export is unavailable until the audited export route is shipped in TASK-357-03.";
 const paginationUnavailableReason =
   "Cursor navigation is not wired yet. TASK-357-04 owns page controls.";
 
@@ -34,6 +33,7 @@ export type AuditTableProps = {
   logs: AuditLog[];
   selectedId?: string | null;
   onSelect: (log: AuditLog) => void;
+  onCopyJson?: (log: AuditLog) => void;
   pageInfo?: {
     countCopy: string;
     hasMore: boolean;
@@ -49,7 +49,13 @@ const getInitials = (name: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-export function AuditTable({ logs, selectedId, onSelect, pageInfo }: AuditTableProps) {
+export function AuditTable({ logs, selectedId, onSelect, onCopyJson, pageInfo }: AuditTableProps) {
+  const handleCopyJson =
+    onCopyJson ??
+    ((log: AuditLog) => {
+      void copyAuditEntryJson(log);
+    });
+
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className="overflow-x-auto">
@@ -144,13 +150,19 @@ export function AuditTable({ logs, selectedId, onSelect, pageInfo }: AuditTableP
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem onClick={() => onSelect(log)}>
+                        <DropdownMenuItem
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onSelect(log);
+                          }}
+                        >
                           View details
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          disabled
-                          title={copyJsonUnavailableReason}
-                          data-no-op-control="audit-copy-json-menu"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleCopyJson(log);
+                          }}
                         >
                           Copy JSON
                         </DropdownMenuItem>

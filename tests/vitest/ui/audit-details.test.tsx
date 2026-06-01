@@ -15,8 +15,9 @@ const sampleLog: AuditLog = {
     type: "user",
   },
   resource: "/api/v1/posts/302",
-  resourceLabel: "Article #302 \"Introduction to CMS\"",
+  resourceLabel: 'Article #302 "Introduction to CMS"',
   ipAddress: "192.168.1.45",
+  createdAt: "2026-03-15T14:22:10.000Z",
   timestamp: "2 mins ago",
   timestampLabel: "Oct 24, 14:22:10",
   status: "success",
@@ -27,19 +28,24 @@ const sampleLog: AuditLog = {
     action: "UPDATE",
     entity: "post",
     entity_id: 302,
+    password: "secret-password",
+    headers: {
+      authorization: "Bearer sk-testsecret",
+      accept: "application/json",
+    },
   },
 };
 
 test("AuditDetailsDrawer renders drawer content", () => {
   const html = renderAdminUi(
-    <AuditDetailsDrawer
-      log={sampleLog}
-      open
-      onOpenChange={() => undefined}
-    />
+    <AuditDetailsDrawer log={sampleLog} open onOpenChange={() => undefined} />
   );
 
   expect(html).toContain("Event Details");
   expect(html).toContain("JSON Payload");
+  expect(html).toContain("Copy JSON");
   expect(html).toContain("Introduction to CMS");
+  expect(html).toContain("application/json");
+  expect(html).not.toContain("secret-password");
+  expect(html).not.toContain("sk-testsecret");
 });

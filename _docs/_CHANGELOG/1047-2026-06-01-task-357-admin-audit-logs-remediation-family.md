@@ -57,10 +57,30 @@ Tasks: TASK-357, TASK-357-01, TASK-357-02, TASK-357-03, TASK-357-04
 - The date range no-op gate was removed while copy/export/share/report and
   cursor navigation remain assigned to later leaves.
 
+### TASK-357-02 Audit Entry Actions Truthfulness
+
+- Added a pure audit redaction helper shared by server audit metadata
+  sanitizing, details-drawer payload rendering, and copied entry JSON.
+- Redaction now removes password/token/secret/API key/cookie/authorization,
+  CSRF, reset-token, and session-id fields recursively and redacts token-like
+  strings in nested payload values.
+- Audit UI rows now carry stable `createdAt` so copied JSON includes a
+  machine-readable timestamp instead of relying only on localized display copy.
+- Row-menu and details-drawer `Copy JSON` controls now use the same Clipboard
+  action, copy redacted public JSON, and report success/error through admin
+  toasts.
+- The details drawer renders the redacted payload, matching copied JSON
+  behavior for secret-safe inspection.
+- `Export entry`, `Share Log`, and `Report` remain disabled with stable
+  unavailable reasons; export remains owned by `TASK-357-03`.
+- The Audit no-op gate no longer expects `Copy JSON` to be disabled and still
+  verifies unsupported Audit actions plus cursor navigation.
+
 ## Validation
 
 - `bun test tests/unit/audit/auditService.test.ts tests/integration/routes/audit.test.ts`
 - `bun run test:vitest -- tests/vitest/admin/auditClient.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/ui/audit-list-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/audit-entry-actions.test.ts tests/vitest/ui/audit-table-wave.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/audit-list-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
@@ -68,7 +88,14 @@ Tasks: TASK-357, TASK-357-01, TASK-357-02, TASK-357-03, TASK-357-04
 - `set -a && source .env && set +a && bun .tmp/task-357-01-playwright-runner.ts`
   (restricted `audit:read` user; screenshot:
   `.tmp/task-357-01-audit-query.png`)
+- `set -a && source .env && set +a && bun .tmp/task-357-02-playwright-runner.ts`
+  (restricted `audit:read` user; row and drawer `Copy JSON`, redacted drawer
+  payload, disabled unsupported entry actions; screenshot:
+  `.tmp/task-357-02-copy-json.png`)
 - Claude final blocker review: no blockers after the category precedence,
   service error mapping, shared count helper, and initial-load error-state fixes.
+- Claude final blocker review for `TASK-357-02`: no blockers after shared
+  redacted copy behavior, drawer payload redaction, `createdAt` clipboard
+  payloads, and truthful disabled entry actions.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md`.

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 27 tasks
+- **To Do:** 26 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2024 tasks
+- **Done:** 2025 tasks
 
 ---
 
@@ -54,7 +54,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-358-01 | Access Logs Query, Filters, and Pagination | High | Large | Physical Access Logs leaf for strict query/date/actor filters, truthful pagination, and search match explanation |
 | TASK-357-04 | Pagination and Count Truthfulness | High | Medium | Physical Audit Logs leaf for backend-driven counts, cursor state, and removal of placeholder totals |
 | TASK-357-03 | Audit Export Contract | High | Large | Physical Audit Logs leaf for real export route/dialog, column allowlist, redaction, CSRF, CSV/JSON, and audit event |
-| TASK-357-02 | Audit Entry Actions Truthfulness | High | Medium | Physical Audit Logs leaf for copy JSON, unsupported action states, shared handlers, and redacted payloads |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -75,7 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-357 | Admin Audit Logs Report Remediation Family | High | Large | In progress (2026-06-01): TASK-357-01 is implemented; entry actions, export, and full cursor pagination leaves remain. |
+| TASK-357 | Admin Audit Logs Report Remediation Family | High | Large | In progress (2026-06-01): TASK-357-01 and TASK-357-02 are implemented; export and full cursor pagination leaves remain. |
 | TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-360-01 through TASK-360-06 are implemented; final-evidence closure remains. |
 ---
 
@@ -95,6 +94,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-356-04 | RBAC Audit Event Diff | High | Medium | Done (2026-06-01): Role create/update/delete audit metadata now includes redacted permission snapshots, full-access flags, guard coverage, and deterministic added/removed update diffs. |
 | TASK-356 | Admin Roles Matrix Report Remediation Family | High | Very Large | Done (2026-06-01): TASK-356-01 through TASK-356-04 close Roles Matrix permission gating, diff review, high-risk/full-access confirmation, and RBAC audit diff findings. |
 | TASK-357-01 | Server-Side Audit Query Contract | High | Large | Done (2026-06-01): Audit Logs now use strict server query params for search/date/category/severity/cursor, shared classification, keyset `nextCursor`, and response-derived count copy. |
+| TASK-357-02 | Audit Entry Actions Truthfulness | High | Medium | Done (2026-06-01): Audit row and drawer Copy JSON now share redacted Clipboard behavior with toast feedback, while unsupported entry/share/report actions stay truthfully disabled. |
 | TASK-360-06 | Admin Server-Side Query and Pagination Conventions | High | Large | Done (2026-06-01): shared Admin query helpers, AJV fragments, strict log query schemas, and area-specific query error mapping now prevent silent fake-filter/pagination drift. |
 | TASK-360-04 | Admin No-Op Control Audit Gate | High | Large | Done (2026-06-01): audited Users, Audit Logs, Access Logs, and Settings no-op controls now have disabled/unavailable states with stable regression expectations. |
 | TASK-360-05 | Drawer and Sheet Accessibility Gate | High | Medium | Done (2026-06-01): audited Admin drawers now bind Radix title/description semantics and share a warning-free Vitest gate for future drawer tests. |

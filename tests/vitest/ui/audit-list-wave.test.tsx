@@ -90,7 +90,26 @@ const auditState = vi.hoisted(() => ({
   },
 }));
 
+const auditActionState = vi.hoisted(() => ({
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
+  clipboardWriteText: vi.fn(async (_value: string) => undefined),
+  reset() {
+    this.toastSuccess.mockReset();
+    this.toastError.mockReset();
+    this.clipboardWriteText.mockReset();
+    this.clipboardWriteText.mockResolvedValue(undefined);
+  },
+}));
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: auditActionState.toastSuccess,
+    error: auditActionState.toastError,
+  },
+}));
 
 vi.mock("@/components/ui/button", () => ({
   Button: ({
@@ -220,19 +239,26 @@ vi.mock("../../../core/admin/ui/audit/AuditTable", () => ({
     selectedId,
     pageInfo,
     onSelect,
+    onCopyJson,
   }: {
     logs: Array<{ id: string; event: string }>;
     selectedId?: string | null;
     pageInfo?: { countCopy: string; hasMore: boolean };
     onSelect: (log: { id: string; event: string }) => void;
+    onCopyJson: (log: { id: string; event: string }) => void;
   }) => (
     <div>
       <span>{`audit-table:${logs.length}:${selectedId ?? "none"}`}</span>
       <span>{`page-info:${pageInfo?.countCopy ?? "none"}:${pageInfo?.hasMore ?? false}`}</span>
       {logs.map((log) => (
-        <button key={log.id} type="button" onClick={() => onSelect(log)}>
-          {`select:${log.event}`}
-        </button>
+        <React.Fragment key={log.id}>
+          <button type="button" onClick={() => onSelect(log)}>
+            {`select:${log.event}`}
+          </button>
+          <button type="button" onClick={() => onCopyJson(log)}>
+            {`copy-table:${log.event}`}
+          </button>
+        </React.Fragment>
       ))}
     </div>
   ),
@@ -243,14 +269,21 @@ vi.mock("../../../core/admin/ui/audit/AuditDetailsDrawer", () => ({
     log,
     open,
     onOpenChange,
+    onCopyJson,
   }: {
     log?: { id: string; event: string } | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onCopyJson: (log: { id: string; event: string }) => void;
   }) =>
     open ? (
       <div>
         <span>{`drawer:${log?.id ?? "none"}:${log?.event ?? "none"}`}</span>
+        {log ? (
+          <button type="button" onClick={() => onCopyJson(log)}>
+            copy-drawer
+          </button>
+        ) : null}
         <button type="button" onClick={() => onOpenChange(false)}>
           close-drawer
         </button>
@@ -309,6 +342,11 @@ const lastAuditQuery = () => {
 
 beforeEach(() => {
   auditState.reset();
+  auditActionState.reset();
+  Object.defineProperty(navigator, "clipboard", {
+    value: { writeText: auditActionState.clipboardWriteText },
+    configurable: true,
+  });
 });
 
 afterEach(() => {
@@ -325,8 +363,16 @@ test("AuditList loads logs, filters them, opens export dialog, and clears select
     );
     expect(view.container.textContent).toContain("audit-table:2:none");
 
+    clickByText(view.container, "copy-table:Content Publish");
+    await flush();
+    expect(auditActionState.clipboardWriteText).toHaveBeenCalledTimes(1);
+    expect(auditActionState.toastSuccess).toHaveBeenCalledWith("Audit entry JSON copied.");
+
     clickByText(view.container, "select:Content Publish");
     expect(view.container.textContent).toContain("drawer:audit-1:Content Publish");
+    clickByText(view.container, "copy-drawer");
+    await flush();
+    expect(auditActionState.clipboardWriteText).toHaveBeenCalledTimes(2);
     clickByText(view.container, "close-drawer");
     expect(view.container.textContent).not.toContain("drawer:audit-1:Content Publish");
     expect(view.container.textContent).toContain("audit-table:2:none");

@@ -39,7 +39,8 @@ Minimalne logowanie zdarzen administracyjnych.
 
 ## Metadata rules
 
-- Nie zapisujemy sekretow (password/token/secret/authorization/cookie).
+- Nie zapisujemy sekretow
+  (password/token/secret/authorization/cookie/CSRF/reset-token/session-id).
 - `ip` i `userAgent` trafiaja do metadata, jezeli dostepne.
 - `action` ma format `domain.action` (np. `pages.publish`).
 - Role duplicate metadata may include `sourceRoleId` and `sourceRoleName`; reset
@@ -53,6 +54,9 @@ Minimalne logowanie zdarzen administracyjnych.
 - Role audit metadata must stay machine-readable and redacted: no session
   cookies, request headers, authorization values, tokens, passwords, or
   unrelated user payloads.
+- Admin UI audit entry copy/details rendering applies the same redaction helper
+  before exposing payload JSON. Redaction removes sensitive fields recursively
+  and redacts token-like strings inside nested values.
 
 ## API
 
@@ -97,3 +101,25 @@ Errors:
 
 - `audit_query_invalid`: invalid/unknown query params or invalid date ranges.
 - `audit_cursor_invalid`: malformed cursor.
+
+## Admin Entry Copy Payload
+
+`Copy JSON` in Audit Logs writes a redacted public entry payload to the
+Clipboard API. The payload includes visible row context plus stable timestamps:
+
+- `id`
+- `event`
+- `category`
+- `actor`
+- `resource`
+- `resourceLabel`
+- `status`
+- `severity`
+- `createdAt`
+- `timestamp`
+- `requestId`
+- `description`
+- `payload` (redacted recursively)
+
+Unsupported entry-level actions that need a server workflow remain disabled
+until their route contracts exist.

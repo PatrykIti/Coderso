@@ -17,6 +17,7 @@ import {
   type AuditLogCategory,
   type AuditLogSeverity,
 } from "./auditClassification";
+import { sanitizeAuditMetadata } from "./auditRedaction";
 
 export type AuditEvent = {
   actorId?: string | null;
@@ -68,47 +69,8 @@ const auditSeverityValues = ["info", "warning", "error"] as const;
 const auditCategories = new Set<AuditLogCategory>(auditCategoryValues);
 const auditSeverities = new Set<AuditLogSeverity>(auditSeverityValues);
 
-const redactedKeys = new Set([
-  "password",
-  "token",
-  "secret",
-  "apikey",
-  "api_key",
-  "authorization",
-  "cookie",
-]);
-
-const redactionPatterns = [
-  /\bsk-or-v1-[a-zA-Z0-9]{8,}\b/g,
-  /\bsk-[a-zA-Z0-9_-]{8,}\b/g,
-  /Bearer\s+[a-zA-Z0-9\-_.=]{8,}/gi,
-  /\beyJ[a-zA-Z0-9_-]+=*\.[a-zA-Z0-9_-]+=*\.[a-zA-Z0-9_-]+=*\b/g,
-] as const;
-
-const redactString = (value: string) => {
-  let output = value;
-  for (const pattern of redactionPatterns) {
-    output = output.replace(pattern, "[REDACTED]");
-  }
-  return output;
-};
-
-const sanitizeUnknown = (value: unknown): unknown => {
-  if (typeof value === "string") return redactString(value);
-  if (Array.isArray(value)) return value.map((entry) => sanitizeUnknown(entry));
-  if (!value || typeof value !== "object") return value;
-
-  const source = value as Record<string, unknown>;
-  const entries: Array<[string, unknown]> = [];
-  for (const [key, entry] of Object.entries(source)) {
-    if (redactedKeys.has(key.toLowerCase())) continue;
-    entries.push([key, sanitizeUnknown(entry)]);
-  }
-  return Object.fromEntries(entries);
-};
-
 export function sanitizeMetadata(meta: Record<string, unknown>) {
-  return sanitizeUnknown(meta) as Record<string, unknown>;
+  return sanitizeAuditMetadata(meta);
 }
 
 const normalizeAuditCategory = (value: string | null | undefined) => {

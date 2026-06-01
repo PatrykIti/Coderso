@@ -41,11 +41,15 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuItem: ({
     children,
     onClick,
+    disabled,
+    ...props
   }: {
     children: React.ReactNode;
-    onClick?: () => void;
+    onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+    disabled?: boolean;
+    [key: string]: unknown;
   }) => (
-    <button type="button" onClick={onClick}>
+    <button type="button" onClick={onClick} disabled={disabled} {...props}>
       {children}
     </button>
   ),
@@ -107,6 +111,7 @@ const logs = [
     resource: "session:1",
     resourceLabel: "Session",
     ipAddress: "10.0.0.1",
+    createdAt: "2026-03-15T09:00:00.000Z",
     timestamp: "2026-03-15 09:00",
     timestampLabel: "1 minute ago",
     status: "success" as const,
@@ -127,6 +132,7 @@ const logs = [
     resource: "backup:daily",
     resourceLabel: "Backup",
     ipAddress: "127.0.0.1",
+    createdAt: "2026-03-15T08:00:00.000Z",
     timestamp: "2026-03-15 08:00",
     timestampLabel: "1 hour ago",
     status: "error" as const,
@@ -169,6 +175,18 @@ const clickByText = (container: HTMLElement, text: string) => {
   });
 };
 
+const clickButtonByText = (container: HTMLElement, text: string) => {
+  const target = Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(text)
+  );
+  if (!(target instanceof HTMLButtonElement)) {
+    throw new Error(`Missing button: ${text}`);
+  }
+  React.act(() => {
+    target.click();
+  });
+};
+
 afterEach(() => {
   document.body.innerHTML = "";
 });
@@ -184,7 +202,11 @@ test("AuditTable renders user and system rows, selected state, and footer contro
     expect(view.container.textContent).toContain("Backup failed");
     expect(view.container.textContent).toContain("Scheduler");
     expect(view.container.textContent).toContain("Showing 2 loaded audit logs.");
-    expect(view.container.textContent).toContain("Server pagination is not wired yet.");
+    expect(
+      Array.from(view.container.querySelectorAll("button")).some((button) =>
+        button.getAttribute("title")?.includes("Cursor navigation is not wired yet.")
+      )
+    ).toBe(true);
     expect(view.container.textContent).not.toContain("2,459 logs");
     expect(view.container.textContent).toContain("Previous");
     expect(view.container.textContent).toContain("Next");
@@ -199,9 +221,12 @@ test("AuditTable renders user and system rows, selected state, and footer contro
   }
 });
 
-test("AuditTable routes row and menu detail selection without triggering from the menu trigger button", () => {
+test("AuditTable routes row, menu detail selection, and copy without menu trigger row selection", () => {
   const onSelect = vi.fn();
-  const view = mount(<AuditTable logs={logs} selectedId={null} onSelect={onSelect} />);
+  const onCopyJson = vi.fn();
+  const view = mount(
+    <AuditTable logs={logs} selectedId={null} onSelect={onSelect} onCopyJson={onCopyJson} />
+  );
 
   try {
     clickByText(view.container, "User login");
@@ -218,11 +243,17 @@ test("AuditTable routes row and menu detail selection without triggering from th
     });
     expect(onSelect).toHaveBeenCalledTimes(1);
 
-    clickByText(view.container, "View details");
+    clickButtonByText(view.container, "View details");
     expect(onSelect).toHaveBeenNthCalledWith(2, logs[0]);
 
-    expect(view.container.textContent).toContain("Copy JSON");
+    clickButtonByText(view.container, "Copy JSON");
+    expect(onCopyJson).toHaveBeenCalledWith(logs[0]);
     expect(view.container.textContent).toContain("Export entry");
+    const exportEntry = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Export entry")
+    );
+    expect(exportEntry).toBeInstanceOf(HTMLButtonElement);
+    expect((exportEntry as HTMLButtonElement).disabled).toBe(true);
   } finally {
     view.cleanup();
   }

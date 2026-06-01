@@ -20,6 +20,7 @@ export type AuditLog = {
   resource: string;
   resourceLabel: string;
   ipAddress: string;
+  createdAt: string;
   timestamp: string;
   timestampLabel: string;
   status: AuditStatus;

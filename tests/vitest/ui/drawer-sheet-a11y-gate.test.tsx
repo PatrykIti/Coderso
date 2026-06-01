@@ -145,6 +145,7 @@ const auditLog: AuditLog = {
   resource: "/api/v1/posts/302",
   resourceLabel: "Article #302",
   ipAddress: "192.168.1.45",
+  createdAt: "2026-10-24T14:22:10.000Z",
   timestamp: "2 mins ago",
   timestampLabel: "Oct 24, 14:22:10",
   status: "success",

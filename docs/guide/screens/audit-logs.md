@@ -75,10 +75,10 @@ workspace with:
    - severity,
    - event type,
    - JSON payload.
-9. Use `Copy JSON` when it is enabled and the raw payload is the important
-   artifact.
-10. Use `Share Log` or `Report` only when those actions are enabled by the
-    current workflow.
+9. Use `Copy JSON` when the selected event payload is the important artifact.
+   The copied JSON is redacted and includes the stable event timestamp.
+10. `Share Log` and `Report` are disabled until a supported compliance workflow
+    is available.
 11. Use `Export CSV` when the current filtered view needs to leave the page and
     export is available.
 12. In the export dialog, review:
@@ -104,7 +104,8 @@ Use this safe audit-review order when you want fewer false conclusions:
 - Relative timestamps are useful for scanning, but the exact timestamp label in
   the drawer is the real reference when events must be compared precisely.
 - `Event Details` matters because the payload and request metadata often carry
-  the evidence that the table alone cannot show.
+  the evidence that the table alone cannot show. The drawer payload is redacted
+  with the same helper used by `Copy JSON`.
 - Role change events expose machine-readable permission evidence: role id/name,
   stored permission snapshot, full-access state, and added/removed permission
   arrays for updates.
@@ -157,7 +158,8 @@ Use this safe audit-review order when you want fewer false conclusions:
   event history access.
 - Audit exports can contain sensitive operational metadata, so they should be
   handled as controlled evidence rather than casual downloads.
-- JSON payloads may expose more context than the table view, so review and share
-  them carefully.
+- JSON payloads may expose more context than the table view. The UI redacts
+  known secret fields before display/copy, but copied entries should still be
+  handled as controlled evidence.
 - Audit query filters are server-side and require `audit:read`; unsupported
   row actions remain disabled until their workflow is implemented.

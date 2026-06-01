@@ -5,7 +5,7 @@
 **Category:** Admin UI + Audit Logs + UX Truthfulness + Redaction
 **Estimated Effort:** Medium
 **Dependencies:** TASK-357-01, TASK-360-04
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -114,3 +114,20 @@ Error handling:
 - `Copy JSON` copies redacted JSON and reports success/failure.
 - Unsupported Audit actions no longer appear as active commands.
 - Row and drawer actions behave consistently.
+
+## Completion Notes
+
+- Added a pure audit redaction helper shared by server audit metadata sanitizing,
+  drawer payload rendering, and copied entry JSON.
+- Redaction now removes password/token/secret/API key/cookie/authorization,
+  CSRF, reset-token, and session-id fields recursively and redacts token-like
+  strings in arrays and nested payload values.
+- `AuditLog` now carries machine-readable `createdAt`, so copied JSON includes
+  a stable timestamp in addition to display labels.
+- Row-menu and drawer `Copy JSON` controls call the same copy implementation,
+  write redacted JSON to the Clipboard API, and emit success/error toasts.
+- Clipboard unavailable or rejected paths show explicit failure feedback.
+- `Export entry`, `Share Log`, and `Report` remain disabled with stable
+  unavailable copy. Single-entry/bulk export stays owned by `TASK-357-03`.
+- The Audit no-op gate no longer expects `Copy JSON` to be disabled and still
+  verifies unsupported Audit actions are disabled with reasons.

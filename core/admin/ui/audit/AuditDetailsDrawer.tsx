@@ -14,27 +14,38 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
+import { copyAuditEntryJson } from "./auditEntryActions";
 import { auditCategoryMeta, auditStatusMeta } from "./auditMeta";
 import type { AuditLog } from "./types";
+import { redactAuditPayload } from "../../../services/audit/auditRedaction";
 
-const copyJsonUnavailableReason =
-  "Copy JSON is not wired yet. TASK-357-02 owns clipboard feedback.";
 const shareLogUnavailableReason =
-  "Share Log is not wired yet. TASK-357-02 owns compliance sharing actions.";
+  "Share Log is unavailable for audit entries until a safe internal sharing workflow is added.";
 const reportLogUnavailableReason =
-  "Report is not wired yet. TASK-357-02 owns compliance report actions.";
+  "Report is unavailable for audit entries until a compliance reporting workflow is added.";
 
 export type AuditDetailsDrawerProps = {
   log?: AuditLog | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCopyJson?: (log: AuditLog) => void;
 };
 
-export function AuditDetailsDrawer({ log, open, onOpenChange }: AuditDetailsDrawerProps) {
-  const payload = log ? JSON.stringify(log.payload, null, 2) : "";
+export function AuditDetailsDrawer({
+  log,
+  open,
+  onOpenChange,
+  onCopyJson,
+}: AuditDetailsDrawerProps) {
+  const payload = log ? JSON.stringify(redactAuditPayload(log.payload), null, 2) : "";
   const category = log ? auditCategoryMeta[log.category] : null;
   const status = log ? auditStatusMeta[log.status] : null;
   const Icon = category?.icon;
+  const handleCopyJson =
+    onCopyJson ??
+    ((entry: AuditLog) => {
+      void copyAuditEntryJson(entry);
+    });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -150,9 +161,7 @@ export function AuditDetailsDrawer({ log, open, onOpenChange }: AuditDetailsDraw
                       variant="link"
                       size="sm"
                       className="h-auto p-0 text-xs"
-                      disabled
-                      title={copyJsonUnavailableReason}
-                      data-no-op-control="audit-copy-json-drawer"
+                      onClick={() => handleCopyJson(log)}
                     >
                       <Copy className="h-3.5 w-3.5" />
                       Copy JSON
