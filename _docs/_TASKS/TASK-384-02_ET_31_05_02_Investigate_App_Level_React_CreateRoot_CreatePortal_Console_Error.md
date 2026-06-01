@@ -1,4 +1,4 @@
-# TASK-384-02: ET-31-05-02 - Investigate app-level React `createRoot/createPortal` console error if reproducible
+# TASK-384-02: ET-31-05-02 - Resolve Entry Teaser fixture 404 and isolate React `createRoot/createPortal` console noise
 # FileName: TASK-384-02_ET_31_05_02_Investigate_App_Level_React_CreateRoot_CreatePortal_Console_Error.md
 
 **Priority:** Medium
@@ -13,7 +13,7 @@
 
 Execution-ready leaf task for ET-31-05-02 from `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_ENTRY_TEASER_WIDGET.md` and parent `TASK-384`.
 
-Report saw console errors not tied to Entry Teaser crash; repeated occurrence would affect audit signal quality.
+Report saw a fixture 404 and React `createRoot/createPortal` console noise not tied to an Entry Teaser crash. Both must be removed from the Entry Teaser audit signal or assigned to a concrete non-widget owner before closure.
 
 ## Sub-Tasks
 
@@ -25,7 +25,7 @@ Report saw console errors not tied to Entry Teaser crash; repeated occurrence wo
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Reproduce in page editor across widgets, identify owner if persistent, and keep it out of widget task only if confirmed unrelated.
+**Helper/function shape:** Fix the Entry Teaser browser fixture so the resolved teaser target returns HTTP 200, then run a console-hygiene probe in `PageEditor`/preview. If `createRoot/createPortal` still reproduces after the 404 is gone, file or link the concrete app-shell owner task before closing this leaf.
 
 **Data flow:**
 
@@ -40,11 +40,13 @@ Report saw console errors not tied to Entry Teaser crash; repeated occurrence wo
 - Map service/route errors through existing machine-readable error helpers when this leaf touches an API route.
 - Do not leak raw attacker-controlled strings, nonce material, provider secrets, or internal identifiers into public DOM/debug output.
 
-**Regression-test shape:** Console-hygiene smoke: Entry Teaser session has no repeatable app-level errors or records a separate owner task.
+**Regression-test shape:** Console-hygiene smoke: Entry Teaser session has no fixture 404; any repeatable `createRoot/createPortal` error has a linked app-shell owner task and is not hidden in widget closure notes.
 
 ## Owner Files
 
-- `core/admin/ui/pages/builder/*`
+- `core/admin/ui/pages/PageEditor.tsx`
+- `core/admin/ui/pages/PagePreview.tsx`
+- `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx`
 
 ## Security Contract
 
@@ -73,7 +75,7 @@ Leaf-specific checks:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
-- Focused regression: Console-hygiene smoke: Entry Teaser session has no repeatable app-level errors or records a separate owner task.
+- Focused regression: Console-hygiene smoke: Entry Teaser session has no fixture 404; any repeatable `createRoot/createPortal` error has a linked app-shell owner task and is not hidden in widget closure notes.
 
 For DB-backed tests, load env first: `set -a && source .env && set +a`. If unavailable, record that skip in the parent closure notes.
 
@@ -83,7 +85,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_ENTRY_TEASER_WIDGET.md`
 - `_docs/_TASKS/TASK-384_Entry_Teaser_Widget_31_05_UI_Audit_Fixture_and_Console_Hygiene_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

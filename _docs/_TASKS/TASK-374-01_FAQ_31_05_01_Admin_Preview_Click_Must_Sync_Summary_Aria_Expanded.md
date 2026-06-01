@@ -25,7 +25,7 @@ Public runtime synchronizes `aria-expanded`, but dynamic admin React preview doe
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Either add an admin-safe runtime bootstrap/preview effect for FAQ roots or add explicit preview copy that admin disclosure state is static while public preview is interactive.
+**Helper/function shape:** Add an admin-safe FAQ preview effect that runs the same disclosure sync logic for `[data-coderso-faq="1"]` roots after admin canvas render, so clicking a summary updates `aria-expanded` like public runtime.
 
 **Data flow:**
 
@@ -40,12 +40,12 @@ Public runtime synchronizes `aria-expanded`, but dynamic admin React preview doe
 - Map service/route errors through existing machine-readable error helpers when this leaf touches an API route.
 - Do not leak raw attacker-controlled strings, nonce material, provider secrets, or internal identifiers into public DOM/debug output.
 
-**Regression-test shape:** UI regression: clicking admin preview summary updates `aria-expanded`, or visible noninteractive boundary copy exists.
+**Regression-test shape:** UI regression: clicking an admin preview summary updates `aria-expanded` through the admin-safe FAQ preview effect.
 
 ## Owner Files
 
+- `core/admin/ui/pages/PageEditor.tsx`
 - `core/widgets/core/faqAccordion.tsx`
-- `core/admin/ui/pages/builder/PageEditor*.tsx`
 
 ## Security Contract
 
@@ -72,17 +72,17 @@ Leaf-specific checks:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
-- Focused regression: UI regression: clicking admin preview summary updates `aria-expanded`, or visible noninteractive boundary copy exists.
+- Focused regression: UI regression: clicking an admin preview summary updates `aria-expanded` through the admin-safe FAQ preview effect.
 
 For DB-backed tests, load env first: `set -a && source .env && set +a`. If unavailable, record that skip in the parent closure notes.
 
 ## Documentation Updates Required
 
-- `_docs/_WIDGETS/FAQ_ACCORDION.md`
+- `_docs/_WIDGETS/FAQ.md`
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FAQ_ACCORDION_WIDGET.md`
 - `_docs/_TASKS/TASK-374_FAQ_Accordion_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

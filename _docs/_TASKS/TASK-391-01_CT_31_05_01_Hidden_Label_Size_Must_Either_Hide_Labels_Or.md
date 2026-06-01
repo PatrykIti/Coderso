@@ -25,7 +25,7 @@ Execution-ready leaf task for CT-31-05-01 from `_docs/PLAYWRIGHT/31-05-2026-widg
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Choose product semantics: rename to `Inherit/No explicit size`, or hide labels with clear a11y decision (`sr-only` vs not rendered). Apply consistently.
+**Helper/function shape:** Treat the `none` label-size option as inherited/default sizing, rename the admin copy to `Default / no explicit size`, and keep labels rendered for accessibility instead of hiding them.
 
 **Data flow:**
 
@@ -82,7 +82,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_COMPARE_TIMELINE_WIDGET.md`
 - `_docs/_TASKS/TASK-391_Compare_Timeline_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

@@ -11,6 +11,11 @@ Project Change Log.
 - Format: `{N}-{YYYY-MM-DD}-short-title.md`
 - Example: `1-2025-11-22-project-init-and-rpc.md`
 - `N` increments by 1 and is never reused.
+- Reserved ranges are intentional gaps, not placeholder files. Ordinary new
+  entries continue with numbers 1034-1050 for parallel agent work; numbers
+  1051-1088 are reserved only for TASK-361 through TASK-398 family
+  implementation/closure entries. Create a reserved entry only when the
+  matching family is implemented or closed.
 
 ## Entry format (minimum)
 - Title line with No. and short title.

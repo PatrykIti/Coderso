@@ -25,7 +25,7 @@ Admin copy says `Billing toggle`, but public runtime renders a static `role=stat
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Either rename/copy the admin control as static billing-cycle display, or implement hydrated visitor-side toggle with keyboard/focus/aria-live behavior and public runtime tests.
+**Helper/function shape:** Keep public Pricing Plans read-only for this remediation and rename/copy the admin control as a static billing-cycle display, not a visitor-side toggle. Do not add hydrated visitor state unless a later product task explicitly expands the contract.
 
 **Data flow:**
 
@@ -40,7 +40,7 @@ Admin copy says `Billing toggle`, but public runtime renders a static `role=stat
 - Map service/route errors through existing machine-readable error helpers when this leaf touches an API route.
 - Do not leak raw attacker-controlled strings, nonce material, provider secrets, or internal identifiers into public DOM/debug output.
 
-**Regression-test shape:** If static: UI copy regression. If interactive: renderer/runtime/a11y regression for visitor toggle.
+**Regression-test shape:** UI copy and renderer regression prove the public cycle display remains static `role=status` copy and the admin label no longer promises an interactive visitor toggle.
 
 ## Owner Files
 
@@ -72,7 +72,7 @@ Leaf-specific checks:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
-- Focused regression: If static: UI copy regression. If interactive: renderer/runtime/a11y regression for visitor toggle.
+- Focused regression: UI copy and renderer regression prove the public cycle display remains static `role=status` copy and the admin label no longer promises an interactive visitor toggle.
 
 For DB-backed tests, load env first: `set -a && source .env && set +a`. If unavailable, record that skip in the parent closure notes.
 
@@ -82,7 +82,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_PRICING_PLANS_WIDGET.md`
 - `_docs/_TASKS/TASK-377_Pricing_Plans_Widget_31_05_UI_Audit_Contract_Decision_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

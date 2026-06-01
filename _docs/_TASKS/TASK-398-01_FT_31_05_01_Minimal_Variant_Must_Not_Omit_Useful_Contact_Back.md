@@ -25,7 +25,7 @@ Minimal variant can hide contact and back-to-top when legal/social are disabled,
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Decide product contract: render minimal utilities when configured or show admin inactive copy explaining hidden-by-variant behavior.
+**Helper/function shape:** Render minimal utility content when configured by changing the minimal branch condition to include `Boolean(contact) || Boolean(backToTop)` alongside legal/social visibility.
 
 **Data flow:**
 
@@ -82,7 +82,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FOOTER_WIDGET.md`
 - `_docs/_TASKS/TASK-398_Footer_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

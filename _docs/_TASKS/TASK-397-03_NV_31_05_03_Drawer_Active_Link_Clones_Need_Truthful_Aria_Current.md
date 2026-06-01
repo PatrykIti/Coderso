@@ -25,7 +25,7 @@ Drawer active link has `aria-current` only on first clone.
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Decide clone semantics and apply current state consistently or remove from hidden/nonactive duplicate.
+**Helper/function shape:** Update the Navigation runtime active-link helper to assign `aria-current="page"` to the visible/focusable best match for each responsive clone set, recomputing after drawer/media state changes while leaving hidden clones without current semantics.
 
 **Data flow:**
 
@@ -81,7 +81,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_NAVIGATION_WIDGET.md`
 - `_docs/_TASKS/TASK-397_Navigation_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

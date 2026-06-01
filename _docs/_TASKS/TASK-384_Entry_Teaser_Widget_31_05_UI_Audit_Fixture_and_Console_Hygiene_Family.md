@@ -20,12 +20,12 @@ This task family is intentionally scoped to everything the report calls out for 
 ## Report Evidence
 
 - ET-31-05-01: Add seeded content/listing fixture for resolved teaser branches
-- ET-31-05-02: Investigate app-level React `createRoot/createPortal` console error if reproducible
+- ET-31-05-02: Resolve Entry Teaser fixture 404 and isolate React `createRoot/createPortal` console noise
 
 ## Sub-Tasks
 
 - [ ] [TASK-384-01](TASK-384-01_ET_31_05_01_Add_Seeded_Content_Listing_Fixture_For_Resolved_Teaser.md): ET-31-05-01 - Add seeded content/listing fixture for resolved teaser branches
-- [ ] [TASK-384-02](TASK-384-02_ET_31_05_02_Investigate_App_Level_React_CreateRoot_CreatePortal_Console_Error.md): ET-31-05-02 - Investigate app-level React `createRoot/createPortal` console error if reproducible
+- [ ] [TASK-384-02](TASK-384-02_ET_31_05_02_Investigate_App_Level_React_CreateRoot_CreatePortal_Console_Error.md): ET-31-05-02 - Resolve Entry Teaser fixture 404 and isolate React `createRoot/createPortal` console noise
 
 ## Implementation Pseudocode
 
@@ -63,7 +63,7 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - `_docs/_WIDGETS/ENTRY_TEASER.md`
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_ENTRY_TEASER_WIDGET.md`
 - `_docs/_TASKS/README.md` status row when this task starts or closes.
-- Reserved changelog number 1074; create the changelog entry only when this family is implemented or closed.
+- Reserved changelog number 1074; create the changelog entry only when this family is implemented or closed, and list the parent task ID plus every leaf task ID closed by that entry.
 
 ## Acceptance Criteria
 

@@ -48,7 +48,7 @@ Advanced reports legacy webhook as a destination even though runtime blocks that
 
 ## Security Contract
 
-Public write surface: newsletter/forms submissions. Public endpoint must require nonce and existing CAPTCHA policy when configured, reject unknown fields, rate-limit by forms/newsletter bucket, and never store privileged settings in browser cache. Internal/admin paths remain session/RBAC/CSRF protected.
+Public write surface: newsletter/forms submissions. Route visibility is public only for widget-rendered submissions; internal/admin writes remain session/RBAC/CSRF protected. Public submissions must use the shared access evaluator, a server-issued one-time nonce plus request signature/HMAC, optional reCAPTCHA when botProtection policy requires it, strict reject-unknown schema validation, and the existing `public_write` bucket keyed by the submission pathname via `resolvePublicWriteIdentifier`. Internal integration mode may use only a session or an API key with explicit newsletter/forms submit scope, and nonce/API-key material must never reach browser cache, localStorage, or debug payloads.
 
 Minimum checks for any touched endpoint or payload boundary:
 
@@ -60,6 +60,7 @@ Minimum checks for any touched endpoint or payload boundary:
 
 Leaf-specific checks:
 
+- Newsletter public submissions must use public visibility only for widget runtime, nonce + signature/HMAC, optional reCAPTCHA per botProtection policy, the existing `public_write` bucket keyed by the submission pathname via `resolvePublicWriteIdentifier`, strict reject-unknown validation, and session or API key with explicit newsletter/forms submit scope for internal mode.
 - Endpoint visibility must be explicit if a route is touched: internal admin routes require session/RBAC/CSRF; public routes require the existing widget-specific public access contract.
 - Public writes must use nonce/signature/HMAC or the existing equivalent, optional CAPTCHA where configured, strict reject-unknown validation, and a named rate-limit bucket.
 - Public read/render paths must fail closed for malformed IDs, unsafe hrefs, unsafe CSS, stale runtime data, and empty resolver states.
@@ -82,7 +83,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_NEWSLETTER_WIDGET.md`
 - `_docs/_TASKS/TASK-392_Newsletter_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

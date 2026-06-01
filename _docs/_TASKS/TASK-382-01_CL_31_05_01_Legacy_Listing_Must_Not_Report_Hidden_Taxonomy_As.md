@@ -25,7 +25,7 @@ Visual hides legacy filters in listing mode, but `filters.taxonomy` survives and
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Either clear `taxonomy` in `updateSourceMode(...listing)` or show it only as inactive saved legacy state; prefer clearing if current search/featured behavior already clears stale filters.
+**Helper/function shape:** Clear `filters.taxonomy` in `updateSourceMode(...listing)` and the corresponding normalizer path, matching the existing stale-filter clearing behavior used by search/featured modes.
 
 **Data flow:**
 
@@ -82,7 +82,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_CONTENT_LIST_WIDGET.md`
 - `_docs/_TASKS/TASK-382_Content_List_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

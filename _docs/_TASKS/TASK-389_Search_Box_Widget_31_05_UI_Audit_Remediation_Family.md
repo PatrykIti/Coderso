@@ -59,7 +59,7 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - `_docs/_WIDGETS/SEARCH_BOX.md`
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_SEARCH_BOX_WIDGET.md`
 - `_docs/_TASKS/README.md` status row when this task starts or closes.
-- Reserved changelog number 1079; create the changelog entry only when this family is implemented or closed.
+- Reserved changelog number 1079; create the changelog entry only when this family is implemented or closed, and list the parent task ID plus every leaf task ID closed by that entry.
 
 ## Acceptance Criteria
 

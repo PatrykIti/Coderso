@@ -27,8 +27,12 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
+- Leaf tasks may be covered by the parent family changelog only when that
+  entry explicitly lists the parent task ID and every closed leaf task ID.
+  Do not move a leaf task to `Done` until either its standalone changelog
+  exists or the family changelog records that leaf.
 
-- **To Do:** 141 tasks
+- **To Do:** 142 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2006 tasks
 
@@ -56,7 +60,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-376 | Testimonials 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_TESTIMONIALS_WIDGET.md`; 1 finding routed to implementation/tests/docs |
 | TASK-377 | Pricing Plans 31-05 UI Audit Contract Decision Family | Medium | Medium | Report-driven family from `REPORT_PRICING_PLANS_WIDGET.md`; contract decision routed to tests/docs |
 | TASK-378 | Logo Cloud 31-05 UI Audit Fixture and Regression Family | Medium | Small | Report-driven family from `REPORT_LOGO_CLOUD_WIDGET.md`; media fixture gap routed to browser proof/tests/docs |
-| TASK-379 | Gallery Mosaic 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_GALLERY_MOSAIC_WIDGET.md`; 2 findings routed to implementation/tests/docs |
+| TASK-379 | Gallery Mosaic 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_GALLERY_MOSAIC_WIDGET.md`; 3 findings routed to implementation/tests/docs |
 | TASK-380 | Team 31-05 UI Audit UX and Fixture Family | Medium | Small | Report-driven family from `REPORT_TEAM_WIDGET.md`; UX debt and media fixture gap routed to tests/docs |
 | TASK-381 | Rich Text Section 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_RICH_TEXT_SECTION_WIDGET.md`; 3 findings routed to implementation/tests/docs |
 | TASK-382 | Content List 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_CONTENT_LIST_WIDGET.md`; 2 findings routed to implementation/tests/docs |
@@ -104,6 +108,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-378-01 | LC-31-05-01 - Seed media assets for browser-level MediaPicker proof | Medium | Medium | Leaf task for TASK-378; source `REPORT_LOGO_CLOUD_WIDGET.md` |
 | TASK-379-01 | GM-31-05-01 - Advanced must distinguish selected lightbox mode from eligible lightbox tiles | Medium | Medium | Leaf task for TASK-379; source `REPORT_GALLERY_MOSAIC_WIDGET.md` |
 | TASK-379-02 | GM-31-05-02 - Add media and public lightbox browser fixtures | Medium | Medium | Leaf task for TASK-379; source `REPORT_GALLERY_MOSAIC_WIDGET.md` |
+| TASK-379-03 | GM-31-05-03 - Replace per-item Remove native confirm with shared ConfirmActionDialog | Medium | Small | Leaf task for TASK-379; source `REPORT_GALLERY_MOSAIC_WIDGET.md` |
 | TASK-380-01 | TEAM-31-05-01 - Replace member-count native confirm with shared ConfirmActionDialog | Medium | Small | Leaf task for TASK-380; source `REPORT_TEAM_WIDGET.md` |
 | TASK-380-02 | TEAM-31-05-02 - Seed media image for real photo selection proof | Medium | Medium | Leaf task for TASK-380; source `REPORT_TEAM_WIDGET.md` |
 | TASK-381-01 | RTS-31-05-01 - Do not lose body sanitizer diagnostics after structured block edits | High | Medium | Leaf task for TASK-381; source `REPORT_RICH_TEXT_SECTION_WIDGET.md` |
@@ -114,7 +119,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-383-01 | PF-31-05-01 - Inactive category filter must not be reported active in Latest mode | Medium | Medium | Leaf task for TASK-383; source `REPORT_POSTS_FEED_WIDGET.md` |
 | TASK-383-02 | PF-31-05-02 - Add seeded posts fixture for browser-level display controls | Medium | Medium | Leaf task for TASK-383; source `REPORT_POSTS_FEED_WIDGET.md` |
 | TASK-384-01 | ET-31-05-01 - Add seeded content/listing fixture for resolved teaser branches | Medium | Medium | Leaf task for TASK-384; source `REPORT_ENTRY_TEASER_WIDGET.md` |
-| TASK-384-02 | ET-31-05-02 - Investigate app-level React `createRoot/createPortal` console error if reproducible | Medium | Small | Leaf task for TASK-384; source `REPORT_ENTRY_TEASER_WIDGET.md` |
+| TASK-384-02 | ET-31-05-02 - Resolve Entry Teaser fixture 404 and isolate React `createRoot/createPortal` console noise | Medium | Small | Leaf task for TASK-384; source `REPORT_ENTRY_TEASER_WIDGET.md` |
 | TASK-385-01 | PG-31-05-01 - Manual selected products must be marked inactive in query mode | Medium | Medium | Leaf task for TASK-385; source `REPORT_PRODUCT_GALLERY_WIDGET.md` |
 | TASK-385-02 | PG-31-05-02 - Add commerce image/detail/view-all fixture coverage | Medium | Medium | Leaf task for TASK-385; source `REPORT_PRODUCT_GALLERY_WIDGET.md` |
 | TASK-386-01 | PC-31-05-01 - Search/collections/status filters must be marked ignored for selected products | Medium | Medium | Leaf task for TASK-386; source `REPORT_PRODUCT_COMPARE_WIDGET.md` |

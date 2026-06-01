@@ -11,7 +11,7 @@
 
 ## Overview
 
-Fix Gallery Mosaic lightbox diagnostics and close media/public-lightbox fixture gaps.
+Fix Gallery Mosaic lightbox diagnostics, close media/public-lightbox fixture gaps, and align destructive item removal with the shared admin confirmation UI.
 
 Source report: `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_GALLERY_MOSAIC_WIDGET.md`.
 
@@ -21,11 +21,13 @@ This task family is intentionally scoped to everything the report calls out for 
 
 - GM-31-05-01: Advanced must distinguish selected lightbox mode from eligible lightbox tiles
 - GM-31-05-02: Add media and public lightbox browser fixtures
+- GM-31-05-03: Replace per-item Remove native confirm with shared ConfirmActionDialog
 
 ## Sub-Tasks
 
 - [ ] [TASK-379-01](TASK-379-01_GM_31_05_01_Advanced_Must_Distinguish_Selected_Lightbox_Mode_From_Eligible.md): GM-31-05-01 - Advanced must distinguish selected lightbox mode from eligible lightbox tiles
 - [ ] [TASK-379-02](TASK-379-02_GM_31_05_02_Add_Media_And_Public_Lightbox_Browser_Fixtures.md): GM-31-05-02 - Add media and public lightbox browser fixtures
+- [ ] [TASK-379-03](TASK-379-03_GM_31_05_03_Replace_Per_Item_Remove_Native_Confirm_With_Shared.md): GM-31-05-03 - Replace per-item Remove native confirm with shared ConfirmActionDialog
 
 ## Implementation Pseudocode
 
@@ -62,7 +64,7 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - `_docs/_WIDGETS/GALLERY_MOSAIC.md`
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_GALLERY_MOSAIC_WIDGET.md`
 - `_docs/_TASKS/README.md` status row when this task starts or closes.
-- Reserved changelog number 1069; create the changelog entry only when this family is implemented or closed.
+- Reserved changelog number 1069; create the changelog entry only when this family is implemented or closed, and list the parent task ID plus every leaf task ID closed by that entry.
 
 ## Acceptance Criteria
 

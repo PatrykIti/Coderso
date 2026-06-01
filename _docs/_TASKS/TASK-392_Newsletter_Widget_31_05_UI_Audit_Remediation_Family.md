@@ -41,7 +41,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Security Contract
 
-Public write surface: newsletter/forms submissions. Public endpoint must require nonce and existing CAPTCHA policy when configured, reject unknown fields, rate-limit by forms/newsletter bucket, and never store privileged settings in browser cache. Internal/admin paths remain session/RBAC/CSRF protected.
+Public write surface: newsletter/forms submissions. Route visibility is public only for widget-rendered submissions; internal/admin writes remain session/RBAC/CSRF protected. Public submissions must use the shared access evaluator, a server-issued one-time nonce plus request signature/HMAC, optional reCAPTCHA when botProtection policy requires it, strict reject-unknown schema validation, and the existing `public_write` bucket keyed by the submission pathname via `resolvePublicWriteIdentifier`. Internal integration mode may use only a session or an API key with explicit newsletter/forms submit scope, and nonce/API-key material must never reach browser cache, localStorage, or debug payloads.
 
 Minimum checks for any touched endpoint or payload boundary:
 
@@ -66,7 +66,7 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - `_docs/_WIDGETS/NEWSLETTER.md`
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_NEWSLETTER_WIDGET.md`
 - `_docs/_TASKS/README.md` status row when this task starts or closes.
-- Reserved changelog number 1082; create the changelog entry only when this family is implemented or closed.
+- Reserved changelog number 1082; create the changelog entry only when this family is implemented or closed, and list the parent task ID plus every leaf task ID closed by that entry.
 
 ## Acceptance Criteria
 

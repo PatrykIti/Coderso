@@ -25,7 +25,7 @@ Single CTA deletes `secondaryCta`; switching back to Dual recreates an empty obj
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Either preserve the last non-empty secondary CTA in editor state or restore `heroDefaults.secondaryCta` when toggling back to Dual; make any destructive Single CTA behavior explicit if data is discarded.
+**Helper/function shape:** Preserve the last non-empty secondary CTA in `HeroVisualEditor` state while the author switches to Single CTA; when switching back to Dual, restore that saved CTA or fall back to `heroDefaults.secondaryCta` if no authored value exists.
 
 **Data flow:**
 
@@ -83,7 +83,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_HERO_WIDGET.md`
 - `_docs/_TASKS/TASK-371_Hero_Widget_31_05_UI_Audit_Continuation_and_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

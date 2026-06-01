@@ -44,7 +44,7 @@ Media API empty prevented real image/attachment selection; unsafe paste/link pat
 
 ## Owner Files
 
-- `tests/fixtures/media*`
+- `scripts/playwright-widget-contract-smoke.ts`
 - `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx`
 
 ## Security Contract
@@ -83,7 +83,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_RICH_TEXT_SECTION_WIDGET.md`
 - `_docs/_TASKS/TASK-381_Rich_Text_Section_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

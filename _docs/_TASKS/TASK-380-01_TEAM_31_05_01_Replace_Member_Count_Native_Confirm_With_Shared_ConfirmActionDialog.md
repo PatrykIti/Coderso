@@ -2,7 +2,7 @@
 # FileName: TASK-380-01_TEAM_31_05_01_Replace_Member_Count_Native_Confirm_With_Shared_ConfirmActionDialog.md
 
 **Priority:** Medium
-**Category:** Widgets + Team + Admin UX + Media Fixtures + QA + Docs + Leaf Remediation
+**Category:** Widgets + Team + Admin UX + QA + Docs + Leaf Remediation
 **Estimated Effort:** Small
 **Dependencies:** TASK-380
 **Status:** To Do
@@ -48,7 +48,7 @@ Native `window.confirm` works but is inconsistent with admin UX and awkward for 
 
 ## Security Contract
 
-No new public write. Media fixture setup must use existing authenticated admin/media path; no secrets or provider keys in browser state.
+No route or public write change. This leaf only changes authenticated admin editor UX for destructive member-count reduction; do not expose raw member payloads, media URLs, or internal identifiers in dialog copy.
 
 Minimum checks for any touched endpoint or payload boundary:
 
@@ -68,7 +68,7 @@ Leaf-specific checks:
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/team.test.tsx tests/vitest/ui/team-editor-wave.test.tsx`
-- Team Playwright media picker smoke
+- Team Playwright count-reduction confirm/cancel smoke
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -82,7 +82,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_TEAM_WIDGET.md`
 - `_docs/_TASKS/TASK-380_Team_Widget_31_05_UI_Audit_UX_and_Fixture_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

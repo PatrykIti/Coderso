@@ -13,7 +13,7 @@
 
 Execution-ready leaf task for FE-31-05-01 from `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FORM_EMBED_WIDGET.md` and parent `TASK-395`.
 
-Public submit currently 404s for the widget flow.
+The report saw a public submit 404 for the widget flow. First reproduce whether the route is actually missing or whether the widget is posting to the wrong action path / missing nonce projection; do not add a duplicate route if the shared Forms submit route is already registered.
 
 ## Sub-Tasks
 
@@ -25,7 +25,7 @@ Public submit currently 404s for the widget flow.
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Register the public forms submit route in the runtime router and map known service errors to API errors.
+**Helper/function shape:** Verify `registerFormsRoutes` wiring for the shared `POST /forms/:id/submissions` path, then fix the Form Embed action path/nonce projection or route registration as evidence requires. Map known service errors through the existing Forms route error mapper.
 
 **Data flow:**
 
@@ -40,16 +40,17 @@ Public submit currently 404s for the widget flow.
 - Map service/route errors through existing machine-readable error helpers when this leaf touches an API route.
 - Do not leak raw attacker-controlled strings, nonce material, provider secrets, or internal identifiers into public DOM/debug output.
 
-**Regression-test shape:** Route registration + public submit happy/failure tests.
+**Regression-test shape:** Route registration plus widget public submit happy/failure tests that distinguish a missing route from a wrong form action path.
 
 ## Owner Files
 
-- `core/server/publicFormsApi.ts`
-- `core/server/routes*.ts`
+- `core/server/routes/formsRoutes.ts`
+- `core/server/routes/index.ts`
+- `core/server/validation/formSchemas.ts`
 
 ## Security Contract
 
-Public write endpoint: form submission. Must be public only when form access allows it, require nonce/signature/HMAC where contract expects it, optional reCAPTCHA/botProtection, rate-limit forms bucket, strict reject-unknown validation, no persisted nonce, CSRF/session/RBAC for internal admin writes, and API key scope only for explicitly internal integrations.
+Public write endpoint: form submission. Route visibility is public only when the Forms access evaluator allows widget-rendered submissions; internal/admin writes remain session/RBAC/CSRF protected. Public submissions must use a server-issued one-time nonce plus request signature/HMAC, optional reCAPTCHA/botProtection when configured, strict reject-unknown validation, no persisted nonce, and the existing `public_write` bucket keyed by the submission pathname via `resolvePublicWriteIdentifier`. Internal integration mode may use only a session or an API key with explicit forms submit scope.
 
 Minimum checks for any touched endpoint or payload boundary:
 
@@ -61,6 +62,7 @@ Minimum checks for any touched endpoint or payload boundary:
 
 Leaf-specific checks:
 
+- Form Embed public submissions must use public visibility only for widget runtime, nonce + signature/HMAC, optional reCAPTCHA/botProtection when configured, the existing `public_write` bucket keyed by the submission pathname via `resolvePublicWriteIdentifier`, strict reject-unknown validation, and session or API key with explicit forms submit scope for internal mode.
 - Endpoint visibility must be explicit if a route is touched: internal admin routes require session/RBAC/CSRF; public routes require the existing widget-specific public access contract.
 - Public writes must use nonce/signature/HMAC or the existing equivalent, optional CAPTCHA where configured, strict reject-unknown validation, and a named rate-limit bucket.
 - Public read/render paths must fail closed for malformed IDs, unsafe hrefs, unsafe CSS, stale runtime data, and empty resolver states.
@@ -73,7 +75,7 @@ Leaf-specific checks:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
-- Focused regression: Route registration + public submit happy/failure tests.
+- Focused regression: Route registration plus widget public submit happy/failure tests that distinguish a missing route from a wrong form action path.
 
 For DB-backed tests, load env first: `set -a && source .env && set +a`. If unavailable, record that skip in the parent closure notes.
 
@@ -84,7 +86,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/CMS_API.md`
 - `_docs/_TASKS/TASK-395_Form_Embed_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

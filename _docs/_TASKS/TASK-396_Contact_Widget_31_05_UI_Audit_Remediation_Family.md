@@ -15,6 +15,11 @@ Close Contact public Forms runtime, error state, binding, CAPTCHA projection, ad
 
 Source report: `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_CONTACT_WIDGET.md`.
 
+The source report labels these findings `CT-31-05-01` through `CT-31-05-08`.
+This family uses `CONTACT-31-05-*` finding aliases to avoid collision with
+Compare Timeline task IDs; closure notes must mention both the source report ID
+and the Contact alias.
+
 This task family is intentionally scoped to everything the report calls out for Contact. Do not downgrade it to a partial MVP; if implementation discovers the report is stale, update the report, this task, and the changelog with evidence before closing.
 
 ## Report Evidence
@@ -49,7 +54,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Security Contract
 
-Public write endpoint: contact form submission. Must enforce access evaluator, nonce/signature/HMAC where required, CAPTCHA/botProtection policy, forms/contact rate-limit bucket, strict reject-unknown validation, safe URL protocols, and no secrets in browser cache. Internal admin writes remain session/RBAC/CSRF protected.
+Public write endpoint: contact form submission. Route visibility is public only for widget-rendered submissions; internal/admin writes remain session/RBAC/CSRF protected. Public submissions must use the shared access evaluator, a server-issued one-time nonce plus request signature/HMAC, CAPTCHA/botProtection policy when configured, strict reject-unknown schema validation, safe URL protocols, and the existing `public_write` bucket keyed by the submission pathname via `resolvePublicWriteIdentifier`. Internal integration mode may use only a session or an API key with explicit contact/forms submit scope, and nonce/API-key material must never reach browser cache, localStorage, or debug payloads.
 
 Minimum checks for any touched endpoint or payload boundary:
 
@@ -75,7 +80,7 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_CONTACT_WIDGET.md`
 - `_docs/CMS_API.md` if submit route contract changes.
 - `_docs/_TASKS/README.md` status row when this task starts or closes.
-- Reserved changelog number 1086; create the changelog entry only when this family is implemented or closed.
+- Reserved changelog number 1086; create the changelog entry only when this family is implemented or closed, and list the parent task ID plus every leaf task ID closed by that entry.
 
 ## Acceptance Criteria
 

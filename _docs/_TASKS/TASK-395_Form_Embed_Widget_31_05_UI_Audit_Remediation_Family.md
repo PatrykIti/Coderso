@@ -51,7 +51,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Security Contract
 
-Public write endpoint: form submission. Must be public only when form access allows it, require nonce/signature/HMAC where contract expects it, optional reCAPTCHA/botProtection, rate-limit forms bucket, strict reject-unknown validation, no persisted nonce, CSRF/session/RBAC for internal admin writes, and API key scope only for explicitly internal integrations.
+Public write endpoint: form submission. Route visibility is public only when the Forms access evaluator allows widget-rendered submissions; internal/admin writes remain session/RBAC/CSRF protected. Public submissions must use a server-issued one-time nonce plus request signature/HMAC, optional reCAPTCHA/botProtection when configured, strict reject-unknown validation, no persisted nonce, and the existing `public_write` bucket keyed by the submission pathname via `resolvePublicWriteIdentifier`. Internal integration mode may use only a session or an API key with explicit forms submit scope.
 
 Minimum checks for any touched endpoint or payload boundary:
 
@@ -77,7 +77,7 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FORM_EMBED_WIDGET.md`
 - `_docs/CMS_API.md` if route contract changes.
 - `_docs/_TASKS/README.md` status row when this task starts or closes.
-- Reserved changelog number 1085; create the changelog entry only when this family is implemented or closed.
+- Reserved changelog number 1085; create the changelog entry only when this family is implemented or closed, and list the parent task ID plus every leaf task ID closed by that entry.
 
 ## Acceptance Criteria
 

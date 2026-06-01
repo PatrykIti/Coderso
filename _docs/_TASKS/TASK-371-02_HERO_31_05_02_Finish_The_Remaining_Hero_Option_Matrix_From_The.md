@@ -25,7 +25,7 @@ The report explicitly marks typography, media/background picker flows, gradient,
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Run the same UI-first method across all remaining Hero controls; promote any newly confirmed defects into this family before implementation closure.
+**Helper/function shape:** Extend the Hero Playwright replay to cover the remaining report matrix controls, update `REPORT_HERO_WIDGET.md` with pass/fail evidence, and create physical child leaf tasks for every newly confirmed defect before this family can close.
 
 **Data flow:**
 
@@ -40,7 +40,7 @@ The report explicitly marks typography, media/background picker flows, gradient,
 - Map service/route errors through existing machine-readable error helpers when this leaf touches an API route.
 - Do not leak raw attacker-controlled strings, nonce material, provider secrets, or internal identifiers into public DOM/debug output.
 
-**Regression-test shape:** Playwright Hero replay plus targeted Vitest/Bun suites for every new defect found.
+**Regression-test shape:** Playwright Hero replay covers typography, media/background picker flows, gradient, social proof avatars, destination picker, rich text toolbar, Advanced summaries, save/publish replay, and public replay; any defect found has a linked physical leaf task.
 
 ## Owner Files
 
@@ -73,7 +73,7 @@ Leaf-specific checks:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
-- Focused regression: Playwright Hero replay plus targeted Vitest/Bun suites for every new defect found.
+- Focused regression: Playwright Hero replay covers typography, media/background picker flows, gradient, social proof avatars, destination picker, rich text toolbar, Advanced summaries, save/publish replay, and public replay; any defect found has a linked physical leaf task.
 
 For DB-backed tests, load env first: `set -a && source .env && set +a`. If unavailable, record that skip in the parent closure notes.
 
@@ -83,7 +83,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_HERO_WIDGET.md`
 - `_docs/_TASKS/TASK-371_Hero_Widget_31_05_UI_Audit_Continuation_and_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

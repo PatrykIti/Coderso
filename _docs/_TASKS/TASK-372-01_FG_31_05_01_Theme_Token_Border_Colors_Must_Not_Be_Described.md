@@ -25,7 +25,7 @@ Execution-ready leaf task for FG-31-05-01 from `_docs/PLAYWRIGHT/31-05-2026-widg
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Reuse shared color state description or add token/color-mix recognition so Advanced says `Theme token`/`Theme default` accurately.
+**Helper/function shape:** Reuse shared color state description or add token/color-mix recognition so `surfaceColor`, `borderColor`, and `sectionBackground` describe theme tokens, theme defaults, and `color-mix(...)` values accurately instead of calling them saved custom colors.
 
 **Data flow:**
 
@@ -40,7 +40,7 @@ Execution-ready leaf task for FG-31-05-01 from `_docs/PLAYWRIGHT/31-05-2026-widg
 - Map service/route errors through existing machine-readable error helpers when this leaf touches an API route.
 - Do not leak raw attacker-controlled strings, nonce material, provider secrets, or internal identifiers into public DOM/debug output.
 
-**Regression-test shape:** UI regression: `style.borderColor=var(--color-border)` renders token/default copy, not saved custom color.
+**Regression-test shape:** UI regression: `style.surfaceColor`, `style.borderColor`, and `style.sectionBackground` values such as `var(--color-border)` and `color-mix(...)` render token/default/mixed-color copy, not saved custom color.
 
 ## Owner Files
 
@@ -71,7 +71,7 @@ Leaf-specific checks:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
-- Focused regression: UI regression: `style.borderColor=var(--color-border)` renders token/default copy, not saved custom color.
+- Focused regression: UI regression: `style.surfaceColor`, `style.borderColor`, and `style.sectionBackground` token or `color-mix(...)` values render token/default/mixed-color copy, not saved custom color.
 
 For DB-backed tests, load env first: `set -a && source .env && set +a`. If unavailable, record that skip in the parent closure notes.
 
@@ -81,7 +81,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FEATURE_GRID_WIDGET.md`
 - `_docs/_TASKS/TASK-372_Feature_Grid_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 

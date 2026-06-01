@@ -25,7 +25,7 @@ Report notes default source drift where an untouched widget can look like confli
 
 ## Implementation Pseudocode
 
-**Helper/function shape:** Either align defaults so untouched widgets have one effective source, or make the initial warning explicitly describe normal default fallback instead of conflict.
+**Helper/function shape:** Align Rich Text Section defaults so untouched `body.html` and `body.blocks` describe the same effective content, preventing the source-drift warning on a pristine widget.
 
 **Data flow:**
 
@@ -83,7 +83,7 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_RICH_TEXT_SECTION_WIDGET.md`
 - `_docs/_TASKS/TASK-381_Rich_Text_Section_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
-- Do not create a standalone changelog for this leaf unless closure policy changes; the parent family uses the reserved changelog number at implementation closure.
+- Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
 
 ## Acceptance Criteria
 
