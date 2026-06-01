@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 106 tasks
+- **To Do:** 104 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2042 tasks
+- **Done:** 2044 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-375 | Stats KPI 31-05 UI Audit UX Guard Family | Low | Small | Report-driven family from `REPORT_STATS_KPI_WIDGET.md`; no product defect, UX guard routed to tests/docs |
 | TASK-376 | Testimonials 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_TESTIMONIALS_WIDGET.md`; 1 finding routed to implementation/tests/docs |
 | TASK-377 | Pricing Plans 31-05 UI Audit Contract Decision Family | Medium | Medium | Report-driven family from `REPORT_PRICING_PLANS_WIDGET.md`; contract decision routed to tests/docs |
 | TASK-378 | Logo Cloud 31-05 UI Audit Fixture and Regression Family | Medium | Small | Report-driven family from `REPORT_LOGO_CLOUD_WIDGET.md`; media fixture gap routed to browser proof/tests/docs |
@@ -66,7 +65,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
 | TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-375-01 | SKPI-31-05-01 - Explain per-metric accent precedence over global value color | Low | Medium | Leaf task for TASK-375; source `REPORT_STATS_KPI_WIDGET.md` |
 | TASK-376-01 | TST-31-05-01 - Treat `<br>`-only quote HTML as empty | Medium | Medium | Leaf task for TASK-376; source `REPORT_TESTIMONIALS_WIDGET.md` |
 | TASK-377-01 | PP-31-05-01 - Resolve billing toggle contract: static display vs visitor-side toggle | Medium | Medium | Leaf task for TASK-377; source `REPORT_PRICING_PLANS_WIDGET.md` |
 | TASK-378-01 | LC-31-05-01 - Seed media assets for browser-level MediaPicker proof | Medium | Medium | Leaf task for TASK-378; source `REPORT_LOGO_CLOUD_WIDGET.md` |
@@ -164,6 +162,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-375 | Stats KPI 31-05 UI Audit UX Guard Family | Low | Small | Done (2026-06-01): Added Visual guidance and regression guards for per-metric accent precedence over global Value color without changing runtime behavior. |
+| TASK-375-01 | SKPI-31-05-01 - Explain per-metric accent precedence over global value color | Low | Medium | Done (2026-06-01): `Value color` now explains metric accent override, and renderer coverage locks accent-over-global priority. |
 | TASK-374 | FAQ Accordion 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-01): Admin FAQ preview now binds the FAQ disclosure sync contract, so summary `aria-expanded` follows disclosure state without executing arbitrary widget scripts. |
 | TASK-374-01 | FAQ-31-05-01 - Admin preview click must sync `summary[aria-expanded]` or show a boundary notice | Medium | Medium | Done (2026-06-01): Page-builder canvas and shared live preview use an admin-safe FAQ runtime bridge with focused UI regression coverage. |
 | TASK-373 | CTA Banner 31-05 UI Audit Remediation Family | Medium | Small | Done (2026-06-01): Advanced diagnostics now report active background gradients without exposing raw CSS while runtime rendering stays unchanged. |

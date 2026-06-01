@@ -63,7 +63,7 @@ Przetestowane:
 | Link href/label/new tab | Href `/audit-31-05-hero`, label `Open audit hero`, open in new tab on | Pierwsza metryka renderuje sie jako `<a>`, `href=/audit-31-05-hero`, `target=_blank`, `rel=noopener noreferrer`. | Nie publikowano tej zmiany. | Dziala | `resolveWidgetLinkAttrs` dodaje bezpieczne atrybuty dla dozwolonego href. | Brak. |
 | Unsafe link | Wpisz `javascript:alert(1)` | Metryka zmienia sie na `<article>`, `data-stats-kpi-link="false"`, helper mowi ze renderuja sie tylko relative/hash/http(s). | Nie publikowano tej zmiany. | Dziala | `resolveWidgetLinkAttrs` odrzuca unsafe href, a edytor pokazuje `renderLinkValidation`. | Brak. |
 | Value size | Select `Hero` | Root ma `data-stats-kpi-value-size="xl"`, value class `text-5xl`. | Nie publikowano tej zmiany. | Dziala | `valueSizeOptions` mapuja `Hero -> xl`, renderer uzywa `valueSizeClassMap.xl`. | Brak. |
-| Value/label/description colors | Ustaw `#00ff00`, `#0000ff`, `#ff00ff` | Label i description dostaja inline colors; value color dziala dla metryk bez per-item accent. Metryka z accentem pozostaje w accent color. | Nie publikowano tej zmiany. | Dziala z uwaga UX | Renderer celowo daje pierwszenstwo `item.accentColor` przed globalnym `style.valueColor`. | Opcjonalnie dopisac help przy `Value color`, ze per-metric accent nadpisuje value/trend/icon color dla danej metryki. |
+| Value/label/description colors | Ustaw `#00ff00`, `#0000ff`, `#ff00ff` | Label i description dostaja inline colors; value color dziala dla metryk bez per-item accent. Metryka z accentem pozostaje w accent color, a Visual `Value color` wyjasnia ten priorytet. | Nie publikowano tej zmiany. | Dziala po UX guard | Renderer celowo daje pierwszenstwo `item.accentColor` przed globalnym `style.valueColor`; Visual help opisuje override dla value/trend/icon/link. | Zamkniete w TASK-375/TASK-375-01; UI i renderer regresje utrwalaja help oraz accent-over-global precedence. |
 | Clear value color | Klik `Clear` przy Value color | Advanced pokazuje `valueColor: var(--color-text)`; nieakcentowane value wracaja do theme text. | Nie publikowano tej zmiany. | Dziala | `clearStyle(..., "valueColor")` usuwa override, renderer bierze fallback `var(--color-text)`. | Brak. |
 | Card background/border | Ustaw `#fef3c7` i `#111111` | Card style ma `background-color: rgb(254, 243, 199); border-color: rgb(17, 17, 17);`. | Nie publikowano tej zmiany. | Dziala | `cardStyle` sklada `cardBackground` i `cardBorderColor` przez `resolveClearableStyleValue`. | Brak. |
 | Icon size/surface/border | Select `Large`, ustaw `#eeeeee`, `#222222` | Icon class ma `h-10 w-10 text-lg`, style ma surface i border colors. | Nie publikowano tej zmiany. | Dziala | `iconSizeClassMap.lg` i `iconStyle` sa przekazywane do `StatsKpiCard`. | Brak. |
@@ -104,15 +104,26 @@ w tym pass.
   - `StatsKpiBlock` mapuje style, warianty i `data-stats-kpi-*` w okolicach
     linii 889-1040.
 
-## Wynik i rekomendacje
+## Wynik i remediacja
 
 Nie znaleziono defektu produktu w glownej macierzy opcji Stats KPI.
 
-Jedyna notatka UX: globalny `Value color` nie zmienia metryk, ktore maja
-ustawiony `Metric accent color`, poniewaz accent celowo ma pierwszenstwo dla
-value/trend/icon. Jezeli zespol chce ograniczyc falszywe zgloszenia, warto
-dodac krotki help przy `Value color` albo `Metric accent color` i test UI, ktory
-utrwala ten priorytet.
+Jedyna notatka UX zostala zamknieta jako guard: globalny `Value color` nie
+zmienia metryk, ktore maja ustawiony `Metric accent color`, poniewaz accent
+celowo ma pierwszenstwo dla value/trend/icon/link. Visual `Value color` ma teraz
+krotki help opisujacy ten priorytet.
+
+Walidacja remediacji:
+
+- Focused UI regression failed before the help copy because `Value color` did
+  not explain metric accent precedence.
+- Focused UI regression passed after the help copy.
+- `bun run test:vitest -- tests/vitest/widgets/statsKpi.test.tsx tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- Renderer regression confirms accented metrics use `accentColor` while
+  non-accented metrics still use global `valueColor`.
 
 ## Console / srodowisko
 

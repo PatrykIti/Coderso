@@ -5,7 +5,7 @@
 **Category:** Widgets + Stats KPI + Admin UX + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-375
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Global `Value color` does not change metrics with `Metric accent color` because 
 
 ## Sub-Tasks
 
-- [ ] Reproduce SKPI-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce SKPI-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +90,12 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced SKPI-31-05-01 with a focused UI regression: `Value color` control text lacked the precedence note while a metric had `accentColor` and global `valueColor`.
+- Added Visual help copy: `Metric accent color overrides Value color for that metric's value, trend, icon, and link.`
+- Added UI coverage for the help copy and renderer coverage proving accented metrics do not inherit global `valueColor` while non-accented metrics do.
+- No route, public write, normalization, persistence, or runtime behavior changed.
+- Validation: focused UI regression failed before the help copy and passed after; Stats KPI Vitest lane passed; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; Claude staged review reported no blockers.
+- Covered by changelog `1065`.

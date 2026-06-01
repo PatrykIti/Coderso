@@ -734,6 +734,41 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
   }
 });
 
+test("StatsKpi visual explains metric accent precedence over value color", async () => {
+  const { StatsKpiVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
+
+  const view = mountStatsKpiHarness({
+    initialVariant: "cards",
+    initialValue: {
+      ...statsKpiDefaults,
+      items: [
+        {
+          id: "accented",
+          value: "88",
+          label: "Accented value",
+          accentColor: "#ff0000",
+        },
+      ],
+      style: {
+        ...statsKpiDefaults.style,
+        valueColor: "#00ff00",
+      },
+    },
+    render: (props) => <StatsKpiVisualEditor {...props} />,
+  });
+
+  try {
+    const valueColorControl = getControlById(view.container, "stats-kpi.style.valueColor");
+
+    expect(valueColorControl.textContent).toContain(
+      "Metric accent color overrides Value color for that metric's value, trend, icon, and link."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("StatsKpi editors render sparse normalized fallbacks for missing header, item, and style fields", async () => {
   vi.resetModules();
 

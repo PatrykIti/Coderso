@@ -5,7 +5,7 @@
 **Category:** Widgets + Stats KPI + Admin UX + QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_STATS_KPI_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-375-01](TASK-375-01_SKPI_31_05_01_Explain_Per_Metric_Accent_Precedence_Over_Global_Value.md): SKPI-31-05-01 - Explain per-metric accent precedence over global value color
+- [x] [TASK-375-01](TASK-375-01_SKPI_31_05_01_Explain_Per_Metric_Accent_Precedence_Over_Global_Value.md): SKPI-31-05-01 - Explain per-metric accent precedence over global value color
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,12 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced SKPI-31-05-01 with a failing focused UI regression: `Value color` did not explain that per-metric `Metric accent color` intentionally overrides it for a metric's value, trend, icon, and link.
+- Added concise help copy to the Visual `Value color` control without changing the renderer or saved data contract.
+- Added renderer regression coverage that locks the existing accent-over-global precedence for value, trend, icon, and metric link color.
+- The report remains classified as no product defect; this family adds UX guidance and regression guards for the nuanced color priority.
+- Validation: focused UI regression failed before the help copy and passed after; `bun run test:vitest -- tests/vitest/widgets/statsKpi.test.tsx tests/vitest/ui/stats-kpi-editor-wave.test.tsx`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; Claude staged review reported no blockers.
+- Covered by changelog `1065` together with TASK-375-01.
