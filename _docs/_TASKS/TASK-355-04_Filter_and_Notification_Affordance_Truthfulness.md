@@ -5,7 +5,7 @@
 **Category:** Admin UI + Users + UX Truthfulness
 **Estimated Effort:** Medium
 **Dependencies:** TASK-355-01, TASK-360-04, TASK-360-06
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -93,8 +93,8 @@ Error handling:
 
 ## Testing Requirements
 
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
+- `bun --cwd core lint` (passed 2026-06-01)
+- `bun --cwd core lint:types` (passed 2026-06-01)
 - Vitest UI: filter trigger opens/closes drawer or is absent/disabled;
   active-filter count updates; role filter unavailable without `roles:read`.
 - Vitest UI: notification controls are either persisted or visibly
@@ -102,6 +102,12 @@ Error handling:
 - Bun route/service tests for any new query/preferences schema and mapped
   validation errors.
 - No-op audit gate from `TASK-360-04` must not flag remaining Users controls.
+
+Validation run:
+
+- `bun run test:vitest -- tests/vitest/ui/user-list-filters-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
@@ -118,3 +124,14 @@ Error handling:
 - Notification switches no longer appear as active writable controls when no
   persistence exists.
 - No remaining Users no-op controls are reported by the shared audit gate.
+
+## Completion Notes
+
+- Chose the truthful unavailable/read-only path instead of adding new
+  persistence or backend query APIs in this leaf.
+- Advanced user filters remain disabled with an accessible label, title reason,
+  and no-op gate coverage; existing search, role, and status filters remain
+  active and intentionally stay on the current client-side list path until a
+  future server-query expansion is scoped.
+- Notification switches are disabled/read-only with managed-elsewhere copy and
+  no local submit path.

@@ -13,7 +13,7 @@ import {
 import type { RoleSummary } from "../roles/types";
 
 const advancedFiltersUnavailableReason =
-  "Advanced user filters are not wired yet. Use search, role, and status filters for now.";
+  "Advanced user filters are unavailable. Use search, role, and status filters.";
 const defaultRoleFilterUnavailableReason = "Role filtering requires roles:read permission.";
 
 export type UserFiltersProps = {

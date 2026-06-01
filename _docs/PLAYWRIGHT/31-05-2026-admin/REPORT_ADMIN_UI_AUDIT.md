@@ -107,6 +107,9 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
 - `TASK-355-03` jest zaimplementowany: Users/Roles destructive actions uzywaja
   shared confirm dialogu, role duplicate ma high-risk confirm i source-role
   audit context, a user/role destructive routes emituja redacted audit events.
+- `TASK-355-04` jest zaimplementowany: Users advanced filter icon jest
+  truthful disabled/unavailable, a notification switches sa read-only managed
+  states objete shared no-op gate.
 - Pozostale pozycje z raportu pozostaja przypisane do rodzin TASK-355..360.
   Część no-opow jest teraz jawnie niedostepna albo zaimplementowana, ale
   Settings cache/navigation, Audit/Access funkcje i finalny re-audyt UI nadal

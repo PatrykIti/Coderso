@@ -227,7 +227,7 @@ Completion notes:
 
 ### TASK-355-02: Reset Password and Login-Capable Invite Flow
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation decision:
 
@@ -319,7 +319,7 @@ Regression tests:
 
 ### TASK-355-03: Destructive Action Confirmation
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Add shared confirm flows for:
 
@@ -347,7 +347,7 @@ Regression tests:
 
 ### TASK-355-04: Filter and Notification Affordance Truthfulness
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 User filters:
 

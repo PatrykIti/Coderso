@@ -54,6 +54,8 @@ screen.
    - search by name or email,
    - role filter,
    - status filter.
+   The advanced filter icon is intentionally unavailable; use these visible
+   filters for the current Users list.
 3. Review the user table in order:
    - user identity,
    - role badges,
@@ -64,7 +66,7 @@ screen.
 5. Use the right-side details panel to review:
    - last active,
    - permissions summary,
-   - email notification toggles,
+   - read-only email notification state,
    - account controls,
    - two-factor state.
 6. Treat the `Last admin` badge carefully.
@@ -112,8 +114,9 @@ Use this safe user-management order when you want fewer access mistakes:
   cache the token in the browser.
 - Deactivate, delete, delete-role, and high-risk duplicate actions require an
   explicit confirmation that names the target user or role.
-- The route’s details panel exposes notification and two-factor context, which
-  makes it stronger than a simple members list.
+- The route’s details panel exposes read-only notification and two-factor
+  context, which makes it stronger than a simple members list without implying
+  local notification preference writes.
 - Missing role-read access hides role filters and role names/details. Missing
   user-read access hides the user table and invite entry points.
 

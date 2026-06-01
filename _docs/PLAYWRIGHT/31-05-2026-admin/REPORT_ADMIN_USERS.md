@@ -89,7 +89,7 @@ jednorazowym fixture user/role i posprzątano po teście.
   role filter/details, a edit/invite są niedostępne przed submit.
 - `roles:read` bez `users:read` pobiera roles/catalog, ukrywa users table i
   Invite User, a role writes pozostają disabled bez `roles:write`.
-- Pozostałe problemy z raportu nadal należą do kolejnych liści:
+- Po `TASK-355-03` pozostałe problemy z raportu należały do kolejnych liści:
   `TASK-355-02` reset/invite login-capable, `TASK-355-03` destructive confirms,
   `TASK-355-04` filters/notifications, `TASK-355-05` mobile a11y.
 
@@ -126,6 +126,23 @@ jednorazowym fixture user/role i posprzątano po teście.
 - Pozostałe problemy z raportu nadal należą do kolejnych liści:
   `TASK-355-04` filters/notifications i `TASK-355-05` mobile a11y.
 
+### Status po TASK-355-04 - 2026-06-01
+
+- Zaawansowany filter icon nie wygląda już jak działająca ukryta funkcja:
+  przycisk jest disabled, ma `aria-label`, `title` z powodem i stabilne
+  `data-no-op-control`.
+- Widoczne filtry search, role i status pozostają realnie podpięte do listy;
+  role filter nadal jest niedostępny w partial `users:read` bez `roles:read`.
+  Ten leaf nie dodaje server-query API dla Users, tylko zamyka fałszywy
+  advanced-filter affordance.
+- Notification switches w user details są disabled/read-only z jawną kopią, że
+  delivery rules są zarządzane w Settings/workspace policy; nie wyglądają jak
+  lokalny zapis preferencji.
+- Shared no-op audit gate obejmuje Users advanced filters oraz oba notification
+  controls i wymusza disabled state z jawnym powodem.
+- Po `TASK-355-04` pozostały problem z raportu należy do `TASK-355-05`
+  mobile a11y.
+
 ## Dlaczego
 
 Widok miesza gotowe, produkcyjne flow (`save user`, `invite user`, `delete user`)
@@ -144,8 +161,9 @@ które akcje są realne.
   delivery i nie zwraca tokenu do browsera ani raportów.
 - `Deactivate/Delete`: zrealizowane w `TASK-355-03`; dalsza pełna weryfikacja
   klikana cleanup fixture należy do final evidence pass.
-- Filter icon: albo otwiera advanced filters drawer, albo znika.
-- Notification switches: podłączyć do modelu user preferences albo oznaczyć
-  jako read-only.
+- Filter icon: zrealizowane w `TASK-355-04` jako truthful unavailable state;
+  realne filtry search/role/status pozostają aktywne.
+- Notification switches: zrealizowane w `TASK-355-04` jako read-only managed
+  state bez lokalnego submitu.
 - Mobile sheet: dodać `SheetTitle`/`SheetDescription`, ewentualnie przez
   `VisuallyHidden`.

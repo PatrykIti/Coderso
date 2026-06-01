@@ -40,8 +40,22 @@ vi.mock("@/components/ui/separator", () => ({
 }));
 
 vi.mock("@/components/ui/switch", () => ({
-  Switch: ({ defaultChecked }: { defaultChecked?: boolean }) => (
-    <input type="checkbox" defaultChecked={defaultChecked} readOnly />
+  Switch: ({
+    defaultChecked,
+    disabled,
+    ...props
+  }: {
+    defaultChecked?: boolean;
+    disabled?: boolean;
+    [key: string]: unknown;
+  }) => (
+    <input
+      type="checkbox"
+      defaultChecked={defaultChecked}
+      disabled={disabled}
+      readOnly
+      {...props}
+    />
   ),
 }));
 
@@ -153,7 +167,17 @@ test("UserDetailsDrawer renders user details, permission summaries, and action g
     expect(managedView.container.textContent).toContain("users.write");
     expect(managedView.container.textContent).toContain("roles.read");
     expect(managedView.container.textContent).toContain("Two-factor authentication disabled.");
-    expect(managedView.container.querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
+    const notificationControls = Array.from(
+      managedView.container.querySelectorAll('input[type="checkbox"]')
+    ).filter((control): control is HTMLInputElement => control instanceof HTMLInputElement);
+    expect(notificationControls).toHaveLength(2);
+    expect(notificationControls.every((control) => control.disabled)).toBe(true);
+    expect(notificationControls.every((control) => !control.checked)).toBe(true);
+    expect(
+      notificationControls.every((control) =>
+        control.getAttribute("title")?.includes("Notification preferences are read-only")
+      )
+    ).toBe(true);
 
     clickByText(managedView.container, "Edit permissions");
     clickByText(managedView.container, "Reset password");

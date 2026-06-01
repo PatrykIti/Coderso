@@ -27,7 +27,7 @@ export type UserDetailsDrawerProps = {
 };
 
 const notificationPreferencesUnavailableReason =
-  "Notification preferences are read-only until TASK-355-04 connects persistence.";
+  "Notification preferences are read-only. Delivery rules are managed in Settings and workspace policy.";
 
 const getInitials = (name: string) =>
   name
@@ -149,7 +149,6 @@ export function UserDetailsDrawer({
                 <p className="text-xs text-muted-foreground">Digest of changes and alerts</p>
               </div>
               <Switch
-                defaultChecked
                 disabled
                 aria-label="Weekly summary notifications unavailable"
                 title={notificationPreferencesUnavailableReason}
@@ -162,7 +161,6 @@ export function UserDetailsDrawer({
                 <p className="text-xs text-muted-foreground">Login + permission changes</p>
               </div>
               <Switch
-                defaultChecked
                 disabled
                 aria-label="Security alert notifications unavailable"
                 title={notificationPreferencesUnavailableReason}

@@ -244,6 +244,17 @@ test("UserFilters routes search and select changes through the provided callback
   try {
     expect(view.container.textContent).toContain("All roles");
     expect(view.container.textContent).toContain("Active");
+    const advancedFilterButton = view.container.querySelector(
+      '[data-no-op-control="users-advanced-filters"]'
+    );
+    expect(advancedFilterButton).toBeInstanceOf(HTMLButtonElement);
+    expect((advancedFilterButton as HTMLButtonElement).disabled).toBe(true);
+    expect(advancedFilterButton?.getAttribute("aria-label")).toBe(
+      "Advanced user filters unavailable"
+    );
+    expect(advancedFilterButton?.getAttribute("title")).toContain(
+      "Advanced user filters are unavailable"
+    );
 
     setInputValue(
       view.container.querySelector('input[placeholder="Search users by name or email..."]'),
@@ -256,6 +267,36 @@ test("UserFilters routes search and select changes through the provided callback
     expect(onQueryChange).toHaveBeenCalledWith("grace");
     expect(onRoleChange).toHaveBeenCalledWith("editor");
     expect(onStatusChange).toHaveBeenCalledWith("inactive");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UserFilters makes role filtering truthful without roles read access", async () => {
+  const { UserFilters } = await import("../../../core/admin/ui/users/UserFilters");
+
+  const onRoleChange = vi.fn();
+
+  const view = mount(
+    <UserFilters
+      query=""
+      roleFilter="all"
+      statusFilter="any"
+      roles={[{ id: "admin", name: "Admin", permissions: ["*"] }]}
+      canReadRoles={false}
+      roleFilterUnavailableReason="Role filtering requires roles:read permission."
+      onQueryChange={() => undefined}
+      onRoleChange={onRoleChange}
+      onStatusChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Role filter unavailable");
+    expect(view.container.textContent).not.toContain("All roles");
+    expect(view.container.textContent).not.toContain("Admin");
+    expect(view.container.textContent).toContain("All status");
+    expect(onRoleChange).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
