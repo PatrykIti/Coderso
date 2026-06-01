@@ -200,7 +200,7 @@ type AuditExportRequest = {
 
 async function exportAuditLogs(request: AuditExportRequest) {
   const response = await apiRequest<Blob>(
-    "/audit/export",
+    "/admin/api/audit/export",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -214,8 +214,10 @@ async function exportAuditLogs(request: AuditExportRequest) {
 
 Admin API path:
 
-- Browser client path is `/audit/export` through `apiRequest`.
-- Server route registration must expose it under `/admin/api/audit/export`.
+- Route registration must expose `POST /admin/api/audit/export`.
+- If the existing `apiRequest` helper expects paths relative to
+  `/admin/api`, the client wrapper may pass `/audit/export`, but the task
+  acceptance evidence must name the concrete registered route.
 
 Data flow:
 

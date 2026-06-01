@@ -201,7 +201,7 @@ type AccessLogExportRequest = {
 };
 
 async function exportAccessLogs(request: AccessLogExportRequest) {
-  return downloadAdminExport("/access-logs/export", request, {
+  return downloadAdminExport("/admin/api/access-logs/export", request, {
     filenamePrefix: "access-logs",
     withCsrf: true,
   });
@@ -210,9 +210,10 @@ async function exportAccessLogs(request: AccessLogExportRequest) {
 
 Admin API path:
 
-- Browser client path is `/access-logs/export` through `apiRequest`.
-- Server route registration must expose it under
-  `POST /admin/api/access-logs/export`.
+- Route registration must expose `POST /admin/api/access-logs/export`.
+- If the existing `apiRequest` helper expects paths relative to
+  `/admin/api`, the client wrapper may pass `/access-logs/export`, but the task
+  acceptance evidence must name the concrete registered route.
 
 Error handling:
 
@@ -298,8 +299,8 @@ Regression tests:
 
 Route family: access logs and session revoke.
 
-- Endpoint visibility: internal admin only (`/admin/api/access-logs*`,
-  optional session revoke route).
+- Endpoint visibility: internal admin only (`/admin/api/access-logs*` and the
+  required revoke route `POST /admin/api/access-logs/:id/revoke`).
 - Auth model: authenticated admin session.
 - RBAC:
   - `audit:read` for list/detail/export.

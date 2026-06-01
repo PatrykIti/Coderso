@@ -192,11 +192,12 @@ Regression tests:
 
 **Status:** To Do
 
-Decision required:
+Implementation decision:
 
-- Some Settings values are safe to cache for UX (`site.name`, `site.locale`,
-  `site.cacheTtlSeconds`, redacted configured flags).
-- Secrets and credential material must not be stored in localStorage:
+- Implement a redacted safe-settings cache for non-secret UX values
+  (`site.name`, `site.locale`, `site.cacheTtlSeconds`, redacted configured
+  flags).
+- Do not cache secrets or credential material in localStorage:
   SMTP password, S3/Azure keys, bot-protection secret, integration secrets,
   webhook secrets, API key secrets.
 
@@ -522,9 +523,10 @@ sessions, API keys, webhooks, IP allowlist, assistant reindex.
 - RBAC:
   - `settings:read` for settings read routes.
   - `settings:write` for general/site/assistant settings writes.
-  - Security/session/API key/webhook/IP allowlist changes should require the
-    existing most-specific high-risk permission if available; if not, define it
-    before implementation rather than widening `settings:write` silently.
+  - Security/session/API key/webhook/IP allowlist changes must require the
+    most-specific high-risk permission. If the permission does not exist yet,
+    define it before implementation rather than widening `settings:write`
+    silently.
 - CSRF: required for all writes, tests, reindex, revokes, deletes, exports, and
   external side-effect actions.
 - Rate-limit bucket:

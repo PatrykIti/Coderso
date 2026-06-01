@@ -369,8 +369,9 @@ Route family: admin users and roles.
   - Writes require `users:write` / `roles:write`.
   - Password reset requires `users:write` plus explicit audit event.
 - CSRF: required for all POST/PATCH/DELETE/PUT admin writes.
-- Rate-limit bucket: admin write for mutations; auth-sensitive/password reset
-  route should also use the auth/security-sensitive bucket if available.
+- Rate-limit bucket: admin write for mutations; password reset/set-password
+  routes must use an auth/security-sensitive bucket, defining one first if the
+  current route layer does not expose it.
 - Reject unknown validation: all new request payloads schema-first and
   unknown-field rejecting.
 - Anti-abuse: no public write endpoint. No nonce/HMAC/captcha required because
