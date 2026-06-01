@@ -516,6 +516,12 @@ test("widget template block settings render split layout visual sections", () =>
   expect(html).toContain("Phone behavior");
   expect(html).toContain("Spacing and alignment");
   expect(html).toContain("Pane content");
+  expect(html).toContain('data-widget-control="split-layout.slot.left"');
+  expect(html).toContain('data-widget-control-path="slots.left"');
+  expect(html).toContain('data-widget-control="split-layout.slot.right"');
+  expect(html).toContain('data-widget-control-path="slots.right"');
+  expect(html).not.toContain("Move up");
+  expect(html).not.toContain("Move down");
 });
 
 test("widget template block settings render spacer visual sections", () => {

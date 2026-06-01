@@ -417,11 +417,11 @@ export function BlockSettings({
               onRemove: canRemoveRepeatable
                 ? () => handleRemoveRepeatableSlotInstance(slot.slotId)
                 : undefined,
-              canMoveUp: slot.kind === "repeatable" && repeatableIndex > 0,
+              canMoveUp: slot.kind === "repeatable" ? repeatableIndex > 0 : undefined,
               canMoveDown:
-                slot.kind === "repeatable" &&
-                repeatableIndex >= 0 &&
-                repeatableIndex < repeatableSlotIds.length - 1,
+                slot.kind === "repeatable"
+                  ? repeatableIndex >= 0 && repeatableIndex < repeatableSlotIds.length - 1
+                  : undefined,
               onMoveUp:
                 slot.kind === "repeatable" && repeatableIndex > 0
                   ? () =>

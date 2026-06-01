@@ -5,7 +5,7 @@
 > **Admin page id:** `9f6cb5a9-60ad-4cdd-a203-133340472124`
 > **Public routes:** `/audit-31-05-split-layout`, `/audit-31-05-split-layout-rich`, `/audit-31-05-split-layout-stack`, `/audit-31-05-split-layout-legacy-zero`, `/audit-31-05-split-layout-invalid`
 > **Playwright sessions:** `codex-31-05-ui-split-layout`, `codex-31-05-ui-split-layout-public`, `codex-31-05-ui-split-layout-advanced`, `codex-31-05-ui-split-layout-interaction`
-> **Claude:** lokalny CLI nadal blokuje wspolprace: `401 Invalid authentication credentials`. Raport opiera sie na Playwright + audycie kodu Codex.
+> **Claude:** remediation review z lokalnego CLI (2026-06-01) zakonczony wynikiem `No blockers`.
 
 ## Metoda
 
@@ -66,20 +66,20 @@ Przetestowane:
 | Visual variant cards | Klik `50 / 50` na rich fixture | Selected card przechodzi na `50-50`; desktop value `50 / 50`, tablet zostaje `40 / 60`, phone `50 / 50`. | Nie dotyczy bez zapisu; public rich nadal 60/40. | Dziala | `buildVisualVariantSplitLayoutData()` zachowuje device overrides gdy roznia sie od desktop. | Brak. |
 | Variant card metadata | Inspect Visual | Variant buttons maja path `variant`, ownership `writable`; no unwrapped controls. | Nie dotyczy. | Dziala | VariantCards siedzi w `WidgetControlRow` path `variant`. | Brak. |
 | Ratio disclosure in keep | Rich fixture | Summary: Desktop `60 / 40`, tablet `40 / 60`, mobile `50 / 50`; copy mowi phone split has own saved value. | Public root markers i classes zgadzaja sie z keep split. | Dziala | Disclosure bazuje na normalized ratio i `collapseMobile=keep`. | Brak. |
-| Ratio disclosure in stack | Stack fixture lub po interaction switch to stack | Summary nadal pisze `mobile 60 / 40` / `mobile 50 / 50`, a sekcja Phone behavior mowi, ze panes stackuja sie na pelna szerokosc. | Public stack renderuje `grid-cols-1`, panes `col-span-1` on phone. | Nie dziala truthfulness | Summary nie dostaje `collapseMobile`, wiec opisuje zapisany ratio zamiast efektywnego phone layout. | Patrz `SPL-31-05-01`. |
+| Ratio disclosure in stack | Stack fixture lub po interaction switch to stack | Summary mowi `phone stacked`, a saved phone split jest opisany jako dormant value dla przyszlego `keep`. | Public stack renderuje `grid-cols-1`, panes `col-span-1` on phone. | Dziala | Summary dostaje `collapseMobile`; active metadata ignoruje phone-only dormant ratios w stack mode. | Naprawione w `SPL-31-05-01` / TASK-364. |
 | Desktop/tablet selects | Rich fixture | Desktop `60 / 40`, tablet `40 / 60`; writable paths `ratio.desktop`, `ratio.tablet`. | Public classes: left `lg:col-span-7 md:col-span-5`, right `lg:col-span-5 md:col-span-7`. | Dziala | Ratio tokens ida przez bounded maps. | Brak. |
 | Phone layout keep | Rich fixture | Select `Keep two columns on phones`; phone split control visible `50 / 50`; helper warns tight screens. | Public root `collapseMobile=keep`, phone panes `col-span-6`. | Dziala | `mobileKeep` gates phone split control and renderer uses `mobileKeep*SpanMap`. | Brak. |
-| Phone layout stack | Stack fixture and interaction | Select `Stack panes on phones`; phone split control hidden; stack note visible. | Public root `grid-cols-1`, panes `col-span-1`, no phone split layout on mobile. | Dziala control/runtime, summary bug | Main Phone behavior is truthful; only Pane layout summary is stale. | Patrz `SPL-31-05-01`. |
+| Phone layout stack | Stack fixture and interaction | Select `Stack panes on phones`; phone split control hidden; stack note visible; Pane layout summary reports `phone stacked`. | Public root `grid-cols-1`, panes `col-span-1`, no phone split layout on mobile. | Dziala | Phone behavior and Pane layout now share effective stack semantics. | Brak. |
 | Reverse phone order | Rich fixture | Copy says right pane is shown first on phones and screen reader order stays saved. | Public panes have `order-2 md:order-1` and `order-1 md:order-2`. | Dziala | Renderer applies order classes only for mobile. | Brak. |
 | Gap labels | Rich/stack/legacy fixtures | Rich `Balanced`; stack `No gap`; legacy zero in public marker `gap="0"`. | Public rich `gap-4`, stack `gap-0`, legacy `gap-0`. | Dziala | `getSplitLayoutGapControlValue("0")` maps legacy zero to `none` in UI. | Brak. |
 | Vertical alignment | Rich/legacy fixtures | Rich `Middle`, legacy `Bottom`. | Public rich `items-center`, legacy `items-end`. | Dziala | Bounded vertical align map. | Brak. |
 | Pane content guidance | Visual | Shows `Pane content`, not old `Pane slots`; copy points to Structure/insert controls. | Public never shows admin pane guidance. | Dziala | Visual guidance is editor-only. | Brak. |
 | Public empty pane | Stack fixture with empty right slot | Structure says right slot 0 items in admin. | Public has no `data-split-empty-pane`, no `Left/Right pane is empty`, no admin instructions. | Dziala | Empty guidance is render-context gated. | Brak. |
-| Shared Structure fixed panes | Visual Structure | Left/right slots show counts, but also disabled Move up / Move down controls for fixed panes. | Public unaffected. | Czesciowo dziala, UX noise | Shared Structure renders move buttons whenever `canMove*` is boolean, including false for fixed slots. | Patrz `SPL-31-05-02`. |
+| Shared Structure fixed panes | Visual Structure | Left/right slots show counts and metadata paths `slots.left` / `slots.right`; Move up / Move down are not rendered for fixed panes. | Public unaffected. | Dziala | `BlockSettings` passes move flags only for repeatable slots, while fixed Split Layout panes remain stable rows. | Naprawione w `SPL-31-05-02` / TASK-364. |
 | Advanced diagnostics | Click Advanced | `writablePaths=[]`, `rawControlCount=0`, `unwrappedControls=[]`; rows explain desktop/tablet/phone/gap/align and saved summary. | Nie dotyczy. | Dziala | `SplitLayoutAdvancedEditor` uses `ReadonlyWidgetSummaryRow`. | Brak. |
 | Invalid enum payload | API fixture with invalid ratios/enums | Nieosiagalne przez normalny UI; API/import edge. | HTTP 200, `Invalid widget data`, no raw `75-25`/`baseline`/`float` in HTML. | Dziala fail-closed; route gap shared | Widget schema rejects invalid enums, but admin API allowed invalid payload to persist. | Shared write validation gap, same class as Section/Grid route contract. |
 
-## Znaleziska do poprawy
+## Znaleziska i remediacja
 
 ### SPL-31-05-01 - `Pane layout` summary pokazuje phone split, gdy efektywny phone layout jest stacked
 
@@ -139,6 +139,18 @@ layout on devices` dalej podaje `mobile 50 / 50`.
    `collapseMobile="stack"` summary nie moze mowic `mobile 60 / 40` jako
    efektywny layout i musi wspominac `phone stacked`.
 
+**Status po remediacji (2026-06-01): Naprawione.**
+
+- `VariantCards` dostaje `collapseMobile` i dla stack mode pokazuje
+  `phone stacked` plus dormant saved-copy zamiast aktywnego `mobile ...`.
+- Active metadata (`data-split-ratio-override`,
+  `data-split-ratio-device-specific`) and `Custom device layout` badge ignore
+  phone-only dormant ratios while phones stack.
+- Desktop split cards preserve dormant saved phone ratios without inventing a
+  tablet override when no active tablet/phone override exists.
+- Regression coverage includes initial stack state, phone-only dormant saved
+  ratio, and `keep -> stack -> keep` interaction.
+
 ### SPL-31-05-02 - Shared Structure pokazuje Move up / Move down dla fixed left/right panes
 
 **Objaw:** Split Layout ma fixed slots `left` i `right`, ale Visual Structure
@@ -179,6 +191,15 @@ disabled, ale nadal wygladaja jak dostepne akcje strukturalne.
 4. Dodac page-builder DOM test dla fixed-slot widgetu: Structure nie pokazuje
    move buttons dla non-repeatable slots.
 
+**Status po remediacji (2026-06-01): Naprawione.**
+
+- `BlockSettings` passes `canMoveUp` / `canMoveDown` only for repeatable slot
+  instances, so fixed Split Layout panes no longer render Move up / Move down.
+- Fixed pane row metadata remains auditable through `slots.left` and
+  `slots.right`.
+- Regression coverage confirms Split Layout fixed rows expose pane paths and do
+  not render inert move controls.
+
 ## Co dziala
 
 - Public renderer trzyma fixed `left` / `right` slots, bounded ratios and
@@ -187,6 +208,10 @@ disabled, ale nadal wygladaja jak dostepne akcje strukturalne.
   vertical alignment renderuja sie zgodnie z UI.
 - Desktop variant cards preserve responsive overrides zamiast resetowac tablet
   and phone silently.
+- In stack mode, saved phone ratios are labelled dormant and do not create
+  active custom-layout metadata until `keep` is selected.
+- Shared Structure omits move actions for fixed Split Layout panes while keeping
+  stable row metadata.
 - Legacy `gap="0"` pozostaje backward-compatible publicznie i jest canonicalized
   to `No gap` in UI.
 - Empty pane guidance is preview/admin-only and does not leak to public runtime.
@@ -196,7 +221,9 @@ disabled, ale nadal wygladaja jak dostepne akcje strukturalne.
 
 ## Walidacja
 
-- `bun run test:vitest -- tests/vitest/widgets/splitLayout.test.tsx tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx` - passed, 4 files / 56 tests.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 4 files / 63 tests.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/splitLayout.test.tsx tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 7 files / 111 tests.
 - `bun --cwd core lint` - passed.
 - `bun --cwd core lint:types` - passed.
-- `git diff --check -- _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_SPLIT_LAYOUT_WIDGET.md _docs/PLAYWRIGHT/31-05-2026-widgets/README.md` - passed.
+- `git diff --check` and `git diff --cached --check` - passed.
+- `timeout 120s claude -p --dangerously-skip-permissions --max-budget-usd 1 "Review staged diff for TASK-364 only..."` - passed, no blockers.

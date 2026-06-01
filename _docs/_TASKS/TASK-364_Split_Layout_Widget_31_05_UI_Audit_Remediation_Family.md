@@ -5,7 +5,7 @@
 **Category:** Widgets + Split Layout + Admin UI + Builder Metadata + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_SPLIT_LAYOUT_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -24,8 +24,8 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-364-01](TASK-364-01_SPL_31_05_01_Phone_Ratio_Summary_Must_Respect_Stacked_Mobile_Mode.md): SPL-31-05-01 - Phone ratio summary must respect stacked mobile mode
-- [ ] [TASK-364-02](TASK-364-02_SPL_31_05_02_Do_Not_Show_Move_Up_Down_For_Fixed.md): SPL-31-05-02 - Do not show Move up/down for fixed left/right panes
+- [x] [TASK-364-01](TASK-364-01_SPL_31_05_01_Phone_Ratio_Summary_Must_Respect_Stacked_Mobile_Mode.md): SPL-31-05-01 - Phone ratio summary must respect stacked mobile mode
+- [x] [TASK-364-02](TASK-364-02_SPL_31_05_02_Do_Not_Show_Move_Up_Down_For_Fixed.md): SPL-31-05-02 - Do not show Move up/down for fixed left/right panes
 
 ## Implementation Pseudocode
 
@@ -69,3 +69,13 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Split Layout Visual now passes `collapseMobile` into the ratio disclosure, reports stacked phones as `phone stacked`, and labels saved phone ratios as dormant while `collapseMobile="stack"`.
+- Active ratio metadata and the `Custom device layout` badge now ignore dormant phone-only ratios in stack mode while still preserving saved phone ratios for future `keep` mode.
+- Desktop split card changes no longer create a tablet override only because a dormant phone split exists; tablet syncs with the selected desktop split unless an active tablet/phone override is present.
+- Shared Structure metadata for fixed Split Layout panes now exposes `slots.left` and `slots.right` row paths while omitting non-applicable Move up / Move down controls.
+- Rawls read-only agent found two TASK-364 drifts before closure; both were resolved with additional dormant-phone and interaction regression coverage.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/widgets/editorContract.test.ts`; `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/splitLayout.test.tsx tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/widgets/editorContract.test.ts`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; `git diff --cached --check`; `timeout 120s claude -p --dangerously-skip-permissions --max-budget-usd 1 "Review staged diff for TASK-364 only..."` returned no blockers.
+- Covered by changelog `1054` together with TASK-364-01 and TASK-364-02.
