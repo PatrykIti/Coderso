@@ -51,18 +51,19 @@ sidebar:
 ## Deep-Pass Outcome
 
 - Search found a real published page fixture.
-- SEO Manager saved title and description into the SEO document, but those
-  values did not render in the public page HTML.
+- SEO Manager saves now render into public page HTML after TASK-349.
 - Analytics showed the published page fixture in API top content and UI top
   content.
-- Backups created a queued backup row, but no artifact, size, download, restore,
-  or completion path was produced.
+- Backups now documents the v1 external-worker boundary, serializes include
+  options, paginates real rows, and disables restore/download until artifacts
+  are ready after TASK-351.
 - Import / Export successfully downloaded, previewed, applied, verified, and
   restored a valid JSON bundle. TASK-352 later closed the malformed menu-id
   drift: preview/apply now reject invalid UUIDs with mapped validation errors
   before database persistence.
-- Redirects created an admin redirect row, but the public runtime returned 404
-  for the source path instead of redirecting.
+- Redirects now execute enabled admin rows in public runtime, reject unsafe
+  destinations, expose confirmed delete, and use truthful empty/pagination
+  states after TASK-353.
 - Claude's later UX pass independently flagged the same rough edges from a user
   perspective: unclear empty states, queued backups with disabled actions,
   incomplete Search suggestions, missing Import / Export error details, and

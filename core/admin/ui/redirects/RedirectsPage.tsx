@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { isApiClientError } from "@/services/apiClient";
 import {
   createRedirect,
+  deleteRedirect,
   listRedirects,
   updateRedirect,
   type RedirectCreateInput,
@@ -19,9 +20,11 @@ import { RedirectDrawer } from "./RedirectDrawer";
 import { RedirectsTable, type RedirectRow } from "./RedirectsTable";
 
 export function RedirectsPage() {
+  const pageSize = 10;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingRedirect, setEditingRedirect] = useState<RedirectRow | null>(null);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [items, setItems] = useState<RedirectRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -128,6 +131,28 @@ export function RedirectsPage() {
     }
   };
 
+  const handleDelete = async (redirect: RedirectRow) => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      await deleteRedirect(redirect.id);
+      await refresh();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to delete redirect.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    setPage(1);
+  };
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return items;
@@ -140,6 +165,11 @@ export function RedirectsPage() {
     () => items.filter((item) => item.status === "active").length,
     [items]
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const isFiltering = query.trim().length > 0;
 
   return (
     <AdminShell
@@ -171,16 +201,23 @@ export function RedirectsPage() {
               placeholder="Search redirects..."
               className="pl-9"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => handleQueryChange(event.target.value)}
             />
           </div>
         </div>
         <RedirectsTable
-          items={filtered}
+          items={paginated}
           isLoading={isLoading}
           isSaving={isSaving}
+          total={filtered.length}
+          page={currentPage}
+          limit={pageSize}
+          isFiltering={isFiltering}
+          onCreate={openCreate}
           onEdit={openEdit}
           onToggle={handleToggle}
+          onDelete={handleDelete}
+          onPageChange={setPage}
         />
       </div>
       <RedirectDrawer

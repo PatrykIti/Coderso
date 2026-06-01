@@ -688,6 +688,18 @@ Zakres CMS, model danych, auth i security opisane sa w:
 
 - Przekierowania trzymane w tabeli `redirects` z kodami 301/302/307/308.
 - Admin UI zarzadza redirectami przez `/redirects`.
+- Admin CRUD jest internal-only (`settings:read` / `settings:write`), ale
+  wlaczone rekordy sa publicznym runtime contractem: `handlePublicRequest`
+  sprawdza redirect po public API/preview/asset exclusions i przed
+  page/content resolution.
+- `fromPath` i `toPath` sa normalizowane jako sciezki wewnetrzne. Zewnetrzne
+  albo protocol-relative destinations sa odrzucane, aby adminowy redirect nie
+  stal sie open-redirect primitive.
+- Runtime zwija bezpieczne lancuchy do finalnej sciezki z pierwszym statusem,
+  a self-loop, cykle i przekroczenie limitu hopow fail-closed przez HTTP `508`.
+- Redirects admin list pozostaje intentionally uncached; create/update/delete
+  odswiezaja liste bez localStorage/cache-bus, bo wlaczone rekordy natychmiast
+  zmieniaja publiczna warstwe routingu.
 
 ## Forms (v1)
 

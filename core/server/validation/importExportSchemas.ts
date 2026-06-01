@@ -152,7 +152,7 @@ const redirectSchema = {
   properties: {
     id: optionalUuidSchema,
     fromPath: { type: "string", minLength: 1, maxLength: 512 },
-    toPath: { type: "string", minLength: 1, maxLength: 2048 },
+    toPath: { type: "string", minLength: 1, maxLength: 512 },
     statusCode: { type: "integer", enum: [301, 302, 307, 308] },
     enabled: { type: "boolean" },
   },

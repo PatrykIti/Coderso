@@ -5,7 +5,7 @@
 **Category:** Redirects + Admin UI + API + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-353-01, TASK-353-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -119,3 +119,9 @@ Regression-test shape:
 - Redirect deletion is either visible, confirmed, and tested, or explicitly
   documented as API-only with UI rationale.
 - Test cleanup no longer requires hidden API calls when UI delete is supported.
+
+## Closure Notes
+
+Done (2026-06-01): redirect delete is visible in row actions, protected by a
+confirmation prompt, wired to `deleteRedirect`, refreshed from the server after
+mutation, mapped through route errors, and documented as intentionally uncached.

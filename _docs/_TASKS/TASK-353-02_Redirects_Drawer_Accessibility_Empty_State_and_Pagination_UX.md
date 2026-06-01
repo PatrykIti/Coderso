@@ -5,7 +5,7 @@
 **Category:** Redirects + Admin UI + Accessibility + API
 **Estimated Effort:** Medium
 **Dependencies:** TASK-353-01
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -114,3 +114,10 @@ Pagination route changes, if added:
 - Redirect drawer opens without Radix title/description warnings.
 - Empty state contains a direct create action.
 - Pagination is functional or unavailable with truthful disabled/hidden state.
+
+## Closure Notes
+
+Done (2026-06-01): the drawer now includes sr-only Sheet title/description
+wiring, the table separates first-time and filtered empty states, exposes the
+inline create CTA, and uses local page/limit/total state with no inert
+single-page controls.

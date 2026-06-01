@@ -1,40 +1,48 @@
-import { Info, Link2, X } from "lucide-react"
-import { useState } from "react"
+import { Info, Link2, X } from "lucide-react";
+import { useState } from "react";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetClose,
   SheetContent,
-} from "@/components/ui/sheet"
-import { Switch } from "@/components/ui/switch"
-import type { RedirectStatusCode } from "@/services/redirectsClient"
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import type { RedirectStatusCode } from "@/services/redirectsClient";
 
 export type RedirectDrawerProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  mode: "create" | "edit"
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mode: "create" | "edit";
   redirect?: {
-    from: string
-    to: string
-    type: "301" | "302" | "307" | "308"
-    active: boolean
-  } | null
-  isSaving: boolean
-  onSave: (payload: { fromPath: string; toPath: string; statusCode: RedirectStatusCode; enabled: boolean }) => Promise<boolean>
-}
+    from: string;
+    to: string;
+    type: "301" | "302" | "307" | "308";
+    active: boolean;
+  } | null;
+  isSaving: boolean;
+  onSave: (payload: {
+    fromPath: string;
+    toPath: string;
+    statusCode: RedirectStatusCode;
+    enabled: boolean;
+  }) => Promise<boolean>;
+};
 
-type StatusCodeValue = "301" | "302" | "307" | "308"
+type StatusCodeValue = "301" | "302" | "307" | "308";
 
 export function RedirectDrawer({
   open,
@@ -44,29 +52,25 @@ export function RedirectDrawer({
   isSaving,
   onSave,
 }: RedirectDrawerProps) {
-  const [fromPath, setFromPath] = useState(
-    (redirect?.from ?? "").replace(/^\/+/, "")
-  )
-  const [toPath, setToPath] = useState(redirect?.to ?? "")
-  const [statusCode, setStatusCode] = useState<StatusCodeValue>(
-    redirect?.type ?? "301"
-  )
-  const [enabled, setEnabled] = useState(redirect?.active ?? true)
+  const [fromPath, setFromPath] = useState((redirect?.from ?? "").replace(/^\/+/, ""));
+  const [toPath, setToPath] = useState(redirect?.to ?? "");
+  const [statusCode, setStatusCode] = useState<StatusCodeValue>(redirect?.type ?? "301");
+  const [enabled, setEnabled] = useState(redirect?.active ?? true);
 
-  const canSave = fromPath.trim().length > 0 && toPath.trim().length > 0
+  const canSave = fromPath.trim().length > 0 && toPath.trim().length > 0;
 
   const handleSave = async () => {
-    if (!canSave) return
+    if (!canSave) return;
     const ok = await onSave({
       fromPath: fromPath.startsWith("/") ? fromPath : `/${fromPath}`,
       toPath,
       statusCode: Number(statusCode) as RedirectStatusCode,
       enabled,
-    })
+    });
     if (ok) {
-      onOpenChange(false)
+      onOpenChange(false);
     }
-  }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -75,6 +79,13 @@ export function RedirectDrawer({
         className="flex h-full min-h-0 w-[360px] flex-col p-0 sm:w-[420px]"
         showCloseButton={false}
       >
+        <SheetHeader className="sr-only">
+          <SheetTitle>{mode === "create" ? "New Redirect" : "Edit Redirect"}</SheetTitle>
+          <SheetDescription>
+            Define the source path, destination path, status code, and active state for this
+            redirect.
+          </SheetDescription>
+        </SheetHeader>
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -84,9 +95,7 @@ export function RedirectDrawer({
               <p className="text-sm font-semibold text-foreground">
                 {mode === "create" ? "New Redirect" : "Edit Redirect"}
               </p>
-              <p className="text-xs text-muted-foreground">
-                Define where traffic should go.
-              </p>
+              <p className="text-xs text-muted-foreground">Define where traffic should go.</p>
             </div>
           </div>
           <SheetClose asChild>
@@ -130,11 +139,11 @@ export function RedirectDrawer({
                     htmlFor="redirect-destination"
                     className="text-xs font-medium text-muted-foreground"
                   >
-                    Destination URL
+                    Destination path
                   </label>
                   <Input
                     id="redirect-destination"
-                    placeholder="https://... or /new-path"
+                    placeholder="/new-path"
                     value={toPath}
                     onChange={(event) => setToPath(event.target.value)}
                   />
@@ -177,14 +186,8 @@ export function RedirectDrawer({
                     Active status
                   </label>
                   <div className="flex h-10 items-center gap-2">
-                    <Switch
-                      id="redirect-active"
-                      checked={enabled}
-                      onCheckedChange={setEnabled}
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      Enabled
-                    </span>
+                    <Switch id="redirect-active" checked={enabled} onCheckedChange={setEnabled} />
+                    <span className="text-sm text-muted-foreground">Enabled</span>
                   </div>
                 </div>
               </div>
@@ -195,8 +198,7 @@ export function RedirectDrawer({
                 <div>
                   <p className="text-xs font-semibold text-foreground">SEO tip</p>
                   <p className="text-xs text-muted-foreground">
-                    Use 301 redirects for permanent changes to pass ranking power
-                    to the new URL.
+                    Use 301 redirects for permanent changes to pass ranking power to the new URL.
                   </p>
                 </div>
               </div>
@@ -206,17 +208,16 @@ export function RedirectDrawer({
         <div className="border-t bg-muted/30 px-6 py-4">
           <div className="grid grid-cols-2 gap-3">
             <SheetClose asChild>
-              <Button variant="outline" disabled={isSaving}>Cancel</Button>
+              <Button variant="outline" disabled={isSaving}>
+                Cancel
+              </Button>
             </SheetClose>
-            <Button
-              onClick={handleSave}
-              disabled={!canSave || isSaving}
-            >
+            <Button onClick={handleSave} disabled={!canSave || isSaving}>
               {isSaving ? "Saving..." : mode === "create" ? "Add redirect" : "Save changes"}
             </Button>
           </div>
         </div>
       </SheetContent>
     </Sheet>
-  )
+  );
 }

@@ -224,6 +224,13 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cached APIs: none; intentionally uncached because exports can contain
     controlled configuration data and Recent Imports is session-local React
     state only.
+- Redirects
+  - UI: `core/admin/ui/redirects/RedirectsPage.tsx`,
+    `core/admin/ui/redirects/RedirectsTable.tsx`,
+    `core/admin/ui/redirects/RedirectDrawer.tsx`
+  - Cached APIs: none; intentionally uncached because enabled redirect rows
+    immediately affect public routing and CRUD flows refresh from the server
+    response instead of patching browser cache state.
 - Admin UI themes
   - UI: `core/admin/ui/themes/ThemesPage.tsx`
   - Cached APIs: `listAdminThemeTemplatesCached`, `getCachedAdminThemeTemplates`, `listAdminThemeProfilesCached`, `getCachedAdminThemeProfiles`

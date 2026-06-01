@@ -442,6 +442,16 @@ Clients update caches and broadcast events on:
   React state only. It does not cache filenames, failure reasons, parsed
   bundles, or upload payloads across tabs or reloads.
 
+### Redirects uncached note
+
+- Redirects intentionally do not use localStorage/admin cache keys.
+- `core/admin/ui/redirects/RedirectsPage.tsx` reads `listRedirects()` directly
+  and refreshes after create/update/enable/disable/delete because enabled rows
+  immediately affect public routing.
+- Redirect mutations must not patch browser cache state. The server response
+  plus fresh list read remain the source of truth for table rows, local
+  pagination totals, and destructive-action outcomes.
+
 ## Extending The Cache
 When adding a new resource:
 1. Add cache keys + TTLs to `core/admin/services/cachePolicy.ts`.

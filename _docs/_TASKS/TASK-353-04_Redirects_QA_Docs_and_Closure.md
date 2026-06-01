@@ -5,7 +5,7 @@
 **Category:** Redirects + Public Runtime + Playwright + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-353-01, TASK-353-02, TASK-353-03
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -89,3 +89,11 @@ No additional route changes are expected in this closure leaf.
 - Redirects report has no unclassified findings.
 - Public redirect execution is proven for all supported status codes.
 - Admin UI is accessible and has no placeholder pagination/delete controls.
+
+## Closure Notes
+
+Done (2026-06-01): Bun service/route/runtime suites, Vitest admin/UI suites,
+and focused Playwright CLI proof cover runtime status execution,
+disabled/no-match behavior, loop safety, excluded routes, route error mappings,
+drawer accessibility, empty CTA, pagination, public 301 `Location`, and visible
+delete wiring. Reports, docs, task board, and changelog 1042 are synchronized.

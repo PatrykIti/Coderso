@@ -192,6 +192,36 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 - Rate-limit: `admin_read` / `admin_write`.
 - Brak public write; nonce/HMAC/reCAPTCHA nie dotyczy.
 
+### Redirects admin API and public runtime
+
+- Endpointy CRUD sa internal-only:
+  - `GET /admin/api/redirects`
+  - `POST /admin/api/redirects`
+  - `PATCH /admin/api/redirects/:id`
+  - `DELETE /admin/api/redirects/:id`
+- Auth/RBAC:
+  - admin session cookie,
+  - `settings:read` dla listy,
+  - `settings:write` dla create/update/delete.
+- CSRF:
+  - wymagany dla `POST`, `PATCH`, i `DELETE`.
+- Rate-limit:
+  - `admin_read` / `admin_write` dla CRUD,
+  - public redirect lookup korzysta z public request path i nie dodaje public
+    write surface.
+- Validation:
+  - strict schema odrzuca unknown fields,
+  - `fromPath` i `toPath` sa ograniczone do wewnetrznych sciezek,
+  - absolute/protocol-relative/backslash destinations sa odrzucane, aby
+    zapobiec open redirect,
+  - self-loop i redirect-chain loop sa blokowane.
+- Runtime hardening:
+  - public lookup wykonuje tylko wlaczone rekordy i nie ujawnia admin payloadow,
+  - public API, preview i site assets nie sa shadowowane przez redirect rows,
+  - loop lub unsafe legacy target fail-closed przez HTTP `508`.
+- Anti-abuse:
+  - nonce/HMAC/reCAPTCHA nie dotycza, bo nie dodano public write.
+
 ## File uploads
 
 - Limit size per file.

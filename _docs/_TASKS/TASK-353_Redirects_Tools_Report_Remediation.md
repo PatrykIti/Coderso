@@ -5,7 +5,7 @@
 **Category:** Admin Tools + Redirects + Public Runtime + API + UI + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-347
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -36,10 +36,18 @@ the product contract is incomplete:
 
 ## Sub-Tasks
 
-- [ ] TASK-353-01: Public Redirect Runtime Resolver and Loop Prevention
-- [ ] TASK-353-02: Redirects Drawer Accessibility, Empty State, and Pagination UX
-- [ ] TASK-353-03: Redirect Delete UI, Confirmation, and Cache/State Contract
-- [ ] TASK-353-04: Redirects QA, Docs, and Closure
+- [x] TASK-353-01: Public Redirect Runtime Resolver and Loop Prevention
+- [x] TASK-353-02: Redirects Drawer Accessibility, Empty State, and Pagination UX
+- [x] TASK-353-03: Redirect Delete UI, Confirmation, and Cache/State Contract
+- [x] TASK-353-04: Redirects QA, Docs, and Closure
+
+## Closure Notes
+
+Done (2026-06-01): enabled redirects now execute in public runtime with
+supported 301/302/307/308 statuses, internal-only destination validation, loop
+fail-closed behavior, route error mapping, drawer accessibility wiring,
+truthful empty/pagination state, confirmed delete UI, docs, reports, and
+changelog 1042.
 
 ## Implementation Order
 

@@ -120,6 +120,13 @@ test("previewImport rejects duplicate route and redirect paths before apply", as
   await expect(previewImport(duplicateRedirectBundle)).rejects.toThrow("redirects_duplicate");
 });
 
+test("previewImport uses the redirect domain destination policy", async () => {
+  const bundle = makeBundle();
+  bundle.redirects[0]!.toPath = "https://evil.example.com";
+
+  await expect(previewImport(bundle)).rejects.toThrow("redirect_target_external");
+});
+
 test("filterExportBundleForScope keeps only selected target sections", () => {
   const scope = normalizeExportRequest({
     target: "menus",

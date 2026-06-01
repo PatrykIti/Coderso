@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 21 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2031 tasks
+- **Done:** 2036 tasks
 
 ---
 
@@ -44,11 +44,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-354-03 | Seed Admin Pepper-Aware Bootstrap Credentials | High | Medium | Make `db:seed:admin` use the same pepper-aware password helper as login and test both pepper/no-pepper paths. |
 | TASK-354-04 | Tools Playwright Regression Matrix and Report Drift Guard | High | Large | Add durable route/control/fixture/report coverage so future Tools audits cannot miss no-op controls or shallow evidence. |
 | TASK-354-05 | Cross Tools QA, Docs, and Closure | Medium | Medium | Reconcile all Tools report findings, final matrix evidence, seed-admin tests, and docs/changelog closure. |
-| TASK-353 | Redirects Tools Report Remediation | High | Very Large | New report-driven family for public redirect execution, drawer a11y, pagination/empty state, delete UI, and closure proof. |
-| TASK-353-01 | Public Redirect Runtime Resolver and Loop Prevention | High | Large | Make enabled admin redirects affect public HTTP responses with status-code and loop/open-redirect safeguards. |
-| TASK-353-02 | Redirects Drawer Accessibility, Empty State, and Pagination UX | High | Medium | Add Sheet title/description wiring, inline empty create CTA, and real or disabled pagination. |
-| TASK-353-03 | Redirect Delete UI, Confirmation, and Cache State Contract | Medium | Medium | Expose supported redirect deletion through confirmed UI or document API-only rationale. |
-| TASK-353-04 | Redirects QA, Docs, and Closure | Medium | Medium | Prove public statuses, disabled/no-match/loop behavior, admin UI, and report/changelog closure. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -75,6 +70,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-353 | Redirects Tools Report Remediation | High | Very Large | Done (2026-06-01): public runtime executes enabled redirects, unsafe destinations and loops are blocked, drawer a11y is wired, pagination/empty state/delete UI are truthful, and docs/changelog 1042 are synchronized. |
+| TASK-353-01 | Public Redirect Runtime Resolver and Loop Prevention | High | Large | Done (2026-06-01): enabled redirects return configured public status/location with loop/open-redirect safeguards and excluded route coverage. |
+| TASK-353-02 | Redirects Drawer Accessibility, Empty State, and Pagination UX | High | Medium | Done (2026-06-01): Sheet title/description wiring, first-time empty CTA, filtered empty copy, and local pagination state are implemented and tested. |
+| TASK-353-03 | Redirect Delete UI, Confirmation, and Cache State Contract | Medium | Medium | Done (2026-06-01): delete is visible, confirmed, route-mapped, refreshed from the server, and documented as intentionally uncached. |
+| TASK-353-04 | Redirects QA, Docs, and Closure | Medium | Medium | Done (2026-06-01): Bun/Vitest validation, reports, docs, task board, and changelog are synchronized for Redirects closure. |
 | TASK-352 | Import Export Tools Report Remediation | High | Very Large | Done (2026-06-01): export target/include options are real, partial bundle scope is safe, import validation rejects malformed IDs, JSON-only copy is aligned, and session activity/search/progress is truthful. |
 | TASK-352-01 | Export Target and Include Options Contract | High | Large | Done (2026-06-01): supported configuration export cards serialize target/include options and filtered JSON bundle scope. |
 | TASK-352-02 | Import Bundle Validation and Error Mapping | High | Large | Done (2026-06-01): preview/apply share UUID, duplicate path, and admin-theme reference validation with mapped API errors. |

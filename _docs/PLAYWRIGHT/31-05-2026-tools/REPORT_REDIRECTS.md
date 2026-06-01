@@ -37,9 +37,29 @@ Route: `/admin/redirects`
 - Enable/disable action returned a successful backend response.
 - The created redirect was cleaned up through the API after the test.
 
+## TASK-353 Resolution - 2026-06-01
+
+- Enabled redirect rows now execute in public runtime before page/content
+  resolution and after public API, preview, and site-asset exclusions.
+- Public runtime tests cover 301/302/307/308 responses, disabled/no-match
+  fallthrough, loop fail-closed behavior, and non-shadowing of public API,
+  preview, and site assets.
+- Redirect destinations are internal-only; absolute, protocol-relative, and
+  backslash/network-path variants are rejected to prevent open redirects.
+- The drawer now provides Radix `SheetTitle` and `SheetDescription` wiring.
+- The table has cause-specific empty states, an inline create CTA for first
+  setup, local pagination with truthful disabled/hidden state, keyboard-visible
+  row actions, and a confirmed delete action.
+- Focused Playwright CLI proof created a redirect through the drawer, verified
+  the public 301 `Location`, deleted it through the visible row action, and saw
+  zero browser console errors/warnings after the Vite optimize cache refresh.
+- Admin route failures now map through `mapRedirectError` for
+  `redirect_not_found`, `redirect_exists`, `redirect_invalid`,
+  `redirect_target_external`, and `redirect_loop`.
+
 ## What Did Not Work
 
-### [ISSUE] Admin redirects do not affect the public runtime
+### [RESOLVED 2026-06-01] Admin redirects do not affect the public runtime
 
 Evidence:
 
@@ -62,7 +82,7 @@ How to fix:
 - Add integration tests for 301/302/307/308, disabled redirects, no-match paths,
   and loop prevention.
 
-### [ISSUE] Redirect drawer is missing Radix dialog accessibility wiring
+### [RESOLVED 2026-06-01] Redirect drawer is missing Radix dialog accessibility wiring
 
 Evidence:
 
@@ -84,7 +104,7 @@ How to fix:
 - Add a UI test that opens the drawer and asserts no console accessibility
   errors.
 
-### [ISSUE] Pagination buttons are placeholders
+### [RESOLVED 2026-06-01] Pagination buttons are placeholders
 
 Evidence:
 
@@ -102,7 +122,7 @@ How to fix:
   already visible.
 - Add tests for empty list and single-page list pagination state.
 
-### [ISSUE] Delete exists in the API but not in the UI
+### [RESOLVED 2026-06-01] Delete exists in the API but not in the UI
 
 Evidence:
 

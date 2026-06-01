@@ -16,6 +16,11 @@ import { listAdminThemeTemplates } from "../adminThemes/adminThemeTemplateServic
 import { assertAdminThemeTokens } from "../adminThemes/tokenValidation";
 import { listMenuItems, listMenus, replaceMenuItems } from "../menus/menuService";
 import { listSettings, setSettings } from "../settings/settingsService";
+import {
+  normalizeRedirectPath,
+  normalizeRedirectStatusCode,
+  normalizeRedirectTarget,
+} from "../redirects/redirectService";
 import { listThemeProfiles } from "../themes/themeProfileService";
 import { assertTokenOverrides } from "../theme/tokenValidation";
 import { listThemes } from "../themes/themeService";
@@ -40,7 +45,6 @@ import {
 const BUNDLE_VERSION = 1;
 const uuidPattern =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
-const redirectStatusCodes = new Set([301, 302, 307, 308]);
 
 const targetIncludeOptions: Record<ExportTarget, ExportIncludeOption[]> = {
   full: [...exportIncludeOptions],
@@ -143,28 +147,6 @@ const normalizePath = (value: string) => {
   if (trimmed === "/") return "/";
   const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
   return normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
-};
-
-const normalizeRedirectFromPath = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed || trimmed.includes("://")) {
-    throw new Error("redirect_invalid");
-  }
-  if (trimmed === "/") return "/";
-  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-};
-
-const normalizeRedirectTarget = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) throw new Error("redirect_invalid");
-  return trimmed;
-};
-
-const normalizeRedirectStatusCode = (value: unknown): 301 | 302 | 307 | 308 => {
-  if (typeof value !== "number" || !redirectStatusCodes.has(value)) {
-    throw new Error("redirect_invalid");
-  }
-  return value as 301 | 302 | 307 | 308;
 };
 
 export const filterExportBundleForScope = (
@@ -290,7 +272,7 @@ const validateBundle = async (bundle: ExportBundle) => {
   const redirectPaths = new Set<string>();
   for (const redirect of bundle.redirects) {
     assertOptionalUuid(redirect.id, "import_redirect_id_invalid");
-    const fromPath = normalizeRedirectFromPath(redirect.fromPath);
+    const fromPath = normalizeRedirectPath(redirect.fromPath);
     normalizeRedirectTarget(redirect.toPath);
     normalizeRedirectStatusCode(redirect.statusCode);
     if (redirectPaths.has(fromPath)) {
@@ -623,7 +605,7 @@ export async function importConfig(bundle: ExportBundle): Promise<ImportResult> 
 
   if (includesOption(scope, "redirects")) {
     const bundleRedirectPaths = new Set(
-      bundle.redirects.map((redirect) => normalizeRedirectFromPath(redirect.fromPath))
+      bundle.redirects.map((redirect) => normalizeRedirectPath(redirect.fromPath))
     );
     const existingRedirects = await db.select().from(redirects);
     for (const redirect of existingRedirects) {
@@ -633,7 +615,7 @@ export async function importConfig(bundle: ExportBundle): Promise<ImportResult> 
     }
 
     for (const redirect of bundle.redirects) {
-      const fromPath = normalizeRedirectFromPath(redirect.fromPath);
+      const fromPath = normalizeRedirectPath(redirect.fromPath);
       const toPath = normalizeRedirectTarget(redirect.toPath);
       const statusCode = normalizeRedirectStatusCode(redirect.statusCode);
       const [existing] = await db.select().from(redirects).where(eq(redirects.fromPath, fromPath));

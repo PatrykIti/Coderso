@@ -30,9 +30,12 @@ Current classification:
   controlled include payloads, stateful pagination, disabled action reasons,
   and real metadata-row delete; Import / Export has controlled target/include
   export, JSON-only import, mapped malformed-bundle rejection, searchable
-  session activity, and valid JSON roundtrip.
-- Partially works: Redirects save admin rows but do not affect public routing.
-- Still UI-only/incomplete: Redirects pagination. Search date range and Search
+  session activity, and valid JSON roundtrip; Redirects save admin rows, execute
+  enabled public redirects for 301/302/307/308, reject unsafe destinations,
+  expose confirmed delete, and use truthful empty/pagination states.
+- Partially works: none from the original per-tool functional findings remain
+  open after TASK-348 through TASK-353.
+- Still UI-only/incomplete: Search date range and Search
   empty-state / suggestion drift were
   closed by TASK-348 on 2026-06-01; SEO audit/filter/save drift was closed by
   TASK-349 on 2026-06-01; Analytics export/no-data/top-content range drift was
@@ -40,7 +43,8 @@ Current classification:
   drift was closed by TASK-351 on 2026-06-01; Import / Export export options,
   Activity Log availability, Recent Imports search/progress/failure, JSON-only
   copy, and malformed-ID validation drift were closed by TASK-352 on
-  2026-06-01.
+  2026-06-01; Redirects public runtime, drawer accessibility,
+  empty/pagination/delete drift was closed by TASK-353 on 2026-06-01.
 
 ## Evidence
 
@@ -72,11 +76,20 @@ Current classification:
     errors through a focused Chrome DevTools Protocol pass. The expected
     malformed-bundle 400 was observed and excluded from unexpected-error
     counts.
+  - TASK-353 follow-up tests on 2026-06-01 verified Redirects public runtime
+    status execution, disabled/no-match fallthrough, loop fail-closed behavior,
+    public API/preview/asset exclusions, route error mappings, drawer
+    accessibility wiring, empty-state CTA, local pagination, and confirmed
+    delete. Focused Playwright CLI proof also created a redirect through the
+    drawer, verified the public 301 `Location`, and deleted it through the
+    visible row action with zero browser console errors/warnings after the Vite
+    optimize cache refresh.
   - Original Import / Export pass also proved a valid JSON bundle could be
     downloaded, modified, uploaded, previewed, applied, verified through export,
     and restored.
   - Redirect was created in the UI, checked against the public runtime, and
-    deleted.
+    deleted; TASK-353 replaced the earlier 404 public-runtime outcome with
+    tested redirect execution.
 
 ## Environment Notes
 
@@ -102,6 +115,9 @@ Affected surfaces:
 
 TASK-352 status: Import / Export Activity Log and per-card chevrons are now
 disabled with explanatory labels until real routes/menus exist.
+
+TASK-353 status: Redirects pagination now has page/limit/total state and is
+hidden when no page change is possible.
 
 Why it happens:
 
@@ -151,6 +167,9 @@ Evidence:
 - Redirects persisted a 301 redirect row, but requesting the public source path
   returned 404 and stayed on the source URL.
 
+TASK-353 status: resolved on 2026-06-01. Enabled redirects now execute in
+public runtime with supported status codes and loop/open-redirect safeguards.
+
 How to fix:
 
 - Add a public redirect lookup before public page/content resolution.
@@ -160,6 +179,9 @@ How to fix:
 Affected surfaces:
 
 - Redirects table
+
+TASK-353 status: resolved on 2026-06-01. The table uses local pagination state
+and hides one-page controls.
 
 Why it happens:
 

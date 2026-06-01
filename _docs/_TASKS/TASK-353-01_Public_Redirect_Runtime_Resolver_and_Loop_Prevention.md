@@ -5,7 +5,7 @@
 **Category:** Redirects + Public Runtime + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-353
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -138,3 +138,9 @@ Regression-test shape:
 - Disabled/no-match/loop paths are safe.
 - Public redirect lookup does not shadow admin/API/media/asset routes.
 - Chain loops and unsafe destination policies are enforced and route-mapped.
+
+## Closure Notes
+
+Done (2026-06-01): `resolvePublicRedirect` normalizes internal source/target
+paths, rejects unsafe destinations, follows bounded enabled chains, detects
+loops, and is wired into public runtime before page/content lookup.

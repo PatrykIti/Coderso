@@ -2889,6 +2889,7 @@ Known import/export error codes:
 - `admin_theme_template_not_found`
 - `menu_item_link_invalid`
 - `redirect_invalid`
+- `redirect_target_external`
 
 ---
 
@@ -2927,6 +2928,24 @@ List response (array):
   }
 ]
 ```
+
+Validation and runtime contract:
+
+- `fromPath` and `toPath` are internal path strings with a 512 character
+  maximum. Both are normalized with a leading `/`; trailing slashes are removed
+  except for `/`.
+- `toPath` must stay internal. Absolute URLs, protocol-relative URLs, and
+  backslash/network-path variants are rejected with `redirect_target_external`
+  or `redirect_invalid`.
+- `statusCode` accepts only `301`, `302`, `307`, and `308`.
+- Duplicate `fromPath` rows return `redirect_exists`.
+- Missing rows return `redirect_not_found`.
+- Source-to-self redirects and redirect chains that loop return
+  `redirect_loop`.
+- Public runtime applies enabled redirects before page/content resolution and
+  after public API, preview, and site-asset exclusions. Disabled/no-match rows
+  fall through to normal public routing. Runtime loops fail closed with HTTP
+  `508`.
 
 ---
 

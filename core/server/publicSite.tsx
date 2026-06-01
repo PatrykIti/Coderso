@@ -47,6 +47,7 @@ import { resolvePublicSeoMetadata } from "../services/seo/seoService";
 import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
 import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
+import { resolvePublicRedirect } from "../services/redirects/redirectService";
 import type { ContentSchema } from "../services/content/validation";
 import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
 import { getWidgetTemplateLayoutSettings } from "../services/widgets/widgetTemplateSettings";
@@ -1355,6 +1356,22 @@ export async function handlePublicRequest(req: Request) {
         throw error;
       }
     }
+  }
+
+  try {
+    const redirect = await resolvePublicRedirect(url.pathname);
+    if (redirect) {
+      const location = new URL(redirect.location, url);
+      return Response.redirect(location.toString(), redirect.statusCode);
+    }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message === "redirect_loop" || error.message === "redirect_target_external")
+    ) {
+      return new Response("Redirect Loop", { status: 508 });
+    }
+    throw error;
   }
 
   const slugPath = normalizeSitePath(url.pathname);
