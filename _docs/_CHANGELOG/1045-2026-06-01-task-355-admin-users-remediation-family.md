@@ -49,12 +49,37 @@ Tasks: TASK-355, TASK-355-01, TASK-355-02, TASK-355-03, TASK-355-04, TASK-355-05
 - Split user lifecycle writes from role-assignment writes: status/delete can use
   `users:write`, while edit/invite role assignment still requires `roles:read`.
 
+### TASK-355-02 Login-Capable Invite and Reset
+
+- Added a real admin set-password invite endpoint and typed client. Invites now
+  create `pending` users, issue hashed single-use tokens, and send the token
+  only through configured email delivery.
+- Added admin-triggered password reset delivery through
+  `POST /admin-users/:id/password-reset`, guarded by `users:write`, strict
+  `{ delivery: "email" }` validation, CSRF/admin-write middleware, audit
+  metadata without tokens, and mapped delivery errors.
+- Removed the normal admin `password` create/update path from HTTP schemas,
+  client types, and service inputs so admins no longer set another user's
+  password directly.
+- Reset tokens now invalidate prior outstanding tokens and expose stable
+  `set_password_token_invalid`, `set_password_token_expired`, and
+  `set_password_token_used` route errors.
+- `/auth/reset` now sends the configured set-password email instead of creating
+  and discarding a token, and `/auth/reset/confirm` activates only `pending`
+  users after a successful password set.
+- Users UI now opens a confirm dialog for `Reset password`, keeps invite errors
+  visible without closing the dialog, removes the reset no-op marker, and routes
+  `UserEditor` create mode through the same invitation delivery path.
+
 ## Validation
 
 - `bun run test:vitest -- tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/users-roles.test.tsx tests/vitest/ui-integration/users.test.tsx tests/vitest/ui-integration/roles.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx tests/vitest/ui/user-list-filters-wave.test.tsx`
 - `set -a && source .env && set +a && bun test tests/integration/routes/auth.test.ts tests/integration/routes/adminUsers.test.ts tests/integration/routes/adminRoles.test.ts tests/unit/auth/rbac.test.ts`
+- `bun run test:vitest -- tests/vitest/admin/adminUsersClient.test.ts tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/invite-user.test.tsx tests/vitest/ui/user-editor-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx`
+- `set -a && source .env && set +a && bun test tests/unit/auth/passwordResetService.test.ts tests/integration/routes/adminUsers.test.ts tests/integration/routes/auth.test.ts tests/unit/admin/usersService.test.ts tests/unit/email/emailSettingsService.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run gates:coderso`
 - `bun run scan:semgrep` (0 findings; one non-blocking Semgrep rule timeout in
   `core/db/schema.ts`)
 - `bun run scan:trivy` (0 HIGH/CRITICAL vuln findings, 0 Dockerfile

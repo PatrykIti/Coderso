@@ -9,7 +9,11 @@ import { Separator } from "@/components/ui/separator";
 import { AuthShell } from "@/ui/layouts/AuthShell";
 import { InfoBanner } from "@/ui/auth/InfoBanner";
 import { isApiClientError } from "@/services/apiClient";
-import { getAuthBotProtection, requestPasswordReset, type BotProtectionConfig } from "@/services/authClient";
+import {
+  getAuthBotProtection,
+  requestPasswordReset,
+  type BotProtectionConfig,
+} from "@/services/authClient";
 import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 import { executeRecaptcha } from "@/ui/auth/recaptcha";
 
@@ -108,19 +112,17 @@ export function ResetPasswordPage({
         <CardContent className="space-y-6 p-8">
           <div className="space-y-2 text-center">
             <h1 className="text-2xl font-semibold">Reset password</h1>
-            <p className="text-sm text-muted-foreground">
-              Recover access to your Coderso account.
-            </p>
+            <p className="text-sm text-muted-foreground">Recover access to your Coderso account.</p>
           </div>
           {success ? (
             <InfoBanner
               title="Reset link sent"
-              description="Check your inbox for a secure reset link. It expires in 1 hour."
+              description="Check your inbox for a secure reset link."
             />
           ) : (
             <InfoBanner
               title="Need help?"
-              description="Enter your email to receive a secure reset link. It will expire in 1 hour."
+              description="Enter your email to receive a secure reset link."
             />
           )}
           <form className="space-y-4" onSubmit={handleSubmit}>
@@ -156,7 +158,7 @@ export function ResetPasswordPage({
         <CardFooter className="flex flex-col gap-3">
           <Separator />
           <p className="text-xs text-muted-foreground">
-            For security reasons, this link expires in 1 hour.
+            For security reasons, reset links expire after the configured reset window.
           </p>
         </CardFooter>
       </Card>

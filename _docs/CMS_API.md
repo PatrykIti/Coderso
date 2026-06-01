@@ -91,10 +91,12 @@ Permissions: `users:read`, `users:write`
 
 - `GET /admin-users`
 - `POST /admin-users`
+- `POST /admin-users/invite`
 - `PATCH /admin-users/:id`
 - `POST /admin-users/:id/disable`
 - `POST /admin-users/:id/enable`
 - `PUT /admin-users/:id/roles`
+- `POST /admin-users/:id/password-reset`
 - `DELETE /admin-users/:id`
 
 Create user payload (summary):
@@ -104,8 +106,18 @@ Create user payload (summary):
   "name": "Alex Morgan",
   "email": "alex@example.com",
   "roleIds": ["editor"],
-  "status": "pending",
-  "password": "optional"
+  "status": "pending"
+}
+```
+
+Invite user payload (summary):
+
+```json
+{
+  "name": "Alex Morgan",
+  "email": "alex@example.com",
+  "roleIds": ["editor"],
+  "sendSetPasswordInvite": true
 }
 ```
 
@@ -124,6 +136,29 @@ Replace roles payload:
 ```json
 { "roleIds": ["editor", "viewer"] }
 ```
+
+Password reset payload:
+
+```json
+{ "delivery": "email" }
+```
+
+Invite/reset responses return delivery status and never return the reset token:
+
+```json
+{
+  "delivery": "email",
+  "status": "sent",
+  "expiresAt": "2026-06-01T11:00:00.000Z"
+}
+```
+
+Relevant errors:
+
+- `email_not_configured` when Settings -> Email is not configured.
+- `email_send_failed` when SMTP delivery fails.
+- `set_password_token_invalid`, `set_password_token_expired`,
+  `set_password_token_used` on reset-confirm.
 
 ---
 

@@ -25,6 +25,8 @@ const listAdminUsers = vi.fn();
 const createAdminUser = vi.fn();
 const updateAdminUser = vi.fn();
 const replaceAdminUserRoles = vi.fn();
+const inviteUserWithSetPassword = vi.fn();
+const requestAdminPasswordReset = vi.fn();
 const enableAdminUser = vi.fn();
 const disableAdminUser = vi.fn();
 const deleteAdminUser = vi.fn();
@@ -44,6 +46,8 @@ vi.mock("@/services/adminUsersClient", () => ({
   createAdminUser,
   updateAdminUser,
   replaceAdminUserRoles,
+  inviteUserWithSetPassword,
+  requestAdminPasswordReset,
   enableAdminUser,
   disableAdminUser,
   deleteAdminUser,

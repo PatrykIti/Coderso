@@ -198,9 +198,6 @@ const user = {
 
 const roles = [{ id: "admin", name: "Admin", permissions: ["*"] }];
 
-const resetPasswordReason =
-  "Reset password is not wired yet. TASK-355-02 owns the reset-token flow.";
-
 test("Users report no-op controls are disabled with explicit reasons", () => {
   const root = asDocument(
     <div>
@@ -216,14 +213,12 @@ test("Users report no-op controls are disabled with explicit reasons", () => {
       <UserDetailsDrawer
         user={user}
         roles={roles}
-        resetPasswordUnavailableReason={resetPasswordReason}
         onEditUser={() => undefined}
         onResetPassword={() => undefined}
       />
       <UserList
         items={[user]}
         roles={roles}
-        resetPasswordUnavailableReason={resetPasswordReason}
         onSelect={() => undefined}
         onEdit={() => undefined}
         onToggleStatus={() => undefined}
@@ -239,13 +234,6 @@ test("Users report no-op controls are disabled with explicit reasons", () => {
       controlId: "users-advanced-filters",
       expected: "disabled",
       reasonPattern: /Advanced user filters.*not wired yet/,
-      report: "REPORT_ADMIN_USERS.md",
-    },
-    {
-      area: "Users",
-      controlId: "users-reset-password",
-      expected: "disabled",
-      reasonPattern: /Reset password.*TASK-355-02/,
       report: "REPORT_ADMIN_USERS.md",
     },
     {

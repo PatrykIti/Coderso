@@ -279,7 +279,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("UserEditor create mode updates draft, toggles invite, and saves selected roles", () => {
+test("UserEditor create mode updates draft and saves selected roles as pending invite", () => {
   const onOpenChange = vi.fn();
   const onSave = vi.fn();
 
@@ -288,7 +288,7 @@ test("UserEditor create mode updates draft, toggles invite, and saves selected r
   try {
     expect(view.container.textContent).toContain("Invite new user");
     expect(view.container.textContent).toContain("0 selected");
-    expect(view.container.textContent).toContain("Send invite email");
+    expect(view.container.textContent).not.toContain("Send invite email");
 
     const saveButton = clickByText(view.container, "Invite user");
     expect(saveButton.disabled).toBe(true);
@@ -299,7 +299,6 @@ test("UserEditor create mode updates draft, toggles invite, and saves selected r
         view.container.querySelector('input[placeholder="name@company.com"]'),
         "ada@example.com"
       );
-      setSelectValue(view.container.querySelector("select"), "pending");
       setCheckboxValue(findCheckboxByRoleLabel(view.container, "Admin"), true);
       setCheckboxValue(findCheckboxByRoleLabel(view.container, "Viewer"), true);
     });
@@ -308,10 +307,6 @@ test("UserEditor create mode updates draft, toggles invite, and saves selected r
       view.container.querySelectorAll('input[type="checkbox"]')
     ) as HTMLInputElement[];
     expect(checkboxes.at(-1)?.checked).toBe(true);
-
-    React.act(() => {
-      setCheckboxValue(checkboxes.at(-1), false);
-    });
 
     clickByText(view.container, "Invite user");
 

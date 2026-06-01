@@ -14,12 +14,13 @@ import {
   updateAdminRole,
 } from "@/services/adminRolesClient";
 import {
-  createAdminUser,
   deleteAdminUser,
   disableAdminUser,
   enableAdminUser,
+  inviteUserWithSetPassword,
   listAdminUsers,
   replaceAdminUserRoles,
+  requestAdminPasswordReset,
   updateAdminUser,
   type AdminUser,
 } from "@/services/adminUsersClient";
@@ -27,6 +28,7 @@ import { SplitShell } from "@/ui/layouts/SplitShell";
 import { useAdminAuth } from "@/ui/contexts/AdminAuthContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { SectionHeader } from "@/ui/shared/SectionHeader";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
 import { RoleEditor } from "../roles/RoleEditor";
 import { RoleList } from "../roles/RoleList";
@@ -42,8 +44,6 @@ import type { UserDraft, UserSummary } from "./types";
 const hasPermission = (permissions: string[], permission: string) =>
   permissions.includes("*") || permissions.includes(permission);
 
-const resetPasswordUnavailableReason =
-  "Reset password is not wired yet. TASK-355-02 owns the reset-token flow.";
 const roleFilterUnavailableReason =
   "Role filtering requires roles:read permission. TASK-355-01 keeps the Users list readable without fetching roles.";
 const roleDetailsUnavailableReason =
@@ -106,6 +106,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
   const [userEditorOpen, setUserEditorOpen] = useState(false);
   const [roleEditorOpen, setRoleEditorOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [passwordResetUser, setPasswordResetUser] = useState<UserSummary | null>(null);
   const [userEditorSeed, setUserEditorSeed] = useState(0);
   const [roleEditorSeed, setRoleEditorSeed] = useState(0);
   const [inviteDialogSeed, setInviteDialogSeed] = useState(0);
@@ -114,6 +115,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const canReadUsers = canAccess("users:read");
   const canManageUsers = canAccess("users:write");
@@ -191,6 +193,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
     }
     setIsLoading(true);
     setError(null);
+    setNotice(null);
     try {
       applyResources(await loadResources());
     } catch (err) {
@@ -288,8 +291,10 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
     }
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       let selectedId: string | null = null;
+      let noticeMessage: string | null = null;
       if (mode === "edit" && editingUser) {
         await updateAdminUser(editingUser.id, {
           name: draft.name,
@@ -299,17 +304,21 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
         await replaceAdminUserRoles(editingUser.id, draft.roleIds);
         selectedId = editingUser.id;
       } else {
-        const created = await createAdminUser({
+        const created = await inviteUserWithSetPassword({
           name: draft.name,
           email: draft.email,
           roleIds: draft.roleIds,
-          status: draft.status,
+          sendSetPasswordInvite: true,
         });
-        selectedId = created.id;
+        selectedId = created.user.id;
+        noticeMessage = `Invitation email sent to ${created.user.email}.`;
       }
       await refresh();
       if (selectedId) {
         setPendingSelectUserId(selectedId);
+      }
+      if (noticeMessage) {
+        setNotice(noticeMessage);
       }
     } catch (err) {
       setError(resolveErrorMessage(err, "Failed to save user."));
@@ -319,15 +328,31 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
   };
 
   const handleInviteUser = async (values: InviteUserValues) => {
-    await handleSaveUser(
-      {
+    if (!canReadUsers || !canManageUsers || !canReadRoles) {
+      const message = "Inviting users requires users:write and roles:read permissions.";
+      setError(message);
+      throw new Error(message);
+    }
+    setIsSaving(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await inviteUserWithSetPassword({
         name: values.name,
         email: values.email,
         roleIds: [values.roleId],
-        status: "pending",
-      },
-      "create"
-    );
+        sendSetPasswordInvite: true,
+      });
+      await refresh();
+      setPendingSelectUserId(result.user.id);
+      setNotice(`Invitation email sent to ${result.user.email}.`);
+    } catch (err) {
+      const message = resolveErrorMessage(err, "Failed to send invitation.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveRole = async (draft: RoleDraft, mode: "create" | "edit") => {
@@ -337,6 +362,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
     }
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       let selectedId: string | null = null;
       if (mode === "edit" && editingRole) {
@@ -364,6 +390,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
     }
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       if (user.status === "inactive") {
         await enableAdminUser(user.id);
@@ -387,6 +414,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
     if (protectedUserIds.includes(user.id)) return;
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       await deleteAdminUser(user.id);
       await refresh();
@@ -405,6 +433,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
     if (role.system || role.name.toLowerCase() === "admin") return;
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       await deleteAdminRole(role.id);
       await refresh();
@@ -422,6 +451,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
     }
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       const created = await createAdminRole({
         name: `${role.name} copy`,
@@ -467,6 +497,31 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
     handleSelectUser(user.id);
   };
 
+  const openPasswordResetDialog = (user: UserSummary) => {
+    if (!canReadUsers || !canManageUsers) {
+      setError("Password resets require users:write permission.");
+      return;
+    }
+    setPasswordResetUser(user);
+  };
+
+  const handleConfirmPasswordReset = async () => {
+    if (!passwordResetUser) return;
+    setIsSaving(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await requestAdminPasswordReset(passwordResetUser.id);
+      setNotice(`Password reset email sent to ${passwordResetUser.email}.`);
+    } catch (err) {
+      const message = resolveErrorMessage(err, "Failed to send password reset email.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const readOnly =
     hasAnyReadAccess && (!canManageUsers || !canManageRoles || !canReadUsers || !canReadRoles);
   const userActionsEnabled =
@@ -509,10 +564,11 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
           user={selectedUser}
           roles={roles}
           canManageUsers={userActionsEnabled}
+          canEditUser={userActionsEnabled}
+          canResetPassword={userLifecycleActionsEnabled}
           roleDetailsUnavailableReason={canReadRoles ? undefined : roleDetailsUnavailableReason}
-          resetPasswordUnavailableReason={resetPasswordUnavailableReason}
           onEditUser={() => selectedUser && openUserEditor(selectedUser)}
-          onResetPassword={() => undefined}
+          onResetPassword={() => selectedUser && openPasswordResetDialog(selectedUser)}
         />
       }
       breadcrumbs={["Settings", "Users & Roles"]}
@@ -558,6 +614,12 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
+        {notice ? (
+          <Alert>
+            <AlertTitle>Users & Roles updated</AlertTitle>
+            <AlertDescription>{notice}</AlertDescription>
+          </Alert>
+        ) : null}
         {isLoading ? (
           <div className="rounded-xl border bg-card/60 p-4 text-sm text-muted-foreground">
             Loading users and roles...
@@ -594,12 +656,11 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
               canManageUserLifecycle={userLifecycleActionsEnabled}
               canResetPassword={userLifecycleActionsEnabled}
               roleDetailsUnavailableReason={canReadRoles ? undefined : roleDetailsUnavailableReason}
-              resetPasswordUnavailableReason={resetPasswordUnavailableReason}
               onSelect={handleSelectUser}
               onViewProfile={handleViewProfile}
               onEdit={openUserEditor}
               onToggleStatus={handleToggleStatus}
-              onResetPassword={() => undefined}
+              onResetPassword={openPasswordResetDialog}
               onDelete={handleDeleteUser}
             />
           </>
@@ -675,6 +736,21 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
         onSave={handleSaveRole}
         permissionGroups={permissionGroups}
       />
+      <ConfirmActionDialog
+        open={Boolean(passwordResetUser)}
+        onOpenChange={(open) => {
+          if (!open) setPasswordResetUser(null);
+        }}
+        title="Reset password"
+        description="Send a single-use set-password email to this user."
+        targetLabel={passwordResetUser?.email}
+        confirmLabel="Send reset email"
+        confirmingLabel="Sending..."
+        tone="warning"
+        closeOnSuccess
+        isConfirming={isSaving}
+        onConfirm={handleConfirmPasswordReset}
+      />
       {!isLargeScreen ? (
         <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
           <SheetContent side="right" className="w-full sm:max-w-md">
@@ -688,10 +764,11 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
               user={selectedUser}
               roles={roles}
               canManageUsers={userActionsEnabled}
+              canEditUser={userActionsEnabled}
+              canResetPassword={userLifecycleActionsEnabled}
               roleDetailsUnavailableReason={canReadRoles ? undefined : roleDetailsUnavailableReason}
-              resetPasswordUnavailableReason={resetPasswordUnavailableReason}
               onEditUser={() => selectedUser && openUserEditor(selectedUser)}
-              onResetPassword={() => undefined}
+              onResetPassword={() => selectedUser && openPasswordResetDialog(selectedUser)}
             />
           </SheetContent>
         </Sheet>

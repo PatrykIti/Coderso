@@ -58,6 +58,11 @@ Poza zakresem v1:
   `users:read` laduje users, `roles:read` laduje roles i permission catalog.
 - Mutacje userow wymagaja `users:write` oraz `roles:read`, gdy zmieniaja
   przypisanie roli. Mutacje roli wymagaja `roles:write`.
+- Zaproszenia userow sa login-capable: admin nie wpisuje hasla innej osoby,
+  tylko wysyla email z jednorazowym linkiem do ustawienia hasla.
+- Admin reset hasla uzywa `POST /admin-users/:id/password-reset`, wymaga
+  `users:write`, CSRF oraz skonfigurowanego email delivery, i zapisuje audit
+  event bez tokenu.
 - UI blokuje usuniecie ostatniego admina.
 - Ostatni admin nie moze utracic roli admin do czasu utworzenia kolejnego.
 - Uzytkownicy zapraszani startuja ze statusem `pending`.
@@ -66,10 +71,19 @@ Poza zakresem v1:
 
 - Token resetu w DB z TTL.
 - TTL source: `settings["auth.resetTtlMinutes"]` (default `60`, zakres `5..1440`), fallback do `60`.
-- Email poza zakresem v1.
-- UI: `/auth/reset` wysyla email, `/auth/reset/confirm` ustawia nowe haslo.
+- Nowy token uniewaznia poprzednie niewykorzystane tokeny dla tego usera.
+- Token jest hashowany w DB; plaintext wystepuje tylko w jednorazowym linku
+  email i nie jest zwracany do API clienta, audit logow ani delivery logs.
+- Email delivery korzysta z Settings -> Email. Gdy email nie jest
+  skonfigurowany, admin invite/reset zwraca blokujacy `email_not_configured`.
+- UI: `/auth/reset` wysyla email, `/auth/reset/confirm` ustawia nowe haslo i
+  aktywuje tylko konta `pending`.
 - Bledy walidacji i nieprawidlowy token pokazywane w UI.
- - Endpointy zwracaja `{ ok: true }` bez ujawniania czy email istnieje.
+- Token errors mapuja sie na stabilne kody:
+  `set_password_token_invalid`, `set_password_token_expired`,
+  `set_password_token_used`.
+- Publiczny reset request zwraca `{ ok: true }` bez ujawniania czy email
+  istnieje, po przejsciu globalnej kontroli konfiguracji email.
 
 ## MFA (v2)
 

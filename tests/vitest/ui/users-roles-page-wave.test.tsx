@@ -14,6 +14,8 @@ const listAdminUsers = vi.fn();
 const createAdminUser = vi.fn();
 const updateAdminUser = vi.fn();
 const replaceAdminUserRoles = vi.fn();
+const inviteUserWithSetPassword = vi.fn();
+const requestAdminPasswordReset = vi.fn();
 const enableAdminUser = vi.fn();
 const disableAdminUser = vi.fn();
 const deleteAdminUser = vi.fn();
@@ -84,9 +86,44 @@ vi.mock("@/services/adminUsersClient", () => ({
   createAdminUser,
   updateAdminUser,
   replaceAdminUserRoles,
+  inviteUserWithSetPassword,
+  requestAdminPasswordReset,
   enableAdminUser,
   disableAdminUser,
   deleteAdminUser,
+}));
+
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    targetLabel,
+    onConfirm,
+    onOpenChange,
+  }: {
+    open: boolean;
+    title?: string;
+    targetLabel?: string;
+    onConfirm?: () => void | Promise<void>;
+    onOpenChange?: (open: boolean) => void;
+  }) =>
+    open ? (
+      <div data-testid="confirm-action-dialog">
+        <div>{title}</div>
+        <div data-testid="confirm-target">{targetLabel}</div>
+        <button
+          type="button"
+          onClick={() => {
+            void Promise.resolve(onConfirm?.()).then(() => onOpenChange?.(false));
+          }}
+        >
+          confirm-password-reset
+        </button>
+        <button type="button" onClick={() => onOpenChange?.(false)}>
+          cancel-password-reset
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("../../../core/admin/ui/users/UserFilters", () => ({
@@ -144,6 +181,7 @@ vi.mock("../../../core/admin/ui/users/UserList", () => ({
     onViewProfile,
     onEdit,
     onToggleStatus,
+    onResetPassword,
     onDelete,
   }: {
     items: Array<{ id: string; name: string }>;
@@ -158,6 +196,7 @@ vi.mock("../../../core/admin/ui/users/UserList", () => ({
     onViewProfile?: (user: { id: string; name: string }) => void;
     onEdit: (user: { id: string; name: string }) => void;
     onToggleStatus: (user: { id: string; name: string }) => void;
+    onResetPassword: (user: { id: string; name: string }) => void;
     onDelete: (user: { id: string; name: string }) => void;
   }) => (
     <div>
@@ -184,6 +223,13 @@ vi.mock("../../../core/admin/ui/users/UserList", () => ({
         onClick={() => items[0] && onToggleStatus(items[0])}
       >
         toggle-first-user
+      </button>
+      <button
+        type="button"
+        disabled={!canResetPassword}
+        onClick={() => items[0] && onResetPassword(items[0])}
+      >
+        reset-first-user
       </button>
       <button
         type="button"
@@ -239,16 +285,23 @@ vi.mock("../../../core/admin/ui/users/UserDetailsDrawer", () => ({
     user,
     canManageUsers,
     onEditUser,
+    onResetPassword,
+    canResetPassword,
   }: {
     user?: { name?: string } | null;
     canManageUsers?: boolean;
     onEditUser?: () => void;
+    onResetPassword?: () => void;
+    canResetPassword?: boolean;
   }) => (
     <div>
       <div data-testid="details-user">{user?.name ?? "none"}</div>
       <div data-testid="details-can-manage">{String(Boolean(canManageUsers))}</div>
       <button type="button" onClick={onEditUser}>
         details-edit-user
+      </button>
+      <button type="button" disabled={!canResetPassword} onClick={onResetPassword}>
+        details-reset-password
       </button>
     </div>
   ),
@@ -527,6 +580,28 @@ beforeEach(() => {
   listAdminRoles.mockResolvedValue([editorRole, adminRole]);
   listPermissionCatalog.mockResolvedValue([]);
   createAdminUser.mockResolvedValue({ id: "user-3" });
+  inviteUserWithSetPassword.mockResolvedValue({
+    user: {
+      id: "user-3",
+      name: "Invited User",
+      email: "invite@example.com",
+      roleIds: ["editor"],
+      status: "pending",
+      createdAt: "2026-03-03T10:00:00.000Z",
+      updatedAt: "2026-03-03T10:00:00.000Z",
+      lastLoginAt: null,
+    },
+    setPassword: {
+      delivery: "email",
+      status: "sent",
+      expiresAt: "2026-03-03T11:00:00.000Z",
+    },
+  });
+  requestAdminPasswordReset.mockResolvedValue({
+    delivery: "email",
+    status: "sent",
+    expiresAt: "2026-03-03T11:00:00.000Z",
+  });
   createAdminRole.mockResolvedValue({ id: "role-3" });
   updateAdminRole.mockResolvedValue({ id: "editor" });
 });
@@ -574,6 +649,13 @@ test("UsersRolesPage orchestrates filters and user-role management flows", async
       "Bob Editor"
     );
 
+    clickByText(view.container, "reset-first-user");
+    expect(view.container.querySelector('[data-testid="confirm-target"]')?.textContent).toContain(
+      "bob@example.com"
+    );
+    clickByText(view.container, "confirm-password-reset");
+    await flush();
+
     clickByText(view.container, "Invite User");
     clickByText(view.container, "submit-invite");
     await flush();
@@ -608,12 +690,14 @@ test("UsersRolesPage orchestrates filters and user-role management flows", async
     clickByText(view.container, "delete-first-role");
     await flush();
 
-    expect(createAdminUser).toHaveBeenCalledWith({
+    expect(requestAdminPasswordReset).toHaveBeenCalledWith("user-2");
+    expect(inviteUserWithSetPassword).toHaveBeenCalledWith({
       name: "Invited User",
       email: "invite@example.com",
       roleIds: ["editor"],
-      status: "pending",
+      sendSetPasswordInvite: true,
     });
+    expect(createAdminUser).not.toHaveBeenCalled();
     expect(updateAdminUser).toHaveBeenCalledWith("user-2", {
       name: "Bob Editor Updated",
       email: "updated@example.com",
@@ -694,16 +778,24 @@ test("UsersRolesPage separates user lifecycle writes from role-assignment writes
     expect(
       view.container.querySelector('[data-testid="user-list-can-lifecycle"]')?.textContent
     ).toBe("true");
+    expect(view.container.querySelector('[data-testid="user-list-can-reset"]')?.textContent).toBe(
+      "true"
+    );
 
     expect(findButtonByText(view.container, "edit-first-user")?.disabled).toBe(true);
     expect(findButtonByText(view.container, "toggle-first-user")?.disabled).toBe(false);
+    expect(findButtonByText(view.container, "reset-first-user")?.disabled).toBe(false);
     expect(findButtonByText(view.container, "delete-first-user")?.disabled).toBe(false);
 
+    clickByText(view.container, "reset-first-user");
+    clickByText(view.container, "confirm-password-reset");
+    await flush();
     clickByText(view.container, "toggle-first-user");
     await flush();
     clickByText(view.container, "delete-first-user");
     await flush();
 
+    expect(requestAdminPasswordReset).toHaveBeenCalledWith("user-1");
     expect(disableAdminUser).toHaveBeenCalledWith("user-1");
     expect(deleteAdminUser).toHaveBeenCalledWith("user-1");
   } finally {

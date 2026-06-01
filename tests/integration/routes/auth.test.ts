@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { ApiError } from "../../../core/server/errorHandler";
 import type { RouteContext, RouteHandler } from "../../../core/server/router";
 import { registerAuthRoutes } from "../../../core/server/routes/authRoutes";
+import type { AuditEvent, AuditRecord } from "../../../core/services/audit/auditService";
 
 type Route = { method: string; path: string; handlers: RouteHandler[] };
 
@@ -42,6 +43,16 @@ const findRoute = (routes: Route[], method: string, path: string) => {
   if (!route) throw new Error(`Missing route ${method} ${path}`);
   return route;
 };
+
+const makeAuditRecord = (event: AuditEvent): AuditRecord => ({
+  id: `audit-${event.action}`,
+  actorId: event.actorId ?? null,
+  action: event.action,
+  targetType: event.targetType,
+  targetId: event.targetId,
+  metadata: event.metadata ?? {},
+  createdAt: new Date("2026-06-01T10:00:00.000Z"),
+});
 
 test("registerAuthRoutes wires auth endpoints", () => {
   const { router, routes } = makeRouter();
@@ -216,3 +227,84 @@ test("auth/me maps malformed permission snapshots", async () => {
     expect(apiError.status).toBe(500);
   }
 });
+
+test("auth/reset/confirm activates pending users and revokes sessions", async () => {
+  const { router, routes } = makeRouter();
+  const passwordUpdates: unknown[] = [];
+  const revoked: string[] = [];
+  const auditEvents: unknown[] = [];
+
+  registerAuthRoutes(router as unknown as Parameters<typeof registerAuthRoutes>[0], {
+    requireAuth: async () => undefined,
+    validate: () => undefined,
+    consumeResetTokenWithStatus: async () => ({
+      ok: true,
+      reset: {
+        id: "reset-1",
+        userId: "user-1",
+        tokenHash: "hash",
+        expiresAt: new Date("2026-06-01T11:00:00.000Z"),
+        usedAt: new Date("2026-06-01T10:00:00.000Z"),
+        createdAt: new Date("2026-06-01T09:00:00.000Z"),
+        updatedAt: new Date("2026-06-01T10:00:00.000Z"),
+      },
+    }),
+    hashPassword: async () => "hashed-password",
+    updatePassword: async (userId, options) => {
+      passwordUpdates.push({ userId, options });
+      return { id: userId } as never;
+    },
+    revokeAllSessions: async (userId) => {
+      revoked.push(userId);
+    },
+    logAudit: async (entry) => {
+      auditEvents.push(entry);
+      return makeAuditRecord(entry);
+    },
+  });
+
+  const result = await runRoute(findRoute(routes, "POST", "/auth/reset/confirm"), {
+    body: { token: "reset-token", password: "New-password-123" },
+  });
+
+  expect(result).toEqual({ ok: true });
+  expect(passwordUpdates).toEqual([
+    { userId: "user-1", options: { passwordHash: "hashed-password", activatePending: true } },
+  ]);
+  expect(revoked).toEqual(["user-1"]);
+  expect(auditEvents).toEqual([
+    expect.objectContaining({
+      actorId: "user-1",
+      action: "auth.reset.confirm",
+      targetId: "user-1",
+    }),
+  ]);
+});
+
+for (const code of [
+  "set_password_token_invalid",
+  "set_password_token_expired",
+  "set_password_token_used",
+] as const) {
+  test(`auth/reset/confirm maps ${code}`, async () => {
+    const { router, routes } = makeRouter();
+
+    registerAuthRoutes(router as unknown as Parameters<typeof registerAuthRoutes>[0], {
+      requireAuth: async () => undefined,
+      validate: () => undefined,
+      consumeResetTokenWithStatus: async () => ({ ok: false, code }),
+    });
+
+    try {
+      await runRoute(findRoute(routes, "POST", "/auth/reset/confirm"), {
+        body: { token: "reset-token", password: "New-password-123" },
+      });
+      throw new Error("Expected set-password token rejection");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.code).toBe(code);
+      expect(apiError.status).toBe(400);
+    }
+  });
+}

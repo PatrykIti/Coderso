@@ -23,7 +23,15 @@ import {
   authResetSchema,
   authVerifyOtpSchema,
 } from "../validation/authSchemas";
-import { consumeResetToken, createResetToken } from "../../services/auth/passwordResetService";
+import {
+  consumeResetTokenWithStatus,
+  createResetToken,
+  invalidateResetTokensForUser,
+} from "../../services/auth/passwordResetService";
+import {
+  assertSetPasswordEmailConfigured,
+  sendSetPasswordEmail,
+} from "../../services/auth/setPasswordEmailService";
 import {
   getAdminPermissionSnapshot,
   type AdminPermissionSnapshot,
@@ -33,6 +41,15 @@ export type AuthRouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
   validate: (schema: unknown, payload: unknown) => void;
   resolvePermissionSnapshot?: (userId: string) => Promise<AdminPermissionSnapshot>;
+  consumeResetTokenWithStatus?: typeof consumeResetTokenWithStatus;
+  createResetToken?: typeof createResetToken;
+  invalidateResetTokensForUser?: typeof invalidateResetTokensForUser;
+  assertSetPasswordEmailConfigured?: typeof assertSetPasswordEmailConfigured;
+  sendSetPasswordEmail?: typeof sendSetPasswordEmail;
+  hashPassword?: typeof hashPassword;
+  updatePassword?: typeof updatePassword;
+  revokeAllSessions?: typeof revokeAllSessions;
+  logAudit?: typeof logAudit;
 };
 
 type LoginBody = { email: string; password: string; captchaToken?: string };
@@ -143,6 +160,17 @@ function toCurrentAdminUser(
 
 export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
   const { requireAuth, validate, resolvePermissionSnapshot = getAdminPermissionSnapshot } = deps;
+  const consumeSetPasswordToken = deps.consumeResetTokenWithStatus ?? consumeResetTokenWithStatus;
+  const createPasswordResetToken = deps.createResetToken ?? createResetToken;
+  const invalidatePasswordResetTokens =
+    deps.invalidateResetTokensForUser ?? invalidateResetTokensForUser;
+  const assertPasswordEmailConfigured =
+    deps.assertSetPasswordEmailConfigured ?? assertSetPasswordEmailConfigured;
+  const deliverSetPasswordEmail = deps.sendSetPasswordEmail ?? sendSetPasswordEmail;
+  const hashPasswordValue = deps.hashPassword ?? hashPassword;
+  const updateUserPassword = deps.updatePassword ?? updatePassword;
+  const revokeUserSessions = deps.revokeAllSessions ?? revokeAllSessions;
+  const writeAudit = deps.logAudit ?? logAudit;
 
   router.get("/auth/bot-protection", async () => {
     const settings = await getSecuritySettings();
@@ -191,7 +219,7 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
     ctx.setCookie?.(SESSION_COOKIE_NAME, token, buildSessionCookieOptions(ttlDays));
 
     await updateLastLogin(user.id);
-    await logAudit({
+    await writeAudit({
       actorId: user.id,
       action: "auth.login",
       targetType: "user",
@@ -207,7 +235,7 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
         (securitySettings.loginAlerts.notifyOnNewLocation && alertFlags.newLocation));
 
     if (shouldAlert) {
-      await logAudit({
+      await writeAudit({
         actorId: user.id,
         action: "auth.login.alert",
         targetType: "user",
@@ -236,7 +264,7 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
     }
     ctx.clearCookie?.(SESSION_COOKIE_NAME);
     if (ctx.user?.id) {
-      await logAudit({
+      await writeAudit({
         actorId: ctx.user.id,
         action: "auth.logout",
         targetType: "user",
@@ -308,14 +336,41 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
       settings: securitySettings.botProtection,
     });
 
+    try {
+      await assertPasswordEmailConfigured();
+    } catch (error) {
+      if (error instanceof Error && error.message === "email_not_configured") {
+        throw new ApiError("email_not_configured", "Email delivery is not configured", 400);
+      }
+      throw error;
+    }
+
     const user = await getUserByEmail(body.email);
     if (!user) {
       return { ok: true };
     }
 
-    await createResetToken(user.id);
+    const reset = await createPasswordResetToken(user.id);
 
-    await logAudit({
+    try {
+      await deliverSetPasswordEmail({
+        user: { email: resolveUserEmail(user), name: user.name ?? null },
+        token: reset.token,
+        expiresAt: reset.expiresAt,
+        reason: "reset",
+      });
+    } catch (error) {
+      await invalidatePasswordResetTokens(user.id).catch(() => undefined);
+      if (error instanceof Error && error.message === "email_send_failed") {
+        throw new ApiError("email_send_failed", "Reset email could not be sent", 400);
+      }
+      if (error instanceof Error && error.message === "email_not_configured") {
+        throw new ApiError("email_not_configured", "Email delivery is not configured", 400);
+      }
+      throw error;
+    }
+
+    await writeAudit({
       actorId: null,
       action: "auth.reset.request",
       targetType: "user",
@@ -332,20 +387,26 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
     validate(authResetConfirmSchema, ctx.body);
     const body = ctx.body as ResetConfirmBody;
 
-    const reset = await consumeResetToken(body.token);
-    if (!reset) {
-      throw new ApiError("reset_invalid", "Reset token invalid or expired", 400);
+    const reset = await consumeSetPasswordToken(body.token);
+    if (!reset.ok) {
+      throw new ApiError(reset.code, "Set-password token is invalid or expired", 400);
     }
 
-    const passwordHash = await hashPassword(body.password);
-    await updatePassword(reset.userId, passwordHash);
-    await revokeAllSessions(reset.userId);
+    const passwordHash = await hashPasswordValue(body.password);
+    const updated = await updateUserPassword(reset.reset.userId, {
+      passwordHash,
+      activatePending: true,
+    });
+    if (!updated) {
+      throw new ApiError("set_password_user_not_found", "Set-password user not found", 404);
+    }
+    await revokeUserSessions(reset.reset.userId);
 
-    await logAudit({
-      actorId: reset.userId,
+    await writeAudit({
+      actorId: reset.reset.userId,
       action: "auth.reset.confirm",
       targetType: "user",
-      targetId: reset.userId,
+      targetId: reset.reset.userId,
       ip: ctx.ip,
       userAgent: ctx.userAgent,
     });

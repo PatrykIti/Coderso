@@ -5,7 +5,7 @@
 **Category:** Admin UI + Users + Auth + Security UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-355-01, TASK-360-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -162,3 +162,37 @@ Public set-password endpoint:
   in.
 - Tokens are single-use, TTL-bound, hashed at rest, and never leaked to client
   caches or reports.
+
+## Completion Notes
+
+- Added strict admin set-password delivery contracts:
+  `POST /admin-users/invite` creates a pending user, creates a hashed
+  single-use token, sends the token only in email body/link form, and returns
+  delivery status without token data.
+- Added `POST /admin-users/:id/password-reset` for admin-triggered reset email
+  delivery with `users:write`, strict `{ delivery: "email" }` validation,
+  centralized error mapping, and explicit audit events.
+- Retired the normal admin HTTP `password` field from create/update schemas,
+  client types, and service inputs; admins no longer type another user's
+  password through Users UI.
+- Reset tokens now invalidate previous outstanding tokens, remain hashed at
+  rest, and classify invalid/expired/used states as
+  `set_password_token_invalid`, `set_password_token_expired`, and
+  `set_password_token_used`.
+- Public reset requests now use configured email delivery instead of creating
+  and discarding a token; reset-confirm activates only `pending` accounts while
+  preserving explicit inactive accounts.
+- Users UI now wires reset password through a confirm dialog and real API
+  submit, removes the reset no-op marker, and keeps invite dialogs open on
+  delivery errors.
+- `UserEditor` create mode is no longer a separate invite-without-email path:
+  new-user creation through that surface also sends a set-password invitation.
+- Validation run:
+  `bun run test:vitest -- tests/vitest/admin/adminUsersClient.test.ts tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/invite-user.test.tsx tests/vitest/ui/user-editor-wave.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx`
+- Validation run:
+  `set -a && source .env && set +a && bun test tests/unit/auth/passwordResetService.test.ts tests/integration/routes/adminUsers.test.ts tests/integration/routes/auth.test.ts tests/unit/admin/usersService.test.ts tests/unit/email/emailSettingsService.test.ts`
+- Validation run: `bun --cwd core lint`
+- Validation run: `bun --cwd core lint:types`
+- Validation run: `bun run gates:coderso`
+- Advisory security scans run: `bun run scan:semgrep`,
+  `bun run scan:trivy`, and `bun run scan:gitleaks:worktree`.

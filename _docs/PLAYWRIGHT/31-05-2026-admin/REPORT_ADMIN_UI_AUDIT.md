@@ -97,9 +97,18 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
   strict query, limit clamp, date-range validation, cursor/count-copy helpers i
   area-specific `*_query_invalid` errors. Pelna adopcja cursor UI zostaje w
   TASK-357/TASK-358.
+- `TASK-355-01` jest zaimplementowany: Users UI konsumuje shared permission
+  snapshot, nie hardcoduje write permissions i wspiera partial
+  `users:read`/`roles:read` bez pobocznych fetchy.
+- `TASK-355-02` jest zaimplementowany: Users `Reset password` nie jest juz
+  no-opem, invite/create-mode wysylaja set-password email, admin HTTP
+  `password` field jest odrzucony, a tokeny resetu sa TTL-bound, single-use i
+  nie sa zwracane do browsera.
 - Pozostale pozycje z raportu pozostaja przypisane do rodzin TASK-355..360.
-  Część no-opow jest teraz jawnie niedostepna, ale pelne funkcje backendowe
-  nadal wymagaja osobnych implementacji w taskach obszarowych oraz re-audytu UI.
+  Część no-opow jest teraz jawnie niedostepna albo zaimplementowana, ale
+  destructive confirms, Settings cache/navigation, Audit/Access funkcje i
+  finalny re-audyt UI nadal wymagaja osobnych implementacji w taskach
+  obszarowych.
 
 ## Uwaga o Claude - 2026-06-01
 

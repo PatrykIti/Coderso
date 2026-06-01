@@ -14,6 +14,8 @@ export type UserDetailsDrawerProps = {
   user?: UserSummary | null;
   roles: RoleSummary[];
   canManageUsers?: boolean;
+  canEditUser?: boolean;
+  canResetPassword?: boolean;
   roleDetailsUnavailableReason?: string;
   resetPasswordUnavailableReason?: string;
   onEditUser: () => void;
@@ -58,6 +60,8 @@ export function UserDetailsDrawer({
   user,
   roles,
   canManageUsers = true,
+  canEditUser,
+  canResetPassword,
   roleDetailsUnavailableReason,
   resetPasswordUnavailableReason,
   onEditUser,
@@ -82,6 +86,8 @@ export function UserDetailsDrawer({
         items: [roleDetailsUnavailableReason],
       }
     : getPermissionSummary(user, roles);
+  const editEnabled = canEditUser ?? canManageUsers;
+  const resetEnabled = canResetPassword ?? canManageUsers;
 
   return (
     <div className="flex h-full flex-col">
@@ -170,14 +176,14 @@ export function UserDetailsDrawer({
       </ScrollArea>
       <Separator className="my-4" />
       <div className="space-y-2">
-        <Button className="w-full" onClick={onEditUser} disabled={!canManageUsers}>
+        <Button className="w-full" onClick={onEditUser} disabled={!editEnabled}>
           Edit permissions
         </Button>
         <Button
           variant="outline"
           className="w-full"
           onClick={onResetPassword}
-          disabled={!canManageUsers || Boolean(resetPasswordUnavailableReason)}
+          disabled={!resetEnabled || Boolean(resetPasswordUnavailableReason)}
           title={resetPasswordUnavailableReason}
           data-no-op-control={resetPasswordUnavailableReason ? "users-reset-password" : undefined}
         >

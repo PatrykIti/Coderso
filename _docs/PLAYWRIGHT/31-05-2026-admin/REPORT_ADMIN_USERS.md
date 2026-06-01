@@ -93,6 +93,23 @@ jednorazowym fixture user/role i posprzątano po teście.
   `TASK-355-02` reset/invite login-capable, `TASK-355-03` destructive confirms,
   `TASK-355-04` filters/notifications, `TASK-355-05` mobile a11y.
 
+### Status po TASK-355-02 - 2026-06-01
+
+- Naprawiono problemy `Reset password` no-op oraz login-capable invite:
+  `Reset password` otwiera confirm dialog i wysyła email przez
+  `POST /admin-users/:id/password-reset`.
+- `Invite User` i create-mode w `UserEditor` tworzą `pending` usera oraz
+  wysyłają jednorazowy set-password link przez skonfigurowany email delivery;
+  dialog pozostaje otwarty przy `email_not_configured` lub błędzie SMTP.
+- Usunięto normalną ścieżkę ustawiania cudzego hasła przez admin HTTP
+  `password`; create/update schemas odrzucają to pole.
+- Tokeny resetu są hashowane, TTL-bound, single-use, unieważniają poprzednie
+  aktywne tokeny i mapują błędy na `set_password_token_invalid`,
+  `set_password_token_expired`, `set_password_token_used`.
+- Pozostałe problemy z raportu nadal należą do kolejnych liści:
+  `TASK-355-03` destructive confirms, `TASK-355-04` filters/notifications,
+  `TASK-355-05` mobile a11y.
+
 ## Dlaczego
 
 Widok miesza gotowe, produkcyjne flow (`save user`, `invite user`, `delete user`)
@@ -105,11 +122,10 @@ które akcje są realne.
 - Przestać hardcodować default write permissions w `UsersRolesPage`; źródłem
   prawdy powinien być backendowy `can(permission)` z `/auth/me` albo osobnego
   endpointu efektywnych uprawnień.
-- `Reset password`: dodać backend/API flow lub ukryć/disable do czasu
-  implementacji; po kliknięciu musi być toast albo dialog z wynikiem.
-- Invite User: dodać świadomy password/set-password flow albo jasno wymusić
-  zaproszenie mailowe z działającym reset tokenem; nie zostawiać UI bez drogi
-  do testowalnego logowania.
+- `Reset password`: zrealizowane w `TASK-355-02`; dalsza pełna weryfikacja
+  klikana z mailbox fixture należy do final evidence pass.
+- Invite User: zrealizowane w `TASK-355-02`; wymaga skonfigurowanego email
+  delivery i nie zwraca tokenu do browsera ani raportów.
 - `Deactivate/Delete`: dodać confirm dialog z nazwą użytkownika/roli i testy
   regresyjne dla cancel/confirm.
 - Filter icon: albo otwiera advanced filters drawer, albo znika.

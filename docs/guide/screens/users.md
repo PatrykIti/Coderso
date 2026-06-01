@@ -74,7 +74,9 @@ screen.
    - email address,
    - workspace role.
 9. Review the permissions preview before sending the invitation.
-10. Use `Send Invitation` only after the selected role is intentional.
+10. Use `Send Invitation` only after the selected role is intentional. The
+    invited user receives a single-use set-password email and starts as
+    `pending`.
 11. Use the row action menu when you need lifecycle actions such as:
     - view profile,
     - edit user,
@@ -100,6 +102,8 @@ Use this safe user-management order when you want fewer access mistakes:
   access work often needs both contexts together.
 - Invitation preview is more than a convenience. It helps stop obvious
   over-permissioning before the user is even created.
+- `Reset password` sends a single-use set-password email. It does not reveal or
+  cache the token in the browser.
 - The route’s details panel exposes notification and two-factor context, which
   makes it stronger than a simple members list.
 - Missing role-read access hides role filters and role names/details. Missing
@@ -116,6 +120,8 @@ Use this safe user-management order when you want fewer access mistakes:
   check whether the account is marked `Last admin`.
 - The invite role feels uncertain:
   use the permissions preview to compare expected capabilities before sending.
+- Invite or reset cannot send email:
+  ask a settings admin to configure Settings -> Email before retrying.
 - Role details are unavailable:
   ask for `roles:read` if your work requires role names, filters, or permission
   summaries.
@@ -151,5 +157,7 @@ Use this safe user-management order when you want fewer access mistakes:
   the matching write permission is present.
 - Invitation, status changes, password resets, and deletion are access-control
   actions, not just profile edits.
+- Admins do not type another user's password. Invite and reset both use
+  TTL-bound, single-use set-password emails.
 - Be especially careful with last-admin and high-privilege accounts, because
   those changes can affect the whole workspace’s recoverability.
