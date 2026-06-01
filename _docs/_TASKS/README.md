@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 28 tasks
+- **To Do:** 34 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2007 tasks
 
@@ -38,6 +38,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-352 | Import Export Tools Report Remediation | High | Very Large | New report-driven family for export options, import validation, activity/progress/retry, file-type truthfulness, and closure proof. |
+| TASK-352-01 | Export Target and Include Options Contract | High | Large | Make export card targets/options affect bundle shape or remove unsupported controls. |
+| TASK-352-02 | Import Bundle Validation and Error Mapping | High | Large | Reject malformed IDs during preview/apply and map import errors without raw DB 500s. |
+| TASK-352-03 | Import Activity History, Progress, Failure Reason, and Retry UX | Medium | Large | Replace static Recent Imports with searchable, truthful activity/progress/retry behavior or explicit unavailable state. |
+| TASK-352-04 | Import Export File-Type and Options-Control Truthfulness | Medium | Medium | Align supported file-type copy/input/parser and wire or disable per-card chevrons. |
+| TASK-352-05 | Import Export QA, Docs, and Closure | Medium | Medium | Prove export/import roundtrip, malformed-bundle rejection, activity controls, and docs/changelog closure. |
 | TASK-351 | Backups Tools Report Remediation | High | Very Large | New report-driven family for include options, artifact lifecycle, restore/download/delete, pagination, queue health, and closure proof. |
 | TASK-351-01 | Backup Include Options Schema and Manual Request Contract | High | Medium | Make manual backup checkboxes controlled, validated, serialized, and safe for audit metadata. |
 | TASK-351-02 | Backup Execution, Artifact, Restore, Download, and Delete Contract | High | Very Large | Add real local/dev backup lifecycle or document an explicit external-worker boundary with safe actions. |
