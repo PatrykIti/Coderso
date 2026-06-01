@@ -23,6 +23,11 @@ Project Change Log.
 
 ## Index
 
+Reserved ranges: numbers 1034-1050 are intentionally left available for
+parallel agent work. Numbers 1051-1088 are reserved for TASK-361 through
+TASK-398 implementation/closure changelogs and must be created only when the
+matching remediation family is implemented or closed.
+
 | No. | Date | Title | Type |
 |-----|------|-------|------|
 | 1033 | 2026-05-31 | Admin seed package command | Developer Tooling/Auth Bootstrap/Docs |

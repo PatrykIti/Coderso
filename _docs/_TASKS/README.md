@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 10 tasks
+- **To Do:** 141 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2006 tasks
 
@@ -38,6 +38,137 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-361 | Section 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_SECTION_WIDGET.md`; 3 findings routed to implementation/tests/docs |
+| TASK-362 | Template Section 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_TEMPLATE_SECTION_WIDGET.md`; 2 findings routed to implementation/tests/docs |
+| TASK-363 | Grid Columns 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_GRID_COLUMNS_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-364 | Split Layout 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_SPLIT_LAYOUT_WIDGET.md`; 2 findings routed to implementation/tests/docs |
+| TASK-365 | Tabs 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_TABS_WIDGET.md`; 2 findings routed to implementation/tests/docs |
+| TASK-366 | Accordion 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_ACCORDION_WIDGET.md`; 3 findings routed to implementation/tests/docs |
+| TASK-367 | Toggle Block 31-05 UI Audit Remediation Family | High | Medium | Report-driven family from `REPORT_TOGGLE_BLOCK_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-368 | Spacer 31-05 UI Audit Closure and Regression Guard Family | Medium | Small | Report-driven family from `REPORT_SPACER_WIDGET.md`; no new defect, regression guard routed to tests/docs |
+| TASK-369 | Divider 31-05 UI Audit Remediation Family | High | Medium | Report-driven family from `REPORT_DIVIDER_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-370 | Stack 31-05 UI Audit Remediation Family | High | Medium | Report-driven family from `REPORT_STACK_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-371 | Hero 31-05 UI Audit Continuation and Remediation Family | High | Large | Report-driven family from `REPORT_HERO_WIDGET.md`; partial audit continuation plus 2 findings routed to implementation/tests/docs |
+| TASK-372 | Feature Grid 31-05 UI Audit Remediation Family | Medium | Small | Report-driven family from `REPORT_FEATURE_GRID_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-373 | CTA Banner 31-05 UI Audit Remediation Family | Medium | Small | Report-driven family from `REPORT_CTA_BANNER_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-374 | FAQ Accordion 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_FAQ_ACCORDION_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-375 | Stats KPI 31-05 UI Audit UX Guard Family | Low | Small | Report-driven family from `REPORT_STATS_KPI_WIDGET.md`; no product defect, UX guard routed to tests/docs |
+| TASK-376 | Testimonials 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_TESTIMONIALS_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-377 | Pricing Plans 31-05 UI Audit Contract Decision Family | Medium | Medium | Report-driven family from `REPORT_PRICING_PLANS_WIDGET.md`; contract decision routed to tests/docs |
+| TASK-378 | Logo Cloud 31-05 UI Audit Fixture and Regression Family | Medium | Small | Report-driven family from `REPORT_LOGO_CLOUD_WIDGET.md`; media fixture gap routed to browser proof/tests/docs |
+| TASK-379 | Gallery Mosaic 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_GALLERY_MOSAIC_WIDGET.md`; 2 findings routed to implementation/tests/docs |
+| TASK-380 | Team 31-05 UI Audit UX and Fixture Family | Medium | Small | Report-driven family from `REPORT_TEAM_WIDGET.md`; UX debt and media fixture gap routed to tests/docs |
+| TASK-381 | Rich Text Section 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_RICH_TEXT_SECTION_WIDGET.md`; 3 findings routed to implementation/tests/docs |
+| TASK-382 | Content List 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_CONTENT_LIST_WIDGET.md`; 2 findings routed to implementation/tests/docs |
+| TASK-383 | Posts Feed 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_POSTS_FEED_WIDGET.md`; 2 findings routed to implementation/tests/docs |
+| TASK-384 | Entry Teaser 31-05 UI Audit Fixture and Console Hygiene Family | Medium | Medium | Report-driven family from `REPORT_ENTRY_TEASER_WIDGET.md`; fixture gap and console hygiene guard routed to tests/docs |
+| TASK-385 | Product Gallery 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_PRODUCT_GALLERY_WIDGET.md`; 2 findings routed to implementation/tests/docs |
+| TASK-386 | Product Compare 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_PRODUCT_COMPARE_WIDGET.md`; 2 findings routed to implementation/tests/docs |
+| TASK-387 | Product Table 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_PRODUCT_TABLE_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-388 | Listing Filters 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_LISTING_FILTERS_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-389 | Search Box 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_SEARCH_BOX_WIDGET.md`; 1 finding routed to implementation/tests/docs |
+| TASK-390 | Timeline 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_TIMELINE_WIDGET.md`; 3 findings routed to implementation/tests/docs |
+| TASK-391 | Compare Timeline 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_COMPARE_TIMELINE_WIDGET.md`; 3 findings routed to implementation/tests/docs |
+| TASK-392 | Newsletter 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NEWSLETTER_WIDGET.md`; 4 findings routed to implementation/tests/docs |
+| TASK-393 | Booking Calendar 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_BOOKING_CALENDAR_WIDGET.md`; 4 findings routed to implementation/tests/docs |
+| TASK-394 | Appointment Form 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_APPOINTMENT_FORM_WIDGET.md`; 5 findings routed to implementation/tests/docs |
+| TASK-395 | Form Embed 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_FORM_EMBED_WIDGET.md`; 9 findings routed to implementation/tests/docs |
+| TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
+| TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
+| TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
+| TASK-361-01 | SC-31-05-01 - Sanitize unsafe style/color strings before public inline CSS | High | Medium | Leaf task for TASK-361; source `REPORT_SECTION_WIDGET.md` |
+| TASK-361-02 | SC-31-05-02 - Reject or normalize invalid Section payloads on admin save/publish/import | High | Medium | Leaf task for TASK-361; source `REPORT_SECTION_WIDGET.md` |
+| TASK-361-03 | SC-31-05-03 - Complete metadata for builder-owned Region actions and labels | High | Medium | Leaf task for TASK-361; source `REPORT_SECTION_WIDGET.md` |
+| TASK-362-01 | TS-31-05-01 - Non-UUID `templateId` must render a safe placeholder, not HTTP 500 | High | Medium | Leaf task for TASK-362; source `REPORT_TEMPLATE_SECTION_WIDGET.md` |
+| TASK-362-02 | TS-31-05-02 - Propagate loop resolution to parent markers | High | Small | Leaf task for TASK-362; source `REPORT_TEMPLATE_SECTION_WIDGET.md` |
+| TASK-363-01 | GC-31-05-01 - Add metadata for `Reapply asymmetric desktop widths` and shared `Add Column` | Medium | Medium | Leaf task for TASK-363; source `REPORT_GRID_COLUMNS_WIDGET.md` |
+| TASK-364-01 | SPL-31-05-01 - Phone ratio summary must respect stacked mobile mode | Medium | Medium | Leaf task for TASK-364; source `REPORT_SPLIT_LAYOUT_WIDGET.md` |
+| TASK-364-02 | SPL-31-05-02 - Do not show Move up/down for fixed left/right panes | Medium | Medium | Leaf task for TASK-364; source `REPORT_SPLIT_LAYOUT_WIDGET.md` |
+| TASK-365-01 | TABS-31-05-01 - Sanitize six Tabs style fields before inline CSS | High | Medium | Leaf task for TASK-365; source `REPORT_TABS_WIDGET.md` |
+| TASK-365-02 | TABS-31-05-02 - Complete repeatable Structure metadata for panel actions | High | Medium | Leaf task for TASK-365; source `REPORT_TABS_WIDGET.md` |
+| TASK-366-01 | ACC-31-05-01 - Custom item IDs must match `defaultOpenIds` in public runtime | High | Medium | Leaf task for TASK-366; source `REPORT_ACCORDION_WIDGET.md` |
+| TASK-366-02 | ACC-31-05-02 - Sanitize Accordion surface/text/border color fields | High | Medium | Leaf task for TASK-366; source `REPORT_ACCORDION_WIDGET.md` |
+| TASK-366-03 | ACC-31-05-03 - Complete repeatable Structure metadata for item actions | High | Medium | Leaf task for TASK-366; source `REPORT_ACCORDION_WIDGET.md` |
+| TASK-367-01 | TGL-31-05-01 - Sanitize Toggle Block clearable color fields | High | Medium | Leaf task for TASK-367; source `REPORT_TOGGLE_BLOCK_WIDGET.md` |
+| TASK-368-01 | SPC-31-05-01 - Lock responsive/fixed/unsafe-length behavior as a regression guard | Medium | Medium | Leaf task for TASK-368; source `REPORT_SPACER_WIDGET.md` |
+| TASK-369-01 | DIV-31-05-01 - Unsafe `color` and `labelColor` must be normalized | High | Medium | Leaf task for TASK-369; source `REPORT_DIVIDER_WIDGET.md` |
+| TASK-370-01 | STK-31-05-01 - Preserve absent `direction` until Stack variant defaults can apply | High | Medium | Leaf task for TASK-370; source `REPORT_STACK_WIDGET.md` |
+| TASK-371-01 | HERO-31-05-01 - Dual CTA should restore a useful secondary CTA after Single CTA | High | Medium | Leaf task for TASK-371; source `REPORT_HERO_WIDGET.md` |
+| TASK-371-02 | HERO-31-05-02 - Finish the remaining Hero option matrix from the report | High | Medium | Leaf task for TASK-371; source `REPORT_HERO_WIDGET.md` |
+| TASK-372-01 | FG-31-05-01 - Theme token border colors must not be described as saved custom colors | Medium | Medium | Leaf task for TASK-372; source `REPORT_FEATURE_GRID_WIDGET.md` |
+| TASK-373-01 | CTA-31-05-01 - Advanced must report active background gradients | Medium | Medium | Leaf task for TASK-373; source `REPORT_CTA_BANNER_WIDGET.md` |
+| TASK-374-01 | FAQ-31-05-01 - Admin preview click must sync `summary[aria-expanded]` or show a boundary notice | Medium | Medium | Leaf task for TASK-374; source `REPORT_FAQ_ACCORDION_WIDGET.md` |
+| TASK-375-01 | SKPI-31-05-01 - Explain per-metric accent precedence over global value color | Low | Medium | Leaf task for TASK-375; source `REPORT_STATS_KPI_WIDGET.md` |
+| TASK-376-01 | TST-31-05-01 - Treat `<br>`-only quote HTML as empty | Medium | Medium | Leaf task for TASK-376; source `REPORT_TESTIMONIALS_WIDGET.md` |
+| TASK-377-01 | PP-31-05-01 - Resolve billing toggle contract: static display vs visitor-side toggle | Medium | Medium | Leaf task for TASK-377; source `REPORT_PRICING_PLANS_WIDGET.md` |
+| TASK-378-01 | LC-31-05-01 - Seed media assets for browser-level MediaPicker proof | Medium | Medium | Leaf task for TASK-378; source `REPORT_LOGO_CLOUD_WIDGET.md` |
+| TASK-379-01 | GM-31-05-01 - Advanced must distinguish selected lightbox mode from eligible lightbox tiles | Medium | Medium | Leaf task for TASK-379; source `REPORT_GALLERY_MOSAIC_WIDGET.md` |
+| TASK-379-02 | GM-31-05-02 - Add media and public lightbox browser fixtures | Medium | Medium | Leaf task for TASK-379; source `REPORT_GALLERY_MOSAIC_WIDGET.md` |
+| TASK-380-01 | TEAM-31-05-01 - Replace member-count native confirm with shared ConfirmActionDialog | Medium | Small | Leaf task for TASK-380; source `REPORT_TEAM_WIDGET.md` |
+| TASK-380-02 | TEAM-31-05-02 - Seed media image for real photo selection proof | Medium | Medium | Leaf task for TASK-380; source `REPORT_TEAM_WIDGET.md` |
+| TASK-381-01 | RTS-31-05-01 - Do not lose body sanitizer diagnostics after structured block edits | High | Medium | Leaf task for TASK-381; source `REPORT_RICH_TEXT_SECTION_WIDGET.md` |
+| TASK-381-02 | RTS-31-05-02 - Resolve default HTML-vs-block source drift | High | Small | Leaf task for TASK-381; source `REPORT_RICH_TEXT_SECTION_WIDGET.md` |
+| TASK-381-03 | RTS-31-05-03 - Add image/document media fixture and paste/link sanitizer browser smoke | High | Medium | Leaf task for TASK-381; source `REPORT_RICH_TEXT_SECTION_WIDGET.md` |
+| TASK-382-01 | CL-31-05-01 - `legacy -> listing` must not report hidden taxonomy as active | Medium | Medium | Leaf task for TASK-382; source `REPORT_CONTENT_LIST_WIDGET.md` |
+| TASK-382-02 | CL-31-05-02 - Add populated Content List browser fixture | Medium | Medium | Leaf task for TASK-382; source `REPORT_CONTENT_LIST_WIDGET.md` |
+| TASK-383-01 | PF-31-05-01 - Inactive category filter must not be reported active in Latest mode | Medium | Medium | Leaf task for TASK-383; source `REPORT_POSTS_FEED_WIDGET.md` |
+| TASK-383-02 | PF-31-05-02 - Add seeded posts fixture for browser-level display controls | Medium | Medium | Leaf task for TASK-383; source `REPORT_POSTS_FEED_WIDGET.md` |
+| TASK-384-01 | ET-31-05-01 - Add seeded content/listing fixture for resolved teaser branches | Medium | Medium | Leaf task for TASK-384; source `REPORT_ENTRY_TEASER_WIDGET.md` |
+| TASK-384-02 | ET-31-05-02 - Investigate app-level React `createRoot/createPortal` console error if reproducible | Medium | Small | Leaf task for TASK-384; source `REPORT_ENTRY_TEASER_WIDGET.md` |
+| TASK-385-01 | PG-31-05-01 - Manual selected products must be marked inactive in query mode | Medium | Medium | Leaf task for TASK-385; source `REPORT_PRODUCT_GALLERY_WIDGET.md` |
+| TASK-385-02 | PG-31-05-02 - Add commerce image/detail/view-all fixture coverage | Medium | Medium | Leaf task for TASK-385; source `REPORT_PRODUCT_GALLERY_WIDGET.md` |
+| TASK-386-01 | PC-31-05-01 - Search/collections/status filters must be marked ignored for selected products | Medium | Medium | Leaf task for TASK-386; source `REPORT_PRODUCT_COMPARE_WIDGET.md` |
+| TASK-386-02 | PC-31-05-02 - Add commerce detail/image fixture coverage | Medium | Medium | Leaf task for TASK-386; source `REPORT_PRODUCT_COMPARE_WIDGET.md` |
+| TASK-387-01 | PT-31-05-01 - Saved collection filter toggle must be distinguished from active public control | Medium | Medium | Leaf task for TASK-387; source `REPORT_PRODUCT_TABLE_WIDGET.md` |
+| TASK-388-01 | LF-31-05-01 - `Action background` must be inactive while Auto Apply is enabled | Medium | Medium | Leaf task for TASK-388; source `REPORT_LISTING_FILTERS_WIDGET.md` |
+| TASK-389-01 | SB-31-05-01 - Route-submit rows must be hidden or marked inactive outside route-submit mode | Medium | Medium | Leaf task for TASK-389; source `REPORT_SEARCH_BOX_WIDGET.md` |
+| TASK-390-01 | TL-31-05-01 - CTA saved in process/compact mode must render or be called out as hidden | High | Medium | Leaf task for TASK-390; source `REPORT_TIMELINE_WIDGET.md` |
+| TASK-390-02 | TL-31-05-02 - Wrap all real Visual controls with shared metadata | High | Medium | Leaf task for TASK-390; source `REPORT_TIMELINE_WIDGET.md` |
+| TASK-390-03 | TL-31-05-03 - Variant cards must not appear active when `mode=process` controls runtime branch | High | Medium | Leaf task for TASK-390; source `REPORT_TIMELINE_WIDGET.md` |
+| TASK-391-01 | CT-31-05-01 - `Hidden` label size must either hide labels or be renamed | High | Small | Leaf task for TASK-391; source `REPORT_COMPARE_TIMELINE_WIDGET.md` |
+| TASK-391-02 | CT-31-05-02 - `Step label size` must affect axis row labels | High | Small | Leaf task for TASK-391; source `REPORT_COMPARE_TIMELINE_WIDGET.md` |
+| TASK-391-03 | CT-31-05-03 - Advanced must mark highlight targets dormant in `dual-track` | High | Medium | Leaf task for TASK-391; source `REPORT_COMPARE_TIMELINE_WIDGET.md` |
+| TASK-392-01 | NL-31-05-01 - Normalize bound Forms runtime fields before admin preview | High | Medium | Leaf task for TASK-392; source `REPORT_NEWSLETTER_WIDGET.md` |
+| TASK-392-02 | NL-31-05-02 - Legacy `webhookId` diagnostics must not claim an inactive submit path | High | Medium | Leaf task for TASK-392; source `REPORT_NEWSLETTER_WIDGET.md` |
+| TASK-392-03 | NL-31-05-03 - Public Forms runtime must not be interactive without widget-level nonce | High | Large | Leaf task for TASK-392; source `REPORT_NEWSLETTER_WIDGET.md` |
+| TASK-392-04 | NL-31-05-04 - Variant cards must not look active without `onVariantChange` | High | Medium | Leaf task for TASK-392; source `REPORT_NEWSLETTER_WIDGET.md` |
+| TASK-393-01 | BC-31-05-01 - Replace runtime `innerHTML` copy composition | High | Medium | Leaf task for TASK-393; source `REPORT_BOOKING_CALENDAR_WIDGET.md` |
+| TASK-393-02 | BC-31-05-02 - Build bounded week dates without duplicates | High | Medium | Leaf task for TASK-393; source `REPORT_BOOKING_CALENDAR_WIDGET.md` |
+| TASK-393-03 | BC-31-05-03 - Define admin canvas behavior for runtime-only controls | High | Medium | Leaf task for TASK-393; source `REPORT_BOOKING_CALENDAR_WIDGET.md` |
+| TASK-393-04 | BC-31-05-04 - Unify admin/public preview catalog filtering | High | Medium | Leaf task for TASK-393; source `REPORT_BOOKING_CALENDAR_WIDGET.md` |
+| TASK-394-01 | AF-31-05-01 - Calendar/form runtime binding must be idempotent regardless of DOM order | High | Medium | Leaf task for TASK-394; source `REPORT_APPOINTMENT_FORM_WIDGET.md` |
+| TASK-394-02 | AF-31-05-02 - Public reservation API must verify server-generated slot match | High | Large | Leaf task for TASK-394; source `REPORT_APPOINTMENT_FORM_WIDGET.md` |
+| TASK-394-03 | AF-31-05-03 - Mixed public/internal service catalog must scope captcha/nonce per selected service | High | Large | Leaf task for TASK-394; source `REPORT_APPOINTMENT_FORM_WIDGET.md` |
+| TASK-394-04 | AF-31-05-04 - Widget custom success copy must outrank API default | High | Medium | Leaf task for TASK-394; source `REPORT_APPOINTMENT_FORM_WIDGET.md` |
+| TASK-394-05 | AF-31-05-05 - Align client maxLength with public API schema bounds | High | Medium | Leaf task for TASK-394; source `REPORT_APPOINTMENT_FORM_WIDGET.md` |
+| TASK-395-01 | FE-31-05-01 - Mount public Form Embed submit route | High | Large | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
+| TASK-395-02 | FE-31-05-02 - Bind duplicate Form Embed instances independently | High | Medium | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
+| TASK-395-03 | FE-31-05-03 - Do not render internal-only forms as public interactive forms | High | Large | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
+| TASK-395-04 | FE-31-05-04 - Normalize checkbox payload to backend schema | High | Medium | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
+| TASK-395-05 | FE-31-05-05 - Saved progress must not skip required previous-step fields | High | Medium | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
+| TASK-395-06 | FE-31-05-06 - Split overloaded `settings.step` meanings | High | Small | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
+| TASK-395-07 | FE-31-05-07 - Clarify widget vs form-level success and redirect policy | High | Medium | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
+| TASK-395-08 | FE-31-05-08 - Keep `resolved.submissionNonce` out of persisted widget schema | High | Large | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
+| TASK-395-09 | FE-31-05-09 - Admin canvas should render real mapped form or explicit static boundary | High | Medium | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
+| TASK-396-01 | CONTACT-31-05-01 - Mount Contact public Forms runtime submit route | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
+| TASK-396-02 | CONTACT-31-05-02 - Reset submit button label after failure | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
+| TASK-396-03 | CONTACT-31-05-03 - Bind duplicate Contact runtimes independently | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
+| TASK-396-04 | CONTACT-31-05-04 - Project `botProtection` into Contact Forms runtime | High | Large | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
+| TASK-396-05 | CONTACT-31-05-05 - Admin canvas should render mapped Forms runtime or explicit boundary | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
+| TASK-396-06 | CONTACT-31-05-06 - Configured/effective runtime metadata must not claim forms-runtime when fallback is static/internal | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
+| TASK-396-07 | CONTACT-31-05-07 - Tighten legacy map/social URL safety | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
+| TASK-396-08 | CONTACT-31-05-08 - Complete Visual path metadata beyond style rows | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
+| TASK-397-01 | NV-31-05-01 - Empty resolved link list must not make public widget invalid | High | Small | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
+| TASK-397-02 | NV-31-05-02 - Unsafe manual href must not degrade to clickable `#` | High | Medium | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
+| TASK-397-03 | NV-31-05-03 - Drawer active link clones need truthful `aria-current` semantics | High | Medium | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
+| TASK-397-04 | NV-31-05-04 - Complete Visual path metadata | High | Medium | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
+| TASK-397-05 | NV-31-05-05 - Remove or justify public `data-menu-key` exposure | High | Medium | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
+| TASK-397-06 | NV-31-05-06 - Bound persisted/imported style colors | High | Medium | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
+| TASK-398-01 | FT-31-05-01 - Minimal variant must not omit useful contact/back-to-top utilities unintentionally | High | Medium | Leaf task for TASK-398; source `REPORT_FOOTER_WIDGET.md` |
+| TASK-398-02 | FT-31-05-02 - Unsafe column links must not degrade to clickable `#` | High | Medium | Leaf task for TASK-398; source `REPORT_FOOTER_WIDGET.md` |
+| TASK-398-03 | FT-31-05-03 - Visual logo preview must not render raw unsafe `brand.logoUrl` | High | Medium | Leaf task for TASK-398; source `REPORT_FOOTER_WIDGET.md` |
+| TASK-398-04 | FT-31-05-04 - Wizard variant ownership must align with contract | High | Medium | Leaf task for TASK-398; source `REPORT_FOOTER_WIDGET.md` |
+| TASK-398-05 | FT-31-05-05 - Make slot and LinkDestination metadata precise | High | Medium | Leaf task for TASK-398; source `REPORT_FOOTER_WIDGET.md` |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
