@@ -5,7 +5,14 @@
 > **Admin page id:** `d80c50e0-d3a0-48a0-a2d9-cbd6c43fd580`
 > **Public routes:** `/audit-31-05-template-section-ready`, `/audit-31-05-template-section-unresolved`, `/audit-31-05-template-section-missing`, `/audit-31-05-template-section-invalid-id`, `/audit-31-05-template-section-draft`, `/audit-31-05-template-section-empty`, `/audit-31-05-template-section-loop`
 > **Playwright sessions:** `codex-31-05-ui-template-section`, `codex-31-05-ui-template-section-public`, `codex-31-05-ui-template-section-advanced`, `codex-31-05-ui-template-section-interaction`
-> **Claude:** lokalny CLI nadal blokuje wspolprace: `401 Invalid authentication credentials`. Raport opiera sie na Playwright + audycie kodu Codex.
+> **Claude:** pierwotny audyt UI-first powstal bez Claude z powodu `401 Invalid authentication credentials`; pass remediacyjny TASK-362 zostal dodatkowo sprawdzony lokalnym Claude CLI po naprawach.
+
+## Status remediacji (2026-06-01)
+
+TASK-362 zamknal oba znaleziska z raportu:
+
+- TS-31-05-01: non-UUID `templateId` jest odrzucany na zapisach, a legacy public runtime renderuje `template_missing` bez HTTP 500 i bez raw ID w widocznym tekscie.
+- TS-31-05-02: nested `template_loop` propaguje sie do parent markerow; parent nie raportuje juz `ready`, gdy rozstrzygniecie konczy sie loop placeholderem.
 
 ## Metoda
 
@@ -69,18 +76,18 @@ Przetestowane:
 | Shared layout/visibility | Inspect Visual | Shared paths obecne: `layout.container`, padding, margin, `visibility.devices.*`. | Public fixtures nie overflowuja. | Dziala | Shared builder controls sa poza widget-local contract, ale widoczne i wrapped. | Brak. |
 | Advanced diagnostics | Klik Advanced w osobnej sesji | `writablePaths=[]`, `rawControlCount=0`; pokazuje `0 editor-resolved blocks; 2 source blocks...` i `admin_preview_unresolved`. | Nie dotyczy. | Dziala | Advanced jest read-only i truthfully odroznia editor preview od public runtime. | Brak. |
 | Missing template, valid UUID | Fixture z nieistniejacym valid UUID | Nieosiagalne przez zwykly select; edge dla legacy/import/API. | HTTP 200, `resolution="template_missing"`, placeholder `Template not found`, brak missing ID w visible text. | Dziala | `getWidgetTemplate()` zwraca `null`, runtime mapuje na `template_missing`. | Brak dla valid UUID. |
-| Invalid template id | Fixture z `templateId="missing-template-31-05"` | Nieosiagalne przez zwykly select; API/payload edge. | HTTP 500, brak `<main>`, Bun overlay z Postgres `invalid input syntax for type uuid`. | Nie dziala | Runtime trimuje string i od razu pyta DB po UUID column. | Patrz `TS-31-05-01`. |
+| Invalid template id | Fixture z `templateId="missing-template-31-05"` | Nieosiagalne przez zwykly select; API/payload edge. | Po TASK-362: HTTP 200, `resolution="template_missing"`, safe placeholder, brak raw ID w visible text. | Dziala | Runtime waliduje UUID przed DB lookupiem, a write paths odrzucaja malformed `templateId`. | Brak. |
 | Draft template | Fixture z `status="draft"` | Wizard pokazuje badge `Draft`. | HTTP 200, `resolution="template_unpublished"`, brak child spacerow. | Dziala | `resolveTemplateSectionRuntimeData()` blokuje draft poza preview. | Brak. |
 | Empty template | Published template bez blokow | Advanced potrafi pokazac source block count. | HTTP 200, `resolution="template_empty"`, text `This template has no blocks yet.` | Dziala | Renderer traktuje `resolved.blocks.length === 0` jako placeholder. | Brak. |
-| Loop template | Template zawiera child template-section na siebie | Nie crashuje admin UI. | HTTP 200, wewnetrzny node `resolution="template_loop"` i komunikat loop; parent ma jednak `state="ready"`. | Czesciowo dziala | Stack chroni przed rekurencja, ale parent marker jest mylacy. | Patrz `TS-31-05-02`. |
+| Loop template | Template zawiera child template-section na siebie | Nie crashuje admin UI. | Po TASK-362: HTTP 200, parent marker ma `resolution="template_loop"` i nie raportuje `state="ready"`. | Dziala | Hydrator propaguje child `template_loop` do parent `resolved.error`; renderer ma defensywny scan nested blocks. | Brak. |
 | Stale resolved blocks on missing | Missing valid UUID z legacy `resolved.blocks` w page payload | Nie dotyczy. | Public nie renderuje stale spacerow (`staleMissingSpacerCount=0`). | Dziala | Public hydrator nadpisuje `resolved` wynikiem runtime resolvera. | Brak. |
 | Raw JSON / native controls | Advanced inspect | `rawControlCount=0`, brak textarea/pre, `unwrappedControls=[]`. | Nie dotyczy. | Dziala | Advanced uzywa summary rows zamiast raw payload editor. | Brak. |
 
-## Znaleziska do poprawy
+## Znaleziska i remediacja
 
-### TS-31-05-01 - Nie-UUID `templateId` powoduje public HTTP 500 zamiast safe placeholdera
+### TS-31-05-01 - Naprawione: nie-UUID `templateId` renderuje safe placeholder
 
-**Objaw:** `/audit-31-05-template-section-invalid-id` zostal zapisany przez
+**Objaw przed TASK-362:** `/audit-31-05-template-section-invalid-id` zostal zapisany przez
 admin API z `templateId="missing-template-31-05"`. Public runtime zwraca HTTP
 500 i Bun error overlay:
 
@@ -95,7 +102,7 @@ zachowuje sie poprawnie: HTTP 200, `data-template-section-resolution="template_m
 placeholder `Template not found. Pick another template.` i brak stale child
 blocks.
 
-**Dlaczego:**
+**Dlaczego przed TASK-362:**
 
 - Schema dopuszcza dowolny string: `templateId: { type: "string" }` w
   `core/widgets/core/templateSection.tsx:38-43`.
@@ -107,21 +114,17 @@ blocks.
 - Kolumna `widget_templates.id` jest UUID, wiec Postgres rzuca przed tym, jak
   kod moze zwrocic `template_missing`.
 
-**Jak naprawic:**
+**Naprawa w TASK-362:**
 
-1. Dodac walidacje UUID/safe id w ownerze kontraktu (`templateSection` albo
-   `templateSectionRuntime`), zanim wywolany zostanie `getWidgetTemplate()`.
-2. Dla invalid/non-UUID id zwracac `{ blocks: [], error: "template_missing" }`
-   albo nowy machine-readable `template_invalid`, mapowany na safe placeholder.
-3. Walidowac/normalizowac payload na admin save/publish/import/assistant
-   mutation, zeby invalid id nie trafial do public runtime.
-4. Dodac test runtime service/public renderer: non-UUID `templateId` nie rzuca,
-   nie odpytuje DB po invalid UUID i renderuje placeholder bez raw id w visible
-   text.
+1. `templateId` jest teraz kontraktem UUID-or-empty w ownerze Template Section.
+2. Runtime zwraca `template_missing` dla malformed legacy ID przed DB lookupiem.
+3. Page/widget-template writes oraz widget-template revision restore odrzucaja malformed nested Template Section data.
+4. Legacy widget-template reads pozostaja tolerancyjne, zeby public hydrator mogl zamienic stare dane na placeholder.
+5. Regresje sprawdzaja brak raw ID/templateName leak w public runtime.
 
-### TS-31-05-02 - Loop fixture bezpiecznie zatrzymuje rekurencje, ale parent marker raportuje `ready`
+### TS-31-05-02 - Naprawione: loop resolution propaguje sie do parent markerow
 
-**Objaw:** `/audit-31-05-template-section-loop` nie crashuje i pokazuje loop
+**Objaw przed TASK-362:** `/audit-31-05-template-section-loop` nie crashuje i pokazuje loop
 placeholder, ale DOM ma dwa template-section nodes:
 
 ```json
@@ -142,7 +145,7 @@ placeholder, ale DOM ma dwa template-section nodes:
 Visitor widzi komunikat loop, ale zewnetrzny marker `ready` sugeruje, ze caly
 selected template zostal poprawnie wyrenderowany.
 
-**Dlaczego:**
+**Dlaczego przed TASK-362:**
 
 - `publicSite.tsx` wykrywa loop dopiero przy hydratacji child
   `template-section`, gdy `templateStack` zawiera juz parent id:
@@ -152,16 +155,11 @@ selected template zostal poprawnie wyrenderowany.
   i `core/widgets/core/templateSection.tsx:279-286`.
 - Nie ma propagacji child `template_loop` do parent `resolved.error`.
 
-**Jak naprawic:**
+**Naprawa w TASK-362:**
 
-1. W runtime hydratacji oznaczyc parent template jako errored, jezeli jego
-   template-section child resolve zwrocil `template_loop`, albo przynajmniej
-   expose'owac parent marker jako `template_loop` gdy wszystkie resolved dzieci
-   sa loop/error placeholders.
-2. Dodac integration/public renderer test dla nested self-reference: brak
-   rekurencji, HTTP 200, ale parent marker nie moze byc mylaco `ready`.
-3. Utrzymac obecny safe placeholder copy, bo visitor-side zachowanie jest juz
-   bezpieczne.
+1. Runtime hydrator oznacza parent `resolved.error="template_loop"`, jezeli child hydration wykryje loop.
+2. Renderer dodatkowo skanuje nested resolved blocks jako defensywny fallback dla stale payloadow.
+3. DB-backed public runtime test potwierdza HTTP 200, brak rekurencji i brak parent `state="ready"`.
 
 ## Co dziala
 
@@ -174,6 +172,7 @@ selected template zostal poprawnie wyrenderowany.
 - Visual ma poprawne ownership dla `metadata.previewLabel` i
   `metadata.category`, a `metadata.version` jest read-only.
 - Advanced pozostaje read-only, bez raw JSON i bez false success copy.
+- Po TASK-362 malformed legacy IDs i loop markers failuja bezpiecznie i truthfully.
 
 ## Walidacja
 
@@ -181,3 +180,14 @@ selected template zostal poprawnie wyrenderowany.
 - `bun --cwd core lint` - passed.
 - `bun --cwd core lint:types` - passed.
 - `git diff --check -- _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_TEMPLATE_SECTION_WIDGET.md _docs/PLAYWRIGHT/31-05-2026-widgets/README.md` - passed.
+
+Remediacja TASK-362 (2026-06-01):
+
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/templateSection.test.tsx tests/vitest/widgets/templateSectionRuntime.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/ui/template-section-editor-wave.test.tsx` - passed, 4 files / 32 tests.
+- `bun test tests/unit/pages/pageWidgetData.test.ts` - passed, 3 tests.
+- `set -a && source .env && set +a && bun test tests/unit/widgets/widgetTemplateService.test.ts --test-name-pattern "Template Section|legacy reads|revision restore"` - passed, 3 tests.
+- `set -a && source .env && set +a && bun test tests/integration/routes/pages.test.ts --test-name-pattern "Template Section references"` - passed, 1 test.
+- `bun test tests/integration/routes/widgetTemplates.test.ts` - passed, 3 tests.
+- `set -a && source .env && set +a && bun test tests/integration/runtime/pages-runtime.test.ts --test-name-pattern "Template Section"` - passed, 3 tests.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.

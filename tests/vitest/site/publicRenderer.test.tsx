@@ -41,6 +41,7 @@ const StubTabsEditor: ComponentType<WidgetEditorProps<TabsData>> = () => null;
 const StubToggleEditor: ComponentType<WidgetEditorProps<ToggleBlockData>> = () => null;
 
 const DummyWidgetEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
+const validTemplateId = "11111111-1111-4111-8111-111111111111";
 
 test("renderPublicPageHtml renders title and preview banner", () => {
   const html = renderPublicPageHtml({
@@ -774,7 +775,7 @@ test("renderPublicPageHtml renders template sections deterministically", () => {
         type: "template-section",
         variant: "default",
         data: {
-          templateId: "template-1",
+          templateId: validTemplateId,
           templateName: "Hero Cluster",
           resolved: {
             blocks: [{ id: "dummy-1", type: "dummy", variant: "default", data: {} }],

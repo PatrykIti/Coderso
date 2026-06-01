@@ -3,6 +3,10 @@ import { desc, eq, max } from "drizzle-orm";
 import { db } from "../../db/client";
 import { users, widgetTemplateRevisions, widgetTemplates } from "../../db/schema";
 import type { WidgetBlock } from "../../widgets/types";
+import {
+  normalizeWidgetTemplateBlocksForRead,
+  normalizeWidgetTemplateBlocksForWrite,
+} from "./widgetTemplateBlockContract";
 import type { WidgetTemplateStatus } from "./widgetTemplateService";
 import {
   normalizeWidgetTemplateSettings,
@@ -37,9 +41,10 @@ type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type DbClient = typeof db | DbTransaction;
 
 const normalizeBlocks = (blocks?: WidgetBlock[] | null) =>
-  Array.isArray(blocks) ? blocks : [];
-const normalizeSettings = (settings?: unknown) =>
-  normalizeWidgetTemplateSettings(settings);
+  normalizeWidgetTemplateBlocksForRead(blocks);
+const normalizeWriteBlocks = (blocks?: WidgetBlock[] | null) =>
+  normalizeWidgetTemplateBlocksForWrite(blocks);
+const normalizeSettings = (settings?: unknown) => normalizeWidgetTemplateSettings(settings);
 
 export async function listWidgetTemplateRevisions(templateId: string) {
   const rows = await db
@@ -79,10 +84,11 @@ export async function listWidgetTemplateRevisions(templateId: string) {
       ? {
           id: row.createdBy,
           name: row.authorName ?? null,
-          email: resolveEmailValue({
-            emailEncrypted: row.authorEmailEncrypted,
-            email: row.authorEmail,
-          }) ?? "",
+          email:
+            resolveEmailValue({
+              emailEncrypted: row.authorEmailEncrypted,
+              email: row.authorEmail,
+            }) ?? "",
         }
       : null,
   }));
@@ -110,7 +116,7 @@ export async function createWidgetTemplateRevisionTx(
       description: payload.description ?? null,
       category: payload.category,
       status: payload.status,
-      blocks: normalizeBlocks(payload.blocks),
+      blocks: normalizeWriteBlocks(payload.blocks),
       settings: normalizeSettings(payload.settings),
       createdBy: userId ?? null,
     })
@@ -119,10 +125,7 @@ export async function createWidgetTemplateRevisionTx(
   return row ?? null;
 }
 
-export async function restoreWidgetTemplateRevision(
-  revisionId: string,
-  userId?: string | null
-) {
+export async function restoreWidgetTemplateRevision(revisionId: string, userId?: string | null) {
   return db.transaction(async (tx) => {
     const [revision] = await tx
       .select()
@@ -130,6 +133,7 @@ export async function restoreWidgetTemplateRevision(
       .where(eq(widgetTemplateRevisions.id, revisionId));
 
     if (!revision) throw new Error("widget_template_revision_not_found");
+    const normalizedBlocks = normalizeWriteBlocks(revision.blocks as WidgetBlock[]);
 
     const [template] = await tx
       .update(widgetTemplates)
@@ -138,7 +142,7 @@ export async function restoreWidgetTemplateRevision(
         description: revision.description,
         category: revision.category,
         status: revision.status,
-        blocks: revision.blocks,
+        blocks: normalizedBlocks,
         settings: normalizeSettings(revision.settings),
         updatedAt: new Date(),
       })

@@ -5,7 +5,7 @@
 **Category:** Widgets + Template Section + Runtime + DB Safety + QA + Docs + Leaf Remediation
 **Estimated Effort:** Small
 **Dependencies:** TASK-362
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Nested self-reference is safely stopped, but the outer Template Section still re
 
 ## Sub-Tasks
 
-- [ ] Reproduce TS-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce TS-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -91,3 +91,9 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Runtime hydration propagates nested `template_loop` errors into the parent resolved payload.
+- Template Section rendering also defensively scans nested resolved blocks so stale hydrated payloads do not report `ready` over loop placeholders.
+- DB-backed public runtime coverage now asserts self-reference returns HTTP 200 and the parent marker is not `ready`.

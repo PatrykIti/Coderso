@@ -214,6 +214,28 @@ const ensureRecord = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
+const hasNestedTemplateSectionError = (blocks: WidgetBlock[], error: string): boolean =>
+  blocks.some((block) => {
+    const data = ensureRecord(block.data);
+    const resolved = ensureRecord(data.resolved);
+    if (block.type === "template-section" && resolved.error === error) {
+      return true;
+    }
+
+    const resolvedBlocks = Array.isArray(resolved.blocks) ? (resolved.blocks as WidgetBlock[]) : [];
+    if (hasNestedTemplateSectionError(resolvedBlocks, error)) return true;
+
+    const children = Array.isArray(block.children) ? block.children : [];
+    if (hasNestedTemplateSectionError(children, error)) return true;
+
+    const slots = ensureRecord(block.slots);
+    return Object.values(slots).some((slotBlocks) =>
+      Array.isArray(slotBlocks)
+        ? hasNestedTemplateSectionError(slotBlocks as WidgetBlock[], error)
+        : false
+    );
+  });
+
 const appointmentFormSupportsRuntimeCaptchaHydration = (() => {
   const properties = ensureRecord((appointmentFormSchema as { properties?: unknown }).properties);
   const resolvedSchema = ensureRecord(
@@ -526,11 +548,12 @@ const hydrateRuntimeBlock = async (
   }
   if (block.type === "template-section") {
     const data = ensureRecord(block.data);
-    const templateId = typeof data.templateId === "string" ? data.templateId.trim() : "";
-    const resolution = await resolveTemplateSectionRuntimeData(templateId, {
+    const rawTemplateId = typeof data.templateId === "string" ? data.templateId : "";
+    const resolution = await resolveTemplateSectionRuntimeData(rawTemplateId, {
       preview: options.preview,
       templateStack: options.templateStack ?? [],
     });
+    const templateId = resolution.templateId ?? "";
     const nextStack = templateId
       ? [...(options.templateStack ?? []), templateId]
       : options.templateStack;
@@ -540,16 +563,21 @@ const hydrateRuntimeBlock = async (
           templateStack: nextStack,
         })
       : [];
+    const resolvedError =
+      resolution.error ??
+      (hasNestedTemplateSectionError(resolvedBlocks, "template_loop")
+        ? "template_loop"
+        : undefined);
 
     nextBlock = {
       ...block,
       data: {
         ...data,
-        ...(templateId ? { templateId } : {}),
+        templateId,
         ...(resolution.templateName ? { templateName: resolution.templateName } : {}),
         resolved: {
           blocks: resolvedBlocks,
-          ...(resolution.error ? { error: resolution.error } : {}),
+          ...(resolvedError ? { error: resolvedError } : {}),
         },
       },
     };

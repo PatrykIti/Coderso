@@ -50,8 +50,15 @@ None.
 
 - Resolves the selected widget template into `resolved.blocks`.
 - Renders template blocks in order as a single page section.
+- `templateId` is either an empty string or a widget template UUID. Admin/page
+  and widget-template write paths reject malformed IDs before persistence.
 - Draft, missing, looped, or otherwise errored template references render a safe
   placeholder even if stale resolved blocks are still present in legacy payloads.
+- Legacy malformed IDs are treated as `template_missing` before any DB lookup,
+  and raw malformed IDs or stale ID-shaped template names are not rendered in
+  public visible text.
+- Nested `template_loop` errors propagate to the parent marker so a template
+  that resolves only into a loop placeholder is not reported as `ready`.
 - Selected templates without admin-side `resolved` data render a truthful
   placeholder: "Admin preview is placeholder-only until runtime resolves this
   template."
@@ -66,7 +73,7 @@ None.
 
 ```json
 {
-  "templateId": "template-id",
+  "templateId": "11111111-1111-4111-8111-111111111111",
   "templateName": "Hero Cluster",
   "metadata": {
     "category": "Marketing",

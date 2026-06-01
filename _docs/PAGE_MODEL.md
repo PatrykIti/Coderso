@@ -196,7 +196,7 @@ Template sections render widget templates inside page content flow.
   "type": "template-section",
   "variant": "default",
   "data": {
-    "templateId": "template-id",
+    "templateId": "11111111-1111-4111-8111-111111111111",
     "templateName": "Hero Cluster",
     "resolved": {
       "blocks": [],
@@ -208,6 +208,9 @@ Template sections render widget templates inside page content flow.
 
 Notes:
 - `data.resolved` is runtime-only; it is injected during preview/public rendering.
+- `data.templateId` is empty or a widget template UUID; malformed IDs are
+  rejected on writes and legacy malformed values render as safe missing-template
+  placeholders.
 - `error` values: `template_missing | template_unpublished | template_loop`.
 
 

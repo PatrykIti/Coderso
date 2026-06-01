@@ -67,3 +67,20 @@ test("normalizePageWidgetData preserves valid Section widget blocks and slots", 
     }),
   ]);
 });
+
+test("normalizePageWidgetData rejects invalid Template Section references before persistence", () => {
+  expect(() =>
+    normalizePageWidgetData({
+      blocks: [
+        {
+          id: "template-section-invalid",
+          type: "template-section",
+          variant: "default",
+          data: {
+            templateId: "missing-template-31-05",
+          },
+        },
+      ],
+    })
+  ).toThrow("widget_schema_invalid");
+});

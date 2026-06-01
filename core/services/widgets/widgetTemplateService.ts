@@ -3,6 +3,10 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import { widgetTemplates } from "../../db/schema";
 import type { WidgetBlock } from "../../widgets/types";
+import {
+  normalizeWidgetTemplateBlocksForRead,
+  normalizeWidgetTemplateBlocksForWrite,
+} from "./widgetTemplateBlockContract";
 import { listWidgetTemplateCategories } from "./widgetTemplateCategoryService";
 import { createWidgetTemplateRevisionTx } from "./widgetTemplateRevisionService";
 import {
@@ -41,9 +45,7 @@ async function resolveCategory(category: string) {
   const normalized = category.trim();
   if (!normalized) throw new Error("widget_template_category_invalid");
   const categories = await listWidgetTemplateCategories();
-  const match = categories.find(
-    (item) => item.name.toLowerCase() === normalized.toLowerCase()
-  );
+  const match = categories.find((item) => item.name.toLowerCase() === normalized.toLowerCase());
   if (!match) throw new Error("widget_template_category_invalid");
   return match.name;
 }
@@ -55,7 +57,7 @@ function assertStatus(status: string) {
 }
 
 function normalizeBlocks(blocks?: WidgetBlock[] | null): WidgetBlock[] {
-  return Array.isArray(blocks) ? blocks : [];
+  return normalizeWidgetTemplateBlocksForWrite(blocks);
 }
 
 function cloneBlocks(blocks?: WidgetBlock[] | null): WidgetBlock[] {
@@ -68,24 +70,18 @@ function normalizeName(value: string) {
 
 const mapWidgetTemplateRow = (row: typeof widgetTemplates.$inferSelect) => ({
   ...row,
-  blocks: normalizeBlocks(row.blocks as WidgetBlock[]),
+  blocks: normalizeWidgetTemplateBlocksForRead(row.blocks as WidgetBlock[]),
   settings: normalizeWidgetTemplateSettings(row.settings),
 });
 
 export async function listWidgetTemplates(): Promise<WidgetTemplateRecord[]> {
-  const rows = await db
-    .select()
-    .from(widgetTemplates)
-    .orderBy(desc(widgetTemplates.updatedAt));
+  const rows = await db.select().from(widgetTemplates).orderBy(desc(widgetTemplates.updatedAt));
 
   return rows.map(mapWidgetTemplateRow);
 }
 
 export async function getWidgetTemplate(id: string) {
-  const [row] = await db
-    .select()
-    .from(widgetTemplates)
-    .where(eq(widgetTemplates.id, id));
+  const [row] = await db.select().from(widgetTemplates).where(eq(widgetTemplates.id, id));
 
   if (!row) return null;
   return mapWidgetTemplateRow(row);
@@ -96,8 +92,7 @@ async function assertTemplateNameAvailable(name: string, excludeId?: string) {
   if (!normalizedName) throw new Error("widget_template_invalid");
   const templates = await listWidgetTemplates();
   const conflict = templates.find(
-    (template) =>
-      template.id !== excludeId && normalizeName(template.name) === normalizedName
+    (template) => template.id !== excludeId && normalizeName(template.name) === normalizedName
   );
   if (conflict) throw new Error("widget_template_name_conflict");
 }
@@ -246,10 +241,7 @@ export async function duplicateWidgetTemplate(id: string, userId?: string | null
 }
 
 export async function deleteWidgetTemplate(id: string) {
-  const [row] = await db
-    .delete(widgetTemplates)
-    .where(eq(widgetTemplates.id, id))
-    .returning();
+  const [row] = await db.delete(widgetTemplates).where(eq(widgetTemplates.id, id)).returning();
 
   if (!row) return null;
   return mapWidgetTemplateRow(row);

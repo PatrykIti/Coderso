@@ -9,6 +9,10 @@ import type {
   WidgetEditorProps,
   WidgetLayoutDefaults,
 } from "../types";
+import {
+  normalizeTemplateSectionTemplateId,
+  templateSectionTemplateIdPattern,
+} from "./templateSectionContract";
 
 export const TEMPLATE_SECTION_TYPE = "template-section";
 
@@ -26,6 +30,11 @@ export type TemplateSectionData = {
   };
 };
 
+export type TemplateSectionResolvedError =
+  | "template_missing"
+  | "template_unpublished"
+  | "template_loop";
+
 export type TemplateSectionResolutionState =
   | "not_selected"
   | "preview_unresolved"
@@ -39,7 +48,9 @@ export const templateSectionSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    templateId: { type: "string" },
+    templateId: {
+      anyOf: [{ const: "" }, { type: "string", pattern: templateSectionTemplateIdPattern }],
+    },
     templateName: { type: "string" },
     metadata: {
       type: "object",
@@ -137,8 +148,8 @@ const templateSectionEditorContract = {
 } satisfies WidgetEditorContract;
 
 export function normalizeTemplateSectionData(data: TemplateSectionData): TemplateSectionData {
-  const templateId = typeof data.templateId === "string" ? data.templateId : "";
-  const templateName = typeof data.templateName === "string" ? data.templateName : "";
+  const templateId = normalizeTemplateSectionTemplateId(data.templateId);
+  const templateName = templateId && typeof data.templateName === "string" ? data.templateName : "";
   const metadata = data.metadata
     ? {
         category: typeof data.metadata.category === "string" ? data.metadata.category : "",
@@ -176,12 +187,6 @@ const resolveTemplateLabel = (data: TemplateSectionData) => {
 };
 
 const resolvePlaceholderMessage = (data: TemplateSectionData) => {
-  const templateId = data.templateId?.trim();
-  if (!templateId) return "Select a widget template to render here.";
-  if (!data.resolved) {
-    return "Admin preview is placeholder-only until runtime resolves this template.";
-  }
-
   switch (data.resolved?.error) {
     case "template_missing":
       return "Template not found. Pick another template.";
@@ -189,21 +194,59 @@ const resolvePlaceholderMessage = (data: TemplateSectionData) => {
       return "Template is not published yet.";
     case "template_loop":
       return "Template loop detected. Remove nested template sections.";
-    default:
-      return "This template has no blocks yet.";
   }
+
+  if (templateSectionBlocksContainError(data.resolved?.blocks, "template_loop")) {
+    return "Template loop detected. Remove nested template sections.";
+  }
+
+  const templateId = data.templateId?.trim();
+  if (!templateId) return "Select a widget template to render here.";
+  if (!data.resolved) {
+    return "Admin preview is placeholder-only until runtime resolves this template.";
+  }
+
+  return "This template has no blocks yet.";
 };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+function templateSectionBlocksContainError(
+  blocks: unknown,
+  error: TemplateSectionResolvedError
+): boolean {
+  if (!Array.isArray(blocks)) return false;
+
+  return blocks.some((block) => {
+    if (!isRecord(block)) return false;
+    const data = isRecord(block.data) ? block.data : {};
+    const resolved = isRecord(data.resolved) ? data.resolved : {};
+    if (block.type === TEMPLATE_SECTION_TYPE && resolved.error === error) {
+      return true;
+    }
+
+    if (templateSectionBlocksContainError(resolved.blocks, error)) return true;
+    if (templateSectionBlocksContainError(block.children, error)) return true;
+
+    const slots = isRecord(block.slots) ? block.slots : {};
+    return Object.values(slots).some((slotBlocks) =>
+      templateSectionBlocksContainError(slotBlocks, error)
+    );
+  });
+}
 
 export const resolveTemplateSectionState = (
   data: TemplateSectionData
 ): TemplateSectionResolutionState => {
+  if (data.resolved?.error === "template_missing") return "template_missing";
+  if (data.resolved?.error === "template_unpublished") return "template_unpublished";
+  if (data.resolved?.error === "template_loop") return "template_loop";
   const templateId = data.templateId?.trim();
   if (!templateId) return "not_selected";
   if (!data.resolved) return "preview_unresolved";
-  if (data.resolved.error === "template_missing") return "template_missing";
-  if (data.resolved.error === "template_unpublished") return "template_unpublished";
-  if (data.resolved.error === "template_loop") return "template_loop";
   const blocks = Array.isArray(data.resolved.blocks) ? data.resolved.blocks : [];
+  if (templateSectionBlocksContainError(blocks, "template_loop")) return "template_loop";
   return blocks.length > 0 ? "ready" : "template_empty";
 };
 
@@ -263,7 +306,7 @@ export function TemplateSectionBlock({
   const version = metadata.version?.trim();
   const resolutionState = resolveTemplateSectionState(normalized);
 
-  if (normalized.resolved?.error || !blocks.length) {
+  if (resolutionState !== "ready") {
     return (
       <TemplateSectionPlaceholder
         label={label}

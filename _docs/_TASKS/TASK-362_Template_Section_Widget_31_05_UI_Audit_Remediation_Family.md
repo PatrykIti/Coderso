@@ -5,7 +5,7 @@
 **Category:** Widgets + Template Section + Runtime + DB Safety + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_TEMPLATE_SECTION_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -24,8 +24,8 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-362-01](TASK-362-01_TS_31_05_01_Non_UUID_TemplateId_Must_Render_A_Safe_Placeholder.md): TS-31-05-01 - Non-UUID `templateId` must render a safe placeholder, not HTTP 500
-- [ ] [TASK-362-02](TASK-362-02_TS_31_05_02_Propagate_Loop_Resolution_To_Parent_Markers.md): TS-31-05-02 - Propagate loop resolution to parent markers
+- [x] [TASK-362-01](TASK-362-01_TS_31_05_01_Non_UUID_TemplateId_Must_Render_A_Safe_Placeholder.md): TS-31-05-01 - Non-UUID `templateId` must render a safe placeholder, not HTTP 500
+- [x] [TASK-362-02](TASK-362-02_TS_31_05_02_Propagate_Loop_Resolution_To_Parent_Markers.md): TS-31-05-02 - Propagate loop resolution to parent markers
 
 ## Implementation Pseudocode
 
@@ -70,3 +70,11 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Implemented owner-side UUID-or-empty Template Section `templateId` contract and normalization.
+- Public runtime now treats malformed legacy IDs as `template_missing` without querying the UUID column or exposing raw IDs/template names.
+- Widget template writes and revision restore now reject malformed nested Template Section references, while legacy reads remain tolerant so public hydration can fail safely.
+- Nested `template_loop` results now propagate to the parent Template Section marker so the parent no longer reports `ready`.
+- Covered by changelog `1052` together with both leaf tasks.

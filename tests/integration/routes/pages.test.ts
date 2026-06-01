@@ -586,6 +586,58 @@ testIfDb("page routes reject invalid Section widget payloads before persistence"
   expect(afterPublishAttempt[0]?.publishedData).toBeNull();
 });
 
+testIfDb("page routes reject invalid Template Section references before persistence", async () => {
+  ensureRuntimeWidgetsRegistered();
+  const { router, routes } = makeRouter();
+  const deps = makeValidatingDeps();
+  const actor = await createRouteActor();
+  const page = await createPageDirectly("Invalid Template Section Page");
+  const invalidData = {
+    blocks: [
+      {
+        id: "template-section-invalid",
+        type: "template-section",
+        variant: "default",
+        data: {
+          templateId: "missing-template-31-05",
+        },
+        layout: {
+          container: "inherit",
+          padding: { top: "inherit", bottom: "inherit" },
+          margin: { top: "inherit", bottom: "inherit" },
+          background: { color: "transparent", image: null },
+        },
+        visibility: { devices: ["desktop", "tablet", "mobile"], enabled: true },
+        editor: { mode: "visual", wizardCompleted: true },
+      },
+    ],
+  };
+
+  registerPageRoutes(router, deps);
+
+  await expect(
+    runRoute(routes, "PATCH", "/pages/:id", {
+      params: { id: page.id },
+      body: { data: invalidData },
+    })
+  ).rejects.toThrow("widget_schema_invalid");
+
+  const afterSaveAttempt = await db.select().from(pages).where(eq(pages.id, page.id));
+  expect(afterSaveAttempt[0]?.currentData).toEqual({ blocks: [] });
+
+  await expect(
+    runRoute(routes, "POST", "/pages/:id/publish", {
+      params: { id: page.id },
+      user: { id: actor.id },
+      body: { data: invalidData },
+    })
+  ).rejects.toThrow("widget_schema_invalid");
+
+  const afterPublishAttempt = await db.select().from(pages).where(eq(pages.id, page.id));
+  expect(afterPublishAttempt[0]?.status).toBe("draft");
+  expect(afterPublishAttempt[0]?.publishedData).toBeNull();
+});
+
 testIfDb("page route handlers surface not-found and revision guard errors", async () => {
   const { router, routes } = makeRouter();
   const actor = await createRouteActor();

@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 138 tasks
+- **To Do:** 135 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2010 tasks
+- **Done:** 2013 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-362 | Template Section 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_TEMPLATE_SECTION_WIDGET.md`; 2 findings routed to implementation/tests/docs |
 | TASK-363 | Grid Columns 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_GRID_COLUMNS_WIDGET.md`; 1 finding routed to implementation/tests/docs |
 | TASK-364 | Split Layout 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_SPLIT_LAYOUT_WIDGET.md`; 2 findings routed to implementation/tests/docs |
 | TASK-365 | Tabs 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_TABS_WIDGET.md`; 2 findings routed to implementation/tests/docs |
@@ -79,8 +78,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
 | TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-362-01 | TS-31-05-01 - Non-UUID `templateId` must render a safe placeholder, not HTTP 500 | High | Medium | Leaf task for TASK-362; source `REPORT_TEMPLATE_SECTION_WIDGET.md` |
-| TASK-362-02 | TS-31-05-02 - Propagate loop resolution to parent markers | High | Small | Leaf task for TASK-362; source `REPORT_TEMPLATE_SECTION_WIDGET.md` |
 | TASK-363-01 | GC-31-05-01 - Add metadata for `Reapply asymmetric desktop widths` and shared `Add Column` | Medium | Medium | Leaf task for TASK-363; source `REPORT_GRID_COLUMNS_WIDGET.md` |
 | TASK-364-01 | SPL-31-05-01 - Phone ratio summary must respect stacked mobile mode | Medium | Medium | Leaf task for TASK-364; source `REPORT_SPLIT_LAYOUT_WIDGET.md` |
 | TASK-364-02 | SPL-31-05-02 - Do not show Move up/down for fixed left/right panes | Medium | Medium | Leaf task for TASK-364; source `REPORT_SPLIT_LAYOUT_WIDGET.md` |
@@ -196,6 +193,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-362 | Template Section 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-01): invalid legacy Template Section IDs now fail safely, widget template writes/restore reject malformed nested references, and loop errors propagate to parent markers. |
+| TASK-362-02 | TS-31-05-02 - Propagate loop resolution to parent markers | High | Small | Done (2026-06-01): nested self-reference markers now surface `template_loop` at the parent instead of `ready`. |
+| TASK-362-01 | TS-31-05-01 - Non-UUID `templateId` must render a safe placeholder, not HTTP 500 | High | Medium | Done (2026-06-01): non-UUID IDs are rejected on writes while legacy runtime renders safe `template_missing` placeholders without raw IDs. |
 | TASK-361 | Section 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-01): sanitized Section inline color output, rejected invalid page-builder Section payloads before persistence/publication, and completed Region control metadata. |
 | TASK-361-03 | SC-31-05-03 - Complete metadata for builder-owned Region actions and labels | High | Medium | Done (2026-06-01): Add Region and Region label controls now expose stable `regions` / `regions.<instanceId>.label` metadata. |
 | TASK-361-02 | SC-31-05-02 - Reject or normalize invalid Section payloads on admin save/publish/import | High | Medium | Done (2026-06-01): page service validates widget blocks before page create/update/autosave snapshots and publish. |
