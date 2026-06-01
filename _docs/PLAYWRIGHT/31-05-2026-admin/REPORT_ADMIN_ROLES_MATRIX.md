@@ -69,16 +69,27 @@ jednorazowej roli testowej oraz przywrócono stan.
   tymczasowa rola dostala `content:write` przez matrix, review modal pokazal
   `+ content:write`, confirm zapisal backend, a fixture user/role zostaly
   usuniete. Lokalny screenshot: `.tmp/task-356-02-review-modal.png`.
+- Po `TASK-356-03` `Select all` w `RoleEditor` nie mutuje draftu przed
+  potwierdzeniem. Cancel w high-risk dialogu zostawia dotychczasowe
+  permissions, a confirm dopiero wtedy pokazuje `Full access enabled`.
+- Matrix bulk full-access promotion jest blokowany w review modalu dopoki admin
+  nie zaakceptuje osobnego `Confirm high-risk role permissions`; samo
+  `Confirm changes` pozostaje disabled przed tym krokiem.
+- Playwright CLI pass `task-356-03-full-access-confirm` potwierdzil realny
+  flow: `Add Role -> Select all` cancel/confirm oraz matrix bulk full-access
+  dla tymczasowej roli. DB potwierdzila `permissions: ["*"]` dopiero po
+  high-risk confirm; fixture zostal usuniety po weryfikacji. Lokalny
+  screenshot: `.tmp/task-356-03-full-access-confirm.png`.
 
 ## Co nie działało / co jest ryzykowne
 
-| Problem | Dowód z kodu | Skutek |
-| --- | --- | --- |
-| Roles Matrix nie jest bramkowany uprawnieniami użytkownika | `PermissionsMatrixPage.tsx` nie przyjmuje permissions/current user, a `AdminApp.tsx` renderuje `<PermissionsMatrixPage />` bez kontekstu RBAC | restricted user może lokalnie zmieniać checkboxy i klikać save, dopiero API zwraca 403 |
-| `Add Role` jest aktywne dla restricted usera | brak `can("roles:write")` w topbar actions | user dostaje aktywny create dialog mimo braku prawa do zapisu |
-| `Save changes` zapisuje masowe zmiany bez potwierdzenia | `handleSaveChanges` buduje update dla zmienionych ról i od razu woła `updateAdminRole` | jeden błędny klik może zmienić RBAC wielu ról |
-| `Select all` w RoleEditor przełącza pełen dostęp bez confirm | `handleSelectAll` ustawia `fullAccess` i wszystkie permissions | UI ostrzega badge, ale nie wymusza świadomego potwierdzenia |
-| Brak podsumowania diffu przed zapisem | footer pokazuje tylko dirty/clean | admin nie widzi dokładnie, które role i scopes zmienia |
+| Problem | Dowód z audytu | Skutek | Status |
+| --- | --- | --- | --- |
+| Roles Matrix nie był bramkowany uprawnieniami użytkownika | `PermissionsMatrixPage.tsx` nie przyjmował permissions/current user, a `AdminApp.tsx` renderował `<PermissionsMatrixPage />` bez kontekstu RBAC | restricted user mógł lokalnie zmieniać checkboxy i klikać save, dopiero API zwracało 403 | Zamknięte w `TASK-356-01` |
+| `Add Role` było aktywne dla restricted usera | brak `can("roles:write")` w topbar actions | user dostawał aktywny create dialog mimo braku prawa do zapisu | Zamknięte w `TASK-356-01` |
+| `Save changes` zapisywało masowe zmiany bez potwierdzenia | `handleSaveChanges` budował update dla zmienionych ról i od razu wołał `updateAdminRole` | jeden błędny klik mógł zmienić RBAC wielu ról | Zamknięte w `TASK-356-02` |
+| `Select all` w RoleEditor przełączał pełen dostęp bez confirm | `handleSelectAll` ustawiał `fullAccess` i wszystkie permissions | UI ostrzegał badge, ale nie wymuszał świadomego potwierdzenia | Zamknięte w `TASK-356-03` |
+| Brak podsumowania diffu przed zapisem | footer pokazywał tylko dirty/clean | admin nie widział dokładnie, które role i scopes zmienia | Zamknięte w `TASK-356-02` |
 
 Status po `TASK-356-01`:
 
@@ -93,16 +104,18 @@ Status po `TASK-356-01`:
   search nadal dzialal. Fixture user/role zostaly usuniete po tescie; lokalny
   screenshot: `.tmp/task-356-01-roles-readonly.png`.
 - Po `TASK-356-02` diff review jest zamkniety w kodzie, testach i realnym UI.
-  Pozostale problemy sa nadal celowo w rodzinie `TASK-356`:
-  high-risk/full-access confirm (`TASK-356-03`) i audit diff (`TASK-356-04`).
+- Po `TASK-356-03` high-risk/full-access confirm jest zamkniety w kodzie,
+  testach i realnym UI.
+- Pozostaly problem jest nadal celowo w rodzinie `TASK-356`: audit diff
+  (`TASK-356-04`).
 
 ## Dlaczego
 
 Macierz działa jako draft state po stronie klienta. Przed `TASK-356-02` moment
 zapisu byl zbyt lekki jak na RBAC: kod mial poprawny `Cancel`, ale nie mial
 review step ani confirm dla szerokich zmian. `TASK-356-02` dodal review step i
-partial-failure handling; osobny confirm dla szerokich/full-access zmian nadal
-nalezy do `TASK-356-03`.
+partial-failure handling, a `TASK-356-03` dodal osobny confirm dla
+szerokich/full-access oraz high-risk grants.
 
 ## Jak naprawić
 
@@ -111,8 +124,10 @@ nalezy do `TASK-356-03`.
   read-only, a `Add Role`/`Save changes` ukryte albo disabled.
 - Przed zapisem pokazać modal z listą ról i liczbą dodanych/usuniętych
   permissions. Status: zamkniete w `TASK-356-02`.
-- Dla `*`/full access wymagać dodatkowego confirm z nazwą roli.
+- Dla `*`/full access wymagać dodatkowego confirm z nazwą roli. Status:
+  zamkniete w `TASK-356-03`.
 - Dodać testy: dirty state, cancel reset, save payload dla jednej roli, save
   payload dla full access, confirm cancel. Status: diff review/cancel/payload
-  pokryte w `TASK-356-02`; full access confirm pozostaje w `TASK-356-03`.
+  pokryte w `TASK-356-02`; full access/high-risk confirm pokryte w
+  `TASK-356-03`.
 - Rozważyć audit log event opisujący diff RBAC, nie tylko fakt zapisu.

@@ -1,4 +1,4 @@
-import { isHighRiskPermission } from "./rolePermissionRisk";
+import { classifyRolePermissionChange, normalizeRolePermissionSet } from "./rolePermissionRisk";
 
 export type RolePermissionDiffRole = {
   id: string;
@@ -12,6 +12,10 @@ export type RolePermissionDiff = {
   added: string[];
   removed: string[];
   highRisk: boolean;
+  requiresConfirmation: boolean;
+  fullAccess: boolean;
+  fullAccessPromotion: boolean;
+  addedHighRiskPermissions: string[];
 };
 
 export type RolePermissionDiffSummary = {
@@ -21,15 +25,7 @@ export type RolePermissionDiffSummary = {
   highRisk: boolean;
 };
 
-const uniqueSorted = (permissions: string[]) =>
-  Array.from(new Set(permissions.map((permission) => permission.trim()).filter(Boolean))).sort();
-
-export const normalizeRolePermissionSet = (permissions: string[], allPermissionIds: string[]) => {
-  if (permissions.includes("*")) {
-    return uniqueSorted(allPermissionIds);
-  }
-  return uniqueSorted(permissions);
-};
+export { normalizeRolePermissionSet } from "./rolePermissionRisk";
 
 export function buildRolePermissionDiffs(
   originalRoles: RolePermissionDiffRole[],
@@ -47,6 +43,11 @@ export function buildRolePermissionDiffs(
     const afterSet = new Set(after);
     const added = after.filter((permission) => !beforeSet.has(permission));
     const removed = before.filter((permission) => !afterSet.has(permission));
+    const risk = classifyRolePermissionChange({
+      beforePermissions: role.permissions,
+      nextPermissions: draftPermissions[role.id] ?? [],
+      allPermissionIds,
+    });
 
     if (added.length === 0 && removed.length === 0) return [];
 
@@ -56,7 +57,11 @@ export function buildRolePermissionDiffs(
         roleName: role.name,
         added,
         removed,
-        highRisk: added.some(isHighRiskPermission),
+        highRisk: risk.requiresConfirmation,
+        requiresConfirmation: risk.requiresConfirmation,
+        fullAccess: risk.fullAccess,
+        fullAccessPromotion: risk.fullAccessPromotion,
+        addedHighRiskPermissions: risk.addedHighRiskPermissions,
       },
     ];
   });

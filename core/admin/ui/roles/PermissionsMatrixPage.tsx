@@ -22,6 +22,7 @@ import {
 } from "@/services/adminRolesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { useAdminAuth } from "@/ui/contexts/AdminAuthContext";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
 import { PermissionsMatrix, type RolePermissionsMap } from "./PermissionsMatrix";
 import { RoleEditor } from "./RoleEditor";
@@ -56,6 +57,17 @@ const stalePermissionMessage = "Permissions changed; refresh required.";
 const isStaleRoleError = (err: unknown) =>
   isApiClientError(err) &&
   (err.status === 412 || err.code === "role_conflict" || err.code === "role_stale");
+
+const buildRiskConfirmationSignature = (diffs: RolePermissionDiff[]) =>
+  diffs
+    .filter((diff) => diff.requiresConfirmation)
+    .map((diff) =>
+      [diff.roleId, diff.fullAccessPromotion ? "full-access" : "", ...diff.addedHighRiskPermissions]
+        .filter(Boolean)
+        .join(":")
+    )
+    .sort()
+    .join("|");
 
 function PermissionsMatrixSearch({
   value,
@@ -101,9 +113,12 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
   const [draftPermissions, setDraftPermissions] = useState<RolePermissionsMap>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [roleEditorOpen, setRoleEditorOpen] = useState(false);
+  const [roleEditorSeed, setRoleEditorSeed] = useState(0);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [roleRefreshRequired, setRoleRefreshRequired] = useState(false);
+  const [riskConfirmOpen, setRiskConfirmOpen] = useState(false);
+  const [riskConfirmationSignature, setRiskConfirmationSignature] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -174,6 +189,8 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
       setDraftPermissions(buildRolePermissions(rolesData, resolvedPermissions));
       setReviewError(null);
       setRoleRefreshRequired(false);
+      setRiskConfirmOpen(false);
+      setRiskConfirmationSignature(null);
     } catch (err) {
       const message = resolveErrorMessage(
         err,
@@ -217,6 +234,8 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
         setDraftPermissions(buildRolePermissions(rolesData, resolvedPermissions));
         setReviewError(null);
         setRoleRefreshRequired(false);
+        setRiskConfirmOpen(false);
+        setRiskConfirmationSignature(null);
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -247,6 +266,13 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
   );
   const diffSummary = useMemo(() => summarizeRolePermissionDiffs(pendingDiffs), [pendingDiffs]);
   const hasUnsavedChanges = pendingDiffs.length > 0;
+  const riskDiffs = useMemo(
+    () => pendingDiffs.filter((diff) => diff.requiresConfirmation),
+    [pendingDiffs]
+  );
+  const riskSignature = useMemo(() => buildRiskConfirmationSignature(pendingDiffs), [pendingDiffs]);
+  const riskConfirmationRequired = riskSignature.length > 0;
+  const riskConfirmed = !riskConfirmationRequired || riskConfirmationSignature === riskSignature;
 
   const formatDiffSummary = useMemo(() => {
     if (!hasUnsavedChanges) return "No pending permission changes.";
@@ -287,6 +313,12 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
     }
   };
 
+  const openRoleEditor = () => {
+    if (!canEditMatrix) return;
+    setRoleEditorSeed((prev) => prev + 1);
+    setRoleEditorOpen(true);
+  };
+
   const handleTogglePermission = (roleId: string, permissionId: string) => {
     if (!canEditMatrix) return;
     setDraftPermissions((prev) => {
@@ -325,6 +357,11 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
 
   const handleConfirmSaveChanges = async () => {
     if (!canEditMatrix || pendingDiffs.length === 0 || roleRefreshRequired) return;
+    if (!riskConfirmed) {
+      setReviewError("Confirm high-risk permission changes before saving.");
+      setRiskConfirmOpen(true);
+      return;
+    }
     setIsSaving(true);
     setError(null);
     setReviewError(null);
@@ -384,6 +421,7 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
       }
 
       setReviewOpen(false);
+      setRiskConfirmationSignature(null);
       await refresh();
     } finally {
       setIsSaving(false);
@@ -406,6 +444,15 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
     setReviewError(null);
     setRoleRefreshRequired(false);
     setReviewOpen(false);
+    setRiskConfirmOpen(false);
+    setRiskConfirmationSignature(null);
+  };
+
+  const handleConfirmRiskDiffs = () => {
+    if (!riskSignature) return;
+    setRiskConfirmationSignature(riskSignature);
+    setRiskConfirmOpen(false);
+    setReviewError(null);
   };
 
   return (
@@ -422,7 +469,7 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
           variant="outline"
           size="sm"
           className="gap-2"
-          onClick={() => setRoleEditorOpen(true)}
+          onClick={openRoleEditor}
           disabled={!canEditMatrix || isLoading || isSaving}
           title={!canEditMatrix && matrixMode !== "denied" ? readOnlyReason : undefined}
           aria-label={
@@ -516,13 +563,20 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
         ) : null}
       </div>
       <RoleEditor
+        key={`role-editor-${roleEditorSeed}`}
         open={roleEditorOpen}
         onOpenChange={setRoleEditorOpen}
         onSave={(draft) => handleSaveRole(draft)}
         canManageRoles={canEditMatrix}
         permissionGroups={permissionGroups}
       />
-      <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+      <Dialog
+        open={reviewOpen}
+        onOpenChange={(open) => {
+          setReviewOpen(open);
+          if (!open) setRiskConfirmOpen(false);
+        }}
+      >
         <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Review permission changes</DialogTitle>
@@ -541,6 +595,15 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
               <Alert variant="destructive">
                 <AlertTitle>Some roles were not saved</AlertTitle>
                 <AlertDescription>{reviewError}</AlertDescription>
+              </Alert>
+            ) : null}
+            {riskConfirmationRequired && !riskConfirmed ? (
+              <Alert>
+                <AlertTitle>High-risk confirmation required</AlertTitle>
+                <AlertDescription>
+                  Confirm full-access or high-risk permission grants before saving these role
+                  changes.
+                </AlertDescription>
               </Alert>
             ) : null}
             <div className="space-y-3">
@@ -595,15 +658,48 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
                 Refresh roles
               </Button>
             ) : null}
+            {riskConfirmationRequired && !riskConfirmed ? (
+              <Button
+                variant="outline"
+                onClick={() => setRiskConfirmOpen(true)}
+                disabled={isSaving || roleRefreshRequired}
+              >
+                Review high-risk changes
+              </Button>
+            ) : null}
             <Button
               onClick={handleConfirmSaveChanges}
-              disabled={!hasUnsavedChanges || isSaving || roleRefreshRequired}
+              disabled={!hasUnsavedChanges || isSaving || roleRefreshRequired || !riskConfirmed}
             >
               {isSaving ? "Saving..." : "Confirm changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmActionDialog
+        open={riskConfirmOpen}
+        onOpenChange={setRiskConfirmOpen}
+        title="Confirm high-risk role permissions"
+        description="This change grants full access or sensitive permissions to one or more roles."
+        targetLabel={`${riskDiffs.length} ${riskDiffs.length === 1 ? "role" : "roles"}`}
+        cancelLabel="Back to review"
+        confirmLabel="Confirm high-risk changes"
+        confirmingLabel="Confirming..."
+        tone="warning"
+        onConfirm={handleConfirmRiskDiffs}
+      >
+        {riskDiffs
+          .map((diff) => {
+            const grants = [
+              diff.fullAccessPromotion ? "full access" : "",
+              ...diff.addedHighRiskPermissions,
+            ]
+              .filter(Boolean)
+              .join(", ");
+            return `${diff.roleName}: ${grants}`;
+          })
+          .join("; ")}
+      </ConfirmActionDialog>
     </AdminShell>
   );
 }

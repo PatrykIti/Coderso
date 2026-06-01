@@ -91,6 +91,11 @@ UI behavior:
   dirty z role-specific error. Stale role conflicts (`409`/`412`,
   `role_conflict`, `role_stale`) blokuja retry do czasu jawnego odswiezenia
   rol.
+- RoleEditor i Roles Matrix uzywaja tego samego high-risk taxonomy. Granty
+  full-access (`*` albo kompletny katalog permissions), wildcard/write/security
+  scopes i inne high-risk additions wymagaja osobnego confirm dialogu przed
+  mutacja draftu albo finalnym zapisem. Read-only scopes takie jak `roles:read`
+  nie sa high-risk same w sobie.
 - Widoki Users/Roles wylaczaja akcje edycji bez odpowiedniego write
   permission, a stale 403 wymusza odswiezenie permission snapshotu.
 - Ostatni admin nie moze zostac usuniety ani pozbawiony roli admin.
@@ -98,8 +103,8 @@ UI behavior:
   wymaga confirm, gdy role sa high-risk albo UI nie ma `roles:read` i nie moze
   potwierdzic ryzyka. Duplicate role wymaga confirm dla `*`, wildcard scopes i
   high-risk permissions (`roles:write`, `users:write`, `settings:write`,
-  `plugins:manage`, `backups:write`, `themes:write`, `solution-kits:write`,
-  `audit:read`).
+  `sessions:write`, `api-keys:write`, `plugins:manage`, `backups:write`,
+  `themes:write`, `solution-kits:write`, `audit:read`).
 
 ## Enforcement
 

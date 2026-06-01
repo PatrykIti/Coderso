@@ -90,6 +90,8 @@ screen.
     - delete user,
     - delete role,
     - duplicate a role with sensitive permissions,
+    - create or edit a role so it grants full access or sensitive write/security
+      permissions,
     - reactivate a user when role risk is high or cannot be verified.
 13. Treat the bottom `Roles` section as supporting context for user assignment,
     not as the full permissions-matrix replacement.
@@ -114,6 +116,8 @@ Use this safe user-management order when you want fewer access mistakes:
   cache the token in the browser.
 - Deactivate, delete, delete-role, and high-risk duplicate actions require an
   explicit confirmation that names the target user or role.
+- Role creation and role edits reuse the same high-risk confirmation as Roles
+  Matrix when a change grants full access or sensitive permissions.
 - The route’s details panel exposes read-only notification and two-factor
   context, which makes it stronger than a simple members list without implying
   local notification preference writes.
@@ -131,6 +135,8 @@ Use this safe user-management order when you want fewer access mistakes:
   check whether the account is marked `Last admin`.
 - The invite role feels uncertain:
   use the permissions preview to compare expected capabilities before sending.
+- A role editor high-risk confirmation appears:
+  review the named role and scopes; cancel keeps the role draft unchanged.
 - Invite or reset cannot send email:
   ask a settings admin to configure Settings -> Email before retrying.
 - Role details are unavailable:
@@ -157,7 +163,7 @@ Use this safe user-management order when you want fewer access mistakes:
 2. Confirm status and role filters are intentional.
 3. Review the details panel before changing access.
 4. Confirm invitation role choice before sending.
-5. Treat `Last admin` state carefully.
+5. Treat full-access, high-risk, and `Last admin` state carefully.
 
 # Security
 

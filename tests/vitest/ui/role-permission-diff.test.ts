@@ -42,6 +42,10 @@ describe("role permission diff helpers", () => {
         added: ["content:write", "roles:write"],
         removed: [],
         highRisk: true,
+        requiresConfirmation: true,
+        fullAccess: false,
+        fullAccessPromotion: false,
+        addedHighRiskPermissions: ["roles:write"],
       },
       {
         roleId: "admin",
@@ -49,6 +53,10 @@ describe("role permission diff helpers", () => {
         added: [],
         removed: ["roles:read", "roles:write", "settings:write"],
         highRisk: false,
+        requiresConfirmation: false,
+        fullAccess: false,
+        fullAccessPromotion: false,
+        addedHighRiskPermissions: [],
       },
     ]);
   });
@@ -85,6 +93,34 @@ describe("role permission diff helpers", () => {
         added: [],
         removed: ["content:read"],
         highRisk: false,
+        requiresConfirmation: false,
+        fullAccess: false,
+        fullAccessPromotion: false,
+        addedHighRiskPermissions: [],
+      },
+    ]);
+  });
+
+  test("marks full-access promotions as requiring confirmation", () => {
+    expect(
+      buildRolePermissionDiffs(
+        [{ id: "viewer", name: "Viewer", permissions: ["content:read"] }],
+        {
+          viewer: allPermissions,
+        },
+        allPermissions
+      )
+    ).toEqual([
+      {
+        roleId: "viewer",
+        roleName: "Viewer",
+        added: ["content:write", "roles:read", "roles:write", "settings:write"],
+        removed: [],
+        highRisk: true,
+        requiresConfirmation: true,
+        fullAccess: true,
+        fullAccessPromotion: true,
+        addedHighRiskPermissions: ["roles:write", "settings:write"],
       },
     ]);
   });

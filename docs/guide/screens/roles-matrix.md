@@ -80,14 +80,17 @@ deeper and more structural than the `/users` route.
     not submit any role changes.
 14. Use `Confirm changes` only after the listed diff matches the intended RBAC
     change.
+    If the diff grants full access or sensitive write/security scopes, confirm
+    the separate high-risk dialog first.
 15. Use `Add Role` when the current role catalog does not fit the access model.
 16. In `Create new role`, fill:
     - role name,
     - description,
     - permission scope.
-17. Use `Select all` only for a true full-access role.
+17. Use `Select all` only for a true full-access role. It requires explicit
+    confirmation before it changes the draft.
 18. Read the `Full access enabled` warning carefully before saving an admin-like
-    role.
+    role; the warning is informational, not a replacement for the confirmation.
 19. Use `Create role` only after the name, description, and permission scope all
     match the intended responsibility boundary.
 
@@ -110,6 +113,8 @@ Use this safe role-design order when you want fewer access mistakes:
   matrix locally or open a submit-ready role-creation flow.
 - `Full access` is a strong security boundary. The dialog explicitly warns that
   it should be reserved for admin-level roles only.
+- High-risk permission grants use the same confirmation model in `Add Role`,
+  role edits from Users, and the Roles Matrix review modal.
 - The footer’s diff summary is operationally important because this screen
   encourages experimentation before commit.
 - The review dialog PATCHes only roles with actual diffs. If one role fails but
@@ -124,6 +129,9 @@ Use this safe role-design order when you want fewer access mistakes:
   compare their column toggles directly before creating a redundant new role.
 - A change feels risky:
   leave it unsaved and use `Cancel` until the role impact is clear.
+- A high-risk confirmation appears:
+  review the named role and sensitive scopes; cancel leaves the current draft or
+  pending save unchanged.
 - Add Role, bulk toggles, checkboxes, or Review changes are unavailable:
   your account can inspect roles, but editing requires `roles:write`.
 - A review save reports that a role changed on the server:
@@ -148,7 +156,7 @@ Use this safe role-design order when you want fewer access mistakes:
 1. Confirm the right role or permission group is selected for review.
 2. Confirm any toggle change is intentional.
 3. Review the changed-role and added/removed counts before opening the review.
-4. Confirm full-access roles are truly necessary.
+4. Confirm full-access and high-risk permission grants are truly necessary.
 5. Confirm only after the review dialog diff matches the intended access model.
 
 # Security

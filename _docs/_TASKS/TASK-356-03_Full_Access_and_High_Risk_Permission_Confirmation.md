@@ -5,7 +5,7 @@
 **Category:** Admin UI + Roles + RBAC + Security UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-356-01, TASK-356-02, TASK-360-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -108,3 +108,35 @@ Error handling:
   later product/security decision documents that stricter behavior.
 - Cancel leaves role permissions unchanged.
 - RoleEditor and Roles Matrix use the same high-risk taxonomy.
+
+## Completion Notes
+
+- Extended the shared roles risk helper with full-access detection,
+  normalized permission-set comparison, and diff-aware high-risk addition
+  classification.
+- `RoleEditor` now gates `Select all`, high-risk permission toggles, and
+  create/save submit through the shared confirm dialog before mutating or
+  submitting high-risk/full-access grants.
+- `RoleEditor` reuses confirmed risk signatures so adding low-risk permissions
+  after a confirmed sensitive grant does not re-prompt, while clearing/removing
+  risk resets the confirmation.
+- Roles Matrix diffs now carry full-access/high-risk confirmation metadata. The
+  review modal blocks final `Confirm changes` until the admin confirms
+  high-risk/full-access diffs through the shared confirm dialog.
+- Matrix `RoleEditor` instances are keyed per open action so stale confirmed
+  risk state cannot leak across create-role sessions.
+- Playwright CLI evidence verified real UI behavior for `Add Role -> Select
+  all` cancel/confirm and matrix bulk full-access promotion. The temporary role
+  reached `["*"]` only after high-risk confirmation and was removed after DB
+  verification; local screenshot:
+  `.tmp/task-356-03-full-access-confirm.png`.
+
+Validation completed:
+
+- `bun run test:vitest -- tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/role-permission-diff.test.ts tests/vitest/ui/role-editor-wave.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/role-editor-wave.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/role-permission-diff.test.ts tests/vitest/ui/role-permission-risk.test.ts tests/vitest/admin/adminRolesClient.test.ts tests/vitest/ui/shared-dialog-contracts.test.tsx`
+- `set -a && source .env && set +a && bun test tests/integration/routes/adminRoles.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `playwright-cli -s task-356-03-full-access-confirm run-code ...` admin
+  full-access confirmation pass

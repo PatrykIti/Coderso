@@ -239,7 +239,7 @@ Completion notes:
 
 ### TASK-356-03: Full Access and High-Risk Permission Confirmation
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation shape:
 
@@ -292,6 +292,18 @@ Regression tests:
   confirmation.
 - Adding high-risk write/security scopes without full access also requires the
   same confirmation, while read-only scopes do not unless explicitly documented.
+
+Completion notes:
+
+- Shared role risk helpers now distinguish full-access promotion, current
+  full-access state, and newly added high-risk permissions.
+- `RoleEditor` requires explicit confirmation before `Select all`, high-risk
+  permission toggles, or submit paths can grant high-risk/full-access scopes.
+- Roles Matrix review now blocks final save for high-risk/full-access diffs
+  until the separate high-risk confirm action is accepted.
+- Real Playwright evidence verified RoleEditor cancel/confirm behavior and
+  matrix bulk full-access promotion on a temporary role that was cleaned up
+  after DB verification.
 
 ### TASK-356-04: RBAC Audit Event Diff
 

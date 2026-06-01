@@ -344,6 +344,79 @@ test("PermissionsMatrixPage preserves editable matrix behavior for roles:write u
   }
 });
 
+test("PermissionsMatrixPage blocks high-risk permission saves until confirmed", async () => {
+  const { PermissionsMatrixPage } =
+    await import("../../../core/admin/ui/roles/PermissionsMatrixPage");
+
+  const view = mount(<PermissionsMatrixPage permissions={["roles:read", "roles:write"]} />);
+
+  try {
+    await flush();
+
+    clickByLabel(view.container, "Write settings for Editor");
+    clickByText(view.container, "Review changes");
+
+    expect(view.container.textContent).toContain("High-risk confirmation required");
+    expect(view.container.textContent).toContain("+ settings:write");
+    const confirm = findButtonByText(view.container, "Confirm changes");
+    expect(confirm).toBeInstanceOf(HTMLButtonElement);
+    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+
+    clickByText(view.container, "Confirm changes");
+    expect(updateAdminRole).not.toHaveBeenCalled();
+
+    clickByText(view.container, "Review high-risk changes");
+    expect(view.container.textContent).toContain("Confirm high-risk role permissions");
+    expect(view.container.textContent).toContain("Editor: settings:write");
+
+    clickByText(view.container, "Back to review");
+    expect(updateAdminRole).not.toHaveBeenCalled();
+
+    clickByText(view.container, "Review high-risk changes");
+    clickByText(view.container, "Confirm high-risk changes");
+
+    const confirmed = findButtonByText(view.container, "Confirm changes");
+    expect(confirmed).toBeInstanceOf(HTMLButtonElement);
+    expect((confirmed as HTMLButtonElement).disabled).toBe(false);
+
+    clickByText(view.container, "Confirm changes");
+    await flush();
+
+    expect(updateAdminRole).toHaveBeenCalledWith("editor", {
+      permissions: ["content:read", "settings:write"],
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PermissionsMatrixPage requires high-risk confirmation for bulk full-access promotion", async () => {
+  const { PermissionsMatrixPage } =
+    await import("../../../core/admin/ui/roles/PermissionsMatrixPage");
+
+  const view = mount(<PermissionsMatrixPage permissions={["roles:read", "roles:write"]} />);
+
+  try {
+    await flush();
+
+    clickByLabel(view.container, "Toggle all Editor permissions");
+    clickByText(view.container, "Review changes");
+
+    expect(view.container.textContent).toContain("High-risk confirmation required");
+    clickByText(view.container, "Review high-risk changes");
+    expect(view.container.textContent).toContain("Editor: full access");
+    clickByText(view.container, "Confirm high-risk changes");
+    clickByText(view.container, "Confirm changes");
+    await flush();
+
+    expect(updateAdminRole).toHaveBeenCalledWith("editor", {
+      permissions: ["*"],
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PermissionsMatrixPage refreshes permissions and shows access denied after stale load 403", async () => {
   const { ApiClientError } = await import("../../../core/admin/services/apiClient");
   const { AdminAuthProvider } = await import("../../../core/admin/ui/contexts/AdminAuthContext");

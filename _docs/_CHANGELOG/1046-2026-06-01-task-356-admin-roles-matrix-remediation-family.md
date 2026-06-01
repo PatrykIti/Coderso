@@ -68,11 +68,32 @@ Tasks: TASK-356, TASK-356-01, TASK-356-02, TASK-356-03, TASK-356-04
 - Added Playwright CLI admin evidence for add-permission -> review diff ->
   confirm -> backend update with temporary fixtures removed after the pass.
 
+### TASK-356-03 Full Access and High-Risk Permission Confirmation
+
+- Extended the shared roles risk helper to classify full-access promotion,
+  current full-access state, and newly added high-risk permissions using the
+  same normalized permission semantics as the matrix diff builder.
+- `RoleEditor` now requires explicit confirmation before `Select all`,
+  high-risk permission toggles, or create/save submit paths can grant sensitive
+  scopes.
+- `RoleEditor` uses risk signatures so a confirmed sensitive grant does not
+  repeatedly prompt for unrelated low-risk edits, while clearing/removing the
+  risk resets confirmation.
+- Roles Matrix review now blocks final `Confirm changes` for high-risk or
+  full-access diffs until the admin accepts a separate shared confirm dialog.
+- Matrix create-role dialogs are keyed per open action to prevent stale draft or
+  confirmed-risk state from leaking across sessions.
+- Added Playwright CLI evidence for RoleEditor full-access cancel/confirm and
+  matrix bulk full-access promotion; the temporary role was verified as `["*"]`
+  after confirmation and then removed.
+
 ## Validation
 
 - `bun run test:vitest -- tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/role-editor-wave.test.tsx tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/routes/adminRoles.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/role-permission-diff.test.ts tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/admin/adminRolesClient.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/role-permission-diff.test.ts tests/vitest/ui/role-editor-wave.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/role-editor-wave.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/role-permission-diff.test.ts tests/vitest/ui/role-permission-risk.test.ts tests/vitest/admin/adminRolesClient.test.ts tests/vitest/ui/shared-dialog-contracts.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
@@ -82,5 +103,9 @@ Tasks: TASK-356, TASK-356-01, TASK-356-02, TASK-356-03, TASK-356-04
 - `playwright-cli -s task-356-02-review-modal run-code ...` with admin
   review-modal assertions; temporary script and DB fixtures removed after the
   pass. Local screenshot: `.tmp/task-356-02-review-modal.png`.
+- `playwright-cli -s task-356-03-full-access-confirm run-code ...` with
+  RoleEditor and matrix full-access confirmation assertions; temporary script
+  and DB fixture removed after the pass. Local screenshot:
+  `.tmp/task-356-03-full-access-confirm.png`.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md`.
