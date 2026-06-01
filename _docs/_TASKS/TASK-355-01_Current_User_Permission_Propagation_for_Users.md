@@ -5,7 +5,7 @@
 **Category:** Admin UI + Users + Roles + RBAC + Security UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-355, TASK-360-01
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -147,3 +147,38 @@ Error handling:
   missing.
 - Backend RBAC remains the source of truth and still rejects unauthorized
   writes.
+
+## Completion Notes
+
+- Reused the `TASK-360-01` `/auth/me` permission snapshot as the current-user
+  source of truth; no second browser permission model was introduced.
+- `/admin/users` and the sidebar Users item now allow either `users:read` or
+  `roles:read`, while the page itself fetches only resources covered by the
+  effective snapshot.
+- Admin shell global reads are also permission-gated for this partial mode:
+  settings, admin theme, custom-screen shortcuts, and solution-kit nav context
+  no longer fetch when their required read permission is absent.
+- Removed the Users page fail-open default permission list. Standalone usage
+  without a provider now fails closed unless explicit test permissions are
+  passed.
+- Added `users:read`-only mode: users load, role fetches are skipped, role
+  filters/details are unavailable, and user write controls are disabled before
+  submit.
+- Added `roles:read`-only mode: roles and the permission catalog load, user
+  fetches are skipped, invite/user-table controls are hidden, and role writes
+  stay disabled without `roles:write`.
+- Mutation handlers still keep backend RBAC as defense-in-depth and refresh the
+  permission snapshot after stale 403/`permission_denied` responses.
+- User lifecycle writes (`activate/deactivate` and delete) require
+  `users:write`; role-assignment/edit/invite flows additionally require
+  `roles:read` because they need role choices.
+- Backend auth route snapshot tests remain owned by completed `TASK-360-01`;
+  this leaf validates the Users route/page consumption contract.
+- Validation run:
+  `bun run test:vitest -- tests/vitest/ui/users-roles-page-wave.test.tsx tests/vitest/ui/users-roles.test.tsx tests/vitest/ui-integration/users.test.tsx tests/vitest/ui-integration/roles.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/user-details-drawer-wave.test.tsx tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx tests/vitest/ui/user-list-filters-wave.test.tsx`
+- Validation run:
+  `set -a && source .env && set +a && bun test tests/integration/routes/auth.test.ts tests/integration/routes/adminUsers.test.ts tests/integration/routes/adminRoles.test.ts tests/unit/auth/rbac.test.ts`
+- Validation run: `bun --cwd core lint`
+- Validation run: `bun --cwd core lint:types`
+- Advisory security scans run: `bun run scan:semgrep`,
+  `bun run scan:trivy`, and `bun run scan:gitleaks:worktree`.

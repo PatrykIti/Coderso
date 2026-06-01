@@ -149,6 +149,16 @@ Contract:
 - `theme:updated` event:
   - refresh scope is limited to admin theme token reload,
   - global settings refresh is not triggered by theme update.
+- Permission-gated shell reads:
+  - `AdminApp` only calls `getSettings()` when the current permission snapshot
+    has `settings:read`.
+  - `AdminApp` only refreshes admin theme token caches when the snapshot has
+    `themes:read`.
+  - `AdminShell` only hydrates/revalidates custom screen shortcuts with
+    `content:read` and solution-kit navigation context with
+    `solution-kits:read`.
+  - Missing permissions clear route-local shell state instead of issuing
+    avoidable 403-producing reads.
 
 ## Release Gate Link
 - Admin cache/SPA transition behavior is part of Coderso release gates:

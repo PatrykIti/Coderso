@@ -32,6 +32,7 @@ export type NavItem = {
   icon: LucideIcon;
   badge?: string;
   permission?: string;
+  anyPermissions?: string[];
 };
 
 export type NavGroup = {
@@ -41,6 +42,7 @@ export type NavGroup = {
   items: NavItem[];
   defaultExpanded?: boolean;
   permission?: string;
+  anyPermissions?: string[];
 };
 
 export type NavSection = {
@@ -108,7 +110,12 @@ export const buildDefaultNavSections = (
   {
     title: "Admin",
     items: [
-      { label: "Users", href: "/admin/users", icon: Users, permission: "users:read" },
+      {
+        label: "Users",
+        href: "/admin/users",
+        icon: Users,
+        anyPermissions: ["users:read", "roles:read"],
+      },
       { label: "Roles Matrix", href: "/admin/roles", icon: ShieldCheck, permission: "roles:read" },
       { label: "Audit Logs", href: "/admin/audit", icon: Shield, permission: "audit:read" },
       {

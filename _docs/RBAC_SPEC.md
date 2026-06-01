@@ -72,7 +72,15 @@ UI behavior:
   przez `GET /auth/me`; brak lub malformed snapshot fail-closed.
 - Sidebar i admin route guards uzywaja tego samego helpera, a API 403 pozostaje
   defense-in-depth i wyzwala odswiezenie permission snapshotu.
-- Widoki Users/Roles wylaczaja akcje edycji bez `users:write` lub `roles:write`.
+- Globalne odczyty Admin shell rowniez musza sprawdzac snapshot przed fetch:
+  settings (`settings:read`), admin theme (`themes:read`), custom-screen
+  shortcuts (`content:read`) i solution-kit nav context (`solution-kits:read`).
+- `/admin/users` jest dostepne przy `users:read` albo `roles:read`; bez obu
+  uprawnien UI nie wykonuje fetchy Users/Roles.
+- `users:read`-only pokazuje liste users bez role filter/details; `roles:read`
+  -only pokazuje role cards/catalog bez tabeli users i invite.
+- Widoki Users/Roles wylaczaja akcje edycji bez odpowiedniego write
+  permission, a stale 403 wymusza odswiezenie permission snapshotu.
 - Ostatni admin nie moze zostac usuniety ani pozbawiony roli admin.
 
 ## Enforcement

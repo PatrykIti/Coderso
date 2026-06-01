@@ -221,7 +221,7 @@ test("UsersRolesPage mobile user details sheet binds a title and description", a
   const { UsersRolesPage } = await import("../../../core/admin/ui/users/UsersRolesPage");
 
   await expectOpenDialogSemantics(
-    <UsersRolesPage />,
+    <UsersRolesPage permissions={["users:read", "users:write", "roles:read", "roles:write"]} />,
     "User details",
     "Review the selected user's roles, permissions, and account activity."
   );

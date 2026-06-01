@@ -17,9 +17,7 @@ const defaultBrand = (
       C
     </div>
     <div className="flex flex-col">
-      <span className="text-sm font-semibold text-[var(--admin-sidebar-active-text)]">
-        Coderso
-      </span>
+      <span className="text-sm font-semibold text-[var(--admin-sidebar-active-text)]">Coderso</span>
       <span className="text-xs text-[var(--admin-sidebar-text)]">Admin Panel</span>
     </div>
   </div>
@@ -57,15 +55,18 @@ export function SidebarNav({
     if (!permission) return true;
     return canAccess ? canAccess(permission) : true;
   };
+  const canAccessAnyPermission = (permissions?: string[]) => {
+    if (!permissions?.length) return true;
+    return permissions.some((permission) => canAccessPermission(permission));
+  };
+  const canAccessNavTarget = (target: { permission?: string; anyPermissions?: string[] }) =>
+    canAccessPermission(target.permission) && canAccessAnyPermission(target.anyPermissions);
 
   const persistScrollPosition = useCallback(() => {
     if (!shouldPersistScroll || typeof window === "undefined") return;
     const nav = navRef.current;
     if (!nav) return;
-    window.sessionStorage.setItem(
-      SIDEBAR_SCROLL_STORAGE_KEY,
-      String(nav.scrollTop)
-    );
+    window.sessionStorage.setItem(SIDEBAR_SCROLL_STORAGE_KEY, String(nav.scrollTop));
   }, [shouldPersistScroll]);
 
   useEffect(() => {
@@ -94,17 +95,15 @@ export function SidebarNav({
 
   const visibleSections = sections
     .map((section) => {
-      const visibleItems = (section.items ?? []).filter((item) =>
-        canAccessPermission(item.permission)
-      );
+      const visibleItems = (section.items ?? []).filter((item) => canAccessNavTarget(item));
       const visibleItemsAfterGroups = (section.itemsAfterGroups ?? []).filter((item) =>
-        canAccessPermission(item.permission)
+        canAccessNavTarget(item)
       );
       const visibleGroups = (section.groups ?? [])
-        .filter((group) => canAccessPermission(group.permission))
+        .filter((group) => canAccessNavTarget(group))
         .map((group) => ({
           ...group,
-          items: group.items.filter((item) => canAccessPermission(item.permission)),
+          items: group.items.filter((item) => canAccessNavTarget(item)),
         }))
         .filter((group) => group.items.length > 0);
       return {
@@ -116,9 +115,7 @@ export function SidebarNav({
     })
     .filter(
       (section) =>
-        section.items.length > 0 ||
-        section.groups.length > 0 ||
-        section.itemsAfterGroups.length > 0
+        section.items.length > 0 || section.groups.length > 0 || section.itemsAfterGroups.length > 0
     );
 
   const baseClasses =
@@ -126,12 +123,7 @@ export function SidebarNav({
       ? "flex h-full w-72 flex-col bg-[var(--admin-sidebar-bg)]"
       : "hidden h-screen w-64 shrink-0 flex-col border-r border-[var(--admin-base-border)] bg-[var(--admin-sidebar-bg)] md:flex";
   return (
-    <aside
-      className={cn(
-        baseClasses,
-        className
-      )}
-    >
+    <aside className={cn(baseClasses, className)}>
       <div className="p-6 pb-4">{brand}</div>
       <nav
         ref={navRef}
@@ -146,11 +138,7 @@ export function SidebarNav({
             <div className="mt-2 space-y-1">
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = isAdminHrefActive(
-                  adminBasePath,
-                  item.href,
-                  activeHref
-                );
+                const isActive = isAdminHrefActive(adminBasePath, item.href, activeHref);
                 return (
                   <AdminLink
                     key={item.href}
@@ -178,8 +166,7 @@ export function SidebarNav({
                 const isGroupActive = group.items.some((item) =>
                   isAdminHrefActive(adminBasePath, item.href, activeHref)
                 );
-                const expanded =
-                  groupState?.[group.id] ?? group.defaultExpanded ?? true;
+                const expanded = groupState?.[group.id] ?? group.defaultExpanded ?? true;
                 return (
                   <div key={group.id} className="rounded-lg border border-transparent">
                     <button
@@ -240,11 +227,7 @@ export function SidebarNav({
               })}
               {section.itemsAfterGroups.map((item) => {
                 const Icon = item.icon;
-                const isActive = isAdminHrefActive(
-                  adminBasePath,
-                  item.href,
-                  activeHref
-                );
+                const isActive = isAdminHrefActive(adminBasePath, item.href, activeHref);
                 return (
                   <AdminLink
                     key={item.href}

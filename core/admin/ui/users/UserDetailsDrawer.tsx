@@ -14,6 +14,7 @@ export type UserDetailsDrawerProps = {
   user?: UserSummary | null;
   roles: RoleSummary[];
   canManageUsers?: boolean;
+  roleDetailsUnavailableReason?: string;
   resetPasswordUnavailableReason?: string;
   onEditUser: () => void;
   onResetPassword: () => void;
@@ -57,6 +58,7 @@ export function UserDetailsDrawer({
   user,
   roles,
   canManageUsers = true,
+  roleDetailsUnavailableReason,
   resetPasswordUnavailableReason,
   onEditUser,
   onResetPassword,
@@ -71,8 +73,15 @@ export function UserDetailsDrawer({
   }
 
   const roleMap = new Map(roles.map((role) => [role.id, role.name]));
-  const roleNames = user.roleIds.map((roleId) => roleMap.get(roleId) ?? roleId);
-  const permissionSummary = getPermissionSummary(user, roles);
+  const roleNames = roleDetailsUnavailableReason
+    ? []
+    : user.roleIds.map((roleId) => roleMap.get(roleId) ?? roleId);
+  const permissionSummary = roleDetailsUnavailableReason
+    ? {
+        count: "Role details unavailable",
+        items: [roleDetailsUnavailableReason],
+      }
+    : getPermissionSummary(user, roles);
 
   return (
     <div className="flex h-full flex-col">
@@ -87,7 +96,7 @@ export function UserDetailsDrawer({
           </div>
         </div>
         <Badge variant="outline" className="text-xs">
-          {roleNames[0] ?? "User"}
+          {roleNames[0] ?? (roleDetailsUnavailableReason ? "Roles unavailable" : "User")}
         </Badge>
       </div>
       <Separator className="my-4" />

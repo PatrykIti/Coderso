@@ -118,6 +118,7 @@ type RouteMatch = {
   element: React.ReactNode;
   params: Record<string, string>;
   permission?: string;
+  anyPermissions?: string[];
 };
 
 const normalizePath = (input: string) => {
@@ -171,12 +172,20 @@ type RouteDefinition = {
   pattern: string;
   element: React.ReactNode;
   permission?: string;
+  anyPermissions?: string[];
 };
 
 const resolveRoute = (path: string, routes: RouteDefinition[]): RouteMatch => {
   for (const route of routes) {
     const params = matchRoute(route.pattern, path);
-    if (params) return { element: route.element, params, permission: route.permission };
+    if (params) {
+      return {
+        element: route.element,
+        params,
+        permission: route.permission,
+        anyPermissions: route.anyPermissions,
+      };
+    }
   }
   return { element: <NotFound />, params: {} };
 };
@@ -539,10 +548,15 @@ export function AdminApp({ path }: AdminAppProps) {
   );
 
   const permissionSnapshot = authUser?.permissionSnapshot ?? null;
+  const canReadSettings = canAdmin("settings:read", permissionSnapshot);
+  const canReadThemes = canAdmin("themes:read", permissionSnapshot);
   const canAccessRoute = useCallback(
-    (permission?: string) => {
-      if (!permission) return true;
-      return canAdmin(permission, permissionSnapshot);
+    (route: Pick<RouteMatch, "permission" | "anyPermissions">) => {
+      if (route.permission && !canAdmin(route.permission, permissionSnapshot)) return false;
+      if (route.anyPermissions?.length) {
+        return route.anyPermissions.some((permission) => canAdmin(permission, permissionSnapshot));
+      }
+      return true;
     },
     [permissionSnapshot]
   );
@@ -550,6 +564,13 @@ export function AdminApp({ path }: AdminAppProps) {
     const result = await resolveAuthBootstrap({ force: true });
     setAuthState(result.state);
     setAuthUser(result.user);
+    if (!canAdmin("settings:read", result.user?.permissionSnapshot ?? null)) {
+      setSettingsState({
+        status: "idle",
+        values: defaultSettingsValues,
+        error: null,
+      });
+    }
   }, []);
   const authPermissions = useMemo(
     () => permissionSnapshot?.permissions ?? [],
@@ -667,7 +688,7 @@ export function AdminApp({ path }: AdminAppProps) {
       {
         pattern: "/users",
         element: <UsersRolesPage permissions={authPermissions} />,
-        permission: "users:read",
+        anyPermissions: ["users:read", "roles:read"],
       },
       { pattern: "/roles", element: <PermissionsMatrixPage />, permission: "roles:read" },
       { pattern: "/themes", element: <ThemesPage />, permission: "themes:read" },
@@ -755,7 +776,7 @@ export function AdminApp({ path }: AdminAppProps) {
     ];
 
     const route = resolveRoute(canonicalRelativePath, routes);
-    if (isProtected && !canAccessRoute(route.permission)) {
+    if (isProtected && !canAccessRoute(route)) {
       return { ...route, element: <AccessDenied /> };
     }
     return route;
@@ -771,6 +792,14 @@ export function AdminApp({ path }: AdminAppProps) {
   ]);
 
   const refreshSettings = useCallback(() => {
+    if (!canReadSettings) {
+      setSettingsState({
+        status: "idle",
+        values: defaultSettingsValues,
+        error: null,
+      });
+      return;
+    }
     setSettingsState((prev) => ({
       ...prev,
       status: "loading",
@@ -800,7 +829,7 @@ export function AdminApp({ path }: AdminAppProps) {
           error: message,
         }));
       });
-  }, []);
+  }, [canReadSettings]);
 
   const refreshAdminTheme = useCallback((options?: { force?: boolean }) => {
     const fallback = DEFAULT_ADMIN_THEME_TOKENS;
@@ -832,6 +861,13 @@ export function AdminApp({ path }: AdminAppProps) {
         if (!active) return;
         setAuthState(result.state);
         setAuthUser(result.user);
+        if (!canAdmin("settings:read", result.user?.permissionSnapshot ?? null)) {
+          setSettingsState({
+            status: "idle",
+            values: defaultSettingsValues,
+            error: null,
+          });
+        }
       })
       .catch(() => {
         if (!active) return;
@@ -845,6 +881,7 @@ export function AdminApp({ path }: AdminAppProps) {
 
   useEffect(() => {
     if (authState !== "authenticated") return;
+    if (!canReadSettings) return;
     let active = true;
     const fallbackState: SettingsState = {
       status: "idle",
@@ -873,12 +910,13 @@ export function AdminApp({ path }: AdminAppProps) {
     return () => {
       active = false;
     };
-  }, [authState]);
+  }, [authState, canReadSettings]);
 
   useEffect(() => {
     if (authState !== "authenticated") return;
+    if (!canReadThemes) return;
     refreshAdminTheme({ force: false });
-  }, [authState, refreshAdminTheme]);
+  }, [authState, canReadThemes, refreshAdminTheme]);
 
   useEffect(() => {
     if (authState !== "authenticated") return undefined;
@@ -892,16 +930,16 @@ export function AdminApp({ path }: AdminAppProps) {
     if (authState !== "authenticated") return;
     const handler = () => {
       const scope = resolveThemeUpdatedRefreshScope();
-      if (scope.refreshSettings) {
+      if (scope.refreshSettings && canReadSettings) {
         refreshSettings();
       }
-      if (scope.refreshTheme) {
+      if (scope.refreshTheme && canReadThemes) {
         refreshAdminTheme({ force: true });
       }
     };
     window.addEventListener("theme:updated", handler);
     return () => window.removeEventListener("theme:updated", handler);
-  }, [authState, refreshAdminTheme, refreshSettings]);
+  }, [authState, canReadSettings, canReadThemes, refreshAdminTheme, refreshSettings]);
 
   useEffect(() => {
     if (!isAdminPath) return;

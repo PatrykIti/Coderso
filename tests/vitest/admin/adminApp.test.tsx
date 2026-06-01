@@ -19,6 +19,14 @@ const adminAuthState = vi.hoisted(() => ({
     },
   },
 }));
+const adminAppServiceMocks = vi.hoisted(() => ({
+  getSettings: vi.fn(async () => ({
+    "setup.completed": true,
+  })),
+  updateSettings: vi.fn(async () => ({})),
+  listAdminThemeProfilesCached: vi.fn(async () => []),
+  listAdminThemeTemplatesCached: vi.fn(async () => []),
+}));
 
 vi.mock("@/services/authClient", () => ({
   canAdmin: (permission: string, snapshot: { permissions?: string[] } | null | undefined) =>
@@ -27,15 +35,13 @@ vi.mock("@/services/authClient", () => ({
 }));
 
 vi.mock("@/services/settingsClient", () => ({
-  getSettings: vi.fn().mockResolvedValue({
-    "setup.completed": true,
-  }),
-  updateSettings: vi.fn().mockResolvedValue({}),
+  getSettings: adminAppServiceMocks.getSettings,
+  updateSettings: adminAppServiceMocks.updateSettings,
 }));
 
 vi.mock("@/services/adminThemeClient", () => ({
-  listAdminThemeProfilesCached: vi.fn().mockResolvedValue([]),
-  listAdminThemeTemplatesCached: vi.fn().mockResolvedValue([]),
+  listAdminThemeProfilesCached: adminAppServiceMocks.listAdminThemeProfilesCached,
+  listAdminThemeTemplatesCached: adminAppServiceMocks.listAdminThemeTemplatesCached,
 }));
 
 vi.mock("@/components/ui/sonner", () => ({
@@ -81,6 +87,12 @@ vi.mock("@/ui/content-types/DetailTemplateEditorPage", () => ({
   DetailTemplateEditorPage: () => <div>Detail template editor route</div>,
 }));
 
+vi.mock("@/ui/users/UsersRolesPage", () => ({
+  UsersRolesPage: ({ permissions = [] }: { permissions?: string[] }) => (
+    <div>Users route {permissions.join("|")}</div>
+  ),
+}));
+
 import {
   AdminApp,
   resolveThemeUpdatedRefreshScope,
@@ -122,6 +134,7 @@ const flush = async () => {
 };
 
 beforeEach(() => {
+  vi.clearAllMocks();
   adminAuthState.bootstrap = {
     state: "authenticated",
     user: {
@@ -167,6 +180,33 @@ test("AdminApp denies guarded routes when the permission snapshot is missing the
     expect(view.container.textContent).toContain(
       "Your account does not have permission to open this admin area."
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminApp allows the Users route when the user only has roles:read", async () => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "roles-reader-1",
+      email: "roles-reader@example.com",
+      name: "Roles Reader",
+      permissionSnapshot: {
+        permissions: ["roles:read"],
+        roles: [{ id: "role-3", slug: "roles-reader", name: "Roles Reader" }],
+      },
+    },
+  };
+  const view = mount("/admin/users");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Users route roles:read");
+    expect(view.container.textContent).not.toContain("Access denied");
+    expect(adminAppServiceMocks.getSettings).not.toHaveBeenCalled();
+    expect(adminAppServiceMocks.listAdminThemeProfilesCached).not.toHaveBeenCalled();
+    expect(adminAppServiceMocks.listAdminThemeTemplatesCached).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

@@ -189,3 +189,34 @@ test("UserDetailsDrawer renders user details, permission summaries, and action g
     lockedView.cleanup();
   }
 });
+
+test("UserDetailsDrawer hides role ids when role details are unavailable", () => {
+  const view = mount(
+    <UserDetailsDrawer
+      user={{
+        id: "user-3",
+        name: "Readonly User",
+        email: "readonly@example.com",
+        roleIds: ["role-admin", "role-missing"],
+        status: "active",
+        mfaEnabled: false,
+        lastActive: "Today",
+      }}
+      roles={roles}
+      canManageUsers={false}
+      roleDetailsUnavailableReason="Role names require roles:read permission."
+      onEditUser={() => undefined}
+      onResetPassword={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Roles unavailable");
+    expect(view.container.textContent).toContain("Role details unavailable");
+    expect(view.container.textContent).toContain("Role names require roles:read permission.");
+    expect(view.container.textContent).not.toContain("role-admin");
+    expect(view.container.textContent).not.toContain("role-missing");
+  } finally {
+    view.cleanup();
+  }
+});

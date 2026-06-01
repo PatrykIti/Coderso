@@ -28,6 +28,11 @@ In the current UI, this route includes:
 - an invite dialog,
 - a role summary section at the bottom of the same route.
 
+What you see depends on your admin permissions. With `users:read` you can
+review users. With `roles:read` you can review roles and permission summaries.
+If you only have one of those permissions, the other half of the screen is
+shown as unavailable instead of silently loading or submitting forbidden data.
+
 # Medium
 
 Use Users when the main question is about people and their access state, not
@@ -97,6 +102,8 @@ Use this safe user-management order when you want fewer access mistakes:
   over-permissioning before the user is even created.
 - The route’s details panel exposes notification and two-factor context, which
   makes it stronger than a simple members list.
+- Missing role-read access hides role filters and role names/details. Missing
+  user-read access hides the user table and invite entry points.
 
 # Troubleshooting
 
@@ -109,6 +116,11 @@ Use this safe user-management order when you want fewer access mistakes:
   check whether the account is marked `Last admin`.
 - The invite role feels uncertain:
   use the permissions preview to compare expected capabilities before sending.
+- Role details are unavailable:
+  ask for `roles:read` if your work requires role names, filters, or permission
+  summaries.
+- The user table is unavailable:
+  ask for `users:read` if your work requires person-level access review.
 
 # Decision Guide
 
@@ -134,6 +146,9 @@ Use this safe user-management order when you want fewer access mistakes:
 
 - Users is an authenticated admin surface and should only be used by
   high-trust administrators responsible for workspace access.
+- The route uses the current admin's permission snapshot. Read-only and
+  partial-read states are intentional, and write actions stay unavailable until
+  the matching write permission is present.
 - Invitation, status changes, password resets, and deletion are access-control
   actions, not just profile edits.
 - Be especially careful with last-admin and high-privilege accounts, because

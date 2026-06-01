@@ -45,11 +45,19 @@ Poza zakresem v1:
   `can(permission)`, sidebar route visibility i route guards. Backend 403
   pozostaje defense-in-depth i wymusza odswiezenie snapshotu po stale permission
   failure.
+- Admin shell nie wykonuje globalnych odczytow ustawien, theme cache,
+  custom-screen shortcuts ani solution-kit context bez odpowiedniego read
+  permission w snapshotcie.
 
 ## Admin UI (v1)
 
 - Zarzadzanie uzytkownikami i rolami w panelu `/admin/users`.
-- Operacje mutujace wymagaja `users:write` i `roles:write`.
+- `/admin/users` jest widoczne, gdy snapshot zawiera `users:read` albo
+  `roles:read`; brak obu uprawnien fail-closed przed pobraniem list.
+- Widok pobiera tylko zasoby pokryte snapshotem:
+  `users:read` laduje users, `roles:read` laduje roles i permission catalog.
+- Mutacje userow wymagaja `users:write` oraz `roles:read`, gdy zmieniaja
+  przypisanie roli. Mutacje roli wymagaja `roles:write`.
 - UI blokuje usuniecie ostatniego admina.
 - Ostatni admin nie moze utracic roli admin do czasu utworzenia kolejnego.
 - Uzytkownicy zapraszani startuja ze statusem `pending`.

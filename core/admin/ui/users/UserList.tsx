@@ -65,6 +65,10 @@ export type UserListProps = {
   selectedId?: string;
   protectedIds?: string[];
   canManageUsers?: boolean;
+  canEditUsers?: boolean;
+  canManageUserLifecycle?: boolean;
+  canResetPassword?: boolean;
+  roleDetailsUnavailableReason?: string;
   resetPasswordUnavailableReason?: string;
   onSelect: (id: string) => void;
   onViewProfile?: (user: UserSummary) => void;
@@ -80,6 +84,10 @@ export function UserList({
   selectedId,
   protectedIds = [],
   canManageUsers = true,
+  canEditUsers,
+  canManageUserLifecycle,
+  canResetPassword,
+  roleDetailsUnavailableReason,
   resetPasswordUnavailableReason,
   onSelect,
   onViewProfile,
@@ -89,6 +97,9 @@ export function UserList({
   onDelete,
 }: UserListProps) {
   const roleMap = new Map(roles.map((role) => [role.id, role.name]));
+  const canEdit = canEditUsers ?? canManageUsers;
+  const canManageLifecycle = canManageUserLifecycle ?? canManageUsers;
+  const canReset = canResetPassword ?? canManageUsers;
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -107,7 +118,9 @@ export function UserList({
             const status = statusMeta[user.status];
             const isSelected = selectedId === user.id;
             const isProtected = protectedIds.includes(user.id);
-            const roleNames = user.roleIds.map((roleId) => roleMap.get(roleId) ?? roleId);
+            const roleNames = roleDetailsUnavailableReason
+              ? []
+              : user.roleIds.map((roleId) => roleMap.get(roleId) ?? roleId);
             const overflowRoles = Math.max(roleNames.length - 2, 0);
 
             return (
@@ -150,6 +163,15 @@ export function UserList({
                         +{overflowRoles}
                       </Badge>
                     ) : null}
+                    {roleDetailsUnavailableReason && user.roleIds.length > 0 ? (
+                      <Badge
+                        variant="outline"
+                        className="border-dashed text-xs"
+                        title={roleDetailsUnavailableReason}
+                      >
+                        Role details unavailable
+                      </Badge>
+                    ) : null}
                     {isProtected ? (
                       <Badge variant="secondary" className="text-xs text-amber-700">
                         Last admin
@@ -177,11 +199,11 @@ export function UserList({
                       >
                         View profile
                       </DropdownMenuItem>
-                      <DropdownMenuItem disabled={!canManageUsers} onClick={() => onEdit(user)}>
+                      <DropdownMenuItem disabled={!canEdit} onClick={() => onEdit(user)}>
                         Edit user
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        disabled={!canManageUsers || Boolean(resetPasswordUnavailableReason)}
+                        disabled={!canReset || Boolean(resetPasswordUnavailableReason)}
                         title={resetPasswordUnavailableReason}
                         data-no-op-control={
                           resetPasswordUnavailableReason ? "users-reset-password" : undefined
@@ -192,14 +214,14 @@ export function UserList({
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        disabled={!canManageUsers}
+                        disabled={!canManageLifecycle}
                         onClick={() => onToggleStatus(user)}
                       >
                         {user.status === "inactive" ? "Activate user" : "Deactivate user"}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         variant="destructive"
-                        disabled={!canManageUsers || isProtected}
+                        disabled={!canManageLifecycle || isProtected}
                         onClick={() => onDelete(user)}
                       >
                         Delete user

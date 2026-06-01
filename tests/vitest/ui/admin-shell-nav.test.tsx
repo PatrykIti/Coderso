@@ -2,9 +2,36 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { Database } from "lucide-react";
 import { renderToString } from "react-dom/server";
+
+const adminShellServiceMocks = vi.hoisted(() => ({
+  getCachedCustomScreens: vi.fn(() => []),
+  listCustomScreensCached: vi.fn(async () => []),
+  getCachedSolutionKits: vi.fn(() => []),
+  listSolutionKitsCached: vi.fn(async () => []),
+  getActiveSolutionKitId: vi.fn(() => null),
+  subscribeActiveSolutionKitId: vi.fn(() => () => undefined),
+  buildAdvancedFeatureFlagsForSolutionKit: vi.fn(() => ({})),
+}));
+
+vi.mock("@/services/customScreensClient", () => ({
+  getCachedCustomScreens: adminShellServiceMocks.getCachedCustomScreens,
+  listCustomScreensCached: adminShellServiceMocks.listCustomScreensCached,
+}));
+
+vi.mock("@/services/solutionKitsClient", () => ({
+  getCachedSolutionKits: adminShellServiceMocks.getCachedSolutionKits,
+  listSolutionKitsCached: adminShellServiceMocks.listSolutionKitsCached,
+}));
+
+vi.mock("@/services/solutionKitSelection", () => ({
+  getActiveSolutionKitId: adminShellServiceMocks.getActiveSolutionKitId,
+  subscribeActiveSolutionKitId: adminShellServiceMocks.subscribeActiveSolutionKitId,
+  buildAdvancedFeatureFlagsForSolutionKit:
+    adminShellServiceMocks.buildAdvancedFeatureFlagsForSolutionKit,
+}));
 
 import { AdminBasePathProvider } from "../../../core/admin/ui/contexts/AdminBasePathContext";
 import { AdminAuthProvider } from "../../../core/admin/ui/contexts/AdminAuthContext";
@@ -65,6 +92,57 @@ const mountSidebar = (sections: NavSection[]) => {
     },
   };
 };
+
+const mountShell = (permissions: string[]) => {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+
+  React.act(() => {
+    root.render(
+      <AdminRouterProvider initialPath="/admin/users">
+        <AdminBasePathProvider value="/admin">
+          <AdminAuthProvider
+            user={{
+              id: "user-1",
+              email: "user@example.com",
+              name: null,
+              permissionSnapshot: {
+                permissions,
+                roles: [{ id: "role-1", slug: "test-role", name: "Test Role" }],
+              },
+            }}
+          >
+            <AdminShell showSearch={false}>
+              <div>Users content</div>
+            </AdminShell>
+          </AdminAuthProvider>
+        </AdminBasePathProvider>
+      </AdminRouterProvider>
+    );
+  });
+
+  return {
+    container,
+    cleanup: () => {
+      React.act(() => {
+        root.unmount();
+      });
+      container.remove();
+    },
+  };
+};
+
+const flush = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 afterEach(() => {
   window.sessionStorage.clear();
@@ -193,6 +271,106 @@ test("AdminShell filters navigation through the shared permission snapshot", () 
   expect(html).toContain("Users");
   expect(html).toContain("/admin/users");
   expect(html).not.toContain("/admin/settings");
+});
+
+test("AdminShell shows nav items when any configured permission is present", () => {
+  const sections: NavSection[] = [
+    {
+      title: "Admin",
+      items: [
+        {
+          label: "Users",
+          href: "/admin/users",
+          icon: Database,
+          anyPermissions: ["users:read", "roles:read"],
+        },
+        { label: "Settings", href: "/admin/settings", icon: Database, permission: "settings:read" },
+      ],
+    },
+  ];
+
+  const html = renderToString(
+    <AdminRouterProvider initialPath="/admin/users">
+      <AdminBasePathProvider value="/admin">
+        <AdminAuthProvider
+          user={{
+            id: "role-reader-1",
+            email: "role-reader@example.com",
+            name: null,
+            permissionSnapshot: {
+              permissions: ["roles:read"],
+              roles: [{ id: "role-1", slug: "role-reader", name: "Role Reader" }],
+            },
+          }}
+        >
+          <AdminShell navSections={sections} showSearch={false}>
+            <div>Users content</div>
+          </AdminShell>
+        </AdminAuthProvider>
+      </AdminBasePathProvider>
+    </AdminRouterProvider>
+  );
+
+  expect(html).toContain("Users");
+  expect(html).toContain("/admin/users");
+  expect(html).not.toContain("/admin/settings");
+});
+
+test("AdminShell hides any-permission nav items when none are present", () => {
+  const sections: NavSection[] = [
+    {
+      title: "Admin",
+      items: [
+        {
+          label: "Users",
+          href: "/admin/users",
+          icon: Database,
+          anyPermissions: ["users:read", "roles:read"],
+        },
+        { label: "Settings", href: "/admin/settings", icon: Database, permission: "settings:read" },
+      ],
+    },
+  ];
+
+  const html = renderToString(
+    <AdminRouterProvider initialPath="/admin/settings">
+      <AdminBasePathProvider value="/admin">
+        <AdminAuthProvider
+          user={{
+            id: "settings-reader-1",
+            email: "settings-reader@example.com",
+            name: null,
+            permissionSnapshot: {
+              permissions: ["settings:read"],
+              roles: [{ id: "role-1", slug: "settings-reader", name: "Settings Reader" }],
+            },
+          }}
+        >
+          <AdminShell navSections={sections} showSearch={false}>
+            <div>Settings content</div>
+          </AdminShell>
+        </AdminAuthProvider>
+      </AdminBasePathProvider>
+    </AdminRouterProvider>
+  );
+
+  expect(html).not.toContain("/admin/users");
+  expect(html).toContain("/admin/settings");
+});
+
+test("AdminShell does not load advanced catalogs without matching permissions", async () => {
+  const view = mountShell(["users:read"]);
+
+  try {
+    await flush();
+
+    expect(adminShellServiceMocks.getCachedCustomScreens).not.toHaveBeenCalled();
+    expect(adminShellServiceMocks.listCustomScreensCached).not.toHaveBeenCalled();
+    expect(adminShellServiceMocks.getCachedSolutionKits).not.toHaveBeenCalled();
+    expect(adminShellServiceMocks.listSolutionKitsCached).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
 });
 
 test("SidebarNav renders custom screen shortcuts after the Advanced group", () => {

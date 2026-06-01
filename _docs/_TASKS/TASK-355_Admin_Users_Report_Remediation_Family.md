@@ -5,7 +5,7 @@
 **Category:** Admin UI + RBAC + Users + Security UX + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm action pattern, TASK-360-04 no-op control gate, TASK-360-05 drawer/sheet accessibility gate, TASK-360-06 server-side query conventions, TASK-001 auth foundation, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_USERS.md` audit evidence
-**Status:** To Do
+**Status:** In Progress (2026-06-01)
 
 ---
 
@@ -102,7 +102,7 @@ Physical execution leaves:
 
 ### TASK-355-01: Current User Permission Propagation for Users
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation shape:
 
@@ -206,6 +206,24 @@ Security Contract for permission bootstrap:
   keys, or provider secrets in the response/cache/debug payload.
 - Tests: route registration, unauthenticated response, authenticated redacted
   payload, stale/invalid permission source mapping, and client 403-refresh.
+
+Completion notes:
+
+- `TASK-360-01` already landed the backend `GET /auth/me` redacted
+  `permissionSnapshot`; this leaf consumes it in Users rather than reopening the
+  route contract.
+- Users route/nav access now allows either `users:read` or `roles:read`.
+- `UsersRolesPage` no longer defaults to full read/write access, fetches only
+  authorized resources, supports `users:read`-only and `roles:read`-only modes,
+  hides role details when `roles:read` is missing, and refreshes the permission
+  snapshot after stale 403s.
+- Admin shell global settings/theme/custom-screen/solution-kit cache reads are
+  permission-gated so restricted Users/Roles sessions do not create avoidable
+  403s outside the page body.
+- Targeted Vitest coverage now exercises admin, read-only, partial-read,
+  users-write-without-roles-read, neither-read, stale-403 refresh, route guard,
+  shell global-read gating, sidebar any-permission, drawer, filter, and
+  user-list states.
 
 ### TASK-355-02: Reset Password and Login-Capable Invite Flow
 

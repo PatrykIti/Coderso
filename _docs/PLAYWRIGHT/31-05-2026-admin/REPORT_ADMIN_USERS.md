@@ -76,6 +76,23 @@ jednorazowym fixture user/role i posprzątano po teście.
 | `Deactivate user`, `Delete user`, `Delete role` wywołują mutacje bez confirm dialogu | potwierdzone na fixture; `handleToggleStatus`, `handleDeleteUser`, `handleDeleteRole` od razu wołają API | łatwo wykonać destrukcyjną akcję z menu wiersza |
 | Mobile details sheet nie ma semantycznego `SheetTitle` | mobile `SheetContent` w `UsersRolesPage.tsx`, zawartość `UserDetailsDrawer` używa zwykłego `h3` | błąd/warning Radix i gorsza dostępność na mobile |
 
+### Status po TASK-355-01 - 2026-06-01
+
+- Naprawiono pierwszy problem z tabeli: Users UI nie hardcoduje już pełnych
+  uprawnień, tylko konsumuje shared permission snapshot z `TASK-360-01`.
+- `/admin/users` i pozycja sidebaru są widoczne przy `users:read` albo
+  `roles:read`; brak obu uprawnień kończy się access denied przed fetchami.
+- Admin shell nie wykonuje już pobocznych fetchy settings/theme/custom
+  screens/solution kits, jeśli restricted Users/Roles fixture nie ma
+  odpowiednich read permissions.
+- `users:read` bez `roles:read` pobiera wyłącznie users, ukrywa role cards i
+  role filter/details, a edit/invite są niedostępne przed submit.
+- `roles:read` bez `users:read` pobiera roles/catalog, ukrywa users table i
+  Invite User, a role writes pozostają disabled bez `roles:write`.
+- Pozostałe problemy z raportu nadal należą do kolejnych liści:
+  `TASK-355-02` reset/invite login-capable, `TASK-355-03` destructive confirms,
+  `TASK-355-04` filters/notifications, `TASK-355-05` mobile a11y.
+
 ## Dlaczego
 
 Widok miesza gotowe, produkcyjne flow (`save user`, `invite user`, `delete user`)

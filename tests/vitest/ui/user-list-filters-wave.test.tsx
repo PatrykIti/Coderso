@@ -406,3 +406,89 @@ test("UserList read-only mode disables management actions and falls back to onSe
     view.cleanup();
   }
 });
+
+test("UserList hides raw role ids when role details are unavailable", async () => {
+  const { UserList } = await import("../../../core/admin/ui/users/UserList");
+
+  const user = {
+    id: "user-4",
+    name: "Partial Reader",
+    email: "partial@example.com",
+    roleIds: ["role-secret"],
+    status: "active" as const,
+    lastActive: "Today",
+    mfaEnabled: false,
+  };
+
+  const view = mount(
+    <UserList
+      items={[user]}
+      roles={[]}
+      roleDetailsUnavailableReason="Role names require roles:read permission."
+      onSelect={() => undefined}
+      onEdit={() => undefined}
+      onToggleStatus={() => undefined}
+      onResetPassword={() => undefined}
+      onDelete={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Role details unavailable");
+    expect(view.container.textContent).not.toContain("role-secret");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UserList can disable role editing while keeping lifecycle writes available", async () => {
+  const { UserList } = await import("../../../core/admin/ui/users/UserList");
+
+  const user = {
+    id: "user-5",
+    name: "Lifecycle Writer",
+    email: "lifecycle@example.com",
+    roleIds: ["role-secret"],
+    status: "active" as const,
+    lastActive: "Today",
+    mfaEnabled: false,
+  };
+  const onEdit = vi.fn();
+  const onToggleStatus = vi.fn();
+  const onDelete = vi.fn();
+
+  const view = mount(
+    <UserList
+      items={[user]}
+      roles={[]}
+      canEditUsers={false}
+      canManageUserLifecycle
+      roleDetailsUnavailableReason="Role names require roles:read permission."
+      onSelect={() => undefined}
+      onEdit={onEdit}
+      onToggleStatus={onToggleStatus}
+      onResetPassword={() => undefined}
+      onDelete={onDelete}
+    />
+  );
+
+  try {
+    const editButton = findButtonsByText(view.container, "Edit user")[0];
+    const statusButton = findButtonsByText(view.container, "Deactivate user")[0];
+    const deleteButton = findButtonsByText(view.container, "Delete user")[0];
+
+    expect(editButton?.disabled).toBe(true);
+    expect(statusButton?.disabled).toBe(false);
+    expect(deleteButton?.disabled).toBe(false);
+
+    click(editButton);
+    click(statusButton);
+    click(deleteButton);
+
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onToggleStatus).toHaveBeenCalledWith(user);
+    expect(onDelete).toHaveBeenCalledWith(user);
+  } finally {
+    view.cleanup();
+  }
+});

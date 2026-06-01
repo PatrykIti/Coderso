@@ -165,8 +165,17 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/layouts/AdminShell.tsx`
   - Cached APIs: `listCustomScreensCached`
   - Cache bus: `customScreens:list`
+  - Permission gate: shortcut cache hydration and revalidation require
+    `content:read`; unauthorized shells keep shortcuts empty and do not call the
+    endpoint.
   - Shortcut gate: only active screens with `supportsDedicatedEditor=true`
     become sidebar workspace links
+- Advanced solution-kit nav context
+  - UI: `core/admin/ui/layouts/AdminShell.tsx`
+  - Cached APIs: `listSolutionKitsCached`
+  - Permission gate: hydration and revalidation require `solution-kits:read`;
+    users without that permission keep default Advanced nav context without a
+    solution-kit list fetch.
 
 ## Widget Templates
 - Template editor
@@ -216,6 +225,10 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Admin UI themes
   - UI: `core/admin/ui/themes/ThemesPage.tsx`
   - Cached APIs: `listAdminThemeTemplatesCached`, `getCachedAdminThemeTemplates`, `listAdminThemeProfilesCached`, `getCachedAdminThemeProfiles`
+  - Shell token refresh: `core/admin/app/AdminApp.tsx` uses cached theme
+    template/profile reads only when the current permission snapshot has
+    `themes:read`; otherwise stored/default tokens render without network
+    refresh.
 - Theme editor
   - UI: `core/admin/ui/themes/ThemeEditorPage.tsx`
   - Cached APIs: `listPagesCached`

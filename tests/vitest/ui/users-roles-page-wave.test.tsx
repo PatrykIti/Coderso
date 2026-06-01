@@ -94,6 +94,8 @@ vi.mock("../../../core/admin/ui/users/UserFilters", () => ({
     query,
     roleFilter,
     statusFilter,
+    canReadRoles,
+    roleFilterUnavailableReason,
     onQueryChange,
     onRoleChange,
     onStatusChange,
@@ -101,18 +103,26 @@ vi.mock("../../../core/admin/ui/users/UserFilters", () => ({
     query: string;
     roleFilter: string;
     statusFilter: string;
+    canReadRoles?: boolean;
+    roleFilterUnavailableReason?: string;
     onQueryChange: (value: string) => void;
     onRoleChange: (value: string) => void;
     onStatusChange: (value: string) => void;
   }) => (
     <div>
       <div data-testid="filters-state">{`${query}|${roleFilter}|${statusFilter}`}</div>
+      <div data-testid="filters-can-read-roles">{String(Boolean(canReadRoles))}</div>
+      {canReadRoles ? null : (
+        <div data-testid="role-filter-unavailable">{roleFilterUnavailableReason}</div>
+      )}
       <button type="button" onClick={() => onQueryChange("bob")}>
         filter-query-bob
       </button>
-      <button type="button" onClick={() => onRoleChange("editor")}>
-        filter-role-editor
-      </button>
+      {canReadRoles ? (
+        <button type="button" onClick={() => onRoleChange("editor")}>
+          filter-role-editor
+        </button>
+      ) : null}
       <button type="button" onClick={() => onStatusChange("inactive")}>
         filter-status-inactive
       </button>
@@ -126,6 +136,10 @@ vi.mock("../../../core/admin/ui/users/UserList", () => ({
     selectedId,
     protectedIds,
     canManageUsers,
+    canEditUsers,
+    canManageUserLifecycle,
+    canResetPassword,
+    roleDetailsUnavailableReason,
     onSelect,
     onViewProfile,
     onEdit,
@@ -136,6 +150,10 @@ vi.mock("../../../core/admin/ui/users/UserList", () => ({
     selectedId?: string;
     protectedIds?: string[];
     canManageUsers?: boolean;
+    canEditUsers?: boolean;
+    canManageUserLifecycle?: boolean;
+    canResetPassword?: boolean;
+    roleDetailsUnavailableReason?: string;
     onSelect: (id: string) => void;
     onViewProfile?: (user: { id: string; name: string }) => void;
     onEdit: (user: { id: string; name: string }) => void;
@@ -147,19 +165,31 @@ vi.mock("../../../core/admin/ui/users/UserList", () => ({
       <div data-testid="user-list-selected">{selectedId ?? ""}</div>
       <div data-testid="user-list-protected">{(protectedIds ?? []).join("|")}</div>
       <div data-testid="user-list-can-manage">{String(Boolean(canManageUsers))}</div>
+      <div data-testid="user-list-can-edit">{String(Boolean(canEditUsers))}</div>
+      <div data-testid="user-list-can-lifecycle">{String(Boolean(canManageUserLifecycle))}</div>
+      <div data-testid="user-list-can-reset">{String(Boolean(canResetPassword))}</div>
+      <div data-testid="user-list-role-details-reason">{roleDetailsUnavailableReason ?? ""}</div>
       <button type="button" onClick={() => items[0] && onSelect(items[0].id)}>
         select-first-user
       </button>
       <button type="button" onClick={() => items[0] && onViewProfile?.(items[0])}>
         view-first-user
       </button>
-      <button type="button" onClick={() => items[0] && onEdit(items[0])}>
+      <button type="button" disabled={!canEditUsers} onClick={() => items[0] && onEdit(items[0])}>
         edit-first-user
       </button>
-      <button type="button" onClick={() => items[0] && onToggleStatus(items[0])}>
+      <button
+        type="button"
+        disabled={!canManageUserLifecycle}
+        onClick={() => items[0] && onToggleStatus(items[0])}
+      >
         toggle-first-user
       </button>
-      <button type="button" onClick={() => items[0] && onDelete(items[0])}>
+      <button
+        type="button"
+        disabled={!canManageUserLifecycle}
+        onClick={() => items[0] && onDelete(items[0])}
+      >
         delete-first-user
       </button>
     </div>
@@ -429,6 +459,11 @@ const clickByText = (container: HTMLElement, text: string) => {
   return button;
 };
 
+const findButtonByText = (container: HTMLElement, text: string) =>
+  Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(text)
+  );
+
 const installMatchMedia = (matches: boolean) => {
   Object.defineProperty(window, "matchMedia", {
     writable: true,
@@ -504,7 +539,9 @@ afterEach(() => {
 test("UsersRolesPage orchestrates filters and user-role management flows", async () => {
   const { UsersRolesPage } = await import("../../../core/admin/ui/users/UsersRolesPage");
 
-  const view = mount(<UsersRolesPage />);
+  const view = mount(
+    <UsersRolesPage permissions={["users:read", "users:write", "roles:read", "roles:write"]} />
+  );
 
   try {
     await flush();
@@ -602,6 +639,159 @@ test("UsersRolesPage orchestrates filters and user-role management flows", async
       permissions: ["content.write"],
     });
     expect(deleteAdminRole).toHaveBeenCalledWith("editor");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UsersRolesPage supports users-read only mode without fetching roles", async () => {
+  const { UsersRolesPage } = await import("../../../core/admin/ui/users/UsersRolesPage");
+
+  const view = mount(<UsersRolesPage permissions={["users:read"]} />);
+
+  try {
+    await flush();
+    await flush();
+
+    expect(listAdminUsers).toHaveBeenCalledTimes(1);
+    expect(listAdminRoles).not.toHaveBeenCalled();
+    expect(listPermissionCatalog).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Roles unavailable");
+    expect(
+      view.container.querySelector('[data-testid="filters-can-read-roles"]')?.textContent
+    ).toBe("false");
+    expect(
+      view.container.querySelector('[data-testid="role-filter-unavailable"]')?.textContent
+    ).toContain("roles:read");
+    expect(
+      view.container.querySelector('[data-testid="user-list-role-details-reason"]')?.textContent
+    ).toContain("roles:read");
+    expect(view.container.querySelector('[data-testid="details-can-manage"]')?.textContent).toBe(
+      "false"
+    );
+    expect(view.container.querySelector('[data-testid="role-list-items"]')).toBeNull();
+    expect(findButtonByText(view.container, "Create Role")).toBeUndefined();
+    expect(findButtonByText(view.container, "Invite User")?.disabled).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UsersRolesPage separates user lifecycle writes from role-assignment writes", async () => {
+  const { UsersRolesPage } = await import("../../../core/admin/ui/users/UsersRolesPage");
+
+  const view = mount(<UsersRolesPage permissions={["users:read", "users:write"]} />);
+
+  try {
+    await flush();
+    await flush();
+
+    expect(listAdminUsers).toHaveBeenCalledTimes(1);
+    expect(listAdminRoles).not.toHaveBeenCalled();
+    expect(view.container.querySelector('[data-testid="user-list-can-edit"]')?.textContent).toBe(
+      "false"
+    );
+    expect(
+      view.container.querySelector('[data-testid="user-list-can-lifecycle"]')?.textContent
+    ).toBe("true");
+
+    expect(findButtonByText(view.container, "edit-first-user")?.disabled).toBe(true);
+    expect(findButtonByText(view.container, "toggle-first-user")?.disabled).toBe(false);
+    expect(findButtonByText(view.container, "delete-first-user")?.disabled).toBe(false);
+
+    clickByText(view.container, "toggle-first-user");
+    await flush();
+    clickByText(view.container, "delete-first-user");
+    await flush();
+
+    expect(disableAdminUser).toHaveBeenCalledWith("user-1");
+    expect(deleteAdminUser).toHaveBeenCalledWith("user-1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UsersRolesPage supports roles-read only mode without fetching users", async () => {
+  const { UsersRolesPage } = await import("../../../core/admin/ui/users/UsersRolesPage");
+
+  const view = mount(<UsersRolesPage permissions={["roles:read"]} />);
+
+  try {
+    await flush();
+    await flush();
+
+    expect(listAdminUsers).not.toHaveBeenCalled();
+    expect(listAdminRoles).toHaveBeenCalledTimes(1);
+    expect(listPermissionCatalog).toHaveBeenCalledTimes(1);
+    expect(view.container.textContent).toContain("User list unavailable");
+    expect(view.container.querySelector('[data-testid="user-list-items"]')).toBeNull();
+    expect(view.container.querySelector('[data-testid="role-list-items"]')?.textContent).toContain(
+      "Editor|Admin"
+    );
+    expect(findButtonByText(view.container, "Invite User")).toBeUndefined();
+    expect(findButtonByText(view.container, "Create Role")?.disabled).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UsersRolesPage denies access before fetching when no read permission is present", async () => {
+  const { UsersRolesPage } = await import("../../../core/admin/ui/users/UsersRolesPage");
+
+  const view = mount(<UsersRolesPage permissions={[]} />);
+
+  try {
+    await flush();
+
+    expect(listAdminUsers).not.toHaveBeenCalled();
+    expect(listAdminRoles).not.toHaveBeenCalled();
+    expect(listPermissionCatalog).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Access denied");
+    expect(view.container.textContent).toContain("users:read or roles:read");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UsersRolesPage refreshes permissions after stale write 403s", async () => {
+  const { ApiClientError } = await import("../../../core/admin/services/apiClient");
+  const { AdminAuthProvider } = await import("../../../core/admin/ui/contexts/AdminAuthContext");
+  const { UsersRolesPage } = await import("../../../core/admin/ui/users/UsersRolesPage");
+
+  const error = new ApiClientError("forbidden", "Forbidden", 403);
+  error.sharedFailureKind = "permission_denied";
+  disableAdminUser.mockRejectedValueOnce(error);
+  const refreshPermissions = vi.fn(async () => undefined);
+
+  const view = mount(
+    <AdminAuthProvider
+      refreshPermissions={refreshPermissions}
+      user={{
+        id: "admin-1",
+        email: "admin@example.com",
+        name: "Admin",
+        permissionSnapshot: {
+          permissions: ["users:read", "users:write", "roles:read", "roles:write"],
+          roles: [{ id: "admin", slug: "admin", name: "Admin" }],
+        },
+      }}
+    >
+      <UsersRolesPage />
+    </AdminAuthProvider>
+  );
+
+  try {
+    await flush();
+    await flush();
+
+    clickByText(view.container, "toggle-first-user");
+    await flush();
+
+    expect(disableAdminUser).toHaveBeenCalledWith("user-1");
+    expect(refreshPermissions).toHaveBeenCalledTimes(1);
+    expect(view.container.textContent).toContain(
+      "Your permissions changed. Refreshing access before enabling actions."
+    );
   } finally {
     view.cleanup();
   }
