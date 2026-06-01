@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 19 tasks
+- **To Do:** 23 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2007 tasks
 
@@ -38,6 +38,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-350 | Analytics Tools Report Remediation | Medium | Large | New report-driven family for Top Content export behavior, no-data semantics, and Analytics closure proof. |
+| TASK-350-01 | Analytics Export Contract and Download Flow | High | Medium | Replace drawer close-only Export with a real download or truthful disabled/unavailable state. |
+| TASK-350-02 | Analytics Empty Data Semantics and Guidance | Medium | Medium | Distinguish no data from zero change and add compact next-action empty states. |
+| TASK-350-03 | Analytics QA, Docs, and Closure | Medium | Medium | Re-prove empty/populated/range/export behavior and close report/docs/changelog evidence. |
 | TASK-349 | SEO Manager Tools Report Remediation | High | Very Large | New report-driven family for public SEO metadata parity, audit/scoring truthfulness, UI-only controls, and closure proof. |
 | TASK-349-01 | SEO Public Runtime Metadata Parity | High | Large | Make SEO Manager saves affect public page HTML through one documented source-of-truth path. |
 | TASK-349-02 | SEO Audit Scope and Scoring Recalculation Contract | High | Large | Recompute score/issues on save and make audit checkbox selections controlled or truthfully unavailable. |
