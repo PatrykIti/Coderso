@@ -422,6 +422,30 @@ test("PricingPlans wizard editor keeps setup focused on layout and points daily 
   }
 });
 
+test("PricingPlans visual editor describes billing as a static cycle display", async () => {
+  const { PricingPlansVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
+
+  const view = mount(
+    <PricingPlansVisualEditor
+      value={pricingPlansDefaults}
+      onChange={() => undefined}
+      variant="three-plans"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Billing cycle display");
+    expect(view.container.textContent).toContain("Show billing cycle display");
+    expect(view.container.textContent).toContain("read-only billing cycle status");
+    expect(view.container.textContent).not.toContain("Billing toggle");
+    expect(view.container.textContent).not.toContain("Enable billing toggle");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PricingPlans visual editor covers variant cards, plan and feature management, highlight exclusivity, and style tokens", async () => {
   const { PricingPlansVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");

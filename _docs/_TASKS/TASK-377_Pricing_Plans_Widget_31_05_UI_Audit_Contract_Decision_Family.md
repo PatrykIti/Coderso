@@ -5,7 +5,7 @@
 **Category:** Widgets + Pricing Plans + Product Contract + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_PRICING_PLANS_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-377-01](TASK-377-01_PP_31_05_01_Resolve_Billing_Toggle_Contract_Static_Display_Vs_Visitor.md): PP-31-05-01 - Resolve billing toggle contract: static display vs visitor-side toggle
+- [x] [TASK-377-01](TASK-377-01_PP_31_05_01_Resolve_Billing_Toggle_Contract_Static_Display_Vs_Visitor.md): PP-31-05-01 - Resolve billing toggle contract: static display vs visitor-side toggle
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,13 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced PP-31-05-01 as a contract-copy drift, not a public runtime defect: `PricingPlansBlock` already renders billing as static `role="status"` with `data-pricing-billing-display="static-cycle"`.
+- Renamed the Visual contract and editor copy from `Billing toggle` to `Billing cycle display`, including the switch label and helper text, so admin no longer promises a visitor-side toggle.
+- Kept persisted `billingToggle.*` field names for backward compatibility and did not add hydrated public visitor state.
+- Added renderer/contract guards proving public billing remains static status output without visitor-side switch semantics, and added UI coverage for the truthful admin copy.
+- Carver sidecar confirmed the remaining drift was admin/docs copy only and that public rendering was already correct.
+- Validation: focused widget/UI regressions failed before the copy fix and passed after; `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/ui/pricing-plans-editor-wave.test.tsx`; `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/widget-template-editor.test.tsx -t "pricing plans visual sections"`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; Claude re-review reported no blockers after the stale template assertion was fixed.
+- Covered by changelog `1067` together with TASK-377-01.

@@ -5,7 +5,7 @@
 **Category:** Widgets + Pricing Plans + Product Contract + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-377
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Admin copy says `Billing toggle`, but public runtime renders a static `role=stat
 
 ## Sub-Tasks
 
-- [ ] Reproduce PP-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce PP-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +90,12 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Confirmed the public renderer already matched the chosen product contract: billing output is static `role="status"` with `data-pricing-billing-toggle="static"` and no visitor-side switch behavior.
+- Changed the editor contract title, Visual section title, switch label, helper copy, and Advanced diagnostic label to use `Billing cycle display` / `Billing display` instead of `Billing toggle`.
+- Preserved `billingToggle` data keys and existing normalization to avoid a destructive migration for saved content.
+- Added focused UI and renderer/contract regressions: admin copy no longer contains `Billing toggle` or `Enable billing toggle`, the shared editor contract title is `Billing cycle display`, and public output does not expose visitor-side switch markers.
+- Validation: focused widget/UI regressions failed before the copy fix and passed after; Pricing Plans Vitest lane passed; widget-template visual-section regression passed; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; Carver sidecar reported no drift beyond the admin/docs copy fixed here; Claude re-review reported no blockers after the stale template assertion was fixed.
+- Covered by changelog `1067`.

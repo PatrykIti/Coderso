@@ -20,7 +20,7 @@ Przetestowane:
 
 - warianty: Two Plans, Three Plans, Four Plans, Comparison Rows,
 - Header title/description,
-- Billing toggle: enabled, labels, Annual default cycle,
+- Billing cycle display: enabled, labels, Annual default cycle,
 - plan fields: name, badge, description, highlight label, price, period,
 - price modes: legacy, structured, free, custom,
 - CTA destination picker, CTA style, badge tone, highlighted plan,
@@ -42,7 +42,7 @@ Przetestowane:
 | Variant: Four Plans | Klik `Four Plans` przy 3 zapisanych planach | `variant=four-plans`, `count=3`, `hidden=0`; brak pustej czwartej karty. | Nie publikowano tej zmiany. | Dziala z niuansem UX | Visual pokazuje `FixedPlanCountNotice`, bo wariant wspiera 4, ale renderer renderuje tylko skonfigurowane plany. | Brak dla obecnego kontraktu. Jezeli produkt chce auto-wypelnienie, trzeba zmienic `addPlan`/normalizacje wariantu i testy renderu. |
 | Variant: Comparison Rows | Klik `Comparison Rows` | `data-pricing-comparison="true"`, scroll hint, 9 feature rows, highlighted columns. | Nie publikowano tej zmiany. | Dziala | `PricingComparisonRowsLayout` buduje tabele z `collectFeatureRows`. | Brak. |
 | Header copy | Fill title/description | Header pokazuje `31-05 Pricing Audit` i opis z Visual. | Public baseline ma domyslny header. | Dziala | `updateHeader` patchuje `header.*`; renderer uzywa `aria-labelledby`. | Brak. |
-| Billing enabled + Annual | Enable switch, labels `Monthly audit`/`Annual audit`, cycle `Annual` | Pojawia sie `role="status"`, `data-pricing-billing-toggle="static"`, `data-pricing-cycle="annual"`; ceny przechodza z `$19/month` na `$190/year`. | Public baseline ma billing disabled, wiec brak statusu. | Dziala jako konfiguracja; nie jest visitor-side toggle | Renderer celowo renderuje statyczny status, nie interaktywny przełącznik. Wlasciciel: `PricingPlansBlock` billing branch. | Brak, jesli aktualny kontrakt zostaje. Jezeli oczekiwany jest prawdziwy toggle na froncie, trzeba dodac client-side hydrated state, eventy, a11y i testy public runtime. |
+| Billing cycle display + Annual | Enable display, labels `Monthly audit`/`Annual audit`, cycle `Annual` | Pojawia sie `role="status"`, `data-pricing-billing-toggle="static"`, `data-pricing-cycle="annual"`; ceny przechodza z `$19/month` na `$190/year`. Admin copy nazywa kontrole `Billing cycle display`, nie `Billing toggle`. | Public baseline ma billing disabled, wiec brak statusu. | Dziala po contract-copy fix | Renderer celowo renderuje statyczny status, nie interaktywny przełącznik. Visual/Advanced copy opisuje teraz read-only billing cycle status. | Brak. Pokryte regresjami w `tests/vitest/widgets/pricingPlans.test.tsx` i `tests/vitest/ui/pricing-plans-editor-wave.test.tsx`. |
 | Plan fields | Fill name/badge/description/highlight/price/period | Plan pokazuje `Audit Starter`, `Audit badge`, opis, `Audit highlight`, zmieniony period. | Nie publikowano tej zmiany. | Dziala | `updatePlan` aktualizuje pola po indeksie. | Brak. |
 | Highlight this plan | Toggle Plan 1 | Plan 1 dostaje `data-pricing-highlighted="true"` i ring; Plan 2 przestaje byc highlighted. | Nie publikowano tej zmiany. | Dziala | `setHighlightedPlan` utrzymuje pojedynczy highlight. | Brak. |
 | CTA destination/style | Wybierz `Audit 31-05 Hero`, CTA style `Ghost` | Link ma `href="/audit-31-05-hero"`, aria `Start now for Audit Starter`, `data-pricing-plan-cta-style="ghost"`. | Public baseline nie ma CTA href, wiec linki nie renderuja sie. | Dziala | `LinkDestinationField` zapisuje safe route; renderer pokazuje `<a>` tylko przy label + href. | Brak. |
@@ -82,20 +82,23 @@ HTML z:
 To potwierdza, ze swieza strona audytowa publikuje domyslny Pricing Plans.
 Zmiany z klikanej sesji admin nie byly publikowane jako finalny stan publiczny.
 
-## Niuans kontraktowy: billing toggle
+## Wynik i remediacja
 
-W UI admin kontrolka nazywa sie `Billing toggle`, ale publiczny renderer nie daje
-odwiedzajacemu przelacznika miesiecznie/rocznie. Po wlaczeniu w adminie publiczny
-output jest statycznym statusem cyklu:
+Zamkniete w TASK-377 / TASK-377-01.
+
+Publiczny renderer pozostaje statyczny i nie daje odwiedzajacemu przelacznika
+miesiecznie/rocznie. Po wlaczeniu w adminie publiczny output jest statycznym
+statusem cyklu:
 
 - `role="status"`,
 - `data-pricing-billing-toggle="static"`,
 - `data-pricing-billing-display="static-cycle"`,
 - `data-pricing-cycle="annual|monthly"`.
 
-To nie jest bug wzgledem aktualnego kodu. Jest to jednak wazne dla produktu:
-jezeli opcja ma oznaczac interaktywny visitor-side toggle, trzeba zmienic kontrakt
-renderera, a nie tylko label w edytorze.
+Admin copy zostalo dopasowane do tego kontraktu: Visual uzywa teraz `Billing
+cycle display`, helper opisuje publiczny read-only billing cycle status, a
+Advanced pokazuje `Billing display`. Persisted data keys `billingToggle.*`
+zostaly zachowane dla kompatybilnosci.
 
 ## Kod-owner
 
@@ -112,14 +115,21 @@ renderera, a nie tylko label w edytorze.
   - Visual remove confirm: okolice linii 1743-1777,
   - Advanced diagnostics/repair dialogs: okolice linii 1783-1905.
 
-## Rekomendacje
+## Walidacja remediacji
 
-1. Brak wymaganej poprawki produkcyjnej dla aktualnego kontraktu.
-2. Jezeli produktowo oczekujemy prawdziwego publicznego billing switcha, dodac
-   hydrated client behavior dla `pricing-plans`, test public runtime i a11y test
-   dla keyboard/focus/aria-live.
-3. Jezeli label `Billing toggle` ma zostac statyczny, rozwazyc copy w adminie:
-   `Billing cycle display` albo opis wprost, ze front pokazuje domyslny cykl.
+- Focused widget/UI regressions fail-before/pass-after dla starej kopii
+  `Billing toggle` / `Enable billing toggle`.
+- `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx
+  tests/vitest/ui/pricing-plans-editor-wave.test.tsx`.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts
+  tests/vitest/ui/widget-template-editor.test.tsx -t "pricing plans visual
+  sections"`.
+- `bun --cwd core lint`.
+- `bun --cwd core lint:types`.
+- Carver sidecar potwierdzil, ze public renderer byl juz statyczny, a drift
+  pozostawal w admin/docs copy.
+- Claude staged re-review po poprawce stale `widget-template` assertion:
+  no blockers.
 
 ## Console / srodowisko
 

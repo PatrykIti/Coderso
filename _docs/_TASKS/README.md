@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 102 tasks
+- **To Do:** 100 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2046 tasks
+- **Done:** 2048 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-377 | Pricing Plans 31-05 UI Audit Contract Decision Family | Medium | Medium | Report-driven family from `REPORT_PRICING_PLANS_WIDGET.md`; contract decision routed to tests/docs |
 | TASK-378 | Logo Cloud 31-05 UI Audit Fixture and Regression Family | Medium | Small | Report-driven family from `REPORT_LOGO_CLOUD_WIDGET.md`; media fixture gap routed to browser proof/tests/docs |
 | TASK-379 | Gallery Mosaic 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_GALLERY_MOSAIC_WIDGET.md`; 3 findings routed to implementation/tests/docs |
 | TASK-380 | Team 31-05 UI Audit UX and Fixture Family | Medium | Small | Report-driven family from `REPORT_TEAM_WIDGET.md`; UX debt and media fixture gap routed to tests/docs |
@@ -64,7 +63,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
 | TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-377-01 | PP-31-05-01 - Resolve billing toggle contract: static display vs visitor-side toggle | Medium | Medium | Leaf task for TASK-377; source `REPORT_PRICING_PLANS_WIDGET.md` |
 | TASK-378-01 | LC-31-05-01 - Seed media assets for browser-level MediaPicker proof | Medium | Medium | Leaf task for TASK-378; source `REPORT_LOGO_CLOUD_WIDGET.md` |
 | TASK-379-01 | GM-31-05-01 - Advanced must distinguish selected lightbox mode from eligible lightbox tiles | Medium | Medium | Leaf task for TASK-379; source `REPORT_GALLERY_MOSAIC_WIDGET.md` |
 | TASK-379-02 | GM-31-05-02 - Add media and public lightbox browser fixtures | Medium | Medium | Leaf task for TASK-379; source `REPORT_GALLERY_MOSAIC_WIDGET.md` |
@@ -160,6 +158,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-377 | Pricing Plans 31-05 UI Audit Contract Decision Family | Medium | Medium | Done (2026-06-01): Admin copy now names the static billing cycle display contract instead of promising a visitor-side toggle. |
+| TASK-377-01 | PP-31-05-01 - Resolve billing toggle contract: static display vs visitor-side toggle | Medium | Medium | Done (2026-06-01): Visual/Advanced copy and regression guards lock read-only billing status output without hydrated toggle behavior. |
 | TASK-376 | Testimonials 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-01): `<br>`-only and whitespace-only formatted quote HTML now normalizes empty so plain quote fallback remains visible. |
 | TASK-376-01 | TST-31-05-01 - Treat `<br>`-only quote HTML as empty | Medium | Medium | Done (2026-06-01): owner-side sanitizer, renderer, and Visual editor regressions cover cleared rich quote fallback behavior. |
 | TASK-375 | Stats KPI 31-05 UI Audit UX Guard Family | Low | Small | Done (2026-06-01): Added Visual guidance and regression guards for per-metric accent precedence over global Value color without changing runtime behavior. |
