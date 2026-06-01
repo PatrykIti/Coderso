@@ -19,7 +19,12 @@ test("listAuditLogs hits GET /audit with strict query params", async () => {
 
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
-    return jsonResponse({ items: [] });
+    return jsonResponse({
+      items: [],
+      nextCursor: "cursor-2",
+      totalCount: 120,
+      totalApprox: 125,
+    });
   };
 
   try {
@@ -34,9 +39,9 @@ test("listAuditLogs hits GET /audit with strict query params", async () => {
     });
     expect(response).toEqual({
       items: [],
-      nextCursor: null,
-      totalApprox: null,
-      totalCount: null,
+      nextCursor: "cursor-2",
+      totalApprox: 125,
+      totalCount: 120,
     });
     expect(calls[0]?.input).toBe(
       "/admin/api/audit?limit=120&q=login&category=authentication&severity=warning&from=2026-06-01T00%3A00%3A00.000Z&to=2026-06-02T23%3A59%3A59.999Z&cursor=cursor-1"

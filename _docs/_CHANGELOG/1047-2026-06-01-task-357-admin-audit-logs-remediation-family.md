@@ -96,6 +96,24 @@ Tasks: TASK-357, TASK-357-01, TASK-357-02, TASK-357-03, TASK-357-04
   include the `Payload` column, download a real CSV, and keep password, CSRF,
   and API-key fixture values out of the file.
 
+### TASK-357-04 Pagination and Count Truthfulness
+
+- Audit Logs now tracks requested and loaded cursor page state separately, so
+  failed next-page requests preserve the last successful rows and controls.
+- `Next` sends the server-provided `nextCursor`; `Previous` uses the loaded
+  cursor stack and is disabled on the first page.
+- Search, date range, category, and severity changes reset pagination to the
+  first page.
+- Invalid or expired cursors recover to the first page with neutral copy instead
+  of a hard failure banner.
+- Audit export keeps using the active filter query without the current cursor,
+  so exported evidence follows the filtered slice rather than only the visible
+  page.
+- Removed the old `audit-next-page` no-op marker and kept count copy derived
+  from response metadata instead of placeholder totals.
+- Playwright verified first/next/previous navigation with a 55-row restricted
+  `audit:read` fixture.
+
 ## Validation
 
 - `bun test tests/unit/audit/auditService.test.ts tests/integration/routes/audit.test.ts`
@@ -103,6 +121,7 @@ Tasks: TASK-357, TASK-357-01, TASK-357-02, TASK-357-03, TASK-357-04
 - `bun run test:vitest -- tests/vitest/admin/auditClient.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/ui/audit-list-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
 - `bun run test:vitest -- tests/vitest/admin/auditClient.test.ts tests/vitest/admin/adminExportClient.test.ts tests/vitest/ui/audit-list-wave.test.tsx tests/vitest/ui/audit-list.test.tsx tests/vitest/ui/shared-dialog-contracts.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/audit-entry-actions.test.ts tests/vitest/ui/audit-table-wave.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/audit-list-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/audit-list-wave.test.tsx tests/vitest/ui/audit-table-wave.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/admin/auditClient.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run gates:coderso`
@@ -119,6 +138,10 @@ Tasks: TASK-357, TASK-357-01, TASK-357-02, TASK-357-03, TASK-357-04
   real CSV download, redacted password/CSRF/API-key values; screenshot:
   `.tmp/task-357-03-audit-export.png`; CSV proof:
   `.tmp/task-357-03-export.csv`)
+- `set -a && source .env && set +a && bun .tmp/task-357-04-playwright-runner.ts`
+  (restricted `audit:read` user; 55-row fixture, first page, next page with
+  cursor, previous page without cursor; screenshot:
+  `.tmp/task-357-04-audit-pagination.png`)
 - Claude final blocker review: no blockers after the category precedence,
   service error mapping, shared count helper, and initial-load error-state fixes.
 - Claude final blocker review for `TASK-357-02`: no blockers after shared
@@ -128,5 +151,8 @@ Tasks: TASK-357, TASK-357-01, TASK-357-02, TASK-357-03, TASK-357-04
   `downloadAdminExport`, keep route JSON file contract instead of raw
   `Response`, enforce server column allowlist, redaction, CSV formula guard, and
   explicit export error mapping.
+- Claude and subagent read-only review for `TASK-357-04`: keep export filters
+  cursor-free, remove the no-op marker, preserve loaded page state on failed
+  pagination requests, and recover invalid cursors to the first page.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md`.

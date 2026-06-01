@@ -32,6 +32,12 @@ import { AuditTable } from "./AuditTable";
 import type { AuditCategory, AuditDateRange, AuditLog, AuditSeverity, AuditStatus } from "./types";
 import type { ExportDialogPayload, ExportField } from "@/ui/shared/ExportDialog";
 
+type AuditCursor = string | null;
+type AuditPageState = {
+  cursor: AuditCursor;
+  previousCursors: AuditCursor[];
+};
+
 const formatTitle = (value: string) =>
   value
     .split(/[.\-_]/g)
@@ -154,6 +160,11 @@ const buildAuditCountCopy = (response: AuditLogListResponse) => {
   return resolveTruthfulCountCopy(response, { resourceLabel: "audit logs" });
 };
 
+const firstAuditPageState = (): AuditPageState => ({
+  cursor: null,
+  previousCursors: [],
+});
+
 const auditExportColumns: AuditExportColumn[] = [
   "event",
   "actor",
@@ -176,34 +187,53 @@ export function AuditList() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [dateRange, setDateRange] = useState<AuditDateRange>("last-7-days");
   const [eventType, setEventType] = useState<"all" | AuditCategory>("all");
   const [severity, setSeverity] = useState<"all" | AuditSeverity>("all");
   const [countCopy, setCountCopy] = useState("Showing 0 loaded audit logs.");
-  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<AuditCursor>(null);
+  const [pageRequest, setPageRequest] = useState<AuditPageState>(() => firstAuditPageState());
+  const [loadedPage, setLoadedPage] = useState<AuditPageState>(() => firstAuditPageState());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
-  const auditQuery = useMemo(
+  const baseAuditQuery = useMemo(
     () => buildAuditQueryFromFilters({ query, dateRange, eventType, severity }),
     [dateRange, eventType, query, severity]
+  );
+  const auditQuery = useMemo(
+    () => ({
+      ...baseAuditQuery,
+      ...(pageRequest.cursor ? { cursor: pageRequest.cursor } : {}),
+    }),
+    [baseAuditQuery, pageRequest]
   );
 
   useEffect(() => {
     let active = true;
+    const requestedPage = pageRequest;
     listAuditLogs(auditQuery)
       .then((response) => {
         if (!active) return;
         setError(null);
         setLogs(response.items.map(mapAuditRecord));
         setCountCopy(buildAuditCountCopy(response));
-        setHasMore(Boolean(response.nextCursor));
+        setNextCursor(response.nextCursor ?? null);
+        setLoadedPage(requestedPage);
       })
       .catch((err: unknown) => {
         if (!active) return;
         if (isApiClientError(err)) {
+          if (err.code === "audit_cursor_invalid") {
+            setError(null);
+            setNotice("Audit cursor expired. Showing the first page again.");
+            setNextCursor(null);
+            setPageRequest(firstAuditPageState());
+            return;
+          }
           setError(err.message);
         } else {
           setError("Failed to load audit logs.");
@@ -215,10 +245,13 @@ export function AuditList() {
     return () => {
       active = false;
     };
-  }, [auditQuery]);
+  }, [auditQuery, pageRequest]);
 
   const startFilterRefresh = () => {
     setIsLoading(true);
+    setPageRequest(firstAuditPageState());
+    setNextCursor(null);
+    setNotice(null);
   };
 
   const handleQueryChange = (value: string) => {
@@ -255,6 +288,27 @@ export function AuditList() {
     void copyAuditEntryJson(log);
   }, []);
 
+  const handleNextPage = useCallback(() => {
+    if (!nextCursor) return;
+    setIsLoading(true);
+    setNotice(null);
+    setPageRequest({
+      cursor: nextCursor,
+      previousCursors: [...loadedPage.previousCursors, loadedPage.cursor],
+    });
+  }, [loadedPage, nextCursor]);
+
+  const handlePreviousPage = useCallback(() => {
+    if (loadedPage.previousCursors.length === 0) return;
+    const previousCursor = loadedPage.previousCursors.at(-1) ?? null;
+    setIsLoading(true);
+    setNotice(null);
+    setPageRequest({
+      cursor: previousCursor,
+      previousCursors: loadedPage.previousCursors.slice(0, -1),
+    });
+  }, [loadedPage]);
+
   const handleExport = useCallback(
     async (payload: ExportDialogPayload) => {
       const columns = payload.fields.filter(isAuditExportColumn);
@@ -264,7 +318,7 @@ export function AuditList() {
       const result = await exportAuditLogs({
         format: payload.format,
         columns,
-        filters: auditQuery,
+        filters: baseAuditQuery,
       });
       if (result.status === "queued") {
         toast.success("Audit export queued.");
@@ -273,7 +327,7 @@ export function AuditList() {
       }
       setExportOpen(false);
     },
-    [auditQuery]
+    [baseAuditQuery]
   );
 
   const handleDrawerChange = (open: boolean) => {
@@ -311,6 +365,11 @@ export function AuditList() {
             {error}
           </div>
         ) : null}
+        {notice ? (
+          <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+            {notice}
+          </div>
+        ) : null}
         {isLoading && logs.length === 0 ? (
           <div className="rounded-xl border bg-muted/20 p-6 text-sm text-muted-foreground">
             Loading audit logs...
@@ -329,7 +388,14 @@ export function AuditList() {
             selectedId={selectedId}
             onSelect={handleSelect}
             onCopyJson={handleCopyJson}
-            pageInfo={{ countCopy, hasMore }}
+            pageInfo={{
+              countCopy,
+              canNext: Boolean(nextCursor),
+              canPrevious: loadedPage.previousCursors.length > 0,
+              isLoading,
+              onNext: handleNextPage,
+              onPrevious: handlePreviousPage,
+            }}
           />
         )}
       </div>

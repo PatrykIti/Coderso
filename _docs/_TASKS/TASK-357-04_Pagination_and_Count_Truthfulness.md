@@ -5,7 +5,7 @@
 **Category:** Admin UI + Audit Logs + Pagination Truthfulness
 **Estimated Effort:** Medium
 **Dependencies:** TASK-357-01, TASK-360-06
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -106,3 +106,21 @@ Error handling:
 - Audit list shows exact totals only when returned by backend.
 - Next/Previous state follows real cursor metadata.
 - Search/filter changes reset pagination state.
+
+## Completion Notes
+
+- `AuditList` now owns requested vs loaded cursor page state so failed next-page
+  loads preserve the last successful page instead of drifting UI controls.
+- `Next` sends the response-provided `nextCursor`; `Previous` uses the loaded
+  cursor stack and is disabled on the first page.
+- Search, date range, category, and severity changes reset pagination to the
+  first page.
+- Invalid or expired cursors map to a neutral recovery notice and reload the
+  first page without inventing totals.
+- Page-level export uses the active filter query without the current page
+  cursor, so export remains a filtered-slice action rather than a single-page
+  export.
+- The old `audit-next-page` no-op marker and hard-coded `2,459 logs` count are
+  covered by Vitest regression tests.
+- Playwright verified first/next/previous cursor navigation with a 55-row
+  restricted `audit:read` fixture.

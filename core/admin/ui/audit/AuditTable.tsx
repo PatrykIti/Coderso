@@ -26,8 +26,6 @@ import type { AuditLog } from "./types";
 
 const exportEntryUnavailableReason =
   "Single-entry export is unavailable. Use the Audit Logs page export for filtered CSV or JSON evidence.";
-const paginationUnavailableReason =
-  "Cursor navigation is not wired yet. TASK-357-04 owns page controls.";
 
 export type AuditTableProps = {
   logs: AuditLog[];
@@ -36,7 +34,11 @@ export type AuditTableProps = {
   onCopyJson?: (log: AuditLog) => void;
   pageInfo?: {
     countCopy: string;
-    hasMore: boolean;
+    canNext: boolean;
+    canPrevious: boolean;
+    isLoading?: boolean;
+    onNext: () => void;
+    onPrevious: () => void;
   };
 };
 
@@ -188,17 +190,21 @@ export function AuditTable({ logs, selectedId, onSelect, onCopyJson, pageInfo }:
           {pageInfo?.countCopy ?? `Showing ${logs.length} loaded audit logs.`}
         </span>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled title={paginationUnavailableReason}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!pageInfo?.canPrevious || pageInfo?.isLoading}
+            onClick={pageInfo?.onPrevious}
+          >
             Previous
           </Button>
           <Button
             variant="outline"
             size="sm"
-            disabled
-            title={paginationUnavailableReason}
-            data-no-op-control="audit-next-page"
+            disabled={!pageInfo?.canNext || pageInfo?.isLoading}
+            onClick={pageInfo?.onNext}
           >
-            {pageInfo?.hasMore ? "Next page unavailable" : "Next"}
+            Next
           </Button>
         </div>
       </div>

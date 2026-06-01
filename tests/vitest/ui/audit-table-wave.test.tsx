@@ -192,7 +192,22 @@ afterEach(() => {
 });
 
 test("AuditTable renders user and system rows, selected state, and footer controls", () => {
-  const view = mount(<AuditTable logs={logs} selectedId="log-2" onSelect={() => undefined} />);
+  const onNext = vi.fn();
+  const onPrevious = vi.fn();
+  const view = mount(
+    <AuditTable
+      logs={logs}
+      selectedId="log-2"
+      onSelect={() => undefined}
+      pageInfo={{
+        countCopy: "Showing 2 loaded audit logs. More results are available.",
+        canNext: true,
+        canPrevious: false,
+        onNext,
+        onPrevious,
+      }}
+    />
+  );
 
   try {
     expect(view.container.textContent).toContain("User login");
@@ -201,15 +216,26 @@ test("AuditTable renders user and system rows, selected state, and footer contro
     expect(view.container.textContent).toContain("AL");
     expect(view.container.textContent).toContain("Backup failed");
     expect(view.container.textContent).toContain("Scheduler");
-    expect(view.container.textContent).toContain("Showing 2 loaded audit logs.");
-    expect(
-      Array.from(view.container.querySelectorAll("button")).some((button) =>
-        button.getAttribute("title")?.includes("Cursor navigation is not wired yet.")
-      )
-    ).toBe(true);
+    expect(view.container.textContent).toContain(
+      "Showing 2 loaded audit logs. More results are available."
+    );
     expect(view.container.textContent).not.toContain("2,459 logs");
     expect(view.container.textContent).toContain("Previous");
     expect(view.container.textContent).toContain("Next");
+
+    const previousButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Previous")
+    );
+    const nextButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Next")
+    );
+    expect(previousButton).toBeInstanceOf(HTMLButtonElement);
+    expect((previousButton as HTMLButtonElement).disabled).toBe(true);
+    expect(nextButton).toBeInstanceOf(HTMLButtonElement);
+    expect((nextButton as HTMLButtonElement).disabled).toBe(false);
+    clickButtonByText(view.container, "Next");
+    expect(onNext).toHaveBeenCalledOnce();
+    expect(onPrevious).not.toHaveBeenCalled();
 
     const selectedRow = Array.from(view.container.querySelectorAll("tr")).find((row) =>
       row.textContent?.includes("Backup failed")
@@ -254,6 +280,45 @@ test("AuditTable routes row, menu detail selection, and copy without menu trigge
     );
     expect(exportEntry).toBeInstanceOf(HTMLButtonElement);
     expect((exportEntry as HTMLButtonElement).disabled).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AuditTable enables Previous from loaded cursor state and disables Next without a cursor", () => {
+  const onNext = vi.fn();
+  const onPrevious = vi.fn();
+  const view = mount(
+    <AuditTable
+      logs={logs.slice(0, 1)}
+      selectedId={null}
+      onSelect={() => undefined}
+      pageInfo={{
+        countCopy: "Showing 1 loaded audit logs.",
+        canNext: false,
+        canPrevious: true,
+        onNext,
+        onPrevious,
+      }}
+    />
+  );
+
+  try {
+    const previousButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Previous")
+    );
+    const nextButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Next")
+    );
+    expect(previousButton).toBeInstanceOf(HTMLButtonElement);
+    expect((previousButton as HTMLButtonElement).disabled).toBe(false);
+    expect(nextButton).toBeInstanceOf(HTMLButtonElement);
+    expect((nextButton as HTMLButtonElement).disabled).toBe(true);
+
+    clickButtonByText(view.container, "Previous");
+    expect(onPrevious).toHaveBeenCalledOnce();
+    expect(onNext).not.toHaveBeenCalled();
+    expect(view.container.textContent).not.toContain("Next page unavailable");
   } finally {
     view.cleanup();
   }

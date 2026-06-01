@@ -54,6 +54,22 @@ Trasa: `/admin/audit`. Źródła: `core/admin/ui/audit/AuditList.tsx`,
 - Screenshot: `.tmp/task-357-03-audit-export.png`; CSV proof:
   `.tmp/task-357-03-export.csv`.
 
+### TASK-357-04 verification - 2026-06-01
+
+- Playwright CLI utworzyl 55 logow z unikalnym markerem i zalogowal
+  tymczasowego restricted usera z rola `audit:read`.
+- Pierwsza strona `/admin/audit` pokazala 50 wierszy, `Previous` byl disabled,
+  a `Next` byl aktywny tylko dlatego, ze API zwrocilo `nextCursor`.
+- Klik `Next` wyslal request do `/admin/api/audit` z `cursor=...` oraz
+  aktywnymi filtrami `q`, `from` i `to`.
+- Druga strona pokazala pozostale 5 wierszy, `Next` byl disabled, a
+  `Previous` byl aktywny.
+- Klik `Previous` wrocil na pierwsza strone requestem bez `cursor`, zachowujac
+  aktywne filtry.
+- Widok nie pokazal hard-coded `2,459 logs` ani dawnego no-op statusu dla
+  `Next`.
+- Screenshot: `.tmp/task-357-04-audit-pagination.png`.
+
 ### Pierwsza fala - 2026-05-31
 
 - Wejście w `Audit Logs`.
@@ -76,6 +92,8 @@ zewnętrzna.
   `severity`) zamiast filtrowac lokalny top-200 sample.
 - Po `TASK-357-01` API zwraca `nextCursor`, a count copy opiera sie na liczbie
   zaladowanych wierszy i dostepnosci cursora, bez placeholdera `2,459 logs`.
+- Po `TASK-357-04` `Next` i `Previous` realnie uzywaja cursor metadata z API,
+  a zmiana search/date/type/severity resetuje page state do pierwszej strony.
 - Drawer szczegółów pokazuje request/resource/status/payload.
 - Export dialog otwiera się i ma poprawny title/description.
 - Uprawnienie `audit:read` wystarcza do odczytu Audit Logs w restricted session.
@@ -88,7 +106,7 @@ zewnętrzna.
 | `Copy JSON` nie kopiuje | pozycja menu i button w drawerze nie mają handlera | aktywna akcja bez efektu | Zamknięte w `TASK-357-02` |
 | `Export entry`, `Share Log`, `Report` są UI-only | brak `onClick` w `AuditTable`/`AuditDetailsDrawer` | user widzi funkcje compliance, które nie działają | Zamknięte w `TASK-357-02`: akcje są disabled/unavailable; page-level export zamknięty w `TASK-357-03` |
 | Export dialog nie generuje pliku | `ExportDialog` finalnie tylko `onOpenChange(false)` | wygląda jak export, ale tylko zamyka dialog | Zamknięte w `TASK-357-03`: export pobiera redacted CSV/JSON przez `/admin/api/audit/export` |
-| Paginacja/table count jest placeholderem | table pokazuje `Showing 1 to X of 2,459 logs`, `Next` bez realnego page state | mylący obraz rozmiaru danych | Count copy zamkniete w `TASK-357-01`; interaktywne Prev/Next zostaje w `TASK-357-04` |
+| Paginacja/table count jest placeholderem | table pokazywal `Showing 1 to X of 2,459 logs`, `Next` bez realnego page state | mylący obraz rozmiaru danych | Zamkniete w `TASK-357-04`: count copy jest metadata-driven, a Prev/Next uzywa realnego cursor state |
 
 ## Dlaczego
 
@@ -99,8 +117,9 @@ server-side dla search/date/category/severity i zwraca cursor metadata; export
 i interaktywna paginacja zostaly rozbite na osobne leafy. Po `TASK-357-02`
 row/drawer `Copy JSON` kopiuje zredagowany JSON z feedbackiem, a pozostale
 akcje entry sa jawnie niedostepne zamiast wygladac jak dzialajace. Po
-`TASK-357-03` page-level export jest realnym flow CSV/JSON z redakcja payloadu;
-interaktywna paginacja nadal zostaje w `TASK-357-04`.
+`TASK-357-03` page-level export jest realnym flow CSV/JSON z redakcja payloadu.
+Po `TASK-357-04` interaktywna paginacja korzysta z `nextCursor` i stosu
+poprzednich cursorow zamiast placeholdera UI.
 
 ## Jak naprawić
 
@@ -117,3 +136,5 @@ interaktywna paginacja nadal zostaje w `TASK-357-04`.
   Status: zamkniete w `TASK-357-03`; page-level export uzywa
   `/admin/api/audit/export`, allowlisty kolumn i redacted CSV/JSON.
 - Paginacja: zastąpić hard-coded count i `Next` realnym cursor/page state.
+  Status: zamkniete w `TASK-357-04`; Playwright potwierdzil first/next/previous
+  dla 55-logowej fixture i restricted `audit:read` usera.

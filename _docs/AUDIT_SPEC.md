@@ -85,6 +85,12 @@ Response:
 - `items`: audit rows ordered by `createdAt DESC, id DESC`.
 - `nextCursor`: next keyset cursor when more matching rows are available,
   otherwise `null`. Cursor payloads preserve database timestamp precision.
+- Admin UI `Next` and `Previous` controls must be driven only by returned
+  cursor metadata and loaded page state. Filter changes reset cursor state to
+  the first page, and malformed or expired cursors recover to the first page
+  with non-destructive copy.
+- Audit export uses the active filters without the current page cursor, so the
+  export scope is the filtered slice rather than only the visible page.
 
 `POST /audit/export` strict JSON body:
 

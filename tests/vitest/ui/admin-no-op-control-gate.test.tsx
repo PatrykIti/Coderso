@@ -309,8 +309,7 @@ test("Audit Logs report no-op controls are disabled with explicit reasons", () =
     {
       area: "Audit Logs",
       controlId: "audit-next-page",
-      expected: "disabled",
-      reasonPattern: /Cursor navigation.*TASK-357-04/,
+      expected: "hidden",
       report: "REPORT_ADMIN_AUDIT_LOGS.md",
     },
   ]);

@@ -64,6 +64,26 @@ const auditState = vi.hoisted(() => ({
       if (auditQuery?.query === "zzz") {
         return { items: [], nextCursor: null };
       }
+      if (auditQuery?.cursor === "cursor-1") {
+        return {
+          items: [
+            {
+              id: "audit-3",
+              action: "content.update",
+              actorId: "user-3",
+              targetType: "page",
+              targetId: "about",
+              createdAt: "2026-03-15T08:30:00.000Z",
+              metadata: {
+                actorName: "Katherine Johnson",
+                ip: "127.0.0.2",
+                requestId: "req-3",
+              },
+            },
+          ],
+          nextCursor: null,
+        };
+      }
       return {
         items: [
           {
@@ -96,8 +116,8 @@ const auditState = vi.hoisted(() => ({
       };
     });
   },
-  apiError(message: string) {
-    return { kind: "api", message };
+  apiError(message: string, code = "api_error") {
+    return { kind: "api", message, code };
   },
 }));
 
@@ -272,13 +292,25 @@ vi.mock("../../../core/admin/ui/audit/AuditTable", () => ({
   }: {
     logs: Array<{ id: string; event: string }>;
     selectedId?: string | null;
-    pageInfo?: { countCopy: string; hasMore: boolean };
+    pageInfo?: {
+      countCopy: string;
+      canNext: boolean;
+      canPrevious: boolean;
+      onNext: () => void;
+      onPrevious: () => void;
+    };
     onSelect: (log: { id: string; event: string }) => void;
     onCopyJson: (log: { id: string; event: string }) => void;
   }) => (
     <div>
       <span>{`audit-table:${logs.length}:${selectedId ?? "none"}`}</span>
-      <span>{`page-info:${pageInfo?.countCopy ?? "none"}:${pageInfo?.hasMore ?? false}`}</span>
+      <span>{`page-info:${pageInfo?.countCopy ?? "none"}:${pageInfo?.canNext ?? false}:${pageInfo?.canPrevious ?? false}`}</span>
+      <button type="button" disabled={!pageInfo?.canPrevious} onClick={pageInfo?.onPrevious}>
+        previous-page
+      </button>
+      <button type="button" disabled={!pageInfo?.canNext} onClick={pageInfo?.onNext}>
+        next-page
+      </button>
       {logs.map((log) => (
         <React.Fragment key={log.id}>
           <button type="button" onClick={() => onSelect(log)}>
@@ -412,7 +444,25 @@ test("AuditList loads logs, filters them, opens export dialog, and clears select
       expect.objectContaining({ query: "ada" })
     );
     expect(view.container.textContent).toContain(
-      "page-info:Showing 2 loaded audit logs. More results are available.:true"
+      "page-info:Showing 2 loaded audit logs. More results are available.:true:false"
+    );
+
+    clickByText(view.container, "next-page");
+    await flush();
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "ada", cursor: "cursor-1" })
+    );
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 1 loaded audit logs.:false:true"
+    );
+
+    clickByText(view.container, "previous-page");
+    await flush();
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ cursor: expect.any(String) })
+    );
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "ada" })
     );
 
     const queryBeforeDate = lastAuditQuery();
@@ -421,6 +471,7 @@ test("AuditList loads logs, filters them, opens export dialog, and clears select
     const queryAfterDate = lastAuditQuery();
     expect(queryAfterDate.from).not.toBe(queryBeforeDate.from);
     expect(queryAfterDate.to).toEqual(expect.any(String));
+    expect(queryAfterDate.cursor).toBeUndefined();
 
     clickByText(view.container, "filter-type");
     clickByText(view.container, "filter-severity");
@@ -501,6 +552,70 @@ test("AuditList preserves visible rows when a server-filter refresh fails", asyn
 
     expect(view.container.textContent).toContain("Filter failed");
     expect(view.container.textContent).toContain("audit-table:2:none");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AuditList preserves the loaded page state when a next-page request fails", async () => {
+  const view = mount(<AuditList />);
+
+  try {
+    await flush();
+    clickByText(view.container, "filter-query");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 2 loaded audit logs. More results are available.:true:false"
+    );
+
+    auditState.nextError = auditState.apiError("Next page failed");
+    clickByText(view.container, "next-page");
+    await flush();
+
+    expect(view.container.textContent).toContain("Next page failed");
+    expect(view.container.textContent).toContain("audit-table:2:none");
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 2 loaded audit logs. More results are available.:true:false"
+    );
+
+    clickByText(view.container, "next-page");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 1 loaded audit logs.:false:true"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AuditList resets to the first page when the server rejects a cursor", async () => {
+  const view = mount(<AuditList />);
+
+  try {
+    await flush();
+    clickByText(view.container, "filter-query");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 2 loaded audit logs. More results are available.:true:false"
+    );
+
+    auditState.nextError = auditState.apiError("Cursor invalid", "audit_cursor_invalid");
+    clickByText(view.container, "next-page");
+    await flush();
+    await flush();
+
+    expect(view.container.textContent).toContain(
+      "Audit cursor expired. Showing the first page again."
+    );
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 2 loaded audit logs. More results are available.:true:false"
+    );
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ cursor: expect.any(String) })
+    );
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "ada" })
+    );
   } finally {
     view.cleanup();
   }

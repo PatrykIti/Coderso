@@ -5,7 +5,7 @@
 **Category:** Admin UI + Audit Logs + Compliance Export + Pagination + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-360-03 shared export dialog contract, TASK-360-04 no-op control gate, TASK-360-06 server-side query/pagination conventions, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md` audit evidence
-**Status:** In Progress (2026-06-01)
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -320,7 +320,7 @@ Completion notes:
 
 ### TASK-357-04: Pagination and Count Truthfulness
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 - Remove hard-coded `Showing 1 to X of 2,459 logs`.
 - Render:
@@ -375,6 +375,23 @@ Regression tests:
 - Next click uses returned cursor.
 - Filter change resets page/cursor.
 - No placeholder totals remain in snapshots.
+
+Completion notes:
+
+- Audit pagination now tracks requested and loaded page state separately, so
+  failed page loads preserve the last successful rows and cursor controls.
+- `Next` sends the server-provided `nextCursor`; `Previous` uses the loaded
+  cursor stack and is disabled on the first page.
+- Search, date range, category, and severity changes reset cursor state to the
+  first page.
+- Invalid or expired cursors recover to the first page with neutral copy instead
+  of a hard failure banner.
+- Audit export uses the active filter query without the current cursor, keeping
+  export scope aligned to the filtered audit slice rather than the visible page.
+- The UI no longer exposes the old `audit-next-page` no-op marker or hard-coded
+  placeholder total.
+- Playwright verified first/next/previous cursor behavior with a 55-row
+  restricted `audit:read` fixture.
 
 ## Security Contract
 
@@ -447,3 +464,15 @@ Per-endpoint contract matrix:
 - Report findings are updated with evidence and tests.
 - No export/copy/share path can include raw cookies, auth headers, reset tokens,
   CSRF tokens, or password-like fields in tests.
+
+## Family Completion Notes
+
+- `TASK-357-01` closed server-side query/date/category/severity filtering and
+  strict cursor metadata.
+- `TASK-357-02` closed row/drawer copy truthfulness and kept unsupported entry
+  actions disabled with explicit reasons.
+- `TASK-357-03` closed filtered CSV/JSON export through
+  `/admin/api/audit/export`.
+- `TASK-357-04` closed real cursor pagination and count truthfulness.
+- Final click evidence is recorded in
+  `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md`.
