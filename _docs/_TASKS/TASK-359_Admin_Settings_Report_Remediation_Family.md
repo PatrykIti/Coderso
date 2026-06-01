@@ -83,6 +83,9 @@ are placeholders.
 27. **External action sandboxing:** email send, webhook test, storage test, and
     assistant reindex must have environment-aware copy/confirm so local QA does
     not accidentally affect production services.
+28. **Auth bootstrap 429 resilience:** Settings navigation fixes must include
+    an explicit regression proving quick section switching does not turn
+    `auth/me` rate limits into a false logout/login redirect.
 
 ## Sub-Tasks
 
@@ -265,7 +268,59 @@ Site:
   schema fields and runtime behavior.
 - High-risk changes to admin path/base URLs must show confirm and rollback
   guidance.
+- Homepage/default route and 404 page changes must show a review step because
+  they change public routing behavior.
+- Security headers changes must be included in high-risk save classification
+  because they can break embeds, previews, and public integrations.
 - `View homepage` and preview actions must report failures.
+
+Pseudocode:
+
+```ts
+type BrandingSavePayload = {
+  siteName: string;
+  siteLocale: string;
+  timezone?: string;
+  logoMediaId?: string | null;
+  faviconMediaId?: string | null;
+};
+
+function buildBrandingSavePayload(form: GeneralSettingsForm): BrandingSavePayload {
+  return strictNormalizeBrandingPayload({
+    siteName: form.siteName.trim(),
+    siteLocale: form.siteLocale,
+    timezone: form.timezone || undefined,
+    logoMediaId: form.logoMediaId ?? null,
+    faviconMediaId: form.faviconMediaId ?? null,
+  });
+}
+
+function classifySiteRoutingRisk(before: SiteSettingsResponse, after: SiteSettingsForm) {
+  return {
+    adminPathChanged: before.adminPath !== after.adminPath,
+    baseUrlChanged: before.publicBaseUrl !== after.publicBaseUrl || before.adminBaseUrl !== after.adminBaseUrl,
+    homepageChanged: before.homepageId !== after.homepageId,
+    notFoundChanged: before.notFoundPageId !== after.notFoundPageId,
+  };
+}
+```
+
+Data flow:
+
+1. General media buttons open the existing media/file picker.
+2. Selected media ids update local dirty form state.
+3. Save sends normalized branding payload through settings service.
+4. Site save computes routing risk and opens confirm before PATCH when risk is
+   non-empty.
+5. Success updates redacted settings cache and visible preview state.
+
+Error handling:
+
+- Invalid media type/size shows field-level error.
+- Failed upload/select leaves previous logo/favicon intact.
+- High-risk site save cancel leaves draft dirty.
+- Save conflict/403 refreshes settings and permission snapshot without
+  overwriting unsaved draft.
 
 Regression tests:
 
@@ -288,7 +343,10 @@ Add confirm flows for:
 - High-risk security saves:
   - CORS/CSRF changes,
   - rate-limit changes,
+  - security headers/CSP/HSTS/referrer/permissions policy changes,
   - session TTL/single-session changes,
+  - homepage/default route/404 routing changes,
+  - admin path/base URL changes,
   - admin/public write protection changes.
 
 Pseudocode:
@@ -338,10 +396,50 @@ Integrations:
 - Secret save flows need confirm/audit and redaction tests.
 - Drawers must have `SheetDescription`.
 
+IP Allowlist and drawers:
+
+- IP Allowlist add drawer must have a semantic `SheetTitle` as well as
+  `SheetDescription`; visual headings alone are not sufficient.
+- Webhook, Email, Integrations, and IP Allowlist drawers must all pass a
+  warning-free Radix title/description regression.
+
 Assistant:
 
 - `Run reindex` needs confirm or dry-run with document/chunk counts.
 - Reindex result should be auditable and not run accidentally.
+
+Pseudocode:
+
+```ts
+type ExternalSettingsAction =
+  | { kind: "email_test"; recipient: string }
+  | { kind: "email_logs_export"; format: "csv" | "json" }
+  | { kind: "storage_test"; driver: "local" | "s3" | "azure" }
+  | { kind: "webhook_test"; webhookId: string }
+  | { kind: "assistant_reindex"; dryRun: boolean };
+
+async function executeExternalSettingsAction(action: ExternalSettingsAction) {
+  const confirmed = await confirmExternalAction(action);
+  if (!confirmed) return { status: "cancelled" as const };
+  return settingsExternalActionsClient.execute(action);
+}
+```
+
+Data flow:
+
+1. UI builds an action descriptor with redacted labels only.
+2. Confirm dialog shows environment, target, and side effect.
+3. Client calls the matching `/admin/api/settings/*` or assistant endpoint.
+4. Server validates permission, CSRF, payload, and redacts response.
+5. UI shows success/error toast and audit event id when available.
+
+Error handling:
+
+- Missing provider config blocks test with actionable field errors.
+- External timeout returns non-destructive `*_test_timeout` copy.
+- Secret validation failures never echo submitted secret values.
+- Assistant reindex failure leaves existing index untouched or reports partial
+  status if the backend supports it.
 
 Regression tests:
 
@@ -367,6 +465,44 @@ Sessions:
 - `Change Password` and `Security Settings` buttons must navigate or be
   removed/disabled.
 - Session revoke actions covered by TASK-359-05.
+
+Pseudocode:
+
+```ts
+type LoginAlertsPayload = {
+  enabled: boolean;
+  notifyOnNewDevice: boolean;
+  notifyOnNewLocation: boolean;
+  bruteForceThreshold?: number;
+  recipients?: string[];
+  channels?: Array<"email" | "webhook">;
+};
+
+function buildLoginAlertsPayload(form: LoginAlertsFormState): LoginAlertsPayload {
+  return strictNormalizeLoginAlerts({
+    enabled: form.enabled,
+    notifyOnNewDevice: form.notifyOnNewDevice,
+    notifyOnNewLocation: form.notifyOnNewLocation,
+    bruteForceThreshold: form.bruteForceThreshold,
+    recipients: parseEmailList(form.recipients),
+    channels: form.channels,
+  });
+}
+```
+
+Data flow:
+
+1. Topbar and sticky actions call the same save/discard handlers.
+2. Unsupported controls render disabled and do not enter dirty-state snapshots.
+3. Supported controls normalize into one `loginAlerts` payload.
+4. Save updates security settings and refreshes local form from server response.
+
+Error handling:
+
+- Invalid recipient emails block save with field errors.
+- Unsupported channel/webhook configuration remains disabled.
+- API 403 refreshes permission snapshot and keeps draft visible.
+- Discard restores last server response.
 
 Regression tests:
 
@@ -411,6 +547,17 @@ sessions, API keys, webhooks, IP allowlist, assistant reindex.
   include confirm and, where feasible, server-side current-session/current-IP
   protection.
 
+Per-subtask API contract matrix:
+
+| Subtask | Endpoint family | Visibility/auth/RBAC | CSRF/rate-limit | Validation/anti-abuse |
+|---|---|---|---|---|
+| 359-01 | `GET /admin/api/settings`, `GET /admin/api/settings/*` | internal admin session + `settings:read` | read-only, admin read bucket | strict no-body/no-unknown query, no public write |
+| 359-03 | cached settings reads/mutations | internal admin session + settings permission matching source route | writes require CSRF, admin write bucket | redacted cache only, secret denylist tests |
+| 359-04 | branding/site settings PATCH and media selection | internal admin session + `settings:write`; media picker keeps existing media RBAC | CSRF, admin write bucket | strict settings/media schema, high-risk site confirm |
+| 359-05 | security/sessions/API keys/webhooks/IP allowlist | internal admin session + most-specific security/session/API-key/webhook permission | CSRF, security-sensitive/admin write bucket | strict schemas, typed confirm, lockout guards |
+| 359-06 | email/storage/integrations/assistant external actions | internal admin session + settings/security/integration-specific permission | CSRF, external-action/security-sensitive bucket | strict schemas, no secret echo, environment confirm |
+| 359-07 | login alerts/sessions placeholder cleanup | internal admin session + security/settings write as applicable | CSRF for writes, admin write bucket | strict login-alerts schema, no public write |
+
 ## Testing Requirements
 
 - `bun --cwd core lint`
@@ -431,8 +578,15 @@ sessions, API keys, webhooks, IP allowlist, assistant reindex.
   - reversible saves still pass,
   - no active no-op controls remain,
   - high-risk actions require confirm.
+- Request budget/resilience:
+  - quick Settings section switching does not produce false logout on
+    `auth/me` 429,
+  - redundant `auth/me` requests are reduced after SPA/cache changes.
 - Security scanner commands from `_docs/SECURITY_SPEC.md` if secret handling,
   auth, public write, or scanner config changes are touched.
+- Route registration tests and centralized `mapSettingsError` /
+  `mapSecuritySettingsError` / action-specific map-error coverage for every
+  new/changed route family.
 
 ## Documentation Updates Required
 
@@ -440,6 +594,7 @@ sessions, API keys, webhooks, IP allowlist, assistant reindex.
 - `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md`
 - `_docs/ADMIN_CACHE.md`
 - `_docs/ADMIN_CACHE_MAP.md`
+- `_docs/SETTINGS.md`
 - `_docs/AUTH_SPEC.md`
 - `_docs/RBAC_SPEC.md`
 - `_docs/SECURITY_SPEC.md` if secret/lockout contract changes.

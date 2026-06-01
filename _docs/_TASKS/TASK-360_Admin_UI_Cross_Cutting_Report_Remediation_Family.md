@@ -76,6 +76,12 @@ The summary report identifies the repeated root causes:
 33. **No-op prevention policy:** add contributor guidance that active controls
     must have real handlers or explicit disabled/unavailable state before
     merging.
+34. **Stable control locators:** Radix Selects and icon-only controls in audited
+    Admin surfaces need stable accessible names and/or test ids where their
+    current accessible name is brittle.
+35. **Filter-label truthfulness:** shared query conventions must require filter
+    labels to match their actual data source, e.g. Access Logs cannot label a
+    static role dropdown as `User`.
 
 ## Sub-Tasks
 
@@ -156,7 +162,9 @@ Required behavior:
 - Confirm handles loading/error.
 - Typed confirmation available for delete/full-access/lockout actions.
 - Accessibility: dialog title/description always present.
-- Telemetry/audit hook optional but consistent.
+- Redacted audit event hook required for audited destructive/high-risk domains
+  that already have an audit trail; domains without audit support must document
+  the gap in the area task before implementation.
 
 Area adoption:
 
@@ -218,7 +226,11 @@ Implementation shape:
 - Prefer targeted component tests over brittle global DOM scanning.
 - Add a report-driven checklist test for known fixed controls:
   - Users `Reset password`,
+  - Users filter icon,
+  - Users `Email notifications` switches,
   - Access Logs `Revoke access`,
+  - Access Logs `View full session`,
+  - Access Logs sliders/advanced filters button,
   - Audit actions,
   - Storage `Test Connection`,
   - Email `Export Logs`,
@@ -289,6 +301,51 @@ Required conventions:
 - Never show active pagination buttons without matching state.
 - `custom` date ranges must have actual inputs.
 - Unknown query fields rejected at route boundary.
+- Filter labels must match the real query field. A role-backed filter is
+  labelled "Role"; a user-backed filter is labelled "User"; mixed text filters
+  are labelled "Query" or "Actor".
+
+Pseudocode:
+
+```ts
+type AdminQueryField =
+  | { kind: "query"; label: "Query"; value: string }
+  | { kind: "user"; label: "User"; userId: string }
+  | { kind: "role"; label: "Role"; roleId: string }
+  | { kind: "dateRange"; label: "Date range"; from: string; to: string };
+
+function assertFilterLabelMatchesSource(field: AdminQueryField) {
+  if (field.kind === "role" && field.label !== "Role") {
+    throw new Error("admin_filter_label_mismatch");
+  }
+  if (field.kind === "user" && field.label !== "User") {
+    throw new Error("admin_filter_label_mismatch");
+  }
+}
+
+function buildCursorPageState<TQuery>(query: TQuery, response: CursorResponse) {
+  return {
+    query,
+    rows: response.items,
+    nextCursor: response.nextCursor ?? null,
+    countCopy: resolveTruthfulCountCopy(response),
+  };
+}
+```
+
+Data flow:
+
+1. Surface owns strict filter state with typed source labels.
+2. Query serializer rejects label/source mismatches in tests.
+3. Server validates query params and returns cursor metadata.
+4. UI renders count copy only from metadata.
+
+Error handling:
+
+- Invalid custom date range blocks submit locally and maps server
+  `*_query_invalid` to field errors.
+- Invalid/expired cursor resets to first page with non-destructive copy.
+- Unknown query params map through centralized `map*Error` helpers.
 
 ### TASK-360-07: Final Evidence, Reports, and QA Closure
 
@@ -310,6 +367,41 @@ After TASK-355 through TASK-359 land:
   30.
 - Run Claude/source review after implementation and record whether it clicked
   UI or only reviewed source.
+
+Pseudocode:
+
+```ts
+type AdminAuditFindingStatus =
+  | { status: "fixed"; evidence: string[] }
+  | { status: "disabled"; evidence: string[]; unavailableCopy: string }
+  | { status: "deferred"; owner: string; date: string; reason: string };
+
+function assertEveryFindingClosed(matrix: Record<string, AdminAuditFindingStatus>) {
+  for (const [findingId, status] of Object.entries(matrix)) {
+    if (status.status === "deferred" && (!status.owner || !status.date)) {
+      throw new Error(`Finding ${findingId} deferred without owner/date`);
+    }
+    if (status.status !== "deferred" && status.evidence.length === 0) {
+      throw new Error(`Finding ${findingId} closed without evidence`);
+    }
+  }
+}
+```
+
+Data flow:
+
+1. Build a six-report finding matrix before final re-audit.
+2. Re-run Playwright over each area using isolated fixtures.
+3. Attach code/test/report evidence to each matrix row.
+4. Run Claude/source review and label whether it is source-only or UI-clicking.
+5. Update reports, changelogs, task board, and release-gate docs.
+
+Error handling:
+
+- If any finding lacks evidence, keep TASK-360 open.
+- If Claude UI clicking times out, record source-only result and do not claim
+  Claude clicked UI.
+- If DB/network blocks Playwright, record blocker and rerun before closure.
 
 ## Security Contract
 
@@ -363,6 +455,8 @@ query, and confirm patterns.
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/CMS_API.md`
 - `_docs/CODERSO_RELEASE_GATES.md` if gates change.
+- `CONTRIBUTING.md` and/or `docs/develop/contributing.md` for no-op control
+  prevention policy if contributor guidance changes.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/1050-2026-06-01-task-360-admin-ui-cross-cutting-remediation-family.md`
 
