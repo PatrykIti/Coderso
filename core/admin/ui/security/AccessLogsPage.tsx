@@ -252,6 +252,7 @@ export function AccessLogsPage() {
         title="Export Access Logs"
         description="Download access logs based on the current filters."
         filename="access-logs.csv"
+        unavailableReason="Access log export is not wired yet. TASK-358-03 owns the export route and payload."
         fields={[
           { id: "user", label: "User", defaultChecked: true },
           { id: "ip", label: "IP address", defaultChecked: true },

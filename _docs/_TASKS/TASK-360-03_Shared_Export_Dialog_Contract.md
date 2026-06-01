@@ -5,7 +5,7 @@
 **Category:** Admin UI + Export + Shared Components
 **Estimated Effort:** Large
 **Dependencies:** TASK-360
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -141,3 +141,17 @@ Error handling:
 - Audit and Access Logs can adopt the same shared dialog contract.
 - The shared export helper gives adopting clients a real JSON export/job path
   and does not rely on unsupported `apiRequest` options.
+
+## Completion Notes
+
+- `ExportDialog` now owns selected fields/format state, supports only CSV/JSON,
+  disables submit without `onExport`, and shows explicit unavailable/error/success
+  states.
+- Audit Logs and Access Logs pass unavailable reasons until TASK-357-03 and
+  TASK-358-03 add real export routes.
+- Added `downloadAdminExport()` for JSON file/job export responses under
+  canonical `/admin/api/*` paths with CSRF.
+- Regression coverage lives in
+  `tests/vitest/ui/shared-dialog-contracts.test.tsx`,
+  `tests/vitest/ui/dialogs.test.tsx`, and
+  `tests/vitest/admin/adminExportClient.test.ts`.

@@ -242,6 +242,7 @@ export function AuditList() {
         title="Export Audit Logs"
         description="Download audit events for compliance reviews."
         filename="audit-logs.csv"
+        unavailableReason="Audit log export is not wired yet. TASK-357-03 owns the export route and payload."
         fields={[
           { id: "event", label: "Event", defaultChecked: true },
           { id: "actor", label: "Actor", defaultChecked: true },

@@ -80,6 +80,12 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
 - `TASK-360-01` jest zaimplementowany: `/auth/me` zwraca redacted
   `permissionSnapshot`, Admin UI ma wspolny `can(permission)`, sidebar i route
   guards korzystaja z jednego helpera, a stale permission 403 odswieza snapshot.
+- `TASK-360-02` jest zaimplementowany: shared confirm dialog ma typed
+  confirmation, internal pending/error state i zachowana kompatybilnosc callsites.
+- `TASK-360-03` jest zaimplementowany: shared export dialog nie moze juz
+  aktywnie zamykac sie bez handlera, `xlsx` nie jest oferowany jako no-op, a
+  Audit/Access Logs pokazuja explicit unavailable copy do czasu TASK-357-03 i
+  TASK-358-03.
 - Pozostale pozycje z raportu pozostaja przypisane do rodzin TASK-355..360 i
   wymagaja osobnych implementacji oraz re-audytu UI.
 

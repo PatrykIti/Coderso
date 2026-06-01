@@ -1,5 +1,7 @@
 import { Download } from "lucide-react";
+import { useMemo, useState } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -18,14 +20,42 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
+export type ExportDialogFormat = "csv" | "json";
+
+export type ExportDialogPayload = {
+  format: ExportDialogFormat;
+  fields: string[];
+};
+
+export type ExportField = {
+  id: string;
+  label: string;
+  defaultChecked?: boolean;
+};
+
 type ExportDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
   filename: string;
-  fields: Array<{ id: string; label: string; defaultChecked?: boolean }>;
+  fields: ExportField[];
+  onExport?: (payload: ExportDialogPayload) => Promise<void> | void;
+  unavailableReason?: string;
 };
+
+const formatOptions: Array<{ value: ExportDialogFormat; label: string }> = [
+  { value: "csv", label: "CSV" },
+  { value: "json", label: "JSON" },
+];
+
+const resolveInitialFields = (fields: ExportField[]) =>
+  fields.filter((field) => field.defaultChecked !== false).map((field) => field.id);
+
+const toErrorMessage = (error: unknown) =>
+  error instanceof Error && error.message.trim().length > 0
+    ? error.message
+    : "Export failed. Review the issue and try again.";
 
 export function ExportDialog({
   open,
@@ -34,9 +64,64 @@ export function ExportDialog({
   description,
   filename,
   fields,
+  onExport,
+  unavailableReason,
 }: ExportDialogProps) {
+  const [format, setFormat] = useState<ExportDialogFormat>("csv");
+  const [selectedFields, setSelectedFields] = useState<string[]>(() =>
+    resolveInitialFields(fields)
+  );
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [message, setMessage] = useState<string | null>(null);
+  const selectedFieldSet = useMemo(() => new Set(selectedFields), [selectedFields]);
+  const unavailableCopy =
+    unavailableReason ?? (!onExport ? "Export is not available for this surface yet." : null);
+  const canSubmit = Boolean(onExport) && !unavailableCopy && selectedFields.length > 0;
+  const isSubmitting = status === "submitting";
+
+  const resetDialogState = () => {
+    setFormat("csv");
+    setSelectedFields(resolveInitialFields(fields));
+    setStatus("idle");
+    setMessage(null);
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (isSubmitting && !nextOpen) return;
+    if (!nextOpen) resetDialogState();
+    onOpenChange(nextOpen);
+  };
+
+  const handleFieldChange = (fieldId: string, checked: boolean) => {
+    setSelectedFields((current) => {
+      if (checked) return Array.from(new Set([...current, fieldId]));
+      return current.filter((item) => item !== fieldId);
+    });
+    setMessage(null);
+    setStatus("idle");
+  };
+
+  const handleSubmit = async () => {
+    if (!onExport || unavailableCopy) return;
+    if (selectedFields.length === 0) {
+      setStatus("error");
+      setMessage("Select at least one field to export.");
+      return;
+    }
+    setStatus("submitting");
+    setMessage(null);
+    try {
+      await onExport({ format, fields: selectedFields });
+      setStatus("success");
+      setMessage("Export started.");
+    } catch (error) {
+      setStatus("error");
+      setMessage(toErrorMessage(error));
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[85vh] gap-0 p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{title}</DialogTitle>
@@ -47,31 +132,49 @@ export function ExportDialog({
             <label className="text-xs font-semibold uppercase text-muted-foreground">
               File format
             </label>
-            <Select defaultValue="csv">
+            <Select
+              value={format}
+              onValueChange={(value) => setFormat(value as ExportDialogFormat)}
+              disabled={isSubmitting || Boolean(unavailableCopy)}
+            >
               <SelectTrigger className="h-10">
                 <SelectValue placeholder="Select format" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="csv">CSV</SelectItem>
-                <SelectItem value="json">JSON</SelectItem>
-                <SelectItem value="xlsx">Excel</SelectItem>
+                {formatOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <Separator />
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">
-              Include fields
-            </p>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Include fields</p>
             <div className="grid gap-2">
               {fields.map((field) => (
                 <label key={field.id} className="flex items-center gap-2 text-sm">
-                  <Checkbox defaultChecked={field.defaultChecked} />
+                  <Checkbox
+                    checked={selectedFieldSet.has(field.id)}
+                    disabled={isSubmitting || Boolean(unavailableCopy)}
+                    onCheckedChange={(checked) => handleFieldChange(field.id, checked === true)}
+                  />
                   <span>{field.label}</span>
                 </label>
               ))}
             </div>
           </div>
+          {unavailableCopy ? (
+            <Alert>
+              <AlertDescription>{unavailableCopy}</AlertDescription>
+            </Alert>
+          ) : null}
+          {message ? (
+            <Alert variant={status === "error" ? "destructive" : "default"}>
+              <AlertDescription>{message}</AlertDescription>
+            </Alert>
+          ) : null}
           <div className="rounded-xl border bg-muted/30 p-4 text-xs text-muted-foreground">
             Export will include data from the current filters. File name:{" "}
             <span className="font-semibold text-foreground">{filename}</span>
@@ -79,12 +182,16 @@ export function ExportDialog({
         </div>
         <Separator />
         <div className="flex flex-col gap-3 bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={() => onOpenChange(false)} className="gap-2">
+          <Button
+            onClick={() => void handleSubmit()}
+            disabled={!canSubmit || isSubmitting}
+            className="gap-2"
+          >
             <Download className="h-4 w-4" />
-            Export
+            {isSubmitting ? "Exporting..." : "Export"}
           </Button>
         </div>
       </DialogContent>

@@ -34,11 +34,19 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
   normalizes the snapshot, `AdminAuthProvider` exposes shared `can(permission)`,
   sidebar/route guards consume the helper, and permission-denied API failures
   trigger auth snapshot refresh.
+- Completed `TASK-360-02` shared confirm action pattern with backward-compatible
+  props, action objects, typed confirmation, internal pending/error handling,
+  and focus return.
+- Completed `TASK-360-03` shared export dialog contract: enabled submit now
+  requires `onExport`, unsupported surfaces show unavailable copy, Excel is no
+  longer offered as an active no-op, and `downloadAdminExport()` covers JSON
+  file/job export responses under canonical admin API paths.
 
 ## Validation
 
 - `bun test tests/unit/auth/rbac.test.ts tests/integration/routes/auth.test.ts`
 - `bun run test:vitest -- tests/vitest/admin/apiClient.test.ts tests/vitest/admin/authClient.test.ts tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/shared-dialog-contracts.test.tsx tests/vitest/ui/dialogs.test.tsx tests/vitest/admin/adminExportClient.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Source evidence:

@@ -5,7 +5,7 @@
 **Category:** Admin UI + Confirm UX + Accessibility + Audit
 **Estimated Effort:** Large
 **Dependencies:** TASK-360
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -104,3 +104,14 @@ Error handling:
 - Shared confirm pattern exists and is accessible.
 - Cancel paths are side-effect-free.
 - Area tasks can reuse one API for destructive/high-risk actions.
+
+## Completion Notes
+
+- `ConfirmActionDialog` keeps the existing prop API while adding a canonical
+  `action` shape, internal pending/error handling, typed confirmation, optional
+  target labels, and focus return.
+- Existing callsites remain compatible; adopting tasks can opt into
+  `requireTypedValue`, `closeOnSuccess`, and action objects without a broad
+  migration.
+- Regression coverage lives in
+  `tests/vitest/ui/shared-dialog-contracts.test.tsx`.

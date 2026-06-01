@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 45 tasks
+- **To Do:** 43 tasks
 - **In Progress:** 5 tasks
-- **Done:** 2007 tasks
+- **Done:** 2009 tasks
 
 ---
 
@@ -42,8 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-360-06 | Admin Server-Side Query and Pagination Conventions | High | Large | Physical cross-cutting leaf for strict query schemas, truthful filter labels, cursor metadata, and fake-total prevention |
 | TASK-360-05 | Drawer and Sheet Accessibility Gate | High | Medium | Physical cross-cutting leaf for Radix title/description warning gates across audited Admin drawers and sheets |
 | TASK-360-04 | Admin No-Op Control Audit Gate | High | Large | Physical cross-cutting leaf for report-driven active-control truthfulness expectations and no-op regression prevention |
-| TASK-360-03 | Shared Export Dialog Contract | High | Large | Physical cross-cutting leaf for real export submit/loading/error behavior and unavailable export states |
-| TASK-360-02 | Shared Confirm Action Pattern | High | Large | Physical cross-cutting leaf for destructive/high-risk confirm dialogs with typed confirmation, loading/error, and a11y |
 | TASK-359 | Admin Settings Report Remediation Family | High | Very Large | Full Settings remediation family: RBAC guard, SPA/cache behavior, dirty/mobile nav, placeholders, high-risk confirms, secret-safe cache, and action truthfulness |
 | TASK-359-07 | Login Alerts and Sessions Placeholder Cleanup | High | Medium | Physical Settings leaf for Login Alerts persistence/unavailable states and Sessions link-button truthfulness |
 | TASK-359-06 | Email, Storage, Integrations, Assistant Action Truthfulness | High | Large | Physical Settings leaf for external action confirms, redaction, drawer a11y, and no-op cleanup |
@@ -93,13 +91,15 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-360-01 permission snapshot is implemented; shared confirm/export/no-op/a11y/query/final-evidence leaves remain. |
+| TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-360-01 through TASK-360-03 are implemented; no-op/a11y/query/final-evidence leaves remain. |
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-360-03 | Shared Export Dialog Contract | High | Large | Done (2026-06-01): shared export dialogs now require a real `onExport` handler or explicit unavailable copy, remove active Excel no-op state, and expose JSON file/job helper coverage. |
+| TASK-360-02 | Shared Confirm Action Pattern | High | Large | Done (2026-06-01): shared confirm dialogs now support action objects, typed confirmation, internal pending/error handling, focus return, and backward-compatible existing callsites. |
 | TASK-360-01 | Admin Permission Snapshot Contract | High | Large | Done (2026-06-01): `/auth/me` now returns a redacted effective-permission snapshot, admin UI exposes shared `can(permission)`, sidebar/route guards consume it, and stale permission 403s refresh auth bootstrap. |
 | TASK-346 | Admin Seed Package Command | Medium | Small | Done (2026-05-31): added root `db:seed:admin` command, package-script regression coverage, and local setup docs for bootstrap administrator seeding. |
 | TASK-345 | CodeQL Widget Sanitizer and Validation DoS Remediation | High | Small | Done (2026-05-31): replaced regex HTML pseudo-sanitization in Hero/Template Section paths and hardened widget AJV validation with fail-fast plus structural budget checks. |

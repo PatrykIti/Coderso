@@ -1252,6 +1252,21 @@ Kontrakt pluginu (client):
 
 ---
 
+## Admin UI shared actions
+
+- Destructive, high-risk, or lockout-prone admin actions use
+  `ConfirmActionDialog`; native `window.confirm` and one-off active confirms are
+  not accepted for new admin surfaces.
+- Confirm dialogs must provide title, description, redacted target labels where
+  useful, and typed confirmation for delete/full-access/lockout-prone actions.
+- Shared export surfaces use `ExportDialog`. Enabled submit requires a real
+  `onExport` handler; unsupported exports must pass explicit unavailable copy.
+- Shared export helpers handle JSON file/job metadata under canonical
+  `/admin/api/*` paths. Direct blob downloads require explicit router
+  `Response` passthrough before adoption.
+
+---
+
 ## System hookow (server)
 
 API core:

@@ -32,20 +32,25 @@ test("ExportDialog renders fields", () => {
 
   expect(html).toContain("Export Logs");
   expect(html).toContain("Event");
+  expect(html).toContain("Export is not available for this surface yet.");
+  expect(html).not.toContain("Excel");
 });
 
 test("BackupNowDialog renders options", () => {
   const html = renderAdminUi(
-    <BackupNowDialog open onOpenChange={() => undefined} onCreate={async () => true} isSubmitting={false} />
+    <BackupNowDialog
+      open
+      onOpenChange={() => undefined}
+      onCreate={async () => true}
+      isSubmitting={false}
+    />
   );
 
   expect(html).toContain("Create Backup Now");
 });
 
 test("ThemeExportDialog renders title", () => {
-  const html = renderAdminUi(
-    <ThemeExportDialog open onOpenChange={() => undefined} />
-  );
+  const html = renderAdminUi(<ThemeExportDialog open onOpenChange={() => undefined} />);
 
   expect(html).toContain("Export Theme Config");
 });
@@ -63,17 +68,13 @@ test("WidgetCreateDialog renders title", () => {
 });
 
 test("WidgetInsertDialog renders title", () => {
-  const html = renderAdminUi(
-    <WidgetInsertDialog open onOpenChange={() => undefined} pages={[]} />
-  );
+  const html = renderAdminUi(<WidgetInsertDialog open onOpenChange={() => undefined} pages={[]} />);
 
   expect(html).toContain("Insert Widget");
 });
 
 test("IntegrationRequestDialog renders title", () => {
-  const html = renderAdminUi(
-    <IntegrationRequestDialog open onOpenChange={() => undefined} />
-  );
+  const html = renderAdminUi(<IntegrationRequestDialog open onOpenChange={() => undefined} />);
 
   expect(html).toContain("Request New Integration");
 });
