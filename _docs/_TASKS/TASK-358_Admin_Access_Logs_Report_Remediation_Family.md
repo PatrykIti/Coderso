@@ -124,14 +124,18 @@ Regression tests:
 
 **Status:** To Do
 
-Decision required before implementation:
+Implementation decision:
 
-- If access logs can map to existing session ids, `View full session` navigates
-  to `/admin/settings/security/sessions?sessionId=...` or opens a session
-  drawer.
-- If not, the button must be disabled with copy explaining that the access log
-  has no session reference.
-- `Revoke access` must not remain an active-looking destructive no-op.
+- Preferred full-scope path is required: access log rows that include or can
+  resolve an active session id must support `View full session` and
+  `Revoke access`.
+- Rows without a resolvable active session must render both actions disabled
+  with deterministic unavailable copy. Do not leave this as a product decision
+  for implementers.
+- Revoke must require a newly defined or existing explicit high-risk permission
+  before implementation. If neither `sessions:write` nor `security:write`
+  exists, define a dedicated `sessions:write`/equivalent permission in the
+  task implementation; never fall back to `audit:read`.
 
 Preferred revoke implementation:
 
@@ -155,6 +159,14 @@ async function revokeAccessFromLog(input: RevokeAccessRequest) {
   );
 }
 ```
+
+Route/client contract:
+
+- Browser client path: `/access-logs/:id/revoke` through `apiRequest`.
+- Server route: `POST /admin/api/access-logs/:id/revoke`.
+- Session detail navigation:
+  `/admin/settings/security/sessions?sessionId=<id>` or a shared session drawer
+  must be backed by the existing sessions client.
 
 Error handling:
 
@@ -196,6 +208,21 @@ async function exportAccessLogs(request: AccessLogExportRequest) {
 }
 ```
 
+Admin API path:
+
+- Browser client path is `/access-logs/export` through `apiRequest`.
+- Server route registration must expose it under
+  `POST /admin/api/access-logs/export`.
+
+Error handling:
+
+- `access_log_export_invalid_columns`: keep dialog open and mark field
+  selection.
+- `access_log_export_too_large`: show row-limit/async guidance.
+- `access_log_export_forbidden`: refresh permission snapshot and show
+  access-denied copy.
+- Network failure: keep dialog open and allow retry.
+
 Regression tests:
 
 - Export uses current status/date/search filters.
@@ -215,6 +242,51 @@ Regression tests:
   - avoid exposing email to users without the required permission,
   - show selected actor identity in active filter chips.
 
+Pseudocode:
+
+```ts
+type AccessAdvancedFilters = {
+  actorId?: string;
+  actorRole?: string;
+  method?: string;
+  ip?: string;
+};
+
+function resolveAccessFilterLabel(filter: AccessAdvancedFilters) {
+  if (filter.actorId) return "User";
+  if (filter.actorRole) return "Role";
+  return "Advanced filters";
+}
+
+function buildAccessLogQueryFromFilters(
+  base: AccessLogQuery,
+  advanced: AccessAdvancedFilters
+): AccessLogQuery {
+  return normalizeAccessLogQuery({
+    ...base,
+    actorId: advanced.actorId,
+    actorRole: advanced.actorRole,
+    method: advanced.method,
+    ip: advanced.ip,
+  });
+}
+```
+
+Data flow:
+
+1. Sliders button opens advanced filters drawer.
+2. Drawer owns draft filter state.
+3. Apply validates and normalizes into URL/query state.
+4. List reloads from server and active chips reflect exact query semantics.
+
+Error handling:
+
+- Invalid IP/method values block apply and show field errors.
+- Actor lookup failure leaves the text query usable and marks actor filter
+  unavailable.
+- Restricted users receive redacted actor summaries and no extra email list if
+  not permitted.
+
 Regression tests:
 
 - Sliders button has a handler or is not rendered.
@@ -231,9 +303,8 @@ Route family: access logs and session revoke.
 - Auth model: authenticated admin session.
 - RBAC:
   - `audit:read` for list/detail/export.
-  - Revoke requires a dedicated high-risk permission if available
-    (`sessions:write`, `security:write`, or equivalent), not merely
-    `audit:read`.
+  - Revoke requires `sessions:write`, `security:write`, or a newly defined
+    equivalent high-risk permission. It must not fall back to `audit:read`.
 - CSRF: required for export POST and revoke POST.
 - Rate-limit bucket: admin read for list/detail, admin write/security-sensitive
   bucket for revoke.
@@ -245,6 +316,15 @@ Route family: access logs and session revoke.
 - Self-lockout: revoking the current session must require explicit extra
   confirmation or be blocked.
 
+Per-endpoint contract matrix:
+
+| Endpoint | Visibility | Auth/RBAC | CSRF | Rate bucket | Validation | Anti-abuse |
+|---|---|---|---|---|---|---|
+| `GET /admin/api/access-logs` | internal admin | session + `audit:read` | none, read-only | admin read | strict query schema, clamped limit/cursor | no public write |
+| `GET /admin/api/access-logs/:id` if added | internal admin | session + `audit:read` | none, read-only | admin read | strict id param | no public write |
+| `POST /admin/api/access-logs/export` | internal admin | session + `audit:read` | required | export/admin write bucket | strict body schema, column allowlist | no public write, redacted output |
+| `POST /admin/api/access-logs/:id/revoke` | internal admin | session + high-risk session/security write permission | required | security-sensitive/admin write | strict id/body schema, self-lockout guard | no public write, audit event |
+
 ## Testing Requirements
 
 - `bun --cwd core lint`
@@ -253,12 +333,24 @@ Route family: access logs and session revoke.
   real actions, export, pagination.
 - Bun route/service tests for access log query validation, export, revoke,
   RBAC, CSRF, and audit event.
+- Route registration tests for every new/changed access-log route.
+- Centralized `mapAccessLogError` coverage for `access_log_query_invalid`,
+  `access_log_cursor_invalid`, `access_log_not_found`,
+  `access_log_session_not_found`, `access_log_revoke_forbidden`,
+  `access_log_export_invalid_columns`, and `access_log_export_too_large`.
 - Playwright:
   - restricted `audit:read` can read but cannot revoke,
   - custom range affects request,
   - export downloads or is disabled,
   - revoke requires confirm when enabled,
   - pagination changes data.
+- Before DB-backed route/service/Playwright tests: verify `DATABASE_URL` is
+  reachable after `set -a && source .env && set +a`.
+- Run `bun run gates:coderso` when audit/session/security release gates are
+  touched.
+- Run Semgrep/Trivy/Gitleaks commands from `_docs/SECURITY_SPEC.md` when
+  redaction/session revoke/security scanner behavior changes; otherwise record
+  the remaining scanner validation as CI-only.
 
 ## Documentation Updates Required
 
@@ -267,6 +359,9 @@ Route family: access logs and session revoke.
 - `_docs/AUDIT_SPEC.md`
 - `_docs/AUTH_SPEC.md` / `_docs/RBAC_SPEC.md` if revoke permission changes.
 - `_docs/CMS_API.md`
+- `docs/guide/screens/access-logs.md`
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if dynamic actor/user
+  summaries introduce a cached admin resource.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/1048-2026-06-01-task-358-admin-access-logs-remediation-family.md`
 

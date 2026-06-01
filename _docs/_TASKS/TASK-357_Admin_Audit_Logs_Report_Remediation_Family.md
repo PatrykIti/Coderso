@@ -212,6 +212,29 @@ async function exportAuditLogs(request: AuditExportRequest) {
 }
 ```
 
+Admin API path:
+
+- Browser client path is `/audit/export` through `apiRequest`.
+- Server route registration must expose it under `/admin/api/audit/export`.
+
+Data flow:
+
+1. User opens export dialog from `/admin/audit`.
+2. Dialog receives active filter state from `AuditList`.
+3. Dialog validates selected columns and format.
+4. Client posts to `/admin/api/audit/export`.
+5. Server re-validates filters, columns, RBAC, and row limit.
+6. Server returns a blob or async export job metadata.
+7. UI downloads the blob or shows job status.
+
+Error handling:
+
+- `audit_export_invalid_columns`: keep dialog open and mark field selection.
+- `audit_export_too_large`: show row-limit/async-job guidance.
+- `audit_export_forbidden`: close sensitive payload state, show access-denied
+  toast, and refresh current-user permissions.
+- Network failure: keep dialog open with retry.
+
 Regression tests:
 
 - Dialog validates at least one selected column.
@@ -230,6 +253,45 @@ Regression tests:
 - `Next` uses `nextCursor`; disabled when absent.
 - `Previous` uses cursor stack or page state; disabled on first page.
 - Search/filter changes reset pagination state.
+
+Pseudocode:
+
+```ts
+type AuditPaginationState = {
+  currentCursor: string | null;
+  previousCursors: string[];
+  nextCursor: string | null;
+  visibleCount: number;
+  totalCount?: number;
+};
+
+function resolveAuditCountCopy(state: AuditPaginationState) {
+  if (typeof state.totalCount === "number") {
+    return `Showing ${state.visibleCount} of ${state.totalCount} logs`;
+  }
+  return state.nextCursor
+    ? `Showing ${state.visibleCount} logs. More results available.`
+    : `Showing ${state.visibleCount} logs.`;
+}
+
+function resetAuditPaginationOnFilterChange() {
+  setPagination({ currentCursor: null, previousCursors: [], nextCursor: null, visibleCount: 0 });
+}
+```
+
+Data flow:
+
+1. Query/filter state change resets cursor stack.
+2. List request sends `cursor=currentCursor`.
+3. Response updates `nextCursor`, visible row count, and optional total.
+4. `Next` pushes current cursor onto `previousCursors`.
+5. `Previous` pops from `previousCursors`.
+
+Error handling:
+
+- Invalid/expired cursor maps to `audit_cursor_invalid`, resets to first page,
+  and shows non-destructive copy.
+- Failed page load preserves the current visible page and exposes retry.
 
 Regression tests:
 
@@ -257,18 +319,36 @@ Route family: audit logs.
 - Audit: export action should emit an audit event with format/filter summary
   but not exported payload contents.
 
+Per-endpoint contract matrix:
+
+| Endpoint | Visibility | Auth/RBAC | CSRF | Rate bucket | Validation | Anti-abuse |
+|---|---|---|---|---|---|---|
+| `GET /admin/api/audit` | internal admin | session + `audit:read` | none, read-only | admin read | strict query schema, clamped limit/cursor | no public write |
+| `GET /admin/api/audit/:id` if added | internal admin | session + `audit:read` | none, read-only | admin read | strict id param | no public write |
+| `POST /admin/api/audit/export` | internal admin | session + `audit:read` | required | export/admin write bucket | strict body schema, column allowlist, clamped rows | no public write, redacted output |
+
 ## Testing Requirements
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Targeted Vitest UI tests for filters, copy, export dialog, pagination.
 - Bun route/service tests for audit query normalization, RBAC, export, and CSV.
+- Route registration tests for every new/changed audit route.
+- Centralized `mapAuditError` coverage for `audit_query_invalid`,
+  `audit_cursor_invalid`, `audit_export_invalid_columns`,
+  `audit_export_too_large`, `audit_log_not_found`, and `audit_forbidden`.
 - Playwright:
   - date range affects request/results,
   - copy JSON shows feedback,
   - export downloads or reports success,
   - pagination is real.
 - Security/redaction tests for copied/exported payload.
+- Before DB-backed route/service/Playwright tests: verify `DATABASE_URL` is
+  reachable after `set -a && source .env && set +a`.
+- Run `bun run gates:coderso` when audit/export release gates are touched.
+- Run Semgrep/Trivy/Gitleaks commands from `_docs/SECURITY_SPEC.md` when
+  redaction/export/security scanner behavior changes; otherwise record the
+  remaining scanner validation as CI-only.
 
 ## Documentation Updates Required
 
@@ -276,6 +356,7 @@ Route family: audit logs.
 - `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md`
 - `_docs/AUDIT_SPEC.md`
 - `_docs/CMS_API.md`
+- `docs/guide/screens/audit-logs.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/1047-2026-06-01-task-357-admin-audit-logs-remediation-family.md`
 
