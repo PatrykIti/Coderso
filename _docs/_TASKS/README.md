@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 127 tasks
+- **To Do:** 123 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2021 tasks
+- **Done:** 2025 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-366 | Accordion 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_ACCORDION_WIDGET.md`; 3 findings routed to implementation/tests/docs |
 | TASK-367 | Toggle Block 31-05 UI Audit Remediation Family | High | Medium | Report-driven family from `REPORT_TOGGLE_BLOCK_WIDGET.md`; 1 finding routed to implementation/tests/docs |
 | TASK-368 | Spacer 31-05 UI Audit Closure and Regression Guard Family | Medium | Small | Report-driven family from `REPORT_SPACER_WIDGET.md`; no new defect, regression guard routed to tests/docs |
 | TASK-369 | Divider 31-05 UI Audit Remediation Family | High | Medium | Report-driven family from `REPORT_DIVIDER_WIDGET.md`; 1 finding routed to implementation/tests/docs |
@@ -75,9 +74,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
 | TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-366-01 | ACC-31-05-01 - Custom item IDs must match `defaultOpenIds` in public runtime | High | Medium | Leaf task for TASK-366; source `REPORT_ACCORDION_WIDGET.md` |
-| TASK-366-02 | ACC-31-05-02 - Sanitize Accordion surface/text/border color fields | High | Medium | Leaf task for TASK-366; source `REPORT_ACCORDION_WIDGET.md` |
-| TASK-366-03 | ACC-31-05-03 - Complete repeatable Structure metadata for item actions | High | Medium | Leaf task for TASK-366; source `REPORT_ACCORDION_WIDGET.md` |
 | TASK-367-01 | TGL-31-05-01 - Sanitize Toggle Block clearable color fields | High | Medium | Leaf task for TASK-367; source `REPORT_TOGGLE_BLOCK_WIDGET.md` |
 | TASK-368-01 | SPC-31-05-01 - Lock responsive/fixed/unsafe-length behavior as a regression guard | Medium | Medium | Leaf task for TASK-368; source `REPORT_SPACER_WIDGET.md` |
 | TASK-369-01 | DIV-31-05-01 - Unsafe `color` and `labelColor` must be normalized | High | Medium | Leaf task for TASK-369; source `REPORT_DIVIDER_WIDGET.md` |
@@ -185,6 +181,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-366 | Accordion 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-01): custom and legacy default-open ids now resolve to the same runtime item, unsafe color imports are sanitized, and item Structure actions expose stable metadata. |
+| TASK-366-03 | ACC-31-05-03 - Complete repeatable Structure metadata for item actions | High | Medium | Done (2026-06-01): shared Structure metadata now covers Accordion `slots.item` add/row/move/remove actions with an Accordion-specific regression. |
+| TASK-366-02 | ACC-31-05-02 - Sanitize Accordion surface/text/border color fields | High | Medium | Done (2026-06-01): Accordion color fields drop unsafe CSS fragments while preserving bounded colors, theme defaults, and safe legacy hyphenated tokens. |
+| TASK-366-01 | ACC-31-05-01 - Custom item IDs must match `defaultOpenIds` in public runtime | High | Medium | Done (2026-06-01): custom item ids and legacy positional slot ids now open the intended public item without changing stable DOM slot markers. |
 | TASK-365 | Tabs 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-01): six Tabs color fields now use bounded color normalization, unsafe imported CSS is dropped before SSR, and repeatable panel actions expose stable metadata. |
 | TASK-365-02 | TABS-31-05-02 - Complete repeatable Structure metadata for panel actions | High | Medium | Done (2026-06-01): Add Panel, panel rows, and Move/Remove actions expose `slots.panel` metadata with action ids scoped to `panel:<id>`. |
 | TASK-365-01 | TABS-31-05-01 - Sanitize six Tabs style fields before inline CSS | High | Medium | Done (2026-06-01): Tabs color-only fields now preserve bounded CSS colors and drop unsafe `javascript:`, `expression`, `data:`, and injection fragments. |

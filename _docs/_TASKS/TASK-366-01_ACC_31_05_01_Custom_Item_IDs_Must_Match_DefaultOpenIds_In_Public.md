@@ -5,7 +5,7 @@
 **Category:** Widgets + Accordion + Runtime Security + Builder Metadata + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-366
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Normalizer validates against custom item IDs, but renderer opens by slot instanc
 
 ## Sub-Tasks
 
-- [ ] Reproduce ACC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce ACC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -89,3 +89,12 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced the report drift in code: normalized custom item IDs could be announced in Advanced while public rendering compared default-open settings only against repeatable slot instance IDs.
+- Resolved items now carry both `instanceId` and `selectionId`; runtime matching accepts both while keeping DOM ids and slot markers stable.
+- Normalization maps legacy positional default IDs such as `"2"` onto the corresponding custom item ID, so custom items stay compatible with older slot-instance defaults.
+- Added renderer regressions for `defaultOpenIds=["beta"]` and legacy `defaultOpenIds=["2"]` with custom `alpha`/`beta` item IDs.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/ui/accordion-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`; broader Accordion/UI lane with renderer and shared block-layout coverage; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; `git diff --cached --check`; Claude staged-diff review returned no blockers.
+- Covered by changelog `1056`.

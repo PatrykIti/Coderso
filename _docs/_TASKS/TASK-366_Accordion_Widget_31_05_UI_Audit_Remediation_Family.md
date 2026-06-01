@@ -5,7 +5,7 @@
 **Category:** Widgets + Accordion + Runtime Security + Builder Metadata + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_ACCORDION_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -25,9 +25,9 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-366-01](TASK-366-01_ACC_31_05_01_Custom_Item_IDs_Must_Match_DefaultOpenIds_In_Public.md): ACC-31-05-01 - Custom item IDs must match `defaultOpenIds` in public runtime
-- [ ] [TASK-366-02](TASK-366-02_ACC_31_05_02_Sanitize_Accordion_Surface_Text_Border_Color_Fields.md): ACC-31-05-02 - Sanitize Accordion surface/text/border color fields
-- [ ] [TASK-366-03](TASK-366-03_ACC_31_05_03_Complete_Repeatable_Structure_Metadata_For_Item_Actions.md): ACC-31-05-03 - Complete repeatable Structure metadata for item actions
+- [x] [TASK-366-01](TASK-366-01_ACC_31_05_01_Custom_Item_IDs_Must_Match_DefaultOpenIds_In_Public.md): ACC-31-05-01 - Custom item IDs must match `defaultOpenIds` in public runtime
+- [x] [TASK-366-02](TASK-366-02_ACC_31_05_02_Sanitize_Accordion_Surface_Text_Border_Color_Fields.md): ACC-31-05-02 - Sanitize Accordion surface/text/border color fields
+- [x] [TASK-366-03](TASK-366-03_ACC_31_05_03_Complete_Repeatable_Structure_Metadata_For_Item_Actions.md): ACC-31-05-03 - Complete repeatable Structure metadata for item actions
 
 ## Implementation Pseudocode
 
@@ -71,3 +71,13 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Accordion default-open resolution now maps custom item IDs and legacy positional slot IDs to the same normalized item identity, while keeping DOM and slot markers stable on `item:<id>`.
+- Public runtime opens items by both stable slot instance IDs and normalized selection IDs, covering custom `alpha`/`beta` payloads and legacy `defaultOpenIds=["2"]`.
+- Accordion color fields now use a safe color resolver that preserves bounded CSS colors and legacy hyphenated tokens while dropping unsafe imported CSS fragments before public inline style output.
+- Repeatable Accordion Structure metadata is covered through the shared TASK-365 action metadata path and an Accordion-specific VisualPanel regression for `slots.item`.
+- Kepler read-only agent found the legacy slot-id normalization drift after the first pass; the additional regression and normalizer mapping were added before closure.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/ui/accordion-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`; `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/ui/accordion-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; `git diff --cached --check`; Claude staged-diff review returned no blockers.
+- Covered by changelog `1056` together with TASK-366-01, TASK-366-02, and TASK-366-03.
