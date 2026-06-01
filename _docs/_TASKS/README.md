@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 14 tasks
+- **To Do:** 19 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2007 tasks
 
@@ -38,6 +38,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-349 | SEO Manager Tools Report Remediation | High | Very Large | New report-driven family for public SEO metadata parity, audit/scoring truthfulness, UI-only controls, and closure proof. |
+| TASK-349-01 | SEO Public Runtime Metadata Parity | High | Large | Make SEO Manager saves affect public page HTML through one documented source-of-truth path. |
+| TASK-349-02 | SEO Audit Scope and Scoring Recalculation Contract | High | Large | Recompute score/issues on save and make audit checkbox selections controlled or truthfully unavailable. |
+| TASK-349-03 | SEO Manager UI-Only Controls and Empty-State UX | Medium | Medium | Wire, disable, or remove dead controls and add truthful pre-scan/table empty states. |
+| TASK-349-04 | SEO Manager QA, Docs, and Closure | Medium | Medium | Prove admin save to public metadata parity, update reports, and close docs/changelog evidence. |
 | TASK-348 | Search Tools Report Remediation | High | Large | New report-driven family for Search date-range truthfulness, empty-state UX, suggestions, and result-navigation proof. |
 | TASK-348-01 | Search Date Range API and Service Contract | High | Medium | Make the Date Range select controlled, validated, serialized, and applied by the Search service. |
 | TASK-348-02 | Search Suggestions, Empty States, and Category UX | High | Medium | Fill empty `Try:` suggestions and split no-data/no-match/filter-empty/category helper states. |

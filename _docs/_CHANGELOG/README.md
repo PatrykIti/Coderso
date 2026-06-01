@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1036 | 2026-06-01 | TASK-349 SEO Manager remediation plan | Admin Tools/SEO/Public Runtime/API/UI/QA/Docs |
 | 1035 | 2026-06-01 | TASK-348 Search Tools remediation plan | Admin Tools/Search/API/UI/QA/Docs |
 | 1034 | 2026-05-31 | Admin Tools Playwright audit reports | QA/Admin UI/Playwright/Docs |
 | 1033 | 2026-05-31 | Admin seed package command | Developer Tooling/Auth Bootstrap/Docs |
