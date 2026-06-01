@@ -5,7 +5,7 @@
 **Category:** Widgets + Testimonials + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_TESTIMONIALS_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-376-01](TASK-376-01_TST_31_05_01_Treat_Br_Only_Quote_HTML_As_Empty.md): TST-31-05-01 - Treat `<br>`-only quote HTML as empty
+- [x] [TASK-376-01](TASK-376-01_TST_31_05_01_Treat_Br_Only_Quote_HTML_As_Empty.md): TST-31-05-01 - Treat `<br>`-only quote HTML as empty
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,13 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced TST-31-05-01 with focused failing regressions: `<br>`-only rich quote HTML was truthy and caused the renderer/admin preview path to select `data-testimonial-quote-mode="html"` instead of the plain quote fallback.
+- Fixed the widget owner contract in `sanitizeTestimonialsQuoteHtml`: after existing HTML sanitization, rich quote HTML with no plain text now normalizes to `undefined`.
+- Preserved the existing sanitizer allowlist; no route, public write, schema, persistence, or unsafe HTML allowance changed.
+- Added renderer/domain coverage for `<br>`, `<p><br></p>`, and whitespace/`&nbsp;` rich quote cases, plus UI coverage proving Visual editor clear state normalizes `quoteHtml` and preview rendering keeps the plain quote visible.
+- Aquinas sidecar confirmed no drift: owner-side sanitizer fix is the correct scope, and `TestimonialsEditors.tsx` does not need an editor-only fallback because its update path normalizes through `normalizeTestimonialsData`.
+- Validation: focused widget/UI regressions failed before the sanitizer fix and passed after; `bun run test:vitest -- tests/vitest/widgets/testimonials.test.tsx tests/vitest/ui/testimonials-editor-wave.test.tsx`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; Claude staged review reported no blockers.
+- Covered by changelog `1066` together with TASK-376-01.

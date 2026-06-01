@@ -592,7 +592,8 @@ export function sanitizeTestimonialsQuoteHtml(value: string | undefined): string
     dropContentTags: dangerousHtmlContentTagSet,
     sanitizeAttributes: sanitizeTestimonialsQuoteAttrs,
   });
-  return sanitized || undefined;
+  if (!sanitized) return undefined;
+  return htmlToPlainText(sanitized, testimonialsQuoteBlockTags) ? sanitized : undefined;
 }
 
 export function getTestimonialsPlainQuote(item: TestimonialItem | undefined): string {

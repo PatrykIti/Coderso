@@ -5,7 +5,7 @@
 **Category:** Widgets + Testimonials + Admin UI + Runtime + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-376
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Backspacing a rich quote leaves `innerHTML="<br>"`; sanitizer returns truthy HTM
 
 ## Sub-Tasks
 
-- [ ] Reproduce TST-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce TST-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +90,13 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced the clear-state bug with focused regressions: `sanitizeTestimonialsQuoteHtml("<br>")` returned `"<br>"`, and preview rendering selected HTML mode with an empty visible quote.
+- `sanitizeTestimonialsQuoteHtml` now returns `undefined` when sanitized rich quote HTML has no plain text, covering `<br>`, `<p><br></p>`, and whitespace/`&nbsp;` cases.
+- `normalizeTestimonialsData` clears saved `quoteHtml` for empty rich quote HTML while preserving the plain `quote`; `TestimonialsBlock` renders `data-testimonial-quote-mode="plain"` and keeps the fallback quote visible.
+- Added UI regression coverage for the Visual editor clear path: rich editor `onChange("<br>")` normalizes `quoteHtml` to `undefined` and preview rendering does not emit `<br>`.
+- No editor-only fallback was added; the fix lives in the widget/domain owner and flows through renderer, normalizer, import/export, and editor state.
+- Validation: focused widget/UI regressions failed before the sanitizer fix and passed after; Testimonials Vitest lane passed; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; Aquinas sidecar and Claude staged review reported no drift or blockers in the fix shape.
+- Covered by changelog `1066`.

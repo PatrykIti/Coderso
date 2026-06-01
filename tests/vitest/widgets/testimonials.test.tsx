@@ -13,6 +13,7 @@ import {
   normalizeTestimonialsCount,
   normalizeTestimonialsData,
   normalizeTestimonialsItems,
+  sanitizeTestimonialsQuoteHtml,
   testimonialsDefaults,
   TestimonialsBlock,
   type TestimonialsData,
@@ -308,6 +309,36 @@ test("testimonials rich quote and CTA render safely while unsafe hrefs fail clos
   );
 
   expect(unsafeCtaHtml).not.toContain('data-testimonials-cta="true"');
+});
+
+test("testimonials treats br-only rich quote HTML as empty and falls back to the plain quote", () => {
+  expect(sanitizeTestimonialsQuoteHtml("<br>")).toBeUndefined();
+  expect(sanitizeTestimonialsQuoteHtml("<p><br></p>")).toBeUndefined();
+  expect(sanitizeTestimonialsQuoteHtml("<p> <br> &nbsp; </p>")).toBeUndefined();
+
+  const normalized = normalizeTestimonialsData({
+    ...testimonialsDefaults,
+    testimonials: [
+      {
+        id: "t-1",
+        quote: "Fallback quote remains visible",
+        quoteHtml: "<br>",
+        author: "Alice",
+        rating: 5,
+      },
+      testimonialsDefaults.testimonials[1]!,
+    ],
+  });
+
+  expect(normalized.testimonials[0]?.quote).toBe("Fallback quote remains visible");
+  expect(normalized.testimonials[0]?.quoteHtml).toBeUndefined();
+
+  const html = renderToString(<TestimonialsBlock variant="grid" data={normalized} />);
+
+  expect(html).toContain('data-testimonial-quote-mode="plain"');
+  expect(html).not.toContain('data-testimonial-quote-mode="html"');
+  expect(html).toContain("Fallback quote remains visible");
+  expect(html).not.toContain("<br>");
 });
 
 test("testimonials load-more rendering exposes SSR details and rejects unsafe avatar urls", () => {

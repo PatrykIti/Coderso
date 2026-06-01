@@ -55,7 +55,7 @@ Przetestowane:
 | CTA disabled/enabled | Enable CTA, label `Audit CTA`, destination `Audit 31-05 Hero`, New tab, Link style | Link renderuje `href="/audit-31-05-hero"`, `target="_blank"`, `rel="noopener noreferrer"`, `data-testimonials-cta-style="link"`. | Nie publikowano tej zmiany. | Dziala | `LinkDestinationField` + `resolveWidgetLinkAttrs`. | Brak. |
 | Pagination load-more | Mode `Load more`, page size `2`, label | Root `data-testimonials-pagination="load-more"`, `<details data-testimonials-load-more>` z label `Show more audit testimonials`. | Nie publikowano tej zmiany. | Dziala | Renderer dzieli visible/overflow przez `resolveVisibleTestimonials`. | Brak. |
 | Advanced | Klik `Advanced` | `0` writable widget controls; summary pokazuje `grid`, `6 configured`, spacing `lg`, pagination `load-more`, CTA `Audit CTA`. | Nie dotyczy. | Dziala | Advanced jest read-only diagnostics. | Brak. |
-| Formatted quote clear | W rich quote zaznacz wszystko i Backspace | Edytor zostawia `innerHTML="<br>"`; preview ma `data-testimonial-quote-mode="html"` i widoczny cytat znika zamiast wrocic do plain quote. | Nie dotyczy. | **Nie dziala / UX bug** | `sanitizeTestimonialsQuoteHtml` dopuszcza samotne `<br>` i zwraca truthy HTML; `TestimonialQuote` wybiera tryb HTML tylko po `quoteHtml`, nie po realnej tresci tekstowej. | Po sanitizacji traktowac whitespace-only / `<br>`-only HTML jako `undefined`, albo w `PostRichTextAdapter` emitowac pusty string po clear. Dodac test renderu dla `quoteHtml: "<br>"`, ktory oczekuje fallback do `quote`. |
+| Formatted quote clear | W rich quote zaznacz wszystko i Backspace | Po poprawce `quoteHtml="<br>"` normalizuje sie do pustego stanu; preview wraca do `data-testimonial-quote-mode="plain"` i pokazuje plain quote fallback. | Nie dotyczy. | Dziala po poprawce | `sanitizeTestimonialsQuoteHtml` najpierw zachowuje dotychczasowa allowliste, a potem odrzuca HTML bez realnego plain textu (`<br>`, `<p><br></p>`, whitespace/`&nbsp;`). | Brak. Pokryte regresjami w `tests/vitest/widgets/testimonials.test.tsx` i `tests/vitest/ui/testimonials-editor-wave.test.tsx`. |
 
 ## Public baseline
 
@@ -85,18 +85,21 @@ Zmiany z klikanej sesji admin nie byly publikowane jako finalny stan publiczny.
   - `TestimonialQuote` renderuje HTML branch, gdy `quoteHtml` jest truthy, w
     okolicach linii 925-936.
 
-## Rekomendowana poprawka
+## Wynik i remediacja
 
-1. Po `sanitizeHtmlWithPolicy` policzyc plain text przez `htmlToPlainText`.
-   Jezeli plain text jest pusty i HTML sklada sie tylko z pustych tagow
-   technicznych typu `<br>`, zwrocic `undefined`.
-2. Alternatywnie lub dodatkowo: w `PostRichTextAdapter` normalizowac clear state
-   z `<br>` do pustego stringa przed `onChange`.
-3. Dodac regresje w `tests/vitest/widgets/testimonials.test.tsx`:
-   - `quoteHtml: "<br>"`, `quote: "Fallback quote"` renderuje
-     `data-testimonial-quote-mode="plain"` i pokazuje fallback.
-4. Dodac regresje UI w `tests/vitest/ui/testimonials-editor-wave.test.tsx` dla
-   clear rich quote.
+Zamkniete w TASK-376 / TASK-376-01.
+
+- `sanitizeTestimonialsQuoteHtml` odrzuca teraz sanitized rich quote HTML, jezeli
+  `htmlToPlainText` nie znajduje realnej tresci.
+- `TestimonialsEditors.tsx` nie dostal editor-only fallbacku; jego update path
+  przechodzi przez `normalizeTestimonialsData`, wiec owner-side sanitizer
+  czysci `quoteHtml` takze w Visual editor state.
+- Regresje: `quoteHtml: "<br>"`, `<p><br></p>` i whitespace/`&nbsp;` nie
+  wybieraja juz HTML branchu, a preview/SSR pokazuje plain quote fallback.
+- Walidacja: focused widget/UI regressions fail-before/pass-after, `bun run
+  test:vitest -- tests/vitest/widgets/testimonials.test.tsx
+  tests/vitest/ui/testimonials-editor-wave.test.tsx`, `bun --cwd core lint`,
+  `bun --cwd core lint:types`.
 
 ## Console / srodowisko
 
