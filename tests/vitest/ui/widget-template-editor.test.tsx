@@ -168,6 +168,12 @@ import type { WidgetDefinition } from "../../../core/widgets/types";
 const asBlockSettingsWidget = <T,>(widget: WidgetDefinition<T>) =>
   widget as unknown as WidgetDefinition;
 
+const requireHtmlMatch = (html: string, pattern: RegExp, message: string) => {
+  const match = html.match(pattern);
+  if (!match) throw new Error(message);
+  return match[0];
+};
+
 test("WidgetTemplateEditorPage renders canvas placeholder", () => {
   const html = renderAdminUi(<WidgetTemplateEditorPage />);
 
@@ -433,6 +439,16 @@ test("widget template block settings render grid columns visual sections", () =>
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Column sizing and labels");
   expect(html).toContain("Gap and column surface");
+  expect(html).toContain('data-widget-control="add-column"');
+  expect(html).toContain('data-widget-control-path="slots.column"');
+  expect(html).toContain('data-widget-control="grid-columns.slot.column:1"');
+  const columnRowHtml = requireHtmlMatch(
+    html,
+    /<div[^>]*data-widget-control="grid-columns\.slot\.column:1"[\s\S]*?<\/div>\s*<\/div>/,
+    "Missing Grid Columns column row metadata"
+  );
+  expect(columnRowHtml).toContain('data-widget-control-path="slots.column"');
+  expect(columnRowHtml).toContain('data-widget-control-ownership="action"');
 });
 
 test("widget template block settings render stack visual sections", () => {

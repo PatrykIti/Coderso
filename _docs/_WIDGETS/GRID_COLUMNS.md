@@ -25,6 +25,8 @@ schema-first contract.
   block `slots` map
 - live add/remove/reorder is owned by the shared Structure section and the
   widget repeatable-slot sync adapter
+- shared Structure add, move, and remove actions expose action metadata on the
+  `slots.column` path
 
 ## Editor Modes
 
@@ -50,6 +52,8 @@ Notes:
 - Visual owns daily column labels, column count guidance, same-count layout
   presets, responsive spans, visibility, spacing, cardized surface controls, and
   per-column overrides.
+- The `Reapply asymmetric desktop widths` action is exposed as a stable action
+  control with path `columns.desktopSpan`.
 - When live slot instances already exist, the local count controls plus add/remove
   actions are locked and users are redirected to the shared Structure section so
   slot payloads and column metadata stay aligned.

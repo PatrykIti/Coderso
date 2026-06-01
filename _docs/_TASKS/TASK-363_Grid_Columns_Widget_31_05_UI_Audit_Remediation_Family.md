@@ -5,7 +5,7 @@
 **Category:** Widgets + Grid Columns + Builder Metadata + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_GRID_COLUMNS_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-363-01](TASK-363-01_GC_31_05_01_Add_Metadata_For_Reapply_Asymmetric_Desktop_Widths_And.md): GC-31-05-01 - Add metadata for `Reapply asymmetric desktop widths` and shared `Add Column`
+- [x] [TASK-363-01](TASK-363-01_GC_31_05_01_Add_Metadata_For_Reapply_Asymmetric_Desktop_Widths_And.md): GC-31-05-01 - Add metadata for `Reapply asymmetric desktop widths` and shared `Add Column`
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,11 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Added stable Grid Columns metadata for the `Reapply asymmetric desktop widths` action with path `columns.desktopSpan`.
+- Added shared repeatable-slot action paths for non-Section Structure controls using `slots.<definitionId>`, including Grid Columns `Add Column` and column row actions.
+- Preserved Section's existing `regions` / `regions.<instanceId>.label` metadata contract.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts --testTimeout=10000 tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1053` together with TASK-363-01.

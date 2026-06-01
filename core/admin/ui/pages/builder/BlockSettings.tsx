@@ -265,6 +265,12 @@ export function BlockSettings({
     const instanceId = parseRepeatableSlotId(slotId)?.instanceId;
     return instanceId ? ["regions", instanceId, suffix].filter(Boolean).join(".") : "regions";
   };
+  const resolveSlotControlPath = (definitionId: string, slotId?: string, suffix?: string) => {
+    if (widget.type === "section" && definitionId === sectionRegionSlot.id) {
+      return slotId ? resolveSectionRegionControlPath(slotId, suffix) : "regions";
+    }
+    return ["slots", definitionId, suffix].filter(Boolean).join(".");
+  };
 
   const handleAddRepeatableSlotInstance = (definitionId: string) => {
     const definition = slotDefinitions.find((slot) => slot.id === definitionId);
@@ -335,11 +341,13 @@ export function BlockSettings({
             const maximum = Number.isFinite(slot.maxItems)
               ? Math.max(0, Math.floor(slot.maxItems ?? 0))
               : undefined;
-            const isSectionRegion = widget.type === "section" && slot.id === sectionRegionSlot.id;
             return {
-              id: isSectionRegion ? "section.regions.add-region" : `add-${slot.id}`,
+              id:
+                widget.type === "section" && slot.id === sectionRegionSlot.id
+                  ? "section.regions.add-region"
+                  : `add-${slot.id}`,
               label: `Add ${slot.label}`,
-              path: isSectionRegion ? "regions" : undefined,
+              path: resolveSlotControlPath(slot.id),
               ownership: "action" as const,
               disabled: typeof maximum === "number" && count >= maximum,
               onClick: () => handleAddRepeatableSlotInstance(slot.id),
@@ -372,13 +380,11 @@ export function BlockSettings({
               repeatableCount > repeatableMinimum;
             const isSectionRegion =
               widget.type === "section" && slot.definitionId === sectionRegionSlot.id;
-            const sectionRegionPath = isSectionRegion
-              ? resolveSectionRegionControlPath(slot.slotId)
-              : undefined;
+            const slotControlPath = resolveSlotControlPath(slot.definitionId, slot.slotId);
             return {
               id: `${widget.type}.slot.${slot.slotId}`,
               label: `${slot.label} slot`,
-              path: sectionRegionPath,
+              path: slotControlPath,
               ownership: "action" as const,
               labelValue: isSectionRegion
                 ? resolveSectionRegionLabelValue(
@@ -389,7 +395,7 @@ export function BlockSettings({
                 : undefined,
               labelPlaceholder: isSectionRegion ? rawSlot.label : undefined,
               labelPath: isSectionRegion
-                ? resolveSectionRegionControlPath(slot.slotId, "label")
+                ? resolveSlotControlPath(slot.definitionId, slot.slotId, "label")
                 : undefined,
               onLabelChange: isSectionRegion
                 ? (nextLabel: string) =>

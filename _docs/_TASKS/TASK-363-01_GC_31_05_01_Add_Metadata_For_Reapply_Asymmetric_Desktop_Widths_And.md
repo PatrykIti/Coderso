@@ -5,7 +5,7 @@
 **Category:** Widgets + Grid Columns + Builder Metadata + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-363
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Controls work, but some buttons are not wrapped with stable `data-widget-control
 
 ## Sub-Tasks
 
-- [ ] Reproduce GC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce GC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +90,11 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- `Reapply asymmetric desktop widths` now exposes `data-widget-control`, `data-widget-control-path="columns.desktopSpan"`, and action ownership.
+- Shared Structure add and row actions now carry `slots.<definitionId>` paths for Grid Columns and other non-Section repeatable-slot widgets.
+- Section region metadata remains on the existing `regions` contract.
+- Regression coverage asserts Grid Columns reapply metadata and Grid Columns `Add Column` Structure metadata.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts --testTimeout=10000 tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
