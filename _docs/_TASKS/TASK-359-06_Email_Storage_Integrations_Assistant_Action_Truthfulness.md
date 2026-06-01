@@ -114,7 +114,11 @@ Error handling:
 - `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md`
 - `_docs/CMS_API.md`
 - `_docs/AUDIT_SPEC.md`
-- `docs/guide/screens/settings.md`
+- `docs/guide/screens/email-settings.md`
+- `docs/guide/screens/storage-settings.md`
+- `docs/guide/screens/integrations.md`
+- `docs/guide/screens/webhooks.md`
+- `docs/guide/screens/assistant-settings.md`
 - `_docs/_TASKS/README.md` on status changes
 - `_docs/_CHANGELOG/` when completed
 

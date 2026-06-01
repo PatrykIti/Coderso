@@ -23,6 +23,10 @@ Tasks: TASK-359, TASK-359-01, TASK-359-02, TASK-359-03, TASK-359-04, TASK-359-05
   with `admin_read`, `admin_write`, and `assistant`, clarified current
   `settings:write` security-session RBAC, assigned raw sidebar anchor cleanup,
   and made Max Sessions restoration owner explicit.
+- Follow-up drift pass replaced nonexistent Settings guide paths with the real
+  per-screen docs, normalized redacted bot-protection cache naming to
+  `botProtectionConfigured` from `botProtection.secretKey.configured`, and
+  separated webhook delete ownership from external webhook test side effects.
 
 ## Validation
 

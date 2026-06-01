@@ -21,6 +21,9 @@ Tasks: TASK-356, TASK-356-01, TASK-356-02, TASK-356-03, TASK-356-04
 - Refined drift found by agent/Claude review: moved high-risk permission
   taxonomy into the diff-builder leaf, aligned rate buckets, clarified
   RoleEditor ownership, and expanded audit coverage beyond update-only diffs.
+- Follow-up drift pass corrected the inline `PermissionsMatrixSearch`
+  ownership to `PermissionsMatrixPage.tsx` so the read-only leaf no longer
+  references a nonexistent component file.
 
 ## Validation
 

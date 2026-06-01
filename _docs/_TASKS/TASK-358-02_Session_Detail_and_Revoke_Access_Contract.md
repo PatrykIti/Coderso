@@ -43,8 +43,6 @@ states for rows that do not.
 ```ts
 type RevokeAccessRequest = {
   accessLogId: string;
-  sessionId?: string;
-  userId?: string;
   reason: "admin_manual_revoke";
 };
 
@@ -54,7 +52,7 @@ async function revokeAccessFromLog(input: RevokeAccessRequest) {
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ reason: input.reason }),
     },
     { withCsrf: true }
   );
@@ -81,6 +79,10 @@ Data flow:
 - Revoke opens shared confirm, posts to
   `POST /admin/api/access-logs/:id/revoke`, refreshes row/session state, and
   emits audit.
+- Browser sends only revoke reason. The server resolves `sessionId`, `userId`,
+  and current-session facts from the persisted `access_logs.session_id`
+  relation and session table. If client hints are ever accepted, the server
+  must verify them against the access log row before using them.
 
 Error handling:
 

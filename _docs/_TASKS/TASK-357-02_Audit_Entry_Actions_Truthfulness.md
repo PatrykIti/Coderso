@@ -38,13 +38,13 @@ supported action or render as unavailable.
 ## Implementation Pseudocode
 
 ```ts
-async function copyAuditEntryJson(entry: AuditLogEntry) {
+async function copyAuditEntryJson(entry: AuditLog) {
   const payload = JSON.stringify(buildPublicAuditEntryPayload(entry), null, 2);
   await navigator.clipboard.writeText(payload);
   toast.success("Audit entry copied.");
 }
 
-function buildPublicAuditEntryPayload(entry: AuditLogEntry) {
+function buildPublicAuditEntryPayload(entry: AuditLog) {
   return {
     id: entry.id,
     event: entry.event,
@@ -60,6 +60,10 @@ function buildPublicAuditEntryPayload(entry: AuditLogEntry) {
 Data flow:
 
 - Row menu and details drawer call the same action implementation.
+- UI action helpers use the current `AuditLog` type from
+  `core/admin/ui/audit/types.ts`. If implementation needs raw API rows, add an
+  explicit `AuditRecord -> AuditLog` mapper instead of inventing a parallel
+  `AuditLogEntry` type.
 - `Copy JSON` builds redacted payload at click time and writes to Clipboard API.
 - Success/failure toasts expose the outcome.
 - Unsupported actions render disabled or hidden with explicit unavailable copy,

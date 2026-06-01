@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Users + Roles + Safety UX
 **Estimated Effort:** Medium
-**Dependencies:** TASK-355-01, TASK-360-02
+**Dependencies:** TASK-355-01, TASK-356-02, TASK-360-02
 **Status:** To Do
 
 ---
@@ -61,6 +61,9 @@ function requiresHighRiskRoleConfirm(role: AdminRole) {
 
 Data flow:
 
+- High-risk permission classification is imported from the helper owned by
+  `TASK-356-02`; do not create a second `HIGH_RISK_PERMISSIONS` taxonomy in
+  Users code.
 - UI action opens a confirm dialog with target email/name/role.
 - Cancel closes dialog, returns focus, and never calls the client.
 - Confirm calls the existing client exactly once.

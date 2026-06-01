@@ -65,8 +65,11 @@ Error handling:
 ## Security Contract
 
 - Endpoint visibility: none; QA/testing/docs task.
-- Auth/RBAC/CSRF/rate-limit: unchanged, but adopting controls must keep their
-  route-level security contracts.
+- Auth model: unchanged; tests run through the same authenticated admin/restricted
+  fixtures as the adopting surface.
+- RBAC: unchanged, but adopting controls must keep their route-level security
+  contracts.
+- CSRF/rate-limit: unchanged for the gate itself.
 - Reject unknown validation: unchanged.
 - Anti-abuse: unchanged.
 - Secret handling: test fixtures and failure output must not print secrets.

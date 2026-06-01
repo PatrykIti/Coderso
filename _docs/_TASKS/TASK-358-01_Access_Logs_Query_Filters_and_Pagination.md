@@ -44,7 +44,6 @@ type AccessLogQuery = {
   query?: string;
   status?: "success" | "failed";
   userId?: string;
-  actorRole?: string;
   method?: string;
   ip?: string;
   dateFrom?: string;
@@ -62,15 +61,36 @@ function resolveAccessLogDateRange(range: DateRangeSelection) {
   }
   return presetToDateRange(range.kind);
 }
+
+function toAccessLogWireQuery(query: AccessLogQuery) {
+  return {
+    q: query.query,
+    status: query.status,
+    userId: query.userId,
+    method: query.method,
+    ip: query.ip,
+    from: query.dateFrom,
+    to: query.dateTo,
+    limit: query.limit,
+    cursor: query.cursor,
+  };
+}
 ```
 
 Data flow:
 
 - Filters update one query state, optionally mirrored into URL params if the
   route already follows that pattern.
+- The client/router wire contract keeps the existing `q`, `from`, and `to`
+  query params. `query`, `dateFrom`, and `dateTo` are internal normalized names
+  only unless the implementation deliberately migrates routes, clients, docs,
+  and compatibility aliases in the same task.
 - The implementation preserves the current backend status vocabulary
   `success|failed` unless it deliberately extends the schema, docs, and tests
   to distinguish blocked/allowed states.
+- Do not add `actorRole` as a server query field unless the task also defines
+  current-role join vs historical role snapshot semantics and tests the privacy
+  impact. Current access logs do not store role snapshots.
 - Query state reloads the list through the access logs client.
 - Response metadata drives page buttons and count copy.
 - Details drawer receives the selected row from current results.
@@ -123,7 +143,7 @@ Error handling:
 
 ## Acceptance Criteria
 
-- Custom range, status, search, user/role, limit, and cursor affect server
+- Custom range, status, search, user, limit, and cursor affect server
   query.
 - Pagination is backend-driven.
 - Search results explain hidden-field matches or avoid hidden-field confusion.

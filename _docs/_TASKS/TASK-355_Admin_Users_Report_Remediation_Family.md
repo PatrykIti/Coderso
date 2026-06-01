@@ -35,6 +35,8 @@ misleading.
 - `core/admin/services/adminUsersClient.ts`
 - `core/admin/services/adminRolesClient.ts`
 - `core/admin/services/authClient.ts`
+- `core/server/routes/authRoutes.ts`
+- `core/services/auth/roleService.ts`
 
 ## Remediation Scope
 
@@ -107,6 +109,9 @@ Implementation shape:
 - Extend the current-user bootstrap contract so admin UI can answer
   `can("users:read")`, `can("users:write")`, `can("roles:read")`, and
   `can("roles:write")` without guessing.
+- Existing `GET /auth/me` returns `ctx.user`; update that backend handler to
+  call `getUserPermissions(ctx.user.id)` and return only redacted permission
+  ids in the current-user payload.
 - Do not hardcode default write access in `UsersRolesPage`.
 - Route-level access:
   - No `users:read` and no `roles:read`: show the shared Admin access-denied
@@ -262,7 +267,10 @@ Routes and client shape:
 
 - `POST /admin/api/admin-users`
   - body: `InviteUserRequest`
-  - creates invited/active-pending-password user and token transactionally.
+  - creates a `status: "pending"` user and set-password token
+    transactionally. Do not add an `invited` or `active-pending-password`
+    status unless the user status enum, schemas, docs, migrations, and tests
+    are updated in the same task.
 - `POST /admin/api/admin-users/:id/password-reset`
   - body: `ResetPasswordRequest`
   - invalidates older outstanding set-password tokens and creates a new token.

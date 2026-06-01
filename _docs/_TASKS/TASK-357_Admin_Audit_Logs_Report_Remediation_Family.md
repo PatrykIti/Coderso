@@ -161,13 +161,13 @@ Actions:
 Preferred implementation:
 
 ```ts
-async function copyAuditEntryJson(entry: AuditLogEntry) {
+async function copyAuditEntryJson(entry: AuditLog) {
   const payload = JSON.stringify(buildPublicAuditEntryPayload(entry), null, 2);
   await navigator.clipboard.writeText(payload);
   toast.success("Audit entry copied.");
 }
 
-function buildPublicAuditEntryPayload(entry: AuditLogEntry) {
+function buildPublicAuditEntryPayload(entry: AuditLog) {
   return {
     id: entry.id,
     event: entry.event,
@@ -239,8 +239,10 @@ Data flow:
 3. Dialog validates selected columns and format.
 4. Client posts to `/admin/api/audit/export`.
 5. Server re-validates filters, columns, RBAC, and row limit.
-6. Server returns a blob or async export job metadata.
-7. UI downloads the blob or shows job status.
+6. Server returns JSON export metadata/content or async export job metadata.
+   Direct blob responses require explicit `httpServer`/router `Response`
+   passthrough plus content-disposition tests in this task before use.
+7. UI downloads from the JSON export contract or shows job status.
 
 Error handling:
 

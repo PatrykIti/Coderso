@@ -23,6 +23,9 @@ Tasks: TASK-357, TASK-357-01, TASK-357-02, TASK-357-03, TASK-357-04
   semantics to category/severity/cursor, removed the 200-row local-filter
   ambiguity, aligned rate buckets, and required explicit `xlsx` unavailable
   handling.
+- Follow-up drift pass aligned pseudocode with the real `AuditLog` UI type and
+  made direct blob downloads conditional on explicit router `Response`
+  passthrough plus content-disposition tests.
 
 ## Validation
 

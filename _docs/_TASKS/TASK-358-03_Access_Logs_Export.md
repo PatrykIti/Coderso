@@ -31,7 +31,7 @@ download success/error feedback.
 | File | Required change |
 |---|---|
 | `core/admin/ui/shared/ExportDialog.tsx` | Reuse shared export submit/loading/error contract from `TASK-360-03`. |
-| Access logs admin client | Add `exportAccessLogs` with CSRF and blob/job handling. |
+| Access logs admin client | Add `exportAccessLogs` with CSRF and JSON export or async-job handling. Direct blobs require the explicit router passthrough contract below. |
 | Access log route/service modules | Register `POST /admin/api/access-logs/export`, enforce RBAC/CSRF, validate body, and generate redacted output. |
 | Access log export domain module | Own column allowlist, filter normalization, row limit, CSV escaping, and redaction. |
 | Tests | Cover active filters, empty columns, unauthorized user, CSV escaping, and redaction. |
@@ -42,6 +42,8 @@ download success/error feedback.
 type AccessLogExportRequest = {
   format: "csv" | "json";
   columns: AccessLogExportColumn[];
+  // From TASK-358-01: status?: "success" | "failed", userId?: string,
+  // method?, ip?: string, dateFrom?, dateTo?, limit, and cursor.
   filters: AccessLogQuery;
 };
 
@@ -60,8 +62,12 @@ Data flow:
 - Client passes API-relative `/access-logs/export` to the shared helper, which
   resolves and posts to `POST /admin/api/access-logs/export`.
 - Server re-validates query filters, columns, RBAC, CSRF, and row limits.
-- Server returns redacted CSV/JSON blob or async export job metadata.
-- UI downloads blob or displays job status with retry-capable error state.
+- Server returns redacted JSON export metadata/content or async export job
+  metadata.
+- Direct CSV/JSON blob responses require explicit `httpServer`/router
+  `Response` passthrough plus content-disposition tests before use.
+- UI downloads from the JSON export contract or displays job status with
+  retry-capable error state.
 - If `ExportDialog` still contains `xlsx`, remove/disable that option as
   unavailable unless a real Excel export contract is implemented and tested.
 
@@ -100,7 +106,7 @@ Error handling:
   commas/newlines/quotes in user agent.
 - Redaction tests include cookies, authorization headers, CSRF tokens, reset
   tokens, session tokens, session ids, and raw secret-like keys.
-- Vitest UI tests prove `xlsx` is not an active no-op when only CSV/JSON are
+- Vitest UI tests prove `xlsx` is not an enabled no-op when only CSV/JSON are
   implemented.
 - Centralized `mapAccessLogError` coverage for export-specific errors.
 - Playwright export fixture verifies real file/job outcome.

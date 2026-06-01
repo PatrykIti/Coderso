@@ -234,7 +234,7 @@ type RedactedSettingsCache = {
   assistantEnabled: boolean;
   securityConfigured: {
     botProtectionHasSiteKey: boolean;
-    botProtectionHasSecret: boolean;
+    botProtectionConfigured: boolean;
   };
 };
 
@@ -246,7 +246,7 @@ function toRedactedSettingsCache(payload: SettingsResponse): RedactedSettingsCac
     assistantEnabled: Boolean(payload["assistant.enabled"]),
     securityConfigured: {
       botProtectionHasSiteKey: Boolean(payload["security.botProtection.siteKey"]),
-      botProtectionHasSecret: Boolean(payload["security.botProtection.secretConfigured"]),
+      botProtectionConfigured: Boolean(payload["security.botProtection.secretKey.configured"]),
     },
   };
 }
@@ -349,7 +349,8 @@ Add confirm flows for:
 - Bot protection `Clear stored secret`.
 - Sessions `Revoke` and `Revoke All Other Sessions`.
 - API key rotate and revoke.
-- Webhook delete and external test connection.
+- Webhook delete. Webhook external test connection and other webhook side-effect
+  tests are owned by `TASK-359-06`.
 - IP allowlist remove and any save that could lock out the current IP.
 - High-risk security saves:
   - CORS/CSRF changes,
@@ -540,7 +541,8 @@ sessions, API keys, webhooks, IP allowlist, assistant reindex.
     `_docs/CMS_API.md` in the same task.
 - CSRF: required for all writes, tests, reindex, revokes, deletes, exports, and
   external side-effect actions.
-- Rate-limit bucket:
+- Rate-limit bucket: `admin_read`, `admin_write`, `assistant`, and `auth`
+  depending on route family:
   - `admin_read` for settings reads,
   - `admin_write` for settings writes, sessions/IP allowlist/API keys, email,
     webhook, and storage tests,

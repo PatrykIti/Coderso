@@ -77,8 +77,10 @@ async function requestAdminPasswordReset(input: ResetPasswordRequest) {
 
 Data flow:
 
-- `POST /admin/api/admin-users` creates the invited user and a single-use
-  set-password token transactionally.
+- `POST /admin/api/admin-users` creates a `status: "pending"` user and a
+  single-use set-password token transactionally; do not introduce a new
+  invited or active-pending-password status unless the enum, schemas, docs, and
+  migrations are explicitly updated.
 - `POST /admin/api/admin-users/:id/password-reset` invalidates previous
   outstanding set-password tokens and creates a new token.
 - Delivery uses email when configured; if delivery is unavailable, the UI shows

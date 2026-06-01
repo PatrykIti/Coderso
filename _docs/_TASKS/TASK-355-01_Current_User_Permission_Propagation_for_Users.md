@@ -28,6 +28,8 @@ support read-only and partial-read modes without avoidable UI-originated 403s.
 - `core/admin/services/adminUsersClient.ts`
 - `core/admin/services/adminRolesClient.ts`
 - `core/admin/services/authClient.ts`
+- `core/server/routes/authRoutes.ts`
+- `core/services/auth/roleService.ts`
 
 ## Sub-Tasks
 
@@ -37,8 +39,10 @@ support read-only and partial-read modes without avoidable UI-originated 403s.
 
 | File | Required change |
 |---|---|
+| `core/server/routes/authRoutes.ts` | Extend the existing `GET /auth/me` handler so it loads the caller's effective permissions from `getUserPermissions(ctx.user.id)` instead of returning only `ctx.user`. |
+| `core/services/auth/roleService.ts` | Reuse the existing permission resolver; do not duplicate role traversal in the route or browser. |
 | `core/admin/services/authClient.ts` | Return the effective permission snapshot from the current-user bootstrap client without secrets. |
-| `core/admin/ui/AdminApp.tsx` or current auth provider | Build a stable `can(permission)` helper from the bootstrap payload. |
+| `core/admin/app/AdminApp.tsx` or current auth provider | Build a stable `can(permission)` helper from the bootstrap payload. |
 | `core/admin/ui/users/UsersRolesPage.tsx` | Route-gate Users by `users:read` / `roles:read`, pass explicit access flags, and refresh permissions after stale 403s. |
 | `core/admin/ui/users/*` | Hide or disable write controls based on explicit `canWriteUsers` / `canWriteRoles` flags. |
 | `tests/vitest/ui/*users*` | Cover admin, read-only, `users:read` only, and `roles:read` only modes. |
@@ -74,6 +78,9 @@ function resolveUsersAccess(can: (permission: string) => boolean) {
 
 Data flow:
 
+- Existing `GET /auth/me` currently returns `ctx.user`; extend that route to
+  call `getUserPermissions(ctx.user.id)` and attach only redacted permission
+  ids to the current-user payload.
 - Auth bootstrap loads the caller's redacted effective permission list.
 - Admin shell exposes a stable `can(permission)` helper to route guards,
   navigation, and page components.

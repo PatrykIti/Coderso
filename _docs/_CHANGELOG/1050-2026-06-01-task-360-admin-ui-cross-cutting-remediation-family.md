@@ -22,6 +22,10 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
   `downloadAdminExport` helper ownership, explicit `xlsx` no-op prevention,
   canonical rate-limit bucket names, stable locator requirements, and final QA
   evidence ownership for Settings cleanup.
+- Follow-up drift pass changed shared export helper examples to JSON export or
+  async-job responses unless router `Response` passthrough is implemented, and
+  expanded drawer accessibility coverage to Audit and Access Logs detail
+  drawers.
 
 ## Validation
 

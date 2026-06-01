@@ -23,6 +23,10 @@ Tasks: TASK-358, TASK-358-01, TASK-358-02, TASK-358-03, TASK-358-04
   required a real session relation before revoke/session-detail actions,
   aligned export helper paths and rate buckets, and separated query vs
   advanced-filter leaf ownership.
+- Follow-up drift pass preserved current wire params `q`, `from`, and `to`,
+  removed unsupported `actorRole` filtering, made revoke server-resolve the
+  target session/user instead of trusting browser hints, and applied the same
+  JSON export or explicit `Response` passthrough rule as Audit Logs.
 
 ## Validation
 

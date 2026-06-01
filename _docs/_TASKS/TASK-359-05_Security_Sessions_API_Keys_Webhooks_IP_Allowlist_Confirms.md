@@ -135,7 +135,11 @@ Error handling:
 - `_docs/AUTH_SPEC.md`
 - `_docs/AUDIT_SPEC.md`
 - `_docs/CMS_API.md`
-- `docs/guide/screens/settings.md`
+- `docs/guide/screens/security-settings.md`
+- `docs/guide/screens/sessions.md`
+- `docs/guide/screens/api-keys.md`
+- `docs/guide/screens/webhooks.md`
+- `docs/guide/screens/ip-allowlist.md`
 - `_docs/_TASKS/README.md` on status changes
 - `_docs/_CHANGELOG/` when completed
 

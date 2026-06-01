@@ -20,7 +20,8 @@ search the matrix, but not toggle permissions, add roles, or save changes.
 - `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md`
 - `core/admin/ui/roles/PermissionsMatrixPage.tsx`
 - `core/admin/ui/roles/PermissionsMatrix.tsx`
-- `core/admin/ui/roles/PermissionsMatrixSearch.tsx`
+- local `PermissionsMatrixSearch` component in
+  `core/admin/ui/roles/PermissionsMatrixPage.tsx`
 - `core/admin/ui/roles/RoleEditor.tsx`
 - `core/admin/services/adminRolesClient.ts`
 - `core/admin/app/AdminApp.tsx`

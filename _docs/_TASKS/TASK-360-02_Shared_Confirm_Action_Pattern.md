@@ -69,7 +69,11 @@ Error handling:
 ## Security Contract
 
 - Endpoint visibility: none; UI-only shared component.
-- Auth/RBAC/CSRF/rate-limit: enforced by adopting route/client actions.
+- Auth model: none in the UI component itself; adopting actions must use the
+  authenticated admin session required by their route contract.
+- RBAC: unchanged in the shared component; adopting actions must enforce their
+  route-specific permission before mutation.
+- CSRF/rate-limit: enforced by adopting route/client actions.
 - Reject unknown validation: unchanged.
 - Anti-abuse: unchanged.
 - Secret handling: confirm descriptions/target labels must use redacted display
@@ -100,4 +104,3 @@ Error handling:
 - Shared confirm pattern exists and is accessible.
 - Cancel paths are side-effect-free.
 - Area tasks can reuse one API for destructive/high-risk actions.
-

@@ -75,11 +75,12 @@ Physical execution leaves:
 Implementation shape:
 
 - Normalize list query params:
-  - search `query`,
+  - search `query` internally while preserving current wire param `q`,
   - status,
   - date range preset,
-  - custom `dateFrom` / `dateTo`,
-  - user/actor filter,
+  - custom `dateFrom` / `dateTo` internally while preserving current wire
+    params `from` / `to`,
+  - user filter,
   - limit,
   - cursor.
 - Replace hard-coded page buttons with backend metadata.
@@ -93,7 +94,6 @@ type AccessLogQuery = {
   query?: string;
   status?: "success" | "failed";
   userId?: string;
-  actorRole?: string;
   method?: string;
   ip?: string;
   dateFrom?: string;
@@ -111,14 +111,28 @@ function resolveAccessLogDateRange(range: DateRangeSelection) {
   }
   return presetToDateRange(range.kind);
 }
+
+function toAccessLogWireQuery(query: AccessLogQuery) {
+  return {
+    q: query.query,
+    status: query.status,
+    userId: query.userId,
+    method: query.method,
+    ip: query.ip,
+    from: query.dateFrom,
+    to: query.dateTo,
+    limit: query.limit,
+    cursor: query.cursor,
+  };
+}
 ```
 
 Data flow:
 
 1. `TASK-358-01` owns the backend list query, date/status/search/user filters,
    cursor metadata, and search match explanation.
-2. `TASK-358-04` owns the sliders/advanced drawer and adds method/IP/user-role
-   UI affordances on top of the query contract.
+2. `TASK-358-04` owns the sliders/advanced drawer and adds method/IP/user UI
+   affordances on top of the query contract.
 3. Filters update a single query state.
 4. Query state reloads list through access logs client.
 5. Response metadata drives page buttons.
@@ -131,6 +145,8 @@ Regression tests:
 - Custom range validates `from <= to`.
 - Sliders/advanced filters button opens drawer or is absent.
 - User filter uses dynamic actor/user data or is relabeled.
+- Role filtering is not part of the server query unless the implementation adds
+  explicit current-role join or historical role snapshot semantics with tests.
 - Pagination uses backend `nextCursor` and no static `1/2/3`.
 
 ### TASK-358-02: Session Detail and Revoke Access Contract
@@ -142,7 +158,7 @@ Implementation decision:
 - Preferred full-scope path is required: access log rows that include or can
   resolve an active session id must support `View full session` and
   `Revoke access`.
-- Current `access_logs` rows do not include `sessionId`. Before enabling real
+- The current `access_logs` rows do not include `sessionId`. Before enabling real
   view/revoke, add a deterministic session relation such as nullable
   `session_id` on `access_logs`, update `logAccess` for future rows, and ship
   full migration artifacts (SQL, `meta/*_snapshot.json`, `_journal.json`). Old
@@ -161,8 +177,6 @@ Preferred revoke implementation:
 ```ts
 type RevokeAccessRequest = {
   accessLogId: string;
-  sessionId?: string;
-  userId?: string;
   reason: "admin_manual_revoke";
 };
 
@@ -172,7 +186,7 @@ async function revokeAccessFromLog(input: RevokeAccessRequest) {
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ reason: input.reason }),
     },
     { withCsrf: true }
   );
@@ -275,14 +289,12 @@ Pseudocode:
 ```ts
 type AccessAdvancedFilters = {
   userId?: string;
-  actorRole?: string;
   method?: string;
   ip?: string;
 };
 
 function resolveAccessFilterLabel(filter: AccessAdvancedFilters) {
   if (filter.userId) return "User";
-  if (filter.actorRole) return "Role";
   return "Advanced filters";
 }
 
@@ -293,7 +305,6 @@ function buildAccessLogQueryFromFilters(
   return normalizeAccessLogQuery({
     ...base,
     userId: advanced.userId,
-    actorRole: advanced.actorRole,
     method: advanced.method,
     ip: advanced.ip,
   });

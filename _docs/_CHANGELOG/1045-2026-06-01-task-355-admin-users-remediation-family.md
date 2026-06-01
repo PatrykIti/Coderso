@@ -23,6 +23,10 @@ Tasks: TASK-355, TASK-355-01, TASK-355-02, TASK-355-03, TASK-355-04, TASK-355-05
   with `_docs/SECURITY_SPEC.md`, kept invite/reset on the existing
   reset-confirm auth route, fixed role editor ownership paths, and clarified
   destructive/notification/mobile leaf ownership.
+- Follow-up drift pass added the backend `GET /auth/me` + `getUserPermissions`
+  source of truth for permission snapshots, fixed the `AdminApp` path, linked
+  destructive role confirms to the `TASK-356-02` high-risk helper, and kept
+  invites on the existing `status: "pending"` user enum.
 
 ## Validation
 

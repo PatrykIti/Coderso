@@ -43,6 +43,8 @@ redacts sensitive values, and downloads CSV/JSON or returns async job metadata.
 type AuditExportRequest = {
   format: "csv" | "json";
   columns: AuditExportColumn[];
+  // From TASK-357-01: category?: "authentication" | "content" | "system";
+  // severity?: "info" | "warning" | "error"; plus date, limit, and cursor.
   filters: AuditLogQuery;
 };
 
@@ -63,8 +65,12 @@ Data flow:
 - The client passes API-relative `/audit/export` to the shared helper, which
   resolves the concrete HTTP route `/admin/api/audit/export`.
 - Server re-validates filters, columns, RBAC, CSRF, and row limit.
-- Server returns a redacted blob or async export job metadata.
-- UI downloads blob or shows job status and success/error feedback.
+- Server returns redacted JSON export metadata/content or async export job
+  metadata.
+- Direct blob responses require explicit `httpServer`/router `Response`
+  passthrough plus content-disposition tests in this task before use.
+- UI downloads from the JSON export contract or shows job status and
+  success/error feedback.
 - Tests must prove the helper resolves the API-relative path to the registered
   route.
 - If the shared dialog still contains `xlsx`, remove/disable it as unavailable
@@ -99,7 +105,7 @@ Error handling:
 - `bun --cwd core lint:types`
 - Vitest UI tests for at-least-one-column validation, active filters in submit
   payload, loading state, retry, and download success/error.
-- Vitest UI tests prove `xlsx` is not an active no-op when only CSV/JSON are
+- Vitest UI tests prove `xlsx` is not an enabled no-op when only CSV/JSON are
   implemented.
 - Bun route/service tests for route registration, `audit:read`, CSRF, unknown
   body rejection, invalid columns, row limit, redaction, and CSV escaping.

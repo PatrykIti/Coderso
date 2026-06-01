@@ -40,14 +40,17 @@ actual actor/user semantics without leaking extra PII.
 ```ts
 type AccessAdvancedFilters = {
   userId?: string;
-  actorRole?: string;
   method?: string;
   ip?: string;
 };
 
+// From TASK-358-01, AccessLogQuery keeps status?: "success" | "failed",
+// userId?, method?, ip?, date range, limit, and cursor semantics.
+// Role filtering requires a separate current-role join or historical role
+// snapshot contract before it can become a server query field.
+
 function resolveAccessFilterLabel(filter: AccessAdvancedFilters) {
   if (filter.userId) return "User";
-  if (filter.actorRole) return "Role";
   return "Advanced filters";
 }
 
@@ -58,7 +61,6 @@ function buildAccessLogQueryFromFilters(
   return normalizeAccessLogQuery({
     ...base,
     userId: advanced.userId,
-    actorRole: advanced.actorRole,
     method: advanced.method,
     ip: advanced.ip,
   });

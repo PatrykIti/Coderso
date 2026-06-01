@@ -225,13 +225,13 @@ async function downloadAdminExport(
   options: { filenamePrefix: string; withCsrf: true }
 ) {
   // Resolve through the same admin API base convention as apiRequest, then
-  // handle either a blob response or async export-job JSON.
+  // handle JSON export content/metadata or async export-job JSON.
   return resolveExportDownload(
     await adminApiFetch(apiPath, {
       method: "POST",
       body: JSON.stringify(payload),
       withCsrf: options.withCsrf,
-      accept: "blob-or-json-job",
+      accept: "json-export-or-job",
     }),
     options.filenamePrefix
   );
@@ -296,6 +296,8 @@ Validation:
   not produce Radix missing title/description warnings.
 - Cover:
   - mobile user details sheet,
+  - Audit details drawer,
+  - Access Log details drawer,
   - IP allowlist drawer,
   - webhook drawer,
   - email logs drawer,
@@ -446,7 +448,8 @@ query, and confirm patterns.
 - RBAC: permission snapshot must represent effective backend permissions and
   fail closed when absent/stale.
 - CSRF: required for all write/export/revoke/test actions.
-- Rate-limit bucket:
+- Rate-limit bucket: `admin_read`, `admin_write`, `auth`, and `assistant`
+  depending on route family:
   - `admin_read` for read/query routes,
   - `admin_write` for mutations, exports, revoke, settings tests, API-key, IP
     allowlist, and admin security actions,

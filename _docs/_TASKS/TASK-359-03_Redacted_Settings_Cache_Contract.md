@@ -49,7 +49,7 @@ type RedactedSettingsCache = {
   assistantEnabled: boolean;
   securityConfigured: {
     botProtectionHasSiteKey: boolean;
-    botProtectionHasSecret: boolean;
+    botProtectionConfigured: boolean;
   };
 };
 
@@ -61,7 +61,7 @@ function toRedactedSettingsCache(payload: SettingsResponse): RedactedSettingsCac
     assistantEnabled: Boolean(payload["assistant.enabled"]),
     securityConfigured: {
       botProtectionHasSiteKey: Boolean(payload["security.botProtection.siteKey"]),
-      botProtectionHasSecret: Boolean(payload["security.botProtection.secretConfigured"]),
+      botProtectionConfigured: Boolean(payload["security.botProtection.secretKey.configured"]),
     },
   };
 }

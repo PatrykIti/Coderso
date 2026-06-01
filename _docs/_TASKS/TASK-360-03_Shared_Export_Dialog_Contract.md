@@ -31,7 +31,7 @@ surfaces render explicit unavailable copy.
 | File | Required change |
 |---|---|
 | `core/admin/ui/shared/ExportDialog.tsx` | Add required enabled-submit contract, validation, loading/success/error states, and disabled unavailable mode. |
-| Shared export helpers | Add payload type and `downloadAdminExport` blob/job helper using canonical admin API path resolution. |
+| Shared export helpers | Add payload type and `downloadAdminExport` JSON export/job helper using canonical admin API path resolution. |
 | Existing export callsites | Migrate or preserve backward compatibility with explicit unavailable state. |
 | Tests | Cover validation, disabled mode, submit payload, loading/error, and callsite migration. |
 
@@ -66,7 +66,7 @@ async function downloadAdminExport(
     method: "POST",
     body: JSON.stringify(payload),
     withCsrf: options.withCsrf,
-    accept: "blob-or-json-job",
+    accept: "json-export-or-job",
   });
   return resolveExportDownload(response, options.filenamePrefix);
 }
@@ -82,8 +82,10 @@ Data flow:
 - `downloadAdminExport` accepts admin API-relative paths such as
   `/audit/export` and `/access-logs/export`, resolves them through the same
   admin base/API path convention as `apiRequest`, includes CSRF for writes, and
-  handles blob downloads or JSON async-job metadata without using fake
-  `apiRequest` `responseType` options.
+  handles JSON export content/metadata or async-job metadata without using fake
+  `apiRequest` `responseType` options. Direct blob downloads require a separate
+  router `Response` passthrough contract plus content-disposition tests before
+  adoption.
 - Submit validates locally, calls `onExport(payload)`, shows loading and
   success/error.
 - Unsupported surfaces pass `unavailableReason` and render disabled submit with
@@ -101,7 +103,11 @@ Error handling:
 ## Security Contract
 
 - Endpoint visibility: none; UI-only shared component.
-- Auth/RBAC/CSRF/rate-limit: enforced by adopting export endpoints.
+- Auth model: none in the UI component itself; adopting export endpoints must
+  use authenticated admin sessions.
+- RBAC: enforced by adopting export endpoints, usually the read permission for
+  the exported surface.
+- CSRF/rate-limit: enforced by adopting export endpoints.
 - Reject unknown validation: adopting endpoints must validate selected columns
   server-side; the UI allowlist is not trusted.
 - Anti-abuse: unchanged.
@@ -133,5 +139,5 @@ Error handling:
 - Enabled export dialogs cannot submit without a real handler.
 - Unsupported export surfaces show explicit unavailable state.
 - Audit and Access Logs can adopt the same shared dialog contract.
-- The shared export helper gives adopting clients a real blob/job path and does
-  not rely on unsupported `apiRequest` options.
+- The shared export helper gives adopting clients a real JSON export/job path
+  and does not rely on unsupported `apiRequest` options.

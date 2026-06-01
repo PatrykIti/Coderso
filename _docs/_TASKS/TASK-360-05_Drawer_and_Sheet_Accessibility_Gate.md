@@ -19,6 +19,8 @@ valid accessible name/description.
 
 - `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md`
 - `core/admin/ui/users/UserDetailsDrawer.tsx`
+- `core/admin/ui/audit/AuditDetailsDrawer.tsx`
+- `core/admin/ui/security/AccessLogDetailsDrawer.tsx`
 - Settings drawers for IP allowlist, webhook, email logs, integrations, and
   related shared sheet primitives
 
@@ -68,7 +70,11 @@ Error handling:
 ## Security Contract
 
 - Endpoint visibility: none unless drawer tests need existing reads.
-- Auth/RBAC/CSRF/rate-limit: unchanged.
+- Auth model: unchanged; drawer tests use the authenticated admin/restricted
+  fixture required by the adopting surface.
+- RBAC: unchanged; adopting drawer reads must keep their route-level
+  permissions.
+- CSRF/rate-limit: unchanged.
 - Reject unknown validation: unchanged.
 - Anti-abuse: unchanged.
 - Secret handling: accessible titles/descriptions must use redacted labels and
@@ -78,8 +84,9 @@ Error handling:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- Vitest or Playwright a11y assertions for mobile user details, IP allowlist,
-  webhook, email logs, integrations, and touched shared drawers.
+- Vitest or Playwright a11y assertions for mobile user details, Audit details,
+  Access Log details, IP allowlist, webhook, email logs, integrations, and
+  touched shared drawers.
 - Console-warning regression proves Radix dialog warnings are gone.
 - Area tests from TASK-355-05 and TASK-359-06 consume this helper.
 

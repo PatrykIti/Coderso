@@ -108,7 +108,8 @@ Error handling:
 
 - `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md`
 - `_docs/CMS_API.md` if Login Alerts payload changes
-- `docs/guide/screens/settings.md`
+- `docs/guide/screens/login-alerts.md`
+- `docs/guide/screens/sessions.md`
 - `_docs/_TASKS/README.md` on status changes
 - `_docs/_CHANGELOG/` when completed
 
