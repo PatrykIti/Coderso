@@ -5,7 +5,7 @@
 **Category:** Widgets + Stack + Runtime Normalization + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_STACK_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-370-01](TASK-370-01_STK_31_05_01_Preserve_Absent_Direction_Until_Stack_Variant_Defaults_Can.md): STK-31-05-01 - Preserve absent `direction` until Stack variant defaults can apply
+- [x] [TASK-370-01](TASK-370-01_STK_31_05_01_Preserve_Absent_Direction_Until_Stack_Variant_Defaults_Can.md): STK-31-05-01 - Preserve absent `direction` until Stack variant defaults can apply
 
 ## Implementation Pseudocode
 
@@ -68,3 +68,14 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced the report drift in code: `normalizeWidgetBlock()` merged `stackDefaults.direction` into non-empty imported Stack payloads before `normalizeStackData()` could apply variant-aware defaults.
+- Stack now opts into the existing validator contract with `preserveAbsentDefaultKeys: ["direction"]`, so saved/imported non-empty payloads that omit `direction` keep it absent until Stack resolves variant defaults.
+- Added WidgetRenderer regressions for `variant="responsive"` without `direction` resolving to `row/row/column` and `variant="horizontal"` without `direction` resolving to `row/row/row`.
+- Added Stack and Bun validator regressions proving non-empty omitted `direction` is not injected during validation.
+- Hegel read-only agent confirmed the implementation and flagged docs/changelog/report closure drift; those closure updates were applied before commit.
+- Claude staged review reported no blockers and confirmed the normalization contract, runtime markers, tests, task board, and changelog.
+- Validation: `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/stack.test.tsx tests/vitest/ui/stack-editor-wave.test.tsx`; `bun test tests/unit/widgets/validator.test.ts`; broader Stack/UI lane with renderer, `styleNoneTokens`, widget template, and shared block-layout coverage; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- Covered by changelog `1060` together with TASK-370-01.

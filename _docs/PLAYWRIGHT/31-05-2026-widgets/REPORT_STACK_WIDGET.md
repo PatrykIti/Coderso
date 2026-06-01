@@ -79,7 +79,7 @@ Przetestowane:
 | Row-flow children | Rich/CSS probe with child spacers | Structure shows Content slot with 2 items; fixed slot actions disabled when no move target. | Each child is wrapped in `data-widget-surface=row-flow-item`, class `min-w-0 max-w-full`. | Dziala | Stack uses nested row-flow render context. | Brak. |
 | Empty slot | `/audit-31-05-stack-empty` | Slot guidance remains admin-only; no child widgets. | `data-stack-items=0`, public text `Empty stack.`. | Dziala | Empty public placeholder is neutral. | Brak. |
 | Legacy scalar align/justify/wrap | `/audit-31-05-stack-legacy-scalar` | Not normally authored by Visual; Advanced has compatibility copy. | Scalar axis values fan out to all breakpoints: align baseline, justify around, wrap true. | Dziala for scalar axis | `normalizeResponsiveValue()` supports scalar values. | Brak for axis fields. |
-| Missing direction with responsive variant | `/audit-31-05-stack-legacy-scalar` | API/import edge; Visual cards normally save direction explicitly. | Public renders `direction=column/column/column`, despite `variant=responsive`. | Nie dziala | Generic validator merges `stackDefaults.direction` before variant defaults can apply. | Add preserve/fix for absent `direction`; tests via `WidgetRenderer`. |
+| Missing direction with responsive variant | `/audit-31-05-stack-legacy-scalar` | API/import edge; Visual cards normally save direction explicitly. | Public now resolves absent responsive `direction` to `row/row/column`; horizontal omitted direction is covered as `row/row/row`. | Dziala po remediacji | TASK-370 adds `preserveAbsentDefaultKeys: ["direction"]`, so the generic validator no longer injects vertical direction before Stack variant defaults. | Naprawione w TASK-370; covered by WidgetRenderer and validator regressions. |
 | CSS historical probe | `/audit-31-05-stack-css-probe` | Nie dotyczy admin beyond fixture values. | 800/1280 computed CSS matches attrs for `md:items-end`, `lg:flex-col`, `lg:flex-wrap`, `md:gap-8`, `lg:gap-10`. | Dziala | Old Tailwind dynamic-class issue is closed by literal maps. | Brak. |
 | Invalid variant | `/audit-31-05-stack-invalid-variant` | Nieosiagalne przez normalny UI. | HTTP 200, rootCount `0`, `Invalid widget data`. | Dziala fail-closed | `normalizeWidgetBlock()` rejects unknown variants. | Brak. |
 | Invalid data | `/audit-31-05-stack-invalid-data` | Nieosiagalne przez normalny UI. | HTTP 200, rootCount `0`, `Invalid widget data`. | Dziala fail-closed | Schema rejects unknown breakpoint keys and enum values. | Brak. |
@@ -91,7 +91,8 @@ Przetestowane:
 
 ### STK-31-05-01 - Responsive/horizontal variant defaults are bypassed when imported data omits `direction`
 
-**Status:** confirmed by Playwright and Claude cross-check.
+**Status:** fixed in TASK-370 on 2026-06-01. The original defect was confirmed
+by Playwright and Claude cross-check before remediation.
 
 **Wplyw:** correctness bug for API/import/legacy payloads. Normal Visual
 authoring works because variant cards write `variant` and `direction` together.
@@ -123,17 +124,17 @@ but no `direction` key.
 - `StackBlock` receives already-merged data on the real `WidgetRenderer` path:
   `core/widgets/core/stack.tsx:440-455`.
 
-**How to fix:**
+**Remediation (2026-06-01):**
 
-- Lowest-risk fix: add `preserveAbsentDefaultKeys: ["direction"]` to
-  `createStackWidget()`. The validator already supports this for non-empty
-  saved data; it would prevent absent `direction` from being filled with the
-  vertical defaults before `StackBlock` can apply variant-aware defaults.
-- Add regressions:
+- Added `preserveAbsentDefaultKeys: ["direction"]` to `createStackWidget()`.
+  The generic validator already supports this for non-empty saved/imported
+  data, so absent `direction` now remains absent until Stack can apply
+  variant-aware defaults.
+- Added regressions:
   - render through `WidgetRenderer` a `variant="responsive"` Stack with
     non-empty data but no `direction`; expect `row/row/column`,
   - same for `variant="horizontal"`; expect `row/row/row`,
-  - `normalizeWidgetBlock()` should not inject vertical direction into non-empty
+  - `normalizeWidgetBlock()` does not inject vertical direction into non-empty
     payloads that omit `direction`.
 
 ## Claude cross-check
@@ -162,6 +163,9 @@ Claude independently confirmed:
 - Row-flow children are wrapped safely and do not force page overflow.
 - Empty Stack output is neutral and public-safe.
 - Invalid variants and invalid breakpoint data fail closed.
+- Non-empty imported/admin Stack payloads that omit `direction` preserve that
+  absence through validation, so `horizontal` and `responsive` variants apply
+  their own direction defaults at render.
 
 ## Kodowe punkty kontroli
 
@@ -169,8 +173,11 @@ Claude independently confirmed:
   `core/widgets/core/stack.tsx:51-125`.
 - Strict schema and breakpoint enums:
   `core/widgets/core/stack.tsx:135-174`.
-- Variant-agnostic defaults that cause the edge finding:
+- Variant-agnostic base defaults:
   `core/widgets/core/stack.tsx:200-210`.
+- Stack's validator opt-in for preserving omitted `direction` on non-empty
+  saved/imported data:
+  `core/widgets/core/stack.tsx:548-552`.
 - Literal responsive class maps:
   `core/widgets/core/stack.tsx:215-336`.
 - Variant-aware direction resolver:
@@ -184,6 +191,23 @@ Claude independently confirmed:
   `core/widgets/validator.ts:159-168`.
 
 ## Walidacja
+
+Remediacja TASK-370 (2026-06-01):
+
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/stack.test.tsx tests/vitest/ui/stack-editor-wave.test.tsx`
+  - PASS: 2 files, 14 tests.
+- `bun test tests/unit/widgets/validator.test.ts`
+  - PASS: 34 tests.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/widgets/stack.test.tsx tests/vitest/ui/stack-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx`
+  - PASS: 6 files, 80 tests.
+- `bun --cwd core lint` - PASS.
+- `bun --cwd core lint:types` - PASS.
+- `git diff --check` - PASS.
+- `timeout 180s claude -p --dangerously-skip-permissions --max-budget-usd 0.8 "Review the current staged TASK-370 Stack diff only..."`
+  - PASS: no blockers; Claude confirmed the normalization contract, runtime
+    markers, tests, task board, and changelog.
+
+Oryginalny UI-first pass:
 
 - `bun run test:vitest -- tests/vitest/widgets/stack.test.tsx tests/vitest/ui/stack-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/ui/block-layout-shared-wave.test.tsx`
   - PASS: 6 files, 77 tests.

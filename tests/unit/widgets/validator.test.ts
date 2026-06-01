@@ -1444,6 +1444,34 @@ test("normalizeWidgetBlock accepts legacy and responsive stack axis or wrap shap
   ).not.toThrow();
 });
 
+test("normalizeWidgetBlock preserves absent stack direction for variant defaults", () => {
+  registerWidget(
+    createStackWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "stack-imported-responsive",
+    type: "stack",
+    variant: "responsive",
+    data: {
+      gap: {
+        desktop: "8",
+        tablet: "6",
+        mobile: "4",
+      },
+      align: "baseline",
+      justify: "around",
+      wrap: true,
+    } satisfies StackData,
+  });
+
+  expect(normalized.data).not.toHaveProperty("direction");
+});
+
 test("normalizeWidgetBlock rejects invalid stack responsive axis or wrap shapes", () => {
   registerWidget(
     createStackWidget({

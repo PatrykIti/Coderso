@@ -548,6 +548,7 @@ export function createStackWidget(editors: {
     ],
     schema: stackSchema,
     defaults: stackDefaults,
+    preserveAbsentDefaultKeys: ["direction"],
     editor: editors,
     editorContract: stackEditorContract,
     editorCapabilities: {
