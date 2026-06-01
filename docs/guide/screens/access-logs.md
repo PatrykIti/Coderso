@@ -21,7 +21,7 @@ slice for security review.
 In the current UI, this screen includes:
 - `Export`,
 - filters for:
-  user ID, date range, status, and search,
+  user ID, date range, status, search, HTTP method, and IP contains,
 - a table with:
   user, IP address, device/browser, timestamp, status, actions,
 - cursor-backed Previous/Next navigation,
@@ -55,17 +55,24 @@ events and their operational security context.
 6. Use the status selector to separate:
    - `Success`
    - `Failed`
-7. Use `Next` and `Previous` when the current filter scope has more rows than
-   the loaded page. Changing search, user ID, date range, or status starts from
-   the first page again.
-8. Review the table columns in order:
+7. Open `Advanced access filters` when you need request-level filtering:
+   - `HTTP method` accepts supported methods such as `GET`, `POST`, `PATCH`,
+     and `DELETE`,
+   - `IP contains` matches IPv4 or IPv6 text already present in access log rows.
+8. Use the active filter chips to confirm the exact scope. `User ID` means an
+   exact actor/user id; role filtering is not part of Access Logs because rows
+   do not store historical role snapshots.
+9. Use `Next` and `Previous` when the current filter scope has more rows than
+   the loaded page. Changing search, user ID, date range, status, method, or IP
+   starts from the first page again.
+10. Review the table columns in order:
    - user,
    - IP address,
    - device / browser,
    - timestamp,
    - status.
-9. Open the row action to inspect one event more deeply.
-10. In `Access Log Details`, review:
+11. Open the row action to inspect one event more deeply.
+12. In `Access Log Details`, review:
    - user identity,
    - status code,
    - IP address,
@@ -75,20 +82,20 @@ events and their operational security context.
    - duration,
    - location & risk signal,
    - session state.
-11. Use `View full session` only when the row shows an active/current linked
+13. Use `View full session` only when the row shows an active/current linked
     session and your account has session settings access. The target opens
     `Security Sessions` focused on that session, including another user's
     active session when your permissions allow it.
-12. Use `Revoke access` only when the row shows an active linked session and
+14. Use `Revoke access` only when the row shows an active linked session and
     your account has the required high-risk settings write permission. Confirm
     the destructive action before revoking.
-13. Use `Export` only after the current filters match the right scope.
-14. In the export dialog, review:
+15. Use `Export` only after the current filters match the right scope.
+16. In the export dialog, review:
    - file format,
    - included fields,
    - filename,
    - reminder that export follows the current filters.
-15. Start the export. The downloaded CSV or JSON file contains only the selected
+17. Start the export. The downloaded CSV or JSON file contains only the selected
     allowlisted fields from the current filtered slice.
 
 Use this safe access-review order when you want fewer wrong conclusions:
@@ -116,6 +123,9 @@ Use this safe access-review order when you want fewer wrong conclusions:
   metadata.
 - Search results can show match labels such as `Matched user email` when the
   query matched a field that is not otherwise obvious in the row.
+- Advanced filters use the existing access-log query contract. They do not load
+  a user directory or role list, so they do not expose extra user PII beyond the
+  rows already visible to the current permission set.
 - Session action availability is row-specific. Historical rows, failed attempts
   without a session, expired sessions, already-revoked sessions, and the current
   admin session show unavailable copy instead of firing a hidden request.
@@ -131,6 +141,8 @@ Use this safe access-review order when you want fewer wrong conclusions:
 - A custom range fails:
   confirm both start and end dates are present and that the start date is not
   after the end date.
+- An advanced filter fails:
+  use a supported HTTP method and IPv4/IPv6 characters only for `IP contains`.
 - One event looks odd:
   open `Access Log Details` and review request, duration, device, and session
   state before escalating.

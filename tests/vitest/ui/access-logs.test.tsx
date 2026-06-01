@@ -197,6 +197,16 @@ vi.mock("@/components/ui/select", () => ({
   ),
 }));
 
+vi.mock("@/components/ui/sheet", () => ({
+  Sheet: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <section>{children}</section> : null,
+  SheetContent: ({ children }: { children: React.ReactNode }) => (
+    <div role="dialog">{children}</div>
+  ),
+  SheetDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  SheetTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+}));
+
 vi.mock("@/ui/layouts/AdminShell", () => ({
   AdminShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
 }));
@@ -416,6 +426,16 @@ function clickByText(container: HTMLElement, text: string) {
   });
 }
 
+function clickByAriaLabel(container: HTMLElement, label: string) {
+  const button = container.querySelector(`button[aria-label="${label}"]`);
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Missing button ${label}`);
+  }
+  act(() => {
+    button.click();
+  });
+}
+
 function lastAccessQuery() {
   return accessState.listAccessLogs.mock.calls.at(-1)?.[0] ?? {};
 }
@@ -512,6 +532,19 @@ test("AccessLogsPage exports current base filters without page cursor", async ()
     await flush();
     expect(lastAccessQuery()).toEqual(expect.objectContaining({ cursor: "cursor-1" }));
 
+    clickByAriaLabel(view.container, "Advanced access log filters");
+    await flush();
+    setInputValue(
+      view.container.querySelector("#access-method-filter") as HTMLInputElement,
+      "post"
+    );
+    setInputValue(
+      view.container.querySelector("#access-ip-filter") as HTMLInputElement,
+      "127.0.0.1"
+    );
+    clickByText(view.container, "Apply filters");
+    await flush();
+
     const selects = view.container.querySelectorAll("select");
     setSelectValue(selects[0] as HTMLSelectElement, "custom");
     await flush();
@@ -541,6 +574,8 @@ test("AccessLogsPage exports current base filters without page cursor", async ()
         query: "ada",
         userId: "user-1",
         status: "failed",
+        method: "POST",
+        ip: "127.0.0.1",
         from: "2026-05-01T00:00:00.000Z",
         to: "2026-05-31T23:59:59.999Z",
       },
@@ -549,6 +584,46 @@ test("AccessLogsPage exports current base filters without page cursor", async ()
       "Access log export downloaded: access-logs-2026-06-01-all.csv"
     );
     expect(view.container.textContent).not.toContain("Export Access Logs");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsPage opens advanced filters, validates them, and renders truthful chips", async () => {
+  const view = mount(<AccessLogsPage />);
+
+  try {
+    await flush();
+    clickByAriaLabel(view.container, "Advanced access log filters");
+    await flush();
+    expect(view.container.textContent).toContain("Advanced access filters");
+    expect(view.container.textContent).toContain("Exact User ID remains the user filter.");
+
+    const methodInput = view.container.querySelector("#access-method-filter") as HTMLInputElement;
+    const ipInput = view.container.querySelector("#access-ip-filter") as HTMLInputElement;
+    setInputValue(methodInput, "TRACE");
+    setInputValue(ipInput, "not-an-ip");
+    clickByText(view.container, "Apply filters");
+    await flush();
+
+    expect(view.container.textContent).toContain("Use a supported HTTP method");
+    expect(view.container.textContent).toContain("Use only IPv4 or IPv6 characters");
+    expect(lastAccessQuery()).toEqual(expect.not.objectContaining({ method: "TRACE" }));
+
+    setInputValue(methodInput, "post");
+    setInputValue(ipInput, "127.0.0.1");
+    clickByText(view.container, "Apply filters");
+    await flush();
+
+    expect(lastAccessQuery()).toEqual(expect.objectContaining({ method: "POST", ip: "127.0.0.1" }));
+    expect(view.container.textContent).toContain("Method: POST");
+    expect(view.container.textContent).toContain("IP contains: 127.0.0.1");
+    expect(view.container.textContent).not.toContain("Role:");
+
+    clickByAriaLabel(view.container, "Clear Method: POST");
+    await flush();
+    expect(lastAccessQuery()).toEqual(expect.not.objectContaining({ method: "POST" }));
+    expect(lastAccessQuery()).toEqual(expect.objectContaining({ ip: "127.0.0.1" }));
   } finally {
     view.cleanup();
   }

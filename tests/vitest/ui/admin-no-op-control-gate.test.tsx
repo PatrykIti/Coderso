@@ -341,8 +341,7 @@ test("Access Logs report no-op controls are disabled with explicit reasons", () 
     {
       area: "Access Logs",
       controlId: "access-advanced-filters",
-      expected: "disabled",
-      reasonPattern: /Advanced access log filters.*TASK-358-04/,
+      expected: "hidden",
       report: "REPORT_ADMIN_ACCESS_LOGS.md",
     },
     {

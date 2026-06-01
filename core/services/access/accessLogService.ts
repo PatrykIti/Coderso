@@ -13,6 +13,7 @@ import {
   normalizeAdminSearchQuery,
 } from "../admin/adminQueryConventions";
 import { hashEmail, isLikelyEmail, normalizeEmail, resolveEmailValue } from "../security/piiEmail";
+import { isAccessLogMethod } from "./accessLogQueryContract";
 
 export type AccessLogInput = {
   method: string;
@@ -152,7 +153,6 @@ export class AccessLogDomainError extends Error {
 }
 
 const accessLogStatuses = new Set<AccessLogStatus>(["success", "failed"]);
-const allowedHttpMethods = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
 
 const normalizeAccessLogStatus = (value: string | null | undefined) => {
   if (!value) return undefined;
@@ -181,7 +181,7 @@ const normalizeAccessLogUserId = (value: string | null | undefined) => {
 const normalizeAccessLogMethod = (value: string | null | undefined) => {
   if (!value) return undefined;
   const normalized = value.trim().toUpperCase();
-  if (!allowedHttpMethods.has(normalized)) {
+  if (!isAccessLogMethod(normalized)) {
     throw new AdminQueryConventionError(
       "admin_query_text_invalid",
       "Access log method is invalid.",

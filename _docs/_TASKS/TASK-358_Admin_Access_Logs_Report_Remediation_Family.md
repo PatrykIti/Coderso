@@ -5,7 +5,7 @@
 **Category:** Admin UI + Access Logs + Security Sessions + Export + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-359-05 settings security session contract, TASK-360-02 shared confirm pattern, TASK-360-03 shared export dialog contract, TASK-360-04 no-op control gate, TASK-360-06 server-side query and pagination conventions, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ACCESS_LOGS.md` audit evidence
-**Status:** In Progress (2026-06-01)
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -164,7 +164,7 @@ Completion notes:
 - Custom range validation preserves the previous rows and blocks refetch until
   the range is complete and ordered.
 - `access-custom-range` and `access-next-page` are no longer no-op controls.
-  `access-advanced-filters` remains explicitly owned by `TASK-358-04`.
+  `access-advanced-filters` was closed later by `TASK-358-04`.
 - Playwright verified restricted `audit:read` access, custom range params,
   Next/Previous cursor behavior, and email match labels.
 
@@ -260,7 +260,7 @@ Completion notes:
 
 ### TASK-358-03: Access Logs Export
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 - Reuse the `ExportDialog` contract from TASK-357 if landed first.
 - Export payload must include active filters and selected fields.
@@ -310,9 +310,23 @@ Regression tests:
 - Unauthorized user cannot export.
 - CSV output escapes user agent commas/newlines/quotes.
 
+Completion notes:
+
+- Added real `POST /admin/api/access-logs/export` with `audit:read`, CSRF,
+  strict body validation, column allowlist, CSV/JSON file response semantics,
+  row cap, redaction, export audit event metadata, and route error mapping.
+- Wired the Access Logs `Export` action to the shared admin export dialog with
+  active filters and selected allowlisted fields.
+- Playwright verified CSV and JSON submits from the UI with marker/user/status
+  filters, no cursor in export payloads, redacted secret-bearing `path` and
+  `userAgent`, and evidence files
+  `.tmp/task-358-03-access-export.png`,
+  `.tmp/task-358-03-access-export.csv`, and
+  `.tmp/task-358-03-access-export.json`.
+
 ### TASK-358-04: Advanced Filters and User Filter Truthfulness
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 - The sliders icon must either open a real advanced filter panel or disappear.
 - The "User" filter must not contain static role labels unless the UI is
@@ -370,6 +384,22 @@ Regression tests:
 - Filter labels match actual query semantics.
 - Restricted `audit:read` user does not receive extra user PII beyond what the
   access logs contract already allows.
+
+Completion notes:
+
+- The sliders button now opens a real `Advanced access filters` sheet with
+  draft `HTTP method` and `IP contains` controls.
+- Method filters are normalized to uppercase and validated against supported
+  methods; IP filters accept only IPv4/IPv6 substring characters before they
+  are added to the server query.
+- Active filter chips now make the exact scope visible for search, exact
+  `User ID`, status, non-default date ranges, method, and IP contains.
+- Role filtering remains intentionally absent because access log rows do not
+  store historical role snapshots. No user/role summary endpoint was added, so
+  restricted `audit:read` users do not receive extra directory PII.
+- Playwright verified applying method/IP filters, chips, method-chip clearing,
+  and zero `/admin/api/users` or `/admin/api/roles` lookup requests. Evidence
+  screenshot: `.tmp/task-358-04-advanced-filters.png`.
 
 ## Security Contract
 

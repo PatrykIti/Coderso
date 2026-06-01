@@ -10,12 +10,15 @@ import {
   Terminal,
   Tablet,
   User,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -23,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import {
   exportAccessLogs,
@@ -44,6 +48,7 @@ import {
   isAccessLogExportColumn,
   type AccessLogExportColumn,
 } from "../../../services/access/accessLogExportContract";
+import { isAccessLogMethod } from "../../../services/access/accessLogQueryContract";
 
 import { AccessLogDetailsDrawer } from "./AccessLogDetailsDrawer";
 import { AccessLogsTable } from "./AccessLogsTable";
@@ -52,13 +57,22 @@ import type { AccessLogItem } from "./types";
 type AccessFilterStatus = "all" | "success" | "failed";
 type AccessDateRange = "last-7-days" | "last-30-days" | "this-month" | "custom";
 type AccessCursor = string | null;
+type AccessAdvancedFilters = {
+  method: string;
+  ip: string;
+};
+type AccessAdvancedFilterErrors = Partial<Record<keyof AccessAdvancedFilters, string>>;
 type AccessPageState = {
   cursor: AccessCursor;
   previousCursors: AccessCursor[];
 };
 
-const advancedFiltersUnavailableReason =
-  "Advanced access log filters are not wired yet. TASK-358-04 owns method, IP, and saved advanced filter controls.";
+const emptyAdvancedFilters: AccessAdvancedFilters = {
+  method: "",
+  ip: "",
+};
+
+const ipFilterPattern = /^[0-9a-fA-F:.]{1,128}$/;
 
 const firstAccessPageState = (): AccessPageState => ({
   cursor: null,
@@ -129,6 +143,7 @@ const buildAccessLogQueryFromFilters = ({
   customFrom,
   customTo,
   status,
+  advancedFilters,
 }: {
   query: string;
   userId: string;
@@ -136,14 +151,19 @@ const buildAccessLogQueryFromFilters = ({
   customFrom: string;
   customTo: string;
   status: AccessFilterStatus;
+  advancedFilters: AccessAdvancedFilters;
 }): { query: AccessLogQuery; validationError: string | null } => {
   const normalizedQuery = query.trim();
   const normalizedUserId = userId.trim();
+  const normalizedMethod = advancedFilters.method.trim().toUpperCase();
+  const normalizedIp = advancedFilters.ip.trim();
   const baseQuery: AccessLogQuery = {
     limit: 50,
     ...(normalizedQuery ? { query: normalizedQuery } : {}),
     ...(normalizedUserId ? { userId: normalizedUserId } : {}),
     ...(status === "all" ? {} : { status }),
+    ...(normalizedMethod ? { method: normalizedMethod } : {}),
+    ...(normalizedIp ? { ip: normalizedIp } : {}),
   };
 
   if (dateRange === "custom") {
@@ -177,6 +197,32 @@ const buildAccessLogQueryFromFilters = ({
     },
     validationError: null,
   };
+};
+
+const normalizeAdvancedFilters = (draft: AccessAdvancedFilters): AccessAdvancedFilters => ({
+  method: draft.method.trim().toUpperCase(),
+  ip: draft.ip.trim(),
+});
+
+const validateAdvancedFilters = (draft: AccessAdvancedFilters): AccessAdvancedFilterErrors => {
+  const normalized = normalizeAdvancedFilters(draft);
+  const errors: AccessAdvancedFilterErrors = {};
+  if (normalized.method && !isAccessLogMethod(normalized.method)) {
+    errors.method = "Use a supported HTTP method such as GET, POST, PATCH, or DELETE.";
+  }
+  if (normalized.ip && !ipFilterPattern.test(normalized.ip)) {
+    errors.ip = "Use only IPv4 or IPv6 characters for the IP contains filter.";
+  }
+  return errors;
+};
+
+const hasAdvancedErrors = (errors: AccessAdvancedFilterErrors) =>
+  Boolean(errors.method || errors.ip);
+
+const dateRangeLabels: Record<Exclude<AccessDateRange, "last-7-days">, string> = {
+  "last-30-days": "Last 30 days",
+  "this-month": "This month",
+  custom: "Custom range",
 };
 
 const resolveDevice = (userAgent: string | null) => {
@@ -254,6 +300,14 @@ export function AccessLogsPage() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [statusFilter, setStatusFilter] = useState<AccessFilterStatus>("all");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState<AccessAdvancedFilters>(
+    () => emptyAdvancedFilters
+  );
+  const [advancedDraft, setAdvancedDraft] = useState<AccessAdvancedFilters>(
+    () => emptyAdvancedFilters
+  );
+  const [advancedErrors, setAdvancedErrors] = useState<AccessAdvancedFilterErrors>({});
   const [logs, setLogs] = useState<AccessLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -302,8 +356,9 @@ export function AccessLogsPage() {
         customFrom,
         customTo,
         status: statusFilter,
+        advancedFilters,
       }),
-    [customFrom, customTo, dateRange, query, statusFilter, userIdFilter]
+    [advancedFilters, customFrom, customTo, dateRange, query, statusFilter, userIdFilter]
   );
 
   const accessQuery = useMemo(
@@ -438,6 +493,66 @@ export function AccessLogsPage() {
     setStatusFilter(value as AccessFilterStatus);
   };
 
+  const handleAdvancedOpenChange = (open: boolean) => {
+    setAdvancedOpen(open);
+    if (open) {
+      setAdvancedDraft(advancedFilters);
+      setAdvancedErrors({});
+    }
+  };
+
+  const handleAdvancedDraftChange = (field: keyof AccessAdvancedFilters, value: string) => {
+    setAdvancedDraft((current) => ({ ...current, [field]: value }));
+    setAdvancedErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
+  const handleApplyAdvancedFilters = () => {
+    const errors = validateAdvancedFilters(advancedDraft);
+    if (hasAdvancedErrors(errors)) {
+      setAdvancedErrors(errors);
+      return;
+    }
+    startFilterRefresh();
+    setAdvancedFilters(normalizeAdvancedFilters(advancedDraft));
+    setAdvancedOpen(false);
+  };
+
+  const handleClearAdvancedFilters = () => {
+    startFilterRefresh();
+    setAdvancedFilters(emptyAdvancedFilters);
+    setAdvancedDraft(emptyAdvancedFilters);
+    setAdvancedErrors({});
+  };
+
+  const clearSearchFilter = () => {
+    startFilterRefresh();
+    setQuery("");
+  };
+
+  const clearUserIdFilter = () => {
+    startFilterRefresh();
+    setUserIdFilter("");
+  };
+
+  const clearStatusFilter = () => {
+    startFilterRefresh();
+    setStatusFilter("all");
+  };
+
+  const clearDateRangeFilter = () => {
+    startFilterRefresh();
+    setDateRange("last-7-days");
+    setCustomFrom("");
+    setCustomTo("");
+  };
+
+  const clearAdvancedFilter = (field: keyof AccessAdvancedFilters) => {
+    startFilterRefresh();
+    setAdvancedFilters((current) => ({ ...current, [field]: "" }));
+    setAdvancedDraft((current) => ({ ...current, [field]: "" }));
+    setAdvancedErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
   const handleNextPage = useCallback(() => {
     if (!nextCursor) return;
     setIsLoading(true);
@@ -461,6 +576,47 @@ export function AccessLogsPage() {
 
   const visibleError = validationError ?? error;
   const tableIsLoading = validationError ? false : isLoading;
+  const activeFilterChips = [
+    ...(query.trim()
+      ? [{ id: "query", label: `Search: ${query.trim()}`, onClear: clearSearchFilter }]
+      : []),
+    ...(userIdFilter.trim()
+      ? [{ id: "userId", label: `User ID: ${userIdFilter.trim()}`, onClear: clearUserIdFilter }]
+      : []),
+    ...(statusFilter !== "all"
+      ? [{ id: "status", label: `Status: ${statusFilter}`, onClear: clearStatusFilter }]
+      : []),
+    ...(dateRange !== "last-7-days"
+      ? [
+          {
+            id: "dateRange",
+            label:
+              dateRange === "custom" && customFrom && customTo
+                ? `Date: ${customFrom} to ${customTo}`
+                : `Date: ${dateRangeLabels[dateRange]}`,
+            onClear: clearDateRangeFilter,
+          },
+        ]
+      : []),
+    ...(advancedFilters.method
+      ? [
+          {
+            id: "method",
+            label: `Method: ${advancedFilters.method}`,
+            onClear: () => clearAdvancedFilter("method"),
+          },
+        ]
+      : []),
+    ...(advancedFilters.ip
+      ? [
+          {
+            id: "ip",
+            label: `IP contains: ${advancedFilters.ip}`,
+            onClear: () => clearAdvancedFilter("ip"),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <AdminShell activeHref="/admin/access-logs" breadcrumbs={["Security", "Access Logs"]}>
@@ -545,15 +701,32 @@ export function AccessLogsPage() {
               variant="ghost"
               size="icon"
               className="h-9 w-9"
-              disabled
-              aria-label="Advanced access log filters unavailable"
-              title={advancedFiltersUnavailableReason}
-              data-no-op-control="access-advanced-filters"
+              aria-label="Advanced access log filters"
+              title="Filter by HTTP method and IP address"
+              onClick={() => handleAdvancedOpenChange(true)}
             >
               <SlidersHorizontal className="h-4 w-4" />
             </Button>
           </div>
         </div>
+
+        {activeFilterChips.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2" aria-label="Active access log filters">
+            {activeFilterChips.map((chip) => (
+              <Badge key={chip.id} variant="secondary" className="max-w-full gap-1.5 pr-1">
+                <span className="min-w-0 truncate">{chip.label}</span>
+                <button
+                  type="button"
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`Clear ${chip.label}`}
+                  onClick={chip.onClear}
+                >
+                  <X className="h-3 w-3" aria-hidden />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        ) : null}
 
         {visibleError ? (
           <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
@@ -587,6 +760,94 @@ export function AccessLogsPage() {
         onRequestRevoke={handleRequestRevoke}
         isRevoking={isRevoking}
       />
+      <Sheet open={advancedOpen} onOpenChange={handleAdvancedOpenChange}>
+        <SheetContent
+          side="right"
+          showCloseButton={false}
+          className="flex h-full min-h-0 w-full flex-col gap-0 p-0 sm:max-w-md"
+        >
+          <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
+            <div>
+              <SheetTitle>Advanced access filters</SheetTitle>
+              <SheetDescription>
+                Filter the current access log query by request method and IP without loading a user
+                directory.
+              </SheetDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Close advanced access filters"
+              onClick={() => handleAdvancedOpenChange(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="access-method-filter">
+                HTTP method
+              </label>
+              <Input
+                id="access-method-filter"
+                value={advancedDraft.method}
+                onChange={(event) => handleAdvancedDraftChange("method", event.target.value)}
+                placeholder="GET"
+                autoCapitalize="characters"
+                aria-invalid={Boolean(advancedErrors.method)}
+                aria-describedby={advancedErrors.method ? "access-method-filter-error" : undefined}
+              />
+              {advancedErrors.method ? (
+                <p id="access-method-filter-error" className="text-xs text-destructive">
+                  {advancedErrors.method}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Supported values: GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="access-ip-filter">
+                IP contains
+              </label>
+              <Input
+                id="access-ip-filter"
+                value={advancedDraft.ip}
+                onChange={(event) => handleAdvancedDraftChange("ip", event.target.value)}
+                placeholder="127.0.0.1"
+                aria-invalid={Boolean(advancedErrors.ip)}
+                aria-describedby={advancedErrors.ip ? "access-ip-filter-error" : undefined}
+              />
+              {advancedErrors.ip ? (
+                <p id="access-ip-filter-error" className="text-xs text-destructive">
+                  {advancedErrors.ip}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Matches IPv4 or IPv6 text already present in access log rows.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-lg border bg-muted/30 p-4 text-xs text-muted-foreground">
+              Exact User ID remains the user filter. Role filtering is not available because access
+              logs do not store historical role snapshots.
+            </div>
+          </div>
+          <Separator />
+          <div className="flex flex-col gap-3 bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">
+            <Button variant="ghost" onClick={() => handleAdvancedOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button variant="outline" onClick={handleClearAdvancedFilters}>
+              Clear advanced
+            </Button>
+            <Button onClick={handleApplyAdvancedFilters}>Apply filters</Button>
+          </div>
+        </SheetContent>
+      </Sheet>
       <ConfirmActionDialog
         open={Boolean(pendingRevokeLog)}
         onOpenChange={(open) => {

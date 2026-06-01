@@ -165,6 +165,6 @@ Error handling:
 - Search match labels such as `Matched user email` explain hidden-field
   matches without adding new raw PII values.
 - The old `access-custom-range` and `access-next-page` no-op markers are gone;
-  advanced filters remain explicitly owned by `TASK-358-04`.
+  the advanced-filter UI was left to `TASK-358-04` and is now closed there.
 - Playwright verified restricted `audit:read` access, custom range request
   params, Next with cursor, Previous without cursor, and email match labels.

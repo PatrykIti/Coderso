@@ -23,7 +23,7 @@ Tasks: TASK-358, TASK-358-01, TASK-358-02, TASK-358-03, TASK-358-04
 - Added search match labels such as `Matched user email` to explain hidden-field
   matches without exposing additional raw PII.
 - Removed the `access-custom-range` and `access-next-page` no-op controls from
-  the no-op audit gate; the advanced filters/sliders surface remains owned by
+  the no-op audit gate; the advanced filters/sliders surface was closed by
   `TASK-358-04`.
 - Updated Access Logs API/spec/user docs and the clickable Playwright report
   with the new query, cursor, and match-context behavior.
@@ -76,6 +76,28 @@ Tasks: TASK-358, TASK-358-01, TASK-358-02, TASK-358-03, TASK-358-04
   search/user/IP filter values are not stored in audit metadata.
 - Updated API, audit, user guide, task board, and clickable Access Logs report
   documentation for the real export contract.
+
+### TASK-358-04 Advanced Filters and User Filter Truthfulness
+
+- Wired the Access Logs sliders affordance to a real `Advanced access filters`
+  sheet instead of a disabled/no-op state.
+- Added draft `HTTP method` and `IP contains` advanced filters, including
+  supported-method validation, IP substring character validation, uppercase
+  method normalization, and cursor reset on apply.
+- Added a pure access-log query contract for supported HTTP method values so UI
+  validation and service normalization share the same owner.
+- Threaded method/IP filters through the existing access-log query builder so
+  list reloads, export payloads, and clear-chip behavior use the same active
+  filter contract.
+- Added active filter chips for search, exact `User ID`, status, non-default
+  date ranges, method, and IP contains, with per-chip clear actions.
+- Kept role filtering intentionally absent because access log rows do not store
+  historical role snapshots; the UI now states exact User ID semantics instead
+  of implying role/user-directory filtering.
+- Avoided a new user/role summary endpoint, so restricted `audit:read` users do
+  not receive additional directory PII beyond visible access-log rows.
+- Updated the no-op control gate, user guide, task board, parent task, and
+  clickable Access Logs report for the real advanced-filter behavior.
 
 ### Planning / QA
 
@@ -160,5 +182,27 @@ Tasks: TASK-358, TASK-358-01, TASK-358-02, TASK-358-03, TASK-358-04
   strict body validation, `audit:read`/CSRF mapping, redaction of path/user-agent
   secret carriers, and Playwright file evidence requirements. The UI pass also
   found and fixed field-list drift (`userAgent` missing) and dialog overflow.
+- `bun run test:vitest -- tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+  passed after TASK-358-04 for the advanced-filter sheet, validation, active
+  chips, export-filter propagation, and no-op gate update.
+- `bun run test:vitest -- tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/access-logs-table.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+  passed in final TASK-358-04 validation with 12 tests.
+- `bun test tests/unit/access/accessLogService.test.ts tests/integration/routes/accessLogs.test.ts`
+  passed in final TASK-358-04 validation with 15 tests for access-log service,
+  route, export, revoke, and error-mapping contracts.
+- `bun --cwd core lint` passed in final TASK-358-04 validation.
+- `bun --cwd core lint:types` passed in final TASK-358-04 validation.
+- `bun run gates:coderso` passed in final TASK-358-04 validation:
+  functional, ux, performance, security, and reliability.
+- Playwright TASK-358-04 advanced-filter smoke passed with an `audit:read` user:
+  filtered by marker and exact `User ID`, opened `Advanced access filters`,
+  applied `method=POST` and `ip=127.0.4`, verified `User ID`/`Method`/`IP
+  contains` chips, cleared the method chip, and observed zero
+  `/admin/api/users` or `/admin/api/roles` lookup requests. Evidence screenshot:
+  `.tmp/task-358-04-advanced-filters.png`.
+- Claude and agent review for TASK-358-04 agreed that no extra endpoint was
+  required, that method/IP should use the existing strict query contract, and
+  that role filtering should stay absent unless historical role snapshots are
+  introduced.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ACCESS_LOGS.md`.

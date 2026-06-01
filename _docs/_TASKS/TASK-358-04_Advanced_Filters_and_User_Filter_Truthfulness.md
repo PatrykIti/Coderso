@@ -5,7 +5,7 @@
 **Category:** Admin UI + Access Logs + Filters + Privacy
 **Estimated Effort:** Medium
 **Dependencies:** TASK-358-01, TASK-360-04
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -124,3 +124,37 @@ Error handling:
 - Sliders advanced-filter affordance is real or truthfully unavailable.
 - `User` and `Role` labels match actual query behavior.
 - Restricted filter metadata does not leak extra PII.
+
+## Completion Notes
+
+- The sliders affordance now opens a real `Advanced access filters` sheet.
+- The sheet owns draft `HTTP method` and `IP contains` filters, validates
+  unsupported methods and invalid IP characters, normalizes methods to
+  uppercase, and applies them through the existing access-log query contract.
+- Supported HTTP method values are owned by the pure access-log query contract
+  and reused by both UI validation and service normalization.
+- Active filter chips now show the exact scope for search, exact `User ID`,
+  status, non-default date ranges, method, and IP contains. Each chip can clear
+  only its own filter and resets cursor pagination to the first page.
+- The former misleading role/user affordance is closed by exact `User ID`
+  semantics. Role filtering remains intentionally absent because access log rows
+  do not store historical role snapshots.
+- No new user/role summary endpoint was added; restricted `audit:read` users do
+  not receive additional directory PII beyond visible access-log rows.
+- Playwright verified an `audit:read` user applying `method=POST` and
+  `ip=127.0.4`, seeing `User ID`, `Method`, and `IP contains` chips, clearing
+  the method chip, and making no `/admin/api/users` or `/admin/api/roles`
+  requests. Evidence screenshot:
+  `.tmp/task-358-04-advanced-filters.png`.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/access-logs-table.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+  passed.
+- `bun test tests/unit/access/accessLogService.test.ts tests/integration/routes/accessLogs.test.ts`
+  passed.
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
+- `bun run gates:coderso` passed.
+- Full validation details are tracked in changelog
+  `_docs/_CHANGELOG/1048-2026-06-01-task-358-admin-access-logs-remediation-family.md`.

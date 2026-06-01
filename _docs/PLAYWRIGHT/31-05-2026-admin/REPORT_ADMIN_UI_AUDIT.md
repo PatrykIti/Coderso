@@ -97,6 +97,10 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
   strict query, limit clamp, date-range validation, cursor/count-copy helpers i
   area-specific `*_query_invalid` errors. Pelna adopcja cursor UI zostaje w
   TASK-357/TASK-358.
+- `TASK-358` jest zaimplementowany: Access Logs maja strict server query,
+  cursor pagination, exact `User ID`, custom range, match labels, real session
+  view/revoke z permission gatingiem, CSV/JSON export oraz realny advanced
+  method/IP filters panel bez dodatkowych user/role directory lookupow.
 - `TASK-355-01` jest zaimplementowany: Users UI konsumuje shared permission
   snapshot, nie hardcoduje write permissions i wspiera partial
   `users:read`/`roles:read` bez pobocznych fetchy.

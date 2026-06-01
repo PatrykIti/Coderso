@@ -8,6 +8,29 @@ Trasa: `/admin/access-logs`. Źródła:
 
 ## Co faktycznie kliknięto
 
+### TASK-358-04 verification - 2026-06-01
+
+- Przygotowano restricted usera z rolą `audit:read` oraz kontrolowany access
+  log `POST` z markerem w request path i IP `127.0.4.44`.
+- Po zalogowaniu weszliśmy w `/admin/access-logs`, ustawiliśmy search po
+  markerze i exact `User ID`; tabela pokazała `TASK 358-04 Advanced Filters`
+  oraz `Matched request path`.
+- Kliknięto ikonowy przycisk `Advanced access log filters`; otworzył się realny
+  panel `Advanced access filters`.
+- Wpisano `post` w `HTTP method` i `127.0.4` w `IP contains`, a następnie
+  kliknięto `Apply filters`.
+- Zarejestrowany request listy zawierał aktywne filtry `q`, exact `userId`,
+  `method=POST`, `ip=127.0.4`, `limit=50` oraz `from`; nie używał dodatkowego
+  directory/user lookup.
+- UI pokazało aktywne chipsy `User ID: <id>`, `Method: POST` i
+  `IP contains: 127.0.4`; nie pojawił się żaden chip `Role:`.
+- Kliknięto chip clear dla `Method: POST`; kolejny request usunął `method`, ale
+  zachował `q`, `userId` i `ip=127.0.4`.
+- Podczas całego passu nie wystąpiły requesty do `/admin/api/users` ani
+  `/admin/api/roles`, więc advanced filters nie rozszerzają PII poza aktualny
+  access-log contract.
+- Dowód screenshot: `.tmp/task-358-04-advanced-filters.png`.
+
 ### TASK-358-03 verification - 2026-06-01
 
 - Przygotowano restricted usera z rolą `audit:read` oraz kontrolowany failed
@@ -108,8 +131,10 @@ sesji. Po TASK-358-02 realnie kliknięto view session i revoke.
 - Search buduje query i przeładowuje listę przez `q`.
 - Status filter, exact `User ID`, date range
   `last-7-days`/`last-30-days`/`this-month`, custom `from`/`to` oraz `cursor`
-  są mapowane do requestu API. Server contract obsługuje też `method` i `ip`;
-  UI dla advanced method/IP filters pozostaje w `TASK-358-04`.
+  są mapowane do requestu API.
+- Advanced filters panel jest realny: `HTTP method` normalizuje metodę do
+  uppercase, `IP contains` filtruje po IP substring, a active chips pokazują
+  dokładny scope.
 - Details drawer otwiera się z realnymi danymi rekordu.
 - `Previous` na pierwszej stronie jest disabled.
 - `Next` jest sterowany przez backend `nextCursor`, a `Previous` wraca do
@@ -136,9 +161,9 @@ sesji. Po TASK-358-02 realnie kliknięto view session i revoke.
 | --- | --- | --- |
 | `View full session` nie ma handlera | zamknięte: aktywne/current sesje z `settings:read` przechodzą do Settings Sessions z `sessionId` i gated `userId`; audit-only dostaje disabled unavailable state | brak dalszego ownera dla podstawowego view session |
 | `Revoke access` nie ma handlera | zamknięte: `settings:write` + CSRF + typed confirm wykonuje jeden POST revoke, blokuje current session i odświeża row state | brak dalszego ownera dla podstawowego revoke |
-| User filter ma hard-coded role, nie użytkowników | zamknięte częściowo: static role select zastąpiony exact `User ID`, który wysyła `userId` | TASK-358-04 może dodać dynamiczny user picker/chips bez dodatkowego PII dla restricted `audit:read` |
+| User filter ma hard-coded role, nie użytkowników | zamknięte: static role select zastąpiony exact `User ID`, aktywny chip pokazuje exact user-id semantics, a role filtering jest celowo nieobecny bez historycznych role snapshots | brak dalszego ownera dla podstawowego user-filter truthfulness |
 | `Custom range` nie pokazuje pickera | zamknięte: custom range pokazuje start/end date inputs i waliduje kompletność/kolejność | brak dalszego ownera dla podstawowego custom range |
-| Sliders button nie ma handlera | nadal niezamknięte, jawnie oznaczone jako unavailable `TASK-358-04` | TASK-358-04 musi dodać drawer albo usunąć przycisk |
+| Sliders button nie ma handlera | zamknięte: otwiera realny `Advanced access filters` panel z method/IP filters, walidacją i chipsami | brak dalszego ownera dla podstawowych advanced filters |
 | Paginacja jest statyczna | zamknięte: brak page 1/2/3, jest backend `nextCursor` i Previous/Next | brak dalszego ownera dla podstawowej paginacji |
 | Search result match jest niewyjaśniony | zamknięte: row pokazuje `Matched user email`/inne match labels | brak dalszego ownera dla podstawowego wyjaśnienia wyników |
 | Export dialog nie eksportuje | zamknięte: CSV/JSON export używa `/admin/api/access-logs/export`, aktywnych filtrów, allowlisty kolumn, CSRF i redakcji sekretów | brak dalszego ownera dla podstawowego exportu |
@@ -148,9 +173,10 @@ sesji. Po TASK-358-02 realnie kliknięto view session i revoke.
 Pierwotnie widok miał sensowny API client dla listy, ale UI wyprzedzał backend
 contract: szczegóły sesji, revoke, custom range, zaawansowane filtry,
 paginacja i export nie miały kontraktu wykonawczego. Po TASK-358-01 część
-listowa ma już server-side contract i realną paginację. Po TASK-358-02 kontrakt
-sesji/revoke też jest wykonawczy. Po TASK-358-03 podstawowy CSV/JSON export
-jest wykonawczy; nadal brakuje advanced filters.
+listowa ma server-side contract i realną paginację. Po TASK-358-02 kontrakt
+sesji/revoke jest wykonawczy. Po TASK-358-03 podstawowy CSV/JSON export jest
+wykonawczy. Po TASK-358-04 advanced filters i user-filter truthfulness też są
+wykonawcze bez dodatkowego user/role directory lookup.
 
 ## Jak naprawić
 
@@ -160,5 +186,6 @@ jest wykonawczy; nadal brakuje advanced filters.
 - TASK-358-03: zamknięte przez `/admin/api/access-logs/export`, shared export
   helper, CSV/JSON file contract, allowlistę pól, redakcję sekretów,
   `access_logs.export` audit event i realny Playwright UI export pass.
-- TASK-358-04: podłączyć sliders/advanced filters drawer i ewentualny dynamiczny
-  user picker/chips, zachowując privacy dla restricted `audit:read`.
+- TASK-358-04: zamknięte przez realny `Advanced access filters` panel,
+  method/IP validation, active chips, exact `User ID` semantics i brak
+  dodatkowych `/users`/`/roles` lookupów dla restricted `audit:read`.
