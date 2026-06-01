@@ -5,7 +5,7 @@
 **Category:** Backups + API + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-351
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -113,3 +113,11 @@ Regression-test shape:
 - Backup checkboxes are not visual-only.
 - The selected include options reach the service layer and tests.
 - Zero/unknown selections are rejected safely.
+
+## Closure Notes
+
+Done (2026-06-01): `BackupIncludeOption` now lives in the backup service
+contract, `normalizeBackupInclude` defaults/dedupes/rejects invalid selections,
+the dialog keeps controlled checkbox state, and `BackupsPage` sends selected
+include options through the admin client to strict route validation and the
+service. Audit metadata records only selected option keys, not secret values.

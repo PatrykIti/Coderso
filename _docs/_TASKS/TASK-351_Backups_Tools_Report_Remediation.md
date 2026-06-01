@@ -5,7 +5,7 @@
 **Category:** Admin Tools + Backups + Runtime + API + UI + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-347
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -38,10 +38,10 @@ updated/restored. The unresolved gaps are product-contract level:
 
 ## Sub-Tasks
 
-- [ ] TASK-351-01: Backup Include Options Schema and Manual Request Contract
-- [ ] TASK-351-02: Backup Execution, Artifact, Restore, Download, and Delete Contract
-- [ ] TASK-351-03: Backups Pagination, Queue Health, and Table UX
-- [ ] TASK-351-04: Backups QA, Docs, and Closure
+- [x] TASK-351-01: Backup Include Options Schema and Manual Request Contract
+- [x] TASK-351-02: Backup Execution, Artifact, Restore, Download, and Delete Contract
+- [x] TASK-351-03: Backups Pagination, Queue Health, and Table UX
+- [x] TASK-351-04: Backups QA, Docs, and Closure
 
 ## Implementation Order
 
@@ -105,3 +105,16 @@ Backups are internal admin operations with destructive potential:
 - Download/restore/delete actions are real when enabled and explain why they are
   disabled otherwise.
 - Pagination controls are stateful or hidden/disabled truthfully.
+
+## Closure Notes
+
+Done (2026-06-01): Backups now keep v1 metadata-only architecture explicit:
+manual include options are controlled, validated, serialized, and logged as
+option keys; queued/running rows show the external-worker boundary and aged
+queue warning; restore/download are status-aware and disabled/rejected with
+machine-readable reasons until a worker publishes a secure artifact URL; delete
+removes only the selected metadata row; list/search pagination is strict and
+stateful. Focused browser proof covered include request body
+`["database","settings"]`, first/second-page pagination, queued worker copy,
+disabled restore/download labels, real delete, zero browser errors, and cleanup
+of temporary user/role/session/backup fixtures.

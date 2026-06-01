@@ -213,6 +213,11 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/seo/SeoManagerPage.tsx`
   - Cached APIs: none; consumes cache bus events for assistant/direct SEO mutations
   - Cache bus: `seo:list`, `seo:detail:<id>`
+- Backups
+  - UI: `core/admin/ui/backups/BackupsPage.tsx`
+  - Cached APIs: none; intentionally uncached because list pagination, queued
+    jobs, worker health, artifact readiness, and destructive action state must
+    come from the current server response.
 - Admin UI themes
   - UI: `core/admin/ui/themes/ThemesPage.tsx`
   - Cached APIs: `listAdminThemeTemplatesCached`, `getCachedAdminThemeTemplates`, `listAdminThemeProfilesCached`, `getCachedAdminThemeProfiles`

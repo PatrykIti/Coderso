@@ -5,7 +5,7 @@
 **Category:** Backups + Admin UI + API + UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-351-02
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -124,3 +124,13 @@ Regression-test shape:
 - Queued/running rows explain what is happening.
 - Disabled actions tell users why they are unavailable.
 - Search, pagination, and refresh behavior are deterministic and tested.
+
+## Closure Notes
+
+Done (2026-06-01): `listBackups` now returns paginated list metadata plus
+external worker health, the route strictly parses/rejects query parameters, and
+the admin client/table use `page`, `limit`, `query`, `total`, `hasNext`, and
+`hasPrevious` instead of local placeholder pagination. The table shows worker
+messages, aged queued warnings, per-action disabled reasons, search-empty copy,
+and refresh/Previous/Next states from the server result. Backups are documented
+as intentionally uncached.

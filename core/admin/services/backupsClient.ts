@@ -4,6 +4,7 @@ export type BackupStatus = "queued" | "running" | "complete" | "failed";
 export type BackupKind = "manual" | "scheduled";
 export type BackupStorageDriver = "local" | "s3" | "azure";
 export type BackupFrequency = "daily" | "weekly" | "monthly";
+export type BackupIncludeOption = "database" | "media" | "settings";
 
 export type BackupItem = {
   id: string;
@@ -15,6 +16,24 @@ export type BackupItem = {
   error: string | null;
   createdAt: string;
   finishedAt: string | null;
+};
+
+export type BackupWorkerHealth = {
+  mode: "external";
+  healthy: boolean;
+  queuedCount: number;
+  oldestQueuedAt: string | null;
+  message: string;
+};
+
+export type BackupListResult = {
+  items: BackupItem[];
+  page: number;
+  limit: number;
+  total: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  worker: BackupWorkerHealth;
 };
 
 export type BackupSchedule = {
@@ -34,14 +53,29 @@ export type BackupScheduleUpdate = {
   storageDriver?: BackupStorageDriver;
 };
 
-export async function listBackups() {
-  const payload = await apiRequest<{ items: BackupItem[] }>("/backups", {
+export type BackupListOptions = {
+  page?: number;
+  limit?: number;
+  query?: string;
+};
+
+export type BackupCreatePayload = {
+  kind?: BackupKind;
+  include?: BackupIncludeOption[];
+};
+
+export async function listBackups(options: BackupListOptions = {}) {
+  const params = new URLSearchParams({
+    page: String(options.page ?? 1),
+    limit: String(options.limit ?? 10),
+  });
+  if (options.query?.trim()) params.set("query", options.query.trim());
+  return apiRequest<BackupListResult>(`/backups?${params}`, {
     method: "GET",
   });
-  return payload.items;
 }
 
-export async function createBackup(input?: { kind?: BackupKind }) {
+export async function createBackup(input?: BackupCreatePayload) {
   return apiRequest<BackupItem>(
     "/backups",
     {
@@ -53,19 +87,22 @@ export async function createBackup(input?: { kind?: BackupKind }) {
   );
 }
 
-export async function restoreBackup(id: string) {
-  return apiRequest<BackupItem>(
-    `/backups/${id}/restore`,
-    { method: "POST" },
+export async function deleteBackup(id: string) {
+  return apiRequest<{ ok: true; id: string }>(
+    `/backups/${id}`,
+    { method: "DELETE" },
     { withCsrf: true }
   );
 }
 
+export async function restoreBackup(id: string) {
+  return apiRequest<BackupItem>(`/backups/${id}/restore`, { method: "POST" }, { withCsrf: true });
+}
+
 export async function downloadBackup(id: string) {
-  return apiRequest<{ url: string | null; path: string | null }>(
-    `/backups/${id}/download`,
-    { method: "GET" }
-  );
+  return apiRequest<{ url: string | null; path: string | null }>(`/backups/${id}/download`, {
+    method: "GET",
+  });
 }
 
 export async function getBackupSchedule() {

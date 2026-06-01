@@ -26,15 +26,18 @@ Current classification:
   Range filtering through the API/service contract; SEO Manager saves now update
   public page HTML metadata and refresh scores; Analytics can surface a real
   published page in range-scoped Top Content and export that ranking as CSV;
-  Import / Export can roundtrip a valid JSON bundle.
-- Partially works: Backups enqueue rows but do not create artifacts; Redirects
-  save admin rows but do not affect public routing.
-- Still UI-only/incomplete: Backup include checkboxes, Import / Export card
-  options, Activity Log, Recent Imports search, and Backups/Redirects
-  pagination. Search date range and Search empty-state / suggestion drift were
+  Backups enqueue metadata rows with a documented external-worker boundary,
+  controlled include payloads, stateful pagination, disabled action reasons,
+  and real metadata-row delete; Import / Export can roundtrip a valid JSON
+  bundle.
+- Partially works: Redirects save admin rows but do not affect public routing.
+- Still UI-only/incomplete: Import / Export card options, Activity Log, Recent
+  Imports search, and Redirects pagination. Search date range and Search
+  empty-state / suggestion drift were
   closed by TASK-348 on 2026-06-01; SEO audit/filter/save drift was closed by
   TASK-349 on 2026-06-01; Analytics export/no-data/top-content range drift was
-  closed by TASK-350 on 2026-06-01.
+  closed by TASK-350 on 2026-06-01; Backups include/pagination/action-state
+  drift was closed by TASK-351 on 2026-06-01.
 
 ## Evidence
 
@@ -55,8 +58,10 @@ Current classification:
     labels, a temporary published fixture across all visible date ranges,
     drawer CSV export, and zero browser console/page errors through a focused
     Chrome DevTools Protocol pass.
-  - Manual backup was started through the UI and verified as queued with no
-    artifact.
+  - TASK-351 follow-up proof on 2026-06-01 verified Backups include request
+    serialization, external-worker queued state, real pagination, disabled
+    restore/download reasons, real delete, and zero browser console/page
+    errors through a focused Chrome DevTools Protocol pass.
   - Import / Export valid JSON bundle was downloaded, modified, uploaded,
     previewed, applied, verified through export, and restored.
   - Redirect was created in the UI, checked against the public runtime, and
@@ -84,7 +89,7 @@ Affected surfaces:
 
 - Import / Export Activity Log button
 - Import / Export per-card options chevron
-- Backups and Redirects pagination buttons
+- Redirects pagination buttons
 
 Why it happens:
 
@@ -100,11 +105,10 @@ How to fix:
 - Add regression tests that click these controls and assert the resulting menu,
   route, download, pagination, or disabled state.
 
-### [ISSUE] Several checkbox groups are uncontrolled and not sent to services
+### [ISSUE] Import / Export checkbox groups are uncontrolled and not sent to services
 
 Affected surfaces:
 
-- Backup content selection
 - Import / Export include options
 
 Why it happens:
@@ -125,25 +129,20 @@ How to fix:
 Affected surfaces:
 
 - Redirects
-- Backups
 
 Evidence:
 
 - Redirects persisted a 301 redirect row, but requesting the public source path
   returned 404 and stayed on the source URL.
-- Backups persisted a queued row, but no artifact path, size, download, restore,
-  or completion was produced.
 
 How to fix:
 
 - Add a public redirect lookup before public page/content resolution.
-- Add a backup worker/artifact creation path and status polling.
 
 ### [ISSUE] Pagination controls are placeholders
 
 Affected surfaces:
 
-- Backups table
 - Redirects table
 
 Why it happens:

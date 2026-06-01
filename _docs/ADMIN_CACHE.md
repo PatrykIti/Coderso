@@ -421,6 +421,17 @@ Clients update caches and broadcast events on:
   diagnostics block hard delete through `form_delete_restricted`, so failed
   deletes must not remove rows from browser cache as success.
 
+### Backups uncached note
+
+- Backups intentionally do not use localStorage/admin cache keys.
+- `core/admin/ui/backups/BackupsPage.tsx` reads `listBackups()` directly and
+  refreshes after create/delete/restore/download attempts because queue state,
+  worker health, artifact readiness, and destructive-action availability are
+  operationally sensitive and fast-changing.
+- Backup create/delete mutations must not patch browser cache state. The server
+  response and immediate refetch remain the source of truth for list totals,
+  pagination, and disabled-action reasons.
+
 ## Extending The Cache
 When adding a new resource:
 1. Add cache keys + TTLs to `core/admin/services/cachePolicy.ts`.

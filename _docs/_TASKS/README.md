@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 32 tasks
+- **To Do:** 27 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2020 tasks
+- **Done:** 2025 tasks
 
 ---
 
@@ -55,11 +55,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-352-03 | Import Activity History, Progress, Failure Reason, and Retry UX | Medium | Large | Replace static Recent Imports with searchable, truthful activity/progress/retry behavior or explicit unavailable state. |
 | TASK-352-04 | Import Export File-Type and Options-Control Truthfulness | Medium | Medium | Align supported file-type copy/input/parser and wire or disable per-card chevrons. |
 | TASK-352-05 | Import Export QA, Docs, and Closure | Medium | Medium | Prove export/import roundtrip, malformed-bundle rejection, activity controls, and docs/changelog closure. |
-| TASK-351 | Backups Tools Report Remediation | High | Very Large | New report-driven family for include options, artifact lifecycle, restore/download/delete, pagination, queue health, and closure proof. |
-| TASK-351-01 | Backup Include Options Schema and Manual Request Contract | High | Medium | Make manual backup checkboxes controlled, validated, serialized, and safe for audit metadata. |
-| TASK-351-02 | Backup Execution, Artifact, Restore, Download, and Delete Contract | High | Very Large | Add real local/dev backup lifecycle or document an explicit external-worker boundary with safe actions. |
-| TASK-351-03 | Backups Pagination, Queue Health, and Table UX | Medium | Large | Replace placeholder pagination and explain queued/action-disabled states with tested UI. |
-| TASK-351-04 | Backups QA, Docs, and Closure | Medium | Medium | Prove DB-backed lifecycle behavior, Playwright evidence, cleanup, and docs/changelog closure. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -86,6 +81,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-351 | Backups Tools Report Remediation | High | Very Large | Done (2026-06-01): include options are controlled/validated, v1 external-worker queue semantics are explicit, restore/download/delete are status-aware, pagination is real, and docs/browser proof are synchronized. |
+| TASK-351-01 | Backup Include Options Schema and Manual Request Contract | High | Medium | Done (2026-06-01): manual backup include checkboxes now serialize through client/route/service validation and audit option-key metadata. |
+| TASK-351-02 | Backup Execution, Artifact, Restore, Download, and Delete Contract | High | Very Large | Done (2026-06-01): metadata-only external-worker boundary is explicit, download/restore reject unsafe states, and delete removes only target backup metadata rows. |
+| TASK-351-03 | Backups Pagination, Queue Health, and Table UX | Medium | Large | Done (2026-06-01): list/search pagination, worker health copy, aged queue warnings, disabled action reasons, and uncached behavior are implemented and tested. |
+| TASK-351-04 | Backups QA, Docs, and Closure | Medium | Medium | Done (2026-06-01): Bun/Vitest/lint/typecheck plus focused Chromium CDP proof, reports, docs, board, and changelog are synchronized. |
 | TASK-350 | Analytics Tools Report Remediation | Medium | Large | Done (2026-06-01): Top Content is range-scoped, drawer Export downloads CSV, no-data KPI semantics are truthful, reports, docs, and browser proof are synchronized. |
 | TASK-350-01 | Analytics Export Contract and Download Flow | High | Medium | Done (2026-06-01): strict export route/client/service CSV contract, range-aware Top Content, and drawer download/loading/error states are complete. |
 | TASK-350-02 | Analytics Empty Data Semantics and Guidance | Medium | Medium | Done (2026-06-01): KPI cards distinguish no data/no period activity/new data and Top Content empty states include publish-or-widen-range guidance. |

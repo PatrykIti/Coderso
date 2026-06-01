@@ -5,7 +5,7 @@
 **Category:** Backups + DB Tests + Playwright + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-351-01, TASK-351-02, TASK-351-03
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -94,3 +94,13 @@ No additional route changes are expected in this closure leaf.
 - Queue/artifact/action behavior is proven or explicitly documented as
   external-worker-backed.
 - DB fixtures and artifacts from validation are cleaned up safely.
+
+## Closure Notes
+
+Done (2026-06-01): DB-backed Bun service tests, route registration/validation
+tests, Vitest admin/UI tests, lint, typecheck, and a focused headless Chromium
+CDP pass are green for TASK-351. The browser proof created a temporary admin
+user/session/role and pagination backup fixtures, verified include payload
+serialization, external-worker queued copy, disabled restore/download reasons,
+real delete, and cleanup back to the pre-proof backup count. Reports, user/API
+docs, architecture/cache docs, board, and changelog are synchronized.

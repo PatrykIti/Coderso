@@ -5,7 +5,7 @@
 **Category:** Backups + Runtime + API + Storage + Security
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-351-01
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -159,3 +159,13 @@ Regression-test shape:
   supported.
 - Restore/delete behavior is real or truthfully unavailable with documented
   product rationale.
+
+## Closure Notes
+
+Done (2026-06-01): v1 remains an external-worker metadata queue per
+architecture. `resolveBackupDownload` now rejects queued/artifact-less rows and
+non-`http(s)` artifacts, `restoreBackup` rejects not-ready rows and then returns
+`backup_restore_unsupported` until a worker-backed restore exists, route errors
+map through `mapBackupError`, and `DELETE /backups/:id` removes only the target
+metadata row with audit coverage. The UI enables download only for
+worker-provided URL artifacts and keeps restore unavailable with explicit copy.

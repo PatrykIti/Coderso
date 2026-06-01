@@ -928,7 +928,17 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Backupy w v1 to **metadata-only** zapisane w tabeli `backups`.
 - Harmonogram trzymany jest w `backup_schedules` i konfigurowany z Admin UI.
 - Storage driver dla backupu jest brany z ustawien storage (local/s3/azure).
-- Faktyczne tworzenie/restore plikow backupu realizuje przyszly worker/plugin.
+- Manual create zapisuje queued job i request-time include option keys
+  (`database`, `media`, `settings`) do service/audit contractu. Core nie
+  zapisuje sekretnych wartosci ani zawartosci artefaktu w payloadach UI/API.
+- Faktyczne tworzenie, publikacja bezpiecznego `http(s)` download URL, oraz
+  restore plikow backupu realizuje przyszly external worker/plugin.
+- Core UI/API musza pokazywac te granice jawnie: queued/running jobs wskazuja
+  external worker, download jest dostepny tylko dla completed rows z
+  worker-provided URL, restore pozostaje unsupported do czasu worker-backed
+  restore, a delete usuwa tylko metadata row.
+- Backups admin list pozostaje intentional uncached, bo stan kolejki/worker
+  health jest szybkozmienny i moze ujawniac operacyjne informacje.
 
 ## Kluczowe decyzje architektoniczne
 

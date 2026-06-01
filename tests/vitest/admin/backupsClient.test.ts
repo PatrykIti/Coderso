@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 
 import {
   createBackup,
+  deleteBackup,
   downloadBackup,
   getBackupSchedule,
   listBackups,
@@ -16,25 +17,39 @@ const jsonResponse = (payload: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
-test("listBackups hits GET /backups", async () => {
+test("listBackups hits GET /backups with pagination params", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
 
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
-    return jsonResponse({ items: [] });
+    return jsonResponse({
+      items: [],
+      page: 2,
+      limit: 25,
+      total: 0,
+      hasNext: false,
+      hasPrevious: true,
+      worker: {
+        mode: "external",
+        healthy: true,
+        queuedCount: 0,
+        oldestQueuedAt: null,
+        message: "No jobs.",
+      },
+    });
   };
 
   try {
-    await listBackups();
-    expect(calls[0]?.input).toBe("/admin/api/backups");
+    await listBackups({ page: 2, limit: 25, query: "queued" });
+    expect(calls[0]?.input).toBe("/admin/api/backups?page=2&limit=25&query=queued");
     expect(calls[0]?.init?.method).toBe("GET");
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("createBackup uses CSRF and POST", async () => {
+test("createBackup sends include options with CSRF and POST", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
 
@@ -49,10 +64,37 @@ test("createBackup uses CSRF and POST", async () => {
 
   try {
     resetCsrfToken();
-    await createBackup({ kind: "manual" });
+    await createBackup({ kind: "manual", include: ["database", "settings"] });
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/backups");
     expect(calls[1]?.init?.method).toBe("POST");
+    expect(calls[1]?.init?.body).toBe(
+      JSON.stringify({ kind: "manual", include: ["database", "settings"] })
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("deleteBackup uses CSRF and DELETE", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ ok: true, id: "backup-1" });
+  };
+
+  try {
+    resetCsrfToken();
+    await deleteBackup("backup-1");
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/backups/backup-1");
+    expect(calls[1]?.init?.method).toBe("DELETE");
   } finally {
     globalThis.fetch = originalFetch;
   }

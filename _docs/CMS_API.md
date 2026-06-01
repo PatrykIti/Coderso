@@ -2628,19 +2628,41 @@ Response:
 
 Permissions: `backups:read`, `backups:write`
 
-Note: v1 backupy to metadane + placeholder na artefakt. Faktyczne backupy realizuje worker/plugin.
+Note: v1 backupy to metadane + placeholder na artefakt. Faktyczne tworzenie
+artefaktow i restore realizuje external worker/plugin. Core API exposes the
+queue, worker boundary, safe action states, and metadata-row delete.
 
-- `GET /backups`
+- `GET /backups?page=1&limit=10&query=queued`
 - `POST /backups` (manual create)
 - `POST /backups/:id/restore`
 - `GET /backups/:id/download`
+- `DELETE /backups/:id`
 - `GET /backups/schedule`
 - `PATCH /backups/schedule`
 
 Create payload (optional):
 
 ```json
-{ "kind": "manual" }
+{
+  "kind": "manual",
+  "include": ["database", "media"]
+}
+```
+
+`include` is optional and defaults to `["database", "media"]`. Allowed values
+are `database`, `media`, and `settings`; the array must contain 1-3 unique
+values. The selected option keys are accepted by the service and recorded in
+audit metadata, but v1 does not persist secret values or artifact contents in
+the browser/API payload.
+
+List query:
+
+```json
+{
+  "page": 1,
+  "limit": 10,
+  "query": "queued"
+}
 ```
 
 List response:
@@ -2659,9 +2681,24 @@ List response:
       "createdAt": "2026-01-30T10:00:00Z",
       "finishedAt": "2026-01-30T10:05:00Z"
     }
-  ]
+  ],
+  "page": 1,
+  "limit": 10,
+  "total": 1,
+  "hasNext": false,
+  "hasPrevious": false,
+  "worker": {
+    "mode": "external",
+    "healthy": true,
+    "queuedCount": 0,
+    "oldestQueuedAt": null,
+    "message": "No backup jobs are waiting for the external backup worker."
+  }
 }
 ```
+
+Unknown query fields are rejected. `page` must be an integer >= 1 and `limit`
+must be 1-100.
 
 Schedule payload:
 
@@ -2677,8 +2714,33 @@ Schedule payload:
 Download response:
 
 ```json
-{ "url": "https://cdn.example.com/backups/backup.tar", "path": "s3://bucket/backup.tar" }
+{ "url": "https://cdn.example.com/backups/backup.tar", "path": null }
 ```
+
+Download returns `backup_not_ready` for queued/running/failed/artifact-less
+rows and `backup_artifact_invalid` when a completed row has a non-downloadable
+artifact path. The current admin route only opens worker-provided `http(s)`
+artifact URLs.
+
+Restore returns `backup_not_ready` until a completed artifact exists, then
+`backup_restore_unsupported` until an external worker/plugin provides the
+restore implementation.
+
+Delete response:
+
+```json
+{ "ok": true, "id": "backup-id" }
+```
+
+Known backup error codes:
+
+- `backup_not_found`
+- `backup_not_ready`
+- `backup_restore_unsupported`
+- `backup_artifact_invalid`
+- `backup_include_required`
+- `backup_include_invalid`
+- `backup_schedule_invalid`
 
 ---
 
