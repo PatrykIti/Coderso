@@ -5,7 +5,7 @@
 **Category:** Admin UI + Settings + Navigation + Dirty State + Mobile UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-359-01
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -115,3 +115,21 @@ Error handling:
 - Settings section switches are SPA transitions.
 - Dirty Settings drafts cannot be lost silently.
 - Mobile users can reach every Settings section.
+
+## Completion Notes
+
+- `SettingsSidebar` now uses `AdminLink` with `prefetch`; Site Settings
+  empty-state admin links also use `AdminLink`.
+- `AdminRouterContext` supports inert navigation blockers, and Settings
+  registers a boolean-only dirty blocker that covers sidebar links, direct
+  Settings `AdminLink`, browser Back/Forward, and refresh/close.
+- Dirty registration covers General, Assistant, Site, Security, Email,
+  Storage, Login Alerts, API key create dialog, webhook drawer, integration
+  request/config drawers, and IP allowlist drawer drafts. Secret fields are
+  represented only as sentinel dirty values.
+- `SettingsShell` exposes mobile Settings navigation below `lg`, and the
+  sidebar now includes Sessions, Login Alerts, and IP Allowlist routes.
+- Playwright evidence on 2026-06-02 passed with `errors: []`,
+  `authMeRequests: 0`, `documentLoadEvents: 0`, no `auth/me` 429, no login
+  redirect, dirty cancel/confirm, dirty Back cancel/confirm, and 12 visible
+  Settings mobile links.

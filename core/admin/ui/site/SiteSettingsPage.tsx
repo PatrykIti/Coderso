@@ -24,11 +24,11 @@ import {
 } from "@/services/siteSettingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { InfoTip } from "@/ui/shared/InfoTip";
-import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
-import { resolveAdminHref } from "@/utils/adminPaths";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { SettingsSidebar } from "@/ui/settings/SettingsSidebar";
 import { AdminAccessCard } from "@/ui/settings/AdminAccessCard";
 import { BaseUrlCard } from "@/ui/settings/BaseUrlCard";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 import { cn } from "@/lib/utils";
 
@@ -160,8 +160,8 @@ const resolvePublicBaseUrl = (value: string) => {
 };
 
 export function SiteSettingsPage() {
-  const adminBasePath = useAdminBasePath();
   const [form, setForm] = useState<SiteSettingsForm>(defaultForm);
+  const [savedForm, setSavedForm] = useState<SiteSettingsForm>(defaultForm);
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("loading");
@@ -183,11 +183,12 @@ export function SiteSettingsPage() {
     ])
       .then(([settings, pagesResult, typesResult]) => {
         if (!active) return;
-        setForm((prev) => ({
-          ...prev,
+        const loadedForm = {
           ...toFormValues(settings),
           contentRoutes: mergeContentRoutes(toFormValues(settings).contentRoutes, typesResult),
-        }));
+        };
+        setForm(loadedForm);
+        setSavedForm(loadedForm);
         setPages(pagesResult);
         setContentTypes(typesResult);
         setStatus("ready");
@@ -208,6 +209,8 @@ export function SiteSettingsPage() {
     () => validateContentRoutes(form.contentRoutes),
     [form.contentRoutes]
   );
+  const isDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
+  useRegisterSettingsDirty(status === "ready" && isDirty);
 
   const publicBaseUrlError = validateBaseUrl(form.publicBaseUrl);
   const adminBaseUrlError = validateBaseUrl(form.adminBaseUrl);
@@ -257,7 +260,12 @@ export function SiteSettingsPage() {
         cacheTtlSeconds: Math.max(0, Math.floor(cacheTtlValue || 0)),
         contentRoutes: normalizedRoutes,
       });
-      setForm((prev) => ({ ...prev, ...toFormValues(updated) }));
+      const updatedForm = {
+        ...toFormValues(updated),
+        contentRoutes: mergeContentRoutes(toFormValues(updated).contentRoutes, contentTypes),
+      };
+      setForm(updatedForm);
+      setSavedForm(updatedForm);
       setSaveSuccess("Site settings updated.");
       return true;
     } catch (err) {
@@ -267,7 +275,7 @@ export function SiteSettingsPage() {
     } finally {
       setSaving(false);
     }
-  }, [cacheTtlValue, form, hasValidationErrors]);
+  }, [cacheTtlValue, contentTypes, form, hasValidationErrors]);
 
   const handleViewHomepage = () => {
     setActionError(null);
@@ -505,12 +513,12 @@ export function SiteSettingsPage() {
                       {pages.length === 0 ? (
                         <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
                           No pages yet. Create one in the
-                          <a
+                          <AdminLink
                             className="ml-1 text-primary underline-offset-4 hover:underline"
-                            href={resolveAdminHref(adminBasePath, "/admin/pages")}
+                            href="/admin/pages"
                           >
                             Pages section
-                          </a>
+                          </AdminLink>
                           .
                         </div>
                       ) : null}
@@ -583,12 +591,12 @@ export function SiteSettingsPage() {
                       {contentTypes.length === 0 ? (
                         <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
                           No content types yet. Create one in
-                          <a
+                          <AdminLink
                             className="ml-1 text-primary underline-offset-4 hover:underline"
-                            href={resolveAdminHref(adminBasePath, "/admin/content-types")}
+                            href="/admin/content-types"
                           >
                             Content Types
-                          </a>
+                          </AdminLink>
                           .
                         </div>
                       ) : null}

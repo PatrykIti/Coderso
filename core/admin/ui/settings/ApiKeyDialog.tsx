@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
 import { apiKeyScopeOptions, getDefaultScopes } from "./apiKeyScopes";
 
@@ -34,6 +35,11 @@ export function ApiKeyDialog({
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<string[]>(getDefaultScopes());
   const [localError, setLocalError] = useState<string | null>(null);
+  const defaultScopes = getDefaultScopes();
+  const scopesChanged =
+    scopes.length !== defaultScopes.length ||
+    scopes.some((scope, index) => scope !== defaultScopes[index]);
+  useRegisterSettingsDirty(open && (name.trim().length > 0 || scopesChanged));
 
   const resetForm = () => {
     setName("");
@@ -100,10 +106,7 @@ export function ApiKeyDialog({
         <ScrollArea className="flex-1">
           <div className="space-y-5 px-6 py-5">
             <div className="space-y-2">
-              <label
-                htmlFor="api-key-name"
-                className="text-sm font-semibold text-foreground"
-              >
+              <label htmlFor="api-key-name" className="text-sm font-semibold text-foreground">
                 Key Name
               </label>
               <Input
@@ -132,17 +135,11 @@ export function ApiKeyDialog({
                       <Checkbox
                         className="mt-1"
                         checked={scopes.includes(scope.id)}
-                        onCheckedChange={(value) =>
-                          handleToggleScope(scope.id, value === true)
-                        }
+                        onCheckedChange={(value) => handleToggleScope(scope.id, value === true)}
                       />
                       <div>
-                        <p className="text-sm font-semibold text-foreground">
-                          {scope.label}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {scope.description}
-                        </p>
+                        <p className="text-sm font-semibold text-foreground">{scope.label}</p>
+                        <p className="text-xs text-muted-foreground">{scope.description}</p>
                       </div>
                     </label>
                   ))}

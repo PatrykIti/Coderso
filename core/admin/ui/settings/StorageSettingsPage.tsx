@@ -42,6 +42,7 @@ import {
   type StorageDriver,
 } from "@/services/settingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
 import { SettingsSidebar } from "./SettingsSidebar";
@@ -356,9 +357,32 @@ const normalizeMaxSize = (value: string, unit: StorageSizeUnit) => {
   return Math.round(parsed * multiplier);
 };
 
+const getStorageDirtySignature = (form: StorageFormState, activeProvider: StorageProviderId) =>
+  JSON.stringify({
+    activeProvider,
+    driver: form.driver,
+    localDir: form.localDir,
+    publicBaseUrl: form.publicBaseUrl,
+    maxSizeValue: form.maxSizeValue,
+    maxSizeUnit: form.maxSizeUnit,
+    allowedMime: form.allowedMime,
+    s3Bucket: form.s3Bucket,
+    s3Region: form.s3Region,
+    s3Endpoint: form.s3Endpoint,
+    azureAccount: form.azureAccount,
+    azureContainer: form.azureContainer,
+    s3AccessKey: form.s3AccessKey.trim() ? "draft-secret" : "",
+    s3SecretKey: form.s3SecretKey.trim() ? "draft-secret" : "",
+    azureKey: form.azureKey.trim() ? "draft-secret" : "",
+    azureConnectionString: form.azureConnectionString.trim() ? "draft-secret" : "",
+  });
+
 export function StorageSettingsPage() {
   const [activeProvider, setActiveProvider] = useState<StorageProviderId>("local");
   const [form, setForm] = useState<StorageFormState>(emptyFormState);
+  const [savedSignature, setSavedSignature] = useState(() =>
+    getStorageDirtySignature(emptyFormState, "local")
+  );
   const [secrets, setSecrets] = useState<SecretFlags>(emptySecrets);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -377,7 +401,7 @@ export function StorageSettingsPage() {
         const driver = result.driver as StorageProviderId;
         setActiveProvider(driver);
         const sizeState = resolveSizeFromBytes(result.maxSizeBytes);
-        setForm({
+        const loadedForm = {
           driver,
           localDir: result.local.dir ?? "./storage/media",
           publicBaseUrl: result.publicBaseUrl ?? "",
@@ -393,7 +417,9 @@ export function StorageSettingsPage() {
           azureKey: "",
           azureContainer: result.azure.container ?? "",
           azureConnectionString: "",
-        });
+        };
+        setForm(loadedForm);
+        setSavedSignature(getStorageDirtySignature(loadedForm, driver));
         setSecrets({
           s3AccessKey: result.s3.accessKey.configured,
           s3SecretKey: result.s3.secretKey.configured,
@@ -438,6 +464,9 @@ export function StorageSettingsPage() {
     }),
     [activeProvider, form]
   );
+  useRegisterSettingsDirty(
+    !isLoading && getStorageDirtySignature(form, activeProvider) !== savedSignature
+  );
 
   const handleSave = useCallback(async () => {
     if (busy) return false;
@@ -467,13 +496,14 @@ export function StorageSettingsPage() {
       };
 
       const updated = await updateStorageSettings(payload);
-      setForm((prev) => ({
-        ...prev,
-        driver: updated.driver,
+      const sizeState = resolveSizeFromBytes(updated.maxSizeBytes);
+      const savedProvider = updated.driver as StorageProviderId;
+      const savedForm: StorageFormState = {
+        driver: savedProvider,
         localDir: updated.local.dir ?? "./storage/media",
         publicBaseUrl: updated.publicBaseUrl ?? "",
-        maxSizeValue: resolveSizeFromBytes(updated.maxSizeBytes).value,
-        maxSizeUnit: resolveSizeFromBytes(updated.maxSizeBytes).unit,
+        maxSizeValue: sizeState.value,
+        maxSizeUnit: sizeState.unit,
         allowedMime: updated.allowedMime ?? "",
         s3AccessKey: "",
         s3SecretKey: "",
@@ -484,7 +514,10 @@ export function StorageSettingsPage() {
         azureKey: "",
         azureContainer: updated.azure.container ?? "",
         azureConnectionString: "",
-      }));
+      };
+      setActiveProvider(savedProvider);
+      setForm(savedForm);
+      setSavedSignature(getStorageDirtySignature(savedForm, savedProvider));
       setSecrets({
         s3AccessKey: updated.s3.accessKey.configured,
         s3SecretKey: updated.s3.secretKey.configured,

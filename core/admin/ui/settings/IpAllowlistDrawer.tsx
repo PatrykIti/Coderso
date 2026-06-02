@@ -15,6 +15,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
 type IpAllowlistDrawerPanelProps = {
   onSubmit?: (payload: { cidr: string; label?: string; description?: string }) => void;
@@ -22,6 +23,7 @@ type IpAllowlistDrawerPanelProps = {
   error?: string | null;
   readOnly?: boolean;
   useSheetHeaderSemantics?: boolean;
+  dirtyTrackingEnabled?: boolean;
   closeAction?: React.ReactNode;
   cancelAction?: React.ReactNode;
 };
@@ -36,6 +38,7 @@ export function IpAllowlistDrawerPanel({
   error,
   readOnly = false,
   useSheetHeaderSemantics = false,
+  dirtyTrackingEnabled = true,
   closeAction,
   cancelAction,
 }: IpAllowlistDrawerPanelProps) {
@@ -43,6 +46,11 @@ export function IpAllowlistDrawerPanel({
   const [cidr, setCidr] = useState("");
   const [description, setDescription] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  useRegisterSettingsDirty(
+    dirtyTrackingEnabled &&
+      !readOnly &&
+      (label.trim().length > 0 || cidr.trim().length > 0 || description.trim().length > 0)
+  );
 
   const handleSubmit = () => {
     if (readOnly) return;
@@ -231,6 +239,7 @@ export function IpAllowlistDrawer({
           isSubmitting={isSubmitting}
           error={error ?? undefined}
           useSheetHeaderSemantics
+          dirtyTrackingEnabled={open}
           closeAction={
             <SheetClose asChild>
               <Button variant="ghost" size="icon" aria-label="Close drawer">

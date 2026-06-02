@@ -127,6 +127,13 @@ Use this safe storage workflow when you want fewer asset-delivery mistakes:
 5. Confirm the migration caveat is understood.
 6. Save changes deliberately.
 
+# Navigation And Drafts
+
+- Settings section links use in-app navigation on desktop and mobile.
+- If this screen has unsaved edits, moving to another Settings section,
+  browser Back/Forward, or refresh/close prompts before the draft is discarded.
+- Choose cancel/keep editing when you need to preserve the current draft.
+
 # Security
 
 - Storage Settings is an authenticated admin surface and should only be used by

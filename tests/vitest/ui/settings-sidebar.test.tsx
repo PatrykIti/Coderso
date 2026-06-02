@@ -15,6 +15,12 @@ test("SettingsSidebar renders settings navigation items", () => {
   expect(html).toContain("/admin/settings/site");
   expect(html).toContain("Security");
   expect(html).toContain("/admin/settings/security");
+  expect(html).toContain("Sessions");
+  expect(html).toContain("/admin/settings/security/sessions");
+  expect(html).toContain("Login Alerts");
+  expect(html).toContain("/admin/settings/security/login-alerts");
+  expect(html).toContain("IP Allowlist");
+  expect(html).toContain("/admin/settings/security/ip-allowlist");
   expect(html).toContain("API Keys");
   expect(html).toContain("/admin/settings/api-keys");
   expect(html).toContain("Webhooks");

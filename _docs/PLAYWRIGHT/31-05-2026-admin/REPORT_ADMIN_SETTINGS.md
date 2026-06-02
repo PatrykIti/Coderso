@@ -16,6 +16,39 @@ Główne źródła: `core/admin/ui/settings/**`, `core/admin/ui/site/**`,
 
 ## Co faktycznie kliknięto
 
+### Piąta fala - 2026-06-02: TASK-359-02 SPA navigation, dirty guard i mobile
+
+- Kliknięto realne linki Settings z UI bez `page.goto`: Assistant, Site,
+  Security, Email, Storage i Integrations.
+- W trakcie tych przejść utrzymano marker JS w `window`, co potwierdziło SPA
+  navigation bez remountu dokumentu.
+- Request-budget evidence dla fazy kliknięć: `authMeRequests: 0`,
+  `documentLoadEvents: 0`, `auth429Responses: 0`, `loginRedirected: false`.
+- Dirty guard: na General wpisano draft `Site name`, kliknięto Security,
+  zobaczono confirm `Discard unsaved settings?`, wybrano `Keep editing`,
+  pozostano na General i draft został zachowany.
+- Dirty confirm: ponowne kliknięcie Security i `Discard changes` przeniosło do
+  `/admin/settings/security`.
+- Browser Back evidence: po wejściu z Security do General, wpisaniu draftu i
+  użyciu `window.history.back()` guard pokazał ten sam confirm, cancel zachował
+  draft i URL General, a confirm przeniósł z powrotem do Security.
+- Mobile viewport 390x844 miał widoczne linki Settings: General, Assistant,
+  Site, Security, Sessions, Login Alerts, IP Allowlist, API Keys, Webhooks,
+  Email, Storage, Integrations.
+- Mobile click do Storage także zachował marker JS i miał
+  `documentLoadEvents: 0`.
+- Screenshot evidence:
+  `.tmp/task-359-02-settings-desktop.png` i
+  `.tmp/task-359-02-settings-mobile.png`.
+- Claude read-only review wskazał, żeby nie dodawać settings cache prefetch w
+  tym leafie; `AdminLink prefetch` pozostaje zgodny z helperem, a realny cache
+  Settings jest właścicielem `TASK-359-03`.
+- Subagent review po implementacji wykrył drifty: raw admin anchors w Site,
+  guard tylko w sidebarze, brak Back/Forward ochrony i niepełną mobile
+  reachability dla Security subroutes. Zostały zamknięte przez router blocker,
+  `AdminLink` w Site i rozszerzenie Settings sidebaru o Sessions/Login
+  Alerts/IP Allowlist.
+
 ### Czwarta fala - 2026-06-01: TASK-359-01 RBAC verification
 
 - Zalogowano tymczasowego usera z rolą `roles:read` bez `settings:read`.
@@ -126,15 +159,23 @@ Główne źródła: `core/admin/ui/settings/**`, `core/admin/ui/site/**`,
   `/admin/settings`, direct URL pokazuje pełnoekranowe `Access denied`, a
   globalny Settings bootstrap nie wykonuje `GET /admin/api/settings`.
   Zweryfikowano warianty `roles:read` i `audit:read` bez `settings:read`.
+- `TASK-359-02`: Settings section links są SPA transitions przez `AdminLink`,
+  bez document reloadu i bez ponownego `auth/me` podczas szybkiego
+  przeklikania sekcji.
+- `TASK-359-02`: dirty Settings drafts są chronione dla sidebar links,
+  bezpośrednich `AdminLink`, browser Back/Forward i refresh/close; cancel
+  zachowuje draft, a discard przechodzi dalej.
+- `TASK-359-02`: mobile Settings navigation pokazuje wszystkie główne Settings
+  sekcje oraz Security subroutes: Sessions, Login Alerts i IP Allowlist.
 
 ## Co nie działało / co jest ryzykowne
 
 | Obszar | Problem | Dlaczego |
 | --- | --- | --- |
-| Settings navigation | Klikanie między opcjami Settings robi pełny reload i ponownie odpala `auth/me` + `settings` | `SettingsSidebar.tsx` używa surowego `<a href>` zamiast `AdminLink`, więc omija SPA router/prefetch |
+| Settings navigation | Zamknięte w `TASK-359-02`: kliknięcia między opcjami Settings są SPA transitions i nie refetchują `auth/me` w fazie przejść | `SettingsSidebar.tsx` używa `AdminLink`, a shared router blocker pilnuje dirty navigation |
 | Settings cache | Wartości Settings nie są cache'owane/hydratowane jak listy/editor pages | `settingsClient.ts` i `siteSettingsClient.ts` używają bezpośrednio `apiRequest`; brak cache keys/cacheBus w `_docs/ADMIN_CACHE.md` |
-| Settings dirty state | Przejście raw linkiem z niezapisanymi zmianami może je stracić | brak route-level dirty guard; auto-save jest globalnym localStorage toggle, nie ochroną przed opuszczeniem formularza |
-| Settings mobile | Lokalny Settings sidebar znika na mobile bez równoważnej nawigacji sekcji | `SettingsShell.tsx` ukrywa sidebar przez `hidden ... lg:block` |
+| Settings dirty state | Zamknięte w `TASK-359-02`: Settings drafts wymagają confirmu przy sidebar/direct SPA navigation, Back/Forward i refresh/close | boolean-only dirty guard nie serializuje sekretów; cancel zachowuje draft |
+| Settings mobile | Zamknięte w `TASK-359-02`: mobile ma lokalną Settings nawigację z top-level sekcjami i Security subroutes | `SettingsShell.tsx` renderuje Settings sidebar także poniżej `lg` |
 | General | Logo upload, favicon upload/remove wyglądają aktywnie, ale nie mają file input/handlera | `LogoUploadCard.tsx` renderuje buttony bez akcji |
 | General | Timezone wygląda jak ustawienie, ale nie jest podłączony do save payloadu | `BrandingCard.tsx` używa `defaultValue`, bez state i bez `onSave` mappingu |
 | Assistant | `Run reindex` jest realną mutacją indeksu dokumentów | działa, ale wymaga osobnego potwierdzenia/dry-run w QA |
@@ -169,11 +210,13 @@ read-through cache dla `getUserSettings`, `getAssistantStatus`,
 bezpośrednie `GET /settings`, `GET /settings/security`, `GET /settings/storage`,
 `GET /settings/email` itd.
 
-Navigation w Settings ma osobny problem: `SettingsSidebar.tsx` renderuje raw
-`<a href>` z `resolveAdminHref`, nie `AdminLink`. To omija SPA navigation i
-prefetch contract, dlatego każde kliknięcie startuje ponowny bootstrap
-`auth/me`, globalne `settings` i endpoint danej podstrony. Przy szybkim
-przeklikaniu da się uderzyć w rate limit auth.
+Navigation w Settings zostało zamknięte w `TASK-359-02`: `SettingsSidebar`
+renderuje `AdminLink`, Settings shell ma mobile nav, a shared admin router
+obsługuje settings-scoped dirty blocker dla SPA navigation i Back/Forward.
+Evidence z piątej fali pokazuje `authMeRequests: 0`,
+`documentLoadEvents: 0`, brak `429` i brak redirectu na login podczas fazy
+kliknięć sekcji. Redukcja requestów endpointów danej sekcji pozostaje osobnym
+cache kontraktem `TASK-359-03`.
 
 Druga fala pokazała też problem przekrojowy RBAC: `AdminApp.tsx` pobierał
 settings globalnie po samym `authState === "authenticated"`, bez sprawdzenia
@@ -189,12 +232,13 @@ linkuje już do `/admin/settings`.
   URL bez uprawnień.
 - Zamknięte w `TASK-359-01`: globalny `getSettings()` nie uruchamia się po
   logowaniu, jeśli bieżący user nie ma `settings:read`.
-- Zmienić `SettingsSidebar` z raw `<a>` na `AdminLink` z canonical hrefami i
-  prefetch przez shared admin route helpers.
-- Dodać dirty-state guard dla Settings forms: przejście sekcji, sidebar,
-  browser back i raw navigation muszą ostrzec albo zachować draft.
-- Dodać mobile Settings navigation (np. segmented/select/sheet nav), bo lokalny
-  sidebar jest ukryty poniżej `lg`.
+- Zamknięte w `TASK-359-02`: `SettingsSidebar` używa `AdminLink` z canonical
+  hrefami i `prefetch`.
+- Zamknięte w `TASK-359-02`: dirty-state guard dla Settings forms obejmuje
+  przejścia sekcji, bezpośrednie `AdminLink`, browser Back/Forward i
+  refresh/close.
+- Zamknięte w `TASK-359-02`: mobile Settings navigation jest dostępna poniżej
+  `lg` i zawiera Security subroutes.
 - Rozdzielić cache policy dla Settings: cache'ować tylko bezpieczne, redacted
   wartości bez sekretów; credential/config sekretów nie wkładać do
   localStorage. Dodać cache keys/TTLs, cached wrappers, invalidation i cacheBus

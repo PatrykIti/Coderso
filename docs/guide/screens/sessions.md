@@ -122,6 +122,12 @@ Use this safe session-review order when you want fewer lockout mistakes:
 4. Use revoke-all only when the broader reset is intentional.
 5. Change password if the session anomaly suggests deeper account risk.
 
+# Navigation And Drafts
+
+- Settings section links use in-app navigation on desktop and mobile.
+- Session review itself is read-only until a revoke action is chosen, but
+  leaving other dirty Settings screens prompts before a draft is discarded.
+
 # Security
 
 - Sessions is an authenticated admin surface and should only be used by the

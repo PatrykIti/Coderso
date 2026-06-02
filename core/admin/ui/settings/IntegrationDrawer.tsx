@@ -1,5 +1,5 @@
 import { Link2, ShieldCheck, X } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,39 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
 import type { IntegrationStatus } from "./IntegrationCard";
+
+type IntegrationDrawerField = {
+  key: string;
+  label: string;
+  type: "text" | "url" | "secret";
+  required: boolean;
+  configured: boolean;
+  value: string | null;
+};
+
+const getIntegrationDirtySignature = (
+  fields: IntegrationDrawerField[],
+  values: Record<string, string>,
+  secretEdits: Record<string, boolean>
+) =>
+  JSON.stringify(
+    fields.map((field) => {
+      if (field.type === "secret") {
+        return {
+          key: field.key,
+          editing: secretEdits[field.key] ?? false,
+          hasDraft: Boolean(values[field.key]?.trim()),
+        };
+      }
+      return {
+        key: field.key,
+        value: values[field.key] ?? "",
+      };
+    })
+  );
 
 type IntegrationDrawerProps = {
   open: boolean;
@@ -26,14 +57,7 @@ type IntegrationDrawerProps = {
     status: IntegrationStatus;
     description: string;
     scopes: string[];
-    fields: Array<{
-      key: string;
-      label: string;
-      type: "text" | "url" | "secret";
-      required: boolean;
-      configured: boolean;
-      value: string | null;
-    }>;
+    fields: IntegrationDrawerField[];
   } | null;
   isSaving?: boolean;
   error?: string | null;
@@ -48,7 +72,7 @@ export function IntegrationDrawer({
   error,
   onSave,
 }: IntegrationDrawerProps) {
-  const fields = integration?.fields ?? [];
+  const fields = useMemo(() => integration?.fields ?? [], [integration?.fields]);
   const [values, setValues] = useState<Record<string, string>>(() => {
     const nextValues: Record<string, string> = {};
     for (const field of fields) {
@@ -64,6 +88,17 @@ export function IntegrationDrawer({
     return nextSecretEdits;
   });
   const [localError, setLocalError] = useState<string | null>(null);
+  const initialSignature = useMemo(() => {
+    const initialValues: Record<string, string> = {};
+    const initialSecretEdits: Record<string, boolean> = {};
+    for (const field of fields) {
+      initialValues[field.key] = field.value ?? "";
+      initialSecretEdits[field.key] = false;
+    }
+    return getIntegrationDirtySignature(fields, initialValues, initialSecretEdits);
+  }, [fields]);
+  const currentSignature = getIntegrationDirtySignature(fields, values, secretEdits);
+  useRegisterSettingsDirty(open && currentSignature !== initialSignature);
 
   const scopesLabel = integration?.scopes?.length
     ? integration.scopes.join(", ")

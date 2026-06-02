@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
 const webhookEvents = [
   {
@@ -47,6 +48,21 @@ const webhookEvents = [
     description: "Fired when a page is unpublished",
   },
 ];
+
+const getWebhookDirtySignature = (input: {
+  name: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  secret: string;
+}) =>
+  JSON.stringify({
+    name: input.name,
+    url: input.url,
+    events: input.events,
+    enabled: input.enabled,
+    secret: input.secret.trim() ? "draft-secret" : "",
+  });
 
 type WebhookDrawerProps = {
   open: boolean;
@@ -91,6 +107,25 @@ export function WebhookDrawer({
   const [secret, setSecret] = useState("");
   const [enabled, setEnabled] = useState(webhook?.enabled ?? true);
   const [localError, setLocalError] = useState<string | null>(null);
+  const initialSignature = useMemo(
+    () =>
+      getWebhookDirtySignature({
+        name: webhook?.name ?? "",
+        url: webhook?.url ?? "",
+        events: initialEvents,
+        enabled: webhook?.enabled ?? true,
+        secret: "",
+      }),
+    [initialEvents, webhook]
+  );
+  const currentSignature = getWebhookDirtySignature({
+    name,
+    url,
+    events,
+    enabled,
+    secret,
+  });
+  useRegisterSettingsDirty(open && currentSignature !== initialSignature);
 
   const handleToggleEvent = (id: string, checked: boolean) => {
     setEvents((prev) => {

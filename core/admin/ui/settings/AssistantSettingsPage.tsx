@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { isApiClientError } from "@/services/apiClient";
 import { reindexAssistantDocs } from "@/services/assistantClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
 import {
@@ -75,6 +76,7 @@ export function AssistantSettingsPage({
   const [formState, setFormState] = useState(() => ({
     source: values,
     form: normalizeValues(values),
+    savedForm: normalizeValues(values),
   }));
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -85,17 +87,22 @@ export function AssistantSettingsPage({
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
 
   const form = formState.source === values ? formState.form : normalizeValues(values);
+  const savedForm = formState.source === values ? formState.savedForm : normalizeValues(values);
   const setForm = (
     next: AssistantSettingsValues | ((previous: AssistantSettingsValues) => AssistantSettingsValues)
   ) => {
     setFormState((previous) => {
       const current = previous.source === values ? previous.form : normalizeValues(values);
+      const saved = previous.source === values ? previous.savedForm : normalizeValues(values);
       return {
         source: values,
         form: typeof next === "function" ? next(current) : next,
+        savedForm: saved,
       };
     });
   };
+  const isDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
+  useRegisterSettingsDirty(isDirty);
 
   const validationError = resolveAssistantValidationError(form);
   const hasValidationErrors = Boolean(validationError);
@@ -108,6 +115,11 @@ export function AssistantSettingsPage({
     setLocalSaving(true);
     try {
       await onSave(form);
+      setFormState({
+        source: values,
+        form,
+        savedForm: form,
+      });
       setSaveSuccess("Assistant settings updated.");
       return true;
     } catch (err) {
@@ -120,7 +132,7 @@ export function AssistantSettingsPage({
     } finally {
       setLocalSaving(false);
     }
-  }, [form, hasValidationErrors, onSave]);
+  }, [form, hasValidationErrors, onSave, values]);
 
   const handleReindex = useCallback(async () => {
     setReindexError(null);

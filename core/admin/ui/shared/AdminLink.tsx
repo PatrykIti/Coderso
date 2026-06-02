@@ -12,7 +12,7 @@ export type AdminLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href
 
 const shouldIgnoreClick = (event: MouseEvent<HTMLAnchorElement>) => {
   if (event.defaultPrevented) return true;
-  if (event.button !== 0) return true;
+  if (event.button > 0) return true;
   if (event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) return true;
   return false;
 };

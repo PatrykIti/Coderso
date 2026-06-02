@@ -5,7 +5,7 @@
 **Category:** Admin UI + Settings + Cache + Security UX + RBAC + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm pattern, TASK-360-04 no-op gate, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md` audit evidence
-**Status:** In Progress (2026-06-01)
+**Status:** In Progress (2026-06-02)
 
 ---
 
@@ -103,8 +103,8 @@ Physical execution leaves:
 
 1. Consume `TASK-360-01` shared permission snapshot and block Settings shell
    leaks before adding cache/navigation changes.
-2. Replace Settings navigation with `AdminLink`, then add dirty-state and mobile
-   navigation behavior.
+2. Done in `TASK-359-02`: replace Settings navigation with `AdminLink`, then
+   add dirty-state and mobile navigation behavior.
 3. Decide and implement the redacted settings cache contract before any
    section-specific caching.
 4. Fix General/Site placeholders and high-risk confirm flows.
@@ -164,7 +164,7 @@ Completion notes:
 
 ### TASK-359-02: Settings SPA Navigation, Dirty Guard, and Mobile Navigation
 
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 Implementation shape:
 
@@ -211,6 +211,20 @@ Regression tests:
   transition.
 - Dirty form navigation cancel preserves draft.
 - Mobile viewport can navigate to every Settings section.
+
+Completion notes:
+
+- Settings section links are SPA transitions through `AdminLink`; Playwright
+  confirmed `authMeRequests: 0`, `documentLoadEvents: 0`, no auth 429, and no
+  login redirect during the section-click phase.
+- Settings dirty guard is registered through the shared admin router blocker,
+  so sidebar links, direct Settings `AdminLink`, Back/Forward, and refresh/close
+  cannot silently lose drafts.
+- Mobile Settings navigation is visible below `lg` and includes General,
+  Assistant, Site, Security, Sessions, Login Alerts, IP Allowlist, API Keys,
+  Webhooks, Email, Storage, and Integrations.
+- Redacted settings cache remains `TASK-359-03`; this leaf intentionally did
+  not add settings endpoint prefetch/cache wrappers.
 
 ### TASK-359-03: Redacted Settings Cache Contract
 

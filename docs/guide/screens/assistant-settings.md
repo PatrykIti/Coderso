@@ -154,6 +154,13 @@ Use this safe Assistant Settings order when you want fewer runtime mistakes:
 5. Confirm quotas are appropriate.
 6. Save changes deliberately.
 
+# Navigation And Drafts
+
+- Settings section links use in-app navigation on desktop and mobile.
+- If this screen has unsaved edits, moving to another Settings section,
+  browser Back/Forward, or refresh/close prompts before the draft is discarded.
+- Choose cancel/keep editing when you need to preserve the current draft.
+
 # Security
 
 - Assistant Settings is an authenticated admin surface and should only be used

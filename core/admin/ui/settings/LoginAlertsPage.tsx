@@ -26,6 +26,7 @@ import {
   type SecuritySettingsResponse,
 } from "@/services/settingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
 import { LoginAlertsCard } from "./LoginAlertsCard";
 import { SettingsSidebar } from "./SettingsSidebar";
@@ -128,11 +129,13 @@ export function LoginAlertsPage() {
   };
 
   const busy = isLoading || isSaving;
+  const isDirty = settings ? JSON.stringify(form) !== JSON.stringify(toFormState(settings)) : false;
+  useRegisterSettingsDirty(isDirty);
 
   return (
     <SettingsShell
       activeHref="/admin/settings"
-      sidebar={<SettingsSidebar activeId="security" />}
+      sidebar={<SettingsSidebar activeId="login-alerts" />}
       showSearch={false}
       breadcrumbs={["Security", "Login Alerts"]}
       topbarActions={

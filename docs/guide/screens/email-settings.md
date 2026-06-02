@@ -127,6 +127,13 @@ Use this safe email-setup order when you want fewer delivery mistakes:
 5. Review delivery logs if anything feels uncertain.
 6. Save changes deliberately.
 
+# Navigation And Drafts
+
+- Settings section links use in-app navigation on desktop and mobile.
+- If this screen has unsaved edits, moving to another Settings section,
+  browser Back/Forward, or refresh/close prompts before the draft is discarded.
+- Choose cancel/keep editing when you need to preserve the current draft.
+
 # Security
 
 - Email Settings is an authenticated admin surface and should only be used by

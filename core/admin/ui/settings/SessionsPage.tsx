@@ -198,7 +198,7 @@ export function SessionsPage() {
   return (
     <SettingsShell
       activeHref="/admin/settings"
-      sidebar={<SettingsSidebar activeId="security" />}
+      sidebar={<SettingsSidebar activeId="sessions" />}
       breadcrumbs={["Settings", "Security", "Sessions"]}
       topbarActions={
         <Button

@@ -36,6 +36,7 @@ import {
 } from "@/services/settingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { InfoTip } from "@/ui/shared/InfoTip";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
 import { IpAllowlistDrawer } from "./IpAllowlistDrawer";
@@ -299,6 +300,12 @@ const toFormState = (settings: SecuritySettingsResponse): SecurityFormState => (
   botProtectionEnforceLocalhost: settings.botProtection.enforceOnLocalhost,
 });
 
+const getSecurityDirtySignature = (form: SecurityFormState) =>
+  JSON.stringify({
+    ...form,
+    botProtectionSecretKey: form.botProtectionSecretKey.trim() ? "draft-secret" : "",
+  });
+
 const resolveRuntimeTtl = (
   payload: Record<string, unknown>,
   key: "auth.sessionTtlDays" | "auth.resetTtlMinutes",
@@ -399,6 +406,7 @@ const resolveRateLimitPreset = (form: SecurityFormState): PresetId => {
 export function SecuritySettingsPage() {
   const [settings, setSettings] = useState<SecuritySettingsResponse | null>(null);
   const [form, setForm] = useState<SecurityFormState>(defaultFormState);
+  const [savedForm, setSavedForm] = useState<SecurityFormState>(defaultFormState);
   const [activeSection, setActiveSection] = useState<SecuritySectionId>("auth");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -433,12 +441,14 @@ export function SecuritySettingsPage() {
           5,
           1440
         );
-        setSettings(securityResult);
-        setForm({
+        const loadedForm = {
           ...toFormState(securityResult),
           authSessionTtlDays: String(authSessionTtlDays),
           authResetTtlMinutes: String(authResetTtlMinutes),
-        });
+        };
+        setSettings(securityResult);
+        setForm(loadedForm);
+        setSavedForm(loadedForm);
       })
       .catch((err) => {
         if (!active) return;
@@ -664,13 +674,15 @@ export function SecuritySettingsPage() {
         updateSecuritySettings(securityPayload),
         updateSettings(runtimePayload),
       ]);
-
-      setSettings(updatedSecurity);
-      setForm((prev) => ({
-        ...prev,
+      const savedNextForm = {
+        ...form,
         botProtectionSecretKey: "",
         botProtectionClearSecret: false,
-      }));
+      };
+
+      setSettings(updatedSecurity);
+      setForm(savedNextForm);
+      setSavedForm(savedNextForm);
       setSaveSuccess("Security settings updated.");
       return true;
     } catch (err) {
@@ -694,6 +706,8 @@ export function SecuritySettingsPage() {
   });
 
   const saveDisabled = busy || hasValidationErrors;
+  const isDirty = getSecurityDirtySignature(form) !== getSecurityDirtySignature(savedForm);
+  useRegisterSettingsDirty(!isLoading && isDirty);
 
   return (
     <SettingsShell

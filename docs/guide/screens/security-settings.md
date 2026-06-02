@@ -151,6 +151,15 @@ Use this safe hardening order when you want fewer lockout mistakes:
 5. Confirm access restrictions such as IP allowlist are deliberate.
 6. Save only after checking the whole policy set.
 
+# Navigation And Drafts
+
+- Settings section links use in-app navigation on desktop and mobile.
+- If this screen has unsaved edits, moving to another Settings section,
+  browser Back/Forward, or refresh/close prompts before the draft is discarded.
+- Choose cancel/keep editing when you need to preserve the current draft.
+- Overly aggressive settings can lock out legitimate users; overly relaxed
+  settings can expose the environment. Changes here require deliberate review.
+
 # Security
 
 - Security Settings is an authenticated admin surface and should only be used by
@@ -158,5 +167,3 @@ Use this safe hardening order when you want fewer lockout mistakes:
 - These controls affect authentication, public write protection, assistant
   runtime, and admin reachability, so they should be treated as operationally
   sensitive configuration.
-- Overly aggressive settings can lock out legitimate users; overly relaxed
-  settings can expose the environment. Changes here require deliberate review.

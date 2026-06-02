@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 17 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2034 tasks
+- **Done:** 2035 tasks
 
 ---
 
@@ -44,7 +44,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-359-05 | Security, Sessions, API Keys, Webhooks, IP Allowlist Confirms | High | Very Large | Physical Settings leaf for high-risk confirms, current-session/IP safety, one-time secrets, and redacted audit |
 | TASK-359-04 | General and Site Placeholder Truthfulness | High | Large | Physical Settings leaf for logo/favicon/timezone, Site Performance, routing/security-header review, and cache update behavior |
 | TASK-359-03 | Redacted Settings Cache Contract | High | Large | Physical Settings leaf for safe cache keys, secret denylist tests, hydration, invalidation, and docs |
-| TASK-359-02 | Settings SPA Navigation, Dirty Guard, and Mobile Navigation | High | Large | Physical Settings leaf for AdminLink navigation, request-budget behavior, dirty draft protection, and mobile section nav |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -66,7 +65,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-360-01 through TASK-360-06 are implemented; final-evidence closure remains. |
-| TASK-359 | Admin Settings Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-359-01 is done; next leaf is TASK-359-02 Settings SPA navigation, dirty guard, and mobile navigation. |
+| TASK-359 | Admin Settings Report Remediation Family | High | Very Large | In progress (2026-06-02): TASK-359-01 and TASK-359-02 are done; TASK-359-03 redacted Settings cache remains next. |
 ---
 
 ## Done
@@ -74,6 +73,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-359-01 | Settings RBAC Guard and Bootstrap Discipline | High | Large | Done (2026-06-01): Settings routes/nav now fail closed without `settings:read`, global settings bootstrap is skipped for restricted users, Users/Roles and Audit/Access breadcrumbs no longer link to Settings, and Playwright evidence shows zero Settings API requests. |
+| TASK-359-02 | Settings SPA Navigation, Dirty Guard, and Mobile Navigation | High | Large | Done (2026-06-02): Settings navigation now uses `AdminLink`, dirty drafts are guarded across sidebar/direct links, Back/Forward and refresh/close, and mobile Settings nav exposes all sections including Security subroutes. |
 | TASK-355-01 | Current User Permission Propagation for Users | High | Large | Done (2026-06-01): Users route/nav and page controls now consume the shared permission snapshot, support partial `users:read`/`roles:read` modes, skip unauthorized fetches, and refresh on stale 403s. |
 | TASK-355-02 | Reset Password and Login-Capable Invite Flow | High | Very Large | Done (2026-06-01): Users invite/reset now sends single-use set-password emails, retires admin password fields, maps token states, and removes the reset no-op UI. |
 | TASK-355-03 | Destructive Action Confirmation | High | Medium | Done (2026-06-01): Users/roles destructive actions now require shared confirm dialogs, high-risk role duplicate confirms, source-role audit context, and mapped role errors. |

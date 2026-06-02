@@ -36,7 +36,7 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
 | Wysoki | RBAC UI | Zamknięte w `TASK-360-01` i obszarowych leafach: frontend propaguje redacted permission snapshot do route/menu/components | `AuthUser` ma `permissionSnapshot`, `AdminApp` używa shared `can(permission)`, a Users/Roles/Settings konsumują ten sam kontrakt; API 403 zostaje defense-in-depth |
 | Wysoki | Users/Roles Matrix | Zamknięte w `TASK-355-01` i `TASK-356-01`: restricted user nie dostaje aktywnych write controls bez write permission | `UsersRolesPage` i `PermissionsMatrixPage` konsumują permission snapshot, wspierają read-only/partial-read modes i odświeżają snapshot po stale 403 |
 | Wysoki | Settings | Zamknięte w `TASK-359-01`: user bez `settings:read` nie widzi Settings linków, direct URL pokazuje `Access denied` i nie odpala `GET /admin/api/settings` | shared permission snapshot gate, settings bootstrap guard i breadcrumb cleanup zastąpiły dawny shell `Forbidden`; backend 403 zostaje defense-in-depth |
-| Wysoki | Settings navigation | Przejścia między opcjami Settings robią pełny reload i ponowny `auth/me` + `settings` fetch | `SettingsSidebar` używa raw `<a>` zamiast `AdminLink`, więc omija SPA router/prefetch |
+| Wysoki | Settings navigation | Zamknięte w `TASK-359-02`: przejścia między opcjami Settings są SPA transitions bez document reloadu, `auth/me` refetchy, 429 i login redirectu | `SettingsSidebar` używa `AdminLink`, a settings-scoped router blocker chroni dirty navigation |
 | Wysoki | Settings cache | Settings nie są cache'owane/hydratowane jak inne admin zasoby | brak settings cache keys/wrappers/cacheBus; klienty używają bezpośredniego `apiRequest` |
 | Wysoki | Access Logs | `Revoke access` wygląda jak destrukcyjna akcja, ale nie ma handlera | `AccessLogDetailsDrawer.tsx` renderuje button bez `onClick` |
 | Wysoki | Sessions/API Keys/Webhooks/IP Allowlist/Users | Część akcji destrukcyjnych wykonuje mutację bez potwierdzenia | handlery wywołują API bez confirm modal |
@@ -45,7 +45,7 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
 | Średni | Audit Logs | `Copy JSON`, `Export entry`, `Share Log`, `Report` są UI-only | brak handlerów w menu/drawerze |
 | Średni | Access Logs | Paginacja, `View full session`, część filtrów i export są niepełne | twarde page buttons, brak handlerów, export dialog tylko zamyka modal |
 | Średni | Settings | Storage `Test Connection`, Email `Export Logs`, General uploady/timezone, Site Performance, część Login Alerts i Sessions link-buttons są UI-only | aktywne kontrolki nie mają backendowego działania |
-| Średni | Settings mobile/draft | Lokalna nawigacja Settings znika na mobile, a raw-link navigation nie ma dirty-state guard | `SettingsShell` ukrywa sidebar poniżej `lg`; auto-save toggle nie chroni niezapisanych draftów |
+| Średni | Settings mobile/draft | Zamknięte w `TASK-359-02`: mobile ma Settings nav dla top-level sekcji i Security subroutes, a dirty drafts wymagają confirmu przy linkach, Back/Forward i refresh/close | boolean-only dirty guard zachowuje draft po cancel i nie serializuje sekretów |
 | Średni | A11y | Kilka Sheet/Drawer powoduje warningi Radix o brakującym opisie, a IP Allowlist nie ma semantycznego `SheetTitle` | komponenty używają tekstu wizualnego zamiast `SheetTitle`/`SheetDescription` |
 | Niski | Testowalność | Część Radix Selectów jest krucha dla locatorów po accessible name | brakuje stabilnych `aria-label`/test ids |
 
@@ -63,9 +63,9 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
    revoke sessions, revoke all, delete/deactivate user, delete role, rotate/revoke
    API key, delete webhook, remove IP allowlist entry, save high-risk security
    policy.
-4. Przenieść `SettingsSidebar` na `AdminLink`, dodać dirty-state guard dla
-   Settings i mobilną nawigację podsekcji. Osobno zaprojektować cache tylko dla
-   redacted/non-secret settings, bez sekretów w localStorage.
+4. Zamknięte w `TASK-359-02`: `SettingsSidebar` używa `AdminLink`, Settings ma
+   dirty-state guard i mobilną nawigację sekcji. Osobno zaprojektować cache
+   tylko dla redacted/non-secret settings, bez sekretów w localStorage.
 5. Dodać `SheetTitle` i `SheetDescription` albo `VisuallyHidden` title/desc do
    Settings drawers i mobile user drawer; potem dodać Playwright assertion na
    brak Radix console errors/warnings.
@@ -106,6 +106,13 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
   oraz Audit/Access breadcrumbi nie linkuja juz do Settings, a restricted
   Playwright passy dla `roles:read` i `audit:read` nie wykonaly zadnego
   `GET /admin/api/settings`.
+- `TASK-359-02` jest zaimplementowany: Settings links przechodza przez
+  `AdminLink`, shared router blocker chroni dirty drafts przy sidebar/direct
+  links, Back/Forward i refresh/close, a mobile Settings nav pokazuje General,
+  Assistant, Site, Security, Sessions, Login Alerts, IP Allowlist, API Keys,
+  Webhooks, Email, Storage i Integrations. Playwright pass mial
+  `authMeRequests: 0`, `documentLoadEvents: 0`, `auth429Responses: 0` podczas
+  fazy klikniec sekcji.
 - `TASK-355-01` jest zaimplementowany: Users UI konsumuje shared permission
   snapshot, nie hardcoduje write permissions i wspiera partial
   `users:read`/`roles:read` bez pobocznych fetchy.
@@ -123,8 +130,8 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
   `SheetTitle`/`SheetDescription` i warning-free drawer a11y regression gate.
 - Pozostale pozycje z raportu pozostaja przypisane do rodzin TASK-355..360.
   Część no-opow jest teraz jawnie niedostepna albo zaimplementowana, ale
-  Settings cache/navigation, Audit/Access funkcje i finalny re-audyt UI nadal
-  wymagaja osobnych implementacji w taskach obszarowych.
+  Settings cache, Audit/Access funkcje i finalny re-audyt UI nadal wymagaja
+  osobnych implementacji w taskach obszarowych.
 
 ## Uwaga o Claude - 2026-06-01
 
