@@ -61,7 +61,7 @@ export function BackupNowDialog({
       <DialogContent className="max-h-[85vh] gap-0 p-0 sm:max-w-lg">
         <DialogHeader className="flex flex-row items-start justify-between gap-4 border-b px-6 py-4 text-left">
           <div>
-            <DialogTitle>Create Backup Now</DialogTitle>
+            <DialogTitle>Create Backup</DialogTitle>
             <DialogDescription>
               Select what should be included in the on-demand backup.
             </DialogDescription>

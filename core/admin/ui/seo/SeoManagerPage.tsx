@@ -121,7 +121,8 @@ export function SeoManagerPage() {
   useEffect(() => {
     let active = true;
     void Promise.resolve().then(() => {
-      if (active) void refresh({ force: initialState.hasCache, background: initialState.hasCache });
+      if (active)
+        void refresh({ force: !initialState.hasCache, background: initialState.hasCache });
     });
     return () => {
       active = false;

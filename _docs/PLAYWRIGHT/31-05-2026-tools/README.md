@@ -59,6 +59,13 @@ runtime-effect evidence for SEO, Backups, and Redirects.
   outside the Codex sandbox with `--dangerously-skip-permissions` and a
   logged-in Playwright session. That pass clicked through all Tools routes and
   produced the dedicated UX addendum linked above.
+- TASK-355 follow-up on 2026-06-02 used `coderso-dev-core-host` and an HTTP E2E
+  script against `http://localhost:3000` after Playwright Chromium installation
+  hung in this environment. The pass verified admin auth/CSRF, Backups internal
+  artifact create/download/delete, Import / Export redirects export plus
+  preview/apply, and SEO Manager saves rendering into public HTML title,
+  description, canonical, and robots metadata. Claude CLI also reviewed the
+  TASK-355 diff and its actionable backup cache findings were fixed.
 
 ## Deep-Pass Outcome
 
@@ -77,6 +84,12 @@ runtime-effect evidence for SEO, Backups, and Redirects.
 - Redirects now execute enabled admin rows in public runtime, reject unsafe
   destinations, expose confirmed delete, and use truthful empty/pagination
   states after TASK-353.
+- TASK-355 tightened cache parity and UX polish after user feedback:
+  Backups and Redirects use concise create/delete flows, Backups gained
+  selection and bulk delete, backup list cache patching now redacts local paths
+  and selectively invalidates pagination-sensitive pages, Import / Export
+  per-card loading is regression-tested, and SEO/Backups/Import-Export were
+  physically verified through the running CMS HTTP stack.
 - Claude's later UX pass independently flagged the same rough edges from a user
   perspective: unclear empty states, queued backups with disabled actions,
   incomplete Search suggestions, missing Import / Export error details, and

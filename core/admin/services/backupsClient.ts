@@ -86,6 +86,7 @@ export type BackupDownload = {
 let cachedBackupSchedulePromise: Promise<BackupSchedule> | null = null;
 const cachedBackupListPromises = new Map<string, Promise<BackupListResult>>();
 const backupListCaches = new Map<string, MemoryBackedStorageCache<BackupListResult>>();
+const backupListCacheOptions = new Map<string, BackupListOptions>();
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object");
@@ -117,19 +118,45 @@ const getBackupListCacheKey = (options: BackupListOptions = {}) => {
 const getBackupListCache = (options: BackupListOptions = {}) => {
   const key = getBackupListCacheKey(options);
   const existing = backupListCaches.get(key);
-  if (existing) return existing;
+  if (existing) {
+    backupListCacheOptions.set(key, {
+      page: options.page ?? 1,
+      limit: options.limit ?? 10,
+      query: options.query,
+    });
+    return existing;
+  }
   const created = createMemoryBackedLocalCache({
     key,
     ttlMs: cacheTtlMs.list,
     validate: isBackupListResult,
   });
   backupListCaches.set(key, created);
+  backupListCacheOptions.set(key, {
+    page: options.page ?? 1,
+    limit: options.limit ?? 10,
+    query: options.query,
+  });
   return created;
+};
+
+const backupMatchesQuery = (backup: BackupItem, query?: string) => {
+  const needle = query?.trim().toLowerCase();
+  if (!needle) return true;
+  return [
+    backup.id,
+    backup.status,
+    backup.kind,
+    backup.storageDriver,
+    backup.error ?? "",
+    backup.artifactPath ?? "",
+  ].some((value) => value.toLowerCase().includes(needle));
 };
 
 const clearBackupListCacheByKey = (key: string) => {
   backupListCaches.get(key)?.clear();
   backupListCaches.delete(key);
+  backupListCacheOptions.delete(key);
   cachedBackupListPromises.delete(key);
   clearLocalCache(key);
 };
@@ -159,6 +186,108 @@ const invalidateBackupListCaches = () => {
   for (const key of keys) {
     clearBackupListCacheByKey(key);
     broadcastCacheEvent({ key, action: "invalidate" });
+  }
+};
+
+const invalidateBackupListCachesWhere = (predicate: (options: BackupListOptions) => boolean) => {
+  for (const [key, options] of Array.from(backupListCacheOptions.entries())) {
+    if (!predicate(options)) continue;
+    clearBackupListCacheByKey(key);
+    broadcastCacheEvent({ key, action: "invalidate" });
+  }
+};
+
+const patchBackupListCaches = (
+  patch: (cache: BackupListResult, options: BackupListOptions) => BackupListResult | null
+) => {
+  for (const [key, cache] of backupListCaches.entries()) {
+    const current = cache.read();
+    if (!current) continue;
+    const next = patch(current, backupListCacheOptions.get(key) ?? {});
+    if (!next) continue;
+    cache.write(next);
+    broadcastCacheEvent({ key, action: "update" });
+  }
+};
+
+const patchBackupCreated = (created: BackupItem) => {
+  const safeCreated = sanitizeBackupItemForBrowserCache(created);
+  const isProcessing = safeCreated.status === "queued" || safeCreated.status === "running";
+  invalidateBackupListCachesWhere(
+    (options) => (options.page ?? 1) !== 1 && backupMatchesQuery(safeCreated, options.query)
+  );
+  patchBackupListCaches((current, options) => {
+    if (!backupMatchesQuery(safeCreated, options.query)) return null;
+    if ((options.page ?? current.page) !== 1) return null;
+    const nextItems = [
+      safeCreated,
+      ...current.items.filter((item) => item.id !== safeCreated.id),
+    ].slice(0, current.limit);
+    const nextTotal = current.items.some((item) => item.id === safeCreated.id)
+      ? current.total
+      : current.total + 1;
+    return {
+      ...current,
+      items: nextItems,
+      total: nextTotal,
+      hasPrevious: false,
+      hasNext: nextTotal > current.limit,
+      worker: {
+        ...current.worker,
+        queuedCount: isProcessing ? current.worker.queuedCount + 1 : current.worker.queuedCount,
+        oldestQueuedAt: isProcessing
+          ? (current.worker.oldestQueuedAt ?? safeCreated.createdAt)
+          : current.worker.oldestQueuedAt,
+        message:
+          isProcessing && current.worker.queuedCount === 0
+            ? "CMS backup worker is processing backup jobs."
+            : current.worker.message,
+      },
+    };
+  });
+};
+
+const patchBackupDeleted = (id: string) => {
+  const snapshots = Array.from(backupListCaches.entries())
+    .map(([key, cache]) => ({
+      key,
+      cache,
+      options: backupListCacheOptions.get(key) ?? {},
+      current: cache.read(),
+    }))
+    .filter(
+      (
+        snapshot
+      ): snapshot is {
+        key: string;
+        cache: MemoryBackedStorageCache<BackupListResult>;
+        options: BackupListOptions;
+        current: BackupListResult;
+      } => Boolean(snapshot.current)
+    );
+  const deletedItem = snapshots
+    .flatMap((snapshot) => snapshot.current.items)
+    .find((item) => item.id === id);
+
+  for (const snapshot of snapshots) {
+    if (deletedItem && !backupMatchesQuery(deletedItem, snapshot.options.query)) continue;
+    if (!deletedItem && !snapshot.current.items.some((item) => item.id === id)) continue;
+    const current = snapshot.current;
+    const hadItem = current.items.some((item) => item.id === id);
+    if (!hadItem || current.hasNext) {
+      clearBackupListCacheByKey(snapshot.key);
+      broadcastCacheEvent({ key: snapshot.key, action: "invalidate" });
+      continue;
+    }
+    const nextTotal = Math.max(0, current.total - 1);
+    snapshot.cache.write({
+      ...current,
+      items: current.items.filter((item) => item.id !== id),
+      total: nextTotal,
+      hasPrevious: current.page > 1,
+      hasNext: current.page * current.limit < nextTotal,
+    });
+    broadcastCacheEvent({ key: snapshot.key, action: "update" });
   }
 };
 
@@ -228,7 +357,7 @@ export async function createBackup(input?: BackupCreatePayload) {
     },
     { withCsrf: true }
   );
-  if (created) invalidateBackupListCaches();
+  if (created) patchBackupCreated(created);
   return created;
 }
 
@@ -238,7 +367,7 @@ export async function deleteBackup(id: string) {
     { method: "DELETE" },
     { withCsrf: true }
   );
-  if (result?.ok) invalidateBackupListCaches();
+  if (result?.ok) patchBackupDeleted(id);
   return result;
 }
 

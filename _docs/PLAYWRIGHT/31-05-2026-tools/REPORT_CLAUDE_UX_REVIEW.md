@@ -5,6 +5,36 @@ Reviewer: Claude CLI, launched outside the Codex sandbox with
 `--dangerously-skip-permissions`
 UI session: `claude-tools-ux-fast-2026-06-01`
 
+## TASK-355 Claude Follow-Up - 2026-06-02
+
+Claude CLI was rerun with:
+
+```bash
+claude --print --permission-mode bypassPermissions "You are reviewing a Coderso CMS patch in /home/coder/project/Coderso-b..."
+```
+
+The follow-up reviewed the working-tree diff and supporting server/service
+code. It did not run tests. Findings and resolution:
+
+- Physical proof gap: addressed by the TASK-355 HTTP E2E pass on the running CMS
+  (`http://localhost:3000`) for SEO public HTML, Backups create/download/delete,
+  and Import / Export preview/apply. Fresh Playwright browser proof could not be
+  rerun because Chromium installation hung before the executable was available.
+- Backup delete cache correctness: fixed. Delete now patches only cache pages
+  that can stay correct and invalidates query/page caches whose pagination can
+  shift.
+- Backup cache redaction: fixed. Created backup rows are sanitized before being
+  written into browser cache.
+- Backup worker false warning heuristic: fixed. New queued/running rows no
+  longer force `healthy=false` immediately; the server-owned age-aware worker
+  state remains authoritative.
+- Dead BackupsTable branch: fixed by collapsing duplicate restore/download
+  action-state logic.
+- Analytics/Backups mount revalidation concern: reviewed against Pages/Posts.
+  The current contract is cached-first mount without forced network refresh when
+  cache is fresh; cache-bus invalidation and explicit refresh remain the forced
+  paths.
+
 ## Execution
 
 Claude was rerun after API authentication was restored. The first retry reached

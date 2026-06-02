@@ -4,6 +4,8 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test, vi, beforeEach, afterEach } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
+import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
+import type { ExportBundle } from "../../../core/admin/services/importExportClient";
 
 const importExportState = vi.hoisted(() => ({
   previewImport: vi.fn(async () => ({
@@ -32,16 +34,18 @@ const importExportState = vi.hoisted(() => ({
       warnings: [],
     },
   })),
-  exportConfig: vi.fn(async () => ({
-    version: 1,
-    exportedAt: "2026-06-01T10:00:00.000Z",
-    scope: { target: "settings", include: ["settings"] },
-    settings: { "site.name": "Coderso" },
-    menus: [],
-    themeProfiles: [],
-    adminThemes: { templates: [], profiles: [] },
-    redirects: [],
-  })),
+  exportConfig: vi.fn(
+    async (): Promise<ExportBundle> => ({
+      version: 1,
+      exportedAt: "2026-06-01T10:00:00.000Z",
+      scope: { target: "settings", include: ["settings"] },
+      settings: { "site.name": "Coderso" },
+      menus: [],
+      themeProfiles: [],
+      adminThemes: { templates: [], profiles: [] },
+      redirects: [],
+    })
+  ),
 }));
 
 vi.mock("@/services/importExportClient", () => ({
@@ -72,7 +76,9 @@ const mount = (node: React.ReactNode) => {
   const root = createRoot(container);
 
   React.act(() => {
-    root.render(node);
+    root.render(
+      <AdminRouterProvider initialPath="/admin/tools/import-export">{node}</AdminRouterProvider>
+    );
   });
 
   return {
@@ -135,6 +141,7 @@ beforeEach(() => {
 
 afterEach(() => {
   document.body.innerHTML = "";
+  vi.unstubAllGlobals();
 });
 
 test("ImportExportPage renders truthful export cards and JSON-only import copy", () => {
@@ -185,6 +192,60 @@ test("ExportCards sends controlled target and include options", () => {
       button.getAttribute("aria-label")?.includes("advanced export options")
     );
     expect(chevronButtons.every((button) => button.disabled)).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ImportExportPage keeps export loading scoped to the clicked card", async () => {
+  const exportResolver: { current?: (value: ExportBundle) => void } = {};
+  const pendingExport = new Promise<ExportBundle>((resolve) => {
+    exportResolver.current = resolve;
+  });
+  importExportState.exportConfig.mockImplementationOnce(async () => pendingExport);
+  const createObjectUrlSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:export");
+  const revokeObjectUrlSpy = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+
+  const view = mount(<ImportExportPage />);
+
+  try {
+    const initialDownloadButtons = Array.from(view.container.querySelectorAll("button")).filter(
+      (button) => button.textContent?.trim() === "Download"
+    );
+    expect(initialDownloadButtons).toHaveLength(4);
+
+    React.act(() => {
+      initialDownloadButtons[0]!.click();
+    });
+
+    const preparingButtons = Array.from(view.container.querySelectorAll("button")).filter(
+      (button) => button.textContent?.trim() === "Preparing..."
+    );
+    const remainingDownloadButtons = Array.from(view.container.querySelectorAll("button")).filter(
+      (button) => button.textContent?.trim() === "Download"
+    );
+
+    expect(preparingButtons).toHaveLength(1);
+    expect(remainingDownloadButtons).toHaveLength(3);
+    expect(remainingDownloadButtons.every((button) => !button.disabled)).toBe(true);
+
+    const resolveExport = exportResolver.current;
+    if (!resolveExport) {
+      throw new Error("Missing export resolver.");
+    }
+    resolveExport({
+      version: 1,
+      exportedAt: "2026-06-01T10:00:00.000Z",
+      scope: { target: "settings", include: ["settings"] },
+      settings: {},
+      menus: [],
+      themeProfiles: [],
+      adminThemes: { templates: [], profiles: [] },
+      redirects: [],
+    });
+    await flush();
+    expect(createObjectUrlSpy).toHaveBeenCalled();
+    expect(revokeObjectUrlSpy).toHaveBeenCalledWith("blob:export");
   } finally {
     view.cleanup();
   }

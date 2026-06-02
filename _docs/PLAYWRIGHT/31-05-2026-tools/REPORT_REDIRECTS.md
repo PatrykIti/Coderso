@@ -57,6 +57,18 @@ Route: `/admin/redirects`
   `redirect_not_found`, `redirect_exists`, `redirect_invalid`,
   `redirect_target_external`, and `redirect_loop`.
 
+## TASK-355 Follow-Up - 2026-06-02
+
+- Redirects now hydrates from cached list data on revisit without forcing a
+  foreground wait when fresh cache exists.
+- Mutations revalidate in the background after the changed redirect is saved,
+  toggled, or deleted.
+- The primary action is the concise `Create` label.
+- Single-row delete uses the shared destructive confirmation dialog instead of
+  a native browser confirm.
+- Selection and bulk enable/disable/delete controls are covered by the
+  Redirects page Vitest suite.
+
 ## What Did Not Work
 
 ### [RESOLVED 2026-06-01] Admin redirects do not affect the public runtime

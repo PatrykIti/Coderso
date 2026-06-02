@@ -255,19 +255,23 @@ test("restoreBackup uses CSRF and POST", async () => {
   }
 });
 
-test("backup create, delete, and restore invalidate known list caches and broadcast", async () => {
+test("backup create/delete patch list caches and restore invalidates", async () => {
   const { restore } = installLocalStorage();
   const originalFetch = globalThis.fetch;
   const events: CacheEvent[] = [];
   const unsubscribe = subscribeCacheEvents((event) => events.push(event));
-  const options = { page: 2, limit: 25, query: "queued" };
-  const cacheKey = cacheKeys.backupsList(2, 25, createBoundedCacheKeySegment("queued", "all"));
+  const pageOneOptions = { page: 1, limit: 25, query: "queued" };
+  const pageTwoOptions = { page: 2, limit: 25, query: "queued" };
+  const pageOneKey = cacheKeys.backupsList(1, 25, createBoundedCacheKeySegment("queued", "all"));
+  const pageTwoKey = cacheKeys.backupsList(2, 25, createBoundedCacheKeySegment("queued", "all"));
 
   globalThis.fetch = async (input) => {
     const url = String(input);
     if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
     if (url.startsWith("/admin/api/backups?")) {
-      return jsonResponse(backupListResult([backupItem({ id: "backup-cached" })]));
+      return jsonResponse(
+        backupListResult([backupItem({ id: "backup-cached", status: "queued" })])
+      );
     }
     if (url === "/admin/api/backups") {
       return jsonResponse(backupItem({ id: "backup-created", status: "queued" }));
@@ -281,23 +285,29 @@ test("backup create, delete, and restore invalidate known list caches and broadc
   try {
     resetCsrfToken();
 
-    await listBackupsCached({ ...options, force: true });
+    await listBackupsCached({ ...pageOneOptions, force: true });
+    await listBackupsCached({ ...pageTwoOptions, force: true });
     await createBackup({ kind: "manual", include: ["database"] });
-    expect(getCachedBackups(options)).toBeNull();
+    expect(getCachedBackups(pageOneOptions)?.items[0]?.id).toBe("backup-created");
+    expect(getCachedBackups(pageTwoOptions)).toBeNull();
 
-    await listBackupsCached({ ...options, force: true });
+    await listBackupsCached({ ...pageOneOptions, force: true });
     await deleteBackup("backup-cached");
-    expect(getCachedBackups(options)).toBeNull();
+    expect(
+      getCachedBackups(pageOneOptions)?.items.some((item) => item.id === "backup-cached")
+    ).toBe(false);
 
-    await listBackupsCached({ ...options, force: true });
+    await listBackupsCached({ ...pageOneOptions, force: true });
     await restoreBackup("backup-cached");
-    expect(getCachedBackups(options)).toBeNull();
+    expect(getCachedBackups(pageOneOptions)).toBeNull();
 
-    expect(events.filter((event) => event.key === cacheKey)).toEqual([
-      expect.objectContaining({ key: cacheKey, action: "invalidate" }),
-      expect.objectContaining({ key: cacheKey, action: "invalidate" }),
-      expect.objectContaining({ key: cacheKey, action: "invalidate" }),
-    ]);
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: pageOneKey, action: "update" }),
+        expect.objectContaining({ key: pageTwoKey, action: "invalidate" }),
+        expect.objectContaining({ key: pageOneKey, action: "invalidate" }),
+      ])
+    );
   } finally {
     unsubscribe();
     globalThis.fetch = originalFetch;

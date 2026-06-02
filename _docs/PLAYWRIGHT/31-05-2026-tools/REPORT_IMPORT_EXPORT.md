@@ -27,6 +27,11 @@ Route: `/admin/tools/import-export`
 - Deep pass: a valid exported JSON bundle was modified with a temporary menu,
   uploaded through the file input, previewed, applied, verified by a follow-up
   export, and then restored to the original bundle.
+- TASK-355 follow-up on 2026-06-02 verified through the running CMS HTTP stack
+  that a redirects-scoped bundle exports with scope metadata and can be sent
+  through real preview plus apply without changing unrelated data. A Vitest UI
+  regression also proves one clicked export card enters `Preparing...` while the
+  other `Download` buttons remain enabled.
 
 ## What Did Not Work
 
@@ -53,6 +58,8 @@ Status: resolved by TASK-352.
 - Recent Imports is no longer static fixture data. It is session-local,
   searchable, shows real preview/apply progress, records failure reasons, and
   offers an `Upload again` action for failed rows.
+- TASK-355 keeps export bundle payloads and uploaded bundle contents uncached;
+  only browser-local Recent Imports activity is cached.
 
 Validation evidence:
 

@@ -106,11 +106,11 @@ export function AnalyticsPage() {
     const cachedOverview = getCachedOverview(rangeDays);
     const cachedTopContent = getCachedTopContent({ limit: 50, rangeDays });
     Promise.all([
-      getOverviewCached(rangeDays, { force: Boolean(cachedOverview) }),
+      getOverviewCached(rangeDays, { force: !cachedOverview }),
       getTopContentCached({
         limit: 50,
         rangeDays,
-        force: Boolean(cachedTopContent),
+        force: !cachedTopContent,
       }),
     ])
       .then(([nextOverview, nextTop]) => {

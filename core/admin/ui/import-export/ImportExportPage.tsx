@@ -29,9 +29,9 @@ export function ImportExportPage() {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      const target = request.target ?? bundle.scope?.target ?? "full";
+      const downloadTarget = request.target ?? bundle.scope?.target ?? "full";
       const exportedAt = bundle.exportedAt.replace(/[:.]/g, "-");
-      anchor.download = `coderso-export-${target}-${exportedAt}.json`;
+      anchor.download = `coderso-export-${downloadTarget}-${exportedAt}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
       toast.success("Export downloaded.");

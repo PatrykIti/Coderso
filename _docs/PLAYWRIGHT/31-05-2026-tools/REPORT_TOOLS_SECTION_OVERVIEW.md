@@ -49,6 +49,10 @@ Current classification:
 - TASK-354 adds the cross-tools guard: `scripts/tools-audit-matrix.ts` now
   machine-validates the route/control/empty-state/async/runtime-effect/report
   matrix so future audit closures cannot rely on shallow click evidence alone.
+- TASK-355 re-opened the closed Tools family against direct user feedback on
+  2026-06-02. It tightened cached-first revisits, Backups/Redirects
+  Pages/Posts-style table actions, Backups internal artifact UX, Import /
+  Export per-card loading, and SEO frontend proof.
 
 ## Evidence
 
@@ -94,6 +98,12 @@ Current classification:
   - Redirect was created in the UI, checked against the public runtime, and
     deleted; TASK-353 replaced the earlier 404 public-runtime outcome with
     tested redirect execution.
+  - TASK-355 HTTP E2E on 2026-06-02 verified admin login/CSRF, Backups
+    `worker.mode: internal`, manual local JSON artifact create/download/delete,
+    Import / Export redirects bundle export plus preview/apply, and SEO Manager
+    save rendering into public HTML `<title>`, description, canonical, and
+    robots metadata. The E2E page, backup row, and orphaned TASK-355 SEO docs
+    were cleaned up after the pass.
 
 ## Environment Notes
 
@@ -108,6 +118,10 @@ Current classification:
 - Claude CLI was available and launched with permissions outside its sandbox, but
   it failed before useful work because its Anthropic API authentication returned
   `401 Invalid authentication credentials`.
+- TASK-355 attempted `npx @playwright/test@1.57.0 install chromium`; the
+  installer hung before creating the Chromium executable, so the final
+  post-feedback proof used the running CMS HTTP stack plus Claude CLI diff
+  review instead of a fresh browser pass.
 
 ## Cross-Cutting Findings
 

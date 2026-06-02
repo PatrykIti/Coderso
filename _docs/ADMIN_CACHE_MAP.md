@@ -239,8 +239,9 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `getBackupScheduleCached`, `getCachedBackupSchedule`
   - Cache keys: `backups:list:<page>:<limit>:<boundedQuery>`,
     `backups:schedule`
-  - Mutations: create, delete, restore, and schedule updates invalidate or patch
-    backup caches through cache-bus events.
+  - Mutations: create, delete, restore, and schedule updates patch cache pages
+    only when local row/totals can remain correct; affected pages whose
+    pagination can shift are invalidated through cache-bus events.
   - Security: browser cache redacts local artifact paths to
     `artifactPath: "local"` and never stores backup download content.
 - Import / Export

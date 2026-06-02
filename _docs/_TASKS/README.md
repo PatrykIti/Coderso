@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2042 tasks
+- **Done:** 2043 tasks
 
 ---
 
@@ -64,6 +64,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-355 | Admin Tools User Feedback Remediation | High | Large | Done (2026-06-02): Tools cache parity refined, Backups/Redirects table UX aligned with Pages/Posts patterns, SEO public HTML and Import/Export/Backups HTTP E2E proof recorded, Claude CLI review reconciled, docs/tests/changelog synchronized. |
 | TASK-354 | Cross Tools UX and Bootstrap Report Remediation | High | Very Large | Done (2026-06-01): machine-readable Tools matrix, report drift guard, seed-admin pepper fix, Tools cache refinement, final live smoke evidence, docs, and changelog 1043 are synchronized; final Claude CLI retry timed out without review output. |
 | TASK-354-01 | Admin Tools Empty State and Action Availability Standard | High | Large | Done (2026-06-01): matrix validates observable controls, disabled reasons, option payload ownership, and cause-specific empty states across all six Tools routes. |
 | TASK-354-02 | Admin Tools Long-Running Operation Feedback Standard | Medium | Large | Done (2026-06-01): async vocabulary is matrix-owned and Backups polls only while queued/running states exist. |

@@ -140,6 +140,36 @@ vi.mock("@/ui/shared/PageHeader", () => ({
   ),
 }));
 
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    onConfirm,
+    onOpenChange,
+  }: {
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    confirmLabel: string;
+    onConfirm: () => void | Promise<void>;
+    onOpenChange: (open: boolean) => void;
+  }) =>
+    open ? (
+      <div>
+        <span>{title}</span>
+        <span>{description}</span>
+        <button type="button" onClick={() => void onConfirm()}>
+          {confirmLabel}
+        </button>
+        <button type="button" onClick={() => onOpenChange(false)}>
+          cancel-confirm
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("../../../core/admin/ui/redirects/RedirectsTable", () => ({
   RedirectsTable: ({
     items,
@@ -392,6 +422,14 @@ test("RedirectsPage loads, filters, creates, edits, and toggles redirects", asyn
     await React.act(async () => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "delete-first")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(view.container.textContent).toContain("Delete redirect?");
+
+    await React.act(async () => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Delete")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await Promise.resolve();
     });

@@ -273,6 +273,28 @@ vi.mock("@/ui/shared/PageHeader", () => ({
   ),
 }));
 
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    confirmLabel,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    confirmLabel: string;
+    onConfirm: () => void | Promise<void>;
+  }) =>
+    open ? (
+      <div>
+        <span>{title}</span>
+        <button type="button" onClick={() => void onConfirm()}>
+          {`confirm:${confirmLabel}`}
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("../../../core/admin/ui/backups/BackupNowDialog", () => ({
   BackupNowDialog: ({
     open,
@@ -442,7 +464,7 @@ test("BackupsPage loads data, creates manual backups, updates schedule, restores
     expect(view.container.textContent).toContain("schedule:daily");
     expect(view.container.textContent).toContain("backup-count:1");
 
-    clickByText(view.container, "Create Backup Now");
+    clickByText(view.container, "Create");
     await flush();
     clickByText(view.container, "backup-now-confirm");
     await flush();
@@ -477,11 +499,10 @@ test("BackupsPage loads data, creates manual backups, updates schedule, restores
       "noopener,noreferrer"
     );
 
-    vi.stubGlobal(
-      "confirm",
-      vi.fn(() => true)
-    );
     clickByText(view.container, "delete:backup-1");
+    await flush();
+    expect(view.container.textContent).toContain("Delete backup?");
+    clickByText(view.container, "confirm:Delete");
     await flush();
     expect(backupsState.deleteBackup).toHaveBeenCalledWith("backup-1");
 
@@ -524,7 +545,7 @@ test("BackupsPage surfaces load and action errors, including missing download UR
     await flush();
 
     backupsState.nextCreateError = new Error("create exploded");
-    clickByText(view.container, "Create Backup Now");
+    clickByText(view.container, "Create");
     await flush();
     clickByText(view.container, "backup-now-confirm");
     await flush();
@@ -551,11 +572,9 @@ test("BackupsPage surfaces load and action errors, including missing download UR
     expect(view.container.textContent).toContain("Download denied");
 
     backupsState.nextDeleteError = backupsState.apiError("Delete denied");
-    vi.stubGlobal(
-      "confirm",
-      vi.fn(() => true)
-    );
     clickByText(view.container, "delete:backup-1");
+    await flush();
+    clickByText(view.container, "confirm:Delete");
     await flush();
     expect(view.container.textContent).toContain("Delete denied");
   } finally {

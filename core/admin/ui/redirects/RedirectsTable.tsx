@@ -86,12 +86,6 @@ export function RedirectsTable({
   const hasPrevious = page > 1;
   const hasNext = page < totalPages;
 
-  const handleDelete = (redirect: RedirectRow) => {
-    if (!onDelete) return;
-    const confirmed = window.confirm(`Delete redirect from ${redirect.from}?`);
-    if (confirmed) onDelete(redirect);
-  };
-
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -221,7 +215,7 @@ export function RedirectsTable({
                         size="icon-sm"
                         className="text-muted-foreground hover:text-rose-500"
                         aria-label="Delete redirect"
-                        onClick={() => handleDelete(redirect)}
+                        onClick={() => onDelete?.(redirect)}
                         disabled={isSaving}
                       >
                         <Trash2 className="h-4 w-4" />

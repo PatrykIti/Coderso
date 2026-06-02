@@ -112,7 +112,11 @@ const analyticsState = vi.hoisted(() => ({
 
 vi.mock("@/services/analyticsClient", () => ({
   getOverview: analyticsState.getOverview,
+  getOverviewCached: analyticsState.getOverview,
+  getCachedOverview: vi.fn(() => null),
   getTopContent: analyticsState.getTopContent,
+  getTopContentCached: analyticsState.getTopContent,
+  getCachedTopContent: vi.fn(() => null),
   exportTopContent: analyticsState.exportTopContent,
 }));
 
@@ -261,7 +265,9 @@ test("AnalyticsPage requests range-scoped Top Content and clears stale rows afte
   try {
     await flushAsync();
     expect(view.container.textContent).toContain("Homepage");
-    expect(analyticsState.getTopContent).toHaveBeenCalledWith({ limit: 50, rangeDays: 30 });
+    expect(analyticsState.getTopContent).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 50, rangeDays: 30 })
+    );
 
     analyticsState.nextOverviewError = new Error("network");
     const select = view.container.querySelector<HTMLSelectElement>(
@@ -276,7 +282,9 @@ test("AnalyticsPage requests range-scoped Top Content and clears stale rows afte
     expect(view.container.textContent).toContain("Loading analytics...");
 
     await flushAsync();
-    expect(analyticsState.getTopContent).toHaveBeenLastCalledWith({ limit: 50, rangeDays: 7 });
+    expect(analyticsState.getTopContent).toHaveBeenLastCalledWith(
+      expect.objectContaining({ limit: 50, rangeDays: 7 })
+    );
     expect(view.container.textContent).toContain("Analytics unavailable");
     expect(view.container.textContent).not.toContain("Homepage");
   } finally {

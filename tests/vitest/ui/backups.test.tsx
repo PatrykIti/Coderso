@@ -50,6 +50,7 @@ vi.mock("@/components/ui/dialog", () => ({
     open ? <div>{children}</div> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
 }));
@@ -136,7 +137,7 @@ test("BackupsPage renders schedule and table", () => {
 
   expect(html).toContain("Backup Schedule");
   expect(html).toContain("Recent Backups");
-  expect(html).toContain("Create Backup Now");
+  expect(html).toContain("Create");
 });
 
 test("BackupNowDialog sends selected include options and blocks empty selections", async () => {

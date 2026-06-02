@@ -60,6 +60,7 @@ export function RedirectsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<"" | "enable" | "disable" | "delete">("");
   const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState<string[]>([]);
+  const [pendingDeleteRedirect, setPendingDeleteRedirect] = useState<RedirectRow | null>(null);
   const [isLoading, setIsLoading] = useState(!initialState.hasCache);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +85,8 @@ export function RedirectsPage() {
   useEffect(() => {
     let active = true;
     void Promise.resolve().then(() => {
-      if (active) void refresh({ force: initialState.hasCache, background: initialState.hasCache });
+      if (active)
+        void refresh({ force: !initialState.hasCache, background: initialState.hasCache });
     });
     return () => {
       active = false;
@@ -120,7 +122,7 @@ export function RedirectsPage() {
         await createRedirect(payload);
         toast.success("Redirect created.");
       }
-      await refresh({ force: true });
+      await refresh({ background: true });
       return true;
     } catch (err) {
       if (isApiClientError(err)) {
@@ -144,7 +146,7 @@ export function RedirectsPage() {
       await updateRedirect(redirect.id, {
         enabled: redirect.status !== "active",
       });
-      await refresh({ force: true });
+      await refresh({ background: true });
       toast.success(redirect.status === "active" ? "Redirect disabled." : "Redirect enabled.");
     } catch (err) {
       if (isApiClientError(err)) {
@@ -160,12 +162,12 @@ export function RedirectsPage() {
     }
   };
 
-  const handleDelete = async (redirect: RedirectRow) => {
+  const runDelete = async (redirect: RedirectRow) => {
     setIsSaving(true);
     setError(null);
     try {
       await deleteRedirect(redirect.id);
-      await refresh({ force: true });
+      await refresh({ background: true });
       setSelectedIds((current) => current.filter((id) => id !== redirect.id));
       toast.success("Redirect deleted.");
     } catch (err) {
@@ -179,6 +181,7 @@ export function RedirectsPage() {
       }
     } finally {
       setIsSaving(false);
+      setPendingDeleteRedirect(null);
     }
   };
 
@@ -244,7 +247,7 @@ export function RedirectsPage() {
           return updateRedirect(item.id, { enabled: action === "enable" });
         })
       );
-      await refresh({ force: true });
+      await refresh({ background: true });
       const failed = results.filter((result) => result.status === "rejected").length;
       const succeeded = results.length - failed;
       if (failed > 0) {
@@ -281,6 +284,10 @@ export function RedirectsPage() {
     }
     void runBulkAction(bulkAction, visibleSelectedIds);
   };
+
+  const pendingDeleteDescription = pendingDeleteRedirect
+    ? `Delete redirect from ${pendingDeleteRedirect.from} to ${pendingDeleteRedirect.to}? This cannot be undone.`
+    : "Delete this redirect? This cannot be undone.";
 
   return (
     <AdminShell
@@ -361,7 +368,7 @@ export function RedirectsPage() {
           onToggleRedirect={handleToggleRedirect}
           onEdit={openEdit}
           onToggle={handleToggle}
-          onDelete={handleDelete}
+          onDelete={setPendingDeleteRedirect}
           onPageChange={setPage}
         />
       </div>
@@ -382,6 +389,21 @@ export function RedirectsPage() {
         }
         isSaving={isSaving}
         onSave={handleSave}
+      />
+      <ConfirmActionDialog
+        open={Boolean(pendingDeleteRedirect)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteRedirect(null);
+        }}
+        title="Delete redirect?"
+        description={pendingDeleteDescription}
+        confirmLabel="Delete"
+        confirmingLabel="Deleting..."
+        isConfirming={isSaving}
+        onConfirm={() => {
+          if (!pendingDeleteRedirect) return undefined;
+          return runDelete(pendingDeleteRedirect);
+        }}
       />
       <ConfirmActionDialog
         open={pendingBulkDeleteIds.length > 0}

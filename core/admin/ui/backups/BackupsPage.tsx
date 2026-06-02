@@ -22,6 +22,7 @@ import {
 } from "@/services/backupsClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
@@ -87,6 +88,9 @@ export function BackupsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const loadBackups = useCallback(
@@ -157,9 +161,9 @@ export function BackupsPage() {
           listBackupsCached({
             page: 1,
             limit: backupPageSize,
-            ...(initialState.hasCache ? { force: true } : {}),
+            ...(!initialState.hasCache ? { force: true } : {}),
           }),
-          getBackupScheduleCached(initialState.hasCache ? { force: true } : undefined),
+          getBackupScheduleCached(!initialState.hasCache ? { force: true } : undefined),
         ]);
         if (!active) return;
         setError(null);
@@ -207,7 +211,13 @@ export function BackupsPage() {
     setError(null);
     try {
       const backup = await createBackup({ kind: "manual", include });
-      await loadBackups({ page: 1, force: true });
+      const cached = getCachedBackups({ page: 1, limit: backupPageSize, query });
+      if (cached) {
+        setBackupList(cached);
+        setPage(cached.page);
+      } else {
+        await loadBackups({ page: 1 });
+      }
       if (backup.status === "failed") {
         const message = backup.error ?? "Backup failed.";
         setError(message);
@@ -313,18 +323,21 @@ export function BackupsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (typeof window !== "undefined") {
-      const confirmed = window.confirm("Delete this backup record?");
-      if (!confirmed) return;
-    }
+  const runDelete = async (id: string) => {
     setIsSaving(true);
     setError(null);
     try {
       await deleteBackup(id);
       const nextPage =
         backupList.items.length === 1 && backupList.hasPrevious ? Math.max(1, page - 1) : page;
-      await loadBackups({ page: nextPage, force: true });
+      const cached = getCachedBackups({ page: nextPage, limit: backupPageSize, query });
+      if (cached) {
+        setBackupList(cached);
+        setPage(cached.page);
+      } else {
+        await loadBackups({ page: nextPage });
+      }
+      setSelectedIds((current) => current.filter((itemId) => itemId !== id));
       toast.success("Backup deleted.");
     } catch (err) {
       if (isApiClientError(err)) {
@@ -337,7 +350,69 @@ export function BackupsPage() {
       }
     } finally {
       setIsSaving(false);
+      setPendingDeleteId(null);
     }
+  };
+
+  const runBulkDelete = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const results = await Promise.allSettled(ids.map((id) => deleteBackup(id)));
+      const failed = results.filter((result) => result.status === "rejected").length;
+      const succeeded = results.length - failed;
+      const cached = getCachedBackups({ page, limit: backupPageSize, query });
+      if (cached) {
+        setBackupList(cached);
+        setPage(cached.page);
+      } else {
+        await loadBackups({ page });
+      }
+      if (failed > 0) {
+        const message =
+          succeeded > 0
+            ? `Deleted ${succeeded} backup${succeeded === 1 ? "" : "s"}; failed ${failed}.`
+            : `Failed to delete ${failed} backup${failed === 1 ? "" : "s"}.`;
+        setError(message);
+        toast.error(message);
+      } else {
+        toast.success(`${succeeded} backup${succeeded === 1 ? "" : "s"} deleted.`);
+      }
+      setSelectedIds([]);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+        toast.error(err.message);
+      } else {
+        const message = "Bulk backup delete failed.";
+        setError(message);
+        toast.error(message);
+      }
+    } finally {
+      setIsSaving(false);
+      setPendingBulkDeleteIds([]);
+    }
+  };
+
+  const visibleIds = backupList.items.map((item) => item.id);
+  const visibleSelectedIds = selectedIds.filter((id) => visibleIds.includes(id));
+  const selectedCount = visibleSelectedIds.length;
+  const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isIndeterminate = selectedCount > 0 && !isAllSelected;
+
+  const handleToggleBackup = (id: string) => {
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    );
+  };
+
+  const handleToggleAll = () => {
+    setSelectedIds((current) =>
+      isAllSelected
+        ? current.filter((id) => !visibleIds.includes(id))
+        : Array.from(new Set([...current, ...visibleIds]))
+    );
   };
 
   return (
@@ -345,12 +420,32 @@ export function BackupsPage() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Backups"
-          description="Manage scheduled backups for your database and assets."
+          description="Create, download, and manage CMS backup artifacts."
           actions={
-            <Button className="gap-2" onClick={() => setBackupOpen(true)} disabled={isSaving}>
-              <CloudUpload className="h-4 w-4" />
-              Create Backup Now
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              {selectedCount > 0 ? (
+                <>
+                  <span className="flex items-center text-sm font-semibold text-foreground">
+                    {selectedCount} selected
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPendingBulkDeleteIds(visibleSelectedIds)}
+                    disabled={isSaving}
+                  >
+                    Delete selected
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>
+                    Clear
+                  </Button>
+                </>
+              ) : null}
+              <Button className="gap-2" onClick={() => setBackupOpen(true)} disabled={isSaving}>
+                <CloudUpload className="h-4 w-4" />
+                Create
+              </Button>
+            </div>
           }
         />
         {error ? (
@@ -371,9 +466,14 @@ export function BackupsPage() {
           query={query}
           isLoading={isLoading || isListLoading}
           isSaving={isSaving}
+          selectedIds={visibleSelectedIds}
+          isAllSelected={isAllSelected}
+          isIndeterminate={isIndeterminate}
+          onToggleAll={handleToggleAll}
+          onToggleBackup={handleToggleBackup}
           onRestore={handleRestore}
           onDownload={handleDownload}
-          onDelete={handleDelete}
+          onDelete={setPendingDeleteId}
           onRefresh={() => void loadBackups({ force: true })}
           onPageChange={handlePageChange}
           onQueryChange={handleQueryChange}
@@ -399,6 +499,33 @@ export function BackupsPage() {
         onOpenChange={setBackupOpen}
         onCreate={handleCreateBackup}
         isSubmitting={isSaving}
+      />
+      <ConfirmActionDialog
+        open={Boolean(pendingDeleteId)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteId(null);
+        }}
+        title="Delete backup?"
+        description="Delete this backup record and its owned local artifact when one exists. This cannot be undone."
+        confirmLabel="Delete"
+        confirmingLabel="Deleting..."
+        isConfirming={isSaving}
+        onConfirm={() => {
+          if (!pendingDeleteId) return undefined;
+          return runDelete(pendingDeleteId);
+        }}
+      />
+      <ConfirmActionDialog
+        open={pendingBulkDeleteIds.length > 0}
+        onOpenChange={(open) => {
+          if (!open) setPendingBulkDeleteIds([]);
+        }}
+        title="Delete selected backups?"
+        description={`Delete ${pendingBulkDeleteIds.length} backup${pendingBulkDeleteIds.length === 1 ? "" : "s"} and owned local artifacts when present. This cannot be undone.`}
+        confirmLabel="Delete selected"
+        confirmingLabel="Deleting..."
+        isConfirming={isSaving}
+        onConfirm={() => runBulkDelete(pendingBulkDeleteIds)}
       />
     </AdminShell>
   );

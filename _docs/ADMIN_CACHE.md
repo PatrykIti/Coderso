@@ -254,10 +254,14 @@ Clients update caches and broadcast events on:
     calls patch the relevant result key and recent-search list.
   - Analytics overview and Top Content caches are range-scoped read caches and
     are refreshed explicitly by range changes or route prefetch.
-  - Backups create/delete/restore and schedule updates invalidate or patch
-    `backups:list:<page>:<limit>:<queryKey>` and `backups:schedule`. Browser
-    cache stores local backup artifacts with `artifactPath: "local"` only; raw
-    filesystem paths and backup JSON content are never persisted in cache.
+  - Backups create/delete/restore and schedule updates patch or selectively
+    invalidate `backups:list:<page>:<limit>:<queryKey>` and
+    `backups:schedule`. Create patches first-page matching caches and
+    invalidates later pages where pagination can shift. Delete patches caches
+    only when the visible page can stay correct; otherwise it invalidates the
+    affected query/page cache so the next read refetches. Browser cache stores
+    local backup artifacts with `artifactPath: "local"` only; raw filesystem
+    paths and backup JSON content are never persisted in cache.
   - Import / Export caches only session-local Recent Imports in
     `tools:import:history`; downloaded export bundle content is not cached.
     Successful imports invalidate the imported resource families such as menus,
@@ -451,36 +455,23 @@ Clients update caches and broadcast events on:
   diagnostics block hard delete through `form_delete_restricted`, so failed
   deletes must not remove rows from browser cache as success.
 
-### Backups uncached note
+### Tools cache note
 
-- Backups intentionally do not use localStorage/admin cache keys.
-- `core/admin/ui/backups/BackupsPage.tsx` reads `listBackups()` directly and
-  refreshes after create/delete/restore/download attempts because queue state,
-  worker health, artifact readiness, and destructive-action availability are
-  operationally sensitive and fast-changing.
-- Backup create/delete mutations must not patch browser cache state. The server
-  response and immediate refetch remain the source of truth for list totals,
-  pagination, and disabled-action reasons.
-
-### Import / Export uncached note
-
-- Import / Export intentionally does not use localStorage/admin cache keys.
-- `core/admin/ui/import-export/ImportExportPage.tsx` calls export/import
-  endpoints directly because exported bundles can contain controlled
-  configuration data and import activity is session-local.
-- `core/admin/ui/import-export/ImportDropzone.tsx` keeps Recent Imports in
-  React state only. It does not cache filenames, failure reasons, parsed
-  bundles, or upload payloads across tabs or reloads.
-
-### Redirects uncached note
-
-- Redirects intentionally do not use localStorage/admin cache keys.
-- `core/admin/ui/redirects/RedirectsPage.tsx` reads `listRedirects()` directly
-  and refreshes after create/update/enable/disable/delete because enabled rows
-  immediately affect public routing.
-- Redirect mutations must not patch browser cache state. The server response
-  plus fresh list read remain the source of truth for table rows, local
-  pagination totals, and destructive-action outcomes.
+- Tools pages now follow the same cached-first contract as Pages/Posts where
+  the resource is safe to cache:
+  - Search caches recent searches and query/date-range result payloads.
+  - SEO Manager caches list/detail rows and invalidates public HTML cache after
+    writes.
+  - Analytics caches range-scoped overview and Top Content rows; CSV export
+    payloads are not cached.
+  - Backups caches redacted list/schedule rows, patches create/delete cache
+    state when the cached page can stay correct, selectively invalidates pages
+    whose totals/row order can shift, and never stores local filesystem
+    artifact paths or download content in browser cache.
+  - Import / Export caches only browser-local Recent Imports activity; export
+    bundle payloads and uploaded bundle contents are intentionally uncached.
+  - Redirects caches list rows and patches create/update/delete cache state so
+    admin revisits do not wait for a foreground list refetch.
 
 ## Extending The Cache
 When adding a new resource:

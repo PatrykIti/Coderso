@@ -45,6 +45,11 @@ Route: `/admin/seo`
   drawer, and verified the public page HTML contained the saved `<title>` and
   meta description with no browser console errors. The fixture was deleted after
   the pass.
+- TASK-355 follow-up on 2026-06-02 repeated the public-runtime proof through
+  the running CMS HTTP stack after priming the page HTML cache. The saved SEO
+  Manager document rendered in public HTML `<title>`, meta description,
+  canonical URL, and robots metadata; the temporary page and orphaned TASK-355
+  SEO docs were cleaned up after the pass.
 
 ## Original Findings Closed by TASK-349
 

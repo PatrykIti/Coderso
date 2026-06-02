@@ -2,6 +2,7 @@ import { Calendar, Download, FileText, RotateCcw, Search, Trash2 } from "lucide-
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -18,7 +19,7 @@ const statusMeta: Record<BackupStatus, { label: string; className: string }> = {
   queued: {
     label: "Queued",
     className:
-      "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400",
+      "border-slate-500/20 bg-slate-500/10 text-slate-600 dark:border-slate-500/30 dark:bg-slate-500/15 dark:text-slate-300",
   },
   running: {
     label: "Running",
@@ -66,6 +67,11 @@ type BackupsTableProps = {
   query: string;
   isLoading: boolean;
   isSaving: boolean;
+  selectedIds?: string[];
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
+  onToggleAll?: () => void;
+  onToggleBackup?: (id: string) => void;
   onRestore: (id: string) => void;
   onDownload: (id: string) => void;
   onDelete: (id: string) => void;
@@ -75,16 +81,6 @@ type BackupsTableProps = {
 };
 
 const queuedWarningMs = 15 * 60 * 1000;
-
-const isDownloadableArtifactPath = (value: string | null) => {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
-  }
-};
 
 const getActionState = (
   backup: BackupItem
@@ -107,12 +103,6 @@ const getActionState = (
       download: "Backup artifact is not ready.",
     };
   }
-  if (!isDownloadableArtifactPath(backup.artifactPath)) {
-    return {
-      restore: "Restore is not available for CMS-managed backup files yet.",
-      download: null,
-    };
-  }
   return {
     restore: "Restore is not available for CMS-managed backup files yet.",
     download: null,
@@ -133,6 +123,11 @@ export function BackupsTable({
   query,
   isLoading,
   isSaving,
+  selectedIds = [],
+  isAllSelected = false,
+  isIndeterminate = false,
+  onToggleAll,
+  onToggleBackup,
   onRestore,
   onDownload,
   onDelete,
@@ -168,6 +163,14 @@ export function BackupsTable({
         <TableHeader className="bg-muted/40">
           <TableRow>
             <TableHead className="px-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <Checkbox
+                aria-label="Select all backups"
+                checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                onCheckedChange={() => onToggleAll?.()}
+                disabled={isLoading || items.length === 0}
+              />
+            </TableHead>
+            <TableHead className="px-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Backup ID
             </TableHead>
             <TableHead className="px-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -187,13 +190,13 @@ export function BackupsTable({
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={5} className="px-6 py-6 text-sm text-muted-foreground">
+              <TableCell colSpan={6} className="px-6 py-6 text-sm text-muted-foreground">
                 Loading backups...
               </TableCell>
             </TableRow>
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="px-6 py-6 text-sm text-muted-foreground">
+              <TableCell colSpan={6} className="px-6 py-6 text-sm text-muted-foreground">
                 {query ? "No backups match this search." : "No backups found."}
               </TableCell>
             </TableRow>
@@ -204,9 +207,18 @@ export function BackupsTable({
               const queueMessage = getQueueMessage(backup);
               const canRestore = actionState.restore === null;
               const canDownload = actionState.download === null;
+              const isSelected = selectedIds.includes(backup.id);
 
               return (
-                <TableRow key={backup.id}>
+                <TableRow key={backup.id} className={cn(isSelected && "bg-muted/30")}>
+                  <TableCell className="px-6 py-4">
+                    <Checkbox
+                      aria-label={`Select backup ${backup.id}`}
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleBackup?.(backup.id)}
+                      disabled={isSaving}
+                    />
+                  </TableCell>
                   <TableCell className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                       <FileText className="h-4 w-4 text-muted-foreground" />
