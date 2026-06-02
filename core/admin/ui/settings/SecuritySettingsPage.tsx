@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   Gauge,
@@ -35,6 +35,7 @@ import {
   type SecuritySettingsResponse,
 } from "@/services/settingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { InfoTip } from "@/ui/shared/InfoTip";
 import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
@@ -403,6 +404,99 @@ const resolveRateLimitPreset = (form: SecurityFormState): PresetId => {
   return "custom";
 };
 
+const hasChanged = <K extends keyof SecurityFormState>(
+  before: SecurityFormState,
+  after: SecurityFormState,
+  keys: K[]
+) => keys.some((key) => before[key] !== after[key]);
+
+const classifySecuritySettingsRisk = (before: SecurityFormState, after: SecurityFormState) => {
+  const risks: string[] = [];
+
+  if (hasChanged(before, after, ["requestIdEnabled", "requestIdHeaderName"])) {
+    risks.push("Request ID header policy");
+  }
+  if (hasChanged(before, after, ["csrfEnabled", "csrfHeaderName", "csrfTtlMinutes"])) {
+    risks.push("CSRF protection");
+  }
+  if (
+    hasChanged(before, after, [
+      "corsAllowedOrigins",
+      "corsAllowCredentials",
+      "corsAllowedMethods",
+      "corsAllowedHeaders",
+      "corsMaxAgeSeconds",
+    ])
+  ) {
+    risks.push("CORS policy");
+  }
+  if (
+    hasChanged(before, after, [
+      "rateLimitEnabled",
+      "rateLimitAuthWindowSeconds",
+      "rateLimitAuthMaxRequests",
+      "rateLimitAdminReadWindowSeconds",
+      "rateLimitAdminReadMaxRequests",
+      "rateLimitAdminWriteWindowSeconds",
+      "rateLimitAdminWriteMaxRequests",
+      "rateLimitPublicReadWindowSeconds",
+      "rateLimitPublicReadMaxRequests",
+      "rateLimitPublicWriteWindowSeconds",
+      "rateLimitPublicWriteMaxRequests",
+      "rateLimitAssistantWindowSeconds",
+      "rateLimitAssistantMaxRequests",
+    ])
+  ) {
+    risks.push("Rate limit policy");
+  }
+  if (
+    hasChanged(before, after, [
+      "headersEnabled",
+      "frameOptions",
+      "contentTypeOptions",
+      "referrerPolicy",
+      "permissionsPolicy",
+      "csp",
+      "hsts",
+    ])
+  ) {
+    risks.push("Security headers");
+  }
+  if (hasChanged(before, after, ["validationRejectUnknownFields"])) {
+    risks.push("Strict validation");
+  }
+  if (hasChanged(before, after, ["pluginSafeMode"])) {
+    risks.push("Plugin safe mode");
+  }
+  if (
+    hasChanged(before, after, [
+      "sessionTtlDays",
+      "sessionMaxPerUser",
+      "sessionSingleSession",
+      "authSessionTtlDays",
+      "authResetTtlMinutes",
+    ])
+  ) {
+    risks.push("Session and password reset policy");
+  }
+  if (
+    hasChanged(before, after, [
+      "botProtectionEnabled",
+      "botProtectionSiteKey",
+      "botProtectionThresholdLogin",
+      "botProtectionThresholdReset",
+      "botProtectionThresholdPublicWrite",
+      "botProtectionEnforceLocalhost",
+    ]) ||
+    after.botProtectionClearSecret ||
+    after.botProtectionSecretKey.trim().length > 0
+  ) {
+    risks.push("Bot protection secrets and thresholds");
+  }
+
+  return risks;
+};
+
 export function SecuritySettingsPage() {
   const [settings, setSettings] = useState<SecuritySettingsResponse | null>(null);
   const [form, setForm] = useState<SecurityFormState>(defaultFormState);
@@ -413,6 +507,7 @@ export function SecuritySettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [pendingRiskReview, setPendingRiskReview] = useState<string[] | null>(null);
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
   const {
     entries: allowlistEntries,
@@ -510,6 +605,11 @@ export function SecuritySettingsPage() {
   const scoreInvalid = botScoreInvalid;
   const hasValidationErrors = headerInvalid || numericInvalid || scoreInvalid;
   const presetId = resolveRateLimitPreset(form);
+  const securityRiskChanges = useMemo(
+    () => classifySecuritySettingsRisk(savedForm, form),
+    [form, savedForm]
+  );
+  const hasSecurityRiskChanges = securityRiskChanges.length > 0;
 
   const handleApplyPreset = (id: PresetId) => {
     const preset = RATE_LIMIT_PRESETS.find((item) => item.id === id);
@@ -532,7 +632,7 @@ export function SecuritySettingsPage() {
     }));
   };
 
-  const handleSave = useCallback(async () => {
+  const performSave = useCallback(async () => {
     if (busy || hasValidationErrors) return false;
     setSaveError(null);
     setSaveSuccess(null);
@@ -697,12 +797,22 @@ export function SecuritySettingsPage() {
     }
   }, [busy, form, hasValidationErrors]);
 
+  const handleSave = useCallback(async () => {
+    if (hasSecurityRiskChanges) {
+      setPendingRiskReview(securityRiskChanges);
+      return false;
+    }
+    return performSave();
+  }, [hasSecurityRiskChanges, performSave, securityRiskChanges]);
+
   useAutoSaveEffect({
     enabled: autoSaveEnabled,
     isReady: !isLoading,
-    hasErrors: hasValidationErrors,
+    hasErrors: hasValidationErrors || hasSecurityRiskChanges,
     value: form,
+    savedValue: savedForm,
     onSave: handleSave,
+    syncSnapshotWhenBlocked: true,
   });
 
   const saveDisabled = busy || hasValidationErrors;
@@ -1882,6 +1992,26 @@ export function SecuritySettingsPage() {
           </div>
         </div>
       </div>
+      <ConfirmActionDialog
+        open={Boolean(pendingRiskReview)}
+        onOpenChange={(open) => {
+          if (!open) setPendingRiskReview(null);
+        }}
+        title="Review security policy changes"
+        description="These changes can affect authentication, rate limits, browser protections, sessions, or bot-defense secrets."
+        targetLabel={(pendingRiskReview ?? []).join(", ")}
+        confirmLabel="Apply security changes"
+        confirmingLabel="Applying..."
+        tone="warning"
+        requireTypedValue="APPLY"
+        closeOnSuccess
+        onConfirm={async () => {
+          await performSave();
+        }}
+      >
+        Type APPLY only after confirming the new policy will not lock out administrators or weaken
+        production protections unintentionally.
+      </ConfirmActionDialog>
     </SettingsShell>
   );
 }

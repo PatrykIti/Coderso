@@ -5,7 +5,7 @@
 **Category:** Admin UI + Settings + Cache + Security UX + RBAC + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm pattern, TASK-360-04 no-op gate, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md` audit evidence
-**Status:** In Progress (2026-06-02)
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -307,7 +307,7 @@ Completion notes:
 
 ### TASK-359-04: General and Site Placeholder Truthfulness
 
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 General:
 
@@ -386,7 +386,7 @@ Regression tests:
 
 ### TASK-359-05: Security, Sessions, API Keys, Webhooks, IP Allowlist Confirms
 
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 Add confirm flows for:
 
@@ -433,7 +433,7 @@ Regression tests:
 
 ### TASK-359-06: Email, Storage, Integrations, Assistant Action Truthfulness
 
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 Email:
 
@@ -506,7 +506,7 @@ Regression tests:
 
 ### TASK-359-07: Login Alerts and Sessions Placeholder Cleanup
 
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 Login Alerts:
 

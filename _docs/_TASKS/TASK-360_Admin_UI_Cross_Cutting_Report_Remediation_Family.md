@@ -5,7 +5,7 @@
 **Category:** Admin UI + Cross-Cutting RBAC + Accessibility + QA Gates + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md` audit evidence
-**Status:** In Progress (2026-06-01)
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -390,7 +390,7 @@ Validation:
 
 ### TASK-360-07: Final Evidence, Reports, and QA Closure
 
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 After TASK-355 through TASK-359 land:
 

@@ -13,6 +13,7 @@ import {
 } from "@/services/webhooksClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
 import { SettingsSidebar } from "./SettingsSidebar";
 import { WebhookDrawer } from "./WebhookDrawer";
@@ -60,6 +61,7 @@ export function WebhooksPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [drawerError, setDrawerError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<WebhookRow | null>(null);
 
   const rows = useMemo(() => items.map(toRow), [items]);
 
@@ -210,7 +212,7 @@ export function WebhooksPage() {
           <WebhooksTable
             items={rows}
             onEdit={openEdit}
-            onDelete={handleDelete}
+            onDelete={setPendingDelete}
             isLoading={isLoading}
             busyId={busyId}
           />
@@ -237,6 +239,27 @@ export function WebhooksPage() {
         onSave={handleSave}
         onTest={editingWebhook ? handleTest : undefined}
       />
+      <ConfirmActionDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        title="Delete webhook?"
+        description="This removes the webhook endpoint and stops future deliveries for its selected events."
+        targetLabel={pendingDelete?.url}
+        confirmLabel="Delete webhook"
+        confirmingLabel="Deleting..."
+        tone="destructive"
+        closeOnSuccess
+        onConfirm={async () => {
+          if (pendingDelete) {
+            await handleDelete(pendingDelete);
+          }
+        }}
+      >
+        Delivery history may remain for audit purposes, but this endpoint will no longer receive CMS
+        events.
+      </ConfirmActionDialog>
     </SettingsShell>
   );
 }

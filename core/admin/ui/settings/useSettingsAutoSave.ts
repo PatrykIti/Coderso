@@ -13,16 +13,17 @@ export type AutoSaveEffectOptions<T> = {
   isReady?: boolean;
   hasErrors?: boolean;
   value: T;
+  savedValue?: T;
   onSave: () => Promise<boolean> | boolean;
   delayMs?: number;
+  syncSnapshotWhenBlocked?: boolean;
 };
 
 export function useSettingsAutoSave(): AutoSaveState {
   const [enabled, setEnabled] = useState(() => {
     if (typeof window === "undefined") return false;
     const stored =
-      window.localStorage.getItem(STORAGE_KEY) ??
-      window.localStorage.getItem(LEGACY_STORAGE_KEY);
+      window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (stored === null) return false;
     return stored === "true";
   });
@@ -30,9 +31,7 @@ export function useSettingsAutoSave(): AutoSaveState {
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(STORAGE_KEY, String(enabled));
-    window.dispatchEvent(
-      new CustomEvent("settings:autosave", { detail: { enabled } })
-    );
+    window.dispatchEvent(new CustomEvent("settings:autosave", { detail: { enabled } }));
   }, [enabled]);
 
   useEffect(() => {
@@ -59,10 +58,7 @@ export function useSettingsAutoSave(): AutoSaveState {
     setEnabled(value);
   }, []);
 
-  return useMemo(
-    () => ({ enabled, setEnabled: setEnabledStable }),
-    [enabled, setEnabledStable]
-  );
+  return useMemo(() => ({ enabled, setEnabled: setEnabledStable }), [enabled, setEnabledStable]);
 }
 
 export function useAutoSaveEffect<T>({
@@ -70,17 +66,38 @@ export function useAutoSaveEffect<T>({
   isReady = true,
   hasErrors = false,
   value,
+  savedValue,
   onSave,
   delayMs = 800,
+  syncSnapshotWhenBlocked = false,
 }: AutoSaveEffectOptions<T>) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initializedRef = useRef(false);
   const lastSavedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!enabled || !isReady || hasErrors) return;
-
     const snapshot = JSON.stringify(value);
+    const savedSnapshot = savedValue === undefined ? null : JSON.stringify(savedValue);
+    if (!enabled || !isReady) return;
+    if (savedSnapshot !== null && snapshot === savedSnapshot) {
+      initializedRef.current = true;
+      lastSavedRef.current = snapshot;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      return;
+    }
+    if (hasErrors) {
+      if (syncSnapshotWhenBlocked) {
+        initializedRef.current = true;
+        lastSavedRef.current = snapshot;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      return;
+    }
+
     if (!initializedRef.current) {
       initializedRef.current = true;
       lastSavedRef.current = snapshot;
@@ -109,5 +126,5 @@ export function useAutoSaveEffect<T>({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [enabled, isReady, hasErrors, value, onSave, delayMs]);
+  }, [enabled, isReady, hasErrors, value, savedValue, onSave, delayMs, syncSnapshotWhenBlocked]);
 }

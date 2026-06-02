@@ -5,7 +5,7 @@
 **Category:** Admin UI + Security Settings + Sessions + Confirm UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-359-01, TASK-360-02
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -148,3 +148,17 @@ Error handling:
 - High-risk Settings actions cannot execute without confirm.
 - Current session/IP lockout cases are protected.
 - Secrets remain one-time/redacted and audit events are safe.
+
+## Completion Notes
+
+- Security high-risk policy saves, Sessions revoke/revoke-all, API key
+  rotate/revoke, webhook delete, and IP allowlist remove now route through
+  cancel-safe confirms.
+- Current-session and current-IP lockout copy remains visible; current session
+  revoke remains blocked.
+- API key one-time secret handling stays out of browser cache and clears after
+  the one-time secret dialog closes.
+- QA override note: `Max sessions per user = 30` is intentionally retained for
+  the local multi-agent Playwright audit with owner/date/reason in the report.
+- Evidence: `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md`,
+  focused Vitest suites, lint, and typecheck.

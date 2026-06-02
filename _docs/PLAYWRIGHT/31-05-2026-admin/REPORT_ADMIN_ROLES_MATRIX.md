@@ -140,3 +140,20 @@ szerokich/full-access oraz high-risk grants.
   `TASK-356-03`.
 - Rozważyć audit log event opisujący diff RBAC, nie tylko fakt zapisu.
   Status: zamkniete w `TASK-356-04`.
+
+## Finalna weryfikacja - 2026-06-02
+
+- Subagent Playwright smoke `codex-02-06-admin-final-areas` otworzył
+  `/admin/roles` i potwierdził widoczność permissions search, `Add Role`, bulk
+  toggles oraz permission checkboxes.
+- Bez zmian w matrix `Cancel` i `Review changes` były disabled. Nie przełączano
+  permissions w finalnym smoke, żeby nie tworzyć dodatkowego RBAC diffu.
+- Final console dla tego smoke'a: 0 errors, 0 warnings. Po loginie role/
+  permissions requesty wracały `200`.
+- Dodatkowy końcowy pass `codex-02-06-physical` oraz niezależny Claude pass
+  `claude-02-06-admin-physical` ponownie otworzyły `/admin/roles` przez
+  fizyczne kliknięcie sidebaru. Claude raportuje PASS, 0 console errors/
+  warnings i requesty po loginie `200`.
+- Status raportu: wszystkie Roles Matrix findings są zamknięte w
+  `TASK-356-01` through `TASK-356-04`; ten finalny smoke jest ewidencją
+  `TASK-360-07`.

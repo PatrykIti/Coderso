@@ -5,7 +5,7 @@
 **Category:** Admin UI + Settings + External Actions + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-359-01, TASK-360-02, TASK-360-04, TASK-360-05
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -128,3 +128,16 @@ Error handling:
   truthfully unavailable.
 - Side-effect actions require confirmation and redacted audit.
 - Settings drawers expose valid title/description semantics.
+
+## Completion Notes
+
+- Email test send, webhook test, webhook edit save, integration secret save, and
+  assistant reindex now require explicit confirmation when available.
+- Storage `Test Connection` and Email `Export Logs` are disabled with explicit
+  unavailable copy instead of active no-op behavior.
+- Integration secret review shows provider/field labels only and does not echo
+  submitted secret values.
+- Drawer title/description semantics remain covered by the shared drawer a11y
+  gate.
+- Evidence: `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md`,
+  docs/guide screen updates, focused Vitest suites, lint, and typecheck.

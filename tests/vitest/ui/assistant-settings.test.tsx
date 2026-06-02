@@ -31,6 +31,21 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
+const clickButton = async (label: string, options: { last?: boolean } = {}) => {
+  const matches = Array.from(document.body.querySelectorAll("button")).filter((button) =>
+    button.textContent?.includes(label)
+  );
+  const button = options.last ? matches.at(-1) : matches[0];
+  if (!button) {
+    throw new Error(`Missing button: ${label}`);
+  }
+  await React.act(async () => {
+    (button as HTMLButtonElement).click();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
@@ -78,7 +93,7 @@ test("AssistantSettingsPage links OpenAI provider to integrations secrets", () =
   expect(html).toContain("/admin/settings/integrations");
 });
 
-test("Run reindex triggers assistant reindex without calling onSave first", async () => {
+test("Run reindex requires confirmation before calling assistant reindex", async () => {
   const onSave = vi.fn();
   const reindexSpy = vi.spyOn(assistantClient, "reindexAssistantDocs").mockResolvedValue({
     retrievalBackend: "db",
@@ -96,19 +111,16 @@ test("Run reindex triggers assistant reindex without calling onSave first", asyn
     </AdminRouterProvider>
   );
 
-  const reindexButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
-    button.textContent?.includes("Run reindex")
-  );
+  await clickButton("Run reindex");
+  expect(document.body.textContent).toContain("Run assistant reindex?");
+  expect(onSave).not.toHaveBeenCalled();
+  expect(reindexSpy).not.toHaveBeenCalled();
 
-  if (!reindexButton) {
-    throw new Error("Missing reindex button");
-  }
+  await clickButton("Cancel");
+  expect(reindexSpy).not.toHaveBeenCalled();
 
-  await React.act(async () => {
-    reindexButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    await Promise.resolve();
-    await Promise.resolve();
-  });
+  await clickButton("Run reindex");
+  await clickButton("Run reindex", { last: true });
 
   expect(onSave).not.toHaveBeenCalled();
   expect(reindexSpy).toHaveBeenCalledTimes(1);

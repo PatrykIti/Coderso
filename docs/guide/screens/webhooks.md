@@ -72,6 +72,9 @@ verified in the shipped UI source.
     - edit webhook,
     - test connection,
     - delete webhook.
+14. Existing webhook edits open `Review webhook changes` before saving, webhook
+    tests open `Send webhook test?`, and deletes require a destructive confirm.
+    Cancel keeps the draft/row unchanged.
 
 Use this safe webhook flow when you want fewer delivery mistakes:
 1. Confirm the endpoint URL.
@@ -89,7 +92,8 @@ Use this safe webhook flow when you want fewer delivery mistakes:
 - Signing secret management is a real security boundary. It is what lets the
   receiving system verify that requests came from this platform.
 - `Test Connection` is an operational check, not just a convenience button. It
-  should be used when the endpoint is supposed to be reachable now.
+  should be used when the endpoint is supposed to be reachable now, and the UI
+  asks for confirmation before sending the test request.
 - Last-delivery state is a practical health signal when webhooks already exist,
   even though the current local dataset is empty.
 
@@ -113,7 +117,7 @@ Use this safe webhook flow when you want fewer delivery mistakes:
   must change.
 - Choose disable vs delete:
   disable when the integration may come back; delete when it should be removed
-  entirely.
+  entirely, then confirm the destructive delete dialog.
 - Choose broad vs narrow event selection:
   choose the narrowest set that still satisfies the real integration need.
 

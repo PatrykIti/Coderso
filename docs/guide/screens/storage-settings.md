@@ -59,8 +59,8 @@ underneath media handling across the CMS.
    - account key,
    - container name,
    - connection string.
-7. Use `Test Connection` when the provider should already be reachable and the
-   credentials are expected to work.
+7. Review `Test Connection`. In the current UI it is disabled and explains that
+   provider test feedback is not wired yet.
 8. Move to `Upload Policies`.
 9. Review the shared fields:
    - storage file URL override,
@@ -78,7 +78,7 @@ Use this safe storage workflow when you want fewer asset-delivery mistakes:
 2. Configure provider-specific fields.
 3. Review the provider note.
 4. Review upload policies.
-5. Test connection when appropriate.
+5. Wait for the connection-test contract before relying on provider validation.
 6. Save deliberately.
 
 # Advanced
@@ -92,7 +92,9 @@ Use this safe storage workflow when you want fewer asset-delivery mistakes:
 - `Storage File URL (Override)` is a delivery-control field, not only a cosmetic
   path override.
 - `Test Connection` should be treated as an operational validation step, not as
-  a replacement for understanding the provider configuration itself.
+  a replacement for understanding the provider configuration itself. It is
+  intentionally unavailable in the current UI until backend provider feedback is
+  wired.
 
 # Troubleshooting
 

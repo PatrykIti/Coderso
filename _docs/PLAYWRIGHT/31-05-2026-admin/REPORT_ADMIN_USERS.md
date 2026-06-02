@@ -66,15 +66,15 @@ jednorazowym fixture user/role i posprzątano po teście.
 
 ## Co nie działało / co jest ryzykowne
 
-| Problem | Dowód z kodu | Skutek |
-| --- | --- | --- |
-| UI nie zna efektywnych uprawnień bieżącego usera | `authClient.AuthUser` ma tylko `id/email/name`; `AdminApp.tsx` renderuje `<UsersRolesPage />` bez permissions; `UsersRolesPage` domyślnie ustawia `users/roles` read+write | restricted user widzi aktywne write-actions, które backend odrzuca 403 |
-| `Reset password` jest no-op | `UsersRolesPage.tsx` przekazuje `onResetPassword={() => undefined}` do listy i drawera | user klika akcję bezpieczeństwa i nie dostaje efektu ani feedbacku |
-| Invite User nie pozwala ustawić hasła | `InviteUserDialog.tsx` ma tylko name/email/role, mimo że `adminUsersClient.ts` i service obsługują `password` | nie da się pełnie stworzyć login-capable usera samym UI bez zewnętrznego resetu/API fixture |
-| Ikona filtra obok selectów nie ma handlera | `UserFilters.tsx` renderuje ghost button z ikoną `Filter`, bez `onClick` | wygląda jak dodatkowy panel filtrów, ale nic nie robi |
-| Switches w `Email notifications` są lokalne/statyczne | `UserDetailsDrawer.tsx` ma `Switch defaultChecked` bez zapisu | user może założyć, że zmienia preferencje usera |
-| `Deactivate user`, `Delete user`, `Delete role` wywołują mutacje bez confirm dialogu | potwierdzone na fixture; `handleToggleStatus`, `handleDeleteUser`, `handleDeleteRole` od razu wołają API | łatwo wykonać destrukcyjną akcję z menu wiersza |
-| Mobile details sheet nie ma semantycznego `SheetTitle` | mobile `SheetContent` w `UsersRolesPage.tsx`, zawartość `UserDetailsDrawer` używa zwykłego `h3` | błąd/warning Radix i gorsza dostępność na mobile |
+| Problem | Dowód z audytu | Skutek | Status |
+| --- | --- | --- | --- |
+| UI nie zna efektywnych uprawnień bieżącego usera | `authClient.AuthUser` miał tylko `id/email/name`; `AdminApp.tsx` renderował `<UsersRolesPage />` bez permissions; `UsersRolesPage` domyślnie ustawiał `users/roles` read+write | restricted user widział aktywne write-actions, które backend odrzucał 403 | Zamknięte w `TASK-355-01` |
+| `Reset password` jest no-op | `UsersRolesPage.tsx` przekazywał `onResetPassword={() => undefined}` do listy i drawera | user klikał akcję bezpieczeństwa i nie dostawał efektu ani feedbacku | Zamknięte w `TASK-355-02` |
+| Invite User nie pozwala ustawić hasła | `InviteUserDialog.tsx` miał tylko name/email/role, mimo że `adminUsersClient.ts` i service obsługiwały `password` | nie dało się pełnie stworzyć login-capable usera samym UI bez zewnętrznego resetu/API fixture | Zamknięte w `TASK-355-02` przez set-password email flow |
+| Ikona filtra obok selectów nie ma handlera | `UserFilters.tsx` renderował ghost button z ikoną `Filter`, bez `onClick` | wyglądało jak dodatkowy panel filtrów, ale nic nie robiło | Zamknięte w `TASK-355-04` jako disabled unavailable state |
+| Switches w `Email notifications` są lokalne/statyczne | `UserDetailsDrawer.tsx` miał `Switch defaultChecked` bez zapisu | user mógł założyć, że zmienia preferencje usera | Zamknięte w `TASK-355-04` jako read-only managed state |
+| `Deactivate user`, `Delete user`, `Delete role` wywołują mutacje bez confirm dialogu | potwierdzone na fixture; handlery od razu wołały API | łatwo było wykonać destrukcyjną akcję z menu wiersza | Zamknięte w `TASK-355-03` |
+| Mobile details sheet nie ma semantycznego `SheetTitle` | mobile `SheetContent` w `UsersRolesPage.tsx`, zawartość `UserDetailsDrawer` używała zwykłego `h3` | błąd/warning Radix i gorsza dostępność na mobile | Zamknięte w `TASK-355-05` |
 
 ### Status po TASK-355-01 - 2026-06-01
 
@@ -152,8 +152,8 @@ jednorazowym fixture user/role i posprzątano po teście.
 - Shared `drawer-sheet-a11y-gate` otwiera Users mobile sheet i sprawdza
   `aria-labelledby`, `aria-describedby` oraz brak Radix warningów.
 - Wszystkie problemy z tabeli ryzyk Users zostały przypisane i zaadresowane w
-  `TASK-355-01` through `TASK-355-05`; finalna przeklikana ewidencja zostaje w
-  `TASK-360-07`.
+  `TASK-355-01` through `TASK-355-05`; finalna przeklikana ewidencja została
+  dopisana w `TASK-360-07`.
 
 ## Dlaczego
 
@@ -179,3 +179,19 @@ które akcje są realne.
   state bez lokalnego submitu.
 - Mobile sheet: zrealizowane w `TASK-355-05` przez wizualnie ukryte
   `SheetTitle`/`SheetDescription` oraz warning-free regression gate.
+
+## Finalna weryfikacja - 2026-06-02
+
+- Subagent Playwright smoke `codex-02-06-admin-final-areas` otworzył
+  `/admin/users` i realnie kliknął search, role/status filters, disabled
+  advanced filters, `Invite User`, `Create Role` oraz row actions.
+- `Delete user` otworzył destrukcyjny confirm z target userem i irreversible
+  warningiem. Kliknięto `Cancel`; po cancel nie pojawił się mutujący request.
+- Final console dla tego smoke'a: 0 errors, 0 warnings. Oczekiwany był tylko
+  pre-login `401 /admin/api/auth/me` oraz React DevTools info.
+- Dodatkowy końcowy pass `codex-02-06-physical` oraz niezależny Claude pass
+  `claude-02-06-admin-physical` ponownie otworzyły `/admin/users` przez
+  fizyczne kliknięcie sidebaru. Claude raportuje PASS, 0 console errors/
+  warnings i requesty po loginie `200`.
+- Status raportu: wszystkie Users findings są zamknięte w `TASK-355-01`
+  through `TASK-355-05`; ten finalny smoke jest ewidencją `TASK-360-07`.

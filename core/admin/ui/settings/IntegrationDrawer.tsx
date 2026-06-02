@@ -14,6 +14,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
 import type { IntegrationStatus } from "./IntegrationCard";
@@ -61,7 +62,7 @@ type IntegrationDrawerProps = {
   } | null;
   isSaving?: boolean;
   error?: string | null;
-  onSave?: (id: string, config: Record<string, string | null>) => void;
+  onSave?: (id: string, config: Record<string, string | null>) => void | Promise<void>;
 };
 
 export function IntegrationDrawer({
@@ -88,6 +89,12 @@ export function IntegrationDrawer({
     return nextSecretEdits;
   });
   const [localError, setLocalError] = useState<string | null>(null);
+  const [pendingSecretSave, setPendingSecretSave] = useState<{
+    id: string;
+    name: string;
+    config: Record<string, string | null>;
+    secretLabels: string[];
+  } | null>(null);
   const initialSignature = useMemo(() => {
     const initialValues: Record<string, string> = {};
     const initialSecretEdits: Record<string, boolean> = {};
@@ -116,10 +123,14 @@ export function IntegrationDrawer({
   const handleSave = () => {
     if (!integration || !onSave) return;
     const payload: Record<string, string | null> = {};
+    const editedSecretLabels: string[] = [];
     for (const field of fields) {
       const value = values[field.key] ?? "";
       if (field.type === "secret" && !secretEdits[field.key]) {
         continue;
+      }
+      if (field.type === "secret") {
+        editedSecretLabels.push(field.label);
       }
       if (field.required && !value.trim() && field.type !== "secret") {
         setLocalError(`Fill in ${field.label.toLowerCase()}.`);
@@ -128,6 +139,15 @@ export function IntegrationDrawer({
       payload[field.key] = value.trim() ? value.trim() : null;
     }
     setLocalError(null);
+    if (editedSecretLabels.length > 0) {
+      setPendingSecretSave({
+        id: integration.id,
+        name: integration.name,
+        config: payload,
+        secretLabels: editedSecretLabels,
+      });
+      return;
+    }
     onSave(integration.id, payload);
   };
 
@@ -238,6 +258,30 @@ export function IntegrationDrawer({
           </Button>
         </div>
       </SheetContent>
+      <ConfirmActionDialog
+        open={Boolean(pendingSecretSave)}
+        onOpenChange={(open) => {
+          if (!open) setPendingSecretSave(null);
+        }}
+        title="Review integration secrets"
+        description="This updates encrypted credentials used by an external integration."
+        targetLabel={
+          pendingSecretSave
+            ? `${pendingSecretSave.name}: ${pendingSecretSave.secretLabels.join(", ")}`
+            : undefined
+        }
+        confirmLabel="Save secrets"
+        confirmingLabel="Saving..."
+        tone="warning"
+        closeOnSuccess
+        onConfirm={async () => {
+          if (pendingSecretSave) {
+            await onSave?.(pendingSecretSave.id, pendingSecretSave.config);
+          }
+        }}
+      >
+        Confirm that the replacement secret is intended for this integration and scope.
+      </ConfirmActionDialog>
     </Sheet>
   );
 }

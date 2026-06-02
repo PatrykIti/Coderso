@@ -5,7 +5,7 @@
 **Category:** Admin UI + Settings + Login Alerts + Sessions + UX Truthfulness
 **Estimated Effort:** Medium
 **Dependencies:** TASK-359-01, TASK-359-05, TASK-360-04
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -118,3 +118,14 @@ Error handling:
 - Login Alerts controls are persisted or truthfully unavailable.
 - Sticky and topbar actions do not diverge.
 - Sessions buttons do not remain active no-ops.
+
+## Completion Notes
+
+- Login Alerts unavailable tabs, brute-force threshold, custom recipients,
+  channels, and sticky actions are disabled with no-op gate coverage.
+- Supported Login Alerts top actions continue to use the same save/discard
+  handlers for the persisted alert toggles.
+- Sessions unavailable tabs plus `Change Password` and `Security Settings`
+  link-buttons are disabled; session revokes are handled by `TASK-359-05`.
+- Evidence: `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md`,
+  focused Vitest no-op/session suites, lint, and typecheck.

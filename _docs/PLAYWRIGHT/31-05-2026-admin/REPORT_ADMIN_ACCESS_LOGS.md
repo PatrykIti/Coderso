@@ -189,3 +189,22 @@ wykonawcze bez dodatkowego user/role directory lookup.
 - TASK-358-04: zamknięte przez realny `Advanced access filters` panel,
   method/IP validation, active chips, exact `User ID` semantics i brak
   dodatkowych `/users`/`/roles` lookupów dla restricted `audit:read`.
+
+## Finalna weryfikacja - 2026-06-02
+
+- Subagent Playwright smoke `codex-02-06-admin-final-areas` otworzył
+  `/admin/access-logs` i potwierdził search, user ID, date/status filters,
+  `Export`, advanced filters oraz pagination controls.
+- Advanced filters otworzyły realny dialog dla HTTP method/IP i pokazały
+  wyjaśnienie, że role filtering jest niedostępny, bo access logs nie trzymają
+  historycznych role snapshots. Kliknięto `Cancel`.
+- Pierwsza akcja wiersza otworzyła `Access Log Details`; drawer pokazał, że
+  current session nie może być revoked from access logs. Nie wykonano revoke.
+- Final console dla tego smoke'a: 0 errors, 0 warnings. Access Logs requesty po
+  loginie wracały `200`.
+- Dodatkowy końcowy pass `codex-02-06-physical` oraz niezależny Claude pass
+  `claude-02-06-admin-physical` ponownie otworzyły `/admin/access-logs` przez
+  fizyczne kliknięcie sidebaru. Claude raportuje PASS, 0 console errors/
+  warnings i requesty po loginie `200`.
+- Status raportu: wszystkie Access Logs findings są zamknięte w `TASK-358-01`
+  through `TASK-358-04`; ten finalny smoke jest ewidencją `TASK-360-07`.

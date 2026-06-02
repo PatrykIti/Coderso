@@ -119,6 +119,12 @@ const flushEffects = async () => {
   });
 };
 
+const waitForAutoSaveDelay = async () => {
+  await React.act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 900));
+  });
+};
+
 const findButton = (container: HTMLElement, label: string) => {
   const button = Array.from(container.querySelectorAll("button")).find((item) =>
     item.textContent?.includes(label)
@@ -145,6 +151,18 @@ const setInputValue = (input: HTMLInputElement, value: string) => {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
   setter?.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
+};
+
+const clickButton = async (container: HTMLElement | ParentNode, label: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((item) =>
+    item.textContent?.includes(label)
+  );
+  if (!button) throw new Error(`missing button: ${label}`);
+  await React.act(async () => {
+    (button as HTMLButtonElement).click();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 };
 
 const installSettingsFetch = (settings: () => Record<string, unknown>) => {
@@ -287,6 +305,70 @@ test("SiteSettingsPage does not overwrite dirty drafts on settings cache refresh
     await flushEffects();
 
     expect(getCacheTtlInput(view.container).value).toBe("45");
+    view.cleanup();
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
+test("SiteSettingsPage requires review before risky routing saves", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  const fetchMock = installSettingsFetch(() => rawSiteSettingsPayload());
+
+  try {
+    storage.setItem("coderso.settings.autosave", "true");
+    primeRedactedSettingsCache(rawSiteSettingsPayload());
+    setCacheValue(storage, cacheKeys.pagesList, [pageSummary("page-home", "Home")]);
+    setCacheValue(storage, cacheKeys.contentTypesList, []);
+
+    const view = mount(
+      <AdminRouterProvider initialPath="/admin/settings/site">
+        <SiteSettingsPage />
+      </AdminRouterProvider>
+    );
+    await flushEffects();
+
+    const adminPathInput = view.container.querySelector("#admin-path") as HTMLInputElement | null;
+    if (!adminPathInput) throw new Error("missing admin path input");
+    React.act(() => {
+      setInputValue(adminPathInput, "/cms");
+    });
+    await flushEffects();
+
+    await clickButton(view.container, "Save changes");
+    expect(document.body.textContent).toContain("Review site routing changes");
+    expect(document.body.textContent).toContain("Admin access path");
+    expect(
+      fetchMock.calls.filter(
+        (call) => String(call.input).endsWith("/settings") && call.init?.method === "PATCH"
+      )
+    ).toHaveLength(0);
+
+    await clickButton(document.body, "Cancel");
+    expect(
+      fetchMock.calls.filter(
+        (call) => String(call.input).endsWith("/settings") && call.init?.method === "PATCH"
+      )
+    ).toHaveLength(0);
+
+    await clickButton(view.container, "Save changes");
+    await clickButton(document.body, "Apply site changes");
+    await flushEffects();
+
+    const patchCalls = fetchMock.calls.filter(
+      (call) => String(call.input).endsWith("/settings") && call.init?.method === "PATCH"
+    );
+    expect(patchCalls).toHaveLength(1);
+    expect(JSON.parse(String(patchCalls[0]?.init?.body))).toMatchObject({
+      "site.adminPath": "/cms",
+    });
+    await waitForAutoSaveDelay();
+    expect(
+      fetchMock.calls.filter(
+        (call) => String(call.input).endsWith("/settings") && call.init?.method === "PATCH"
+      )
+    ).toHaveLength(1);
     view.cleanup();
   } finally {
     fetchMock.restore();

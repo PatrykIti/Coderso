@@ -69,6 +69,8 @@ should be.
    corpus needs to be rebuilt now.
    The rebuild refreshes DB records from the current root `docs/` tree and
    removes official docs that no longer exist in the source corpus.
+   The action opens a confirmation dialog before the reindex request is sent;
+   cancel leaves the current index untouched.
 10. If LLM mode is in scope, review:
     - enable LLM mode,
     - provider,
@@ -104,7 +106,8 @@ Use this safe Assistant Settings order when you want fewer runtime mistakes:
   because it defines the runtime source of truth: root `docs/` seeded into DB,
   not a filesystem fallback.
 - `Run reindex` is an operational action, not a cosmetic button. It should be
-  used only when the saved assistant configuration and corpus state are ready.
+  used only when the saved assistant configuration and corpus state are ready,
+  and it requires confirmation before execution.
 - Reindex is also the cleanup path for removed assistant docs. Deleting a
   canonical article from root `docs/` does not change runtime answers until the
   DB corpus is rebuilt.

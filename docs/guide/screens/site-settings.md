@@ -75,6 +75,10 @@ workspace that groups public runtime concerns into distinct areas.
     save behavior.
 16. Use `Save changes` when you want an explicit save after reviewing the whole
     public-site configuration.
+17. If the change affects admin/public URLs, admin path, homepage, 404 page,
+    preview, or content routes, review the `Review site routing changes` dialog
+    before applying it. Cancel keeps the draft visible and does not patch the
+    site settings.
 
 Use this safe Site Settings order when you want fewer routing mistakes:
 1. Base URLs first.
@@ -87,6 +91,9 @@ Use this safe Site Settings order when you want fewer routing mistakes:
 
 - `Base URLs` and `Admin Access Path` affect how both humans and systems reach
   the platform, so they should be treated as environment-level routing controls.
+- High-impact routing edits require an explicit review step before the PATCH is
+  sent. This also prevents auto-save from silently applying admin-path or public
+  routing changes.
 - `Content routes` is one of the highest-impact parts of this screen because it
   defines public URL shape for each content type.
 - Suggested routes are there to reduce drift, but they are not automatically the
@@ -113,7 +120,8 @@ Use this safe Site Settings order when you want fewer routing mistakes:
 # Decision Guide
 
 - Choose explicit save vs relying on auto-save:
-  use explicit save when the public-site routing change needs deliberate review.
+  use explicit save when the public-site routing change needs deliberate review;
+  risky routing changes open the review dialog before they are applied.
 - Choose custom route vs suggested route:
   use suggested when the default pattern matches the model; keep custom only when
   the public URL shape truly needs it.

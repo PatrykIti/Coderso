@@ -17,6 +17,7 @@ import {
   type EmailSettingsResponse,
 } from "@/services/emailClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
@@ -100,6 +101,7 @@ export function EmailSettingsPage() {
   const [isTesting, setIsTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [sendTestReviewOpen, setSendTestReviewOpen] = useState(false);
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
 
   const loadSettings = useCallback(async () => {
@@ -312,6 +314,16 @@ export function EmailSettingsPage() {
     }
   };
 
+  const handleRequestSendTest = () => {
+    setError(null);
+    setSuccess(null);
+    if (!testRecipient.trim()) {
+      setError("Provide a recipient address.");
+      return;
+    }
+    setSendTestReviewOpen(true);
+  };
+
   const busy = isLoading || isSaving;
 
   useAutoSaveEffect({
@@ -466,7 +478,7 @@ export function EmailSettingsPage() {
                       <Button
                         variant="secondary"
                         className="w-full gap-2"
-                        onClick={handleSendTest}
+                        onClick={handleRequestSendTest}
                         disabled={isTesting || isLoading}
                       >
                         <Send className="h-4 w-4" />
@@ -583,6 +595,22 @@ export function EmailSettingsPage() {
         isLoading={logsLoading}
         error={logsError}
       />
+      <ConfirmActionDialog
+        open={sendTestReviewOpen}
+        onOpenChange={setSendTestReviewOpen}
+        title="Send test email?"
+        description="This sends a real email through the configured SMTP provider."
+        targetLabel={testRecipient.trim()}
+        confirmLabel="Send test email"
+        confirmingLabel="Sending..."
+        tone="warning"
+        closeOnSuccess
+        onConfirm={async () => {
+          await handleSendTest();
+        }}
+      >
+        Confirm the recipient address before sending an external message.
+      </ConfirmActionDialog>
     </SettingsShell>
   );
 }

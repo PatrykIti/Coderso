@@ -34,6 +34,8 @@ import { SettingsSidebar } from "./SettingsSidebar";
 const tabTriggerClassName = "after:bg-primary data-[state=active]:text-primary";
 const loginAlertAdvancedUnavailableReason =
   "Advanced login alert recipients and brute-force controls are not wired yet. TASK-359-07 owns persistence.";
+const loginAlertTabsUnavailableReason =
+  "Only Login Alerts is wired on this screen. TASK-359-07 owns the remaining security tabs.";
 
 type LoginAlertsFormState = {
   enabled: boolean;
@@ -168,19 +170,43 @@ export function LoginAlertsPage() {
         <Tabs defaultValue="login-alerts" className="flex flex-1 flex-col">
           <div className="border-b bg-background px-6">
             <TabsList variant="line" className="h-12 gap-6">
-              <TabsTrigger value="general" className={tabTriggerClassName}>
+              <TabsTrigger
+                value="general"
+                className={tabTriggerClassName}
+                disabled
+                title={loginAlertTabsUnavailableReason}
+                data-no-op-control="settings-login-alerts-tab-general"
+              >
                 General
               </TabsTrigger>
-              <TabsTrigger value="active-sessions" className={tabTriggerClassName}>
+              <TabsTrigger
+                value="active-sessions"
+                className={tabTriggerClassName}
+                disabled
+                title={loginAlertTabsUnavailableReason}
+                data-no-op-control="settings-login-alerts-tab-active-sessions"
+              >
                 Active Sessions
               </TabsTrigger>
               <TabsTrigger value="login-alerts" className={tabTriggerClassName}>
                 Login Alerts
               </TabsTrigger>
-              <TabsTrigger value="audit-log" className={tabTriggerClassName}>
+              <TabsTrigger
+                value="audit-log"
+                className={tabTriggerClassName}
+                disabled
+                title={loginAlertTabsUnavailableReason}
+                data-no-op-control="settings-login-alerts-tab-audit-log"
+              >
                 Audit Log
               </TabsTrigger>
-              <TabsTrigger value="two-factor" className={tabTriggerClassName}>
+              <TabsTrigger
+                value="two-factor"
+                className={tabTriggerClassName}
+                disabled
+                title={loginAlertTabsUnavailableReason}
+                data-no-op-control="settings-login-alerts-tab-two-factor"
+              >
                 Two-Factor Auth
               </TabsTrigger>
             </TabsList>

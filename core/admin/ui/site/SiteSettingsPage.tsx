@@ -36,6 +36,7 @@ import { cacheKeys } from "@/services/cachePolicy";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { InfoTip } from "@/ui/shared/InfoTip";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { SettingsSidebar } from "@/ui/settings/SettingsSidebar";
 import { AdminAccessCard } from "@/ui/settings/AdminAccessCard";
 import { BaseUrlCard } from "@/ui/settings/BaseUrlCard";
@@ -198,6 +199,39 @@ const resolvePublicBaseUrl = (value: string) => {
   return window.location.origin;
 };
 
+const normalizeComparableUrl = (value: string) => value.trim().replace(/\/$/, "");
+
+const classifySiteSettingsRisk = (before: SiteSettingsForm, after: SiteSettingsForm) => {
+  const risks: string[] = [];
+  if (normalizeComparableUrl(before.adminBaseUrl) !== normalizeComparableUrl(after.adminBaseUrl)) {
+    risks.push("Admin base URL");
+  }
+  if (
+    normalizeComparableUrl(before.publicBaseUrl) !== normalizeComparableUrl(after.publicBaseUrl)
+  ) {
+    risks.push("Public site URL");
+  }
+  if (before.adminPath.trim() !== after.adminPath.trim()) {
+    risks.push("Admin access path");
+  }
+  if (before.adminRedirectEnabled !== after.adminRedirectEnabled) {
+    risks.push("Admin host redirect");
+  }
+  if (before.homepageId !== after.homepageId) {
+    risks.push("Homepage route");
+  }
+  if (before.notFoundPageId !== after.notFoundPageId) {
+    risks.push("404 route");
+  }
+  if (before.previewEnabled !== after.previewEnabled) {
+    risks.push("Preview access");
+  }
+  if (JSON.stringify(before.contentRoutes) !== JSON.stringify(after.contentRoutes)) {
+    risks.push("Content route map");
+  }
+  return risks;
+};
+
 export function SiteSettingsPage() {
   const [initialState] = useState(resolveInitialSiteSettingsState);
   const [form, setForm] = useState<SiteSettingsForm>(initialState.form);
@@ -211,6 +245,7 @@ export function SiteSettingsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState<SiteSectionId>("base");
+  const [pendingRiskReview, setPendingRiskReview] = useState<string[] | null>(null);
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
   const hasSettingsCacheRef = useRef(initialState.hasSettingsCache);
   const hasPagesCacheRef = useRef(initialState.hasPagesCache);
@@ -350,8 +385,13 @@ export function SiteSettingsPage() {
   );
 
   const busy = saving || status === "loading";
+  const siteRiskChanges = useMemo(
+    () => classifySiteSettingsRisk(savedForm, form),
+    [form, savedForm]
+  );
+  const hasRiskyChanges = siteRiskChanges.length > 0;
 
-  const handleSave = useCallback(async () => {
+  const performSave = useCallback(async () => {
     if (hasValidationErrors) return false;
     setSaveError(null);
     setSaveSuccess(null);
@@ -392,6 +432,14 @@ export function SiteSettingsPage() {
     }
   }, [cacheTtlValue, contentTypes, form, hasValidationErrors]);
 
+  const handleSave = useCallback(async () => {
+    if (hasRiskyChanges) {
+      setPendingRiskReview(siteRiskChanges);
+      return false;
+    }
+    return performSave();
+  }, [hasRiskyChanges, performSave, siteRiskChanges]);
+
   const handleViewHomepage = () => {
     setActionError(null);
     const baseUrl = resolvePublicBaseUrl(form.publicBaseUrl);
@@ -427,9 +475,11 @@ export function SiteSettingsPage() {
   useAutoSaveEffect({
     enabled: autoSaveEnabled,
     isReady: status === "ready",
-    hasErrors: hasValidationErrors,
+    hasErrors: hasValidationErrors || hasRiskyChanges,
     value: form,
+    savedValue: savedForm,
     onSave: handleSave,
+    syncSnapshotWhenBlocked: true,
   });
 
   return (
@@ -868,6 +918,25 @@ export function SiteSettingsPage() {
           </div>
         </div>
       </div>
+      <ConfirmActionDialog
+        open={Boolean(pendingRiskReview)}
+        onOpenChange={(open) => {
+          if (!open) setPendingRiskReview(null);
+        }}
+        title="Review site routing changes"
+        description="These settings can affect admin access or public routing. Confirm before applying them."
+        targetLabel={(pendingRiskReview ?? []).join(", ")}
+        confirmLabel="Apply site changes"
+        confirmingLabel="Applying..."
+        tone="warning"
+        closeOnSuccess
+        onConfirm={async () => {
+          await performSave();
+        }}
+      >
+        Keep a rollback path ready before changing admin URLs, default pages, preview access, or
+        content route patterns.
+      </ConfirmActionDialog>
     </SettingsShell>
   );
 }

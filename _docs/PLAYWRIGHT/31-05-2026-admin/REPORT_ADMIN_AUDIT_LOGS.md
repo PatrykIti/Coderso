@@ -138,3 +138,19 @@ poprzednich cursorow zamiast placeholdera UI.
 - Paginacja: zastąpić hard-coded count i `Next` realnym cursor/page state.
   Status: zamkniete w `TASK-357-04`; Playwright potwierdzil first/next/previous
   dla 55-logowej fixture i restricted `audit:read` usera.
+
+## Finalna weryfikacja - 2026-06-02
+
+- Subagent Playwright smoke `codex-02-06-admin-final-areas` otworzył
+  `/admin/audit` i potwierdził search, date range/type/severity filters, tabelę
+  oraz widoczny `Export`.
+- Date range dropdown został otwarty i zamknięty bez finalnego exportu, żeby nie
+  generować dodatkowego download artifactu w końcowym smoke.
+- Final console dla tego smoke'a: 0 errors, 0 warnings. Audit list requesty po
+  loginie wracały `200`.
+- Dodatkowy końcowy pass `codex-02-06-physical` oraz niezależny Claude pass
+  `claude-02-06-admin-physical` ponownie otworzyły `/admin/audit` przez
+  fizyczne kliknięcie sidebaru. Claude raportuje PASS, 0 console errors/
+  warnings i requesty po loginie `200`.
+- Status raportu: wszystkie Audit Logs findings są zamknięte w `TASK-357-01`
+  through `TASK-357-04`; ten finalny smoke jest ewidencją `TASK-360-07`.

@@ -16,6 +16,72 @@ Główne źródła: `core/admin/ui/settings/**`, `core/admin/ui/site/**`,
 
 ## Co faktycznie kliknięto
 
+### Siódma fala - 2026-06-02: TASK-359-04..07 i TASK-360-07 closure
+
+- Playwright session `codex-02-06-admin-final` przeszła Settings UI po
+  końcowych poprawkach. Zalogowano admina, sprawdzono dashboard warning dla
+  QA override `Max sessions per user = 30`, a potem klikano bezpieczne ścieżki
+  cancel/disabled bez wykonywania destrukcyjnych mutacji.
+- Dodatkowa końcowa sesja `codex-02-06-physical` została uruchomiona po prośbie
+  o commit. Ponownie przeklikano Admin routes oraz Settings subroutes na
+  świeżo odpalonym serwerze; konsola miała 0 errors i 0 warnings, a requesty po
+  loginie wracały `200` (pre-login `401 /admin/api/auth/me` był oczekiwany).
+- General: `Timezone`, `Upload site logo`, `Upload new` favicon i `Remove`
+  favicon są disabled z jawną kopią właściciela `TASK-359-04`.
+- Site: zmiana `Admin access path` otworzyła `Review site routing changes` z
+  targetem `Admin access path`; `Cancel` nie wykonał PATCH i draft został
+  przywrócony. Performance jest jawnie przyszłym/nieaktywnym obszarem.
+- Security: zmiana auth rate-limit `Attempts per window` otworzyła
+  `Review security policy changes`, pokazała target `Rate limit policy` i
+  wymagała wpisania `APPLY`; `Cancel` nie zapisał zmiany.
+- Sessions: nieaktywne taby `General`, `Audit Log`, `Two-Factor Auth` są
+  disabled, `Active Sessions` jest aktywny. Current session pokazuje
+  `Cannot Revoke`; row `Revoke` otwiera confirm i `Cancel` nie wykonuje revoke.
+  `Change Password` oraz `Security Settings` są disabled.
+- Login Alerts: nieaktywne taby są disabled, a brute-force threshold,
+  admin-only/custom recipients, email/webhook channels oraz sticky
+  discard/save są disabled/unavailable. Obsługiwane alert toggles pozostają
+  aktywne.
+- IP Allowlist: pusty fixture pokazuje `No IP ranges currently allowlisted`;
+  remove nie był klikany w live UI, bo nie było wiersza. Vitest pokrywa
+  remove cancel/confirm i widoczny lockout warning.
+- API Keys: dla istniejącego klucza otwarto menu, kliknięto `Rotate key` i
+  `Revoke key`; oba pokazały confirm dialogs, a `Cancel` nie wykonał mutacji.
+- Webhooks: live fixture był pusty, więc sprawdzono create drawer i disabled
+  test connection w create mode. Vitest pokrywa delete cancel/confirm, edit
+  save confirm oraz existing-webhook test confirm.
+- Email: wypełniono recipienta `qa@example.com`, `Send Test Email` otworzył
+  `Send test email?`, a `Cancel` nie wysłał maila. Delivery Logs pokazały empty
+  state, a `Export Logs` był disabled.
+- Integrations: w OpenAI drawer wpisano draft sekretu, `Save Changes` otworzył
+  `Review integration secrets` z targetem `OpenAI: API Key`; dialog nie
+  powtarzał wartości sekretu i `Cancel` nie zapisał konfiguracji.
+- Assistant: live UI miał assistant disabled, więc `Run reindex` było disabled.
+  Vitest pokrywa enabled confirm/cancel path.
+- Storage: kliknięto Local, Amazon S3 i Azure Blob provider cards bez zapisu.
+  Każdy provider pokazuje disabled `Test Connection` z kopią
+  `Storage connection testing is not wired yet. TASK-359-06 owns provider test
+  feedback.` S3/Azure secret fields są maskowane jako `••••••••`; security
+  summary pokazuje tylko configured/missing state.
+- Niezależny Claude pass `claude-02-06-admin-physical` fizycznie kliknął
+  wszystkie Settings subroutes przez `playwright-cli`. Potwierdził risky
+  dialog cancel dla Site i Security, Sessions revoke, API key rotate/revoke,
+  create Webhook drawer, Integration secret update gate, Storage Local/S3/Azure
+  disabled `Test Connection` i secret masking. Dla pustego IP allowlist fixture
+  potwierdził brak wiersza remove; dla pustego webhook fixture test/delete/edit
+  były niewykonalne poza create drawer. Wynik Claude: PASS, 0 console
+  errors/warnings, wszystkie requesty po loginie `200`.
+- Console evidence dla sesji finalnej: 0 errors, 0 warnings. Request evidence:
+  oczekiwane pre-login `401`, udane `200` po loginie oraz kilka
+  `net::ERR_ABORTED` dla settings GET przerwanych przejściem/nawigacją; brak
+  blokujących runtime błędów i brak destrukcyjnych mutacji po cancel.
+- Subagent UI-click smoke `codex-02-06-admin-final-areas` potwierdził Users,
+  Roles Matrix, Audit Logs i Access Logs z 0 console errors/warnings; szczegóły
+  są dopisane w raportach obszarowych.
+- Claude został uruchomiony jako source-only reviewer po implementacji, a
+  następnie jako fizyczny UI reviewer w `claude-02-06-admin-physical`. Source
+  review nie wykrył blocking issues; UI-click pass zwrócił PASS.
+
 ### Szósta fala - 2026-06-02: TASK-359-03 redacted Settings cache
 
 - Dodano `settings:redacted` jako jedyny browser-cache owner dla wartości
@@ -208,6 +274,19 @@ Główne źródła: `core/admin/ui/settings/**`, `core/admin/ui/site/**`,
 - `TASK-359-03`: redacted Settings cache hydratuje safe Settings values i Site
   selectors bez sekretów w `localStorage`; mutacje Settings/Site/Security
   synchronizują `settings:redacted` przez cacheBus.
+- `TASK-359-04`: General/Site placeholdery są truthful unavailable albo
+  confirmowane. Logo/favicon/timezone są disabled, Performance nie jest aktywnym
+  placeholderem, a admin/public routing changes wymagają `Review site routing
+  changes`.
+- `TASK-359-05`: Security high-risk policy saves, session revoke/revoke-all,
+  API key rotate/revoke, webhook delete i IP allowlist remove mają cancel-safe
+  confirms. Current session/current IP lockout copy pozostaje widoczna, a API
+  key secrets są one-time/redacted.
+- `TASK-359-06`: Email test, webhook test/edit save, integration secret save i
+  assistant reindex wymagają confirmu albo są disabled, Storage test connection
+  i Email export logs są truthfully unavailable.
+- `TASK-359-07`: Login Alerts unsupported tabs/advanced controls/sticky actions
+  oraz Sessions link-buttons są disabled z no-op gate coverage.
 
 ## Co nie działało / co jest ryzykowne
 
@@ -217,22 +296,20 @@ Główne źródła: `core/admin/ui/settings/**`, `core/admin/ui/site/**`,
 | Settings cache | Zamknięte w `TASK-359-03`: safe Settings values hydratują z redacted cache, a Site selectors nie force-refetchują przy świeżym cache | `settings:redacted` ma strict allowlistę, secret denylist tests, cached wrappers, cacheBus update/invalidate i prefetch `/settings/site` |
 | Settings dirty state | Zamknięte w `TASK-359-02`: Settings drafts wymagają confirmu przy sidebar/direct SPA navigation, Back/Forward i refresh/close | boolean-only dirty guard nie serializuje sekretów; cancel zachowuje draft |
 | Settings mobile | Zamknięte w `TASK-359-02`: mobile ma lokalną Settings nawigację z top-level sekcjami i Security subroutes | `SettingsShell.tsx` renderuje Settings sidebar także poniżej `lg` |
-| General | Logo upload, favicon upload/remove wyglądają aktywnie, ale nie mają file input/handlera | `LogoUploadCard.tsx` renderuje buttony bez akcji |
-| General | Timezone wygląda jak ustawienie, ale nie jest podłączony do save payloadu | `BrandingCard.tsx` używa `defaultValue`, bez state i bez `onSave` mappingu |
-| Assistant | `Run reindex` jest realną mutacją indeksu dokumentów | działa, ale wymaga osobnego potwierdzenia/dry-run w QA |
-| Site | Admin path/base URL/homepage/cache zmieniają zachowanie całej instancji | cache TTL zapisano pozytywnie, ale admin path/base URL są wysokiego ryzyka lockoutu/routingu |
-| Site | `Performance` jest jawnie placeholderem | sekcja renderuje tekst `No performance settings yet` |
-| Security | `Clear stored secret` dla bot protection nie ma confirm | można wyczyścić sekret zbyt łatwo |
-| Sessions | `Revoke` i `Revoke All Other Sessions` wołają API bez confirm | wysokie ryzyko odcięcia aktywnych sesji |
-| Sessions | `Change Password` i `Security Settings` wyglądają jak linki/akcje, ale nie mają handlera | renderowane jako buttony bez `onClick` |
-| Login Alerts | dolny sticky `Discard`/`Save Changes`, brute-force slider, recipients i channel switches są lokalne/statyczne | tylko topbar save zapisuje trzy pola `loginAlerts` |
-| IP Allowlist | Add drawer nie ma semantycznego `SheetTitle`; remove entry nie ma confirm | a11y + ryzyko lockoutu |
-| API Keys | Rotate/Revoke wykonują mutacje bez confirm | utrata/rotacja sekretu jest nieodwracalna dla integracji |
-| Webhooks | Delete i Test Connection są bez dodatkowego potwierdzenia | delete jest destrukcyjny, test może wysłać zewnętrzny request |
-| Webhooks/Email/Integrations | Sheet drawers mają title wizualny, ale brakuje `SheetDescription`/`aria-describedby` | warningi Radix w konsoli |
-| Email | `Send Test Email` jest realną akcją zewnętrzną, a `Export Logs` jest UI-only | jedno jest side effectem, drugie tylko wygląda jak export |
-| Storage | `Test Connection` jest UI-only | button nie ma `onClick`, więc nie testuje providerów |
-| Integrations | Secret fields są dobrze maskowane, ale save sekretów wymaga ostrożnego confirm/audit | to realne credentiale, nie powinny trafiać do cache/logów |
+| General | Zamknięte w `TASK-359-04`: logo upload, favicon upload/remove i timezone są disabled z jawną kopią niedostępności | Vitest/no-op gate i live Playwright potwierdzają disabled state |
+| Assistant | Zamknięte w `TASK-359-06`: `Run reindex` jest disabled, gdy assistant jest wyłączony, a enabled path wymaga confirmu | Vitest pokrywa cancel/confirm; live fixture potwierdza disabled state |
+| Site | Zamknięte w `TASK-359-04`: admin path/base URL/homepage/404/preview/content routes wymagają `Review site routing changes` | Playwright potwierdził cancel-safe admin path review; Vitest pokrywa no duplicate auto-save |
+| Site | Zamknięte w `TASK-359-04`: `Performance` nie jest aktywnym placeholderem | UI pokazuje future runtime optimization copy, bez aktywnych submit controls |
+| Security | Zamknięte w `TASK-359-05`: high-risk policy save wymaga `Review security policy changes` i typed `APPLY` | Playwright i Vitest potwierdzają cancel/confirm oraz brak duplicate auto-save |
+| Sessions | Zamknięte w `TASK-359-05`/`TASK-359-07`: revoke/revoke-all mają confirm, current session jest chroniona, link-buttons są disabled | Vitest i Playwright potwierdzają cancel-safe flow oraz disabled destinations |
+| Login Alerts | Zamknięte w `TASK-359-07`: unsupported tabs, brute-force slider, recipients, channels i sticky actions są disabled/unavailable | No-op gate obejmuje disabled controls; top supported toggles nadal zapisują realny payload |
+| IP Allowlist | Zamknięte w `TASK-359-05`/`TASK-359-06`: drawer ma semantics, remove ma confirm i lockout warning | Live fixture nie miał wiersza remove; Vitest pokrywa cancel/confirm |
+| API Keys | Zamknięte w `TASK-359-05`: rotate/revoke mają cancel-safe confirm, a one-time secret nie trafia do cache | Playwright kliknął cancel; Vitest pokrywa confirm path i secret cleanup |
+| Webhooks | Zamknięte w `TASK-359-05`/`TASK-359-06`: delete, existing-webhook test i edit save wymagają confirmu | Live fixture pusty; Vitest pokrywa delete/test/edit confirms |
+| Webhooks/Email/Integrations | Zamknięte w `TASK-360-05` i utrzymane w `TASK-359-06`: drawers mają `SheetTitle`/`SheetDescription` | Drawer a11y gate jest green |
+| Email | Zamknięte w `TASK-359-06`: `Send Test Email` wymaga confirmu, `Export Logs` jest disabled | Playwright kliknął cancel; Vitest pokrywa send confirm |
+| Storage | Zamknięte w `TASK-359-06`: `Test Connection` jest disabled z właścicielem taska, a provider secrets są maskowane | Playwright potwierdził Local/S3/Azure disabled test copy i masked secrets |
+| Integrations | Zamknięte w `TASK-359-06`: edited secret fields wymagają confirmu z labelami, bez wartości sekretu | Playwright i Vitest potwierdzają cancel-safe secret review |
 | RBAC route gating | Zamknięte w `TASK-359-01`: restricted user bez `settings:read` nie widzi Settings linków, direct URL kończy w `Access denied` i nie wykonuje `GET /admin/api/settings` | route guard, shared sidebar filter, gated settings bootstrap oraz breadcrumb cleanup usunęły dawny shell `Forbidden`; backend 403 pozostaje defense-in-depth |
 
 ## Dlaczego
@@ -285,22 +362,20 @@ linkuje już do `/admin/settings`.
   `listPagesCached({ force: true })` i
   `listContentTypesCached({ force: true })` na każdym mount, jeśli cache jest
   świeży.
-- General: dodać realny media/file picker dla logo/favicon albo disable buttony.
-- General: podłączyć Timezone do schema/save albo oznaczyć jako niedostępny.
-- Site: ukryć `Performance` albo zamienić w realny zestaw ustawień z zapisem.
-- Security/Sessions/API Keys/Webhooks/IP Allowlist: confirm modal dla każdej
-  destrukcyjnej lub lockout-prone akcji; test cancel/confirm.
-- Login Alerts: usunąć dolny sticky action bar albo podłączyć go do tych samych
-  handlerów co topbar; brute-force slider, recipients i channel switches
-  zapisywać albo oznaczyć jako preview/disabled.
-- Sessions: podłączyć `Change Password` i `Security Settings` albo usunąć
-  martwe buttony.
-- Drawers: dodać `SheetTitle`/`SheetDescription`; dla niewidocznych opisów użyć
-  `VisuallyHidden`.
-- Storage: podłączyć `Test Connection` do backendu albo ukryć. Wynik musi mieć
-  success/error toast.
-- Email: `Export Logs` podłączyć do API albo disable; `Send Test Email` powinien
-  mieć jasny recipient preview i najlepiej confirm w środowisku produkcyjnym.
-- Assistant reindex: dodać dry-run/review mode albo confirm z liczbą docs/chunks.
-- Po tym audycie przywrócić `Max sessions per user` z 30 do wartości docelowej,
-  jeżeli 30 było wyłącznie ustawieniem QA.
+- Zamknięte w `TASK-359-04`: logo/favicon/timezone są disabled z jawną kopią,
+  Site Performance nie ma aktywnych controls, a routing/base URL/homepage/404/
+  preview/content-route saves wymagają review confirm.
+- Zamknięte w `TASK-359-05`: destructive albo lockout-prone Settings actions
+  mają cancel-safe confirms; current session/current IP cases są chronione.
+- Zamknięte w `TASK-359-06`: external-action controls albo wymagają confirmu
+  (`email_test`, `webhook_test`, `assistant_reindex`, `integration_secret`,
+  `webhook_edit`) albo są truthfully unavailable (`storage_test`,
+  `email_logs_export`).
+- Zamknięte w `TASK-359-07`: Login Alerts/Sessions placeholders są disabled
+  albo routed through supported handlers, a no-op gate obejmuje ich stable ids.
+- QA note 2026-06-02: `Max sessions per user = 30` zostaje świadomie w tej
+  lokalnej instancji jako override dla długiego, wieloagentowego audytu
+  Playwright. Owner: Admin UI Playwright QA / `TASK-360-07`. Reason: uniknięcie
+  churnu sesji podczas wielu równoległych sesji klikanych. Dashboard warning o
+  zbyt permisywnej polityce jest oczekiwany; środowiska produkcyjne powinny
+  wrócić do bezpieczniejszego defaultu poza tym shared QA setupem.

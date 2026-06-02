@@ -21,6 +21,8 @@ In the current UI, this screen includes:
 - the settings sidebar,
 - a `Site Identity` card,
 - a `Branding` card,
+- disabled timezone and branding asset controls for fields that are not wired
+  to persistence yet,
 - an auto-save toggle,
 - `Save changes`.
 
@@ -30,8 +32,10 @@ Use General Settings when the site’s shared identity or admin branding needs t
 change at the environment level rather than inside one content screen. The
 current route is designed for:
 - keeping the site name and default locale coherent,
-- reviewing the current timezone baseline,
-- updating logo and favicon assets for the admin experience,
+- reviewing the current timezone baseline while the field is unavailable for
+  persistence,
+- reviewing logo and favicon placeholders while asset upload persistence is
+  unavailable,
 - choosing whether settings should auto-save across screens.
 
 Both `/settings` and `/settings/general` currently point at this same surface,
@@ -47,10 +51,13 @@ so this route is the default entry point into the broader settings area.
    - `Timezone`
 4. Update the site name when the shared environment label needs to change.
 5. Update the primary locale when the default language baseline should change.
-6. Review timezone carefully because it affects shared environment expectations.
+6. Review timezone carefully. In the current UI it is disabled until persistence
+   is wired into the settings save payload.
 7. Move to `Branding`.
-8. Use the logo upload area when the admin experience needs a new site logo.
-9. Use the favicon controls when the browser-level icon needs to change:
+8. Review the logo upload area. In the current UI, logo upload is disabled and
+   explains that asset persistence is not wired yet.
+9. Review the favicon controls. In the current UI, favicon upload/remove are
+   disabled and explain that asset persistence is not wired yet:
    - `Upload new`
    - `Remove`
 10. Decide whether `Auto-save settings across all screens` should stay enabled.
@@ -72,8 +79,9 @@ Use this safe General Settings order when you want fewer configuration mistakes:
   the default anchor for the whole settings area, not just another subsection.
 - Auto-save is a cross-screen behavior in the current UI, so changing it here
   affects how the rest of settings work operationally.
-- Branding changes are more than visual polish. Logo and favicon updates change
-  how the environment is identified across the admin experience.
+- Branding changes are more than visual polish. Logo and favicon updates will
+  change how the environment is identified across the admin experience once
+  the asset persistence path is available.
 - Locale and timezone should be treated as environment assumptions, not as minor
   dropdown cosmetics.
 - General Settings should stay focused on shared identity and branding; deeper
@@ -84,8 +92,9 @@ Use this safe General Settings order when you want fewer configuration mistakes:
 - You are not sure whether the change belongs here:
   use General Settings only for shared site identity and branding, not for
   content edits or deeper runtime logic.
-- A branding update feels too local:
-  remember that logo and favicon here affect the broader admin experience.
+- A branding update feels blocked:
+  logo, favicon, and timezone are intentionally disabled in the current UI
+  until their save payload is implemented.
 - Auto-save behavior feels surprising:
   check the toggle first before assuming save timing is broken.
 - The wrong route opened:

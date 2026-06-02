@@ -60,17 +60,20 @@ validation workspace for SMTP-backed email.
 7. Enter a real recipient address that can verify the result.
 8. Use `Send Test Email` only after the SMTP values and sender defaults are
    coherent.
-9. Review the `Connection Status` card for:
+9. Review the `Send test email?` confirmation. Cancel does not send mail;
+   confirm sends a real test email through the configured provider.
+10. Review the `Connection Status` card for:
    - overall operational/pending state,
    - host configured state,
    - authentication state.
-10. Use `View delivery logs` when you need recent SMTP activity context.
-11. In `Delivery Logs`, review:
+11. Use `View delivery logs` when you need recent SMTP activity context.
+12. In `Delivery Logs`, review:
     - whether logs exist,
     - delivery status,
     - export path.
-12. Read the `Security Note` before finalizing production setup.
-13. Use `Save changes` when you want an explicit save instead of relying only on
+13. `Export Logs` is disabled until the delivery-log export contract is wired.
+14. Read the `Security Note` before finalizing production setup.
+15. Use `Save changes` when you want an explicit save instead of relying only on
     auto-save.
 
 Use this safe email-setup order when you want fewer delivery mistakes:
@@ -88,7 +91,7 @@ Use this safe email-setup order when you want fewer delivery mistakes:
 - `Needs setup` in the status area is an operational signal, not just a warning
   badge. It tells you outbound email should not yet be assumed reliable.
 - `Send Test Email` is a verification step, not a substitute for correct SMTP
-  setup.
+  setup, and it requires a confirmation because it is an external side effect.
 - Delivery logs matter even when empty, because the empty state still tells you
   no recent SMTP attempts have been recorded.
 - The built-in security note reflects a real deliverability trade-off:

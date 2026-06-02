@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 15 tasks
-- **In Progress:** 6 tasks
-- **Done:** 2036 tasks
+- **To Do:** 10 tasks
+- **In Progress:** 4 tasks
+- **Done:** 2043 tasks
 
 ---
 
@@ -38,11 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-360-07 | Final Evidence, Reports, and QA Closure | High | Large | Physical cross-cutting leaf for final Playwright evidence, six-report closure, QA override cleanup, and Claude evidence labeling |
-| TASK-359-07 | Login Alerts and Sessions Placeholder Cleanup | High | Medium | Physical Settings leaf for Login Alerts persistence/unavailable states and Sessions link-button truthfulness |
-| TASK-359-06 | Email, Storage, Integrations, Assistant Action Truthfulness | High | Large | Physical Settings leaf for external action confirms, redaction, drawer a11y, and no-op cleanup |
-| TASK-359-05 | Security, Sessions, API Keys, Webhooks, IP Allowlist Confirms | High | Very Large | Physical Settings leaf for high-risk confirms, current-session/IP safety, one-time secrets, and redacted audit |
-| TASK-359-04 | General and Site Placeholder Truthfulness | High | Large | Physical Settings leaf for logo/favicon/timezone, Site Performance, routing/security-header review, and cache update behavior |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -63,14 +58,19 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | In progress (2026-06-01): TASK-360-01 through TASK-360-06 are implemented; final-evidence closure remains. |
-| TASK-359 | Admin Settings Report Remediation Family | High | Very Large | In progress (2026-06-02): TASK-359-01 through TASK-359-03 are done; TASK-359-04 General/Site truthfulness remains next. |
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-360-07 | Final Evidence, Reports, and QA Closure | High | Large | Done (2026-06-02): six Admin Playwright reports and README now carry final evidence, QA override owner/reason, and Claude source-only labeling. |
+| TASK-360 | Admin UI Cross-Cutting Report Remediation Family | High | Very Large | Done (2026-06-02): TASK-360-01 through TASK-360-07 close shared Admin UI permission, confirm, export, no-op, drawer a11y, query, and final evidence contracts. |
+| TASK-359-07 | Login Alerts and Sessions Placeholder Cleanup | High | Medium | Done (2026-06-02): Login Alerts unsupported controls/tabs/sticky actions and Sessions unavailable link-buttons are disabled and covered by no-op/session tests. |
+| TASK-359-06 | Email, Storage, Integrations, Assistant Action Truthfulness | High | Large | Done (2026-06-02): external Settings actions require confirm or are truthfully unavailable, secret review stays redacted, and drawer semantics remain covered. |
+| TASK-359-05 | Security, Sessions, API Keys, Webhooks, IP Allowlist Confirms | High | Very Large | Done (2026-06-02): high-risk security saves and destructive/lockout-prone Settings actions require cancel-safe confirms with one-time secret handling preserved. |
+| TASK-359-04 | General and Site Placeholder Truthfulness | High | Large | Done (2026-06-02): General branding/timezone placeholders are disabled, Site Performance is truthful, and risky Site routing changes require review. |
+| TASK-359 | Admin Settings Report Remediation Family | High | Very Large | Done (2026-06-02): TASK-359-01 through TASK-359-07 close Settings RBAC, SPA/dirty/mobile, redacted cache, placeholder truthfulness, confirms, external action, and Login Alerts/Sessions cleanup. |
 | TASK-359-01 | Settings RBAC Guard and Bootstrap Discipline | High | Large | Done (2026-06-01): Settings routes/nav now fail closed without `settings:read`, global settings bootstrap is skipped for restricted users, Users/Roles and Audit/Access breadcrumbs no longer link to Settings, and Playwright evidence shows zero Settings API requests. |
 | TASK-359-02 | Settings SPA Navigation, Dirty Guard, and Mobile Navigation | High | Large | Done (2026-06-02): Settings navigation now uses `AdminLink`, dirty drafts are guarded across sidebar/direct links, Back/Forward and refresh/close, and mobile Settings nav exposes all sections including Security subroutes. |
 | TASK-359-03 | Redacted Settings Cache Contract | High | Large | Done (2026-06-02): `settings:redacted` now hydrates safe Settings values, mutation/cacheBus updates stay redacted, Site Settings reuses fresh selector caches, and secret denylist tests protect browser cache. |
@@ -79,7 +79,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-355-03 | Destructive Action Confirmation | High | Medium | Done (2026-06-01): Users/roles destructive actions now require shared confirm dialogs, high-risk role duplicate confirms, source-role audit context, and mapped role errors. |
 | TASK-355-04 | Filter and Notification Affordance Truthfulness | High | Medium | Done (2026-06-01): Users advanced filters are truthful unavailable controls, notification switches are read-only managed states, and the no-op gate covers both. |
 | TASK-355-05 | Mobile Drawer Accessibility | High | Small | Done (2026-06-01): Users mobile details sheet now has hidden title/description semantics and a Radix-warning-free drawer a11y gate. |
-| TASK-355 | Admin Users Report Remediation Family | High | Very Large | Done (2026-06-01): TASK-355-01 through TASK-355-05 close Users permission, invite/reset, destructive confirm, no-op, and mobile sheet a11y findings; final click evidence remains in TASK-360-07. |
+| TASK-355 | Admin Users Report Remediation Family | High | Very Large | Done (2026-06-01): TASK-355-01 through TASK-355-05 close Users permission, invite/reset, destructive confirm, no-op, and mobile sheet a11y findings; final click evidence was appended in TASK-360-07. |
 | TASK-356-01 | Roles Matrix Permission-Aware Read-Only Mode | High | Large | Done (2026-06-01): Roles Matrix now has denied/read-only/editable modes, searchable read-only inspection, disabled write controls, and stale 403 permission refresh coverage. |
 | TASK-356-02 | RBAC Diff Builder and Review Modal | High | Large | Done (2026-06-01): Roles Matrix saves now require role-by-role diff review, PATCH only changed roles, keep failed diffs dirty, and have pure diff helper plus Playwright evidence. |
 | TASK-356-03 | Full Access and High-Risk Permission Confirmation | High | Large | Done (2026-06-01): RoleEditor and Roles Matrix now require explicit confirmation before high-risk or full-access permission grants, with Playwright evidence. |

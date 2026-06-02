@@ -5,7 +5,7 @@
 **Category:** Admin UI + Settings + Site + UX Truthfulness
 **Estimated Effort:** Large
 **Dependencies:** TASK-359-01, TASK-359-03, TASK-360-02, TASK-360-04
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -133,3 +133,15 @@ Error handling:
 - General/Site controls either perform real work or are truthfully unavailable.
 - Routing/base URL/security-header changes require explicit review.
 - Saves update redacted cache without overwriting dirty drafts.
+
+## Completion Notes
+
+- Logo upload, favicon upload/remove, and timezone now render as disabled
+  unavailable controls with explicit owning-task copy and no-op gate coverage.
+- Site high-risk routing changes open `Review site routing changes`; cancel does
+  not PATCH and confirmed saves do not trigger duplicate auto-save writes.
+- Site Performance remains a truthful future-runtime area, not an active
+  placeholder.
+- Evidence: `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md`,
+  docs/guide screen updates, focused Vitest Settings suites, lint, and
+  typecheck.

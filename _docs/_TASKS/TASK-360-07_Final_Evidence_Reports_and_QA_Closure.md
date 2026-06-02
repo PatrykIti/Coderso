@@ -5,7 +5,7 @@
 **Category:** Admin UI + Playwright + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-355, TASK-356, TASK-357, TASK-358, TASK-359, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05, TASK-360-06
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -123,3 +123,17 @@ Error handling:
   evidence and owner.
 - Final Playwright evidence covers real restricted-user login and UI clicks.
 - Claude evidence is labeled truthfully as UI-clicking or source-only.
+
+## Completion Notes
+
+- All six Admin Playwright reports plus the report README were updated with
+  final fixed/disabled/deferred status and 2026-06-02 evidence.
+- Final Playwright smoke covered Users, Roles Matrix, Audit Logs, Access Logs,
+  and every Settings subpage. The restricted-user and defense-in-depth evidence
+  remains in the earlier area-task waves; the final smoke verified the remediated
+  UI states.
+- Claude final review is labeled source-only, not UI-clicking evidence.
+- QA override `Max sessions per user = 30` has dated owner/reason in the final
+  reports.
+- Evidence: `_docs/PLAYWRIGHT/31-05-2026-admin/`, focused Vitest suites, lint,
+  and typecheck.
