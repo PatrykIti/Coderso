@@ -13,6 +13,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { listMediaCached } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { cn } from "@/lib/utils";
 
 import {
@@ -148,6 +149,10 @@ type CtaData = NonNullable<TeamData["cta"]>;
 type PendingRemoval =
   | { type: "member"; memberId: string }
   | { type: "social"; memberId: string; socialId: string };
+type PendingMemberCountReduction = {
+  nextCount: number;
+  removedCount: number;
+};
 
 function normalizeValue(value: TeamData): TeamData {
   return normalizeTeamData(value);
@@ -573,6 +578,22 @@ function hasConfiguredTeamMember(member: TeamMember | undefined) {
   );
 }
 
+function resolvePendingMemberCountReduction(
+  members: TeamMember[],
+  count: number
+): PendingMemberCountReduction | null {
+  const nextCount = normalizeTeamMemberCount(count);
+  if (nextCount >= members.length) return null;
+
+  const removedMembers = members.slice(nextCount);
+  if (!removedMembers.some(hasConfiguredTeamMember)) return null;
+
+  return {
+    nextCount,
+    removedCount: removedMembers.length,
+  };
+}
+
 function addMemberSocialLink(
   value: TeamData,
   onChange: (next: TeamData) => void,
@@ -637,27 +658,6 @@ function setMembersCount(value: TeamData, onChange: (next: TeamData) => void, co
   updateValue(value, onChange, (current) => {
     const nextCount = normalizeTeamMemberCount(count);
     const members = normalizeTeamMembers(current.members);
-    if (nextCount >= members.length) {
-      return {
-        ...current,
-        members: normalizeTeamMembers(members, nextCount),
-      };
-    }
-
-    const removedMembers = members.slice(nextCount);
-    const shouldConfirm =
-      !removedMembers.some(hasConfiguredTeamMember) ||
-      typeof window === "undefined" ||
-      typeof window.confirm !== "function" ||
-      window.confirm(
-        `Reducing the member count will remove the last ${removedMembers.length} profile${
-          removedMembers.length === 1 ? "" : "s"
-        }. Continue?`
-      );
-
-    if (!shouldConfirm) {
-      return current;
-    }
 
     return {
       ...current,
@@ -1013,6 +1013,8 @@ export function TeamVisualEditor({
   const cta = normalized.cta ?? { label: "", url: "" };
   const resolvedVariant = resolveTeamVariant(variant);
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
+  const [pendingMemberCountReduction, setPendingMemberCountReduction] =
+    useState<PendingMemberCountReduction | null>(null);
   const [selectedPhotoMediaIds, setSelectedPhotoMediaIds] = useState<Record<string, string | null>>(
     {}
   );
@@ -1098,6 +1100,25 @@ export function TeamVisualEditor({
     setPendingRemoval(null);
   };
 
+  const handleMemberCountChange = (next: string) => {
+    const nextCount = Number(next);
+    if (!Number.isFinite(nextCount)) return;
+
+    const pendingReduction = resolvePendingMemberCountReduction(members, nextCount);
+    if (pendingReduction) {
+      setPendingMemberCountReduction(pendingReduction);
+      return;
+    }
+
+    setMembersCount(value, onChange, nextCount);
+  };
+
+  const confirmMemberCountReduction = () => {
+    if (!pendingMemberCountReduction) return;
+    setMembersCount(value, onChange, pendingMemberCountReduction.nextCount);
+    setPendingMemberCountReduction(null);
+  };
+
   return (
     <div className="space-y-4">
       <EditorSection
@@ -1117,10 +1138,7 @@ export function TeamVisualEditor({
         >
           {(fieldProps) => (
             <>
-              <Select
-                value={String(members.length)}
-                onValueChange={(next) => setMembersCount(value, onChange, Number(next))}
-              >
+              <Select value={String(members.length)} onValueChange={handleMemberCountChange}>
                 <SelectTrigger
                   id={fieldProps.id}
                   aria-labelledby={fieldProps["aria-labelledby"]}
@@ -1146,6 +1164,27 @@ export function TeamVisualEditor({
           )}
         </WidgetControlRow>
       </EditorSection>
+
+      <ConfirmActionDialog
+        open={pendingMemberCountReduction !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingMemberCountReduction(null);
+        }}
+        title="Reduce team members"
+        description={
+          pendingMemberCountReduction
+            ? `Reducing the member count will remove the last ${
+                pendingMemberCountReduction.removedCount
+              } profile${
+                pendingMemberCountReduction.removedCount === 1 ? "" : "s"
+              }. This cannot be undone.`
+            : "Reducing the member count removes saved member profiles."
+        }
+        confirmLabel="Reduce members"
+        onConfirm={confirmMemberCountReduction}
+      >
+        Cancel keeps the current member order, photos, bios, and social links intact.
+      </ConfirmActionDialog>
 
       <EditorSection
         id="team.visual.header-cta"

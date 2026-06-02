@@ -175,8 +175,9 @@ before that point remain based on `playwright-cli` plus Codex code review.
 - `REPORT_GALLERY_MOSAIC_WIDGET.md` — completed main UI option pass. TASK-379
   closed the Advanced lightbox eligibility summary, per-item Remove dialog, and
   deterministic media/public-lightbox smoke gaps.
-- `REPORT_TEAM_WIDGET.md` — completed main UI option pass; no renderer defect
-  found, with member-count native confirm UX debt and media fixture gap noted.
+- `REPORT_TEAM_WIDGET.md` — completed main UI option pass. TASK-380 closed the
+  member-count native confirm UX debt and deterministic Team photo MediaPicker
+  smoke gap.
 - `REPORT_RICH_TEXT_SECTION_WIDGET.md` — completed main UI option pass; renderer
   controls work, with Advanced sanitizer diagnostics loss after block edits and
   default HTML-vs-block drift recorded.

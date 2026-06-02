@@ -5,7 +5,7 @@
 **Category:** Widgets + Team + Admin UX + Media Fixtures + QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_TEAM_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -24,8 +24,8 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-380-01](TASK-380-01_TEAM_31_05_01_Replace_Member_Count_Native_Confirm_With_Shared_ConfirmActionDialog.md): TEAM-31-05-01 - Replace member-count native confirm with shared ConfirmActionDialog
-- [ ] [TASK-380-02](TASK-380-02_TEAM_31_05_02_Seed_Media_Image_For_Real_Photo_Selection_Proof.md): TEAM-31-05-02 - Seed media image for real photo selection proof
+- [x] [TASK-380-01](TASK-380-01_TEAM_31_05_01_Replace_Member_Count_Native_Confirm_With_Shared_ConfirmActionDialog.md): TEAM-31-05-01 - Replace member-count native confirm with shared ConfirmActionDialog (done 2026-06-01)
+- [x] [TASK-380-02](TASK-380-02_TEAM_31_05_02_Seed_Media_Image_For_Real_Photo_Selection_Proof.md): TEAM-31-05-02 - Seed media image for real photo selection proof (done 2026-06-01)
 
 ## Implementation Pseudocode
 
@@ -63,6 +63,15 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_TEAM_WIDGET.md`
 - `_docs/_TASKS/README.md` status row when this task starts or closes.
 - Reserved changelog number 1070; create the changelog entry only when this family is implemented or closed, and list the parent task ID plus every leaf task ID closed by that entry.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced TASK-380-01 before fix with a focused UI regression: count reduction mutated immediately through the native confirm path instead of opening a shared dialog.
+- Implemented `ConfirmActionDialog` for destructive member-count reductions. Cancel preserves members; confirm applies the same normalized truncation as before; `window.confirm` is no longer called.
+- Extended widget smoke media fixture support to Team with a deterministic portrait image seed and a browser `mediaProof` for MediaPicker selection, Clear photo, publish, and public image rendering.
+- Updated Team widget docs, the 31-05 Team report/index, task board, and changelog 1070.
+- Validation run: `bun run test:vitest -- tests/vitest/widgets/team.test.tsx tests/vitest/ui/team-editor-wave.test.tsx` passed, `bun test tests/unit/playwright-widget-contract-smoke.test.ts` passed, and Team smoke dry-run passed with zero failures/gaps.
+- Full live Playwright replay remains environment-gated unless admin/frontend servers and `CODERSO_PLAYWRIGHT_EMAIL` / `CODERSO_PLAYWRIGHT_PASSWORD` are available.
 
 ## Acceptance Criteria
 

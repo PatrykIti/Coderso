@@ -134,6 +134,16 @@ const galleryMosaicCase: SmokeInventory["widgets"][number] = {
   requiredModes: ["visual", "advanced"],
 };
 
+const teamCase: SmokeInventory["widgets"][number] = {
+  widgetType: "team",
+  title: "Team",
+  adminInsertLabel: "Team",
+  adminFixtureSlug: "/ctr-team",
+  publicPath: "/team",
+  publicFixtureStatus: "published",
+  requiredModes: ["visual", "advanced"],
+};
+
 describe("playwright widget contract smoke helpers", () => {
   test("parses debug and target flags without exposing credentials", () => {
     const args = parseArgs([
@@ -222,6 +232,7 @@ describe("playwright widget contract smoke helpers", () => {
     expect(selectedCasesNeedMediaFixtures(makeInventory().widgets)).toBe(false);
     expect(selectedCasesNeedMediaFixtures([logoCloudCase])).toBe(true);
     expect(selectedCasesNeedMediaFixtures([galleryMosaicCase])).toBe(true);
+    expect(selectedCasesNeedMediaFixtures([teamCase])).toBe(true);
   });
 
   test("uses the public fixture route for Logo Cloud media proof before admin slug fallback", () => {
@@ -392,6 +403,55 @@ describe("playwright widget contract smoke helpers", () => {
     expect(uploadedNames).toEqual([
       "widget-fixture-gallery-mosaic-image.svg",
       "widget-fixture-gallery-mosaic-video.mp4",
+    ]);
+  });
+
+  test("seeds Team photo media fixture through authenticated admin upload", async () => {
+    const originalFetch = globalThis.fetch;
+    const uploadedFiles: Array<{ name: string; type: string; title: FormDataEntryValue | null }> =
+      [];
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      if (url === "http://admin.test/admin/api/media" && (init?.method ?? "GET") === "GET") {
+        return Response.json([]);
+      }
+      if (url === "http://admin.test/admin/api/auth/csrf") {
+        return Response.json({ token: "csrf-token" });
+      }
+      if (url === "http://admin.test/admin/api/media" && init?.method === "POST") {
+        expect(init.body).toBeInstanceOf(FormData);
+        const formData = init.body as FormData;
+        const file = formData.get("file") as File;
+        uploadedFiles.push({
+          name: file.name,
+          type: file.type,
+          title: formData.get("title"),
+        });
+        return Response.json({
+          id: "team-photo",
+          originalName: file.name,
+          mimeType: file.type,
+          type: "image",
+          title: formData.get("title"),
+          alt: formData.get("alt"),
+          caption: formData.get("caption"),
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      await ensureMediaWidgetFixtures("http://admin.test/admin", "session-token", [teamCase]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(uploadedFiles).toEqual([
+      {
+        name: "widget-fixture-team-photo.svg",
+        type: "image/svg+xml",
+        title: "Widget fixture Team photo",
+      },
     ]);
   });
 

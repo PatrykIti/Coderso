@@ -91,6 +91,8 @@ type WidgetMediaProofResult = {
   publicPath?: string | null;
   adminAlt?: string | null;
   publicAlt?: string | null;
+  adminSrc?: string | null;
+  publicSrc?: string | null;
   publicLightboxOpened?: boolean;
   publicLightboxClosed?: boolean;
   error?: string;
@@ -176,7 +178,7 @@ const screenOnlyWidgets = new Set([
   "screen-two-column",
 ]);
 const commerceFixtureWidgetTypes = new Set(["product-gallery", "product-compare", "product-table"]);
-const mediaFixtureWidgetTypes = new Set(["logo-cloud", "gallery-mosaic"]);
+const mediaFixtureWidgetTypes = new Set(["logo-cloud", "gallery-mosaic", "team"]);
 
 type MediaFixtureSeed = {
   widgetTypes: string[];
@@ -235,6 +237,16 @@ const mediaFixtureSeeds: MediaFixtureSeed[] = [
     caption: "Deterministic Gallery Mosaic MediaPicker video fixture.",
     content: "coderso-gallery-mosaic-video-fixture",
     optionalUpload: true,
+  },
+  {
+    widgetTypes: ["team"],
+    originalName: "widget-fixture-team-photo.svg",
+    mimeType: "image/svg+xml",
+    mediaType: "image",
+    title: "Widget fixture Team photo",
+    alt: "Widget fixture Team portrait",
+    caption: "Deterministic Team MediaPicker photo fixture.",
+    content: `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" role="img" aria-label="Team portrait"><rect width="640" height="640" fill="#f1f5f9"/><circle cx="320" cy="245" r="112" fill="#0369a1"/><path d="M134 560c32-108 114-170 186-170s154 62 186 170H134Z" fill="#0f766e"/><circle cx="280" cy="222" r="18" fill="#e0f2fe"/><circle cx="360" cy="222" r="18" fill="#e0f2fe"/><path d="M268 292c33 28 71 28 104 0" fill="none" stroke="#e0f2fe" stroke-width="18" stroke-linecap="round"/></svg>`,
   },
 ];
 
@@ -1058,6 +1070,9 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
       (seed) => seed.originalName === "widget-fixture-gallery-mosaic-image.svg"
     )
   )};
+  const teamPhotoFixture = ${JSON.stringify(
+    mediaFixtureSeeds.find((seed) => seed.originalName === "widget-fixture-team-photo.svg")
+  )};
   const requiredLogin = { attempted: false, authenticated: null, error: null };
   page.on("dialog", async (dialog) => {
     await dialog.accept().catch(() => undefined);
@@ -1373,6 +1388,7 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
       await adminImage.waitFor({ state: "visible", timeout: 10000 });
       proof.adminHasImage = true;
       proof.adminAlt = await adminImage.getAttribute("alt");
+      proof.adminSrc = await adminImage.getAttribute("src");
       if (proof.adminAlt !== galleryMosaicImageFixture.alt) {
         proof.error = "admin_gallery_alt_mismatch";
         return proof;
@@ -1397,6 +1413,7 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
       await publicImage.waitFor({ state: "visible", timeout: 10000 });
       proof.publicHasImage = true;
       proof.publicAlt = await publicImage.getAttribute("alt");
+      proof.publicSrc = await publicImage.getAttribute("src");
       if (proof.publicAlt !== galleryMosaicImageFixture.alt) {
         proof.error = "public_gallery_alt_mismatch";
         return proof;
@@ -1433,10 +1450,108 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
       return proof;
     }
   }
+  async function runTeamMediaPickerProof(item, adminPath) {
+    if (item.widgetType !== "team") return null;
+    const publicPath = item.mediaProofPublicPath || item.publicPath || item.adminFixtureSlug || null;
+    const proof = {
+      status: "failed",
+      adminHasImage: false,
+      publicHasImage: false,
+      publicPath,
+      adminAlt: null,
+      publicAlt: null,
+      adminSrc: null,
+      publicSrc: null,
+      error: undefined,
+    };
+    try {
+      await dismissCustomDirtyDialog();
+      await page.goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const selected = await openFixtureAndSelect(item, null, adminPath);
+      if (!selected.ok) {
+        proof.error = selected.error || "block_select_missing";
+        return proof;
+      }
+      const visualTab = page.getByRole("tab", { name: /^visual$/i }).first();
+      if ((await visualTab.count()) > 0) {
+        await visualTab.click().catch(() => undefined);
+        await settle();
+      }
+      const editor = page.locator('[data-widget-editor="team"][data-widget-editor-mode="visual"]').first();
+      await editor.waitFor({ state: "visible", timeout: 20000 });
+      const membersSection = editor.locator('[data-widget-editor-section="team.visual.members-content-order"]').first();
+      await membersSection.waitFor({ state: "visible", timeout: 20000 });
+
+      await membersSection.getByRole("button", { name: /browse media/i }).first().click();
+      await chooseMediaFixtureFromDialog(teamPhotoFixture);
+      const firstMember = page.locator('[data-team-member="1"]').first();
+      const adminImage = firstMember.locator("img").first();
+      await adminImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasImage = true;
+      proof.adminAlt = await adminImage.getAttribute("alt");
+      proof.adminSrc = await adminImage.getAttribute("src");
+      if (!proof.adminSrc || /images\\.unsplash\\.com/i.test(proof.adminSrc)) {
+        proof.error = "admin_team_seeded_photo_not_selected";
+        return proof;
+      }
+      if (!/^Photo of /.test(proof.adminAlt || "")) {
+        proof.error = "admin_team_photo_alt_mismatch";
+        return proof;
+      }
+
+      await membersSection.getByRole("button", { name: /clear photo/i }).first().click();
+      await settle();
+      if ((await firstMember.locator("img").count()) > 0) {
+        proof.error = "admin_team_clear_photo_failed";
+        return proof;
+      }
+
+      await membersSection.getByRole("button", { name: /browse media/i }).first().click();
+      await chooseMediaFixtureFromDialog(teamPhotoFixture);
+      await firstMember.locator("img").first().waitFor({ state: "visible", timeout: 10000 });
+
+      const publishButton = page.getByRole("button", { name: /^publish$/i }).first();
+      if ((await publishButton.count()) === 0) {
+        proof.error = "publish_button_missing";
+        return proof;
+      }
+      await publishButton.click();
+      await page.getByRole("button", { name: /publishing/i }).waitFor({ state: "hidden", timeout: 15000 }).catch(() => undefined);
+      await settle();
+
+      if (!publicPath) {
+        proof.error = "public_path_missing";
+        return proof;
+      }
+      await page.goto(frontUrl + publicPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const publicImage = page.locator('[data-team-member="1"] img').first();
+      await publicImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasImage = true;
+      proof.publicAlt = await publicImage.getAttribute("alt");
+      proof.publicSrc = await publicImage.getAttribute("src");
+      if (!proof.publicSrc || /images\\.unsplash\\.com/i.test(proof.publicSrc)) {
+        proof.error = "public_team_seeded_photo_not_rendered";
+        return proof;
+      }
+      if (!/^Photo of /.test(proof.publicAlt || "")) {
+        proof.error = "public_team_photo_alt_mismatch";
+        return proof;
+      }
+      proof.status = "passed";
+      return proof;
+    } catch (error) {
+      proof.error = error instanceof Error ? error.message : String(error);
+      return proof;
+    }
+  }
   async function runWidgetMediaPickerProof(item, adminPath) {
     const logoProof = await runLogoCloudMediaPickerProof(item, adminPath);
     if (logoProof) return logoProof;
-    return await runGalleryMosaicMediaPickerProof(item, adminPath);
+    const galleryProof = await runGalleryMosaicMediaPickerProof(item, adminPath);
+    if (galleryProof) return galleryProof;
+    return await runTeamMediaPickerProof(item, adminPath);
   }
   await verifyAuthenticated();
   if (!requiredLogin.authenticated) {

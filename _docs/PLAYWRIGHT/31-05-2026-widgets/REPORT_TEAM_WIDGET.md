@@ -7,6 +7,17 @@
 > **Playwright session:** `codex-31-05-ui-team`
 > **Claude:** probowano uruchomic non-interactive; CLI zwrocil `401 Invalid authentication credentials` przed testem.
 
+## Remediation status (2026-06-01)
+
+TASK-380 closes the two report findings:
+
+- TEAM-31-05-01: member-count reductions now use shared
+  `ConfirmActionDialog` cancel/accept flow instead of native `window.confirm`.
+- TEAM-31-05-02: widget smoke now treats Team as a media-fixture widget, uploads
+  a deterministic Team portrait through the authenticated admin media API, and
+  adds a browser proof for MediaPicker photo selection, Clear photo, publish,
+  and public image rendering.
+
 ## Metoda
 
 Test byl prowadzony od UI na swiezej stronie audytowej. Efekt sprawdzano w
@@ -47,8 +58,8 @@ Przetestowane:
 | Variant: Compact List | Klik `Compact List` | `data-team-variant="compact-list"`, container `flex flex-col gap-5`, karty maja `sm:flex-row`. | Nie publikowano tej zmiany. | Dziala | Branch `compact-list` renderuje `MemberCard` z `compact=true`. | Brak. |
 | Variant: Spotlight | Klik `Spotlight` | `data-team-variant="spotlight"`, lead card ma `data-team-spotlight-lead="true"` i klase `p-6`. | Nie publikowano tej zmiany. | Dziala | Renderer wylicza `spotlightLead` i oddziela reszte kart. | Brak. |
 | Spotlight lead | Klik `Set as spotlight lead` na drugim profilu | Lead zmienia sie na `Marek Nowak`; order renderu: Marek, Anna, Ewa. | Nie publikowano tej zmiany. | Dziala | `spotlightLeadId` wskazuje wybranego membera; renderer przenosi go na lead slot. | Brak. |
-| Member count cancel | Select `1` przy 3 authored profiles i odrzucenie confirm | Przechwycony prompt `Reducing the member count will remove the last 2 profiles. Continue?`; count zostal `3`. | Nie dotyczy. | Dziala funkcjonalnie, UX debt | `setMembersCount` uzywa natywnego `window.confirm`. | Rozwazyc migracje na `ConfirmActionDialog`, jak w innych nowszych kontrolkach destrukcyjnych. |
-| Member count accept | Select `1` i akceptacja confirm | Count `1`, zostal tylko pierwszy profil. | Nie publikowano tej zmiany. | Dziala | `normalizeTeamMembers(members, nextCount)` przycina liste po confirm. | Brak funkcjonalny. |
+| Member count cancel | Select `1` przy 3 authored profiles i odrzucenie confirm | Przechwycony prompt `Reducing the member count will remove the last 2 profiles. Continue?`; count zostal `3`. | Nie dotyczy. | Naprawione | TASK-380 przenosi count reduction na `ConfirmActionDialog`; cancel nie mutuje `members`. | Brak. |
+| Member count accept | Select `1` i akceptacja confirm | Count `1`, zostal tylko pierwszy profil. | Nie publikowano tej zmiany. | Naprawione | `setMembersCount` jest czysta mutacja; dialog accept dopiero wywoluje przyciecie przez normalizer. | Brak. |
 | Add member / regrow | Klik `Add member`, potem count do 3 | Powstaja placeholdery `Team Member 2` i `Team Member 3`; usuniete authored profiles nie wracaja. | Nie publikowano tej zmiany. | Dziala zgodnie z destrukcyjnym count flow | Po przycieciu stan nie zachowuje historii usunietych profili. | Brak, jezeli kontrakt ma byc destrukcyjny. |
 | Header copy | Fill eyebrow/title/description | Header pokazuje `Audit leadership`, `31-05 Team Audit`, opis; `aria-label` root = `31-05 Team Audit`. | Public baseline ma domyslny header. | Dziala | Visual patchuje `header.*`; renderer pokazuje header tylko dla niepustych pol. | Brak. |
 | Header align/title size | Select `Left`, `3XL` | Root `data-team-header-align="left"`, `data-team-title-size="3xl"`. | Nie publikowano tej zmiany. | Dziala | `resolveTeamHeaderAlign` i `resolveTeamHeaderTitleSize` mapuja dane na klasy i attrs. | Brak. |
@@ -56,7 +67,7 @@ Przetestowane:
 | Name / role / bio | Edycja pierwszego profilu | Card ma `Ada Audit`, `Quality Lead`, bio `Owns widget UI audit quality.`, aria `Ada Audit, Quality Lead`. | Nie publikowano tej zmiany. | Dziala | `MemberCard` uzywa znormalizowanych pol membera. | Brak. |
 | Move down/up | Klik Move down, potem Move up | Order zmienil sie na `Team Member 2`, `Ada Audit`, `Team Member 3`, potem wrocil. | Nie publikowano tej zmiany. | Dziala | `moveMember` przestawia pozycje w tablicy i normalizacja zachowuje ID. | Brak. |
 | Clear photo | Klik `Clear photo` | Image znika, fallback initials `A`; `imgSrc=null`, `fallbackHidden="A"`. | Nie publikowano tej zmiany. | Dziala | `handleClearPhoto` czysci `photo`; `Avatar` renderuje dekoracyjny fallback. | Brak. |
-| MediaPicker photo | UI picker obecny | `/admin/api/media?limit=10` zwrocil `[]`; nie bylo assetu do klikniecia. | Public baseline ma remote Unsplash photos. | Fixture gap | Srodowisko nie ma seed media. Editor test mockuje `listMediaCached` i potwierdza wybor photo. | Dodac seed image do audytu, zeby potwierdzic realny MediaPicker click w browserze. |
+| MediaPicker photo | UI picker obecny | `/admin/api/media?limit=10` zwrocil `[]`; nie bylo assetu do klikniecia. | Public baseline ma remote Unsplash photos. | Naprawione w smoke harnessie | TASK-380 dodaje Team portrait seed i `mediaProof`, ktory wybiera photo przez realny MediaPicker, sprawdza Clear photo, publikuje i weryfikuje publiczne `<img>`. | Uruchomic live smoke, gdy admin/frontend/auth sa dostepne. Dry-run i unit tests potwierdzaja harness contract. |
 | Social add/platform/profile/label | Add link, platform GitHub, profile `ada-audit`, label `Audit GitHub` | Link renderuje `https://github.com/ada-audit`, target `_blank`, rel `noopener noreferrer`. | Nie publikowano tej zmiany. | Dziala | `updateMemberSocialPlatform` + profile field buduja safe URL; renderer filtruje unsafe URL przez `resolveWidgetLinkAttrs`. | Brak. |
 | Social remove cancel | Klik Remove i Cancel | Link `Audit GitHub` zostal. | Nie dotyczy. | Dziala | Inline pending removal trzyma stan do confirm. | Brak. |
 | Social remove accept | Klik Remove i Confirm remove | Link zostal usuniety; pozostaly dwa poprzednie linki. | Nie dotyczy. | Dziala | `removeMemberSocialLink` filtruje link po ID. | Brak. |
@@ -97,10 +108,12 @@ klikanej sesji admin nie byly publikowane jako finalny stan publiczny.
 
 ## Ograniczenia fixture
 
-Media API w tym srodowisku zwrocilo `[]`, dlatego nie da sie uczciwie
-potwierdzic wyboru nowego zdjecia przez MediaPicker w realnym browserze.
-Zweryfikowane sa: obecny picker w UI, clear photo, fallback initials, default
-remote image rendering oraz mockowany media-pick flow w targeted Vitest.
+Media API w tym srodowisku pierwotnie zwrocilo `[]`, dlatego klikany pass nie
+mogl uczciwie potwierdzic wyboru nowego zdjecia przez MediaPicker w realnym
+browserze. TASK-380 przeniosl ten brak do deterministycznego smoke harnessu:
+Team portrait image jest uploadowany przez admin media API przed proba, a
+`mediaProof` wybiera zdjecie, sprawdza clear-photo recovery, publikuje fixture
+i weryfikuje publiczny obraz.
 
 ## Kod-owner
 
@@ -125,11 +138,10 @@ remote image rendering oraz mockowany media-pick flow w targeted Vitest.
 
 ## Rekomendacje
 
-1. Rozwazyc wymiane `setMembersCount` native `window.confirm` na
-   `ConfirmActionDialog`. To nie blokuje funkcji, ale daje spojny admin UX i
-   latwiejsze testy automatyczne.
-2. Dodac seed media image dla audytow UI, zeby MediaPicker byl testowany
-   browserowo, nie tylko mockiem w Vitest.
+1. Zamkniete w TASK-380: `setMembersCount` nie uzywa juz native
+   `window.confirm`; destrukcyjna redukcja jest obsluzona przez shared dialog.
+2. Zamkniete w TASK-380: Team ma deterministic media image seed i browserowy
+   MediaPicker/photo proof w smoke harnessie.
 3. W kolejnej rundzie mozna rozbudowac Playwright extractor dla Spotlight tak,
    aby raportowal tez klase zagniezdzonego support gridu, bo zewnetrzny grid ma
    stale `lg:grid-cols-3` z projektu.
@@ -142,3 +154,12 @@ remote image rendering oraz mockowany media-pick flow w targeted Vitest.
 - `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx` — passed, 7 tests.
 - `curl http://localhost:3000/audit-31-05-team` — HTTP 200, public baseline unchanged.
 - Claude CLI nie wykonal audytu z powodu `401 Invalid authentication credentials`.
+- TASK-380 follow-up: focused UI regression failed before fix because count
+  reduction mutated through the native confirm path; after fix
+  `bun run test:vitest -- tests/vitest/widgets/team.test.tsx tests/vitest/ui/team-editor-wave.test.tsx`
+  passed, 20 tests.
+- TASK-380 follow-up: `bun test tests/unit/playwright-widget-contract-smoke.test.ts`
+  passed, 24 tests.
+- TASK-380 follow-up: `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget team --output-json .tmp/task-380-team-smoke-dry-run.json --output-md .tmp/task-380-team-smoke-dry-run.md`
+  passed with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
+  `metadataGaps=0`.
