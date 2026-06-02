@@ -458,7 +458,7 @@ export function PermissionsMatrixPage({ permissions }: PermissionsMatrixPageProp
   return (
     <AdminShell
       activeHref="/admin/roles"
-      breadcrumbs={["Settings", "Permissions Matrix"]}
+      breadcrumbs={["Admin", "Permissions Matrix"]}
       search={
         matrixMode === "denied" ? undefined : (
           <PermissionsMatrixSearch value={searchQuery} onChange={setSearchQuery} />

@@ -273,6 +273,33 @@ test("AdminShell filters navigation through the shared permission snapshot", () 
   expect(html).not.toContain("/admin/settings");
 });
 
+test("AdminShell hides the default Settings nav item without settings:read", () => {
+  const html = renderToString(
+    <AdminRouterProvider initialPath="/admin/pages">
+      <AdminBasePathProvider value="/admin">
+        <AdminAuthProvider
+          user={{
+            id: "content-reader-1",
+            email: "content-reader@example.com",
+            name: null,
+            permissionSnapshot: {
+              permissions: ["content:read"],
+              roles: [{ id: "role-1", slug: "content-reader", name: "Content Reader" }],
+            },
+          }}
+        >
+          <AdminShell showSearch={false}>
+            <div>Pages content</div>
+          </AdminShell>
+        </AdminAuthProvider>
+      </AdminBasePathProvider>
+    </AdminRouterProvider>
+  );
+
+  expect(html).toContain("/admin/pages");
+  expect(html).not.toContain("/admin/settings");
+});
+
 test("AdminShell shows nav items when any configured permission is present", () => {
   const sections: NavSection[] = [
     {

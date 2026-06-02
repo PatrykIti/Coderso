@@ -5,7 +5,7 @@
 **Category:** Admin UI + Settings + Cache + Security UX + RBAC + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm pattern, TASK-360-04 no-op gate, changelog 1034 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md` audit evidence
-**Status:** To Do
+**Status:** In Progress (2026-06-01)
 
 ---
 
@@ -114,7 +114,7 @@ Physical execution leaves:
 
 ### TASK-359-01: Settings RBAC Guard and Bootstrap Discipline
 
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 Implementation shape:
 
@@ -147,6 +147,20 @@ Regression tests:
 - Direct URL `/admin/settings` returns access denied UI without default content.
 - No `GET /admin/api/settings` fires for users without `settings:read`.
 - Backend 403 remains covered.
+
+Completion notes:
+
+- Settings route/nav are now fail-closed for users without `settings:read`.
+- Global settings bootstrap does not call `getSettings()` without
+  `settings:read`.
+- Users/Roles breadcrumbs now use `Admin` instead of `Settings`, closing the
+  real Playwright drift where a `roles:read` user still saw a link to
+  `/admin/settings`.
+- Audit/Access breadcrumbs now use `Admin` instead of `Security`, closing the
+  matching drift where an `audit:read` user still saw a link to
+  `/admin/settings/security`.
+- Restricted Playwright evidence passed with zero Settings API requests and
+  direct `/admin/settings` rendering shared `Access denied`.
 
 ### TASK-359-02: Settings SPA Navigation, Dirty Guard, and Mobile Navigation
 

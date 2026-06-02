@@ -132,7 +132,7 @@ vi.mock("@/ui/layouts/AdminShell", () => ({
     topbarActions?: React.ReactNode;
   }) => (
     <main>
-      <div>{breadcrumbs?.join(" / ")}</div>
+      <div data-testid="breadcrumbs">{breadcrumbs?.join(" / ")}</div>
       <div data-testid="search-slot">{search}</div>
       <div data-testid="topbar-actions">{topbarActions}</div>
       {children}
@@ -275,6 +275,9 @@ test("PermissionsMatrixPage lets roles:read users search but not edit", async ()
 
     expect(listAdminRoles).toHaveBeenCalledTimes(1);
     expect(listPermissionCatalog).toHaveBeenCalledTimes(1);
+    expect(view.container.querySelector("[data-testid='breadcrumbs']")?.textContent).toBe(
+      "Admin / Permissions Matrix"
+    );
     expect(view.container.textContent).toContain("Read-only permissions");
     expect(view.container.textContent).toContain("Write content");
 

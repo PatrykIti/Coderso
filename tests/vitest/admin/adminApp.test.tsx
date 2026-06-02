@@ -23,7 +23,11 @@ const adminAppServiceMocks = vi.hoisted(() => ({
   getSettings: vi.fn(async () => ({
     "setup.completed": true,
   })),
+  getSecuritySettings: vi.fn(async () => ({})),
+  getStorageSettings: vi.fn(async () => ({})),
   updateSettings: vi.fn(async () => ({})),
+  updateSecuritySettings: vi.fn(async () => ({})),
+  updateStorageSettings: vi.fn(async () => ({})),
   listAdminThemeProfilesCached: vi.fn(async () => []),
   listAdminThemeTemplatesCached: vi.fn(async () => []),
 }));
@@ -36,7 +40,11 @@ vi.mock("@/services/authClient", () => ({
 
 vi.mock("@/services/settingsClient", () => ({
   getSettings: adminAppServiceMocks.getSettings,
+  getSecuritySettings: adminAppServiceMocks.getSecuritySettings,
+  getStorageSettings: adminAppServiceMocks.getStorageSettings,
   updateSettings: adminAppServiceMocks.updateSettings,
+  updateSecuritySettings: adminAppServiceMocks.updateSecuritySettings,
+  updateStorageSettings: adminAppServiceMocks.updateStorageSettings,
 }));
 
 vi.mock("@/services/adminThemeClient", () => ({
@@ -217,6 +225,50 @@ test("AdminApp allows the Users route when the user only has roles:read", async 
     view.cleanup();
   }
 });
+
+const restrictedSettingsRouteCases: Array<[string, string[]]> = [
+  ["/admin/settings", ["Site name", "Settings error"]],
+  ["/admin/settings/security", ["Security policy", "Rate limits"]],
+  ["/admin/settings/storage", ["Storage provider", "Media storage"]],
+];
+
+test.each(restrictedSettingsRouteCases)(
+  "AdminApp denies direct Settings route %s without loading settings clients",
+  async (path, blockedCopy) => {
+    adminAuthState.bootstrap = {
+      state: "authenticated",
+      user: {
+        id: "roles-reader-1",
+        email: "roles-reader@example.com",
+        name: "Roles Reader",
+        permissionSnapshot: {
+          permissions: ["roles:read"],
+          roles: [{ id: "role-3", slug: "roles-reader", name: "Roles Reader" }],
+        },
+      },
+    };
+    const view = mount(path);
+
+    try {
+      await flush();
+      expect(view.container.textContent).toContain("Access denied");
+      expect(view.container.textContent).toContain(
+        "Your account does not have permission to open this admin area."
+      );
+      for (const copy of blockedCopy) {
+        expect(view.container.textContent).not.toContain(copy);
+      }
+      expect(adminAppServiceMocks.getSettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.getSecuritySettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.getStorageSettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.updateSettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.updateSecuritySettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.updateStorageSettings).not.toHaveBeenCalled();
+    } finally {
+      view.cleanup();
+    }
+  }
+);
 
 test("AdminApp passes the permission snapshot into the Roles Matrix route", async () => {
   adminAuthState.bootstrap = {

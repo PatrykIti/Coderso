@@ -512,7 +512,9 @@ vi.mock("@/ui/layouts/SplitShell", () => ({
     breadcrumbs?: React.ReactNode;
   }) => (
     <div>
-      <div data-testid="breadcrumbs">{breadcrumbs}</div>
+      <div data-testid="breadcrumbs">
+        {Array.isArray(breadcrumbs) ? breadcrumbs.join(" / ") : breadcrumbs}
+      </div>
       <div data-testid="right-panel">{rightPanel}</div>
       {React.Children.toArray(children)}
     </div>
@@ -1015,6 +1017,9 @@ test("UsersRolesPage supports roles-read only mode without fetching users", asyn
     expect(listAdminUsers).not.toHaveBeenCalled();
     expect(listAdminRoles).toHaveBeenCalledTimes(1);
     expect(listPermissionCatalog).toHaveBeenCalledTimes(1);
+    expect(view.container.querySelector("[data-testid='breadcrumbs']")?.textContent).toBe(
+      "Admin / Users & Roles"
+    );
     expect(view.container.textContent).toContain("User list unavailable");
     expect(view.container.querySelector('[data-testid="user-list-items"]')).toBeNull();
     expect(view.container.querySelector('[data-testid="role-list-items"]')?.textContent).toContain(

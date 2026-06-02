@@ -4,19 +4,37 @@ import {
   mapSettingsRouteError,
   registerSettingsRoutes,
   resolveSettingsRouteKey,
+  type RouteContext,
+  type RouteHandler,
 } from "../../../core/server/routes/settingsRoutes";
 
-type Route = { method: string; path: string };
+type Route = { method: string; path: string; handlers: RouteHandler[] };
 
 const makeRouter = () => {
   const routes: Route[] = [];
   return {
     routes,
     router: {
-      get: (path: string) => routes.push({ method: "GET", path }),
-      patch: (path: string) => routes.push({ method: "PATCH", path }),
+      get: (path: string, ...handlers: RouteHandler[]) =>
+        routes.push({ method: "GET", path, handlers }),
+      patch: (path: string, ...handlers: RouteHandler[]) =>
+        routes.push({ method: "PATCH", path, handlers }),
     },
   };
+};
+
+const findRoute = (routes: Route[], method: string, path: string) => {
+  const route = routes.find((item) => item.method === method && item.path === path);
+  if (!route) throw new Error(`Missing route ${method} ${path}`);
+  return route;
+};
+
+const runRoute = async (route: Route, ctx: RouteContext) => {
+  let result: unknown;
+  for (const handler of route.handlers) {
+    result = await handler(ctx);
+  }
+  return result;
 };
 
 test("registerSettingsRoutes wires endpoints", () => {
@@ -41,6 +59,78 @@ test("registerSettingsRoutes wires endpoints", () => {
       "PATCH /settings",
     ])
   );
+});
+
+test("registerSettingsRoutes keeps settings reads behind settings:read", () => {
+  const { router } = makeRouter();
+  const requiredPermissions: string[] = [];
+
+  registerSettingsRoutes(router, {
+    requirePermission: (permission) => {
+      requiredPermissions.push(permission);
+      return async () => undefined;
+    },
+    validate: () => undefined,
+  });
+
+  expect(requiredPermissions.slice(0, 4)).toEqual([
+    "settings:read",
+    "settings:read",
+    "settings:read",
+    "settings:read",
+  ]);
+  expect(requiredPermissions.slice(4)).toEqual([
+    "settings:write",
+    "settings:write",
+    "settings:write",
+    "settings:write",
+  ]);
+});
+
+test("settings reads stop at the settings:read guard with a 403", async () => {
+  const { router, routes } = makeRouter();
+
+  registerSettingsRoutes(router, {
+    requirePermission: (permission) => {
+      return async () => {
+        expect(permission).toBe("settings:read");
+        throw new ApiError("permission_denied", "Forbidden", 403);
+      };
+    },
+    validate: () => undefined,
+  });
+
+  const route = findRoute(routes, "GET", "/settings/security");
+  const permissionHandler = route.handlers[0];
+  const readHandler = route.handlers[1];
+  if (!permissionHandler || !readHandler) {
+    throw new Error("Settings read route is missing its guard or read handler");
+  }
+
+  let readHandlerReached = false;
+  const guardedRoute: Route = {
+    ...route,
+    handlers: [
+      permissionHandler,
+      async (ctx) => {
+        readHandlerReached = true;
+        return readHandler(ctx);
+      },
+    ],
+  };
+
+  await expect(
+    runRoute(guardedRoute, {
+      params: {},
+      query: {},
+      body: undefined,
+      user: { id: "restricted-1" },
+    })
+  ).rejects.toMatchObject({
+    code: "permission_denied",
+    status: 403,
+  });
+  expect(readHandlerReached).toBe(false);
 });
 
 test("resolveSettingsRouteKey maps site.baseUrl alias", () => {

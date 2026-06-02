@@ -619,7 +619,7 @@ export function AccessLogsPage() {
   ];
 
   return (
-    <AdminShell activeHref="/admin/access-logs" breadcrumbs={["Security", "Access Logs"]}>
+    <AdminShell activeHref="/admin/access-logs" breadcrumbs={["Admin", "Access Logs"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Access Logs"

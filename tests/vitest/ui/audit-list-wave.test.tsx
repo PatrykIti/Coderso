@@ -180,7 +180,9 @@ vi.mock("@/ui/layouts/AdminShell", () => ({
     breadcrumbs?: React.ReactNode;
   }) => (
     <div>
-      <div>{breadcrumbs}</div>
+      <div data-testid="breadcrumbs">
+        {Array.isArray(breadcrumbs) ? breadcrumbs.join(" / ") : breadcrumbs}
+      </div>
       <div>{children}</div>
     </div>
   ),
@@ -421,6 +423,9 @@ test("AuditList loads logs, filters them, opens export dialog, and clears select
     await flush();
     expect(auditState.listAuditLogs).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 50, from: expect.any(String), to: expect.any(String) })
+    );
+    expect(view.container.querySelector("[data-testid='breadcrumbs']")?.textContent).toBe(
+      "Admin / Audit Logs"
     );
     expect(view.container.textContent).toContain("audit-table:2:none");
 

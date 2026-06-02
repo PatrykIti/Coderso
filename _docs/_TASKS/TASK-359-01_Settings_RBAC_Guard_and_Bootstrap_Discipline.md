@@ -5,7 +5,7 @@
 **Category:** Admin UI + Settings + RBAC + Auth Bootstrap
 **Estimated Effort:** Large
 **Dependencies:** TASK-359, TASK-360-01
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -106,6 +106,35 @@ Error handling:
   `docs/guide/screens/assistant-settings.md`, and `docs/guide/screens/sessions.md`
 - `_docs/_TASKS/README.md` on status changes
 - `_docs/_CHANGELOG/` when completed
+
+## Completion Notes
+
+- `/admin/settings/**` routes consume the shared permission snapshot and render
+  the shared `Access denied` state before Settings shell content when
+  `settings:read` is absent.
+- The global Settings bootstrap is gated by `settings:read`; restricted users
+  do not perform normal-UX `GET /admin/api/settings` requests.
+- Settings navigation is hidden without `settings:read`, including the
+  previously missed Users/Roles breadcrumb drift where `Settings` labels linked
+  to `/admin/settings`.
+- Final review also closed the matching Audit/Access breadcrumb drift where
+  `Security` labels linked to `/admin/settings/security` for `audit:read` users
+  without `settings:read`.
+- Backend read guards remain wired to `settings:read`, and the route test now
+  proves a 403 stops the read handler before service work.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx`
+- `set -a && source .env && set +a && bun test tests/integration/routes/settings.test.ts`
+- `set -a && source .env && set +a && bun .tmp/task-359-01-fixture.ts cleanup && set -a && source .env && set +a && bun .tmp/task-359-01-fixture.ts && bun .tmp/task-359-01-playwright-runner.ts; status=$?; set -a && source .env && set +a && bun .tmp/task-359-01-fixture.ts cleanup; exit $status`
+  passed with `settingsLinksOnAllowedRoute: 0`, `settingsRequests: []`, and
+  `settingsResponses: []`. Evidence screenshot:
+  `.tmp/task-359-01-settings-rbac.png`.
+- `set -a && source .env && set +a && bun .tmp/task-359-01-audit-fixture.ts cleanup && set -a && source .env && set +a && bun .tmp/task-359-01-audit-fixture.ts && bun .tmp/task-359-01-audit-playwright-runner.ts; status=$?; set -a && source .env && set +a && bun .tmp/task-359-01-audit-fixture.ts cleanup; exit $status`
+  passed with empty Settings links on `/admin/audit` and `/admin/access-logs`,
+  plus `settingsRequests: []` and `settingsResponses: []`. Evidence screenshot:
+  `.tmp/task-359-01-audit-rbac.png`.
 
 ## Acceptance Criteria
 

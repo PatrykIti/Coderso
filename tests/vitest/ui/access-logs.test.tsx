@@ -208,7 +208,20 @@ vi.mock("@/components/ui/sheet", () => ({
 }));
 
 vi.mock("@/ui/layouts/AdminShell", () => ({
-  AdminShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+  AdminShell: ({
+    breadcrumbs,
+    children,
+  }: {
+    breadcrumbs?: React.ReactNode;
+    children: React.ReactNode;
+  }) => (
+    <main>
+      <div data-testid="breadcrumbs">
+        {Array.isArray(breadcrumbs) ? breadcrumbs.join(" / ") : breadcrumbs}
+      </div>
+      {children}
+    </main>
+  ),
 }));
 
 vi.mock("@/ui/shared/PageHeader", () => ({
@@ -458,6 +471,9 @@ test("AccessLogsPage sends server filters and drives cursor pagination", async (
 
   try {
     await flush();
+    expect(view.container.querySelector("[data-testid='breadcrumbs']")?.textContent).toBe(
+      "Admin / Access Logs"
+    );
     expect(view.container.textContent).toContain("Access Logs");
     expect(view.container.textContent).toContain("access-table:2");
 

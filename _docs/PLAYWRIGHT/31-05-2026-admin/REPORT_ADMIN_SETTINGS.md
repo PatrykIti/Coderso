@@ -16,6 +16,32 @@ Główne źródła: `core/admin/ui/settings/**`, `core/admin/ui/site/**`,
 
 ## Co faktycznie kliknięto
 
+### Czwarta fala - 2026-06-01: TASK-359-01 RBAC verification
+
+- Zalogowano tymczasowego usera z rolą `roles:read` bez `settings:read`.
+- Na `/admin/roles` sprawdzono, że nie ma żadnego linku
+  `href="/admin/settings"` ani w głównym sidebarze, ani w breadcrumbach.
+- Playwright wykrył drift: `Roles Matrix` i `Users & Roles` używały breadcrumbu
+  `Settings`, który shared breadcrumbs zamieniał na link do `/admin/settings`.
+  Breadcrumbi zostały zmienione na `Admin / Permissions Matrix` i
+  `Admin / Users & Roles`.
+- Claude final review wykrył ten sam drift w wariancie `audit:read`: `Audit
+  Logs` i `Access Logs` używały breadcrumbu `Security`, który shared
+  breadcrumbs mapował do `/admin/settings/security`. Breadcrumbi zostały
+  zmienione na `Admin / Audit Logs` i `Admin / Access Logs`.
+- Dodatkowo zalogowano tymczasowego usera z rolą `audit:read` bez
+  `settings:read`; na `/admin/audit` i `/admin/access-logs` nie było żadnego
+  linku do `/admin/settings`.
+- Direct hit w `/admin/settings` wyrenderował shared `Access denied` z kopią
+  `Your account does not have permission to open this admin area.`
+- Network log z całego smoke'a miał `settingsRequests: []` i
+  `settingsResponses: []`; nie wystąpił normal-UX `GET /admin/api/settings`
+  403 loop.
+- `GET /admin/api/auth/me` po zalogowaniu zwrócił permission snapshot wyłącznie
+  z `["roles:read"]`; nie było `429`.
+- Screenshot evidence: `.tmp/task-359-01-settings-rbac.png`.
+- Audit-only screenshot evidence: `.tmp/task-359-01-audit-rbac.png`.
+
 ### Trzecia fala - 2026-06-01: Settings cache i realne zapisy
 
 - Kliknięto wewnętrzne linki Settings sidebaru, bez `page.goto`: General,
@@ -96,6 +122,10 @@ Główne źródła: `core/admin/ui/settings/**`, `core/admin/ui/site/**`,
 - Email test wymaga recipienta przed wysłaniem.
 - Storage pokazuje ostrzeżenie, że zmiana drivera nie migruje istniejących
   plików.
+- `TASK-359-01`: restricted user bez `settings:read` nie widzi linków do
+  `/admin/settings`, direct URL pokazuje pełnoekranowe `Access denied`, a
+  globalny Settings bootstrap nie wykonuje `GET /admin/api/settings`.
+  Zweryfikowano warianty `roles:read` i `audit:read` bez `settings:read`.
 
 ## Co nie działało / co jest ryzykowne
 
@@ -121,7 +151,7 @@ Główne źródła: `core/admin/ui/settings/**`, `core/admin/ui/site/**`,
 | Email | `Send Test Email` jest realną akcją zewnętrzną, a `Export Logs` jest UI-only | jedno jest side effectem, drugie tylko wygląda jak export |
 | Storage | `Test Connection` jest UI-only | button nie ma `onClick`, więc nie testuje providerów |
 | Integrations | Secret fields są dobrze maskowane, ale save sekretów wymaga ostrożnego confirm/audit | to realne credentiale, nie powinny trafiać do cache/logów |
-| RBAC route gating | Restricted user bez `settings:read` widzi link Settings i wyrenderowany shell Settings z inline `Forbidden` | frontend pokazuje defaultową treść ustawień mimo braku prawa odczytu |
+| RBAC route gating | Zamknięte w `TASK-359-01`: restricted user bez `settings:read` nie widzi Settings linków, direct URL kończy w `Access denied` i nie wykonuje `GET /admin/api/settings` | route guard, shared sidebar filter, gated settings bootstrap oraz breadcrumb cleanup usunęły dawny shell `Forbidden`; backend 403 pozostaje defense-in-depth |
 
 ## Dlaczego
 
@@ -145,19 +175,20 @@ prefetch contract, dlatego każde kliknięcie startuje ponowny bootstrap
 `auth/me`, globalne `settings` i endpoint danej podstrony. Przy szybkim
 przeklikaniu da się uderzyć w rate limit auth.
 
-Druga fala pokazała też problem przekrojowy RBAC: `AdminApp.tsx` pobiera
+Druga fala pokazała też problem przekrojowy RBAC: `AdminApp.tsx` pobierał
 settings globalnie po samym `authState === "authenticated"`, bez sprawdzenia
-`settings:read`. Gdy API odpowiada 403, błąd trafia jako inline state do
-wyrenderowanej strony zamiast pełnoekranowego `Access denied` albo
-przekierowania z route guard.
+`settings:read`. `TASK-359-01` zamknął ten konkretny drift: Settings routes
+fail-closed przez shared permission snapshot, bootstrap `getSettings()` jest
+pomijany bez `settings:read`, a dodatkowy breadcrumb drift w Users/Roles nie
+linkuje już do `/admin/settings`.
 
 ## Jak naprawić
 
-- Dodać route guard dla `/admin/settings/**` na `settings:read`; dla braku
-  uprawnień ukryć link w sidebarze i pokazać spójny stan `Access denied`.
-- Nie wywoływać globalnego `getSettings()` po każdym logowaniu, jeśli bieżący
-  user nie ma `settings:read`; do tego potrzebny jest backendowy/current-user
-  `can(permission)`.
+- Zamknięte w `TASK-359-01`: route guard dla `/admin/settings/**` na
+  `settings:read`, ukrycie Settings linków i shared `Access denied` dla direct
+  URL bez uprawnień.
+- Zamknięte w `TASK-359-01`: globalny `getSettings()` nie uruchamia się po
+  logowaniu, jeśli bieżący user nie ma `settings:read`.
 - Zmienić `SettingsSidebar` z raw `<a>` na `AdminLink` z canonical hrefami i
   prefetch przez shared admin route helpers.
 - Dodać dirty-state guard dla Settings forms: przejście sekcji, sidebar,

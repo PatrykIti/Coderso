@@ -75,6 +75,10 @@ UI behavior:
 - Globalne odczyty Admin shell rowniez musza sprawdzac snapshot przed fetch:
   settings (`settings:read`), admin theme (`themes:read`), custom-screen
   shortcuts (`content:read`) i solution-kit nav context (`solution-kits:read`).
+- `/admin/settings/**` wymaga `settings:read` do renderowania Settings shell.
+  Bez `settings:read` UI renderuje shared access denied przed globalnym
+  `getSettings()` i przed section-specific Settings fetchami; Settings linki,
+  w tym breadcrumbi z innych admin areas, nie moga kierowac do Settings.
 - `/admin/users` jest dostepne przy `users:read` albo `roles:read`; bez obu
   uprawnien UI nie wykonuje fetchy Users/Roles.
 - `users:read`-only pokazuje liste users bez role filter/details; `roles:read`

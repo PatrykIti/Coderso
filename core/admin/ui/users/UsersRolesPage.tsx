@@ -711,7 +711,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
             Users and roles are unavailable for this account.
           </div>
         }
-        breadcrumbs={["Settings", "Users & Roles"]}
+        breadcrumbs={["Admin", "Users & Roles"]}
       >
         <div className="mx-auto flex max-w-5xl flex-col gap-6">
           <PageHeader
@@ -748,7 +748,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
           onDeleteUser={() => selectedUser && handleDeleteUser(selectedUser)}
         />
       }
-      breadcrumbs={["Settings", "Users & Roles"]}
+      breadcrumbs={["Admin", "Users & Roles"]}
     >
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <PageHeader

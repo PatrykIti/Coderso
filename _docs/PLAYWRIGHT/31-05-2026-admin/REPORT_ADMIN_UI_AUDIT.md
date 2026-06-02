@@ -33,9 +33,9 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
 
 | Priorytet | Obszar | Problem | Dlaczego |
 | --- | --- | --- | --- |
-| Wysoki | RBAC UI | Frontend nie propaguje efektywnych uprawnień usera do route/menu/components | `authClient.AuthUser` ma tylko `id/email/name`; `AdminApp` renderuje Users/Roles/Settings bez `can(permission)` |
-| Wysoki | Users/Roles Matrix | Restricted user widzi i może kliknąć write controls, dopiero API odpowiada 403 | `UsersRolesPage` ma default `users/roles` read+write, `PermissionsMatrixPage` nie ma permission prop |
-| Wysoki | Settings | User bez `settings:read` widzi Settings shell/default content i inline `Forbidden` | `getSettings()` odpala się globalnie po auth, bez route guard |
+| Wysoki | RBAC UI | Zamknięte w `TASK-360-01` i obszarowych leafach: frontend propaguje redacted permission snapshot do route/menu/components | `AuthUser` ma `permissionSnapshot`, `AdminApp` używa shared `can(permission)`, a Users/Roles/Settings konsumują ten sam kontrakt; API 403 zostaje defense-in-depth |
+| Wysoki | Users/Roles Matrix | Zamknięte w `TASK-355-01` i `TASK-356-01`: restricted user nie dostaje aktywnych write controls bez write permission | `UsersRolesPage` i `PermissionsMatrixPage` konsumują permission snapshot, wspierają read-only/partial-read modes i odświeżają snapshot po stale 403 |
+| Wysoki | Settings | Zamknięte w `TASK-359-01`: user bez `settings:read` nie widzi Settings linków, direct URL pokazuje `Access denied` i nie odpala `GET /admin/api/settings` | shared permission snapshot gate, settings bootstrap guard i breadcrumb cleanup zastąpiły dawny shell `Forbidden`; backend 403 zostaje defense-in-depth |
 | Wysoki | Settings navigation | Przejścia między opcjami Settings robią pełny reload i ponowny `auth/me` + `settings` fetch | `SettingsSidebar` używa raw `<a>` zamiast `AdminLink`, więc omija SPA router/prefetch |
 | Wysoki | Settings cache | Settings nie są cache'owane/hydratowane jak inne admin zasoby | brak settings cache keys/wrappers/cacheBus; klienty używają bezpośredniego `apiRequest` |
 | Wysoki | Access Logs | `Revoke access` wygląda jak destrukcyjna akcja, ale nie ma handlera | `AccessLogDetailsDrawer.tsx` renderuje button bez `onClick` |
@@ -101,6 +101,11 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
   cursor pagination, exact `User ID`, custom range, match labels, real session
   view/revoke z permission gatingiem, CSV/JSON export oraz realny advanced
   method/IP filters panel bez dodatkowych user/role directory lookupow.
+- `TASK-359-01` jest zaimplementowany: `/admin/settings/**` fail-closed dla
+  userow bez `settings:read`, Settings linki znikaja z UI, Users/Roles
+  oraz Audit/Access breadcrumbi nie linkuja juz do Settings, a restricted
+  Playwright passy dla `roles:read` i `audit:read` nie wykonaly zadnego
+  `GET /admin/api/settings`.
 - `TASK-355-01` jest zaimplementowany: Users UI konsumuje shared permission
   snapshot, nie hardcoduje write permissions i wspiera partial
   `users:read`/`roles:read` bez pobocznych fetchy.

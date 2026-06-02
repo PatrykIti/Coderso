@@ -338,7 +338,7 @@ export function AuditList() {
   };
 
   return (
-    <AdminShell activeHref="/admin/audit" breadcrumbs={["Security", "Audit Logs"]}>
+    <AdminShell activeHref="/admin/audit" breadcrumbs={["Admin", "Audit Logs"]}>
       <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6">
         <PageHeader
           title="Audit Logs"
