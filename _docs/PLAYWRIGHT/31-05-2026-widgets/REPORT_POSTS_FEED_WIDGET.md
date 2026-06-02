@@ -95,6 +95,23 @@ destrukcyjne dla uzytkownika. Dodac test w
 `tests/vitest/ui/posts-feed-editor-wave.test.tsx`: category set -> mode latest
 -> Advanced nie pokazuje category jako aktywnego filtra.
 
+## Remediation 2026-06-02
+
+- PF-31-05-01 fixed: `core/widgets/core/postsFeed.tsx` owns
+  `resolvePostsFeedActiveSourceFilterLabels`, and Advanced source-filter copy now
+  uses that runtime-active helper. Saved `source.category` remains preserved as
+  dormant state outside `category` mode, but Advanced no longer reports it as an
+  active filter in `latest`, `featured`, or `manual`.
+- PF-31-05-02 covered: `scripts/playwright-widget-contract-smoke.ts` now
+  bootstraps three deterministic Posts Feed fixture posts through authenticated
+  admin post APIs, ensures an enabled `/fixture-posts/:slug` posts content
+  route through the existing admin settings API, publishes the posts, patches
+  `/posts-feed-test-page` with populated image/tag/author/date/CTA/load-more
+  data, and records a dedicated `postsProof` for admin/public card rendering.
+- Drift correction: task docs now point to the real domain lane
+  `tests/unit/widgets/postsFeedWidget.test.tsx` instead of the non-existent
+  `tests/vitest/widgets/postsFeed.test.tsx`.
+
 ## Public baseline
 
 `curl http://localhost:3000/audit-31-05-posts-feed` zwrocil HTTP 200 i SSR HTML z:
@@ -118,6 +135,10 @@ Dlatego nie da sie uczciwie browserowo ocenic item card visuals: obrazkow,
 tagow, autora/daty, CTA/linkow, manual ordering ani realnych hrefow paginacji.
 Zweryfikowane sa warunki UI, runtime empty state, route guidance, motion wrapper,
 Advanced i targeted testy renderer/resolver/preview bridge.
+
+Remediation 2026-06-02 dodaje osobna deterministyczna strone smoke
+`/posts-feed-test-page`, ktora nie zastepuje historycznego `/audit-31-05-posts-feed`,
+ale zamyka ograniczenie fixture dla kolejnych przebiegow contract smoke.
 
 ## Kod-owner
 
@@ -149,10 +170,12 @@ Advanced i targeted testy renderer/resolver/preview bridge.
 1. Naprawic PF-31-05-01 w Advanced summary, z preferencja dla conditional display
    zamiast destrukcyjnego czyszczenia category.
 2. Dodac seeded Posts Feed UI fixture z minimum 3 postami: jeden featured, jeden
-   z media image, jeden z tagiem/category, plus enabled post detail/list route.
+   z media image, jeden z tagiem/category, plus deterministic detail/list route.
    To odblokuje realne sprawdzenie kart, linkow, obrazkow, manual order i
    paginacji.
 3. Rozszerzyc Vitest editor wave o przypadek inactive category w latest mode.
+
+Status 2026-06-02: punkty 1, 2 i 3 wykonane w TASK-383.
 
 ## Walidacja
 

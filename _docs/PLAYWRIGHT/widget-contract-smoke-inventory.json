@@ -247,7 +247,8 @@
       "publicPath": "/posts-feed-test-page",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "cssChecks": ["body-overflow"]
+      "cssChecks": ["body-overflow"],
+      "notes": "Populated fixture is bootstrapped through admin post and page data before smoke."
     },
     {
       "widgetType": "entry-teaser",

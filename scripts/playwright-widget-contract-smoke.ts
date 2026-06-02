@@ -121,6 +121,8 @@ type WidgetContentListProofResult = {
   error?: string;
 };
 
+type WidgetPostsFeedProofResult = WidgetContentListProofResult;
+
 type AdminWidgetResult = {
   widgetType: string;
   status: SmokeStatus;
@@ -130,6 +132,7 @@ type AdminWidgetResult = {
   duplicateWritablePaths: string[];
   mediaProof?: WidgetMediaProofResult;
   contentProof?: WidgetContentListProofResult;
+  postsProof?: WidgetPostsFeedProofResult;
   error?: string;
 };
 
@@ -203,6 +206,7 @@ const screenOnlyWidgets = new Set([
 ]);
 const commerceFixtureWidgetTypes = new Set(["product-gallery", "product-compare", "product-table"]);
 const contentFixtureWidgetTypes = new Set(["content-list"]);
+const postsFixtureWidgetTypes = new Set(["posts-feed"]);
 const mediaFixtureWidgetTypes = new Set([
   "logo-cloud",
   "gallery-mosaic",
@@ -244,6 +248,41 @@ type ContentListFixturePageListItem = {
 type ContentListFixturePageDetail = {
   id: string;
   currentData?: Record<string, unknown> | null;
+};
+
+type PostsFeedFixturePostListItem = {
+  id: string;
+  slug: string;
+  title?: string | null;
+  status?: string | null;
+  tags?: string[];
+  data?: Record<string, unknown> | null;
+};
+
+type PostsFeedFixturePostListPayload = {
+  items?: PostsFeedFixturePostListItem[];
+};
+
+type PostsFeedFixturePostSeed = {
+  title: string;
+  slug: string;
+  excerpt: string;
+  tags: string[];
+  imageAlt: string;
+  publishedAt: string;
+  authorName: string;
+};
+
+type PostsFeedFixtureSettingsPayload = {
+  "site.contentRoutes"?: unknown;
+};
+
+type PostsFeedFixtureContentRoute = {
+  type: string;
+  listPath: string;
+  detailPath: string;
+  enabled: boolean;
+  detailPageId?: string | null;
 };
 
 const mediaFixtureSeeds: MediaFixtureSeed[] = [
@@ -500,6 +539,10 @@ export function selectedCasesNeedContentFixtures(cases: WidgetSmokeCase[]): bool
   return cases.some((item) => contentFixtureWidgetTypes.has(item.widgetType));
 }
 
+export function selectedCasesNeedPostsFixtures(cases: WidgetSmokeCase[]): boolean {
+  return cases.some((item) => postsFixtureWidgetTypes.has(item.widgetType));
+}
+
 export function selectedCasesNeedMediaFixtures(cases: WidgetSmokeCase[]): boolean {
   return cases.some((item) => mediaFixtureWidgetTypes.has(item.widgetType));
 }
@@ -526,6 +569,41 @@ function resolveMediaFixtureSeedsForCases(cases: WidgetSmokeCase[]): MediaFixtur
 const contentListFixtureFallbackBlockId = "content-list-fixture";
 const contentListFixtureImageSrc =
   "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='960'%20height='540'%20viewBox='0%200%20960%20540'%20role='img'%20aria-label='Content%20List%20fixture'%3E%3Crect%20width='960'%20height='540'%20fill='%23f8fafc'/%3E%3Crect%20x='96'%20y='84'%20width='768'%20height='372'%20rx='34'%20fill='%230f766e'/%3E%3Ccircle%20cx='704'%20cy='184'%20r='72'%20fill='%23f97316'/%3E%3Cpath%20d='M162%20408%20342%20236l124%20118%2086-82%20246%20136H162Z'%20fill='%23ccfbf1'/%3E%3Ctext%20x='150'%20y='168'%20font-family='Arial,Helvetica,sans-serif'%20font-size='54'%20font-weight='700'%20fill='%23ffffff'%3EContent%20Fixture%3C/text%3E%3C/svg%3E";
+const postsFeedFixtureFallbackBlockId = "posts-feed-fixture";
+const postsFeedFixtureListPath = "/fixture-posts";
+const postsFeedFixtureDetailPath = `${postsFeedFixtureListPath}/:slug`;
+const postsFeedFixtureImageSrc =
+  "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='960'%20height='540'%20viewBox='0%200%20960%20540'%20role='img'%20aria-label='Posts%20Feed%20fixture'%3E%3Crect%20width='960'%20height='540'%20fill='%23f8fafc'/%3E%3Crect%20x='88'%20y='74'%20width='784'%20height='392'%20rx='34'%20fill='%231e40af'/%3E%3Cpath%20d='M164%20396%20338%20242l112%20102%2082-78%20264%20130H164Z'%20fill='%23bfdbfe'/%3E%3Ccircle%20cx='704'%20cy='174'%20r='70'%20fill='%23f97316'/%3E%3Ctext%20x='146'%20y='164'%20font-family='Arial,Helvetica,sans-serif'%20font-size='54'%20font-weight='700'%20fill='%23ffffff'%3EPosts%20Fixture%3C/text%3E%3C/svg%3E";
+
+const postsFeedFixturePostSeeds: PostsFeedFixturePostSeed[] = [
+  {
+    title: "Fixture Posts Feed Launch Brief",
+    slug: "fixture-posts-launch-brief",
+    excerpt: "Deterministic featured post with image, tags, author, date, and CTA proof.",
+    tags: ["featured", "launch"],
+    imageAlt: "Fixture Posts Feed launch brief image",
+    publishedAt: "2026-05-31T10:00:00.000Z",
+    authorName: "Fixture Editor",
+  },
+  {
+    title: "Fixture Posts Feed Roadmap Note",
+    slug: "fixture-posts-roadmap-note",
+    excerpt: "Second deterministic post proving multi-card layout and pagination.",
+    tags: ["roadmap", "release"],
+    imageAlt: "Fixture Posts Feed roadmap note image",
+    publishedAt: "2026-05-30T10:00:00.000Z",
+    authorName: "Fixture Editor",
+  },
+  {
+    title: "Fixture Posts Feed Operations Update",
+    slug: "fixture-posts-operations-update",
+    excerpt: "Third deterministic post proving load-more counts and category-style tags.",
+    tags: ["operations", "news"],
+    imageAlt: "Fixture Posts Feed operations update image",
+    publishedAt: "2026-05-29T10:00:00.000Z",
+    authorName: "Fixture Editor",
+  },
+];
 
 function buildContentListFixtureWidgetData(blockId: string): Record<string, unknown> {
   return {
@@ -665,6 +743,182 @@ export function buildContentListFixturePageData(
   };
 }
 
+function buildPostsFeedFixturePostData(seed: PostsFeedFixturePostSeed): Record<string, unknown> {
+  return {
+    excerpt: seed.excerpt,
+    featuredImage: postsFeedFixtureImageSrc,
+    featuredImageAlt: seed.imageAlt,
+  };
+}
+
+function buildPostsFeedFixtureRuntimeItem(seed: PostsFeedFixturePostSeed): Record<string, unknown> {
+  return {
+    id: seed.slug,
+    title: seed.title,
+    slug: seed.slug,
+    href: `${postsFeedFixtureListPath}/${seed.slug}`,
+    excerpt: seed.excerpt,
+    imageSrc: postsFeedFixtureImageSrc,
+    imageAlt: seed.imageAlt,
+    tags: seed.tags,
+    authorName: seed.authorName,
+    publishedAt: seed.publishedAt,
+    status: "published",
+  };
+}
+
+function buildPostsFeedFixtureWidgetData(blockId: string): Record<string, unknown> {
+  return {
+    source: {
+      mode: "latest",
+      category: "",
+      manualPostIds: [],
+      authorId: "",
+      featuredFirst: true,
+      dateRange: {
+        from: "",
+        to: "",
+      },
+      limit: 3,
+      sort: "published-desc",
+    },
+    title: "Fixture posts",
+    description: "Populated Posts Feed smoke fixture.",
+    pagination: {
+      mode: "load-more",
+      pageSize: 2,
+      viewAllHref: postsFeedFixtureListPath,
+      viewAllLabel: "View all fixture posts",
+      loadMoreLabel: "More fixture posts",
+    },
+    fields: {
+      showImage: true,
+      showExcerpt: true,
+      showAuthor: true,
+      showDate: true,
+      showCta: true,
+    },
+    emptyState: {
+      title: "No fixture posts",
+      description: "The Posts Feed smoke fixture should stay populated.",
+    },
+    style: {
+      columns: "2",
+      gap: "lg",
+      cardStyle: "elevated",
+      imageAspect: "wide",
+      ctaLabel: "Read post",
+      backgroundColor: "var(--color-bg)",
+      borderColor: "var(--color-border)",
+      textColor: "var(--color-text)",
+      motion: "fade",
+    },
+    resolved: {
+      items: postsFeedFixturePostSeeds.map(buildPostsFeedFixtureRuntimeItem),
+      total: postsFeedFixturePostSeeds.length,
+      sourceMode: "latest",
+      listPath: postsFeedFixtureListPath,
+      resolvedAt: "2026-05-31T10:05:00.000Z",
+      runtime: {
+        page: 1,
+        pageSize: 2,
+        totalPages: 2,
+        nextPageHref: `?cl.${blockId}.page=2`,
+      },
+    },
+  };
+}
+
+function normalizePostsFeedFixtureContentRoutes(value: unknown): PostsFeedFixtureContentRoute[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => {
+      if (!isRecord(entry)) return null;
+      if (typeof entry.type !== "string") return null;
+      if (typeof entry.listPath !== "string") return null;
+      if (typeof entry.detailPath !== "string") return null;
+      const route: PostsFeedFixtureContentRoute = {
+        type: entry.type,
+        listPath: entry.listPath,
+        detailPath: entry.detailPath,
+        enabled: typeof entry.enabled === "boolean" ? entry.enabled : true,
+      };
+      if (Object.prototype.hasOwnProperty.call(entry, "detailPageId")) {
+        route.detailPageId =
+          typeof entry.detailPageId === "string" && entry.detailPageId.trim()
+            ? entry.detailPageId.trim()
+            : null;
+      }
+      return route;
+    })
+    .filter((entry): entry is PostsFeedFixtureContentRoute => Boolean(entry));
+}
+
+function isPostsFeedFixtureRoute(route: PostsFeedFixtureContentRoute): boolean {
+  return (
+    (route.type === "post" || route.type === "posts") &&
+    route.listPath === postsFeedFixtureListPath &&
+    route.detailPath === postsFeedFixtureDetailPath
+  );
+}
+
+export function buildPostsFeedFixtureContentRoutes(
+  currentValue: unknown
+): PostsFeedFixtureContentRoute[] {
+  const fixtureRoute: PostsFeedFixtureContentRoute = {
+    type: "posts",
+    listPath: postsFeedFixtureListPath,
+    detailPath: postsFeedFixtureDetailPath,
+    enabled: true,
+  };
+  const existingRoutes = normalizePostsFeedFixtureContentRoutes(currentValue);
+  const remainingRoutes = existingRoutes.filter((route) => !isPostsFeedFixtureRoute(route));
+  return [fixtureRoute, ...remainingRoutes];
+}
+
+function isPostsFeedFixtureBlock(value: unknown): value is Record<string, unknown> {
+  return isRecord(value) && value.type === "posts-feed";
+}
+
+export function buildPostsFeedFixturePageData(
+  currentData: Record<string, unknown> | null | undefined
+): Record<string, unknown> {
+  const source = isRecord(currentData) ? currentData : {};
+  const sourceBlocks = Array.isArray(source.blocks) ? source.blocks : [];
+  let patchedPostsFeed = false;
+  const blocks = sourceBlocks.map((block) => {
+    if (!patchedPostsFeed && isPostsFeedFixtureBlock(block)) {
+      patchedPostsFeed = true;
+      const blockId =
+        typeof block.id === "string" && block.id.trim()
+          ? block.id.trim()
+          : postsFeedFixtureFallbackBlockId;
+      return {
+        ...block,
+        id: blockId,
+        type: "posts-feed",
+        variant: "cards",
+        data: buildPostsFeedFixtureWidgetData(blockId),
+      };
+    }
+    return block;
+  });
+
+  if (!patchedPostsFeed) {
+    blocks.push({
+      id: postsFeedFixtureFallbackBlockId,
+      type: "posts-feed",
+      variant: "cards",
+      data: buildPostsFeedFixtureWidgetData(postsFeedFixtureFallbackBlockId),
+    });
+  }
+
+  return {
+    ...source,
+    blocks,
+  };
+}
+
 function normalizeFixtureSlug(slug: string): string {
   const trimmed = slug.trim();
   if (!trimmed) return "";
@@ -706,6 +960,181 @@ export async function ensureContentListWidgetFixtures(
       path: `/api/pages/${encodeURIComponent(pageRow.id)}`,
     });
     const data = buildContentListFixturePageData(detail.currentData);
+    await requestAdminJson<ContentListFixturePageDetail>({
+      adminUrl,
+      sessionValue,
+      path: `/api/pages/${encodeURIComponent(pageRow.id)}`,
+      method: "PATCH",
+      body: { data },
+      csrfToken: await ensureCsrf(),
+    });
+    await requestAdminJson<{ ok: boolean }>({
+      adminUrl,
+      sessionValue,
+      path: `/api/pages/${encodeURIComponent(pageRow.id)}/publish`,
+      method: "POST",
+      body: { data },
+      csrfToken: await ensureCsrf(),
+    });
+  }
+}
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(value ?? null);
+}
+
+export function buildPostsFeedFixturePostPatch(
+  existing: PostsFeedFixturePostListItem,
+  seed: PostsFeedFixturePostSeed
+): Record<string, unknown> | null {
+  const expectedData = buildPostsFeedFixturePostData(seed);
+  const patch: Record<string, unknown> = {};
+  if (existing.title !== seed.title) patch.title = seed.title;
+  if (existing.slug !== seed.slug) patch.slug = seed.slug;
+  if (stableJson(existing.data ?? {}) !== stableJson(expectedData)) {
+    patch.data = expectedData;
+  }
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+function postsFeedFixtureMetadataPayload(seed: PostsFeedFixturePostSeed): Record<string, unknown> {
+  return {
+    status: "published",
+    scheduledAt: null,
+    tags: seed.tags,
+    seo: {
+      title: seed.title,
+      description: seed.excerpt,
+    },
+  };
+}
+
+function normalizePostFixtureListItems(
+  payload: PostsFeedFixturePostListItem[] | PostsFeedFixturePostListPayload
+): PostsFeedFixturePostListItem[] {
+  return Array.isArray(payload) ? payload : (payload.items ?? []);
+}
+
+export async function ensurePostsFeedWidgetFixtures(
+  adminUrl: string,
+  sessionValue: string,
+  selectedCases: WidgetSmokeCase[]
+): Promise<void> {
+  if (!selectedCasesNeedPostsFixtures(selectedCases)) {
+    return;
+  }
+
+  const postsPayload = await requestAdminJson<
+    PostsFeedFixturePostListItem[] | PostsFeedFixturePostListPayload
+  >({
+    adminUrl,
+    sessionValue,
+    path: "/api/posts",
+  });
+  const postBySlug = new Map(
+    normalizePostFixtureListItems(postsPayload).map((item) => [item.slug, item] as const)
+  );
+  let csrfToken: string | null = null;
+  const ensureCsrf = async () => {
+    if (csrfToken) return csrfToken;
+    csrfToken = await fetchAdminCsrfToken(adminUrl, sessionValue);
+    return csrfToken;
+  };
+  const settingsPayload = await requestAdminJson<PostsFeedFixtureSettingsPayload>({
+    adminUrl,
+    sessionValue,
+    path: "/api/settings",
+  });
+  const currentRoutes = normalizePostsFeedFixtureContentRoutes(
+    settingsPayload["site.contentRoutes"]
+  );
+  const nextRoutes = buildPostsFeedFixtureContentRoutes(currentRoutes);
+  if (stableJson(currentRoutes) !== stableJson(nextRoutes)) {
+    await requestAdminJson<PostsFeedFixtureSettingsPayload>({
+      adminUrl,
+      sessionValue,
+      path: "/api/settings",
+      method: "PATCH",
+      body: {
+        "site.contentRoutes": nextRoutes,
+      },
+      csrfToken: await ensureCsrf(),
+    });
+  }
+
+  for (const seed of postsFeedFixturePostSeeds) {
+    const existing = postBySlug.get(seed.slug);
+    let postId = existing?.id;
+    if (!existing) {
+      const created = await requestAdminJson<PostsFeedFixturePostListItem>({
+        adminUrl,
+        sessionValue,
+        path: "/api/posts",
+        method: "POST",
+        body: {
+          title: seed.title,
+          slug: seed.slug,
+          data: buildPostsFeedFixturePostData(seed),
+        },
+        csrfToken: await ensureCsrf(),
+      });
+      postId = created.id;
+      postBySlug.set(seed.slug, created);
+    } else {
+      const patch = buildPostsFeedFixturePostPatch(existing, seed);
+      if (patch) {
+        await requestAdminJson<PostsFeedFixturePostListItem>({
+          adminUrl,
+          sessionValue,
+          path: `/api/posts/${encodeURIComponent(existing.id)}`,
+          method: "PATCH",
+          body: patch,
+          csrfToken: await ensureCsrf(),
+        });
+      }
+    }
+
+    if (!postId) {
+      throw new Error(`posts_feed_fixture_post_id_missing:${seed.slug}`);
+    }
+
+    await requestAdminJson<PostsFeedFixturePostListItem>({
+      adminUrl,
+      sessionValue,
+      path: `/api/posts/${encodeURIComponent(postId)}/metadata`,
+      method: "PATCH",
+      body: postsFeedFixtureMetadataPayload(seed),
+      csrfToken: await ensureCsrf(),
+    });
+    await requestAdminJson<{ ok: boolean }>({
+      adminUrl,
+      sessionValue,
+      path: `/api/posts/${encodeURIComponent(postId)}/publish`,
+      method: "POST",
+      csrfToken: await ensureCsrf(),
+    });
+  }
+
+  const pages = await requestAdminJson<ContentListFixturePageListItem[]>({
+    adminUrl,
+    sessionValue,
+    path: "/api/pages",
+  });
+
+  for (const item of selectedCases.filter((current) =>
+    postsFixtureWidgetTypes.has(current.widgetType)
+  )) {
+    const expectedSlug = normalizeFixtureSlug(item.adminFixtureSlug);
+    const pageRow = pages.find((page) => normalizeFixtureSlug(page.slug) === expectedSlug);
+    if (!pageRow) {
+      throw new Error(`posts_feed_fixture_page_not_found:${item.adminFixtureSlug}`);
+    }
+    const detail = await requestAdminJson<ContentListFixturePageDetail>({
+      adminUrl,
+      sessionValue,
+      path: `/api/pages/${encodeURIComponent(pageRow.id)}`,
+    });
+    const data = buildPostsFeedFixturePageData(detail.currentData);
     await requestAdminJson<ContentListFixturePageDetail>({
       adminUrl,
       sessionValue,
@@ -2115,6 +2544,116 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
   async function runWidgetContentProof(item, adminPath) {
     return await runContentListFixtureProof(item, adminPath);
   }
+  async function runPostsFeedFixtureProof(item, adminPath) {
+    if (item.widgetType !== "posts-feed") return null;
+    const publicPath = item.publicPath || item.adminFixtureSlug || null;
+    const proof = {
+      status: "failed",
+      adminItemCount: 0,
+      publicItemCount: 0,
+      adminHasImage: false,
+      publicHasImage: false,
+      adminHasTags: false,
+      publicHasTags: false,
+      adminHasCta: false,
+      publicHasCta: false,
+      adminHasLoadMore: false,
+      publicHasViewAll: false,
+      publicPath,
+      error: undefined,
+    };
+    try {
+      await dismissCustomDirtyDialog();
+      await page.goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const selected = await openFixtureAndSelect(item, null, adminPath);
+      if (!selected.ok) {
+        proof.error = selected.error || "block_select_missing";
+        return proof;
+      }
+      const visualTab = page.getByRole("tab", { name: /^visual$/i }).first();
+      if ((await visualTab.count()) > 0) {
+        await visualTab.click().catch(() => undefined);
+        await settle();
+      }
+      const editor = page.locator('[data-widget-editor="posts-feed"][data-widget-editor-mode="visual"]').first();
+      await editor.waitFor({ state: "visible", timeout: 20000 });
+      const adminMotion = page.locator('[data-posts-feed-motion="fade"]').first();
+      await adminMotion.waitFor({ state: "visible", timeout: 15000 });
+      const adminRoot = page.locator('[data-listing-widget="content-list"][data-content-list-source="post"][data-content-list-state="ready"]').first();
+      await adminRoot.waitFor({ state: "visible", timeout: 15000 });
+      proof.adminItemCount = Number(await adminRoot.getAttribute("data-content-list-items")) || await adminRoot.locator("[data-content-list-item]").count();
+      if (proof.adminItemCount < 3) {
+        proof.error = "admin_posts_feed_fixture_items_missing";
+        return proof;
+      }
+      const adminImage = adminRoot.locator('[data-content-list-item="1"] img').first();
+      await adminImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasImage = true;
+      proof.adminHasTags = (await adminRoot.locator("text=featured").count()) > 0 && (await adminRoot.locator("text=launch").count()) > 0;
+      if (!proof.adminHasTags) {
+        proof.error = "admin_posts_feed_tags_missing";
+        return proof;
+      }
+      const adminCta = adminRoot.locator('a[href="/fixture-posts/fixture-posts-launch-brief"]').first();
+      await adminCta.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasCta = true;
+      const adminLoadMore = adminRoot.getByRole("link", { name: /more fixture posts/i }).first();
+      await adminLoadMore.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasLoadMore = true;
+
+      const paginationModeControl = editor.locator('[data-widget-control="posts-feed.visual.pagination-mode"]').first();
+      await paginationModeControl.waitFor({ state: "visible", timeout: 10000 });
+      await setRadixSelectOption(paginationModeControl, /view all link/i);
+
+      const publishButton = page.getByRole("button", { name: /^publish$/i }).first();
+      if ((await publishButton.count()) === 0) {
+        proof.error = "publish_button_missing";
+        return proof;
+      }
+      await publishButton.click();
+      await page.getByRole("button", { name: /publishing/i }).waitFor({ state: "hidden", timeout: 15000 }).catch(() => undefined);
+      await settle();
+
+      if (!publicPath) {
+        proof.error = "public_path_missing";
+        return proof;
+      }
+      await page.goto(frontUrl + publicPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const publicMotion = page.locator('[data-posts-feed-motion="fade"]').first();
+      await publicMotion.waitFor({ state: "visible", timeout: 15000 });
+      const publicRoot = page.locator('[data-listing-widget="content-list"][data-content-list-source="post"][data-content-list-state="ready"]').first();
+      await publicRoot.waitFor({ state: "visible", timeout: 15000 });
+      proof.publicItemCount = Number(await publicRoot.getAttribute("data-content-list-items")) || await publicRoot.locator("[data-content-list-item]").count();
+      if (proof.publicItemCount < 3) {
+        proof.error = "public_posts_feed_fixture_items_missing";
+        return proof;
+      }
+      const publicImage = publicRoot.locator('[data-content-list-item="1"] img').first();
+      await publicImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasImage = true;
+      proof.publicHasTags = (await publicRoot.locator("text=featured").count()) > 0 && (await publicRoot.locator("text=launch").count()) > 0;
+      if (!proof.publicHasTags) {
+        proof.error = "public_posts_feed_tags_missing";
+        return proof;
+      }
+      const publicCta = publicRoot.locator('a[href="/fixture-posts/fixture-posts-launch-brief"]').first();
+      await publicCta.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasCta = true;
+      const publicViewAll = publicRoot.locator('a[href="/fixture-posts"]').first();
+      await publicViewAll.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasViewAll = true;
+      proof.status = "passed";
+      return proof;
+    } catch (error) {
+      proof.error = error instanceof Error ? error.message : String(error);
+      return proof;
+    }
+  }
+  async function runWidgetPostsProof(item, adminPath) {
+    return await runPostsFeedFixtureProof(item, adminPath);
+  }
   await verifyAuthenticated();
   if (!requiredLogin.authenticated) {
     return JSON.stringify({ login: requiredLogin, results: [], error: requiredLogin.error || "login_failed" });
@@ -2158,9 +2697,11 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
     const hasModeFailure = modes.some((mode) => mode.status === "failed");
     const mediaProof = hasModeFailure ? null : await runWidgetMediaPickerProof(item, adminPath);
     const contentProof = hasModeFailure ? null : await runWidgetContentProof(item, adminPath);
+    const postsProof = hasModeFailure ? null : await runWidgetPostsProof(item, adminPath);
     const hasMediaProofFailure = Boolean(mediaProof && mediaProof.status !== "passed");
     const hasContentProofFailure = Boolean(contentProof && contentProof.status !== "passed");
-    const hasFailure = hasModeFailure || duplicates.length > 0 || hasMediaProofFailure || hasContentProofFailure;
+    const hasPostsProofFailure = Boolean(postsProof && postsProof.status !== "passed");
+    const hasFailure = hasModeFailure || duplicates.length > 0 || hasMediaProofFailure || hasContentProofFailure || hasPostsProofFailure;
     results.push({
       widgetType: item.widgetType,
       status: hasFailure ? "failed" : hasMetadataGap ? "metadata-gap" : "passed",
@@ -2170,11 +2711,14 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
       duplicateWritablePaths: duplicates,
       mediaProof: mediaProof || undefined,
       contentProof: contentProof || undefined,
+      postsProof: postsProof || undefined,
       error: hasMediaProofFailure
         ? mediaProof.error || "media_picker_proof_failed"
         : hasContentProofFailure
           ? contentProof.error || "content_list_fixture_proof_failed"
-          : undefined,
+          : hasPostsProofFailure
+            ? postsProof.error || "posts_feed_fixture_proof_failed"
+            : undefined,
     });
   }
   return JSON.stringify({ login: requiredLogin, results });
@@ -2364,7 +2908,10 @@ function renderMarkdown(report: SmokeReport): string {
       const contentProof = item.contentProof
         ? `content proof: ${item.contentProof.status}${item.contentProof.error ? ` (${item.contentProof.error})` : ""}`
         : undefined;
-      const notes = [item.error, mediaProof, contentProof].filter(Boolean).join("; ");
+      const postsProof = item.postsProof
+        ? `posts proof: ${item.postsProof.status}${item.postsProof.error ? ` (${item.postsProof.error})` : ""}`
+        : undefined;
+      const notes = [item.error, mediaProof, contentProof, postsProof].filter(Boolean).join("; ");
       return `| \`${item.widgetType}\` | ${item.status} | ${modes || "-"} | ${item.duplicateWritablePaths.join(", ") || "-"} | ${notes || "-"} |`;
     }),
     "",
@@ -2614,6 +3161,17 @@ async function main() {
           if (!report.admin.error) {
             try {
               await ensureContentListWidgetFixtures(
+                args.adminUrl,
+                authState.sessionValue,
+                selectedCases
+              );
+            } catch (error) {
+              report.admin.error = error instanceof Error ? error.message : String(error);
+            }
+          }
+          if (!report.admin.error) {
+            try {
+              await ensurePostsFeedWidgetFixtures(
                 args.adminUrl,
                 authState.sessionValue,
                 selectedCases

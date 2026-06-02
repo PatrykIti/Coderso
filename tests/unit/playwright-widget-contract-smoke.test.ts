@@ -3,11 +3,14 @@ import { describe, expect, test } from "bun:test";
 import {
   buildCommerceFixtureProductPatch,
   buildContentListFixturePageData,
+  buildPostsFeedFixtureContentRoutes,
+  buildPostsFeedFixturePageData,
   classifyPublicStatus,
   createAdminFixtureGapMode,
   createFailedAdminMode,
   ensureContentListWidgetFixtures,
   ensureMediaWidgetFixtures,
+  ensurePostsFeedWidgetFixtures,
   extractCliJson,
   finalizeAdminResult,
   findDuplicateWritablePaths,
@@ -21,6 +24,7 @@ import {
   selectedCasesNeedCommerceFixtures,
   selectedCasesNeedContentFixtures,
   selectedCasesNeedMediaFixtures,
+  selectedCasesNeedPostsFixtures,
   selectCases,
   shouldCountOverflowOwner,
   summarize,
@@ -167,6 +171,16 @@ const contentListCase: SmokeInventory["widgets"][number] = {
   requiredModes: ["wizard", "visual", "advanced"],
 };
 
+const postsFeedCase: SmokeInventory["widgets"][number] = {
+  widgetType: "posts-feed",
+  title: "Posts Feed",
+  adminInsertLabel: "Posts Feed",
+  adminFixtureSlug: "/posts-feed-test-page",
+  publicPath: "/posts-feed-test-page",
+  publicFixtureStatus: "published",
+  requiredModes: ["visual", "advanced"],
+};
+
 describe("playwright widget contract smoke helpers", () => {
   test("parses debug and target flags without exposing credentials", () => {
     const args = parseArgs([
@@ -264,6 +278,11 @@ describe("playwright widget contract smoke helpers", () => {
     expect(selectedCasesNeedContentFixtures([contentListCase])).toBe(true);
   });
 
+  test("detects when selected widget cases require Posts Feed fixture bootstrap", () => {
+    expect(selectedCasesNeedPostsFixtures(makeInventory().widgets)).toBe(false);
+    expect(selectedCasesNeedPostsFixtures([postsFeedCase])).toBe(true);
+  });
+
   test("uses the public fixture route for Logo Cloud media proof before admin slug fallback", () => {
     expect(resolveLogoCloudMediaProofPublicPath(logoCloudCase)).toBe("/logo-cloud");
     expect(
@@ -327,6 +346,113 @@ describe("playwright widget contract smoke helpers", () => {
       totalPages: 2,
       nextPageHref: "?cl.content-list-existing.page=2",
     });
+  });
+
+  test("builds populated Posts Feed fixture page data without dropping page metadata", () => {
+    const next = buildPostsFeedFixturePageData({
+      seo: { title: "Keep SEO" },
+      settings: { template: "default" },
+      blocks: [
+        { id: "hero-1", type: "hero", variant: "default", data: { headline: "Keep hero" } },
+        {
+          id: "posts-feed-existing",
+          type: "posts-feed",
+          variant: "list",
+          data: { title: "Old fixture" },
+        },
+      ],
+    });
+    const blocks = next.blocks as Array<Record<string, unknown>>;
+    const postsFeedBlock = blocks.find((block) => block.type === "posts-feed");
+    const data = postsFeedBlock?.data as Record<string, unknown> | undefined;
+    const source = data?.source as Record<string, unknown> | undefined;
+    const fields = data?.fields as Record<string, unknown> | undefined;
+    const pagination = data?.pagination as Record<string, unknown> | undefined;
+    const resolved = data?.resolved as Record<string, unknown> | undefined;
+    const runtime = resolved?.runtime as Record<string, unknown> | undefined;
+    const items = resolved?.items as Array<Record<string, unknown>> | undefined;
+
+    expect(next.seo).toEqual({ title: "Keep SEO" });
+    expect(next.settings).toEqual({ template: "default" });
+    expect(blocks[0]?.type).toBe("hero");
+    expect(postsFeedBlock).toMatchObject({
+      id: "posts-feed-existing",
+      type: "posts-feed",
+      variant: "cards",
+    });
+    expect(source).toMatchObject({
+      mode: "latest",
+      featuredFirst: true,
+      limit: 3,
+    });
+    expect(fields).toMatchObject({
+      showImage: true,
+      showExcerpt: true,
+      showAuthor: true,
+      showDate: true,
+      showCta: true,
+    });
+    expect(pagination).toMatchObject({
+      mode: "load-more",
+      pageSize: 2,
+      viewAllHref: "/fixture-posts",
+    });
+    expect(items).toHaveLength(3);
+    expect(items?.[0]).toMatchObject({
+      href: "/fixture-posts/fixture-posts-launch-brief",
+      imageAlt: "Fixture Posts Feed launch brief image",
+      tags: ["featured", "launch"],
+    });
+    expect(runtime).toMatchObject({
+      page: 1,
+      pageSize: 2,
+      totalPages: 2,
+      nextPageHref: "?cl.posts-feed-existing.page=2",
+    });
+  });
+
+  test("builds Posts Feed fixture content route first without dropping existing routes", () => {
+    const routes = buildPostsFeedFixtureContentRoutes([
+      {
+        type: "products",
+        listPath: "/shop",
+        detailPath: "/shop/:slug",
+        enabled: true,
+      },
+      {
+        type: "posts",
+        listPath: "/blog",
+        detailPath: "/blog/:slug",
+        enabled: true,
+      },
+      {
+        type: "posts",
+        listPath: "/fixture-posts",
+        detailPath: "/fixture-posts/:slug",
+        enabled: false,
+      },
+    ]);
+
+    expect(routes).toEqual([
+      {
+        type: "posts",
+        listPath: "/fixture-posts",
+        detailPath: "/fixture-posts/:slug",
+        enabled: true,
+      },
+      {
+        type: "products",
+        listPath: "/shop",
+        detailPath: "/shop/:slug",
+        enabled: true,
+      },
+      {
+        type: "posts",
+        listPath: "/blog",
+        detailPath: "/blog/:slug",
+        enabled: true,
+      },
+    ]);
   });
 
   test("patches and publishes Content List page fixtures through authenticated admin APIs", async () => {
@@ -407,6 +533,206 @@ describe("playwright widget contract smoke helpers", () => {
     expect(patchHeaders.get("cookie")).toBe("session=session-token");
     expect(patchHeaders.get("X-CSRF-Token")).toBe("csrf-token");
     expect(publishHeaders.get("X-CSRF-Token")).toBe("csrf-token");
+  });
+
+  test("seeds Posts Feed posts and publishes page fixtures through authenticated admin APIs", async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      requests.push({ url, init });
+      if (url === "http://admin.test/admin/api/posts" && (init?.method ?? "GET") === "GET") {
+        return Response.json({
+          items: [
+            {
+              id: "post-existing",
+              title: "Old title",
+              slug: "fixture-posts-launch-brief",
+              status: "draft",
+              tags: [],
+              data: {},
+            },
+          ],
+        });
+      }
+      if (url === "http://admin.test/admin/api/settings" && (init?.method ?? "GET") === "GET") {
+        return Response.json({
+          "site.contentRoutes": [
+            {
+              type: "products",
+              listPath: "/shop",
+              detailPath: "/shop/:slug",
+              enabled: true,
+            },
+            {
+              type: "posts",
+              listPath: "/blog",
+              detailPath: "/blog/:slug",
+              enabled: true,
+            },
+          ],
+        });
+      }
+      if (url === "http://admin.test/admin/api/pages" && (init?.method ?? "GET") === "GET") {
+        return Response.json([
+          {
+            id: "page-posts",
+            title: "Posts Feed fixture",
+            slug: "/posts-feed-test-page",
+            status: "draft",
+            updatedAt: "2026-05-31T00:00:00.000Z",
+            author: null,
+          },
+        ]);
+      }
+      if (
+        url === "http://admin.test/admin/api/pages/page-posts" &&
+        (init?.method ?? "GET") === "GET"
+      ) {
+        return Response.json({
+          id: "page-posts",
+          title: "Posts Feed fixture",
+          slug: "/posts-feed-test-page",
+          status: "draft",
+          currentData: { seo: { title: "Keep SEO" }, blocks: [] },
+          updatedAt: "2026-05-31T00:00:00.000Z",
+        });
+      }
+      if (url === "http://admin.test/admin/api/auth/csrf") {
+        return Response.json({ token: "csrf-token" });
+      }
+      if (url === "http://admin.test/admin/api/settings" && init?.method === "PATCH") {
+        const payload = JSON.parse(String(init.body)) as {
+          "site.contentRoutes"?: Array<Record<string, unknown>>;
+        };
+        expect(payload["site.contentRoutes"]?.[0]).toEqual({
+          type: "posts",
+          listPath: "/fixture-posts",
+          detailPath: "/fixture-posts/:slug",
+          enabled: true,
+        });
+        expect(payload["site.contentRoutes"]?.[1]).toEqual({
+          type: "products",
+          listPath: "/shop",
+          detailPath: "/shop/:slug",
+          enabled: true,
+        });
+        expect(payload["site.contentRoutes"]?.[2]).toEqual({
+          type: "posts",
+          listPath: "/blog",
+          detailPath: "/blog/:slug",
+          enabled: true,
+        });
+        return Response.json(payload);
+      }
+      if (url === "http://admin.test/admin/api/posts" && init?.method === "POST") {
+        const payload = JSON.parse(String(init.body)) as {
+          title?: string;
+          slug?: string;
+          data?: Record<string, unknown>;
+        };
+        expect(payload.title).toMatch(/^Fixture Posts Feed/);
+        expect(payload.slug).toMatch(/^fixture-posts-/);
+        expect(typeof payload.data?.featuredImage).toBe("string");
+        return Response.json({
+          id: `created-${payload.slug}`,
+          title: payload.title,
+          slug: payload.slug,
+          status: "draft",
+          tags: [],
+          data: payload.data,
+        });
+      }
+      if (url === "http://admin.test/admin/api/posts/post-existing" && init?.method === "PATCH") {
+        const payload = JSON.parse(String(init.body)) as {
+          title?: string;
+          slug?: string;
+          data?: Record<string, unknown>;
+        };
+        expect(payload).toMatchObject({
+          title: "Fixture Posts Feed Launch Brief",
+        });
+        expect(payload.slug).toBeUndefined();
+        expect(typeof payload.data?.featuredImage).toBe("string");
+        return Response.json({
+          id: "post-existing",
+          title: payload.title,
+          slug: payload.slug,
+          status: "draft",
+          tags: [],
+          data: payload.data,
+        });
+      }
+      if (url.includes("/api/posts/") && url.endsWith("/metadata") && init?.method === "PATCH") {
+        const payload = JSON.parse(String(init.body)) as { tags?: string[]; status?: string };
+        expect(payload.status).toBe("published");
+        expect(payload.tags?.length).toBeGreaterThanOrEqual(2);
+        return Response.json({ ok: true });
+      }
+      if (url.includes("/api/posts/") && url.endsWith("/publish") && init?.method === "POST") {
+        return Response.json({ ok: true });
+      }
+      if (url === "http://admin.test/admin/api/pages/page-posts" && init?.method === "PATCH") {
+        const payload = JSON.parse(String(init.body)) as { data?: Record<string, unknown> };
+        const blocks = payload.data?.blocks as Array<Record<string, unknown>> | undefined;
+        const postsFeedBlock = blocks?.find((block) => block.type === "posts-feed");
+        const data = postsFeedBlock?.data as Record<string, unknown> | undefined;
+        const resolved = data?.resolved as Record<string, unknown> | undefined;
+        const items = resolved?.items as unknown[] | undefined;
+
+        expect(payload.data?.seo).toEqual({ title: "Keep SEO" });
+        expect(items).toHaveLength(3);
+        return Response.json({
+          id: "page-posts",
+          title: "Posts Feed fixture",
+          slug: "/posts-feed-test-page",
+          status: "draft",
+          currentData: payload.data,
+          updatedAt: "2026-05-31T00:00:00.000Z",
+        });
+      }
+      if (
+        url === "http://admin.test/admin/api/pages/page-posts/publish" &&
+        init?.method === "POST"
+      ) {
+        const payload = JSON.parse(String(init.body)) as { data?: Record<string, unknown> };
+        expect(Array.isArray(payload.data?.blocks)).toBe(true);
+        return Response.json({ ok: true });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      await ensurePostsFeedWidgetFixtures("http://admin.test/admin", "session-token", [
+        postsFeedCase,
+      ]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    const labels = requests.map((request) => `${request.init?.method ?? "GET"} ${request.url}`);
+    expect(labels).toContain("GET http://admin.test/admin/api/posts");
+    expect(labels).toContain("GET http://admin.test/admin/api/settings");
+    expect(labels).toContain("PATCH http://admin.test/admin/api/settings");
+    expect(labels).toContain("PATCH http://admin.test/admin/api/posts/post-existing");
+    expect(labels).toContain("POST http://admin.test/admin/api/posts");
+    expect(labels).toContain("PATCH http://admin.test/admin/api/pages/page-posts");
+    expect(labels).toContain("POST http://admin.test/admin/api/pages/page-posts/publish");
+    expect(labels.filter((label) => label.endsWith("/metadata"))).toHaveLength(3);
+    expect(
+      labels.filter((label) => label.endsWith("/publish") && label.includes("/posts/"))
+    ).toHaveLength(3);
+
+    const writeHeaders = requests
+      .filter((request) => (request.init?.method ?? "GET") !== "GET")
+      .map((request) => request.init?.headers)
+      .filter((headers): headers is Headers => headers instanceof Headers);
+    expect(writeHeaders.every((headers) => headers.get("cookie") === "session=session-token")).toBe(
+      true
+    );
+    expect(writeHeaders.every((headers) => headers.get("X-CSRF-Token") === "csrf-token")).toBe(
+      true
+    );
   });
 
   test("seeds Logo Cloud media fixtures through authenticated admin upload", async () => {

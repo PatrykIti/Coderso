@@ -736,6 +736,73 @@ test("PostsFeed editors cover category filtering, manual deselection, empty cata
   }
 });
 
+test("PostsFeed Advanced reports only runtime-active source filters after source mode changes", async () => {
+  const { PostsFeedAdvancedEditor, PostsFeedWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  let latestValue: PostsFeedData = {
+    source: {
+      mode: "category",
+      category: "audit-category",
+      authorId: "author-1",
+      featuredFirst: true,
+      dateRange: {
+        from: "2026-03-01",
+        to: "2026-03-31",
+      },
+      limit: 3,
+      sort: "published-desc",
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<PostsFeedData>(latestValue);
+
+    return (
+      <>
+        <PostsFeedWizardEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="cards"
+        />
+        <PostsFeedAdvancedEditor value={value} onChange={() => undefined} variant="cards" />
+      </>
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Category: audit-category");
+
+    React.act(() => {
+      setSelectValue(
+        findSelectByOptions(view.container, ["latest", "featured", "category", "manual"]),
+        "latest"
+      );
+    });
+    await flush();
+
+    expect(latestValue.source).toEqual(
+      expect.objectContaining({
+        mode: "latest",
+        category: "audit-category",
+      })
+    );
+    expect(view.container.textContent).not.toContain("Category: audit-category");
+    expect(view.container.textContent).toContain("Author: author-1");
+    expect(view.container.textContent).toContain("From: 2026-03-01");
+    expect(view.container.textContent).toContain("To: 2026-03-31");
+    expect(view.container.textContent).toContain("Featured first");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostsFeed editors fall back for invalid numeric/select values and sparse defaults", async () => {
   const { PostsFeedAdvancedEditor, PostsFeedVisualEditor, PostsFeedWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");

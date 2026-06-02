@@ -5,7 +5,7 @@
 **Category:** Widgets + Posts Feed + Admin UI + Runtime Fixtures + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-383
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,11 @@ Category/tag filter value survives after switching back to Latest, while runtime
 
 ## Sub-Tasks
 
-- [ ] Reproduce PF-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce PF-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -68,7 +68,8 @@ Leaf-specific checks:
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx tests/vitest/widgets/postsFeed.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/postsFeedWidget.test.tsx tests/unit/playwright-widget-contract-smoke.test.ts`
 - Posts Feed populated Playwright smoke
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -91,3 +92,11 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes
+
+- Reproduced with failing Vitest UI coverage before the fix: category set -> Latest -> Advanced still showed `Category: audit-category`.
+- Added `resolvePostsFeedActiveSourceFilterLabels` in the widget owner and wired Advanced diagnostics to it.
+- Saved category stays non-destructive/dormant outside `category`; runtime-active labels now match source mode semantics for `latest`, `featured`, `category`, and `manual`.
+- Regression coverage: `tests/vitest/ui/posts-feed-editor-wave.test.tsx` and `tests/unit/widgets/postsFeedWidget.test.tsx`.
+- Covered by changelog 1073.

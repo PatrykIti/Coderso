@@ -5,7 +5,7 @@
 **Category:** Widgets + Posts Feed + Admin UI + Runtime Fixtures + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_POSTS_FEED_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -24,8 +24,8 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-383-01](TASK-383-01_PF_31_05_01_Inactive_Category_Filter_Must_Not_Be_Reported_Active.md): PF-31-05-01 - Inactive category filter must not be reported active in Latest mode
-- [ ] [TASK-383-02](TASK-383-02_PF_31_05_02_Add_Seeded_Posts_Fixture_For_Browser_Level_Display.md): PF-31-05-02 - Add seeded posts fixture for browser-level display controls
+- [x] [TASK-383-01](TASK-383-01_PF_31_05_01_Inactive_Category_Filter_Must_Not_Be_Reported_Active.md): PF-31-05-01 - Inactive category filter must not be reported active in Latest mode
+- [x] [TASK-383-02](TASK-383-02_PF_31_05_02_Add_Seeded_Posts_Fixture_For_Browser_Level_Display.md): PF-31-05-02 - Add seeded posts fixture for browser-level display controls
 
 ## Implementation Pseudocode
 
@@ -49,7 +49,8 @@ Minimum checks for any touched endpoint or payload boundary:
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx tests/vitest/widgets/postsFeed.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/postsFeedWidget.test.tsx tests/unit/playwright-widget-contract-smoke.test.ts`
 - Posts Feed populated Playwright smoke
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -70,3 +71,14 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes
+
+- PF-31-05-01 reproduced before implementation with a failing Vitest UI regression: Advanced reported `Category: audit-category` after switching back to Latest.
+- Added owner-side `resolvePostsFeedActiveSourceFilterLabels` in `core/widgets/core/postsFeed.tsx` and reused it in Advanced diagnostics so inactive category state is preserved but no longer reported active outside `category`.
+- PF-31-05-02 reproduced as a fixture/proof gap: the smoke harness had no Posts Feed seed/proof path.
+- Added authenticated admin bootstrap for Posts Feed fixture posts, an enabled `/fixture-posts/:slug` posts content route, and `/posts-feed-test-page`, plus dedicated `postsProof` admin/public card proof for image, tags, CTA, load-more, motion, and view-all rendering.
+- Corrected the task testing path drift from missing `tests/vitest/widgets/postsFeed.test.tsx` to the real Bun domain lane `tests/unit/widgets/postsFeedWidget.test.tsx`.
+- Validation completed: focused Vitest UI, focused Bun widget/smoke tests, Posts Feed smoke dry-run, `bun --cwd core lint`, `bun --cwd core lint:types`, `git diff --check`, and `bun run precommit`.
+- Live Playwright replay was not run because `CODERSO_PLAYWRIGHT_EMAIL` and `CODERSO_PLAYWRIGHT_PASSWORD` are missing from `.env`; dry-run smoke passed with 0 fixture/metadata gaps.
+- Covered by changelog 1073.

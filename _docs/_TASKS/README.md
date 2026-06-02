@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 84 tasks
+- **To Do:** 81 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2064 tasks
+- **Done:** 2067 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-383 | Posts Feed 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_POSTS_FEED_WIDGET.md`; 2 findings routed to implementation/tests/docs |
 | TASK-384 | Entry Teaser 31-05 UI Audit Fixture and Console Hygiene Family | Medium | Medium | Report-driven family from `REPORT_ENTRY_TEASER_WIDGET.md`; fixture gap and console hygiene guard routed to tests/docs |
 | TASK-385 | Product Gallery 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_PRODUCT_GALLERY_WIDGET.md`; 2 findings routed to implementation/tests/docs |
 | TASK-386 | Product Compare 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_PRODUCT_COMPARE_WIDGET.md`; 2 findings routed to implementation/tests/docs |
@@ -58,8 +57,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
 | TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-383-01 | PF-31-05-01 - Inactive category filter must not be reported active in Latest mode | Medium | Medium | Leaf task for TASK-383; source `REPORT_POSTS_FEED_WIDGET.md` |
-| TASK-383-02 | PF-31-05-02 - Add seeded posts fixture for browser-level display controls | Medium | Medium | Leaf task for TASK-383; source `REPORT_POSTS_FEED_WIDGET.md` |
 | TASK-384-01 | ET-31-05-01 - Add seeded content/listing fixture for resolved teaser branches | Medium | Medium | Leaf task for TASK-384; source `REPORT_ENTRY_TEASER_WIDGET.md` |
 | TASK-384-02 | ET-31-05-02 - Resolve Entry Teaser fixture 404 and isolate React `createRoot/createPortal` console noise | Medium | Small | Leaf task for TASK-384; source `REPORT_ENTRY_TEASER_WIDGET.md` |
 | TASK-385-01 | PG-31-05-01 - Manual selected products must be marked inactive in query mode | Medium | Medium | Leaf task for TASK-385; source `REPORT_PRODUCT_GALLERY_WIDGET.md` |
@@ -142,6 +139,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-383 | Posts Feed 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-02): Advanced source filters now report only runtime-active filters, and the smoke harness seeds/publishes populated Posts Feed proof data. |
+| TASK-383-01 | PF-31-05-01 - Inactive category filter must not be reported active in Latest mode | Medium | Medium | Done (2026-06-02): owner-side active source filter labels keep dormant category state out of Latest/Featured/Manual diagnostics. |
+| TASK-383-02 | PF-31-05-02 - Add seeded posts fixture for browser-level display controls | Medium | Medium | Done (2026-06-02): smoke bootstrap seeds three fixture posts and verifies populated admin/public image/tag/CTA/pagination rendering. |
 | TASK-382 | Content List 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-01): hidden legacy taxonomy state is cleared for listing mode and the smoke harness now proves populated Content List image/tag/CTA/pagination rendering. |
 | TASK-382-01 | CL-31-05-01 - `legacy -> listing` must not report hidden taxonomy as active | Medium | Medium | Done (2026-06-01): editor transitions and owner-side normalizer clear dormant legacy filters in listing mode. |
 | TASK-382-02 | CL-31-05-02 - Add populated Content List browser fixture | Medium | Medium | Done (2026-06-01): smoke bootstrap patches and publishes a populated Content List fixture with dedicated content proof. |
