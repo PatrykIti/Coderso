@@ -5,7 +5,7 @@
 **Category:** Widgets + Product Table + Commerce UI + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_PRODUCT_TABLE_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -20,10 +20,12 @@ This task family is intentionally scoped to everything the report calls out for 
 ## Report Evidence
 
 - PT-31-05-01: Saved collection filter toggle must be distinguished from active public control
+- PT-31-05-02: Add commerce image/detail/action fixture coverage
 
 ## Sub-Tasks
 
-- [ ] [TASK-387-01](TASK-387-01_PT_31_05_01_Saved_Collection_Filter_Toggle_Must_Be_Distinguished_From.md): PT-31-05-01 - Saved collection filter toggle must be distinguished from active public control
+- [x] [TASK-387-01](TASK-387-01_PT_31_05_01_Saved_Collection_Filter_Toggle_Must_Be_Distinguished_From.md): PT-31-05-01 - Saved collection filter toggle must be distinguished from active public control
+- [x] [TASK-387-02](TASK-387-02_PT_31_05_02_Add_Commerce_Image_Detail_Action_Fixture_Coverage.md): PT-31-05-02 - Add commerce image/detail/action fixture coverage
 
 ## Implementation Pseudocode
 
@@ -67,3 +69,22 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes
+
+Done on 2026-06-02.
+
+- Product Table Advanced now distinguishes saved public filter toggles from visible visitor controls when runtime options are unavailable.
+- Product Table smoke bootstrap now seeds media-backed commerce products, a safe `/fixture-products/:slug` products route, audited page data, and publish for Product Table.
+- Product Table generated smoke proof now checks admin and public images, safe Product-column title links, and visible action CTAs.
+- Changelog coverage: `_docs/_CHANGELOG/1077-2026-06-02-product-table-widget-31-05-ui-audit-remediation.md`.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx tests/vitest/widgets/productTable.test.tsx`
+- `bun test tests/integration/routes/productTablePreview.test.ts tests/integration/runtime/product-table-runtime-pagination.test.ts`
+- `bun test tests/unit/playwright-widget-contract-smoke.test.ts`
+- `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget product-table --output-json .tmp/task-387-product-table-smoke-dry-run.json --output-md .tmp/task-387-product-table-smoke-dry-run.md`
+- `git diff --check`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

@@ -5,7 +5,7 @@
 **Category:** Widgets + Form Embed + Public Forms API + Security + Runtime + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-395
-**Status:** To Do
+**Status:** Done
 
 ---
 
@@ -14,6 +14,13 @@
 Execution-ready leaf task for FE-31-05-07 from `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FORM_EMBED_WIDGET.md` and parent `TASK-395`.
 
 Success message and redirect are controlled by form-level API response, not widget configuration.
+
+Status log:
+
+- 2026-06-02: Moved to In Progress with TASK-395 family implementation.
+- 2026-06-02: Done. Runtime success copy uses widget copy before API/runtime
+  copy; form-level success redirects are normalized to same-origin relative
+  paths before persistence, and runtime ignores unsafe redirects before assign.
 
 ## Sub-Tasks
 

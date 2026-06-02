@@ -430,6 +430,35 @@ test("ProductGallery keeps daily presentation controls out of Wizard", async () 
   }
 });
 
+test("ProductGallery Advanced marks saved manual selections inactive in query mode", async () => {
+  const { ProductGalleryAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
+
+  const view = mount(
+    <ProductGalleryAdvancedEditor
+      value={{
+        curation: {
+          mode: "query",
+          productIds: ["product-1", "product-2"],
+        },
+      }}
+      onChange={() => undefined}
+      variant="cards"
+    />
+  );
+
+  try {
+    const text = normalizeText(view.container.textContent);
+    expect(text).toContain(normalizeText("Source mode"));
+    expect(text).toContain(normalizeText("Query results"));
+    expect(text).toContain(normalizeText("Saved manual selection"));
+    expect(text).toContain(normalizeText("2 products saved, inactive in query mode"));
+    expect(text).not.toContain(normalizeText("Selected products 2 products"));
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("ProductGallery visual editor keeps an intentionally blank empty-state description", async () => {
   const { ProductGalleryVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");

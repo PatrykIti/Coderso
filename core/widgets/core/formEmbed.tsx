@@ -68,6 +68,8 @@ export type ResolvedFormField = {
     pattern?: string;
     min?: number;
     max?: number;
+    formStep?: number;
+    inputStep?: number;
     step?: number;
     logic?: FormFieldLogic;
     style?: FormFieldStyle;
@@ -435,7 +437,44 @@ export const formEmbedSchema = {
     },
     resolved: {
       type: "object",
-      additionalProperties: true,
+      additionalProperties: false,
+      properties: {
+        formName: { type: "string" },
+        description: { type: ["string", "null"] },
+        status: { type: "string" },
+        successMessage: { type: ["string", "null"] },
+        successRedirectUrl: { type: ["string", "null"] },
+        submissionAccess: { enum: ["public", "internal"] },
+        botProtection: {
+          type: ["object", "null"],
+          additionalProperties: false,
+          properties: {
+            provider: { enum: ["recaptcha_v3"] },
+            siteKey: { type: ["string", "null"] },
+            action: { enum: ["public_write"] },
+          },
+        },
+        settings: {
+          type: "object",
+          additionalProperties: true,
+          properties: {
+            layoutMode: { enum: ["single", "multi_step"] },
+            saveProgress: { type: "boolean" },
+            stepTitles: {
+              type: "array",
+              items: { type: "string" },
+            },
+          },
+        },
+        fields: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: true,
+          },
+        },
+        error: { type: "string" },
+      },
     },
   },
 };
@@ -625,10 +664,18 @@ const normalizeRuntimeStep = (value: unknown) => {
   return Math.max(1, Math.round(value));
 };
 
+const resolveRuntimeFormStep = (field: ResolvedFormField) =>
+  normalizeRuntimeStep(field.settings?.formStep ?? field.settings?.step);
+
+const resolveRuntimeInputStep = (field: ResolvedFormField) => {
+  const step = field.settings?.inputStep;
+  return typeof step === "number" && Number.isFinite(step) && step > 0 ? String(step) : undefined;
+};
+
 const groupFieldsByStep = (fields: ResolvedFormField[]) => {
   const groups = new Map<number, ResolvedFormField[]>();
   for (const field of fields) {
-    const step = normalizeRuntimeStep(field.settings?.step);
+    const step = resolveRuntimeFormStep(field);
     const current = groups.get(step) ?? [];
     current.push(field);
     groups.set(step, current);
@@ -753,6 +800,7 @@ function renderFieldControl(
               aria-describedby={ids.helperId}
               data-required-original={required ? "1" : "0"}
               defaultChecked={Boolean(field.settings?.defaultValue)}
+              value="true"
               className={joinClasses("h-4 w-4", borderClassName, radiusClassName)}
               style={{ borderColor }}
             />
@@ -781,6 +829,7 @@ function renderFieldControl(
             aria-describedby={ids.helperId}
             data-required-original={required ? "1" : "0"}
             defaultChecked={Boolean(field.settings?.defaultValue)}
+            value="true"
             className={joinClasses("h-4 w-4", borderClassName, radiusClassName)}
             style={{ borderColor }}
           />
@@ -967,7 +1016,7 @@ function renderFieldControl(
         pattern={field.settings?.pattern}
         min={typeof field.settings?.min === "number" ? String(field.settings.min) : undefined}
         max={typeof field.settings?.max === "number" ? String(field.settings.max) : undefined}
-        step={typeof field.settings?.step === "number" ? String(field.settings.step) : undefined}
+        step={resolveRuntimeInputStep(field)}
         className={joinClasses(
           "w-full border bg-transparent",
           inputClassName,
@@ -1044,6 +1093,8 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
   const hasMultipleSteps = runtimeLayoutMode === "multi_step" && stepGroups.length > 1;
   const hasRuntimeFormReference = Boolean(normalizedData.formId);
   const runtimeDataMissing = hasRuntimeFormReference && resolved === undefined;
+  const isInternalOnlyForm = resolved?.submissionAccess === "internal";
+  const canRenderInteractiveForm = fields.length > 0 && !isInternalOnlyForm;
   const showProgress = hasMultipleSteps && navigation.showProgress;
   const HeadingTag = `h${resolvedHeadingLevel}` as "h2" | "h3" | "h4";
 
@@ -1084,17 +1135,30 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
               </p>
             ) : null}
           </div>
-          {resolved?.error ? (
-            <div className="rounded-lg border border-dashed px-4 py-3 text-sm text-[var(--color-text)]/70">
+          {isInternalOnlyForm ? (
+            <div
+              className="rounded-lg border border-dashed px-4 py-3 text-sm text-[var(--color-text)]/70"
+              data-form-embed-runtime-boundary="internal"
+            >
+              This form is not accepting public submissions right now.
+            </div>
+          ) : resolved?.error ? (
+            <div
+              className="rounded-lg border border-dashed px-4 py-3 text-sm text-[var(--color-text)]/70"
+              data-form-embed-runtime-boundary="error"
+            >
               {resolveFormEmbedRuntimeErrorMessage(resolved.error)}
             </div>
           ) : fields.length === 0 ? (
-            <div className="rounded-lg border border-dashed px-4 py-3 text-sm text-[var(--color-text)]/70">
+            <div
+              className="rounded-lg border border-dashed px-4 py-3 text-sm text-[var(--color-text)]/70"
+              data-form-embed-runtime-boundary={runtimeDataMissing ? "missing" : "empty"}
+            >
               {runtimeDataMissing
                 ? "Form fields load in runtime preview."
                 : "No fields configured yet."}
             </div>
-          ) : (
+          ) : canRenderInteractiveForm ? (
             <form
               className="space-y-4"
               method="post"
@@ -1263,8 +1327,8 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                 Unable to submit the form. Please try again.
               </p>
             </form>
-          )}
-          {fields.length > 0 ? (
+          ) : null}
+          {canRenderInteractiveForm ? (
             <script dangerouslySetInnerHTML={{ __html: getFormRuntimeClientScript() }} />
           ) : null}
         </div>
@@ -1409,6 +1473,8 @@ export const formEmbedEditorContract: WidgetEditorContract = {
         "resolved.submissionAccess",
         "resolved.submissionNonce",
         "resolved.botProtection",
+        "resolved.successRedirectUrl",
+        "successMessage",
         "submitBehavior.successBehavior",
       ],
     },

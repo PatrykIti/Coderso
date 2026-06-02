@@ -5,7 +5,7 @@
 **Category:** Widgets + Compare Timeline + Admin UI + Runtime + QA + Docs + Leaf Remediation
 **Estimated Effort:** Small
 **Dependencies:** TASK-391
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,11 @@ Execution-ready leaf task for CT-31-05-01 from `_docs/PLAYWRIGHT/31-05-2026-widg
 
 ## Sub-Tasks
 
-- [ ] Reproduce CT-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce CT-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -46,6 +46,15 @@ Execution-ready leaf task for CT-31-05-01 from `_docs/PLAYWRIGHT/31-05-2026-widg
 
 - `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx`
 - `core/widgets/core/compareTimeline.tsx`
+
+## Closure Notes
+
+Closed on 2026-06-02.
+
+- Reproduced from the 31-05 report evidence: `none` removed text-size classes but did not hide track, step, or segment labels.
+- Kept the accessible visible-label behavior and renamed the admin option copy from `Hidden` to `Inherit`.
+- Added renderer/UI regression coverage proving `none` keeps labels visible without explicit bounded text-size classes and no select copy promises hidden labels.
+- Validation recorded in the parent TASK-391 closure notes.
 
 ## Security Contract
 

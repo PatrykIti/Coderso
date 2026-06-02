@@ -41,6 +41,8 @@ listing runtime token contract.
 - searchable-option mode, range input mode/step, and date input mode
 - range/date presentation settings with dual inputs and optional slider pairing
 - surface styling through swatch-only color controls
+- saved Action background color is marked inactive while Auto Apply hides the
+  manual submit button; the saved value is preserved for manual apply mode
 - no listing query rebinding and no facet source/value row creation; Visual can
   rename existing option labels but does not create new match values
 
@@ -80,6 +82,8 @@ listing runtime token contract.
 - Editor authoring keeps runtime normalization strict while the editor surface
   preserves incomplete facet drafts long enough to show inline validation.
 - Auto-apply mode renders helper copy instead of a second manual submit button.
+  In editor Visual mode, a saved `style.actionBackground` is explicitly marked
+  inactive while this manual action button is hidden.
 - Active filters render chips plus a `Clear all` action from resolved runtime
   state; fallback metrics no longer pretend unloaded counts are truthful zeroes.
 - `sidebar` uses bounded width plus optional desktop sticky behavior, while

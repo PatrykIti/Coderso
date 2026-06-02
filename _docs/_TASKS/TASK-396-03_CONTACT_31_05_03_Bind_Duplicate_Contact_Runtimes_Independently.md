@@ -5,7 +5,7 @@
 **Category:** Widgets + Contact + Public Forms API + Security + Admin UI + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-396
-**Status:** To Do
+**Status:** Done
 
 ---
 
@@ -15,13 +15,20 @@ Execution-ready leaf task for CONTACT-31-05-03 from `_docs/PLAYWRIGHT/31-05-2026
 
 Second Contact runtime on page does not bind.
 
+Status log:
+
+- 2026-06-02: Moved to In Progress with TASK-396 Contact remediation.
+- 2026-06-02: Done. CONTACT-31-05-03 / CT-31-05-03 is closed by the
+  idempotent shared Forms runtime binder introduced in TASK-395 and verified
+  in the Contact lane.
+
 ## Sub-Tasks
 
-- [ ] Reproduce CONTACT-31-05-03 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce CONTACT-31-05-03 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -92,3 +99,10 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes
+
+- The shared runtime now exposes and re-invokes `window.__nextlessFormRuntimeBind`.
+- Duplicate/later Contact Forms runtime instances bind through the same
+  idempotent code path as Form Embed.
+- Validation is recorded in parent TASK-396 closure notes and changelog 1086.

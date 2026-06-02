@@ -5,7 +5,7 @@
 **Category:** Widgets + Compare Timeline + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_COMPARE_TIMELINE_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -25,9 +25,9 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-391-01](TASK-391-01_CT_31_05_01_Hidden_Label_Size_Must_Either_Hide_Labels_Or.md): CT-31-05-01 - `Hidden` label size must either hide labels or be renamed
-- [ ] [TASK-391-02](TASK-391-02_CT_31_05_02_Step_Label_Size_Must_Affect_Axis_Row_Labels.md): CT-31-05-02 - `Step label size` must affect axis row labels
-- [ ] [TASK-391-03](TASK-391-03_CT_31_05_03_Advanced_Must_Mark_Highlight_Targets_Dormant_In_Dual.md): CT-31-05-03 - Advanced must mark highlight targets dormant in `dual-track`
+- [x] [TASK-391-01](TASK-391-01_CT_31_05_01_Hidden_Label_Size_Must_Either_Hide_Labels_Or.md): CT-31-05-01 - `Hidden` label size must either hide labels or be renamed
+- [x] [TASK-391-02](TASK-391-02_CT_31_05_02_Step_Label_Size_Must_Affect_Axis_Row_Labels.md): CT-31-05-02 - `Step label size` must affect axis row labels
+- [x] [TASK-391-03](TASK-391-03_CT_31_05_03_Advanced_Must_Mark_Highlight_Targets_Dormant_In_Dual.md): CT-31-05-03 - Advanced must mark highlight targets dormant in `dual-track`
 
 ## Implementation Pseudocode
 
@@ -57,6 +57,22 @@ Minimum checks for any touched endpoint or payload boundary:
 - `git diff --check`
 
 For DB-backed tests, load env before execution: `set -a && source .env && set +a`. If DB is unavailable, record the skipped validation explicitly in the task closure notes.
+
+## Closure Notes
+
+Closed on 2026-06-02.
+
+- TASK-391-01: `none` label-size copy now reads `Inherit`, matching the existing renderer behavior that keeps track, step, and segment labels visible while removing explicit text-size classes.
+- TASK-391-02: axis row labels now receive the same normalized `stepLabelSize` class as track-row step labels.
+- TASK-391-03: Advanced highlight diagnostics are variant-aware and mark saved highlight targets dormant in `dual-track` while preserving them for `dual-track-highlight`.
+- Regression coverage added in `tests/vitest/widgets/compareTimeline.test.tsx` and `tests/vitest/ui/compare-timeline-editor-wave.test.tsx`.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/ui/compare-timeline-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 3 files / 38 tests.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `git diff --check` - passed.
 
 ## Documentation Updates Required
 

@@ -12,10 +12,7 @@ import {
   normalizeSubmissionAccess,
 } from "../../services/forms/submissionAccess";
 import { assertFormSubmissionNonce } from "../../services/forms/submissionNonce";
-import {
-  listSubmissions,
-  submitForm,
-} from "../../services/forms/submissionService";
+import { listSubmissions, submitForm } from "../../services/forms/submissionService";
 import { runFormAutomation } from "../../services/forms/formAutomationRunner";
 import { normalizeFormSettings } from "../../services/forms/formSettings";
 import { ApiError } from "../errorHandler";
@@ -34,6 +31,7 @@ export type RouteContext = {
   query: Record<string, string | undefined>;
   body: unknown;
   headers?: Record<string, string | undefined>;
+  cookies?: Record<string, string | undefined>;
   user?: { id: string; email?: string; name?: string | null };
   ip?: string;
   userAgent?: string;
@@ -94,7 +92,17 @@ export const mapFormError = (error: unknown) => {
         400
       );
     case "form_payload_required":
-      return new ApiError("form_payload_required", "Required form submission field is missing.", 400);
+      return new ApiError(
+        "form_payload_required",
+        "Required form submission field is missing.",
+        400
+      );
+    case "form_success_redirect_url_invalid":
+      return new ApiError(
+        "form_success_redirect_url_invalid",
+        "Form success redirect URL must be a same-origin relative path.",
+        400
+      );
     default:
       return null;
   }
@@ -141,6 +149,95 @@ const normalizeSubmissionBody = (body: unknown): SubmissionBody => {
     ...(resolvedFormNonce ? { formNonce: resolvedFormNonce } : {}),
   };
 };
+
+export type FormSubmissionRouteDeps = {
+  requirePermission: FormsRouteDeps["requirePermission"];
+  validate: FormsRouteDeps["validate"];
+};
+
+export async function handleFormSubmissionRoute(ctx: RouteContext, deps: FormSubmissionRouteDeps) {
+  const { requirePermission, validate } = deps;
+  const normalized = normalizeSubmissionBody(ctx.body);
+  validate(formSubmissionSchema, normalized);
+  const body = normalized as SubmissionBody;
+
+  let form: Awaited<ReturnType<typeof getForm>> | null = null;
+  try {
+    form = await getForm(ctx.params.id);
+  } catch (error) {
+    throwMappedFormError(error);
+  }
+  if (!form) {
+    throw new ApiError("form_not_found", "Form not found.", 404);
+  }
+  const resolvedForm = form;
+
+  const accessMode = normalizeSubmissionAccess(resolvedForm.submissionAccess, "public");
+  const apiKey =
+    accessMode === "internal" ? await authenticateApiKey(ctx.headers?.authorization ?? null) : null;
+  const access = evaluateSubmissionAccess({
+    mode: accessMode,
+    isAuthenticated: Boolean(ctx.user),
+    apiKeyScopes: apiKey?.scopes,
+  });
+
+  if (!access.allow) {
+    if (access.reason === "forbidden") {
+      throw new ApiError("forbidden", "Forbidden", 403);
+    }
+    throw new ApiError("auth_required", "Not authenticated", 401);
+  }
+
+  if (accessMode === "internal" && ctx.user) {
+    await requirePermission("forms:write")(ctx);
+  }
+
+  if (access.requireCaptcha) {
+    assertFormSubmissionNonce(resolvedForm.id, body.formNonce);
+    const securitySettings = await getSecuritySettings();
+    await enforceBotProtection({
+      token: body.captchaToken,
+      action: "public_write",
+      ip: ctx.ip,
+      settings: securitySettings.botProtection,
+    });
+  }
+
+  let submission: Awaited<ReturnType<typeof submitForm>> | null = null;
+  try {
+    submission = await submitForm(ctx.params.id, body.data, {
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    });
+  } catch (error) {
+    throwMappedFormError(error);
+  }
+  if (!submission) {
+    throw new ApiError("form_submission_failed", "Submission failed", 500);
+  }
+
+  let automationResult: Awaited<ReturnType<typeof runFormAutomation>> | null = null;
+  try {
+    automationResult = await runFormAutomation({
+      formId: resolvedForm.id,
+      submissionId: submission.id,
+      submissionPayload: body.data,
+      submittedAt: submission.createdAt,
+      settings: normalizeFormSettings(resolvedForm.settings),
+    });
+  } catch {
+    // Submission persistence must not fail when action pipeline has unexpected runtime issues.
+    automationResult = null;
+  }
+
+  return {
+    ...submission,
+    runtime: {
+      successMessage: automationResult?.successMessage ?? resolvedForm.successMessage ?? null,
+      redirectUrl: automationResult?.redirectUrl ?? resolvedForm.successRedirectUrl ?? null,
+    },
+  };
+}
 
 export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
   const { requirePermission, validate } = deps;
@@ -202,96 +299,11 @@ export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
     }
   });
 
-  router.get(
-    "/forms/:id/submissions",
-    requirePermission("forms:read"),
-    async (ctx) => {
-      return listSubmissions(ctx.params.id);
-    }
-  );
+  router.get("/forms/:id/submissions", requirePermission("forms:read"), async (ctx) => {
+    return listSubmissions(ctx.params.id);
+  });
 
   router.post("/forms/:id/submissions", async (ctx) => {
-    const normalized = normalizeSubmissionBody(ctx.body);
-    validate(formSubmissionSchema, normalized);
-    const body = normalized as SubmissionBody;
-
-    let form: Awaited<ReturnType<typeof getForm>> | null = null;
-    try {
-      form = await getForm(ctx.params.id);
-    } catch (error) {
-      throwMappedFormError(error);
-    }
-    if (!form) {
-      throw new ApiError("form_not_found", "Form not found.", 404);
-    }
-    const resolvedForm = form;
-
-    const accessMode = normalizeSubmissionAccess(resolvedForm.submissionAccess, "public");
-    const apiKey =
-      accessMode === "internal"
-        ? await authenticateApiKey(ctx.headers?.authorization ?? null)
-        : null;
-    const access = evaluateSubmissionAccess({
-      mode: accessMode,
-      isAuthenticated: Boolean(ctx.user),
-      apiKeyScopes: apiKey?.scopes,
-    });
-
-    if (!access.allow) {
-      if (access.reason === "forbidden") {
-        throw new ApiError("forbidden", "Forbidden", 403);
-      }
-      throw new ApiError("auth_required", "Not authenticated", 401);
-    }
-
-    if (accessMode === "internal" && ctx.user) {
-      await requirePermission("forms:write")(ctx);
-    }
-
-    if (access.requireCaptcha) {
-      assertFormSubmissionNonce(resolvedForm.id, body.formNonce);
-      const securitySettings = await getSecuritySettings();
-      await enforceBotProtection({
-        token: body.captchaToken,
-        action: "public_write",
-        ip: ctx.ip,
-        settings: securitySettings.botProtection,
-      });
-    }
-
-    let submission: Awaited<ReturnType<typeof submitForm>> | null = null;
-    try {
-      submission = await submitForm(ctx.params.id, body.data, {
-        ip: ctx.ip,
-        userAgent: ctx.userAgent,
-      });
-    } catch (error) {
-      throwMappedFormError(error);
-    }
-    if (!submission) {
-      throw new ApiError("form_submission_failed", "Submission failed", 500);
-    }
-
-    let automationResult: Awaited<ReturnType<typeof runFormAutomation>> | null = null;
-    try {
-      automationResult = await runFormAutomation({
-        formId: resolvedForm.id,
-        submissionId: submission.id,
-        submissionPayload: body.data,
-        submittedAt: submission.createdAt,
-        settings: normalizeFormSettings(resolvedForm.settings),
-      });
-    } catch {
-      // Submission persistence must not fail when action pipeline has unexpected runtime issues.
-      automationResult = null;
-    }
-
-    return {
-      ...submission,
-      runtime: {
-        successMessage: automationResult?.successMessage ?? resolvedForm.successMessage ?? null,
-        redirectUrl: automationResult?.redirectUrl ?? resolvedForm.successRedirectUrl ?? null,
-      },
-    };
+    return handleFormSubmissionRoute(ctx, { requirePermission, validate });
   });
 }

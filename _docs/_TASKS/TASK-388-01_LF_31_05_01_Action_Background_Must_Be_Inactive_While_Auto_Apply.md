@@ -5,7 +5,7 @@
 **Category:** Widgets + Listing Filters + Admin UI + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-388
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,11 @@ Saved action background works for manual submit, but Visual still presents it as
 
 ## Sub-Tasks
 
-- [ ] Reproduce LF-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce LF-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +90,15 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes
+
+Closed on 2026-06-02. `ListingFiltersVisualEditor` now renders explicit inactive copy for a saved action background while Auto Apply hides the manual action button, preserving the saved color for manual apply mode.
+
+Validation recorded for closure:
+
+- `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/widgets/listingFilters.test.tsx` - passed, 26 tests.
+- `bun run test:vitest -- tests/vitest/ui/listing-filters-query-parser.test.ts tests/vitest/widgets/listingRuntimeScript.test.ts` - passed, 13 tests.
+- `git diff --check` - passed.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.

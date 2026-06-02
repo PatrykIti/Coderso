@@ -66,11 +66,17 @@ aktywny runtime form i tokeny query, nie liste wynikow.
 | Route submit page picker | Wybrano `Audit 31-05 Search Box` | `targetRoute=/audit-31-05-search-box`, `action=/audit-31-05-search-box`; Wizard ma shared `LinkDestinationField`. | Nie publikowano draftu. | Dziala | Route-submit Wizard owns `targetRoute`; page picker mapuje published page na route. | Brak. |
 | Route action color | Visual: `Action background=#16a34a` | Route-submit button dostaje `background-color: rgb(22, 163, 74)`. | Nie publikowano draftu. | Dziala | Route-submit branch stosuje ten sam `actionStyle` na submit button. | Brak. |
 | Advanced read-only | Klik `Advanced` | Sekcje diagnostics/status/summary; `writableControls=0`, brak raw technical inputs. | Nie dotyczy. | Dziala | Advanced uzywa `ReadonlyWidgetSummaryRow` i nie wystawia kontrolek mutujacych. | Brak. |
-| Advanced route rows poza route-submit | Advanced w `listing` i `global` | Pokazuje `Results page: Default search results page` i `Search term routing: Standard search term routing`, mimo ze runtime listing/global nie uzywa `targetRoute/queryParam`. | Nie dotyczy. | Nie dziala jako truthfulness | `normalizeSearchBoxData` dodaje `targetRoute/queryParam` tylko dla `route-submit`, ale Advanced bezwarunkowo renderuje te rows. | Patrz `SB-31-05-01`. |
+| Advanced route rows poza route-submit | Advanced w `listing` i `global` | Pokazuje `Active routing` dla efektywnej galezi runtime i nie renderuje `Results page` ani `Search term routing`. Route-submit nadal pokazuje te rows. | Nie dotyczy. | Dziala po TASK-389 | `normalizeSearchBoxData` dodaje `targetRoute/queryParam` tylko dla `route-submit`, a Advanced renderuje route-only rows tylko dla tego trybu. | Brak. |
 
 ## Znaleziska do poprawy
 
 ### SB-31-05-01 - Advanced pokazuje route-submit diagnostyke jako aktywna w trybach `listing` i `global`
+
+**Status po TASK-389:** naprawione 2026-06-02. Advanced pokazuje teraz
+read-only row `Active routing`, ktory nazywa efektywna galaz runtime:
+`Listing runtime search token`, `Global public search endpoint with q parameter`
+albo `Route-submit page routing`. Rows `Results page` i
+`Search term routing` sa renderowane tylko dla `mode="route-submit"`.
 
 **Objaw:** w Advanced dla domyslnego `listing` placeholdera i dla `global`
 search widoczne sa rows:
@@ -158,11 +164,9 @@ z:
 
 ## Rekomendacje
 
-1. Naprawic `SB-31-05-01` jako Advanced truthfulness fix bez zmiany runtime
-   semantics.
-2. Dodac published fixture z aktywnym listing query albo dedykowany runtime test
+1. Dodac published fixture z aktywnym listing query albo dedykowany runtime test
    public SSR, zeby nastepny pass nie musial tworzyc query tylko w draft preview.
-3. Opcjonalnie dodac test dla `displayMode="compact"` w placeholder branch bez
+2. Opcjonalnie dodac test dla `displayMode="compact"` w placeholder branch bez
    `listingQueryId` i zdecydowac, czy placeholder tez powinien zwezac sie do
    `max-w-3xl`, czy obecne `max-w-4xl` jest celowym stanem konfiguracji.
 
@@ -177,6 +181,11 @@ z:
 - `bun run test:vitest -- tests/vitest/widgets/searchBox.test.tsx` - passed, 9 tests.
 - `bun run test:vitest -- tests/vitest/ui/search-box-editor-wave.test.tsx` - passed, 8 tests.
 - `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts` - passed, 9 tests.
+- `bun run test:vitest -- tests/vitest/ui/search-box-editor-wave.test.tsx tests/vitest/widgets/searchBox.test.tsx` - passed po TASK-389, 18 tests.
+- `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts` - passed po TASK-389, 9 tests.
+- `git diff --check` - passed po TASK-389.
+- `bun --cwd core lint` - passed po TASK-389.
+- `bun --cwd core lint:types` - passed po TASK-389.
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` - passed, 16 tests.
 - `curl http://localhost:3000/audit-31-05-search-box` - HTTP 200, public placeholder baseline.
 - Subagent code review potwierdzil renderer/a11y/contract coverage i niezaleznie wskazal Advanced route-row truthfulness risk.

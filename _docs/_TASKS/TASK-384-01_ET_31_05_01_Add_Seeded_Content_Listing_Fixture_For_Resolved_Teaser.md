@@ -5,7 +5,7 @@
 **Category:** Widgets + Entry Teaser + Runtime Fixtures + Admin Console + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-384
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,11 @@ Local content-type, listing query, and template catalogs were empty, so image/me
 
 ## Sub-Tasks
 
-- [ ] Reproduce ET-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce ET-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -45,7 +45,13 @@ Local content-type, listing query, and template catalogs were empty, so image/me
 ## Owner Files
 
 - `scripts/playwright-widget-contract-smoke.ts`
-- `core/widgets/core/entryTeaser.tsx`
+- `tests/unit/playwright-widget-contract-smoke.test.ts`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-inventory.json`
+- Admin API contracts used by the fixture bootstrap:
+  - `core/server/routes/contentTypeRoutes.ts`
+  - `core/server/routes/contentEntryRoutes.ts`
+  - `core/server/routes/listingsRoutes.ts`
+  - `core/server/routes/settingsRoutes.ts`
 
 ## Security Contract
 
@@ -92,3 +98,10 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-02)
+
+- Fixed the fixture gap by adding Entry Teaser smoke bootstrap for a published content type, three published entries, an enabled detail route, a populated listing query, a fallback-only listing query, and a listing template.
+- The persisted page fixture now contains three physical Entry Teaser blocks: legacy manual, listing featured, and listing fallback-to-latest.
+- Added unit coverage for fixture page-data construction, content route normalization, idempotent admin seeding, CSRF headers, listing query/template creation, and page publish.
+- Changelog 1074 covers this leaf.

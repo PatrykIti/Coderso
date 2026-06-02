@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 81 tasks
+- **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2067 tasks
+- **Done:** 2139 tasks
 
 ---
 
@@ -42,77 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-384 | Entry Teaser 31-05 UI Audit Fixture and Console Hygiene Family | Medium | Medium | Report-driven family from `REPORT_ENTRY_TEASER_WIDGET.md`; fixture gap and console hygiene guard routed to tests/docs |
-| TASK-385 | Product Gallery 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_PRODUCT_GALLERY_WIDGET.md`; 2 findings routed to implementation/tests/docs |
-| TASK-386 | Product Compare 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_PRODUCT_COMPARE_WIDGET.md`; 2 findings routed to implementation/tests/docs |
-| TASK-387 | Product Table 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_PRODUCT_TABLE_WIDGET.md`; 1 finding routed to implementation/tests/docs |
-| TASK-388 | Listing Filters 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_LISTING_FILTERS_WIDGET.md`; 1 finding routed to implementation/tests/docs |
-| TASK-389 | Search Box 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_SEARCH_BOX_WIDGET.md`; 1 finding routed to implementation/tests/docs |
-| TASK-390 | Timeline 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_TIMELINE_WIDGET.md`; 3 findings routed to implementation/tests/docs |
-| TASK-391 | Compare Timeline 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_COMPARE_TIMELINE_WIDGET.md`; 3 findings routed to implementation/tests/docs |
-| TASK-392 | Newsletter 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NEWSLETTER_WIDGET.md`; 4 findings routed to implementation/tests/docs |
-| TASK-393 | Booking Calendar 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_BOOKING_CALENDAR_WIDGET.md`; 4 findings routed to implementation/tests/docs |
-| TASK-394 | Appointment Form 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_APPOINTMENT_FORM_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-395 | Form Embed 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_FORM_EMBED_WIDGET.md`; 9 findings routed to implementation/tests/docs |
-| TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
-| TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
-| TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-384-01 | ET-31-05-01 - Add seeded content/listing fixture for resolved teaser branches | Medium | Medium | Leaf task for TASK-384; source `REPORT_ENTRY_TEASER_WIDGET.md` |
-| TASK-384-02 | ET-31-05-02 - Resolve Entry Teaser fixture 404 and isolate React `createRoot/createPortal` console noise | Medium | Small | Leaf task for TASK-384; source `REPORT_ENTRY_TEASER_WIDGET.md` |
-| TASK-385-01 | PG-31-05-01 - Manual selected products must be marked inactive in query mode | Medium | Medium | Leaf task for TASK-385; source `REPORT_PRODUCT_GALLERY_WIDGET.md` |
-| TASK-385-02 | PG-31-05-02 - Add commerce image/detail/view-all fixture coverage | Medium | Medium | Leaf task for TASK-385; source `REPORT_PRODUCT_GALLERY_WIDGET.md` |
-| TASK-386-01 | PC-31-05-01 - Search/collections/status filters must be marked ignored for selected products | Medium | Medium | Leaf task for TASK-386; source `REPORT_PRODUCT_COMPARE_WIDGET.md` |
-| TASK-386-02 | PC-31-05-02 - Add commerce detail/image fixture coverage | Medium | Medium | Leaf task for TASK-386; source `REPORT_PRODUCT_COMPARE_WIDGET.md` |
-| TASK-387-01 | PT-31-05-01 - Saved collection filter toggle must be distinguished from active public control | Medium | Medium | Leaf task for TASK-387; source `REPORT_PRODUCT_TABLE_WIDGET.md` |
-| TASK-388-01 | LF-31-05-01 - `Action background` must be inactive while Auto Apply is enabled | Medium | Medium | Leaf task for TASK-388; source `REPORT_LISTING_FILTERS_WIDGET.md` |
-| TASK-389-01 | SB-31-05-01 - Route-submit rows must be hidden or marked inactive outside route-submit mode | Medium | Medium | Leaf task for TASK-389; source `REPORT_SEARCH_BOX_WIDGET.md` |
-| TASK-390-01 | TL-31-05-01 - CTA saved in process/compact mode must render or be called out as hidden | High | Medium | Leaf task for TASK-390; source `REPORT_TIMELINE_WIDGET.md` |
-| TASK-390-02 | TL-31-05-02 - Wrap all real Visual controls with shared metadata | High | Medium | Leaf task for TASK-390; source `REPORT_TIMELINE_WIDGET.md` |
-| TASK-390-03 | TL-31-05-03 - Variant cards must not appear active when `mode=process` controls runtime branch | High | Medium | Leaf task for TASK-390; source `REPORT_TIMELINE_WIDGET.md` |
-| TASK-391-01 | CT-31-05-01 - `Hidden` label size must either hide labels or be renamed | High | Small | Leaf task for TASK-391; source `REPORT_COMPARE_TIMELINE_WIDGET.md` |
-| TASK-391-02 | CT-31-05-02 - `Step label size` must affect axis row labels | High | Small | Leaf task for TASK-391; source `REPORT_COMPARE_TIMELINE_WIDGET.md` |
-| TASK-391-03 | CT-31-05-03 - Advanced must mark highlight targets dormant in `dual-track` | High | Medium | Leaf task for TASK-391; source `REPORT_COMPARE_TIMELINE_WIDGET.md` |
-| TASK-392-01 | NL-31-05-01 - Normalize bound Forms runtime fields before admin preview | High | Medium | Leaf task for TASK-392; source `REPORT_NEWSLETTER_WIDGET.md` |
-| TASK-392-02 | NL-31-05-02 - Legacy `webhookId` diagnostics must not claim an inactive submit path | High | Medium | Leaf task for TASK-392; source `REPORT_NEWSLETTER_WIDGET.md` |
-| TASK-392-03 | NL-31-05-03 - Public Forms runtime must not be interactive without widget-level nonce | High | Large | Leaf task for TASK-392; source `REPORT_NEWSLETTER_WIDGET.md` |
-| TASK-392-04 | NL-31-05-04 - Variant cards must not look active without `onVariantChange` | High | Medium | Leaf task for TASK-392; source `REPORT_NEWSLETTER_WIDGET.md` |
-| TASK-393-01 | BC-31-05-01 - Replace runtime `innerHTML` copy composition | High | Medium | Leaf task for TASK-393; source `REPORT_BOOKING_CALENDAR_WIDGET.md` |
-| TASK-393-02 | BC-31-05-02 - Build bounded week dates without duplicates | High | Medium | Leaf task for TASK-393; source `REPORT_BOOKING_CALENDAR_WIDGET.md` |
-| TASK-393-03 | BC-31-05-03 - Define admin canvas behavior for runtime-only controls | High | Medium | Leaf task for TASK-393; source `REPORT_BOOKING_CALENDAR_WIDGET.md` |
-| TASK-393-04 | BC-31-05-04 - Unify admin/public preview catalog filtering | High | Medium | Leaf task for TASK-393; source `REPORT_BOOKING_CALENDAR_WIDGET.md` |
-| TASK-394-01 | AF-31-05-01 - Calendar/form runtime binding must be idempotent regardless of DOM order | High | Medium | Leaf task for TASK-394; source `REPORT_APPOINTMENT_FORM_WIDGET.md` |
-| TASK-394-02 | AF-31-05-02 - Public reservation API must verify server-generated slot match | High | Large | Leaf task for TASK-394; source `REPORT_APPOINTMENT_FORM_WIDGET.md` |
-| TASK-394-03 | AF-31-05-03 - Mixed public/internal service catalog must scope captcha/nonce per selected service | High | Large | Leaf task for TASK-394; source `REPORT_APPOINTMENT_FORM_WIDGET.md` |
-| TASK-394-04 | AF-31-05-04 - Widget custom success copy must outrank API default | High | Medium | Leaf task for TASK-394; source `REPORT_APPOINTMENT_FORM_WIDGET.md` |
-| TASK-394-05 | AF-31-05-05 - Align client maxLength with public API schema bounds | High | Medium | Leaf task for TASK-394; source `REPORT_APPOINTMENT_FORM_WIDGET.md` |
-| TASK-395-01 | FE-31-05-01 - Mount public Form Embed submit route | High | Large | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
-| TASK-395-02 | FE-31-05-02 - Bind duplicate Form Embed instances independently | High | Medium | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
-| TASK-395-03 | FE-31-05-03 - Do not render internal-only forms as public interactive forms | High | Large | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
-| TASK-395-04 | FE-31-05-04 - Normalize checkbox payload to backend schema | High | Medium | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
-| TASK-395-05 | FE-31-05-05 - Saved progress must not skip required previous-step fields | High | Medium | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
-| TASK-395-06 | FE-31-05-06 - Split overloaded `settings.step` meanings | High | Small | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
-| TASK-395-07 | FE-31-05-07 - Clarify widget vs form-level success and redirect policy | High | Medium | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
-| TASK-395-08 | FE-31-05-08 - Keep `resolved.submissionNonce` out of persisted widget schema | High | Large | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
-| TASK-395-09 | FE-31-05-09 - Admin canvas should render real mapped form or explicit static boundary | High | Medium | Leaf task for TASK-395; source `REPORT_FORM_EMBED_WIDGET.md` |
-| TASK-396-01 | CONTACT-31-05-01 - Mount Contact public Forms runtime submit route | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
-| TASK-396-02 | CONTACT-31-05-02 - Reset submit button label after failure | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
-| TASK-396-03 | CONTACT-31-05-03 - Bind duplicate Contact runtimes independently | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
-| TASK-396-04 | CONTACT-31-05-04 - Project `botProtection` into Contact Forms runtime | High | Large | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
-| TASK-396-05 | CONTACT-31-05-05 - Admin canvas should render mapped Forms runtime or explicit boundary | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
-| TASK-396-06 | CONTACT-31-05-06 - Configured/effective runtime metadata must not claim forms-runtime when fallback is static/internal | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
-| TASK-396-07 | CONTACT-31-05-07 - Tighten legacy map/social URL safety | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
-| TASK-396-08 | CONTACT-31-05-08 - Complete Visual path metadata beyond style rows | High | Medium | Leaf task for TASK-396; source `REPORT_CONTACT_WIDGET.md` |
-| TASK-397-01 | NV-31-05-01 - Empty resolved link list must not make public widget invalid | High | Small | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
-| TASK-397-02 | NV-31-05-02 - Unsafe manual href must not degrade to clickable `#` | High | Medium | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
-| TASK-397-03 | NV-31-05-03 - Drawer active link clones need truthful `aria-current` semantics | High | Medium | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
-| TASK-397-04 | NV-31-05-04 - Complete Visual path metadata | High | Medium | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
-| TASK-397-05 | NV-31-05-05 - Remove or justify public `data-menu-key` exposure | High | Medium | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
-| TASK-397-06 | NV-31-05-06 - Bound persisted/imported style colors | High | Medium | Leaf task for TASK-397; source `REPORT_NAVIGATION_WIDGET.md` |
-| TASK-398-01 | FT-31-05-01 - Minimal variant must not omit useful contact/back-to-top utilities unintentionally | High | Medium | Leaf task for TASK-398; source `REPORT_FOOTER_WIDGET.md` |
-| TASK-398-02 | FT-31-05-02 - Unsafe column links must not degrade to clickable `#` | High | Medium | Leaf task for TASK-398; source `REPORT_FOOTER_WIDGET.md` |
-| TASK-398-03 | FT-31-05-03 - Visual logo preview must not render raw unsafe `brand.logoUrl` | High | Medium | Leaf task for TASK-398; source `REPORT_FOOTER_WIDGET.md` |
-| TASK-398-04 | FT-31-05-04 - Wizard variant ownership must align with contract | High | Medium | Leaf task for TASK-398; source `REPORT_FOOTER_WIDGET.md` |
-| TASK-398-05 | FT-31-05-05 - Make slot and LinkDestination metadata precise | High | Medium | Leaf task for TASK-398; source `REPORT_FOOTER_WIDGET.md` |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -139,6 +68,78 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-02): minimal utility rendering, unsafe link/logo fail-closed behavior, Wizard/Visual ownership, and precise slot/destination metadata are closed. |
+| TASK-398-01 | FT-31-05-01 - Minimal variant must not omit useful contact/back-to-top utilities unintentionally | High | Medium | Done (2026-06-02): minimal footers keep configured contact and back-to-top utilities available. |
+| TASK-398-02 | FT-31-05-02 - Unsafe column links must not degrade to clickable `#` | High | Medium | Done (2026-06-02): unsafe or empty column links are omitted instead of becoming placeholder anchors. |
+| TASK-398-03 | FT-31-05-03 - Visual logo preview must not render raw unsafe `brand.logoUrl` | High | Medium | Done (2026-06-02): Visual logo preview normalizes image sources and flags unsafe saved URLs. |
+| TASK-398-04 | FT-31-05-04 - Wizard variant ownership must align with contract | High | Medium | Done (2026-06-02): Wizard variant is read-only and Visual remains the writable owner. |
+| TASK-398-05 | FT-31-05-05 - Make slot and LinkDestination metadata precise | High | Medium | Done (2026-06-02): Footer slot summaries and destination controls expose precise ownership metadata. |
+| TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-02): empty link lists, unsafe hrefs, drawer active clones, Visual metadata, public menu-key exposure, and bounded colors are closed. |
+| TASK-397-01 | NV-31-05-01 - Empty resolved link list must not make public widget invalid | High | Small | Done (2026-06-02): resolved empty link lists are schema-valid and render a static-safe public state. |
+| TASK-397-02 | NV-31-05-02 - Unsafe manual href must not degrade to clickable `#` | High | Medium | Done (2026-06-02): unsafe manual hrefs are omitted by the Navigation href normalizer. |
+| TASK-397-03 | NV-31-05-03 - Drawer active link clones need truthful `aria-current` semantics | High | Medium | Done (2026-06-02): responsive drawer clones now expose truthful active-link semantics. |
+| TASK-397-04 | NV-31-05-04 - Complete Visual path metadata | High | Medium | Done (2026-06-02): Navigation Visual controls expose contract-aligned `data-widget-control-path` metadata. |
+| TASK-397-05 | NV-31-05-05 - Remove or justify public `data-menu-key` exposure | High | Medium | Done (2026-06-02): raw public menu keys were replaced with non-sensitive configured-state metadata. |
+| TASK-397-06 | NV-31-05-06 - Bound persisted/imported style colors | High | Medium | Done (2026-06-02): Navigation style colors normalize through bounded CSS color handling. |
+| TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Done (2026-06-02): public Forms submit dispatch, submit-label restore, duplicate runtime binding, CAPTCHA projection, explicit runtime boundaries, safe map/social/CSS policy, and Visual metadata coverage are closed. |
+| TASK-396-01 | CONTACT-31-05-01 - Mount Contact public Forms runtime submit route | High | Medium | Done (2026-06-02): Contact runtime uses the shared public Forms submit bridge. |
+| TASK-396-02 | CONTACT-31-05-02 - Reset submit button label after failure | High | Medium | Done (2026-06-02): Contact emits the submit label and the shared runtime restores it after failed submit. |
+| TASK-396-03 | CONTACT-31-05-03 - Bind duplicate Contact runtimes independently | High | Medium | Done (2026-06-02): duplicate/later Contact Forms runtimes bind idempotently. |
+| TASK-396-04 | CONTACT-31-05-04 - Project `botProtection` into Contact Forms runtime | High | Large | Done (2026-06-02): Contact runtime projects CAPTCHA site key/action and hidden token field when configured. |
+| TASK-396-05 | CONTACT-31-05-05 - Admin canvas should render mapped Forms runtime or explicit boundary | High | Medium | Done (2026-06-02): Contact renders mapped runtime data or an explicit noninteractive boundary. |
+| TASK-396-06 | CONTACT-31-05-06 - Configured/effective runtime metadata must not claim forms-runtime when fallback is static/internal | High | Medium | Done (2026-06-02): Contact splits configured/effective form mode and boundary reason metadata. |
+| TASK-396-07 | CONTACT-31-05-07 - Tighten legacy map/social URL safety | High | Medium | Done (2026-06-02): map embeds require HTTPS Google Maps and social links require known HTTPS platform hosts. |
+| TASK-396-08 | CONTACT-31-05-08 - Complete Visual path metadata beyond style rows | High | Medium | Done (2026-06-02): Contact Visual controls now expose stable path/action metadata beyond style rows. |
+| TASK-395 | Form Embed 31-05 UI Audit Remediation Family | High | Very Large | Done (2026-06-02): public submit route, duplicate binding, internal fail-closed rendering, checkbox payloads, saved-progress validation, split step semantics, success/redirect policy, nonce persistence, and boundary states are closed. |
+| TASK-395-01 | FE-31-05-01 - Mount public Form Embed submit route | High | Large | Done (2026-06-02): public submit route is mounted through `handlePublicFormsApi` and shares the Forms submit contract. |
+| TASK-395-02 | FE-31-05-02 - Bind duplicate Form Embed instances independently | High | Medium | Done (2026-06-02): repeated runtime scripts idempotently rebind later Form Embed instances. |
+| TASK-395-03 | FE-31-05-03 - Do not render internal-only forms as public interactive forms | High | Large | Done (2026-06-02): public internal-only forms render a noninteractive boundary without submit runtime. |
+| TASK-395-04 | FE-31-05-04 - Normalize checkbox payload to backend schema | High | Medium | Done (2026-06-02): checked boxes serialize as boolean `true` instead of browser-default `on`. |
+| TASK-395-05 | FE-31-05-05 - Saved progress must not skip required previous-step fields | High | Medium | Done (2026-06-02): restore and submit validation guard required previous steps. |
+| TASK-395-06 | FE-31-05-06 - Split overloaded `settings.step` meanings | High | Small | Done (2026-06-02): `formStep` owns placement and `inputStep` owns input increment with legacy `step` as form-step adapter. |
+| TASK-395-07 | FE-31-05-07 - Clarify widget vs form-level success and redirect policy | High | Medium | Done (2026-06-02): widget success copy wins and redirects are same-origin relative only. |
+| TASK-395-08 | FE-31-05-08 - Keep `resolved.submissionNonce` out of persisted widget schema | High | Large | Done (2026-06-02): persisted Form Embed schema rejects runtime nonce material. |
+| TASK-395-09 | FE-31-05-09 - Admin canvas should render real mapped form or explicit static boundary | High | Medium | Done (2026-06-02): Form Embed renders mapped forms when hydrated and explicit runtime boundaries otherwise. |
+| TASK-394 | Appointment Form 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-02): runtime rebinding, server-generated slot verification, selected-service CAPTCHA scoping, widget-first success copy, and shared field bounds are closed. |
+| TASK-394-01 | AF-31-05-01 - Calendar/form runtime binding must be idempotent regardless of DOM order | High | Medium | Done (2026-06-02): repeated runtime scripts now idempotently bind both calendar and form nodes in either DOM order. |
+| TASK-394-02 | AF-31-05-02 - Public reservation API must verify server-generated slot match | High | Large | Done (2026-06-02): valid nonce submissions must match regenerated server availability before persistence. |
+| TASK-394-03 | AF-31-05-03 - Mixed public/internal service catalog must scope captcha/nonce per selected service | High | Large | Done (2026-06-02): selection events carry `submissionAccess`, and internal selections skip public CAPTCHA/nonce material. |
+| TASK-394-04 | AF-31-05-04 - Widget custom success copy must outrank API default | High | Medium | Done (2026-06-02): widget `successMessage` displays before API runtime default. |
+| TASK-394-05 | AF-31-05-05 - Align client maxLength with public API schema bounds | High | Medium | Done (2026-06-02): shared Appointment Form bounds drive renderer, normalizer/runtime payloads, and public API schema. |
+| TASK-393 | Booking Calendar 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-02): runtime copy uses DOM text nodes, week dates are bounded/unique, admin week preview shows an explicit runtime boundary, and admin/public catalog filtering is shared. |
+| TASK-393-01 | BC-31-05-01 - Replace runtime `innerHTML` copy composition | High | Medium | Done (2026-06-02): service context and status copy render attacker-shaped payloads literally without creating DOM markup. |
+| TASK-393-02 | BC-31-05-02 - Build bounded week dates without duplicates | High | Medium | Done (2026-06-02): week labels, buttons, and first availability requests consume unique in-range dates. |
+| TASK-393-03 | BC-31-05-03 - Define admin canvas behavior for runtime-only controls | High | Medium | Done (2026-06-02): tokenless editor/admin week mode shows a clear noninteractive boundary instead of an empty runtime shell. |
+| TASK-393-04 | BC-31-05-04 - Unify admin/public preview catalog filtering | High | Medium | Done (2026-06-02): admin preview and public resolver share active linked catalog filtering. |
+| TASK-392 | Newsletter 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-02): Forms preview fields are normalized, legacy webhook diagnostics are inactive, public Forms runtime requires a nonce, and variant cards are read-only without a handler. |
+| TASK-392-01 | NL-31-05-01 - Normalize bound Forms runtime fields before admin preview | High | Medium | Done (2026-06-02): admin preview patches strip unsupported Form field metadata before reaching strict Newsletter `resolved.fields[]`. |
+| TASK-392-02 | NL-31-05-02 - Legacy `webhookId` diagnostics must not claim an inactive submit path | High | Medium | Done (2026-06-02): legacy webhook metadata is preserved but marked inactive until migrated to a supported submit path. |
+| TASK-392-03 | NL-31-05-03 - Public Forms runtime must not be interactive without widget-level nonce | High | Large | Done (2026-06-02): compatible public Forms runtime bindings stay non-submitting unless `resolved.submissionNonce` is projected. |
+| TASK-392-04 | NL-31-05-04 - Variant cards must not look active without `onVariantChange` | High | Medium | Done (2026-06-02): variant cards are disabled/read-only when mutation is unavailable. |
+| TASK-391 | Compare Timeline 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-02): label-size `none` copy now matches inherited/no-explicit-size behavior, axis step labels honor step size, and Advanced marks saved highlight targets dormant in `dual-track`. |
+| TASK-391-01 | CT-31-05-01 - `Hidden` label size must either hide labels or be renamed | High | Small | Done (2026-06-02): `none` label-size options now read `Inherit` while labels remain visible without explicit size classes. |
+| TASK-391-02 | CT-31-05-02 - `Step label size` must affect axis row labels | High | Small | Done (2026-06-02): axis row labels consume the same normalized step label size class as track rows. |
+| TASK-391-03 | CT-31-05-03 - Advanced must mark highlight targets dormant in `dual-track` | High | Medium | Done (2026-06-02): Advanced diagnostics are variant-aware and preserve saved targets without presenting them as active in Dual Track. |
+| TASK-390 | Timeline 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-02): compact/process CTAs render, Visual metadata is complete for real controls, and process mode marks saved non-compact variants inactive. |
+| TASK-390-01 | TL-31-05-01 - CTA saved in process/compact mode must render or be called out as hidden | High | Medium | Done (2026-06-02): compact/process layout renders saved CTA links while whole-step links remain suppressed to avoid nested anchors. |
+| TASK-390-02 | TL-31-05-02 - Wrap all real Visual controls with shared metadata | High | Medium | Done (2026-06-02): Visual controls expose shared metadata paths aligned with actual sections and the Timeline editor contract. |
+| TASK-390-03 | TL-31-05-03 - Variant cards must not appear active when `mode=process` controls runtime branch | High | Medium | Done (2026-06-02): process mode identifies compact as effective and labels saved non-compact variants inactive. |
+| TASK-389 | Search Box 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-02): Advanced now shows active routing by mode and reserves route-submit page/query rows for route-submit mode only. |
+| TASK-389-01 | SB-31-05-01 - Route-submit rows must be hidden or marked inactive outside route-submit mode | Medium | Medium | Done (2026-06-02): listing/global Advanced diagnostics no longer present route-submit rows as active. |
+| TASK-388 | Listing Filters 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-02): Visual now marks saved Action background inactive while Auto apply hides the manual submit button, preserving the color for manual apply mode. |
+| TASK-388-01 | LF-31-05-01 - `Action background` must be inactive while Auto Apply is enabled | Medium | Medium | Done (2026-06-02): saved action color stays visible but is explicitly inactive until Auto apply is disabled. |
+| TASK-387 | Product Table 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-02): Advanced now distinguishes saved filter toggles from visible visitor controls, and smoke fixtures prove media-backed rows, safe title links, action CTAs, detail-route, and out-of-stock branches. |
+| TASK-387-01 | PT-31-05-01 - Saved collection filter toggle must be distinguished from active public control | Medium | Medium | Done (2026-06-02): saved collection/status filters stay visible but inactive until enough runtime options resolve. |
+| TASK-387-02 | PT-31-05-02 - Add commerce image/detail/action fixture coverage | Medium | Medium | Done (2026-06-02): smoke bootstrap seeds media-backed commerce products, safe products route, audited page data, and admin/public image/title-link/action proof. |
+| TASK-386 | Product Compare 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-02): Advanced now marks saved query filters inactive while selected products own runtime resolution, and smoke fixtures prove image, safe title-link, CTA, detail-route, and out-of-stock branches. |
+| TASK-386-01 | PC-31-05-01 - Search/collections/status filters must be marked ignored for selected products | Medium | Medium | Done (2026-06-02): saved search, collection, and status filters stay visible but inactive in selected-products mode. |
+| TASK-386-02 | PC-31-05-02 - Add commerce detail/image fixture coverage | Medium | Medium | Done (2026-06-02): smoke bootstrap seeds media-backed commerce products, safe products route, audited page data, and admin/public image/title-link/CTA proof. |
+| TASK-385 | Product Gallery 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-02): Advanced now marks preserved manual selections inactive in query mode, and smoke fixtures prove image, safe card-link, and view-all branches. |
+| TASK-385-01 | PG-31-05-01 - Manual selected products must be marked inactive in query mode | Medium | Medium | Done (2026-06-02): dormant `curation.productIds` are summarized as saved/inactive while query mode owns runtime products. |
+| TASK-385-02 | PG-31-05-02 - Add commerce image/detail/view-all fixture coverage | Medium | Medium | Done (2026-06-02): smoke bootstrap seeds Product Gallery media, attaches it to products, patches the audited page, and verifies ready image/link/view-all output. |
+| TASK-384 | Entry Teaser 31-05 UI Audit Fixture and Console Hygiene Family | Medium | Medium | Done (2026-06-02): populated content/listing Entry Teaser smoke fixtures now seed authenticated content, listing, route, page, and console-hygiene proof data. |
+| TASK-384-01 | ET-31-05-01 - Add seeded content/listing fixture for resolved teaser branches | Medium | Medium | Done (2026-06-02): smoke bootstrap creates manual, featured, and fallback resolved branches with image, tags, CTA, and listing template data. |
+| TASK-384-02 | ET-31-05-02 - Resolve Entry Teaser fixture 404 and isolate React `createRoot/createPortal` console noise | Medium | Small | Done (2026-06-02): stale fixture route was removed and Entry Teaser smoke now fails on repeatable admin/public console errors instead of hiding them. |
 | TASK-383 | Posts Feed 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-02): Advanced source filters now report only runtime-active filters, and the smoke harness seeds/publishes populated Posts Feed proof data. |
 | TASK-383-01 | PF-31-05-01 - Inactive category filter must not be reported active in Latest mode | Medium | Medium | Done (2026-06-02): owner-side active source filter labels keep dormant category state out of Latest/Featured/Manual diagnostics. |
 | TASK-383-02 | PF-31-05-02 - Add seeded posts fixture for browser-level display controls | Medium | Medium | Done (2026-06-02): smoke bootstrap seeds three fixture posts and verifies populated admin/public image/tag/CTA/pagination rendering. |

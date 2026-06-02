@@ -46,6 +46,9 @@ const formsRuntimeMockState = vi.hoisted(() => ({
         required: boolean;
         settings: Record<string, unknown>;
         orderIndex: number;
+        formId?: string;
+        createdAt?: string;
+        updatedAt?: string;
       }>;
     }
   >(),
@@ -753,6 +756,35 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
   }
 });
 
+test("Newsletter visual variant cards are read-only without a variant handler", async () => {
+  const { NewsletterVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
+
+  const view = mount(
+    <NewsletterVisualEditor
+      value={newsletterDefaults}
+      onChange={() => undefined}
+      variant="inline"
+    />
+  );
+
+  try {
+    const variantSection = getSectionByTitle(view.container, "Variant and form structure");
+    const buttons = Array.from(variantSection.querySelectorAll("button"));
+
+    expect(buttons).toHaveLength(3);
+    expect(buttons.every((button) => button.disabled)).toBe(true);
+    expect(buttons.every((button) => button.getAttribute("aria-disabled") === "true")).toBe(true);
+    expect(normalizeText(variantSection.textContent)).toContain("current");
+    expect(normalizeText(variantSection.textContent)).toContain("read-only");
+    expect(buttons.some((button) => normalizeText(button.textContent).includes("pick"))).toBe(
+      false
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("Newsletter visual editor explains disconnected public submit guard", async () => {
   const { NewsletterVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
@@ -886,6 +918,9 @@ test("Newsletter visual editor publishes page-builder preview hydration for form
         required: true,
         settings: {},
         orderIndex: 0,
+        formId: "form-preview",
+        createdAt: "2026-05-01T00:00:00.000Z",
+        updatedAt: "2026-05-01T00:00:00.000Z",
       },
       {
         id: "field-2",
@@ -895,6 +930,9 @@ test("Newsletter visual editor publishes page-builder preview hydration for form
         required: false,
         settings: {},
         orderIndex: 1,
+        formId: "form-preview",
+        createdAt: "2026-05-01T00:00:00.000Z",
+        updatedAt: "2026-05-01T00:00:00.000Z",
       },
     ],
   });
@@ -1031,6 +1069,58 @@ test("Newsletter advanced editor is read-only and uses human support summaries",
     expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     cleanup();
+  }
+});
+
+test("Newsletter legacy webhook diagnostics do not claim an active submit path", async () => {
+  const { NewsletterAdvancedEditor, NewsletterVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
+
+  const value: NewsletterData = {
+    ...newsletterDefaults,
+    integration: {
+      mode: "webhook",
+      method: "post",
+      actionUrl: "",
+      webhookId: "legacy-hook",
+    },
+    submission: {
+      ...newsletterDefaults.submission,
+      mode: "static",
+    },
+  };
+
+  const visualView = mount(
+    <NewsletterVisualEditor
+      value={value}
+      onChange={() => undefined}
+      variant="inline"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    const connectionSection = getSectionByTitle(visualView.container, "Connection status");
+    const connectionText = normalizeText(connectionSection.textContent);
+    expect(connectionText).toContain("legacy webhook saved");
+    expect(connectionText).toContain("visitor submit disabled");
+    expect(connectionText).not.toContain("external signup service saved");
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <NewsletterAdvancedEditor value={value} onChange={() => undefined} variant="inline" />
+  );
+
+  try {
+    const diagnosticsText = normalizeText(advancedView.container.textContent);
+    expect(diagnosticsText).toContain("legacy webhook saved");
+    expect(diagnosticsText).toContain("visitor submit remains disabled");
+    expect(diagnosticsText).toContain("switch to a coderso form");
+    expect(diagnosticsText).not.toContain("visitors are sent");
+  } finally {
+    advancedView.cleanup();
   }
 });
 

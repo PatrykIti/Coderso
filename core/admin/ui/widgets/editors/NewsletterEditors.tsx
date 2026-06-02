@@ -21,6 +21,7 @@ import {
   getNewsletterFormsRuntimeCompatibility,
   newsletterDefaults,
   normalizeNewsletterData,
+  normalizeNewsletterResolvedFields,
   resolveNewsletterTransport,
   resolveNewsletterVariant,
   type NewsletterData,
@@ -231,7 +232,7 @@ function useNewsletterAdminPreview({
           successMessage: detail.form.successMessage,
           successRedirectUrl: detail.form.successRedirectUrl,
           submissionAccess: detail.form.submissionAccess,
-          fields: detail.fields,
+          fields: normalizeNewsletterResolvedFields(detail.fields),
         },
       },
     });
@@ -420,24 +421,42 @@ function VariantCards({
   value: NewsletterVariantId;
   onChange?: (next: string) => void;
 }) {
+  const canChange = typeof onChange === "function";
+
   return (
     <div className="space-y-2">
       {variantOptions.map((option) => (
         <button
           key={option.id}
           type="button"
-          onClick={() => onChange?.(option.id)}
+          disabled={!canChange}
+          aria-disabled={!canChange}
+          data-newsletter-variant-card-state={
+            value === option.id ? (canChange ? "selected" : "current") : "read-only"
+          }
+          onClick={() => {
+            if (canChange) onChange(option.id);
+          }}
           className={cn(
             "w-full rounded-lg border p-3 text-left transition",
             value === option.id
               ? "border-primary bg-primary/5"
-              : "border-border bg-background hover:border-primary/50"
+              : canChange
+                ? "border-border bg-background hover:border-primary/50"
+                : "border-border bg-muted/20",
+            canChange ? undefined : "cursor-default opacity-80"
           )}
         >
           <div className="flex items-start justify-between gap-2">
             <p className="text-sm font-semibold">{option.label}</p>
             <Badge variant={value === option.id ? "default" : "outline"}>
-              {value === option.id ? "Selected" : "Pick"}
+              {value === option.id
+                ? canChange
+                  ? "Selected"
+                  : "Current"
+                : canChange
+                  ? "Pick"
+                  : "Read-only"}
             </Badge>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
@@ -624,10 +643,14 @@ function resolveFieldBindingStatus(
   };
 }
 
-function hasSavedExternalConnection(
+function hasSupportedExternalConnection(
   transport: ReturnType<typeof resolveNewsletterTransport>
 ): boolean {
-  return transport.actionStatus === "valid" || transport.webhookId.length > 0;
+  return transport.actionStatus === "valid";
+}
+
+function hasLegacyWebhook(transport: ReturnType<typeof resolveNewsletterTransport>): boolean {
+  return transport.webhookId.length > 0 && transport.actionStatus !== "valid";
 }
 
 function describeSignupDestination(
@@ -640,7 +663,10 @@ function describeSignupDestination(
       : "Choose a Coderso Form in Visual";
   }
 
-  if (hasSavedExternalConnection(transport)) return "External signup service saved";
+  if (hasSupportedExternalConnection(transport)) return "External signup service saved";
+  if (hasLegacyWebhook(transport)) {
+    return "Legacy webhook saved; visitor submit disabled until migrated to a Coderso Form";
+  }
   if (transport.actionStatus === "invalid") return "Saved external connection needs review";
   return "Not connected yet";
 }
@@ -655,8 +681,12 @@ function describeVisitorSubmitPath(
       : "Visitors cannot sign up until a public Form is selected.";
   }
 
-  if (hasSavedExternalConnection(transport)) {
+  if (hasSupportedExternalConnection(transport)) {
     return "Visitors are sent to the saved external signup service.";
+  }
+
+  if (hasLegacyWebhook(transport)) {
+    return "Legacy webhook saved; visitor submit remains disabled until you switch to a Coderso Form or a supported external action URL.";
   }
 
   if (transport.actionStatus === "invalid") {
@@ -674,7 +704,8 @@ function describeSavedExternalConnection(
     return "Not used while a Coderso Form is selected";
   }
 
-  if (hasSavedExternalConnection(transport)) return "Configured";
+  if (hasSupportedExternalConnection(transport)) return "Configured";
+  if (hasLegacyWebhook(transport)) return "Legacy webhook saved; inactive until migrated";
   if (transport.actionStatus === "invalid") return "Needs support review";
   return "Not configured";
 }
@@ -1451,9 +1482,9 @@ export function NewsletterVisualEditor({
               ? selectedForm?.name
                 ? `Coderso Form: ${selectedForm.name}`
                 : "Choose a Coderso Form"
-              : transport.actionStatus === "valid" || transport.webhookId
-                ? "External signup service saved"
-                : "Not connected yet; visitor submit disabled"
+              : transport.actionStatus === "empty" && !transport.webhookId
+                ? "Not connected yet; visitor submit disabled"
+                : describeSignupDestination(normalized, transport)
           }
         />
         <ReadonlyWidgetSummaryRow

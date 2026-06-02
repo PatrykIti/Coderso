@@ -5,13 +5,21 @@
 **Category:** Widgets + Contact + Public Forms API + Security + Admin UI + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_CONTACT_WIDGET.md
-**Status:** To Do
+**Status:** Done
 
 ---
 
 ## Overview
 
 Close Contact public Forms runtime, error state, binding, CAPTCHA projection, admin canvas, metadata, URL safety, and Visual path gaps.
+
+Status log:
+
+- 2026-06-02: Moved to In Progress for Contact-scope implementation.
+- 2026-06-02: Done. Closed CONTACT-31-05-01..08 / CT-31-05-01..08 with
+  shared public Forms submit dispatch, submit-label restore, idempotent Forms
+  runtime binding, CAPTCHA projection, explicit runtime boundary metadata,
+  safe map/social/CSS policy, and Visual metadata coverage.
 
 Source report: `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_CONTACT_WIDGET.md`.
 
@@ -35,14 +43,14 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-396-01](TASK-396-01_CONTACT_31_05_01_Mount_Contact_Public_Forms_Runtime_Submit_Route.md): CONTACT-31-05-01 - Mount Contact public Forms runtime submit route
-- [ ] [TASK-396-02](TASK-396-02_CONTACT_31_05_02_Reset_Submit_Button_Label_After_Failure.md): CONTACT-31-05-02 - Reset submit button label after failure
-- [ ] [TASK-396-03](TASK-396-03_CONTACT_31_05_03_Bind_Duplicate_Contact_Runtimes_Independently.md): CONTACT-31-05-03 - Bind duplicate Contact runtimes independently
-- [ ] [TASK-396-04](TASK-396-04_CONTACT_31_05_04_Project_BotProtection_Into_Contact_Forms_Runtime.md): CONTACT-31-05-04 - Project `botProtection` into Contact Forms runtime
-- [ ] [TASK-396-05](TASK-396-05_CONTACT_31_05_05_Admin_Canvas_Should_Render_Mapped_Forms_Runtime_Or.md): CONTACT-31-05-05 - Admin canvas should render mapped Forms runtime or explicit boundary
-- [ ] [TASK-396-06](TASK-396-06_CONTACT_31_05_06_Configured_Effective_Runtime_Metadata_Must_Not_Claim_Forms.md): CONTACT-31-05-06 - Configured/effective runtime metadata must not claim forms-runtime when fallback is static/internal
-- [ ] [TASK-396-07](TASK-396-07_CONTACT_31_05_07_Tighten_Legacy_Map_Social_URL_Safety.md): CONTACT-31-05-07 - Tighten legacy map/social URL safety
-- [ ] [TASK-396-08](TASK-396-08_CONTACT_31_05_08_Complete_Visual_Path_Metadata_Beyond_Style_Rows.md): CONTACT-31-05-08 - Complete Visual path metadata beyond style rows
+- [x] [TASK-396-01](TASK-396-01_CONTACT_31_05_01_Mount_Contact_Public_Forms_Runtime_Submit_Route.md): CONTACT-31-05-01 - Mount Contact public Forms runtime submit route
+- [x] [TASK-396-02](TASK-396-02_CONTACT_31_05_02_Reset_Submit_Button_Label_After_Failure.md): CONTACT-31-05-02 - Reset submit button label after failure
+- [x] [TASK-396-03](TASK-396-03_CONTACT_31_05_03_Bind_Duplicate_Contact_Runtimes_Independently.md): CONTACT-31-05-03 - Bind duplicate Contact runtimes independently
+- [x] [TASK-396-04](TASK-396-04_CONTACT_31_05_04_Project_BotProtection_Into_Contact_Forms_Runtime.md): CONTACT-31-05-04 - Project `botProtection` into Contact Forms runtime
+- [x] [TASK-396-05](TASK-396-05_CONTACT_31_05_05_Admin_Canvas_Should_Render_Mapped_Forms_Runtime_Or.md): CONTACT-31-05-05 - Admin canvas should render mapped Forms runtime or explicit boundary
+- [x] [TASK-396-06](TASK-396-06_CONTACT_31_05_06_Configured_Effective_Runtime_Metadata_Must_Not_Claim_Forms.md): CONTACT-31-05-06 - Configured/effective runtime metadata must not claim forms-runtime when fallback is static/internal
+- [x] [TASK-396-07](TASK-396-07_CONTACT_31_05_07_Tighten_Legacy_Map_Social_URL_Safety.md): CONTACT-31-05-07 - Tighten legacy map/social URL safety
+- [x] [TASK-396-08](TASK-396-08_CONTACT_31_05_08_Complete_Visual_Path_Metadata_Beyond_Style_Rows.md): CONTACT-31-05-08 - Complete Visual path metadata beyond style rows
 
 ## Implementation Pseudocode
 
@@ -88,3 +96,38 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes
+
+- Public submit: Contact uses the shared public Forms bridge for
+  `POST /forms/:id/submissions`; TASK-395 mounted the endpoint and TASK-396
+  keeps Contact on the same nonce/HMAC, bot-protection, strict schema,
+  `public_write` rate-limit, and Forms error-mapping contract.
+- Runtime: Contact emits `data-form-submit-label`, CAPTCHA attrs/input, and
+  hidden nonce only for active public runtime; the shared runtime snapshots the
+  original submit label before loading-state mutations and idempotently binds
+  duplicate/later forms.
+- Boundaries: Contact now separates configured and effective form mode with
+  `data-contact-form-configured-mode`, `data-contact-form-mode`, and
+  `data-contact-runtime-boundary`; missing nonce, internal forms, field
+  mismatch, conditional logic, and multi-step bindings render static-safe.
+- Security hardening: map embeds are restricted to HTTPS Google Maps, social
+  links publish only known HTTPS platform hosts, custom/arbitrary legacy social
+  URLs stay dormant, and inline color values use the bounded CSS color
+  normalizer.
+- Editor/docs: Visual controls expose stable path/action metadata beyond style
+  rows; Contact docs and the 31-05 report were updated with remediation notes.
+
+Validation completed:
+
+- `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/site/publicRenderer.test.tsx` - passed, 4 files / 45 tests.
+- `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 9 files / 125 tests.
+- `set -a && source .env && set +a && bun test tests/unit/widgets/validator.test.ts tests/unit/server/publicFormsApi.test.ts tests/integration/routes/forms.test.ts` - passed, 40 tests.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `bun test tests/security/codersoSecurityGate.test.ts` - passed.
+- `bun run scan:gitleaks:worktree` - passed.
+- `bun run scan:trivy:secret` - passed.
+- `bun run scan:semgrep` - passed, 0 findings.
+- `git diff --check` - passed.
+- `bun run gates:coderso` - passed: functional, ux, performance, security, reliability.

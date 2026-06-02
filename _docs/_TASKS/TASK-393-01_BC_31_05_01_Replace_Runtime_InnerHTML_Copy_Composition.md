@@ -5,7 +5,7 @@
 **Category:** Widgets + Booking Calendar + Runtime Security + Admin Preview + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-393
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,17 @@ Runtime builds service context and messages through `innerHTML` from decoded tex
 
 ## Sub-Tasks
 
-- [ ] Reproduce BC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce BC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+
+## Closure Notes (2026-06-02)
+
+- Replaced runtime `innerHTML` copy composition in service context, empty/missing/error slot copy, and week button labels with explicit DOM nodes and `textContent`.
+- Added happy-dom regression coverage with `<img onerror>` payloads in service name, service description, empty copy, missing copy, and error copy; no image nodes are created and the payload renders as literal text.
+- Validation covered by TASK-393 parent changelog 1083.
 
 ## Implementation Pseudocode
 

@@ -5,7 +5,7 @@
 **Category:** Widgets + Product Gallery + Commerce UI + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_PRODUCT_GALLERY_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -24,8 +24,8 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-385-01](TASK-385-01_PG_31_05_01_Manual_Selected_Products_Must_Be_Marked_Inactive_In.md): PG-31-05-01 - Manual selected products must be marked inactive in query mode
-- [ ] [TASK-385-02](TASK-385-02_PG_31_05_02_Add_Commerce_Image_Detail_View_All_Fixture_Coverage.md): PG-31-05-02 - Add commerce image/detail/view-all fixture coverage
+- [x] [TASK-385-01](TASK-385-01_PG_31_05_01_Manual_Selected_Products_Must_Be_Marked_Inactive_In.md): PG-31-05-01 - Manual selected products must be marked inactive in query mode
+- [x] [TASK-385-02](TASK-385-02_PG_31_05_02_Add_Commerce_Image_Detail_View_All_Fixture_Coverage.md): PG-31-05-02 - Add commerce image/detail/view-all fixture coverage
 
 ## Implementation Pseudocode
 
@@ -70,3 +70,20 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-02)
+
+- Product Gallery Advanced now reports preserved manual selections as `Saved manual selection` with inactive query-mode copy instead of presenting dormant `curation.productIds` as active selected products.
+- Product Gallery smoke bootstrap now seeds a deterministic media image, attaches it to commerce products through authenticated admin APIs, patches `/audit-31-05-product-gallery` to use a safe product base path, and publishes a `limit=2` + `view-all` fixture.
+- Product Gallery admin smoke now verifies image output, ready card links, and visible view-all links in admin and public runtime.
+- Changelog coverage: `_docs/_CHANGELOG/1075-2026-06-02-product-gallery-widget-31-05-ui-audit-remediation.md`.
+
+Validation:
+
+- `bun test tests/unit/playwright-widget-contract-smoke.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx tests/vitest/widgets/productGallery.test.tsx`
+- `bun test tests/integration/routes/productGalleryPreview.test.ts`
+- `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget product-gallery --output-json .tmp/task-385-product-gallery-smoke-dry-run.json --output-md .tmp/task-385-product-gallery-smoke-dry-run.md`
+- `git diff --check`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

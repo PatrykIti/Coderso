@@ -5,7 +5,7 @@
 **Category:** Widgets + Newsletter + Forms Runtime + Public Security + Admin UI + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-392
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,11 @@ Advanced reports legacy webhook as a destination even though runtime blocks that
 
 ## Sub-Tasks
 
-- [ ] Reproduce NL-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce NL-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -45,6 +45,16 @@ Advanced reports legacy webhook as a destination even though runtime blocks that
 ## Owner Files
 
 - `core/admin/ui/widgets/editors/NewsletterEditors.tsx`
+
+## Closure Notes
+
+Closed on 2026-06-02.
+
+- Reproduced from the 31-05 report evidence: saved `webhookId` was described as an active external signup destination while runtime kept native submit blocked.
+- Split supported external action URLs from legacy webhook metadata in Visual/Advanced diagnostics.
+- Legacy webhook data remains preserved but is labelled inactive until migrated to a Coderso Form or supported action URL.
+- Added UI regression coverage for Visual and Advanced legacy webhook summaries.
+- Validation recorded in the parent TASK-392 closure notes.
 
 ## Security Contract
 

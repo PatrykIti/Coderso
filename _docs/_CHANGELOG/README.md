@@ -35,6 +35,21 @@ matching remediation family is implemented or closed.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1088 | 2026-06-02 | Footer widget 31-05 UI audit remediation | CMS Widgets/Footer/Runtime Security/Admin UI/QA/Docs |
+| 1087 | 2026-06-02 | Navigation widget 31-05 UI audit remediation | CMS Widgets/Navigation/Runtime Security/Admin UI/QA/Docs |
+| 1086 | 2026-06-02 | Contact widget 31-05 UI audit remediation | CMS Widgets/Contact/Public Forms API/Runtime Security/Admin UI/QA/Docs |
+| 1085 | 2026-06-02 | Form Embed widget 31-05 UI audit remediation | CMS Widgets/Form Embed/Public Forms API/Runtime Security/Admin UI/QA/Docs |
+| 1084 | 2026-06-02 | Appointment Form widget 31-05 UI audit remediation | CMS Widgets/Appointment Form/Public Booking API/Runtime Security/QA/Docs |
+| 1083 | 2026-06-02 | Booking Calendar widget 31-05 UI audit remediation | CMS Widgets/Booking Calendar/Runtime Security/Admin UI/Public Resolver/QA/Docs |
+| 1082 | 2026-06-02 | Newsletter widget 31-05 UI audit remediation | CMS Widgets/Newsletter/Admin UI/Forms Runtime/Public Security/QA/Docs |
+| 1081 | 2026-06-02 | Compare Timeline widget 31-05 UI audit remediation | CMS Widgets/Compare Timeline/Admin UI/Runtime/QA/Docs |
+| 1080 | 2026-06-02 | Timeline widget 31-05 UI audit remediation | CMS Widgets/Timeline/Admin UI/Runtime/QA/Docs |
+| 1079 | 2026-06-02 | Search Box widget 31-05 UI audit remediation | CMS Widgets/Search Box/Admin UI/QA/Docs |
+| 1078 | 2026-06-02 | Listing Filters widget 31-05 UI audit remediation | CMS Widgets/Listing Filters/Admin UI/QA/Docs |
+| 1077 | 2026-06-02 | Product Table widget 31-05 UI audit remediation | CMS Widgets/Product Table/Admin UI/Commerce Fixtures/Playwright/QA/Docs |
+| 1076 | 2026-06-02 | Product Compare widget 31-05 UI audit remediation | CMS Widgets/Product Compare/Admin UI/Commerce Fixtures/Playwright/QA/Docs |
+| 1075 | 2026-06-02 | Product Gallery widget 31-05 UI audit remediation | CMS Widgets/Product Gallery/Admin UI/Commerce Fixtures/Playwright/QA/Docs |
+| 1074 | 2026-06-02 | Entry Teaser widget 31-05 UI audit fixture and console hygiene | CMS Widgets/Entry Teaser/Playwright/Fixtures/Console Hygiene/QA/Docs |
 | 1073 | 2026-06-02 | Posts Feed widget 31-05 UI audit remediation | CMS Widgets/Posts Feed/Admin UI/Playwright/Fixtures/QA/Docs |
 | 1072 | 2026-06-01 | Content List widget 31-05 UI audit remediation | CMS Widgets/Content List/Admin UI/Playwright/Fixtures/QA/Docs |
 | 1071 | 2026-06-01 | Rich Text Section widget 31-05 UI audit remediation | CMS Widgets/Rich Text/Admin UI/Sanitizer/Playwright/Media Fixtures/QA/Docs |

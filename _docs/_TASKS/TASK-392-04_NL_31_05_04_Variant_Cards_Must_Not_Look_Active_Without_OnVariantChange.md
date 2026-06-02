@@ -5,7 +5,7 @@
 **Category:** Widgets + Newsletter + Forms Runtime + Public Security + Admin UI + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-392
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,11 @@ Cards appear selected/mutable even when variant change handler is absent.
 
 ## Sub-Tasks
 
-- [ ] Reproduce NL-31-05-04 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce NL-31-05-04 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -45,6 +45,15 @@ Cards appear selected/mutable even when variant change handler is absent.
 ## Owner Files
 
 - `core/admin/ui/widgets/editors/NewsletterEditors.tsx`
+
+## Closure Notes
+
+Closed on 2026-06-02.
+
+- Reproduced from the 31-05 report evidence: variant cards still looked pickable when `onVariantChange` was absent.
+- Variant cards now render disabled/read-only states without firing optional mutation callbacks.
+- Added UI regression coverage for missing `onVariantChange`.
+- Validation recorded in the parent TASK-392 closure notes.
 
 ## Security Contract
 

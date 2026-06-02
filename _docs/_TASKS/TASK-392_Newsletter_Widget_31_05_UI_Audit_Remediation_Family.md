@@ -5,7 +5,7 @@
 **Category:** Widgets + Newsletter + Forms Runtime + Public Security + Admin UI + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_NEWSLETTER_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -26,10 +26,10 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-392-01](TASK-392-01_NL_31_05_01_Normalize_Bound_Forms_Runtime_Fields_Before_Admin_Preview.md): NL-31-05-01 - Normalize bound Forms runtime fields before admin preview
-- [ ] [TASK-392-02](TASK-392-02_NL_31_05_02_Legacy_WebhookId_Diagnostics_Must_Not_Claim_An_Inactive.md): NL-31-05-02 - Legacy `webhookId` diagnostics must not claim an inactive submit path
-- [ ] [TASK-392-03](TASK-392-03_NL_31_05_03_Public_Forms_Runtime_Must_Not_Be_Interactive_Without.md): NL-31-05-03 - Public Forms runtime must not be interactive without widget-level nonce
-- [ ] [TASK-392-04](TASK-392-04_NL_31_05_04_Variant_Cards_Must_Not_Look_Active_Without_OnVariantChange.md): NL-31-05-04 - Variant cards must not look active without `onVariantChange`
+- [x] [TASK-392-01](TASK-392-01_NL_31_05_01_Normalize_Bound_Forms_Runtime_Fields_Before_Admin_Preview.md): NL-31-05-01 - Normalize bound Forms runtime fields before admin preview
+- [x] [TASK-392-02](TASK-392-02_NL_31_05_02_Legacy_WebhookId_Diagnostics_Must_Not_Claim_An_Inactive.md): NL-31-05-02 - Legacy `webhookId` diagnostics must not claim an inactive submit path
+- [x] [TASK-392-03](TASK-392-03_NL_31_05_03_Public_Forms_Runtime_Must_Not_Be_Interactive_Without.md): NL-31-05-03 - Public Forms runtime must not be interactive without widget-level nonce
+- [x] [TASK-392-04](TASK-392-04_NL_31_05_04_Variant_Cards_Must_Not_Look_Active_Without_OnVariantChange.md): NL-31-05-04 - Variant cards must not look active without `onVariantChange`
 
 ## Implementation Pseudocode
 
@@ -60,6 +60,25 @@ Minimum checks for any touched endpoint or payload boundary:
 - `git diff --check`
 
 For DB-backed tests, load env before execution: `set -a && source .env && set +a`. If DB is unavailable, record the skipped validation explicitly in the task closure notes.
+
+## Closure Notes
+
+Closed on 2026-06-02.
+
+- TASK-392-01: Newsletter admin preview now projects bound Form fields through the Newsletter resolved-field contract before patching preview data.
+- TASK-392-02: legacy `integration.webhookId` diagnostics now mark saved webhook metadata inactive instead of claiming visitor submit is active.
+- TASK-392-03: public Forms runtime rendering now requires a projected `submissionNonce`; compatible bindings without a nonce stay non-submitting.
+- TASK-392-04: Visual variant cards render disabled/read-only when no variant mutation handler is available.
+- No route owner code was changed; public nonce validation was verified through existing Forms nonce/security suites.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/site/publicRenderer.test.tsx` - passed, 4 files / 56 tests.
+- `bun run test:vitest -- tests/vitest/forms/submissionNonce.test.ts tests/vitest/forms/formRuntimeResolver.test.ts` - passed, 2 files / 10 tests.
+- `bun test tests/security/codersoSecurityGate.test.ts` - passed, 4 tests.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `git diff --check` - passed.
 
 ## Documentation Updates Required
 

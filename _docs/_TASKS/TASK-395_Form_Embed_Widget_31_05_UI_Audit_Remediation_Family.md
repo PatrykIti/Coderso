@@ -5,13 +5,23 @@
 **Category:** Widgets + Form Embed + Public Forms API + Security + Runtime + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FORM_EMBED_WIDGET.md
-**Status:** To Do
+**Status:** Done
 
 ---
 
 ## Overview
 
 Close all Form Embed public submit, binding, access, checkbox, progress, field naming, success policy, nonce persistence, and admin canvas gaps.
+
+Status log:
+
+- 2026-06-02: Moved to In Progress for implementation.
+- 2026-06-02: Completed TASK-395 remediation. Closed FE-31-05-01..09 with
+  public submit route mounting, idempotent runtime binding, internal-only
+  public fail-closed rendering, checkbox boolean payloads, saved-progress step
+  validation, split `formStep`/`inputStep`, widget-first success copy, safe
+  redirect persistence/runtime policy, strict persisted `resolved` schema, and
+  explicit admin/runtime boundary states.
 
 Source report: `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FORM_EMBED_WIDGET.md`.
 
@@ -31,15 +41,15 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-395-01](TASK-395-01_FE_31_05_01_Mount_Public_Form_Embed_Submit_Route.md): FE-31-05-01 - Mount public Form Embed submit route
-- [ ] [TASK-395-02](TASK-395-02_FE_31_05_02_Bind_Duplicate_Form_Embed_Instances_Independently.md): FE-31-05-02 - Bind duplicate Form Embed instances independently
-- [ ] [TASK-395-03](TASK-395-03_FE_31_05_03_Do_Not_Render_Internal_Only_Forms_As_Public.md): FE-31-05-03 - Do not render internal-only forms as public interactive forms
-- [ ] [TASK-395-04](TASK-395-04_FE_31_05_04_Normalize_Checkbox_Payload_To_Backend_Schema.md): FE-31-05-04 - Normalize checkbox payload to backend schema
-- [ ] [TASK-395-05](TASK-395-05_FE_31_05_05_Saved_Progress_Must_Not_Skip_Required_Previous_Step.md): FE-31-05-05 - Saved progress must not skip required previous-step fields
-- [ ] [TASK-395-06](TASK-395-06_FE_31_05_06_Split_Overloaded_Settings_Step_Meanings.md): FE-31-05-06 - Split overloaded `settings.step` meanings
-- [ ] [TASK-395-07](TASK-395-07_FE_31_05_07_Clarify_Widget_Vs_Form_Level_Success_And_Redirect.md): FE-31-05-07 - Clarify widget vs form-level success and redirect policy
-- [ ] [TASK-395-08](TASK-395-08_FE_31_05_08_Keep_Resolved_SubmissionNonce_Out_Of_Persisted_Widget_Schema.md): FE-31-05-08 - Keep `resolved.submissionNonce` out of persisted widget schema
-- [ ] [TASK-395-09](TASK-395-09_FE_31_05_09_Admin_Canvas_Should_Render_Real_Mapped_Form_Or.md): FE-31-05-09 - Admin canvas should render real mapped form or explicit static boundary
+- [x] [TASK-395-01](TASK-395-01_FE_31_05_01_Mount_Public_Form_Embed_Submit_Route.md): FE-31-05-01 - Mount public Form Embed submit route
+- [x] [TASK-395-02](TASK-395-02_FE_31_05_02_Bind_Duplicate_Form_Embed_Instances_Independently.md): FE-31-05-02 - Bind duplicate Form Embed instances independently
+- [x] [TASK-395-03](TASK-395-03_FE_31_05_03_Do_Not_Render_Internal_Only_Forms_As_Public.md): FE-31-05-03 - Do not render internal-only forms as public interactive forms
+- [x] [TASK-395-04](TASK-395-04_FE_31_05_04_Normalize_Checkbox_Payload_To_Backend_Schema.md): FE-31-05-04 - Normalize checkbox payload to backend schema
+- [x] [TASK-395-05](TASK-395-05_FE_31_05_05_Saved_Progress_Must_Not_Skip_Required_Previous_Step.md): FE-31-05-05 - Saved progress must not skip required previous-step fields
+- [x] [TASK-395-06](TASK-395-06_FE_31_05_06_Split_Overloaded_Settings_Step_Meanings.md): FE-31-05-06 - Split overloaded `settings.step` meanings
+- [x] [TASK-395-07](TASK-395-07_FE_31_05_07_Clarify_Widget_Vs_Form_Level_Success_And_Redirect.md): FE-31-05-07 - Clarify widget vs form-level success and redirect policy
+- [x] [TASK-395-08](TASK-395-08_FE_31_05_08_Keep_Resolved_SubmissionNonce_Out_Of_Persisted_Widget_Schema.md): FE-31-05-08 - Keep `resolved.submissionNonce` out of persisted widget schema
+- [x] [TASK-395-09](TASK-395-09_FE_31_05_09_Admin_Canvas_Should_Render_Real_Mapped_Form_Or.md): FE-31-05-09 - Admin canvas should render real mapped form or explicit static boundary
 
 ## Implementation Pseudocode
 
@@ -85,3 +95,40 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes
+
+- Public submit route: added `core/server/publicFormsApi.ts`, mounted it before
+  public page fallback, and extracted `handleFormSubmissionRoute` so public and
+  admin API submit paths share validation, access, nonce, bot protection,
+  persistence, automation, and error mapping.
+- Runtime: Form Embed binding is idempotent across duplicate/later instances;
+  checkbox payloads are boolean; restored progress clamps to incomplete
+  previous steps; submit validates all prior visible steps; widget success copy
+  outranks runtime copy; unsafe redirects are ignored before browser assign.
+- Forms model: added safe form-level success redirect normalization and split
+  field settings into `formStep` and `inputStep`; legacy `settings.step`
+  remains a non-destructive form-step adapter.
+- Rendering/security: public internal-only forms fail closed; persisted widget
+  schema rejects `resolved.submissionNonce`; admin/static canvas states expose
+  explicit `data-form-embed-runtime-boundary` boundaries instead of ambiguous
+  shells.
+- Docs updated: `_docs/_WIDGETS/FORM_EMBED.md`, `_docs/CMS_API.md`,
+  `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FORM_EMBED_WIDGET.md`, audit
+  README, task board, and changelog 1085.
+
+Validation completed:
+
+- `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/forms/validation.test.ts tests/vitest/forms/formRuntimeResolver.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/ui/form-embed-editor-wave.test.tsx` — passed, 6 files / 75 tests.
+- `set -a && source .env && set +a && bun test tests/unit/server/publicFormsApi.test.ts tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts` — passed, 18 tests.
+- `bun run test:vitest -- tests/vitest/ui/form-canvas.test.tsx tests/vitest/ui/form-canvas-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx` — passed, 6 files / 31 tests.
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/admin/formsClient.test.ts` — passed, 3 files / 56 tests.
+- `bun --cwd core lint` — passed.
+- `bun --cwd core lint:types` — passed.
+- `bun test tests/security/codersoSecurityGate.test.ts` — passed, 4 tests.
+- `bun run scan:gitleaks:worktree` — passed, no leaks.
+- `bun run scan:trivy:secret` — passed, no secret findings.
+- `bun run scan:semgrep` — passed, 0 findings.
+- `git diff --check` — passed.
+- `bun run gates:coderso` — passed all gates (`functional`, `ux`,
+  `performance`, `security`, `reliability`).

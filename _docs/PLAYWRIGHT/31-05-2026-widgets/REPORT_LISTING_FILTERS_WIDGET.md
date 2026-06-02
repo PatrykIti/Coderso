@@ -72,7 +72,7 @@ potwierdza realnych metric counts ani aktywnych option chips z danych.
 | Show search field | Toggle OFF/ON | OFF: `searchCount=0`; ON: search wraca z `name=lq.<queryId>.__q`, `autoComplete=off`. | Nie publikowano draftu. | Dziala | `showSearch` kontroluje render search label/input. | Brak. |
 | Auto apply OFF | Toggle OFF | `data-listing-auto-apply=0`; pojawia sie submit button `Apply audit filters`; action background domyslnie `var(--color-primary)`. | Nie publikowano draftu. | Dziala | Manual branch renderuje `<button type="submit">`. | Brak. |
 | Action background while manual | Ustawiono `Action background=#dc2626` przy Auto apply OFF | Submit button style `background-color: rgb(220, 38, 38)`; editor chip `Selected color`. | Nie publikowano draftu. | Dziala | `style.actionBackground` jest uzyte jako `actionStyle` na manual submit button. | Brak. |
-| Action background while auto apply | Po ustawieniu koloru wlaczono Auto apply ON | Submit button znika (`submitButtons=[]`), ale Surface dalej pokazuje `Action background: Selected color` bez informacji, ze kolor jest inactive. | Nie dotyczy. | Nie dziala jako truthfulness | Saved style jest poprawny, ale UI sugeruje aktywny efekt przy braku action buttona. | Patrz `LF-31-05-01`. |
+| Action background while auto apply | Po ustawieniu koloru wlaczono Auto apply ON | Submit button znika (`submitButtons=[]`), a Surface pokazuje zapisany kolor z tekstem `Action background saved, inactive while auto apply hides the manual action button.` | Nie dotyczy. | Dziala po TASK-388 | Saved style jest poprawny i pozostaje zachowany dla manual apply, ale UI nie sugeruje juz aktywnego efektu przy braku action buttona. | Brak. |
 | Horizontal variant | Klik `Horizontal` | Root `data-listing-variant="horizontal"`, form i taxonomy/searchable branch zachowane. | Nie publikowano draftu. | Dziala | Variant maps to horizontal controls grid. | Brak. |
 | Sidebar + sticky | Klik `Sidebar`, sticky ON | Root `variant=sidebar`, frame class ma `md:max-w-md`; targeted code path supports sticky class. | Nie publikowano draftu. | Dziala | Sidebar branch adds side-panel constraints and sticky when enabled. | Brak. |
 | Drawer + default collapsed | Klik `Drawer`, targeted replay: Default collapsed OFF/ON/OFF | Targeted replay: details open -> closed -> open; switch `aria-checked=false -> true -> false`. | Nie publikowano draftu. | Dziala | Drawer uses native `<details>` with `open={!defaultCollapsed}`. | Brak. |
@@ -82,6 +82,12 @@ potwierdza realnych metric counts ani aktywnych option chips z danych.
 ## Znaleziska do poprawy
 
 ### LF-31-05-01 - `Action background` wyglada aktywnie, gdy `Auto apply` ukrywa przycisk akcji
+
+**Status po TASK-388:** naprawione 2026-06-02. Visual nadal pokazuje zapisany
+swatch, ale przy `autoApply=true` i zapisanym `style.actionBackground` dodaje
+widoczny tekst: `Action background saved, inactive while auto apply hides the manual action button.`
+Saved value nie jest czyszczony, wiec po wylaczeniu Auto apply kolor wraca na
+manual submit button.
 
 **Objaw:** przy `Auto apply changes` OFF ustawienie `Action background` na
 `#dc2626` dziala: submit button `Apply audit filters` dostaje
@@ -173,12 +179,10 @@ HTML z:
 
 ## Rekomendacje
 
-1. Naprawic `LF-31-05-01` jako UI truthfulness fix bez zmiany runtime
-   semantics.
-2. Dodac/poprawic published listing query fixture dla nowej
+1. Dodac/poprawic published listing query fixture dla nowej
    `/audit-31-05-listing-filters`, zeby kolejne passy mogly potwierdzic public
    SSR z metrics, active chips, clear-all i realnymi option counts.
-3. W kolejnym pass zostawic tymczasowy query tylko jako fallback, nie jako
+2. W kolejnym pass zostawic tymczasowy query tylko jako fallback, nie jako
    glowny dowod public runtime.
 
 ## Walidacja
@@ -193,6 +197,11 @@ HTML z:
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx` - passed, 12 tests.
 - `bun run test:vitest -- tests/vitest/ui/listing-filters-query-parser.test.ts` - passed, 4 tests.
 - `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts` - passed, 9 tests.
+- `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/widgets/listingFilters.test.tsx` - passed po TASK-388, 26 tests.
+- `bun run test:vitest -- tests/vitest/ui/listing-filters-query-parser.test.ts tests/vitest/widgets/listingRuntimeScript.test.ts` - passed po TASK-388, 13 tests.
+- `git diff --check` - passed po TASK-388.
+- `bun --cwd core lint` - passed po TASK-388.
+- `bun --cwd core lint:types` - passed po TASK-388.
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` - passed, 16 tests.
 - `curl http://localhost:3000/audit-31-05-listing-filters` - HTTP 200, public placeholder baseline.
 - Claude CLI nie wykonal audytu z powodu `401 Invalid authentication credentials`.

@@ -42,6 +42,8 @@ Notes:
 
 - Newsletter owns variant selection in Visual
   (`visualOwnsVariantSelection = true`).
+- Variant cards render disabled/read-only when the editor context does not
+  provide `onVariantChange`.
 - Mobile behavior is documented directly on the variant cards.
 - Visual does not ask authors to type persisted field-name keys, action URLs,
   methods, webhook IDs, or analytics event names. Static mode uses safe default
@@ -63,6 +65,9 @@ changes, and whether saved data is still compatible. It does not expose or edit
 raw action URLs, webhook IDs, HTTP methods, JSON payloads, or normalization
 actions.
 
+Legacy `integration.webhookId` metadata is preserved but reported as inactive
+until migrated to a Coderso Form or supported external action URL.
+
 ## Runtime Contract
 
 - Unknown variants normalize to `inline`.
@@ -82,12 +87,17 @@ actions.
 - Valid Forms-runtime bindings reuse `POST /forms/:id/submissions`, shared nonce
   handling, shared CAPTCHA/runtime script markers, loading state, success state,
   error state, and redirect behavior returned by the bound Form owner.
+- Public Forms-runtime rendering requires a non-empty projected
+  `resolved.submissionNonce` before emitting native form/script markup; a
+  compatible binding without the nonce remains a disabled shell.
 - Invalid or incomplete bindings degrade to a non-submitting fallback with
   explicit diagnostics in admin preview and a user-facing disconnected message
   on the public site.
 - Page-builder preview can hydrate the bound Form contract without persisting
   runtime secrets into widget JSON; submit stays preview-only there until the
   public runtime injects nonce/CAPTCHA markers.
+- Page-builder preview projects bound Form fields through the strict Newsletter
+  resolved-field schema before patching preview data.
 - A native static `action-url` must be a safe external HTTPS target. Coderso
   `/forms/:id/submissions` routes are runtime-owned and require
   `submission.mode = "forms-runtime"`.

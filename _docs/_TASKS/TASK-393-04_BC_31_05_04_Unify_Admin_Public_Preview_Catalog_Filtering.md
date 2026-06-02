@@ -5,7 +5,7 @@
 **Category:** Widgets + Booking Calendar + Runtime Security + Admin Preview + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-393
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,17 @@ Admin preview filters inactive/unlinked rows differently from public preview res
 
 ## Sub-Tasks
 
-- [ ] Reproduce BC-31-05-04 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce BC-31-05-04 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+
+## Closure Notes (2026-06-02)
+
+- Added pure `buildBookingRuntimeCatalog` filtering for active resources, active services, and active service-resource links, then reused it in admin preview and public runtime resolver.
+- Added parity regression coverage proving admin preview and the shared runtime catalog produce the same visible service/resource lists while filtering inactive and unlinked rows.
+- Validation covered by TASK-393 parent changelog 1083.
 
 ## Implementation Pseudocode
 

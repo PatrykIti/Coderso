@@ -28,6 +28,12 @@ import {
   createTemplateSectionWidget,
   type TemplateSectionData,
 } from "../../../core/widgets/core/templateSection";
+import { createFormEmbedWidget, type FormEmbedData } from "../../../core/widgets/core/formEmbed";
+import {
+  contactDefaults,
+  createContactWidget,
+  type ContactData,
+} from "../../../core/widgets/core/contact";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
@@ -39,6 +45,8 @@ const StubEntryTeaserEditor: ComponentType<WidgetEditorProps<EntryTeaserData>> =
 const StubTemplateSectionEditor: ComponentType<WidgetEditorProps<TemplateSectionData>> = () => null;
 const StubTabsEditor: ComponentType<WidgetEditorProps<TabsData>> = () => null;
 const StubToggleEditor: ComponentType<WidgetEditorProps<ToggleBlockData>> = () => null;
+const StubFormEmbedEditor: ComponentType<WidgetEditorProps<FormEmbedData>> = () => null;
+const StubContactEditor: ComponentType<WidgetEditorProps<ContactData>> = () => null;
 
 const DummyWidgetEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 const validTemplateId = "11111111-1111-4111-8111-111111111111";
@@ -124,6 +132,137 @@ test("renderPublicPageHtml dedupes shared runtime scripts across multiple widget
   expect(html.match(/data-coderso-runtime-script="toggle-block"/g)).toHaveLength(1);
   expect(html).toContain('data-coderso-runtime-script="tabs"');
   expect(html).toContain('data-coderso-runtime-script="toggle-block"');
+});
+
+test("renderPublicPageRuntimeHtml renders internal Form Embed blocks as noninteractive", async () => {
+  clearWidgets();
+  registerWidget(
+    createFormEmbedWidget({
+      wizard: StubFormEmbedEditor,
+      visual: StubFormEmbedEditor,
+      advanced: StubFormEmbedEditor,
+    })
+  );
+
+  const html = await renderPublicPageRuntimeHtml({
+    title: "Internal form",
+    blocks: [
+      {
+        id: "form-embed-internal",
+        type: "form-embed",
+        variant: "standard",
+        data: {
+          formId: "form-internal",
+          resolved: {
+            formName: "Internal",
+            submissionAccess: "internal",
+            fields: [
+              {
+                id: "field-1",
+                type: "text",
+                label: "Name",
+                name: "name",
+                required: true,
+              },
+            ],
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain('data-form-embed-runtime-boundary="internal"');
+  expect(html).not.toContain('data-nextless-form-runtime="1"');
+  expect(html).not.toContain("__nextlessFormRuntimeClient");
+});
+
+test("renderPublicPageRuntimeHtml renders Contact Forms runtime captcha projection", async () => {
+  clearWidgets();
+  registerWidget(
+    createContactWidget({
+      wizard: StubContactEditor,
+      visual: StubContactEditor,
+      advanced: StubContactEditor,
+    })
+  );
+
+  const html = await renderPublicPageRuntimeHtml({
+    title: "Contact runtime",
+    blocks: [
+      {
+        id: "contact-runtime",
+        type: "contact",
+        variant: "form-left",
+        data: {
+          ...contactDefaults,
+          form: {
+            ...contactDefaults.form,
+            fields: ["name", "email", "message"],
+            submission: {
+              ...contactDefaults.form?.submission,
+              mode: "forms-runtime",
+              formId: "form-public",
+              fieldMap: {
+                name: "full_name",
+                email: "reply_email",
+                phone: "",
+                message: "message_body",
+              },
+            },
+          },
+          resolved: {
+            formId: "form-public",
+            formName: "Support",
+            status: "published",
+            submissionAccess: "public",
+            submissionNonce: "signed-contact-nonce",
+            botProtection: {
+              provider: "recaptcha_v3",
+              siteKey: "site-key-contact",
+              action: "public_write",
+            },
+            fields: [
+              {
+                id: "field-1",
+                type: "text",
+                label: "Full name",
+                name: "full_name",
+                required: true,
+                orderIndex: 0,
+                settings: {},
+              },
+              {
+                id: "field-2",
+                type: "email",
+                label: "Reply email",
+                name: "reply_email",
+                required: true,
+                orderIndex: 1,
+                settings: {},
+              },
+              {
+                id: "field-3",
+                type: "textarea",
+                label: "Message",
+                name: "message_body",
+                required: true,
+                orderIndex: 2,
+                settings: {},
+              },
+            ],
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain('data-contact-form-mode="forms-runtime"');
+  expect(html).toContain('action="/forms/form-public/submissions"');
+  expect(html).toContain('data-form-submit-label="Send message"');
+  expect(html).toContain('data-form-captcha-site-key="site-key-contact"');
+  expect(html).toContain('name="captchaToken"');
+  expect(html).toContain("signed-contact-nonce");
+  expect(html).toContain("__nextlessFormRuntimeClient");
 });
 
 test("renderPublicPageHtml applies wrapper settings and inherited block defaults", () => {

@@ -7,6 +7,9 @@
 > **Dodatkowe runtime routes:** `/audit-31-05-form-embed-double`, `/audit-31-05-form-embed-internal`
 > **Playwright sessions:** `formembed-31`, `formembed-public-31`
 > **Claude:** probowano uruchomic non-interactive; CLI zwrocil `401 Invalid authentication credentials` przed testem. Dodatkowy przeglad zrobiono subagentem Codex.
+> **Remediation 2026-06-02:** TASK-395 zamknal FE-31-05-01..09 w kodzie,
+> testach i dokumentacji. Raport zachowuje pierwotne obserwacje jako baseline
+> oraz ponizej notuje zamkniecie findings.
 
 ## Metoda
 
@@ -54,28 +57,34 @@ Przetestowane:
 |---|---|---|---|---|---|---|
 | Initial render | Otwarta strona i zaznaczony blok | Canvas pokazuje tytul/opis/surface, ale `formPresent=false`; editor diagnostics widzi saved form, 10 pol, multi-step i save progress. | Public route renderuje realny `<form>`, nonce, kroki i pola. | Dziala public, ograniczone w admin canvas | Admin editor pobiera detale formularza dla diagnostyki, ale canvas nie hydratuje runtime fields. | Patrz `FE-31-05-09` dla admin-preview gap. |
 | Wizard form selection | `Run setup again` | Wizard ma writable path `formId`; pokazuje `Audit 31-05 Form Embed Intake`, `Published`, `Multi-step`, `Save progress`, field count/type list. | Public form uzywa wybranego `formId`. | Dziala | Wizard ogranicza setup do wyboru saved form. | Brak. |
-| Visual copy | Wpisano custom title, description, submit label, success message | Editor pokazuje custom copy; canvas aktualizuje tytul/opis. | Public DOM baseline ma `submitText=Send audit request` i `successMessageAttr=Widget custom success.` | Dziala czesciowo | Public submit nie dochodzi do sukcesu przez 404 route; dodatkowo API runtime success moze nadpisac widget copy po naprawie route. | Patrz `FE-31-05-07`. |
+| Visual copy | Wpisano custom title, description, submit label, success message | Editor pokazuje custom copy; canvas aktualizuje tytul/opis. | Public DOM baseline ma `submitText=Send audit request` i `successMessageAttr=Widget custom success.` | Naprawione | Public submit route jest zamontowany, a runtime preferuje widget success copy przed form/runtime copy. | FE-31-05-01, FE-31-05-07 zamkniete 2026-06-02. |
 | Layout | Center, Extra large, Spacious, End button, wide side padding, extra-spacious vertical padding, spacious field gap | Root zmienia `width=xl`, `spacing=lg`, `px-8 py-12`; editor summary pokazuje Extra large / Center / Spacious. | Public baseline fixture zostal w stanie startowym, bez tych admin zmian. | Dziala w admin | Visual controls zapisuje layout paths. | Dodac publish/e2e po naprawie public submit. |
 | Field labels | Toggle show labels / required marks | Editor i diagnostics zachowuja toggle; po powrocie ON field labels sa widoczne w config. | Public baseline pokazuje label + `*` dla required. | Dziala | Renderer uzywa `fields.showLabels` i `fields.showRequiredIndicator`. | Brak. |
 | Style controls | Background, border color, border width, radius, input size, label/helper/submit colors | Canvas zmienia background, border `rgb(37,99,235)`, border-2, rounded-xl, input small; Advanced mowi `5 saved color overrides`. | Public baseline ma theme/default fixture styles. | Dziala z drobnym UX gap | `Clear surface` w probe zwrocil `false`, bo surface zostal theme default; nie znaleziono twardego runtime bledu. | Ewentualnie doprecyzowac clear-state UX dla theme defaults. |
 | Heading level | H3 | Canvas `headingTag=h3`; Visual summary `Heading level H3`. | Nie publikowano w tym stanie. | Dziala | `layout.headingLevel` steruje tagiem. | Brak. |
 | Navigation progress | Show progress OFF/ON, TTL `0` potem `14` | Editor przyjal toggle i TTL; canvas bez realnych krokow nie pokazal progress. | Public baseline ma `Step 1 of 2`, `50%`; po Next `Step 2 of 2`, `100%`; `ttl=7`. | Dziala public, admin canvas nie weryfikuje | Public runtime bindowal progress; admin canvas nie ma hydrated form fields. | Patrz `FE-31-05-09`. |
-| Submit behavior | Loading label, success behavior `Keep form` | Advanced summary `After submit Keep form`; canvas bez form nie pokazal runtime state. | Public submit nie moze potwierdzic sukcesu przez 404. | Zablokowane przez route | Runtime submit fetchuje `form.action`, ale public host nie obsluguje tej trasy. | Patrz `FE-31-05-01`. |
-| Advanced diagnostics | Klik Advanced | `writablePaths=[]`; raw nonce nie jest widoczny; `Nonce policy: Waiting for runtime projection`; bot protection not configured. | Public DOM ma hidden `__nl_form_nonce`, Advanced go nie ujawnia. | Dziala dla redakcji | Advanced jest read-only i redaguje runtime-only wartosci. | Dodatkowo patrz `FE-31-05-08` dla schema/persistence risk. |
-| Public field render | `GET /audit-31-05-form-embed` | Nie dotyczy admin. | Renderuje text/email/select/radio/hidden/textarea/number/time/rating/checkbox; select default `Support`; hidden `segment=enterprise`; checkbox value `on`. | Dziala wizualnie | Renderer obsluguje wspierane typy. | Checkbox submit wymaga fixu, patrz `FE-31-05-04`. |
+| Submit behavior | Loading label, success behavior `Keep form` | Advanced summary `After submit Keep form`; canvas bez form nie pokazal runtime state. | Public submit route dziala przez public handler; runtime nadal stosuje configured success behavior. | Naprawione | Public handler `handlePublicFormsApi` deleguje do wspolnego Forms submit contractu. | FE-31-05-01 zamkniete 2026-06-02. |
+| Advanced diagnostics | Klik Advanced | `writablePaths=[]`; raw nonce nie jest widoczny; `Nonce policy: Waiting for runtime projection`; bot protection not configured. | Public DOM ma hidden `__nl_form_nonce`, Advanced go nie ujawnia. | Naprawione | Advanced jest read-only, a persisted widget schema odrzuca `resolved.submissionNonce`. | FE-31-05-08 zamkniete 2026-06-02. |
+| Public field render | `GET /audit-31-05-form-embed` | Nie dotyczy admin. | Renderuje text/email/select/radio/hidden/textarea/number/time/rating/checkbox; checkbox value/runtime payload jest backend-compatible boolean. | Naprawione | Renderer ustawia checkbox `value="true"`, a runtime serializuje checkbox jako boolean. | FE-31-05-04 zamkniete 2026-06-02. |
 | Public multi-step | Wypelniono step 1 i kliknieto Next | Nie dotyczy admin. | Step 1 chowa sie, step 2 pokazuje sie, submit staje sie widoczny, progress `100%`. | Dziala | `validateCurrentStep` i `refreshStepUi` dzialaja dla normalnego Next flow. | Brak dla normalnego flow; restore gap w `FE-31-05-05`. |
 | Conditional logic | Topic `Support` | Nie dotyczy admin. | Pole `details` ma `data-logic-operator=equals`, `data-logic-field=topic`, `data-logic-visible=1`. | Dziala | Runtime refreshuje field logic po input/change. | Brak. |
-| Public submit | Klik submit po wypelnieniu wszystkich pol | Nie dotyczy admin. | `fetch` do `http://localhost:3000/forms/{id}/submissions` zwraca `404 Not Found`; UI pokazuje generic error. | Nie dziala | Public site nie montuje Forms submission route na public host. | Patrz `FE-31-05-01`. |
-| Duplicate Form Embed | Public page z dwoma Form Embed | Nie dotyczy admin. | Pierwszy form ma `data-form-runtime-bound=1`, drugi ma `bound=null`; drugi nie dostaje eventow/runtime state. | Nie dziala | Runtime ma one-shot guard i wykonuje `bindForms()` tylko raz. | Patrz `FE-31-05-02`. |
-| Internal-only form | Public page z `submissionAccess=internal` | Advanced pokaze internal access, jesli taki form jest wybrany. | Public route renderuje interaktywny form bez nonce i pole `internal_note`; submit idzie na 404 w obecnym host. | Nie dziala / security UX | Resolver przekazuje pola internal form do public renderu. | Patrz `FE-31-05-03`. |
-| Checkbox | Zaznaczono `send_updates` | Nie dotyczy admin. | DOM wysyla browser value `on`; direct validator probe zwrocil `form_payload_invalid`. | Nie dziala po naprawie route | Checkbox nie ma `value=true`, a API nie akceptuje `on`. | Patrz `FE-31-05-04`. |
-| Save progress restore | W localStorage ustawiono `currentStep=2` z samym `details` | Nie dotyczy admin. | Strona startuje na step 2, submit widoczny, wymagane `name/email` ze step 1 sa puste i ukryte. | Nie dziala / UX drift | Hydration ufa saved step, submit waliduje tylko current step. | Patrz `FE-31-05-05`. |
-| Number/time step | Field `team_size` ma default `4` i `settings.step=2` dla multi-step | Nie dotyczy admin. | Number input ma `step=2`, default `4`; dla min `1` backend uzna wartosci 1/3/5..., wiec default 4 jest semantycznie zly. Time input tez dostaje `step=2`. | Nie dziala modelowo | Jedno `settings.step` oznacza jednoczesnie krok formularza i numeric/time input step. | Patrz `FE-31-05-06`. |
-| Success copy / redirect | Code audit po submit blockerze | Editor pozwala ustawic widget success copy. | Po naprawie 404 runtime bedzie preferowal API `runtime.successMessage` i wykona dowolny `runtime.redirectUrl`. | Ryzyko runtime | Forms route zwraca form-level success/redirect, runtime je preferuje. | Patrz `FE-31-05-07`. |
+| Public submit | Klik submit po wypelnieniu wszystkich pol | Nie dotyczy admin. | Public handler przyjmuje signed nonce JSON submit, mapuje known Forms errors i zwraca runtime success/redirect. | Naprawione | `core/server/publicFormsApi.ts` montowany jest przed public page fallback. | FE-31-05-01 zamkniete 2026-06-02. |
+| Duplicate Form Embed | Public page z dwoma Form Embed | Nie dotyczy admin. | Kolejny inline/runtime script wywoluje shared binder; oba formularze binduja sie niezaleznie. | Naprawione | Runtime exposes `window.__nextlessFormRuntimeBind` and rebinds on repeat script/microtask/DOMContentLoaded. | FE-31-05-02 zamkniete 2026-06-02. |
+| Internal-only form | Public page z `submissionAccess=internal` | Advanced pokazuje internal access i ostrzezenie. | Public resolver nie projektuje fields; renderer fail-closed do noninteractive boundary bez `<form>`/runtime script. | Naprawione | `resolveFormRuntimeData` zwraca `public_submission_disabled`, a renderer blokuje explicit internal data. | FE-31-05-03 zamkniete 2026-06-02. |
+| Checkbox | Zaznaczono `send_updates` | Nie dotyczy admin. | Runtime payload wysyla `send_updates: true`; optional unchecked checkbox nie wysyla browser `on`. | Naprawione | Renderer/runtime serializuja boolean, backend parser pozostaje strict. | FE-31-05-04 zamkniete 2026-06-02. |
+| Save progress restore | W localStorage ustawiono `currentStep=2` z samym `details` | Nie dotyczy admin. | Runtime clampuje restore do pierwszego incomplete previous step i submit waliduje wszystkie widoczne kroki do current. | Naprawione | `clampRestoredStep` + `validateStepsThroughCurrent`. | FE-31-05-05 zamkniete 2026-06-02. |
+| Number/time step | Field `team_size` ma default `4` i `settings.step=2` dla multi-step | Nie dotyczy admin. | Form step i input increment sa rozdzielone: `formStep` grupuje kroki, `inputStep` emituje HTML/backend increment. Legacy `step` mapuje tylko do form step. | Naprawione | Domain/admin/renderer/preview uzywaja nowych helperow i ustawien. | FE-31-05-06 zamkniete 2026-06-02. |
+| Success copy / redirect | Code audit po submit blockerze | Editor pozwala ustawic widget success copy i Advanced pokazuje source/redirect policy. | Runtime preferuje widget copy, wykonuje tylko same-origin relative redirect, a form service odrzuca unsafe successRedirectUrl przed zapisem. | Naprawione | Runtime guard + `normalizeFormSuccessRedirectUrl`. | FE-31-05-07 zamkniete 2026-06-02. |
 
 ## Znaleziska do poprawy
 
 ### FE-31-05-01 - Public Form Embed submit trafia w 404
+
+**Status 2026-06-02:** Naprawione. `core/server/publicFormsApi.ts` montuje
+`POST /forms/:id/submissions` w public request handlerze i deleguje do
+wspolnego `handleFormSubmissionRoute`, zachowujac strict schema validation,
+signed nonce/HMAC, Forms access evaluator, `public_write` rate limit i
+machine-readable Forms error mapping.
 
 **Objaw:** na `/audit-31-05-form-embed` public DOM byl poprawnie zbindowany:
 
@@ -131,6 +140,11 @@ To samo wystapilo dla checked i unchecked checkbox flow oraz internal-only page.
 
 ### FE-31-05-02 - Drugi Form Embed na tej samej stronie nie binduje runtime
 
+**Status 2026-06-02:** Naprawione. Runtime exposes
+`window.__nextlessFormRuntimeBind`; kolejne inline scripts wywoluja binder
+zamiast wychodzic z one-shot guard, a binder odpala sie tez w microtask i na
+`DOMContentLoaded`.
+
 **Objaw:** na `/audit-31-05-form-embed-double` public DOM mial dwa formularze.
 Pierwszy byl zbindowany, drugi nie:
 
@@ -162,6 +176,11 @@ Pierwszy byl zbindowany, drugi nie:
    parsera, oba formularze musza miec `data-form-runtime-bound=1`.
 
 ### FE-31-05-03 - Internal-only form renderuje sie publicznie jako interaktywny formularz
+
+**Status 2026-06-02:** Naprawione. Public resolver nie projektuje fields dla
+published internal forms (`public_submission_disabled`), a renderer dodatkowo
+fail-closed dla explicit `submissionAccess="internal"` bez `<form>` i runtime
+script.
 
 **Objaw:** fixture z `submissionAccess=internal` opublikowana na
 `/audit-31-05-form-embed-internal` renderuje:
@@ -201,6 +220,10 @@ dostepny dla internal form.
    `data-nextless-form-runtime`.
 
 ### FE-31-05-04 - Checkbox wysyla `on`, a backend akceptuje tylko boolean/true/1/false/0
+
+**Status 2026-06-02:** Naprawione. Renderer ustawia checkbox `value="true"`,
+a runtime payload builder serializuje zaznaczone checkboxy jako boolean `true`
+zamiast korzystac z browser-default `on`.
 
 **Objaw:** public DOM pokazal:
 
@@ -243,6 +266,10 @@ zwrocil `form_payload_invalid`.
    zaznaczenia optional checkbox nie moze wyslac `on`.
 
 ### FE-31-05-05 - Saved progress moze pominac wymagane pola z poprzednich krokow
+
+**Status 2026-06-02:** Naprawione. Runtime clampuje restored step do pierwszego
+niekompletnego poprzedniego kroku i submit waliduje wszystkie widoczne kroki do
+aktualnego kroku.
 
 **Objaw:** po zapisaniu w localStorage:
 
@@ -291,6 +318,11 @@ Wymagane pola step 1 sa puste i ukryte, a submit jest widoczny.
 
 ### FE-31-05-06 - `settings.step` ma dwa sprzeczne znaczenia
 
+**Status 2026-06-02:** Naprawione. Domain/admin/renderer rozdzielaja
+`formStep` (multi-step placement) i `inputStep` (number/range/time increment).
+Legacy `settings.step` zostaje niedestrukcyjnym adapterem form-step i nie
+trafia do HTML/backend input increment.
+
 **Objaw:** fixture ustawil pole `team_size` jako krok 2 formularza. Public DOM
 pokazal jednoczesnie:
 
@@ -338,6 +370,11 @@ domyslne `4` jest niezgodne z wlasnym input contractem. Time input tez dostal
 
 ### FE-31-05-07 - Success message i redirect sa kontrolowane przez form-level API response
 
+**Status 2026-06-02:** Naprawione. Runtime preferuje widget success copy przed
+API/runtime copy, ignoruje unsafe redirect, a Forms service odrzuca form-level
+`successRedirectUrl` inny niz same-origin relative path przed persistence.
+Advanced pokazuje read-only success source i redirect policy.
+
 **Objaw:** public submit jest obecnie blokowany przez 404, ale code path po
 naprawie route ma dwa ryzyka:
 
@@ -372,6 +409,10 @@ naprawie route ma dwa ryzyka:
 
 ### FE-31-05-08 - `resolved.submissionNonce` miesci sie w schema widget data
 
+**Status 2026-06-02:** Naprawione. Persisted Form Embed schema ma strict
+`resolved` projection bez `submissionNonce`; runtime renderer nadal akceptuje
+request-scoped nonce z server-side resolvera bez zapisu w widget data.
+
 **Objaw:** Advanced UI redaguje nonce i pokazuje `Waiting for runtime
 projection`, ale schema `form-embed` dopuszcza dowolny `resolved` payload.
 
@@ -395,6 +436,11 @@ projection`, ale schema `form-embed` dopuszcza dowolny `resolved` payload.
    w page-builder data ani debug payloadach.
 
 ### FE-31-05-09 - Admin canvas nie renderuje realnego formularza mimo poprawnych diagnostics
+
+**Status 2026-06-02:** Naprawione przez explicit boundary contract. Canvas
+without hydrated `resolved.fields` renders `data-form-embed-runtime-boundary`
+instead of an ambiguous shell; runtime-hydrated public/preview blocks render the
+real mapped form, while internal/error/empty states fail closed.
 
 **Objaw:** na stronie admin canvas po wyborze zapisanej formy mial:
 
@@ -430,18 +476,15 @@ Jednoczesnie Wizard/Visual/Advanced diagnostics poprawnie pokazywaly:
 
 ## Walidacja
 
-Uruchomione dla raportu:
+Uruchomione po remediacji TASK-395:
 
-- `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx tests/vitest/ui/form-embed-editor-wave.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/widgets/editorContract.test.ts tests/vitest/site/publicRenderer.test.tsx`
-  - Wynik: passed, 5 files / 69 tests.
-- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test tests/integration/routes/forms.test.ts`
-  - Wynik: passed, 3 tests.
-- `bun --cwd core lint`
-  - Wynik: passed.
-- `bun --cwd core lint:types`
-  - Wynik: passed.
+- `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/forms/validation.test.ts tests/vitest/forms/formRuntimeResolver.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/ui/form-embed-editor-wave.test.tsx`
+  - Wynik: passed, 6 files / 75 tests.
+- `set -a && source .env && set +a && bun test tests/unit/server/publicFormsApi.test.ts tests/integration/routes/forms.test.ts tests/unit/forms/formsService.test.ts tests/unit/forms/submissionService.test.ts`
+  - Wynik: passed, 18 tests.
+- `bun run test:vitest -- tests/vitest/ui/form-canvas.test.tsx tests/vitest/ui/form-canvas-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx`
+  - Wynik: passed, 6 files / 31 tests.
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/admin/formsClient.test.ts`
+  - Wynik: passed, 3 files / 56 tests.
 
-Testy przechodza, ale obecne route tests sprawdzaja rejestracje
-`POST /forms/:id/submissions` w routerze, nie realne zamontowanie tej trasy w
-public `handlePublicRequest`. Ten brak pokryl Playwright runtime probe i powinien
-wejsc do nowego Bun route-boundary testu przy fixie `FE-31-05-01`.
+Final lint/typecheck/security validation is tracked in TASK-395 closure notes.

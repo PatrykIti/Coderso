@@ -19,6 +19,19 @@ Zmiany z klikanej sesji admin nie byly zapisywane jako finalny stan publiczny.
 Publiczny route pozostal w baseline query z trzema fixture produktami i bez
 skonfigurowanej sciezki detalu produktu.
 
+## Remediacja TASK-385 (2026-06-02)
+
+PG-31-05-01 i PG-31-05-02 zostaly zamkniete:
+
+- Advanced `Product behavior` pokazuje aktywne `Selected products` tylko dla
+  `curation.mode=manual`. W query mode zachowane `curation.productIds` sa
+  opisane jako `Saved manual selection` oraz inactive.
+- Smoke harness seeduje Product Gallery media asset, dopina media ID do
+  deterministycznych commerce products, patchuje `/audit-31-05-product-gallery`
+  na `limit=2`, `link.basePath=/fixture-products` i widoczny view-all link.
+- Product Gallery smoke proof wymaga teraz admin/public obrazow, ready card
+  links i widocznego `View all fixture products`.
+
 ## Pokrycie UI
 
 Przetestowane:
@@ -107,6 +120,10 @@ Problem jest w Advanced: summary row zawsze liczy
    aktywna diagnostyka nie mowi `Selected products 2 products` bez informacji
    o nieaktywnosci.
 
+**Status po TASK-385:** naprawione. Advanced pokazuje `Saved manual selection`
+oraz `2 products saved, inactive in query mode` dla zachowanych manual IDs w
+query mode.
+
 ## Public baseline
 
 `curl http://localhost:3000/audit-31-05-product-gallery` zwrocil HTTP 200 i SSR
@@ -134,6 +151,9 @@ HTML z:
   query `3/3`, bo wszystkie produkty byly juz pokazane. Zweryfikowano stan
   `all_products_visible`; dla pelnego visible link potrzebny jest total > shown.
 
+Status po TASK-385: powyzsze ograniczenia sa zamkniete w smoke harness przez
+seedowane media, safe `link.basePath`, `limit=2` oraz `view-all` destination.
+
 ## Kod-owner
 
 - `core/widgets/core/productGallery.tsx`
@@ -155,13 +175,10 @@ HTML z:
 
 ## Rekomendacje
 
-1. Naprawic `PG-31-05-01` jako maly UI diagnostics fix bez zmiany renderera.
-2. Dodac commerce fixture z obrazami produktu i skonfigurowanym safe
-   `link.basePath`, zeby browser pass potwierdzal link ready, target/rel i
-   image alt/aspect branch.
-3. Dodac fixture z `total > shown` dla `view-all`, zeby potwierdzic realny
-   widoczny link, nie tylko `all_products_visible` i `missing_destination`.
-4. Zbadac app-level console 404, jesli powtarza sie w kolejnych widgetach.
+1. Zbadac app-level console 404, jesli powtarza sie w kolejnych widgetach.
+
+Zamkniete przez TASK-385: inactive manual-selection diagnostics,
+image/link-ready fixture i visible view-all fixture.
 
 ## Walidacja
 
@@ -176,6 +193,13 @@ HTML z:
 - `bun test ./tests/integration/routes/productGalleryPreview.test.ts` — passed, 2 tests.
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` — passed, 16 tests.
 - `curl http://localhost:3000/audit-31-05-product-gallery` — HTTP 200, public baseline query.
+- `bun test tests/unit/playwright-widget-contract-smoke.test.ts` — passed, 38 tests.
+- `bun run test:vitest -- tests/vitest/ui/product-gallery-editor-wave.test.tsx tests/vitest/widgets/productGallery.test.tsx` — passed, 18 tests.
+- `bun test tests/integration/routes/productGalleryPreview.test.ts` — passed, 2 tests.
+- `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget product-gallery --output-json .tmp/task-385-product-gallery-smoke-dry-run.json --output-md .tmp/task-385-product-gallery-smoke-dry-run.md` — passed dry-run, `fixtureGaps=0`, `metadataGaps=0`.
+- `git diff --check` — passed.
+- `bun --cwd core lint` — passed.
+- `bun --cwd core lint:types` — passed.
 - Pierwszy lokalny test command zostal odpalony z blednym `cwd` i zwrocil
   `Script not found "test:vitest"` przed uruchomieniem suite; powyzsze wyniki
   sa z poprawionych komend z repo root.

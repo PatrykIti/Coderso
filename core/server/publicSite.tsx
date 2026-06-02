@@ -95,6 +95,7 @@ import { searchPublicIndex } from "../services/search/searchIndexService";
 import { publicSearchRequestSchema } from "./validation/filterSchemas";
 import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
+import { handlePublicFormsApi } from "./publicFormsApi";
 import { readBindingPathValue } from "../services/utils/bindingPath";
 
 export type PublicPageData = {
@@ -434,6 +435,7 @@ const hydrateRuntimeBlock = async (
           successRedirectUrl: resolvedData.successRedirectUrl,
           submissionAccess: resolvedData.submissionAccess,
           submissionNonce: resolvedData.submissionNonce ?? null,
+          botProtection: resolvedData.botProtection ?? null,
           fields: resolvedData.fields,
           ...(resolvedData.error ? { error: resolvedData.error } : {}),
         }
@@ -1192,6 +1194,14 @@ export async function handlePublicRequest(req: Request) {
     security,
   });
   if (bookingApiResponse) return bookingApiResponse;
+
+  const formsApiResponse = await handlePublicFormsApi(req, {
+    url,
+    ip,
+    userAgent,
+    security,
+  });
+  if (formsApiResponse) return formsApiResponse;
 
   checkRateLimit(
     "public_read",

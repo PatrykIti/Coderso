@@ -5,7 +5,7 @@
 **Category:** Widgets + Entry Teaser + Runtime Fixtures + Admin Console + QA + Docs + Leaf Remediation
 **Estimated Effort:** Small
 **Dependencies:** TASK-384
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,11 @@ Report saw a fixture 404 and React `createRoot/createPortal` console noise not t
 
 ## Sub-Tasks
 
-- [ ] Reproduce ET-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce ET-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -44,9 +44,10 @@ Report saw a fixture 404 and React `createRoot/createPortal` console noise not t
 
 ## Owner Files
 
-- `core/admin/ui/pages/PageEditor.tsx`
-- `core/admin/ui/pages/PagePreview.tsx`
-- `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx`
+- `scripts/playwright-widget-contract-smoke.ts`
+- `tests/unit/playwright-widget-contract-smoke.test.ts`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-inventory.json`
+- No PageEditor/PagePreview/EntryTeaser editor code change was required after the stale fixture path was removed; repeatable console errors are now captured by the Entry Teaser smoke proof instead of hidden in widget closure notes.
 
 ## Security Contract
 
@@ -93,3 +94,11 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-02)
+
+- Removed the stale public fixture path by changing Entry Teaser smoke inventory to the audited `/audit-31-05-entry-teaser` admin/public route.
+- Added Entry Teaser proof collection for admin/public console errors during the populated fixture pass. Any repeatable `createRoot/createPortal` error now fails the Entry Teaser proof with `entry_teaser_console_errors` and is visible in the smoke report.
+- `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget entry-teaser --output-json .tmp/task-384-entry-teaser-smoke-dry-run.json --output-md .tmp/task-384-entry-teaser-smoke-dry-run.md` reports 0 fixture gaps and 0 metadata gaps.
+- Live Playwright replay was not available in this workspace because `.env` lacks the required Playwright login credentials.
+- Changelog 1074 covers this leaf.

@@ -8,6 +8,12 @@
 > **Playwright sessions:** `appointment-31`, `appointment-public-31`
 > **Claude:** probowano uruchomic non-interactive; CLI zwrocil `401 Invalid authentication credentials` przed testem. Dodatkowy przeglad zrobiono subagentem Codex.
 
+> **Status po TASK-394:** zamkniete 2026-06-02. Runtime binduje pary
+> calendar/form niezaleznie od kolejnosci DOM, public reservation API wymaga
+> exact match z server-generated slot, mixed public/internal CAPTCHA scope jest
+> wybor-serwisu-based, widget success copy ma priorytet nad API default, a
+> client-side field bounds sa wspolne ze schema public API.
+
 ## Metoda
 
 Test byl prowadzony od UI na stronie audytowej z blokiem `appointment-form`.
@@ -57,28 +63,33 @@ Przetestowane:
 | Variants | Visual -> `Compact`, `Inline`, `Sidebar`, `Card summary` | Root classes zmieniaja layout/padding/grid/shadow; preview aktualizuje sie po kliknieciu. | Opublikowany runtime route ma `card-summary`. | Dziala | `variant` steruje klasami w rendererze. | Brak. |
 | Locale | Select `Polish` | Root `data-locale=pl-PL`. | Selection summary pokazal `16 cze 2026`, `10:00 - 10:30`. | Dziala | Runtime formatter bierze `form.dataset.locale`. | Brak. |
 | After submit destination | Wybrano page `Audit 31-05 Booking Calendar` w admin UI | Picker pokazywal `Links to selected site page`; preview root dostal `data-success-redirect=/audit-31-05-booking-calendar`. | Dla runtime submit uzyto strony bez redirectu, aby odczytac success copy. | Dziala w admin | Page-first picker poprawnie zapisuje safe relative path. | Dodac osobny public e2e dla redirectu po naprawie success copy/parowania. |
-| Copy fields | Wpisano title, description, submit, loading, success | Preview pokazal `Audit appointment`, `Confirm your audited reservation.`, `Reserve audit slot`, `Audited reservation confirmed.` jako attr. | Po prawdziwym submit public pokazal `Appointment booked successfully.` zamiast custom copy. | Nie dziala dla success copy | Runtime preferuje `result.runtime.successMessage`, a API zawsze zwraca default. | Patrz `AF-31-05-04`. |
+| Copy fields | Wpisano title, description, submit, loading, success | Preview pokazal `Audit appointment`, `Confirm your audited reservation.`, `Reserve audit slot`, `Audited reservation confirmed.` jako attr. | Po TASK-394 runtime preferuje widget `data-success-message`; API runtime copy jest fallbackiem. | Dziala po TASK-394 | `bookingRuntimeScript.ts` pokazuje widget success copy przed API default; regresja pokrywa custom widget copy + default API response. | Brak. |
 | Slot summary copy | Zmieniono label/empty/no-selection | Empty summary pokazuje `Pick an audited slot first.`; no-selection error jest dostepny. | Single route po selection pokazuje service + date/time; po submit resetuje summary do empty. | Dziala | Form slucha selection event i `setSelection` czysci stan po sukcesie. | Brak. |
 | Include service/resource | Service ON, resource OFF | Root `data-show-service-in-summary=true`, `data-show-resource-in-summary=false`. | Summary zawiera `Audit 31-05 Service`, nie zawiera `Audit 31-05 Mechanic`. | Dziala | Runtime sklada summary z toggli. | Brak. |
 | Name mode | `First and last name` | `customerName` znika; `customerFirstName` i `customerLastName` sa required. | Payload public API ma `customerName: "Jane Audit"`. | Dziala | `buildCustomerName` laczy split-name inputs. | Brak. |
-| Email / phone required | Email i phone ON + required | Inputs maja `required=true`; phone ma pattern po wyborze preset. | Browser pozwolil wyslac poprawne wartosci. | Dziala | HTML required/pattern sa renderowane. | Uzupelnic maxLength, patrz `AF-31-05-05`. |
+| Email / phone required | Email i phone ON + required | Inputs maja `required=true`; phone ma pattern po wyborze preset. | Po TASK-394 name/email/phone maja `maxLength` zgodne z API; browser pozwolil wyslac poprawne wartosci. | Dziala po TASK-394 | HTML required/pattern/maxLength sa renderowane. | Brak. |
 | Phone validation: No extra | Wybrano `No extra validation` | Phone input po tej opcji ma `pattern=null`, `title=null`. | Nie publikowano w tym stanie. | Dziala | `validationText` zachowuje jawnie puste pattern/message po TASK-343. | Brak. |
 | Phone validation: Digits and spaces | Wybrano `Digits and spaces` + custom help | Phone input ma `pattern=^[0-9\\s]{7,20}$`, title `Use digits and spaces for audit.` | Submit z `48600700800` przeszedl. | Dziala | Preset zapisuje pattern i message. | Brak. |
 | Notes max length | Ustawiono `750` | Textarea ma `maxLength=750`; counter jest obslugiwany przez runtime. | Public route pokazal `notesMaxLength=750`, payload zawieral note. | Dziala | Renderer ustawia `maxLength` dla notes. | Brak. |
-| Custom field: select | Dodano pole, label `Company`, type `Select`, required, options `Email`, `Phone` | Preview renderuje select `customField:custom-field-1`, required, options. | Payload metadata ma `customFields[0] = { id, type: "select", label: "Company", value: "Email" }`. | Dziala | Runtime zbiera `[data-appointment-custom-field]`. | Uzupelnic bounds/maxLength dla tekstowych custom fields, patrz `AF-31-05-05`. |
+| Custom field: select | Dodano pole, label `Company`, type `Select`, required, options `Email`, `Phone` | Preview renderuje select `customField:custom-field-1`, required, options. | Payload metadata ma `customFields[0] = { id, type: "select", label: "Company", value: "Email" }`; po TASK-394 custom labels/options/values sa bounded. | Dziala po TASK-394 | Runtime zbiera `[data-appointment-custom-field]`; owner normalizer/API schema korzystaja ze wspolnych custom field limitow. | Brak. |
 | Consent | Show consent ON, required ON, privacy/terms page pickers | Consent checkbox required; privacy/terms linki renderuja `/audit-31-05-booking-calendar`. | Payload metadata ma `consent.accepted=true` i label. | Dziala | Renderer linkuje safe relative URLs, runtime zbiera consent metadata. | Brak. |
 | Surface colors | Ustawiono frame border, summary bg/border, submit bg; clear frame background | Preview ma `border-color: rgb(37, 99, 235)` i submit bg `rgb(15, 118, 110)`; clear frame background wraca do theme default. | Public route ma te style po publikacji fixture. | Dziala | `SharedColorControl` zapisuje/usuwa konkretne pola. | Brak. |
 | Advanced route/flow | Klik `Advanced` | Writable paths puste; route i flow sa read-only. | Nie dotyczy. | Dziala | Advanced nie pozwala edytowac endpointu/secrets. | Brak. |
 | Advanced security diagnostics | Klik `Advanced` | `Submission nonce: Not injected in editor`, `Captcha: Not configured`, `Runtime error: No runtime warning`; raw nonce nie jest widoczny. | Public form ma hidden nonce, ale wartosc nie jest w admin UI. | Dziala | Admin canvas nie pokazuje secret/runtime-only wartosci. | Brak. |
-| Pairing calendar -> form | Public page z `booking-calendar` przed `appointment-form` | Nie dotyczy admin. | Calendar mial `data-booking-calendar-bound=1`, form mial `data-booking-form-bound=null`; selection event nie wlaczyl submitu. | Nie dziala | Runtime ma globalny one-shot guard i drugi inline script wychodzi przed bindowaniem pozniejszego form. | Patrz `AF-31-05-01`. |
-| Public submit happy path | Single public route, ustawiono selection state, wypelniono split-name/email/phone/notes/custom/consent, klik submit | Nie dotyczy admin. | POST 200; reservation utworzona; payload zawiera nonce-protected metadata; form resetuje sie i submit wraca disabled. | Dziala czesciowo | Runtime i public API dzialaja, ale success copy jest nadpisana przez API default. | Naprawic `AF-31-05-04`. |
-| Public slot trust | Direct POST z valid nonce na 03:00-03:05 UTC dla resource `Europe/Warsaw` | Nie dotyczy admin. | API zwrocilo 200 i utworzylo reservation poza harmonogramem oraz z 5-min duration. | Nie dziala / security | Public route ufa client `startsAt`/`endsAt` i nie porownuje z server-generated slots. | Patrz `AF-31-05-02`. |
-| Client-side field bounds | Public DOM probe | Name/email/phone `maxLength=-1`, custom select brak bounds; notes ma 750. | API ma limity 200/320/64/2000 i custom value 2000. | Ryzyko UX/API | UI moze przyjac wartosci, ktore API odrzuci jako `validation_error`. | Patrz `AF-31-05-05`. |
-| Mixed public/internal captcha | Code/subagent audit | Nie dotyczy zwyklego single public fixture. | Przy mieszanym katalogu public service moze wymusic captcha hydration na formularzu dla internal service. | Ryzyko kontraktu | Resolver hydratuje captcha, gdy jakikolwiek service jest public; selection nie niesie access mode. | Patrz `AF-31-05-03`. |
+| Pairing calendar -> form | Public page z `booking-calendar` przed `appointment-form` | Nie dotyczy admin. | Po TASK-394 ponowne inline script wywoluje shared rebinder; calendar i form binduja sie w obu kolejnosciach DOM. | Dziala po TASK-394 | Runtime przechowuje `window.__nextlessBookingRuntimeBind` i idempotentnie odpala `bindCalendars()` / `bindForms()` przy kolejnych skryptach oraz microtask/DOMContentLoaded. | Brak. |
+| Public submit happy path | Single public route, ustawiono selection state, wypelniono split-name/email/phone/notes/custom/consent, klik submit | Nie dotyczy admin. | POST 200; reservation utworzona; payload zawiera nonce-protected metadata; form resetuje sie, submit wraca disabled, a widget success copy pozostaje widoczna. | Dziala po TASK-394 | Runtime success precedence zostal odwrocony na widget-first. | Brak. |
+| Public slot trust | Direct POST z valid nonce na 03:00-03:05 UTC dla resource `Europe/Warsaw` | Nie dotyczy admin. | Po TASK-394 valid nonce + wrong-duration slot zwraca `409 booking_slot_unavailable` przed persistence. | Dziala po TASK-394 / security | Public route regeneruje server availability dla service/resource/date/timezone i wymaga exact `startsAt`/`endsAt` match. | Brak. |
+| Client-side field bounds | Public DOM probe | Name/email/phone oraz text-like custom fields maja `maxLength`; notes nadal respektuje author limit do 2000. | API i client korzystaja ze wspolnych boundow 200/320/64/2000 oraz custom id/label/value 120/240/2000. | Dziala po TASK-394 | `appointmentFormContract.ts` jest wspolnym ownerem limitow dla widget schema/render/runtime i public API validation. | Brak. |
+| Mixed public/internal captcha | Code/subagent audit | Nie dotyczy zwyklego single public fixture. | Po TASK-394 service options maja `data-submission-access`; internal selection pomija captcha i nonce material, public selection nadal uzywa captcha/nonce. | Dziala po TASK-394 | Selection event niesie `submissionAccess`, a Appointment Form decyduje captcha/nonce per selected service. | Brak. |
 
 ## Znaleziska do poprawy
 
 ### AF-31-05-01 - Paired calendar/form nie zawsze binduja sie w public runtime
+
+**Status po TASK-394:** zamkniete. Booking runtime zachowuje shared rebinder w
+`window.__nextlessBookingRuntimeBind`; kolejne inline skrypty oraz microtask /
+DOMContentLoaded wywoluja idempotentne `bindCalendars()` i `bindForms()`.
+Regresja pokrywa kolejnosc calendar -> form oraz form -> calendar.
 
 **Objaw:** na `/audit-31-05-appointment-form`, gdzie `booking-calendar` stoi
 przed `appointment-form`, public DOM po zaladowaniu mial:
@@ -120,6 +131,10 @@ i submit dalej byl disabled.
 
 ### AF-31-05-02 - Public reservation API ufa client-side slot context
 
+**Status po TASK-394:** zamkniete. Public reservation route po access/nonce/
+captcha check regeneruje availability przez `previewBookingSlots` i wymaga
+exact server-generated `startsAt` + `endsAt` match przed persistence.
+
 **Objaw:** public probe wyslal direct POST z valid nonce na slot
 `2026-06-17T03:00:00.000Z` - `03:05:00.000Z` dla resource
 `Europe/Warsaw`, mimo ze fixture schedule to 09:00-17:00 i service duration to
@@ -148,6 +163,10 @@ i submit dalej byl disabled.
 
 ### AF-31-05-03 - Mixed public/internal catalog moze wymusic captcha na internal flow
 
+**Status po TASK-394:** zamkniete. Booking Calendar projektuje
+`submissionAccess` na service options i selection events, a Appointment Form
+wykonuje CAPTCHA/nonce tylko dla wybranego public service.
+
 **Objaw:** nie wystapil w prostym public-only fixture, ale code/subagent audit
 pokazuje kontraktowy problem dla mieszanych katalogow.
 
@@ -173,6 +192,9 @@ pokazuje kontraktowy problem dla mieszanych katalogow.
 
 ### AF-31-05-04 - Custom success copy jest nadpisywana przez API default
 
+**Status po TASK-394:** zamkniete. Runtime pokazuje widget
+`data-success-message` przed API runtime copy.
+
 **Objaw:** formularz mial `data-success-message="Audited reservation confirmed."`.
 Po realnym public submit sukces w UI pokazal `Appointment booked successfully.`.
 
@@ -194,6 +216,10 @@ Po realnym public submit sukces w UI pokazal `Appointment booked successfully.`.
    response ma pokazac custom copy.
 
 ### AF-31-05-05 - Client-side field bounds nie zgadzaja sie z public API schema
+
+**Status po TASK-394:** zamkniete. `appointmentFormContract.ts` definiuje
+wspolne limity; renderer, normalizer/runtime payload shaping i public API
+schema korzystaja z tych samych boundow.
 
 **Objaw:** public DOM probe pokazal:
 
@@ -232,17 +258,25 @@ API ma limity `customerName=200`, `customerEmail=320`, `customerPhone=64`,
 
 ## Walidacja
 
-Uruchomione po raporcie:
+Uruchomione po TASK-394:
 
-- `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/ui/appointment-form-editor-wave.test.tsx tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts tests/vitest/widgets/editorContract.test.ts tests/vitest/site/publicRenderer.test.tsx`
-  - Wynik: passed, 5 files / 59 tests.
+- `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts tests/vitest/widgets/bookingCalendar.test.tsx tests/vitest/ui/appointment-form-editor-wave.test.tsx`
+  - Wynik: passed, 4 files / 44 tests.
+- `bun run test:vitest -- tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  - Wynik: passed, 3 files / 36 tests.
 - `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test tests/unit/server/publicBookingApi.test.ts`
-  - Wynik: passed, 13 tests.
+  - Wynik: passed, 14 tests.
+- `bun test tests/security/codersoSecurityGate.test.ts`
+  - Wynik: passed, 4 tests.
 - `bun --cwd core lint`
   - Wynik: passed.
 - `bun --cwd core lint:types`
   - Wynik: passed.
-
-Uwaga operacyjna: pierwsza proba Vitest z katalogu `core/` zwrocila
-`Script not found "test:vitest"`; poprawny command surface jest w root
-`package.json` i tam powtorzenie przeszlo.
+- `bun run scan:semgrep`
+  - Wynik: passed, 0 findings.
+- `bun run scan:gitleaks:worktree`
+  - Wynik: passed, no leaks found.
+- `bun run scan:trivy:secret`
+  - Wynik: passed, no secret findings reported.
+- `git diff --check`
+  - Wynik: passed.

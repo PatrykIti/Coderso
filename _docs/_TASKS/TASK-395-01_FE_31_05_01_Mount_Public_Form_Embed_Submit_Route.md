@@ -5,7 +5,7 @@
 **Category:** Widgets + Form Embed + Public Forms API + Security + Runtime + QA + Docs + Leaf Remediation
 **Estimated Effort:** Large
 **Dependencies:** TASK-395
-**Status:** To Do
+**Status:** Done
 
 ---
 
@@ -14,6 +14,14 @@
 Execution-ready leaf task for FE-31-05-01 from `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FORM_EMBED_WIDGET.md` and parent `TASK-395`.
 
 The report saw a public submit 404 for the widget flow. First reproduce whether the route is actually missing or whether the widget is posting to the wrong action path / missing nonce projection; do not add a duplicate route if the shared Forms submit route is already registered.
+
+Status log:
+
+- 2026-06-02: Moved to In Progress with TASK-395 family implementation.
+- 2026-06-02: Done. Public Form Embed submissions are mounted through
+  `handlePublicFormsApi`, share `handleFormSubmissionRoute`, enforce the signed
+  nonce/HMAC, strict payload validation, Forms access evaluation, `public_write`
+  rate limiting, and Forms error mapping.
 
 ## Sub-Tasks
 

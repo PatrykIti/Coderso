@@ -16,6 +16,7 @@ import {
   normalizeAppointmentFormData,
   type AppointmentFormData,
 } from "../../../core/widgets/core/appointmentForm";
+import { appointmentFormFieldLimits } from "../../../core/widgets/core/appointmentFormContract";
 import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
@@ -124,6 +125,12 @@ test("appointment form normalizes hidden required fields and renders split-name 
   expect(html).not.toContain('name="customerPhone"');
   expect(html).toContain('autoComplete="given-name"');
   expect(html).toContain('autoComplete="family-name"');
+  expect(html.match(/<input[^>]*name="customerFirstName"[^>]*>/)?.[0] ?? "").toContain(
+    `maxLength="${appointmentFormFieldLimits.customerNamePart}"`
+  );
+  expect(html.match(/<input[^>]*name="customerLastName"[^>]*>/)?.[0] ?? "").toContain(
+    `maxLength="${appointmentFormFieldLimits.customerNamePart}"`
+  );
   expect(html).toContain('aria-label="Appointment details"');
   expect(html).toContain(
     'aria-description="Provide contact details and confirm the selected slot."'
@@ -145,8 +152,49 @@ test("appointment form renders phone validation and notes bounds when optional f
   expect(html).toContain('required=""');
   expect(html).toContain('pattern="^\\+?[0-9()\\-.\\s]{7,20}$"');
   expect(html).toContain('autoComplete="tel"');
+  expect(html.match(/<input[^>]*name="customerName"[^>]*>/)?.[0] ?? "").toContain(
+    `maxLength="${appointmentFormFieldLimits.customerName}"`
+  );
+  expect(html.match(/<input[^>]*name="customerEmail"[^>]*>/)?.[0] ?? "").toContain(
+    `maxLength="${appointmentFormFieldLimits.customerEmail}"`
+  );
+  expect(html.match(/<input[^>]*name="customerPhone"[^>]*>/)?.[0] ?? "").toContain(
+    `maxLength="${appointmentFormFieldLimits.customerPhone}"`
+  );
   expect(html).toContain('maxLength="320"');
   expect(html).toContain('data-booking-notes-counter="true"');
+});
+
+test("appointment form normalizes custom field bounds from imported payloads", () => {
+  const longId = "field-".repeat(30);
+  const normalized = normalizeAppointmentFormData({
+    ...appointmentFormDefaults,
+    customFields: [
+      {
+        id: longId,
+        label: "L".repeat(300),
+        type: "text",
+        placeholder: "P".repeat(2200),
+      },
+      {
+        id: longId,
+        label: "Duplicate",
+        type: "select",
+        options: Array.from({ length: 20 }, (_, index) => `Option ${index}`.repeat(300)),
+      },
+    ],
+  });
+
+  const fields = normalized.customFields ?? [];
+
+  expect(fields).toHaveLength(2);
+  expect(fields[0]?.id).toHaveLength(appointmentFormFieldLimits.customFieldId);
+  expect(fields[0]?.label).toHaveLength(appointmentFormFieldLimits.customFieldLabel);
+  expect(fields[0]?.placeholder).toHaveLength(appointmentFormFieldLimits.customFieldValue);
+  expect(fields[1]?.id).toMatch(/-2$/);
+  expect(fields[1]?.id.length).toBeLessThanOrEqual(appointmentFormFieldLimits.customFieldId);
+  expect(fields[1]?.options).toHaveLength(appointmentFormFieldLimits.customFieldOptions);
+  expect(fields[1]?.options?.[0]).toHaveLength(appointmentFormFieldLimits.customFieldValue);
 });
 
 test("appointment form preserves blank phone validation and omits runtime validation attrs", () => {
@@ -223,6 +271,11 @@ test("appointment form renders bounded custom fields with deterministic metadata
             label: "NDA required",
             type: "checkbox",
           },
+          {
+            id: "message",
+            label: "Message",
+            type: "textarea",
+          },
         ],
       })}
     />
@@ -235,6 +288,8 @@ test("appointment form renders bounded custom fields with deterministic metadata
   expect(html).toContain(">Email<");
   expect(html).toContain('data-appointment-custom-field="nda"');
   expect(html).toContain('data-appointment-custom-field-type="checkbox"');
+  expect(html).toContain('data-appointment-custom-field="message"');
+  expect(html).toContain(`maxLength="${appointmentFormFieldLimits.customFieldValue}"`);
 });
 
 test("appointment form renders consent controls and captcha bridge data when available", () => {

@@ -17,6 +17,26 @@ oraz publiczny SSR pod `http://localhost:3000/audit-31-05-entry-teaser`.
 Zmiany z klikanej sesji admin nie byly zapisywane jako finalny stan publiczny.
 Publiczny route pozostal w baseline `state=missing-source`.
 
+## Remediacja TASK-384 (2026-06-02)
+
+Populated fixture gap z pierwotnego raportu zostal zamkniety w smoke harness:
+
+- `_docs/PLAYWRIGHT/widget-contract-smoke-inventory.json` uzywa teraz
+  `/audit-31-05-entry-teaser` dla admin i public runtime zamiast stalej sciezki
+  `/test-entry-teaser-0516`.
+- `scripts/playwright-widget-contract-smoke.ts` bootstrappuje deterministyczny
+  content type, trzy opublikowane entries (`manual`, `featured`, `fallback`),
+  detail route, listing query, fallback listing query, listing template oraz
+  trzy fizyczne bloki Entry Teaser na audytowej stronie.
+- Smoke proof wymaga teraz trzech resolved `data-entry-teaser-state="ready"`
+  rootow w admin/public, obrazu, tagow, CTA oraz braku nowych console errors.
+- Unit coverage obejmuje budowanie page-data, content route, idempotentne
+  seeding APIs, CSRF headers, listing query/template creation i page publish.
+
+Live Playwright replay pozostaje zalezne od dostepnego lokalnego srodowiska i
+auth state. Dry-run smoke dla Entry Teaser raportuje 0 fixture gaps oraz
+0 metadata gaps.
+
 ## Pokrycie UI
 
 Przetestowane:
@@ -91,7 +111,7 @@ widgety zaczna pokazywac ten sam blad podczas otwierania page editor.
 - `data-entry-teaser-state="missing-source"`,
 - text `Select content type to resolve teaser source.`
 
-## Ograniczenia fixture
+## Ograniczenia pierwotnego fixture
 
 Lokalne admin API zwrocilo:
 
@@ -104,6 +124,10 @@ obrazow, meta/excerpt/tags, CTA link/span, safe target/rel, spacing na article,
 manual entry picker, manual listing row picker ani fallback-to-latest na listing
 featured. Te kontrakty zostaly pokryte targeted tests; do pelnego browser pass
 potrzebny jest seeded content/listing fixture.
+
+Status po TASK-384: seeded content/listing fixture zostal dodany do smoke
+harness, a powyzsze ograniczenie nie jest juz otwartym findingiem dla
+automatycznego smoke.
 
 ## Kod-owner
 
@@ -129,13 +153,11 @@ potrzebny jest seeded content/listing fixture.
 
 ## Rekomendacje
 
-1. Dodac seeded Entry Teaser UI fixture: content type, latest entry, featured
-   entry, manual entry, image, tags, author/date, safe detail route.
-2. Dodac seeded listing query/template fixture z minimum dwoma row IDs i jednym
-   featured row, zeby browserowo przetestowac manual listing target i
-   `fallbackToLatest`.
-3. Zbadac app-level console hygiene dla powtarzalnego React `createRoot` /
+1. Zbadac app-level console hygiene dla powtarzalnego React `createRoot` /
    `createPortal` errora, jesli wystapi tez w kolejnych widgetach.
+
+Zamkniete przez TASK-384: seeded content/listing fixture oraz stale public route
+404.
 
 ## Walidacja
 

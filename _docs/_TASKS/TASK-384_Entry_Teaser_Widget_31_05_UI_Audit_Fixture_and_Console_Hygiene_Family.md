@@ -5,7 +5,7 @@
 **Category:** Widgets + Entry Teaser + Runtime Fixtures + Admin Console + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_ENTRY_TEASER_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -24,8 +24,8 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-384-01](TASK-384-01_ET_31_05_01_Add_Seeded_Content_Listing_Fixture_For_Resolved_Teaser.md): ET-31-05-01 - Add seeded content/listing fixture for resolved teaser branches
-- [ ] [TASK-384-02](TASK-384-02_ET_31_05_02_Investigate_App_Level_React_CreateRoot_CreatePortal_Console_Error.md): ET-31-05-02 - Resolve Entry Teaser fixture 404 and isolate React `createRoot/createPortal` console noise
+- [x] [TASK-384-01](TASK-384-01_ET_31_05_01_Add_Seeded_Content_Listing_Fixture_For_Resolved_Teaser.md): ET-31-05-01 - Add seeded content/listing fixture for resolved teaser branches
+- [x] [TASK-384-02](TASK-384-02_ET_31_05_02_Investigate_App_Level_React_CreateRoot_CreatePortal_Console_Error.md): ET-31-05-02 - Resolve Entry Teaser fixture 404 and isolate React `createRoot/createPortal` console noise
 
 ## Implementation Pseudocode
 
@@ -71,3 +71,23 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-02)
+
+- Added deterministic Entry Teaser fixture bootstrap to `scripts/playwright-widget-contract-smoke.ts`: content type, manual/featured/fallback entries, content route, listing queries/templates, page patch, and publish all run through authenticated admin APIs with CSRF.
+- Updated the smoke inventory to use the audited `/audit-31-05-entry-teaser` admin/public route instead of the stale `/test-entry-teaser-0516` path.
+- Added Entry Teaser proof coverage for three resolved ready roots, image, tags, CTA, and admin/public console errors.
+- Covered fixture helper red/green behavior in `tests/unit/playwright-widget-contract-smoke.test.ts`.
+- Changelog coverage: `_docs/_CHANGELOG/1074-2026-06-02-entry-teaser-widget-31-05-ui-audit-fixture-and-console-hygiene.md`.
+
+Validation:
+
+- `bun test tests/unit/playwright-widget-contract-smoke.test.ts`
+- `bun test tests/unit/widgets/entryTeaser.test.tsx tests/integration/routes/entryTeaserPreview.test.ts`
+- `bun run test:vitest -- tests/vitest/widgets/entryTeaser.test.tsx tests/vitest/ui/entry-teaser-editor-wave.test.tsx`
+- `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget entry-teaser --output-json .tmp/task-384-entry-teaser-smoke-dry-run.json --output-md .tmp/task-384-entry-teaser-smoke-dry-run.md`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+
+Live Playwright replay remains environment-blocked in this workspace because `.env` does not provide `CODERSO_PLAYWRIGHT_EMAIL` and `CODERSO_PLAYWRIGHT_PASSWORD`.

@@ -465,6 +465,16 @@ test("ContactVisualEditor separates required/order UX and exposes metadata, map,
     expect(view.container.textContent).toContain("Visible fields");
     expect(view.container.textContent).toContain("Required fields");
     expect(view.container.textContent).toContain("Field order");
+    expect(
+      view.container.querySelector(
+        '[data-widget-control="contact.form.fields.name"][data-widget-control-path="form.fields"]'
+      )
+    ).toBeTruthy();
+    expect(
+      view.container.querySelector(
+        '[data-widget-control="contact.form.submitLabel"][data-widget-control-path="form.submitLabel"]'
+      )
+    ).toBeTruthy();
 
     setCheckboxValue(
       Array.from(view.container.querySelectorAll("input[type='checkbox']")).find((element) => {
@@ -491,6 +501,11 @@ test("ContactVisualEditor separates required/order UX and exposes metadata, map,
     setInputValue(findInputByPlaceholder(view.container, "Contact details"), "Ways to reach us");
 
     if (!mapSection) throw new Error("Missing map section");
+    expect(
+      mapSection.querySelector(
+        '[data-widget-control="contact.map.enabled"][data-widget-control-path="map.enabled"]'
+      )
+    ).toBeTruthy();
     setCheckboxValue(mapSection.querySelector("input[type='checkbox']"), true);
     setInputValue(
       findInputByPlaceholder(view.container, "Warsaw, Poland or 123 Market Street"),
@@ -504,6 +519,11 @@ test("ContactVisualEditor separates required/order UX and exposes metadata, map,
     expect(latestValue.map?.height).toBe("lg");
 
     clickButtonByText(view.container, "Add social link");
+    expect(
+      view.container.querySelector(
+        '[data-widget-control="contact.social.add"][data-widget-control-path="contact.social"]'
+      )
+    ).toBeTruthy();
     setInputValue(findInputByPlaceholder(view.container, "LinkedIn"), "Support team");
     const platformSelect = Array.from(view.container.querySelectorAll("select")).find((element) => {
       if (!(element instanceof HTMLSelectElement)) return false;
@@ -520,6 +540,11 @@ test("ContactVisualEditor separates required/order UX and exposes metadata, map,
     });
 
     const maxWidthSelect = findSelectByOptions(view.container, ["none", "md", "lg", "xl", "2xl"]);
+    expect(
+      view.container.querySelector(
+        '[data-widget-control="contact.style.maxWidth"][data-widget-control-path="style.maxWidth"]'
+      )
+    ).toBeTruthy();
     setSelectValue(maxWidthSelect, "2xl");
     const paddingSelect = findSelectByOptions(view.container, ["none", "sm", "md", "lg"]);
     setSelectValue(paddingSelect, "lg");

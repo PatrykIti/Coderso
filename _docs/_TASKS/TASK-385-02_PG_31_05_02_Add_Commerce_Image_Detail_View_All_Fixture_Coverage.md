@@ -5,7 +5,7 @@
 **Category:** Widgets + Product Gallery + Commerce UI + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-385
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,11 @@ Report lacked product image URLs, detail route links, and total > shown view-all
 
 ## Sub-Tasks
 
-- [ ] Reproduce PG-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce PG-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -46,6 +46,7 @@ Report lacked product image URLs, detail route links, and total > shown view-all
 
 - `scripts/playwright-widget-contract-smoke.ts`
 - `core/widgets/core/productGallery.tsx`
+- `tests/unit/playwright-widget-contract-smoke.test.ts`
 
 ## Security Contract
 
@@ -91,3 +92,10 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-02)
+
+- Added Product Gallery media seed and attached the resulting media ID to deterministic commerce products through authenticated admin APIs.
+- Patched and published the Product Gallery audit page with `limit=2`, safe `/fixture-products` card links, and a visible `View all fixture products` branch.
+- Added product-gallery-specific smoke proof for admin/public images, ready card links, and view-all visibility.
+- Parent changelog 1075 covers this leaf.

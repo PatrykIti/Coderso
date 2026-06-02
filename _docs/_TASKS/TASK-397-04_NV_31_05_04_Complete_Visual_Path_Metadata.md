@@ -5,7 +5,7 @@
 **Category:** Widgets + Navigation + Runtime Security + Admin UI + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-397
-**Status:** To Do
+**Status:** Done
 
 ---
 
@@ -17,11 +17,11 @@ Visual controls work but `data-widget-control-path` coverage is incomplete.
 
 ## Sub-Tasks
 
-- [ ] Reproduce NV-31-05-04 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce NV-31-05-04 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -82,6 +82,16 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/_TASKS/TASK-397_Navigation_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
 - Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
+
+## Closure Notes
+
+2026-06-02: Closed in Navigation scope. Navigation Visual mutating controls now
+emit stable `data-widget-control-path` metadata via shared editor controls.
+Focused regression:
+`NavigationVisualEditor renders path metadata for every declared Visual
+writable path`.
+
+Validation is recorded in parent TASK-397 closure notes.
 
 ## Acceptance Criteria
 

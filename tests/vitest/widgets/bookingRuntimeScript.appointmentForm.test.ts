@@ -10,6 +10,7 @@ import {
   normalizeAppointmentFormData,
   type AppointmentFormData,
 } from "../../../core/widgets/core/appointmentForm";
+import { getBookingRuntimeClientScript } from "../../../core/widgets/core/bookingRuntimeScript";
 
 const SLOT_EVENT_NAME = "nextless:booking-slot-selected";
 
@@ -17,6 +18,16 @@ const flushPromises = async () => {
   await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
+const runBookingRuntimeScript = () => {
+  // eslint-disable-next-line no-eval
+  eval(getBookingRuntimeClientScript());
 };
 
 const renderAppointmentFormDom = (data: AppointmentFormData = appointmentFormDefaults) => {
@@ -95,6 +106,7 @@ afterEach(() => {
   delete (
     window as Window & {
       __nextlessBookingRuntimeClient?: boolean;
+      __nextlessBookingRuntimeBind?: () => void;
       __nextlessBookingRuntimeState?: unknown;
       fetch?: unknown;
       grecaptcha?: unknown;
@@ -103,6 +115,16 @@ afterEach(() => {
   delete (
     window as Window & {
       __nextlessBookingRuntimeClient?: boolean;
+      __nextlessBookingRuntimeBind?: () => void;
+      __nextlessBookingRuntimeState?: unknown;
+      fetch?: unknown;
+      grecaptcha?: unknown;
+    }
+  ).__nextlessBookingRuntimeBind;
+  delete (
+    window as Window & {
+      __nextlessBookingRuntimeClient?: boolean;
+      __nextlessBookingRuntimeBind?: () => void;
       __nextlessBookingRuntimeState?: unknown;
       fetch?: unknown;
       grecaptcha?: unknown;
@@ -111,12 +133,115 @@ afterEach(() => {
   delete (
     window as Window & {
       __nextlessBookingRuntimeClient?: boolean;
+      __nextlessBookingRuntimeBind?: () => void;
       __nextlessBookingRuntimeState?: unknown;
       fetch?: unknown;
       grecaptcha?: unknown;
     }
   ).grecaptcha;
   vi.restoreAllMocks();
+});
+
+test("booking runtime rebinds forms and calendars when the paired widget script runs later", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ items: [] }),
+  });
+  window.fetch = fetchMock as unknown as typeof window.fetch;
+
+  const resetRuntime = () => {
+    document.body.innerHTML = "";
+    delete (
+      window as Window & {
+        __nextlessBookingRuntimeClient?: boolean;
+        __nextlessBookingRuntimeBind?: () => void;
+        __nextlessBookingRuntimeState?: unknown;
+      }
+    ).__nextlessBookingRuntimeClient;
+    delete (
+      window as Window & {
+        __nextlessBookingRuntimeClient?: boolean;
+        __nextlessBookingRuntimeBind?: () => void;
+        __nextlessBookingRuntimeState?: unknown;
+      }
+    ).__nextlessBookingRuntimeBind;
+    delete (
+      window as Window & {
+        __nextlessBookingRuntimeClient?: boolean;
+        __nextlessBookingRuntimeBind?: () => void;
+        __nextlessBookingRuntimeState?: unknown;
+      }
+    ).__nextlessBookingRuntimeState;
+  };
+
+  const appendCalendarShell = () => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<section data-nextless-booking-calendar="1" data-flow-id="booking-flow" data-slots-endpoint="/api/booking/slots" data-loading-message="Loading" data-empty-slots-message="No slots" data-missing-selection-message="Select service and resource" data-error-message="Unable to load">
+        <select data-booking-service>
+          <option value="service-1" data-resource-ids="resource-1" data-duration-minutes="30" data-buffer-before-minutes="0" data-buffer-after-minutes="0" data-submission-access="public">Consultation</option>
+        </select>
+        <select data-booking-resource>
+          <option value="resource-1" data-timezone="UTC">Room A</option>
+        </select>
+        <input data-booking-date type="date" value="2030-01-15" />
+        <div data-booking-slots></div>
+        <p data-booking-slots-status></p>
+        <button data-booking-refresh type="button">Refresh</button>
+      </section>`
+    );
+  };
+
+  const appendFormShell = () => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `<form data-nextless-appointment-form="1" data-flow-id="booking-flow" action="/api/booking/reservations" data-success-message="Done">
+        <p data-booking-selected-slot data-empty="Select a slot first.">Select a slot first.</p>
+        <p data-booking-form-error data-no-selection="Select a slot first." hidden></p>
+        <p data-booking-form-success hidden></p>
+        <input name="customerName" value="Jamie Doe" />
+        <button data-booking-submit type="submit" data-idle-label="Book" disabled>Book</button>
+      </form>`
+    );
+  };
+
+  appendCalendarShell();
+  runBookingRuntimeScript();
+  await flushPromises();
+  appendFormShell();
+  runBookingRuntimeScript();
+  await flushPromises();
+
+  expect(
+    document
+      .querySelector("[data-nextless-booking-calendar='1']")
+      ?.getAttribute("data-booking-calendar-bound")
+  ).toBe("1");
+  expect(
+    document
+      .querySelector("form[data-nextless-appointment-form='1']")
+      ?.getAttribute("data-booking-form-bound")
+  ).toBe("1");
+
+  resetRuntime();
+
+  appendFormShell();
+  runBookingRuntimeScript();
+  await flushPromises();
+  appendCalendarShell();
+  runBookingRuntimeScript();
+  await flushPromises();
+
+  expect(
+    document
+      .querySelector("form[data-nextless-appointment-form='1']")
+      ?.getAttribute("data-booking-form-bound")
+  ).toBe("1");
+  expect(
+    document
+      .querySelector("[data-nextless-booking-calendar='1']")
+      ?.getAttribute("data-booking-calendar-bound")
+  ).toBe("1");
 });
 
 test("appointment form runtime starts disabled and enables after slot selection", async () => {
@@ -231,7 +356,41 @@ test("appointment form runtime shows loading copy and clears selection after suc
   expect(view.button.textContent).toBe("Book appointment");
   expect(view.summaryNode?.textContent).toContain("Select a slot in Booking Calendar first.");
   expect(view.successNode?.classList.contains("hidden")).toBe(false);
-  expect(view.successNode?.textContent).toContain("Reservation confirmed");
+  expect(view.successNode?.textContent).toContain("Appointment booked successfully.");
+});
+
+test("appointment form runtime prefers widget success copy over API runtime default", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      runtime: {
+        successMessage: "Appointment booked successfully.",
+      },
+    }),
+  });
+  window.fetch = fetchMock as unknown as typeof window.fetch;
+
+  const view = renderAppointmentFormDom(
+    normalizeAppointmentFormData({
+      ...appointmentFormDefaults,
+      successMessage: "Custom widget success",
+    })
+  );
+
+  setRuntimeSelection({
+    serviceId: "service-1",
+    resourceId: "resource-1",
+    startsAt: "2030-01-15T12:00:00.000Z",
+    endsAt: "2030-01-15T12:30:00.000Z",
+    timezone: "UTC",
+  });
+  await flushPromises();
+
+  submitForm(view.form);
+  await flushPromises();
+
+  expect(view.successNode?.classList.contains("hidden")).toBe(false);
+  expect(view.successNode?.textContent).toContain("Custom widget success");
 });
 
 test("appointment form runtime renders service/resource summary context and follows a safe redirect", async () => {
@@ -503,4 +662,53 @@ test("appointment form runtime executes recaptcha and submits consent metadata",
       },
     },
   });
+});
+
+test("appointment form runtime skips captcha for an internal selected service in a mixed catalog", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      runtime: {
+        successMessage: "Appointment booked successfully.",
+      },
+    }),
+  });
+  window.fetch = fetchMock as unknown as typeof window.fetch;
+
+  const view = renderAppointmentFormDom(
+    normalizeAppointmentFormData({
+      ...appointmentFormDefaults,
+      resolved: {
+        submissionNonce: "public-nonce",
+        captcha: {
+          provider: "recaptcha_v3",
+          siteKey: "site-key-1",
+          action: "public_write",
+        },
+      },
+    })
+  );
+
+  setRuntimeSelection({
+    serviceId: "internal-service",
+    serviceName: "Internal repair",
+    submissionAccess: "internal",
+    resourceId: "resource-1",
+    startsAt: "2030-01-15T12:00:00.000Z",
+    endsAt: "2030-01-15T12:30:00.000Z",
+    timezone: "UTC",
+  });
+  await flushPromises();
+
+  submitForm(view.form);
+  await flushPromises();
+
+  const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(payload).toMatchObject({
+    serviceId: "internal-service",
+    formNonce: "",
+  });
+  expect(payload).not.toHaveProperty("captchaToken");
 });

@@ -852,6 +852,52 @@ test("ProductTable preview hook resolves admin preview state", async () => {
   }
 });
 
+test("ProductTable advanced marks saved filters inactive without runtime options", async () => {
+  const { ProductTableAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
+
+  const view = mount(
+    <ProductTableAdvancedEditor
+      value={{
+        controls: {
+          showCollectionFilter: true,
+          showStatusFilter: true,
+          sorting: "none",
+          pagination: "none",
+        },
+        resolved: {
+          items: [],
+          total: 0,
+          resolvedAt: "2026-05-21T12:00:00.000Z",
+          runtime: {
+            availableCollections: [],
+            availableStatuses: ["published"],
+          },
+        },
+      }}
+      onChange={() => undefined}
+      variant="default"
+    />
+  );
+
+  try {
+    const visitorControls = view.container.querySelector(
+      '[data-widget-control="product-table.advanced.query-visitor-controls"] [data-widget-control-summary="true"]'
+    );
+    const visitorControlsText = normalizeText(visitorControls?.textContent);
+
+    expect(visitorControlsText).toContain(
+      normalizeText("Collection filters saved, inactive until at least two collections resolve")
+    );
+    expect(visitorControlsText).toContain(
+      normalizeText("Status filter saved, inactive until at least two statuses resolve")
+    );
+    expect(visitorControlsText).not.toBe("collection filters");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("ProductTable preview hook ignores stale async responses and retains the last safe patch on error", async () => {
   const { ProductTableWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");

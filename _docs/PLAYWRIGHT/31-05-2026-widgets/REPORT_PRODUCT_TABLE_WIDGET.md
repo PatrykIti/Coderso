@@ -117,6 +117,30 @@ Przez to Advanced myli saved intent z aktywnym public runtime state.
    `resolved.runtime.availableCollections` nie moze raportowac samego
    `Collection filters` bez informacji o nieaktywnosci.
 
+**Status po TASK-387:** naprawione. Advanced zachowuje saved toggle, ale
+`Visitor controls` pokazuje `Collection filters saved, inactive until at least
+two collections resolve`, gdy runtime nie ma minimum dwoch
+`availableCollections`. Ten sam mechanizm oznacza saved status filter jako
+inactive, gdy `availableStatuses.length <= 1`.
+
+### PT-31-05-02 - smoke fixture musi dowodzic image, safe detail link i action CTA
+
+**Status po TASK-387:** naprawione. Smoke bootstrap dla Product Table:
+
+- dodaje media-backed commerce products dla wybranego Product Table case,
+- ustawia deterministic route `site.contentRoutes` dla `products`:
+  `/fixture-products/:slug`,
+- patchuje `/audit-31-05-product-table` na fixture z image column, linked
+  Product column i action CTA `Inspect fixture product`,
+- publikuje strone przez admin API z CSRF,
+- w generated Playwright probe sprawdza admin i public output: obrazy z
+  oczekiwanym alt, title link `Fixture Starter Home` z safe relative href oraz
+  widoczne action links.
+
+Shared commerce seed zawiera `Fixture Garden Suite` jako `out_of_stock`, wiec
+Product Table ma tez widoczny stock-state fixture dla kolejnych live browser
+przebiegow.
+
 ## Public baseline
 
 `curl http://localhost:3000/audit-31-05-product-table` zwrocil HTTP 200 i SSR
@@ -141,13 +165,14 @@ HTML z:
 
 ## Ograniczenia fixture
 
-- Brak image URLs, wiec image column potwierdzono przez fallback `No image`,
-  nie przez realne `img`.
-- Brak safe `productHref` w admin resolved rows, wiec linked product/slug
-  cells i action CTA poprawnie zdegradowaly do tekstu/pustego action cell.
 - Brak produktu `draft`/`archived` w public-ready fixture, wiec status filters
   dla tych wartosci potwierdzono przez empty state.
 - Admin console mial jeden powtarzalny app-level `404`, bez widget-owned crash.
+
+Status po TASK-387: ograniczenia zwiazane z image URLs, safe `productHref`,
+linked product cells i action CTA sa zamkniete w smoke harness. Public-ready
+fixture nadal nie poszerza public access do draft/archived produktow; status
+filter security coverage pozostaje w runtime tests.
 
 ## Kod-owner
 
@@ -173,14 +198,10 @@ HTML z:
 
 ## Rekomendacje
 
-1. Naprawic `PT-31-05-01` jako Advanced diagnostics fix bez zmiany runtime
-   renderera.
-2. Dodac commerce fixture z safe product detail route i obrazami, zeby browser
-   pass potwierdzal product cell links, slug links, action CTA, `target/rel` i
-   image alt.
-3. Rozszerzyc Advanced summary o rozroznienie `saved control` vs `visible
-   visitor control` takze dla status filter, bo status fieldset rowniez zalezy
-   od `availableStatuses.length > 1`.
+1. Zachowac app-level console 404 jako osobny follow-up, jesli pojawi sie w
+   szerszym admin smoke.
+2. Przy kolejnym live browser pass uruchomic Product Table smoke bez
+   `--dry-run`, zeby odswiezyc pelny Playwright dowod po zmianie fixture.
 
 ## Walidacja
 
@@ -196,4 +217,11 @@ HTML z:
 - `bun test ./tests/unit/commerce/commerceWidgetRuntime.test.ts` - passed, 9 tests.
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` - passed, 16 tests.
 - `curl http://localhost:3000/audit-31-05-product-table` - HTTP 200, public baseline query.
+- `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx tests/vitest/widgets/productTable.test.tsx` - passed, 31 tests.
+- `bun test tests/integration/routes/productTablePreview.test.ts tests/integration/runtime/product-table-runtime-pagination.test.ts` - passed, 4 tests.
+- `bun test tests/unit/playwright-widget-contract-smoke.test.ts` - passed, 43 tests.
+- `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget product-table --output-json .tmp/task-387-product-table-smoke-dry-run.json --output-md .tmp/task-387-product-table-smoke-dry-run.md` - passed dry-run, `fixtureGaps=0`, `metadataGaps=0`.
+- `git diff --check` - passed.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
 - Claude CLI nie wykonal audytu z powodu `401 Invalid authentication credentials`.

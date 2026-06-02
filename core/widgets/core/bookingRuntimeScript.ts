@@ -1,11 +1,25 @@
+import { appointmentFormFieldLimits } from "./appointmentFormContract";
+
 const runtimeClientScript = String.raw`(() => {
   if (typeof window === "undefined") return;
-  if (window.__nextlessBookingRuntimeClient) return;
+  if (window.__nextlessBookingRuntimeClient) {
+    if (typeof window.__nextlessBookingRuntimeBind === "function") {
+      window.__nextlessBookingRuntimeBind();
+    }
+    return;
+  }
   window.__nextlessBookingRuntimeClient = true;
 
   const CALENDAR_SELECTOR = "[data-nextless-booking-calendar='1']";
   const FORM_SELECTOR = "form[data-nextless-appointment-form='1']";
   const SLOT_EVENT_NAME = "nextless:booking-slot-selected";
+  const CUSTOMER_NAME_MAX_LENGTH = ${appointmentFormFieldLimits.customerName};
+  const CUSTOMER_EMAIL_MAX_LENGTH = ${appointmentFormFieldLimits.customerEmail};
+  const CUSTOMER_PHONE_MAX_LENGTH = ${appointmentFormFieldLimits.customerPhone};
+  const NOTES_MAX_LENGTH = ${appointmentFormFieldLimits.notes};
+  const CUSTOM_FIELD_ID_MAX_LENGTH = ${appointmentFormFieldLimits.customFieldId};
+  const CUSTOM_FIELD_LABEL_MAX_LENGTH = ${appointmentFormFieldLimits.customFieldLabel};
+  const CUSTOM_FIELD_VALUE_MAX_LENGTH = ${appointmentFormFieldLimits.customFieldValue};
 
   const state = window.__nextlessBookingRuntimeState || {
     selections: {},
@@ -28,6 +42,8 @@ const runtimeClientScript = String.raw`(() => {
       return fallback;
     }
   };
+
+  const clampText = (value, maxLength) => String(value || "").trim().slice(0, maxLength);
 
   const setSelection = (flowId, selection) => {
     if (!flowId) return;
@@ -123,9 +139,46 @@ const runtimeClientScript = String.raw`(() => {
   const buildWeekDates = (anchorDate) =>
     Array.from({ length: 7 }, (_, index) => addDays(anchorDate, index));
 
+  const buildBoundedWeekDates = (anchorDate, policy, today) => {
+    const anchor = clampDateToPolicy(anchorDate, policy, today);
+    const minDate = policy.minDate || today;
+    const maxDate = policy.maxDate;
+    const dates = [];
+    const seen = new Set();
+
+    buildWeekDates(anchor).forEach((dateValue) => {
+      if (dateValue < minDate) return;
+      if (maxDate && dateValue > maxDate) return;
+      if (seen.has(dateValue)) return;
+      seen.add(dateValue);
+      dates.push(dateValue);
+    });
+
+    return dates;
+  };
+
   const setStatusMessage = (statusNode, message) => {
     if (!(statusNode instanceof HTMLElement)) return;
     statusNode.textContent = message;
+  };
+
+  const clearNode = (node) => {
+    while (node.firstChild) {
+      node.removeChild(node.firstChild);
+    }
+  };
+
+  const appendTextBlock = (parent, className, textValue) => {
+    const paragraph = document.createElement("p");
+    paragraph.className = className;
+    paragraph.textContent = textValue;
+    parent.appendChild(paragraph);
+    return paragraph;
+  };
+
+  const renderSingleTextBlock = (parent, className, textValue) => {
+    clearNode(parent);
+    appendTextBlock(parent, className, textValue);
   };
 
   const syncResourceOptions = (serviceSelect, resourceSelect) => {
@@ -305,16 +358,26 @@ const runtimeClientScript = String.raw`(() => {
         }
 
         const description = (serviceOption?.dataset.description || "").trim();
-        serviceContextNode.innerHTML =
-          "<p class=\"text-sm font-medium text-[var(--color-text)]\">" +
-          (serviceOption?.textContent?.trim() || "No service selected") +
-          "</p>" +
-          (metaParts.length > 0
-            ? "<p class=\"text-xs text-[var(--color-text)]/70\">" + metaParts.join(" · ") + "</p>"
-            : "") +
-          (showServiceDescription && description
-            ? "<p class=\"text-xs text-[var(--color-text)]/70\">" + description + "</p>"
-            : "");
+        clearNode(serviceContextNode);
+        appendTextBlock(
+          serviceContextNode,
+          "text-sm font-medium text-[var(--color-text)]",
+          serviceOption?.textContent?.trim() || "No service selected"
+        );
+        if (metaParts.length > 0) {
+          appendTextBlock(
+            serviceContextNode,
+            "text-xs text-[var(--color-text)]/70",
+            metaParts.join(" · ")
+          );
+        }
+        if (showServiceDescription && description) {
+          appendTextBlock(
+            serviceContextNode,
+            "text-xs text-[var(--color-text)]/70",
+            description
+          );
+        }
       }
 
       if (timezoneNode instanceof HTMLElement) {
@@ -404,12 +467,13 @@ const runtimeClientScript = String.raw`(() => {
     const renderSlots = (items) => {
       const currentItems = Array.isArray(items) ? items : [];
       lastRenderedSlots.set(root, currentItems);
-      slotsNode.innerHTML = "";
+      clearNode(slotsNode);
       if (currentItems.length === 0) {
-        slotsNode.innerHTML =
-          "<p class=\"text-xs text-[var(--color-text)]/65\">" +
-          (slotsNode.dataset.empty || "No available slots for selected date.") +
-          "</p>";
+        renderSingleTextBlock(
+          slotsNode,
+          "text-xs text-[var(--color-text)]/65",
+          slotsNode.dataset.empty || "No available slots for selected date."
+        );
         return;
       }
 
@@ -442,11 +506,16 @@ const runtimeClientScript = String.raw`(() => {
         applyButtonVisualState(button, isSelected);
 
         button.addEventListener("click", () => {
+          const selectedServiceOption = serviceSelect.selectedOptions[0];
           const selectedResourceOption = resourceSelect.selectedOptions[0];
           const timezone = selectedResourceOption?.dataset.timezone || slot.timezone || "UTC";
           const nextSelection = {
             serviceId: serviceSelect.value,
-            serviceName: serviceSelect.selectedOptions[0]?.textContent?.trim() || "",
+            serviceName: selectedServiceOption?.textContent?.trim() || "",
+            submissionAccess:
+              selectedServiceOption?.dataset.submissionAccess === "internal"
+                ? "internal"
+                : "public",
             resourceId: resourceSelect.value,
             resourceName: resourceSelect.selectedOptions[0]?.textContent?.trim() || "",
             startsAt: slot.startsAt,
@@ -473,31 +542,37 @@ const runtimeClientScript = String.raw`(() => {
     const renderWeekPicker = (availabilityMap = new Map()) => {
       if (!(weekDaysNode instanceof HTMLElement) || !(weekLabelNode instanceof HTMLElement)) return;
 
-      const anchorDate = weekAnchors.get(root) || dateInput.value || today;
-      weekAnchors.set(root, anchorDate);
-      const dates = buildWeekDates(anchorDate).map((dateValue) =>
-        clampDateToPolicy(dateValue, datePolicy, today)
+      const anchorDate = clampDateToPolicy(
+        weekAnchors.get(root) || dateInput.value || today,
+        datePolicy,
+        today
       );
-      weekLabelNode.textContent = dates[0] + " - " + dates[dates.length - 1];
-      weekDaysNode.innerHTML = "";
+      weekAnchors.set(root, anchorDate);
+      const dates = buildBoundedWeekDates(anchorDate, datePolicy, today);
+      weekLabelNode.textContent =
+        dates.length > 0 ? dates[0] + " - " + dates[dates.length - 1] : "";
+      clearNode(weekDaysNode);
 
       dates.forEach((dateValue) => {
         const availability = availabilityMap.get(dateValue) || { count: null };
         const button = document.createElement("button");
         button.type = "button";
+        button.dataset.bookingWeekDate = dateValue;
         button.className =
           "rounded-md border border-[var(--color-border)] px-2 py-2 text-left text-xs text-[var(--color-text)]";
-        button.innerHTML =
-          "<span class=\"block font-medium\">" +
-          toWeekdayLabel(dateValue, summaryLocale) +
-          "</span>" +
-          "<span class=\"block text-[11px] text-[var(--color-text)]/65\">" +
-          (availability.count === null
+        const dayLabel = document.createElement("span");
+        dayLabel.className = "block font-medium";
+        dayLabel.textContent = toWeekdayLabel(dateValue, summaryLocale);
+        const availabilityLabel = document.createElement("span");
+        availabilityLabel.className = "block text-[11px] text-[var(--color-text)]/65";
+        availabilityLabel.textContent =
+          availability.count === null
             ? "Check availability"
             : availability.count > 0
               ? availability.count + " slots"
-              : "No slots") +
-          "</span>";
+              : "No slots";
+        button.appendChild(dayLabel);
+        button.appendChild(availabilityLabel);
 
         if (dateInput.value === dateValue) {
           button.style.backgroundColor = "var(--booking-slot-selected-bg)";
@@ -518,7 +593,11 @@ const runtimeClientScript = String.raw`(() => {
       if (datePickerMode !== "week" || !(weekDaysNode instanceof HTMLElement)) return;
       const serviceId = serviceSelect.value;
       const resourceId = resourceSelect.value;
-      const anchorDate = weekAnchors.get(root) || dateInput.value || today;
+      const anchorDate = clampDateToPolicy(
+        weekAnchors.get(root) || dateInput.value || today,
+        datePolicy,
+        today
+      );
       weekAnchors.set(root, anchorDate);
 
       if (!serviceId || !resourceId) {
@@ -529,9 +608,7 @@ const runtimeClientScript = String.raw`(() => {
       availabilityRequests.get(root)?.abort();
       const controller = new AbortController();
       availabilityRequests.set(root, controller);
-      const dates = buildWeekDates(anchorDate).map((dateValue) =>
-        clampDateToPolicy(dateValue, datePolicy, today)
-      );
+      const dates = buildBoundedWeekDates(anchorDate, datePolicy, today);
 
       try {
         const entries = await Promise.all(
@@ -574,10 +651,11 @@ const runtimeClientScript = String.raw`(() => {
       setStatusMessage(statusNode, statusNode?.dataset.loading || "Loading slots...");
 
       if (!serviceId || !resourceId || !date) {
-        slotsNode.innerHTML =
-          "<p class=\"text-xs text-[var(--color-text)]/65\">" +
-          (slotsNode.dataset.missing || "Choose service, resource, and date first.") +
-          "</p>";
+        renderSingleTextBlock(
+          slotsNode,
+          "text-xs text-[var(--color-text)]/65",
+          slotsNode.dataset.missing || "Choose service, resource, and date first."
+        );
         setStatusMessage(statusNode, slotsNode.dataset.missing || "Choose service, resource, and date first.");
         renderSelectedSummary(null);
         return;
@@ -630,10 +708,11 @@ const runtimeClientScript = String.raw`(() => {
         void refreshAvailability();
       } catch (error) {
         if (error?.name === "AbortError") return;
-        slotsNode.innerHTML =
-          "<p class=\"text-xs text-rose-600\">" +
-          (slotsNode.dataset.error || "Unable to load slots right now.") +
-          "</p>";
+        renderSingleTextBlock(
+          slotsNode,
+          "text-xs text-rose-600",
+          slotsNode.dataset.error || "Unable to load slots right now."
+        );
         setStatusMessage(statusNode, slotsNode.dataset.error || "Unable to load slots right now.");
       } finally {
         if (slotRequests.get(root) === controller) {
@@ -753,12 +832,13 @@ const runtimeClientScript = String.raw`(() => {
     };
 
     const buildCustomerName = (formData) => {
-      const fullName = String(formData.get("customerName") || "").trim();
+      const fullName = clampText(formData.get("customerName"), CUSTOMER_NAME_MAX_LENGTH);
       if (fullName) return fullName;
-      return [formData.get("customerFirstName"), formData.get("customerLastName")]
+      const splitName = [formData.get("customerFirstName"), formData.get("customerLastName")]
         .map((value) => String(value || "").trim())
         .filter(Boolean)
         .join(" ");
+      return clampText(splitName, CUSTOMER_NAME_MAX_LENGTH);
     };
 
     const collectConsentMetadata = (formData) => {
@@ -772,8 +852,14 @@ const runtimeClientScript = String.raw`(() => {
 
     const collectCustomFieldMetadata = () => {
       return Array.from(form.querySelectorAll("[data-appointment-custom-field]")).flatMap((node) => {
-        const id = (node.getAttribute("data-appointment-custom-field") || "").trim();
-        const label = (node.getAttribute("data-appointment-custom-field-label") || "").trim();
+        const id = clampText(
+          node.getAttribute("data-appointment-custom-field"),
+          CUSTOM_FIELD_ID_MAX_LENGTH
+        );
+        const label = clampText(
+          node.getAttribute("data-appointment-custom-field-label"),
+          CUSTOM_FIELD_LABEL_MAX_LENGTH
+        );
         const type = (node.getAttribute("data-appointment-custom-field-type") || "").trim();
         if (!id || !label || !type) return [];
 
@@ -804,7 +890,7 @@ const runtimeClientScript = String.raw`(() => {
             id,
             label,
             type,
-            value: node.value.trim() || null,
+            value: clampText(node.value, CUSTOM_FIELD_VALUE_MAX_LENGTH) || null,
           },
         ];
       });
@@ -907,7 +993,13 @@ const runtimeClientScript = String.raw`(() => {
         const formData = new FormData(form);
         const consent = collectConsentMetadata(formData);
         const customFields = collectCustomFieldMetadata();
-        const captchaToken = await resolveCaptchaToken(form);
+        const submissionAccess = selection.submissionAccess === "internal" ? "internal" : "public";
+        const captchaToken =
+          submissionAccess === "public" ? await resolveCaptchaToken(form) : undefined;
+        const formNonce =
+          submissionAccess === "public"
+            ? String(formData.get("formNonce") || formData.get("__nl_booking_nonce") || "")
+            : "";
         const payload = {
           serviceId: selection.serviceId,
           resourceId: selection.resourceId,
@@ -915,11 +1007,10 @@ const runtimeClientScript = String.raw`(() => {
           endsAt: selection.endsAt,
           timezone: selection.timezone,
           customerName: buildCustomerName(formData),
-          customerEmail: String(formData.get("customerEmail") || "").trim() || null,
-          customerPhone: String(formData.get("customerPhone") || "").trim() || null,
-          notes: String(formData.get("notes") || "").trim() || null,
-          formNonce:
-            String(formData.get("formNonce") || formData.get("__nl_booking_nonce") || "") || "",
+          customerEmail: clampText(formData.get("customerEmail"), CUSTOMER_EMAIL_MAX_LENGTH) || null,
+          customerPhone: clampText(formData.get("customerPhone"), CUSTOMER_PHONE_MAX_LENGTH) || null,
+          notes: clampText(formData.get("notes"), NOTES_MAX_LENGTH) || null,
+          formNonce,
           captchaToken,
           metadata: {
             flowId,
@@ -954,7 +1045,7 @@ const runtimeClientScript = String.raw`(() => {
         const defaultMessage = (form.dataset.successMessage || "Booking submitted.").trim();
 
         if (successNode instanceof HTMLElement) {
-          successNode.textContent = runtimeMessage || defaultMessage;
+          successNode.textContent = defaultMessage || runtimeMessage || "Booking submitted.";
           show(successNode);
         }
 
@@ -992,8 +1083,21 @@ const runtimeClientScript = String.raw`(() => {
     nodes.forEach((node) => bindAppointmentForm(node));
   };
 
-  bindCalendars();
-  bindForms();
+  const bindRuntime = () => {
+    bindCalendars();
+    bindForms();
+  };
+
+  window.__nextlessBookingRuntimeBind = bindRuntime;
+  bindRuntime();
+  if (typeof window.queueMicrotask === "function") {
+    window.queueMicrotask(bindRuntime);
+  } else {
+    window.setTimeout(bindRuntime, 0);
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bindRuntime, { once: true });
+  }
 })();`;
 
 export function getBookingRuntimeClientScript() {

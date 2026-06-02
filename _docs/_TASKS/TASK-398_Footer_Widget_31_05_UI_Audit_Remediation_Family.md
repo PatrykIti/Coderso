@@ -5,13 +5,20 @@
 **Category:** Widgets + Footer + Runtime Security + Admin UI + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FOOTER_WIDGET.md
-**Status:** To Do
+**Status:** Done
 
 ---
 
 ## Overview
 
 Close Footer minimal utility, unsafe links/logo preview, Wizard ownership, and metadata precision issues.
+
+Status log:
+
+- 2026-06-02: Moved to In Progress for Footer-scope implementation.
+- 2026-06-02: Done. Closed FT-31-05-01..05 with minimal contact/back-to-top
+  rendering, fail-closed column link normalization, safe Visual logo preview,
+  Visual-only variant ownership, and precise destination/slot metadata.
 
 Source report: `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FOOTER_WIDGET.md`.
 
@@ -27,11 +34,11 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-398-01](TASK-398-01_FT_31_05_01_Minimal_Variant_Must_Not_Omit_Useful_Contact_Back.md): FT-31-05-01 - Minimal variant must not omit useful contact/back-to-top utilities unintentionally
-- [ ] [TASK-398-02](TASK-398-02_FT_31_05_02_Unsafe_Column_Links_Must_Not_Degrade_To_Clickable.md): FT-31-05-02 - Unsafe column links must not degrade to clickable `#`
-- [ ] [TASK-398-03](TASK-398-03_FT_31_05_03_Visual_Logo_Preview_Must_Not_Render_Raw_Unsafe.md): FT-31-05-03 - Visual logo preview must not render raw unsafe `brand.logoUrl`
-- [ ] [TASK-398-04](TASK-398-04_FT_31_05_04_Wizard_Variant_Ownership_Must_Align_With_Contract.md): FT-31-05-04 - Wizard variant ownership must align with contract
-- [ ] [TASK-398-05](TASK-398-05_FT_31_05_05_Make_Slot_And_LinkDestination_Metadata_Precise.md): FT-31-05-05 - Make slot and LinkDestination metadata precise
+- [x] [TASK-398-01](TASK-398-01_FT_31_05_01_Minimal_Variant_Must_Not_Omit_Useful_Contact_Back.md): FT-31-05-01 - Minimal variant must not omit useful contact/back-to-top utilities unintentionally
+- [x] [TASK-398-02](TASK-398-02_FT_31_05_02_Unsafe_Column_Links_Must_Not_Degrade_To_Clickable.md): FT-31-05-02 - Unsafe column links must not degrade to clickable `#`
+- [x] [TASK-398-03](TASK-398-03_FT_31_05_03_Visual_Logo_Preview_Must_Not_Render_Raw_Unsafe.md): FT-31-05-03 - Visual logo preview must not render raw unsafe `brand.logoUrl`
+- [x] [TASK-398-04](TASK-398-04_FT_31_05_04_Wizard_Variant_Ownership_Must_Align_With_Contract.md): FT-31-05-04 - Wizard variant ownership must align with contract
+- [x] [TASK-398-05](TASK-398-05_FT_31_05_05_Make_Slot_And_LinkDestination_Metadata_Precise.md): FT-31-05-05 - Make slot and LinkDestination metadata precise
 
 ## Implementation Pseudocode
 
@@ -75,3 +82,31 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes
+
+- Runtime: minimal footers render configured contact and back-to-top utilities
+  even when legal/social output is disabled, and unsafe/empty column hrefs are
+  omitted instead of becoming `href="#"` anchors.
+- Editor: Visual logo preview uses `normalizeFooterImageSrc()` and shows a
+  replace-or-clear warning for unsafe saved logo URLs. Wizard variant is
+  read-only; Visual remains the only variant owner.
+- Metadata: Footer destination fields now expose a single writable owner path,
+  and Visual/Advanced include read-only `slots` summary rows.
+- Docs updated: `_docs/_WIDGETS/FOOTER.md` and
+  `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FOOTER_WIDGET.md`.
+- Shared task board and changelog indexes were synchronized after the isolated
+  Footer implementation workspace handed off the scoped changes.
+
+Validation completed:
+
+- `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 3 files / 41 tests.
+- `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 9 files / 125 tests.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `bun test tests/security/codersoSecurityGate.test.ts` - passed.
+- `bun run scan:gitleaks:worktree` - passed.
+- `bun run scan:trivy:secret` - passed.
+- `bun run scan:semgrep` - passed, 0 findings.
+- `git diff --check` - passed.
+- `bun run gates:coderso` - passed: functional, ux, performance, security, reliability.

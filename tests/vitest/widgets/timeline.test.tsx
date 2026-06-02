@@ -458,6 +458,34 @@ test("timeline whole-step links stay safe and do not nest with CTA links", () =>
   expect(html).toContain('data-timeline-marker-display="icon"');
 });
 
+test("timeline process layout renders step CTAs without nesting whole-step links", () => {
+  const html = renderToString(
+    <TimelineBlock
+      data={{
+        ...timelineDefaults,
+        mode: "process",
+        steps: normalizeTimelineSteps([
+          {
+            id: "step-1",
+            title: "Discover",
+            cta: { label: "Read details", href: "/cta-step" },
+            link: { href: "/suppressed-whole-step", label: "Should not render" },
+          },
+          { id: "step-2", title: "Plan" },
+          { id: "step-3", title: "Ship" },
+        ]),
+      }}
+      variant="compact"
+    />
+  );
+
+  expect(html).toContain('data-timeline-mode="process"');
+  expect(html).toContain('data-timeline-step-cta="compact"');
+  expect(html).toContain('href="/cta-step"');
+  expect(html).toContain(">Read details</a>");
+  expect(html).not.toContain("/suppressed-whole-step");
+});
+
 test("timeline exposes truthful marker fallback, description-size, and effective-width diagnostics", () => {
   const html = renderToString(
     <TimelineBlock

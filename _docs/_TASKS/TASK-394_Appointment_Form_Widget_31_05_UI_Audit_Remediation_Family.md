@@ -5,13 +5,19 @@
 **Category:** Widgets + Appointment Form + Public Booking API + Security + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_APPOINTMENT_FORM_WIDGET.md
-**Status:** To Do
+**Status:** Done
 
 ---
 
 ## Overview
 
 Close Appointment Form pairing, reservation trust, mixed access, success copy, and field-bound drift issues.
+
+Status log:
+
+- 2026-06-02: Moved to In Progress for implementation.
+- 2026-06-02: Closed after implementing Appointment Form runtime/API/security
+  remediations and focused regression coverage.
 
 Source report: `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_APPOINTMENT_FORM_WIDGET.md`.
 
@@ -27,11 +33,11 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-394-01](TASK-394-01_AF_31_05_01_Calendar_Form_Runtime_Binding_Must_Be_Idempotent_Regardless.md): AF-31-05-01 - Calendar/form runtime binding must be idempotent regardless of DOM order
-- [ ] [TASK-394-02](TASK-394-02_AF_31_05_02_Public_Reservation_API_Must_Verify_Server_Generated_Slot.md): AF-31-05-02 - Public reservation API must verify server-generated slot match
-- [ ] [TASK-394-03](TASK-394-03_AF_31_05_03_Mixed_Public_Internal_Service_Catalog_Must_Scope_Captcha.md): AF-31-05-03 - Mixed public/internal service catalog must scope captcha/nonce per selected service
-- [ ] [TASK-394-04](TASK-394-04_AF_31_05_04_Widget_Custom_Success_Copy_Must_Outrank_API_Default.md): AF-31-05-04 - Widget custom success copy must outrank API default
-- [ ] [TASK-394-05](TASK-394-05_AF_31_05_05_Align_Client_MaxLength_With_Public_API_Schema_Bounds.md): AF-31-05-05 - Align client maxLength with public API schema bounds
+- [x] [TASK-394-01](TASK-394-01_AF_31_05_01_Calendar_Form_Runtime_Binding_Must_Be_Idempotent_Regardless.md): AF-31-05-01 - Calendar/form runtime binding must be idempotent regardless of DOM order
+- [x] [TASK-394-02](TASK-394-02_AF_31_05_02_Public_Reservation_API_Must_Verify_Server_Generated_Slot.md): AF-31-05-02 - Public reservation API must verify server-generated slot match
+- [x] [TASK-394-03](TASK-394-03_AF_31_05_03_Mixed_Public_Internal_Service_Catalog_Must_Scope_Captcha.md): AF-31-05-03 - Mixed public/internal service catalog must scope captcha/nonce per selected service
+- [x] [TASK-394-04](TASK-394-04_AF_31_05_04_Widget_Custom_Success_Copy_Must_Outrank_API_Default.md): AF-31-05-04 - Widget custom success copy must outrank API default
+- [x] [TASK-394-05](TASK-394-05_AF_31_05_05_Align_Client_MaxLength_With_Public_API_Schema_Bounds.md): AF-31-05-05 - Align client maxLength with public API schema bounds
 
 ## Implementation Pseudocode
 
@@ -76,3 +82,23 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes
+
+- Closed AF-31-05-01 by storing `window.__nextlessBookingRuntimeBind` and
+  rebinding calendars/forms on repeated inline runtime calls plus microtask /
+  DOMContentLoaded.
+- Closed AF-31-05-02 by requiring exact server-generated slot match before
+  public reservation persistence.
+- Closed AF-31-05-03 by projecting `submissionAccess` through Booking Calendar
+  service options and slot selections, then scoping captcha/nonce behavior to
+  the selected service.
+- Closed AF-31-05-04 by making widget success copy outrank API runtime default.
+- Closed AF-31-05-05 by adding shared Appointment Form field-limit constants and
+  applying them in widget schema, normalizer, renderer/runtime payload shaping,
+  and public booking API validation.
+- Validation passed: targeted Vitest Appointment Form/Booking Calendar suites,
+  Bun public booking API suite with DB env, Coderso security gate, shared
+  runtime/public renderer smoke tests, `bun --cwd core lint`,
+  `bun --cwd core lint:types`, Semgrep advisory scan, Gitleaks worktree scan,
+  Trivy secret scan, and `git diff --check`.

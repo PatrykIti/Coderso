@@ -1,6 +1,7 @@
 # RAPORT: Navigation Widget - UI-first retest (31-05-2026)
 
 > **Status:** Zakonczony UI-first pass dla Wizard / Visual / Advanced oraz public runtime.
+> TASK-397 remediation for Navigation completed in workspace on 2026-06-02.
 > **Strona admin:** `Audit 31-05 Navigation`
 > **Admin page id:** `9163a987-89eb-43ee-a554-6ed5e972de4f`
 > **Public route:** `/audit-31-05-navigation`
@@ -81,6 +82,11 @@ Przetestowane:
 
 ### NV-31-05-01 - Pusta lista linkow po public resolverze rozwala widget jako invalid data
 
+**Status po TASK-397:** Naprawione. `navigationSchema.items` dopuszcza teraz
+pusta liste, a regresja `navigation schema accepts resolved empty item lists`
+potwierdza, ze public-resolved `items: []` nie przechodzi juz przez invalid
+widget state.
+
 **Objaw:** `/audit-31-05-navigation-empty` ma dwa zapisane linki bez
 bezpiecznych destynacji. Public runtime powinien zachowac brand-only
 Navigation albo ukryc tylko linki. Faktyczny wynik:
@@ -121,6 +127,11 @@ Navigation albo ukryc tylko linki. Faktyczny wynik:
    explicit hidden/fallback state, a nie pusty payload niezgodny ze schema.
 
 ### NV-31-05-02 - Public resolver zmienia unsafe manual href w widoczny link `#`
+
+**Status po TASK-397:** Naprawione na granicy widget-owner. Navigation traktuje
+bare `#` jako brak destynacji, wiec resolverowy placeholder po unsafe href jest
+ukrywany tak samo jak `javascript:` i protocol-relative href. Realne kotwice
+typu `#overview` pozostaja dozwolone.
 
 **Objaw:** `/audit-31-05-navigation-unsafe` ma link
 `javascript:alert(1)`. DOM nie zawiera `javascript:`, ale nadal pokazuje link
@@ -165,6 +176,10 @@ Protocol-relative `//evil.example/path` znika dopiero pozniej, bo
 
 ### NV-31-05-03 - Drawer active link ma `aria-current` tylko na pierwszym klonie
 
+**Status po TASK-397:** Naprawione. Runtime oznacza wszystkie responsywne klony
+najlepszego active-match jako `data-navigation-active="true"` oraz
+`aria-current="page"`, wiec desktop i drawer clone maja zgodna semantyke.
+
 **Objaw:** w `drawer` renderer ma desktop list i mobile panel z tymi samymi
 linkami. Na `/audit-31-05-navigation-rich` oba klony aktualnego linku dostaly
 `data-navigation-active="true"`, ale tylko pierwszy klon dostal
@@ -202,6 +217,11 @@ semantyka aktualnej strony trafia w ukryty desktop clone.
 
 ### NV-31-05-04 - Visual dziala, ale metadata `data-widget-control-path` jest niepelne
 
+**Status po TASK-397:** Naprawione. Navigation Visual uzywa wspolnych
+`WidgetControlRow`, `SharedColorControl` i `LinkDestinationField` metadata dla
+deklarowanych writable paths. Regresja w `navigation-editor-wave.test.tsx`
+porownuje renderowane Visual control paths z `navigationEditorContract`.
+
 **Objaw:** admin Visual ma wiele dzialajacych kontrolek, ale DOM metadata
 pokazala tylko 13 `data-widget-control` rows, glownie destination pickery i
 builder controls. Brak path metadata m.in. dla wariantow, links source, logo
@@ -229,6 +249,10 @@ switchy, token selects i wielu style controls.
 
 ### NV-31-05-05 - Public DOM ujawnia `data-menu-key`
 
+**Status po TASK-397:** Naprawione. Public renderer nie emituje juz
+`data-menu-key` ani raw `menuKey`; zamiast tego pokazuje tylko
+`data-menu-configured="true"` gdy menu jest skonfigurowane.
+
 **Objaw:** renderer wystawia `data-menu-key={normalized.menuKey}` na public
 `<nav>`, chociaz runtime client script go nie uzywa.
 
@@ -246,6 +270,11 @@ switchy, token selects i wielu style controls.
    np. `data-menu-configured="true"`.
 
 ### NV-31-05-06 - Persisted/imported style colors nie sa schema-bounded
+
+**Status po TASK-397:** Naprawione. Navigation color fields maja schema pattern
+dla bezpiecznych kolorow i przechodza przez `resolveClearableCssColorValue()`
+w normalizerze przed renderem. Regresje sprawdzaja odrzucenie importowanego
+`url(javascript:...)` oraz zachowanie tokenow/hex/rgb.
 
 **Objaw:** UI jest swatch-first i dziala poprawnie w codziennym edytowaniu, ale
 schema przyjmuje style color fields jako dowolne stringi. Importowany albo
@@ -285,6 +314,18 @@ variables.
 
 ## Walidacja
 
+- `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, `3 files / 55 tests`.
+- `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, `9 files / 125 tests`.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `bun test tests/security/codersoSecurityGate.test.ts` - passed.
+- `bun run scan:gitleaks:worktree`, `bun run scan:trivy:secret`, `bun run scan:semgrep` - passed, Semgrep `0 findings`.
+- `git diff --check -- core/widgets/core/navigation.tsx core/admin/ui/widgets/editors/NavigationEditors.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx _docs/_WIDGETS/NAVIGATION.md _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_NAVIGATION_WIDGET.md _docs/_TASKS/TASK-397*.md` - passed.
+- `git diff --check` - passed.
+- `bun run gates:coderso` - passed: functional, ux, performance, security, reliability.
+
+Walidacja historyczna z UI-first pass:
+
 - `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/navigationRuntimeScript.test.ts tests/vitest/ui/navigation-editor-wave.test.tsx` - passed, `3 files / 37 tests`.
 - `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test tests/unit/navigation/navigationRuntimeResolver.test.ts` - passed, `11 tests`.
 - `bun --cwd core lint` - passed.
@@ -292,12 +333,8 @@ variables.
 
 ## Rekomendowana kolejnosc napraw
 
-1. `NV-31-05-01` - schema/public hydration mismatch, bo na public route pokazuje
-   `Invalid widget data`.
-2. `NV-31-05-02` - resolver safe href drift, bo unsafe link zostaje widocznym
-   placeholderem `#`.
-3. `NV-31-05-03` - drawer active-link a11y, bo mobile clone nie dostaje
-   `aria-current`.
-4. `NV-31-05-05` - usunac public `data-menu-key`.
-5. `NV-31-05-04` i `NV-31-05-06` - dopiac authoring/testability i persisted
-   style hardening.
+Wszystkie pozycje `NV-31-05-01` do `NV-31-05-06` zostaly zamkniete w
+TASK-397. Dalszy Playwright retest powinien skupic sie na potwierdzeniu
+publicznych tras audytowych po uruchomieniu asset dev servera, bo pierwotny pass
+nie mogl oprzec sie o `computedStyle` przez `ERR_CONNECTION_REFUSED` na porcie
+5178.

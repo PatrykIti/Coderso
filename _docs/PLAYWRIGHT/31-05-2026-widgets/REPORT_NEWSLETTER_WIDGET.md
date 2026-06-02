@@ -6,6 +6,9 @@
 > **Public route:** `/audit-31-05-newsletter`
 > **Playwright sessions:** `newsletter-31`, `newsletter-31b`, `newsletter-31c`
 > **Claude:** probowano uruchomic non-interactive; CLI zwrocil `401 Invalid authentication credentials` przed testem.
+> **Remediation:** TASK-392 zamknal cztery znaleziska: admin preview field
+> projection, legacy webhook diagnostics, public nonce gating i read-only
+> variant cards.
 
 ## Metoda
 
@@ -55,15 +58,18 @@ Przetestowane:
 | Spacing / alignment / width | `Extra spacious`, `Center`, `Wide` | Root `spacing=xl`, `alignment=center`, `width=wide`. | Nie publikowano. | Dziala | Style tokens ida do root data attrs/classes. | Brak. |
 | Static disconnected submit | `Submission mode = Not connected yet` | Shell to `div role=form`, `aria-disabled=true`, button `type=button`, diagnostics: connect runtime/action URL. | Public baseline blocked. | Dziala | `submitReady=false` blokuje native submit. | Brak. |
 | Forms runtime - form list | Utworzono publiczny Form i wybrano `Use a Coderso Form` | Editor laduje form, mapping rows przechodza na pola Form, connection status: `Coderso Form: Audit 31-05 Newsletter Form`. | Nie publikowano. | Dziala czesciowo | Dane formularza sa widoczne w editorze. | Patrz `NL-31-05-01` dla preview. |
-| Forms runtime - preview | Wybrano bound form | Live preview znika i pokazuje placeholder: `Invalid widget data (widget_schema_invalid: data/resolved/fields/0 must NOT have additional properties)`. | Nie publikowano. | Nie dziala | Admin preview przekazuje pelne adminowe `FormField` do `resolved.fields`, a schema widgetu jest strict. | Patrz `NL-31-05-01`. |
+| Forms runtime - preview | Wybrano bound form | Bound Form preview patch obcina adminowe `FormField` metadata do strict `resolved.fields[]`; preview zostaje renderowalny. | Nie publikowano. | Dziala po TASK-392 | `normalizeNewsletterResolvedFields()` kopiuje tylko pola akceptowane przez schema widgetu. | Zamkniete w `NL-31-05-01`. |
 | Advanced static | Klik `Advanced` przy static mode | Sekcje `Signup readiness` i `Authoring boundaries`, `writablePaths=[]`, brak input/select/pre. | Nie dotyczy. | Dziala | Advanced jest read-only support summary. | Brak. |
-| Legacy webhook | Kodowy probe z `integration.webhookId` | Advanced/Visual code opisuje zapisany webhook jako external signup service. | Renderer nie wystawia `<form>` i blokuje submit. | Nie dziala jako truthfulness | Editor uznaje `webhookId` za dzialajacy destination, runtime nie. | Patrz `NL-31-05-02`. |
-| Public Forms runtime bez nonce | Kodowy probe z compatible `resolved` bez `submissionNonce` | Nie dotyczy admin. | Widget renderuje interactive `<form>` bez `__nl_form_nonce`. | Ryzyko kontraktu | Public site zwykle hydratuje nonce, ale widget-level guard jest zbyt luzny. | Patrz `NL-31-05-03`. |
-| Variant cards bez handlera | Kodowy audit `VariantCards` | Przy braku `onVariantChange` karty wygladaja jak klikane, mimo ze `onChange` jest opcjonalny. | Nie dotyczy. | UX robustness gap | Buttony nie sa disabled/read-only bez handlera. | Patrz `NL-31-05-04`. |
+| Legacy webhook | Kodowy probe z `integration.webhookId` | Visual/Advanced pokazuja `Legacy webhook saved` i inactive/disabled copy. | Renderer nadal nie wystawia `<form>` i blokuje submit. | Dziala po TASK-392 | Editor rozdziela supported action URL od legacy webhook metadata. | Zamkniete w `NL-31-05-02`. |
+| Public Forms runtime bez nonce | Kodowy probe z compatible `resolved` bez `submissionNonce` | Nie dotyczy admin. | Widget renderuje disabled shell, bez `<form>`, `data-nextless-form-runtime`, runtime script i nonce input. | Dziala po TASK-392 | `canUseFormsRuntime` wymaga niepustego `resolved.submissionNonce`. | Zamkniete w `NL-31-05-03`. |
+| Variant cards bez handlera | Kodowy audit `VariantCards` | Przy braku `onVariantChange` karty sa disabled/read-only i nie pokazuja `Pick`. | Nie dotyczy. | Dziala po TASK-392 | Karty maja `disabled`, `aria-disabled` i read-only/current badges. | Zamkniete w `NL-31-05-04`. |
 
-## Znaleziska do poprawy
+## Znaleziska i zamkniecie TASK-392
 
 ### NL-31-05-01 - Bound Forms runtime psuje admin preview przez nieznormalizowane pola
+
+**Status:** naprawione w TASK-392. Admin preview projektuje pola bound Form do
+ksztaltu `NewsletterResolvedRuntimeData.fields[]` przed `dataPatch`.
 
 **Objaw:** po wybraniu publicznego formularza `Audit 31-05 Newsletter Form`
 editor poprawnie pokazuje:
@@ -101,20 +107,21 @@ Playwright potwierdzil wtedy:
   wiec nie lapie realnego admin API shape:
   `tests/vitest/ui/newsletter-editor-wave.test.tsx:878-899`.
 
-**Jak naprawic:**
+**Zamkniecie TASK-392:**
 
-1. W admin preview dodac lokalny helper, np. `toNewsletterResolvedField(field)`,
-   ktory mapuje `detail.fields` do ksztaltu schema:
-   `id/type/label/name/required/orderIndex/settings`.
-2. Uzyc helpera w `useNewsletterAdminPreview` zamiast `fields: detail.fields`.
-3. Rozszerzyc test `Newsletter visual editor publishes page-builder preview
-   hydration for forms-runtime` o pola w realnym adminowym ksztalcie
-   (`formId`, `createdAt`, `updatedAt`) i oczekiwac, ze patch je obcina.
-4. Dodac Playwright/regression smoke: wybranie publicznego Form nie moze
-   renderowac `Invalid widget data`, a preview musi zostac w bezpiecznym
-   editor-preview stanie.
+1. Dodano `normalizeNewsletterResolvedFields()` w ownerze
+   `core/widgets/core/newsletter.tsx`.
+2. `useNewsletterAdminPreview` uzywa helpera zamiast przekazywac
+   `detail.fields` bez projekcji.
+3. UI regression dodaje `formId`, `createdAt`, `updatedAt` do mockowanego
+   admin field shape i oczekuje, ze preview patch je obcina.
+4. Targeted suite potwierdza, ze strict widget schema pozostaje zgodna z
+   preview hydration.
 
 ### NL-31-05-02 - Legacy `webhookId` jest raportowany jako destination, ale runtime go blokuje
+
+**Status:** naprawione w TASK-392. Legacy webhook jest zachowany, ale opisany
+jako inactive/disabled do czasu migracji.
 
 **Objaw:** subagent/code audit i render probe potwierdzily, ze legacy
 `integration.webhookId` jest mylaco opisywany jako zapisany external signup
@@ -143,19 +150,19 @@ service. Renderer jednak nie ma dla webhooka submit path:
   `action-url`; `webhook` nigdy nie spelnia `canUseNativeAction`:
   `core/widgets/core/newsletter.tsx:1003-1011`.
 
-**Jak naprawic:**
+**Zamkniecie TASK-392:**
 
-1. Rozdzielic w editorze `saved legacy webhook exists` od `visitor submit path
-   is active`.
-2. Dla `webhookId` bez valid action URL pokazac support copy typu
-   `Legacy webhook saved; visitor submit remains disabled until migrated to a
-   Coderso Form`.
-3. Jesli produktowo webhook ma dzialac, dodac realny internal/public-safe
-   endpoint z tym samym nonce/captcha/rate-limit kontraktem co public writes.
-4. Dodac test Advanced + renderer: webhook legacy nie moze mowic, ze visitors
-   are sent, jesli `NewsletterBlock` renderuje `native-submit=blocked`.
+1. Editor rozdziela supported external action URL od legacy webhook metadata.
+2. Visual/Advanced pokazuja, ze legacy webhook jest zapisany, ale visitor submit
+   pozostaje disabled.
+3. Nie dodano nowego publicznego webhook endpointu; legacy state zostaje
+   non-destructive i inactive.
+4. Dodano UI regression dla Visual i Advanced webhook summaries.
 
 ### NL-31-05-03 - Public Forms runtime moze byc interactive bez nonce na poziomie widgetu
+
+**Status:** naprawione w TASK-392. Public Forms runtime wymaga niepustego
+`resolved.submissionNonce`, zanim Newsletter wystawi native form/script markup.
 
 **Objaw:** kodowy render probe z compatible public `resolved` bez
 `submissionNonce` zwrocil:
@@ -186,17 +193,20 @@ formularzy. Problem jest w samym widget-level guard.
   `core/server/publicSite.tsx:433-449`,
   `core/services/forms/formRuntimeResolver.ts:90-104`.
 
-**Jak naprawic:**
+**Zamkniecie TASK-392:**
 
-1. Dla Forms runtime wymagac `resolved.submissionNonce` rowniez w public
-   rendererze, chyba ze istnieje inny jawny, udokumentowany anti-abuse token.
-2. Przy braku nonce renderowac blocked shell z diagnostyka zamiast native form.
-3. Dodac widget-level test: public Forms runtime bez nonce nie moze renderowac
-   `<form>` ani `data-nextless-form-runtime="1"`.
-4. Zachowac publicSite/integration test, ktory potwierdza, ze normalna sciezka
-   nadal dostarcza nonce i renderuje form.
+1. `canUseFormsRuntime` wymaga compatible binding oraz niepustego
+   `resolved.submissionNonce`.
+2. Przy braku nonce renderer pokazuje disabled shell z diagnostyka security
+   token, bez `<form>`, runtime markerow, nonce inputu i scriptu.
+3. Dodano widget-level public renderer regression dla no-nonce state.
+4. Public route hydration pozostaje przez `resolveFormRuntimeData`; dodatkowo
+   rerunieto nonce resolver i security gate suites.
 
 ### NL-31-05-04 - Variant cards wygladaja aktywnie nawet bez `onVariantChange`
+
+**Status:** naprawione w TASK-392. Variant cards sa read-only/disabled bez
+handlera mutacji.
 
 **Objaw:** `VariantCards` przyjmuje opcjonalny `onChange`, ale karty nadal sa
 zwyklymi klikanymi buttonami z tekstem `Pick`.
@@ -211,12 +221,11 @@ zwyklymi klikanymi buttonami z tekstem `Pick`.
 - TASK-276-04 wskazuje, ze brak handlera powinien byc disabled/read-only:
   `_docs/_TASKS/TASK-276-04_Newsletter_Editor_Mode_Ownership_and_Variant_Guidance.md:113`.
 
-**Jak naprawic:**
+**Zamkniecie TASK-392:**
 
-1. Jesli `onVariantChange` nie istnieje, renderowac karty jako disabled albo
-   read-only summary.
-2. Dodac test UI dla Visual editor bez `onVariantChange`: variant buttons nie
-   moga wygladac jak aktywna mutacja.
+1. Bez `onVariantChange` karty ustawiaja `disabled`, `aria-disabled`,
+   `data-newsletter-variant-card-state` i read-only/current badges.
+2. Dodano test UI dla Visual editor bez `onVariantChange`.
 
 ## Public baseline
 
@@ -276,3 +285,10 @@ To jest oczekiwany baseline dla static/disconnected page.
 - Tests:
   - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/site/publicRenderer.test.tsx`
   - Result: 4 files / 53 tests passed.
+- TASK-392 closure:
+  - `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/site/publicRenderer.test.tsx` - passed, 4 files / 56 tests.
+  - `bun run test:vitest -- tests/vitest/forms/submissionNonce.test.ts tests/vitest/forms/formRuntimeResolver.test.ts` - passed, 2 files / 10 tests.
+  - `bun test tests/security/codersoSecurityGate.test.ts` - passed, 4 tests.
+  - `bun --cwd core lint` - passed.
+  - `bun --cwd core lint:types` - passed.
+  - `git diff --check` - passed.

@@ -5,7 +5,7 @@
 **Category:** Widgets + Compare Timeline + Admin UI + Runtime + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-391
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,11 @@ Runtime shows no segments/highlights in dual-track, but Advanced reports `Highli
 
 ## Sub-Tasks
 
-- [ ] Reproduce CT-31-05-03 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce CT-31-05-03 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -46,6 +46,16 @@ Runtime shows no segments/highlights in dual-track, but Advanced reports `Highli
 
 - `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx`
 - `core/widgets/core/compareTimeline.tsx`
+
+## Closure Notes
+
+Closed on 2026-06-02.
+
+- Reproduced from the 31-05 report evidence: runtime suppresses segments/highlights in `dual-track`, but Advanced presented saved highlight targets as active.
+- Advanced now resolves the active variant and labels saved highlight targets dormant outside `dual-track-highlight`.
+- Saved highlight metadata remains non-destructive and returns as active diagnostics in `dual-track-highlight`.
+- Added UI regression coverage for dormant and active Advanced highlight summaries.
+- Validation recorded in the parent TASK-391 closure notes.
 
 ## Security Contract
 

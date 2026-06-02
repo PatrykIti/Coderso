@@ -6,6 +6,8 @@
 > **Public route:** `/audit-31-05-compare-timeline`
 > **Playwright sessions:** `compare-timeline-31b`
 > **Claude:** probowano uruchomic non-interactive; CLI zwrocil `401 Invalid authentication credentials` przed testem.
+> **Remediation:** TASK-391 zamknal trzy znaleziska: semantyke label-size
+> `none`, axis-row step sizing oraz dormant Advanced highlight diagnostics.
 
 ## Metoda
 
@@ -56,18 +58,22 @@ Przetestowane:
 | Highlight label style | `Outlined badge` | Segment label style: transparent background, border/highlight color. | Nie publikowano. | Dziala | `highlightLabelStyle=outline` mapuje style segment badge. | Brak. |
 | Colors set | Ustawiono highlight/marker/track/step/muted/guide/background colors | Preview pokazuje marker `#2563eb`, guide `#64748b`, background `#f8fafc`, highlight `#f97316`. | Nie publikowano. | Dziala | Shared swatch controls mapuja na style keys. | Brak. |
 | Colors clear | Klik Clear dla 7 kolorow | Editor `Selected color=0`, `Theme default=7`; preview wraca do runtime fallbackow. | Nie publikowano. | Dziala | `clearStyle` usuwa key ze style object. | Dodac test UI clear wiring, patrz rekomendacje. |
-| Segment label size | `Default`, potem `Hidden` | `Default` daje segment badge `text-base`; `Hidden` usuwa `text-*`, ale tekst segmentu nadal widoczny. | Nie publikowano. | Czesciowo dziala / copy nieprawdziwe | TASK-343-08 naprawil hard-coded `text-xs`, ale label `Hidden` sugeruje ukrycie, ktore nie zachodzi. | Patrz `CT-31-05-01`. |
-| Track label size | `Large`, potem `Hidden` | `Large` daje track label `text-base`; `Hidden` usuwa size class, ale `Manual path` / `Coderso path` nadal widoczne. | Nie publikowano. | Nie dziala jako truthfulness | `none` znaczy brak klasy, nie hidden. | Patrz `CT-31-05-01`. |
-| Step label size | `Default`, potem `Hidden` | Track-cell labels reaguja, ale axis row nadal ma `text-xs`; przy `Hidden` axis labels nadal widoczne. | Nie publikowano. | Nie dziala | `CompareAxisRow` hardcoduje `text-xs`. | Patrz `CT-31-05-02`. |
+| Segment label size | `Default`, potem `Inherit` | `Default` daje segment badge `text-base`; `Inherit` usuwa `text-*`, a tekst segmentu pozostaje widoczny. | Nie publikowano. | Dziala po TASK-391 | `none` jest teraz opisane jako inherited/no explicit size, zgodnie z rendererem. | Zamkniete w `CT-31-05-01`. |
+| Track label size | `Large`, potem `Inherit` | `Large` daje track label `text-base`; `Inherit` usuwa size class, a track labels pozostaja widoczne. | Nie publikowano. | Dziala po TASK-391 | `none` znaczy brak jawnej klasy rozmiaru, nie ukrycie tekstu. | Zamkniete w `CT-31-05-01`. |
+| Step label size | `Default`, potem `Inherit` | Track-cell labels i axis row labels reaguja na wybrany size; `Inherit` usuwa jawne size classes przy zachowaniu tekstu. | Nie publikowano. | Dziala po TASK-391 | `CompareAxisRow` dostaje ten sam `stepLabelSizeClass`, ktory steruje track cells. | Zamkniete w `CT-31-05-02`. |
 | Marker shape | `Check mark` | Marker text przechodzi na `✓/○`; root `data-compare-marker-shape=check`. | Nie publikowano. | Dziala | Marker badge content zalezy od `markerShape`. | Brak. |
 | Spacing/layout | Extra spacious, labels bottom, 7XL, lg padding, Coderso first, slide | Root `labelPosition=bottom`, `maxWidth=7xl`, `padding=lg`, `trackOrder=b-first`, `motion=slide`; axis row po trackach. | Nie publikowano. | Dziala | Layout tokens trafiaja do renderer attributes/classes. | Brak. |
 | Advanced after edits | Klik `Advanced` | Sekcje runtime/metadata/normalization + builder summaries; `writableControls=0`. | Nie dotyczy. | Dziala jako read-only | Advanced nie wystawia input/select. | Brak. |
-| Dual Track z zapisanym highlight state | Przelaczono z highlight na `Dual Track` | Runtime `segmentCount=0`, `highlightedCells=0`, ale targetTracks nadal `a,b`; Visual pokazuje tylko message o zachowanych segmentach. | Nie publikowano. | Dziala runtime, ale patrz Advanced | Segmenty sa preserved/dormant w `dual-track`. | Patrz `CT-31-05-03`. |
-| Advanced w `dual-track` | Po przelaczeniu na `Dual Track` klik `Advanced` | Advanced pokazuje `Highlight target: Both tracks`, mimo ze runtime w tym wariancie nie renderuje highlightow. | Nie dotyczy. | Nie dziala jako truthfulness | Advanced ignoruje aktywny variant. | Patrz `CT-31-05-03`. |
+| Dual Track z zapisanym highlight state | Przelaczono z highlight na `Dual Track` | Runtime `segmentCount=0`, `highlightedCells=0`, ale targetTracks nadal `a,b`; Visual pokazuje message o zachowanych segmentach, a Advanced oznacza targety dormant. | Nie publikowano. | Dziala po TASK-391 | Segmenty i targety sa preserved/dormant w `dual-track`. | Zamkniete w `CT-31-05-03`. |
+| Advanced w `dual-track` | Po przelaczeniu na `Dual Track` klik `Advanced` | Advanced pokazuje dormant copy: zapisany target jest disabled w Dual Track i zachowany dla Dual Track Highlight. | Nie dotyczy. | Dziala po TASK-391 | Advanced resolve'uje aktywny variant przed prezentacja highlight diagnostics. | Zamkniete w `CT-31-05-03`. |
 
-## Znaleziska do poprawy
+## Znaleziska i zamkniecie TASK-391
 
 ### CT-31-05-01 - `Hidden` dla label sizes nie ukrywa labeli
+
+**Status:** naprawione w TASK-391. UI label dla `none` zostal zmieniony na
+`Inherit`, a runtime nadal renderuje dostepne etykiety bez jawnej klasy
+rozmiaru.
 
 **Objaw:** Visual pokazuje opcje `Hidden` dla:
 
@@ -89,7 +95,7 @@ tak, ze `none` nie zostawia juz `text-xs`; obecnie problemem jest nazwa opcji
 
 **Dlaczego:**
 
-- Editor mapuje `none` na label `Hidden`:
+- Przed TASK-391 editor mapowal `none` na label `Hidden`:
   `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx:87-93`.
 - Renderer mapuje `none` na pusta klase, nie na ukrycie:
   `core/widgets/core/compareTimeline.tsx:130-149`.
@@ -97,21 +103,17 @@ tak, ze `none` nie zostawia juz `text-xs`; obecnie problemem jest nazwa opcji
   `core/widgets/core/compareTimeline.tsx:941-946`,
   `core/widgets/core/compareTimeline.tsx:1040-1052`.
 
-**Jak naprawic:**
+**Zamkniecie TASK-391:**
 
-1. Jesli produktowo `none` ma znaczyc brak wymuszonego rozmiaru, zmienic copy z
-   `Hidden` na `Inherit` albo `No explicit size` dla wszystkich trzech selectow.
-2. Jesli `Hidden` ma byc prawdziwe, renderer musi warunkowo ukrywac track/step
-   label i segment badge przy `none`, najlepiej z jasna decyzja a11y
-   (`sr-only` vs brak tekstu).
-3. Dodac regresje w `tests/vitest/widgets/compareTimeline.test.tsx`: osobne
-   asercje dla `trackLabelSize="none"`, `stepLabelSize="none"` i
-   `segmentLabelSize="none"`, zgodne z wybrana semantyka.
-4. Dodac UI test w `tests/vitest/ui/compare-timeline-editor-wave.test.tsx`,
-   ktory sprawdza, ze label w select nie obiecuje ukrycia, jesli runtime nie
-   ukrywa tekstu.
+1. `none` zostal zachowany jako inherited/no explicit size semantics.
+2. Copy dla label-size selectow zostala zmieniona z `Hidden` na `Inherit`.
+3. Dodano regresje dla widocznych etykiet bez explicit text-size classes oraz
+   UI regresje, ze select copy nie obiecuje ukrywania.
 
 ### CT-31-05-02 - `Step label size` nie steruje etykietami osi
+
+**Status:** naprawione w TASK-391. Axis row uzywa tego samego
+`stepLabelSizeClass`, co track-row step labels.
 
 **Objaw:** po ustawieniu `Step label size -> Default` track-cell labels
 zmieniaja size class, ale axis row dalej renderuje:
@@ -136,16 +138,18 @@ steruje glowna osia, mimo ze copy mowi ogolnie `Step label size`.
   font-medium`, ale nie rozdziela axis row od track cells:
   `tests/vitest/widgets/compareTimeline.test.tsx:285-306`.
 
-**Jak naprawic:**
+**Zamkniecie TASK-391:**
 
-1. Przekazac `stepLabelSizeClass` do `CompareAxisRow` i uzyc go zamiast
-   hard-coded `text-xs`.
-2. Zdecydowac wspolnie z `CT-31-05-01`, czy `none` dla axis labeli ma ukrywac
-   tekst, czy tylko usuwac explicit size class.
-3. Dodac test rendererowy, ktory selekcjonuje `data-compare-axis="true"` i
-   track cells osobno dla `stepLabelSize="base"` oraz `stepLabelSize="none"`.
+1. `CompareAxisRow` przyjmuje `stepLabelSizeClass` i nie hardcoduje juz
+   `text-xs`.
+2. `none` usuwa explicit size class tak samo dla axis i track labels.
+3. Dodano test rendererowy selekcjonujacy `data-compare-axis="true"` i track
+   cells osobno dla `stepLabelSize="base"` oraz `stepLabelSize="none"`.
 
 ### CT-31-05-03 - Advanced pokazuje highlight target jako aktywny w `dual-track`
+
+**Status:** naprawione w TASK-391. Advanced odczytuje aktywny wariant i
+oznacza zapisane targety jako dormant poza `dual-track-highlight`.
 
 **Objaw:** po ustawieniu highlightow i przelaczeniu wariantu z powrotem na
 `Dual Track` runtime poprawnie nie pokazuje segmentow:
@@ -169,14 +173,13 @@ highlight jest dormant.
   `highlightSummary` z danych:
   `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx:1559-1593`.
 
-**Jak naprawic:**
+**Zamkniecie TASK-391:**
 
-1. W Advanced odczytac `variant` i policzyc `highlightEnabled`.
-2. Dla `dual-track` pokazac np. `Highlight disabled in Dual Track; saved targets
-   and segments are preserved for Dual Track Highlight`.
-3. Zachowac support metadata, ale oznaczyc je jako dormant, nie aktywne.
-4. Dodac test UI: `variant="dual-track"` + `highlight.targetTrackIds=["a","b"]`
-   nie moze renderowac samego `Highlight target: Both tracks` bez dormant copy.
+1. Advanced resolve'uje `variant` i liczy, czy highlight jest aktywny.
+2. Dla `dual-track` pokazuje dormant copy z informacja, ze zapisane targety sa
+   zachowane dla Dual Track Highlight.
+3. W `dual-track-highlight` ta sama konfiguracja wraca do aktywnego summary.
+4. Dodano UI regresje dla dormant i active diagnostics.
 
 ## Public baseline
 
@@ -232,13 +235,10 @@ HTML z:
 
 ## Rekomendacje
 
-1. Naprawic `CT-31-05-01` i `CT-31-05-02` razem, bo oba dotycza semantyki
-   label size `none`.
-2. Naprawic `CT-31-05-03` jako Advanced truthfulness fix bez zmiany runtime
-   semantics.
-3. Dodac UI test clear-color wiring dla 7 clearable color fields; runtime test
+1. TASK-391 zamknal wszystkie trzy raportowe Compare Timeline findings.
+2. Dodac UI test clear-color wiring dla 7 clearable color fields; runtime test
    juz pokrywa `style: {}`, ale nie chroni podpiecia `onClear` w editorze.
-4. Rozwazyc variant-aware contract metadata dla dormant highlight/segment
+3. Rozwazyc variant-aware contract metadata dla dormant highlight/segment
    paths, zeby smoke i raporty nie interpretowaly ukrytych kontrolek jako
    stale aktywnych w `dual-track`.
 
@@ -248,6 +248,10 @@ HTML z:
 - `playwright-cli -s=compare-timeline-31b run-code --filename .tmp/playwright-compare-timeline-dual-advanced.js` - passed.
 - `curl http://localhost:3000/audit-31-05-compare-timeline` - HTTP 200.
 - `bun run test:vitest -- tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/ui/compare-timeline-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/site/publicRenderer.test.tsx` - passed, 4 files / 51 tests.
+- `bun run test:vitest -- tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/ui/compare-timeline-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 3 files / 38 tests (TASK-391 closure).
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `git diff --check` - passed.
 - Admin console po glownym przebiegu: `Errors: 1`, `Warnings: 0`; blad:
   `Failed to load resource: the server responded with a status of 404 (Not Found)`.
 - Subagent code review niezaleznie wskazal `Hidden` label-size truthfulness,

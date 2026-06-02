@@ -357,7 +357,7 @@ test("FooterWizardEditor keeps social setup bounded to visibility while preservi
     socialEnabled: true,
     social: [{ type: "custom", href: "/community", label: "Community" }],
   };
-  let currentVariant = "columns-2";
+  let currentVariant = "minimal";
 
   const Harness = () => {
     const [value, setValue] = useState<FooterData>(latestValue);
@@ -386,11 +386,13 @@ test("FooterWizardEditor keeps social setup bounded to visibility while preservi
     expect(view.container.textContent).not.toContain("Legal basics");
     expect(view.container.textContent).toContain("Use Visual to edit brand logo");
     expect(view.container.textContent).toContain("Visible columns");
-    expect(view.container.textContent).toContain("Company, Resources");
+    expect(view.container.textContent).toContain("Company");
+    expect(view.container.textContent).toContain("Change the footer variant in Visual mode.");
     expect(findInputByLabel(view.container, "Column 1 title")).toBeUndefined();
     expect(findCheckboxByLabel(view.container, "Show social links")).toBeUndefined();
+    expect(findSelectByLabel(view.container, "Footer variant")).toBeUndefined();
+    expect(writablePathsForMode(view.container, "wizard")).toEqual([]);
 
-    setSelectValue(findSelectByLabel(view.container, "Footer variant"), "minimal");
     expect(view.container.textContent).toContain("1 saved social profile stays preserved");
     expect(() => clickByText(view.container, "Add social")).toThrow();
 
@@ -408,6 +410,38 @@ test("FooterWizardEditor keeps social setup bounded to visibility while preservi
     expect(latestValue.social).toEqual([
       { type: "custom", href: "/community", label: "Community" },
     ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FooterVisualEditor fails closed for unsafe saved logo preview", async () => {
+  const { FooterVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
+
+  const view = mount(
+    <FooterVisualEditor
+      value={{
+        columns: [{ title: "Company", links: [] }],
+        brand: {
+          logoText: "Coderso",
+          logoUrl: "javascript:alert(1)",
+          logoAlt: "Unsafe logo",
+        },
+      }}
+      onChange={() => undefined}
+      variant="columns-2"
+    />
+  );
+
+  try {
+    const logoImages = Array.from(view.container.querySelectorAll("img")).filter((image) =>
+      image.alt.includes("Unsafe logo")
+    );
+    expect(logoImages).toEqual([]);
+    expect(view.container.textContent).toContain(
+      "A saved logo URL is not safe for preview or public rendering."
+    );
   } finally {
     view.cleanup();
   }
@@ -470,6 +504,19 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes beginner-
     expect(writablePathsForMode(view.container, "visual")).toContain("layout.sectionPaddingY");
     expect(writablePathsForMode(view.container, "visual")).toContain("style.linkColor");
     expect(unwrappedNativeControlsForMode(view.container, "visual")).toEqual([]);
+    const pathCounts = writablePathsForMode(view.container, "visual").reduce<
+      Record<string, number>
+    >((counts, path) => {
+      counts[path] = (counts[path] ?? 0) + 1;
+      return counts;
+    }, {});
+    expect(pathCounts["columns.0.links.0.href"]).toBe(1);
+    expect(pathCounts["legal.privacy"]).toBe(1);
+    expect(
+      view.container.querySelector(
+        '[data-widget-editor-section="footer.visual.slots-overview"] [data-widget-control-path="slots"][data-widget-control-readonly="true"]'
+      )
+    ).toBeInstanceOf(HTMLElement);
 
     const firstLinkCard = findSectionCard(view.container, "Link 1");
     clickByText(firstLinkCard as ParentNode, "Move down");
@@ -679,6 +726,11 @@ test("FooterAdvancedEditor is read-only diagnostics while Visual owns layout tok
   try {
     expect(writablePathsForMode(view.container, "visual")).toContain("layout.sectionPaddingY");
     expect(writablePathsForMode(view.container, "advanced")).toEqual([]);
+    expect(
+      view.container.querySelector(
+        '[data-widget-editor-section="footer.advanced.support-summary"] [data-widget-control-path="slots"][data-widget-control-readonly="true"]'
+      )
+    ).toBeInstanceOf(HTMLElement);
 
     const advancedPanel = findPanelByTitle(view.container, "Layout diagnostics");
     expect(advancedPanel?.querySelector("input, select, textarea, button")).toBeNull();

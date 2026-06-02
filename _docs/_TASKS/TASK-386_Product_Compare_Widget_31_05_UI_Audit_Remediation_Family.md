@@ -5,7 +5,7 @@
 **Category:** Widgets + Product Compare + Commerce UI + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_PRODUCT_COMPARE_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -24,8 +24,8 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-386-01](TASK-386-01_PC_31_05_01_Search_Collections_Status_Filters_Must_Be_Marked_Ignored.md): PC-31-05-01 - Search/collections/status filters must be marked ignored for selected products
-- [ ] [TASK-386-02](TASK-386-02_PC_31_05_02_Add_Commerce_Detail_Image_Fixture_Coverage.md): PC-31-05-02 - Add commerce detail/image fixture coverage
+- [x] [TASK-386-01](TASK-386-01_PC_31_05_01_Search_Collections_Status_Filters_Must_Be_Marked_Ignored.md): PC-31-05-01 - Search/collections/status filters must be marked ignored for selected products
+- [x] [TASK-386-02](TASK-386-02_PC_31_05_02_Add_Commerce_Detail_Image_Fixture_Coverage.md): PC-31-05-02 - Add commerce detail/image fixture coverage
 
 ## Implementation Pseudocode
 
@@ -70,3 +70,22 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes
+
+Done on 2026-06-02.
+
+- Product Compare Advanced now marks saved search, collection, and status filters as inactive while selected products own runtime resolution.
+- Product Compare smoke bootstrap now seeds a safe `/fixture-products/:slug` products route, attaches deterministic media to commerce products, patches the audited page, and publishes an image/title-link/CTA-ready fixture.
+- Product Compare generated smoke proof now checks admin and public images, safe product title links, and visible `Inspect fixture product` CTAs.
+- Changelog coverage: `_docs/_CHANGELOG/1076-2026-06-02-product-compare-widget-31-05-ui-audit-remediation.md`.
+
+Validation:
+
+- `bun test tests/unit/playwright-widget-contract-smoke.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/widgets/productCompare.test.tsx`
+- `bun test tests/integration/routes/productComparePreview.test.ts`
+- `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget product-compare --output-json .tmp/task-386-product-compare-smoke-dry-run.json --output-md .tmp/task-386-product-compare-smoke-dry-run.md`
+- `git diff --check`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

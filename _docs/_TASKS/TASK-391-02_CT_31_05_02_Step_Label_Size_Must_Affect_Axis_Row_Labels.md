@@ -5,7 +5,7 @@
 **Category:** Widgets + Compare Timeline + Admin UI + Runtime + QA + Docs + Leaf Remediation
 **Estimated Effort:** Small
 **Dependencies:** TASK-391
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -17,11 +17,11 @@ Axis row hardcodes `text-xs`, so step label size only affects track cells.
 
 ## Sub-Tasks
 
-- [ ] Reproduce CT-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce CT-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -45,6 +45,15 @@ Axis row hardcodes `text-xs`, so step label size only affects track cells.
 ## Owner Files
 
 - `core/widgets/core/compareTimeline.tsx`
+
+## Closure Notes
+
+Closed on 2026-06-02.
+
+- Reproduced from the 31-05 report evidence: track-row step labels reacted to `stepLabelSize`, while axis labels stayed hard-coded to `text-xs`.
+- Passed the normalized `stepLabelSizeClass` into `CompareAxisRow` and removed the hard-coded axis size.
+- Added renderer regression coverage that extracts axis and track label classes separately for `base` and `none` size semantics.
+- Validation recorded in the parent TASK-391 closure notes.
 
 ## Security Contract
 

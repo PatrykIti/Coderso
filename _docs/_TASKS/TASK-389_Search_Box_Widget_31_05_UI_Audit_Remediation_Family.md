@@ -5,7 +5,7 @@
 **Category:** Widgets + Search Box + Admin UI + Runtime Diagnostics + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_SEARCH_BOX_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-389-01](TASK-389-01_SB_31_05_01_Route_Submit_Rows_Must_Be_Hidden_Or_Marked.md): SB-31-05-01 - Route-submit rows must be hidden or marked inactive outside route-submit mode
+- [x] [TASK-389-01](TASK-389-01_SB_31_05_01_Route_Submit_Rows_Must_Be_Hidden_Or_Marked.md): SB-31-05-01 - Route-submit rows must be hidden or marked inactive outside route-submit mode
 
 ## Implementation Pseudocode
 
@@ -67,3 +67,15 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes
+
+Closed on 2026-06-02. Search Box Advanced now shows an `Active routing` summary for the effective runtime branch and only renders `Results page` plus `Search term routing` rows when `mode="route-submit"`.
+
+Validation recorded for closure:
+
+- `bun run test:vitest -- tests/vitest/ui/search-box-editor-wave.test.tsx tests/vitest/widgets/searchBox.test.tsx` - passed, 18 tests.
+- `bun run test:vitest -- tests/vitest/widgets/listingRuntimeScript.test.ts` - passed, 9 tests.
+- `git diff --check` - passed.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.

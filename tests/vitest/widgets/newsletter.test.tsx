@@ -202,6 +202,61 @@ test("newsletter reuses shared Forms runtime markup when the resolved form is co
   expect(html).not.toContain("Hidden in minimal variant");
 });
 
+test("newsletter blocks public Forms runtime when the submission nonce is missing", () => {
+  const html = renderToString(
+    <NewsletterBlock
+      blockId="newsletter-runtime-missing-nonce"
+      renderContext={{ mode: "public" }}
+      data={{
+        ...newsletterDefaults,
+        submission: {
+          ...newsletterDefaults.submission,
+          mode: "forms-runtime",
+          formId: "form-public",
+        },
+        resolved: {
+          formId: "form-public",
+          formName: "Newsletter form",
+          status: "published",
+          submissionAccess: "public",
+          submissionNonce: null,
+          fields: [
+            {
+              id: "field-1",
+              type: "email",
+              label: "Email",
+              name: "email",
+              required: true,
+              orderIndex: 0,
+              settings: {},
+            },
+            {
+              id: "field-2",
+              type: "checkbox",
+              label: "Consent",
+              name: "consent",
+              required: false,
+              orderIndex: 1,
+              settings: {},
+            },
+          ],
+        },
+      }}
+      variant="inline"
+    />
+  );
+
+  expect(html).toContain('data-newsletter-submit-ready="true"');
+  expect(html).toContain('data-newsletter-submit-interactive="false"');
+  expect(html).toContain('data-newsletter-native-submit="blocked"');
+  expect(html).not.toContain("<form");
+  expect(html).not.toContain('action="/forms/form-public/submissions"');
+  expect(html).not.toContain('data-nextless-form-runtime="1"');
+  expect(html).not.toContain('name="__nl_form_nonce"');
+  expect(html).not.toContain("<script");
+  expect(html).toContain("submission security token is missing");
+});
+
 test("newsletter keeps forms-runtime bindings static when consent or required fields do not match", () => {
   const html = renderToString(
     <NewsletterBlock

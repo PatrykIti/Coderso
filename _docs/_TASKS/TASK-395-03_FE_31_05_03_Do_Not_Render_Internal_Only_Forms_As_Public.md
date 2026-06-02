@@ -5,7 +5,7 @@
 **Category:** Widgets + Form Embed + Public Forms API + Security + Runtime + QA + Docs + Leaf Remediation
 **Estimated Effort:** Large
 **Dependencies:** TASK-395
-**Status:** To Do
+**Status:** Done
 
 ---
 
@@ -14,6 +14,13 @@
 Execution-ready leaf task for FE-31-05-03 from `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FORM_EMBED_WIDGET.md` and parent `TASK-395`.
 
 Internal-only form can appear public and interactive.
+
+Status log:
+
+- 2026-06-02: Moved to In Progress with TASK-395 family implementation.
+- 2026-06-02: Done. Public resolver suppresses fields for published internal
+  forms and renderer fail-closes explicit internal runtime data to a
+  noninteractive boundary without form action, inputs, nonce, or runtime script.
 
 ## Sub-Tasks
 

@@ -5,7 +5,7 @@
 **Category:** Widgets + Timeline + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_TIMELINE_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -25,9 +25,9 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-390-01](TASK-390-01_TL_31_05_01_CTA_Saved_In_Process_Compact_Mode_Must_Render.md): TL-31-05-01 - CTA saved in process/compact mode must render or be called out as hidden
-- [ ] [TASK-390-02](TASK-390-02_TL_31_05_02_Wrap_All_Real_Visual_Controls_With_Shared_Metadata.md): TL-31-05-02 - Wrap all real Visual controls with shared metadata
-- [ ] [TASK-390-03](TASK-390-03_TL_31_05_03_Variant_Cards_Must_Not_Appear_Active_When_Mode.md): TL-31-05-03 - Variant cards must not appear active when `mode=process` controls runtime branch
+- [x] [TASK-390-01](TASK-390-01_TL_31_05_01_CTA_Saved_In_Process_Compact_Mode_Must_Render.md): TL-31-05-01 - CTA saved in process/compact mode must render or be called out as hidden
+- [x] [TASK-390-02](TASK-390-02_TL_31_05_02_Wrap_All_Real_Visual_Controls_With_Shared_Metadata.md): TL-31-05-02 - Wrap all real Visual controls with shared metadata
+- [x] [TASK-390-03](TASK-390-03_TL_31_05_03_Variant_Cards_Must_Not_Appear_Active_When_Mode.md): TL-31-05-03 - Variant cards must not appear active when `mode=process` controls runtime branch
 
 ## Implementation Pseudocode
 
@@ -71,3 +71,14 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes
+
+Closed on 2026-06-02. Timeline process/compact layouts now render step CTAs, Visual mutating controls expose shared metadata aligned with the editor contract, and process mode marks saved non-compact variants inactive while compact rendering owns the effective branch.
+
+Validation recorded for closure:
+
+- `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx tests/vitest/ui/timeline-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 40 tests.
+- `git diff --check` - passed.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.

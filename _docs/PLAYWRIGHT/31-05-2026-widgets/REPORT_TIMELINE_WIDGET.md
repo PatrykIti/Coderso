@@ -42,12 +42,12 @@ Przetestowane:
 | Wizard | `Run setup again` | Jedna sekcja `timeline.wizard.starter-steps`, `writableControls=0`, header/steps jako readonly summary. | Nie dotyczy. | Dziala | Wizard jest summary-only po TASK-291/TASK-343-13. | Brak. |
 | Mode card: Alternating | Klik `Alternating` | `data-timeline-mode=alternating`, `variant=cards`; preview przechodzi na alternating branch. | Nie publikowano. | Dziala | Mode cards ida przez `updateMode` i preferred variant. | Brak. |
 | Mode select: Process | Select `Timeline mode -> Process` | `data-timeline-mode=process`, `variant=compact`, preview skraca tekst do compact strip. | Nie publikowano. | Dziala | Select uzywa tego samego `updateMode` co cards. | Brak. |
-| Variant Cards while mode Process | Klik `Cards` po ustawieniu `Process` | `data-timeline-variant=cards`, ale `data-timeline-mode=process`; renderer nadal wybiera compact layout. | Nie publikowano. | Nie dziala jako truthfulness | `mode=process` ma priorytet nad `variant=cards`, wiec karta Cards moze nie zmienic widocznego layoutu. | Patrz `TL-31-05-03`. |
+| Variant Cards while mode Process | Klik `Cards` po ustawieniu `Process` | Saved `cards` variant jest oznaczony jako inactive, a `compact` jako effective; copy wyjasnia, ze Process mode uzywa compact rendering. | Nie publikowano. | Dziala po TASK-390 | `mode=process` ma priorytet nad legacy `variant`, a Visual komunikuje saved-vs-effective state. | Brak. |
 | Step count 4 | Select `4 steps` | Preview ma 4 kroki, dodany `Launch`; `effectiveMaxWidth` wraca do `6xl`. | Nie publikowano. | Dziala | Step count normalizuje do `3-8`, width diagnostics zalezy od liczby krokow. | Brak. |
 | Orientation / labels / align | Vertical, Bottom, Start | Root: `orientation=vertical`, `labelPosition=bottom`, 4 kroki w pionie. | Nie publikowano. | Dziala | Layout tokens trafiaja do renderer branches. | Brak. |
 | Date validation | Wpisano `Q3 launch` w Date | Editor pokazuje blad `Use YYYY-MM-DD here...`; preview nadal pokazuje tekst jako date fallback. | Nie publikowano. | Dziala z ostrzezeniem | Walidacja jest guidance, nie blokada zapisu. | Brak, chyba ze product chce strict reject zamiast warning. |
 | Date/status/icon | `2026-06-01`, `June 1, 2026`, status `Current`, icon `star` | Preview ma `timeCount=1`, `aria-current` dla kroku i dekoracyjna ikone. | Nie publikowano. | Dziala | Date renderuje `<time>`, status daje `aria-current=step`. | Brak. |
-| CTA + whole-step link | Ustawiono CTA i whole-step link dla tego samego kroku | Editor pokazuje komunikat o nested anchors; Advanced raportuje `1 safe CTA` i `1 safe whole-step`. Preview w process/compact ma `ctaHrefs=[]`. | Nie publikowano. | Nie dziala w process/compact | CTA jest ukryte w compact render, a whole-step link jest blokowany przez obecne CTA. | Patrz `TL-31-05-01`. |
+| CTA + whole-step link | Ustawiono CTA i whole-step link dla tego samego kroku | Editor pokazuje komunikat o nested anchors; process/compact renderuje CTA jako compact inline link, a whole-step link pozostaje suppressed. | Nie publikowano. | Dziala po TASK-390 | CTA renderuje sie rowniez w compact text, a whole-step link jest nadal blokowany przez obecne CTA. | Brak. |
 | Reorder | Klik `Down` na kroku 1 | Kolejnosc w preview zmienia sie: `Planning` przed `Audit discovery`. | Nie publikowano. | Dziala | Button fallback wywoluje `moveStep`. | Brak. |
 | Guides | Toggle OFF/ON, style `Solid`, line style `Dashed`, thickness `4px` | Advanced pozniej pokazuje `Guides Enabled, Solid style`, `Line: Dashed; Thickness: 4px`. | Nie publikowano. | Dziala strukturalnie | Renderer ma guide/line styles; brakuje bezposredniej regresji `guides.style`. | Dodac test z `borderStyle` dla guide connectorow. |
 | Marker display Icon | Select `Icon` bez ikon dla wszystkich krokow | Root `markerDisplay=icon`, `markerFallbackCount=2/1`, per-marker effective `icon/dot`; editor ostrzega o fallbackach. | Nie publikowano. | Dziala | TASK-343-13 dodal requested/effective marker diagnostics. | Brak. |
@@ -57,12 +57,17 @@ Przetestowane:
 | Title size None | Select `Title size -> None` | Step titles znikaja, editor pokazuje warning `Step titles are currently hidden`. | Nie publikowano. | Dziala z ostrzezeniem | To celowe: `titleSize=none` ukrywa title, ale editor informuje. | Brak. |
 | Description size None | Select `Description size -> None (inherit)` | Description pozostaje widoczna w non-compact modes; editor wyjasnia inherited sizing. | Nie publikowano. | Dziala | TASK-343-13 ustalil, ze `none` nie chowa description. | Brak. |
 | Max width 6XL przy 3 krokach | Step count 3, max width 6XL | Root `data-timeline-max-width=6xl`, `effective=5xl`, `narrowed=true`; editor i Advanced jawnie raportuja narrowing. | Nie publikowano. | Dziala | Runtime ma saved/effective diagnostics. | Brak. |
-| Advanced | Klik `Advanced` | Sekcje runtime/layout/normalization + builder summaries; `writableControls=0`; pokazuje icon fallback, width narrowing i safe-link counts. | Nie dotyczy. | Dziala, ale patrz CTA visibility | Advanced jest read-only, ale safe-link count nie mowi, ze CTA jest niewidoczne w process/compact. | Patrz `TL-31-05-01`. |
-| Visual control metadata | Inspekcja DOM editor | Realne controls dzialaja, ale `data-widget-control` lista zawiera glownie link destination i builder controls; wiele input/select/button controls bez shared row/path. | Nie dotyczy. | Nie dziala jako contract metadata | Kontrakt deklaruje writable paths, ale UI nie wrapuje wielu kontrolek w `WidgetControlRow`. | Patrz `TL-31-05-02`. |
+| Advanced | Klik `Advanced` | Sekcje runtime/layout/normalization + builder summaries; `writableControls=0`; pokazuje icon fallback, width narrowing i safe-link counts. | Nie dotyczy. | Dziala po TASK-390 | Advanced jest read-only; CTA visibility gap zostal usuniety przez compact CTA rendering. | Brak. |
+| Visual control metadata | Inspekcja DOM editor | Realne input/select/color/destination/card/action controls maja stabilne `data-widget-control` i `data-widget-control-path`; sekcje kontraktu sa zgodne z UI placement. | Nie dotyczy. | Dziala po TASK-390 | Visual uzywa shared metadata rows/ids, a `timelineEditorContract` odzwierciedla faktyczne sekcje. | Brak. |
 
 ## Znaleziska do poprawy
 
 ### TL-31-05-01 - CTA zapisane w `process`/compact nie renderuje zadnego linku
+
+**Status po TASK-390:** naprawione 2026-06-02. Compact/process layout renderuje
+zapisane CTA jako compact inline link (`data-timeline-step-cta="compact"`), a
+whole-step link nadal jest suppressed, kiedy CTA istnieje, zeby uniknac nested
+anchors.
 
 **Objaw:** w Visual mozna ustawic `Step CTA label` i `Step CTA destination`.
 Po ustawieniu CTA oraz whole-step link editor poprawnie ostrzega, ze
@@ -98,6 +103,11 @@ aktywnym compact/process layout nie ma zadnego widocznego linku dla tego kroku.
    editor warningu.
 
 ### TL-31-05-02 - Visual controls dzialaja, ale nie wszystkie maja shared control metadata
+
+**Status po TASK-390:** naprawione 2026-06-02. Visual mutating controls maja
+stable `data-widget-control` / `data-widget-control-path`, a
+`timelineEditorContract` przenosi `steps.count`, `header.*` i
+`style.markerColor` do sekcji, w ktorych UI faktycznie je renderuje.
 
 **Objaw:** UI dziala, ale wiele realnych kontrolek nie jest opakowanych w
 `WidgetControlRow` / shared metadata. Playwright widzial duzo writable paths,
@@ -137,6 +147,10 @@ per-kontrolka. Subagent niezaleznie potwierdzil tez drift sekcji kontraktu:
    `data-widget-control` w danej sekcji.
 
 ### TL-31-05-03 - Variant cards moga wygladac aktywnie, mimo ze `mode` decyduje o branchu renderera
+
+**Status po TASK-390:** naprawione 2026-06-02. Przy `mode=process` Visual
+oznacza compact jako effective, zapisany non-compact wariant jako
+`Saved, inactive`, i pokazuje note: `Process mode uses compact rendering`.
 
 **Objaw:** po ustawieniu `Timeline mode -> Process` klik `Cards` zmienia
 `data-timeline-variant` na `cards`, ale runtime nadal renderuje compact/process
@@ -202,13 +216,10 @@ karta `Cards` nie zadzialala.
 
 ## Rekomendacje
 
-1. Naprawic `TL-31-05-01` jako funkcjonalna/truthfulness luka, bo autor moze
-   zapisac CTA, ktore nie jest widoczne w aktywnym process/compact layout.
-2. Naprawic `TL-31-05-02` przed kolejnymi automatycznymi audytami per control;
-   inaczej UI dziala, ale metadata lane nie widzi prawdziwych wlascicieli.
-3. Rozstrzygnac `TL-31-05-03`: albo variant cards sa tylko legacy metadata i
-   dostaja wyjasnienie, albo maja mutowac mode tak, aby karta faktycznie
-   zmieniala layout.
+1. W kolejnym pass potwierdzic compact CTA i process variant inactive state w
+   live Playwright smoke na stronie audytowej.
+2. Rozszerzyc automatyczny smoke helper o sekcyjne porownanie declared
+   `editorContract.writablePaths` z realnymi `data-widget-control-path`.
 
 ## Walidacja
 
@@ -220,6 +231,10 @@ karta `Cards` nie zadzialala.
 - `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx` - passed, 15 tests.
 - `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx` - passed, 6 tests.
 - `bun run test:vitest -- tests/vitest/widgets/editorContract.test.ts` - passed, 16 tests.
+- `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx tests/vitest/ui/timeline-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed po TASK-390, 40 tests.
+- `git diff --check` - passed po TASK-390.
+- `bun --cwd core lint` - passed po TASK-390.
+- `bun --cwd core lint:types` - passed po TASK-390.
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` - passed, 16 tests.
 - Subagent code review potwierdzil read-only Wizard/Advanced, mode-card/select
   parity oraz wskazal niezaleznie metadata/contract gaps.

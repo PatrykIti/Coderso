@@ -4,7 +4,10 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { NavigationData } from "../../../core/widgets/core/navigation";
+import {
+  navigationEditorContract,
+  type NavigationData,
+} from "../../../core/widgets/core/navigation";
 
 type TestMenuSummary = {
   id: string;
@@ -591,6 +594,17 @@ const findSectionByTitle = (container: ParentNode, title: string) =>
 const findCheckboxes = (container: ParentNode) =>
   Array.from(container.querySelectorAll("input")).filter(
     (element) => element instanceof HTMLInputElement && element.type === "checkbox"
+  );
+
+const collectWritableControlPaths = (container: ParentNode) =>
+  new Set(
+    Array.from(
+      container.querySelectorAll(
+        '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    )
+      .map((element) => element.getAttribute("data-widget-control-path"))
+      .filter((path): path is string => Boolean(path))
   );
 
 const createApiClientError = (message: string) => {
@@ -1300,6 +1314,66 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
   } finally {
     view.cleanup();
   }
+});
+
+test("NavigationVisualEditor renders path metadata for every declared Visual writable path", async () => {
+  const { NavigationVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
+  const declaredPaths = new Set(
+    navigationEditorContract.sections
+      .filter((section) => section.mode === "visual")
+      .flatMap((section) => section.writablePaths ?? [])
+  );
+  const collectedPaths = new Set<string>();
+
+  const renderAndCollect = async (value: NavigationData) => {
+    const view = mount(
+      <NavigationVisualEditor
+        value={value}
+        onChange={() => undefined}
+        variant="with-cta"
+        onVariantChange={() => undefined}
+      />
+    );
+    try {
+      await flush();
+      for (const path of collectWritableControlPaths(view.container)) {
+        collectedPaths.add(path);
+      }
+    } finally {
+      view.cleanup();
+    }
+  };
+
+  await renderAndCollect(
+    createNavigationValue({
+      logo: {
+        type: "image",
+        value: "https://cdn.example.com/logo.png",
+        href: "/",
+        alt: "Coderso mark",
+        source: "library",
+        assetId: "logo-1",
+      },
+      linksSource: "manual",
+    })
+  );
+  await renderAndCollect(
+    createNavigationValue({
+      logo: {
+        type: "image",
+        value: "https://cdn.example.com/logo.png",
+        href: "/",
+        alt: "Coderso mark",
+        source: "library",
+        assetId: "logo-1",
+      },
+      linksSource: "menu",
+      menuKey: "menu-1",
+    })
+  );
+
+  expect([...declaredPaths].filter((path) => !collectedPaths.has(path))).toEqual([]);
 });
 
 test("NavigationVisualEditor surfaces runtime boundaries, cleared-link feedback, and full color reset policy", async () => {

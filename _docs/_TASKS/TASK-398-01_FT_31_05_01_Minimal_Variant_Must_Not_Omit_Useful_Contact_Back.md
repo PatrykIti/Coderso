@@ -5,7 +5,7 @@
 **Category:** Widgets + Footer + Runtime Security + Admin UI + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-398
-**Status:** To Do
+**Status:** Done
 
 ---
 
@@ -15,13 +15,19 @@ Execution-ready leaf task for FT-31-05-01 from `_docs/PLAYWRIGHT/31-05-2026-widg
 
 Minimal variant can hide contact and back-to-top when legal/social are disabled, leaving less utility than expected.
 
+Status log:
+
+- 2026-06-02: Moved to In Progress with TASK-398 Footer remediation.
+- 2026-06-02: Done. Minimal utility rendering now includes configured contact
+  and back-to-top content independently of legal/social visibility.
+
 ## Sub-Tasks
 
-- [ ] Reproduce FT-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce FT-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +96,12 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes
+
+- Observed stale report state: minimal utility fixture omitted address, `tel:`,
+  `mailto:`, and `#top` when legal/social were disabled.
+- Fixed `core/widgets/core/footer.tsx` minimal utility branch to render when
+  `contact` or `backToTop` is configured.
+- Added focused regression coverage in `tests/vitest/widgets/footer.test.tsx`.
+- Validation: `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` passed, 3 files / 41 tests.

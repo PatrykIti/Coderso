@@ -5,7 +5,7 @@
 **Category:** Widgets + Booking Calendar + Runtime Security + Admin Preview + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_BOOKING_CALENDAR_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -26,10 +26,19 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-393-01](TASK-393-01_BC_31_05_01_Replace_Runtime_InnerHTML_Copy_Composition.md): BC-31-05-01 - Replace runtime `innerHTML` copy composition
-- [ ] [TASK-393-02](TASK-393-02_BC_31_05_02_Build_Bounded_Week_Dates_Without_Duplicates.md): BC-31-05-02 - Build bounded week dates without duplicates
-- [ ] [TASK-393-03](TASK-393-03_BC_31_05_03_Define_Admin_Canvas_Behavior_For_Runtime_Only_Controls.md): BC-31-05-03 - Define admin canvas behavior for runtime-only controls
-- [ ] [TASK-393-04](TASK-393-04_BC_31_05_04_Unify_Admin_Public_Preview_Catalog_Filtering.md): BC-31-05-04 - Unify admin/public preview catalog filtering
+- [x] [TASK-393-01](TASK-393-01_BC_31_05_01_Replace_Runtime_InnerHTML_Copy_Composition.md): BC-31-05-01 - Replace runtime `innerHTML` copy composition
+- [x] [TASK-393-02](TASK-393-02_BC_31_05_02_Build_Bounded_Week_Dates_Without_Duplicates.md): BC-31-05-02 - Build bounded week dates without duplicates
+- [x] [TASK-393-03](TASK-393-03_BC_31_05_03_Define_Admin_Canvas_Behavior_For_Runtime_Only_Controls.md): BC-31-05-03 - Define admin canvas behavior for runtime-only controls
+- [x] [TASK-393-04](TASK-393-04_BC_31_05_04_Unify_Admin_Public_Preview_Catalog_Filtering.md): BC-31-05-04 - Unify admin/public preview catalog filtering
+
+## Closure Notes (2026-06-02)
+
+- Reproduced the report findings from the audit evidence: runtime string HTML composition, bounded week duplicate dates, empty admin week shell, and admin/public preview catalog filtering drift.
+- Replaced Booking Calendar runtime copy composition with DOM node creation and `textContent`, including service context, empty/missing/error copy, and week button labels.
+- Added unique bounded week-date generation and `data-booking-week-date` markers so buttons and first availability request batches do not duplicate clamped dates.
+- Added an explicit noninteractive admin/runtime boundary for week mode when no slots token is injected in editor preview.
+- Moved active linked catalog filtering into shared `buildBookingRuntimeCatalog`, consumed by both admin preview and public runtime resolver.
+- Validation: targeted Booking Calendar Vitest suite passed (4 files / 25 tests), adjacent public-render/editor-contract checks passed (3 files / 33 tests), Coderso security gate passed (4 tests), `bun --cwd core lint` passed, `bun --cwd core lint:types` passed, and `git diff --check` passed.
 
 ## Implementation Pseudocode
 

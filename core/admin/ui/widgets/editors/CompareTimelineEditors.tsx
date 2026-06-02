@@ -85,7 +85,7 @@ const highlightLabelStyleLabels: Record<(typeof highlightLabelStyles)[number], s
 };
 
 const labelSizeLabels = {
-  none: "Hidden",
+  none: "Inherit",
   xs: "Tiny",
   sm: "Small",
   base: "Default",
@@ -1558,15 +1558,21 @@ export function CompareTimelineVisualEditor({
 
 export function CompareTimelineAdvancedEditor({
   value,
+  variant,
   onChange,
 }: WidgetEditorProps<CompareTimelineData>) {
   const normalized = normalizeValue(value);
+  const resolvedVariant = resolveCompareTimelineVariant(variant);
+  const highlightEnabled = resolvedVariant === "dual-track-highlight";
   const { highlightMode } = getHighlightContext(normalized);
   const normalizationSignature = JSON.stringify(value);
   const highlightTrack =
     highlightMode === "both" ? null : normalized.tracks.find((track) => track.id === highlightMode);
   const highlightSummary =
     highlightMode === "both" ? "Both tracks" : (highlightTrack?.label ?? "Track");
+  const highlightDiagnostics = highlightEnabled
+    ? highlightSummary
+    : `Disabled in Dual Track; saved target ${highlightSummary} is preserved for Dual Track Highlight.`;
   const [confirmNormalizeSignature, setConfirmNormalizeSignature] = useState<string | null>(null);
   const confirmNormalize = confirmNormalizeSignature === normalizationSignature;
 
@@ -1589,7 +1595,7 @@ export function CompareTimelineAdvancedEditor({
           </div>
           <div className="rounded-lg border bg-muted/20 p-3 text-sm">
             <p className="font-medium">Highlight target</p>
-            <p className="mt-1 text-muted-foreground">{highlightSummary}</p>
+            <p className="mt-1 text-muted-foreground">{highlightDiagnostics}</p>
           </div>
           <div className="rounded-lg border bg-muted/20 p-3 text-sm">
             <p className="font-medium">Layout</p>

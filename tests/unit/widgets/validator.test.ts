@@ -266,6 +266,11 @@ test("normalizeWidgetBlock accepts Contact runtime hydration data but rejects un
           status: "published",
           submissionAccess: "public",
           submissionNonce: "signed-nonce",
+          botProtection: {
+            provider: "recaptcha_v3",
+            siteKey: "site-key-contact",
+            action: "public_write",
+          },
           fields: [
             {
               id: "field-1",

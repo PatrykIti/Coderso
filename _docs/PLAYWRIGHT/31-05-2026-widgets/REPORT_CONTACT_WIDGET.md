@@ -8,6 +8,13 @@
 > **Playwright sessions:** `contact-31`, `contact-public-31`
 > **Claude:** probowano uruchomic non-interactive; CLI zwrocil `401 Invalid authentication credentials` przed testem. Dodatkowy przeglad zrobiono subagentem Codex.
 
+> **Remediation 2026-06-02:** TASK-396 zamknal wszystkie znaleziska
+> `CT-31-05-01`..`CT-31-05-08` / `CONTACT-31-05-01`..`CONTACT-31-05-08`.
+> Public submit korzysta ze wspolnego `POST /forms/:id/submissions`, shared
+> Forms runtime jest idempotentny, Contact emituje nonce/CAPTCHA/submit-label
+> markery, fallback DOM rozdziela configured/effective mode, a map/social/CSS
+> runtime fail-close dla unsafe legacy payloads.
+
 ## Metoda
 
 Test byl prowadzony od UI na stronie audytowej z blokiem `contact`.
@@ -53,25 +60,30 @@ Przetestowane:
 
 | Kontrolka / opcja | Akcja UI | Wynik admin preview / editor | Wynik public | Status | Dlaczego / kod | Jak naprawic |
 |---|---|---|---|---|---|---|
-| Initial render | Otwarta strona i zaznaczony blok | Canvas pokazuje `variant=form-right`, map true, contact details, tel/mailto/social, iframe; ale przy Forms runtime renderuje static fields `name/email/phone/message`, nie mapped fields. | Public route renderuje aktywny `<form>`, mapped names `full_name/reply_email/phone_number/message_body`, nonce i shared runtime. | Dziala public, admin preview mylacy | Public hydration dodaje `resolved`; admin canvas go nie dostaje. | Patrz `CT-31-05-05`. |
+| Initial render | Otwarta strona i zaznaczony blok | Canvas pokazuje `variant=form-right`, map true, contact details, tel/mailto/social, iframe; po remediation static/admin fallback ma jawne boundary metadata zamiast udawac aktywny runtime bez server projection. | Public route renderuje aktywny `<form>`, mapped names `full_name/reply_email/phone_number/message_body`, nonce, CAPTCHA projection gdy wlaczona i shared runtime. | Naprawione | Public hydration dodaje `resolved`; renderer rozdziela configured/effective mode i `data-contact-runtime-boundary`. | TASK-396 zamknal `CT-31-05-05`/`CT-31-05-06`. |
 | Wizard | `Run setup again` | `writablePaths=[]`; pokazuje Current layout, Visible fields, Submit label; brak edycji w Wizard. | Nie dotyczy. | Dziala | Wizard jest read-only starter summary zgodnie z docs. | Brak. |
-| Visual sections | Otwarcie Visual | Sekcje: variant/header, fields/required, field copy/layout, submission runtime, details/social, map, surface styling, layout/spacing. | Public route odzwierciedla fixture data. | Dziala funkcjonalnie | Editor ma kompletna sekcje IA. | Metadata paths sa niepelne, patrz `CT-31-05-08`. |
-| Forms runtime binding | Bound form `Audit 31-05 Contact Runtime` | Editor pokazuje form `published`, field mapping: Name -> `full_name`, Email -> `reply_email`, Phone -> `phone_number`, Message -> `message_body`. | Public render ma action `/forms/{id}/submissions`, hidden `__nl_form_nonce`, mapped names, submit type `submit`. | Dziala do submitu | Public renderer hydratuje `resolved` i `canSubmit` przechodzi. | Public route blocker w `CT-31-05-01`. |
-| Public submit | Wypelniono mapped fields i kliknieto submit | Nie dotyczy admin. | `fetch` do `/forms/{id}/submissions` zwrocil `404 Not Found`; UI pokazal generic error. | Nie dziala | Public server nie dispatchuje Forms route. | Patrz `CT-31-05-01`. |
-| Failed submit state | Ten sam failed submit | Nie dotyczy admin. | Po 404 przycisk zostal tekstowo `Sending...`, mimo `aria-busy=false`. | Nie dziala | Contact nie ustawia `data-form-submit-label`, shared runtime restore bierze juz zmieniony tekst. | Patrz `CT-31-05-02`. |
-| Duplicate active Contact | `/audit-31-05-contact-double` | Nie dotyczy admin. | Pierwszy form `bound=1`, drugi `bound=null`; oba maja `<form>`, ale drugi bez listeners. | Nie dziala | Shared Forms runtime ma globalny one-shot bind. | Patrz `CT-31-05-03`. |
-| CAPTCHA/bot protection | Code/subagent audit | Advanced redaguje nonce, ale nie pokazuje captcha runtime. | Contact hydration nie przenosi `botProtection`; form nie ma captcha attrs/input. | Ryzyko security/runtime | Forms route moze wymagac captcha dla public anonymous submit. | Patrz `CT-31-05-04`. |
+| Visual sections | Otwarcie Visual | Sekcje: variant/header, fields/required, field copy/layout, submission runtime, details/social, map, surface styling, layout/spacing. | Public route odzwierciedla fixture data. | Naprawione | Editor ma kompletna sekcje IA i stable `data-widget-control-path` dla realnych mutujacych controls poza style rows. | TASK-396 zamknal `CT-31-05-08`. |
+| Forms runtime binding | Bound form `Audit 31-05 Contact Runtime` | Editor pokazuje form `published`, field mapping: Name -> `full_name`, Email -> `reply_email`, Phone -> `phone_number`, Message -> `message_body`. | Public render ma action `/forms/{id}/submissions`, hidden `__nl_form_nonce`, mapped names, submit type `submit`, submit-label marker i CAPTCHA attrs/input gdy policy wymaga. | Naprawione | Public renderer hydratuje `resolved`, Contact wymaga nonce przed aktywnym submit, a public route jest zamontowana przez shared Forms bridge. | TASK-395/TASK-396 zamknely `CT-31-05-01` i `CT-31-05-04`. |
+| Public submit | Wypelniono mapped fields i kliknieto submit | Nie dotyczy admin. | `fetch` idzie do public `POST /forms/{id}/submissions`, ktory dzieli nonce/HMAC, strict schema, bot protection, rate-limit i error mapping z Forms submit contract. | Naprawione | Public server dispatchuje Forms route przez `handlePublicFormsApi`. | TASK-395 zamknal shared route; TASK-396 potwierdza Contact markup. |
+| Failed submit state | Ten sam failed submit | Nie dotyczy admin. | Po bledzie shared runtime przywraca oryginalny label i `aria-busy=false`. | Naprawione | Contact emituje `data-form-submit-label`, a runtime snapshotuje label przed pierwsza mutacja nawet bez dataset label. | TASK-396 zamknal `CT-31-05-02`. |
+| Duplicate active Contact | `/audit-31-05-contact-double` | Nie dotyczy admin. | Kolejne runtime scripts odpalaja idempotentny `bindForms()`, wiec pozniej sparsowane Contact forms tez dostaja listener. | Naprawione | Shared Forms runtime expose'uje `window.__nextlessFormRuntimeBind` i odpala bind natychmiast, w microtask/timeout oraz na DOMContentLoaded. | TASK-395/TASK-396 zamknely `CT-31-05-03`. |
+| CAPTCHA/bot protection | Code/subagent audit | Advanced redaguje nonce, ale runtime metadata nie ujawnia secrets. | Contact hydration przenosi public-safe `botProtection`; form ma captcha attrs i hidden `captchaToken` tylko przy aktywnym public runtime. | Naprawione | Projection pochodzi z `resolveFormRuntimeData`; Contact schema dopuszcza tylko `recaptcha_v3` public projection. | TASK-396 zamknal `CT-31-05-04`. |
 | Static mode | `/audit-31-05-contact-static` | Nie dotyczy admin. | Brak `<form>` runtime, button `type=button`, static note `Static audit contact is intentionally disconnected.`, brak native GET. | Dziala | Static fallback renderuje non-submit controls. | Brak. |
-| Internal binding | `/audit-31-05-contact-internal` | Visual ostrzega, ze internal requires admin session/API key. | Public route pokazuje static-safe button i note; brak action, brak nonce, brak runtime form. | Dziala funkcjonalnie | `resolved.submissionAccess === "public"` blokuje `canSubmit`. | DOM metadata mylacy, patrz `CT-31-05-06`. |
+| Internal binding | `/audit-31-05-contact-internal` | Visual ostrzega, ze internal requires admin session/API key. | Public route pokazuje static-safe button i note; brak action, brak nonce, brak runtime form; `data-contact-form-mode=static`, configured mode i boundary wyjasniaja fallback. | Naprawione | `resolved.submissionAccess === "public"` i nonce sa wymagane do aktywnego submitu. | TASK-396 zamknal `CT-31-05-06`. |
 | Minimal variant | `/audit-31-05-contact-minimal` | Visual minimal card istnieje; form sections powinny byc ukryte. | Public minimal nie renderuje form panelu ani inputs; pokazuje details/social i map fallback. | Dziala public | `variant=minimal` ustawia `showForm=false`. | Brak twardego public defectu. |
-| Contact links | Public runtime | Canvas i public render tel/mailto/social. | Phone `tel:+48600700800`, email `mailto:hello@example.com`, LinkedIn external target `_blank`, rel `noopener noreferrer`. | Dziala | Link helpers normalizuja phone/email i social href. | Legacy-permissive policy w `CT-31-05-07`. |
-| Map | Public runtime | Canvas i public render iframe dla Google Maps, Advanced `Valid map URL`. | Iframe `https://www.google.com/maps?...&output=embed`, title `Audit map`, `allowFullScreen=true`; invalid minimal URL pokazuje fallback. | Dziala | Map validator dopuszcza http/https i Google helper. | Legacy arbitrary iframe policy w `CT-31-05-07`. |
+| Contact links | Public runtime | Canvas i public render tel/mailto/social. | Phone `tel:+48600700800`, email `mailto:hello@example.com`, znane social platformy renderuja tylko matching HTTPS host; legacy custom/arbitrary destinations sa dormant. | Naprawione | Runtime sprawdza platform host allowlist i odrzuca custom/http/obce hosty. | TASK-396 zamknal `CT-31-05-07`. |
+| Map | Public runtime | Canvas i public render iframe dla Google Maps, Advanced `Valid Google Maps HTTPS embed`. | Iframe renderuje tylko HTTPS Google Maps; non-Google/http/invalid URL pokazuje fallback copy. | Naprawione | Map validator allowlistuje Google Maps HTTPS embed. | TASK-396 zamknal `CT-31-05-07`. |
 | Advanced diagnostics | Klik Advanced | `writablePaths=[]`; map source/status read-only; runtime security: `Submission nonce redacted; public payload not shown in editor.` | Public nonce jest hidden input, ale Advanced go nie ujawnia. | Dziala | Diagnostics snapshot redaguje transient nonce. | Brak. |
-| Style metadata | Visual surface styling | Color/border/radius rows maja writable paths. | Public styles widoczne w fixture (`borderWidth=2`, `maxWidth=2xl`, colors). | Dziala dla kolorow | TASK-342-02-04 domknal color path metadata. | Inne Visual rows bez paths, patrz `CT-31-05-08`. |
+| Style metadata | Visual surface styling | Color/border/radius rows maja writable paths; pozostale Visual controls rowniez maja stable path/action metadata. | Public styles widoczne w fixture (`borderWidth=2`, `maxWidth=2xl`, colors) i unsafe CSS fragments sa ignorowane. | Naprawione | Contact uzywa bounded CSS color normalizer i editor metadata wrappers. | TASK-396 zamknal `CT-31-05-08` oraz security drift unsafe CSS. |
 
 ## Znaleziska do poprawy
 
 ### CT-31-05-01 - Public Contact Forms runtime submit trafia w 404
+
+**Status 2026-06-02:** Naprawione przez TASK-395 shared Forms public bridge
+oraz zweryfikowane dla Contact w TASK-396. Contact uzywa public
+`POST /forms/:id/submissions`; route zachowuje nonce/HMAC, bot-protection,
+strict schema, public-write rate limit i Forms error mapping.
 
 **Objaw:** public route `/audit-31-05-contact` renderuje aktywny Forms runtime:
 
@@ -126,6 +138,10 @@ Po submit:
 
 ### CT-31-05-02 - Po bledzie submit przycisk zostaje jako `Sending...`
 
+**Status 2026-06-02:** Naprawione. Contact emituje
+`data-form-submit-label`, a shared runtime zapisuje oryginalny label przy
+bindzie, zanim przycisk zostanie przestawiony na loading state.
+
 **Objaw:** po 404 public Contact pokazal:
 
 ```json
@@ -160,6 +176,9 @@ Po submit:
 
 ### CT-31-05-03 - Drugi Contact runtime na stronie nie binduje sie
 
+**Status 2026-06-02:** Naprawione przez idempotentny shared Forms runtime
+binder z TASK-395; TASK-396 utrzymuje Contact runtime na tym samym kontrakcie.
+
 **Objaw:** na `/audit-31-05-contact-double`:
 
 ```json
@@ -190,6 +209,10 @@ Po submit:
    musza miec `data-form-runtime-bound=1`.
 
 ### CT-31-05-04 - Contact gubi `botProtection` z Forms runtime projection
+
+**Status 2026-06-02:** Naprawione. Contact `resolved` schema/type przyjmuje
+public-safe `botProtection`, `publicSite` hydratuje projection, a renderer
+emituje captcha attrs i hidden `captchaToken` tylko dla aktywnego public runtime.
 
 **Objaw:** nie wystapil w fixture bez captcha, ale code/subagent audit pokazuje
 blokujacy runtime/security gap dla sites z bot protection.
@@ -222,6 +245,10 @@ blokujacy runtime/security gap dla sites z bot protection.
    public submit.
 
 ### CT-31-05-05 - Admin canvas pokazuje static fallback zamiast mapped Forms runtime
+
+**Status 2026-06-02:** Naprawione jako explicit boundary. Admin/static render
+nie udaje aktywnego runtime bez server-side `resolved`/nonce; DOM pokazuje
+configured mode, effective mode i `data-contact-runtime-boundary`.
 
 **Objaw:** admin canvas przy `form.submission.mode=forms-runtime` pokazal:
 
@@ -266,6 +293,10 @@ Jednoczesnie Visual editor poprawnie pokazal bound form i field mapping:
 
 ### CT-31-05-06 - Static/internal fallback ma mylace `data-contact-form-mode=forms-runtime`
 
+**Status 2026-06-02:** Naprawione. `data-contact-form-mode` oznacza teraz
+effective mode, `data-contact-form-configured-mode` zachowuje zapisany tryb, a
+boundary wskazuje przyczyne fallbacku.
+
 **Objaw:** `/audit-31-05-contact-internal` poprawnie nie renderuje working form:
 
 ```json
@@ -304,6 +335,10 @@ Ale root panel nadal ma:
 
 ### CT-31-05-07 - Map/social safety nadal dopuszcza legacy arbitrary web URLs
 
+**Status 2026-06-02:** Naprawione. Runtime map allowlistuje HTTPS Google Maps
+embed, social runtime publikuje tylko znane platformy z matching HTTPS hostem,
+a unsafe/custom legacy destinations sa dormant/fallback.
+
 **Objaw:** fixture Google Maps i LinkedIn dzialaja poprawnie. Code audit
 pokazuje jednak, ze legacy payload moze nadal renderowac arbitrary http/https
 iframe/social URLs.
@@ -332,6 +367,10 @@ iframe/social URLs.
    jednoznaczny expected behavior.
 
 ### CT-31-05-08 - Visual path metadata jest kompletne tylko dla style rows
+
+**Status 2026-06-02:** Naprawione. Contact Visual ma stable metadata dla
+variant, title/description, fields/required/order, field settings, submission
+mode/form/mapping/copy, details/social, map i layout controls.
 
 **Objaw:** Visual mial 71 controls, ale `writablePaths` z DOM zawieraly glownie:
 
@@ -388,18 +427,31 @@ selects.
 
 ## Walidacja
 
-Uruchomione dla raportu:
+Uruchomione dla raportu i remediation:
 
 - `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/site/publicRenderer.test.tsx`
-  - Wynik: passed, 4 files / 37 tests.
+  - Wynik 2026-06-02 po remediation: passed, 4 files / 45 tests.
+- `set -a && source .env && set +a && bun test tests/unit/widgets/validator.test.ts tests/unit/server/publicFormsApi.test.ts tests/integration/routes/forms.test.ts`
+  - Wynik 2026-06-02 po remediation: passed, 40 tests.
+- `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  - Wynik finalny 2026-06-02: passed, 9 files / 125 tests.
 - `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test tests/integration/runtime/pages-runtime.test.ts tests/integration/routes/forms.test.ts`
   - Wynik: passed, 13 tests.
 - `bun --cwd core lint`
-  - Wynik: passed.
+  - Wynik finalny 2026-06-02: passed.
 - `bun --cwd core lint:types`
-  - Wynik: passed.
+  - Wynik finalny 2026-06-02: passed.
+- `bun test tests/security/codersoSecurityGate.test.ts`
+  - Wynik finalny 2026-06-02: passed.
+- `bun run scan:gitleaks:worktree`, `bun run scan:trivy:secret`, `bun run scan:semgrep`
+  - Wynik finalny 2026-06-02: passed, Semgrep 0 findings.
+- `git diff --check`
+  - Wynik finalny 2026-06-02: passed.
+- `bun run gates:coderso`
+  - Wynik finalny 2026-06-02: passed: functional, ux, performance, security, reliability.
 
-Uwaga: `pages-runtime.test.ts` potwierdza hydration Contact bindings, a
-`forms.test.ts` rejestracje route. Nie pokrywa jednak realnego public dispatchu
-`POST /forms/:id/submissions` przez `handlePublicRequest`; ten brak pokazal
-Playwright jako 404.
+Uwaga 2026-06-02: pierwotny raport slusznie wykazal brak realnego public
+dispatchu przez `handlePublicRequest`. TASK-395 dodal `handlePublicFormsApi`,
+a TASK-396 potwierdza Contact runtime markup, nonce/CAPTCHA projection i
+effective/static boundary. Public dispatch jest pokryty przez
+`tests/unit/server/publicFormsApi.test.ts`.

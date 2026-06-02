@@ -621,7 +621,7 @@ test("FieldSettingsPanel forwards general, logic, style, and duplicate actions",
     expect(onSettingsChange).toHaveBeenCalledWith("field-1", {
       options: ["Sales", "Support", "Billing"],
     });
-    expect(onSettingsChange).toHaveBeenCalledWith("field-1", { step: 2 });
+    expect(onSettingsChange).toHaveBeenCalledWith("field-1", { formStep: 2 });
     expect(onSettingsChange.mock.calls.length).toBeGreaterThanOrEqual(6);
     expect(onDuplicate).toHaveBeenCalledWith("field-1");
   } finally {

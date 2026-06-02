@@ -10,29 +10,14 @@ import {
   getSecuritySettingsPublic,
   type SecuritySettingsPublic,
 } from "../settings/securitySettings";
+import {
+  buildBookingRuntimeCatalog,
+  type BookingRuntimeCatalogResource,
+  type BookingRuntimeCatalogService,
+} from "./bookingRuntimeCatalog";
 
-export type BookingRuntimeResource = {
-  id: string;
-  name: string;
-  type: "staff" | "bay" | "tool" | "vehicle" | "other";
-  timezone: string;
-  capacity: number;
-  status: "active" | "inactive";
-};
-
-export type BookingRuntimeService = {
-  id: string;
-  name: string;
-  description: string | null;
-  durationMinutes: number;
-  bufferBeforeMinutes: number;
-  bufferAfterMinutes: number;
-  priceCents: number | null;
-  currency: string | null;
-  status: "active" | "inactive";
-  resourceIds: string[];
-  submissionAccess: "public" | "internal";
-};
+export type BookingRuntimeResource = BookingRuntimeCatalogResource;
+export type BookingRuntimeService = BookingRuntimeCatalogService;
 
 export type BookingRuntimeCaptcha = {
   provider: "recaptcha_v3";
@@ -48,8 +33,6 @@ export type BookingRuntimeResolution = {
   captcha: BookingRuntimeCaptcha | null;
   error?: string;
 };
-
-const unique = <T>(items: T[]) => Array.from(new Set(items));
 
 const resolveRuntimeCaptcha = (
   settings: SecuritySettingsPublic["botProtection"]
@@ -73,63 +56,21 @@ export async function resolveBookingRuntimeData(options: {
     listBookingResources(),
   ]);
 
-  const services = options.preview
-    ? serviceRows
-    : serviceRows.filter((item) => item.status === "active");
-  const resources = options.preview
-    ? resourceRows
-    : resourceRows.filter((item) => item.status === "active");
-
-  const activeResourceIds = new Set(resources.map((resource) => resource.id));
-
   const serviceResourcePairs = await Promise.all(
-    services.map(async (service) => {
+    serviceRows.map(async (service) => {
       const rows = await listBookingServiceResources(service.id);
-      return [
-        service.id,
-        unique(
-          rows
-            .map((row) => row.resourceId)
-            .filter((resourceId) => activeResourceIds.has(resourceId))
-        ),
-      ] as const;
+      return [service.id, rows.map((row) => ({ resourceId: row.resourceId }))] as const;
     })
   );
 
-  const resourceMap = new Map<string, string[]>(serviceResourcePairs);
-
-  const runtimeServices: BookingRuntimeService[] = services
-    .map<BookingRuntimeService>((service) => ({
-      id: service.id,
-      name: service.name,
-      description: service.description,
-      durationMinutes: service.durationMinutes,
-      bufferBeforeMinutes: service.bufferBeforeMinutes,
-      bufferAfterMinutes: service.bufferAfterMinutes,
-      priceCents: service.priceCents,
-      currency: service.currency,
-      status: service.status === "inactive" ? "inactive" : "active",
-      resourceIds: resourceMap.get(service.id) ?? [],
-      submissionAccess: resolveBookingAccessModeFromSettings(service.settings, "public"),
-    }))
-    .filter((service) => options.preview || service.resourceIds.length > 0);
-
-  const runtimeResources: BookingRuntimeResource[] = resources.map<BookingRuntimeResource>(
-    (resource) => ({
-      id: resource.id,
-      name: resource.name,
-      type:
-        resource.type === "staff" ||
-        resource.type === "bay" ||
-        resource.type === "tool" ||
-        resource.type === "vehicle"
-          ? resource.type
-          : "other",
-      timezone: resource.timezone,
-      capacity: resource.capacity,
-      status: resource.status === "inactive" ? "inactive" : "active",
-    })
-  );
+  const catalog = buildBookingRuntimeCatalog({
+    services: serviceRows,
+    resources: resourceRows,
+    serviceResourcesByServiceId: Object.fromEntries(serviceResourcePairs),
+    resolveSubmissionAccess: resolveBookingAccessModeFromSettings,
+  });
+  const runtimeServices = catalog.services;
+  const runtimeResources = catalog.resources;
 
   let submissionNonce: string | null = null;
   let slotsToken: string | null = null;

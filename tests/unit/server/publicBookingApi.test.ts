@@ -814,6 +814,73 @@ testIfDb(
 );
 
 testIfDb(
+  "public booking reservation endpoint rejects client-invented slot duration with valid nonce",
+  async () => {
+    const resource = await createBookingResource({
+      name: `Duration bay ${randomUUID()}`,
+      type: "bay",
+      timezone: "UTC",
+      capacity: 1,
+    });
+    const service = await createBookingService({
+      name: `Duration wash ${randomUUID()}`,
+      durationMinutes: 30,
+    });
+
+    await setBookingServiceResources(service.id, [{ resourceId: resource.id }]);
+
+    const day = new Date(Date.UTC(2030, 0, 21, 0, 0, 0));
+    const date = toDateString(day);
+    await setBookingSchedules(resource.id, [
+      {
+        dayOfWeek: day.getUTCDay(),
+        startMinute: 9 * 60,
+        endMinute: 11 * 60,
+        timezone: "UTC",
+      },
+    ]);
+
+    const slots = await previewBookingSlots({
+      serviceId: service.id,
+      resourceId: resource.id,
+      date,
+      timezone: "UTC",
+      intervalMinutes: 30,
+    });
+    const inventedEnd = new Date(new Date(slots[0]!.startsAt).getTime() + 5 * 60_000).toISOString();
+
+    const url = new URL("http://localhost/api/booking/reservations");
+    const response = await handlePublicBookingApi(
+      new Request(url.toString(), {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          serviceId: service.id,
+          resourceId: resource.id,
+          startsAt: slots[0]!.startsAt,
+          endsAt: inventedEnd,
+          timezone: "UTC",
+          customerName: "Jane Doe",
+          formNonce: createBookingSubmissionNonce(),
+        }),
+      }),
+      {
+        url,
+        security: getSecurity(),
+        ip: "127.0.0.1",
+        userAgent: "test",
+      }
+    );
+
+    expect(response).not.toBeNull();
+    expect(response?.status).toBe(409);
+    const payload = (await response?.json()) as { error: { code: string } };
+    expect(payload.error.code).toBe("booking_slot_unavailable");
+  },
+  DB_TEST_TIMEOUT_MS
+);
+
+testIfDb(
   "public booking reservation endpoint maps slot conflicts before persistence leaks",
   async () => {
     const resource = await createBookingResource({

@@ -123,6 +123,31 @@ surowy normalized source (`ProductCompareEditors.tsx:426-458`).
    `source.status`, wyrenderowac Advanced i sprawdzic, ze Search/Collections/
    Status nie sa opisane jako aktywne bez informacji o ignorowaniu.
 
+**Status po TASK-386:** naprawione. Advanced zachowuje zapisane query filters,
+ale przy `source.productIds.length > 0` pokazuje je jako `inactive while
+selected products are used`, zamiast sugerowac aktywny runtime filter.
+Regresja pokrywa `productIds + search + collectionIds + status` w
+`tests/vitest/ui/product-compare-editor-wave.test.tsx`.
+
+### PC-31-05-02 — smoke fixture musi dowodzic product detail, obrazow i CTA
+
+**Status po TASK-386:** naprawione. Smoke bootstrap dla Product Compare:
+
+- dodaje media-backed commerce products dla wybranego Product Compare case,
+- ustawia deterministic route `site.contentRoutes` dla `products`:
+  `/fixture-products/:slug`,
+- patchuje `/audit-31-05-product-compare` na matrix fixture z
+  `header.showImages=true`, `header.linkTitles=true` i
+  `header.ctaMode=view_product`,
+- publikuje strone przez admin API z CSRF,
+- w generated Playwright probe sprawdza admin i public output: obrazy z
+  oczekiwanym alt, title link `Fixture Starter Home` z safe relative href oraz
+  widoczne CTA `Inspect fixture product`.
+
+Shared commerce seed zawiera tez `Fixture Garden Suite` jako `out_of_stock`, co
+zamyka brak widocznej komorki dla out-of-stock label w kolejnych browser
+przebiegach.
+
 ## Public baseline
 
 `curl http://localhost:3000/audit-31-05-product-compare` zwrocil HTTP 200 i SSR
@@ -140,14 +165,14 @@ HTML z:
 
 ## Ograniczenia fixture
 
-- Brak product detail route i `productHref`, wiec title links i CTA nie mogly
-  przejsc do safe-link branch.
-- Brak image URLs, wiec `Show product images` nie moglo wyrenderowac obrazow.
-- Brak produktu `out_of_stock`, wiec label `Out-of-stock` nie mial widocznej
-  komorki do potwierdzenia browserowo.
 - Glowny przebieg kliknal warianty w stanie empty po celowo konfliktowych
   filtrach; osobny replay `codex-31-05-ui-product-compare-variants` potwierdzil
   Matrix/Compact/Cards na populated query.
+
+Status po TASK-386: ograniczenia zwiazane z product detail route,
+`productHref`, image URLs i produktem `out_of_stock` sa zamkniete w smoke
+harness. Pozostale ograniczenie dotyczy tylko historycznego przebiegu wariantow
+z 31-05 i nie zmienia kontraktu fixture.
 
 ## Kod-owner
 
@@ -171,12 +196,10 @@ HTML z:
 
 ## Rekomendacje
 
-1. Naprawic `PC-31-05-01` w Advanced bez zmiany renderer/runtime query
-   semantics.
-2. Dodac commerce fixture z product detail route, safe `productHref`, obrazami i
-   minimum jednym `out_of_stock` produktem.
-3. Przy kolejnym browser pass dopisac visible proof dla product title links,
-   CTA, image alt i out-of-stock label.
+1. Zachowac app-level console 404 jako osobny follow-up, jesli pojawi sie w
+   szerszym admin smoke.
+2. Przy kolejnym live browser pass uruchomic Product Compare smoke bez
+   `--dry-run`, zeby odswiezyc pelny Playwright dowod po zmianie fixture.
 
 ## Walidacja
 
@@ -193,4 +216,11 @@ HTML z:
 - `bun test ./tests/unit/commerce/commerceWidgetRuntime.test.ts` — passed, 9 tests.
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` — passed, 16 tests.
 - `curl http://localhost:3000/audit-31-05-product-compare` — HTTP 200, public baseline matrix.
+- `bun test tests/unit/playwright-widget-contract-smoke.test.ts` — passed, 41 tests.
+- `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/widgets/productCompare.test.tsx` — passed, 13 tests.
+- `bun test tests/integration/routes/productComparePreview.test.ts` — passed, 2 tests.
+- `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget product-compare --output-json .tmp/task-386-product-compare-smoke-dry-run.json --output-md .tmp/task-386-product-compare-smoke-dry-run.md` — passed dry-run, `fixtureGaps=0`, `metadataGaps=0`.
+- `git diff --check` — passed.
+- `bun --cwd core lint` — passed.
+- `bun --cwd core lint:types` — passed.
 - Claude CLI nie wykonal audytu z powodu `401 Invalid authentication credentials`.

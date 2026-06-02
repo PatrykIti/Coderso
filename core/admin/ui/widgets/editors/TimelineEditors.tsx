@@ -52,7 +52,11 @@ import {
 } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{ id: TimelineVariantId; label: string; description: string }> = [
   {
@@ -287,6 +291,7 @@ function EditorSection({
 }
 
 function ColorField({
+  id,
   label,
   path,
   value,
@@ -297,6 +302,7 @@ function ColorField({
   helperText,
   allowTransparent = false,
 }: {
+  id: string;
   label: string;
   path?: string;
   value: string | undefined;
@@ -314,6 +320,7 @@ function ColorField({
         value={value}
         onChange={onChange}
         onClear={onClear}
+        controlId={id}
         controlPath={path}
         placeholder={placeholder}
         pickerFallback={pickerFallback}
@@ -325,36 +332,175 @@ function ColorField({
   );
 }
 
+function TimelineSelectControl<TValue extends string>({
+  id,
+  label,
+  path,
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  description,
+}: {
+  id: string;
+  label: string;
+  path: string;
+  value: TValue;
+  onValueChange: (next: string) => void;
+  options: Array<{ id: TValue; label: string }>;
+  placeholder: string;
+  description?: ReactNode;
+}) {
+  return (
+    <WidgetControlRow id={id} label={label} path={path}>
+      {(fieldProps) => (
+        <div className="space-y-2">
+          <Select value={value} onValueChange={onValueChange}>
+            <SelectTrigger
+              id={fieldProps.id}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            >
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {description ? <div className="text-xs text-muted-foreground">{description}</div> : null}
+        </div>
+      )}
+    </WidgetControlRow>
+  );
+}
+
+function TimelineInputControl({
+  id,
+  label,
+  path,
+  value,
+  onChange,
+  placeholder,
+  description,
+  descriptionClassName,
+}: {
+  id: string;
+  label: string;
+  path: string;
+  value: string;
+  onChange: (next: string) => void;
+  placeholder: string;
+  description?: ReactNode;
+  descriptionClassName?: string;
+}) {
+  return (
+    <WidgetControlRow id={id} label={label} path={path}>
+      {(fieldProps) => (
+        <div className="space-y-1">
+          <Input
+            {...fieldProps}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+          />
+          {description ? (
+            <div className={cn("text-xs text-muted-foreground", descriptionClassName)}>
+              {description}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </WidgetControlRow>
+  );
+}
+
+function TimelineTextareaControl({
+  id,
+  label,
+  path,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  path: string;
+  value: string;
+  onChange: (next: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <WidgetControlRow id={id} label={label} path={path}>
+      {(fieldProps) => (
+        <Textarea
+          {...fieldProps}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+      )}
+    </WidgetControlRow>
+  );
+}
+
 function TimelineVariantCards({
   value,
+  mode,
   onChange,
 }: {
   value: string;
+  mode: TimelineMode;
   onChange?: (next: string) => void;
 }) {
+  const processModeDominates = mode === "process";
+  const effectiveVariant = processModeDominates ? "compact" : value;
+
   return (
     <div className="space-y-2">
-      {variantOptions.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          onClick={() => onChange?.(option.id)}
-          className={cn(
-            "w-full rounded-lg border p-3 text-left transition",
-            value === option.id
-              ? "border-primary bg-primary/5"
-              : "border-border bg-background hover:border-primary/50"
-          )}
-        >
-          <div className="flex w-full items-start justify-between gap-2">
-            <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
-            <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
-              {value === option.id ? "Selected" : "Pick"}
-            </Badge>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
-        </button>
-      ))}
+      {processModeDominates ? (
+        <p className="rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          Process mode uses compact rendering; choose Axis, Chronology, or Alternating to use a
+          saved non-compact variant.
+        </p>
+      ) : null}
+      {variantOptions.map((option) => {
+        const isSaved = value === option.id;
+        const isEffective = effectiveVariant === option.id;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => onChange?.(option.id)}
+            className={cn(
+              "w-full rounded-lg border p-3 text-left transition",
+              isEffective
+                ? "border-primary bg-primary/5"
+                : isSaved
+                  ? "border-border bg-muted/40"
+                  : "border-border bg-background hover:border-primary/50"
+            )}
+            data-timeline-variant-card={option.id}
+            data-timeline-variant-card-state={
+              isEffective ? "effective" : isSaved ? "saved-inactive" : "available"
+            }
+            data-widget-control={`timeline.visual.variant-card.${option.id}`}
+            data-widget-control-path="variant"
+            data-widget-control-ownership="writable"
+          >
+            <div className="flex w-full items-start justify-between gap-2">
+              <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+              <Badge className="shrink-0" variant={isEffective ? "default" : "outline"}>
+                {isEffective ? "Active" : isSaved ? "Saved, inactive" : "Pick"}
+              </Badge>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -375,6 +521,9 @@ function TimelineModeCards({
             key={option.id}
             type="button"
             onClick={() => onChange(option.id)}
+            data-widget-control={`timeline.visual.mode-card.${option.id}`}
+            data-widget-control-path="mode"
+            data-widget-control-ownership="writable"
             className={cn(
               "rounded-lg border p-3 text-left transition",
               value === option.id
@@ -766,115 +915,73 @@ function TimelineStructureFields({
   return (
     <div className="grid gap-3 md:grid-cols-2">
       {includeStepCount ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Number of steps</p>
-          <Select
-            value={String(steps.length)}
-            onValueChange={(next) => setStepsCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select step count" />
-            </SelectTrigger>
-            <SelectContent>
-              {stepCountOptions.map((count) => (
-                <SelectItem key={count} value={String(count)}>
-                  {count} steps
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.step-count"
+          label="Number of steps"
+          path="steps.count"
+          value={String(steps.length)}
+          onValueChange={(next) => setStepsCount(value, onChange, Number(next))}
+          options={stepCountOptions.map((count) => ({
+            id: String(count),
+            label: `${count} steps`,
+          }))}
+          placeholder="Select step count"
+        />
       ) : null}
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Timeline mode</p>
-        <Select
-          value={mode}
-          onValueChange={(next) =>
-            updateMode(value, onChange, next as TimelineMode, onVariantChange, onBlockPatch)
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select mode" />
-          </SelectTrigger>
-          <SelectContent>
-            {modeOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <TimelineSelectControl
+        id="timeline.visual.mode"
+        label="Timeline mode"
+        path="mode"
+        value={mode}
+        onValueChange={(next) =>
+          updateMode(value, onChange, next as TimelineMode, onVariantChange, onBlockPatch)
+        }
+        options={modeOptions}
+        placeholder="Select mode"
+      />
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Orientation</p>
-        <Select
-          value={value.layout?.orientation ?? "horizontal"}
-          onValueChange={(next) =>
-            updateLayout(value, onChange, {
-              orientation: next as TimelineLayout["orientation"],
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Orientation" />
-          </SelectTrigger>
-          <SelectContent>
-            {orientationOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <TimelineSelectControl
+        id="timeline.visual.orientation"
+        label="Orientation"
+        path="layout.orientation"
+        value={value.layout?.orientation ?? "horizontal"}
+        onValueChange={(next) =>
+          updateLayout(value, onChange, {
+            orientation: next as TimelineLayout["orientation"],
+          })
+        }
+        options={orientationOptions}
+        placeholder="Orientation"
+      />
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Label position</p>
-        <Select
-          value={value.layout?.labelPosition ?? "top"}
-          onValueChange={(next) =>
-            updateLayout(value, onChange, {
-              labelPosition: next as TimelineLayout["labelPosition"],
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Label position" />
-          </SelectTrigger>
-          <SelectContent>
-            {labelPositionOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <TimelineSelectControl
+        id="timeline.visual.label-position"
+        label="Label position"
+        path="layout.labelPosition"
+        value={value.layout?.labelPosition ?? "top"}
+        onValueChange={(next) =>
+          updateLayout(value, onChange, {
+            labelPosition: next as TimelineLayout["labelPosition"],
+          })
+        }
+        options={labelPositionOptions}
+        placeholder="Label position"
+      />
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Alignment</p>
-        <Select
-          value={value.layout?.align ?? "center"}
-          onValueChange={(next) =>
-            updateLayout(value, onChange, {
-              align: next as TimelineLayout["align"],
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Alignment" />
-          </SelectTrigger>
-          <SelectContent>
-            {alignOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <TimelineSelectControl
+        id="timeline.visual.align"
+        label="Alignment"
+        path="layout.align"
+        value={value.layout?.align ?? "center"}
+        onValueChange={(next) =>
+          updateLayout(value, onChange, {
+            align: next as TimelineLayout["align"],
+          })
+        }
+        options={alignOptions}
+        placeholder="Alignment"
+      />
     </div>
   );
 }
@@ -888,86 +995,64 @@ function TimelineGuidesAndAxisFields({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between rounded-lg border p-3">
-        <div>
-          <p className="text-sm font-medium">Show guide lines</p>
-          <p className="text-xs text-muted-foreground">
-            Display helper connectors across the timeline.
-          </p>
-        </div>
-        <Switch
-          checked={value.guides?.enabled ?? true}
-          onCheckedChange={(checked) => updateGuides(value, onChange, { enabled: checked })}
-        />
-      </div>
+      <WidgetControlRow
+        id="timeline.visual.guides-enabled"
+        label="Show guide lines"
+        path="guides.enabled"
+      >
+        {() => (
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <p className="text-xs text-muted-foreground">
+              Display helper connectors across the timeline.
+            </p>
+            <Switch
+              checked={value.guides?.enabled ?? true}
+              onCheckedChange={(checked) => updateGuides(value, onChange, { enabled: checked })}
+            />
+          </div>
+        )}
+      </WidgetControlRow>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Guide style</p>
-          <Select
-            value={value.guides?.style ?? "dashed"}
-            onValueChange={(next) =>
-              updateGuides(value, onChange, {
-                style: next as TimelineGuides["style"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Guide style" />
-            </SelectTrigger>
-            <SelectContent>
-              {guideStyleOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Line style</p>
-          <Select
-            value={value.style?.lineStyle ?? "solid"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                lineStyle: next as TimelineStyle["lineStyle"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Line style" />
-            </SelectTrigger>
-            <SelectContent>
-              {lineStyleOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Line thickness</p>
-          <Select
-            value={value.style?.thickness ?? "2"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                thickness: next as TimelineStyle["thickness"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Thickness" />
-            </SelectTrigger>
-            <SelectContent>
-              {thicknessOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.guide-style"
+          label="Guide style"
+          path="guides.style"
+          value={value.guides?.style ?? "dashed"}
+          onValueChange={(next) =>
+            updateGuides(value, onChange, {
+              style: next as TimelineGuides["style"],
+            })
+          }
+          options={guideStyleOptions}
+          placeholder="Guide style"
+        />
+        <TimelineSelectControl
+          id="timeline.visual.line-style"
+          label="Line style"
+          path="style.lineStyle"
+          value={value.style?.lineStyle ?? "solid"}
+          onValueChange={(next) =>
+            updateStyle(value, onChange, {
+              lineStyle: next as TimelineStyle["lineStyle"],
+            })
+          }
+          options={lineStyleOptions}
+          placeholder="Line style"
+        />
+        <TimelineSelectControl
+          id="timeline.visual.line-thickness"
+          label="Line thickness"
+          path="style.thickness"
+          value={value.style?.thickness ?? "2"}
+          onValueChange={(next) =>
+            updateStyle(value, onChange, {
+              thickness: next as TimelineStyle["thickness"],
+            })
+          }
+          options={thicknessOptions}
+          placeholder="Thickness"
+        />
       </div>
     </>
   );
@@ -987,65 +1072,52 @@ function TimelineMarkerFields({
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Marker size</p>
-          <Select
-            value={value.style?.markerSize ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                markerSize: next as TimelineStyle["markerSize"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Marker size" />
-            </SelectTrigger>
-            <SelectContent>
-              {markerSizeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.marker-size"
+          label="Marker size"
+          path="style.markerSize"
+          value={value.style?.markerSize ?? "md"}
+          onValueChange={(next) =>
+            updateStyle(value, onChange, {
+              markerSize: next as TimelineStyle["markerSize"],
+            })
+          }
+          options={markerSizeOptions}
+          placeholder="Marker size"
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Marker display</p>
-          <Select
-            value={markerDisplay}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                markerDisplay: next as TimelineStyle["markerDisplay"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Marker display" />
-            </SelectTrigger>
-            <SelectContent>
-              {markerDisplayOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {markerDisplayOptions.find((option) => option.id === markerDisplay)?.description}
-          </p>
-          {markerDisplay === "icon" ? (
-            <p className="text-xs text-amber-700">
-              {markerFallbackCount > 0
-                ? `${markerFallbackCount} step${
-                    markerFallbackCount === 1 ? "" : "s"
-                  } without a marker icon or decorative step icon will render dot markers.`
-                : "Every step has a marker icon or decorative step icon for icon marker mode."}
-            </p>
-          ) : null}
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.marker-display"
+          label="Marker display"
+          path="style.markerDisplay"
+          value={markerDisplay}
+          onValueChange={(next) =>
+            updateStyle(value, onChange, {
+              markerDisplay: next as TimelineStyle["markerDisplay"],
+            })
+          }
+          options={markerDisplayOptions}
+          placeholder="Marker display"
+          description={
+            <>
+              <p>
+                {markerDisplayOptions.find((option) => option.id === markerDisplay)?.description}
+              </p>
+              {markerDisplay === "icon" ? (
+                <p className="text-amber-700">
+                  {markerFallbackCount > 0
+                    ? `${markerFallbackCount} step${
+                        markerFallbackCount === 1 ? "" : "s"
+                      } without a marker icon or decorative step icon will render dot markers.`
+                    : "Every step has a marker icon or decorative step icon for icon marker mode."}
+                </p>
+              ) : null}
+            </>
+          }
+        />
 
         <ColorField
+          id="timeline.visual.global-marker-color"
           label="Global marker color"
           path="style.markerColor"
           value={value.style?.markerColor}
@@ -1069,6 +1141,7 @@ function TimelineMarkerFields({
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               <ColorField
+                id={`timeline.visual.step.${index}.accent`}
                 label={`Step ${index + 1} accent`}
                 path="steps.accent"
                 value={step.accent}
@@ -1078,14 +1151,16 @@ function TimelineMarkerFields({
                 pickerFallback="#1d4ed8"
                 helperText="Optional per-step accent. Leave empty to inherit the global marker color."
               />
-              <Input
+              <TimelineInputControl
+                id={`timeline.visual.step.${index}.marker-icon`}
+                label={`Step ${index + 1} marker icon`}
+                path="steps.markerIcon"
                 value={step.markerIcon ?? ""}
-                onChange={(event) =>
-                  updateStep(value, onChange, index, { markerIcon: event.target.value })
-                }
+                onChange={(next) => updateStep(value, onChange, index, { markerIcon: next })}
                 placeholder="Marker icon or emoji"
               />
               <ColorField
+                id={`timeline.visual.step.${index}.marker-background`}
                 label={`Step ${index + 1} marker background`}
                 path="steps.markerBackgroundColor"
                 value={step.markerBackgroundColor}
@@ -1100,6 +1175,7 @@ function TimelineMarkerFields({
                 helperText="Used when the marker display is dot, number, or icon."
               />
               <ColorField
+                id={`timeline.visual.step.${index}.marker-icon-color`}
                 label={`Step ${index + 1} marker icon color`}
                 path="steps.markerIconColor"
                 value={step.markerIconColor}
@@ -1143,6 +1219,7 @@ function TimelineColorFields({
     <>
       <div className="grid gap-3 md:grid-cols-2">
         <ColorField
+          id="timeline.visual.line-color"
           label="Line color"
           path="style.lineColor"
           value={value.style?.lineColor}
@@ -1152,6 +1229,7 @@ function TimelineColorFields({
           pickerFallback="#e2e8f0"
         />
         <ColorField
+          id="timeline.visual.title-color"
           label="Title color"
           path="style.titleColor"
           value={value.style?.titleColor}
@@ -1161,6 +1239,7 @@ function TimelineColorFields({
           pickerFallback="#0f172a"
         />
         <ColorField
+          id="timeline.visual.description-color"
           label="Description color"
           path="style.descriptionColor"
           value={value.style?.descriptionColor}
@@ -1170,6 +1249,7 @@ function TimelineColorFields({
           pickerFallback="#334155"
         />
         <ColorField
+          id="timeline.visual.background-color"
           label="Background color"
           path="background.color"
           value={value.background?.color}
@@ -1208,201 +1288,135 @@ function TimelineTypographyFields({
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Header title</p>
-          <Input
-            value={value.header?.title ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-            placeholder="Timeline heading"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Header description</p>
-          <Textarea
-            value={value.header?.description ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
-            placeholder="Optional context above the timeline"
-          />
-        </div>
+        <TimelineInputControl
+          id="timeline.visual.header-title"
+          label="Header title"
+          path="header.title"
+          value={value.header?.title ?? ""}
+          onChange={(next) => updateHeader(value, onChange, { title: next })}
+          placeholder="Timeline heading"
+        />
+        <TimelineTextareaControl
+          id="timeline.visual.header-description"
+          label="Header description"
+          path="header.description"
+          value={value.header?.description ?? ""}
+          onChange={(next) => updateHeader(value, onChange, { description: next })}
+          placeholder="Optional context above the timeline"
+        />
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title size</p>
-          <Select
-            value={value.style?.titleSize ?? "base"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                titleSize: next as TimelineStyle["titleSize"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Title size" />
-            </SelectTrigger>
-            <SelectContent>
-              {titleSizeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.title-size"
+          label="Title size"
+          path="style.titleSize"
+          value={value.style?.titleSize ?? "base"}
+          onValueChange={(next) =>
+            updateStyle(value, onChange, {
+              titleSize: next as TimelineStyle["titleSize"],
+            })
+          }
+          options={titleSizeOptions}
+          placeholder="Title size"
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title weight</p>
-          <Select
-            value={value.style?.titleWeight ?? "semibold"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                titleWeight: next as TimelineStyle["titleWeight"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Title weight" />
-            </SelectTrigger>
-            <SelectContent>
-              {titleWeightOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.title-weight"
+          label="Title weight"
+          path="style.titleWeight"
+          value={value.style?.titleWeight ?? "semibold"}
+          onValueChange={(next) =>
+            updateStyle(value, onChange, {
+              titleWeight: next as TimelineStyle["titleWeight"],
+            })
+          }
+          options={titleWeightOptions}
+          placeholder="Title weight"
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Description size</p>
-          <Select
-            value={value.style?.descriptionSize ?? "xs"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                descriptionSize: next as TimelineStyle["descriptionSize"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Description size" />
-            </SelectTrigger>
-            <SelectContent>
-              {descriptionSizeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {value.style?.descriptionSize === "none" ? (
-            <p className="text-xs text-muted-foreground">
-              None keeps descriptions visible and clears the explicit size class so the surrounding
-              typography can inherit.
-            </p>
-          ) : null}
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.description-size"
+          label="Description size"
+          path="style.descriptionSize"
+          value={value.style?.descriptionSize ?? "xs"}
+          onValueChange={(next) =>
+            updateStyle(value, onChange, {
+              descriptionSize: next as TimelineStyle["descriptionSize"],
+            })
+          }
+          options={descriptionSizeOptions}
+          placeholder="Description size"
+          description={
+            value.style?.descriptionSize === "none"
+              ? "None keeps descriptions visible and clears the explicit size class so the surrounding typography can inherit."
+              : undefined
+          }
+        />
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Spacing</p>
-          <Select
-            value={value.layout?.spacing ?? "md"}
-            onValueChange={(next) =>
-              updateLayout(value, onChange, {
-                spacing: next as TimelineLayout["spacing"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Spacing" />
-            </SelectTrigger>
-            <SelectContent>
-              {spacingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {spacingDescriptions[value.layout?.spacing ?? "md"]}
-          </p>
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.spacing"
+          label="Spacing"
+          path="layout.spacing"
+          value={value.layout?.spacing ?? "md"}
+          onValueChange={(next) =>
+            updateLayout(value, onChange, {
+              spacing: next as TimelineLayout["spacing"],
+            })
+          }
+          options={spacingOptions}
+          placeholder="Spacing"
+          description={spacingDescriptions[value.layout?.spacing ?? "md"]}
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Section padding</p>
-          <Select
-            value={value.layout?.padding ?? "md"}
-            onValueChange={(next) =>
-              updateLayout(value, onChange, {
-                padding: next as TimelineLayout["padding"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Padding" />
-            </SelectTrigger>
-            <SelectContent>
-              {paddingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.padding"
+          label="Section padding"
+          path="layout.padding"
+          value={value.layout?.padding ?? "md"}
+          onValueChange={(next) =>
+            updateLayout(value, onChange, {
+              padding: next as TimelineLayout["padding"],
+            })
+          }
+          options={paddingOptions}
+          placeholder="Padding"
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Outer section spacing</p>
-          <Select
-            value={value.layout?.sectionSpacing ?? "none"}
-            onValueChange={(next) =>
-              updateLayout(value, onChange, {
-                sectionSpacing: next as TimelineLayout["sectionSpacing"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Section spacing" />
-            </SelectTrigger>
-            <SelectContent>
-              {sectionSpacingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.section-spacing"
+          label="Outer section spacing"
+          path="layout.sectionSpacing"
+          value={value.layout?.sectionSpacing ?? "none"}
+          onValueChange={(next) =>
+            updateLayout(value, onChange, {
+              sectionSpacing: next as TimelineLayout["sectionSpacing"],
+            })
+          }
+          options={sectionSpacingOptions}
+          placeholder="Section spacing"
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Max width</p>
-          <Select
-            value={value.layout?.maxWidth ?? "6xl"}
-            onValueChange={(next) =>
-              updateLayout(value, onChange, {
-                maxWidth: next as TimelineLayout["maxWidth"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Max width" />
-            </SelectTrigger>
-            <SelectContent>
-              {maxWidthOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {maxWidthDiagnostics.narrowed ? (
-            <p className="text-xs text-muted-foreground">
-              6XL renders as 5XL while this timeline has 3 or fewer steps.
-            </p>
-          ) : null}
-        </div>
+        <TimelineSelectControl
+          id="timeline.visual.max-width"
+          label="Max width"
+          path="layout.maxWidth"
+          value={value.layout?.maxWidth ?? "6xl"}
+          onValueChange={(next) =>
+            updateLayout(value, onChange, {
+              maxWidth: next as TimelineLayout["maxWidth"],
+            })
+          }
+          options={maxWidthOptions}
+          placeholder="Max width"
+          description={
+            maxWidthDiagnostics.narrowed
+              ? "6XL renders as 5XL while this timeline has 3 or fewer steps."
+              : undefined
+          }
+        />
       </div>
     </div>
   );
@@ -1522,7 +1536,9 @@ export function TimelineVisualEditor({
         title="Variant and timeline structure"
         description="Choose timeline variant and core structure before styling details."
       >
-        <TimelineVariantCards value={variant} onChange={onVariantChange} />
+        <WidgetControlRow id="timeline.visual.variant" label="Timeline variant" path="variant">
+          {() => <TimelineVariantCards value={variant} mode={mode} onChange={onVariantChange} />}
+        </WidgetControlRow>
         <div className="space-y-2">
           <p className="text-sm font-medium">Mode preview</p>
           <TimelineModeCards
@@ -1555,6 +1571,9 @@ export function TimelineVisualEditor({
             size="sm"
             onClick={() => addStep(value, onChange)}
             disabled={steps.length >= timelineStepMax}
+            data-widget-control="timeline.visual.step.add"
+            data-widget-control-path="steps"
+            data-widget-control-ownership="action"
           >
             Add step
           </Button>
@@ -1588,6 +1607,9 @@ export function TimelineVisualEditor({
                       onDragEnd={() => setDraggedIndex(null)}
                       aria-label={`Drag step ${index + 1}`}
                       title={`Drag step ${index + 1}`}
+                      data-widget-control={`timeline.visual.step.${index}.drag`}
+                      data-widget-control-path="steps.order"
+                      data-widget-control-ownership="action"
                     >
                       Drag
                     </Button>
@@ -1597,6 +1619,9 @@ export function TimelineVisualEditor({
                       variant="ghost"
                       onClick={() => moveStep(value, onChange, index, index - 1)}
                       disabled={index === 0}
+                      data-widget-control={`timeline.visual.step.${index}.move-up`}
+                      data-widget-control-path="steps.order"
+                      data-widget-control-ownership="action"
                     >
                       Up
                     </Button>
@@ -1606,6 +1631,9 @@ export function TimelineVisualEditor({
                       variant="ghost"
                       onClick={() => moveStep(value, onChange, index, index + 1)}
                       disabled={index === steps.length - 1}
+                      data-widget-control={`timeline.visual.step.${index}.move-down`}
+                      data-widget-control-path="steps.order"
+                      data-widget-control-ownership="action"
                     >
                       Down
                     </Button>
@@ -1615,103 +1643,89 @@ export function TimelineVisualEditor({
                       variant="ghost"
                       onClick={() => removeStep(value, onChange, index)}
                       disabled={steps.length <= timelineStepMin}
+                      data-widget-control={`timeline.visual.step.${index}.remove`}
+                      data-widget-control-path="steps"
+                      data-widget-control-ownership="action"
                     >
                       Remove
                     </Button>
                   </div>
                 </div>
-                <Input
+                <TimelineInputControl
+                  id={`timeline.visual.step.${index}.title`}
+                  label={`Step ${index + 1} title`}
+                  path="steps.title"
                   value={step.title}
-                  onChange={(event) =>
-                    updateStep(value, onChange, index, { title: event.target.value })
-                  }
+                  onChange={(next) => updateStep(value, onChange, index, { title: next })}
                   placeholder="Step title"
                 />
-                <Textarea
+                <TimelineTextareaControl
+                  id={`timeline.visual.step.${index}.description`}
+                  label={`Step ${index + 1} description`}
+                  path="steps.description"
                   value={step.description ?? ""}
-                  onChange={(event) =>
+                  onChange={(next) =>
                     updateStep(value, onChange, index, {
-                      description: event.target.value,
+                      description: next,
                     })
                   }
                   placeholder="Step description"
                 />
                 <div className="grid gap-2 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <Input
-                      value={step.date ?? ""}
-                      onChange={(event) =>
-                        updateStep(value, onChange, index, { date: event.target.value })
-                      }
-                      placeholder="2026-05-11"
-                    />
-                    <p
-                      className={cn(
-                        "text-xs",
-                        dateFeedback.valid ? "text-muted-foreground" : "text-destructive"
-                      )}
-                    >
-                      {dateFeedback.message}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <Input
-                      value={step.dateLabel ?? ""}
-                      onChange={(event) =>
-                        updateStep(value, onChange, index, { dateLabel: event.target.value })
-                      }
-                      placeholder="May 11, 2026"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Date label is optional editorial copy for readers and stays intact even if
-                      Date is empty.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid gap-2 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <Select
-                      value={step.status ?? "__none__"}
-                      onValueChange={(next) =>
-                        updateStep(value, onChange, index, {
-                          status: next === "__none__" ? undefined : (next as TimelineStatus),
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {visualStatusOptions.map((option) => (
-                          <SelectItem key={option.id} value={option.id}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Leave status empty to omit the badge until the step actually needs one.
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <Input
-                      value={step.icon ?? ""}
-                      onChange={(event) =>
-                        updateStep(value, onChange, index, { icon: event.target.value })
-                      }
-                      placeholder="Icon text or emoji"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Optional decorative icon shown next to the step title.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid gap-2 md:grid-cols-2">
-                  <Input
-                    value={step.cta?.label ?? ""}
-                    onChange={(event) =>
-                      updateStepCta(value, onChange, index, { label: event.target.value })
+                  <TimelineInputControl
+                    id={`timeline.visual.step.${index}.date`}
+                    label={`Step ${index + 1} date`}
+                    path="steps.date"
+                    value={step.date ?? ""}
+                    onChange={(next) => updateStep(value, onChange, index, { date: next })}
+                    placeholder="2026-05-11"
+                    description={dateFeedback.message}
+                    descriptionClassName={
+                      dateFeedback.valid ? "text-muted-foreground" : "text-destructive"
                     }
+                  />
+                  <TimelineInputControl
+                    id={`timeline.visual.step.${index}.date-label`}
+                    label={`Step ${index + 1} date label`}
+                    path="steps.dateLabel"
+                    value={step.dateLabel ?? ""}
+                    onChange={(next) => updateStep(value, onChange, index, { dateLabel: next })}
+                    placeholder="May 11, 2026"
+                    description="Date label is optional editorial copy for readers and stays intact even if Date is empty."
+                  />
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <TimelineSelectControl
+                    id={`timeline.visual.step.${index}.status`}
+                    label={`Step ${index + 1} status`}
+                    path="steps.status"
+                    value={step.status ?? "__none__"}
+                    onValueChange={(next) =>
+                      updateStep(value, onChange, index, {
+                        status: next === "__none__" ? undefined : (next as TimelineStatus),
+                      })
+                    }
+                    options={visualStatusOptions}
+                    placeholder="Status"
+                    description="Leave status empty to omit the badge until the step actually needs one."
+                  />
+                  <TimelineInputControl
+                    id={`timeline.visual.step.${index}.icon`}
+                    label={`Step ${index + 1} icon`}
+                    path="steps.icon"
+                    value={step.icon ?? ""}
+                    onChange={(next) => updateStep(value, onChange, index, { icon: next })}
+                    placeholder="Icon text or emoji"
+                    description="Optional decorative icon shown next to the step title."
+                  />
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <TimelineInputControl
+                    id={`timeline.visual.step.${index}.cta-label`}
+                    label={`Step ${index + 1} CTA label`}
+                    path="steps.cta.label"
+                    value={step.cta?.label ?? ""}
+                    onChange={(next) => updateStepCta(value, onChange, index, { label: next })}
                     placeholder="Step CTA label"
                   />
                   <LinkDestinationField
@@ -1725,11 +1739,12 @@ export function TimelineVisualEditor({
                   />
                 </div>
                 <div className="grid gap-2 md:grid-cols-2">
-                  <Input
+                  <TimelineInputControl
+                    id={`timeline.visual.step.${index}.link-label`}
+                    label={`Step ${index + 1} whole-step link label`}
+                    path="steps.link.label"
                     value={step.link?.label ?? ""}
-                    onChange={(event) =>
-                      updateStepLink(value, onChange, index, { label: event.target.value })
-                    }
+                    onChange={(next) => updateStepLink(value, onChange, index, { label: next })}
                     placeholder="Whole-step link label"
                   />
                   <LinkDestinationField

@@ -191,70 +191,71 @@ before that point remain based on `playwright-cli` plus Codex code review.
   reported as active after switching from Category/tag filter back to Latest
   posts.
 - `REPORT_ENTRY_TEASER_WIDGET.md` — completed Wizard / Visual / Advanced UI
-  pass; no hard widget-owned defect found, with resolved-entry/listing behavior
-  left as a populated fixture gap because the local content-type and listing
-  catalogs were empty.
+  pass; no hard widget-owned defect found. TASK-384 closed the populated
+  fixture gap by bootstrapping content type, manual/featured/fallback entries,
+  detail route, listing queries/templates, audited page data, and console-error
+  proof into the widget smoke harness.
 - `REPORT_PRODUCT_GALLERY_WIDGET.md` — completed Wizard / Visual / Advanced UI
-  pass; renderer/source/link states work, with one Advanced diagnostics issue
-  where inactive manual product selections are reported as active after
-  switching back to query mode.
+  pass; renderer/source/link states work. TASK-385 closed the Advanced
+  diagnostics issue for inactive manual selections and added deterministic
+  media/card-link/view-all Product Gallery smoke proof.
 - `REPORT_PRODUCT_COMPARE_WIDGET.md` — completed Wizard / Visual / Advanced UI
-  pass; renderer/query/manual-selection behavior works, with one Advanced
-  diagnostics issue where search/collection/status filters are reported as
-  active even though exact selected products ignore them.
+  pass; renderer/query/manual-selection behavior works. TASK-386 closed the
+  Advanced selected-products diagnostics issue and added deterministic Product
+  Compare image/title-link/CTA smoke fixture proof.
 - `REPORT_PRODUCT_TABLE_WIDGET.md` — completed Wizard / Visual / Advanced UI
-  pass; renderer/source/public controls/export behavior works, with one
-  Advanced diagnostics issue where collection filters are reported as active
-  even when runtime hides them until enough collections resolve.
+  pass; renderer/source/public controls/export behavior works. TASK-387 closed
+  the saved-vs-visible visitor filter diagnostics issue and added deterministic
+  Product Table image/title-link/action smoke fixture proof.
 - `REPORT_LISTING_FILTERS_WIDGET.md` — completed Wizard / Visual / Advanced UI
-  pass using a temporary listing query; renderer/facet/layout behavior works,
-  with one Visual truthfulness issue where Action background stays presented as
-  active while Auto apply hides the action button.
+  pass using a temporary listing query; renderer/facet/layout behavior works.
+  TASK-388 closed the Visual truthfulness issue by marking saved Action
+  background inactive while Auto apply hides the manual action button.
 - `REPORT_SEARCH_BOX_WIDGET.md` — completed Wizard / Visual / Advanced UI pass
   using a temporary listing query; listing/global/route-submit runtime shells
-  and controls work, with one Advanced diagnostics issue where route-submit
-  rows are shown as active in listing/global modes.
+  and controls work. TASK-389 closed the Advanced diagnostics issue by showing
+  active routing per mode and reserving route-submit rows for route-submit mode.
 - `REPORT_TIMELINE_WIDGET.md` — completed Wizard / Visual / Advanced UI pass;
   baseline axis/process/alternating rendering, step editing, guides, markers,
-  colors, typography, width diagnostics and Advanced summaries work, with
-  findings for hidden process/compact CTA links, incomplete control metadata,
-  and variant cards that can look active while `mode=process` still owns the
-  runtime layout.
+  colors, typography, width diagnostics and Advanced summaries work. TASK-390
+  closed hidden process/compact CTA links, incomplete Visual control metadata,
+  and process-mode variant card truthfulness.
 - `REPORT_COMPARE_TIMELINE_WIDGET.md` — completed Wizard / Visual / Advanced UI
   pass; variant switching, axis/track editing, segment links/ranges, guides,
   colors, clear states, marker shape, layout/order/motion, Advanced read-only
-  and public SSR baseline work, with findings for misleading `Hidden` label
-  size semantics, `Step label size` not controlling the axis row, and Advanced
-  reporting dormant highlight targets as active in `dual-track`.
+  and public SSR baseline work. TASK-391 closed misleading label-size copy by
+  treating `none` as inherited/no explicit size, applied step label sizing to
+  axis rows, and made Advanced mark saved highlight targets dormant in
+  `dual-track`.
 - `REPORT_NEWSLETTER_WIDGET.md` — completed Wizard / Visual / Advanced UI pass;
   static disconnected shell, variants, copy, semantic fields, consent, double
-  opt-in, state copy, colors, spacing and public SSR baseline work, with
-  findings for Forms runtime admin preview schema drift, legacy webhook
-  diagnostics claiming an inactive submit path, public Forms runtime allowing
-  interactive render without a widget-level nonce, and variant cards that look
-  active without an `onVariantChange` handler.
+  opt-in, state copy, colors, spacing and public SSR baseline work. TASK-392
+  closed Forms runtime admin preview field projection, inactive legacy webhook
+  diagnostics, public Forms runtime nonce gating, and read-only variant cards
+  without `onVariantChange`.
 - `REPORT_BOOKING_CALENDAR_WIDGET.md` — completed Wizard / Visual / Advanced UI
   pass with an active booking fixture; flow, interval, defaults, date policy,
   variants, copy, service context, locale, interval mode, colors, Advanced
-  diagnostics and public slot runtime work, with findings for runtime
-  `innerHTML` copy injection risk, week picker date duplication at bounded
-  edges, static admin-canvas behavior for runtime-only controls, and
-  admin/public preview catalog parity drift.
+  diagnostics and public slot runtime work. TASK-393 closed runtime
+  `innerHTML` copy injection risk, bounded week date duplication, empty
+  tokenless admin week shell behavior, and admin/public preview catalog parity
+  drift.
 - `REPORT_APPOINTMENT_FORM_WIDGET.md` — completed Wizard / Visual / Advanced UI
   pass with an active booking fixture; pairing, variants, locale, redirect
   picker, copy, split name, required fields, phone presets, notes, custom
   fields, consent, colors, Advanced diagnostics and public submit runtime work,
-  with findings for public calendar/form binding order, public API slot trust,
-  mixed public/internal CAPTCHA scope, API success-copy override, and
-  client/API field-bound drift.
+  and TASK-394 closed public calendar/form binding order, public API
+  server-generated slot trust, mixed public/internal CAPTCHA scoping, widget
+  success-copy precedence, and client/API field-bound drift.
 - `REPORT_FORM_EMBED_WIDGET.md` — completed Wizard / Visual / Advanced UI pass
   with a multi-step public form fixture; selection diagnostics, copy/layout/style
   controls, read-only Advanced, public field rendering, progress, conditional
-  logic, save-progress and duplicate/internal runtime probes work far enough to
-  expose findings for missing public submit route mounting, duplicate-widget
-  binding, internal-only public rendering, checkbox payload mismatch,
-  saved-progress step drift, overloaded field `step`, success/redirect policy,
-  runtime nonce persistence risk, and static admin canvas hydration.
+  logic, save-progress and duplicate/internal runtime probes worked far enough to
+  expose the TASK-395 finding set. TASK-395 closed public submit route
+  mounting, duplicate-widget binding, internal-only public rendering, checkbox
+  payload mismatch, saved-progress step drift, overloaded field `step`,
+  success/redirect policy, runtime nonce persistence risk, and static admin
+  canvas ambiguity.
 - `REPORT_CONTACT_WIDGET.md` — completed Wizard / Visual / Advanced UI pass with
   public/internal Forms fixtures; static fallback, minimal layout, semantic
   contact links, social links, map/fallback rendering, read-only Wizard/Advanced,
@@ -263,7 +264,9 @@ before that point remain based on `playwright-cli` plus Codex code review.
   duplicate-widget binding, missing Contact CAPTCHA projection, static admin
   canvas hydration, misleading configured/effective runtime metadata, legacy map
   and social URL permissiveness, and incomplete Visual path metadata outside the
-  recently fixed style rows.
+  recently fixed style rows. TASK-396 closed the full finding set with shared
+  Forms submit dispatch, runtime label/CAPTCHA projection, explicit boundary
+  metadata, safe URL/CSS policy, and complete Visual metadata coverage.
 - `REPORT_NAVIGATION_WIDGET.md` — completed Wizard / Visual / Advanced UI pass
   and public runtime pass with rich/drawer/minimal/double/empty/unsafe fixtures;
   linked logo, submenu, drawer, metadata, target/rel, image fallback, multiple
@@ -271,10 +274,15 @@ before that point remain based on `playwright-cli` plus Codex code review.
   with findings for empty-link public schema mismatch, unsafe-href resolver
   drift to `#`, drawer `aria-current` clone semantics, incomplete Visual path
   metadata, public `data-menu-key`, and unbounded persisted color strings.
+  TASK-397 closed the finding set with static-safe empty links, fail-closed
+  hrefs, truthful drawer clone semantics, redacted public metadata, Visual path
+  coverage, and bounded colors.
 - `REPORT_FOOTER_WIDGET.md` — completed Wizard / Visual / Advanced UI pass and
   public runtime pass with columns/minimal/unsafe fixtures; columns, legal,
   social icons, contact links, back-to-top, style/layout tokens, brand landmark
   semantics and read-only Advanced work, with findings for minimal utility
   contact/back-to-top omission, unsafe column links degrading to `#`, raw unsafe
   logo preview in Visual, Wizard variant ownership drift, and imprecise
-  slot/destination control metadata.
+  slot/destination control metadata. TASK-398 closed the finding set with
+  minimal utility rendering, unsafe link/logo fail-closed behavior, Visual-only
+  variant ownership, and precise slot/destination metadata.

@@ -52,17 +52,17 @@ Przetestowane:
 | Kontrolka / opcja | Akcja UI | Wynik admin preview / editor | Wynik public | Status | Dlaczego / kod | Jak naprawic |
 |---|---|---|---|---|---|---|
 | Initial render | Otwarta `/audit-31-05-footer` i zaznaczony blok | Canvas pokazuje Footer `columns-2` z brand, kolumnami, legal/social. | Public bazowy i fixture routes HTTP 200. | Dziala | Renderer ma root `<footer>` i schema/defaults sa poprawne dla standardowego payloadu. | Brak. |
-| Wizard | `Run setup again` | Wizard root istnieje; pokazuje wariant, visible columns, social basics, finish action. | Nie dotyczy. | Dziala funkcjonalnie, kontraktowo niespojny | Wizard ma interaktywny variant select mimo `visualOwnsVariantSelection`. | Patrz `FT-31-05-04`. |
+| Wizard | `Run setup again` | Wizard root istnieje; pokazuje read-only wariant, visible columns, social basics, finish action. | Nie dotyczy. | Naprawione 2026-06-02 | Wizard ma read-only `variant`; Visual jest jedynym ownerem selector. | Zamkniete w TASK-398. |
 | Visual sections | Otwarcie Visual | Sekcje: Variant and structure, Columns and links, Brand and legal, Utility strip, Social links, Colors, Typography, Layout, Slots overview. | Fixture public odzwierciedla data. | Dziala | Visual jest glownym ownerem edycji Footer. | Metadata gap w `FT-31-05-05`. |
 | Advanced | Klik Advanced | `writablePaths=[]`, brak raw native controls; runtime/layout/style/support summaries read-only. | Nie dotyczy. | Dziala | `FooterAdvancedEditor` renderuje diagnostyke bez mutacji. | Brak poza `slots` metadata w `FT-31-05-05`. |
 | Variant `columns-2` | Bazowa strona | Select pokazuje Columns 2. | Public ma 2 widoczne kolumny i bottom strip. | Dziala | `resolveFooterColumnCount()` mapuje `columns-2` na 2. | Brak. |
 | Variant `columns-3` | `/audit-31-05-footer-rich` | Visual trzyma 3 kolumny i ukryte/preserved dane. | Public renderuje Company, Resources, Product z `h3`. | Dziala | `resolveFooterColumnsForVariant()` normalizuje kolumny do liczby wariantu. | Brak. |
 | Variant `minimal` | `/audit-31-05-footer-minimal` | Visual opisuje compact row i preserved hidden columns. | Public nie renderuje `h3`; renderuje brand i inline nav `One`, `Two`; legal/social ukryte. | Dziala dla disabled legal/social | Minimal branch renderuje pierwsza kolumne jako inline nav. | Utility edge w `FT-31-05-01`. |
-| Minimal + contact/back-to-top | `/audit-31-05-footer-minimal-utility` | Dane fixture maja contact i back-to-top wlaczone. | Public tekst zawiera tylko `Minimal Utility Footer` i `Primary`; brak address, `tel:`, `mailto:` i `#top`. | Nie dziala | Minimal utility area renderuje sie tylko przy legal/social. | Patrz `FT-31-05-01`. |
+| Minimal + contact/back-to-top | `/audit-31-05-footer-minimal-utility` | Dane fixture maja contact i back-to-top wlaczone. | Public runtime renderuje address, `tel:`, `mailto:` i `#top` nawet przy disabled legal/social. | Naprawione 2026-06-02 | Minimal utility area uwzglednia legal/social/contact/back-to-top. | Zamkniete w TASK-398. |
 | Columns links | Rich fixture z 6 linkami | Labels, destination picker, target i order controls widoczne. | Safe links renderuja poprawne `href`; `_blank` ma `rel`. | Dziala | `resolveFooterLinkAttrs()` normalizuje href i target. | Unsafe `#` w `FT-31-05-02`. |
-| Unsafe column links | Rich/unsafe fixtures | Editor pozwala zachowac saved custom destination. | `javascript:` i `//evil` nie trafiaja do DOM jako takie, ale widoczne sa klikalne linki `href="#"`. | Czesciowo nie dziala | `normalizeFooterLink()` fallbackuje unsafe href do `#`. | Patrz `FT-31-05-02`. |
+| Unsafe column links | Rich/unsafe fixtures | Editor pozwala zachowac saved custom destination. | `javascript:` i `//evil` nie trafiaja do DOM i nie tworza klikalnych `href="#"` placeholderow. | Naprawione 2026-06-02 | `normalizeFooterLink()` pomija unsafe/empty href tak jak legal/social runtime. | Zamkniete w TASK-398. |
 | Brand logo/text | Rich fixture | Visual pokazuje logo image field i alt text. | Public ma `<img src="/media/footer-logo.svg" alt="Audit Footer logo" loading="lazy">` i landmark `aria-labelledby` do brand text. | Dziala | Runtime uzywa `normalizeFooterImageSrc()` i brand text jako label. | Editor unsafe preview w `FT-31-05-03`. |
-| Unsafe logo runtime | `/audit-31-05-footer-unsafe` | Visual preview pokazuje raw saved logo. | Public nie renderuje `<img>` i nie zawiera `javascript:alert`. | Dziala public, nie dziala editor | Runtime sanitizuje, editor preview nie. | Patrz `FT-31-05-03`. |
+| Unsafe logo runtime | `/audit-31-05-footer-unsafe` | Visual preview pokazuje replace/clear warning bez `<img src="javascript:...">`. | Public nie renderuje `<img>` i nie zawiera `javascript:alert`. | Naprawione 2026-06-02 | Runtime i Visual preview uzywaja safe media URL normalizacji. | Zamkniete w TASK-398. |
 | Legal enabled | Rich fixture | Legal enabled, copyright, labels, destinations, targets widoczne. | Copyright, Audit Privacy `_blank noopener noreferrer`, Audit Terms `_self` renderuja sie. | Dziala | `normalizeFooterLegal()` i `resolveFooterLinkAttrs()` odrzucaja unsafe href. | Brak. |
 | Legal disabled | Minimal fixture | Dane legal zachowane, enabled false. | Brak Privacy/Terms/copyright. | Dziala | `showLegalContent` wymaga `legal.enabled`. | Brak. |
 | Unsafe legal href | Unsafe fixture | Saved unsafe privacy istnieje w data. | Public privacy nie renderuje sie; safe terms renderuje sie. | Dziala | `normalizeFooterLegal()` zwraca `undefined` dla unsafe privacy. | Brak. |
@@ -73,12 +73,16 @@ Przetestowane:
 | Social disabled | Minimal fixture | Dane social preserved, `socialEnabled=false`. | Brak `aria-label="Footer social links"`. | Dziala | `socialVisible = data.socialEnabled !== false && social.length > 0`. | Brak. |
 | Unsafe social href | Unsafe fixture | Unsafe social entries w data. | Public renderuje tylko safe GitHub, unsafe social links sa pominiete. | Dziala | `normalizeFooterSocialEntry()` zwraca `null`, gdy linkAttrs brak. | Brak. |
 | Colors/style | Rich fixture | Swatch-first color controls, clear buttons, typography/link selects. | Public inline style: surface `#f8fafc`, border `#0f172a`, border top `3px`, text `#111827`; classes `px-8 py-12 text-base max-w-7xl`. | Dziala | `normalizeFooterRenderColor()` filtruje raw unsafe CSS i mapy tokenow sa bounded. | Brak. |
-| Slots overview | Visual section | Sekcja opisuje column/bottom slots, bez edycji. | Rich bottom slot spacer renderuje sie bez invalid widget. | Dziala runtime, metadata gap | Contract deklaruje read-only `slots`, DOM nie ma path row. | Patrz `FT-31-05-05`. |
-| Editor control wrapping | Visual inspect | `unwrappedControls=[]`; native controls maja ownership `writable` albo `action`. | Nie dotyczy. | Dziala | Footer ma dobra adopcje `data-widget-control`. | Duplicate path rows w `FT-31-05-05`. |
+| Slots overview | Visual section | Sekcja opisuje column/bottom slots, bez edycji, z read-only `data-widget-control-path="slots"`. | Rich bottom slot spacer renderuje sie bez invalid widget. | Naprawione 2026-06-02 | Visual i Advanced maja explicit read-only `slots` summary rows. | Zamkniete w TASK-398. |
+| Editor control wrapping | Visual inspect | `unwrappedControls=[]`; native controls maja ownership `writable` albo `action`, destination paths maja pojedynczego ownera. | Nie dotyczy. | Naprawione 2026-06-02 | Footer usuwa zewnetrzne duplicate wrappers wokol `LinkDestinationField`. | Zamkniete w TASK-398. |
 
 ## Znaleziska do poprawy
 
 ### FT-31-05-01 - Minimal variant ukrywa contact i back-to-top, gdy legal/social sa wylaczone
+
+**Status 2026-06-02:** Naprawione w TASK-398. Minimal utility branch renderuje
+contact/back-to-top, gdy sa skonfigurowane, nawet przy `legal.enabled=false` i
+`socialEnabled=false`. Regresja pokryta w `tests/vitest/widgets/footer.test.tsx`.
 
 **Objaw:** fixture `/audit-31-05-footer-minimal-utility` mial wlaczone:
 
@@ -124,6 +128,10 @@ Nie ma address, `tel:`, `mailto:` ani `href="#top"`.
 
 ### FT-31-05-02 - Unsafe column links degraduja sie do klikalnego `href="#"`
 
+**Status 2026-06-02:** Naprawione w TASK-398. Unsafe/empty column hrefy sa
+pomijane z public anchors zamiast fallbacku do `#`. Regresja pokryta w
+`tests/vitest/widgets/footer.test.tsx`.
+
 **Objaw:** rich fixture mial link `Unsafe column` z
 `href="javascript:alert(1)"`. Unsafe fixture mial `javascript:` i
 protocol-relative `//evil.example/path`. Public DOM nie zawiera raw unsafe URL,
@@ -162,6 +170,10 @@ mylacy kontrakt.
 
 ### FT-31-05-03 - Visual editor preview renderuje raw unsafe `brand.logoUrl`
 
+**Status 2026-06-02:** Naprawione w TASK-398. Visual logo preview uzywa
+`normalizeFooterImageSrc()` i pokazuje replace/clear warning dla unsafe saved
+URL. Regresja pokryta w `tests/vitest/ui/footer-editor-wave.test.tsx`.
+
 **Objaw:** public unsafe fixture usuwa logo, ale admin Visual dla tej samej
 strony pokazal:
 
@@ -193,6 +205,10 @@ strony pokazal:
    `<img src="javascript:...">` w Visual.
 
 ### FT-31-05-04 - Wizard variant selector jest niespojny z kontraktem ownership
+
+**Status 2026-06-02:** Naprawione w TASK-398. Wizard pokazuje read-only variant
+summary, `footerEditorContract` zostaje z pustym Wizard `writablePaths`, a
+mutacja wariantu zostaje w Visual.
 
 **Objaw:** Wizard realnie pozwala zmienic wariant z `Columns 2`, ale contract i
 capabilities mowia, ze Visual owns variant selection:
@@ -226,6 +242,11 @@ capabilities mowia, ze Visual owns variant selection:
    zgodnie z DOM.
 
 ### FT-31-05-05 - Slot/LinkDestination metadata jest funkcjonalne, ale nieprecyzyjne
+
+**Status 2026-06-02:** Naprawione w TASK-398. Destination field paths maja
+pojedynczego metadata ownera, a Visual slot overview i Advanced support summary
+maja read-only `slots` rows. Regresja DOM metadata pokryta w
+`tests/vitest/ui/footer-editor-wave.test.tsx`.
 
 **Objaw:** Visual nie mial unwrapped native controls, ale probe znalazl:
 
@@ -269,9 +290,13 @@ capabilities mowia, ze Visual owns variant selection:
 
 ## Walidacja
 
-Do wykonania po zapisie raportu:
+Uruchomione po remediation:
 
-- `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx`
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
-- `git diff --check -- _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FOOTER_WIDGET.md _docs/PLAYWRIGHT/31-05-2026-widgets/README.md`
+- `bun run test:vitest -- tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed 2026-06-02, 3 files / 41 tests.
+- `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed 2026-06-02, 9 files / 125 tests.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `bun test tests/security/codersoSecurityGate.test.ts` - passed.
+- `bun run scan:gitleaks:worktree`, `bun run scan:trivy:secret`, `bun run scan:semgrep` - passed, Semgrep `0 findings`.
+- `git diff --check` - passed.
+- `bun run gates:coderso` - passed: functional, ux, performance, security, reliability.

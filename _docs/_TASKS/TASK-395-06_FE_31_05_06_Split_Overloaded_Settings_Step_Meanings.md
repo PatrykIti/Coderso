@@ -5,7 +5,7 @@
 **Category:** Widgets + Form Embed + Public Forms API + Security + Runtime + QA + Docs + Leaf Remediation
 **Estimated Effort:** Small
 **Dependencies:** TASK-395
-**Status:** To Do
+**Status:** Done
 
 ---
 
@@ -14,6 +14,13 @@
 Execution-ready leaf task for FE-31-05-06 from `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_FORM_EMBED_WIDGET.md` and parent `TASK-395`.
 
 `settings.step` is used for conflicting concepts.
+
+Status log:
+
+- 2026-06-02: Moved to In Progress with TASK-395 family implementation.
+- 2026-06-02: Done. Forms domain/admin/renderer contracts now split
+  `formStep` for multi-step placement from `inputStep` for number/range/time
+  increments, with legacy `settings.step` preserved as a form-step adapter.
 
 ## Sub-Tasks
 

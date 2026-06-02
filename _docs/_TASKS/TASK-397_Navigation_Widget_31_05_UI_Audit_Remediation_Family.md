@@ -5,7 +5,7 @@
 **Category:** Widgets + Navigation + Runtime Security + Admin UI + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_NAVIGATION_WIDGET.md
-**Status:** To Do
+**Status:** Done
 
 ---
 
@@ -28,12 +28,12 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-397-01](TASK-397-01_NV_31_05_01_Empty_Resolved_Link_List_Must_Not_Make_Public.md): NV-31-05-01 - Empty resolved link list must not make public widget invalid
-- [ ] [TASK-397-02](TASK-397-02_NV_31_05_02_Unsafe_Manual_Href_Must_Not_Degrade_To_Clickable.md): NV-31-05-02 - Unsafe manual href must not degrade to clickable `#`
-- [ ] [TASK-397-03](TASK-397-03_NV_31_05_03_Drawer_Active_Link_Clones_Need_Truthful_Aria_Current.md): NV-31-05-03 - Drawer active link clones need truthful `aria-current` semantics
-- [ ] [TASK-397-04](TASK-397-04_NV_31_05_04_Complete_Visual_Path_Metadata.md): NV-31-05-04 - Complete Visual path metadata
-- [ ] [TASK-397-05](TASK-397-05_NV_31_05_05_Remove_Or_Justify_Public_Data_Menu_Key_Exposure.md): NV-31-05-05 - Remove or justify public `data-menu-key` exposure
-- [ ] [TASK-397-06](TASK-397-06_NV_31_05_06_Bound_Persisted_Imported_Style_Colors.md): NV-31-05-06 - Bound persisted/imported style colors
+- [x] [TASK-397-01](TASK-397-01_NV_31_05_01_Empty_Resolved_Link_List_Must_Not_Make_Public.md): NV-31-05-01 - Empty resolved link list must not make public widget invalid
+- [x] [TASK-397-02](TASK-397-02_NV_31_05_02_Unsafe_Manual_Href_Must_Not_Degrade_To_Clickable.md): NV-31-05-02 - Unsafe manual href must not degrade to clickable `#`
+- [x] [TASK-397-03](TASK-397-03_NV_31_05_03_Drawer_Active_Link_Clones_Need_Truthful_Aria_Current.md): NV-31-05-03 - Drawer active link clones need truthful `aria-current` semantics
+- [x] [TASK-397-04](TASK-397-04_NV_31_05_04_Complete_Visual_Path_Metadata.md): NV-31-05-04 - Complete Visual path metadata
+- [x] [TASK-397-05](TASK-397-05_NV_31_05_05_Remove_Or_Justify_Public_Data_Menu_Key_Exposure.md): NV-31-05-05 - Remove or justify public `data-menu-key` exposure
+- [x] [TASK-397-06](TASK-397-06_NV_31_05_06_Bound_Persisted_Imported_Style_Colors.md): NV-31-05-06 - Bound persisted/imported style colors
 
 ## Implementation Pseudocode
 
@@ -70,6 +70,31 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_NAVIGATION_WIDGET.md`
 - `_docs/_TASKS/README.md` status row when this task starts or closes.
 - Reserved changelog number 1087; create the changelog entry only when this family is implemented or closed, and list the parent task ID plus every leaf task ID closed by that entry.
+
+## Closure Notes
+
+2026-06-02: Navigation scope implemented end-to-end without editing shared task
+or changelog indexes. `navigationSchema.items` now allows resolved empty link
+lists; bare `#` placeholders are hidden by the Navigation href normalizer;
+drawer active-link runtime marks duplicate responsive clones with truthful
+`aria-current="page"`; public DOM redacts raw `menuKey` as
+`data-menu-configured`; Visual controls expose contract-aligned
+`data-widget-control-path` metadata; persisted/imported style colors are
+schema-bounded and normalized through `resolveClearableCssColorValue()`.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 3 files / 55 tests.
+- `bun run test:vitest -- tests/vitest/widgets/contact.test.tsx tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts` - passed, 9 files / 125 tests.
+- `bun --cwd core lint` - passed.
+- `bun --cwd core lint:types` - passed.
+- `bun test tests/security/codersoSecurityGate.test.ts` - passed.
+- `bun run scan:gitleaks:worktree` - passed.
+- `bun run scan:trivy:secret` - passed.
+- `bun run scan:semgrep` - passed, 0 findings.
+- `git diff --check -- core/widgets/core/navigation.tsx core/admin/ui/widgets/editors/NavigationEditors.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx _docs/_WIDGETS/NAVIGATION.md _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_NAVIGATION_WIDGET.md _docs/_TASKS/TASK-397*.md` - passed.
+- `git diff --check` - passed.
+- `bun run gates:coderso` - passed: functional, ux, performance, security, reliability.
 
 ## Acceptance Criteria
 

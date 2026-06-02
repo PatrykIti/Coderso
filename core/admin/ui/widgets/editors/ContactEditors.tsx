@@ -347,6 +347,9 @@ function VariantCards({
           key={option.id}
           type="button"
           onClick={() => onChange?.(option.id)}
+          data-widget-control={`contact.visual.variant.${option.id}`}
+          data-widget-control-path="variant"
+          data-widget-control-ownership="writable"
           className={cn(
             "w-full rounded-lg border p-3 text-left transition",
             value === option.id
@@ -690,7 +693,13 @@ function FieldToggleList({
   return (
     <div className="space-y-2">
       {contactFieldOptions.map((field) => (
-        <div key={field} className="flex items-center justify-between rounded-lg border p-3">
+        <div
+          key={field}
+          className="flex items-center justify-between rounded-lg border p-3"
+          data-widget-control={`contact.form.fields.${field}`}
+          data-widget-control-path="form.fields"
+          data-widget-control-ownership="writable"
+        >
           <div>
             <p className="text-sm font-medium">{fieldLabels[field]}</p>
             <p className="text-xs text-muted-foreground">
@@ -721,7 +730,13 @@ function RequiredFieldList({
   return (
     <div className="space-y-2">
       {selectedFields.map((field) => (
-        <div key={field} className="flex items-center justify-between rounded-lg border p-3">
+        <div
+          key={field}
+          className="flex items-center justify-between rounded-lg border p-3"
+          data-widget-control={`contact.form.required.${field}`}
+          data-widget-control-path="form.required"
+          data-widget-control-ownership="writable"
+        >
           <div>
             <p className="text-sm font-medium">{fieldLabels[field]}</p>
             <p className="text-xs text-muted-foreground">
@@ -751,7 +766,13 @@ function FieldOrderList({
   return (
     <div className="space-y-2">
       {selectedFields.map((field, index) => (
-        <div key={field} className="space-y-2 rounded-lg border p-3">
+        <div
+          key={field}
+          className="space-y-2 rounded-lg border p-3"
+          data-widget-control={`contact.form.order.${field}`}
+          data-widget-control-path="form.fields"
+          data-widget-control-ownership="writable"
+        >
           <div>
             <p className="text-sm font-medium">{fieldLabels[field]}</p>
             <p className="text-xs text-muted-foreground">
@@ -765,6 +786,9 @@ function FieldOrderList({
               size="sm"
               onClick={() => moveField(value, onChange, index, index - 1)}
               disabled={index === 0}
+              data-widget-control={`contact.form.order.${field}.up`}
+              data-widget-control-path="form.fields"
+              data-widget-control-ownership="action"
             >
               Move up
             </Button>
@@ -774,6 +798,9 @@ function FieldOrderList({
               size="sm"
               onClick={() => moveField(value, onChange, index, index + 1)}
               disabled={index === selectedFields.length - 1}
+              data-widget-control={`contact.form.order.${field}.down`}
+              data-widget-control-path="form.fields"
+              data-widget-control-ownership="action"
             >
               Move down
             </Button>
@@ -894,23 +921,31 @@ function SectionHeaderControls({
   const normalized = normalizeContactData(value);
   return (
     <>
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Section title</p>
-        <Input
-          value={normalized.title ?? ""}
-          onChange={(event) => updateRoot(value, onChange, { title: event.target.value })}
-          placeholder={titlePlaceholder}
-        />
-      </div>
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Section description</p>
-        <Textarea
-          rows={3}
-          value={normalized.description ?? ""}
-          onChange={(event) => updateRoot(value, onChange, { description: event.target.value })}
-          placeholder="Optional supporting copy for the contact section."
-        />
-      </div>
+      <WidgetControlRow id="contact.title" label="Section title" path="title">
+        {(fieldProps) => (
+          <Input
+            id={fieldProps.id}
+            aria-labelledby={fieldProps["aria-labelledby"]}
+            aria-describedby={fieldProps["aria-describedby"]}
+            value={normalized.title ?? ""}
+            onChange={(event) => updateRoot(value, onChange, { title: event.target.value })}
+            placeholder={titlePlaceholder}
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="contact.description" label="Section description" path="description">
+        {(fieldProps) => (
+          <Textarea
+            id={fieldProps.id}
+            aria-labelledby={fieldProps["aria-labelledby"]}
+            aria-describedby={fieldProps["aria-describedby"]}
+            rows={3}
+            value={normalized.description ?? ""}
+            onChange={(event) => updateRoot(value, onChange, { description: event.target.value })}
+            placeholder="Optional supporting copy for the contact section."
+          />
+        )}
+      </WidgetControlRow>
     </>
   );
 }
@@ -953,9 +988,9 @@ function SubmissionRuntimeSection({
   });
   const hasMultiStepRuntimeFields = resolvedFields.some(
     (field) =>
-      typeof field.settings?.step === "number" &&
-      Number.isFinite(field.settings.step) &&
-      field.settings.step > 1
+      typeof (field.settings?.formStep ?? field.settings?.step) === "number" &&
+      Number.isFinite(field.settings?.formStep ?? field.settings?.step) &&
+      Number(field.settings?.formStep ?? field.settings?.step) > 1
   );
   const hasExactFieldCoverage =
     resolvedFields.length > 0 &&
@@ -972,7 +1007,12 @@ function SubmissionRuntimeSection({
       title="Submission runtime binding"
       description="Keep Contact static by default or bind it to an existing public-compatible Form."
     >
-      <div className="space-y-2">
+      <div
+        className="space-y-2"
+        data-widget-control="contact.submission.mode"
+        data-widget-control-path="form.submission.mode"
+        data-widget-control-ownership="writable"
+      >
         <p className="text-sm font-medium">Runtime mode</p>
         <Select
           value={submission?.mode ?? "static"}
@@ -995,7 +1035,12 @@ function SubmissionRuntimeSection({
         </Select>
       </div>
 
-      <div className="space-y-2">
+      <div
+        className="space-y-2"
+        data-widget-control="contact.submission.staticMessage"
+        data-widget-control-path="form.submission.staticMessage"
+        data-widget-control-ownership="writable"
+      >
         <p className="text-sm font-medium">Static status note</p>
         <Textarea
           rows={2}
@@ -1009,7 +1054,12 @@ function SubmissionRuntimeSection({
 
       {submission?.mode === "forms-runtime" ? (
         <>
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            data-widget-control="contact.submission.formId"
+            data-widget-control-path="form.submission.formId"
+            data-widget-control-ownership="writable"
+          >
             <p className="text-sm font-medium">Bound form</p>
             <Select
               value={selectedForm ? selectedForm.id : NO_FORM_VALUE}
@@ -1072,7 +1122,12 @@ function SubmissionRuntimeSection({
 
           {selectedForm ? (
             <div className="space-y-3 rounded-lg border p-3">
-              <div className="space-y-1">
+              <div
+                className="space-y-1"
+                data-widget-control="contact.submission.successMessage"
+                data-widget-control-path="form.submission.successMessage"
+                data-widget-control-ownership="writable"
+              >
                 <p className="text-sm font-medium">Success message override</p>
                 <Input
                   value={submission?.successMessage ?? ""}
@@ -1082,7 +1137,12 @@ function SubmissionRuntimeSection({
                   placeholder="Thanks for your message."
                 />
               </div>
-              <div className="space-y-1">
+              <div
+                className="space-y-1"
+                data-widget-control="contact.submission.errorMessage"
+                data-widget-control-path="form.submission.errorMessage"
+                data-widget-control-ownership="writable"
+              >
                 <p className="text-sm font-medium">Error message</p>
                 <Input
                   value={submission?.errorMessage ?? ""}
@@ -1111,7 +1171,13 @@ function SubmissionRuntimeSection({
                 const selectValue = preferredValue.length > 0 ? preferredValue : NO_FORM_VALUE;
 
                 return (
-                  <div key={field} className="space-y-2 rounded-lg border p-3">
+                  <div
+                    key={field}
+                    className="space-y-2 rounded-lg border p-3"
+                    data-widget-control={`contact.submission.fieldMap.${field}`}
+                    data-widget-control-path="form.submission.fieldMap"
+                    data-widget-control-ownership="writable"
+                  >
                     <p className="text-sm font-medium">{fieldLabels[field]}</p>
                     <Select
                       value={selectValue}
@@ -1168,7 +1234,12 @@ function ContactMapLocationField({
   const hasLegacyMapSource = Boolean((normalized.map?.embedUrl ?? "").trim()) && !mapLocation;
 
   return (
-    <div className="space-y-2">
+    <div
+      className="space-y-2"
+      data-widget-control="contact.map.location"
+      data-widget-control-path="map.embedUrl"
+      data-widget-control-ownership="writable"
+    >
       <p className="text-sm font-medium">Map location</p>
       <Input
         value={mapLocation}
@@ -1193,6 +1264,9 @@ function ContactMapLocationField({
             variant="outline"
             size="sm"
             onClick={() => updateMap(value, onChange, { embedUrl: "" })}
+            data-widget-control="contact.map.clearLegacySource"
+            data-widget-control-path="map.embedUrl"
+            data-widget-control-ownership="action"
           >
             Clear saved map source
           </Button>
@@ -1219,7 +1293,13 @@ function SocialProfileField({
 
   if (platform === "custom") {
     return (
-      <div className="space-y-2 rounded-md border border-dashed bg-muted/20 p-3">
+      <div
+        className="space-y-2 rounded-md border border-dashed bg-muted/20 p-3"
+        data-widget-control={`contact.social.${index}.customDestination`}
+        data-widget-control-path="contact.social"
+        data-widget-control-ownership="readonly"
+        data-widget-control-readonly="true"
+      >
         <p className="text-xs font-semibold uppercase text-muted-foreground">Profile destination</p>
         <p className="text-xs text-muted-foreground">
           Custom social destinations stay support-only so editors do not need to paste technical
@@ -1231,6 +1311,9 @@ function SocialProfileField({
             variant="outline"
             size="sm"
             onClick={() => updateSocialLink(value, onChange, index, { href: "" })}
+            data-widget-control={`contact.social.${index}.clearCustomDestination`}
+            data-widget-control-path="contact.social"
+            data-widget-control-ownership="action"
           >
             Clear saved custom destination
           </Button>
@@ -1240,7 +1323,12 @@ function SocialProfileField({
   }
 
   return (
-    <div className="space-y-2">
+    <div
+      className="space-y-2"
+      data-widget-control={`contact.social.${index}.profile`}
+      data-widget-control-path="contact.social"
+      data-widget-control-ownership="writable"
+    >
       <p className="text-xs font-semibold uppercase text-muted-foreground">Profile name</p>
       <Input
         value={profile}
@@ -1265,6 +1353,9 @@ function SocialProfileField({
             variant="outline"
             size="sm"
             onClick={() => updateSocialLink(value, onChange, index, { href: "" })}
+            data-widget-control={`contact.social.${index}.clearDestination`}
+            data-widget-control-path="contact.social"
+            data-widget-control-ownership="action"
           >
             Clear saved destination
           </Button>
@@ -1292,7 +1383,13 @@ function SocialLinksEditor({
         </p>
       ) : null}
       {social.map((link, index) => (
-        <div key={link.id ?? `social-${index + 1}`} className="space-y-3 rounded-lg border p-3">
+        <div
+          key={link.id ?? `social-${index + 1}`}
+          className="space-y-3 rounded-lg border p-3"
+          data-widget-control={`contact.social.${index}`}
+          data-widget-control-path="contact.social"
+          data-widget-control-ownership="writable"
+        >
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium">Social link {index + 1}</p>
             <Button
@@ -1300,11 +1397,19 @@ function SocialLinksEditor({
               size="sm"
               variant="outline"
               onClick={() => removeSocialLink(value, onChange, index)}
+              data-widget-control={`contact.social.${index}.remove`}
+              data-widget-control-path="contact.social"
+              data-widget-control-ownership="action"
             >
               Remove
             </Button>
           </div>
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            data-widget-control={`contact.social.${index}.platform`}
+            data-widget-control-path="contact.social"
+            data-widget-control-ownership="writable"
+          >
             <p className="text-xs font-semibold uppercase text-muted-foreground">Platform</p>
             <Select
               value={link.platform ?? "custom"}
@@ -1335,7 +1440,12 @@ function SocialLinksEditor({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            data-widget-control={`contact.social.${index}.label`}
+            data-widget-control-path="contact.social"
+            data-widget-control-ownership="writable"
+          >
             <p className="text-xs font-semibold uppercase text-muted-foreground">Label</p>
             <Input
               value={link.label ?? ""}
@@ -1348,7 +1458,14 @@ function SocialLinksEditor({
           <SocialProfileField value={value} onChange={onChange} link={link} index={index} />
         </div>
       ))}
-      <Button type="button" variant="outline" onClick={() => addSocialLink(value, onChange)}>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => addSocialLink(value, onChange)}
+        data-widget-control="contact.social.add"
+        data-widget-control-path="contact.social"
+        data-widget-control-ownership="action"
+      >
         Add social link
       </Button>
     </div>
@@ -1452,11 +1569,21 @@ export function ContactVisualEditor({
       >
         {showFormControls ? (
           <>
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              data-widget-control="contact.form.title"
+              data-widget-control-path="form.title"
+              data-widget-control-ownership="writable"
+            >
               <p className="text-sm font-medium">Visible fields</p>
               <FieldToggleList value={value} onChange={onChange} />
             </div>
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              data-widget-control="contact.form.submitLabel"
+              data-widget-control-path="form.submitLabel"
+              data-widget-control-ownership="writable"
+            >
               <p className="text-sm font-medium">Required fields</p>
               <RequiredFieldList value={value} onChange={onChange} />
             </div>
@@ -1499,7 +1626,12 @@ export function ContactVisualEditor({
           title="Field labels, placeholders, and layout"
           description="Tune labels, placeholders, autocomplete, and grid width for each visible field."
         >
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            data-widget-control="contact.form.fieldLayout"
+            data-widget-control-path="form.fieldLayout"
+            data-widget-control-ownership="writable"
+          >
             <p className="text-sm font-medium">Field layout</p>
             <Select
               value={normalized.form?.fieldLayout ?? "one"}
@@ -1529,7 +1661,13 @@ export function ContactVisualEditor({
               contactDefaults.form?.fieldSettings?.[field];
 
             return (
-              <div key={field} className="space-y-2 rounded-lg border p-3">
+              <div
+                key={field}
+                className="space-y-2 rounded-lg border p-3"
+                data-widget-control={`contact.form.fieldSettings.${field}`}
+                data-widget-control-path="form.fieldSettings"
+                data-widget-control-ownership="writable"
+              >
                 <p className="text-sm font-medium">{fieldLabels[field]}</p>
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase text-muted-foreground">Label</p>
@@ -1637,7 +1775,12 @@ export function ContactVisualEditor({
         title="Contact details and business info"
         description="Shape the business panel, semantic labels, icon choices, and social links."
       >
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          data-widget-control="contact.details.title"
+          data-widget-control-path="contact.title"
+          data-widget-control-ownership="writable"
+        >
           <p className="text-sm font-medium">Details panel title</p>
           <Input
             value={normalized.contact?.title ?? ""}
@@ -1648,7 +1791,13 @@ export function ContactVisualEditor({
           />
         </div>
         {contactDetailOptions.map((detail) => (
-          <div key={detail} className="space-y-2 rounded-lg border p-3">
+          <div
+            key={detail}
+            className="space-y-2 rounded-lg border p-3"
+            data-widget-control={`contact.details.${detail}`}
+            data-widget-control-path={`contact.${detail}`}
+            data-widget-control-ownership="writable"
+          >
             <p className="text-sm font-medium">{detailLabels[detail]}</p>
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase text-muted-foreground">Value</p>
@@ -1723,7 +1872,12 @@ export function ContactVisualEditor({
           </div>
         ))}
 
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          data-widget-control="contact.social"
+          data-widget-control-path="contact.social"
+          data-widget-control-ownership="writable"
+        >
           <p className="text-sm font-medium">Social links</p>
           <SocialLinksEditor value={value} onChange={onChange} />
         </div>
@@ -1736,7 +1890,12 @@ export function ContactVisualEditor({
         title="Map source and display behavior"
         description="Control if the map appears, how tall it is, and how validation feedback is explained."
       >
-        <div className="flex items-center justify-between rounded-lg border p-3">
+        <div
+          className="flex items-center justify-between rounded-lg border p-3"
+          data-widget-control="contact.map.enabled"
+          data-widget-control-path="map.enabled"
+          data-widget-control-ownership="writable"
+        >
           <div>
             <p className="text-sm font-medium">Show map</p>
             <p className="text-xs text-muted-foreground">
@@ -1751,7 +1910,12 @@ export function ContactVisualEditor({
         </div>
         {mapEnabled ? (
           <>
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              data-widget-control="contact.map.title"
+              data-widget-control-path="map.title"
+              data-widget-control-ownership="writable"
+            >
               <p className="text-sm font-medium">Map title</p>
               <Input
                 value={normalized.map?.title ?? ""}
@@ -1759,7 +1923,12 @@ export function ContactVisualEditor({
                 placeholder="Find us"
               />
             </div>
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              data-widget-control="contact.map.description"
+              data-widget-control-path="map.description"
+              data-widget-control-ownership="writable"
+            >
               <p className="text-sm font-medium">Map description</p>
               <Textarea
                 rows={2}
@@ -1771,7 +1940,12 @@ export function ContactVisualEditor({
               />
             </div>
             <ContactMapLocationField value={value} onChange={onChange} />
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              data-widget-control="contact.map.height"
+              data-widget-control-path="map.height"
+              data-widget-control-ownership="writable"
+            >
               <p className="text-sm font-medium">Map height</p>
               <Select
                 value={normalized.map?.height ?? "md"}
@@ -1791,7 +1965,12 @@ export function ContactVisualEditor({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              data-widget-control="contact.map.fallbackCopy"
+              data-widget-control-path="map.fallbackCopy"
+              data-widget-control-ownership="writable"
+            >
               <p className="text-sm font-medium">Map fallback copy</p>
               <Textarea
                 rows={2}
@@ -2017,7 +2196,12 @@ export function ContactVisualEditor({
         title="Section layout and spacing"
         description="Tune overall width, horizontal padding, gap density, and panel column layout."
       >
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          data-widget-control="contact.style.maxWidth"
+          data-widget-control-path="style.maxWidth"
+          data-widget-control-ownership="writable"
+        >
           <p className="text-sm font-medium">Max width</p>
           <Select
             value={normalized.style?.maxWidth ?? "xl"}
@@ -2037,7 +2221,12 @@ export function ContactVisualEditor({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          data-widget-control="contact.style.paddingX"
+          data-widget-control-path="style.paddingX"
+          data-widget-control-ownership="writable"
+        >
           <p className="text-sm font-medium">Horizontal padding</p>
           <Select
             value={normalized.style?.paddingX ?? "md"}
@@ -2057,7 +2246,12 @@ export function ContactVisualEditor({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          data-widget-control="contact.style.spacing"
+          data-widget-control-path="style.spacing"
+          data-widget-control-ownership="writable"
+        >
           <p className="text-sm font-medium">Spacing</p>
           <Select
             value={normalized.style?.spacing ?? "md"}
@@ -2082,7 +2276,12 @@ export function ContactVisualEditor({
           </p>
         </div>
         {showFormControls ? (
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            data-widget-control="contact.style.columns"
+            data-widget-control-path="style.columns"
+            data-widget-control-ownership="writable"
+          >
             <p className="text-sm font-medium">Section columns</p>
             <Select
               value={normalized.style?.columns ?? "two"}

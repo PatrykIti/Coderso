@@ -3549,7 +3549,8 @@ Permissions: `forms:read`, `forms:write`
 - `GET /forms/:id/fields`
 - `PUT /forms/:id/fields`
 - `GET /forms/:id/submissions`
-- `POST /forms/:id/submissions` (public submit)
+- `POST /forms/:id/submissions` (public submit; mounted both through the
+  admin API router and the public site request handler)
 - `GET /forms/:id/actions`
 - `PUT /forms/:id/actions`
 - `GET /forms/:id/action-runs`
@@ -3585,7 +3586,9 @@ Opcjonalne pola:
 - `status`: `draft`, `published` albo `archived`; inne wartosci sa odrzucane
   na granicy route schema.
 - `successMessage`: fallback dla sukcesu submission (uzywane, gdy widget nie ma override).
-- `successRedirectUrl`: po sukcesie przekierowuje na podany URL.
+- `successRedirectUrl`: po sukcesie przekierowuje tylko na same-origin relative
+  path (`/thank-you`, z opcjonalnym query/hash). Absolute, protocol-relative i
+  `javascript:` URL sa odrzucane przed zapisem.
 - `submissionAccess`: `public` (default) lub `internal` (wymaga sesji admina lub API key).
 - `settings.layoutMode`: `single` lub `multi_step`.
 - `settings.saveProgress`: runtime zapisuje postep do `localStorage`.
@@ -3606,7 +3609,8 @@ Opcjonalne pola:
     "orderIndex": 0,
     "settings": {
       "placeholder": "John Doe",
-      "step": 1
+      "formStep": 1,
+      "inputStep": 1
     }
   }
 ]
@@ -3615,6 +3619,10 @@ Opcjonalne pola:
 Top-level keys in each field input are strict (`id`, `type`, `label`, `name`,
 `required`, `orderIndex`, `settings`). Flexible per-field extension data must
 stay inside `settings`.
+
+Field settings use `formStep` for multi-step placement and `inputStep` for
+number/range/time input increments. Legacy `settings.step` is preserved as a
+non-destructive form-step adapter and is not interpreted as an input increment.
 
 Known Forms errors are returned as machine-readable API errors:
 - `form_invalid` -> 400,
@@ -3627,7 +3635,9 @@ Known Forms errors are returned as machine-readable API errors:
   `form_field_invalid`, `form_field_label_required`,
   `form_field_id_duplicate`, and `form_field_name_duplicate` -> 400,
 - submission payload errors such as `form_payload_invalid`,
-  `form_payload_unknown_field`, and `form_payload_required` -> 400.
+  `form_payload_unknown_field`, and `form_payload_required` -> 400,
+- `form_success_redirect_url_invalid` -> 400 when a form-level success redirect
+  is not a same-origin relative path.
 
 `POST /forms/:id/submissions`
 
@@ -3643,7 +3653,15 @@ Known Forms errors are returned as machine-readable API errors:
 ```
 
 Uwaga:
-- runtime widget `form-embed` wysyla JSON do `POST /forms/:id/submissions` i obsluguje `runtime.successMessage` / `runtime.redirectUrl` inline.
+- runtime widget `form-embed` wysyla JSON do `POST /forms/:id/submissions` i
+  obsluguje `runtime.successMessage` / `runtime.redirectUrl` inline.
+- public Form Embed submissions use the Forms access evaluator, strict
+  reject-unknown validation, the `public_write` rate-limit bucket keyed by form
+  id, and the signed form nonce (`formId.timestamp.HMAC`) projected only at
+  runtime. Optional bot protection remains backend-owned.
+- widget-level success copy has precedence over `runtime.successMessage` when
+  configured. `runtime.redirectUrl` is followed only when it is a same-origin
+  relative URL.
 - bez JS endpoint nadal przyjmuje payload form-urlencoded (mapowany do `data`).
 
 Przyklad odpowiedzi:
