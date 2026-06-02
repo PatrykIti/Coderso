@@ -2,9 +2,11 @@ import { describe, expect, test } from "bun:test";
 
 import {
   buildCommerceFixtureProductPatch,
+  buildContentListFixturePageData,
   classifyPublicStatus,
   createAdminFixtureGapMode,
   createFailedAdminMode,
+  ensureContentListWidgetFixtures,
   ensureMediaWidgetFixtures,
   extractCliJson,
   finalizeAdminResult,
@@ -17,6 +19,7 @@ import {
   resolveLogoCloudMediaProofPublicPath,
   resolvePlaywrightCliSessionName,
   selectedCasesNeedCommerceFixtures,
+  selectedCasesNeedContentFixtures,
   selectedCasesNeedMediaFixtures,
   selectCases,
   shouldCountOverflowOwner,
@@ -154,6 +157,16 @@ const richTextSectionCase: SmokeInventory["widgets"][number] = {
   requiredModes: ["wizard", "visual", "advanced"],
 };
 
+const contentListCase: SmokeInventory["widgets"][number] = {
+  widgetType: "content-list",
+  title: "Content List",
+  adminInsertLabel: "Content List",
+  adminFixtureSlug: "/ctr-content-list-2305",
+  publicPath: "/test-content-list-0516",
+  publicFixtureStatus: "published",
+  requiredModes: ["wizard", "visual", "advanced"],
+};
+
 describe("playwright widget contract smoke helpers", () => {
   test("parses debug and target flags without exposing credentials", () => {
     const args = parseArgs([
@@ -246,6 +259,11 @@ describe("playwright widget contract smoke helpers", () => {
     expect(selectedCasesNeedMediaFixtures([richTextSectionCase])).toBe(true);
   });
 
+  test("detects when selected widget cases require content list fixture bootstrap", () => {
+    expect(selectedCasesNeedContentFixtures(makeInventory().widgets)).toBe(false);
+    expect(selectedCasesNeedContentFixtures([contentListCase])).toBe(true);
+  });
+
   test("uses the public fixture route for Logo Cloud media proof before admin slug fallback", () => {
     expect(resolveLogoCloudMediaProofPublicPath(logoCloudCase)).toBe("/logo-cloud");
     expect(
@@ -254,6 +272,141 @@ describe("playwright widget contract smoke helpers", () => {
         publicPath: null,
       })
     ).toBe("/ctr-logo-cloud");
+  });
+
+  test("builds populated Content List fixture page data without dropping page metadata", () => {
+    const next = buildContentListFixturePageData({
+      seo: { title: "Keep SEO" },
+      settings: { template: "default" },
+      blocks: [
+        { id: "hero-1", type: "hero", variant: "default", data: { headline: "Keep hero" } },
+        {
+          id: "content-list-existing",
+          type: "content-list",
+          variant: "compact",
+          data: { title: "Old fixture" },
+        },
+      ],
+    });
+    const blocks = next.blocks as Array<Record<string, unknown>>;
+    const contentListBlock = blocks.find((block) => block.type === "content-list");
+    const data = contentListBlock?.data as Record<string, unknown> | undefined;
+    const source = data?.source as Record<string, unknown> | undefined;
+    const resolved = data?.resolved as Record<string, unknown> | undefined;
+    const items = resolved?.items as Array<Record<string, unknown>> | undefined;
+    const pagination = data?.pagination as Record<string, unknown> | undefined;
+
+    expect(next.seo).toEqual({ title: "Keep SEO" });
+    expect(next.settings).toEqual({ template: "default" });
+    expect(blocks[0]?.type).toBe("hero");
+    expect(contentListBlock).toMatchObject({
+      id: "content-list-existing",
+      type: "content-list",
+      variant: "cards",
+    });
+    expect(source).toMatchObject({
+      mode: "legacy",
+      contentTypeId: "fixture-content-type",
+      statusScope: "published",
+      limit: 2,
+    });
+    expect(pagination).toMatchObject({
+      mode: "load-more",
+      pageSize: 2,
+      viewAllHref: "/fixture-content-list",
+    });
+    expect(items).toHaveLength(2);
+    expect(items?.[0]).toMatchObject({
+      href: "/fixture-content-list/launch-brief",
+      imageAlt: "Fixture Content List launch brief image",
+      tags: ["launch", "featured"],
+    });
+    expect(resolved?.runtime).toMatchObject({
+      page: 1,
+      pageSize: 2,
+      totalPages: 2,
+      nextPageHref: "?cl.content-list-existing.page=2",
+    });
+  });
+
+  test("patches and publishes Content List page fixtures through authenticated admin APIs", async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      requests.push({ url, init });
+      if (url === "http://admin.test/admin/api/pages" && (init?.method ?? "GET") === "GET") {
+        return Response.json([
+          {
+            id: "page-1",
+            title: "Content List fixture",
+            slug: "/ctr-content-list-2305",
+            status: "draft",
+            updatedAt: "2026-05-31T00:00:00.000Z",
+            author: null,
+          },
+        ]);
+      }
+      if (url === "http://admin.test/admin/api/pages/page-1" && (init?.method ?? "GET") === "GET") {
+        return Response.json({
+          id: "page-1",
+          title: "Content List fixture",
+          slug: "/ctr-content-list-2305",
+          status: "draft",
+          currentData: { seo: { title: "Keep SEO" }, blocks: [] },
+          updatedAt: "2026-05-31T00:00:00.000Z",
+        });
+      }
+      if (url === "http://admin.test/admin/api/auth/csrf") {
+        return Response.json({ token: "csrf-token" });
+      }
+      if (url === "http://admin.test/admin/api/pages/page-1" && init?.method === "PATCH") {
+        const payload = JSON.parse(String(init.body)) as { data?: Record<string, unknown> };
+        const blocks = payload.data?.blocks as Array<Record<string, unknown>> | undefined;
+        const contentListBlock = blocks?.find((block) => block.type === "content-list");
+        const data = contentListBlock?.data as Record<string, unknown> | undefined;
+        const resolved = data?.resolved as Record<string, unknown> | undefined;
+        const items = resolved?.items as unknown[] | undefined;
+
+        expect(payload.data?.seo).toEqual({ title: "Keep SEO" });
+        expect(items).toHaveLength(2);
+        return Response.json({
+          id: "page-1",
+          title: "Content List fixture",
+          slug: "/ctr-content-list-2305",
+          status: "draft",
+          currentData: payload.data,
+          updatedAt: "2026-05-31T00:00:00.000Z",
+        });
+      }
+      if (url === "http://admin.test/admin/api/pages/page-1/publish" && init?.method === "POST") {
+        const payload = JSON.parse(String(init.body)) as { data?: Record<string, unknown> };
+        expect(Array.isArray(payload.data?.blocks)).toBe(true);
+        return Response.json({ ok: true });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      await ensureContentListWidgetFixtures("http://admin.test/admin", "session-token", [
+        contentListCase,
+      ]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(requests.map((request) => `${request.init?.method ?? "GET"} ${request.url}`)).toEqual([
+      "GET http://admin.test/admin/api/pages",
+      "GET http://admin.test/admin/api/pages/page-1",
+      "GET http://admin.test/admin/api/auth/csrf",
+      "PATCH http://admin.test/admin/api/pages/page-1",
+      "POST http://admin.test/admin/api/pages/page-1/publish",
+    ]);
+    const patchHeaders = requests[3]?.init?.headers as Headers;
+    const publishHeaders = requests[4]?.init?.headers as Headers;
+    expect(patchHeaders.get("cookie")).toBe("session=session-token");
+    expect(patchHeaders.get("X-CSRF-Token")).toBe("csrf-token");
+    expect(publishHeaders.get("X-CSRF-Token")).toBe("csrf-token");
   });
 
   test("seeds Logo Cloud media fixtures through authenticated admin upload", async () => {

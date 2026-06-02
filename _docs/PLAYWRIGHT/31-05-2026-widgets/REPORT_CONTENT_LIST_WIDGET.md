@@ -62,7 +62,7 @@ Przetestowane:
 | Advanced read-only | Klik `Advanced` | Root count 1; sekcje source/style/runtime + builder summaries; `writableControls=0`, `formControls=0`. | Nie dotyczy. | Dziala | Advanced editor ma tylko `ReadonlyWidgetSummaryRow`. | Brak. |
 | Advanced source/style/runtime summaries | Po edycjach Visual | Pokazuje source binding, filters, `2 columns · Spacious spacing · Elevated cards`, runtime `0 items rendered · 0 items available`, no runtime errors. | Nie dotyczy. | Dziala z jednym wyjatkiem | Style/runtime summary prawdziwe; taxonomy stale po listing transition opisane osobno. | Naprawic hidden taxonomy finding. |
 
-## Znalezisko do poprawy
+## Znaleziska po remediacji
 
 ### CL-31-05-01: `legacy -> listing` ukrywa taxonomy w Visual, ale nie czysci jej z payloadu/Advanced
 
@@ -74,7 +74,9 @@ pokazal:
 - `Source mode: By listing query`,
 - `Daily filters: Taxonomy: audit-topic · Search: No search text · Featured: All entries...`
 
-**Status:** do poprawy. Search i Featured zostaly wyczyszczone, ale Taxonomy zostal.
+**Status:** zamkniete 2026-06-01. Search, Featured, Author i Taxonomy sa teraz
+czyszczone w przejsciu do listing mode, a owner-side normalizer usuwa dormant
+legacy filters z listing-mode payloadu zanim trafi on do Advanced/runtime.
 
 **Dlaczego:** `updateSourceMode` w
 `core/admin/ui/widgets/editors/ContentListEditors.tsx:842` czysci przy przejsciu
@@ -87,13 +89,10 @@ do listing tylko `authorId`, `searchQuery` i `featuredOnly`:
 Nie czysci `taxonomy`. Advanced summary w liniach `1853-1859` raportuje potem
 ukryta wartosc, mimo ze listing branch UI mowi, ze query owns filtering.
 
-**Jak naprawic:** w `updateSourceMode(..., mode === "listing")` dodac
-`taxonomy: ""`. Dodatkowo dopisac test w
-`tests/vitest/ui/content-list-editor-wave.test.tsx`: ustaw legacy
-`filters.taxonomy`, przelacz na listing, oczekuj `taxonomy === ""` i Advanced
-bez ukrytego taxonomy. Alternatywnie, jesli produkt chce zachowac legacy filters
-po powrocie do legacy, Advanced w listing mode powinien jawnie pokazac
-`Listing query owns filters` zamiast ukrytego legacy payloadu.
+**Naprawiono:** `updateSourceMode(..., mode === "listing")` dodaje
+`taxonomy: ""`, a `normalizeContentListData` zeruje legacy
+`taxonomy/search/featured/author` dla listing mode. Regresje pokrywaja UI
+transition, Advanced summary i normalizer.
 
 ## Public baseline
 
@@ -113,12 +112,14 @@ zrodla. Zmiany z klikanej sesji admin nie byly publikowane.
 
 ## Ograniczenia fixture
 
-Ta strona audytowa startuje bez content type/listing query i bez saved
-`resolved.items`, dlatego populated runtime (`state=ready`) nie byl uczciwie
-widoczny w admin canvas ani na public route tej strony. Potwierdzone sa:
-warunki UI, dane w Advanced, public missing-source baseline oraz targeted testy
-renderera/resolvera. Pelny browserowy pass dla kart z obrazkiem, tagami, CTA i
-pagination runtime wymaga seeded content source z `resolved.items`.
+Ta strona audytowa startowala bez content type/listing query i bez saved
+`resolved.items`, dlatego pierwotny pass nie mogl uczciwie potwierdzic
+populated runtime (`state=ready`) w admin canvas ani na public route tej strony.
+
+Aktualizacja 2026-06-01: smoke harness bootstrappuje teraz fixture strony
+Content List przez admin API, zapisuje dwa deterministyczne resolved items z
+obrazem, tagami, href, `nextPageHref` i `viewAllHref`, publikuje strone oraz
+uruchamia dedykowany `contentProof` dla admin/public rendering.
 
 ## Kod-owner
 
@@ -143,13 +144,13 @@ pagination runtime wymaga seeded content source z `resolved.items`.
 
 ## Rekomendacje
 
-1. Naprawic CL-31-05-01: czyscic `filters.taxonomy` przy przejsciu do listing
-   albo nie pokazywac ukrytych legacy filters w Advanced dla listing mode.
-2. Dodac seeded Content List UI fixture z realnym source, itemem z obrazkiem,
-   tagami, href i pagination runtime. Bez tego czesc opcji jest logicznie
-   przetestowana, ale nie da sie ocenic wizualnie na kartach.
-3. Rozszerzyc UI test o Advanced summary po `legacy -> listing`, bo obecne testy
-   przechwytuja tylko czesc czyszczenia source/filter state.
+1. CL-31-05-01 zamkniete: taxonomy i pozostale legacy filters sa czyszczone w
+   editorze oraz normalizerze dla listing mode.
+2. CL-31-05-02 zamkniete w smoke harness: Content List ma populated fixture z
+   obrazem, tagami, CTA, load-more i view-all proof.
+3. Przy kolejnym live UI pass uruchomic pelny Playwright replay z aktywnymi
+   `CODERSO_PLAYWRIGHT_EMAIL` / `CODERSO_PLAYWRIGHT_PASSWORD`, bo lokalne
+   credentials nie byly dostepne przy remediacji.
 
 ## Walidacja
 
@@ -163,3 +164,10 @@ pagination runtime wymaga seeded content source z `resolved.items`.
 - `bun run test:vitest -- tests/vitest/site/publicRenderer.test.tsx` — passed, 16 tests.
 - `curl http://localhost:3000/audit-31-05-content-list` — HTTP 200, public baseline `missing-source`.
 - Claude CLI nie wykonal audytu z powodu `401 Invalid authentication credentials`.
+- 2026-06-01 remediation validation:
+  - focused regressions failed before implementation for stale taxonomy,
+    listing-mode normalizer state, and missing Content List smoke fixture helpers;
+  - `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx` — passed, 12 tests;
+  - `bun test tests/unit/widgets/contentList.test.tsx tests/unit/playwright-widget-contract-smoke.test.ts` — passed, 49 tests;
+  - `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget content-list --output-json .tmp/task-382-content-list-smoke-dry-run.json --output-md .tmp/task-382-content-list-smoke-dry-run.md` — passed, 0 gaps;
+  - `bun --cwd core lint`, `bun --cwd core lint:types`, `git diff --check` — passed.

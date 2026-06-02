@@ -5,7 +5,7 @@
 **Category:** Widgets + Content List + Admin UI + Runtime Fixtures + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-382
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Visual hides legacy filters in listing mode, but `filters.taxonomy` survives and
 
 ## Sub-Tasks
 
-- [ ] Reproduce CL-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce CL-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -90,3 +90,11 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes
+
+- Reproduced in code and tests: listing mode hid legacy filters in Visual while `filters.taxonomy` remained active in Advanced.
+- Fixed in `ContentListEditors.tsx` by clearing `filters.taxonomy` alongside author/search/featured when switching into listing mode.
+- Fixed in `contentList.tsx` by normalizing listing-mode payloads to empty dormant legacy filters before diagnostics/runtime use.
+- Regression coverage: `tests/vitest/ui/content-list-editor-wave.test.tsx` and `tests/unit/widgets/contentList.test.tsx`.
+- Covered by changelog 1072.

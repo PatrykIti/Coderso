@@ -5,7 +5,7 @@
 **Category:** Widgets + Content List + Admin UI + Runtime Fixtures + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-382
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Many display controls were only proven as accepted state because the local sourc
 
 ## Sub-Tasks
 
-- [ ] Reproduce CL-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce CL-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -91,3 +91,12 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes
+
+- Reproduced from the report as a fixture gap: the browser pass could not prove cards/images/tags/CTA/pagination because the page had no populated Content List data.
+- Added Content List fixture bootstrap to `scripts/playwright-widget-contract-smoke.ts`: selected cases patch the admin fixture page with two deterministic resolved items, image data, tags, hrefs, load-more runtime, and a view-all destination, then publish through CSRF-protected admin APIs.
+- Added `contentProof` to the admin smoke report. It verifies populated admin preview, image/tag/CTA/load-more, switches Visual pagination to `View all page`, publishes, and verifies public image/tag/CTA/view-all rendering.
+- Updated smoke inventory to remove the known `empty-fixture` marker for Content List.
+- Regression coverage: `tests/unit/playwright-widget-contract-smoke.test.ts` plus the targeted Content List smoke dry-run output in `.tmp/task-382-content-list-smoke-dry-run.*`.
+- Covered by changelog 1072.

@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 87 tasks
+- **To Do:** 84 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2061 tasks
+- **Done:** 2064 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-382 | Content List 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_CONTENT_LIST_WIDGET.md`; 2 findings routed to implementation/tests/docs |
 | TASK-383 | Posts Feed 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_POSTS_FEED_WIDGET.md`; 2 findings routed to implementation/tests/docs |
 | TASK-384 | Entry Teaser 31-05 UI Audit Fixture and Console Hygiene Family | Medium | Medium | Report-driven family from `REPORT_ENTRY_TEASER_WIDGET.md`; fixture gap and console hygiene guard routed to tests/docs |
 | TASK-385 | Product Gallery 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_PRODUCT_GALLERY_WIDGET.md`; 2 findings routed to implementation/tests/docs |
@@ -59,8 +58,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
 | TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-382-01 | CL-31-05-01 - `legacy -> listing` must not report hidden taxonomy as active | Medium | Medium | Leaf task for TASK-382; source `REPORT_CONTENT_LIST_WIDGET.md` |
-| TASK-382-02 | CL-31-05-02 - Add populated Content List browser fixture | Medium | Medium | Leaf task for TASK-382; source `REPORT_CONTENT_LIST_WIDGET.md` |
 | TASK-383-01 | PF-31-05-01 - Inactive category filter must not be reported active in Latest mode | Medium | Medium | Leaf task for TASK-383; source `REPORT_POSTS_FEED_WIDGET.md` |
 | TASK-383-02 | PF-31-05-02 - Add seeded posts fixture for browser-level display controls | Medium | Medium | Leaf task for TASK-383; source `REPORT_POSTS_FEED_WIDGET.md` |
 | TASK-384-01 | ET-31-05-01 - Add seeded content/listing fixture for resolved teaser branches | Medium | Medium | Leaf task for TASK-384; source `REPORT_ENTRY_TEASER_WIDGET.md` |
@@ -145,6 +142,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-382 | Content List 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-01): hidden legacy taxonomy state is cleared for listing mode and the smoke harness now proves populated Content List image/tag/CTA/pagination rendering. |
+| TASK-382-01 | CL-31-05-01 - `legacy -> listing` must not report hidden taxonomy as active | Medium | Medium | Done (2026-06-01): editor transitions and owner-side normalizer clear dormant legacy filters in listing mode. |
+| TASK-382-02 | CL-31-05-02 - Add populated Content List browser fixture | Medium | Medium | Done (2026-06-01): smoke bootstrap patches and publishes a populated Content List fixture with dedicated content proof. |
 | TASK-381 | Rich Text Section 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-01): sanitizer diagnostics retention, pristine default source drift, and Rich Text media/sanitizer smoke fixture gaps are closed. |
 | TASK-381-01 | RTS-31-05-01 - Do not lose body sanitizer diagnostics after structured block edits | High | Medium | Done (2026-06-01): clean structured-block edits no longer clear saved body sanitizer diagnostics. |
 | TASK-381-02 | RTS-31-05-02 - Resolve default HTML-vs-block source drift | High | Small | Done (2026-06-01): default body HTML and structured blocks now describe the same effective text. |

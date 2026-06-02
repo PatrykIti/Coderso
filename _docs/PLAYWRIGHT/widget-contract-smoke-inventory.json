@@ -236,8 +236,8 @@
       "publicPath": "/test-content-list-0516",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "cssChecks": ["body-overflow", "empty-fixture"],
-      "notes": "Known empty-state fixture gap."
+      "cssChecks": ["body-overflow"],
+      "notes": "Populated fixture is bootstrapped through admin page data before smoke."
     },
     {
       "widgetType": "posts-feed",

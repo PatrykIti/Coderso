@@ -35,6 +35,7 @@ matching remediation family is implemented or closed.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1072 | 2026-06-01 | Content List widget 31-05 UI audit remediation | CMS Widgets/Content List/Admin UI/Playwright/Fixtures/QA/Docs |
 | 1071 | 2026-06-01 | Rich Text Section widget 31-05 UI audit remediation | CMS Widgets/Rich Text/Admin UI/Sanitizer/Playwright/Media Fixtures/QA/Docs |
 | 1070 | 2026-06-01 | Team widget 31-05 UI audit UX and fixtures | CMS Widgets/Team/Admin UX/Playwright/Media Fixtures/QA/Docs |
 | 1069 | 2026-06-01 | Gallery Mosaic widget 31-05 UI audit remediation | CMS Widgets/Gallery Mosaic/Admin UI/Playwright/Media Fixtures/QA/Docs |

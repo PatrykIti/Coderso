@@ -105,6 +105,22 @@ type WidgetMediaProofResult = {
   error?: string;
 };
 
+type WidgetContentListProofResult = {
+  status: SmokeStatus;
+  adminItemCount: number;
+  publicItemCount: number;
+  adminHasImage: boolean;
+  publicHasImage: boolean;
+  adminHasTags: boolean;
+  publicHasTags: boolean;
+  adminHasCta: boolean;
+  publicHasCta: boolean;
+  adminHasLoadMore: boolean;
+  publicHasViewAll: boolean;
+  publicPath?: string | null;
+  error?: string;
+};
+
 type AdminWidgetResult = {
   widgetType: string;
   status: SmokeStatus;
@@ -113,6 +129,7 @@ type AdminWidgetResult = {
   modes: AdminModeResult[];
   duplicateWritablePaths: string[];
   mediaProof?: WidgetMediaProofResult;
+  contentProof?: WidgetContentListProofResult;
   error?: string;
 };
 
@@ -185,6 +202,7 @@ const screenOnlyWidgets = new Set([
   "screen-two-column",
 ]);
 const commerceFixtureWidgetTypes = new Set(["product-gallery", "product-compare", "product-table"]);
+const contentFixtureWidgetTypes = new Set(["content-list"]);
 const mediaFixtureWidgetTypes = new Set([
   "logo-cloud",
   "gallery-mosaic",
@@ -216,6 +234,16 @@ type MediaFixtureListItem = {
 
 type MediaFixtureListPayload = {
   items?: MediaFixtureListItem[];
+};
+
+type ContentListFixturePageListItem = {
+  id: string;
+  slug: string;
+};
+
+type ContentListFixturePageDetail = {
+  id: string;
+  currentData?: Record<string, unknown> | null;
 };
 
 const mediaFixtureSeeds: MediaFixtureSeed[] = [
@@ -468,6 +496,10 @@ export function selectedCasesNeedCommerceFixtures(cases: WidgetSmokeCase[]): boo
   return cases.some((item) => commerceFixtureWidgetTypes.has(item.widgetType));
 }
 
+export function selectedCasesNeedContentFixtures(cases: WidgetSmokeCase[]): boolean {
+  return cases.some((item) => contentFixtureWidgetTypes.has(item.widgetType));
+}
+
 export function selectedCasesNeedMediaFixtures(cases: WidgetSmokeCase[]): boolean {
   return cases.some((item) => mediaFixtureWidgetTypes.has(item.widgetType));
 }
@@ -489,6 +521,208 @@ function resolveMediaFixtureSeedsForCases(cases: WidgetSmokeCase[]): MediaFixtur
   return mediaFixtureSeeds.filter((seed) =>
     seed.widgetTypes.some((widgetType) => selectedWidgetTypes.has(widgetType))
   );
+}
+
+const contentListFixtureFallbackBlockId = "content-list-fixture";
+const contentListFixtureImageSrc =
+  "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='960'%20height='540'%20viewBox='0%200%20960%20540'%20role='img'%20aria-label='Content%20List%20fixture'%3E%3Crect%20width='960'%20height='540'%20fill='%23f8fafc'/%3E%3Crect%20x='96'%20y='84'%20width='768'%20height='372'%20rx='34'%20fill='%230f766e'/%3E%3Ccircle%20cx='704'%20cy='184'%20r='72'%20fill='%23f97316'/%3E%3Cpath%20d='M162%20408%20342%20236l124%20118%2086-82%20246%20136H162Z'%20fill='%23ccfbf1'/%3E%3Ctext%20x='150'%20y='168'%20font-family='Arial,Helvetica,sans-serif'%20font-size='54'%20font-weight='700'%20fill='%23ffffff'%3EContent%20Fixture%3C/text%3E%3C/svg%3E";
+
+function buildContentListFixtureWidgetData(blockId: string): Record<string, unknown> {
+  return {
+    source: {
+      mode: "legacy",
+      listingQueryId: "",
+      listingTemplateId: "",
+      contentTypeId: "fixture-content-type",
+      statusScope: "published",
+      limit: 2,
+      sort: "published-desc",
+    },
+    filters: {
+      taxonomy: "",
+      featuredOnly: false,
+      searchQuery: "",
+      authorId: "",
+    },
+    title: "Fixture stories",
+    description: "Populated Content List smoke fixture.",
+    pagination: {
+      mode: "load-more",
+      pageSize: 2,
+      viewAllHref: "/fixture-content-list",
+      viewAllLabel: "View all fixture stories",
+      loadMoreLabel: "More fixture stories",
+    },
+    fields: {
+      showImage: true,
+      showExcerpt: true,
+      showMeta: true,
+      showCta: true,
+    },
+    emptyState: {
+      title: "No fixture stories",
+      description: "The Content List smoke fixture should stay populated.",
+    },
+    style: {
+      columns: "2",
+      gap: "lg",
+      cardStyle: "elevated",
+      imageAspect: "wide",
+      tagMode: "badges",
+      tagLimit: 2,
+      ctaLabel: "Open story",
+      backgroundColor: "var(--color-bg)",
+      borderColor: "var(--color-border)",
+      textColor: "var(--color-text)",
+    },
+    resolved: {
+      items: [
+        {
+          id: "fixture-content-list-launch",
+          title: "Fixture Launch Brief",
+          slug: "launch-brief",
+          href: "/fixture-content-list/launch-brief",
+          excerpt: "A deterministic item with image, tags, metadata, and CTA proof.",
+          imageSrc: contentListFixtureImageSrc,
+          imageAlt: "Fixture Content List launch brief image",
+          tags: ["launch", "featured"],
+          authorName: "Fixture Editor",
+          publishedAt: "2026-05-31T10:00:00.000Z",
+          status: "published",
+        },
+        {
+          id: "fixture-content-list-roadmap",
+          title: "Fixture Roadmap Note",
+          slug: "roadmap-note",
+          href: "/fixture-content-list/roadmap-note",
+          excerpt: "A second deterministic item that proves multi-card layout and gaps.",
+          imageSrc: contentListFixtureImageSrc,
+          imageAlt: "Fixture Content List roadmap note image",
+          tags: ["roadmap", "release"],
+          authorName: "Fixture Editor",
+          publishedAt: "2026-05-30T10:00:00.000Z",
+          status: "published",
+        },
+      ],
+      total: 4,
+      sourceTypeId: "fixture-content-type",
+      sourceTypeSlug: "fixture-content-list",
+      listPath: "/fixture-content-list",
+      listingQueryId: "",
+      listingTemplateId: "",
+      resolvedAt: "2026-05-31T10:05:00.000Z",
+      runtime: {
+        rejectedTokens: [],
+        page: 1,
+        pageSize: 2,
+        totalPages: 2,
+        nextPageHref: `?cl.${blockId}.page=2`,
+      },
+    },
+  };
+}
+
+function isContentListFixtureBlock(value: unknown): value is Record<string, unknown> {
+  return isRecord(value) && value.type === "content-list";
+}
+
+export function buildContentListFixturePageData(
+  currentData: Record<string, unknown> | null | undefined
+): Record<string, unknown> {
+  const source = isRecord(currentData) ? currentData : {};
+  const sourceBlocks = Array.isArray(source.blocks) ? source.blocks : [];
+  let patchedContentList = false;
+  const blocks = sourceBlocks.map((block) => {
+    if (!patchedContentList && isContentListFixtureBlock(block)) {
+      patchedContentList = true;
+      const blockId =
+        typeof block.id === "string" && block.id.trim()
+          ? block.id.trim()
+          : contentListFixtureFallbackBlockId;
+      return {
+        ...block,
+        id: blockId,
+        type: "content-list",
+        variant: "cards",
+        data: buildContentListFixtureWidgetData(blockId),
+      };
+    }
+    return block;
+  });
+
+  if (!patchedContentList) {
+    blocks.push({
+      id: contentListFixtureFallbackBlockId,
+      type: "content-list",
+      variant: "cards",
+      data: buildContentListFixtureWidgetData(contentListFixtureFallbackBlockId),
+    });
+  }
+
+  return {
+    ...source,
+    blocks,
+  };
+}
+
+function normalizeFixtureSlug(slug: string): string {
+  const trimmed = slug.trim();
+  if (!trimmed) return "";
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+export async function ensureContentListWidgetFixtures(
+  adminUrl: string,
+  sessionValue: string,
+  selectedCases: WidgetSmokeCase[]
+): Promise<void> {
+  if (!selectedCasesNeedContentFixtures(selectedCases)) {
+    return;
+  }
+
+  const pages = await requestAdminJson<ContentListFixturePageListItem[]>({
+    adminUrl,
+    sessionValue,
+    path: "/api/pages",
+  });
+  let csrfToken: string | null = null;
+  const ensureCsrf = async () => {
+    if (csrfToken) return csrfToken;
+    csrfToken = await fetchAdminCsrfToken(adminUrl, sessionValue);
+    return csrfToken;
+  };
+
+  for (const item of selectedCases.filter((current) =>
+    contentFixtureWidgetTypes.has(current.widgetType)
+  )) {
+    const expectedSlug = normalizeFixtureSlug(item.adminFixtureSlug);
+    const pageRow = pages.find((page) => normalizeFixtureSlug(page.slug) === expectedSlug);
+    if (!pageRow) {
+      throw new Error(`content_list_fixture_page_not_found:${item.adminFixtureSlug}`);
+    }
+    const detail = await requestAdminJson<ContentListFixturePageDetail>({
+      adminUrl,
+      sessionValue,
+      path: `/api/pages/${encodeURIComponent(pageRow.id)}`,
+    });
+    const data = buildContentListFixturePageData(detail.currentData);
+    await requestAdminJson<ContentListFixturePageDetail>({
+      adminUrl,
+      sessionValue,
+      path: `/api/pages/${encodeURIComponent(pageRow.id)}`,
+      method: "PATCH",
+      body: { data },
+      csrfToken: await ensureCsrf(),
+    });
+    await requestAdminJson<{ ok: boolean }>({
+      adminUrl,
+      sessionValue,
+      path: `/api/pages/${encodeURIComponent(pageRow.id)}/publish`,
+      method: "POST",
+      body: { data },
+      csrfToken: await ensureCsrf(),
+    });
+  }
 }
 
 function mediaFixtureMetaDrifted(existing: MediaFixtureListItem, seed: MediaFixtureSeed): boolean {
@@ -1387,6 +1621,109 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
     await option.click();
     await settle();
   }
+  async function runContentListFixtureProof(item, adminPath) {
+    if (item.widgetType !== "content-list") return null;
+    const publicPath = item.publicPath || item.adminFixtureSlug || null;
+    const proof = {
+      status: "failed",
+      adminItemCount: 0,
+      publicItemCount: 0,
+      adminHasImage: false,
+      publicHasImage: false,
+      adminHasTags: false,
+      publicHasTags: false,
+      adminHasCta: false,
+      publicHasCta: false,
+      adminHasLoadMore: false,
+      publicHasViewAll: false,
+      publicPath,
+      error: undefined,
+    };
+    try {
+      await dismissCustomDirtyDialog();
+      await page.goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const selected = await openFixtureAndSelect(item, null, adminPath);
+      if (!selected.ok) {
+        proof.error = selected.error || "block_select_missing";
+        return proof;
+      }
+      const visualTab = page.getByRole("tab", { name: /^visual$/i }).first();
+      if ((await visualTab.count()) > 0) {
+        await visualTab.click().catch(() => undefined);
+        await settle();
+      }
+      const editor = page.locator('[data-widget-editor="content-list"][data-widget-editor-mode="visual"]').first();
+      await editor.waitFor({ state: "visible", timeout: 20000 });
+      const adminRoot = page.locator('[data-listing-widget="content-list"][data-content-list-state="ready"]').first();
+      await adminRoot.waitFor({ state: "visible", timeout: 15000 });
+      proof.adminItemCount = Number(await adminRoot.getAttribute("data-content-list-items")) || await adminRoot.locator("[data-content-list-item]").count();
+      if (proof.adminItemCount < 2) {
+        proof.error = "admin_content_list_fixture_items_missing";
+        return proof;
+      }
+      const adminImage = adminRoot.locator('[data-content-list-item="1"] img').first();
+      await adminImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasImage = true;
+      proof.adminHasTags = (await adminRoot.locator("text=launch").count()) > 0 && (await adminRoot.locator("text=featured").count()) > 0;
+      if (!proof.adminHasTags) {
+        proof.error = "admin_content_list_tags_missing";
+        return proof;
+      }
+      const adminCta = adminRoot.locator('a[href="/fixture-content-list/launch-brief"]').first();
+      await adminCta.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasCta = true;
+      const adminLoadMore = adminRoot.getByRole("link", { name: /more fixture stories/i }).first();
+      await adminLoadMore.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasLoadMore = true;
+
+      const paginationModeControl = editor.locator('[data-widget-control="content-list.visual.pagination.mode"]').first();
+      await paginationModeControl.waitFor({ state: "visible", timeout: 10000 });
+      await setRadixSelectOption(paginationModeControl, /view all page/i);
+
+      const publishButton = page.getByRole("button", { name: /^publish$/i }).first();
+      if ((await publishButton.count()) === 0) {
+        proof.error = "publish_button_missing";
+        return proof;
+      }
+      await publishButton.click();
+      await page.getByRole("button", { name: /publishing/i }).waitFor({ state: "hidden", timeout: 15000 }).catch(() => undefined);
+      await settle();
+
+      if (!publicPath) {
+        proof.error = "public_path_missing";
+        return proof;
+      }
+      await page.goto(frontUrl + publicPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const publicRoot = page.locator('[data-listing-widget="content-list"][data-content-list-state="ready"]').first();
+      await publicRoot.waitFor({ state: "visible", timeout: 15000 });
+      proof.publicItemCount = Number(await publicRoot.getAttribute("data-content-list-items")) || await publicRoot.locator("[data-content-list-item]").count();
+      if (proof.publicItemCount < 2) {
+        proof.error = "public_content_list_fixture_items_missing";
+        return proof;
+      }
+      const publicImage = publicRoot.locator('[data-content-list-item="1"] img').first();
+      await publicImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasImage = true;
+      proof.publicHasTags = (await publicRoot.locator("text=launch").count()) > 0 && (await publicRoot.locator("text=featured").count()) > 0;
+      if (!proof.publicHasTags) {
+        proof.error = "public_content_list_tags_missing";
+        return proof;
+      }
+      const publicCta = publicRoot.locator('a[href="/fixture-content-list/launch-brief"]').first();
+      await publicCta.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasCta = true;
+      const publicViewAll = publicRoot.locator('a[href="/fixture-content-list"]').first();
+      await publicViewAll.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasViewAll = true;
+      proof.status = "passed";
+      return proof;
+    } catch (error) {
+      proof.error = error instanceof Error ? error.message : String(error);
+      return proof;
+    }
+  }
   async function runGalleryMosaicMediaPickerProof(item, adminPath) {
     if (item.widgetType !== "gallery-mosaic") return null;
     const publicPath = item.mediaProofPublicPath || item.publicPath || item.adminFixtureSlug || null;
@@ -1775,6 +2112,9 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
     if (teamProof) return teamProof;
     return await runRichTextSectionMediaAndSanitizerProof(item, adminPath);
   }
+  async function runWidgetContentProof(item, adminPath) {
+    return await runContentListFixtureProof(item, adminPath);
+  }
   await verifyAuthenticated();
   if (!requiredLogin.authenticated) {
     return JSON.stringify({ login: requiredLogin, results: [], error: requiredLogin.error || "login_failed" });
@@ -1817,8 +2157,10 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
     const duplicates = hasMetadataGap ? [] : duplicatePaths(modes, item.allowedDuplicateWritablePaths || []);
     const hasModeFailure = modes.some((mode) => mode.status === "failed");
     const mediaProof = hasModeFailure ? null : await runWidgetMediaPickerProof(item, adminPath);
+    const contentProof = hasModeFailure ? null : await runWidgetContentProof(item, adminPath);
     const hasMediaProofFailure = Boolean(mediaProof && mediaProof.status !== "passed");
-    const hasFailure = hasModeFailure || duplicates.length > 0 || hasMediaProofFailure;
+    const hasContentProofFailure = Boolean(contentProof && contentProof.status !== "passed");
+    const hasFailure = hasModeFailure || duplicates.length > 0 || hasMediaProofFailure || hasContentProofFailure;
     results.push({
       widgetType: item.widgetType,
       status: hasFailure ? "failed" : hasMetadataGap ? "metadata-gap" : "passed",
@@ -1827,7 +2169,12 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
       modes,
       duplicateWritablePaths: duplicates,
       mediaProof: mediaProof || undefined,
-      error: hasMediaProofFailure ? mediaProof.error || "media_picker_proof_failed" : undefined,
+      contentProof: contentProof || undefined,
+      error: hasMediaProofFailure
+        ? mediaProof.error || "media_picker_proof_failed"
+        : hasContentProofFailure
+          ? contentProof.error || "content_list_fixture_proof_failed"
+          : undefined,
     });
   }
   return JSON.stringify({ login: requiredLogin, results });
@@ -2014,7 +2361,10 @@ function renderMarkdown(report: SmokeReport): string {
       const mediaProof = item.mediaProof
         ? `media proof: ${item.mediaProof.status}${item.mediaProof.error ? ` (${item.mediaProof.error})` : ""}`
         : undefined;
-      const notes = [item.error, mediaProof].filter(Boolean).join("; ");
+      const contentProof = item.contentProof
+        ? `content proof: ${item.contentProof.status}${item.contentProof.error ? ` (${item.contentProof.error})` : ""}`
+        : undefined;
+      const notes = [item.error, mediaProof, contentProof].filter(Boolean).join("; ");
       return `| \`${item.widgetType}\` | ${item.status} | ${modes || "-"} | ${item.duplicateWritablePaths.join(", ") || "-"} | ${notes || "-"} |`;
     }),
     "",
@@ -2260,6 +2610,17 @@ async function main() {
             await ensureMediaWidgetFixtures(args.adminUrl, authState.sessionValue, selectedCases);
           } catch (error) {
             report.admin.error = error instanceof Error ? error.message : String(error);
+          }
+          if (!report.admin.error) {
+            try {
+              await ensureContentListWidgetFixtures(
+                args.adminUrl,
+                authState.sessionValue,
+                selectedCases
+              );
+            } catch (error) {
+              report.admin.error = error instanceof Error ? error.message : String(error);
+            }
           }
           if (!report.admin.error && !args.skipFront) {
             try {

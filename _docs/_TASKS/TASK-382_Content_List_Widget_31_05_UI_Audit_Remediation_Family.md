@@ -5,7 +5,7 @@
 **Category:** Widgets + Content List + Admin UI + Runtime Fixtures + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_CONTENT_LIST_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -24,8 +24,8 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-382-01](TASK-382-01_CL_31_05_01_Legacy_Listing_Must_Not_Report_Hidden_Taxonomy_As.md): CL-31-05-01 - `legacy -> listing` must not report hidden taxonomy as active
-- [ ] [TASK-382-02](TASK-382-02_CL_31_05_02_Add_Populated_Content_List_Browser_Fixture.md): CL-31-05-02 - Add populated Content List browser fixture
+- [x] [TASK-382-01](TASK-382-01_CL_31_05_01_Legacy_Listing_Must_Not_Report_Hidden_Taxonomy_As.md): CL-31-05-01 - `legacy -> listing` must not report hidden taxonomy as active
+- [x] [TASK-382-02](TASK-382-02_CL_31_05_02_Add_Populated_Content_List_Browser_Fixture.md): CL-31-05-02 - Add populated Content List browser fixture
 
 ## Implementation Pseudocode
 
@@ -70,3 +70,12 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes
+
+- CL-31-05-01 fixed: `updateSourceMode(...listing)` clears `filters.taxonomy`, and `normalizeContentListData` clears dormant legacy filters for listing-mode payloads before Advanced/runtime summaries.
+- CL-31-05-02 fixed: widget smoke now bootstraps a populated Content List page fixture with image, tags, hrefs, load-more runtime, view-all destination, PATCH+publish via authenticated admin page APIs, and a dedicated `contentProof` result.
+- Focused regressions failed before the fix for stale taxonomy, listing-mode normalizer state, and missing Content List smoke fixture helpers.
+- Validation passed: `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx`; `bun test tests/unit/widgets/contentList.test.tsx tests/unit/playwright-widget-contract-smoke.test.ts`; `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget content-list --output-json .tmp/task-382-content-list-smoke-dry-run.json --output-md .tmp/task-382-content-list-smoke-dry-run.md`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`.
+- The task references `tests/vitest/widgets/contentList.test.tsx`, but the current checked-out lane owns this widget renderer/domain coverage in `tests/unit/widgets/contentList.test.tsx`; that Bun suite was run instead.
+- Full live Playwright replay was not run because `CODERSO_PLAYWRIGHT_EMAIL` and `CODERSO_PLAYWRIGHT_PASSWORD` are not available in `.env`.

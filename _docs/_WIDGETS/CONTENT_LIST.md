@@ -156,6 +156,10 @@ tokens, or editable support fields.
 
 - Uses the selected `listingQueryId` and optional `listingTemplateId`.
 - Widget-owned legacy filters are cleared/hidden when switching into listing mode.
+- `normalizeContentListData` also clears persisted dormant legacy filters for
+  listing-mode payloads, so Advanced diagnostics and public/runtime state never
+  report taxonomy/search/featured/author filters as active when the Listings
+  query owns filtering.
 - Runtime page navigation reuses the shared listing runtime token contract:
   `lq.<listingQueryId>.__page`.
 - Sort/filter behavior is owned by the selected Listings query.
