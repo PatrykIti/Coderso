@@ -20,7 +20,11 @@ const adminAuthState = vi.hoisted(() => ({
   },
 }));
 const adminAppServiceMocks = vi.hoisted(() => ({
+  getCachedSettings: vi.fn(() => null),
   getSettings: vi.fn(async () => ({
+    "setup.completed": true,
+  })),
+  getSettingsCached: vi.fn(async () => ({
     "setup.completed": true,
   })),
   getSecuritySettings: vi.fn(async () => ({})),
@@ -39,7 +43,9 @@ vi.mock("@/services/authClient", () => ({
 }));
 
 vi.mock("@/services/settingsClient", () => ({
+  getCachedSettings: adminAppServiceMocks.getCachedSettings,
   getSettings: adminAppServiceMocks.getSettings,
+  getSettingsCached: adminAppServiceMocks.getSettingsCached,
   getSecuritySettings: adminAppServiceMocks.getSecuritySettings,
   getStorageSettings: adminAppServiceMocks.getStorageSettings,
   updateSettings: adminAppServiceMocks.updateSettings,
@@ -219,6 +225,7 @@ test("AdminApp allows the Users route when the user only has roles:read", async 
     expect(view.container.textContent).toContain("Users route roles:read");
     expect(view.container.textContent).not.toContain("Access denied");
     expect(adminAppServiceMocks.getSettings).not.toHaveBeenCalled();
+    expect(adminAppServiceMocks.getSettingsCached).not.toHaveBeenCalled();
     expect(adminAppServiceMocks.listAdminThemeProfilesCached).not.toHaveBeenCalled();
     expect(adminAppServiceMocks.listAdminThemeTemplatesCached).not.toHaveBeenCalled();
   } finally {
@@ -259,6 +266,7 @@ test.each(restrictedSettingsRouteCases)(
         expect(view.container.textContent).not.toContain(copy);
       }
       expect(adminAppServiceMocks.getSettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.getSettingsCached).not.toHaveBeenCalled();
       expect(adminAppServiceMocks.getSecuritySettings).not.toHaveBeenCalled();
       expect(adminAppServiceMocks.getStorageSettings).not.toHaveBeenCalled();
       expect(adminAppServiceMocks.updateSettings).not.toHaveBeenCalled();

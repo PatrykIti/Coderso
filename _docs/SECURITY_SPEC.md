@@ -167,6 +167,20 @@ Semgrep local suppressions:
   - plugins (safeMode)
   - validation (rejectUnknownFields)
 
+### Browser cache dla Settings
+
+- Admin Settings moze uzywac tylko redacted browser cache
+  (`settings:redacted`) dla nie-sekretnych wartosci UX i boolean-only
+  configured flags.
+- Cache payload jest allowlistowany, schema-versioned i walidowany przeciwko
+  kluczom `password`, `secret`, `token`, `accessKey`, `connectionString` oraz
+  `apiKey`.
+- Raw SMTP/storage/integration/webhook/API-key credentials, bot-protection
+  secret, provider keys, session/csrf material i inne sekrety nie moga trafic
+  do `localStorage`, debug payloadow ani cache-bus eventow.
+- Credential-bearing Settings endpoints pozostaja uncached w browser storage;
+  mutacje moga co najwyzej zaktualizowac redacted configured flags.
+
 Uwaga: header CSRF jest weryfikowany na podstawie tokenu z prefiksem timestamp (`<ts>.<token>`),
 co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 

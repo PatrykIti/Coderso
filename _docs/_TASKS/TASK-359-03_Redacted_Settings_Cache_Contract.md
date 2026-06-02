@@ -5,7 +5,7 @@
 **Category:** Admin Cache + Settings + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-359-01, TASK-359-02
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -128,3 +128,42 @@ Error handling:
 - Safe Settings values hydrate from redacted cache and revalidate in background.
 - Secrets never enter browser cache/localStorage/debug payloads.
 - Mutations invalidate/update cache consistently.
+
+## Completion Notes
+
+- Added `core/admin/services/settingsCache.ts` as the redacted Settings cache
+  owner with schema versioning, strict allowlist validation, TTL-backed
+  memory/localStorage cache, and nested unsafe-key scanning.
+- Added `settings:redacted` to the cache policy and wired
+  `getSettingsCached()`, `getCachedSettings()`, `getSiteSettingsCached()`, and
+  `getCachedSiteSettings()`.
+- `updateSettings()` and `updateSiteSettings()` now prime `settings:redacted`
+  from server responses and broadcast `update`; `updateSecuritySettings()`
+  patches only boolean configured flags or invalidates when no safe cache
+  exists.
+- `AdminApp` hydrates global Settings from redacted cache when the current
+  permission snapshot has `settings:read`, then revalidates through `/settings`.
+- `SiteSettingsPage` hydrates Settings, pages, and content types from cache,
+  stops force-refetching fresh selector caches on mount, responds to
+  `settings:redacted` cacheBus events, and preserves dirty drafts on background
+  refresh.
+- `prefetchSettingsRoute()` warms `/settings` and `/settings/site` caches with
+  `{ force: false }`; Site prefetch warms Settings plus pages/content types.
+- Updated `_docs/ADMIN_CACHE.md`, `_docs/ADMIN_CACHE_MAP.md`,
+  `_docs/SECURITY_SPEC.md`, the Settings report, the aggregate Admin UI report,
+  and changelog 1049.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/admin/settingsClient.test.ts tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/ui/site-settings.test.tsx tests/vitest/admin/adminApp.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun test tests/perf/admin-prefetch-budget.test.ts`
+- `git diff --check`
+- `bun run gates:coderso`
+- Playwright UI pass `task-359-03-settings-cache`: first Site load
+  `settings: 1`, `pages: 1`, `contentTypes: 1`, `authMe: 0`; cached
+  General -> Site navigation `settings: 1`, `pages: 0`, `contentTypes: 0`,
+  `authMe: 0`; `markerPreserved: true`, `unsafeSettingsCachePaths: []`, and
+  dirty TTL draft preserved. Screenshot:
+  `.tmp/task-359-03-settings-cache.png`.

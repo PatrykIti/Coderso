@@ -37,7 +37,7 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
 | Wysoki | Users/Roles Matrix | Zamknięte w `TASK-355-01` i `TASK-356-01`: restricted user nie dostaje aktywnych write controls bez write permission | `UsersRolesPage` i `PermissionsMatrixPage` konsumują permission snapshot, wspierają read-only/partial-read modes i odświeżają snapshot po stale 403 |
 | Wysoki | Settings | Zamknięte w `TASK-359-01`: user bez `settings:read` nie widzi Settings linków, direct URL pokazuje `Access denied` i nie odpala `GET /admin/api/settings` | shared permission snapshot gate, settings bootstrap guard i breadcrumb cleanup zastąpiły dawny shell `Forbidden`; backend 403 zostaje defense-in-depth |
 | Wysoki | Settings navigation | Zamknięte w `TASK-359-02`: przejścia między opcjami Settings są SPA transitions bez document reloadu, `auth/me` refetchy, 429 i login redirectu | `SettingsSidebar` używa `AdminLink`, a settings-scoped router blocker chroni dirty navigation |
-| Wysoki | Settings cache | Settings nie są cache'owane/hydratowane jak inne admin zasoby | brak settings cache keys/wrappers/cacheBus; klienty używają bezpośredniego `apiRequest` |
+| Wysoki | Settings cache | Zamknięte w `TASK-359-03`: Settings ma redacted cache dla nie-sekretnych wartości, cacheBus i selector-cache hydration dla Site | `settings:redacted` przechowuje tylko allowlistę, testy denylist skanują nested keys, a Site nie force-refetchuje świeżych `pages:list`/`contentTypes:list` na każdym mount |
 | Wysoki | Access Logs | `Revoke access` wygląda jak destrukcyjna akcja, ale nie ma handlera | `AccessLogDetailsDrawer.tsx` renderuje button bez `onClick` |
 | Wysoki | Sessions/API Keys/Webhooks/IP Allowlist/Users | Część akcji destrukcyjnych wykonuje mutację bez potwierdzenia | handlery wywołują API bez confirm modal |
 | Średni | Users | `Reset password` jest aktywne wizualnie, ale jest no-op | `UsersRolesPage.tsx` przekazuje `onResetPassword={() => undefined}` |
@@ -63,9 +63,9 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
    revoke sessions, revoke all, delete/deactivate user, delete role, rotate/revoke
    API key, delete webhook, remove IP allowlist entry, save high-risk security
    policy.
-4. Zamknięte w `TASK-359-02`: `SettingsSidebar` używa `AdminLink`, Settings ma
-   dirty-state guard i mobilną nawigację sekcji. Osobno zaprojektować cache
-   tylko dla redacted/non-secret settings, bez sekretów w localStorage.
+4. Zamknięte w `TASK-359-02` i `TASK-359-03`: `SettingsSidebar` używa
+   `AdminLink`, Settings ma dirty-state guard, mobilną nawigację sekcji oraz
+   redacted/non-secret cache bez sekretów w localStorage.
 5. Dodać `SheetTitle` i `SheetDescription` albo `VisuallyHidden` title/desc do
    Settings drawers i mobile user drawer; potem dodać Playwright assertion na
    brak Radix console errors/warnings.
@@ -113,6 +113,13 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
   Webhooks, Email, Storage i Integrations. Playwright pass mial
   `authMeRequests: 0`, `documentLoadEvents: 0`, `auth429Responses: 0` podczas
   fazy klikniec sekcji.
+- `TASK-359-03` jest zaimplementowany: `settings:redacted` hydratuje safe
+  Settings values, mutacje settings/site/security emituja `cacheBus`, testy
+  potwierdzaja brak secret-like keys w cache, a Site Settings nie wymusza juz
+  odswiezenia `pages` i `content-types` przy swiezym cache selectorow.
+  Playwright `task-359-03-settings-cache` mial cached General -> Site
+  `settings: 1`, `pages: 0`, `contentTypes: 0`, `authMe: 0`,
+  `markerPreserved: true` i `unsafeSettingsCachePaths: []`.
 - `TASK-355-01` jest zaimplementowany: Users UI konsumuje shared permission
   snapshot, nie hardcoduje write permissions i wspiera partial
   `users:read`/`roles:read` bez pobocznych fetchy.
@@ -130,8 +137,8 @@ przez `claude`, subagenci do source audit oraz ręczna weryfikacja kodu w
   `SheetTitle`/`SheetDescription` i warning-free drawer a11y regression gate.
 - Pozostale pozycje z raportu pozostaja przypisane do rodzin TASK-355..360.
   Część no-opow jest teraz jawnie niedostepna albo zaimplementowana, ale
-  Settings cache, Audit/Access funkcje i finalny re-audyt UI nadal wymagaja
-  osobnych implementacji w taskach obszarowych.
+  Settings placeholdery/high-risk confirms oraz finalny re-audyt UI nadal
+  wymagaja osobnych implementacji w taskach obszarowych.
 
 ## Uwaga o Claude - 2026-06-01
 

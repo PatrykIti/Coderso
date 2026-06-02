@@ -232,9 +232,24 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Theme editor
   - UI: `core/admin/ui/themes/ThemeEditorPage.tsx`
   - Cached APIs: `listPagesCached`
+- General / Assistant settings
+  - UI: `core/admin/app/AdminApp.tsx`,
+    `core/admin/ui/settings/GeneralSettingsPage.tsx`,
+    `core/admin/ui/settings/AssistantSettingsPage.tsx`
+  - Cached APIs: `getSettingsCached`, `getCachedSettings`
+  - Cache bus: `settings:redacted`
+  - Prefetch: `/settings` warms `settings:redacted`
 - Site settings
   - UI: `core/admin/ui/site/SiteSettingsPage.tsx`
-  - Cached APIs: `listPagesCached`, `listContentTypesCached`
+  - Cached APIs: `getSiteSettingsCached`, `getCachedSiteSettings`,
+    `listPagesCached`, `getCachedPages`, `listContentTypesCached`,
+    `getCachedContentTypes`
+  - Cache bus: `settings:redacted`, `pages:list`, `contentTypes:list`
+  - Prefetch: `/settings/site` warms `settings:redacted`, `pages:list`, and
+    `contentTypes:list` with `{ force: false }`
+  - Safety: only redacted/non-secret Settings values are stored in
+    `settings:redacted`; credential-bearing Settings endpoints remain uncached
+    in browser storage.
 
 ## Widget Editors (data selectors)
 - Hero

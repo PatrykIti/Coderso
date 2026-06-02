@@ -80,6 +80,32 @@ Tasks: TASK-359, TASK-359-01, TASK-359-02, TASK-359-03, TASK-359-04, TASK-359-05
   dirty link cancel/confirm, dirty Back cancel/confirm, and mobile navigation
   to Storage with all Settings links visible.
 
+### TASK-359-03 Redacted Settings Cache Contract
+
+- Added `settings:redacted` as the Settings browser-cache owner for non-secret
+  UX values only, with schema versioning, strict allowlist validation, and
+  unsafe nested-key scanning.
+- Added cached wrappers for global Settings and Site Settings so safe values
+  hydrate immediately from cache and revalidate through `/settings`.
+- Kept credential-bearing Settings payloads out of browser storage:
+  storage/email/integration/webhook/API-key credentials, bot-protection secret,
+  provider keys, tokens, and connection strings are not cached.
+- Wired Settings/Site mutations to prime `settings:redacted` from server
+  responses and broadcast cacheBus `update`; Security mutations patch only
+  boolean configured flags or invalidate when no safe cache entry exists.
+- Updated `AdminApp` to use cached Settings after permission-gated bootstrap,
+  preserving the `settings:read` guard from `TASK-359-01`.
+- Updated `SiteSettingsPage` to hydrate Settings, pages, and content types from
+  cache, revalidate Settings in the background, avoid force-refetching fresh
+  selector caches on every mount, and ignore background cache updates while the
+  form is dirty.
+- Added `/settings` and `/settings/site` prefetch warmup through shared admin
+  prefetch helpers; Site prefetch warms Settings, pages, and content types with
+  `{ force: false }`.
+- Synchronized `_docs/ADMIN_CACHE.md`, `_docs/ADMIN_CACHE_MAP.md`,
+  `_docs/SECURITY_SPEC.md`, the Settings report, and the aggregate Admin UI
+  report with the redacted cache contract.
+
 ## Validation
 
 - `bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx`
@@ -115,3 +141,26 @@ Tasks: TASK-359, TASK-359-01, TASK-359-02, TASK-359-03, TASK-359-04, TASK-359-05
   Settings links. Evidence screenshots:
   `.tmp/task-359-02-settings-desktop.png` and
   `.tmp/task-359-02-settings-mobile.png`.
+
+### TASK-359-03 validation
+
+- `bun run test:vitest -- tests/vitest/admin/settingsClient.test.ts tests/vitest/admin/siteSettingsClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/ui/site-settings.test.tsx tests/vitest/admin/adminApp.test.tsx`
+  passed with 5 files / 51 tests.
+- `bun test tests/perf/admin-prefetch-budget.test.ts` passed.
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
+- `git diff --check` passed.
+- `bun run gates:coderso` passed: functional, ux, performance, security, and
+  reliability gates all PASS.
+- Playwright UI pass `task-359-03-settings-cache` passed with first Site load
+  `settings: 1`, `pages: 1`, `contentTypes: 1`, `authMe: 0`; cached
+  General -> Site navigation `settings: 1`, `pages: 0`, `contentTypes: 0`,
+  `authMe: 0`; `markerPreserved: true`, `unsafeSettingsCachePaths: []`, and
+  dirty TTL draft preserved. Evidence screenshot:
+  `.tmp/task-359-03-settings-cache.png`.
+- Claude read-only review flagged the original narrow pseudocode as
+  insufficient for Site hydration; final implementation uses a broader
+  allowlist while preserving the secret denylist.
+- Subagent read-only review confirmed the original Settings/Site cache drift
+  and recommended redacted cache, mutation invalidation, and dirty-form
+  non-overwrite coverage.

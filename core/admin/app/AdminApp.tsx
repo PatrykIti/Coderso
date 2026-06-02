@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { canAdmin, resolveAuthBootstrap, type AuthUser } from "@/services/authClient";
 import { isApiClientError, subscribeAdminPermissionFailure } from "@/services/apiClient";
 import {
-  getSettings,
+  getCachedSettings,
+  getSettingsCached,
   updateSettings,
   type GeneralSettingsPayload,
 } from "@/services/settingsClient";
@@ -795,45 +796,59 @@ export function AdminApp({ path }: AdminAppProps) {
     settingsState,
   ]);
 
-  const refreshSettings = useCallback(() => {
-    if (!canReadSettings) {
-      setSettingsState({
+  const refreshSettings = useCallback(
+    (options?: { force?: boolean; background?: boolean }) => {
+      if (!canReadSettings) {
+        setSettingsState({
+          status: "idle",
+          values: defaultSettingsValues,
+          error: null,
+        });
+        return;
+      }
+      const fallbackState: SettingsState = {
         status: "idle",
         values: defaultSettingsValues,
         error: null,
-      });
-      return;
-    }
-    setSettingsState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: null,
-    }));
+      };
+      const cached = options?.force ? null : getCachedSettings();
 
-    const fallbackState: SettingsState = {
-      status: "idle",
-      values: defaultSettingsValues,
-      error: null,
-    };
-
-    getSettings()
-      .then((payload) => {
-        const resolved = resolveSettingsPayload(payload, fallbackState);
+      if (cached) {
+        const resolved = resolveSettingsPayload(cached, fallbackState);
         setSettingsState((prev) => ({
           ...prev,
-          status: "ready",
+          status: "loading",
+          error: null,
           ...resolved,
         }));
-      })
-      .catch((error) => {
-        const message = isApiClientError(error) ? error.message : "Failed to load settings.";
+      } else if (!options?.background) {
         setSettingsState((prev) => ({
           ...prev,
-          status: "error",
-          error: message,
+          status: "loading",
+          error: null,
         }));
-      });
-  }, [canReadSettings]);
+      }
+
+      getSettingsCached({ force: options?.force ?? Boolean(cached) })
+        .then((payload) => {
+          const resolved = resolveSettingsPayload(payload, fallbackState);
+          setSettingsState((prev) => ({
+            ...prev,
+            status: "ready",
+            ...resolved,
+          }));
+        })
+        .catch((error) => {
+          const message = isApiClientError(error) ? error.message : "Failed to load settings.";
+          setSettingsState((prev) => ({
+            ...prev,
+            status: "error",
+            error: message,
+          }));
+        });
+    },
+    [canReadSettings]
+  );
 
   const refreshAdminTheme = useCallback((options?: { force?: boolean }) => {
     const fallback = DEFAULT_ADMIN_THEME_TOKENS;
@@ -887,34 +902,13 @@ export function AdminApp({ path }: AdminAppProps) {
     if (authState !== "authenticated") return;
     if (!canReadSettings) return;
     let active = true;
-    const fallbackState: SettingsState = {
-      status: "idle",
-      values: defaultSettingsValues,
-      error: null,
-    };
-    getSettings()
-      .then((payload) => {
-        if (!active) return;
-        const resolved = resolveSettingsPayload(payload, fallbackState);
-        setSettingsState((prev) => ({
-          ...prev,
-          status: "ready",
-          ...resolved,
-        }));
-      })
-      .catch((error) => {
-        if (!active) return;
-        const message = isApiClientError(error) ? error.message : "Failed to load settings.";
-        setSettingsState((prev) => ({
-          ...prev,
-          status: "error",
-          error: message,
-        }));
-      });
+    Promise.resolve().then(() => {
+      if (active) refreshSettings();
+    });
     return () => {
       active = false;
     };
-  }, [authState, canReadSettings]);
+  }, [authState, canReadSettings, refreshSettings]);
 
   useEffect(() => {
     if (authState !== "authenticated") return;

@@ -16,6 +16,44 @@ Główne źródła: `core/admin/ui/settings/**`, `core/admin/ui/site/**`,
 
 ## Co faktycznie kliknięto
 
+### Szósta fala - 2026-06-02: TASK-359-03 redacted Settings cache
+
+- Dodano `settings:redacted` jako jedyny browser-cache owner dla wartości
+  Settings. Cache trzyma tylko allowlistę non-secret: General, runtime,
+  Assistant non-secret, Site oraz boolean-only security configured flags.
+- Vitest potwierdził, że payload `/settings` zawierający fake
+  `password`/`apiKey`/`accessKey`/`secretKey` nie zapisuje tych wartości ani
+  unsafe key paths w `localStorage`.
+- `getSettingsCached()` i `getSiteSettingsCached()` hydratują z
+  `settings:redacted`; `updateSettings()` i `updateSiteSettings()` primują
+  cache z odpowiedzi serwera i broadcastują `settings:redacted`.
+- `updateSecuritySettings()` patchuje wyłącznie safe configured flags, a kiedy
+  nie ma redacted cache entry, emituje invalidate zamiast cache'ować raw
+  security payload.
+- `SiteSettingsPage` hydratuje Settings, pages i content types z cache. Przy
+  świeżych `pages:list` i `contentTypes:list` mount Site nie wykonuje już
+  force-refetchy tych selectorów; Settings revaliduje się w tle.
+- Cache-bus update dla czystego formularza Site odświeża widoczne wartości ze
+  storage-first cache, ale dirty draft nie zostaje nadpisany.
+- Prefetch `/settings/site` ogrzewa `settings:redacted`, `pages:list` i
+  `contentTypes:list` raz, z `{ force: false }`.
+- Realny Playwright UI pass `task-359-03-settings-cache` potwierdził:
+  pierwsze wejście Site wykonało `settings: 1`, `pages: 1`,
+  `contentTypes: 1`, `authMe: 0`; drugie przejście General -> Site przy
+  świeżym cache wykonało `settings: 1`, `pages: 0`, `contentTypes: 0`,
+  `authMe: 0`.
+- Ten sam UI pass potwierdził `markerPreserved: true`,
+  `unsafeSettingsCachePaths: []`, obecne `pages:list` i `contentTypes:list`,
+  clean cacheBus TTL refresh zastosowany do pola oraz dirty TTL draft
+  zachowany po kolejnym cacheBus update. Screenshot evidence:
+  `.tmp/task-359-03-settings-cache.png`.
+- Claude read-only review zakwestionował zbyt wąską 4-polową pseudostrukturę z
+  taska; finalna implementacja używa szerszej allowlisty potrzebnej do
+  hydratacji General/Assistant/Site, ale nadal odrzuca secret-like key names.
+- Subagent read-only potwierdził drift: Site Settings wcześniej force-refetchował
+  pages/content types i nie miał redacted cache contract. Ten drift został
+  zamknięty kodem, testami i dokumentacją.
+
 ### Piąta fala - 2026-06-02: TASK-359-02 SPA navigation, dirty guard i mobile
 
 - Kliknięto realne linki Settings z UI bez `page.goto`: Assistant, Site,
@@ -167,13 +205,16 @@ Główne źródła: `core/admin/ui/settings/**`, `core/admin/ui/site/**`,
   zachowuje draft, a discard przechodzi dalej.
 - `TASK-359-02`: mobile Settings navigation pokazuje wszystkie główne Settings
   sekcje oraz Security subroutes: Sessions, Login Alerts i IP Allowlist.
+- `TASK-359-03`: redacted Settings cache hydratuje safe Settings values i Site
+  selectors bez sekretów w `localStorage`; mutacje Settings/Site/Security
+  synchronizują `settings:redacted` przez cacheBus.
 
 ## Co nie działało / co jest ryzykowne
 
 | Obszar | Problem | Dlaczego |
 | --- | --- | --- |
 | Settings navigation | Zamknięte w `TASK-359-02`: kliknięcia między opcjami Settings są SPA transitions i nie refetchują `auth/me` w fazie przejść | `SettingsSidebar.tsx` używa `AdminLink`, a shared router blocker pilnuje dirty navigation |
-| Settings cache | Wartości Settings nie są cache'owane/hydratowane jak listy/editor pages | `settingsClient.ts` i `siteSettingsClient.ts` używają bezpośrednio `apiRequest`; brak cache keys/cacheBus w `_docs/ADMIN_CACHE.md` |
+| Settings cache | Zamknięte w `TASK-359-03`: safe Settings values hydratują z redacted cache, a Site selectors nie force-refetchują przy świeżym cache | `settings:redacted` ma strict allowlistę, secret denylist tests, cached wrappers, cacheBus update/invalidate i prefetch `/settings/site` |
 | Settings dirty state | Zamknięte w `TASK-359-02`: Settings drafts wymagają confirmu przy sidebar/direct SPA navigation, Back/Forward i refresh/close | boolean-only dirty guard nie serializuje sekretów; cancel zachowuje draft |
 | Settings mobile | Zamknięte w `TASK-359-02`: mobile ma lokalną Settings nawigację z top-level sekcjami i Security subroutes | `SettingsShell.tsx` renderuje Settings sidebar także poniżej `lg` |
 | General | Logo upload, favicon upload/remove wyglądają aktywnie, ale nie mają file input/handlera | `LogoUploadCard.tsx` renderuje buttony bez akcji |
@@ -201,14 +242,12 @@ realne API (`SecuritySettingsPage`, `EmailSettingsPage`, `StorageSettingsPage`,
 `ApiKeysPage`), a część tylko wizualny shell (`LogoUploadCard`, część drawers,
 shared `ExportDialog`). UI nie rozróżnia tego wystarczająco wyraźnie.
 
-Settings nie zachowuje się jak admin resource objęty shared cache contract.
-`_docs/ADMIN_CACHE.md` wymienia cache keys dla list/detail zasobów i globalny
-read-through cache dla `getUserSettings`, `getAssistantStatus`,
-`listAdminThemeProfiles` i `resolveAuthBootstrap`, ale nie dla `getSettings`.
-`_docs/ADMIN_CACHE_MAP.md` mapuje przy Site settings tylko pomocnicze
-`listPagesCached` i `listContentTypesCached`. Same wartości Settings idą przez
-bezpośrednie `GET /settings`, `GET /settings/security`, `GET /settings/storage`,
-`GET /settings/email` itd.
+Settings cache drift został zamknięty w `TASK-359-03`: `_docs/ADMIN_CACHE.md`
+ma teraz `settings:redacted`, `settingsClient.ts` i `siteSettingsClient.ts`
+mają cached wrappers, a Site Settings przestał force-refetchować selector
+resources, kiedy cache jest świeży. Credential-bearing endpoints nadal nie są
+cache'owane w browser storage, bo ich raw payloady mogą zawierać sekrety albo
+configured-secret material.
 
 Navigation w Settings zostało zamknięte w `TASK-359-02`: `SettingsSidebar`
 renderuje `AdminLink`, Settings shell ma mobile nav, a shared admin router
@@ -239,11 +278,11 @@ linkuje już do `/admin/settings`.
   refresh/close.
 - Zamknięte w `TASK-359-02`: mobile Settings navigation jest dostępna poniżej
   `lg` i zawiera Security subroutes.
-- Rozdzielić cache policy dla Settings: cache'ować tylko bezpieczne, redacted
-  wartości bez sekretów; credential/config sekretów nie wkładać do
-  localStorage. Dodać cache keys/TTLs, cached wrappers, invalidation i cacheBus
-  zgodnie z `_docs/ADMIN_CACHE.md`.
-- W `SiteSettingsPage` nie wymuszać `listPagesCached({ force: true })` i
+- Zamknięte w `TASK-359-03`: Settings cache policy cache'uje tylko bezpieczne,
+  redacted wartości bez sekretów, z cache keys/TTLs, cached wrappers,
+  invalidation i cacheBus zgodnie z `_docs/ADMIN_CACHE.md`.
+- Zamknięte w `TASK-359-03`: `SiteSettingsPage` nie wymusza
+  `listPagesCached({ force: true })` i
   `listContentTypesCached({ force: true })` na każdym mount, jeśli cache jest
   świeży.
 - General: dodać realny media/file picker dla logo/favicon albo disable buttony.

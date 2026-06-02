@@ -105,8 +105,8 @@ Physical execution leaves:
    leaks before adding cache/navigation changes.
 2. Done in `TASK-359-02`: replace Settings navigation with `AdminLink`, then
    add dirty-state and mobile navigation behavior.
-3. Decide and implement the redacted settings cache contract before any
-   section-specific caching.
+3. Done in `TASK-359-03`: implement the redacted settings cache contract before
+   any section-specific caching.
 4. Fix General/Site placeholders and high-risk confirm flows.
 5. Fix Email/Storage/Integrations/Assistant external action truthfulness.
 6. Fix Login Alerts/Sessions placeholders.
@@ -223,12 +223,12 @@ Completion notes:
 - Mobile Settings navigation is visible below `lg` and includes General,
   Assistant, Site, Security, Sessions, Login Alerts, IP Allowlist, API Keys,
   Webhooks, Email, Storage, and Integrations.
-- Redacted settings cache remains `TASK-359-03`; this leaf intentionally did
-  not add settings endpoint prefetch/cache wrappers.
+- Redacted settings cache was later closed in `TASK-359-03`; this leaf
+  intentionally did not add settings endpoint prefetch/cache wrappers.
 
 ### TASK-359-03: Redacted Settings Cache Contract
 
-**Status:** To Do
+**Status:** Done (2026-06-02)
 
 Implementation decision:
 
@@ -288,6 +288,22 @@ Regression tests:
 - Mutations invalidate/update cache and broadcast.
 - Cross-tab cache events refresh non-dirty pages without overwriting dirty
   forms.
+
+Completion notes:
+
+- Added `settings:redacted` as the only browser-cache Settings owner. It stores
+  a schema-versioned, non-secret allowlist and rejects unsafe nested key names.
+- Added cached wrappers for global Settings and Site Settings, plus mutation
+  priming/invalidation and `cacheBus` `update`/`invalidate` events.
+- `AdminApp` and `SiteSettingsPage` hydrate from redacted cache before network
+  reads. Site also reuses fresh `pages:list` and `contentTypes:list` caches
+  instead of forcing those selectors to reload on every mount.
+- `/settings` and `/settings/site` prefetch now use cache warmup only
+  (`{ force: false }`); Site prefetch warms Settings, pages, and content types.
+- Dirty Site drafts ignore background cache updates, while clean forms apply
+  storage-first cache-bus refreshes.
+- Cache docs, security docs, Playwright reports, task board, and changelog 1049
+  were synchronized.
 
 ### TASK-359-04: General and Site Placeholder Truthfulness
 

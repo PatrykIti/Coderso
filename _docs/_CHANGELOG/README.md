@@ -26,7 +26,7 @@ Project Change Log.
 | No. | Date | Title | Type |
 |-----|------|-------|------|
 | 1050 | 2026-06-01 | TASK-360 Admin UI cross-cutting remediation family | Planning/Admin UI/RBAC/QA/Docs |
-| 1049 | 2026-06-01 | TASK-359 Admin Settings remediation family | Planning/Admin UI/Settings/Security/Navigation/QA/Docs |
+| 1049 | 2026-06-01 | TASK-359 Admin Settings remediation family | Planning/Admin UI/Settings/Security/Navigation/Cache/QA/Docs |
 | 1048 | 2026-06-01 | TASK-358 Admin Access Logs remediation family | Planning/Admin UI/Access Logs/Security/QA/Docs |
 | 1047 | 2026-06-01 | TASK-357 Admin Audit Logs remediation family | Planning/Admin UI/Audit Logs/Compliance/QA/Docs |
 | 1046 | 2026-06-01 | TASK-356 Admin Roles Matrix remediation family | Planning/Admin UI/RBAC/QA/Docs |

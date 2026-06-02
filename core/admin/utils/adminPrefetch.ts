@@ -27,6 +27,8 @@ import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
 } from "@/services/adminThemeClient";
+import { getSettingsCached } from "@/services/settingsClient";
+import { getSiteSettingsCached } from "@/services/siteSettingsClient";
 import { listWidgetTemplateCategoriesCached } from "@/services/widgetTemplateCategoriesClient";
 import { listWidgetTemplatesCached } from "@/services/widgetTemplatesClient";
 import { listWidgetCatalogCached } from "@/services/widgetsClient";
@@ -276,6 +278,20 @@ export async function prefetchDetailTemplateEditor(path: string) {
   return true;
 }
 
+export async function prefetchSettingsRoute(path: string) {
+  if (path === "/settings/site" || path.startsWith("/settings/site/")) {
+    await Promise.all([
+      getSiteSettingsCached(prefetchWarmupOptions),
+      listPagesCached(prefetchWarmupOptions),
+      listContentTypesCached(prefetchWarmupOptions),
+    ]);
+    return true;
+  }
+
+  await getSettingsCached(prefetchWarmupOptions);
+  return true;
+}
+
 const defaultEntries: AdminPrefetchEntry[] = [
   {
     match: "/pages",
@@ -412,6 +428,11 @@ const defaultEntries: AdminPrefetchEntry[] = [
         listAdminThemeTemplatesCached(prefetchWarmupOptions),
         listAdminThemeProfilesCached(prefetchWarmupOptions),
       ]),
+  },
+  {
+    match: "/settings",
+    resolveKey: ({ path }) => path,
+    run: ({ path }) => prefetchSettingsRoute(path),
   },
 ];
 

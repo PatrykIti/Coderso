@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Eye, Gauge, Home, LayoutList, Link2, Timer } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -15,13 +15,24 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { isApiClientError } from "@/services/apiClient";
-import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
-import { listPagesCached, previewPage, type PageSummary } from "@/services/pagesClient";
 import {
-  getSiteSettings,
+  getCachedContentTypes,
+  listContentTypesCached,
+  type ContentTypeSummary,
+} from "@/services/contentTypesClient";
+import {
+  getCachedPages,
+  listPagesCached,
+  previewPage,
+  type PageSummary,
+} from "@/services/pagesClient";
+import {
+  getCachedSiteSettings,
+  getSiteSettingsCached,
   updateSiteSettings,
   type SiteSettingsResponse,
 } from "@/services/siteSettingsClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { InfoTip } from "@/ui/shared/InfoTip";
 import { AdminLink } from "@/ui/shared/AdminLink";
@@ -30,6 +41,8 @@ import { AdminAccessCard } from "@/ui/settings/AdminAccessCard";
 import { BaseUrlCard } from "@/ui/settings/BaseUrlCard";
 import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
+import { resolveListMountRefreshOptions } from "@/utils/cacheRefresh";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { cn } from "@/lib/utils";
 
 import { SiteRouteEditor } from "./SiteRouteEditor";
@@ -124,6 +137,32 @@ const toFormValues = (settings: SiteSettingsResponse): SiteSettingsForm => ({
   contentRoutes: settings.contentRoutes ?? [],
 });
 
+const toLoadedForm = (
+  settings: SiteSettingsResponse,
+  contentTypes: ContentTypeSummary[]
+): SiteSettingsForm => ({
+  ...toFormValues(settings),
+  contentRoutes: mergeContentRoutes(toFormValues(settings).contentRoutes, contentTypes),
+});
+
+const resolveInitialSiteSettingsState = () => {
+  const settings = getCachedSiteSettings();
+  const pages = getCachedPages();
+  const contentTypes = getCachedContentTypes();
+  const resolvedContentTypes = contentTypes ?? [];
+  const form = settings ? toLoadedForm(settings, resolvedContentTypes) : defaultForm;
+  return {
+    form,
+    savedForm: form,
+    pages: pages ?? [],
+    contentTypes: resolvedContentTypes,
+    status: settings ? ("ready" as const) : ("loading" as const),
+    hasSettingsCache: Boolean(settings),
+    hasPagesCache: Boolean(pages),
+    hasContentTypesCache: Boolean(contentTypes),
+  };
+};
+
 const validateBaseUrl = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -160,11 +199,12 @@ const resolvePublicBaseUrl = (value: string) => {
 };
 
 export function SiteSettingsPage() {
-  const [form, setForm] = useState<SiteSettingsForm>(defaultForm);
-  const [savedForm, setSavedForm] = useState<SiteSettingsForm>(defaultForm);
-  const [pages, setPages] = useState<PageSummary[]>([]);
-  const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>([]);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("loading");
+  const [initialState] = useState(resolveInitialSiteSettingsState);
+  const [form, setForm] = useState<SiteSettingsForm>(initialState.form);
+  const [savedForm, setSavedForm] = useState<SiteSettingsForm>(initialState.savedForm);
+  const [pages, setPages] = useState<PageSummary[]>(initialState.pages);
+  const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>(initialState.contentTypes);
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(initialState.status);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -172,25 +212,42 @@ export function SiteSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState<SiteSectionId>("base");
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
+  const hasSettingsCacheRef = useRef(initialState.hasSettingsCache);
+  const hasPagesCacheRef = useRef(initialState.hasPagesCache);
+  const hasContentTypesCacheRef = useRef(initialState.hasContentTypesCache);
+  const isDirtyRef = useRef(false);
+  const formRef = useRef(initialState.form);
+  const contentTypesRef = useRef(initialState.contentTypes);
 
   useEffect(() => {
     let active = true;
+    const settingsHadCache = hasSettingsCacheRef.current;
+    const pagesMountOptions = resolveListMountRefreshOptions(hasPagesCacheRef.current);
+    const contentTypesMountOptions = resolveListMountRefreshOptions(
+      hasContentTypesCacheRef.current
+    );
+
+    if (!settingsHadCache) {
+      setStatus("loading");
+    }
 
     Promise.all([
-      getSiteSettings(),
-      listPagesCached({ force: true }),
-      listContentTypesCached({ force: true }),
+      getSiteSettingsCached({ force: settingsHadCache }),
+      listPagesCached({ force: pagesMountOptions.force }),
+      listContentTypesCached({ force: contentTypesMountOptions.force }),
     ])
       .then(([settings, pagesResult, typesResult]) => {
         if (!active) return;
-        const loadedForm = {
-          ...toFormValues(settings),
-          contentRoutes: mergeContentRoutes(toFormValues(settings).contentRoutes, typesResult),
-        };
-        setForm(loadedForm);
-        setSavedForm(loadedForm);
+        const loadedForm = toLoadedForm(settings, typesResult);
+        if (!isDirtyRef.current) {
+          setForm(loadedForm);
+          setSavedForm(loadedForm);
+        }
         setPages(pagesResult);
         setContentTypes(typesResult);
+        hasSettingsCacheRef.current = true;
+        hasPagesCacheRef.current = true;
+        hasContentTypesCacheRef.current = true;
         setStatus("ready");
       })
       .catch((err) => {
@@ -211,6 +268,64 @@ export function SiteSettingsPage() {
   );
   const isDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
   useRegisterSettingsDirty(status === "ready" && isDirty);
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
+
+  useEffect(() => {
+    contentTypesRef.current = contentTypes;
+  }, [contentTypes]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key === cacheKeys.settingsRedacted) {
+        getSiteSettingsCached({
+          force: event.action === "invalidate",
+          storageFirst: event.action === "update",
+        })
+          .then((settings) => {
+            if (isDirtyRef.current) return;
+            const loadedForm = toLoadedForm(settings, contentTypesRef.current);
+            setForm(loadedForm);
+            setSavedForm(loadedForm);
+            setStatus("ready");
+          })
+          .catch(() => undefined);
+        return;
+      }
+
+      if (event.key === cacheKeys.pagesList) {
+        listPagesCached({ force: true })
+          .then((items) => {
+            setPages(items);
+            hasPagesCacheRef.current = true;
+          })
+          .catch(() => undefined);
+        return;
+      }
+
+      if (event.key === cacheKeys.contentTypesList) {
+        listContentTypesCached({ force: true })
+          .then((items) => {
+            setContentTypes(items);
+            hasContentTypesCacheRef.current = true;
+            if (isDirtyRef.current) return;
+            const next = {
+              ...formRef.current,
+              contentRoutes: mergeContentRoutes(formRef.current.contentRoutes, items),
+            };
+            setForm(next);
+            setSavedForm(next);
+          })
+          .catch(() => undefined);
+      }
+    });
+  }, []);
 
   const publicBaseUrlError = validateBaseUrl(form.publicBaseUrl);
   const adminBaseUrlError = validateBaseUrl(form.adminBaseUrl);
