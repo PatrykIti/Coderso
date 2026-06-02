@@ -5,7 +5,7 @@
 **Category:** Widgets + Gallery Mosaic + Admin UI + UX + QA + Docs + Leaf Remediation
 **Estimated Effort:** Small
 **Dependencies:** TASK-379
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Per-item `Remove` uses native `window.confirm`, while count reduction already us
 
 ## Sub-Tasks
 
-- [ ] Reproduce GM-31-05-03 with the report fixture before editing and record the observed admin state in closure notes.
-- [ ] Replace the per-item native confirm path with the same `ConfirmActionDialog` pattern used by count reduction.
-- [ ] Keep item removal non-destructive until the dialog is accepted; cancel must preserve item order and authored media.
-- [ ] Add focused UI regression coverage for cancel and accept.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes admin behavior.
+- [x] Reproduce GM-31-05-03 with the report fixture before editing and record the observed admin state in closure notes.
+- [x] Replace the per-item native confirm path with the same `ConfirmActionDialog` pattern used by count reduction.
+- [x] Keep item removal non-destructive until the dialog is accepted; cancel must preserve item order and authored media.
+- [x] Add focused UI regression coverage for cancel and accept.
+- [x] Update parent task, report notes, and widget docs if the implementation changes admin behavior.
 
 ## Implementation Pseudocode
 
@@ -84,6 +84,13 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/_TASKS/TASK-379_Gallery_Mosaic_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
 - Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list `TASK-379-03` explicitly in the parent family changelog before moving this leaf to `Done`.
+
+## Closure Notes (2026-06-01)
+
+- Focused UI regression failed before fix because per-item Remove still mutated through native `window.confirm`.
+- Removed browser-global confirmation from `removeItem`; it is now a pure normalized remove mutation.
+- Added `pendingItemRemoval` state in Visual, keyed by item id with a stale-item no-op fallback, and routed cancel/accept through shared `ConfirmActionDialog`.
+- Covered cancel and accept in `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`; count-reduction dialog coverage still passes.
 
 ## Acceptance Criteria
 

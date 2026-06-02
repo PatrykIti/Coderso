@@ -7,6 +7,21 @@
 > **Playwright session:** `codex-31-05-ui-gallery-mosaic`
 > **Claude:** probowano uruchomic non-interactive; CLI zwrocil `401 Invalid authentication credentials` przed testem.
 
+## Remediation status (2026-06-01)
+
+TASK-379 closes the three report findings:
+
+- GM-31-05-01: Advanced now uses the widget-owned lightbox eligibility helper
+  and reports `Lightbox selected; no media tiles currently open` when selected
+  lightbox mode has zero effective triggers.
+- GM-31-05-02: widget smoke now treats Gallery Mosaic as a media-fixture widget,
+  uploads a deterministic image fixture through the authenticated admin media
+  API, defines a video fixture for environments whose storage policy allows
+  `video/mp4`, and adds a browser proof that selects the image through
+  MediaPicker, publishes, and opens/closes public lightbox.
+- GM-31-05-03: per-item Remove now uses `ConfirmActionDialog` cancel/accept
+  flow instead of native `window.confirm`.
+
 ## Metoda
 
 Test byl prowadzony od UI na swiezej stronie audytowej. Efekt sprawdzano w
@@ -51,7 +66,7 @@ Przetestowane:
 | Count reduction dialog | Select `1` przy 5 authored media | Dialog: `Reducing the gallery to 1 item removes 4 saved items...`; Cancel trzyma `count=5`. | Nie dotyczy. | Dziala | `resolvePendingCountReduction` + `ConfirmActionDialog` blokuje destrukcyjna redukcje. | Brak. |
 | Count reduction accept | Klik `Reduce items` | `count=1`; pozostaje pierwszy image tile. | Nie publikowano tej zmiany. | Dziala | `setItemCount` normalizuje liste do nowego rozmiaru. | Brak. |
 | Add item / regrow | Klik `Add item`, potem ustaw count 5 | Count wraca do 5; nowe pozycje sa placeholderami `Media 2`, `Story frame`, `Portfolio item`, `Campaign shot`. | Nie publikowano tej zmiany. | Dziala zgodnie z copy dialogu | Usuniete authored content nie jest przywracane; regrow tworzy placeholdery. | Brak, jezeli kontrakt ma byc destrukcyjny. |
-| Media library | Otwarta sekcja `Media library` | Picker obecny, ale `/admin/api/media?limit=10` zwrocil `[]`. | Public baseline korzysta z domyslnych remote images. | Fixture gap | Brak lokalnych assetow do klikniecia w MediaPicker. | Dodac seed media image + video, zeby zweryfikowac wybor assetu i poster image UI. |
+| Media library | Otwarta sekcja `Media library` | Picker obecny, ale `/admin/api/media?limit=10` zwrocil `[]`. | Public baseline korzysta z domyslnych remote images. | Naprawione w smoke harnessie | TASK-379 dodaje Gallery Mosaic do media fixture bootstrapu. Image seed jest wymagany; video seed jest definiowany i uploadowany, gdy storage policy pozwala na `video/mp4`. | Brak dla harnessu. Live env z domyslnym `MEDIA_ALLOWED_MIME=image/*,application/pdf` moze odrzucic optional video bez blokowania image/lightbox proof. |
 | Clear media and poster | Klik `Clear media and poster` na lead item | Lead zmienia `data-gallery-media-type="placeholder"`; `lightboxRoot` znika, bo nie ma juz media tiles. | Nie publikowano tej zmiany. | Dziala | `clearItemMedia` zeruje `image`, `video`, `poster`; renderer daje placeholder i usuwa lightbox triggers. | Brak. |
 | Caption | Fill `Audit lead caption` | Caption w tile i editor list zmienione; lightbox aria label uzywa caption po wlaczeniu lightbox. | Nie publikowano tej zmiany. | Dziala | `items.caption` idzie do `figcaption` i lightbox title fallback. | Brak. |
 | Alt text | Fill `Audit lead alt text` | Image `alt="Audit lead alt text"`. | Nie publikowano tej zmiany. | Dziala | `resolveGalleryMosaicAltText` preferuje explicit alt przed caption. | Brak. |
@@ -63,7 +78,7 @@ Przetestowane:
 | Interaction: Lightbox, linked item | Wlacz `Open lightbox on click` przy item z destination | Root `interaction=lightbox`, ale lead nadal `data-gallery-item-interaction="link"`; edytor pokazuje warning o linked item. | Nie publikowano tej zmiany. | Dziala | Link precedence jest celowy: linked tiles zachowuja navigation. | Brak. |
 | Lightbox po wyczyszczeniu linku | Clear destination | Root dostaje `data-gallery-lightbox-root="1"`, `lightboxCount=1`, lead ma trigger `Open Audit lead caption`, dialog `zoom=fill`. | Nie publikowano tej zmiany. | Dziala | `resolveGalleryMosaicInteractionType` zwraca `lightbox` tylko dla media bez `href`. | Brak. |
 | Admin lightbox click | Klik trigger w admin preview | Dialog zostal `hidden=true`; focus nie przeszedl na close button. | Nie dotyczy. | Dziala zgodnie z copy admin | UI wprost informuje: admin preview pokazuje lightbox markup jako static; public pages binduja script. | Brak dla admin preview. Nie interpretowac tego jako public bug. |
-| Public lightbox runtime | Targeted Vitest runtime | `tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts` passed; renderer test potwierdza script i triggers. | Public baseline nie ma lightbox, bo fixture default to static. | Dziala w testach; nieklikniete na saved public fixture | Public click wymaga zapisanej strony z lightbox. | Dodac osobna public fixture z `interaction.mode=lightbox`, jesli chcemy browser-level lightbox smoke. |
+| Public lightbox runtime | Targeted Vitest runtime | `tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts` passed; renderer test potwierdza script i triggers. | Public baseline nie ma lightbox, bo fixture default to static. | Naprawione w smoke harnessie | TASK-379 admin proof wybiera seeded image, ustawia `interaction.mode=lightbox`, publikuje fixture i klika publiczny trigger/close button. | Uruchomic live smoke, gdy admin/frontend/auth sa dostepne. Dry-run i unit tests potwierdzaja harness contract. |
 | Caption position: Below | Select `Below tile` | Figcaption traci absolute overlay; `captionInside=null`, style pusty. | Nie publikowano tej zmiany. | Dziala | `renderCaption` branch `below` renderuje caption pod tile. | Brak. |
 | Caption position: Hover | Select `On hover` | Figcaption wraca inside z hover classes; static/no-link tiles maja keyboard focus fallback w rendererze. | Nie publikowano tej zmiany. | Dziala | Renderer dodaje hover/focus classes i `tabIndex` dla static hover captions. | Brak. |
 | Overlay color | Ustaw `#ff0000` | Overlay zachowuje opacity: `rgba(255, 0, 0, 0.35)`. | Nie publikowano tej zmiany. | Dziala | `applyColorWithExistingAlpha` zachowuje alpha z poprzedniego `rgba`. | Brak. |
@@ -73,10 +88,10 @@ Przetestowane:
 | Radius | Select `Extra large` | Figure classes `rounded-xl`. | Nie publikowano tej zmiany. | Dziala | `radiusClassMap.xl`. | Brak. |
 | Layout density | Select `Dense` | Root `density=dense`, Uniform Grid uzywa dense grid (`sm:grid-cols-3 lg:grid-cols-4`). | Nie publikowano tej zmiany. | Dziala | `layoutDensityGridClassMap["uniform-grid"].dense`. | Brak. |
 | Motion preset | Select `Slide up` | Root `motion=slide-up`; figures maja `motion-safe:slide-in-from-bottom-2` i reduced-motion classes. | Nie publikowano tej zmiany. | Dziala | `motionPresetClassMap["slide-up"]`. | Brak. |
-| Remove cancel | Klik Remove, confirm `false` | Przechwycony native confirm; count zostal 5. | Nie dotyczy. | Dziala, ale UX niespojny | Remove uzywa `window.confirm`, podczas gdy count reduction uzywa `ConfirmActionDialog`. | Rozwazyc migracje Remove na `ConfirmActionDialog` dla spojnego admin UX i latwiejszych testow. |
-| Remove accept | Klik Remove, confirm `true` | Count 5 -> 4. | Nie dotyczy. | Dziala | `removeItem` filtruje item i normalizuje liste. | Brak funkcjonalny. |
+| Remove cancel | Klik Remove, confirm `false` | Przechwycony native confirm; count zostal 5. | Nie dotyczy. | Naprawione | TASK-379 przenosi per-item Remove na `ConfirmActionDialog`; cancel zamyka dialog bez mutacji i zachowuje item order/media. | Brak. |
+| Remove accept | Klik Remove, confirm `true` | Count 5 -> 4. | Nie dotyczy. | Naprawione | `removeItem` jest teraz czysta mutacja bez browser-globali; akceptacja dialogu rozpoznaje pending item po id i dopiero wtedy usuwa. | Brak. |
 | Advanced read-only | Klik `Advanced` | `rootCount=1`, `writableControls=0`, `formControls=0`, sekcje runtime/style/accessibility/contract obecne. | Nie dotyczy. | Dziala | Advanced editor renderuje tylko `ReadonlyWidgetSummaryRow`. | Brak. |
-| Advanced interaction summary po wyczyszczeniu mediow | Po clear media przy `interaction.mode=lightbox` | Root nie ma lightbox root/triggers, ale Advanced nadal pisze `Interaction Lightbox, fill zoom` i `Link and lightbox behavior Lightbox, fill zoom`. | Nie dotyczy. | Do poprawy: truthfulness gap | `describeGalleryInteractionSummary` patrzy tylko na mode/link count, nie na liczbe media items kwalifikujacych sie do lightbox. | Dodac eligible-lightbox count: media bez `href`; gdy 0, summary powinno mowic `Lightbox selected; no media tiles currently open`. Dodac test w `gallery-mosaic-editor-wave` i/lub `galleryMosaic.test.tsx`. |
+| Advanced interaction summary po wyczyszczeniu mediow | Po clear media przy `interaction.mode=lightbox` | Root nie ma lightbox root/triggers, ale Advanced nadal pisze `Interaction Lightbox, fill zoom` i `Link and lightbox behavior Lightbox, fill zoom`. | Nie dotyczy. | Naprawione | `describeGalleryInteractionSummary` uzywa owner helpera `countGalleryMosaicEligibleLightboxItems`, tego samego warunku co renderer lightbox root. | Pokryte regresja Advanced zero-media/lightbox i renderer helper testem. |
 
 ## Public baseline
 
@@ -101,15 +116,17 @@ Zmiany z klikanej sesji admin nie byly publikowane jako finalny stan publiczny.
 
 ## Ograniczenia fixture
 
-Media API w tym srodowisku zwrocilo `[]`, dlatego nie da sie uczciwie
-potwierdzic wyboru nowego image/video assetu ani poster image przez MediaPicker.
-Sprawdzone sa: obecny picker w UI, default remote image rendering, clear media,
-placeholder fallback, alt/focus/ratio/link behavior oraz renderer/testy dla video
-i poster fields.
+Pierwotnie Media API w tym srodowisku zwrocilo `[]`, dlatego klikany pass nie
+mogl uczciwie potwierdzic wyboru nowego image/video assetu ani poster image
+przez MediaPicker. TASK-379 przeniosl ten brak do deterministycznego harnessu:
+Gallery Mosaic image fixture jest uploadowany przez admin media API przed
+proba, a video fixture jest zdefiniowany i uploadowany tam, gdzie storage policy
+pozwala na `video/mp4`.
 
-Publiczny route audytowy zostal zostawiony w domyslnym stanie static. Publiczny
-lightbox click nie byl klikany na zapisanej stronie; jego runtime zostal
-zweryfikowany targeted Vitestem, a admin UI pokazuje static preview notice.
+Publiczny route audytowy zostal zostawiony w domyslnym stanie static podczas
+oryginalnego passu. TASK-379 dodaje smoke `mediaProof`, ktory w live replayu
+publikuje fixture po wyborze seeded image i wlaczeniu lightboxa, a potem
+sprawdza publiczne otwarcie i zamkniecie dialogu.
 
 ## Kod-owner
 
@@ -130,16 +147,14 @@ zweryfikowany targeted Vitestem, a admin UI pokazuje static preview notice.
 
 ## Rekomendacje
 
-1. Poprawic Advanced interaction summary, zeby rozroznialo `mode=lightbox` od
-   realnie renderowanych lightbox triggers. To jest diagnostyczny UI bug, nie
-   blad renderera.
-2. Rozwazyc migracje per-item `Remove` z natywnego `window.confirm` na
-   `ConfirmActionDialog`, tak jak w count reduction. Funkcjonalnie dziala, ale
-   jest mniej spojne i trudniejsze do automatyzacji.
-3. Dodac media fixture seed dla UI audytow: co najmniej jeden image i jeden
-   video, zeby test klikany potwierdzil MediaPicker selection i poster image.
-4. Dodac osobna publiczna fixture strone z wlaczonym lightboxem, jesli chcemy
-   browser-level smoke dla public click/open/Escape poza Vitestem.
+1. Zamkniete w TASK-379: Advanced interaction summary rozroznia selected
+   `mode=lightbox` od realnych lightbox triggers.
+2. Zamkniete w TASK-379: per-item `Remove` uzywa `ConfirmActionDialog`.
+3. Zamkniete w TASK-379 dla image/lightbox proof: harness seeda Gallery Mosaic
+   image i definiuje optional video seed dla storage policies dopuszczajacych
+   `video/mp4`.
+4. Zamkniete w TASK-379: browser-level public lightbox open/close proof jest w
+   widget smoke `mediaProof`.
 
 ## Walidacja
 
@@ -149,3 +164,12 @@ zweryfikowany targeted Vitestem, a admin UI pokazuje static preview notice.
 - `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx` — passed, 17 tests.
 - `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` — passed, 4 tests.
 - Claude CLI nie wykonal audytu z powodu `401 Invalid authentication credentials`.
+- TASK-379 follow-up: focused regressions failed before fix for missing helper,
+  native Remove, and stale Advanced summary; after fix
+  `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`
+  passed, 24 tests.
+- TASK-379 follow-up: `bun test tests/unit/playwright-widget-contract-smoke.test.ts`
+  passed, 23 tests.
+- TASK-379 follow-up: `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget gallery-mosaic --output-json .tmp/task-379-gallery-mosaic-smoke-dry-run.json --output-md .tmp/task-379-gallery-mosaic-smoke-dry-run.md`
+  passed with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
+  `metadataGaps=0`.

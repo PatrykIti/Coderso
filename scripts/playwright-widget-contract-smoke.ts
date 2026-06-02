@@ -84,13 +84,15 @@ type AdminModeResult = {
   error?: string;
 };
 
-type LogoCloudMediaProofResult = {
+type WidgetMediaProofResult = {
   status: SmokeStatus;
   adminHasImage: boolean;
   publicHasImage: boolean;
   publicPath?: string | null;
   adminAlt?: string | null;
   publicAlt?: string | null;
+  publicLightboxOpened?: boolean;
+  publicLightboxClosed?: boolean;
   error?: string;
 };
 
@@ -101,7 +103,7 @@ type AdminWidgetResult = {
   pageId?: string;
   modes: AdminModeResult[];
   duplicateWritablePaths: string[];
-  mediaProof?: LogoCloudMediaProofResult;
+  mediaProof?: WidgetMediaProofResult;
   error?: string;
 };
 
@@ -174,15 +176,18 @@ const screenOnlyWidgets = new Set([
   "screen-two-column",
 ]);
 const commerceFixtureWidgetTypes = new Set(["product-gallery", "product-compare", "product-table"]);
-const mediaFixtureWidgetTypes = new Set(["logo-cloud"]);
+const mediaFixtureWidgetTypes = new Set(["logo-cloud", "gallery-mosaic"]);
 
 type MediaFixtureSeed = {
+  widgetTypes: string[];
   originalName: string;
   mimeType: string;
+  mediaType: "image" | "file";
   title: string;
   alt: string;
   caption: string;
   content: string;
+  optionalUpload?: boolean;
 };
 
 type MediaFixtureListItem = {
@@ -201,12 +206,35 @@ type MediaFixtureListPayload = {
 
 const mediaFixtureSeeds: MediaFixtureSeed[] = [
   {
+    widgetTypes: ["logo-cloud"],
     originalName: "widget-fixture-logo-cloud-acme.svg",
     mimeType: "image/svg+xml",
+    mediaType: "image",
     title: "Widget fixture Acme logo",
     alt: "Widget fixture Acme logo mark",
     caption: "Deterministic Logo Cloud MediaPicker image fixture.",
     content: `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="128" viewBox="0 0 320 128" role="img" aria-label="Acme logo"><rect width="320" height="128" rx="24" fill="#ffffff"/><circle cx="74" cy="64" r="34" fill="#2563eb"/><path d="M58 78 74 42l16 36h-9l-3-8H70l-3 8h-9Zm14-15h5l-3-9-2 9Z" fill="#ffffff"/><text x="126" y="74" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="700" fill="#111827">ACME</text></svg>`,
+  },
+  {
+    widgetTypes: ["gallery-mosaic"],
+    originalName: "widget-fixture-gallery-mosaic-image.svg",
+    mimeType: "image/svg+xml",
+    mediaType: "image",
+    title: "Widget fixture Gallery Mosaic image",
+    alt: "Widget fixture Gallery Mosaic image tile",
+    caption: "Deterministic Gallery Mosaic MediaPicker image fixture.",
+    content: `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" role="img" aria-label="Gallery Mosaic image tile"><rect width="960" height="640" fill="#f8fafc"/><rect x="80" y="80" width="800" height="480" rx="44" fill="#0f766e"/><path d="M180 460 350 278l118 126 82-88 230 144H180Z" fill="#ccfbf1"/><circle cx="690" cy="205" r="58" fill="#f97316"/><text x="160" y="180" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700" fill="#ffffff">Gallery Fixture</text></svg>`,
+  },
+  {
+    widgetTypes: ["gallery-mosaic"],
+    originalName: "widget-fixture-gallery-mosaic-video.mp4",
+    mimeType: "video/mp4",
+    mediaType: "file",
+    title: "Widget fixture Gallery Mosaic video",
+    alt: "Widget fixture Gallery Mosaic video clip",
+    caption: "Deterministic Gallery Mosaic MediaPicker video fixture.",
+    content: "coderso-gallery-mosaic-video-fixture",
+    optionalUpload: true,
   },
 ];
 
@@ -400,16 +428,42 @@ export function selectedCasesNeedMediaFixtures(cases: WidgetSmokeCase[]): boolea
   return cases.some((item) => mediaFixtureWidgetTypes.has(item.widgetType));
 }
 
-export function resolveLogoCloudMediaProofPublicPath(
+export function resolveWidgetMediaProofPublicPath(
   item: Pick<WidgetSmokeCase, "adminFixtureSlug" | "publicPath">
 ): string | null {
   return item.publicPath || item.adminFixtureSlug || null;
+}
+
+export function resolveLogoCloudMediaProofPublicPath(
+  item: Pick<WidgetSmokeCase, "adminFixtureSlug" | "publicPath">
+): string | null {
+  return resolveWidgetMediaProofPublicPath(item);
+}
+
+function resolveMediaFixtureSeedsForCases(cases: WidgetSmokeCase[]): MediaFixtureSeed[] {
+  const selectedWidgetTypes = new Set(cases.map((item) => item.widgetType));
+  return mediaFixtureSeeds.filter((seed) =>
+    seed.widgetTypes.some((widgetType) => selectedWidgetTypes.has(widgetType))
+  );
 }
 
 function mediaFixtureMetaDrifted(existing: MediaFixtureListItem, seed: MediaFixtureSeed): boolean {
   return (
     existing.title !== seed.title || existing.alt !== seed.alt || existing.caption !== seed.caption
   );
+}
+
+function mediaFixtureMatchesSeed(existing: MediaFixtureListItem, seed: MediaFixtureSeed): boolean {
+  return (
+    existing.originalName === seed.originalName &&
+    existing.type === seed.mediaType &&
+    existing.mimeType === seed.mimeType
+  );
+}
+
+function isOptionalMediaFixtureUploadRejection(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return /media_fixture_request_failed:POST:\/api\/media:(400|413|415)$/.test(error.message);
 }
 
 async function requestAdminForm<T>({
@@ -478,13 +532,8 @@ export async function ensureMediaWidgetFixtures(
     return csrfToken;
   };
 
-  for (const seed of mediaFixtureSeeds) {
-    const existing = existingItems.find(
-      (item) =>
-        item.originalName === seed.originalName &&
-        item.type === "image" &&
-        item.mimeType === seed.mimeType
-    );
+  for (const seed of resolveMediaFixtureSeedsForCases(selectedCases)) {
+    const existing = existingItems.find((item) => mediaFixtureMatchesSeed(item, seed));
     if (existing) {
       if (mediaFixtureMetaDrifted(existing, seed)) {
         await requestAdminJson<MediaFixtureListItem>({
@@ -503,13 +552,20 @@ export async function ensureMediaWidgetFixtures(
       continue;
     }
 
-    await requestAdminForm<MediaFixtureListItem>({
-      adminUrl,
-      sessionValue,
-      path: "/api/media",
-      formData: buildMediaFixtureFormData(seed),
-      csrfToken: await ensureCsrf(),
-    });
+    try {
+      await requestAdminForm<MediaFixtureListItem>({
+        adminUrl,
+        sessionValue,
+        path: "/api/media",
+        formData: buildMediaFixtureFormData(seed),
+        csrfToken: await ensureCsrf(),
+      });
+    } catch (error) {
+      if (seed.optionalUpload && isOptionalMediaFixtureUploadRejection(error)) {
+        continue;
+      }
+      throw error;
+    }
   }
 }
 
@@ -988,13 +1044,20 @@ async function runPlaywrightCode<T>(
 function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSmokeCase[]) {
   const probeCases: AdminProbeSmokeCase[] = cases.map((item) => ({
     ...item,
-    mediaProofPublicPath: resolveLogoCloudMediaProofPublicPath(item),
+    mediaProofPublicPath: resolveWidgetMediaProofPublicPath(item),
   }));
   return `async (page) => {
   const adminUrl = ${JSON.stringify(adminUrl.replace(/\/$/, ""))};
   const frontUrl = ${JSON.stringify(frontUrl.replace(/\/$/, ""))};
   const cases = ${JSON.stringify(probeCases)};
-  const logoCloudMediaFixture = ${JSON.stringify(mediaFixtureSeeds[0])};
+  const logoCloudMediaFixture = ${JSON.stringify(
+    mediaFixtureSeeds.find((seed) => seed.originalName === "widget-fixture-logo-cloud-acme.svg")
+  )};
+  const galleryMosaicImageFixture = ${JSON.stringify(
+    mediaFixtureSeeds.find(
+      (seed) => seed.originalName === "widget-fixture-gallery-mosaic-image.svg"
+    )
+  )};
   const requiredLogin = { attempted: false, authenticated: null, error: null };
   page.on("dialog", async (dialog) => {
     await dialog.accept().catch(() => undefined);
@@ -1245,6 +1308,136 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
       return proof;
     }
   }
+  async function chooseMediaFixtureFromDialog(fixture) {
+    const dialog = page.getByRole("dialog", { name: /media library/i }).first();
+    await dialog.waitFor({ state: "visible", timeout: 10000 });
+    const search = dialog.getByPlaceholder(/search by name or title/i).first();
+    if ((await search.count()) > 0) {
+      await search.fill(fixture.title);
+    }
+    const assetButton = dialog.getByRole("button").filter({ hasText: fixture.title }).first();
+    await assetButton.waitFor({ state: "visible", timeout: 10000 });
+    await assetButton.click();
+    await dialog.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
+    await settle();
+  }
+  async function setRadixSelectOption(control, optionName) {
+    const combobox = control.getByRole("combobox").first();
+    await combobox.waitFor({ state: "visible", timeout: 10000 });
+    await combobox.click();
+    const option = page.getByRole("option", { name: optionName }).first();
+    await option.waitFor({ state: "visible", timeout: 10000 });
+    await option.click();
+    await settle();
+  }
+  async function runGalleryMosaicMediaPickerProof(item, adminPath) {
+    if (item.widgetType !== "gallery-mosaic") return null;
+    const publicPath = item.mediaProofPublicPath || item.publicPath || item.adminFixtureSlug || null;
+    const proof = {
+      status: "failed",
+      adminHasImage: false,
+      publicHasImage: false,
+      publicPath,
+      adminAlt: null,
+      publicAlt: null,
+      publicLightboxOpened: false,
+      publicLightboxClosed: false,
+      error: undefined,
+    };
+    try {
+      await dismissCustomDirtyDialog();
+      await page.goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const selected = await openFixtureAndSelect(item, null, adminPath);
+      if (!selected.ok) {
+        proof.error = selected.error || "block_select_missing";
+        return proof;
+      }
+      const visualTab = page.getByRole("tab", { name: /^visual$/i }).first();
+      if ((await visualTab.count()) > 0) {
+        await visualTab.click().catch(() => undefined);
+        await settle();
+      }
+      const editor = page.locator('[data-widget-editor="gallery-mosaic"][data-widget-editor-mode="visual"]').first();
+      await editor.waitFor({ state: "visible", timeout: 20000 });
+      const mediaSection = editor.locator('[data-widget-editor-section="gallery-mosaic.visual.media-items-links"]').first();
+      await mediaSection.waitFor({ state: "visible", timeout: 20000 });
+      await mediaSection.getByRole("button", { name: /browse media/i }).first().click();
+      await chooseMediaFixtureFromDialog(galleryMosaicImageFixture);
+
+      const interactionControl = editor.locator('[data-widget-control="gallery-mosaic.interaction.mode"]').first();
+      await interactionControl.waitFor({ state: "visible", timeout: 10000 });
+      await setRadixSelectOption(interactionControl, /open lightbox on click/i);
+
+      const adminImage = page.locator('[data-gallery-item="1"][data-gallery-media-type="image"] img').first();
+      await adminImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasImage = true;
+      proof.adminAlt = await adminImage.getAttribute("alt");
+      if (proof.adminAlt !== galleryMosaicImageFixture.alt) {
+        proof.error = "admin_gallery_alt_mismatch";
+        return proof;
+      }
+
+      const publishButton = page.getByRole("button", { name: /^publish$/i }).first();
+      if ((await publishButton.count()) === 0) {
+        proof.error = "publish_button_missing";
+        return proof;
+      }
+      await publishButton.click();
+      await page.getByRole("button", { name: /publishing/i }).waitFor({ state: "hidden", timeout: 15000 }).catch(() => undefined);
+      await settle();
+
+      if (!publicPath) {
+        proof.error = "public_path_missing";
+        return proof;
+      }
+      await page.goto(frontUrl + publicPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const publicImage = page.locator('[data-gallery-item="1"][data-gallery-media-type="image"] img').first();
+      await publicImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasImage = true;
+      proof.publicAlt = await publicImage.getAttribute("alt");
+      if (proof.publicAlt !== galleryMosaicImageFixture.alt) {
+        proof.error = "public_gallery_alt_mismatch";
+        return proof;
+      }
+      const root = page.locator('[data-gallery-lightbox-root="1"]').first();
+      await root.waitFor({ state: "visible", timeout: 10000 });
+      const trigger = root.locator("[data-gallery-lightbox-trigger]").first();
+      await trigger.waitFor({ state: "visible", timeout: 10000 });
+      await trigger.click();
+      const dialog = root.locator("[data-gallery-lightbox-dialog]").first();
+      await dialog.waitFor({ state: "visible", timeout: 10000 });
+      const isOpen = await root.getAttribute("data-gallery-lightbox-open");
+      if (isOpen !== "true") {
+        proof.error = "public_gallery_lightbox_not_open";
+        return proof;
+      }
+      proof.publicLightboxOpened = true;
+      await dialog.locator("[data-gallery-lightbox-close]").first().click();
+      await page.waitForFunction(
+        () => document.querySelector('[data-gallery-lightbox-root="1"]')?.getAttribute("data-gallery-lightbox-open") === "false",
+        null,
+        { timeout: 10000 }
+      ).catch(() => undefined);
+      const closedState = await root.getAttribute("data-gallery-lightbox-open");
+      if (closedState !== "false") {
+        proof.error = "public_gallery_lightbox_not_closed";
+        return proof;
+      }
+      proof.publicLightboxClosed = true;
+      proof.status = "passed";
+      return proof;
+    } catch (error) {
+      proof.error = error instanceof Error ? error.message : String(error);
+      return proof;
+    }
+  }
+  async function runWidgetMediaPickerProof(item, adminPath) {
+    const logoProof = await runLogoCloudMediaPickerProof(item, adminPath);
+    if (logoProof) return logoProof;
+    return await runGalleryMosaicMediaPickerProof(item, adminPath);
+  }
   await verifyAuthenticated();
   if (!requiredLogin.authenticated) {
     return JSON.stringify({ login: requiredLogin, results: [], error: requiredLogin.error || "login_failed" });
@@ -1286,7 +1479,7 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
     const hasMetadataGap = modes.some((mode) => mode.controlsWithoutPath > 0);
     const duplicates = hasMetadataGap ? [] : duplicatePaths(modes, item.allowedDuplicateWritablePaths || []);
     const hasModeFailure = modes.some((mode) => mode.status === "failed");
-    const mediaProof = hasModeFailure ? null : await runLogoCloudMediaPickerProof(item, adminPath);
+    const mediaProof = hasModeFailure ? null : await runWidgetMediaPickerProof(item, adminPath);
     const hasMediaProofFailure = Boolean(mediaProof && mediaProof.status !== "passed");
     const hasFailure = hasModeFailure || duplicates.length > 0 || hasMediaProofFailure;
     results.push({

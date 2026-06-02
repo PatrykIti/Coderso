@@ -5,7 +5,7 @@
 **Category:** Widgets + Gallery Mosaic + Admin UI + Media Fixtures + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-379
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ When lightbox mode is selected but all media are cleared, runtime has no trigger
 
 ## Sub-Tasks
 
-- [ ] Reproduce GM-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce GM-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -84,6 +84,13 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/_TASKS/TASK-379_Gallery_Mosaic_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
 - Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
+
+## Closure Notes (2026-06-01)
+
+- Focused regression failed before fix: Advanced still rendered `Lightbox, fill zoom` for selected lightbox mode with zero media tiles.
+- Added `countGalleryMosaicEligibleLightboxItems` in the widget owner and reused it in Advanced copy so selected lightbox mode is not described as active when no renderer trigger exists.
+- Renderer now uses the same helper for root `data-gallery-lightbox-count`, preserving link precedence and media-only eligibility.
+- Covered by `tests/vitest/widgets/galleryMosaic.test.tsx` and `tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx`.
 
 ## Acceptance Criteria
 

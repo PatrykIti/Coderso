@@ -5,7 +5,7 @@
 **Category:** Widgets + Gallery Mosaic + Admin UI + Media Fixtures + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_GALLERY_MOSAIC_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -25,9 +25,9 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-379-01](TASK-379-01_GM_31_05_01_Advanced_Must_Distinguish_Selected_Lightbox_Mode_From_Eligible.md): GM-31-05-01 - Advanced must distinguish selected lightbox mode from eligible lightbox tiles
-- [ ] [TASK-379-02](TASK-379-02_GM_31_05_02_Add_Media_And_Public_Lightbox_Browser_Fixtures.md): GM-31-05-02 - Add media and public lightbox browser fixtures
-- [ ] [TASK-379-03](TASK-379-03_GM_31_05_03_Replace_Per_Item_Remove_Native_Confirm_With_Shared.md): GM-31-05-03 - Replace per-item Remove native confirm with shared ConfirmActionDialog
+- [x] [TASK-379-01](TASK-379-01_GM_31_05_01_Advanced_Must_Distinguish_Selected_Lightbox_Mode_From_Eligible.md): GM-31-05-01 - Advanced must distinguish selected lightbox mode from eligible lightbox tiles (done 2026-06-01)
+- [x] [TASK-379-02](TASK-379-02_GM_31_05_02_Add_Media_And_Public_Lightbox_Browser_Fixtures.md): GM-31-05-02 - Add media and public lightbox browser fixtures (done 2026-06-01)
+- [x] [TASK-379-03](TASK-379-03_GM_31_05_03_Replace_Per_Item_Remove_Native_Confirm_With_Shared.md): GM-31-05-03 - Replace per-item Remove native confirm with shared ConfirmActionDialog (done 2026-06-01)
 
 ## Implementation Pseudocode
 
@@ -65,6 +65,16 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_GALLERY_MOSAIC_WIDGET.md`
 - `_docs/_TASKS/README.md` status row when this task starts or closes.
 - Reserved changelog number 1069; create the changelog entry only when this family is implemented or closed, and list the parent task ID plus every leaf task ID closed by that entry.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced the three report drifts from source/tests before fixing: new focused regressions failed for missing lightbox eligibility helper, native per-item Remove mutation, and stale Advanced `Lightbox, fill zoom` copy when no media can open.
+- Implemented widget-owner helper `countGalleryMosaicEligibleLightboxItems` and reused it in the renderer and Advanced diagnostics.
+- Replaced per-item native `window.confirm` with a shared `ConfirmActionDialog` flow keyed by item id; cancel preserves order/media, confirm calls the pure remove mutation.
+- Extended the widget smoke harness so Gallery Mosaic seeds authenticated media fixtures, tolerates optional video rejection under default storage MIME policy, selects seeded image through MediaPicker, publishes, and checks public lightbox open/close in live replay.
+- Updated Gallery Mosaic widget docs, the 31-05 report/index, task board, and changelog 1069.
+- Validation run: focused Vitest regressions failed before fix; after fix `bun run test:vitest -- tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx` passed, `bun test tests/unit/playwright-widget-contract-smoke.test.ts` passed, and Gallery Mosaic smoke dry-run passed with zero failures/gaps.
+- Full live Playwright replay remains environment-gated unless admin/frontend servers and `CODERSO_PLAYWRIGHT_EMAIL` / `CODERSO_PLAYWRIGHT_PASSWORD` are available.
 
 ## Acceptance Criteria
 

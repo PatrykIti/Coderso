@@ -172,9 +172,9 @@ before that point remain based on `playwright-cli` plus Codex code review.
   smoke `mediaProof` that selects the seeded asset through MediaPicker,
   publishes the fixture, and verifies public `<img>` alt/grayscale/hover output
   when the live Playwright environment is available.
-- `REPORT_GALLERY_MOSAIC_WIDGET.md` — completed main UI option pass; one
-  Advanced diagnostics truthfulness gap found when lightbox mode is enabled but
-  no media tiles can open, plus media fixture/public-lightbox smoke gaps noted.
+- `REPORT_GALLERY_MOSAIC_WIDGET.md` — completed main UI option pass. TASK-379
+  closed the Advanced lightbox eligibility summary, per-item Remove dialog, and
+  deterministic media/public-lightbox smoke gaps.
 - `REPORT_TEAM_WIDGET.md` — completed main UI option pass; no renderer defect
   found, with member-count native confirm UX debt and media fixture gap noted.
 - `REPORT_RICH_TEXT_SECTION_WIDGET.md` — completed main UI option pass; renderer

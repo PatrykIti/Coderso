@@ -124,6 +124,16 @@ const logoCloudCase: SmokeInventory["widgets"][number] = {
   requiredModes: ["wizard", "visual", "advanced"],
 };
 
+const galleryMosaicCase: SmokeInventory["widgets"][number] = {
+  widgetType: "gallery-mosaic",
+  title: "Gallery Mosaic",
+  adminInsertLabel: "Gallery Mosaic",
+  adminFixtureSlug: "/ctr-gallery-mosaic",
+  publicPath: "/gallery-mosaic",
+  publicFixtureStatus: "published",
+  requiredModes: ["visual", "advanced"],
+};
+
 describe("playwright widget contract smoke helpers", () => {
   test("parses debug and target flags without exposing credentials", () => {
     const args = parseArgs([
@@ -211,6 +221,7 @@ describe("playwright widget contract smoke helpers", () => {
   test("detects when selected widget cases require media fixture bootstrap", () => {
     expect(selectedCasesNeedMediaFixtures(makeInventory().widgets)).toBe(false);
     expect(selectedCasesNeedMediaFixtures([logoCloudCase])).toBe(true);
+    expect(selectedCasesNeedMediaFixtures([galleryMosaicCase])).toBe(true);
   });
 
   test("uses the public fixture route for Logo Cloud media proof before admin slug fallback", () => {
@@ -273,6 +284,115 @@ describe("playwright widget contract smoke helpers", () => {
     expect(uploadHeaders.get("cookie")).toBe("session=session-token");
     expect(uploadHeaders.get("X-CSRF-Token")).toBe("csrf-token");
     expect(uploadHeaders.get("Content-Type")).toBeNull();
+  });
+
+  test("seeds Gallery Mosaic image and video media fixtures through authenticated admin upload", async () => {
+    const originalFetch = globalThis.fetch;
+    const uploadedFiles: Array<{ name: string; type: string; title: FormDataEntryValue | null }> =
+      [];
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      requests.push({ url, init });
+      if (url === "http://admin.test/admin/api/media" && (init?.method ?? "GET") === "GET") {
+        return Response.json([]);
+      }
+      if (url === "http://admin.test/admin/api/auth/csrf") {
+        return Response.json({ token: "csrf-token" });
+      }
+      if (url === "http://admin.test/admin/api/media" && init?.method === "POST") {
+        expect(init.body).toBeInstanceOf(FormData);
+        const formData = init.body as FormData;
+        const file = formData.get("file") as File;
+        uploadedFiles.push({
+          name: file.name,
+          type: file.type,
+          title: formData.get("title"),
+        });
+        return Response.json({
+          id: `media-${uploadedFiles.length}`,
+          originalName: file.name,
+          mimeType: file.type,
+          type: file.type.startsWith("image/") ? "image" : "file",
+          title: formData.get("title"),
+          alt: formData.get("alt"),
+          caption: formData.get("caption"),
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      await ensureMediaWidgetFixtures("http://admin.test/admin", "session-token", [
+        galleryMosaicCase,
+      ]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(uploadedFiles).toEqual([
+      {
+        name: "widget-fixture-gallery-mosaic-image.svg",
+        type: "image/svg+xml",
+        title: "Widget fixture Gallery Mosaic image",
+      },
+      {
+        name: "widget-fixture-gallery-mosaic-video.mp4",
+        type: "video/mp4",
+        title: "Widget fixture Gallery Mosaic video",
+      },
+    ]);
+    expect(requests.map((request) => `${request.init?.method ?? "GET"} ${request.url}`)).toEqual([
+      "GET http://admin.test/admin/api/media",
+      "GET http://admin.test/admin/api/auth/csrf",
+      "POST http://admin.test/admin/api/media",
+      "POST http://admin.test/admin/api/media",
+    ]);
+  });
+
+  test("continues Gallery Mosaic media bootstrap when optional video upload is rejected by storage policy", async () => {
+    const originalFetch = globalThis.fetch;
+    const uploadedNames: string[] = [];
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      if (url === "http://admin.test/admin/api/media" && (init?.method ?? "GET") === "GET") {
+        return Response.json([]);
+      }
+      if (url === "http://admin.test/admin/api/auth/csrf") {
+        return Response.json({ token: "csrf-token" });
+      }
+      if (url === "http://admin.test/admin/api/media" && init?.method === "POST") {
+        const formData = init.body as FormData;
+        const file = formData.get("file") as File;
+        uploadedNames.push(file.name);
+        if (file.type === "video/mp4") {
+          return new Response("mime rejected", { status: 400 });
+        }
+        return Response.json({
+          id: "gallery-image",
+          originalName: file.name,
+          mimeType: file.type,
+          type: "image",
+          title: formData.get("title"),
+          alt: formData.get("alt"),
+          caption: formData.get("caption"),
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      await ensureMediaWidgetFixtures("http://admin.test/admin", "session-token", [
+        galleryMosaicCase,
+      ]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(uploadedNames).toEqual([
+      "widget-fixture-gallery-mosaic-image.svg",
+      "widget-fixture-gallery-mosaic-video.mp4",
+    ]);
   });
 
   test("patches existing Logo Cloud fixture metadata through admin JSON with CSRF", async () => {

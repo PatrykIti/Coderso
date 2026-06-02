@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 98 tasks
+- **To Do:** 94 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2050 tasks
+- **Done:** 2054 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-379 | Gallery Mosaic 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_GALLERY_MOSAIC_WIDGET.md`; 3 findings routed to implementation/tests/docs |
 | TASK-380 | Team 31-05 UI Audit UX and Fixture Family | Medium | Small | Report-driven family from `REPORT_TEAM_WIDGET.md`; UX debt and media fixture gap routed to tests/docs |
 | TASK-381 | Rich Text Section 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_RICH_TEXT_SECTION_WIDGET.md`; 3 findings routed to implementation/tests/docs |
 | TASK-382 | Content List 31-05 UI Audit Remediation Family | Medium | Medium | Report-driven family from `REPORT_CONTENT_LIST_WIDGET.md`; 2 findings routed to implementation/tests/docs |
@@ -62,9 +61,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-396 | Contact 31-05 UI Audit Remediation Family | High | Very Large | Report-driven family from `REPORT_CONTACT_WIDGET.md`; 8 findings routed to implementation/tests/docs |
 | TASK-397 | Navigation 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_NAVIGATION_WIDGET.md`; 6 findings routed to implementation/tests/docs |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Report-driven family from `REPORT_FOOTER_WIDGET.md`; 5 findings routed to implementation/tests/docs |
-| TASK-379-01 | GM-31-05-01 - Advanced must distinguish selected lightbox mode from eligible lightbox tiles | Medium | Medium | Leaf task for TASK-379; source `REPORT_GALLERY_MOSAIC_WIDGET.md` |
-| TASK-379-02 | GM-31-05-02 - Add media and public lightbox browser fixtures | Medium | Medium | Leaf task for TASK-379; source `REPORT_GALLERY_MOSAIC_WIDGET.md` |
-| TASK-379-03 | GM-31-05-03 - Replace per-item Remove native confirm with shared ConfirmActionDialog | Medium | Small | Leaf task for TASK-379; source `REPORT_GALLERY_MOSAIC_WIDGET.md` |
 | TASK-380-01 | TEAM-31-05-01 - Replace member-count native confirm with shared ConfirmActionDialog | Medium | Small | Leaf task for TASK-380; source `REPORT_TEAM_WIDGET.md` |
 | TASK-380-02 | TEAM-31-05-02 - Seed media image for real photo selection proof | Medium | Medium | Leaf task for TASK-380; source `REPORT_TEAM_WIDGET.md` |
 | TASK-381-01 | RTS-31-05-01 - Do not lose body sanitizer diagnostics after structured block edits | High | Medium | Leaf task for TASK-381; source `REPORT_RICH_TEXT_SECTION_WIDGET.md` |
@@ -156,6 +152,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-379 | Gallery Mosaic 31-05 UI Audit Remediation Family | Medium | Medium | Done (2026-06-01): Advanced lightbox diagnostics, Gallery media/public lightbox smoke proof, and per-item Remove dialog drift are closed. |
+| TASK-379-01 | GM-31-05-01 - Advanced must distinguish selected lightbox mode from eligible lightbox tiles | Medium | Medium | Done (2026-06-01): Advanced summary now uses owner-side eligible-lightbox count and no longer reports active triggers when no media can open. |
+| TASK-379-02 | GM-31-05-02 - Add media and public lightbox browser fixtures | Medium | Medium | Done (2026-06-01): smoke harness seeds Gallery media fixtures and adds MediaPicker publish plus public lightbox open/close proof. |
+| TASK-379-03 | GM-31-05-03 - Replace per-item Remove native confirm with shared ConfirmActionDialog | Medium | Small | Done (2026-06-01): per-item Remove now uses shared cancel/accept dialog without native `window.confirm`. |
 | TASK-378 | Logo Cloud 31-05 UI Audit Fixture and Regression Family | Medium | Small | Done (2026-06-01): widget smoke now bootstraps a deterministic Logo Cloud media image through authenticated admin media upload before browser probes. |
 | TASK-378-01 | LC-31-05-01 - Seed media assets for browser-level MediaPicker proof | Medium | Medium | Done (2026-06-01): Logo Cloud media fixture detection and idempotent admin upload close the report fixture gap, with live replay documented as environment-blocked. |
 | TASK-377 | Pricing Plans 31-05 UI Audit Contract Decision Family | Medium | Medium | Done (2026-06-01): Admin copy now names the static billing cycle display contract instead of promising a visitor-side toggle. |

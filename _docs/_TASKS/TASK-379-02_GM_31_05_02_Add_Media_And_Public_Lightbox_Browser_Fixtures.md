@@ -5,7 +5,7 @@
 **Category:** Widgets + Gallery Mosaic + Admin UI + Media Fixtures + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-379
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Media API was empty and default public fixture was static, so real MediaPicker a
 
 ## Sub-Tasks
 
-- [ ] Reproduce GM-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce GM-31-05-02 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -84,6 +84,15 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - `_docs/_TASKS/TASK-379_Gallery_Mosaic_Widget_31_05_UI_Audit_Remediation_Family.md` parent status/checklist when this leaf starts or closes.
 - `_docs/_TASKS/README.md` board row when status changes.
 - Leaf closure changelog coverage: either create a standalone changelog entry for this leaf at closure or list this leaf ID explicitly in the parent family changelog before moving this leaf to `Done`.
+
+## Closure Notes (2026-06-01)
+
+- Original report fixture had an empty Media API and no saved public lightbox click proof.
+- Added Gallery Mosaic to media fixture bootstrap and seeded deterministic image/video fixture definitions through the existing authenticated admin media API with CSRF.
+- Kept the image seed required for browser proof; video upload is attempted and covered, but `video/mp4` rejection is tolerated when the environment keeps the documented default `MEDIA_ALLOWED_MIME=image/*,application/pdf`.
+- Added Gallery Mosaic `mediaProof` to the smoke harness: select seeded image in MediaPicker, set lightbox mode, publish, load public path, open the lightbox, and close it.
+- No inventory path change was required; the proof reuses the selected Gallery Mosaic smoke case public path after publishing the edited admin fixture.
+- Covered by `tests/unit/playwright-widget-contract-smoke.test.ts` and Gallery Mosaic smoke dry-run.
 
 ## Acceptance Criteria
 

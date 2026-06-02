@@ -938,6 +938,16 @@ function resolveGalleryMosaicInteractionType(
   return "none" as const;
 }
 
+export function countGalleryMosaicEligibleLightboxItems(
+  items: GalleryMosaicItem[] | undefined,
+  interactionMode: GalleryMosaicInteractionMode
+): number {
+  if (resolveGalleryMosaicInteractionMode(interactionMode) !== "lightbox") return 0;
+  return normalizeGalleryMosaicItems(items).filter(
+    (item) => resolveGalleryMosaicInteractionType(item, "lightbox") === "lightbox"
+  ).length;
+}
+
 function resolveGalleryMosaicLightboxTitle(item: GalleryMosaicItem, index: number) {
   const caption = item.caption?.trim();
   if (caption) return caption;
@@ -1285,9 +1295,7 @@ export function GalleryMosaicBlock({
   const headerTitle = (normalized.header?.title ?? "").trim();
   const headerDescription = (normalized.header?.description ?? "").trim();
   const sectionTitleId = headerTitle ? scopedId(rootInstanceId, "title") : undefined;
-  const lightboxItemCount = items.filter(
-    (item) => resolveGalleryMosaicInteractionType(item, interactionMode) === "lightbox"
-  ).length;
+  const lightboxItemCount = countGalleryMosaicEligibleLightboxItems(items, interactionMode);
   const hasLightboxDialogs = lightboxItemCount > 0;
 
   const showHeader = headerTitle.length > 0 || headerDescription.length > 0;
