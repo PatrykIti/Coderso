@@ -5,7 +5,7 @@
 **Category:** Widgets + Rich Text + Admin UI + Sanitizer + Media Fixtures + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-381
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Media API empty prevented real image/attachment selection; unsafe paste/link pat
 
 ## Sub-Tasks
 
-- [ ] Reproduce RTS-31-05-03 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce RTS-31-05-03 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -46,6 +46,7 @@ Media API empty prevented real image/attachment selection; unsafe paste/link pat
 
 - `scripts/playwright-widget-contract-smoke.ts`
 - `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx`
+- `tests/unit/playwright-widget-contract-smoke.test.ts`
 
 ## Security Contract
 
@@ -91,3 +92,11 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced as failing Bun helper regressions: `rich-text-section` did not require media bootstrap and uploaded no deterministic fixtures.
+- Fixed in `scripts/playwright-widget-contract-smoke.ts` by adding Rich Text Section image/PDF seeds and `runRichTextSectionMediaAndSanitizerProof`.
+- The proof path selects image and document fixtures through MediaPicker, checks admin/public image and attachment rendering, verifies unsafe link command guidance, blocks raw iframe paste, publishes, and checks public output when the live environment is available.
+- Live replay remains environment-blocked: admin HTTP `000`, frontend HTTP `000`, and no Playwright credentials in `.env`.
+- Validation is recorded in the TASK-381 parent closure notes and changelog 1071.

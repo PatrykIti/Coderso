@@ -93,6 +93,13 @@ type WidgetMediaProofResult = {
   publicAlt?: string | null;
   adminSrc?: string | null;
   publicSrc?: string | null;
+  adminHasAttachment?: boolean;
+  publicHasAttachment?: boolean;
+  adminAttachmentHref?: string | null;
+  publicAttachmentHref?: string | null;
+  sanitizerGuidanceShown?: boolean;
+  unsafeHrefBlocked?: boolean;
+  rawIframeBlocked?: boolean;
   publicLightboxOpened?: boolean;
   publicLightboxClosed?: boolean;
   error?: string;
@@ -178,7 +185,12 @@ const screenOnlyWidgets = new Set([
   "screen-two-column",
 ]);
 const commerceFixtureWidgetTypes = new Set(["product-gallery", "product-compare", "product-table"]);
-const mediaFixtureWidgetTypes = new Set(["logo-cloud", "gallery-mosaic", "team"]);
+const mediaFixtureWidgetTypes = new Set([
+  "logo-cloud",
+  "gallery-mosaic",
+  "team",
+  "rich-text-section",
+]);
 
 type MediaFixtureSeed = {
   widgetTypes: string[];
@@ -247,6 +259,26 @@ const mediaFixtureSeeds: MediaFixtureSeed[] = [
     alt: "Widget fixture Team portrait",
     caption: "Deterministic Team MediaPicker photo fixture.",
     content: `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" role="img" aria-label="Team portrait"><rect width="640" height="640" fill="#f1f5f9"/><circle cx="320" cy="245" r="112" fill="#0369a1"/><path d="M134 560c32-108 114-170 186-170s154 62 186 170H134Z" fill="#0f766e"/><circle cx="280" cy="222" r="18" fill="#e0f2fe"/><circle cx="360" cy="222" r="18" fill="#e0f2fe"/><path d="M268 292c33 28 71 28 104 0" fill="none" stroke="#e0f2fe" stroke-width="18" stroke-linecap="round"/></svg>`,
+  },
+  {
+    widgetTypes: ["rich-text-section"],
+    originalName: "widget-fixture-rich-text-section-image.svg",
+    mimeType: "image/svg+xml",
+    mediaType: "image",
+    title: "Widget fixture Rich Text Section image",
+    alt: "Widget fixture Rich Text Section illustration",
+    caption: "Deterministic Rich Text Section MediaPicker image fixture.",
+    content: `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="Rich Text Section illustration"><rect width="960" height="540" fill="#f8fafc"/><rect x="80" y="76" width="800" height="388" rx="34" fill="#1f2937"/><rect x="136" y="136" width="360" height="36" rx="8" fill="#facc15"/><rect x="136" y="214" width="590" height="24" rx="7" fill="#e5e7eb"/><rect x="136" y="262" width="690" height="24" rx="7" fill="#cbd5e1"/><rect x="136" y="310" width="520" height="24" rx="7" fill="#94a3b8"/><circle cx="748" cy="160" r="54" fill="#0d9488"/></svg>`,
+  },
+  {
+    widgetTypes: ["rich-text-section"],
+    originalName: "widget-fixture-rich-text-section-document.pdf",
+    mimeType: "application/pdf",
+    mediaType: "file",
+    title: "Widget fixture Rich Text Section document",
+    alt: "Widget fixture Rich Text Section document",
+    caption: "Deterministic Rich Text Section attachment fixture.",
+    content: "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n",
   },
 ];
 
@@ -1073,6 +1105,16 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
   const teamPhotoFixture = ${JSON.stringify(
     mediaFixtureSeeds.find((seed) => seed.originalName === "widget-fixture-team-photo.svg")
   )};
+  const richTextSectionImageFixture = ${JSON.stringify(
+    mediaFixtureSeeds.find(
+      (seed) => seed.originalName === "widget-fixture-rich-text-section-image.svg"
+    )
+  )};
+  const richTextSectionDocumentFixture = ${JSON.stringify(
+    mediaFixtureSeeds.find(
+      (seed) => seed.originalName === "widget-fixture-rich-text-section-document.pdf"
+    )
+  )};
   const requiredLogin = { attempted: false, authenticated: null, error: null };
   page.on("dialog", async (dialog) => {
     await dialog.accept().catch(() => undefined);
@@ -1546,12 +1588,192 @@ function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSm
       return proof;
     }
   }
+  async function runRichTextSectionMediaAndSanitizerProof(item, adminPath) {
+    if (item.widgetType !== "rich-text-section") return null;
+    const publicPath = item.mediaProofPublicPath || item.publicPath || item.adminFixtureSlug || null;
+    const proof = {
+      status: "failed",
+      adminHasImage: false,
+      publicHasImage: false,
+      adminHasAttachment: false,
+      publicHasAttachment: false,
+      publicPath,
+      adminAlt: null,
+      publicAlt: null,
+      adminSrc: null,
+      publicSrc: null,
+      adminAttachmentHref: null,
+      publicAttachmentHref: null,
+      sanitizerGuidanceShown: false,
+      unsafeHrefBlocked: false,
+      rawIframeBlocked: false,
+      error: undefined,
+    };
+    try {
+      await dismissCustomDirtyDialog();
+      await page.goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const selected = await openFixtureAndSelect(item, null, adminPath);
+      if (!selected.ok) {
+        proof.error = selected.error || "block_select_missing";
+        return proof;
+      }
+      const visualTab = page.getByRole("tab", { name: /^visual$/i }).first();
+      if ((await visualTab.count()) > 0) {
+        await visualTab.click().catch(() => undefined);
+        await settle();
+      }
+      const editor = page.locator('[data-widget-editor="rich-text-section"][data-widget-editor-mode="visual"]').first();
+      await editor.waitFor({ state: "visible", timeout: 20000 });
+      const bodySection = editor.locator('[data-widget-editor-section="rich-text-section.visual.body-content"]').first();
+      await bodySection.waitFor({ state: "visible", timeout: 20000 });
+      await setRadixSelectOption(bodySection, /use structured blocks only/i);
+
+      const bodyEditable = bodySection.locator('[data-post-editor-primary-editable="true"]').first();
+      await bodyEditable.waitFor({ state: "visible", timeout: 10000 });
+      await page.evaluate(() => {
+        window.__codersoRichTextOriginalPrompt = window.prompt;
+        window.prompt = (message, defaultValue) => {
+          if (/enter link url/i.test(String(message))) return "javascript:alert(1)";
+          return "Unsafe link label";
+        };
+      });
+      await bodyEditable.click();
+      await bodySection.getByRole("button", { name: /^link$/i }).first().click();
+      await settle();
+      await page.evaluate(() => {
+        if (window.__codersoRichTextOriginalPrompt) {
+          window.prompt = window.__codersoRichTextOriginalPrompt;
+          delete window.__codersoRichTextOriginalPrompt;
+        }
+      }).catch(() => undefined);
+      const linkedBodyHtml = await bodyEditable.evaluate((node) => node.innerHTML);
+      proof.unsafeHrefBlocked = !/javascript:/i.test(linkedBodyHtml);
+      proof.sanitizerGuidanceShown =
+        (await bodySection.getByText(/unsafe link urls are rewritten/i).count()) > 0;
+      if (!proof.unsafeHrefBlocked) {
+        proof.error = "admin_rich_text_unsafe_link_not_blocked";
+        return proof;
+      }
+      if (!proof.sanitizerGuidanceShown) {
+        proof.error = "admin_rich_text_unsafe_link_guidance_missing";
+        return proof;
+      }
+
+      await bodyEditable.evaluate((node) => {
+        node.focus();
+        const payload = {
+          "text/html": '<p>Unsafe pasted embed</p><iframe src="https://example.com/embed"></iframe>',
+          "text/plain": "Unsafe pasted embed",
+        };
+        const clipboardData = {
+          files: [],
+          items: [],
+          getData: (type) => payload[type] || "",
+        };
+        const event = new Event("paste", { bubbles: true, cancelable: true });
+        Object.defineProperty(event, "clipboardData", { value: clipboardData });
+        node.dispatchEvent(event);
+      });
+      await settle();
+      const pastedBodyHtml = await bodyEditable.evaluate((node) => node.innerHTML);
+      proof.rawIframeBlocked = !/<iframe/i.test(pastedBodyHtml);
+      if (!proof.rawIframeBlocked) {
+        proof.error = "admin_rich_text_raw_iframe_not_blocked";
+        return proof;
+      }
+
+      const blocksSection = editor.locator('[data-widget-editor-section="rich-text-section.visual.structured-content-blocks"]').first();
+      await blocksSection.waitFor({ state: "visible", timeout: 20000 });
+      await blocksSection.getByRole("button", { name: /add image block/i }).first().click();
+      await settle();
+      await blocksSection.getByRole("button", { name: /browse media/i }).first().click();
+      await chooseMediaFixtureFromDialog(richTextSectionImageFixture);
+      const adminRoot = page.locator('[data-rich-text-rendered-source="blocks"]').first();
+      await adminRoot.waitFor({ state: "visible", timeout: 10000 });
+      const adminImage = adminRoot.locator("img").first();
+      await adminImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasImage = true;
+      proof.adminAlt = await adminImage.getAttribute("alt");
+      proof.adminSrc = await adminImage.getAttribute("src");
+      if (proof.adminAlt !== richTextSectionImageFixture.alt) {
+        proof.error = "admin_rich_text_image_alt_mismatch";
+        return proof;
+      }
+
+      await blocksSection.getByRole("button", { name: /add attachment block/i }).first().click();
+      await settle();
+      await blocksSection.getByRole("button", { name: /browse media/i }).first().click();
+      await chooseMediaFixtureFromDialog(richTextSectionDocumentFixture);
+      const adminAttachment = adminRoot
+        .getByRole("link", { name: richTextSectionDocumentFixture.title })
+        .first();
+      await adminAttachment.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasAttachment = true;
+      proof.adminAttachmentHref = await adminAttachment.getAttribute("href");
+      if (!proof.adminAttachmentHref) {
+        proof.error = "admin_rich_text_attachment_href_missing";
+        return proof;
+      }
+
+      const publishButton = page.getByRole("button", { name: /^publish$/i }).first();
+      if ((await publishButton.count()) === 0) {
+        proof.error = "publish_button_missing";
+        return proof;
+      }
+      await publishButton.click();
+      await page.getByRole("button", { name: /publishing/i }).waitFor({ state: "hidden", timeout: 15000 }).catch(() => undefined);
+      await settle();
+
+      if (!publicPath) {
+        proof.error = "public_path_missing";
+        return proof;
+      }
+      await page.goto(frontUrl + publicPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const publicRoot = page.locator('[data-rich-text-rendered-source="blocks"]').first();
+      await publicRoot.waitFor({ state: "visible", timeout: 10000 });
+      const publicImage = publicRoot.locator("img").first();
+      await publicImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasImage = true;
+      proof.publicAlt = await publicImage.getAttribute("alt");
+      proof.publicSrc = await publicImage.getAttribute("src");
+      if (proof.publicAlt !== richTextSectionImageFixture.alt) {
+        proof.error = "public_rich_text_image_alt_mismatch";
+        return proof;
+      }
+      const publicAttachment = publicRoot
+        .getByRole("link", { name: richTextSectionDocumentFixture.title })
+        .first();
+      await publicAttachment.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasAttachment = true;
+      proof.publicAttachmentHref = await publicAttachment.getAttribute("href");
+      if (!proof.publicAttachmentHref) {
+        proof.error = "public_rich_text_attachment_href_missing";
+        return proof;
+      }
+      proof.status = "passed";
+      return proof;
+    } catch (error) {
+      proof.error = error instanceof Error ? error.message : String(error);
+      return proof;
+    } finally {
+      await page.evaluate(() => {
+        if (window.__codersoRichTextOriginalPrompt) {
+          window.prompt = window.__codersoRichTextOriginalPrompt;
+          delete window.__codersoRichTextOriginalPrompt;
+        }
+      }).catch(() => undefined);
+    }
+  }
   async function runWidgetMediaPickerProof(item, adminPath) {
     const logoProof = await runLogoCloudMediaPickerProof(item, adminPath);
     if (logoProof) return logoProof;
     const galleryProof = await runGalleryMosaicMediaPickerProof(item, adminPath);
     if (galleryProof) return galleryProof;
-    return await runTeamMediaPickerProof(item, adminPath);
+    const teamProof = await runTeamMediaPickerProof(item, adminPath);
+    if (teamProof) return teamProof;
+    return await runRichTextSectionMediaAndSanitizerProof(item, adminPath);
   }
   await verifyAuthenticated();
   if (!requiredLogin.authenticated) {

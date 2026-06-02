@@ -48,6 +48,8 @@ Visual is the primary authoring surface. It now owns:
 - rendered-source status and sanitizer guidance
 - visible body-vs-structured-block drift guidance before authors switch output
   modes
+- pristine defaults keep the body HTML and structured blocks aligned, so source
+  drift guidance appears only after one source actually diverges
 - structured text/image/attachment/embed block authoring
 - confirm + undo flows for destructive block-count and remove actions
 - block navigation/paging for large block sets
@@ -67,6 +69,9 @@ Visual is the primary authoring surface. It now owns:
 - Sanitizer diagnostics combine the latest editor sanitizer events with the
   current stored HTML scan so warnings do not disappear after the editor saves
   cleaned HTML.
+- Body sanitizer diagnostics are preserved when a clean structured block edit is
+  saved; unsafe structured-block events are merged into the same bounded
+  diagnostics list instead of replacing body events.
 - Advanced does not expose raw JSON snapshots or raw HTML authoring.
 
 Advanced intentionally stays diagnostic. Variant selection, output-mode changes,
@@ -185,7 +190,9 @@ live here anymore.
 - The editor stores bounded sanitizer diagnostics from the most recent body or
   structured-block rich-text edit, including unsafe link attempts surfaced by
   the shared rich-text adapter before upstream serialization, while the live
-  editor command receives a safe placeholder href.
+  editor command receives a safe placeholder href. Structured-block edits merge
+  their diagnostics with saved body events so Advanced does not lose body
+  guidance after clean block edits.
 
 ## Clear Controls
 

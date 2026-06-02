@@ -5,7 +5,7 @@
 **Category:** Widgets + Rich Text + Admin UI + Sanitizer + Media Fixtures + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_RICH_TEXT_SECTION_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -25,9 +25,9 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-381-01](TASK-381-01_RTS_31_05_01_Do_Not_Lose_Body_Sanitizer_Diagnostics_After_Structured.md): RTS-31-05-01 - Do not lose body sanitizer diagnostics after structured block edits
-- [ ] [TASK-381-02](TASK-381-02_RTS_31_05_02_Resolve_Default_HTML_Vs_Block_Source_Drift.md): RTS-31-05-02 - Resolve default HTML-vs-block source drift
-- [ ] [TASK-381-03](TASK-381-03_RTS_31_05_03_Add_Image_Document_Media_Fixture_And_Paste_Link.md): RTS-31-05-03 - Add image/document media fixture and paste/link sanitizer browser smoke
+- [x] [TASK-381-01](TASK-381-01_RTS_31_05_01_Do_Not_Lose_Body_Sanitizer_Diagnostics_After_Structured.md): RTS-31-05-01 - Do not lose body sanitizer diagnostics after structured block edits
+- [x] [TASK-381-02](TASK-381-02_RTS_31_05_02_Resolve_Default_HTML_Vs_Block_Source_Drift.md): RTS-31-05-02 - Resolve default HTML-vs-block source drift
+- [x] [TASK-381-03](TASK-381-03_RTS_31_05_03_Add_Image_Document_Media_Fixture_And_Paste_Link.md): RTS-31-05-03 - Add image/document media fixture and paste/link sanitizer browser smoke
 
 ## Implementation Pseudocode
 
@@ -72,3 +72,21 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- RTS-31-05-01 fixed: `handleBlockRichTextChange` now merges bounded structured-block diagnostics with saved body diagnostics instead of replacing body events with a clean block result.
+- RTS-31-05-02 fixed: Rich Text Section defaults now keep `body.html` and `body.blocks` plain-text aligned, so pristine widgets no longer show source drift.
+- RTS-31-05-03 fixed in the smoke harness: Rich Text Section now bootstraps deterministic image and PDF fixtures and has a media/sanitizer proof path for MediaPicker image/document selection, unsafe link command, raw iframe paste, publish, and public render.
+- Changelog coverage: `_docs/_CHANGELOG/1071-2026-06-01-rich-text-section-widget-31-05-ui-audit-remediation.md` lists TASK-381, TASK-381-01, TASK-381-02, and TASK-381-03.
+- Live Playwright replay was not run because admin HTTP was `000`, frontend HTTP was `000`, and `.env` had no `CODERSO_PLAYWRIGHT_EMAIL` / `CODERSO_PLAYWRIGHT_PASSWORD`.
+
+## Validation (2026-06-01)
+
+- Focused regressions failed before implementation for default source drift, diagnostics retention, and missing Rich Text media fixture bootstrap.
+- `bun run test:vitest -- tests/vitest/widgets/richTextSection.test.tsx tests/vitest/ui/rich-text-section-editor-wave.test.tsx` — passed, 18 tests.
+- `bun test tests/unit/playwright-widget-contract-smoke.test.ts` — passed, 25 tests.
+- `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget rich-text-section --output-json .tmp/task-381-rich-text-section-smoke-dry-run.json --output-md .tmp/task-381-rich-text-section-smoke-dry-run.md` — passed, zero failures/gaps.
+- `bun --cwd core lint` — passed.
+- `bun --cwd core lint:types` — passed.
+- `git diff --check` — passed.

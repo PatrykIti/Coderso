@@ -44,6 +44,7 @@ test("rich text section renders defaults with semantic title and html source mar
   expect(html).toContain('data-rich-text-title-level="2"');
   expect(html).toContain('id="rich-text-section-hero-rich-text-title"');
   expect(html).toContain("<h2");
+  expect(resolveRichTextSourceDrift(richTextSectionDefaults)).toMatchObject({ hasDrift: false });
 });
 
 test("rich text section sanitization strips dangerous payloads and reports diagnostics", () => {

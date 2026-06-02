@@ -178,9 +178,10 @@ before that point remain based on `playwright-cli` plus Codex code review.
 - `REPORT_TEAM_WIDGET.md` — completed main UI option pass. TASK-380 closed the
   member-count native confirm UX debt and deterministic Team photo MediaPicker
   smoke gap.
-- `REPORT_RICH_TEXT_SECTION_WIDGET.md` — completed main UI option pass; renderer
-  controls work, with Advanced sanitizer diagnostics loss after block edits and
-  default HTML-vs-block drift recorded.
+- `REPORT_RICH_TEXT_SECTION_WIDGET.md` — completed main UI option pass. TASK-381
+  closed the Advanced sanitizer diagnostics loss, pristine default
+  HTML-vs-block drift, and deterministic image/document plus paste/link
+  sanitizer smoke fixture gaps.
 - `REPORT_CONTENT_LIST_WIDGET.md` — completed Wizard / Visual / Advanced UI pass;
   found one hidden-state issue where `filters.taxonomy` survives `legacy ->
   listing` even though listing mode hides legacy filters and Advanced still

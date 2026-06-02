@@ -767,12 +767,16 @@ export function RichTextSectionVisualEditor({
       const currentBlocks = normalizeRichTextBlocks(current.body?.blocks);
       const nextBlocks = [...currentBlocks];
       const blockIndex = nextBlocks.findIndex((block) => block.id === blockId);
+      const storedDiagnostics = normalizeRichTextSanitizerDiagnostics(
+        current.body?.sanitizerDiagnostics
+      );
+      const nextStoredDiagnostics = mergeSanitizerDiagnostics(storedDiagnostics, diagnostics);
       if (blockIndex < 0) {
         return {
           ...current,
           body: {
             ...current.body,
-            sanitizerDiagnostics: diagnostics,
+            sanitizerDiagnostics: nextStoredDiagnostics,
           },
         };
       }
@@ -782,7 +786,7 @@ export function RichTextSectionVisualEditor({
           ...current,
           body: {
             ...current.body,
-            sanitizerDiagnostics: diagnostics,
+            sanitizerDiagnostics: nextStoredDiagnostics,
           },
         };
       }
@@ -797,7 +801,7 @@ export function RichTextSectionVisualEditor({
         body: {
           ...current.body,
           blocks: normalizeRichTextBlocks(nextBlocks),
-          sanitizerDiagnostics: diagnostics,
+          sanitizerDiagnostics: nextStoredDiagnostics,
         },
       };
     });
