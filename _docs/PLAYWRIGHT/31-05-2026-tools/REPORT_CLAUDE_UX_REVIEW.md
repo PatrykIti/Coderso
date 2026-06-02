@@ -5,7 +5,7 @@ Reviewer: Claude CLI, launched outside the Codex sandbox with
 `--dangerously-skip-permissions`
 UI session: `claude-tools-ux-fast-2026-06-01`
 
-## TASK-355 Claude Follow-Up - 2026-06-02
+## TASK-354-06 Claude Follow-Up - 2026-06-02
 
 Claude CLI was rerun with:
 
@@ -16,7 +16,7 @@ claude --print --permission-mode bypassPermissions "You are reviewing a Coderso 
 The follow-up reviewed the working-tree diff and supporting server/service
 code. It did not run tests. Findings and resolution:
 
-- Physical proof gap: addressed by the TASK-355 HTTP E2E pass on the running CMS
+- Physical proof gap: addressed by the TASK-354-06 HTTP E2E pass on the running CMS
   (`http://localhost:3000`) for SEO public HTML, Backups create/download/delete,
   and Import / Export preview/apply. Fresh Playwright browser proof could not be
   rerun because Chromium installation hung before the executable was available.

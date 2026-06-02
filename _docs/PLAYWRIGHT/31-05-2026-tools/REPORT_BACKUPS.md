@@ -34,7 +34,7 @@ Route: `/admin/backups`
   reason, cache hydration, and a real delete action for the created row.
 - The closure pass recorded zero browser console errors, zero page exceptions,
   and zero network loading failures.
-- TASK-355 follow-up on 2026-06-02 verified through the running CMS HTTP stack
+- TASK-354-06 follow-up on 2026-06-02 verified through the running CMS HTTP stack
   that new manual backups still complete inside the CMS, download as local JSON
   (`url: null`, `contentType: application/json`), redact list/cache artifact
   paths to `local`, and delete the created row/artifact. The same pass observed
@@ -70,7 +70,7 @@ Resolution:
 - Download is enabled for completed CMS-managed local artifacts and returns
   JSON content with `url: null` and `path: null`; list/browser cache redacts
   local paths to `artifactPath: "local"`.
-- TASK-355 refined browser cache patching: create sanitizes before cache write,
+- TASK-354-06 refined browser cache patching: create sanitizes before cache write,
   delete patches only safe pages and invalidates pagination-sensitive caches,
   and no-op pages no longer broadcast spurious updates.
 
@@ -96,7 +96,7 @@ Resolution:
   deletion empties the page.
 - Browser proof deleted only its created backup row and verified the row was
   gone from the database before cleanup.
-- TASK-355 replaced `window.confirm` with the shared confirm dialog, added
+- TASK-354-06 replaced `window.confirm` with the shared confirm dialog, added
   selected-row state plus bulk delete, and changed the primary header action to
   concise `Create`.
 

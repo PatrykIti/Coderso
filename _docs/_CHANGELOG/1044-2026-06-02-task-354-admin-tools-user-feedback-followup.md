@@ -1,8 +1,8 @@
-# 1044 - TASK-355 Admin Tools user feedback remediation
+# 1044 - TASK-354 Admin Tools user feedback follow-up
 
 Date: 2026-06-02
 Version: Unreleased
-Tasks: TASK-355
+Tasks: TASK-354, TASK-354-06
 
 ## Key Changes
 
@@ -26,7 +26,7 @@ Tasks: TASK-355
   write, delete patches only safe pages, pagination-sensitive pages are
   invalidated, and local filesystem artifact paths/download content are never
   stored.
-- Recorded TASK-355 HTTP E2E evidence for admin auth/CSRF, internal backup
+- Recorded TASK-354-06 HTTP E2E evidence for admin auth/CSRF, internal backup
   create/download/delete, Import / Export redirects export preview/apply, and
   SEO Manager save rendering into public HTML title, description, canonical,
   and robots metadata.
@@ -40,5 +40,5 @@ Tasks: TASK-355
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/ui/backups.test.tsx tests/vitest/ui/backups-page-wave.test.tsx tests/vitest/admin/backupsClient.test.ts tests/vitest/ui/import-export.test.tsx tests/vitest/ui/redirects-page-leaf.test.tsx tests/vitest/ui/seo-manager.test.tsx tests/vitest/ui/analytics.test.tsx tests/vitest/assistant/operation-policy-admin-surfaces.test.ts tests/vitest/ui/dialogs.test.tsx`
 - `set -a && source .env && set +a && bun test --parallel=1 tests/integration/routes/backups.test.ts tests/integration/routes/importExport.test.ts tests/integration/routes/seo.test.ts tests/unit/backups/backupService.test.ts tests/unit/tools/importExport.test.ts tests/unit/seo/seoService.test.ts tests/integration/runtime/pages-runtime.test.ts`
-- `set -a && source .env && set +a && bun .tmp/task-355-http-e2e.ts`
+- `set -a && source .env && set +a && bun .tmp/task-354-06-http-e2e.ts`
 - Claude CLI review with `claude --print --permission-mode bypassPermissions`

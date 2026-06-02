@@ -57,7 +57,7 @@ Route: `/admin/redirects`
   `redirect_not_found`, `redirect_exists`, `redirect_invalid`,
   `redirect_target_external`, and `redirect_loop`.
 
-## TASK-355 Follow-Up - 2026-06-02
+## TASK-354-06 Follow-Up - 2026-06-02
 
 - Redirects now hydrates from cached list data on revisit without forcing a
   foreground wait when fresh cache exists.

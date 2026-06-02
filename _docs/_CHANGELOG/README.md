@@ -25,7 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
-| 1044 | 2026-06-02 | TASK-355 Admin Tools user feedback remediation | Admin Tools/UX/Cache/QA/Docs |
+| 1044 | 2026-06-02 | TASK-354 Admin Tools user feedback follow-up | Admin Tools/UX/Cache/QA/Docs |
 | 1043 | 2026-06-01 | TASK-354 Cross Tools remediation closure | Admin Tools/UX/Auth Bootstrap/Playwright/QA/Docs |
 | 1042 | 2026-06-01 | TASK-353 Redirects tools remediation closure | Admin Tools/Redirects/Public Runtime/API/UI/QA/Docs |
 | 1041 | 2026-06-01 | TASK-352 Import Export tools remediation closure | Admin Tools/Import Export/API/UI/QA/Docs |

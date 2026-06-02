@@ -1,5 +1,5 @@
-# TASK-355: Admin Tools User Feedback Remediation
-# FileName: TASK-355_Admin_Tools_User_Feedback_Remediation.md
+# TASK-354-06: Admin Tools User Feedback Follow-Up
+# FileName: TASK-354-06_Admin_Tools_User_Feedback_Followup.md
 
 **Priority:** High
 **Category:** Admin Tools + Cache + UX + Playwright + Claude QA
@@ -11,10 +11,10 @@
 
 ## Overview
 
-Close the post-audit feedback for the admin Tools section after TASK-348 through
-TASK-354 were marked done. The earlier closure is not enough unless the current
-UI behaves like the mature Pages/Posts lists and is physically proven in the
-browser.
+Close the post-audit feedback for the admin Tools section as an additional
+TASK-354 cross-tools follow-up after TASK-348 through TASK-354 were initially
+marked done. The earlier closure is not enough unless the current UI behaves
+like the mature Pages/Posts lists and is physically proven in the browser.
 
 Scope:
 
@@ -82,7 +82,7 @@ Primary feedback to address:
   - Import / Export redirects bundle export, preview, and apply,
   - SEO Manager save rendering into public HTML `<title>`, description,
     canonical, and robots metadata,
-  - cleanup of the E2E backup, page, and orphaned TASK-355 SEO docs.
+  - cleanup of the E2E backup, page, and temporary SEO docs.
 - Existing DB state still contains two stale queued/running backup rows from
   2026-05-31, so the worker health banner can report `healthy=false`; new
   manual backups complete and download inside the CMS.
@@ -90,7 +90,7 @@ Primary feedback to address:
   bypassPermissions`; actionable cache-patching findings were fixed. Claude's
   physical-proof concern was superseded by the HTTP E2E evidence. Playwright
   Chromium install via `npx @playwright/test@1.57.0 install chromium` hung in
-  this environment, so browser automation could not be rerun after TASK-355.
+  this environment, so browser automation could not be rerun after TASK-354-06.
 
 ## Implementation Pseudocode
 
@@ -176,7 +176,7 @@ Executed validation:
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/ui/backups.test.tsx tests/vitest/ui/backups-page-wave.test.tsx tests/vitest/admin/backupsClient.test.ts tests/vitest/ui/import-export.test.tsx tests/vitest/ui/redirects-page-leaf.test.tsx tests/vitest/ui/seo-manager.test.tsx tests/vitest/ui/analytics.test.tsx tests/vitest/assistant/operation-policy-admin-surfaces.test.ts tests/vitest/ui/dialogs.test.tsx`
 - `set -a && source .env && set +a && bun test --parallel=1 tests/integration/routes/backups.test.ts tests/integration/routes/importExport.test.ts tests/integration/routes/seo.test.ts tests/unit/backups/backupService.test.ts tests/unit/tools/importExport.test.ts tests/unit/seo/seoService.test.ts tests/integration/runtime/pages-runtime.test.ts`
-- `set -a && source .env && set +a && bun .tmp/task-355-http-e2e.ts`
+- `set -a && source .env && set +a && bun .tmp/task-354-06-http-e2e.ts`
 - Claude CLI review: `claude --print --permission-mode bypassPermissions ...`
 - Playwright install attempt: `NODE_PATH=/home/coder/.npm/_npx/d07fa91bd3497047/node_modules npx --yes @playwright/test@1.57.0 install chromium`; stopped after hanging without installing `/ms-playwright/chromium_headless_shell-1200/chrome-linux/headless_shell`.
 
@@ -190,7 +190,7 @@ Executed validation:
 - `_docs/ADMIN_CACHE_MAP.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
-- New changelog entry when TASK-355 closes.
+- Changelog entry 1044 when TASK-354-06 closes.
 
 ## Acceptance Criteria
 

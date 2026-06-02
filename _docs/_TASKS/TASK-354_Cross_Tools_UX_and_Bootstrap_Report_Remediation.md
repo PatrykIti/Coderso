@@ -5,7 +5,7 @@
 **Category:** Admin Tools + UX Consistency + Auth Bootstrap + Playwright + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-347, TASK-348, TASK-349, TASK-350, TASK-351, TASK-352, TASK-353
-**Status:** Done (2026-06-01)
+**Status:** Done (2026-06-02)
 
 ---
 
@@ -33,8 +33,10 @@ consistency and drift prevention:
 - A reusable Playwright/report matrix must prevent the next Tools audit from
   missing clickable controls, no-op buttons, or stale report classifications.
 
-This planning wave creates **28 execution leaf tasks** across TASK-348 through
-TASK-354, satisfying the requested minimum of 20 refinements.
+This planning wave creates **29 execution leaf tasks** across TASK-348 through
+TASK-354, satisfying the requested minimum of 20 refinements. TASK-354-06 is
+the post-closure user-feedback follow-up for the same cross-tools family and
+does not create an eighth report family.
 
 ## Cross-Report Finding Matrix
 
@@ -55,6 +57,7 @@ TASK-354, satisfying the requested minimum of 20 refinements.
 - [x] TASK-354-03: Seed Admin Pepper-Aware Bootstrap Credentials
 - [x] TASK-354-04: Tools Playwright Regression Matrix and Report Drift Guard
 - [x] TASK-354-05: Cross Tools QA, Docs, and Closure
+- [x] TASK-354-06: Admin Tools User Feedback Follow-Up
 
 ## Closure Notes
 
@@ -69,6 +72,12 @@ Import / Export, and Redirects end to end with evidence in
 `.tmp/tools-live-smoke-2026-06-01/result.json`. Claude CLI live review was
 attempted twice for the final refinement pass but timed out without review
 output, so the final closure does not claim a Claude no-blocker result.
+
+Follow-up Done (2026-06-02): TASK-354-06 reopened the cross-tools family
+against direct user feedback without consuming a new top-level task number.
+It refined Tools cache parity, Backups/Redirects table UX, Import / Export
+per-card loading, and SEO public HTML proof, then synchronized report evidence
+and changelog 1044 inside the allocated 348-354 / 1035-1044 ranges.
 
 ## Implementation Order
 
