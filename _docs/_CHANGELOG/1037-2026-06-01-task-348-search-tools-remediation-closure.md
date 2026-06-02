@@ -20,6 +20,8 @@ Tasks: TASK-348, TASK-348-01, TASK-348-02, TASK-348-03
   cause-specific empty states for category and content-type filters.
 - Covered Search result destination mapping plus row prefetch/select behavior,
   and documented the resolved Playwright report findings.
+- Added Search admin cache hydration for recent searches and bounded
+  query/date-range result keys, with route prefetch warming `search:recent`.
 
 ## Validation
 
@@ -32,3 +34,5 @@ Tasks: TASK-348, TASK-348-01, TASK-348-02, TASK-348-03
   fixtures, fallback chip visible, recent page visible in default range, older
   page hidden in `Last 7 days`, older page visible in `All time`, and page
   result navigation to `/admin/pages/:id`.
+- Final live Tools smoke confirmed `search:recent` and `search:results:*`
+  browser-cache keys after real admin UI navigation.

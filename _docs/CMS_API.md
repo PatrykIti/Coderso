@@ -2628,9 +2628,10 @@ Response:
 
 Permissions: `backups:read`, `backups:write`
 
-Note: v1 backupy to metadane + placeholder na artefakt. Faktyczne tworzenie
-artefaktow i restore realizuje external worker/plugin. Core API exposes the
-queue, worker boundary, safe action states, and metadata-row delete.
+Note: v1 manual backups are CMS-managed metadata rows plus a local JSON artifact.
+`POST /backups` creates the row, writes the artifact under `BACKUP_DIR` or
+`storage/backups`, and returns a completed row when artifact creation succeeds.
+Restore is still unsupported until a separate restore contract exists.
 
 - `GET /backups?page=1&limit=10&query=queued`
 - `POST /backups` (manual create)
@@ -2674,8 +2675,8 @@ List response:
       "id": "backup-id",
       "status": "complete",
       "kind": "manual",
-      "storageDriver": "s3",
-      "artifactPath": "s3://bucket/backup.tar",
+      "storageDriver": "local",
+      "artifactPath": "local",
       "sizeBytes": 1048576,
       "error": null,
       "createdAt": "2026-01-30T10:00:00Z",
@@ -2688,11 +2689,11 @@ List response:
   "hasNext": false,
   "hasPrevious": false,
   "worker": {
-    "mode": "external",
+    "mode": "internal",
     "healthy": true,
     "queuedCount": 0,
     "oldestQueuedAt": null,
-    "message": "No backup jobs are waiting for the external backup worker."
+    "message": "Backups are processed by the CMS."
   }
 }
 ```
@@ -2714,23 +2715,35 @@ Schedule payload:
 Download response:
 
 ```json
-{ "url": "https://cdn.example.com/backups/backup.tar", "path": null }
+{
+  "url": null,
+  "path": null,
+  "fileName": "coderso-backup-backup-id.json",
+  "contentType": "application/json",
+  "content": "{...redacted example...}"
+}
 ```
 
 Download returns `backup_not_ready` for queued/running/failed/artifact-less
 rows and `backup_artifact_invalid` when a completed row has a non-downloadable
-artifact path. The current admin route only opens worker-provided `http(s)`
-artifact URLs.
+artifact path outside the configured backup directory. Local CMS artifacts are
+returned as JSON content with `url: null` and `path: null`; list responses and
+browser cache redact local artifact paths to `artifactPath: "local"` and never
+persist downloaded artifact content. Future plugin/storage integrations may
+still return public `http(s)` artifact URLs.
 
 Restore returns `backup_not_ready` until a completed artifact exists, then
-`backup_restore_unsupported` until an external worker/plugin provides the
-restore implementation.
+`backup_restore_unsupported` until the CMS ships an explicit restore
+implementation.
 
 Delete response:
 
 ```json
 { "ok": true, "id": "backup-id" }
 ```
+
+Delete removes the target metadata row and deletes the owned local artifact only
+when the path resolves inside the configured backup directory.
 
 Known backup error codes:
 

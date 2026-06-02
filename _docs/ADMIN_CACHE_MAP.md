@@ -209,28 +209,59 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Menu editor
   - UI: `core/admin/ui/menus/MenuEditorPage.tsx`
   - Cached APIs: `getMenuWithItemsCached`, `getCachedMenuDetail`, `listPagesCached`, `getCachedPages`
+- Search
+  - UI: `core/admin/ui/search/SearchPage.tsx`,
+    `core/admin/ui/search/useSearchResults.ts`
+  - Cached APIs: `listRecentSearchesCached`, `getCachedRecentSearches`,
+    `searchAllCached`, `getCachedSearchResults`
+  - Cache keys: `search:recent`,
+    `search:results:<boundedQuery>:limit:<limit>:date:<dateRange>`
+  - Hydration: recent searches hydrate immediately; result caches are keyed by
+    query, limit, and date range, then revalidated through explicit searches.
 - SEO manager
   - UI: `core/admin/ui/seo/SeoManagerPage.tsx`
-  - Cached APIs: none; consumes cache bus events for assistant/direct SEO mutations
+  - Cached APIs: `listSeoCached`, `getCachedSeo`, `getSeoCached`,
+    `getCachedSeoDetail`
+  - Mutations: SEO save/audit update list/detail caches and clear public HTML
+    cache so saved metadata reaches public rendering.
   - Cache bus: `seo:list`, `seo:detail:<id>`
+- Analytics
+  - UI: `core/admin/ui/analytics/AnalyticsPage.tsx`
+  - Cached APIs: `getOverviewCached`, `getCachedOverview`,
+    `getTopContentCached`, `getCachedTopContent`
+  - Cache keys: `analytics:overview:<rangeDays>`,
+    `analytics:topContent:<rangeDays>:<limit>:<type>`
+  - Hydration: selected range hydrates from cache when available and
+    background refreshes preserve the visible table/card state.
 - Backups
   - UI: `core/admin/ui/backups/BackupsPage.tsx`
-  - Cached APIs: none; intentionally uncached because list pagination, queued
-    jobs, worker health, artifact readiness, and destructive action state must
-    come from the current server response.
+  - Cached APIs: `listBackupsCached`, `getCachedBackups`,
+    `getBackupScheduleCached`, `getCachedBackupSchedule`
+  - Cache keys: `backups:list:<page>:<limit>:<boundedQuery>`,
+    `backups:schedule`
+  - Mutations: create, delete, restore, and schedule updates invalidate or patch
+    backup caches through cache-bus events.
+  - Security: browser cache redacts local artifact paths to
+    `artifactPath: "local"` and never stores backup download content.
 - Import / Export
   - UI: `core/admin/ui/import-export/ImportExportPage.tsx`,
     `core/admin/ui/import-export/ImportDropzone.tsx`
-  - Cached APIs: none; intentionally uncached because exports can contain
-    controlled configuration data and Recent Imports is session-local React
-    state only.
+  - Cached APIs: `listImportHistoryCached`, `getCachedImportHistory`,
+    `writeImportHistoryCache`
+  - Cache key: `tools:import:history`
+  - Cache scope: Recent Imports is browser-local activity history; export
+    bundle payloads and uploaded bundle contents are not cached.
+  - Mutations: successful import invalidates only the imported resource-family
+    caches, including menus, admin themes, and redirects when present in the
+    bundle scope.
 - Redirects
   - UI: `core/admin/ui/redirects/RedirectsPage.tsx`,
     `core/admin/ui/redirects/RedirectsTable.tsx`,
     `core/admin/ui/redirects/RedirectDrawer.tsx`
-  - Cached APIs: none; intentionally uncached because enabled redirect rows
-    immediately affect public routing and CRUD flows refresh from the server
-    response instead of patching browser cache state.
+  - Cached APIs: `listRedirectsCached`, `getCachedRedirects`
+  - Mutations: `createRedirect`, `updateRedirect`, and `deleteRedirect` patch
+    or remove rows from `redirects:list` and broadcast cache-bus updates.
+  - Cache bus: `redirects:list`
 - Admin UI themes
   - UI: `core/admin/ui/themes/ThemesPage.tsx`
   - Cached APIs: `listAdminThemeTemplatesCached`, `getCachedAdminThemeTemplates`, `listAdminThemeProfilesCached`, `getCachedAdminThemeProfiles`

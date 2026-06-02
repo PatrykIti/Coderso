@@ -20,9 +20,10 @@ The report proves manual backup rows can be created and schedule settings can be
 updated/restored. The unresolved gaps are product-contract level:
 
 - Backup content checkboxes are uncontrolled and not sent to the service.
-- Created backups remain queued with no artifact path/size; current
-  `_docs/ARCHITECTURE.md` and `_docs/CMS_API.md` still describe v1 backups as
-  metadata-only with future worker/plugin artifact creation.
+- Created backups previously remained queued with no artifact path/size; the
+  original `_docs/ARCHITECTURE.md` and `_docs/CMS_API.md` described v1 backups
+  as future worker/plugin artifact creation before this family selected the
+  internal CMS artifact path.
 - Restore/download/delete affordances are unavailable without explanation.
 - Pagination buttons are placeholders.
 - The UI does not expose queue/worker health or aged queued-job warnings.
@@ -47,9 +48,9 @@ updated/restored. The unresolved gaps are product-contract level:
 
 1. Land request/include schema first so the UI can truthfully describe what a
    manual backup contains.
-2. Land either a documented external-worker boundary for v1 or an architecture
-   update plus execution/artifact lifecycle. Do not silently implement a local
-   artifact path while architecture still says metadata-only.
+2. Land the architecture update plus execution/artifact lifecycle before
+   claiming local artifact completion. Do not silently implement a local
+   artifact path while architecture still lacks the matching artifact contract.
 3. Add pagination and worker-health UI after list responses contain enough
    metadata.
 4. Close with DB-backed lifecycle tests and Playwright proof.
@@ -91,30 +92,34 @@ Backups are internal admin operations with destructive potential:
 - `_docs/ARCHITECTURE.md`, `_docs/CMS_API.md`, and `_docs/SECURITY_SPEC.md` if
   backup artifact policy, include payloads, delete/restore behavior, or worker
   ownership changes
-- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if Backups becomes an
-  admin cached resource; otherwise document the intentional uncached rationale
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` for Backups list and
+  schedule cache keys, invalidation, and browser-cache artifact path redaction
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 
 ## Acceptance Criteria
 
 - Manual backup options are either persisted/sent or removed as unavailable.
-- Backups either remain metadata-only with explicit external-worker state,
-  worker health, disabled-action reasons, and docs, or architecture/API/security
-  docs are updated before implementing local artifact execution.
+- Backups produce an internal CMS artifact for manual v1 backup requests, keep
+  restore disabled/rejected with an explicit unsupported reason, redact local
+  artifact paths from browser cache, and update architecture/API/security docs.
 - Download/restore/delete actions are real when enabled and explain why they are
   disabled otherwise.
 - Pagination controls are stateful or hidden/disabled truthfully.
 
 ## Closure Notes
 
-Done (2026-06-01): Backups now keep v1 metadata-only architecture explicit:
+Done (2026-06-01): Backups now run manual v1 requests through the CMS process:
 manual include options are controlled, validated, serialized, and logged as
-option keys; queued/running rows show the external-worker boundary and aged
-queue warning; restore/download are status-aware and disabled/rejected with
-machine-readable reasons until a worker publishes a secure artifact URL; delete
-removes only the selected metadata row; list/search pagination is strict and
-stateful. Focused browser proof covered include request body
-`["database","settings"]`, first/second-page pagination, queued worker copy,
-disabled restore/download labels, real delete, zero browser errors, and cleanup
-of temporary user/role/session/backup fixtures.
+option keys; the service writes a local JSON artifact, marks the row complete,
+serves local download content without exposing raw filesystem paths, and keeps
+restore disabled/rejected with a machine-readable unsupported reason until a
+restore contract exists. Delete removes the selected metadata row and owned
+local artifact, list/search pagination is strict and stateful, and list/schedule
+caches hydrate like other admin resources while redacting `artifactPath` to
+`local`. Focused browser proof covered include request body
+`["database","settings"]`, first/second-page pagination, internal CMS artifact
+completion, local download, disabled restore copy, real delete, zero browser
+errors, and cleanup of temporary fixtures. Final live Tools smoke confirmed
+status `complete`, `artifactPath: "local"`, download content, and
+`backups:list:1:10:all` plus `backups:schedule` cache keys.

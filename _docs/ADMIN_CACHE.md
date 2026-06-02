@@ -47,6 +47,14 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `menus:detail:<id>`
 - `seo:list`
 - `seo:detail:<id>`
+- `search:recent`
+- `search:results:<queryKey>`
+- `analytics:overview:<rangeDays>`
+- `analytics:topContent:<rangeDays>:<limit>:<type>`
+- `backups:list:<page>:<limit>:<queryKey>`
+- `backups:schedule`
+- `tools:import:history`
+- `redirects:list`
 - `forms:list`
 - `forms:detail:<id>`
 - `forms:actions:<id>`
@@ -102,6 +110,12 @@ Defined in `core/admin/services/cachePolicy.ts`:
   `contentTypes:list` and `contentTypes:collectionWorkspace:<contentTypeId>`
   with `{ force: false }`, so the workspace shell hydrates from the current
   Engine cache family without a parallel `collections:*` namespace.
+- Tools route prefetch warms the same cached resources used by the page shells:
+  `/admin/search` warms `search:recent`, `/admin/seo` warms `seo:list`,
+  `/admin/analytics` warms the default overview and Top Content caches,
+  `/admin/backups` warms the first backup page plus schedule cache,
+  `/admin/tools/import-export` hydrates the local import history cache, and
+  `/admin/redirects` warms `redirects:list`.
 
 ### Prefetch budgets
 - Per-hover burst request budget is gated by:
@@ -234,6 +248,22 @@ Clients update caches and broadcast events on:
   do not currently emit assistant client cache events because their safe cache
   address is either not represented in the admin cache key contract or is
   handled by the existing site-kit execution surface.
+- Tools cache event coverage:
+  - `seo.document.*` writes `seo:list` and touched `seo:detail:<id>`.
+  - Search recent/results caches are browser-local read caches; explicit search
+    calls patch the relevant result key and recent-search list.
+  - Analytics overview and Top Content caches are range-scoped read caches and
+    are refreshed explicitly by range changes or route prefetch.
+  - Backups create/delete/restore and schedule updates invalidate or patch
+    `backups:list:<page>:<limit>:<queryKey>` and `backups:schedule`. Browser
+    cache stores local backup artifacts with `artifactPath: "local"` only; raw
+    filesystem paths and backup JSON content are never persisted in cache.
+  - Import / Export caches only session-local Recent Imports in
+    `tools:import:history`; downloaded export bundle content is not cached.
+    Successful imports invalidate the imported resource families such as menus,
+    admin theme templates/profiles, and redirects.
+  - Redirect create/update/delete patches `redirects:list` and broadcasts an
+    update so other tabs refresh public-routing-affecting rows promptly.
 
 ### Widget template cache note
 

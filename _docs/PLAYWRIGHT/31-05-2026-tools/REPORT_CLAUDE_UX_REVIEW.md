@@ -33,8 +33,9 @@ actions.
   mapped into `scripts/tools-audit-matrix.ts`, which requires observable control
   effects, cause-specific empty states, async-state ownership, runtime-effect
   evidence, scoped fixtures, cleanup paths, and report drift checks.
-- Backups now has a bounded polling policy for queued/running or unhealthy
-  external-worker states instead of relying only on manual refresh.
+- Backups now has a bounded polling policy for queued/running legacy states,
+  and final manual backups complete through the internal CMS artifact path
+  without depending on an external worker.
 - The original findings below remain as source evidence; the final status is
   resolved through TASK-348 through TASK-354 unless a future task explicitly
   reopens a surface.
@@ -135,8 +136,8 @@ Fix path:
 
 - Add auto-refresh and an age-aware warning for backups queued longer than a
   small threshold.
-- Show worker/queue health or a recoverable error message when artifacts are not
-  produced.
+- Show operation/queue health or a recoverable error message when artifacts are
+  not produced.
 - Keep the restore/download disabled state, but explain why the action is not
   available.
 
@@ -178,8 +179,8 @@ Fix path:
 
 ## Top UX Fixes
 
-1. Make Backups explicit about queued jobs, worker health, and unavailable
-   actions.
+1. Make Backups explicit about backup progress, local artifact availability,
+   and unavailable restore actions.
 2. Standardize empty states across Tools with clear cause and next action.
 3. Clarify Search no-results behavior and fill the empty `Try:` suggestions.
 4. Add failure reasons, retry actions, and progress indicators to Import /

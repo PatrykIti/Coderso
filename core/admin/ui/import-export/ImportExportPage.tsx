@@ -1,11 +1,12 @@
 import { History } from "lucide-react";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { isApiClientError } from "@/services/apiClient";
-import { exportConfig, type ExportRequest } from "@/services/importExportClient";
+import { exportConfig, type ExportRequest, type ExportTarget } from "@/services/importExportClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
@@ -13,11 +14,12 @@ import { ExportCards } from "./ExportCards";
 import { ImportDropzone } from "./ImportDropzone";
 
 export function ImportExportPage() {
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportingTargets, setExportingTargets] = useState<ExportTarget[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const handleExport = useCallback(async (request: ExportRequest) => {
-    setIsExporting(true);
+    const target = request.target ?? "full";
+    setExportingTargets((current) => [...new Set([...current, target])]);
     setError(null);
     try {
       const bundle = await exportConfig(request);
@@ -32,6 +34,7 @@ export function ImportExportPage() {
       anchor.download = `coderso-export-${target}-${exportedAt}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
+      toast.success("Export downloaded.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -39,7 +42,7 @@ export function ImportExportPage() {
         setError("Failed to export data.");
       }
     } finally {
-      setIsExporting(false);
+      setExportingTargets((current) => current.filter((item) => item !== target));
     }
   }, []);
 
@@ -76,7 +79,7 @@ export function ImportExportPage() {
               Select supported configuration sections to download as JSON bundles.
             </p>
           </div>
-          <ExportCards onExport={handleExport} isExporting={isExporting} />
+          <ExportCards onExport={handleExport} exportingTargets={exportingTargets} />
         </section>
 
         <Separator />

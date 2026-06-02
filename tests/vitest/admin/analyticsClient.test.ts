@@ -2,15 +2,66 @@ import { expect, test } from "vitest";
 
 import {
   exportTopContent,
+  getCachedOverview,
+  getCachedTopContent,
   getOverview,
+  getOverviewCached,
   getTopContent,
+  getTopContentCached,
 } from "../../../core/admin/services/analyticsClient";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
     headers: { "Content-Type": "application/json" },
   });
+
+const createLocalStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+};
+
+const setCacheValue = (
+  storage: ReturnType<typeof createLocalStorage>,
+  key: string,
+  value: unknown
+) => {
+  storage.setItem(key, JSON.stringify({ value, savedAt: Date.now() }));
+};
+
+const installLocalStorage = () => {
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+  return {
+    storage,
+    restore: () => {
+      if (originalLocal === undefined) {
+        delete (globalThis as { localStorage?: unknown }).localStorage;
+      } else {
+        (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+      }
+    },
+  };
+};
+
+const overview = (rangeDays: number) => ({
+  rangeDays,
+  generatedAt: "2026-06-01T00:00:00.000Z",
+  totals: { pages: 1, publishedPages: 1, entries: 1, media: 1, users: 1 },
+  current: { pages: 1, publishedPages: 1, entries: 1, media: 1, users: 1 },
+  previous: { pages: 0, publishedPages: 0, entries: 0, media: 0, users: 0 },
+  trend: [{ date: "2026-06-01", value: 1 }],
+});
 
 test("getOverview hits /analytics/overview with rangeDays", async () => {
   const originalFetch = globalThis.fetch;
@@ -31,6 +82,33 @@ test("getOverview hits /analytics/overview with rangeDays", async () => {
   }
 });
 
+test("getOverviewCached reads local cache and force refreshes by range", async () => {
+  const { storage, restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const cached = overview(30);
+  const refreshed = { ...overview(30), generatedAt: "2026-06-01T00:05:00.000Z" };
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(refreshed);
+  };
+
+  try {
+    setCacheValue(storage, cacheKeys.analyticsOverview(30), cached);
+    await expect(getOverviewCached(30)).resolves.toEqual(cached);
+    expect(calls).toHaveLength(0);
+    expect(getCachedOverview(30)).toEqual(cached);
+
+    await expect(getOverviewCached(30, { force: true })).resolves.toEqual(refreshed);
+    expect(calls[0]?.input).toBe("/admin/api/analytics/overview?rangeDays=30");
+    expect(getCachedOverview(30)).toEqual(refreshed);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
+  }
+});
+
 test("getTopContent hits /analytics/top-content with limit, range, and type", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -47,6 +125,46 @@ test("getTopContent hits /analytics/top-content with limit, range, and type", as
     expect(calls[0]?.init?.method).toBe("GET");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("getTopContentCached reads local cache by range, limit, and type", async () => {
+  const { storage, restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const options = { limit: 5, rangeDays: 7, type: "page" as const };
+  const cachedItem = {
+    id: "page-1",
+    type: "page" as const,
+    title: "Home",
+    slug: "/",
+    updatedAt: "2026-06-01T00:00:00.000Z",
+    score: 10,
+  };
+  const cached = [cachedItem];
+  const refreshed = [{ ...cachedItem, score: 12 }];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(refreshed);
+  };
+
+  try {
+    setCacheValue(
+      storage,
+      cacheKeys.analyticsTopContent(options.rangeDays, options.limit, options.type),
+      cached
+    );
+    await expect(getTopContentCached(options)).resolves.toEqual(cached);
+    expect(calls).toHaveLength(0);
+    expect(getCachedTopContent(options)).toEqual(cached);
+
+    await expect(getTopContentCached({ ...options, force: true })).resolves.toEqual(refreshed);
+    expect(calls[0]?.input).toBe("/admin/api/analytics/top-content?limit=5&rangeDays=7&type=page");
+    expect(getCachedTopContent(options)).toEqual(refreshed);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
   }
 });
 

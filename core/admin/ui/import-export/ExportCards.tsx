@@ -109,10 +109,10 @@ const createDefaultSelections = () =>
 
 type ExportCardsProps = {
   onExport: (request: ExportRequest) => void;
-  isExporting: boolean;
+  exportingTargets: ExportTarget[];
 };
 
-export function ExportCards({ onExport, isExporting }: ExportCardsProps) {
+export function ExportCards({ onExport, exportingTargets }: ExportCardsProps) {
   const [selectedOptions, setSelectedOptions] = useState(createDefaultSelections);
 
   const updateOption = (cardId: ExportTarget, optionId: ExportIncludeOption, checked: boolean) => {
@@ -141,6 +141,7 @@ export function ExportCards({ onExport, isExporting }: ExportCardsProps) {
       {exportCards.map((card) => {
         const Icon = card.icon;
         const selected = selectedOptions[card.id] ?? [];
+        const isExporting = exportingTargets.includes(card.id);
         return (
           <Card key={card.id} className="border-border/60">
             <CardContent className="flex h-full flex-col gap-6">

@@ -43,6 +43,8 @@ test("SeoManagerPage renders table and drawer", () => {
     socialStatus: "ready",
     metaTitle: "Home",
     metaDescription: "Description",
+    canonicalUrl: "https://example.com/home",
+    robots: "index,follow",
     keywords: ["cms"],
     previewUrl: "https://example.com",
     previewPath: "home",

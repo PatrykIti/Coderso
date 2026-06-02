@@ -25,6 +25,11 @@ test("Redirects UI renders table and drawer", () => {
         total={rows.length}
         page={1}
         limit={10}
+        selectedIds={[]}
+        isAllSelected={false}
+        isIndeterminate={false}
+        onToggleAll={() => undefined}
+        onToggleRedirect={() => undefined}
       />
       <RedirectDrawer
         open
@@ -54,13 +59,17 @@ test("RedirectsTable renders empty create state without one-page controls", () =
       total={0}
       page={1}
       limit={10}
-      onCreate={() => undefined}
+      selectedIds={[]}
+      isAllSelected={false}
+      isIndeterminate={false}
+      onToggleAll={() => undefined}
+      onToggleRedirect={() => undefined}
     />
   );
   const text = html.replaceAll("<!-- -->", "");
 
   expect(html).toContain("No redirects found.");
-  expect(html).toContain("Create your first redirect");
+  expect(html).not.toContain("Create your first redirect");
   expect(text).toContain("Showing 0 of 0 redirects");
   expect(html).not.toContain("Previous");
   expect(html).not.toContain("Next");
@@ -76,7 +85,11 @@ test("RedirectsTable renders filtering empty state without create CTA", () => {
       page={1}
       limit={10}
       isFiltering
-      onCreate={() => undefined}
+      selectedIds={[]}
+      isAllSelected={false}
+      isIndeterminate={false}
+      onToggleAll={() => undefined}
+      onToggleRedirect={() => undefined}
     />
   );
 

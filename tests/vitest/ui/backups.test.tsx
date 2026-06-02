@@ -223,11 +223,11 @@ test("BackupsTable shows worker boundary, disabled reasons, and real pagination/
         hasNext: true,
         hasPrevious: false,
         worker: {
-          mode: "external",
+          mode: "internal",
           healthy: false,
           queuedCount: 1,
           oldestQueuedAt: "2026-06-01T00:00:00.000Z",
-          message: "Backup jobs are still waiting for the external backup worker.",
+          message: "CMS backup worker has jobs running longer than expected.",
         },
       }}
       query=""
@@ -242,9 +242,9 @@ test("BackupsTable shows worker boundary, disabled reasons, and real pagination/
     />
   );
 
-  expect(html).toContain("external backup worker");
-  expect(html).toContain("Backup is waiting for the external backup worker.");
-  expect(html).toContain("Backup artifact is not downloadable from this admin route.");
+  expect(html).toContain("CMS backup worker has jobs running longer than expected.");
+  expect(html).toContain("Backup is still being processed.");
+  expect(html).toContain("Restore is not available for CMS-managed backup files yet.");
   expect(html.replace(/<!-- -->/g, "")).toContain("Showing 2 of 11 backups");
 
   const view = mount(
@@ -257,11 +257,11 @@ test("BackupsTable shows worker boundary, disabled reasons, and real pagination/
         hasNext: false,
         hasPrevious: false,
         worker: {
-          mode: "external",
+          mode: "internal",
           healthy: true,
           queuedCount: 0,
           oldestQueuedAt: null,
-          message: "No backup jobs are waiting for the external backup worker.",
+          message: "CMS backup worker is ready.",
         },
       }}
       query=""

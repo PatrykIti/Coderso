@@ -46,6 +46,7 @@ export type MenuItemInput = {
 };
 
 let cachedMenusPromise: Promise<MenuSummary[]> | null = null;
+const knownMenuDetailIds = new Set<string>();
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -80,13 +81,16 @@ const menusListCache = createMemoryBackedLocalCache({
 const isMenuDetail = (value: unknown): value is MenuWithItems =>
   isRecord(value) && isMenuSummary(value.menu) && Array.isArray(value.items);
 
-const readMenusCache = () =>
-  menusListCache.read();
+const readMenusCache = () => menusListCache.read();
 
-const readMenuDetailCache = (id: string) =>
-  readLocalCache(cacheKeys.menuDetail(id), cacheTtlMs.detail, isMenuDetail);
+const readMenuDetailCache = (id: string) => {
+  const cached = readLocalCache(cacheKeys.menuDetail(id), cacheTtlMs.detail, isMenuDetail);
+  if (cached) knownMenuDetailIds.add(id);
+  return cached;
+};
 
 const writeMenuDetailCache = (payload: MenuWithItems) => {
+  knownMenuDetailIds.add(payload.menu.id);
   writeLocalCache(cacheKeys.menuDetail(payload.menu.id), payload);
 };
 
@@ -126,6 +130,10 @@ export const getCachedMenuDetail = (id: string) => readMenuDetailCache(id);
 export const clearMenusCache = () => {
   cachedMenusPromise = null;
   menusListCache.clear();
+  for (const id of knownMenuDetailIds) {
+    clearLocalCache(cacheKeys.menuDetail(id));
+  }
+  knownMenuDetailIds.clear();
 };
 
 export async function listMenus() {
@@ -189,11 +197,15 @@ export async function updateMenu(
   menuId: string,
   input: { name?: string; location?: string | null; status?: MenuSummary["status"] }
 ) {
-  const updated = await apiRequest<MenuSummary>(`/menus/${menuId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  }, { withCsrf: true });
+  const updated = await apiRequest<MenuSummary>(
+    `/menus/${menuId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+    { withCsrf: true }
+  );
   if (updated) {
     upsertCachedMenuSummary(updated);
     const detail = readMenuDetailCache(menuId);
@@ -206,18 +218,20 @@ export async function updateMenu(
   return updated;
 }
 
-export const publishMenu = (menuId: string) =>
-  updateMenu(menuId, { status: "published" });
+export const publishMenu = (menuId: string) => updateMenu(menuId, { status: "published" });
 
-export const moveMenuToDraft = (menuId: string) =>
-  updateMenu(menuId, { status: "draft" });
+export const moveMenuToDraft = (menuId: string) => updateMenu(menuId, { status: "draft" });
 
 export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
-  const result = await apiRequest<{ ok: boolean }>(`/menus/${menuId}/items`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ items }),
-  }, { withCsrf: true });
+  const result = await apiRequest<{ ok: boolean }>(
+    `/menus/${menuId}/items`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    },
+    { withCsrf: true }
+  );
   if (result?.ok) {
     clearLocalCache(cacheKeys.menuDetail(menuId));
     broadcastCacheEvent({ key: cacheKeys.menuDetail(menuId), action: "update" });
@@ -226,9 +240,13 @@ export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
 }
 
 export async function deleteMenu(menuId: string) {
-  const result = await apiRequest<{ ok: boolean }>(`/menus/${menuId}`, {
-    method: "DELETE",
-  }, { withCsrf: true });
+  const result = await apiRequest<{ ok: boolean }>(
+    `/menus/${menuId}`,
+    {
+      method: "DELETE",
+    },
+    { withCsrf: true }
+  );
   if (result?.ok) {
     removeCachedMenu(menuId);
     broadcastCacheEvent({ key: cacheKeys.menusList, action: "invalidate" });

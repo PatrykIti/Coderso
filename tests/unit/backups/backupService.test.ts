@@ -31,7 +31,11 @@ const createdIds: string[] = [];
 
 afterEach(async () => {
   if (!hasDb || createdIds.length === 0) return;
-  await db.delete(backups).where(inArray(backups.id, [...createdIds]));
+  for (const id of [...createdIds]) {
+    await deleteBackup(id).catch(async () => {
+      await db.delete(backups).where(inArray(backups.id, [id]));
+    });
+  }
   createdIds.length = 0;
 });
 
@@ -43,10 +47,11 @@ testIfDb("createBackup adds backup and listBackups returns it", async () => {
   const match = list.items.find((item) => item.id === created.id);
 
   expect(match).not.toBeNull();
-  expect(match?.status).toBe("queued");
+  expect(match?.status).toBe("complete");
   expect(match?.kind).toBe("manual");
+  expect(match?.artifactPath).toBe("local");
   expect(list.total).toBeGreaterThanOrEqual(1);
-  expect(list.worker.queuedCount).toBeGreaterThanOrEqual(1);
+  expect(list.worker.mode).toBe("internal");
 });
 
 test("normalizeBackupInclude defaults, dedupes, and rejects invalid selections", () => {
@@ -57,22 +62,39 @@ test("normalizeBackupInclude defaults, dedupes, and rejects invalid selections",
 });
 
 testIfDb("queued backups reject restore and download until a worker completes them", async () => {
-  const created = await createBackup({ kind: "manual", include: ["database"] });
+  const [created] = await db
+    .insert(backups)
+    .values({
+      status: "queued",
+      kind: "manual",
+      storageDriver: "local",
+    })
+    .returning();
+  if (!created) throw new Error("backup_create_failed");
   createdIds.push(created.id);
 
   await expect(restoreBackup(created.id)).rejects.toThrow("backup_not_ready");
   await expect(resolveBackupDownload(created.id)).rejects.toThrow("backup_not_ready");
 });
 
-testIfDb("completed backups require a worker-provided download URL", async () => {
+testIfDb("completed backups download CMS-managed artifacts and external URLs", async () => {
   const localArtifact = await createBackup({ kind: "manual", include: ["database"] });
+  const invalidArtifact = await createBackup({ kind: "manual", include: ["database"] });
   const urlArtifact = await createBackup({ kind: "manual", include: ["database"] });
-  createdIds.push(localArtifact.id, urlArtifact.id);
+  createdIds.push(localArtifact.id, invalidArtifact.id, urlArtifact.id);
 
-  await markBackupComplete(localArtifact.id, "/var/backups/local.zip", 42);
+  await markBackupComplete(invalidArtifact.id, "/var/backups/local.zip", 42);
   await markBackupComplete(urlArtifact.id, "https://backups.example.test/url.zip", 42);
 
-  await expect(resolveBackupDownload(localArtifact.id)).rejects.toThrow("backup_artifact_invalid");
+  const localDownload = await resolveBackupDownload(localArtifact.id);
+  expect(localDownload.url).toBeNull();
+  expect(localDownload.path).toBeNull();
+  expect(localDownload.fileName).toContain(localArtifact.id);
+  expect(localDownload.contentType).toBe("application/json");
+  expect(localDownload.content).toContain(localArtifact.id);
+  await expect(resolveBackupDownload(invalidArtifact.id)).rejects.toThrow(
+    "backup_artifact_invalid"
+  );
   await expect(resolveBackupDownload(urlArtifact.id)).resolves.toEqual({
     url: "https://backups.example.test/url.zip",
     path: null,

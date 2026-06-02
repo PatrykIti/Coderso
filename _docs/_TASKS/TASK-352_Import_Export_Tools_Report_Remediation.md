@@ -65,6 +65,12 @@ Done (2026-06-01):
   instead of static CSV/ZIP fixture rows.
 - CSV/ZIP copy was removed; the import surface is JSON-only until real parsers
   and backend contracts exist.
+- Export loading is scoped per card, so one slow download does not disable the
+  other supported export targets.
+- Import apply runs inside a DB transaction and invalidates only the imported
+  resource-family caches after success.
+- Recent Imports hydrates from `tools:import:history` browser cache; export
+  bundle payloads and uploaded bundle contents stay uncached.
 
 ## Implementation Order
 
@@ -112,9 +118,8 @@ Import/export routes are internal admin settings operations:
 - `_docs/CMS_API.md`, `_docs/ARCHITECTURE.md`, and `_docs/SECURITY_SPEC.md` if
   export target shape, import activity storage, retry behavior, or secret
   redaction policy changes
-- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if import/export
-  activity or exports become cached; otherwise document the intentional uncached
-  rationale
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` for cached Recent
+  Imports and uncached export/upload payload boundaries
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 

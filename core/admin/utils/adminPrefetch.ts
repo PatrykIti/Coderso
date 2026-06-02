@@ -27,6 +27,12 @@ import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
 } from "@/services/adminThemeClient";
+import { getOverviewCached, getTopContentCached } from "@/services/analyticsClient";
+import { getBackupScheduleCached, listBackupsCached } from "@/services/backupsClient";
+import { listImportHistoryCached } from "@/services/importExportClient";
+import { listRedirectsCached } from "@/services/redirectsClient";
+import { listRecentSearchesCached } from "@/services/searchClient";
+import { listSeoCached } from "@/services/seoClient";
 import { listWidgetTemplateCategoriesCached } from "@/services/widgetTemplateCategoriesClient";
 import { listWidgetTemplatesCached } from "@/services/widgetTemplatesClient";
 import { listWidgetCatalogCached } from "@/services/widgetsClient";
@@ -412,6 +418,40 @@ const defaultEntries: AdminPrefetchEntry[] = [
         listAdminThemeTemplatesCached(prefetchWarmupOptions),
         listAdminThemeProfilesCached(prefetchWarmupOptions),
       ]),
+  },
+  {
+    match: "/search",
+    run: () => listRecentSearchesCached(prefetchWarmupOptions),
+  },
+  {
+    match: "/seo",
+    run: () => listSeoCached(prefetchWarmupOptions),
+  },
+  {
+    match: "/analytics",
+    run: () =>
+      Promise.all([
+        getOverviewCached(30, prefetchWarmupOptions),
+        getTopContentCached({ limit: 50, rangeDays: 30, ...prefetchWarmupOptions }),
+      ]),
+  },
+  {
+    match: "/backups",
+    run: () =>
+      Promise.all([
+        listBackupsCached({ page: 1, limit: 10, ...prefetchWarmupOptions }),
+        getBackupScheduleCached(prefetchWarmupOptions),
+      ]),
+  },
+  {
+    match: "/tools/import-export",
+    run: () => {
+      listImportHistoryCached();
+    },
+  },
+  {
+    match: "/redirects",
+    run: () => listRedirectsCached(prefetchWarmupOptions),
   },
 ];
 

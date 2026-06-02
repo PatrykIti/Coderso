@@ -1,4 +1,13 @@
 import { apiRequest } from "./apiClient";
+import { broadcastCacheEvent } from "@/utils/cacheBus";
+import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
+import { createMemoryBackedLocalCache } from "@/utils/storageCache";
+import {
+  clearAdminThemeProfilesCache,
+  clearAdminThemeTemplatesCache,
+} from "@/services/adminThemeClient";
+import { clearMenusCache } from "@/services/menusClient";
+import { clearRedirectsCache } from "@/services/redirectsClient";
 
 export type ExportBundle = {
   version: number;
@@ -93,6 +102,118 @@ export type ImportResult = {
   summary: ImportSummary;
 };
 
+export type ImportHistoryStatus =
+  | "validating"
+  | "preview-ready"
+  | "applying"
+  | "applied"
+  | "failed";
+
+export type ImportHistoryItem = {
+  id: string;
+  fileName: string;
+  type: string;
+  sizeBytes: number;
+  status: ImportHistoryStatus;
+  progress: number;
+  createdAt: string;
+  completedAt?: string | null;
+  failureReason?: string | null;
+  summary?: ImportSummary | null;
+};
+
+const importHistoryLimit = 20;
+
+const isImportHistory = (value: unknown): value is ImportHistoryItem[] => Array.isArray(value);
+
+const importHistoryCache = createMemoryBackedLocalCache({
+  key: cacheKeys.importHistory,
+  ttlMs: cacheTtlMs.list,
+  validate: isImportHistory,
+});
+
+const primeImportHistoryCache = (items: ImportHistoryItem[]) => {
+  importHistoryCache.write(items.slice(0, importHistoryLimit));
+};
+
+export const getCachedImportHistory = () => importHistoryCache.read();
+
+export const listImportHistoryCached = () => getCachedImportHistory() ?? [];
+
+export const writeImportHistoryCache = (items: ImportHistoryItem[]) => {
+  primeImportHistoryCache(items);
+  broadcastCacheEvent({ key: cacheKeys.importHistory, action: "update" });
+};
+
+export const upsertImportHistoryItem = (item: ImportHistoryItem) => {
+  const current = getCachedImportHistory() ?? [];
+  const index = current.findIndex((historyItem) => historyItem.id === item.id);
+  const next = [...current];
+  if (index === -1) next.unshift(item);
+  else next[index] = item;
+  writeImportHistoryCache(next);
+};
+
+export const patchImportHistoryItem = (
+  id: string,
+  patch: Partial<Omit<ImportHistoryItem, "id">>
+) => {
+  const current = getCachedImportHistory();
+  if (!current) return null;
+  const index = current.findIndex((item) => item.id === id);
+  if (index === -1) return null;
+  const next = [...current];
+  const updated = { ...next[index], ...patch };
+  next[index] = updated;
+  writeImportHistoryCache(next);
+  return updated;
+};
+
+export const clearImportHistoryCache = () => {
+  importHistoryCache.clear();
+  broadcastCacheEvent({ key: cacheKeys.importHistory, action: "invalidate" });
+};
+
+const targetIncludeOptions: Record<ExportTarget, ExportIncludeOption[]> = {
+  full: [
+    "settings",
+    "menus",
+    "menu-items",
+    "theme-profiles",
+    "theme-routes",
+    "admin-theme-templates",
+    "admin-theme-profiles",
+    "redirects",
+  ],
+  settings: ["settings"],
+  menus: ["menus", "menu-items"],
+  themes: ["theme-profiles", "theme-routes", "admin-theme-templates", "admin-theme-profiles"],
+  redirects: ["redirects"],
+};
+
+const resolveImportedIncludes = (bundle: ExportBundle) =>
+  new Set(bundle.scope?.include ?? targetIncludeOptions[bundle.scope?.target ?? "full"]);
+
+const invalidateImportedResourceCaches = (bundle: ExportBundle) => {
+  const include = resolveImportedIncludes(bundle);
+  if (include.has("menus") || include.has("menu-items")) {
+    clearMenusCache();
+    broadcastCacheEvent({ key: cacheKeys.menusList, action: "invalidate" });
+  }
+  if (include.has("admin-theme-templates")) {
+    clearAdminThemeTemplatesCache();
+    broadcastCacheEvent({ key: cacheKeys.adminThemeTemplatesList, action: "invalidate" });
+  }
+  if (include.has("admin-theme-profiles")) {
+    clearAdminThemeProfilesCache();
+    broadcastCacheEvent({ key: cacheKeys.adminThemeProfilesList, action: "invalidate" });
+  }
+  if (include.has("redirects")) {
+    clearRedirectsCache();
+    broadcastCacheEvent({ key: cacheKeys.redirectsList, action: "invalidate" });
+  }
+};
+
 export async function exportConfig(request: ExportRequest = {}) {
   const params = new URLSearchParams();
   if (request.target) params.set("target", request.target);
@@ -118,7 +239,7 @@ export async function previewImport(bundle: ExportBundle) {
 }
 
 export async function importConfig(bundle: ExportBundle) {
-  return apiRequest<ImportResult>(
+  const result = await apiRequest<ImportResult>(
     "/tools/import",
     {
       method: "POST",
@@ -127,4 +248,6 @@ export async function importConfig(bundle: ExportBundle) {
     },
     { withCsrf: true }
   );
+  invalidateImportedResourceCaches(bundle);
+  return result;
 }

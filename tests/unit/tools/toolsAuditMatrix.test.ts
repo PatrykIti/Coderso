@@ -26,7 +26,7 @@ test("tools audit matrix requires runtime evidence for runtime-effect tools", ()
   );
 
   expect(runtimeKinds.get("seo")).toContain("public-html");
-  expect(runtimeKinds.get("backups")).toContain("artifact-or-external-worker");
+  expect(runtimeKinds.get("backups")).toContain("cms-artifact");
   expect(runtimeKinds.get("redirects")).toContain("public-redirect");
 });
 

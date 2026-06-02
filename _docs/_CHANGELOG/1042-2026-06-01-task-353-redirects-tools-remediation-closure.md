@@ -22,8 +22,12 @@ Tasks: TASK-353, TASK-353-01, TASK-353-02, TASK-353-03, TASK-353-04
 - Replaced placeholder table pagination with local page/limit/total state,
   cause-specific empty states, an inline create CTA, keyboard-visible row
   actions, and confirmed delete.
-- Documented Redirects as intentionally uncached because enabled rows affect
-  public routing immediately.
+- Added Redirects list admin cache hydration and cache-bus patching on
+  create/update/delete, so returning to the route reuses cached rows while
+  still updating public-routing-affecting changes promptly.
+- Added table selection and bulk enable/disable/delete actions, removed the
+  duplicate empty-state create CTA when the header create action is already
+  visible, and shortened the header action label to `Create`.
 
 ## Validation
 
@@ -39,3 +43,6 @@ Tasks: TASK-353, TASK-353-01, TASK-353-02, TASK-353-03, TASK-353-04
   accessible create drawer fields, UI create, public 301 `Location`, confirmed
   UI delete, and zero browser console errors/warnings after Vite optimize cache
   refresh. Temporary proof user/session and redirect rows were removed.
+- Final live Tools smoke confirmed `redirects:list` cache hydration, header
+  `Create` action, no duplicate empty-state CTA in populated mode, and visible
+  bulk action controls after selecting rows.

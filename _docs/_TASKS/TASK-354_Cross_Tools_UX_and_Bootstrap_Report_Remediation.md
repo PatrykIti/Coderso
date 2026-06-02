@@ -62,8 +62,13 @@ Done (2026-06-01): `scripts/tools-audit-matrix.ts` now machine-validates all
 six Tools routes for observable controls, empty-state next actions, async-state
 ownership, runtime-effect evidence, scoped fixture/cleanup plans, and report
 drift. Seed-admin now hashes through the pepper-aware password helper, Backups
-polls only while queued/running or worker-unhealthy states exist, Claude
-read-only review found no blockers, and changelog 1043 closes the family.
+polls only while queued/running states exist, all six Tools surfaces hydrate
+from their shared cache contracts, and changelog 1043 closes the family.
+Final live browser smoke covered Search, SEO Manager, Analytics, Backups,
+Import / Export, and Redirects end to end with evidence in
+`.tmp/tools-live-smoke-2026-06-01/result.json`. Claude CLI live review was
+attempted twice for the final refinement pass but timed out without review
+output, so the final closure does not claim a Claude no-blocker result.
 
 ## Implementation Order
 

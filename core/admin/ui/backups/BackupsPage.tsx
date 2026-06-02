@@ -1,5 +1,6 @@
 import { CloudUpload, Info } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -8,8 +9,10 @@ import {
   createBackup,
   deleteBackup,
   downloadBackup,
-  getBackupSchedule,
-  listBackups,
+  getBackupScheduleCached,
+  getCachedBackups,
+  getCachedBackupSchedule,
+  listBackupsCached,
   restoreBackup,
   updateBackupSchedule,
   type BackupIncludeOption,
@@ -17,8 +20,10 @@ import {
   type BackupSchedule,
   type BackupScheduleUpdate,
 } from "@/services/backupsClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { BackupNowDialog } from "./BackupNowDialog";
 import { BackupScheduleCard } from "./BackupScheduleCard";
@@ -35,19 +40,49 @@ const emptyBackupList: BackupListResult = {
   hasNext: false,
   hasPrevious: false,
   worker: {
-    mode: "external",
+    mode: "internal",
     healthy: true,
     queuedCount: 0,
     oldestQueuedAt: null,
-    message: "No backup jobs are waiting for the external backup worker.",
+    message: "CMS backup worker is ready.",
   },
 };
 
+const downloadBackupContent = (payload: {
+  content?: string;
+  contentType?: string;
+  fileName?: string;
+}) => {
+  if (typeof document === "undefined") return false;
+  if (!payload.content) return false;
+  const blob = new Blob([payload.content], {
+    type: payload.contentType ?? "application/octet-stream",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = payload.fileName ?? "coderso-backup.json";
+  anchor.click();
+  URL.revokeObjectURL(url);
+  return true;
+};
+
+const createInitialBackupsState = () => {
+  const backupList = getCachedBackups({ page: 1, limit: backupPageSize }) ?? emptyBackupList;
+  const schedule = getCachedBackupSchedule();
+  return {
+    backupList,
+    schedule,
+    hasCache: Boolean(schedule && getCachedBackups({ page: 1, limit: backupPageSize })),
+  };
+};
+
 export function BackupsPage() {
+  const [initialState] = useState(createInitialBackupsState);
   const [backupOpen, setBackupOpen] = useState(false);
-  const [backupList, setBackupList] = useState<BackupListResult>(emptyBackupList);
-  const [schedule, setSchedule] = useState<BackupSchedule | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [backupList, setBackupList] = useState<BackupListResult>(initialState.backupList);
+  const [schedule, setSchedule] = useState<BackupSchedule | null>(initialState.schedule);
+  const [isLoading, setIsLoading] = useState(!initialState.hasCache);
   const [isListLoading, setIsListLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [page, setPage] = useState(1);
@@ -55,16 +90,18 @@ export function BackupsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const loadBackups = useCallback(
-    async (next?: { page?: number; query?: string }) => {
+    async (next?: { page?: number; query?: string; force?: boolean; background?: boolean }) => {
       const requestedPage = next?.page ?? page;
       const requestedQuery = next?.query ?? query;
-      setIsListLoading(true);
+      if (!next?.background) setIsListLoading(true);
       try {
-        const result = await listBackups({
+        const request = {
           page: requestedPage,
           limit: backupPageSize,
           query: requestedQuery,
-        });
+          ...(next?.force === undefined ? {} : { force: next.force }),
+        };
+        const result = await listBackupsCached(request);
         setError(null);
         setBackupList(result);
         setPage(result.page);
@@ -75,57 +112,82 @@ export function BackupsPage() {
           setError("Failed to load backups.");
         }
       } finally {
-        setIsListLoading(false);
+        if (!next?.background) setIsListLoading(false);
       }
     },
     [page, query]
   );
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [nextBackups, nextSchedule] = await Promise.all([
-        listBackups({ page, limit: backupPageSize, query }),
-        getBackupSchedule(),
-      ]);
-      setError(null);
-      setBackupList(nextBackups);
-      setSchedule(nextSchedule);
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load backups.");
+  const refresh = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      if (!options?.background) setIsLoading(true);
+      try {
+        const [nextBackups, nextSchedule] = await Promise.all([
+          listBackupsCached({
+            page,
+            limit: backupPageSize,
+            query,
+            ...(options?.force === undefined ? {} : { force: options.force }),
+          }),
+          getBackupScheduleCached({ force: options?.force }),
+        ]);
+        setError(null);
+        setBackupList(nextBackups);
+        setSchedule(nextSchedule);
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load backups.");
+        }
+      } finally {
+        if (!options?.background) setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, query]);
+    },
+    [page, query]
+  );
 
   useEffect(() => {
     let active = true;
-    Promise.all([listBackups({ page: 1, limit: backupPageSize }), getBackupSchedule()])
-      .then(([nextBackupList, nextSchedule]) => {
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      if (!initialState.hasCache) setIsLoading(true);
+      try {
+        const [nextBackups, nextSchedule] = await Promise.all([
+          listBackupsCached({
+            page: 1,
+            limit: backupPageSize,
+            ...(initialState.hasCache ? { force: true } : {}),
+          }),
+          getBackupScheduleCached(initialState.hasCache ? { force: true } : undefined),
+        ]);
         if (!active) return;
         setError(null);
-        setBackupList(nextBackupList);
+        setBackupList(nextBackups);
         setSchedule(nextSchedule);
-      })
-      .catch((err: unknown) => {
+      } catch (err) {
         if (!active) return;
         if (isApiClientError(err)) {
           setError(err.message);
         } else {
           setError("Failed to load backups.");
         }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+      } finally {
+        if (active && !initialState.hasCache) setIsLoading(false);
+      }
+    });
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialState.hasCache]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key === cacheKeys.backupSchedule || event.key.startsWith("backups:list:")) {
+        void refresh({ force: event.action === "invalidate", background: true });
+      }
+    });
+  }, [refresh]);
 
   const shouldPollBackups =
     !backupList.worker.healthy ||
@@ -135,7 +197,7 @@ export function BackupsPage() {
   useEffect(() => {
     if (!shouldPollBackups) return undefined;
     const interval = window.setInterval(() => {
-      void loadBackups();
+      void loadBackups({ force: true, background: true });
     }, backupPollingIntervalMs);
     return () => window.clearInterval(interval);
   }, [loadBackups, shouldPollBackups]);
@@ -144,14 +206,24 @@ export function BackupsPage() {
     setIsSaving(true);
     setError(null);
     try {
-      await createBackup({ kind: "manual", include });
-      await loadBackups({ page: 1 });
+      const backup = await createBackup({ kind: "manual", include });
+      await loadBackups({ page: 1, force: true });
+      if (backup.status === "failed") {
+        const message = backup.error ?? "Backup failed.";
+        setError(message);
+        toast.error(message);
+        return false;
+      }
+      toast.success("Backup created.");
       return true;
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Failed to create backup.");
+        const message = "Failed to create backup.";
+        setError(message);
+        toast.error(message);
       }
       return false;
     } finally {
@@ -176,11 +248,15 @@ export function BackupsPage() {
     try {
       const updated = await updateBackupSchedule(next);
       setSchedule(updated);
+      toast.success("Backup schedule updated.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Failed to update backup schedule.");
+        const message = "Failed to update backup schedule.";
+        setError(message);
+        toast.error(message);
       }
     } finally {
       setIsSaving(false);
@@ -192,12 +268,16 @@ export function BackupsPage() {
     setError(null);
     try {
       await restoreBackup(id);
-      await refresh();
+      await refresh({ force: true });
+      toast.success("Backup restore started.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Failed to restore backup.");
+        const message = "Failed to restore backup.";
+        setError(message);
+        toast.error(message);
       }
     } finally {
       setIsSaving(false);
@@ -211,14 +291,22 @@ export function BackupsPage() {
       const payload = await downloadBackup(id);
       if (payload.url && typeof window !== "undefined") {
         window.open(payload.url, "_blank", "noopener,noreferrer");
+        toast.success("Backup download opened.");
+      } else if (downloadBackupContent(payload)) {
+        toast.success("Backup downloaded.");
       } else {
-        setError("Backup is not ready for download.");
+        const message = "Backup is not ready for download.";
+        setError(message);
+        toast.error(message);
       }
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Failed to download backup.");
+        const message = "Failed to download backup.";
+        setError(message);
+        toast.error(message);
       }
     } finally {
       setIsSaving(false);
@@ -236,12 +324,16 @@ export function BackupsPage() {
       await deleteBackup(id);
       const nextPage =
         backupList.items.length === 1 && backupList.hasPrevious ? Math.max(1, page - 1) : page;
-      await loadBackups({ page: nextPage });
+      await loadBackups({ page: nextPage, force: true });
+      toast.success("Backup deleted.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Failed to delete backup.");
+        const message = "Failed to delete backup.";
+        setError(message);
+        toast.error(message);
       }
     } finally {
       setIsSaving(false);
@@ -282,7 +374,7 @@ export function BackupsPage() {
           onRestore={handleRestore}
           onDownload={handleDownload}
           onDelete={handleDelete}
-          onRefresh={() => void loadBackups()}
+          onRefresh={() => void loadBackups({ force: true })}
           onPageChange={handlePageChange}
           onQueryChange={handleQueryChange}
         />
@@ -294,8 +386,9 @@ export function BackupsPage() {
             <div className="space-y-1">
               <p className="text-sm font-semibold">Storage Information</p>
               <p className="text-xs text-blue-700/90 dark:text-blue-200/80">
-                Backup jobs are queued for the configured external worker. Completed backups become
-                downloadable only when the worker publishes a secure artifact URL.
+                Backup jobs run inside the CMS. Completed local backups download through the
+                authenticated admin API; remote artifacts open only when a configured storage URL is
+                available.
               </p>
             </div>
           </div>

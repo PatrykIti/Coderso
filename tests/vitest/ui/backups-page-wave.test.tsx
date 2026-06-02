@@ -32,11 +32,11 @@ const backupsState = vi.hoisted(() => ({
     hasNext: false,
     hasPrevious: false,
     worker: {
-      mode: "external",
+      mode: "internal",
       healthy: true,
       queuedCount: 0,
       oldestQueuedAt: null,
-      message: "No backup jobs are waiting for the external backup worker.",
+      message: "CMS backup worker is ready.",
     },
   } as Omit<BackupListResult, "items">,
   scheduleResult: {
@@ -55,7 +55,13 @@ const backupsState = vi.hoisted(() => ({
   nextRestoreError: null as unknown,
   nextDownloadError: null as unknown,
   nextDeleteError: null as unknown,
-  nextDownloadPayload: { url: "https://cdn.test/backup-1.zip" } as { url: string | null },
+  nextDownloadPayload: { url: "https://cdn.test/backup-1.zip", path: null } as {
+    url: string | null;
+    path: string | null;
+    content?: string;
+    contentType?: string;
+    fileName?: string;
+  },
   listBackups: vi.fn(async (options?: Record<string, unknown>) => {
     if (backupsState.nextListError) {
       const error = backupsState.nextListError;
@@ -83,7 +89,7 @@ const backupsState = vi.hoisted(() => ({
       backupsState.nextCreateError = null;
       throw error;
     }
-    return { ok: true };
+    return backupsState.listItems[0];
   }),
   updateBackupSchedule: vi.fn(async (payload: Record<string, unknown>) => {
     if (backupsState.nextUpdateError) {
@@ -152,11 +158,11 @@ const backupsState = vi.hoisted(() => ({
       hasNext: false,
       hasPrevious: false,
       worker: {
-        mode: "external",
+        mode: "internal",
         healthy: true,
         queuedCount: 0,
         oldestQueuedAt: null,
-        message: "No backup jobs are waiting for the external backup worker.",
+        message: "CMS backup worker is ready.",
       },
     };
     backupsState.scheduleResult = {
@@ -175,7 +181,7 @@ const backupsState = vi.hoisted(() => ({
     backupsState.nextRestoreError = null;
     backupsState.nextDownloadError = null;
     backupsState.nextDeleteError = null;
-    backupsState.nextDownloadPayload = { url: "https://cdn.test/backup-1.zip" };
+    backupsState.nextDownloadPayload = { url: "https://cdn.test/backup-1.zip", path: null };
     backupsState.listBackups.mockClear();
     backupsState.getBackupSchedule.mockClear();
     backupsState.createBackup.mockClear();
@@ -222,7 +228,11 @@ vi.mock("@/services/apiClient", () => ({
 
 vi.mock("@/services/backupsClient", () => ({
   listBackups: backupsState.listBackups,
+  listBackupsCached: backupsState.listBackups,
+  getCachedBackups: vi.fn(() => null),
   getBackupSchedule: backupsState.getBackupSchedule,
+  getBackupScheduleCached: backupsState.getBackupSchedule,
+  getCachedBackupSchedule: vi.fn(() => null),
   createBackup: backupsState.createBackup,
   updateBackupSchedule: backupsState.updateBackupSchedule,
   restoreBackup: backupsState.restoreBackup,
@@ -530,7 +540,7 @@ test("BackupsPage surfaces load and action errors, including missing download UR
     await flush();
     expect(view.container.textContent).toContain("Failed to restore backup.");
 
-    backupsState.nextDownloadPayload = { url: null };
+    backupsState.nextDownloadPayload = { url: null, path: null };
     clickByText(view.container, "download:backup-1");
     await flush();
     expect(view.container.textContent).toContain("Backup is not ready for download.");
@@ -572,11 +582,11 @@ test("BackupsPage polls while backup jobs are queued", async () => {
     ...backupsState.listMeta,
     total: 1,
     worker: {
-      mode: "external",
+      mode: "internal",
       healthy: true,
       queuedCount: 1,
       oldestQueuedAt: "2026-03-15T08:00:00.000Z",
-      message: "Backup jobs are still waiting for the external backup worker.",
+      message: "CMS backup worker is processing backup jobs.",
     },
   };
 
@@ -597,6 +607,7 @@ test("BackupsPage polls while backup jobs are queued", async () => {
       page: 1,
       limit: 10,
       query: "",
+      force: true,
     });
   } finally {
     view.cleanup();

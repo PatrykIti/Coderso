@@ -25,8 +25,13 @@ Tasks: TASK-352, TASK-352-01, TASK-352-02, TASK-352-03, TASK-352-04, TASK-352-05
   `Upload again` action.
 - Aligned import copy, file input accept list, parser behavior, and client
   rejection to JSON-only bundles until CSV/ZIP contracts exist.
-- Documented Import / Export as intentionally uncached because bundles may
-  contain controlled configuration data and activity rows are session-local.
+- Scoped export loading to the clicked card so one download no longer disables
+  unrelated export cards.
+- Wrapped import apply mutations in a DB transaction and invalidated only the
+  imported resource-family caches after success.
+- Added browser-cache hydration for session-local Recent Imports through
+  `tools:import:history`; export bundle payloads and uploaded bundle contents
+  remain uncached.
 
 ## Validation
 
@@ -42,3 +47,6 @@ Tasks: TASK-352, TASK-352-01, TASK-352-02, TASK-352-03, TASK-352-04, TASK-352-05
   page/network loading errors. The expected malformed-bundle 400 was observed
   and excluded from unexpected-error counts. Temporary fixtures were removed
   after the pass.
+- Final live Tools smoke paused one export request and confirmed only the
+  clicked card showed `Preparing...`, then applied a real JSON settings bundle
+  through the UI and confirmed `tools:import:history` cache hydration.

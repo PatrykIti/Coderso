@@ -697,9 +697,9 @@ Zakres CMS, model danych, auth i security opisane sa w:
   stal sie open-redirect primitive.
 - Runtime zwija bezpieczne lancuchy do finalnej sciezki z pierwszym statusem,
   a self-loop, cykle i przekroczenie limitu hopow fail-closed przez HTTP `508`.
-- Redirects admin list pozostaje intentionally uncached; create/update/delete
-  odswiezaja liste bez localStorage/cache-bus, bo wlaczone rekordy natychmiast
-  zmieniaja publiczna warstwe routingu.
+- Redirects admin list korzysta z cache `redirects:list`; create/update/delete
+  patchuja cache i emituja cache-bus update, bo wlaczone rekordy natychmiast
+  zmieniaja publiczna warstwe routingu i inne karty admina musza odswiezyc stan.
 
 ## Forms (v1)
 
@@ -937,20 +937,26 @@ Zakres CMS, model danych, auth i security opisane sa w:
 
 ## Backups (v1)
 
-- Backupy w v1 to **metadata-only** zapisane w tabeli `backups`.
+- Backupy w v1 sa rekordami w tabeli `backups` z CMS-managed lokalnym
+  artefaktem JSON dla manualnych requestow.
 - Harmonogram trzymany jest w `backup_schedules` i konfigurowany z Admin UI.
 - Storage driver dla backupu jest brany z ustawien storage (local/s3/azure).
-- Manual create zapisuje queued job i request-time include option keys
-  (`database`, `media`, `settings`) do service/audit contractu. Core nie
-  zapisuje sekretnych wartosci ani zawartosci artefaktu w payloadach UI/API.
-- Faktyczne tworzenie, publikacja bezpiecznego `http(s)` download URL, oraz
-  restore plikow backupu realizuje przyszly external worker/plugin.
-- Core UI/API musza pokazywac te granice jawnie: queued/running jobs wskazuja
-  external worker, download jest dostepny tylko dla completed rows z
-  worker-provided URL, restore pozostaje unsupported do czasu worker-backed
-  restore, a delete usuwa tylko metadata row.
-- Backups admin list pozostaje intentional uncached, bo stan kolejki/worker
-  health jest szybkozmienny i moze ujawniac operacyjne informacje.
+- Manual create zapisuje running row, request-time include option keys
+  (`database`, `media`, `settings`) do service/audit contractu, tworzy artefakt
+  w `BACKUP_DIR` albo `storage/backups`, a potem oznacza row jako `complete`.
+  Core nie zapisuje sekretnych wartosci ani zawartosci artefaktu w
+  localStorage/debug payloadach.
+- Local download zwraca JSON content tylko w odpowiedzi `/backups/:id/download`;
+  listy i browser cache redaktuja lokalny `artifactPath` do wartosci `local`.
+  Publiczne `http(s)` artifact URLs pozostaja dozwolone dla przyszlych
+  integracji storage/plugin, ale raw local filesystem paths nie sa ujawniane.
+- Restore pozostaje unsupported (`backup_restore_unsupported`) do czasu
+  osobnego restore contractu. Delete usuwa wybrany metadata row i nalezacy do
+  niego lokalny artefakt, jesli sciezka jest w dozwolonym katalogu backupow.
+- Backups admin list i schedule korzystaja z cache
+  `backups:list:<page>:<limit>:<queryKey>` oraz `backups:schedule`; mutacje
+  invaliduja cache przez cache bus, a cache nigdy nie przechowuje zawartosci
+  artefaktu.
 
 ## Kluczowe decyzje architektoniczne
 

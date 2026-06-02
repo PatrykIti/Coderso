@@ -18,7 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import {
   DEFAULT_SEARCH_DATE_RANGE,
-  listRecentSearches,
+  getCachedRecentSearches,
+  listRecentSearchesCached,
   normalizeSearchDateRange,
   type SearchDateRange,
   type SearchResponseMeta,
@@ -124,7 +125,9 @@ export function SearchPage() {
   const [query, setQuery] = useState("");
   const { navigate, prefetch } = useAdminRouter();
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() =>
+    (getCachedRecentSearches() ?? []).map((row) => row.query)
+  );
   const [recentError, setRecentError] = useState<string | null>(null);
   const [categorySelection, setCategorySelection] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<SearchDateRange>(DEFAULT_SEARCH_DATE_RANGE);
@@ -139,9 +142,9 @@ export function SearchPage() {
     error,
   } = useSearchResults(query, { limit: 50, dateRange });
 
-  const refreshRecent = useCallback(async () => {
+  const refreshRecent = useCallback(async (options?: { force?: boolean }) => {
     try {
-      const rows = await listRecentSearches();
+      const rows = await listRecentSearchesCached(options);
       setRecentSearches(rows.map((row) => row.query));
       setRecentError(null);
     } catch (err) {
@@ -163,7 +166,7 @@ export function SearchPage() {
   useEffect(() => {
     if (!shouldSearch || !normalizedQuery) return;
     const timer = setTimeout(() => {
-      void refreshRecent();
+      void refreshRecent({ force: true });
     }, 150);
     return () => clearTimeout(timer);
   }, [normalizedQuery, shouldSearch, refreshRecent]);

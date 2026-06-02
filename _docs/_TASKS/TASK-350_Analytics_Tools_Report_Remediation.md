@@ -96,3 +96,6 @@ strict internal admin endpoint; KPI cards distinguish `No data yet`,
 publish content or widen the date range. Focused browser proof covered empty
 data, a temporary published page fixture across all visible ranges, CSV export,
 and zero console/page errors; temporary fixtures were cleaned up.
+Analytics overview and Top Content now hydrate from range-scoped browser cache,
+and final live Tools smoke confirmed `analytics:overview:30` plus
+`analytics:topContent:30:50:all` after real admin UI load.

@@ -2,6 +2,7 @@ import { Ban, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -27,11 +28,15 @@ type RedirectsTableProps = {
   items: RedirectRow[];
   isLoading: boolean;
   isSaving: boolean;
+  selectedIds?: string[];
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
   total: number;
   page: number;
   limit: number;
   isFiltering?: boolean;
-  onCreate?: () => void;
+  onToggleAll?: () => void;
+  onToggleRedirect?: (id: string) => void;
   onEdit?: (redirect: RedirectRow) => void;
   onToggle?: (redirect: RedirectRow) => void;
   onDelete?: (redirect: RedirectRow) => void;
@@ -62,11 +67,15 @@ export function RedirectsTable({
   items,
   isLoading,
   isSaving,
+  selectedIds = [],
+  isAllSelected = false,
+  isIndeterminate = false,
   total,
   page,
   limit,
   isFiltering = false,
-  onCreate,
+  onToggleAll,
+  onToggleRedirect,
   onEdit,
   onToggle,
   onDelete,
@@ -88,6 +97,13 @@ export function RedirectsTable({
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
+            <TableHead className="w-10 pl-4">
+              <Checkbox
+                aria-label="Select all redirects"
+                checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                onCheckedChange={() => onToggleAll?.()}
+              />
+            </TableHead>
             <TableHead className="px-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               From URL
             </TableHead>
@@ -111,31 +127,30 @@ export function RedirectsTable({
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={6} className="px-6 py-6 text-sm text-muted-foreground">
+              <TableCell colSpan={7} className="px-6 py-6 text-sm text-muted-foreground">
                 Loading redirects...
               </TableCell>
             </TableRow>
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="px-6 py-8">
-                <div className="flex flex-col items-start gap-3 text-sm text-muted-foreground">
-                  <span>
-                    {isFiltering ? "No redirects match your search." : "No redirects found."}
-                  </span>
-                  {!isFiltering && onCreate ? (
-                    <Button variant="outline" size="sm" onClick={onCreate} disabled={isSaving}>
-                      Create your first redirect
-                    </Button>
-                  ) : null}
-                </div>
+              <TableCell colSpan={7} className="px-6 py-8 text-sm text-muted-foreground">
+                {isFiltering ? "No redirects match your search." : "No redirects found."}
               </TableCell>
             </TableRow>
           ) : (
             items.map((redirect) => {
               const status = statusMeta[redirect.status];
+              const isSelected = selectedIds.includes(redirect.id);
 
               return (
-                <TableRow key={redirect.id} className="group">
+                <TableRow key={redirect.id} className={cn("group", isSelected && "bg-muted/30")}>
+                  <TableCell className="pl-4">
+                    <Checkbox
+                      aria-label={`Select redirect from ${redirect.from}`}
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleRedirect?.(redirect.id)}
+                    />
+                  </TableCell>
                   <TableCell className="px-6 py-4 text-sm font-medium text-foreground">
                     {redirect.from}
                   </TableCell>

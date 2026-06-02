@@ -12,8 +12,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isApiClientError } from "@/services/apiClient";
 import {
   exportTopContent,
-  getOverview,
-  getTopContent,
+  getCachedOverview,
+  getCachedTopContent,
+  getOverviewCached,
+  getTopContentCached,
   type AnalyticsOverview,
   type TopContentItem,
 } from "@/services/analyticsClient";
@@ -34,6 +36,23 @@ const metricLabels: Record<AnalyticsMetricKey, string> = {
 };
 
 const formatMetricValue = (value: number) => (value === 0 ? "-" : value.toLocaleString("en-US"));
+
+const resolveRangeDays = (value: string) => {
+  if (value === "ytd") return 365;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 30;
+  return parsed;
+};
+
+const createInitialAnalyticsState = () => {
+  const overview = getCachedOverview(30);
+  const topContent = getCachedTopContent({ limit: 50, rangeDays: 30 });
+  return {
+    overview,
+    topContent: topContent ?? [],
+    isLoading: !(overview && topContent),
+  };
+};
 
 const calcChange = (input: { total: number; current: number; previous: number }) => {
   if (input.total === 0) {
@@ -72,23 +91,28 @@ export function buildAnalyticsKpiCards(overview: AnalyticsOverview | null): KpiC
 }
 
 export function AnalyticsPage() {
+  const [initialState] = useState(createInitialAnalyticsState);
   const [topContentOpen, setTopContentOpen] = useState(false);
   const [rangeValue, setRangeValue] = useState("30");
-  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
-  const [topContent, setTopContent] = useState<TopContentItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(initialState.overview);
+  const [topContent, setTopContent] = useState<TopContentItem[]>(initialState.topContent);
+  const [isLoading, setIsLoading] = useState(initialState.isLoading);
   const [error, setError] = useState<string | null>(null);
 
-  const rangeDays = useMemo(() => {
-    if (rangeValue === "ytd") return 365;
-    const parsed = Number(rangeValue);
-    if (!Number.isFinite(parsed)) return 30;
-    return parsed;
-  }, [rangeValue]);
+  const rangeDays = useMemo(() => resolveRangeDays(rangeValue), [rangeValue]);
 
   useEffect(() => {
     let active = true;
-    Promise.all([getOverview(rangeDays), getTopContent({ limit: 50, rangeDays })])
+    const cachedOverview = getCachedOverview(rangeDays);
+    const cachedTopContent = getCachedTopContent({ limit: 50, rangeDays });
+    Promise.all([
+      getOverviewCached(rangeDays, { force: Boolean(cachedOverview) }),
+      getTopContentCached({
+        limit: 50,
+        rangeDays,
+        force: Boolean(cachedTopContent),
+      }),
+    ])
       .then(([nextOverview, nextTop]) => {
         if (!active) return;
         setError(null);
@@ -152,11 +176,17 @@ export function AnalyticsPage() {
         <Select
           value={rangeValue}
           onValueChange={(nextValue) => {
-            setIsLoading(true);
             setError(null);
-            setOverview(null);
-            setTopContent([]);
             setRangeValue(nextValue);
+            const nextRangeDays = resolveRangeDays(nextValue);
+            const cachedOverview = getCachedOverview(nextRangeDays);
+            const cachedTopContent = getCachedTopContent({
+              limit: 50,
+              rangeDays: nextRangeDays,
+            });
+            setOverview(cachedOverview ?? null);
+            setTopContent(cachedTopContent ?? []);
+            setIsLoading(!(cachedOverview && cachedTopContent));
           }}
         >
           <SelectTrigger className="h-9">

@@ -91,8 +91,8 @@ const getActionState = (
 ): { restore: string | null; download: string | null } => {
   if (backup.status === "queued" || backup.status === "running") {
     return {
-      restore: "Backup is waiting for the external backup worker.",
-      download: "Backup is waiting for the external backup worker.",
+      restore: "Backup is still being processed.",
+      download: "Backup is still being processed.",
     };
   }
   if (backup.status === "failed") {
@@ -109,12 +109,12 @@ const getActionState = (
   }
   if (!isDownloadableArtifactPath(backup.artifactPath)) {
     return {
-      restore: "Restore requires a configured backup worker.",
-      download: "Backup artifact is not downloadable from this admin route.",
+      restore: "Restore is not available for CMS-managed backup files yet.",
+      download: null,
     };
   }
   return {
-    restore: "Restore requires a configured backup worker.",
+    restore: "Restore is not available for CMS-managed backup files yet.",
     download: null,
   };
 };
@@ -123,9 +123,9 @@ const getQueueMessage = (backup: BackupItem) => {
   if (backup.status !== "queued" && backup.status !== "running") return null;
   const createdAt = new Date(backup.createdAt).getTime();
   if (Number.isFinite(createdAt) && Date.now() - createdAt > queuedWarningMs) {
-    return "Waiting for the external backup worker for more than 15 minutes.";
+    return "Processing for more than 15 minutes.";
   }
-  return "Waiting for the external backup worker.";
+  return "Processing backup.";
 };
 
 export function BackupsTable({
@@ -160,9 +160,8 @@ export function BackupsTable({
         </div>
       </div>
       {!result.worker.healthy ? (
-        <div className="border-b border-amber-500/20 bg-amber-500/10 px-6 py-3 text-sm text-amber-700 dark:text-amber-300">
-          Backup jobs are queued longer than expected. Confirm that the external backup worker is
-          running.
+        <div className="border-b border-border bg-muted/30 px-6 py-3 text-sm text-muted-foreground">
+          Backup jobs are taking longer than expected. Refresh to check the latest worker state.
         </div>
       ) : null}
       <Table>

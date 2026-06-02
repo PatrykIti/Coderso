@@ -22,6 +22,8 @@ export type SeoItem = {
   socialStatus: "ready" | "missing";
   metaTitle: string;
   metaDescription: string;
+  canonicalUrl: string;
+  robots: string;
   keywords: string[];
   previewUrl: string;
   previewPath: string;

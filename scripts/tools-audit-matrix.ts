@@ -27,13 +27,13 @@ export type ToolEmptyState = {
 };
 
 export type ToolAsyncState = {
-  kind: "not-run" | "queued" | "running" | "completed" | "failed" | "external-worker" | "no-data";
+  kind: "not-run" | "queued" | "running" | "completed" | "failed" | "internal-worker" | "no-data";
   evidence: string;
 };
 
 export type ToolRuntimeEffect = {
   kind:
-    | "artifact-or-external-worker"
+    | "cms-artifact"
     | "csv-download"
     | "navigation"
     | "payload-change"
@@ -221,14 +221,14 @@ export const toolsAuditMatrix: ToolAuditCase[] = [
         name: "Restore queued backup",
         state: "disabled",
         expectedEffect: "static-unavailable",
-        disabledReason: "Backup is waiting for the external backup worker.",
+        disabledReason: "Backup is still being processed.",
         evidence: "Disabled restore action exposes a reason.",
       },
       {
         name: "Download queued backup",
         state: "disabled",
         expectedEffect: "static-unavailable",
-        disabledReason: "Backup is waiting for the external backup worker.",
+        disabledReason: "Backup is still being processed.",
         evidence: "Disabled download action exposes a reason.",
       },
       {
@@ -251,16 +251,16 @@ export const toolsAuditMatrix: ToolAuditCase[] = [
       },
     ],
     asyncStates: [
-      { kind: "queued", evidence: "Queued rows explain external-worker wait state." },
-      { kind: "external-worker", evidence: "Worker health message is visible." },
+      { kind: "queued", evidence: "Queued rows explain CMS processing state." },
+      { kind: "internal-worker", evidence: "CMS backup worker health message is visible." },
       { kind: "running", evidence: "Running rows keep destructive actions reason-disabled." },
       { kind: "failed", evidence: "Failed rows show bounded error text." },
       { kind: "completed", evidence: "Completed metadata is listed with artifact readiness." },
     ],
     runtimeEffects: [
       {
-        kind: "artifact-or-external-worker",
-        evidence: "V1 proves metadata queue plus explicit external-worker boundary.",
+        kind: "cms-artifact",
+        evidence: "Completed local backups download through the authenticated CMS API.",
       },
     ],
     fixture: "Manual backup request with scoped include options.",
@@ -377,7 +377,7 @@ const expectedIds = ["search", "seo", "analytics", "backups", "import-export", "
 const asyncRequiredIds = new Set(["seo", "backups", "import-export"]);
 const runtimeRequiredKinds = new Map([
   ["seo", "public-html"],
-  ["backups", "artifact-or-external-worker"],
+  ["backups", "cms-artifact"],
   ["redirects", "public-redirect"],
 ]);
 

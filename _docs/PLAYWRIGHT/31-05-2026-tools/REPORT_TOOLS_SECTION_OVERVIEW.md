@@ -26,12 +26,13 @@ Current classification:
   Range filtering through the API/service contract; SEO Manager saves now update
   public page HTML metadata and refresh scores; Analytics can surface a real
   published page in range-scoped Top Content and export that ranking as CSV;
-  Backups enqueue metadata rows with a documented external-worker boundary,
-  controlled include payloads, stateful pagination, disabled action reasons,
-  and real metadata-row delete; Import / Export has controlled target/include
-  export, JSON-only import, mapped malformed-bundle rejection, searchable
-  session activity, and valid JSON roundtrip; Redirects save admin rows, execute
-  enabled public redirects for 301/302/307/308, reject unsafe destinations,
+  Backups create CMS-managed local JSON artifacts with controlled include
+  payloads, stateful pagination, local download, disabled restore reason,
+  cache redaction, and real metadata-row/artifact delete; Import / Export has
+  controlled target/include export, JSON-only import, mapped malformed-bundle
+  rejection, searchable session activity, and valid JSON roundtrip; Redirects
+  save admin rows, execute enabled public redirects for 301/302/307/308,
+  reject unsafe destinations,
   expose confirmed delete, and use truthful empty/pagination states.
 - Partially works: none from the original per-tool functional findings remain
   open after TASK-348 through TASK-353.
@@ -69,9 +70,9 @@ Current classification:
     drawer CSV export, and zero browser console/page errors through a focused
     Chrome DevTools Protocol pass.
   - TASK-351 follow-up proof on 2026-06-01 verified Backups include request
-    serialization, external-worker queued state, real pagination, disabled
-    restore/download reasons, real delete, and zero browser console/page
-    errors through a focused Chrome DevTools Protocol pass.
+    serialization, internal CMS artifact completion, local download, real
+    pagination, disabled restore reason, real delete, and zero browser
+    console/page errors through a focused Chrome DevTools Protocol pass.
   - TASK-352 follow-up proof on 2026-06-01 verified Import / Export
     target/include export shape, disabled unavailable controls, invalid JSON
     rejection, malformed UUID rejection, valid JSON preview/apply/restore,
@@ -117,11 +118,10 @@ Current classification:
   contract exists.
 - Empty states must name the cause and next action.
 - Long-running Tools states use the shared vocabulary:
-  `not-run`, `queued`, `running`, `completed`, `failed`, `external-worker`, and
-  `no-data`.
+  `not-run`, `queued`, `running`, `completed`, `failed`, and `no-data`.
 - Runtime-effect claims are matrix rows, not prose only:
-  SEO requires public HTML evidence, Backups requires artifact or explicit
-  external-worker evidence, and Redirects requires public redirect evidence.
+  SEO requires public HTML evidence, Backups requires artifact/download
+  evidence, and Redirects requires public redirect evidence.
 - Local validation command: `bun scripts/tools-audit-matrix.ts --validate`.
 
 ### [ISSUE] Several icon/buttons are visually actionable but have no behavior

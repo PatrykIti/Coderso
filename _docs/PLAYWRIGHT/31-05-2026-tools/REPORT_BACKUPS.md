@@ -29,9 +29,9 @@ Route: `/admin/backups`
 - Search showed a clear empty state for a non-matching term.
 - Restore, Download, and Delete were disabled for queued backups.
 - TASK-351 closure pass on 2026-06-01 proved controlled include options through
-  the UI request body (`database` + `settings` after toggling), queue/worker
-  messaging, real list pagination, disabled restore/download reasons, and a
-  real delete action for the created row.
+  the UI request body (`database` + `settings` after toggling), internal CMS
+  artifact completion, local download, real list pagination, disabled restore
+  reason, cache hydration, and a real delete action for the created row.
 - The closure pass recorded zero browser console errors, zero page exceptions,
   and zero network loading failures.
 
@@ -49,21 +49,21 @@ Resolution:
 - Browser proof toggled Media off and Settings on, then observed request body
   `{"kind":"manual","include":["database","settings"]}`.
 
-### [RESOLVED] Queued backups expose the v1 external-worker boundary
+### [RESOLVED] Manual backups create CMS-managed artifacts
 
 Resolution:
 
-- v1 remains metadata-only by architecture: the admin API enqueues backup rows
-  and a future worker/plugin owns artifact creation and restore execution.
-- The list response now includes external worker health and queued-job counts.
-- The table explains queued/running rows with external-worker copy and warns
-  when jobs are aged beyond the accepted threshold.
+- v1 manual backup creation is handled by the CMS process: the admin API writes
+  a local JSON artifact and marks the row `complete` on success.
+- The list response reports internal worker health and queue counts for legacy
+  queued/running rows, but new manual backups do not wait for an external
+  worker.
 - Restore is rejected as `backup_not_ready` before artifacts exist and
-  `backup_restore_unsupported` after completion until a worker-backed restore
+  `backup_restore_unsupported` after completion until a CMS restore
   implementation exists.
-- Download is enabled only for completed backups with worker-provided `http(s)`
-  artifact URLs; local or invalid artifact paths are disabled/rejected as
-  `backup_artifact_invalid`.
+- Download is enabled for completed CMS-managed local artifacts and returns
+  JSON content with `url: null` and `path: null`; list/browser cache redacts
+  local paths to `artifactPath: "local"`.
 
 ### [RESOLVED] Pagination buttons are stateful
 
@@ -90,7 +90,7 @@ Resolution:
 
 ## Side Effects
 
-- The audit created queued backup rows through the real UI/API path.
+- The audit created backup rows through the real UI/API path.
 - Original audit rows created on 2026-05-31 were left intact. TASK-351 closure
   rows and pagination fixtures were removed after proof.
 - The schedule settings changed during the test were restored to their original

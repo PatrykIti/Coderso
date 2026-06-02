@@ -116,3 +116,6 @@ admin read route and must preserve this contract:
 - Done (2026-06-01): Search navigation is covered by destination tests,
   row prefetch/select tests, and a focused Playwright CLI pass for page-result
   navigation from `/admin/search`.
+- Done (2026-06-01): Search now hydrates recent searches and bounded
+  query/date-range results from browser cache; final live Tools smoke confirmed
+  `search:recent` and `search:results:*` keys after real admin navigation.

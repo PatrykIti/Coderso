@@ -84,7 +84,7 @@ export const mapBackupError = (error: unknown) => {
     case "backup_restore_unsupported":
       return new ApiError(
         "backup_restore_unsupported",
-        "Backup restore requires an external backup worker.",
+        "Backup restore is not available for CMS-managed backup files yet.",
         409
       );
     case "backup_artifact_invalid":

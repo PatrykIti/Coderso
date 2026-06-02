@@ -48,6 +48,8 @@ vi.mock("@/services/importExportClient", () => ({
   previewImport: importExportState.previewImport,
   importConfig: importExportState.importConfig,
   exportConfig: importExportState.exportConfig,
+  getCachedImportHistory: vi.fn(() => []),
+  writeImportHistoryCache: vi.fn(),
 }));
 
 vi.mock("@/services/apiClient", () => ({
@@ -143,7 +145,7 @@ test("ImportExportPage renders truthful export cards and JSON-only import copy",
   expect(html).toContain("Navigation Menus");
   expect(html).toContain("Theme Configuration");
   expect(html).toContain("Redirect Rules");
-  expect(html).toContain("Support for .json configuration bundles up to 50MB");
+  expect(html).toContain("Drop or choose a .json configuration bundle up to 50MB");
   expect(html).not.toContain("Content Types");
   expect(html).not.toContain("Live & draft content");
   expect(html).not.toContain(".csv");
@@ -152,7 +154,7 @@ test("ImportExportPage renders truthful export cards and JSON-only import copy",
 
 test("ExportCards sends controlled target and include options", () => {
   const onExport = vi.fn();
-  const view = mount(<ExportCards onExport={onExport} isExporting={false} />);
+  const view = mount(<ExportCards onExport={onExport} exportingTargets={[]} />);
 
   try {
     const menuItemsLabel = Array.from(view.container.querySelectorAll("label")).find((label) =>
@@ -237,11 +239,13 @@ test("ImportDropzone previews valid JSON and records completed progress", async 
     expect(view.container.textContent).toContain("Import Preview");
     expect(view.container.textContent).toContain("bundle.json");
     const progressbar = view.container.querySelector("[role='progressbar']");
-    expect(progressbar?.getAttribute("aria-valuenow")).toBe("100");
+    expect(progressbar?.getAttribute("aria-valuenow")).toBe("65");
 
     clickByText(view.container, "Apply Import");
     await flush();
     expect(importExportState.importConfig).toHaveBeenCalledWith(bundle);
+    const appliedProgressbar = view.container.querySelector("[role='progressbar']");
+    expect(appliedProgressbar?.getAttribute("aria-valuenow")).toBe("100");
   } finally {
     view.cleanup();
   }

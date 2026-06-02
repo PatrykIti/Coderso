@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Filter, Search, SearchCheck } from "lucide-react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
-  listSeo,
+  getCachedSeo,
+  listSeoCached,
   runSeoAudit,
   updateSeo,
   type SeoAuditCheckId,
@@ -53,12 +55,13 @@ const resolvePreviewInfo = (slug: string | null) => {
 };
 
 const mapSeoItem = (item: SeoDocumentItem): SeoItem => {
-  const metaTitle = item.title ?? item.targetTitle;
+  const targetTitle = item.targetTitle ?? item.title ?? item.slug ?? item.targetId;
+  const metaTitle = item.title ?? targetTitle;
   const metaDescription = item.description ?? "";
   const { path, previewUrl, previewPath } = resolvePreviewInfo(item.slug);
   return {
     id: item.id,
-    title: item.targetTitle,
+    title: targetTitle,
     path,
     score: item.score ?? 0,
     lastAuditAt: item.lastAuditAt,
@@ -66,6 +69,8 @@ const mapSeoItem = (item: SeoDocumentItem): SeoItem => {
     socialStatus: "missing",
     metaTitle,
     metaDescription,
+    canonicalUrl: item.canonicalUrl ?? "",
+    robots: item.robots ?? "",
     keywords: [],
     previewUrl,
     previewPath,
@@ -76,22 +81,31 @@ const mapSeoItem = (item: SeoDocumentItem): SeoItem => {
   };
 };
 
+const createInitialSeoState = () => {
+  const cached = getCachedSeo();
+  return {
+    items: cached ? cached.map(mapSeoItem) : [],
+    hasCache: Boolean(cached),
+  };
+};
+
 export function SeoManagerPage() {
+  const [initialState] = useState(createInitialSeoState);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<SeoFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
-  const [items, setItems] = useState<SeoItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [items, setItems] = useState<SeoItem[]>(initialState.items);
+  const [isLoading, setIsLoading] = useState(!initialState.hasCache);
   const [isAuditing, setIsAuditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
+  const refresh = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
+    if (!options?.background) setIsLoading(true);
     setError(null);
     try {
-      const result = await listSeo();
+      const result = await listSeoCached({ force: options?.force });
       setItems(result.map(mapSeoItem));
     } catch (err) {
       if (isApiClientError(err)) {
@@ -106,25 +120,13 @@ export function SeoManagerPage() {
 
   useEffect(() => {
     let active = true;
-    listSeo()
-      .then((result) => {
-        if (active) setItems(result.map(mapSeoItem));
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load SEO data.");
-        }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+    void Promise.resolve().then(() => {
+      if (active) void refresh({ force: initialState.hasCache, background: initialState.hasCache });
+    });
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialState.hasCache, refresh]);
 
   const activeSelectedId =
     selectedId && items.some((item) => item.id === selectedId) ? selectedId : null;
@@ -135,17 +137,18 @@ export function SeoManagerPage() {
         event.key === cacheKeys.seoList ||
         (activeSelectedId && event.key === cacheKeys.seoDetail(activeSelectedId))
       ) {
-        void refresh();
+        void refresh({ force: event.action === "invalidate", background: true });
       }
     });
   }, [activeSelectedId, refresh]);
 
   const filteredItems = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
     return items.filter((item) => {
       const matchesQuery =
-        !query ||
-        item.title.toLowerCase().includes(query.toLowerCase()) ||
-        item.path.toLowerCase().includes(query.toLowerCase());
+        !normalizedQuery ||
+        (item.title ?? "").toLowerCase().includes(normalizedQuery) ||
+        (item.path ?? "").toLowerCase().includes(normalizedQuery);
       const matchesStatus = statusFilter === "all" || getHealth(item) === statusFilter;
       return matchesQuery && matchesStatus;
     });
@@ -198,32 +201,45 @@ export function SeoManagerPage() {
     setError(null);
     try {
       await runSeoAudit({ checks });
-      await refresh();
+      await refresh({ force: true });
+      toast.success("SEO audit completed.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Failed to run SEO audit.");
+        const message = "Failed to run SEO audit.";
+        setError(message);
+        toast.error(message);
       }
     } finally {
       setIsAuditing(false);
     }
   };
 
-  const handleSave = async (id: string, payload: { title: string; description: string }) => {
+  const handleSave = async (
+    id: string,
+    payload: { title: string; description: string; canonicalUrl: string; robots: string }
+  ) => {
     setIsSaving(true);
     setError(null);
     try {
       await updateSeo(id, {
         title: payload.title,
         description: payload.description,
+        canonicalUrl: payload.canonicalUrl,
+        robots: payload.robots,
       });
-      await refresh();
+      await refresh({ force: true });
+      toast.success("SEO updated.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Failed to update SEO data.");
+        const message = "Failed to update SEO data.";
+        setError(message);
+        toast.error(message);
       }
     } finally {
       setIsSaving(false);

@@ -7,6 +7,7 @@ import {
   createPage,
   deletePage,
   duplicatePage,
+  getPageBySlug,
   publishPage,
   unpublishPage,
   updatePage,
@@ -229,4 +230,27 @@ testIfDb("delete page removes it", async () => {
 
   const [row] = await db.select().from(pages).where(eq(pages.id, page.id));
   expect(row).toBeUndefined();
+});
+
+testIfDb("getPageBySlug resolves normalized and legacy slug variants", async () => {
+  const plainSlug = `lookup-${randomUUID()}`;
+  const legacySlug = `/legacy-${randomUUID()}`;
+  const plainPage = await createPage({
+    title: "Plain Lookup",
+    slug: plainSlug,
+    data: { schemaVersion: 1, blocks: [] },
+  });
+  const legacyPage = await createPage({
+    title: "Legacy Lookup",
+    slug: legacySlug,
+    data: { schemaVersion: 1, blocks: [] },
+  });
+
+  try {
+    expect((await getPageBySlug(`/${plainSlug}`))?.id).toBe(plainPage.id);
+    expect((await getPageBySlug(legacySlug.slice(1)))?.id).toBe(legacyPage.id);
+  } finally {
+    await cleanup(plainPage.id, undefined);
+    await cleanup(legacyPage.id, undefined);
+  }
 });

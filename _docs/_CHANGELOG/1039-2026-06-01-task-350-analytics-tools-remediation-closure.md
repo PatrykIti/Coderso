@@ -21,6 +21,8 @@ Tasks: TASK-350, TASK-350-01, TASK-350-02, TASK-350-03
   baseline shows `New`.
 - Updated Top Content empty states to tell users to publish content or widen the
   date range, and cleared stale metrics/rows during failed range reloads.
+- Added range-scoped admin cache hydration for Analytics overview and Top
+  Content, with `/admin/analytics` prefetch warming the default 30-day view.
 
 ## Validation
 
@@ -33,3 +35,5 @@ Tasks: TASK-350, TASK-350-01, TASK-350-02, TASK-350-03
   published page fixture across all visible ranges, drawer CSV export containing
   the fixture row, and zero browser console/page errors. Temporary browser,
   auth, role, session, and page fixtures were removed after the pass.
+- Final live Tools smoke confirmed `analytics:overview:30` and
+  `analytics:topContent:30:50:all` browser-cache keys after real UI load.

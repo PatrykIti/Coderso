@@ -48,6 +48,12 @@ export const mapSeoError = (error: unknown) => {
         400
       );
     }
+    if (error.message === "seo_canonical_invalid") {
+      return new ApiError("seo_canonical_invalid", "Canonical URL is invalid.", 400);
+    }
+    if (error.message === "seo_robots_invalid") {
+      return new ApiError("seo_robots_invalid", "Robots directive is invalid.", 400);
+    }
   }
   return null;
 };

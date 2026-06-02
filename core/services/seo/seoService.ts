@@ -49,6 +49,22 @@ const normalizePublicRobots = (value: string | null | undefined) => {
   return trimmed;
 };
 
+const normalizeCanonicalForStorage = (value: string | null | undefined) => {
+  const trimmed = normalizeNullableText(value);
+  if (!trimmed) return null;
+  const normalized = normalizePublicCanonicalUrl(trimmed);
+  if (!normalized) throw new Error("seo_canonical_invalid");
+  return normalized;
+};
+
+const normalizeRobotsForStorage = (value: string | null | undefined) => {
+  const trimmed = normalizeNullableText(value);
+  if (!trimmed) return null;
+  const normalized = normalizePublicRobots(trimmed);
+  if (!normalized) throw new Error("seo_robots_invalid");
+  return normalized;
+};
+
 const targetLookupKeys = (target: TargetRow) => {
   const keys = new Set([`${target.targetType}:${target.id}`]);
   if (target.slug) {
@@ -405,9 +421,10 @@ export async function upsertSeoDocument(input: SeoUpsertInput) {
           : existing.description,
       canonicalUrl:
         input.canonicalUrl !== undefined
-          ? normalizeNullableText(input.canonicalUrl)
+          ? normalizeCanonicalForStorage(input.canonicalUrl)
           : existing.canonicalUrl,
-      robots: input.robots !== undefined ? normalizeNullableText(input.robots) : existing.robots,
+      robots:
+        input.robots !== undefined ? normalizeRobotsForStorage(input.robots) : existing.robots,
     };
     const analysis = analyzeSeoDocument(next);
     const [row] = await db
@@ -426,8 +443,8 @@ export async function upsertSeoDocument(input: SeoUpsertInput) {
   const next = {
     title: normalizeNullableText(input.title),
     description: normalizeNullableText(input.description),
-    canonicalUrl: normalizeNullableText(input.canonicalUrl),
-    robots: normalizeNullableText(input.robots),
+    canonicalUrl: normalizeCanonicalForStorage(input.canonicalUrl),
+    robots: normalizeRobotsForStorage(input.robots),
   };
   const analysis = analyzeSeoDocument(next);
   const [row] = await db
@@ -458,9 +475,9 @@ export async function updateSeoDocumentById(
         : existing.description,
     canonicalUrl:
       input.canonicalUrl !== undefined
-        ? normalizeNullableText(input.canonicalUrl)
+        ? normalizeCanonicalForStorage(input.canonicalUrl)
         : existing.canonicalUrl,
-    robots: input.robots !== undefined ? normalizeNullableText(input.robots) : existing.robots,
+    robots: input.robots !== undefined ? normalizeRobotsForStorage(input.robots) : existing.robots,
   };
   const analysis = analyzeSeoDocument(next);
   const [row] = await db

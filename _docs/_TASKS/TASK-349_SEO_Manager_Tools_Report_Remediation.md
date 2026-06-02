@@ -111,3 +111,8 @@ recalculate saved SEO fields, clear public HTML cache, serialize strict audit
 checks, remove or disable UI-only controls, and render truthful pre-scan/table
 empty states. Focused Playwright proof covered `/admin/seo` audit + drawer save
 -> public `<title>`/meta description output with temporary fixtures cleaned.
+Final live Tools smoke also covered canonical/robots drawer fields and public
+`<title>`, description, canonical, and robots tags on a real published page;
+the final pass fixed public slug lookup for stored slugs with or without a
+leading slash and guarded the SEO list against stale cached rows missing title
+or path fields.

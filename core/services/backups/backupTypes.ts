@@ -30,7 +30,7 @@ export type BackupListQuery = {
 };
 
 export type BackupWorkerHealth = {
-  mode: "external";
+  mode: "internal" | "external";
   healthy: boolean;
   queuedCount: number;
   oldestQueuedAt: Date | null;
@@ -53,8 +53,11 @@ export type BackupDeleteResult = {
 };
 
 export type BackupDownload = {
-  url: string;
+  url: string | null;
   path: string | null;
+  fileName?: string;
+  contentType?: string;
+  content?: string;
 };
 
 export type BackupSchedule = {

@@ -46,7 +46,8 @@ the product contract is incomplete:
 Done (2026-06-01): enabled redirects now execute in public runtime with
 supported 301/302/307/308 statuses, internal-only destination validation, loop
 fail-closed behavior, route error mapping, drawer accessibility wiring,
-truthful empty/pagination state, confirmed delete UI, docs, reports, and
+truthful empty/pagination state, cached list hydration, selection plus bulk
+enable/disable/delete actions, confirmed delete UI, docs, reports, and
 changelog 1042.
 
 ## Implementation Order
@@ -93,8 +94,8 @@ Redirects bridge internal admin writes and public read behavior:
 - `_docs/CMS_API.md`, `_docs/ARCHITECTURE.md`, and `_docs/SECURITY_SPEC.md` for
   public redirect execution, loop/open-redirect policy, delete/pagination
   shape, and error mapping
-- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if Redirects becomes a
-  cached admin resource; otherwise document the intentional uncached rationale
+- `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` for Redirects list
+  cache hydration and cache-bus patching on create/update/delete
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 
@@ -107,3 +108,5 @@ Redirects bridge internal admin writes and public read behavior:
   behavior.
 - Route registration and `mapRedirectError` coverage prove known redirect
   failures are machine-readable at the route boundary.
+- Redirects list state hydrates from cache on revisit and still broadcasts
+  create/update/delete changes that affect public routing.

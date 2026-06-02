@@ -21,7 +21,10 @@ type SeoDrawerProps = {
   item: SeoItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (id: string, payload: { title: string; description: string }) => void;
+  onSave: (
+    id: string,
+    payload: { title: string; description: string; canonicalUrl: string; robots: string }
+  ) => void;
   isSaving?: boolean;
   error?: string | null;
 };
@@ -46,7 +49,7 @@ export function SeoDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SeoDrawerContent
-        key={`${item?.id ?? "empty"}:${item?.metaTitle ?? ""}:${item?.metaDescription ?? ""}`}
+        key={`${item?.id ?? "empty"}:${item?.metaTitle ?? ""}:${item?.metaDescription ?? ""}:${item?.canonicalUrl ?? ""}:${item?.robots ?? ""}`}
         item={item}
         onSave={onSave}
         isSaving={isSaving}
@@ -58,7 +61,10 @@ export function SeoDrawer({
 
 type SeoDrawerContentProps = {
   item: SeoItem | null;
-  onSave: (id: string, payload: { title: string; description: string }) => void;
+  onSave: (
+    id: string,
+    payload: { title: string; description: string; canonicalUrl: string; robots: string }
+  ) => void;
   isSaving: boolean;
   error?: string | null;
 };
@@ -66,15 +72,22 @@ type SeoDrawerContentProps = {
 function SeoDrawerContent({ item, onSave, isSaving, error }: SeoDrawerContentProps) {
   const [metaTitle, setMetaTitle] = useState(item?.metaTitle ?? "");
   const [metaDescription, setMetaDescription] = useState(item?.metaDescription ?? "");
+  const [canonicalUrl, setCanonicalUrl] = useState(item?.canonicalUrl ?? "");
+  const [robots, setRobots] = useState(item?.robots ?? "");
 
   const titleCount = metaTitle.length;
   const descriptionCount = metaDescription.length;
   const hasChanges =
-    metaTitle !== (item?.metaTitle ?? "") || metaDescription !== (item?.metaDescription ?? "");
+    metaTitle !== (item?.metaTitle ?? "") ||
+    metaDescription !== (item?.metaDescription ?? "") ||
+    canonicalUrl !== (item?.canonicalUrl ?? "") ||
+    robots !== (item?.robots ?? "");
 
   const handleDiscard = () => {
     setMetaTitle(item?.metaTitle ?? "");
     setMetaDescription(item?.metaDescription ?? "");
+    setCanonicalUrl(item?.canonicalUrl ?? "");
+    setRobots(item?.robots ?? "");
   };
 
   const analysisTone = useMemo(() => {
@@ -181,6 +194,22 @@ function SeoDrawerContent({ item, onSave, isSaving, error }: SeoDrawerContentPro
               placeholder="Summarize the page in one or two sentences."
             />
           </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold">Canonical URL</label>
+            <Input
+              value={canonicalUrl}
+              onChange={(event) => setCanonicalUrl(event.target.value)}
+              placeholder="https://example.com/page"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold">Robots</label>
+            <Input
+              value={robots}
+              onChange={(event) => setRobots(event.target.value)}
+              placeholder="index,follow"
+            />
+          </div>
           {item?.keywords.length ? (
             <div className="space-y-2">
               <label className="text-sm font-semibold">Focus Keywords</label>
@@ -232,7 +261,12 @@ function SeoDrawerContent({ item, onSave, isSaving, error }: SeoDrawerContentPro
             className="flex-1 gap-2"
             onClick={() => {
               if (!item) return;
-              onSave(item.id, { title: metaTitle, description: metaDescription });
+              onSave(item.id, {
+                title: metaTitle,
+                description: metaDescription,
+                canonicalUrl,
+                robots,
+              });
             }}
             disabled={!item || isSaving}
           >

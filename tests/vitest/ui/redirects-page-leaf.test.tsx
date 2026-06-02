@@ -100,6 +100,8 @@ vi.mock("@/services/apiClient", () => ({
 
 vi.mock("@/services/redirectsClient", () => ({
   listRedirects: redirectsState.listRedirects,
+  listRedirectsCached: redirectsState.listRedirects,
+  getCachedRedirects: vi.fn(() => null),
   createRedirect: redirectsState.createRedirect,
   updateRedirect: redirectsState.updateRedirect,
   deleteRedirect: redirectsState.deleteRedirect,
@@ -147,20 +149,28 @@ vi.mock("../../../core/admin/ui/redirects/RedirectsTable", () => ({
     page,
     limit,
     isFiltering,
+    selectedIds,
+    isAllSelected,
+    isIndeterminate,
+    onToggleAll,
+    onToggleRedirect,
     onEdit,
     onToggle,
     onDelete,
-    onCreate,
     onPageChange,
   }: {
     items: Array<{ id: string; from: string; to: string; type: string; status: string }>;
     isLoading: boolean;
     isSaving: boolean;
+    selectedIds: string[];
+    isAllSelected: boolean;
+    isIndeterminate: boolean;
     total: number;
     page: number;
     limit: number;
     isFiltering: boolean;
-    onCreate: () => void;
+    onToggleAll: () => void;
+    onToggleRedirect: (id: string) => void;
     onEdit: (item: { id: string; from: string; to: string; type: string; status: string }) => void;
     onToggle: (item: {
       id: string;
@@ -186,11 +196,17 @@ vi.mock("../../../core/admin/ui/redirects/RedirectsTable", () => ({
       <span>{`table-page:${page}`}</span>
       <span>{`table-limit:${limit}`}</span>
       <span>{`filtering:${String(isFiltering)}`}</span>
+      <span>{`selected:${selectedIds.length}`}</span>
+      <span>{`all:${String(isAllSelected)}`}</span>
+      <span>{`mixed:${String(isIndeterminate)}`}</span>
       {items.map((item) => (
         <div key={item.id}>{`${item.from}->${item.to}`}</div>
       ))}
-      <button type="button" onClick={onCreate}>
-        table-create
+      <button type="button" onClick={onToggleAll}>
+        select-all
+      </button>
+      <button type="button" onClick={() => items[0] && onToggleRedirect(items[0].id)}>
+        select-first
       </button>
       <button type="button" onClick={() => items[0] && onEdit(items[0])}>
         edit-first
@@ -323,7 +339,7 @@ test("RedirectsPage loads, filters, creates, edits, and toggles redirects", asyn
 
     React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent?.includes("Create redirect"))
+        .find((button) => button.textContent?.trim() === "Create")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(view.container.textContent).toContain("drawer:create");
@@ -385,7 +401,7 @@ test("RedirectsPage loads, filters, creates, edits, and toggles redirects", asyn
 
     React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent === "table-create")
+        .find((button) => button.textContent?.trim() === "Create")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(view.container.textContent).toContain("drawer:create");

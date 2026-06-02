@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   DEFAULT_SEARCH_DATE_RANGE,
-  searchAll,
+  getCachedSearchResults,
+  searchAllCached,
   type SearchDateRange,
   type SearchResponse,
   type SearchResponseMeta,
@@ -119,33 +120,50 @@ export function useSearchResults(query: string, options?: number | UseSearchResu
     }
 
     const current = ++requestId.current;
-    const timer = setTimeout(() => {
-      setLoading(true);
-      setError(null);
-      searchAll(normalizedQuery, { limit, dateRange })
-        .then((response) => {
-          if (requestId.current !== current) return;
+    const cached = getCachedSearchResults(normalizedQuery, { limit, dateRange });
+    const timer = setTimeout(
+      () => {
+        if (cached) {
           setResult({
             key: requestKey,
-            items: response.items.map(mapSearchItem),
-            categories: response.categories ?? [],
-            meta: response.meta ?? null,
+            items: cached.items.map(mapSearchItem),
+            categories: cached.categories ?? [],
+            meta: cached.meta ?? null,
           });
+          setError(null);
+        }
+        setLoading(!cached);
+        setError(null);
+        searchAllCached(normalizedQuery, {
+          limit,
+          dateRange,
+          force: Boolean(cached),
         })
-        .catch(() => {
-          if (requestId.current !== current) return;
-          setResult({
-            key: requestKey,
-            items: [],
-            categories: [],
-            meta: null,
+          .then((response) => {
+            if (requestId.current !== current) return;
+            setResult({
+              key: requestKey,
+              items: response.items.map(mapSearchItem),
+              categories: response.categories ?? [],
+              meta: response.meta ?? null,
+            });
+          })
+          .catch(() => {
+            if (requestId.current !== current) return;
+            setResult({
+              key: requestKey,
+              items: [],
+              categories: [],
+              meta: null,
+            });
+            setError("search_failed");
+          })
+          .finally(() => {
+            if (requestId.current === current) setLoading(false);
           });
-          setError("search_failed");
-        })
-        .finally(() => {
-          if (requestId.current === current) setLoading(false);
-        });
-    }, DEBOUNCE_MS);
+      },
+      cached ? 0 : DEBOUNCE_MS
+    );
 
     return () => {
       clearTimeout(timer);

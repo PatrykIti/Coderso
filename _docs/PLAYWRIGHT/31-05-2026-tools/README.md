@@ -66,9 +66,10 @@ runtime-effect evidence for SEO, Backups, and Redirects.
 - SEO Manager saves now render into public page HTML after TASK-349.
 - Analytics showed the published page fixture in API top content and UI top
   content.
-- Backups now documents the v1 external-worker boundary, serializes include
-  options, paginates real rows, and disables restore/download until artifacts
-  are ready after TASK-351.
+- Backups now creates CMS-managed local JSON artifacts, serializes include
+  options, paginates real rows, hydrates list/schedule cache, enables local
+  download when complete, and keeps restore disabled until a restore contract
+  exists after TASK-351.
 - Import / Export successfully downloaded, previewed, applied, verified, and
   restored a valid JSON bundle. TASK-352 later closed the malformed menu-id
   drift: preview/apply now reject invalid UUIDs with mapped validation errors
