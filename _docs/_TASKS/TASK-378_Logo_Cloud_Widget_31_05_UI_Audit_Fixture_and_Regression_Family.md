@@ -5,7 +5,7 @@
 **Category:** Widgets + Logo Cloud + Media Fixtures + QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_LOGO_CLOUD_WIDGET.md
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -23,7 +23,7 @@ This task family is intentionally scoped to everything the report calls out for 
 
 ## Sub-Tasks
 
-- [ ] [TASK-378-01](TASK-378-01_LC_31_05_01_Seed_Media_Assets_For_Browser_Level_MediaPicker_Proof.md): LC-31-05-01 - Seed media assets for browser-level MediaPicker proof
+- [x] [TASK-378-01](TASK-378-01_LC_31_05_01_Seed_Media_Assets_For_Browser_Level_MediaPicker_Proof.md): LC-31-05-01 - Seed media assets for browser-level MediaPicker proof
 
 ## Implementation Pseudocode
 
@@ -68,3 +68,14 @@ For DB-backed tests, load env before execution: `set -a && source .env && set +a
 - Admin Visual/Wizard/Advanced copy matches the effective runtime state.
 - Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
 - Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced LC-31-05-01 as a fixture/data gap: the Logo Cloud renderer/editor already support image-backed logos, but the local Media Library had no deterministic records for browser proof.
+- Added Logo Cloud media fixture detection to `scripts/playwright-widget-contract-smoke.ts`. When selected cases include `logo-cloud`, the harness now seeds `widget-fixture-logo-cloud-acme.svg` through the existing authenticated `/admin/api/media` route with CSRF before running browser probes.
+- Added a Logo Cloud `mediaProof` to the Playwright admin probe: it opens the real MediaPicker, selects the seeded asset, checks admin preview image/alt/grayscale/hover classes, publishes the fixture page, and checks the public `<img>` output on the fixture route.
+- Kept the change out of production widget code and did not add any public endpoint or browser-visible secret state.
+- Added Bun helper coverage for the Logo Cloud media-fixture selection contract plus the authenticated admin upload/PATCH contract. The focused test failed before the helper existed and passes after implementation.
+- Full live Playwright replay was environment-blocked in this session: `playwright-cli` is installed, but `localhost:5173` and `localhost:3000` were not running, and `.env` did not provide `CODERSO_PLAYWRIGHT_EMAIL` / `CODERSO_PLAYWRIGHT_PASSWORD`. The targeted smoke dry-run for `logo-cloud` passed inventory validation.
+- Validation: `bun test tests/unit/playwright-widget-contract-smoke.test.ts -t "media fixture bootstrap"`; `bun test tests/unit/playwright-widget-contract-smoke.test.ts`; `bun run test:vitest -- tests/vitest/widgets/logoCloud.test.tsx tests/vitest/ui/logo-cloud-editor-wave.test.tsx`; `bun scripts/playwright-widget-contract-smoke.ts --dry-run --widget logo-cloud --output-json .tmp/task-378-logo-cloud-smoke-dry-run.json --output-md .tmp/task-378-logo-cloud-smoke-dry-run.md`.
+- Covered by changelog `1068` together with TASK-378-01.

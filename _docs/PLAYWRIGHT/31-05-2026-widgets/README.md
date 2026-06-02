@@ -168,8 +168,10 @@ before that point remain based on `playwright-cli` plus Codex code review.
   product defect found, with billing documented as a static public status rather
   than a visitor-side toggle.
 - `REPORT_LOGO_CLOUD_WIDGET.md` — completed main UI option pass; no hard product
-  defect found, with MediaPicker asset selection left as a fixture gap because
-  the local media API returned an empty list.
+  defect found. TASK-378 added deterministic Logo Cloud media seeding plus a
+  smoke `mediaProof` that selects the seeded asset through MediaPicker,
+  publishes the fixture, and verifies public `<img>` alt/grayscale/hover output
+  when the live Playwright environment is available.
 - `REPORT_GALLERY_MOSAIC_WIDGET.md` — completed main UI option pass; one
   Advanced diagnostics truthfulness gap found when lightbox mode is enabled but
   no media tiles can open, plus media fixture/public-lightbox smoke gaps noted.

@@ -23,6 +23,10 @@ type WidgetSmokeCase = {
   }>;
 };
 
+type AdminProbeSmokeCase = WidgetSmokeCase & {
+  mediaProofPublicPath?: string | null;
+};
+
 type SmokeInventory = {
   version: 1;
   expectedWidgetCount: number;
@@ -80,6 +84,16 @@ type AdminModeResult = {
   error?: string;
 };
 
+type LogoCloudMediaProofResult = {
+  status: SmokeStatus;
+  adminHasImage: boolean;
+  publicHasImage: boolean;
+  publicPath?: string | null;
+  adminAlt?: string | null;
+  publicAlt?: string | null;
+  error?: string;
+};
+
 type AdminWidgetResult = {
   widgetType: string;
   status: SmokeStatus;
@@ -87,6 +101,7 @@ type AdminWidgetResult = {
   pageId?: string;
   modes: AdminModeResult[];
   duplicateWritablePaths: string[];
+  mediaProof?: LogoCloudMediaProofResult;
   error?: string;
 };
 
@@ -159,6 +174,41 @@ const screenOnlyWidgets = new Set([
   "screen-two-column",
 ]);
 const commerceFixtureWidgetTypes = new Set(["product-gallery", "product-compare", "product-table"]);
+const mediaFixtureWidgetTypes = new Set(["logo-cloud"]);
+
+type MediaFixtureSeed = {
+  originalName: string;
+  mimeType: string;
+  title: string;
+  alt: string;
+  caption: string;
+  content: string;
+};
+
+type MediaFixtureListItem = {
+  id: string;
+  originalName: string | null;
+  mimeType: string;
+  type: string;
+  title: string | null;
+  alt: string | null;
+  caption: string | null;
+};
+
+type MediaFixtureListPayload = {
+  items?: MediaFixtureListItem[];
+};
+
+const mediaFixtureSeeds: MediaFixtureSeed[] = [
+  {
+    originalName: "widget-fixture-logo-cloud-acme.svg",
+    mimeType: "image/svg+xml",
+    title: "Widget fixture Acme logo",
+    alt: "Widget fixture Acme logo mark",
+    caption: "Deterministic Logo Cloud MediaPicker image fixture.",
+    content: `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="128" viewBox="0 0 320 128" role="img" aria-label="Acme logo"><rect width="320" height="128" rx="24" fill="#ffffff"/><circle cx="74" cy="64" r="34" fill="#2563eb"/><path d="M58 78 74 42l16 36h-9l-3-8H70l-3 8h-9Zm14-15h5l-3-9-2 9Z" fill="#ffffff"/><text x="126" y="74" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="700" fill="#111827">ACME</text></svg>`,
+  },
+];
 
 type CommerceFixtureCollectionSeed = {
   slug: string;
@@ -344,6 +394,123 @@ type CommerceProductListItem = {
 
 export function selectedCasesNeedCommerceFixtures(cases: WidgetSmokeCase[]): boolean {
   return cases.some((item) => commerceFixtureWidgetTypes.has(item.widgetType));
+}
+
+export function selectedCasesNeedMediaFixtures(cases: WidgetSmokeCase[]): boolean {
+  return cases.some((item) => mediaFixtureWidgetTypes.has(item.widgetType));
+}
+
+export function resolveLogoCloudMediaProofPublicPath(
+  item: Pick<WidgetSmokeCase, "adminFixtureSlug" | "publicPath">
+): string | null {
+  return item.publicPath || item.adminFixtureSlug || null;
+}
+
+function mediaFixtureMetaDrifted(existing: MediaFixtureListItem, seed: MediaFixtureSeed): boolean {
+  return (
+    existing.title !== seed.title || existing.alt !== seed.alt || existing.caption !== seed.caption
+  );
+}
+
+async function requestAdminForm<T>({
+  adminUrl,
+  sessionValue,
+  path,
+  method = "POST",
+  formData,
+  csrfToken,
+}: {
+  adminUrl: string;
+  sessionValue: string;
+  path: string;
+  method?: "POST" | "PATCH" | "PUT";
+  formData: FormData;
+  csrfToken?: string;
+}): Promise<T> {
+  const adminBase = adminUrl.replace(/\/$/, "");
+  const headers = new Headers({
+    cookie: `session=${encodeURIComponent(sessionValue)}`,
+  });
+  if (csrfToken) {
+    headers.set("X-CSRF-Token", csrfToken);
+  }
+  const response = await fetch(`${adminBase}${path}`, {
+    method,
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(`media_fixture_request_failed:${method}:${path}:${response.status}`);
+  }
+  return (await response.json()) as T;
+}
+
+function buildMediaFixtureFormData(seed: MediaFixtureSeed): FormData {
+  const formData = new FormData();
+  const file = new File([seed.content], seed.originalName, { type: seed.mimeType });
+  formData.set("file", file, seed.originalName);
+  formData.set("alt", seed.alt);
+  formData.set("title", seed.title);
+  formData.set("caption", seed.caption);
+  return formData;
+}
+
+export async function ensureMediaWidgetFixtures(
+  adminUrl: string,
+  sessionValue: string,
+  selectedCases: WidgetSmokeCase[]
+): Promise<void> {
+  if (!selectedCasesNeedMediaFixtures(selectedCases)) {
+    return;
+  }
+
+  const mediaPayload = await requestAdminJson<MediaFixtureListItem[] | MediaFixtureListPayload>({
+    adminUrl,
+    sessionValue,
+    path: "/api/media",
+  });
+  const existingItems = Array.isArray(mediaPayload) ? mediaPayload : (mediaPayload.items ?? []);
+
+  let csrfToken: string | null = null;
+  const ensureCsrf = async () => {
+    if (csrfToken) return csrfToken;
+    csrfToken = await fetchAdminCsrfToken(adminUrl, sessionValue);
+    return csrfToken;
+  };
+
+  for (const seed of mediaFixtureSeeds) {
+    const existing = existingItems.find(
+      (item) =>
+        item.originalName === seed.originalName &&
+        item.type === "image" &&
+        item.mimeType === seed.mimeType
+    );
+    if (existing) {
+      if (mediaFixtureMetaDrifted(existing, seed)) {
+        await requestAdminJson<MediaFixtureListItem>({
+          adminUrl,
+          sessionValue,
+          path: `/api/media/${existing.id}`,
+          method: "PATCH",
+          body: {
+            alt: seed.alt,
+            title: seed.title,
+            caption: seed.caption,
+          },
+          csrfToken: await ensureCsrf(),
+        });
+      }
+      continue;
+    }
+
+    await requestAdminForm<MediaFixtureListItem>({
+      adminUrl,
+      sessionValue,
+      path: "/api/media",
+      formData: buildMediaFixtureFormData(seed),
+      csrfToken: await ensureCsrf(),
+    });
+  }
 }
 
 export function buildCommerceFixtureProductPatch(
@@ -642,7 +809,7 @@ async function requestAdminJson<T>({
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
   if (!response.ok) {
-    throw new Error(`commerce_fixture_request_failed:${method}:${path}:${response.status}`);
+    throw new Error(`admin_fixture_request_failed:${method}:${path}:${response.status}`);
   }
   return (await response.json()) as T;
 }
@@ -655,7 +822,7 @@ async function fetchAdminCsrfToken(adminUrl: string, sessionValue: string): Prom
   });
   const token = typeof payload.token === "string" ? payload.token.trim() : "";
   if (!token) {
-    throw new Error("commerce_fixture_csrf_missing");
+    throw new Error("admin_fixture_csrf_missing");
   }
   return token;
 }
@@ -818,10 +985,16 @@ async function runPlaywrightCode<T>(
   return extractCliJson<T>(result.stdout);
 }
 
-function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
+function buildAdminProbeCode(adminUrl: string, frontUrl: string, cases: WidgetSmokeCase[]) {
+  const probeCases: AdminProbeSmokeCase[] = cases.map((item) => ({
+    ...item,
+    mediaProofPublicPath: resolveLogoCloudMediaProofPublicPath(item),
+  }));
   return `async (page) => {
   const adminUrl = ${JSON.stringify(adminUrl.replace(/\/$/, ""))};
-  const cases = ${JSON.stringify(cases)};
+  const frontUrl = ${JSON.stringify(frontUrl.replace(/\/$/, ""))};
+  const cases = ${JSON.stringify(probeCases)};
+  const logoCloudMediaFixture = ${JSON.stringify(mediaFixtureSeeds[0])};
   const requiredLogin = { attempted: false, authenticated: null, error: null };
   page.on("dialog", async (dialog) => {
     await dialog.accept().catch(() => undefined);
@@ -980,6 +1153,98 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
       error: rootCount === 1 && visibleSectionCount > 0 ? undefined : "mode_root_or_visible_section_missing",
     };
   }
+  async function runLogoCloudMediaPickerProof(item, adminPath) {
+    if (item.widgetType !== "logo-cloud") return null;
+    const publicPath = item.mediaProofPublicPath || item.publicPath || item.adminFixtureSlug || null;
+    const proof = {
+      status: "failed",
+      adminHasImage: false,
+      publicHasImage: false,
+      publicPath,
+      adminAlt: null,
+      publicAlt: null,
+      error: undefined,
+    };
+    try {
+      await dismissCustomDirtyDialog();
+      await page.goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const selected = await openFixtureAndSelect(item, null, adminPath);
+      if (!selected.ok) {
+        proof.error = selected.error || "block_select_missing";
+        return proof;
+      }
+      const visualTab = page.getByRole("tab", { name: /^visual$/i }).first();
+      if ((await visualTab.count()) > 0) {
+        await visualTab.click().catch(() => undefined);
+        await settle();
+      }
+      const editor = page.locator('[data-widget-editor="logo-cloud"][data-widget-editor-mode="visual"]').first();
+      await editor.waitFor({ state: "visible", timeout: 20000 });
+      const imageControl = editor.locator('[data-widget-control="logo-cloud.logo-1.image"]').first();
+      await imageControl.waitFor({ state: "visible", timeout: 20000 });
+      await imageControl.getByRole("button", { name: /browse media/i }).first().click();
+      const dialog = page.getByRole("dialog", { name: /media library/i }).first();
+      await dialog.waitFor({ state: "visible", timeout: 10000 });
+      const search = dialog.getByPlaceholder(/search by name or title/i).first();
+      if ((await search.count()) > 0) {
+        await search.fill(logoCloudMediaFixture.title);
+      }
+      const assetButton = dialog.getByRole("button").filter({ hasText: logoCloudMediaFixture.title }).first();
+      await assetButton.waitFor({ state: "visible", timeout: 10000 });
+      await assetButton.click();
+      await dialog.waitFor({ state: "hidden", timeout: 5000 }).catch(() => undefined);
+      await settle();
+
+      const adminImage = page.locator('[data-logo-cloud-item="1"][data-logo-cloud-has-image="true"] img').first();
+      await adminImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.adminHasImage = true;
+      proof.adminAlt = await adminImage.getAttribute("alt");
+      const adminClassName = (await adminImage.getAttribute("class")) || "";
+      if (proof.adminAlt !== logoCloudMediaFixture.alt) {
+        proof.error = "admin_logo_alt_mismatch";
+        return proof;
+      }
+      if (!adminClassName.includes("grayscale") || !adminClassName.includes("group-hover:grayscale-0")) {
+        proof.error = "admin_logo_grayscale_hover_class_missing";
+        return proof;
+      }
+
+      const publishButton = page.getByRole("button", { name: /^publish$/i }).first();
+      if ((await publishButton.count()) === 0) {
+        proof.error = "publish_button_missing";
+        return proof;
+      }
+      await publishButton.click();
+      await page.getByRole("button", { name: /publishing/i }).waitFor({ state: "hidden", timeout: 15000 }).catch(() => undefined);
+      await settle();
+
+      if (!publicPath) {
+        proof.error = "public_path_missing";
+        return proof;
+      }
+      await page.goto(frontUrl + publicPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await settle();
+      const publicImage = page.locator('[data-logo-cloud-item="1"][data-logo-cloud-has-image="true"] img').first();
+      await publicImage.waitFor({ state: "visible", timeout: 10000 });
+      proof.publicHasImage = true;
+      proof.publicAlt = await publicImage.getAttribute("alt");
+      const publicClassName = (await publicImage.getAttribute("class")) || "";
+      if (proof.publicAlt !== logoCloudMediaFixture.alt) {
+        proof.error = "public_logo_alt_mismatch";
+        return proof;
+      }
+      if (!publicClassName.includes("grayscale") || !publicClassName.includes("group-hover:grayscale-0")) {
+        proof.error = "public_logo_grayscale_hover_class_missing";
+        return proof;
+      }
+      proof.status = "passed";
+      return proof;
+    } catch (error) {
+      proof.error = error instanceof Error ? error.message : String(error);
+      return proof;
+    }
+  }
   await verifyAuthenticated();
   if (!requiredLogin.authenticated) {
     return JSON.stringify({ login: requiredLogin, results: [], error: requiredLogin.error || "login_failed" });
@@ -1020,7 +1285,10 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
     }
     const hasMetadataGap = modes.some((mode) => mode.controlsWithoutPath > 0);
     const duplicates = hasMetadataGap ? [] : duplicatePaths(modes, item.allowedDuplicateWritablePaths || []);
-    const hasFailure = modes.some((mode) => mode.status === "failed") || duplicates.length > 0;
+    const hasModeFailure = modes.some((mode) => mode.status === "failed");
+    const mediaProof = hasModeFailure ? null : await runLogoCloudMediaPickerProof(item, adminPath);
+    const hasMediaProofFailure = Boolean(mediaProof && mediaProof.status !== "passed");
+    const hasFailure = hasModeFailure || duplicates.length > 0 || hasMediaProofFailure;
     results.push({
       widgetType: item.widgetType,
       status: hasFailure ? "failed" : hasMetadataGap ? "metadata-gap" : "passed",
@@ -1028,6 +1296,8 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
       adminPath,
       modes,
       duplicateWritablePaths: duplicates,
+      mediaProof: mediaProof || undefined,
+      error: hasMediaProofFailure ? mediaProof.error || "media_picker_proof_failed" : undefined,
     });
   }
   return JSON.stringify({ login: requiredLogin, results });
@@ -1211,7 +1481,11 @@ function renderMarkdown(report: SmokeReport): string {
           return `${mode.mode}:${mode.status} r${mode.rootCount}/s${mode.sectionCount}/v${mode.visibleSectionCount}${error}`;
         })
         .join("<br>");
-      return `| \`${item.widgetType}\` | ${item.status} | ${modes || "-"} | ${item.duplicateWritablePaths.join(", ") || "-"} | ${item.error ?? "-"} |`;
+      const mediaProof = item.mediaProof
+        ? `media proof: ${item.mediaProof.status}${item.mediaProof.error ? ` (${item.mediaProof.error})` : ""}`
+        : undefined;
+      const notes = [item.error, mediaProof].filter(Boolean).join("; ");
+      return `| \`${item.widgetType}\` | ${item.status} | ${modes || "-"} | ${item.duplicateWritablePaths.join(", ") || "-"} | ${notes || "-"} |`;
     }),
     "",
     "## Public CSS Smoke",
@@ -1451,15 +1725,22 @@ async function main() {
         report.admin.authenticated = authState.authenticated;
         if (!authState.authenticated) {
           report.admin.error = authState.error ?? "login_failed";
-        } else if (authState.sessionValue && !args.skipFront) {
+        } else if (authState.sessionValue) {
           try {
-            await ensureCommerceWidgetFixtures(
-              args.adminUrl,
-              authState.sessionValue,
-              selectedCases
-            );
+            await ensureMediaWidgetFixtures(args.adminUrl, authState.sessionValue, selectedCases);
           } catch (error) {
-            report.public.error = error instanceof Error ? error.message : String(error);
+            report.admin.error = error instanceof Error ? error.message : String(error);
+          }
+          if (!report.admin.error && !args.skipFront) {
+            try {
+              await ensureCommerceWidgetFixtures(
+                args.adminUrl,
+                authState.sessionValue,
+                selectedCases
+              );
+            } catch (error) {
+              report.public.error = error instanceof Error ? error.message : String(error);
+            }
           }
         }
       }
@@ -1517,7 +1798,10 @@ async function main() {
             continue;
           }
           const adminCodePath = `${scratchDir}/admin-probe-${item.widgetType}.js`;
-          await writeCodeFile(adminCodePath, buildAdminProbeCode(args.adminUrl, [item]));
+          await writeCodeFile(
+            adminCodePath,
+            buildAdminProbeCode(args.adminUrl, args.frontUrl, [item])
+          );
           try {
             const adminResult = await runPlaywrightCode<{
               login: { attempted: boolean; authenticated: boolean | null; error?: string | null };

@@ -6,6 +6,9 @@
 > **Public route:** `/audit-31-05-logo-cloud`
 > **Playwright session:** `codex-31-05-ui-logo-cloud`
 > **Claude:** probowano uruchomic non-interactive; CLI zwrocil `401 Invalid authentication credentials` przed testem.
+> **TASK-378 follow-up:** smoke harness dodaje teraz deterministyczny obraz
+> Logo Cloud przez `/admin/api/media` i wykonuje `mediaProof` przez realny
+> MediaPicker, gdy wybrany jest `logo-cloud`.
 
 ## Metoda
 
@@ -50,7 +53,7 @@ Przetestowane:
 | Header copy | Fill eyebrow/title/description | Header pokazuje `31-05 trust proof`, `31-05 Logo Cloud Audit`, opis z Visual. | Public baseline ma domyslny header. | Dziala | `updateHeader` patchuje `header.*`; renderer uzywa `h2` i `aria-labelledby`. | Brak. |
 | Logo name + accessible description | Fill Logo 1 name/alt | Text fallback zmienia sie na `Audit Partner`; link aria-label bierze alt `Audit partner accessible logo`. | Nie publikowano tej zmiany. | Dziala | `LogoCloudItem` wybiera label z `alt || name`. | Brak. |
 | Logo destination | Wybierz `Audit 31-05 Hero` | Logo 1 renderuje sie jako `<a href="/audit-31-05-hero">`. | Public baseline nie ma linkow logo. | Dziala | `LinkDestinationField` + `resolveWidgetLinkAttrs`. | Brak. |
-| Media library | Sprawdzono API `/admin/api/media?limit=10` | API zwrocilo `[]`; preview pokazuje placeholder `No image selected yet`. | Public baseline renderuje text fallback, `data-logo-cloud-has-image="false"`. | Fixture gap | Brak assetow w lokalnej bibliotece, wiec nie bylo czego wybrac w pickerze. | Dodac obraz testowy do fixture/media seed i powtorzyc wybor assetu + alt fallback. |
+| Media library | Sprawdzono API `/admin/api/media?limit=10` | API zwrocilo `[]`; preview pokazuje placeholder `No image selected yet`. | Public baseline renderuje text fallback, `data-logo-cloud-has-image="false"`. | Fixture gap resolved in TASK-378 harness | Brak assetow w lokalnej bibliotece, wiec nie bylo czego wybrac w pickerze podczas pierwotnego audytu. | `scripts/playwright-widget-contract-smoke.ts` seeduje teraz `widget-fixture-logo-cloud-acme.svg` przez admin `/api/media` z CSRF, wybiera go przez MediaPicker, publikuje fixture i sprawdza publiczny `<img>` alt/grayscale/hover. |
 | Logo count cancel | Select 4 przy 6 logo, confirm return `false` | Przechwycony komunikat: `Reduce logo count to 4?... Pixel Forge, Stonegrid...`; count zostal 6. | Nie dotyczy. | Dziala | `confirmLogoCountReduction` blokuje truncation przy cancel. | Brak. |
 | Logo count accept | Select 4 przy 6 logo, confirm return `true` | Count zmienia sie na 4; usuniete sa koncowe logo. | Nie publikowano tej zmiany. | Dziala | `setLogoCountInData` normalizuje liste do nowej dlugosci. | Brak. |
 | Add logo | Klik `Add logo` | Count 4 -> 5, dodaje `Logo 5`. | Nie publikowano tej zmiany. | Dziala | `addLogoToData` dodaje do max 24. | Brak. |
@@ -97,6 +100,31 @@ uczciwie potwierdzic wyboru realnego obrazka przez MediaPicker. Sprawdzone sa:
 placeholder preview, text fallback, safe link, alt jako accessible label dla
 linku oraz Advanced summary `No logo images selected yet`.
 
+### Follow-up TASK-378 (2026-06-01)
+
+LC-31-05-01 zostal zamkniety po stronie smoke harnessu. Dla wybranych case'ow
+`logo-cloud` skrypt `scripts/playwright-widget-contract-smoke.ts`:
+
+- wykrywa potrzebe seedowania mediów przez `selectedCasesNeedMediaFixtures`,
+- pobiera istniejace media przez uwierzytelnione `/admin/api/media`,
+- pobiera CSRF przez `/admin/api/auth/csrf`,
+- uploaduje `widget-fixture-logo-cloud-acme.svg` jako `image/svg+xml` przez
+  `/admin/api/media`, jesli poprawny obraz jeszcze nie istnieje,
+- aktualizuje tylko metadane (`alt`, `title`, `caption`) dla poprawnego,
+  istniejacego obrazu,
+- wykonuje `mediaProof`: otwiera Logo Cloud Visual, wybiera seedowany asset
+  przez realny MediaPicker, sprawdza admin preview
+  `data-logo-cloud-has-image="true"`, publikuje fixture page i sprawdza
+  publiczny `<img>` z oczekiwanym `alt`, `grayscale` oraz
+  `group-hover:grayscale-0`.
+
+W tej sesji nie wykonano pelnego live browser replay, bo lokalne serwery
+`localhost:5173` i `localhost:3000` nie byly uruchomione, a `.env` nie zawieral
+`CODERSO_PLAYWRIGHT_EMAIL` ani `CODERSO_PLAYWRIGHT_PASSWORD`. Dry-run smoke dla
+`--widget logo-cloud` przeszedl walidacje inventory bez gapow; unit coverage
+sprawdza admin media API, cookie sesji, CSRF, `FormData` upload i JSON PATCH
+metadanych.
+
 ## Kod-owner
 
 - `core/widgets/core/logoCloud.tsx`
@@ -114,8 +142,9 @@ linku oraz Advanced summary `No logo images selected yet`.
 ## Rekomendacje
 
 1. Brak wymaganej poprawki produkcyjnej dla aktualnego kontraktu.
-2. Dodac fixture/media seed dla audytow Playwright, zeby MediaPicker mogl
-   zweryfikowac realny wybor obrazu, alt fallback i grayscale/hover na `img`.
+2. Fixture/media seed i browser `mediaProof` dla audytow Playwright zostaly
+   dodane w TASK-378. Kolejny live replay wymaga uruchomionych serwerow i
+   `CODERSO_PLAYWRIGHT_EMAIL` / `CODERSO_PLAYWRIGHT_PASSWORD`.
 3. Przy kolejnych automatach unikac natywnego `window.confirm` w `playwright-cli`
    albo przechwytywac `confirm` w stronie; CLI potrafi zostawic modal w stanie,
    ktory blokuje snapshot.

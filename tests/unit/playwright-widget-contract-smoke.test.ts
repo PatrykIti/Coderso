@@ -5,6 +5,7 @@ import {
   classifyPublicStatus,
   createAdminFixtureGapMode,
   createFailedAdminMode,
+  ensureMediaWidgetFixtures,
   extractCliJson,
   finalizeAdminResult,
   findDuplicateWritablePaths,
@@ -13,8 +14,10 @@ import {
   parseArgs,
   renderMarkdown,
   resolveCommerceFixtureCollectionIds,
+  resolveLogoCloudMediaProofPublicPath,
   resolvePlaywrightCliSessionName,
   selectedCasesNeedCommerceFixtures,
+  selectedCasesNeedMediaFixtures,
   selectCases,
   shouldCountOverflowOwner,
   summarize,
@@ -111,6 +114,16 @@ function makeMode(overrides: Partial<AdminModeResult> = {}): AdminModeResult {
   };
 }
 
+const logoCloudCase: SmokeInventory["widgets"][number] = {
+  widgetType: "logo-cloud",
+  title: "Logo Cloud",
+  adminInsertLabel: "Logo Cloud",
+  adminFixtureSlug: "/ctr-logo-cloud",
+  publicPath: "/logo-cloud",
+  publicFixtureStatus: "published",
+  requiredModes: ["wizard", "visual", "advanced"],
+};
+
 describe("playwright widget contract smoke helpers", () => {
   test("parses debug and target flags without exposing credentials", () => {
     const args = parseArgs([
@@ -193,6 +206,182 @@ describe("playwright widget contract smoke helpers", () => {
         },
       ])
     ).toBe(true);
+  });
+
+  test("detects when selected widget cases require media fixture bootstrap", () => {
+    expect(selectedCasesNeedMediaFixtures(makeInventory().widgets)).toBe(false);
+    expect(selectedCasesNeedMediaFixtures([logoCloudCase])).toBe(true);
+  });
+
+  test("uses the public fixture route for Logo Cloud media proof before admin slug fallback", () => {
+    expect(resolveLogoCloudMediaProofPublicPath(logoCloudCase)).toBe("/logo-cloud");
+    expect(
+      resolveLogoCloudMediaProofPublicPath({
+        ...logoCloudCase,
+        publicPath: null,
+      })
+    ).toBe("/ctr-logo-cloud");
+  });
+
+  test("seeds Logo Cloud media fixtures through authenticated admin upload", async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      requests.push({ url, init });
+      if (url === "http://admin.test/admin/api/media" && (init?.method ?? "GET") === "GET") {
+        return Response.json([]);
+      }
+      if (url === "http://admin.test/admin/api/auth/csrf") {
+        return Response.json({ token: "csrf-token" });
+      }
+      if (url === "http://admin.test/admin/api/media" && init?.method === "POST") {
+        expect(init.body).toBeInstanceOf(FormData);
+        const formData = init.body as FormData;
+        const file = formData.get("file") as File;
+        expect(file).toBeInstanceOf(File);
+        expect(file.name).toBe("widget-fixture-logo-cloud-acme.svg");
+        expect(file.type).toBe("image/svg+xml");
+        expect(formData.get("alt")).toBe("Widget fixture Acme logo mark");
+        expect(formData.get("title")).toBe("Widget fixture Acme logo");
+        expect(formData.get("caption")).toBe("Deterministic Logo Cloud MediaPicker image fixture.");
+        return Response.json({
+          id: "media-1",
+          originalName: "widget-fixture-logo-cloud-acme.svg",
+          mimeType: "image/svg+xml",
+          type: "image",
+          title: "Widget fixture Acme logo",
+          alt: "Widget fixture Acme logo mark",
+          caption: "Deterministic Logo Cloud MediaPicker image fixture.",
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      await ensureMediaWidgetFixtures("http://admin.test/admin", "session-token", [logoCloudCase]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "http://admin.test/admin/api/media",
+      "http://admin.test/admin/api/auth/csrf",
+      "http://admin.test/admin/api/media",
+    ]);
+    const uploadHeaders = requests[2]?.init?.headers as Headers;
+    expect(uploadHeaders.get("cookie")).toBe("session=session-token");
+    expect(uploadHeaders.get("X-CSRF-Token")).toBe("csrf-token");
+    expect(uploadHeaders.get("Content-Type")).toBeNull();
+  });
+
+  test("patches existing Logo Cloud fixture metadata through admin JSON with CSRF", async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      requests.push({ url, init });
+      if (url === "http://admin.test/admin/api/media" && (init?.method ?? "GET") === "GET") {
+        return Response.json([
+          {
+            id: "media-1",
+            originalName: "widget-fixture-logo-cloud-acme.svg",
+            mimeType: "image/svg+xml",
+            type: "image",
+            title: "Old title",
+            alt: null,
+            caption: null,
+          },
+        ]);
+      }
+      if (url === "http://admin.test/admin/api/auth/csrf") {
+        return Response.json({ token: "csrf-token" });
+      }
+      if (url === "http://admin.test/admin/api/media/media-1" && init?.method === "PATCH") {
+        expect(init.body).toBe(
+          JSON.stringify({
+            alt: "Widget fixture Acme logo mark",
+            title: "Widget fixture Acme logo",
+            caption: "Deterministic Logo Cloud MediaPicker image fixture.",
+          })
+        );
+        return Response.json({
+          id: "media-1",
+          originalName: "widget-fixture-logo-cloud-acme.svg",
+          mimeType: "image/svg+xml",
+          type: "image",
+          title: "Widget fixture Acme logo",
+          alt: "Widget fixture Acme logo mark",
+          caption: "Deterministic Logo Cloud MediaPicker image fixture.",
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      await ensureMediaWidgetFixtures("http://admin.test/admin", "session-token", [logoCloudCase]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(requests.map((request) => request.url)).toEqual([
+      "http://admin.test/admin/api/media",
+      "http://admin.test/admin/api/auth/csrf",
+      "http://admin.test/admin/api/media/media-1",
+    ]);
+    const patchHeaders = requests[2]?.init?.headers as Headers;
+    expect(patchHeaders.get("cookie")).toBe("session=session-token");
+    expect(patchHeaders.get("X-CSRF-Token")).toBe("csrf-token");
+    expect(patchHeaders.get("Content-Type")).toBe("application/json");
+  });
+
+  test("does not reuse same-name media fixtures with unsupported type or MIME", async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      requests.push({ url, init });
+      if (url === "http://admin.test/admin/api/media" && (init?.method ?? "GET") === "GET") {
+        return Response.json([
+          {
+            id: "media-file",
+            originalName: "widget-fixture-logo-cloud-acme.svg",
+            mimeType: "application/pdf",
+            type: "file",
+            title: "Widget fixture Acme logo",
+            alt: "Widget fixture Acme logo mark",
+            caption: "Deterministic Logo Cloud MediaPicker image fixture.",
+          },
+        ]);
+      }
+      if (url === "http://admin.test/admin/api/auth/csrf") {
+        return Response.json({ token: "csrf-token" });
+      }
+      if (url === "http://admin.test/admin/api/media" && init?.method === "POST") {
+        return Response.json({
+          id: "media-image",
+          originalName: "widget-fixture-logo-cloud-acme.svg",
+          mimeType: "image/svg+xml",
+          type: "image",
+          title: "Widget fixture Acme logo",
+          alt: "Widget fixture Acme logo mark",
+          caption: "Deterministic Logo Cloud MediaPicker image fixture.",
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      await ensureMediaWidgetFixtures("http://admin.test/admin", "session-token", [logoCloudCase]);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(requests.map((request) => `${request.init?.method ?? "GET"} ${request.url}`)).toEqual([
+      "GET http://admin.test/admin/api/media",
+      "GET http://admin.test/admin/api/auth/csrf",
+      "POST http://admin.test/admin/api/media",
+    ]);
   });
 
   test("builds a commerce fixture patch only for fields that drifted", () => {

@@ -5,7 +5,7 @@
 **Category:** Widgets + Logo Cloud + Media Fixtures + QA + Docs + Leaf Remediation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-378
-**Status:** To Do
+**Status:** Done (2026-06-01)
 
 ---
 
@@ -17,11 +17,11 @@ Local media API returned `[]`, so the audit could not click a real logo image or
 
 ## Sub-Tasks
 
-- [ ] Reproduce LC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
-- [ ] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
-- [ ] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
-- [ ] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
-- [ ] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
+- [x] Reproduce LC-31-05-01 with the report fixture before editing and record the observed admin/public state in closure notes.
+- [x] Implement the owner-side contract change described below without adding route/editor-only fallbacks that hide the real behavior.
+- [x] Preserve non-destructive legacy behavior unless this task explicitly requires clearing stale inactive state.
+- [x] Add the focused regression test listed below in the correct Bun/Vitest/Playwright lane.
+- [x] Update parent task, report notes, and widget docs if the implementation changes public/admin behavior.
 
 ## Implementation Pseudocode
 
@@ -92,3 +92,11 @@ For DB-backed tests, load env first: `set -a && source .env && set +a`. If unava
 - The focused regression fails before the fix and passes after it.
 - The effective admin/public behavior is truthful and does not regress adjacent options from the same widget.
 - Required lint/typecheck/diff checks and targeted test lanes are recorded in closure notes.
+
+## Closure Notes (2026-06-01)
+
+- The pre-fix focused Bun regression failed because `selectedCasesNeedMediaFixtures` was not exported or implemented.
+- The smoke harness now recognizes `logo-cloud` as media-fixture-dependent and seeds a deterministic SVG logo through authenticated admin media upload with CSRF before probes run.
+- The Logo Cloud admin probe now performs the browser-level proof required by this leaf: MediaPicker asset selection, admin preview image assertion, fixture publish, and public `<img>` alt/grayscale/hover assertion.
+- Existing matching media is reused idempotently only when it is an image with the expected MIME type; metadata drift is patched instead of duplicating valid rows.
+- Live browser smoke remains pending on a running local admin/frontend and Playwright credentials; the dry-run and focused unit/Vitest lanes passed in this environment.
