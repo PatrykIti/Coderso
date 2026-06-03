@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 const widgetEditorState = vi.hoisted(() => ({
+  templateId: "11111111-1111-4111-8111-111111111111",
   posts: [
     {
       id: "post-1",
@@ -67,7 +68,7 @@ const widgetEditorState = vi.hoisted(() => ({
   ],
   widgetTemplates: [
     {
-      id: "widget-tpl-1",
+      id: "11111111-1111-4111-8111-111111111111",
       name: "Hero template",
       description: "Hero reusable block",
       status: "published",
@@ -329,7 +330,7 @@ test("TemplateSection editors cover setup, visual summaries, and advanced diagno
       <TemplateSectionVisualEditor
         value={
           {
-            templateId: "widget-tpl-1",
+            templateId: widgetEditorState.templateId,
             templateName: "Hero template",
             resolved: { blocks: [{ id: "block-1" }] },
           } as never
@@ -340,7 +341,7 @@ test("TemplateSection editors cover setup, visual summaries, and advanced diagno
       <TemplateSectionAdvancedEditor
         value={
           {
-            templateId: "widget-tpl-1",
+            templateId: widgetEditorState.templateId,
             templateName: "Hero template",
             resolved: { blocks: [{ id: "block-1" }] },
           } as never

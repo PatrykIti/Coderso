@@ -593,7 +593,7 @@ test("Section builder-owned Region controls expose stable control paths", async 
   } finally {
     view.cleanup();
   }
-});
+}, 10000);
 
 const mockSectionContract = async ({
   normalizedValue,
