@@ -12,7 +12,13 @@ Poza zakresem v1:
 - Po poprawnym loginie tworzymy session cookie (httpOnly).
 - UI pokazuje bledy walidacji pod polami i alert ogolny przy `auth_failed`.
 - Po sukcesie przekierowanie do `/admin`.
-- Admin UI weryfikuje sesje przez `GET /auth/me` (zwraca `user`).
+- Admin UI weryfikuje sesje przez `GET /auth/me`.
+- `GET /auth/me` zwraca redacted current-user payload:
+  `{ user: { id, email, name, permissionSnapshot } }`.
+- `permissionSnapshot` zawiera tylko effective permission ids oraz bezpieczne
+  role labels: `{ permissions: string[], roles: { id, slug, name }[] }`.
+- Endpoint odrzuca nieznane query params i nie zwraca session ids, tokenow,
+  password hashy, cookie, API key secrets ani zaszyfrowanych PII.
 - CSRF token pobierany przez `GET /auth/csrf` i uzywany w mutacjach (`X-CSRF-Token`).
 
 ## Sessions
@@ -35,11 +41,28 @@ Poza zakresem v1:
 - Role: admin, editor, viewer.
 - Permissions jako lista stringow w `roles.permissions`.
 - Middleware sprawdza access per route.
+- Admin UI korzysta z permission snapshot z `/auth/me` jako jednego zrodla dla
+  `can(permission)`, sidebar route visibility i route guards. Backend 403
+  pozostaje defense-in-depth i wymusza odswiezenie snapshotu po stale permission
+  failure.
+- Admin shell nie wykonuje globalnych odczytow ustawien, theme cache,
+  custom-screen shortcuts ani solution-kit context bez odpowiedniego read
+  permission w snapshotcie.
 
 ## Admin UI (v1)
 
 - Zarzadzanie uzytkownikami i rolami w panelu `/admin/users`.
-- Operacje mutujace wymagaja `users:write` i `roles:write`.
+- `/admin/users` jest widoczne, gdy snapshot zawiera `users:read` albo
+  `roles:read`; brak obu uprawnien fail-closed przed pobraniem list.
+- Widok pobiera tylko zasoby pokryte snapshotem:
+  `users:read` laduje users, `roles:read` laduje roles i permission catalog.
+- Mutacje userow wymagaja `users:write` oraz `roles:read`, gdy zmieniaja
+  przypisanie roli. Mutacje roli wymagaja `roles:write`.
+- Zaproszenia userow sa login-capable: admin nie wpisuje hasla innej osoby,
+  tylko wysyla email z jednorazowym linkiem do ustawienia hasla.
+- Admin reset hasla uzywa `POST /admin-users/:id/password-reset`, wymaga
+  `users:write`, CSRF oraz skonfigurowanego email delivery, i zapisuje audit
+  event bez tokenu.
 - UI blokuje usuniecie ostatniego admina.
 - Ostatni admin nie moze utracic roli admin do czasu utworzenia kolejnego.
 - Uzytkownicy zapraszani startuja ze statusem `pending`.
@@ -48,10 +71,19 @@ Poza zakresem v1:
 
 - Token resetu w DB z TTL.
 - TTL source: `settings["auth.resetTtlMinutes"]` (default `60`, zakres `5..1440`), fallback do `60`.
-- Email poza zakresem v1.
-- UI: `/auth/reset` wysyla email, `/auth/reset/confirm` ustawia nowe haslo.
+- Nowy token uniewaznia poprzednie niewykorzystane tokeny dla tego usera.
+- Token jest hashowany w DB; plaintext wystepuje tylko w jednorazowym linku
+  email i nie jest zwracany do API clienta, audit logow ani delivery logs.
+- Email delivery korzysta z Settings -> Email. Gdy email nie jest
+  skonfigurowany, admin invite/reset zwraca blokujacy `email_not_configured`.
+- UI: `/auth/reset` wysyla email, `/auth/reset/confirm` ustawia nowe haslo i
+  aktywuje tylko konta `pending`.
 - Bledy walidacji i nieprawidlowy token pokazywane w UI.
- - Endpointy zwracaja `{ ok: true }` bez ujawniania czy email istnieje.
+- Token errors mapuja sie na stabilne kody:
+  `set_password_token_invalid`, `set_password_token_expired`,
+  `set_password_token_used`.
+- Publiczny reset request zwraca `{ ok: true }` bez ujawniania czy email
+  istnieje, po przejsciu globalnej kontroli konfiguracji email.
 
 ## MFA (v2)
 

@@ -1,9 +1,21 @@
 import { apiRequest, type ApiClientError } from "./apiClient";
 
+export type AdminPermissionSnapshotRole = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+export type AdminPermissionSnapshot = {
+  permissions: string[];
+  roles: AdminPermissionSnapshotRole[];
+};
+
 export type AuthUser = {
   id: string;
   email: string;
   name?: string | null;
+  permissionSnapshot: AdminPermissionSnapshot | null;
 };
 
 export type AuthSession = {
@@ -45,21 +57,80 @@ export const clearAuthBootstrapCache = () => {
   authBootstrapPromise = null;
 };
 
+const normalizeStringArray = (value: unknown) => {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(value.filter((item): item is string => typeof item === "string"))
+  ).sort();
+};
+
+export const normalizeAdminPermissionSnapshot = (
+  value: unknown
+): AdminPermissionSnapshot | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (!Array.isArray(record.permissions) || !Array.isArray(record.roles)) return null;
+  const roles = record.roles.flatMap((item): AdminPermissionSnapshotRole[] => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const role = item as Record<string, unknown>;
+    if (
+      typeof role.id !== "string" ||
+      typeof role.slug !== "string" ||
+      typeof role.name !== "string"
+    ) {
+      return [];
+    }
+    return [{ id: role.id, slug: role.slug, name: role.name }];
+  });
+  return {
+    permissions: normalizeStringArray(record.permissions),
+    roles,
+  };
+};
+
+export const normalizeAuthUser = (value: unknown): AuthUser => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("auth_user_invalid");
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.id !== "string" || typeof record.email !== "string") {
+    throw new Error("auth_user_invalid");
+  }
+  const name = typeof record.name === "string" || record.name === null ? record.name : null;
+  return {
+    id: record.id,
+    email: record.email,
+    name,
+    permissionSnapshot: normalizeAdminPermissionSnapshot(record.permissionSnapshot),
+  };
+};
+
+export const canAdmin = (
+  permission: string,
+  snapshot: AdminPermissionSnapshot | null | undefined
+) => {
+  if (!snapshot) return false;
+  return snapshot.permissions.includes("*") || snapshot.permissions.includes(permission);
+};
+
 export async function resolveAuthBootstrap(options?: { force?: boolean }) {
   const force = options?.force ?? false;
   if (!force && authBootstrapCache) {
     return authBootstrapCache;
   }
 
-  if (authBootstrapPromise) {
+  if (!force && authBootstrapPromise) {
     return authBootstrapPromise;
   }
 
   const request = me()
-    .then((result) => ({
-      state: "authenticated",
-      user: result.user,
-    }) satisfies AuthBootstrapResult)
+    .then(
+      (result) =>
+        ({
+          state: "authenticated",
+          user: result.user,
+        }) satisfies AuthBootstrapResult
+    )
     .catch((error: unknown) => {
       if (isAuthBootstrapError(error)) {
         return {
@@ -85,11 +156,16 @@ export async function login(payload: { email: string; password: string; captchaT
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  const normalizedLoginUser = normalizeAuthUser(result.user);
   authBootstrapCache = {
     state: "authenticated",
-    user: result.user,
+    user: normalizedLoginUser,
   };
-  return result;
+  const bootstrap = await resolveAuthBootstrap({ force: true });
+  return {
+    ...result,
+    user: bootstrap.user ?? normalizedLoginUser,
+  };
 }
 
 export async function logout() {
@@ -111,7 +187,8 @@ export async function logout() {
 }
 
 export async function me() {
-  return apiRequest<{ user: AuthUser }>("/auth/me", { method: "GET" });
+  const result = await apiRequest<{ user: unknown }>("/auth/me", { method: "GET" });
+  return { user: normalizeAuthUser(result.user) };
 }
 
 export async function getAuthBotProtection() {
@@ -119,11 +196,15 @@ export async function getAuthBotProtection() {
 }
 
 export async function verifyOtp(payload: { code?: string; recoveryCode?: string }) {
-  return apiRequest<{ ok: boolean }>("/auth/verify-otp", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  }, { withCsrf: true });
+  return apiRequest<{ ok: boolean }>(
+    "/auth/verify-otp",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
 }
 
 export async function requestPasswordReset(payload: { email: string; captchaToken?: string }) {

@@ -4,28 +4,48 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
+import { copyAuditEntryJson } from "./auditEntryActions";
 import { auditCategoryMeta, auditStatusMeta } from "./auditMeta";
 import type { AuditLog } from "./types";
+import { redactAuditPayload } from "../../../services/audit/auditRedaction";
+
+const shareLogUnavailableReason =
+  "Share Log is unavailable for audit entries until a safe internal sharing workflow is added.";
+const reportLogUnavailableReason =
+  "Report is unavailable for audit entries until a compliance reporting workflow is added.";
 
 export type AuditDetailsDrawerProps = {
   log?: AuditLog | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCopyJson?: (log: AuditLog) => void;
 };
 
 export function AuditDetailsDrawer({
   log,
   open,
   onOpenChange,
+  onCopyJson,
 }: AuditDetailsDrawerProps) {
-  const payload = log ? JSON.stringify(log.payload, null, 2) : "";
+  const payload = log ? JSON.stringify(redactAuditPayload(log.payload), null, 2) : "";
   const category = log ? auditCategoryMeta[log.category] : null;
   const status = log ? auditStatusMeta[log.status] : null;
   const Icon = category?.icon;
+  const handleCopyJson =
+    onCopyJson ??
+    ((entry: AuditLog) => {
+      void copyAuditEntryJson(entry);
+    });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -34,26 +54,25 @@ export function AuditDetailsDrawer({
         showCloseButton={false}
         className="flex h-full min-h-0 w-full flex-col sm:max-w-md lg:max-w-lg"
       >
+        <SheetTitle className="sr-only">Event Details</SheetTitle>
+        <SheetDescription className="sr-only">
+          {log
+            ? "Review the selected audit event metadata and payload."
+            : "Select an audit log to review details."}
+        </SheetDescription>
         {!log ? (
           <div className="flex flex-1 flex-col items-center justify-center text-center text-sm text-muted-foreground">
-            <p className="text-base font-medium text-foreground">
-              No event selected
-            </p>
+            <p className="text-base font-medium text-foreground">No event selected</p>
             <p className="mt-1">Select an audit log to review details.</p>
           </div>
         ) : (
           <div className="flex h-full flex-col">
             <div className="flex items-start justify-between border-b pb-4">
               <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-foreground">
-                  Event Details
-                </h3>
+                <h3 className="text-lg font-semibold text-foreground">Event Details</h3>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="font-mono">ID: {log.id}</span>
-                  <Badge
-                    variant="outline"
-                    className={cn("rounded-md", status?.className)}
-                  >
+                  <Badge variant="outline" className={cn("rounded-md", status?.className)}>
                     {status?.label}
                   </Badge>
                 </div>
@@ -77,17 +96,11 @@ export function AuditDetailsDrawer({
                       {Icon ? <Icon className="h-6 w-6" /> : null}
                     </div>
                     <div>
-                      <h4 className="text-base font-semibold text-foreground">
-                        {log.event}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        {log.description}
-                      </p>
+                      <h4 className="text-base font-semibold text-foreground">{log.event}</h4>
+                      <p className="text-sm text-muted-foreground">{log.description}</p>
                       <p className="text-sm text-muted-foreground">
                         Resource:{" "}
-                        <span className="font-medium text-primary">
-                          {log.resourceLabel}
-                        </span>
+                        <span className="font-medium text-primary">{log.resourceLabel}</span>
                       </p>
                     </div>
                   </div>
@@ -109,17 +122,13 @@ export function AuditDetailsDrawer({
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Timestamp
                       </p>
-                      <p className="text-sm font-medium text-foreground">
-                        {log.timestampLabel}
-                      </p>
+                      <p className="text-sm font-medium text-foreground">{log.timestampLabel}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         IP Address
                       </p>
-                      <p className="text-sm font-medium text-foreground">
-                        {log.ipAddress}
-                      </p>
+                      <p className="text-sm font-medium text-foreground">{log.ipAddress}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -133,17 +142,13 @@ export function AuditDetailsDrawer({
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Severity
                       </p>
-                      <p className="text-sm font-medium text-foreground">
-                        {log.severity}
-                      </p>
+                      <p className="text-sm font-medium text-foreground">{log.severity}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Event type
                       </p>
-                      <p className="text-sm font-medium text-foreground">
-                        {category?.label}
-                      </p>
+                      <p className="text-sm font-medium text-foreground">{category?.label}</p>
                     </div>
                   </div>
                 </div>
@@ -156,6 +161,7 @@ export function AuditDetailsDrawer({
                       variant="link"
                       size="sm"
                       className="h-auto p-0 text-xs"
+                      onClick={() => handleCopyJson(log)}
                     >
                       <Copy className="h-3.5 w-3.5" />
                       Copy JSON
@@ -172,11 +178,21 @@ export function AuditDetailsDrawer({
             </ScrollArea>
             <Separator className="my-4" />
             <div className="flex gap-2 pb-2">
-              <Button className="flex-1">
+              <Button
+                className="flex-1"
+                disabled
+                title={shareLogUnavailableReason}
+                data-no-op-control="audit-share-log"
+              >
                 <Share2 className="h-4 w-4" />
                 Share Log
               </Button>
-              <Button variant="outline">
+              <Button
+                variant="outline"
+                disabled
+                title={reportLogUnavailableReason}
+                data-no-op-control="audit-report-log"
+              >
                 <Flag className="h-4 w-4" />
                 Report
               </Button>

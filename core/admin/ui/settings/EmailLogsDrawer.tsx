@@ -4,7 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 export type EmailLogItem = {
   id: string;
@@ -28,6 +34,9 @@ const statusStyles: Record<string, string> = {
   failed: "border-rose-500/20 bg-rose-500/10 text-rose-600",
 };
 
+const emailLogsExportUnavailableReason =
+  "Delivery log export is not wired yet. TASK-359-06 owns the export action.";
+
 export function EmailLogsDrawer({
   open,
   onOpenChange,
@@ -45,9 +54,9 @@ export function EmailLogsDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>Delivery Logs</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               Recent SMTP activity and delivery status.
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close email logs drawer">
@@ -78,9 +87,7 @@ export function EmailLogsDrawer({
                       {log.status}
                     </Badge>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {log.subject}
-                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">{log.subject}</p>
                   <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
                     {log.timestamp}
@@ -95,7 +102,12 @@ export function EmailLogsDrawer({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button className="gap-2">
+          <Button
+            className="gap-2"
+            disabled
+            title={emailLogsExportUnavailableReason}
+            data-no-op-control="settings-email-export-logs"
+          >
             <Mail className="h-4 w-4" />
             Export Logs
           </Button>

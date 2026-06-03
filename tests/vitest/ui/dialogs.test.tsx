@@ -32,6 +32,8 @@ test("ExportDialog renders fields", () => {
 
   expect(html).toContain("Export Logs");
   expect(html).toContain("Event");
+  expect(html).toContain("Export is not available for this surface yet.");
+  expect(html).not.toContain("Excel");
 });
 
 test("BackupNowDialog renders options", () => {

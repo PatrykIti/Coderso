@@ -87,6 +87,7 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `media:list`
 - `adminThemeTemplates:list`
 - `adminThemeProfiles:list`
+- `settings:redacted`
 
 ## Prefetch
 - Sidebar navigation can trigger optional prefetch on hover/focus.
@@ -116,6 +117,9 @@ Defined in `core/admin/services/cachePolicy.ts`:
   `/admin/backups` warms the first backup page plus schedule cache,
   `/admin/tools/import-export` hydrates the local import history cache, and
   `/admin/redirects` warms `redirects:list`.
+- `/settings` prefetch warms only `settings:redacted` with `{ force: false }`.
+  `/settings/site` additionally warms `pages:list` and `contentTypes:list` for
+  selectors, also with `{ force: false }`.
 
 ### Prefetch budgets
 - Per-hover burst request budget is gated by:
@@ -163,6 +167,17 @@ Contract:
 - `theme:updated` event:
   - refresh scope is limited to admin theme token reload,
   - global settings refresh is not triggered by theme update.
+- Permission-gated shell reads:
+  - `AdminApp` only calls `getSettingsCached()` when the current permission
+    snapshot has `settings:read`; cache hits hydrate from `settings:redacted`
+    and then revalidate through `/settings`.
+  - `AdminApp` only refreshes admin theme token caches when the snapshot has
+    `themes:read`.
+  - `AdminShell` only hydrates/revalidates custom screen shortcuts with
+    `content:read` and solution-kit navigation context with
+    `solution-kits:read`.
+  - Missing permissions clear route-local shell state instead of issuing
+    avoidable 403-producing reads.
 
 ## Release Gate Link
 - Admin cache/SPA transition behavior is part of Coderso release gates:
@@ -214,6 +229,41 @@ Consumers subscribe and revalidate when matching keys change.
    - Do not overwrite.
    - Show a “remote update” hint.
    - Allow manual refresh to apply the latest data.
+
+### Settings
+Settings uses a dedicated redacted cache because raw settings payloads can
+contain credentials or security-sensitive material.
+
+- Cache key: `settings:redacted`.
+- TTL: `cacheTtlMs.detail`.
+- Owner: `core/admin/services/settingsCache.ts`.
+- Cached wrappers:
+  - `getSettingsCached()` / `getCachedSettings()` for safe general/runtime/
+    assistant values.
+  - `getSiteSettingsCached()` / `getCachedSiteSettings()` for Site settings.
+- Stored payload is schema-versioned and allowlisted:
+  - general site name/locale/public base URL,
+  - runtime auth/session TTL and setup completion flags,
+  - assistant non-secret configuration, with token-limit field names stored as
+    `llmInputLimit` / `llmOutputLimit`,
+  - Site routing/cache values needed by the Site Settings page,
+  - boolean-only configured flags for bot protection and password pepper.
+- The cache validator rejects unknown keys and keys matching
+  `password`, `secret`, `token`, `accessKey`, `connectionString`, or `apiKey`.
+- Raw storage, email, integration, webhook, API-key, bot-protection secret, and
+  provider credential payloads are not cached in browser storage.
+- `updateSettings()` and `updateSiteSettings()` prime `settings:redacted` from
+  the server response and broadcast `settings:redacted` `update`.
+- `updateSecuritySettings()` only patches boolean configured flags when a safe
+  cache entry exists; otherwise it broadcasts `invalidate` and clears the
+  redacted settings cache.
+- Site Settings hydrates from `settings:redacted`, `pages:list`, and
+  `contentTypes:list`, revalidates Settings in the background when cache exists,
+  and no longer force-refetches pages/content types on every mount when those
+  selector caches are fresh.
+- `settings:redacted` cache-bus updates hydrate from storage first, so same-tab
+  and cross-tab mutations see the patched cache. Dirty Settings forms ignore
+  background cache updates to avoid draft overwrites.
 
 ## Invalidation Rules
 Clients update caches and broadcast events on:

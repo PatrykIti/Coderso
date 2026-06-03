@@ -65,7 +65,7 @@ vi.mock("@/components/ui/dialog", () => ({
       data-dialog-open={String(Boolean(open))}
       data-has-open-change={String(Boolean(onOpenChange))}
     >
-      {children}
+      {open ? children : null}
     </div>
   ),
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -202,6 +202,17 @@ test("RoleEditor create mode uses fallback catalog, select-all full access, and 
     );
 
     clickByText(view.container, "Select all");
+    expect(onSave).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Confirm full access");
+    expect(view.container.textContent).toContain("Full access will grant");
+    expect(view.container.textContent).toContain("0 selected");
+
+    clickByText(view.container, "Keep current permissions");
+    expect(view.container.textContent).not.toContain("Full access enabled");
+    expect(view.container.textContent).toContain("0 selected");
+
+    clickByText(view.container, "Select all");
+    clickByText(view.container, "Confirm high-risk change");
     expect(view.container.textContent).toContain("Full access");
     expect(view.container.textContent).toContain("Full access enabled");
 
@@ -216,6 +227,130 @@ test("RoleEditor create mode uses fallback catalog, select-all full access, and 
       "create"
     );
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("RoleEditor confirms high-risk permission grants before mutating the draft", () => {
+  const onOpenChange = vi.fn();
+  const onSave = vi.fn();
+
+  const view = mount(
+    <RoleEditor
+      open
+      onOpenChange={onOpenChange}
+      onSave={onSave}
+      permissionGroups={[
+        {
+          id: "custom",
+          label: "Custom",
+          permissions: [
+            { id: "content:read", label: "Read content" },
+            { id: "roles:write", label: "Manage roles" },
+          ],
+        },
+      ]}
+    />
+  );
+
+  try {
+    setInputValue(view.container.querySelector('input[placeholder="Editor"]'), "Security");
+
+    const checkboxes = Array.from(
+      view.container.querySelectorAll('input[type="checkbox"]')
+    ) as HTMLInputElement[];
+    React.act(() => {
+      checkboxes[1]?.click();
+    });
+
+    expect(view.container.textContent).toContain("Confirm high-risk permissions");
+    expect(view.container.textContent).toContain("High-risk permissions: roles:write.");
+    expect(view.container.textContent).toContain("0 selected");
+
+    clickByText(view.container, "Create role");
+    expect(onSave).not.toHaveBeenCalled();
+
+    clickByText(view.container, "Keep current permissions");
+    expect(view.container.textContent).toContain("0 selected");
+
+    const retryCheckboxes = Array.from(
+      view.container.querySelectorAll('input[type="checkbox"]')
+    ) as HTMLInputElement[];
+    React.act(() => {
+      retryCheckboxes[1]?.click();
+    });
+    clickByText(view.container, "Confirm high-risk change");
+    expect(view.container.textContent).toContain("1 selected");
+
+    clickByText(view.container, "Create role");
+
+    expect(onSave).toHaveBeenCalledWith(
+      {
+        name: "Security",
+        description: "",
+        permissions: ["roles:write"],
+      },
+      "create"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("RoleEditor does not re-prompt for low-risk edits after confirmed high-risk grant", () => {
+  const onOpenChange = vi.fn();
+  const onSave = vi.fn();
+
+  const view = mount(
+    <RoleEditor
+      open
+      onOpenChange={onOpenChange}
+      onSave={onSave}
+      permissionGroups={[
+        {
+          id: "custom",
+          label: "Custom",
+          permissions: [
+            { id: "content:read", label: "Read content" },
+            { id: "content:write", label: "Write content" },
+            { id: "roles:write", label: "Manage roles" },
+          ],
+        },
+      ]}
+    />
+  );
+
+  try {
+    setInputValue(view.container.querySelector('input[placeholder="Editor"]'), "Security");
+
+    let checkboxes = Array.from(
+      view.container.querySelectorAll('input[type="checkbox"]')
+    ) as HTMLInputElement[];
+    React.act(() => {
+      checkboxes[2]?.click();
+    });
+    clickByText(view.container, "Confirm high-risk change");
+
+    checkboxes = Array.from(
+      view.container.querySelectorAll('input[type="checkbox"]')
+    ) as HTMLInputElement[];
+    React.act(() => {
+      checkboxes[0]?.click();
+    });
+
+    expect(view.container.textContent).not.toContain("Confirm high-risk permissions");
+    expect(view.container.textContent).toContain("2 selected");
+
+    clickByText(view.container, "Create role");
+    expect(onSave).toHaveBeenCalledWith(
+      {
+        name: "Security",
+        description: "",
+        permissions: ["roles:write", "content:read"],
+      },
+      "create"
+    );
   } finally {
     view.cleanup();
   }

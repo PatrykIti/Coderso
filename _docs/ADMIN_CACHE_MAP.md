@@ -165,8 +165,17 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/layouts/AdminShell.tsx`
   - Cached APIs: `listCustomScreensCached`
   - Cache bus: `customScreens:list`
+  - Permission gate: shortcut cache hydration and revalidation require
+    `content:read`; unauthorized shells keep shortcuts empty and do not call the
+    endpoint.
   - Shortcut gate: only active screens with `supportsDedicatedEditor=true`
     become sidebar workspace links
+- Advanced solution-kit nav context
+  - UI: `core/admin/ui/layouts/AdminShell.tsx`
+  - Cached APIs: `listSolutionKitsCached`
+  - Permission gate: hydration and revalidation require `solution-kits:read`;
+    users without that permission keep default Advanced nav context without a
+    solution-kit list fetch.
 
 ## Widget Templates
 - Template editor
@@ -266,12 +275,31 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Admin UI themes
   - UI: `core/admin/ui/themes/ThemesPage.tsx`
   - Cached APIs: `listAdminThemeTemplatesCached`, `getCachedAdminThemeTemplates`, `listAdminThemeProfilesCached`, `getCachedAdminThemeProfiles`
+  - Shell token refresh: `core/admin/app/AdminApp.tsx` uses cached theme
+    template/profile reads only when the current permission snapshot has
+    `themes:read`; otherwise stored/default tokens render without network
+    refresh.
 - Theme editor
   - UI: `core/admin/ui/themes/ThemeEditorPage.tsx`
   - Cached APIs: `listPagesCached`
+- General / Assistant settings
+  - UI: `core/admin/app/AdminApp.tsx`,
+    `core/admin/ui/settings/GeneralSettingsPage.tsx`,
+    `core/admin/ui/settings/AssistantSettingsPage.tsx`
+  - Cached APIs: `getSettingsCached`, `getCachedSettings`
+  - Cache bus: `settings:redacted`
+  - Prefetch: `/settings` warms `settings:redacted`
 - Site settings
   - UI: `core/admin/ui/site/SiteSettingsPage.tsx`
-  - Cached APIs: `listPagesCached`, `listContentTypesCached`
+  - Cached APIs: `getSiteSettingsCached`, `getCachedSiteSettings`,
+    `listPagesCached`, `getCachedPages`, `listContentTypesCached`,
+    `getCachedContentTypes`
+  - Cache bus: `settings:redacted`, `pages:list`, `contentTypes:list`
+  - Prefetch: `/settings/site` warms `settings:redacted`, `pages:list`, and
+    `contentTypes:list` with `{ force: false }`
+  - Safety: only redacted/non-secret Settings values are stored in
+    `settings:redacted`; credential-bearing Settings endpoints remain uncached
+    in browser storage.
 
 ## Widget Editors (data selectors)
 - Hero
@@ -296,16 +324,29 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 ## Prefetch Routes
 - `/pages` -> `listPagesCached`
 - `/advanced/widgets` -> `listWidgetCatalogCached`, `listWidgetTemplateCategoriesCached`, `listWidgetTemplatesCached`
+- `/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId` -> `getContentTypeCollectionWorkspaceCached`, `getDetailPageCached`, `listContentTypesCached`, optional `listEntriesCached`
+- `/advanced/engine/:contentTypeId/collection` -> `listContentTypesCached`, `getContentTypeCollectionWorkspaceCached`
 - `/advanced/engine` -> `listContentTypesCached`
 - `/advanced/entries` -> `listContentTypesCached`, `listAllEntriesCached`
+- `/advanced/custom-screens` -> `listCustomScreensCached`, `listContentTypesCached`
+- `/advanced/custom-screens/:screenId/entries/:entryId?` -> `listCustomScreensCached`, `getCustomScreenCached`, `listContentTypesCached`, `listEntriesCached`, optional `getEntryCached`
 - `/advanced/forms` -> `listFormsCached`
 - `/advanced/listings` -> `listListingQueriesCached`, `listListingTemplatesCached`
 - `/advanced/filters` -> `listListingQueriesCached`
 - `/advanced/search` -> `listListingQueriesCached`
 - `/advanced/booking` -> `listBookingResourcesCached`, `listBookingServicesCached`, `listBookingReservationsCached`, `listBookingBlackoutsCached`
-- `/advanced/reviews` -> `listReviewsCached`
 - `/advanced/commerce` -> `listCommerceProductsCached`, `listCommerceCollectionsCached`
 - `/advanced/popups` -> `listPopupsCached`
+- `/advanced/reviews` -> `listReviewsCached`
+- `/advanced/solution-kits` -> `listSolutionKitsCached`, `listSolutionKitRunsCached`
 - `/menus` -> `listMenusCached`
 - `/media` -> `listMediaCached`
 - `/themes` -> `listAdminThemeTemplatesCached`, `listAdminThemeProfilesCached`
+- `/search` -> `listRecentSearchesCached`
+- `/seo` -> `listSeoCached`
+- `/analytics` -> `getOverviewCached`, `getTopContentCached`
+- `/backups` -> `listBackupsCached`, `getBackupScheduleCached`
+- `/tools/import-export` -> `listImportHistoryCached`
+- `/redirects` -> `listRedirectsCached`
+- `/settings` -> `getSettingsCached`
+- `/settings/site` -> `getSiteSettingsCached`, `listPagesCached`, `listContentTypesCached`

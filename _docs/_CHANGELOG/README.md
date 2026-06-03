@@ -25,6 +25,13 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1051 | 2026-05-31 | Admin UI Playwright audit | QA/Admin UI/Playwright/Docs |
+| 1050 | 2026-06-01 | TASK-360 Admin UI cross-cutting remediation family | Planning/Admin UI/RBAC/QA/Docs |
+| 1049 | 2026-06-01 | TASK-359 Admin Settings remediation family | Planning/Admin UI/Settings/Security/Navigation/Cache/QA/Docs |
+| 1048 | 2026-06-01 | TASK-358 Admin Access Logs remediation family | Planning/Admin UI/Access Logs/Security/QA/Docs |
+| 1047 | 2026-06-01 | TASK-357 Admin Audit Logs remediation family | Planning/Admin UI/Audit Logs/Compliance/QA/Docs |
+| 1046 | 2026-06-01 | TASK-356 Admin Roles Matrix remediation family | Planning/Admin UI/RBAC/QA/Docs |
+| 1045 | 2026-06-01 | TASK-355 Admin Users remediation family | Admin UI/Users/RBAC/QA/Docs |
 | 1044 | 2026-06-02 | TASK-354 Admin Tools user feedback follow-up | Admin Tools/UX/Cache/QA/Docs |
 | 1043 | 2026-06-01 | TASK-354 Cross Tools remediation closure | Admin Tools/UX/Auth Bootstrap/Playwright/QA/Docs |
 | 1042 | 2026-06-01 | TASK-353 Redirects tools remediation closure | Admin Tools/Redirects/Public Runtime/API/UI/QA/Docs |

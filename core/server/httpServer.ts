@@ -30,8 +30,7 @@ const READ_METHODS = new Set(["GET", "HEAD"]);
 
 const isReadMethod = (method: string) => READ_METHODS.has(method.toUpperCase());
 
-const isPublicWritePath = (pathname: string) =>
-  /^\/forms\/[^/]+\/submissions$/.test(pathname);
+const isPublicWritePath = (pathname: string) => /^\/forms\/[^/]+\/submissions$/.test(pathname);
 
 const resolvePublicWriteIdentifier = (pathname: string) => {
   const match = pathname.match(/^\/forms\/([^/]+)\/submissions$/);
@@ -89,9 +88,12 @@ const errorResponse = (error: unknown) => {
   }
   if (error instanceof Error) {
     if (error.message === "auth_required") {
-      return jsonResponse(toErrorResponse(new ApiError("auth_required", "Not authenticated", 401)), {
-        status: 401,
-      });
+      return jsonResponse(
+        toErrorResponse(new ApiError("auth_required", "Not authenticated", 401)),
+        {
+          status: 401,
+        }
+      );
     }
     if (error.message === "forbidden") {
       return jsonResponse(toErrorResponse(new ApiError("forbidden", "Forbidden", 403)), {
@@ -99,9 +101,12 @@ const errorResponse = (error: unknown) => {
       });
     }
     if (error.message === "validation_error") {
-      return jsonResponse(toErrorResponse(new ApiError("validation_error", "Invalid payload", 400)), {
-        status: 400,
-      });
+      return jsonResponse(
+        toErrorResponse(new ApiError("validation_error", "Invalid payload", 400)),
+        {
+          status: 400,
+        }
+      );
     }
     if (error.message === "media_file_invalid") {
       return jsonResponse(
@@ -332,7 +337,7 @@ const handleApi = async (req: Request, apiPrefix: string) => {
           ? (ctx.body as { email?: string }).email
           : undefined;
       const identifier = isPublicWrite
-        ? resolvePublicWriteIdentifier(pathname) ?? undefined
+        ? (resolvePublicWriteIdentifier(pathname) ?? undefined)
         : identifierFromBody;
       checkRateLimit(
         bucket,
@@ -359,6 +364,7 @@ const handleApi = async (req: Request, apiPrefix: string) => {
         ip: ctx.ip ?? null,
         userAgent: ctx.userAgent ?? null,
         userId: ctx.user?.id ?? null,
+        sessionId: ctx.sessionId ?? null,
         durationMs: Date.now() - requestStart,
       });
       return response;
@@ -372,6 +378,7 @@ const handleApi = async (req: Request, apiPrefix: string) => {
         ip: ctx.ip ?? null,
         userAgent: ctx.userAgent ?? null,
         userId: ctx.user?.id ?? null,
+        sessionId: ctx.sessionId ?? null,
         durationMs: Date.now() - requestStart,
       });
       return response;

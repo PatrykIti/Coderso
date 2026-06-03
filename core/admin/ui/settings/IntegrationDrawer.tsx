@@ -1,15 +1,53 @@
 import { Link2, ShieldCheck, X } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
 import type { IntegrationStatus } from "./IntegrationCard";
+
+type IntegrationDrawerField = {
+  key: string;
+  label: string;
+  type: "text" | "url" | "secret";
+  required: boolean;
+  configured: boolean;
+  value: string | null;
+};
+
+const getIntegrationDirtySignature = (
+  fields: IntegrationDrawerField[],
+  values: Record<string, string>,
+  secretEdits: Record<string, boolean>
+) =>
+  JSON.stringify(
+    fields.map((field) => {
+      if (field.type === "secret") {
+        return {
+          key: field.key,
+          editing: secretEdits[field.key] ?? false,
+          hasDraft: Boolean(values[field.key]?.trim()),
+        };
+      }
+      return {
+        key: field.key,
+        value: values[field.key] ?? "",
+      };
+    })
+  );
 
 type IntegrationDrawerProps = {
   open: boolean;
@@ -20,18 +58,11 @@ type IntegrationDrawerProps = {
     status: IntegrationStatus;
     description: string;
     scopes: string[];
-    fields: Array<{
-      key: string;
-      label: string;
-      type: "text" | "url" | "secret";
-      required: boolean;
-      configured: boolean;
-      value: string | null;
-    }>;
+    fields: IntegrationDrawerField[];
   } | null;
   isSaving?: boolean;
   error?: string | null;
-  onSave?: (id: string, config: Record<string, string | null>) => void;
+  onSave?: (id: string, config: Record<string, string | null>) => void | Promise<void>;
 };
 
 export function IntegrationDrawer({
@@ -42,7 +73,7 @@ export function IntegrationDrawer({
   error,
   onSave,
 }: IntegrationDrawerProps) {
-  const fields = integration?.fields ?? [];
+  const fields = useMemo(() => integration?.fields ?? [], [integration?.fields]);
   const [values, setValues] = useState<Record<string, string>>(() => {
     const nextValues: Record<string, string> = {};
     for (const field of fields) {
@@ -58,11 +89,27 @@ export function IntegrationDrawer({
     return nextSecretEdits;
   });
   const [localError, setLocalError] = useState<string | null>(null);
+  const [pendingSecretSave, setPendingSecretSave] = useState<{
+    id: string;
+    name: string;
+    config: Record<string, string | null>;
+    secretLabels: string[];
+  } | null>(null);
+  const initialSignature = useMemo(() => {
+    const initialValues: Record<string, string> = {};
+    const initialSecretEdits: Record<string, boolean> = {};
+    for (const field of fields) {
+      initialValues[field.key] = field.value ?? "";
+      initialSecretEdits[field.key] = false;
+    }
+    return getIntegrationDirtySignature(fields, initialValues, initialSecretEdits);
+  }, [fields]);
+  const currentSignature = getIntegrationDirtySignature(fields, values, secretEdits);
+  useRegisterSettingsDirty(open && currentSignature !== initialSignature);
 
-  const scopesLabel =
-    integration?.scopes?.length
-      ? integration.scopes.join(", ")
-      : "No scopes available.";
+  const scopesLabel = integration?.scopes?.length
+    ? integration.scopes.join(", ")
+    : "No scopes available.";
 
   const handleChange = (key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -76,10 +123,14 @@ export function IntegrationDrawer({
   const handleSave = () => {
     if (!integration || !onSave) return;
     const payload: Record<string, string | null> = {};
+    const editedSecretLabels: string[] = [];
     for (const field of fields) {
       const value = values[field.key] ?? "";
       if (field.type === "secret" && !secretEdits[field.key]) {
         continue;
+      }
+      if (field.type === "secret") {
+        editedSecretLabels.push(field.label);
       }
       if (field.required && !value.trim() && field.type !== "secret") {
         setLocalError(`Fill in ${field.label.toLowerCase()}.`);
@@ -88,6 +139,15 @@ export function IntegrationDrawer({
       payload[field.key] = value.trim() ? value.trim() : null;
     }
     setLocalError(null);
+    if (editedSecretLabels.length > 0) {
+      setPendingSecretSave({
+        id: integration.id,
+        name: integration.name,
+        config: payload,
+        secretLabels: editedSecretLabels,
+      });
+      return;
+    }
     onSave(integration.id, payload);
   };
 
@@ -101,9 +161,9 @@ export function IntegrationDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>{integration?.name ?? "Integration"}</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               {integration?.description ?? "Configure connection settings."}
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close integration drawer">
@@ -172,9 +232,7 @@ export function IntegrationDrawer({
                       />
                     </div>
                     {field.required ? (
-                      <p className="text-[11px] text-muted-foreground">
-                        Required
-                      </p>
+                      <p className="text-[11px] text-muted-foreground">Required</p>
                     ) : null}
                   </div>
                 );
@@ -200,6 +258,30 @@ export function IntegrationDrawer({
           </Button>
         </div>
       </SheetContent>
+      <ConfirmActionDialog
+        open={Boolean(pendingSecretSave)}
+        onOpenChange={(open) => {
+          if (!open) setPendingSecretSave(null);
+        }}
+        title="Review integration secrets"
+        description="This updates encrypted credentials used by an external integration."
+        targetLabel={
+          pendingSecretSave
+            ? `${pendingSecretSave.name}: ${pendingSecretSave.secretLabels.join(", ")}`
+            : undefined
+        }
+        confirmLabel="Save secrets"
+        confirmingLabel="Saving..."
+        tone="warning"
+        closeOnSuccess
+        onConfirm={async () => {
+          if (pendingSecretSave) {
+            await onSave?.(pendingSecretSave.id, pendingSecretSave.config);
+          }
+        }}
+      >
+        Confirm that the replacement secret is intended for this integration and scope.
+      </ConfirmActionDialog>
     </Sheet>
   );
 }

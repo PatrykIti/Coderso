@@ -23,9 +23,9 @@ In the current UI, this route includes:
 - local security tabs:
   `General`, `Active Sessions`, `Login Alerts`, `Audit Log`, `Two-Factor Auth`
 - alert toggles,
-- a brute-force threshold card,
-- recipients settings,
-- notification channels.
+- a disabled brute-force threshold card,
+- disabled recipients settings,
+- disabled notification channels.
 
 # Medium
 
@@ -54,23 +54,28 @@ them.
 5. Review the two main triggers:
    - `Alert on new device`
    - `Alert on new location`
-6. Move to `Brute Force Protection`.
-7. Review the failed-attempts threshold and its lockout behavior.
-8. Treat the threshold as a balance between security and false positives, not as
+6. The local tab strip is read-only outside `Login Alerts`; the other tab labels
+   are disabled placeholders.
+7. Move to `Brute Force Protection`.
+8. Review the failed-attempts threshold and its lockout behavior. In the current
+   UI this slider is disabled until persistence is wired.
+9. Treat the threshold as a balance between security and false positives, not as
    a decorative slider.
-9. Move to `Recipients`.
-10. Review:
+10. Move to `Recipients`.
+11. Review:
     - `Admin-only alerts`
     - `Custom Email List`
-11. Keep the email list clean and intentional because it controls who receives
-    security noise and security evidence.
-12. Move to `Notification Channels`.
-13. Review which channels should be active:
+12. These recipient controls are disabled in the current UI until persistence is
+    wired.
+13. Move to `Notification Channels`.
+14. Review which channels should be active:
     - `Email`
     - `Webhook`
-14. Use `Save changes` only after the alerting policy and recipients are
-    coherent together.
-15. Use `Discard` when the draft alert policy should not be kept.
+15. These channel controls are disabled in the current UI until persistence is
+    wired.
+16. Use `Save changes` only after the supported alert toggles are coherent
+    together.
+17. Use `Discard` when the draft alert policy should not be kept.
 
 Use this safe alert-policy order when you want fewer noisy or weak alerts:
 1. Confirm alerting is enabled intentionally.
@@ -91,14 +96,15 @@ Use this safe alert-policy order when you want fewer noisy or weak alerts:
 - The route’s unsaved-changes notice is important because this screen controls
   security signaling, not just UI preference.
 - Webhook support means the route can feed broader incident tooling, not only
-  email inboxes.
+  email inboxes, once the disabled channel controls are wired.
 
 # Troubleshooting
 
 - Alerts feel noisy:
   review trigger toggles and the brute-force threshold together.
 - Real alerts are going to the wrong people:
-  check `Admin-only alerts` and the custom email list first.
+  custom recipient persistence is unavailable in the current UI, so keep
+  admin-only supported settings clear and defer custom lists until wired.
 - The policy is unclear after editing:
   use `Discard` before saving a half-decided configuration.
 - The route looks related to sessions:

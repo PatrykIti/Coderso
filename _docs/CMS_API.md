@@ -91,10 +91,12 @@ Permissions: `users:read`, `users:write`
 
 - `GET /admin-users`
 - `POST /admin-users`
+- `POST /admin-users/invite`
 - `PATCH /admin-users/:id`
 - `POST /admin-users/:id/disable`
 - `POST /admin-users/:id/enable`
 - `PUT /admin-users/:id/roles`
+- `POST /admin-users/:id/password-reset`
 - `DELETE /admin-users/:id`
 
 Create user payload (summary):
@@ -104,8 +106,18 @@ Create user payload (summary):
   "name": "Alex Morgan",
   "email": "alex@example.com",
   "roleIds": ["editor"],
-  "status": "pending",
-  "password": "optional"
+  "status": "pending"
+}
+```
+
+Invite user payload (summary):
+
+```json
+{
+  "name": "Alex Morgan",
+  "email": "alex@example.com",
+  "roleIds": ["editor"],
+  "sendSetPasswordInvite": true
 }
 ```
 
@@ -125,6 +137,29 @@ Replace roles payload:
 { "roleIds": ["editor", "viewer"] }
 ```
 
+Password reset payload:
+
+```json
+{ "delivery": "email" }
+```
+
+Invite/reset responses return delivery status and never return the reset token:
+
+```json
+{
+  "delivery": "email",
+  "status": "sent",
+  "expiresAt": "2026-06-01T11:00:00.000Z"
+}
+```
+
+Relevant errors:
+
+- `email_not_configured` when Settings -> Email is not configured.
+- `email_send_failed` when SMTP delivery fails.
+- `set_password_token_invalid`, `set_password_token_expired`,
+  `set_password_token_used` on reset-confirm.
+
 ---
 
 ## Admin roles (v1)
@@ -143,9 +178,22 @@ Create role payload (summary):
 {
   "name": "editor",
   "description": "Content editors",
-  "permissions": ["content:read", "content:write", "media:read"]
+  "permissions": ["content:read", "content:write", "media:read"],
+  "sourceRoleId": "optional-source-role-id",
+  "sourceRoleName": "optional source role name"
 }
 ```
+
+`sourceRoleId` and `sourceRoleName` are accepted only as duplicate-role audit
+context. The route strips them before persistence and records
+`admin.role.duplicate` audit metadata when `sourceRoleId` is present.
+
+Relevant role errors:
+
+- `role_not_found` when the target role does not exist.
+- `role_invalid` or `permission_invalid` for invalid payloads.
+- `role_exists` on name conflicts.
+- `last_admin` when a role mutation would remove the last administrator path.
 
 Permissions catalog response (summary):
 
@@ -2962,11 +3010,31 @@ Validation and runtime contract:
 
 ---
 
+## Admin log query conventions
+
+Admin log list endpoints use strict query validation. Unknown query parameters
+are rejected, `limit` is normalized through the shared Admin query helper after
+raw string validation, and date query params must be RFC3339 `date-time` values
+when a route accepts them. UI copy must not invent totals: exact totals may
+only be shown when response metadata supplies them; otherwise copy must describe
+loaded rows and cursor availability. Custom ranges must expose real `from`/`to`
+inputs before they can be applied, and filter labels must match their source
+(`User` for user ids, `Role` for role ids).
+
+---
+
 ## Audit logs
 
 Permissions: `audit:read`
 
 - `GET /audit?limit=100`
+- `POST /audit/export`
+- Optional strict filters: `q=search`, `category=authentication|content|system`,
+  `severity=info|warning|error`, `from`, `to`, `cursor`.
+- `from` and `to` must be RFC3339 `date-time` values. Reversed ranges are
+  rejected as `audit_query_invalid`.
+- Cursors are opaque keyset cursors that preserve database timestamp precision.
+  Malformed cursors are rejected as `audit_cursor_invalid`.
 
 Response:
 
@@ -2982,20 +3050,70 @@ Response:
       "metadata": { "slug": "home" },
       "createdAt": "2026-01-27T10:00:00Z"
     }
-  ]
+  ],
+  "nextCursor": null
 }
 ```
 
-Uwaga: Admin UI korzysta z `GET /audit` do listowania logow (limit 200).
+Uwaga: Admin UI korzysta z `GET /audit` do listowania logow. `limit` jest
+walidowany jako dodatnia liczba calkowita i clampowany do 200 przez wspolne
+konwencje query. `category` i `severity` sa deterministycznie wyprowadzane z
+`action`, `targetType` i `metadata.severity`; odpowiedz jest sortowana po
+`createdAt DESC, id DESC`.
+
+`POST /audit/export` body:
+
+```json
+{
+  "format": "csv",
+  "columns": ["event", "actor", "resource", "timestamp", "status", "payload"],
+  "filters": {
+    "limit": 50,
+    "query": "auth",
+    "category": "authentication",
+    "from": "2026-06-01T00:00:00.000Z",
+    "to": "2026-06-01T23:59:59.999Z"
+  }
+}
+```
+
+The export route is an internal admin POST (`/admin/api/audit/export` over
+HTTP), uses the global admin CSRF and `admin_write` rate-limit pipeline, and
+requires `audit:read`. It rejects unknown body fields and unsupported columns.
+Supported formats are `csv` and `json`; synchronous exports are limited to 200
+rows. Responses use the shared admin export JSON contract:
+
+```json
+{
+  "type": "file",
+  "filename": "audit-logs-2026-06-01-search.csv",
+  "mimeType": "text/csv",
+  "content": "Event,Timestamp\ncontent.publish,2026-06-01T10:30:00.000Z"
+}
+```
+
+Exported payload values are redacted recursively before serialization. CSV
+output escapes commas, quotes, newlines, and formula prefixes.
 
 ---
 
 ## Access logs
 
-Permissions: `audit:read`
+Permissions:
+
+- `audit:read` for `GET /access-logs`.
+- `audit:read` for `POST /access-logs/export`.
+- `settings:write` for `POST /access-logs/:id/revoke`.
 
 - `GET /access-logs?limit=100`
-- Optional filters: `status=success|failed`, `q=search`, `from`, `to`
+- `POST /access-logs/export`
+- `POST /access-logs/:id/revoke`
+- Optional strict filters: `status=success|failed`, `q=search`, `userId`,
+  `method`, `ip`, `from`, `to`, `cursor`.
+- `from` and `to` must be RFC3339 `date-time` values. Reversed ranges are
+  rejected as `access_log_query_invalid`.
+- `cursor` is an opaque keyset cursor returned by the previous response.
+  Malformed cursors are rejected as `access_log_cursor_invalid`.
 
 Response:
 
@@ -3013,13 +3131,121 @@ Response:
       "userName": "Admin",
       "userEmail": "admin@example.com",
       "durationMs": 120,
-      "createdAt": "2026-01-31T10:00:00Z"
+      "createdAt": "2026-01-31T10:00:00Z",
+      "matchContext": {
+        "field": "email",
+        "label": "Matched user email"
+      },
+      "session": {
+        "state": "active",
+        "label": "Active session",
+        "sessionId": "session-id",
+        "userId": "user-id",
+        "current": false,
+        "expiresAt": "2026-02-01T10:00:00Z",
+        "revokedAt": null,
+        "view": { "enabled": true },
+        "revoke": { "enabled": true }
+      }
     }
-  ]
+  ],
+  "nextCursor": null
 }
 ```
 
-Uwaga: Admin UI korzysta z `GET /access-logs` do listowania (limit 200).
+Uwaga: Admin UI korzysta z `GET /access-logs` do listowania. `limit` jest
+walidowany jako dodatnia liczba calkowita i clampowany do 200 przez wspolne
+konwencje query. Wyniki sa sortowane `createdAt DESC, id DESC`; `Next` i
+`Previous` w UI korzystaja wylacznie z `nextCursor` i lokalnego stosu
+zaladowanych cursorow. `matchContext` wyjasnia dopasowania query do pol, ktore
+nie zawsze sa oczywiste w tabeli, bez dodawania nowych wartosci PII.
+
+`session` opisuje deterministyczny stan sesji zwiazanej z access logiem:
+`active`, `current`, `revoked`, `expired`, `none`, albo `missing`. Raw
+`sessionId`, `userId`, `current`, `expiresAt`, and `revokedAt` are returned only
+when the current admin also has `settings:read`; `audit:read` without settings
+access sees only state and unavailable copy. `userId` lets the Settings Sessions
+surface focus a linked active session that belongs to another user without
+guessing from browser hints. Historical rows without `session_id` and
+failed/system rows do not call session actions.
+
+`POST /access-logs/export` body:
+
+```json
+{
+  "format": "csv",
+  "columns": ["user", "ip", "timestamp", "status", "path"],
+  "filters": {
+    "limit": 50,
+    "status": "failed",
+    "query": "login",
+    "userId": "user-id",
+    "method": "POST",
+    "ip": "127.0.0.1",
+    "from": "2026-06-01T00:00:00.000Z",
+    "to": "2026-06-01T23:59:59.999Z"
+  }
+}
+```
+
+The export route is an internal admin POST (`/admin/api/access-logs/export`
+over HTTP), uses the global admin CSRF and `admin_write` rate-limit pipeline,
+and requires `audit:read`. It rejects unknown body fields and unsupported
+columns. Supported formats are `csv` and `json`; synchronous exports are
+limited to 200 rows. The body uses `query` instead of the URL `q` parameter.
+Supported columns are `id`, `user`, `userId`, `method`, `path`, `status`, `ip`,
+`device`, `userAgent`, `timestamp`, `durationMs`, `sessionState`, and `match`.
+Raw `sessionId` is not an export column.
+
+Responses use the shared admin export JSON contract:
+
+```json
+{
+  "type": "file",
+  "filename": "access-logs-2026-06-01-failed-POST-search-user-ip.csv",
+  "mimeType": "text/csv",
+  "content": "User,Status\nAdmin,401"
+}
+```
+
+Exported `path`, `userAgent`, IP, and user labels are redacted for cookies,
+authorization headers, CSRF/reset/session tokens, API keys, passwords, and raw
+secret-like values before serialization. CSV output escapes commas, quotes,
+newlines, and formula prefixes. Export emits `access_logs.export` with format,
+selected columns, sanitized filter summary, row count, and request id only.
+
+`POST /access-logs/:id/revoke` strict JSON body:
+
+```json
+{
+  "reason": "admin_manual_revoke"
+}
+```
+
+The revoke route is internal admin-only, uses the global admin CSRF pipeline and
+`admin_write` rate-limit bucket, and requires `settings:write`; `audit:read`
+alone is never sufficient. The browser sends only the reason. The server
+resolves the target session from `access_logs.session_id`, blocks current-session
+self-lockout, treats already-revoked sessions idempotently, and emits a redacted
+audit event with `accessLogRef`, `revokedSessionRef`, `targetUserRef`, `reason`,
+and `result`.
+
+Known errors:
+
+- `access_log_query_invalid`: invalid/unknown list query params.
+- `access_log_cursor_invalid`: malformed list cursor.
+- `access_log_export_invalid`: invalid/unknown export payload.
+- `access_log_export_invalid_columns`: unsupported or empty export column
+  selection.
+- `access_log_export_too_large`: requested synchronous export limit is above
+  the supported cap.
+- `access_log_export_forbidden`: `audit:read` is missing for export.
+- `access_log_revoke_invalid`: invalid revoke body or reason.
+- `access_log_not_found`: access log row does not exist.
+- `access_log_session_not_found`: row has no resolvable session relation.
+- `access_log_session_expired`: linked session is already expired.
+- `access_log_current_session_revoke_blocked`: linked session is the current
+  admin session.
 
 ---
 
@@ -4009,6 +4235,11 @@ Permissions: `content:read`
 Permissions: `audit:read`
 
 - `GET /audit`
+- `POST /audit/export`
+- Optional strict filters: `limit`, `q`, `category`, `severity`, `from`, `to`,
+  `cursor`
+- Export body filters use `query` instead of `q`, plus `format` (`csv`/`json`)
+  and allowlisted `columns`.
 
 ---
 

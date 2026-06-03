@@ -610,6 +610,9 @@ export const accessLogs = pgTable(
     userId: uuid("user_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    sessionId: uuid("session_id").references(() => sessions.id, {
+      onDelete: "set null",
+    }),
     durationMs: integer("duration_ms"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -618,6 +621,7 @@ export const accessLogs = pgTable(
     statusIdx: index("access_logs_status_idx").on(t.status),
     pathIdx: index("access_logs_path_idx").on(t.path),
     userIdx: index("access_logs_user_id_idx").on(t.userId),
+    sessionIdx: index("access_logs_session_id_idx").on(t.sessionId),
   })
 );
 

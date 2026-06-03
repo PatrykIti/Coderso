@@ -4,7 +4,7 @@ import { UserPlus, UserCog } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import {
   createAdminRole,
@@ -14,21 +14,25 @@ import {
   updateAdminRole,
 } from "@/services/adminRolesClient";
 import {
-  createAdminUser,
   deleteAdminUser,
   disableAdminUser,
   enableAdminUser,
+  inviteUserWithSetPassword,
   listAdminUsers,
   replaceAdminUserRoles,
+  requestAdminPasswordReset,
   updateAdminUser,
   type AdminUser,
 } from "@/services/adminUsersClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
+import { useAdminAuth } from "@/ui/contexts/AdminAuthContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { SectionHeader } from "@/ui/shared/SectionHeader";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
 import { RoleEditor } from "../roles/RoleEditor";
 import { RoleList } from "../roles/RoleList";
+import { hasHighRiskPermissions } from "../roles/rolePermissionRisk";
 import type { RoleDraft, RoleSummary } from "../roles/types";
 import { fallbackPermissionGroups } from "../roles/permissionCatalog";
 import { InviteUserDialog, type InviteUserValues } from "./InviteUserDialog";
@@ -38,10 +42,13 @@ import { UserFilters } from "./UserFilters";
 import { UserList } from "./UserList";
 import type { UserDraft, UserSummary } from "./types";
 
-const defaultPermissions = ["users:read", "users:write", "roles:read", "roles:write"];
-
 const hasPermission = (permissions: string[], permission: string) =>
   permissions.includes("*") || permissions.includes(permission);
+
+const roleFilterUnavailableReason =
+  "Role filtering requires roles:read permission. TASK-355-01 keeps the Users list readable without fetching roles.";
+const roleDetailsUnavailableReason =
+  "Role names require roles:read permission. User rows hide role details in partial-read mode.";
 
 const formatLastActive = (value?: string | null) => {
   if (!value) return "Never";
@@ -72,7 +79,33 @@ export type UsersRolesPageProps = {
   permissions?: string[];
 };
 
-export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesPageProps) {
+type ConfirmActionRequest =
+  | {
+      kind: "user-status";
+      user: UserSummary;
+      nextStatus: "active" | "inactive";
+      highRisk: boolean;
+    }
+  | {
+      kind: "user-delete";
+      user: UserSummary;
+    }
+  | {
+      kind: "role-delete";
+      role: RoleSummary;
+    }
+  | {
+      kind: "role-duplicate";
+      role: RoleSummary;
+    };
+
+export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
+  const adminAuth = useAdminAuth();
+  const canAccess = useCallback(
+    (permission: string) =>
+      permissions ? hasPermission(permissions, permission) : adminAuth.can(permission),
+    [adminAuth, permissions]
+  );
   const initialUserId =
     typeof window === "undefined"
       ? ""
@@ -94,6 +127,8 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   const [userEditorOpen, setUserEditorOpen] = useState(false);
   const [roleEditorOpen, setRoleEditorOpen] = useState(false);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [passwordResetUser, setPasswordResetUser] = useState<UserSummary | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmActionRequest | null>(null);
   const [userEditorSeed, setUserEditorSeed] = useState(0);
   const [roleEditorSeed, setRoleEditorSeed] = useState(0);
   const [inviteDialogSeed, setInviteDialogSeed] = useState(0);
@@ -102,9 +137,62 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const canManageUsers = hasPermission(permissions, "users:write");
-  const canManageRoles = hasPermission(permissions, "roles:write");
+  const canReadUsers = canAccess("users:read");
+  const canManageUsers = canAccess("users:write");
+  const canReadRoles = canAccess("roles:read");
+  const canManageRoles = canAccess("roles:write");
+  const hasAnyReadAccess = canReadUsers || canReadRoles;
+
+  const resolveErrorMessage = useCallback(
+    (err: unknown, fallback: string) => {
+      if (isApiClientError(err)) {
+        if (err.sharedFailureKind === "permission_denied" || err.status === 403) {
+          void adminAuth.refreshPermissions().catch(() => undefined);
+          return "Your permissions changed. Refreshing access before enabling actions.";
+        }
+        return err.message;
+      }
+      return fallback;
+    },
+    [adminAuth]
+  );
+
+  const loadResources = useCallback(async () => {
+    if (!hasAnyReadAccess) {
+      return {
+        usersData: [] as AdminUser[],
+        rolesData: [] as RoleSummary[],
+        permissionsData: fallbackPermissionGroups,
+      };
+    }
+    const [usersData, rolesData, permissionsData] = await Promise.all([
+      canReadUsers ? listAdminUsers() : Promise.resolve([] as AdminUser[]),
+      canReadRoles ? listAdminRoles() : Promise.resolve([] as RoleSummary[]),
+      canReadRoles ? listPermissionCatalog() : Promise.resolve(fallbackPermissionGroups),
+    ]);
+    return { usersData, rolesData: rolesData as RoleSummary[], permissionsData };
+  }, [canReadRoles, canReadUsers, hasAnyReadAccess]);
+
+  const applyResources = useCallback(
+    ({
+      permissionsData,
+      rolesData,
+      usersData,
+    }: {
+      usersData: AdminUser[];
+      rolesData: RoleSummary[];
+      permissionsData: typeof fallbackPermissionGroups;
+    }) => {
+      setRoles(canReadRoles ? rolesData : []);
+      setUsers(canReadUsers ? usersData.map(mapUserSummary) : []);
+      setPermissionGroups(
+        canReadRoles && permissionsData.length > 0 ? permissionsData : fallbackPermissionGroups
+      );
+    },
+    [canReadRoles, canReadUsers]
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -116,48 +204,49 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   }, []);
 
   const refresh = useCallback(async () => {
+    if (!hasAnyReadAccess) {
+      applyResources({
+        usersData: [],
+        rolesData: [],
+        permissionsData: fallbackPermissionGroups,
+      });
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
+    setNotice(null);
     try {
-      const [usersData, rolesData, permissionsData] = await Promise.all([
-        listAdminUsers(),
-        listAdminRoles(),
-        listPermissionCatalog(),
-      ]);
-      const roleList = rolesData as RoleSummary[];
-      setRoles(roleList);
-      setUsers(usersData.map(mapUserSummary));
-      setPermissionGroups(permissionsData.length > 0 ? permissionsData : fallbackPermissionGroups);
+      applyResources(await loadResources());
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load users and roles.");
-      }
+      setError(resolveErrorMessage(err, "Failed to load users and roles."));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [applyResources, hasAnyReadAccess, loadResources, resolveErrorMessage]);
 
   useEffect(() => {
     let active = true;
-    Promise.all([listAdminUsers(), listAdminRoles(), listPermissionCatalog()])
-      .then(([usersData, rolesData, permissionsData]) => {
-        if (!active) return;
-        const roleList = rolesData as RoleSummary[];
-        setRoles(roleList);
-        setUsers(usersData.map(mapUserSummary));
-        setPermissionGroups(
-          permissionsData.length > 0 ? permissionsData : fallbackPermissionGroups
-        );
+    if (!hasAnyReadAccess) {
+      return () => {
+        active = false;
+      };
+    }
+
+    Promise.resolve()
+      .then(() => {
+        if (!active) return null;
+        setIsLoading(true);
+        setError(null);
+        return loadResources();
+      })
+      .then((resources) => {
+        if (!active || !resources) return;
+        applyResources(resources);
       })
       .catch((err) => {
         if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load users and roles.");
-        }
+        setError(resolveErrorMessage(err, "Failed to load users and roles."));
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -165,7 +254,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     return () => {
       active = false;
     };
-  }, []);
+  }, [applyResources, hasAnyReadAccess, loadResources, resolveErrorMessage]);
 
   const filteredUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -174,11 +263,12 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         !normalizedQuery ||
         user.name.toLowerCase().includes(normalizedQuery) ||
         user.email.toLowerCase().includes(normalizedQuery);
-      const matchesRole = roleFilter === "all" || user.roleIds.includes(roleFilter);
+      const matchesRole =
+        !canReadRoles || roleFilter === "all" || user.roleIds.includes(roleFilter);
       const matchesStatus = statusFilter === "any" || user.status === statusFilter;
       return matchesQuery && matchesRole && matchesStatus;
     });
-  }, [query, roleFilter, statusFilter, users]);
+  }, [canReadRoles, query, roleFilter, statusFilter, users]);
 
   const selectedUser = useMemo(() => {
     const pendingUser = pendingSelectUserId
@@ -206,6 +296,16 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
 
   const protectedUserIds = adminUsers.length === 1 ? [adminUsers[0]?.id] : [];
 
+  const highRiskRoleIds = useMemo(
+    () => roles.filter((role) => hasHighRiskPermissions(role.permissions)).map((role) => role.id),
+    [roles]
+  );
+
+  const isHighRiskUser = useCallback(
+    (user: UserSummary) => user.roleIds.some((roleId) => highRiskRoleIds.includes(roleId)),
+    [highRiskRoleIds]
+  );
+
   const roleUsageCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     users.forEach((user) => {
@@ -217,10 +317,16 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   }, [users]);
 
   const handleSaveUser = async (draft: UserDraft, mode: "create" | "edit") => {
+    if (!canReadUsers || !canManageUsers || !canReadRoles) {
+      setError("User changes require users:write and roles:read permissions.");
+      return;
+    }
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       let selectedId: string | null = null;
+      let noticeMessage: string | null = null;
       if (mode === "edit" && editingUser) {
         await updateAdminUser(editingUser.id, {
           name: draft.name,
@@ -230,44 +336,65 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         await replaceAdminUserRoles(editingUser.id, draft.roleIds);
         selectedId = editingUser.id;
       } else {
-        const created = await createAdminUser({
+        const created = await inviteUserWithSetPassword({
           name: draft.name,
           email: draft.email,
           roleIds: draft.roleIds,
-          status: draft.status,
+          sendSetPasswordInvite: true,
         });
-        selectedId = created.id;
+        selectedId = created.user.id;
+        noticeMessage = `Invitation email sent to ${created.user.email}.`;
       }
       await refresh();
       if (selectedId) {
         setPendingSelectUserId(selectedId);
       }
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to save user.");
+      if (noticeMessage) {
+        setNotice(noticeMessage);
       }
+    } catch (err) {
+      setError(resolveErrorMessage(err, "Failed to save user."));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleInviteUser = async (values: InviteUserValues) => {
-    await handleSaveUser(
-      {
+    if (!canReadUsers || !canManageUsers || !canReadRoles) {
+      const message = "Inviting users requires users:write and roles:read permissions.";
+      setError(message);
+      throw new Error(message);
+    }
+    setIsSaving(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await inviteUserWithSetPassword({
         name: values.name,
         email: values.email,
         roleIds: [values.roleId],
-        status: "pending",
-      },
-      "create"
-    );
+        sendSetPasswordInvite: true,
+      });
+      await refresh();
+      setPendingSelectUserId(result.user.id);
+      setNotice(`Invitation email sent to ${result.user.email}.`);
+    } catch (err) {
+      const message = resolveErrorMessage(err, "Failed to send invitation.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveRole = async (draft: RoleDraft, mode: "create" | "edit") => {
+    if (!canReadRoles || !canManageRoles) {
+      setError("Role changes require roles:write permission.");
+      return;
+    }
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       let selectedId: string | null = null;
       if (mode === "edit" && editingRole) {
@@ -282,19 +409,20 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         setPendingSelectRoleId(selectedId);
       }
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to save role.");
-      }
+      setError(resolveErrorMessage(err, "Failed to save role."));
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleToggleStatus = async (user: UserSummary) => {
+  const performToggleStatus = async (user: UserSummary, options?: { rethrow?: boolean }) => {
+    if (!canReadUsers || !canManageUsers) {
+      setError("User status changes require users:write permission.");
+      return;
+    }
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       if (user.status === "inactive") {
         await enableAdminUser(user.id);
@@ -304,87 +432,148 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
       await refresh();
       setPendingSelectUserId(user.id);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to update user status.");
-      }
+      const message = resolveErrorMessage(err, "Failed to update user status.");
+      setError(message);
+      if (options?.rethrow) throw new Error(message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteUser = async (user: UserSummary) => {
+  const handleToggleStatus = (user: UserSummary) => {
+    if (!canReadUsers || !canManageUsers) {
+      setError("User status changes require users:write permission.");
+      return;
+    }
+    const nextStatus = user.status === "inactive" ? "active" : "inactive";
+    const highRisk = !canReadRoles || isHighRiskUser(user);
+    if (nextStatus === "active" && !highRisk) {
+      void performToggleStatus(user);
+      return;
+    }
+    setConfirmAction({
+      kind: "user-status",
+      user,
+      nextStatus,
+      highRisk,
+    });
+  };
+
+  const performDeleteUser = async (user: UserSummary, options?: { rethrow?: boolean }) => {
+    if (!canReadUsers || !canManageUsers) {
+      setError("Deleting users requires users:write permission.");
+      return;
+    }
     if (protectedUserIds.includes(user.id)) return;
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       await deleteAdminUser(user.id);
       await refresh();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to delete user.");
-      }
+      const message = resolveErrorMessage(err, "Failed to delete user.");
+      setError(message);
+      if (options?.rethrow) throw new Error(message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteRole = async (role: RoleSummary) => {
+  const handleDeleteUser = (user: UserSummary) => {
+    if (!canReadUsers || !canManageUsers) {
+      setError("Deleting users requires users:write permission.");
+      return;
+    }
+    if (protectedUserIds.includes(user.id)) return;
+    setConfirmAction({ kind: "user-delete", user });
+  };
+
+  const performDeleteRole = async (role: RoleSummary, options?: { rethrow?: boolean }) => {
+    if (!canReadRoles || !canManageRoles) {
+      setError("Deleting roles requires roles:write permission.");
+      return;
+    }
     if (role.system || role.name.toLowerCase() === "admin") return;
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       await deleteAdminRole(role.id);
       await refresh();
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to delete role.");
-      }
+      const message = resolveErrorMessage(err, "Failed to delete role.");
+      setError(message);
+      if (options?.rethrow) throw new Error(message);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDuplicateRole = async (role: RoleSummary) => {
+  const handleDeleteRole = (role: RoleSummary) => {
+    if (!canReadRoles || !canManageRoles) {
+      setError("Deleting roles requires roles:write permission.");
+      return;
+    }
+    if (role.system || role.name.toLowerCase() === "admin") return;
+    setConfirmAction({ kind: "role-delete", role });
+  };
+
+  const performDuplicateRole = async (role: RoleSummary, options?: { rethrow?: boolean }) => {
+    if (!canReadRoles || !canManageRoles) {
+      setError("Duplicating roles requires roles:write permission.");
+      return;
+    }
     setIsSaving(true);
     setError(null);
+    setNotice(null);
     try {
       const created = await createAdminRole({
         name: `${role.name} copy`,
         description: role.description,
         permissions: role.permissions,
+        sourceRoleId: role.id,
+        sourceRoleName: role.name,
       });
       await refresh();
       setPendingSelectRoleId(created.id);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to duplicate role.");
-      }
+      const message = resolveErrorMessage(err, "Failed to duplicate role.");
+      setError(message);
+      if (options?.rethrow) throw new Error(message);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleDuplicateRole = (role: RoleSummary) => {
+    if (!canReadRoles || !canManageRoles) {
+      setError("Duplicating roles requires roles:write permission.");
+      return;
+    }
+    if (hasHighRiskPermissions(role.permissions)) {
+      setConfirmAction({ kind: "role-duplicate", role });
+      return;
+    }
+    void performDuplicateRole(role);
+  };
+
   const openUserEditor = (user?: UserSummary) => {
+    if (!canReadUsers || !canManageUsers || !canReadRoles) return;
     setEditingUser(user ?? null);
     setUserEditorSeed((prev) => prev + 1);
     setUserEditorOpen(true);
   };
 
   const openRoleEditor = (role?: RoleSummary) => {
+    if (!canReadRoles || !canManageRoles) return;
     setEditingRole(role ?? null);
     setRoleEditorSeed((prev) => prev + 1);
     setRoleEditorOpen(true);
   };
 
   const openInviteDialog = () => {
+    if (!canReadUsers || !canManageUsers || !canReadRoles) return;
     setInviteDialogSeed((prev) => prev + 1);
     setInviteDialogOpen(true);
   };
@@ -399,9 +588,146 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     handleSelectUser(user.id);
   };
 
-  const readOnly = !canManageUsers || !canManageRoles;
-  const userActionsEnabled = canManageUsers && !isSaving && !isLoading;
-  const roleActionsEnabled = canManageRoles && !isSaving && !isLoading;
+  const openPasswordResetDialog = (user: UserSummary) => {
+    if (!canReadUsers || !canManageUsers) {
+      setError("Password resets require users:write permission.");
+      return;
+    }
+    setPasswordResetUser(user);
+  };
+
+  const handleConfirmPasswordReset = async () => {
+    if (!passwordResetUser) return;
+    setIsSaving(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await requestAdminPasswordReset(passwordResetUser.id);
+      setNotice(`Password reset email sent to ${passwordResetUser.email}.`);
+    } catch (err) {
+      const message = resolveErrorMessage(err, "Failed to send password reset email.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const confirmActionConfig = useMemo(() => {
+    if (!confirmAction) {
+      return {
+        title: "Confirm action",
+        description: "Review the target before continuing.",
+        targetLabel: undefined,
+        confirmLabel: "Confirm",
+        confirmingLabel: "Working...",
+        tone: "destructive" as const,
+      };
+    }
+
+    switch (confirmAction.kind) {
+      case "user-status":
+        return {
+          title:
+            confirmAction.nextStatus === "inactive"
+              ? "Deactivate user?"
+              : "Activate high-risk user?",
+          description:
+            confirmAction.nextStatus === "inactive"
+              ? "This blocks the admin user from signing in until reactivated."
+              : "This account may have high-risk access. Confirm before restoring access.",
+          targetLabel: `${confirmAction.user.name} <${confirmAction.user.email}>`,
+          confirmLabel:
+            confirmAction.nextStatus === "inactive" ? "Deactivate user" : "Activate user",
+          confirmingLabel:
+            confirmAction.nextStatus === "inactive" ? "Deactivating..." : "Activating...",
+          tone:
+            confirmAction.nextStatus === "inactive"
+              ? ("destructive" as const)
+              : ("warning" as const),
+        };
+      case "user-delete":
+        return {
+          title: "Delete user?",
+          description: "This removes the admin user and cannot be undone.",
+          targetLabel: `${confirmAction.user.name} <${confirmAction.user.email}>`,
+          confirmLabel: "Delete user",
+          confirmingLabel: "Deleting...",
+          tone: "destructive" as const,
+        };
+      case "role-delete":
+        return {
+          title: "Delete role?",
+          description: "This removes the role from the admin RBAC catalog and cannot be undone.",
+          targetLabel: confirmAction.role.name,
+          confirmLabel: "Delete role",
+          confirmingLabel: "Deleting...",
+          tone: "destructive" as const,
+        };
+      case "role-duplicate":
+        return {
+          title: "Duplicate high-risk role?",
+          description:
+            "This copies a role that grants sensitive permissions. Review the source role before creating the copy.",
+          targetLabel: confirmAction.role.name,
+          confirmLabel: "Duplicate role",
+          confirmingLabel: "Duplicating...",
+          tone: "warning" as const,
+        };
+    }
+  }, [confirmAction]);
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+    switch (confirmAction.kind) {
+      case "user-status":
+        await performToggleStatus(confirmAction.user, { rethrow: true });
+        return;
+      case "user-delete":
+        await performDeleteUser(confirmAction.user, { rethrow: true });
+        return;
+      case "role-delete":
+        await performDeleteRole(confirmAction.role, { rethrow: true });
+        return;
+      case "role-duplicate":
+        await performDuplicateRole(confirmAction.role, { rethrow: true });
+        return;
+    }
+  };
+
+  const readOnly =
+    hasAnyReadAccess && (!canManageUsers || !canManageRoles || !canReadUsers || !canReadRoles);
+  const userActionsEnabled =
+    canReadUsers && canManageUsers && canReadRoles && !isSaving && !isLoading;
+  const userLifecycleActionsEnabled = canReadUsers && canManageUsers && !isSaving && !isLoading;
+  const roleActionsEnabled = canReadRoles && canManageRoles && !isSaving && !isLoading;
+
+  if (!hasAnyReadAccess) {
+    return (
+      <SplitShell
+        activeHref="/admin/users"
+        rightPanel={
+          <div className="p-6 text-sm text-muted-foreground">
+            Users and roles are unavailable for this account.
+          </div>
+        }
+        breadcrumbs={["Admin", "Users & Roles"]}
+      >
+        <div className="mx-auto flex max-w-5xl flex-col gap-6">
+          <PageHeader
+            title="Users & Roles"
+            description="Manage team access, roles, and platform permissions."
+          />
+          <Alert variant="destructive">
+            <AlertTitle>Access denied</AlertTitle>
+            <AlertDescription>
+              You need users:read or roles:read permission to open this admin area.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </SplitShell>
+    );
+  }
 
   return (
     <SplitShell
@@ -410,12 +736,19 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         <UserDetailsDrawer
           user={selectedUser}
           roles={roles}
-          canManageUsers={canManageUsers}
+          canManageUsers={userActionsEnabled}
+          canEditUser={userActionsEnabled}
+          canResetPassword={userLifecycleActionsEnabled}
+          canManageUserLifecycle={userLifecycleActionsEnabled}
+          isProtectedUser={selectedUser ? protectedUserIds.includes(selectedUser.id) : false}
+          roleDetailsUnavailableReason={canReadRoles ? undefined : roleDetailsUnavailableReason}
           onEditUser={() => selectedUser && openUserEditor(selectedUser)}
-          onResetPassword={() => undefined}
+          onResetPassword={() => selectedUser && openPasswordResetDialog(selectedUser)}
+          onToggleStatus={() => selectedUser && handleToggleStatus(selectedUser)}
+          onDeleteUser={() => selectedUser && handleDeleteUser(selectedUser)}
         />
       }
-      breadcrumbs={["Settings", "Users & Roles"]}
+      breadcrumbs={["Admin", "Users & Roles"]}
     >
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <PageHeader
@@ -428,19 +761,27 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
                   Read-only access
                 </Badge>
               ) : null}
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={() => openRoleEditor()}
-                disabled={!roleActionsEnabled}
-              >
-                <UserCog className="h-4 w-4" />
-                Create Role
-              </Button>
-              <Button className="gap-2" onClick={openInviteDialog} disabled={!userActionsEnabled}>
-                <UserPlus className="h-4 w-4" />
-                Invite User
-              </Button>
+              {canReadRoles ? (
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => openRoleEditor()}
+                  disabled={!roleActionsEnabled}
+                >
+                  <UserCog className="h-4 w-4" />
+                  Create Role
+                </Button>
+              ) : null}
+              {canReadUsers ? (
+                <Button
+                  className="gap-2"
+                  onClick={openInviteDialog}
+                  disabled={!canReadRoles || !userActionsEnabled}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Invite User
+                </Button>
+              ) : null}
             </div>
           }
         />
@@ -448,6 +789,12 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
           <Alert variant="destructive">
             <AlertTitle>Users & Roles unavailable</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {notice ? (
+          <Alert>
+            <AlertTitle>Users & Roles updated</AlertTitle>
+            <AlertDescription>{notice}</AlertDescription>
           </Alert>
         ) : null}
         {isLoading ? (
@@ -463,56 +810,82 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
             </AlertDescription>
           </Alert>
         ) : null}
-        <UserFilters
-          query={query}
-          roleFilter={roleFilter}
-          statusFilter={statusFilter}
-          roles={roles}
-          onQueryChange={setQuery}
-          onRoleChange={setRoleFilter}
-          onStatusChange={setStatusFilter}
-        />
-        <UserList
-          items={filteredUsers}
-          roles={roles}
-          selectedId={selectedUser?.id}
-          protectedIds={protectedUserIds}
-          canManageUsers={userActionsEnabled}
-          onSelect={handleSelectUser}
-          onViewProfile={handleViewProfile}
-          onEdit={openUserEditor}
-          onToggleStatus={handleToggleStatus}
-          onResetPassword={() => undefined}
-          onDelete={handleDeleteUser}
-        />
-        <div className="flex flex-col gap-4 border-t pt-6">
-          <SectionHeader
-            title="Roles"
-            action={
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openRoleEditor()}
-                disabled={!roleActionsEnabled}
-              >
-                Create role
-              </Button>
-            }
-          />
-          <RoleList
-            roles={roles}
-            selectedId={activeSelectedRoleId}
-            usageCounts={roleUsageCounts}
-            canManageRoles={roleActionsEnabled}
-            onSelect={(id) => {
-              setPendingSelectRoleId(null);
-              setSelectedRoleId(id);
-            }}
-            onEdit={openRoleEditor}
-            onDuplicate={handleDuplicateRole}
-            onDelete={handleDeleteRole}
-          />
-        </div>
+        {canReadUsers ? (
+          <>
+            <UserFilters
+              query={query}
+              roleFilter={canReadRoles ? roleFilter : "all"}
+              statusFilter={statusFilter}
+              roles={roles}
+              canReadRoles={canReadRoles}
+              roleFilterUnavailableReason={roleFilterUnavailableReason}
+              onQueryChange={setQuery}
+              onRoleChange={setRoleFilter}
+              onStatusChange={setStatusFilter}
+            />
+            <UserList
+              items={filteredUsers}
+              roles={roles}
+              selectedId={selectedUser?.id}
+              protectedIds={protectedUserIds}
+              canManageUsers={userActionsEnabled}
+              canEditUsers={userActionsEnabled}
+              canManageUserLifecycle={userLifecycleActionsEnabled}
+              canResetPassword={userLifecycleActionsEnabled}
+              roleDetailsUnavailableReason={canReadRoles ? undefined : roleDetailsUnavailableReason}
+              onSelect={handleSelectUser}
+              onViewProfile={handleViewProfile}
+              onEdit={openUserEditor}
+              onToggleStatus={handleToggleStatus}
+              onResetPassword={openPasswordResetDialog}
+              onDelete={handleDeleteUser}
+            />
+          </>
+        ) : (
+          <Alert>
+            <AlertTitle>User list unavailable</AlertTitle>
+            <AlertDescription>
+              Your account can review roles, but users:read is required to load users.
+            </AlertDescription>
+          </Alert>
+        )}
+        {canReadRoles ? (
+          <div className="flex flex-col gap-4 border-t pt-6">
+            <SectionHeader
+              title="Roles"
+              action={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openRoleEditor()}
+                  disabled={!roleActionsEnabled}
+                >
+                  Create role
+                </Button>
+              }
+            />
+            <RoleList
+              roles={roles}
+              selectedId={activeSelectedRoleId}
+              usageCounts={roleUsageCounts}
+              canManageRoles={roleActionsEnabled}
+              onSelect={(id) => {
+                setPendingSelectRoleId(null);
+                setSelectedRoleId(id);
+              }}
+              onEdit={openRoleEditor}
+              onDuplicate={handleDuplicateRole}
+              onDelete={handleDeleteRole}
+            />
+          </div>
+        ) : (
+          <Alert>
+            <AlertTitle>Roles unavailable</AlertTitle>
+            <AlertDescription>
+              roles:read is required to load role cards, role filters, and permission catalog data.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
       <UserEditor
         key={`user-${editingUser?.id ?? "new"}-${userEditorSeed}`}
@@ -540,15 +913,58 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         onSave={handleSaveRole}
         permissionGroups={permissionGroups}
       />
+      <ConfirmActionDialog
+        open={Boolean(passwordResetUser)}
+        onOpenChange={(open) => {
+          if (!open) setPasswordResetUser(null);
+        }}
+        title="Reset password"
+        description="Send a single-use set-password email to this user."
+        targetLabel={passwordResetUser?.email}
+        confirmLabel="Send reset email"
+        confirmingLabel="Sending..."
+        tone="warning"
+        closeOnSuccess
+        isConfirming={isSaving}
+        onConfirm={handleConfirmPasswordReset}
+      />
+      <ConfirmActionDialog
+        open={Boolean(confirmAction)}
+        onOpenChange={(open) => {
+          if (!open) setConfirmAction(null);
+        }}
+        title={confirmActionConfig.title}
+        description={confirmActionConfig.description}
+        targetLabel={confirmActionConfig.targetLabel}
+        confirmLabel={confirmActionConfig.confirmLabel}
+        confirmingLabel={confirmActionConfig.confirmingLabel}
+        tone={confirmActionConfig.tone}
+        closeOnSuccess
+        isConfirming={isSaving}
+        onConfirm={handleConfirmAction}
+      />
       {!isLargeScreen ? (
         <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
           <SheetContent side="right" className="w-full sm:max-w-md">
+            <SheetTitle className="sr-only">User details</SheetTitle>
+            <SheetDescription className="sr-only">
+              {selectedUser
+                ? "Review the selected user's roles, permissions, and account activity."
+                : "Select a user to review permissions and activity."}
+            </SheetDescription>
             <UserDetailsDrawer
               user={selectedUser}
               roles={roles}
-              canManageUsers={canManageUsers}
+              canManageUsers={userActionsEnabled}
+              canEditUser={userActionsEnabled}
+              canResetPassword={userLifecycleActionsEnabled}
+              canManageUserLifecycle={userLifecycleActionsEnabled}
+              isProtectedUser={selectedUser ? protectedUserIds.includes(selectedUser.id) : false}
+              roleDetailsUnavailableReason={canReadRoles ? undefined : roleDetailsUnavailableReason}
               onEditUser={() => selectedUser && openUserEditor(selectedUser)}
-              onResetPassword={() => undefined}
+              onResetPassword={() => selectedUser && openPasswordResetDialog(selectedUser)}
+              onToggleStatus={() => selectedUser && handleToggleStatus(selectedUser)}
+              onDeleteUser={() => selectedUser && handleDeleteUser(selectedUser)}
             />
           </SheetContent>
         </Sheet>

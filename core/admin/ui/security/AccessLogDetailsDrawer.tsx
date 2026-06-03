@@ -4,7 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 import type { AccessLogItem } from "./types";
 
@@ -12,13 +18,22 @@ type AccessLogDetailsDrawerProps = {
   log: AccessLogItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onViewSession?: (log: AccessLogItem) => void;
+  onRequestRevoke?: (log: AccessLogItem) => void;
+  isRevoking?: boolean;
 };
 
 export function AccessLogDetailsDrawer({
   log,
   open,
   onOpenChange,
+  onViewSession,
+  onRequestRevoke,
+  isRevoking = false,
 }: AccessLogDetailsDrawerProps) {
+  const canViewSession = Boolean(log?.session.view.enabled);
+  const canRevokeSession = Boolean(log?.session.revoke.enabled);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -29,9 +44,9 @@ export function AccessLogDetailsDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div>
             <SheetTitle>Access Log Details</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               {log ? log.user.detail : "Select a log to review details."}
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close access log drawer">
@@ -60,17 +75,13 @@ export function AccessLogDetailsDrawer({
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       IP Address
                     </span>
-                    <span className="font-mono text-xs text-foreground">
-                      {log.ipAddress}
-                    </span>
+                    <span className="font-mono text-xs text-foreground">{log.ipAddress}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Device
                     </span>
-                    <span className="text-xs text-foreground">
-                      {log.device.label}
-                    </span>
+                    <span className="text-xs text-foreground">{log.device.label}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
@@ -107,18 +118,50 @@ export function AccessLogDetailsDrawer({
                     Signal: Low risk · Known device · No geo anomalies detected.
                   </div>
                 </div>
+                <Separator />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    Session state
+                  </div>
+                  <div className="rounded-xl border bg-muted/30 p-4 text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground">{log.session.label}</p>
+                    {!log.session.view.enabled && log.session.view.reason ? (
+                      <p className="mt-1">{log.session.view.reason}</p>
+                    ) : null}
+                    {!log.session.revoke.enabled && log.session.revoke.reason ? (
+                      <p className="mt-1">{log.session.revoke.reason}</p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             </ScrollArea>
             <Separator />
             <div className="bg-muted/30 px-6 py-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <Button variant="outline" className="gap-2">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  disabled={!canViewSession}
+                  title={canViewSession ? undefined : log.session.view.reason}
+                  onClick={() => {
+                    if (log.session.view.enabled) onViewSession?.(log);
+                  }}
+                >
                   <Clock className="h-4 w-4" />
                   View full session
                 </Button>
-                <Button variant="destructive" className="gap-2">
+                <Button
+                  variant="destructive"
+                  className="gap-2"
+                  disabled={!canRevokeSession || isRevoking}
+                  title={canRevokeSession ? undefined : log.session.revoke.reason}
+                  onClick={() => {
+                    if (log.session.revoke.enabled) onRequestRevoke?.(log);
+                  }}
+                >
                   <Lock className="h-4 w-4" />
-                  Revoke access
+                  {isRevoking ? "Revoking..." : "Revoke access"}
                 </Button>
               </div>
             </div>

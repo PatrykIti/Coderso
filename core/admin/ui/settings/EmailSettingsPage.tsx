@@ -17,6 +17,8 @@ import {
   type EmailSettingsResponse,
 } from "@/services/emailClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
 import { EmailLogsDrawer, type EmailLogItem } from "./EmailLogsDrawer";
@@ -37,6 +39,45 @@ const toLogItem = (log: EmailDeliveryLog): EmailLogItem => ({
   timestamp: formatTimestamp(log.createdAt),
 });
 
+type EmailSettingsDraft = {
+  smtpHost: string;
+  smtpPort: string;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPassword: string;
+  updatePassword: boolean;
+  fromName: string;
+  fromEmail: string;
+};
+
+const emptyEmailDraft: EmailSettingsDraft = {
+  smtpHost: "",
+  smtpPort: "",
+  smtpSecure: false,
+  smtpUser: "",
+  smtpPassword: "",
+  updatePassword: false,
+  fromName: "",
+  fromEmail: "",
+};
+
+const toEmailDraft = (settings: EmailSettingsResponse): EmailSettingsDraft => ({
+  smtpHost: settings.smtp.host ?? "",
+  smtpPort: settings.smtp.port ? String(settings.smtp.port) : "",
+  smtpSecure: settings.smtp.secure,
+  smtpUser: settings.smtp.user ?? "",
+  smtpPassword: "",
+  updatePassword: false,
+  fromName: settings.from.name ?? "",
+  fromEmail: settings.from.email ?? "",
+});
+
+const getEmailDirtySignature = (draft: EmailSettingsDraft) =>
+  JSON.stringify({
+    ...draft,
+    smtpPassword: draft.updatePassword && draft.smtpPassword.trim() ? "draft-secret" : "",
+  });
+
 export function EmailSettingsPage() {
   const [logsOpen, setLogsOpen] = useState(false);
   const [settings, setSettings] = useState<EmailSettingsResponse | null>(null);
@@ -52,11 +93,15 @@ export function EmailSettingsPage() {
   const [logs, setLogs] = useState<EmailLogItem[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState<string | null>(null);
+  const [savedSignature, setSavedSignature] = useState(() =>
+    getEmailDirtySignature(emptyEmailDraft)
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [sendTestReviewOpen, setSendTestReviewOpen] = useState(false);
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
 
   const loadSettings = useCallback(async () => {
@@ -64,15 +109,17 @@ export function EmailSettingsPage() {
     setError(null);
     try {
       const data = await getEmailSettings();
+      const draft = toEmailDraft(data);
       setSettings(data);
-      setSmtpHost(data.smtp.host ?? "");
-      setSmtpPort(data.smtp.port ? String(data.smtp.port) : "");
-      setSmtpSecure(data.smtp.secure);
-      setSmtpUser(data.smtp.user ?? "");
-      setFromName(data.from.name ?? "");
-      setFromEmail(data.from.email ?? "");
-      setUpdatePassword(false);
-      setSmtpPassword("");
+      setSmtpHost(draft.smtpHost);
+      setSmtpPort(draft.smtpPort);
+      setSmtpSecure(draft.smtpSecure);
+      setSmtpUser(draft.smtpUser);
+      setFromName(draft.fromName);
+      setFromEmail(draft.fromEmail);
+      setUpdatePassword(draft.updatePassword);
+      setSmtpPassword(draft.smtpPassword);
+      setSavedSignature(getEmailDirtySignature(draft));
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -89,15 +136,17 @@ export function EmailSettingsPage() {
     getEmailSettings()
       .then((data) => {
         if (!active) return;
+        const draft = toEmailDraft(data);
         setSettings(data);
-        setSmtpHost(data.smtp.host ?? "");
-        setSmtpPort(data.smtp.port ? String(data.smtp.port) : "");
-        setSmtpSecure(data.smtp.secure);
-        setSmtpUser(data.smtp.user ?? "");
-        setFromName(data.from.name ?? "");
-        setFromEmail(data.from.email ?? "");
-        setUpdatePassword(false);
-        setSmtpPassword("");
+        setSmtpHost(draft.smtpHost);
+        setSmtpPort(draft.smtpPort);
+        setSmtpSecure(draft.smtpSecure);
+        setSmtpUser(draft.smtpUser);
+        setFromName(draft.fromName);
+        setFromEmail(draft.fromEmail);
+        setUpdatePassword(draft.updatePassword);
+        setSmtpPassword(draft.smtpPassword);
+        setSavedSignature(getEmailDirtySignature(draft));
       })
       .catch((err) => {
         if (!active) return;
@@ -154,6 +203,20 @@ export function EmailSettingsPage() {
   const portInvalid = Boolean(portValue) && !Number.isFinite(portNumber);
   const passwordInvalid = updatePassword && !smtpPassword.trim();
   const hasValidationErrors = portInvalid || passwordInvalid;
+  const currentDraft = useMemo(
+    () => ({
+      smtpHost,
+      smtpPort,
+      smtpSecure,
+      smtpUser,
+      smtpPassword,
+      updatePassword,
+      fromName,
+      fromEmail,
+    }),
+    [fromEmail, fromName, smtpHost, smtpPassword, smtpPort, smtpSecure, smtpUser, updatePassword]
+  );
+  useRegisterSettingsDirty(!isLoading && getEmailDirtySignature(currentDraft) !== savedSignature);
 
   const handleSave = useCallback(async () => {
     if (isSaving || isLoading) return false;
@@ -186,9 +249,17 @@ export function EmailSettingsPage() {
       };
 
       const updated = await updateEmailSettings(payload);
+      const draft = toEmailDraft(updated);
       setSettings(updated);
-      setUpdatePassword(false);
-      setSmtpPassword("");
+      setSmtpHost(draft.smtpHost);
+      setSmtpPort(draft.smtpPort);
+      setSmtpSecure(draft.smtpSecure);
+      setSmtpUser(draft.smtpUser);
+      setFromName(draft.fromName);
+      setFromEmail(draft.fromEmail);
+      setUpdatePassword(draft.updatePassword);
+      setSmtpPassword(draft.smtpPassword);
+      setSavedSignature(getEmailDirtySignature(draft));
       setSuccess("Email settings saved.");
       return true;
     } catch (err) {
@@ -241,6 +312,16 @@ export function EmailSettingsPage() {
     } finally {
       setIsTesting(false);
     }
+  };
+
+  const handleRequestSendTest = () => {
+    setError(null);
+    setSuccess(null);
+    if (!testRecipient.trim()) {
+      setError("Provide a recipient address.");
+      return;
+    }
+    setSendTestReviewOpen(true);
   };
 
   const busy = isLoading || isSaving;
@@ -397,7 +478,7 @@ export function EmailSettingsPage() {
                       <Button
                         variant="secondary"
                         className="w-full gap-2"
-                        onClick={handleSendTest}
+                        onClick={handleRequestSendTest}
                         disabled={isTesting || isLoading}
                       >
                         <Send className="h-4 w-4" />
@@ -514,6 +595,22 @@ export function EmailSettingsPage() {
         isLoading={logsLoading}
         error={logsError}
       />
+      <ConfirmActionDialog
+        open={sendTestReviewOpen}
+        onOpenChange={setSendTestReviewOpen}
+        title="Send test email?"
+        description="This sends a real email through the configured SMTP provider."
+        targetLabel={testRecipient.trim()}
+        confirmLabel="Send test email"
+        confirmingLabel="Sending..."
+        tone="warning"
+        closeOnSuccess
+        onConfirm={async () => {
+          await handleSendTest();
+        }}
+      >
+        Confirm the recipient address before sending an external message.
+      </ConfirmActionDialog>
     </SettingsShell>
   );
 }

@@ -1,0 +1,208 @@
+# 1048 - TASK-358 Admin Access Logs remediation family
+
+Date: 2026-06-01
+Version: Unreleased
+Tasks: TASK-358, TASK-358-01, TASK-358-02, TASK-358-03, TASK-358-04
+
+## Key Changes
+
+### TASK-358-01 Access Logs Query, Filters, and Pagination
+
+- Moved access log query normalization into the access service contract for
+  strict `limit`, `q`/`query`, `status`, `userId`, `method`, `ip`, `from`,
+  `to`, and `cursor` handling.
+- Extended `GET /admin/api/access-logs` to accept strict method/IP/cursor
+  query params, map malformed cursors to `access_log_cursor_invalid`, and
+  return `{ items, nextCursor }`.
+- Replaced static Access Logs pagination with keyset pagination ordered by
+  `createdAt DESC, id DESC`, using `limit + 1` reads and opaque cursors.
+- Reworked `/admin/access-logs` filters so search, status, exact `User ID`,
+  presets, custom `from`/`to` dates, and cursor state all feed the server query.
+- Added non-destructive custom range validation and expired-cursor recovery so
+  the last successful rows remain visible.
+- Added search match labels such as `Matched user email` to explain hidden-field
+  matches without exposing additional raw PII.
+- Removed the `access-custom-range` and `access-next-page` no-op controls from
+  the no-op audit gate; the advanced filters/sliders surface was closed by
+  `TASK-358-04`.
+- Updated Access Logs API/spec/user docs and the clickable Playwright report
+  with the new query, cursor, and match-context behavior.
+
+### TASK-358-02 Session Detail and Revoke Access Contract
+
+- Added nullable `access_logs.session_id` with SQL and Drizzle metadata
+  migration artifacts, plus runtime access logging of the authenticated
+  `ctx.sessionId` for future rows.
+- Added deterministic access-log session state/capability resolution for
+  active, current, revoked, expired, missing, failed, system, and historical
+  rows.
+- Gated raw session detail fields (`sessionId`, `userId`, `current`,
+  `expiresAt`, `revokedAt`) behind `settings:read`; `audit:read` users receive
+  only row state and unavailable copy.
+- Added `POST /admin/api/access-logs/:id/revoke` with strict UUID params,
+  strict body validation, `settings:write`, CSRF, `admin_write`, server-side
+  target resolution from `access_logs.session_id`, self-lockout protection,
+  expired/missing mapped errors, and already-revoked idempotency.
+- Wired `/admin/access-logs` drawer actions to real Settings Sessions focus and
+  typed revoke confirmation, including cross-user session focus through gated
+  `userId`.
+- Updated Settings Sessions to honor `sessionId`/`userId` query focus and mark
+  the selected linked session.
+- Removed the old access-log view/revoke no-op controls from the no-op audit
+  gate and updated API, audit, guide, task, and Playwright report docs.
+
+### TASK-358-03 Access Logs Export
+
+- Added `POST /admin/api/access-logs/export` with `audit:read`, strict body
+  validation, export-specific error mapping, selected-column allowlist, 200-row
+  synchronous cap, and shared admin file response semantics.
+- Added access-log export domain contracts for CSV/JSON format normalization,
+  column labels, row serialization, CSV injection escaping, filter summaries,
+  filename generation, and `access_log_export_*` machine-readable errors.
+- Added access-log export redaction for secret-bearing request text including
+  cookies, authorization headers, CSRF/reset/session tokens, API keys,
+  passwords, and raw secret-like values in path/user-agent fields.
+- Wired `/admin/access-logs` export to the shared admin export helper with CSRF,
+  active base filters, selected allowlisted fields, and success toast feedback.
+- Renamed the Access Logs action from `Export CSV` to neutral `Export` and made
+  the preview filename format-aware so CSV/JSON selection is not mislabeled.
+- Expanded the Access Logs export dialog field list to match the backend
+  allowlist, keeping sensitive fields opt-in and defaulting only
+  `user`/`ip`/`timestamp`/`status`.
+- Fixed shared `ExportDialog` overflow so larger field lists keep the action
+  footer reachable while the dialog body scrolls.
+- Emitted `access_logs.export` audit events with format, columns, sanitized
+  filter summary, row count, and request id only; exported rows and raw
+  search/user/IP filter values are not stored in audit metadata.
+- Updated API, audit, user guide, task board, and clickable Access Logs report
+  documentation for the real export contract.
+
+### TASK-358-04 Advanced Filters and User Filter Truthfulness
+
+- Wired the Access Logs sliders affordance to a real `Advanced access filters`
+  sheet instead of a disabled/no-op state.
+- Added draft `HTTP method` and `IP contains` advanced filters, including
+  supported-method validation, IP substring character validation, uppercase
+  method normalization, and cursor reset on apply.
+- Added a pure access-log query contract for supported HTTP method values so UI
+  validation and service normalization share the same owner.
+- Threaded method/IP filters through the existing access-log query builder so
+  list reloads, export payloads, and clear-chip behavior use the same active
+  filter contract.
+- Added active filter chips for search, exact `User ID`, status, non-default
+  date ranges, method, and IP contains, with per-chip clear actions.
+- Kept role filtering intentionally absent because access log rows do not store
+  historical role snapshots; the UI now states exact User ID semantics instead
+  of implying role/user-directory filtering.
+- Avoided a new user/role summary endpoint, so restricted `audit:read` users do
+  not receive additional directory PII beyond visible access-log rows.
+- Updated the no-op control gate, user guide, task board, parent task, and
+  clickable Access Logs report for the real advanced-filter behavior.
+
+### Planning / QA
+
+- Added the report-driven remediation family for the Admin Access Logs audit.
+- Captured execution-ready scope for real session detail/revoke behavior,
+  truthful user/custom-date/advanced filters, server-side pagination, search
+  match explanation, and export behavior.
+- Recorded the security contract for internal access log reads/exports and
+  session revoke actions, including RBAC separation between `audit:read` and
+  high-risk revoke permissions.
+- Split the family into physical execution leaf files:
+  `TASK-358-01` through `TASK-358-04`, each with pseudocode, data flow, error
+  handling, security contract, tests, docs plan, and acceptance criteria.
+- Refined drift found by agent/Claude review: preserved current
+  `success|failed`/`userId` query vocabulary, added method/IP query ownership,
+  required a real session relation before revoke/session-detail actions,
+  aligned export helper paths and rate buckets, and separated query vs
+  advanced-filter leaf ownership.
+- Follow-up drift pass preserved current wire params `q`, `from`, and `to`,
+  removed unsupported `actorRole` filtering, made revoke server-resolve the
+  target session/user instead of trusting browser hints, and applied the same
+  JSON export or explicit `Response` passthrough rule as Audit Logs.
+
+## Validation
+
+- `bun test tests/unit/access/accessLogService.test.ts tests/integration/routes/accessLogs.test.ts`
+  passed for service normalization, cursor pagination, route validation, and
+  error mapping.
+- `bun run test:vitest -- tests/vitest/admin/accessLogsClient.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/access-logs-table.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+  passed for admin client query params, strict AJV schema, UI custom-range and
+  cursor behavior, table page controls, and no-op gate updates.
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
+- `bun run gates:coderso` passed functional, ux, performance, security, and
+  reliability gates.
+- Playwright restricted-session smoke passed with an `audit:read` user,
+  verifying custom range request params, exact userId filtering, Next with
+  cursor, Previous without cursor, and `Matched user email` labels. Evidence
+  screenshot: `.tmp/task-358-01-access-pagination.png`.
+- `bun test tests/unit/access/accessLogService.test.ts tests/integration/routes/accessLogs.test.ts`
+  passed after TASK-358-02 for session state resolution, strict revoke params,
+  self-lockout, expired/missing session handling, already-revoked idempotency,
+  route validation, and audit refs.
+- `bun run test:vitest -- tests/vitest/admin/accessLogsClient.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/access-logs-table.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/analytics-settings-entries-seo-leafs.test.tsx`
+  passed after TASK-358-02 for CSRF client behavior, strict schemas, real
+  view/revoke UI flow, drawer fixtures, no-op gate updates, and related settings
+  UI coverage.
+- `bun --cwd core lint` passed after TASK-358-02.
+- `bun --cwd core lint:types` passed after TASK-358-02.
+- Playwright TASK-358-02 cross-user smoke passed with a restricted
+  `audit:read` user and a `settings:read/write` user: restricted view/revoke
+  stayed disabled without leaking `sessionId`, settings user opened
+  `/admin/settings/security/sessions?sessionId=<id>&userId=<targetUserId>`,
+  sent one `POST /admin/api/access-logs/<id>/revoke`, and saw
+  `Session already revoked`. Evidence screenshot:
+  `.tmp/task-358-02-session-revoke.png`.
+- Agent and Claude review both flagged the same drift before implementation:
+  static pagination, disabled custom range, misleading user filter, lost response
+  metadata, and missing match context. The cursor error-code discrepancy was
+  resolved in favor of the task/API contract `access_log_cursor_invalid`.
+- Agent and Claude review for TASK-358-02 flagged cross-user session focus,
+  strict revoke param validation, and audit-only session detail redaction drift;
+  the final implementation threads gated `userId` to Settings Sessions, validates
+  UUID params, and redacts raw session detail without `settings:read`.
+- `bun test tests/unit/access/accessLogExport.test.ts tests/integration/routes/accessLogs.test.ts`
+  passed after TASK-358-03 for export row redaction, CSV escaping, JSON output,
+  audit summary metadata, invalid columns, row-limit errors, route registration,
+  strict body validation, context passing, and permission-denied mapping.
+- `bun run test:vitest -- tests/vitest/admin/accessLogsClient.test.ts tests/vitest/validation/adminLogQuerySchemas.test.ts tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/access-logs-table.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx tests/vitest/ui/shared-dialog-contracts.test.tsx tests/vitest/ui/dialogs.test.tsx`
+  passed after TASK-358-03 for CSRF export client behavior, strict export schema,
+  active-filter UI export payloads, table/no-op guard stability, and shared
+  export dialog overflow/submit behavior.
+- Playwright TASK-358-03 access export smoke passed with an `audit:read` user:
+  filtered by marker/user/status, selected `Path` and `User agent`, submitted
+  CSV and JSON exports through the UI, verified two real
+  `POST /admin/api/access-logs/export` payloads without `cursor`, and saved
+  redacted file-contract output. Evidence:
+  `.tmp/task-358-03-access-export.png`,
+  `.tmp/task-358-03-access-export.csv`,
+  `.tmp/task-358-03-access-export.json`.
+- Agent and Claude review for TASK-358-03 flagged the Audit export pattern,
+  strict body validation, `audit:read`/CSRF mapping, redaction of path/user-agent
+  secret carriers, and Playwright file evidence requirements. The UI pass also
+  found and fixed field-list drift (`userAgent` missing) and dialog overflow.
+- `bun run test:vitest -- tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+  passed after TASK-358-04 for the advanced-filter sheet, validation, active
+  chips, export-filter propagation, and no-op gate update.
+- `bun run test:vitest -- tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/access-logs-table.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+  passed in final TASK-358-04 validation with 12 tests.
+- `bun test tests/unit/access/accessLogService.test.ts tests/integration/routes/accessLogs.test.ts`
+  passed in final TASK-358-04 validation with 15 tests for access-log service,
+  route, export, revoke, and error-mapping contracts.
+- `bun --cwd core lint` passed in final TASK-358-04 validation.
+- `bun --cwd core lint:types` passed in final TASK-358-04 validation.
+- `bun run gates:coderso` passed in final TASK-358-04 validation:
+  functional, ux, performance, security, and reliability.
+- Playwright TASK-358-04 advanced-filter smoke passed with an `audit:read` user:
+  filtered by marker and exact `User ID`, opened `Advanced access filters`,
+  applied `method=POST` and `ip=127.0.4`, verified `User ID`/`Method`/`IP
+  contains` chips, cleared the method chip, and observed zero
+  `/admin/api/users` or `/admin/api/roles` lookup requests. Evidence screenshot:
+  `.tmp/task-358-04-advanced-filters.png`.
+- Claude and agent review for TASK-358-04 agreed that no extra endpoint was
+  required, that method/IP should use the existing strict query contract, and
+  that role filtering should stay absent unless historical role snapshots are
+  introduced.
+- Source evidence:
+  `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ACCESS_LOGS.md`.

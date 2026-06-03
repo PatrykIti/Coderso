@@ -259,7 +259,7 @@ export function ThemeEditorPage({
       activeHref="/admin/themes"
       contentClassName="p-0"
       showSearch={false}
-      breadcrumbs={["Settings", "Theme Editor"]}
+      breadcrumbs={["Admin", "Theme Editor"]}
       topbarActions={
         <div className="flex items-center gap-2">
           <Badge className="bg-emerald-100 text-[10px] uppercase tracking-wide text-emerald-700">

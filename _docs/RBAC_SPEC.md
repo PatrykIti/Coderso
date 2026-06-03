@@ -68,8 +68,52 @@ Notes:
 - Audit: audit:read
 
 UI behavior:
-- Widoki Users/Roles wylaczaja akcje edycji bez `users:write` lub `roles:write`.
+- Admin UI buduje `can(permission)` z redacted `permissionSnapshot` zwracanego
+  przez `GET /auth/me`; brak lub malformed snapshot fail-closed.
+- Sidebar i admin route guards uzywaja tego samego helpera, a API 403 pozostaje
+  defense-in-depth i wyzwala odswiezenie permission snapshotu.
+- Globalne odczyty Admin shell rowniez musza sprawdzac snapshot przed fetch:
+  settings (`settings:read`), admin theme (`themes:read`), custom-screen
+  shortcuts (`content:read`) i solution-kit nav context (`solution-kits:read`).
+- `/admin/settings/**` wymaga `settings:read` do renderowania Settings shell.
+  Bez `settings:read` UI renderuje shared access denied przed globalnym
+  `getSettings()` i przed section-specific Settings fetchami; Settings linki,
+  w tym breadcrumbi z innych admin areas, nie moga kierowac do Settings.
+- `/admin/users` jest dostepne przy `users:read` albo `roles:read`; bez obu
+  uprawnien UI nie wykonuje fetchy Users/Roles.
+- `users:read`-only pokazuje liste users bez role filter/details; `roles:read`
+  -only pokazuje role cards/catalog bez tabeli users i invite.
+- `/admin/roles` wymaga `roles:read` do odczytu macierzy. Bez `roles:read` UI
+  renderuje access denied przed roles/catalog fetch. `roles:read` bez
+  `roles:write` pokazuje searchable read-only matrix, ale nie aktywuje Add Role,
+  bulk toggles, checkbox toggles ani Save changes. Stale 403 z odczytu albo
+  zapisu wymusza odswiezenie permission snapshotu.
+- `/admin/roles` zapisuje matrix przez review-first flow: footer pokazuje
+  liczbe zmienionych rol oraz dodanych/usunietych permissions, `Review changes`
+  otwiera role-by-role diff modal, Cancel nie wysyla zadnego PATCH, a Confirm
+  PATCHuje tylko role z faktycznym diffem. Partial failure zostawia failed role
+  dirty z role-specific error. Stale role conflicts (`409`/`412`,
+  `role_conflict`, `role_stale`) blokuja retry do czasu jawnego odswiezenia
+  rol.
+- RoleEditor i Roles Matrix uzywaja tego samego high-risk taxonomy. Granty
+  full-access (`*` albo kompletny katalog permissions), wildcard/write/security
+  scopes i inne high-risk additions wymagaja osobnego confirm dialogu przed
+  mutacja draftu albo finalnym zapisem. Read-only scopes takie jak `roles:read`
+  nie sa high-risk same w sobie.
+- Role create/duplicate/update/delete writes emit audit metadata with role
+  id/name, sorted stored permission snapshots, and `fullAccess`. Role update
+  events additionally include sorted `addedPermissions` and
+  `removedPermissions`; diff semantics expand stored `*` to the current
+  permission catalog while keeping the snapshot literal.
+- Widoki Users/Roles wylaczaja akcje edycji bez odpowiedniego write
+  permission, a stale 403 wymusza odswiezenie permission snapshotu.
 - Ostatni admin nie moze zostac usuniety ani pozbawiony roli admin.
+- Destrukcyjne akcje Users/Roles wymagaja confirm dialogu. Re-aktywacja usera
+  wymaga confirm, gdy role sa high-risk albo UI nie ma `roles:read` i nie moze
+  potwierdzic ryzyka. Duplicate role wymaga confirm dla `*`, wildcard scopes i
+  high-risk permissions (`roles:write`, `users:write`, `settings:write`,
+  `sessions:write`, `api-keys:write`, `plugins:manage`, `backups:write`,
+  `themes:write`, `solution-kits:write`, `audit:read`).
 
 ## Enforcement
 

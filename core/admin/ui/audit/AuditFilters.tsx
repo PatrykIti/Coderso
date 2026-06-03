@@ -8,16 +8,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { AuditCategory, AuditDateRange, AuditSeverity } from "./types";
 
 export type AuditFiltersProps = {
   query: string;
-  dateRange: string;
-  eventType: string;
-  severity: string;
+  dateRange: AuditDateRange;
+  eventType: "all" | AuditCategory;
+  severity: "all" | AuditSeverity;
   onQueryChange: (value: string) => void;
-  onDateRangeChange: (value: string) => void;
-  onEventTypeChange: (value: string) => void;
-  onSeverityChange: (value: string) => void;
+  onDateRangeChange: (value: AuditDateRange) => void;
+  onEventTypeChange: (value: "all" | AuditCategory) => void;
+  onSeverityChange: (value: "all" | AuditSeverity) => void;
 };
 
 export function AuditFilters({
@@ -41,8 +42,11 @@ export function AuditFilters({
           onChange={(event) => onQueryChange(event.target.value)}
         />
       </div>
-      <Select value={dateRange} onValueChange={onDateRangeChange}>
-        <SelectTrigger className="h-10 w-full">
+      <Select
+        value={dateRange}
+        onValueChange={(value) => onDateRangeChange(value as AuditDateRange)}
+      >
+        <SelectTrigger className="h-10 w-full" aria-label="Audit date range">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Date range" />
         </SelectTrigger>
@@ -50,10 +54,12 @@ export function AuditFilters({
           <SelectItem value="last-7-days">Last 7 days</SelectItem>
           <SelectItem value="last-30-days">Last 30 days</SelectItem>
           <SelectItem value="this-month">This month</SelectItem>
-          <SelectItem value="custom">Custom range</SelectItem>
         </SelectContent>
       </Select>
-      <Select value={eventType} onValueChange={onEventTypeChange}>
+      <Select
+        value={eventType}
+        onValueChange={(value) => onEventTypeChange(value as "all" | AuditCategory)}
+      >
         <SelectTrigger className="h-10 w-full">
           <Layers className="h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Event type" />
@@ -65,7 +71,10 @@ export function AuditFilters({
           <SelectItem value="system">System</SelectItem>
         </SelectContent>
       </Select>
-      <Select value={severity} onValueChange={onSeverityChange}>
+      <Select
+        value={severity}
+        onValueChange={(value) => onSeverityChange(value as "all" | AuditSeverity)}
+      >
         <SelectTrigger className="h-10 w-full">
           <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Severity" />

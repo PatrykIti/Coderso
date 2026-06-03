@@ -13,15 +13,22 @@ import {
   type SessionRecord,
 } from "@/services/sessionsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
 import { SessionsTable, type SessionItem } from "./SessionsTable";
 import { SettingsSidebar } from "./SettingsSidebar";
 
+const accountSecurityLinksUnavailableReason =
+  "Account security links are not wired yet. TASK-359-07 owns navigation targets.";
+const sessionTabsUnavailableReason =
+  "Only Active Sessions is wired on this screen. TASK-359-07 owns the remaining session tabs.";
+
 const tabs = [
-  { id: "general", label: "General" },
-  { id: "sessions", label: "Active Sessions" },
-  { id: "audit", label: "Audit Log" },
-  { id: "two-factor", label: "Two-Factor Auth" },
+  { id: "general", label: "General", available: false },
+  { id: "sessions", label: "Active Sessions", available: true },
+  { id: "audit", label: "Audit Log", available: false },
+  { id: "two-factor", label: "Two-Factor Auth", available: false },
 ];
 
 type DeviceMeta = {
@@ -86,17 +93,36 @@ const mapSessionItem = (session: SessionRecord): SessionItem => {
   };
 };
 
+const readSessionSelection = (path: string) => {
+  if (!path) return { selectedSessionId: null, selectedUserId: null };
+  const params = new URL(path, "https://admin.local").searchParams;
+  return {
+    selectedSessionId: params.get("sessionId"),
+    selectedUserId: params.get("userId"),
+  };
+};
+
 export function SessionsPage() {
+  const adminRouter = useOptionalAdminRouter();
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRevoking, setIsRevoking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingRevokeSession, setPendingRevokeSession] = useState<SessionItem | null>(null);
+  const [pendingRevokeAll, setPendingRevokeAll] = useState(false);
+
+  const { selectedSessionId, selectedUserId } = useMemo(() => {
+    const path =
+      adminRouter?.path ??
+      (typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : "");
+    return readSessionSelection(path);
+  }, [adminRouter?.path]);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const items = await listSessions();
+      const items = await listSessions(selectedUserId ?? undefined);
       setSessions(items.map(mapSessionItem));
     } catch (err) {
       if (isApiClientError(err)) {
@@ -107,11 +133,11 @@ export function SessionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedUserId]);
 
   useEffect(() => {
     let active = true;
-    listSessions()
+    listSessions(selectedUserId ?? undefined)
       .then((items) => {
         if (active) setSessions(items.map(mapSessionItem));
       })
@@ -129,16 +155,33 @@ export function SessionsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [selectedUserId]);
+
+  const selectedSessionAvailable = useMemo(
+    () =>
+      Boolean(selectedSessionId && sessions.some((session) => session.id === selectedSessionId)),
+    [selectedSessionId, sessions]
+  );
 
   const activeCount = useMemo(() => sessions.length, [sessions.length]);
+  const revokableSessionCount = useMemo(
+    () => sessions.filter((session) => session.canRevoke).length,
+    [sessions]
+  );
 
-  const handleRevoke = async (session: SessionItem) => {
+  const handleRevoke = (session: SessionItem) => {
     if (!session.canRevoke) return;
+    setPendingRevokeSession(session);
+  };
+
+  const confirmRevoke = async () => {
+    const session = pendingRevokeSession;
+    if (!session?.canRevoke) return;
     setIsRevoking(true);
     setError(null);
     try {
       await revokeSession(session.id);
+      setPendingRevokeSession(null);
       await refresh();
     } catch (err) {
       if (isApiClientError(err)) {
@@ -151,11 +194,17 @@ export function SessionsPage() {
     }
   };
 
-  const handleRevokeAll = async () => {
+  const handleRevokeAll = () => {
+    if (revokableSessionCount === 0) return;
+    setPendingRevokeAll(true);
+  };
+
+  const confirmRevokeAll = async () => {
     setIsRevoking(true);
     setError(null);
     try {
-      await revokeAllSessions();
+      await revokeAllSessions(selectedUserId ?? undefined);
+      setPendingRevokeAll(false);
       await refresh();
     } catch (err) {
       if (isApiClientError(err)) {
@@ -171,7 +220,7 @@ export function SessionsPage() {
   return (
     <SettingsShell
       activeHref="/admin/settings"
-      sidebar={<SettingsSidebar activeId="security" />}
+      sidebar={<SettingsSidebar activeId="sessions" />}
       breadcrumbs={["Settings", "Security", "Sessions"]}
       topbarActions={
         <Button
@@ -179,7 +228,7 @@ export function SessionsPage() {
           size="sm"
           className="gap-2"
           onClick={handleRevokeAll}
-          disabled={isRevoking || isLoading || sessions.length === 0}
+          disabled={isRevoking || isLoading || revokableSessionCount === 0}
         >
           <LogOut className="h-4 w-4" />
           Revoke All Other Sessions
@@ -204,8 +253,15 @@ export function SessionsPage() {
                     "border-b-2 py-3 transition-colors",
                     isActive
                       ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                      : tab.available
+                        ? "border-transparent text-muted-foreground hover:text-foreground"
+                        : "cursor-not-allowed border-transparent text-muted-foreground opacity-60"
                   )}
+                  disabled={!tab.available}
+                  title={!tab.available ? sessionTabsUnavailableReason : undefined}
+                  data-no-op-control={
+                    !tab.available ? `settings-sessions-tab-${tab.id}` : undefined
+                  }
                 >
                   {tab.label}
                 </button>
@@ -235,10 +291,18 @@ export function SessionsPage() {
                 {error}
               </div>
             ) : null}
+            {selectedSessionId && !isLoading ? (
+              <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+                {selectedSessionAvailable
+                  ? "Showing the active session selected from access logs."
+                  : "The session selected from access logs is not active or is no longer available."}
+              </div>
+            ) : null}
             <SessionsTable
               sessions={sessions}
               isLoading={isLoading}
               isRevoking={isRevoking}
+              selectedSessionId={selectedSessionId}
               onRevoke={handleRevoke}
             />
             <div className="rounded-xl border border-blue-200/60 bg-blue-50/60 p-6 text-blue-900 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200">
@@ -260,6 +324,9 @@ export function SessionsPage() {
                       variant="link"
                       size="sm"
                       className="h-auto px-0 py-0 text-blue-700 dark:text-blue-300"
+                      disabled
+                      title={accountSecurityLinksUnavailableReason}
+                      data-no-op-control="settings-sessions-change-password"
                     >
                       Change Password
                     </Button>
@@ -267,6 +334,9 @@ export function SessionsPage() {
                       variant="link"
                       size="sm"
                       className="h-auto px-0 py-0 text-blue-700 dark:text-blue-300"
+                      disabled
+                      title={accountSecurityLinksUnavailableReason}
+                      data-no-op-control="settings-sessions-security-settings"
                     >
                       Security Settings
                     </Button>
@@ -277,6 +347,40 @@ export function SessionsPage() {
           </div>
         </div>
       </div>
+      <ConfirmActionDialog
+        open={Boolean(pendingRevokeSession)}
+        onOpenChange={(open) => {
+          if (!open) setPendingRevokeSession(null);
+        }}
+        title="Revoke session"
+        description="This will end the selected active session and require that device to sign in again."
+        confirmLabel="Revoke session"
+        confirmingLabel="Revoking..."
+        isConfirming={isRevoking}
+        targetLabel={
+          pendingRevokeSession
+            ? `${pendingRevokeSession.device} · ${pendingRevokeSession.ipAddress}`
+            : undefined
+        }
+        onConfirm={confirmRevoke}
+      >
+        Review the device and location before revoking. Your current session remains protected.
+      </ConfirmActionDialog>
+      <ConfirmActionDialog
+        open={pendingRevokeAll}
+        onOpenChange={setPendingRevokeAll}
+        title="Revoke all other sessions"
+        description="This will end every revokable session except the current session."
+        confirmLabel="Revoke all other sessions"
+        confirmingLabel="Revoking..."
+        isConfirming={isRevoking}
+        targetLabel={`${revokableSessionCount} other ${
+          revokableSessionCount === 1 ? "session" : "sessions"
+        }`}
+        onConfirm={confirmRevokeAll}
+      >
+        Your current session remains protected. Other devices will need to sign in again.
+      </ConfirmActionDialog>
     </SettingsShell>
   );
 }

@@ -2,11 +2,15 @@ import { expect, test, vi } from "vitest";
 
 import {
   createAdminPrefetcher,
+  prefetchSettingsRoute,
   prefetchWarmupOptions,
   resolveCollectionWorkspacePrefetchTarget,
   resolveDetailTemplatePrefetchTarget,
   type AdminPrefetchEntry,
 } from "../../../core/admin/utils/adminPrefetch";
+import { clearContentTypesCache } from "../../../core/admin/services/contentTypesClient";
+import { clearPagesCache } from "../../../core/admin/services/pagesClient";
+import { clearSiteSettingsCache } from "../../../core/admin/services/siteSettingsClient";
 
 const withWindow = async (fn: () => Promise<void> | void) => {
   const original = (globalThis as { window?: unknown }).window;
@@ -38,8 +42,86 @@ const createDeferred = () => {
   };
 };
 
+const createLocalStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+};
+
+const installLocalStorage = () => {
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+  return () => {
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    clearSiteSettingsCache();
+    clearPagesCache();
+    clearContentTypesCache();
+  };
+};
+
+const jsonResponse = (payload: unknown) =>
+  new Response(JSON.stringify(payload), {
+    headers: { "Content-Type": "application/json" },
+  });
+
 test("prefetch warmup options default to force false", () => {
   expect(prefetchWarmupOptions).toEqual({ force: false });
+});
+
+test("settings site prefetch warms settings and selector caches once", async () => {
+  const restoreStorage = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/settings")) {
+      return jsonResponse({
+        "site.name": "Coderso",
+        "site.locale": "en",
+        "site.adminPath": "/admin",
+        "site.cacheTtlSeconds": 30,
+        "site.contentRoutes": [],
+      });
+    }
+    if (url.endsWith("/pages")) {
+      return jsonResponse([]);
+    }
+    if (url.endsWith("/content-types")) {
+      return jsonResponse([]);
+    }
+    return jsonResponse({});
+  };
+
+  try {
+    clearSiteSettingsCache();
+    clearPagesCache();
+    clearContentTypesCache();
+
+    await prefetchSettingsRoute("/settings/site");
+    await prefetchSettingsRoute("/settings/site");
+
+    const paths = calls.map((call) => String(call.input));
+    expect(paths.filter((path) => path.endsWith("/settings"))).toHaveLength(1);
+    expect(paths.filter((path) => path.endsWith("/pages"))).toHaveLength(1);
+    expect(paths.filter((path) => path.endsWith("/content-types"))).toHaveLength(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreStorage();
+  }
 });
 
 test("collection workspace prefetch target resolves only canonical engine workspace paths", () => {
@@ -422,6 +504,83 @@ test("default commerce prefetch warms products and collections with cached optio
       expect(listCommerceCollectionsCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
     } finally {
       vi.doUnmock("@/services/commerceClient");
+      vi.resetModules();
+    }
+  });
+});
+
+test("default tools prefetch warms route-specific caches", async () => {
+  await withWindow(async () => {
+    vi.resetModules();
+    const listRecentSearchesCached = vi.fn().mockResolvedValue([]);
+    const listSeoCached = vi.fn().mockResolvedValue([]);
+    const getOverviewCached = vi.fn().mockResolvedValue({});
+    const getTopContentCached = vi.fn().mockResolvedValue([]);
+    const listBackupsCached = vi.fn().mockResolvedValue({ items: [], total: 0 });
+    const getBackupScheduleCached = vi.fn().mockResolvedValue(null);
+    const listImportHistoryCached = vi.fn().mockResolvedValue([]);
+    const listRedirectsCached = vi.fn().mockResolvedValue({ items: [], total: 0 });
+
+    vi.doMock("@/services/searchClient", () => ({
+      listRecentSearchesCached,
+    }));
+    vi.doMock("@/services/seoClient", () => ({
+      listSeoCached,
+    }));
+    vi.doMock("@/services/analyticsClient", () => ({
+      getOverviewCached,
+      getTopContentCached,
+    }));
+    vi.doMock("@/services/backupsClient", () => ({
+      getBackupScheduleCached,
+      listBackupsCached,
+    }));
+    vi.doMock("@/services/importExportClient", () => ({
+      listImportHistoryCached,
+    }));
+    vi.doMock("@/services/redirectsClient", () => ({
+      listRedirectsCached,
+    }));
+
+    try {
+      const module = await import("../../../core/admin/utils/adminPrefetch");
+      const prefetchRoute = async (href: string) => {
+        module.prefetchAdminRoute(href, "/admin", {
+          activeHref: "/admin/pages",
+        });
+        await flushAsync();
+      };
+
+      await prefetchRoute("/admin/search");
+      await prefetchRoute("/admin/seo");
+      await prefetchRoute("/admin/analytics");
+      await prefetchRoute("/admin/backups");
+      await prefetchRoute("/admin/tools/import-export");
+      await prefetchRoute("/admin/redirects");
+
+      expect(listRecentSearchesCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+      expect(listSeoCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+      expect(getOverviewCached).toHaveBeenCalledWith(30, module.prefetchWarmupOptions);
+      expect(getTopContentCached).toHaveBeenCalledWith({
+        limit: 50,
+        rangeDays: 30,
+        ...module.prefetchWarmupOptions,
+      });
+      expect(listBackupsCached).toHaveBeenCalledWith({
+        page: 1,
+        limit: 10,
+        ...module.prefetchWarmupOptions,
+      });
+      expect(getBackupScheduleCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+      expect(listImportHistoryCached).toHaveBeenCalledWith();
+      expect(listRedirectsCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
+    } finally {
+      vi.doUnmock("@/services/searchClient");
+      vi.doUnmock("@/services/seoClient");
+      vi.doUnmock("@/services/analyticsClient");
+      vi.doUnmock("@/services/backupsClient");
+      vi.doUnmock("@/services/importExportClient");
+      vi.doUnmock("@/services/redirectsClient");
       vi.resetModules();
     }
   });

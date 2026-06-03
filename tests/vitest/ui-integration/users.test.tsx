@@ -5,7 +5,9 @@ import { renderAdminUi } from "../../utils/adminRouterRender";
 import { UsersRolesPage } from "../../../core/admin/ui/users/UsersRolesPage";
 
 test("Users UI blocks deleting last admin", () => {
-  const html = renderAdminUi(<UsersRolesPage />);
+  const html = renderAdminUi(
+    <UsersRolesPage permissions={["users:read", "users:write", "roles:read", "roles:write"]} />
+  );
 
   expect(html).toContain("Loading users and roles");
   expect(html).toContain("Invite User");

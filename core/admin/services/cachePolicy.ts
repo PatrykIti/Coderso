@@ -89,6 +89,7 @@ export const cacheKeys = {
   mediaList: "media:list",
   adminThemeTemplatesList: "adminThemeTemplates:list",
   adminThemeProfilesList: "adminThemeProfiles:list",
+  settingsRedacted: "settings:redacted",
 };
 
 export const getCacheTtlMs = () => DEFAULT_TTL_MS;

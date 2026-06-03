@@ -9,6 +9,8 @@ export const adminRoleCreateSchema = {
       type: "array",
       items: { type: "string" },
     },
+    sourceRoleId: { type: "string" },
+    sourceRoleName: { type: "string" },
   },
 };
 

@@ -18,14 +18,30 @@ export type AdminUserCreate = {
   email: string;
   roleIds: string[];
   status?: AdminUserStatus;
-  password?: string;
 };
 
 export type AdminUserUpdate = {
   name?: string;
   email?: string;
   status?: AdminUserStatus;
-  password?: string;
+};
+
+export type AdminUserInvite = {
+  name: string;
+  email: string;
+  roleIds: string[];
+  sendSetPasswordInvite: true;
+};
+
+export type AdminUserSetPasswordDelivery = {
+  delivery: "email";
+  status: "sent";
+  expiresAt: string;
+};
+
+export type AdminUserInviteResult = {
+  user: AdminUser;
+  setPassword: AdminUserSetPasswordDelivery;
 };
 
 export async function listAdminUsers() {
@@ -35,6 +51,18 @@ export async function listAdminUsers() {
 export async function createAdminUser(payload: AdminUserCreate) {
   return apiRequest<AdminUser>(
     "/admin-users",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
+}
+
+export async function inviteUserWithSetPassword(payload: AdminUserInvite) {
+  return apiRequest<AdminUserInviteResult>(
+    "/admin-users/invite",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -57,11 +85,7 @@ export async function updateAdminUser(id: string, payload: AdminUserUpdate) {
 }
 
 export async function enableAdminUser(id: string) {
-  return apiRequest<AdminUser>(
-    `/admin-users/${id}/enable`,
-    { method: "POST" },
-    { withCsrf: true }
-  );
+  return apiRequest<AdminUser>(`/admin-users/${id}/enable`, { method: "POST" }, { withCsrf: true });
 }
 
 export async function disableAdminUser(id: string) {
@@ -88,6 +112,18 @@ export async function deleteAdminUser(id: string) {
   return apiRequest<{ ok: boolean }>(
     `/admin-users/${id}`,
     { method: "DELETE" },
+    { withCsrf: true }
+  );
+}
+
+export async function requestAdminPasswordReset(id: string) {
+  return apiRequest<AdminUserSetPasswordDelivery>(
+    `/admin-users/${id}/password-reset`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ delivery: "email" }),
+    },
     { withCsrf: true }
   );
 }

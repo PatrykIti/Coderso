@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { SettingsDirtyNavigationProvider } from "@/ui/settings/SettingsDirtyNavigation";
 
 type SettingsShellProps = {
   sidebar: React.ReactNode;
@@ -19,27 +20,32 @@ export function SettingsShell({
 }: SettingsShellProps) {
   return (
     <AdminShell contentClassName="p-0 overflow-hidden" {...props}>
-      <div className="flex h-full min-h-0 min-h-[calc(100vh-4rem)] overflow-hidden">
-        <aside
-          className={cn(
-            "hidden w-64 shrink-0 border-r bg-background lg:block h-full min-h-0 overflow-y-auto overscroll-contain",
-            sidebarClassName
-          )}
-        >
-          {sidebar}
-        </aside>
-        <section className="min-w-0 flex-1 bg-muted/30 h-full min-h-0 overflow-y-auto overscroll-contain">{children}</section>
-        {preview ? (
+      <SettingsDirtyNavigationProvider>
+        <div className="flex h-full min-h-0 min-h-[calc(100vh-4rem)] overflow-hidden">
           <aside
             className={cn(
-              "hidden w-[420px] shrink-0 border-l bg-background xl:block h-full min-h-0 overflow-y-auto overscroll-contain",
-              previewClassName
+              "hidden h-full min-h-0 w-64 shrink-0 overflow-y-auto overscroll-contain border-r bg-background lg:block",
+              sidebarClassName
             )}
           >
-            {preview}
+            {sidebar}
           </aside>
-        ) : null}
-      </div>
+          <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-muted/30">
+            <div className="shrink-0 border-b bg-background lg:hidden">{sidebar}</div>
+            {children}
+          </section>
+          {preview ? (
+            <aside
+              className={cn(
+                "hidden h-full min-h-0 w-[420px] shrink-0 overflow-y-auto overscroll-contain border-l bg-background xl:block",
+                previewClassName
+              )}
+            >
+              {preview}
+            </aside>
+          ) : null}
+        </div>
+      </SettingsDirtyNavigationProvider>
     </AdminShell>
   );
 }

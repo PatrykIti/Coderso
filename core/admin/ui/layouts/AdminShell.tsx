@@ -37,6 +37,7 @@ import {
 } from "@/services/solutionKitsClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import { useAdminCan } from "@/ui/contexts/AdminAuthContext";
 
 const NAV_GROUP_STATE_KEY = "coderso.admin.navGroupState";
 const LEGACY_NAV_GROUP_STATE_KEY = "nextless.admin.navGroupState";
@@ -103,19 +104,25 @@ export function AdminShell({
   contentClassName,
 }: AdminShellProps) {
   const [navOpen, setNavOpen] = useState(false);
-  const [customScreens, setCustomScreens] = useState<CustomScreenRecord[]>(
-    () => getCachedCustomScreens() ?? []
+  const canAccess = useAdminCan();
+  const canReadCustomScreens = canAccess("content:read");
+  const canReadSolutionKits = canAccess("solution-kits:read");
+  const [customScreens, setCustomScreens] = useState<CustomScreenRecord[]>(() =>
+    canReadCustomScreens ? (getCachedCustomScreens() ?? []) : []
   );
-  const [solutionKits, setSolutionKits] = useState<SolutionKitSummary[]>(
-    () => getCachedSolutionKits() ?? []
+  const [solutionKits, setSolutionKits] = useState<SolutionKitSummary[]>(() =>
+    canReadSolutionKits ? (getCachedSolutionKits() ?? []) : []
   );
   const [activeSolutionKitId, setActiveSolutionKitId] = useState<SolutionKitId | null>(() =>
     getActiveSolutionKitId()
   );
   const adminBasePath = useAdminBasePath();
   const activeSolutionKit = useMemo(
-    () => solutionKits.find((item) => item.id === activeSolutionKitId) ?? null,
-    [activeSolutionKitId, solutionKits]
+    () =>
+      canReadSolutionKits
+        ? (solutionKits.find((item) => item.id === activeSolutionKitId) ?? null)
+        : null,
+    [activeSolutionKitId, canReadSolutionKits, solutionKits]
   );
   const solutionKitFlags = useMemo(
     () => buildAdvancedFeatureFlagsForSolutionKit(activeSolutionKit),
@@ -130,6 +137,8 @@ export function AdminShell({
       baseNavSections.some((section) => section.groups?.some((group) => group.id === "advanced")),
     [baseNavSections]
   );
+  const canLoadCustomScreens = hasAdvancedGroup && canReadCustomScreens;
+  const canLoadSolutionKits = hasAdvancedGroup && canReadSolutionKits;
   const navGroupDefaults = useMemo(
     () => collectDefaultGroupState(baseNavSections),
     [baseNavSections]
@@ -144,44 +153,44 @@ export function AdminShell({
   });
 
   useEffect(() => {
-    if (!hasAdvancedGroup) return;
+    if (!canLoadCustomScreens) return;
     listCustomScreensCached()
       .then((items) => setCustomScreens(items))
       .catch(() => undefined);
-  }, [hasAdvancedGroup]);
+  }, [canLoadCustomScreens]);
 
   useEffect(() => {
-    if (!hasAdvancedGroup) return;
+    if (!canLoadSolutionKits) return;
     listSolutionKitsCached()
       .then((items) => setSolutionKits(items))
       .catch(() => undefined);
-  }, [hasAdvancedGroup]);
+  }, [canLoadSolutionKits]);
 
   useEffect(() => {
-    if (!hasAdvancedGroup) return undefined;
+    if (!canLoadCustomScreens) return undefined;
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.customScreensList) return;
       listCustomScreensCached({ force: true })
         .then((items) => setCustomScreens(items))
         .catch(() => undefined);
     });
-  }, [hasAdvancedGroup]);
+  }, [canLoadCustomScreens]);
 
   useEffect(() => {
-    if (!hasAdvancedGroup) return undefined;
+    if (!canLoadSolutionKits) return undefined;
     return subscribeActiveSolutionKitId((kitId) => {
       setActiveSolutionKitId(kitId);
     });
-  }, [hasAdvancedGroup]);
+  }, [canLoadSolutionKits]);
 
   const navSectionsWithCustomScreens = useMemo(
     () =>
       appendNavItemsAfterGroup(
         baseNavSections,
         "advanced",
-        buildCustomScreenShortcutNavItems(customScreens)
+        buildCustomScreenShortcutNavItems(canReadCustomScreens ? customScreens : [])
       ),
-    [baseNavSections, customScreens]
+    [baseNavSections, canReadCustomScreens, customScreens]
   );
 
   const resolvedSections = useMemo(
@@ -217,6 +226,7 @@ export function AdminShell({
         sections={resolvedSections}
         footerItems={resolvedFooter}
         activeHref={resolvedActiveHref}
+        canAccess={canAccess}
         groupState={resolvedNavGroupState}
         onGroupToggle={(groupId, nextExpanded) =>
           setNavGroupState((prev) => ({
@@ -255,6 +265,7 @@ export function AdminShell({
             sections={resolvedSections}
             footerItems={resolvedFooter}
             activeHref={resolvedActiveHref}
+            canAccess={canAccess}
             variant="mobile"
             groupState={resolvedNavGroupState}
             onGroupToggle={(groupId, nextExpanded) =>

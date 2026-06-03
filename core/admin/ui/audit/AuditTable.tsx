@@ -20,13 +20,26 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
+import { copyAuditEntryJson } from "./auditEntryActions";
 import { auditCategoryMeta, auditStatusMeta } from "./auditMeta";
 import type { AuditLog } from "./types";
+
+const exportEntryUnavailableReason =
+  "Single-entry export is unavailable. Use the Audit Logs page export for filtered CSV or JSON evidence.";
 
 export type AuditTableProps = {
   logs: AuditLog[];
   selectedId?: string | null;
   onSelect: (log: AuditLog) => void;
+  onCopyJson?: (log: AuditLog) => void;
+  pageInfo?: {
+    countCopy: string;
+    canNext: boolean;
+    canPrevious: boolean;
+    isLoading?: boolean;
+    onNext: () => void;
+    onPrevious: () => void;
+  };
 };
 
 const getInitials = (name: string) =>
@@ -38,7 +51,13 @@ const getInitials = (name: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
+export function AuditTable({ logs, selectedId, onSelect, onCopyJson, pageInfo }: AuditTableProps) {
+  const handleCopyJson =
+    onCopyJson ??
+    ((log: AuditLog) => {
+      void copyAuditEntryJson(log);
+    });
+
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className="overflow-x-auto">
@@ -81,9 +100,7 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-foreground">
-                          {log.event}
-                        </span>
+                        <span className="text-sm font-semibold text-foreground">{log.event}</span>
                         <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                           {category.label}
                         </span>
@@ -98,14 +115,10 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
                         </div>
                       ) : (
                         <Avatar size="sm">
-                          <AvatarFallback>
-                            {getInitials(log.actor.name)}
-                          </AvatarFallback>
+                          <AvatarFallback>{getInitials(log.actor.name)}</AvatarFallback>
                         </Avatar>
                       )}
-                      <span className="text-sm text-muted-foreground">
-                        {log.actor.name}
-                      </span>
+                      <span className="text-sm text-muted-foreground">{log.actor.name}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
@@ -116,19 +129,14 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="text-sm text-foreground">
-                        {log.timestamp}
-                      </span>
+                      <span className="text-sm text-foreground">{log.timestamp}</span>
                       <span className="text-[11px] text-muted-foreground">
                         {log.timestampLabel}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={cn("rounded-md", status.className)}
-                    >
+                    <Badge variant="outline" className={cn("rounded-md", status.className)}>
                       {status.label}
                     </Badge>
                   </TableCell>
@@ -144,12 +152,30 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem onClick={() => onSelect(log)}>
+                        <DropdownMenuItem
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onSelect(log);
+                          }}
+                        >
                           View details
                         </DropdownMenuItem>
-                        <DropdownMenuItem>Copy JSON</DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleCopyJson(log);
+                          }}
+                        >
+                          Copy JSON
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>Export entry</DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled
+                          title={exportEntryUnavailableReason}
+                          data-no-op-control="audit-export-entry"
+                        >
+                          Export entry
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -161,13 +187,23 @@ export function AuditTable({ logs, selectedId, onSelect }: AuditTableProps) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-4 py-3">
         <span className="text-sm text-muted-foreground">
-          Showing 1 to {logs.length} of 2,459 logs
+          {pageInfo?.countCopy ?? `Showing ${logs.length} loaded audit logs.`}
         </span>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!pageInfo?.canPrevious || pageInfo?.isLoading}
+            onClick={pageInfo?.onPrevious}
+          >
             Previous
           </Button>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!pageInfo?.canNext || pageInfo?.isLoading}
+            onClick={pageInfo?.onNext}
+          >
             Next
           </Button>
         </div>

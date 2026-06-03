@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
 import { passwordResets, settings, users } from "../../../core/db/schema";
 import {
+  consumeResetTokenWithStatus,
   consumeResetToken,
   createResetToken,
   findResetToken,
@@ -69,6 +70,64 @@ testIfDb("create and consume reset token", async () => {
 
   const replay = await consumeResetToken(token);
   expect(replay).toBeNull();
+
+  await cleanup();
+  userId = undefined;
+});
+
+testIfDb("createResetToken invalidates previous outstanding tokens", async () => {
+  const [user] = await db
+    .insert(users)
+    .values({
+      email: `reset-invalidate-${randomUUID()}@example.com`,
+      passwordHash: "hash",
+      status: "active",
+    })
+    .returning();
+
+  userId = user?.id;
+
+  const first = await createResetToken(user.id);
+  const second = await createResetToken(user.id);
+
+  const firstResult = await consumeResetTokenWithStatus(first.token);
+  expect(firstResult).toEqual({ ok: false, code: "set_password_token_used" });
+
+  const secondResult = await consumeResetTokenWithStatus(second.token);
+  expect(secondResult.ok).toBe(true);
+
+  await cleanup();
+  userId = undefined;
+});
+
+testIfDb("consumeResetTokenWithStatus classifies invalid expired and used tokens", async () => {
+  const [user] = await db
+    .insert(users)
+    .values({
+      email: `reset-status-${randomUUID()}@example.com`,
+      passwordHash: "hash",
+      status: "active",
+    })
+    .returning();
+
+  userId = user?.id;
+
+  const unknown = await consumeResetTokenWithStatus("unknown-token");
+  expect(unknown).toEqual({ ok: false, code: "set_password_token_invalid" });
+
+  const used = await createResetToken(user.id);
+  await consumeResetTokenWithStatus(used.token);
+  const replay = await consumeResetTokenWithStatus(used.token);
+  expect(replay).toEqual({ ok: false, code: "set_password_token_used" });
+
+  const expired = await createResetToken(user.id);
+  await db
+    .update(passwordResets)
+    .set({ expiresAt: new Date(Date.now() - 60_000) })
+    .where(eq(passwordResets.tokenHash, expired.tokenHash));
+
+  const expiredResult = await consumeResetTokenWithStatus(expired.token);
+  expect(expiredResult).toEqual({ ok: false, code: "set_password_token_expired" });
 
   await cleanup();
   userId = undefined;

@@ -45,7 +45,8 @@ configuration.
 2. Start with `Revoke All Other Sessions` only if you already know the current
    account should be reset across devices.
 3. Review the local security tabs so you understand where you are in the wider
-   account-security flow.
+   account-security flow. In the current UI, `Active Sessions` is the only
+   active tab; the other tabs are disabled placeholders.
 4. In `Where you're signed in`, review:
    - device / OS,
    - location,
@@ -62,12 +63,12 @@ configuration.
 8. Use row-level `Revoke` when one session should be removed.
 9. Use `Revoke All Other Sessions` when the whole non-current footprint should
    be cleared.
-10. Read the security guidance block at the bottom when anything looks
+10. Confirm revoke dialogs carefully. Cancel does not call the revoke API, and
+    the current session remains protected.
+11. Read the security guidance block at the bottom when anything looks
     suspicious.
-11. Use `Change Password` when the issue looks account-level, not only
-    session-level.
-12. Use `Security Settings` when the problem points back to broader policy
-    configuration rather than just one active session.
+12. `Change Password` and `Security Settings` are disabled in the current UI
+    until their destination flows are wired.
 
 Use this safe session-review order when you want fewer lockout mistakes:
 1. Confirm the current session.
@@ -85,6 +86,8 @@ Use this safe session-review order when you want fewer lockout mistakes:
   route, even when detailed geo information is not present.
 - `Revoke All Other Sessions` is a strong containment action and should be
   treated as such, not as casual cleanup.
+- Row revoke and revoke-all both require confirmation before the mutation is
+  sent.
 - The local tab strip makes this route part of a wider account-security cluster,
   but its own job is specifically session footprint review.
 - The bottom guidance block is not decorative. It tells the user what to do when
@@ -100,7 +103,7 @@ Use this safe session-review order when you want fewer lockout mistakes:
   that is expected in the current UI.
 - The issue looks broader than one device:
   use `Revoke All Other Sessions` and then continue into password/security
-  follow-up.
+  follow-up once those disabled destination flows are available.
 
 # Decision Guide
 
@@ -121,6 +124,12 @@ Use this safe session-review order when you want fewer lockout mistakes:
 3. Revoke only the sessions that should end.
 4. Use revoke-all only when the broader reset is intentional.
 5. Change password if the session anomaly suggests deeper account risk.
+
+# Navigation And Drafts
+
+- Settings section links use in-app navigation on desktop and mobile.
+- Session review itself is read-only until a revoke action is chosen, but
+  leaving other dirty Settings screens prompts before a draft is discarded.
 
 # Security
 

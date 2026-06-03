@@ -122,7 +122,9 @@ vi.mock("@/ui/layouts/AdminShell", () => ({
     topbarActions?: React.ReactNode;
   }) => (
     <div>
-      <div>{breadcrumbs}</div>
+      <div data-testid="breadcrumbs">
+        {Array.isArray(breadcrumbs) ? breadcrumbs.join(" / ") : breadcrumbs}
+      </div>
       <div>{topbarActions}</div>
       <div>{children}</div>
     </div>
@@ -230,6 +232,9 @@ test("ThemeEditorPage handles invalid draft, reset, export, and save flows", asy
   );
 
   try {
+    expect(view.container.querySelector("[data-testid='breadcrumbs']")?.textContent).toBe(
+      "Admin / Theme Editor"
+    );
     expect(view.container.textContent).toContain("Theme Editor");
     expect(view.container.textContent).toContain("Live");
     expect(view.container.textContent).toContain("preview-panel");
