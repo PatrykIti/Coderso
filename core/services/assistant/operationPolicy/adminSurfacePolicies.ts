@@ -187,7 +187,8 @@ export const menuPolicy: AssistantResourcePolicy = surfacePolicy({
   destructive: exactDestructivePolicy,
   coverageState: "live-read-only",
   task: "TASK-184-08",
-  notes: "Menu summaries are read-only; menu item inspect/update/delete live matrix covers executable item actions.",
+  notes:
+    "Menu summaries are read-only; menu item inspect/update/delete live matrix covers executable item actions.",
 });
 
 export const menuItemPolicy: AssistantResourcePolicy = surfacePolicy({
@@ -238,7 +239,12 @@ export const menuItemPolicy: AssistantResourcePolicy = surfacePolicy({
   actions: {
     inspect: readOnlyAction("inspect"),
     find: readOnlyAction("find"),
-    upsert: { operation: "create", type: "menu.item.upsert", target: "explicit", mode: "executable" },
+    upsert: {
+      operation: "create",
+      type: "menu.item.upsert",
+      target: "explicit",
+      mode: "executable",
+    },
     update: { operation: "update", type: "menu.item.update", target: "single", mode: "executable" },
     delete: { operation: "delete", type: "menu.item.delete", target: "single", mode: "executable" },
   },
@@ -264,7 +270,15 @@ export const adminSearchPolicy: AssistantResourcePolicy = surfacePolicy({
 export const seoDocumentPolicy: AssistantResourcePolicy = surfacePolicy({
   kind: "seo-document",
   label: "SEO Documents",
-  aliases: ["seo", "seo manager", "seo document", "seo documents", "meta", "meta title", "meta description"],
+  aliases: [
+    "seo",
+    "seo manager",
+    "seo document",
+    "seo documents",
+    "meta",
+    "meta title",
+    "meta description",
+  ],
   routes: ["/admin/seo"],
   operations: ["inspect", "find", "create", "update", "delete"],
   readPermissions: ["content:read"],
@@ -294,9 +308,24 @@ export const seoDocumentPolicy: AssistantResourcePolicy = surfacePolicy({
   actions: {
     inspect: readOnlyAction("inspect"),
     find: readOnlyAction("find"),
-    upsert: { operation: "create", type: "seo.document.upsert", target: "explicit", mode: "executable" },
-    update: { operation: "update", type: "seo.document.update", target: "single", mode: "executable" },
-    delete: { operation: "delete", type: "seo.document.delete", target: "single", mode: "executable" },
+    upsert: {
+      operation: "create",
+      type: "seo.document.upsert",
+      target: "explicit",
+      mode: "executable",
+    },
+    update: {
+      operation: "update",
+      type: "seo.document.update",
+      target: "single",
+      mode: "executable",
+    },
+    delete: {
+      operation: "delete",
+      type: "seo.document.delete",
+      target: "single",
+      mode: "executable",
+    },
   },
   destructive: exactDestructivePolicy,
   coverageState: "live-execute",
@@ -351,7 +380,12 @@ export const importExportPolicy: AssistantResourcePolicy = surfacePolicy({
     importApply: gatedAction("create"),
     configure: gatedAction("configure"),
   },
-  secrets: redactedSecrets(["bundle.secrets", "bundle.apiKeys", "bundle.tokens", "bundle.passwords"]),
+  secrets: redactedSecrets([
+    "bundle.secrets",
+    "bundle.apiKeys",
+    "bundle.tokens",
+    "bundle.passwords",
+  ]),
   destructive: exactDestructivePolicy,
   coverageState: "live-gated",
   task: "TASK-184-13",
@@ -399,7 +433,13 @@ export const userPolicy: AssistantResourcePolicy = surfacePolicy({
     email: field("email", ["email", "mail"], "string"),
     roles: field("roles", ["roles", "role", "uprawnienia"], "record"),
   },
-  secrets: redactedSecrets(["emailEncrypted", "emailHash", "passwordHash", "resetToken", "sessionToken"]),
+  secrets: redactedSecrets([
+    "emailEncrypted",
+    "emailHash",
+    "passwordHash",
+    "resetToken",
+    "sessionToken",
+  ]),
   destructive: exactDestructivePolicy,
   coverageState: "live-gated",
   task: "TASK-184-14",
@@ -439,7 +479,13 @@ export const auditLogPolicy: AssistantResourcePolicy = surfacePolicy({
   operations: ["inspect", "find"],
   readPermissions: ["audit:read"],
   actions: inspectFindActions,
-  secrets: redactedSecrets(["actorEmail", "ipAddress", "metadata.secret", "metadata.token", "metadata.apiKey"]),
+  secrets: redactedSecrets([
+    "actorEmail",
+    "ipAddress",
+    "metadata.secret",
+    "metadata.token",
+    "metadata.apiKey",
+  ]),
   coverageState: "live-read-only",
   task: "TASK-184-14",
   notes: "Audit log prompts stay read-only/redacted.",
@@ -486,12 +532,24 @@ export const settingsAssistantPolicy: AssistantResourcePolicy = settingsSurfaceP
   route: "/admin/settings/assistant",
   fields: {
     enabled: field("assistant.enabled", ["enabled", "włączony", "wlaczony"], "boolean"),
-    defaultMode: field("assistant.defaultMode", ["default mode", "mode", "tryb"], "enum", ["docs-only", "llm-guide"]),
-    provider: field("assistant.llm.provider", ["provider", "openai", "openrouter"], "enum", ["openai", "openrouter", "none"]),
+    defaultMode: field("assistant.defaultMode", ["default mode", "mode", "tryb"], "enum", [
+      "docs-only",
+      "llm-guide",
+    ]),
+    provider: field("assistant.llm.provider", ["provider", "openai", "openrouter"], "enum", [
+      "openai",
+      "openrouter",
+      "none",
+    ]),
     model: field("assistant.llm.model", ["model", "llm model"], "string"),
     quotas: field("assistant.quotas", ["quotas", "limity"], "record"),
   },
-  secrets: redactedSecrets(["assistant.llm.apiKey", "openai.apiKey", "openrouter.apiKey", "integration.openrouter.apiKey"]),
+  secrets: redactedSecrets([
+    "assistant.llm.apiKey",
+    "openai.apiKey",
+    "openrouter.apiKey",
+    "integration.openrouter.apiKey",
+  ]),
   notes: "Provider key prompts stay redacted and non-executable.",
 });
 
@@ -511,7 +569,14 @@ export const settingsSitePolicy: AssistantResourcePolicy = settingsSurfacePolicy
 
 export const settingsSecurityPolicy: AssistantResourcePolicy = settingsSurfacePolicy({
   label: "Security Settings",
-  aliases: ["security settings", "security", "csrf", "cors", "rate limit", "ustawienia bezpieczeństwa"],
+  aliases: [
+    "security settings",
+    "security",
+    "csrf",
+    "cors",
+    "rate limit",
+    "ustawienia bezpieczeństwa",
+  ],
   route: "/admin/settings/security",
   fields: {
     csrf: field("csrf", ["csrf", "csrf token"], "record"),
@@ -520,7 +585,11 @@ export const settingsSecurityPolicy: AssistantResourcePolicy = settingsSurfacePo
     headers: field("headers", ["headers", "security headers"], "record"),
     session: field("session", ["session", "sessions"], "record"),
     botProtection: field("botProtection", ["captcha", "recaptcha", "bot protection"], "record"),
-    validation: field("validation.rejectUnknownFields", ["reject unknown", "strict validation"], "boolean"),
+    validation: field(
+      "validation.rejectUnknownFields",
+      ["reject unknown", "strict validation"],
+      "boolean"
+    ),
   },
   secrets: redactedSecrets([
     "botProtection.secretKey",
@@ -530,6 +599,62 @@ export const settingsSecurityPolicy: AssistantResourcePolicy = settingsSurfacePo
     "captcha.secret",
   ]),
   notes: "Broad security-disable prompts stay non-executable.",
+});
+
+export const settingsSecuritySessionsPolicy: AssistantResourcePolicy = settingsSurfacePolicy({
+  label: "Security Sessions",
+  aliases: ["security sessions", "sessions", "active sessions", "sesje", "aktywne sesje"],
+  route: "/admin/settings/security/sessions",
+  fields: {
+    session: field("session", ["session", "sessions", "sesja"], "record"),
+    user: field("user", ["user", "użytkownik", "uzytkownik"], "string"),
+    ipAddress: field("ipAddress", ["ip", "ip address", "adres ip"], "string"),
+    userAgent: field("userAgent", ["device", "browser", "user agent"], "string"),
+    revoke: field("revoke", ["revoke", "revoke session", "unieważnij sesję"], "boolean"),
+  },
+  secrets: redactedSecrets(["session.id", "session.token", "userEmail", "ipAddress", "userAgent"]),
+  notes: "Session inspection and revoke prompts stay redacted and non-executable.",
+});
+
+export const settingsLoginAlertsPolicy: AssistantResourcePolicy = settingsSurfacePolicy({
+  label: "Login Alerts",
+  aliases: ["login alerts", "alerts", "security alerts", "alerty logowania"],
+  route: "/admin/settings/security/login-alerts",
+  fields: {
+    enabled: field("enabled", ["enabled", "active", "włączone", "wlaczone"], "boolean"),
+    notifyOnNewDevice: field("notifyOnNewDevice", ["new device", "device alert"], "boolean"),
+    notifyOnNewLocation: field(
+      "notifyOnNewLocation",
+      ["new location", "location alert"],
+      "boolean"
+    ),
+    bruteForceThreshold: field(
+      "bruteForceThreshold",
+      ["brute force", "threshold", "próg"],
+      "number"
+    ),
+    recipients: field("recipients", ["recipients", "emails", "odbiorcy"], "record"),
+  },
+  secrets: redactedSecrets([
+    "loginAlerts.recipients",
+    "loginAlerts.webhookUrl",
+    "loginAlerts.deliveryError",
+  ]),
+  notes: "Login alert configuration prompts stay redacted and non-executable.",
+});
+
+export const settingsIpAllowlistPolicy: AssistantResourcePolicy = settingsSurfacePolicy({
+  label: "IP Allowlist",
+  aliases: ["ip allowlist", "allowlist", "allowed ips", "ip whitelist", "lista ip"],
+  route: "/admin/settings/security/ip-allowlist",
+  fields: {
+    ipAddress: field("ipAddress", ["ip", "ip address", "adres ip"], "string"),
+    cidr: field("cidr", ["cidr", "range", "zakres"], "string"),
+    label: field("label", ["label", "name", "nazwa"], "string"),
+    expiresAt: field("expiresAt", ["expires", "expiry", "wygasa"], "string"),
+  },
+  secrets: redactedSecrets(["ipAllowlist.ipAddress", "ipAllowlist.cidr", "ipAddress"]),
+  notes: "IP allowlist mutations stay redacted and non-executable without typed contracts.",
 });
 
 export const settingsApiKeysPolicy: AssistantResourcePolicy = settingsSurfacePolicy({
@@ -555,7 +680,11 @@ export const settingsWebhooksPolicy: AssistantResourcePolicy = settingsSurfacePo
     enabled: field("enabled", ["enabled", "active"], "boolean"),
     secret: field("secret", ["secret", "signing secret"], "string"),
   },
-  secrets: redactedSecrets(["webhooks.secret", "webhooks.signingSecret", "delivery.headers.authorization"]),
+  secrets: redactedSecrets([
+    "webhooks.secret",
+    "webhooks.signingSecret",
+    "delivery.headers.authorization",
+  ]),
   notes: "Webhook secret prompts stay redacted and non-executable.",
 });
 
@@ -583,7 +712,10 @@ export const settingsStoragePolicy: AssistantResourcePolicy = settingsSurfacePol
     local: field("local", ["local", "local storage"], "record"),
     s3: field("s3", ["s3", "bucket"], "record"),
     azure: field("azure", ["azure", "container"], "record"),
-    delivery: field("delivery.accessMode", ["delivery", "access mode"], "enum", ["public", "internal"]),
+    delivery: field("delivery.accessMode", ["delivery", "access mode"], "enum", [
+      "public",
+      "internal",
+    ]),
   },
   secrets: redactedSecrets([
     "s3.accessKey",
@@ -605,7 +737,13 @@ export const settingsIntegrationsPolicy: AssistantResourcePolicy = settingsSurfa
     scopes: field("scopes", ["scopes", "permissions"], "record"),
     credentials: field("credentials", ["credentials", "api key", "secret"], "record"),
   },
-  secrets: redactedSecrets(["openrouter.apiKey", "integration.secret", "oauth.clientSecret", "accessToken", "refreshToken"]),
+  secrets: redactedSecrets([
+    "openrouter.apiKey",
+    "integration.secret",
+    "oauth.clientSecret",
+    "accessToken",
+    "refreshToken",
+  ]),
   notes: "Integration credential prompts stay redacted and non-executable.",
 });
 
@@ -628,6 +766,9 @@ export const adminSurfacePolicies = {
   "settings-assistant": settingsAssistantPolicy,
   "settings-site": settingsSitePolicy,
   "settings-security": settingsSecurityPolicy,
+  "settings-security-sessions": settingsSecuritySessionsPolicy,
+  "settings-login-alerts": settingsLoginAlertsPolicy,
+  "settings-ip-allowlist": settingsIpAllowlistPolicy,
   "settings-api-keys": settingsApiKeysPolicy,
   "settings-webhooks": settingsWebhooksPolicy,
   "settings-email": settingsEmailPolicy,

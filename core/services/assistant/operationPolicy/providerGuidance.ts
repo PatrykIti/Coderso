@@ -77,6 +77,7 @@ const operationSet = new Set<string>(cmsOperationValues);
 const filterFieldSet = new Set<string>(cmsOperationFilterFieldValues);
 
 const unique = <T>(items: T[]): T[] => [...new Set(items)];
+const providerRegistryAliasLimit = 48;
 
 const sortText = <T extends string>(items: T[], order: readonly T[]): T[] => {
   const rank = new Map(order.map((item, index) => [item, index]));
@@ -155,7 +156,10 @@ export const buildProviderPolicyRegistry = (policy: AssistantOperationPolicy) =>
       supportedOperations: [],
       readPermissions: [],
     };
-    current.aliases = unique([...current.aliases, ...resource.aliases]).slice(0, 24);
+    current.aliases = unique([...current.aliases, ...resource.aliases]).slice(
+      0,
+      providerRegistryAliasLimit
+    );
     current.supportedOperations = sortText(
       unique([...current.supportedOperations, ...resource.operations]).filter(
         (item): item is CmsOperation => operationSet.has(item)

@@ -76,6 +76,9 @@ report provider gating without trusting provider-authored executable actions.
 | /admin/settings/assistant | Assistant Settings | live-gated | TASK-184-15 | Provider key prompts stay redacted and non-executable. |
 | /admin/settings/site | Site Settings | live-gated | TASK-184-15 | Site setting mutations stay gated without typed contracts. |
 | /admin/settings/security | Security Settings | live-gated | TASK-184-15 | Broad security-disable prompts stay non-executable. |
+| /admin/settings/security/sessions | Security Sessions | live-gated | TASK-184-15 | Session inspection and revoke prompts stay redacted and non-executable. |
+| /admin/settings/security/login-alerts | Login Alerts | live-gated | TASK-184-15 | Login alert configuration prompts stay redacted and non-executable. |
+| /admin/settings/security/ip-allowlist | IP Allowlist | live-gated | TASK-184-15 | IP allowlist mutations stay redacted and non-executable without typed contracts. |
 | /admin/settings/api-keys | API Keys | live-gated | TASK-184-15 | API key value prompts stay redacted and non-executable. |
 | /admin/settings/webhooks | Webhooks | live-gated | TASK-184-15 | Webhook secret prompts stay redacted and non-executable. |
 | /admin/settings/email | Email Settings | live-gated | TASK-184-15 | SMTP credential prompts stay redacted and non-executable. |

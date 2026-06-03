@@ -62,7 +62,8 @@ root and subpages into the assistant operation policy:
 
 - Settings mutations are `live-gated` / `mode="gated"` until a dedicated typed
   action contract exists for that setting family.
-- Secret-bearing surfaces (`assistant`, `security`, `api-keys`, `webhooks`,
+- Secret-bearing or privileged surfaces (`assistant`, `security`, security
+  subroutes for sessions/login alerts/IP allowlist, `api-keys`, `webhooks`,
   `email`, `storage`, `integrations`) set `secrets.redacted=true` and
   `providerAllowed=false`.
 - The policy mirrors the admin route/RBAC split: `settings:read` for inspection

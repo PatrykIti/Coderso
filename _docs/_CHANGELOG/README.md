@@ -11,9 +11,10 @@ Project Change Log.
 - Format: `{N}-{YYYY-MM-DD}-short-title.md`
 - Example: `1-2025-11-22-project-init-and-rpc.md`
 - `N` increments by 1 and is never reused.
-- Changelog numbers 1034-1089 are consumed by the 31-05 Admin Tools,
-  Admin UI, and TASK-361 through TASK-398 widget remediation waves.
-  Ordinary new entries continue at 1090.
+- Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
+  Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
+  2026-06-03 assistant policy coverage fix.
+  Ordinary new entries continue at 1091.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -26,12 +27,13 @@ Project Change Log.
 
 ## Index
 
-Numbers 1034-1089 are consumed by the 31-05 Admin Tools, Admin UI,
-and TASK-361 through TASK-398 widget remediation waves. Use 1090 for the
-next changelog entry.
+Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
+TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
+assistant policy coverage fix. Use 1091 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1090 | 2026-06-03 | Assistant settings security route policy coverage | Assistant/Settings/Security/Testing/Docs |
 | 1089 | 2026-05-31 | Admin UI Playwright audit | QA/Admin UI/Playwright/Docs |
 | 1088 | 2026-06-02 | Footer widget 31-05 UI audit remediation | CMS Widgets/Footer/Runtime Security/Admin UI/QA/Docs |
 | 1087 | 2026-06-02 | Navigation widget 31-05 UI audit remediation | CMS Widgets/Navigation/Runtime Security/Admin UI/QA/Docs |
