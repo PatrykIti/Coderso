@@ -54,6 +54,10 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
   encoding, filter-label truthfulness, and count copy, while Audit and Access
   routes reject invalid log queries through area-specific `*_query_invalid`
   errors.
+- Completed `TASK-360-07` final evidence, reports, and QA closure: all six
+  Admin Playwright reports plus the report README now carry final 2026-06-02
+  Playwright evidence, the local QA override `Max sessions per user = 30` has
+  owner/date/reason, and final Codex plus Claude physical passes are recorded.
 
 ## Validation
 
@@ -68,5 +72,16 @@ Tasks: TASK-360, TASK-360-01, TASK-360-02, TASK-360-03, TASK-360-04, TASK-360-05
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run precommit`
+- `bun run gates:coderso`
+- `bun run scan:semgrep`
+- `bun run scan:trivy:secret`
+- `bun run scan:gitleaks:worktree`
+- `git diff --check`
+- Playwright final smoke: `codex-02-06-admin-final`,
+  `codex-02-06-admin-final-areas`, and `codex-02-06-physical`.
+- Claude physical Playwright pass `claude-02-06-admin-physical` clicked
+  Dashboard, Users, Roles Matrix, Audit Logs, Access Logs, Settings, and all
+  Settings subroutes, cancelled risky dialogs, reported 0 console
+  errors/warnings, and observed all post-login requests as `200`.
 - Source evidence:
   `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md`.

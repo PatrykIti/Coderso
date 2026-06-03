@@ -106,6 +106,56 @@ Tasks: TASK-359, TASK-359-01, TASK-359-02, TASK-359-03, TASK-359-04, TASK-359-05
   `_docs/SECURITY_SPEC.md`, the Settings report, and the aggregate Admin UI
   report with the redacted cache contract.
 
+### TASK-359-04 General and Site Placeholder Truthfulness
+
+- Disabled General logo upload, favicon upload/remove, and timezone controls
+  with explicit unavailable copy tied to `TASK-359-04`.
+- Kept Site Performance as truthful future-state copy instead of an active
+  placeholder control.
+- Added `Review site routing changes` for admin path, admin base URL,
+  homepage/404, preview, and content-route changes so routing-sensitive edits
+  require an explicit review before saving.
+- Updated Site auto-save snapshot handling so a cancelled risky review does not
+  trigger a duplicate save.
+
+### TASK-359-05 Security, Sessions, API Keys, Webhooks, and IP Allowlist Confirms
+
+- Added `Review security policy changes` for high-risk Security saves, with
+  typed `APPLY` confirmation before security-sensitive policy changes are
+  applied.
+- Added cancel-safe confirmation for session revoke/revoke-all actions while
+  preserving current-session self-protection and disabled unavailable
+  destinations.
+- Added cancel-safe confirmation for API key rotate/revoke while preserving
+  one-time secret display and cleanup.
+- Added cancel-safe confirmation for webhook delete/edit-save/test actions and
+  IP allowlist remove actions, including lockout warning copy.
+
+### TASK-359-06 Email, Storage, Integrations, and Assistant Action Truthfulness
+
+- Added confirmation for `Send Test Email`; cancelled dialogs do not send test
+  mail.
+- Kept Email `Export Logs` and Storage `Test Connection` disabled with
+  owning-task copy while those actions remain unwired.
+- Kept Storage Local/S3/Azure provider switching truthful in the UI, with S3
+  and Azure secrets masked as bullets and security summary showing only
+  configured/missing state.
+- Added redacted integration secret review dialogs that show provider/field
+  labels without repeating secret values.
+- Added assistant reindex confirmation when the action is enabled and preserved
+  disabled state when the assistant is unavailable.
+
+### TASK-359-07 Login Alerts and Sessions Placeholder Cleanup
+
+- Disabled unsupported Login Alerts tabs, brute-force threshold, admin-only
+  recipients, email/webhook channels, and sticky discard/save actions with
+  explicit unavailable copy tied to `TASK-359-07`.
+- Kept supported Login Alerts notification switches available while shared
+  no-op gate coverage protects unsupported controls.
+- Disabled Sessions link-buttons for unavailable destinations and kept current
+  session revoke truthfully unavailable.
+- Updated guide pages for the changed Settings confirm and disabled-state UX.
+
 ## Validation
 
 - `bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui/users-roles-page-wave.test.tsx`
@@ -164,3 +214,21 @@ Tasks: TASK-359, TASK-359-01, TASK-359-02, TASK-359-03, TASK-359-04, TASK-359-05
 - Subagent read-only review confirmed the original Settings/Site cache drift
   and recommended redacted cache, mutation invalidation, and dirty-form
   non-overwrite coverage.
+
+### TASK-359-04 through TASK-359-07 validation
+
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/api-keys.test.tsx tests/vitest/ui/security-sessions.test.tsx tests/vitest/ui/ip-allowlist.test.tsx tests/vitest/ui/security-settings.test.tsx tests/vitest/ui/site-settings.test.tsx tests/vitest/ui/assistant-settings.test.tsx tests/vitest/ui/email-settings.test.tsx tests/vitest/ui/webhooks.test.tsx tests/vitest/ui/integration-drawer-secrets.test.tsx tests/vitest/ui/drawers.test.tsx tests/vitest/ui/drawer-sheet-a11y-gate.test.tsx tests/vitest/ui/login-alerts.test.tsx tests/vitest/ui/admin-no-op-control-gate.test.tsx`
+  passed.
+- `bun run gates:coderso` passed.
+- `bun run scan:semgrep` passed.
+- `bun run scan:trivy:secret` passed.
+- `bun run scan:gitleaks:worktree` passed.
+- `git diff --check` passed.
+- Playwright final smoke `codex-02-06-admin-final` and
+  `codex-02-06-physical` clicked Settings subroutes, confirmed disabled states,
+  opened and cancelled risky dialogs, and reported 0 console errors/warnings.
+- Claude physical Playwright pass `claude-02-06-admin-physical` clicked the
+  Settings subroutes, cancelled risky dialogs, confirmed secret masking, and
+  observed all post-login requests as `200`.
