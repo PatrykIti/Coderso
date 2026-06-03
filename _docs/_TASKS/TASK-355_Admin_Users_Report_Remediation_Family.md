@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + RBAC + Users + Security UX + QA + Docs
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm action pattern, TASK-360-04 no-op control gate, TASK-360-05 drawer/sheet accessibility gate, TASK-360-06 server-side query conventions, TASK-001 auth foundation, changelog 1051 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_USERS.md` audit evidence
+**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm action pattern, TASK-360-04 no-op control gate, TASK-360-05 drawer/sheet accessibility gate, TASK-360-06 server-side query conventions, TASK-001 auth foundation, changelog 1089 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_USERS.md` audit evidence
 **Status:** Done (2026-06-01)
 
 ---

@@ -92,6 +92,9 @@ ask nontechnical users for raw data.
   from the author plus any available role/source metadata.
 - `quoteHtml` is sanitized to bounded paragraph/line-break/emphasis/link markup
   before runtime output.
+- Sanitized rich quote HTML with no readable text, including `<br>`-only or
+  whitespace-only editor clear states, normalizes to empty so the plain `quote`
+  fallback remains visible.
 
 ## None Token Support
 

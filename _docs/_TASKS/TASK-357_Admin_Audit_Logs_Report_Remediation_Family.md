@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Audit Logs + Compliance Export + Pagination + QA + Docs
 **Estimated Effort:** Large
-**Dependencies:** TASK-360-03 shared export dialog contract, TASK-360-04 no-op control gate, TASK-360-06 server-side query/pagination conventions, changelog 1051 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md` audit evidence
+**Dependencies:** TASK-360-03 shared export dialog contract, TASK-360-04 no-op control gate, TASK-360-06 server-side query/pagination conventions, changelog 1089 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_AUDIT_LOGS.md` audit evidence
 **Status:** Done (2026-06-01)
 
 ---

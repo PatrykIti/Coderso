@@ -236,8 +236,8 @@
       "publicPath": "/test-content-list-0516",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "cssChecks": ["body-overflow", "empty-fixture"],
-      "notes": "Known empty-state fixture gap."
+      "cssChecks": ["body-overflow"],
+      "notes": "Populated fixture is bootstrapped through admin page data before smoke."
     },
     {
       "widgetType": "posts-feed",
@@ -247,50 +247,52 @@
       "publicPath": "/posts-feed-test-page",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "cssChecks": ["body-overflow"]
+      "cssChecks": ["body-overflow"],
+      "notes": "Populated fixture is bootstrapped through admin post and page data before smoke."
     },
     {
       "widgetType": "entry-teaser",
       "title": "Entry Teaser",
       "adminInsertLabel": "Entry Teaser",
-      "adminFixtureSlug": "/ctr-entry-teaser-2305",
-      "publicPath": "/test-entry-teaser-0516",
+      "adminFixtureSlug": "/audit-31-05-entry-teaser",
+      "publicPath": "/audit-31-05-entry-teaser",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "cssChecks": ["body-overflow"]
+      "cssChecks": ["body-overflow"],
+      "notes": "Populated legacy/listing/fallback fixture is bootstrapped through admin content, listing, route, and page APIs before smoke."
     },
     {
       "widgetType": "product-gallery",
       "title": "Product Gallery",
       "adminInsertLabel": "Product Gallery",
-      "adminFixtureSlug": "/ctr-product-gallery-2305",
-      "publicPath": "/test-product-gallery-widget",
+      "adminFixtureSlug": "/audit-31-05-product-gallery",
+      "publicPath": "/audit-31-05-product-gallery",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "cssChecks": ["body-overflow", "empty-fixture"],
-      "notes": "Known empty-state fixture gap."
+      "cssChecks": ["body-overflow"],
+      "notes": "Populated Product Gallery fixture is bootstrapped through admin commerce, media, page, and publish APIs before smoke."
     },
     {
       "widgetType": "product-compare",
       "title": "Product Compare",
       "adminInsertLabel": "Product Compare",
-      "adminFixtureSlug": "/ctr-product-compare-2305",
-      "publicPath": "/test-product-compare-0516",
+      "adminFixtureSlug": "/audit-31-05-product-compare",
+      "publicPath": "/audit-31-05-product-compare",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "cssChecks": ["body-overflow", "empty-fixture"],
-      "notes": "Known empty-state fixture gap."
+      "cssChecks": ["body-overflow"],
+      "notes": "Populated Product Compare fixture is bootstrapped through admin commerce, media, settings, page, and publish APIs before smoke."
     },
     {
       "widgetType": "product-table",
       "title": "Product Table",
       "adminInsertLabel": "Product Table",
-      "adminFixtureSlug": "/ctr-product-table-2305",
-      "publicPath": "/producttabletestproducttabletest",
+      "adminFixtureSlug": "/audit-31-05-product-table",
+      "publicPath": "/audit-31-05-product-table",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "cssChecks": ["body-overflow", "empty-fixture"],
-      "notes": "Known empty-state fixture gap."
+      "cssChecks": ["body-overflow"],
+      "notes": "Populated Product Table fixture is bootstrapped through admin commerce, media, settings, page, and publish APIs before smoke."
     },
     {
       "widgetType": "listing-filters",

@@ -1210,6 +1210,7 @@ export function StatsKpiVisualEditor({
           value={normalized.style?.valueColor}
           onChange={(next) => updateStyle(value, onChange, { valueColor: next })}
           onClear={() => clearStyle(value, onChange, "valueColor")}
+          help="Metric accent color overrides Value color for that metric's value, trend, icon, and link."
         />
         <StatsKpiColorField
           id="stats-kpi.style.labelColor"

@@ -77,13 +77,17 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
     open,
     title,
     description,
+    confirmLabel,
     children,
+    onOpenChange,
     onConfirm,
   }: {
     open: boolean;
     title: string;
     description?: string;
+    confirmLabel?: string;
     children?: React.ReactNode;
+    onOpenChange?: (open: boolean) => void;
     onConfirm: () => void;
   }) =>
     open ? (
@@ -91,8 +95,11 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
         <p>{title}</p>
         {description ? <p>{description}</p> : null}
         <div>{children}</div>
+        <button type="button" onClick={() => onOpenChange?.(false)}>
+          cancel-action
+        </button>
         <button type="button" onClick={onConfirm}>
-          confirm-action
+          confirm-action {confirmLabel}
         </button>
       </div>
     ) : null,
@@ -307,6 +314,7 @@ const findSectionByTitle = (container: ParentNode, title: string) =>
 afterEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
 });
 
 test("Team wizard editor covers variant fallback and leaves member count to Visual", async () => {
@@ -559,6 +567,85 @@ test("Team visual editor integrates social links into member panels and confirms
     clickButtonByText(membersSection as ParentNode, "Confirm remove");
     expect(latestValue.members).toHaveLength(1);
     expect(latestValue.members[0]?.name).toBe("Ada");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Team visual editor confirms destructive member count reduction with shared dialog", async () => {
+  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+
+  let latestValue: TeamData = {
+    header: {
+      title: "Leadership",
+      description: "",
+    },
+    members: [
+      {
+        id: "member-1",
+        name: "Ada",
+        role: "CTO",
+        bio: "Builds release systems.",
+        socialLinks: [],
+      },
+      {
+        id: "member-2",
+        name: "Grace",
+        role: "COO",
+        bio: "Keeps delivery aligned.",
+        socialLinks: [],
+      },
+      {
+        id: "member-3",
+        name: "Linus",
+        role: "Platform Lead",
+        bio: "Owns infrastructure.",
+        socialLinks: [],
+      },
+    ],
+    style: {},
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<TeamData>(latestValue);
+
+    return (
+      <TeamVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+  const confirmSpy = vi.fn(() => false);
+  vi.stubGlobal("confirm", confirmSpy);
+
+  try {
+    const countSelect = findSelectByOptions(view.container, ["1", "12"]);
+    setSelectValue(countSelect, "1");
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(latestValue.members.map((member) => member.name)).toEqual(["Ada", "Grace", "Linus"]);
+    expect(view.container.textContent).toContain("Reduce team members");
+    expect(view.container.textContent).toContain(
+      "Reducing the member count will remove the last 2 profiles."
+    );
+
+    clickButtonByText(view.container, "cancel-action");
+    expect(latestValue.members.map((member) => member.name)).toEqual(["Ada", "Grace", "Linus"]);
+    expect(view.container.textContent).not.toContain("Reduce team members");
+
+    setSelectValue(countSelect, "1");
+    expect(confirmSpy).not.toHaveBeenCalled();
+    clickButtonByText(view.container, "confirm-action");
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(latestValue.members.map((member) => member.name)).toEqual(["Ada"]);
   } finally {
     view.cleanup();
   }

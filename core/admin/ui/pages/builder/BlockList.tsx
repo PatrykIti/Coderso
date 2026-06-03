@@ -12,6 +12,7 @@ import type { WidgetPreviewState } from "../../../../widgets/types";
 import type { Block, WidgetDefinition } from "./types";
 import { getWidgetRegistry } from "./widgetRegistry";
 import type { BlockPath } from "./blockUtils";
+import { AdminWidgetPreviewRuntimeBridge } from "./AdminWidgetPreviewRuntimeBridge";
 import { BlockToolbar } from "./BlockToolbar";
 
 export type BlockListProps = {
@@ -242,11 +243,13 @@ export function BlockList({
               </div>
             </div>
             <div className="border-t bg-muted/5">
-              <WidgetRenderer
-                block={previewBlock}
-                pageDefaults={pageDefaults}
-                renderContext={{ mode: "editor-preview", previewState }}
-              />
+              <AdminWidgetPreviewRuntimeBridge>
+                <WidgetRenderer
+                  block={previewBlock}
+                  pageDefaults={pageDefaults}
+                  renderContext={{ mode: "editor-preview", previewState }}
+                />
+              </AdminWidgetPreviewRuntimeBridge>
             </div>
             {slotTargets.length > 0 ? (
               <div className="border-t p-4 space-y-4">

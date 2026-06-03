@@ -421,6 +421,60 @@ test("ListingFilters editor modes expose non-overlapping writable ownership meta
   }
 });
 
+test("ListingFilters visual editor marks saved action background inactive while auto apply hides manual action", async () => {
+  const { ListingFiltersVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
+  const inactiveMessage =
+    "Action background saved, inactive while auto apply hides the manual action button.";
+
+  const autoApplyView = mount(
+    <ListingFiltersVisualEditor
+      value={{
+        autoApply: true,
+        style: { actionBackground: "#dc2626" },
+      }}
+      onChange={() => undefined}
+      variant="default"
+    />
+  );
+
+  try {
+    await flush();
+    const surfaceSection = findSectionByTitle(autoApplyView.container, "Filter surface");
+    const actionControl = autoApplyView.container.querySelector(
+      '[data-widget-control="listing-filters.visual.action-background"]'
+    );
+    const swatch = actionControl?.querySelector('input[aria-label="Action background swatch"]');
+
+    expect(normalizeText(surfaceSection?.textContent)).toContain(normalizeText(inactiveMessage));
+    expect(actionControl?.textContent).toContain("Selected color");
+    expect(swatch).toBeInstanceOf(HTMLInputElement);
+    expect((swatch as HTMLInputElement).value).toBe("#dc2626");
+  } finally {
+    autoApplyView.cleanup();
+  }
+
+  const manualApplyView = mount(
+    <ListingFiltersVisualEditor
+      value={{
+        autoApply: false,
+        style: { actionBackground: "#dc2626" },
+      }}
+      onChange={() => undefined}
+      variant="default"
+    />
+  );
+
+  try {
+    await flush();
+    expect(normalizeText(manualApplyView.container.textContent)).not.toContain(
+      normalizeText(inactiveMessage)
+    );
+  } finally {
+    manualApplyView.cleanup();
+  }
+});
+
 test("ListingFilters editors cover listing query selection, runtime behavior, safe facet setup, and runtime summaries", async () => {
   const { ListingFiltersAdvancedEditor, ListingFiltersVisualEditor, ListingFiltersWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");

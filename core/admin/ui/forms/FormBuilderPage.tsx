@@ -183,6 +183,21 @@ const createLocalId = () => {
   return `field_${Math.random().toString(36).slice(2, 10)}`;
 };
 
+const resolveFieldFormStep = (
+  settings: FieldSettings["settings"] | Record<string, unknown> | undefined
+) => normalizeFormStep(settings?.formStep ?? settings?.step);
+
+const normalizeFieldSettingsForState = (
+  settings: FieldSettings["settings"] | Record<string, unknown> | undefined
+): FieldSettings["settings"] => {
+  const next = { ...(settings ?? {}) } as FieldSettings["settings"];
+  next.formStep = resolveFieldFormStep(next);
+  if (next.step !== undefined) {
+    next.step = normalizeFormStep(next.step);
+  }
+  return next;
+};
+
 const toFieldState = (field: ApiFormField): FormFieldState => ({
   id: field.id,
   label: field.label,
@@ -190,10 +205,7 @@ const toFieldState = (field: ApiFormField): FormFieldState => ({
   name: field.name,
   required: field.required,
   orderIndex: field.orderIndex,
-  settings: {
-    ...(field.settings ?? {}),
-    step: normalizeFormStep((field.settings ?? {}).step),
-  },
+  settings: normalizeFieldSettingsForState(field.settings ?? {}),
 });
 
 const toFormMeta = (form: FormRecord): FormMetaState => ({
@@ -229,7 +241,7 @@ const formPresetOptions = [
 const resolveStepCount = (fields: FormFieldState[]) => {
   if (fields.length === 0) return 1;
   return fields.reduce((max, field) => {
-    const step = normalizeFormStep(field.settings.step);
+    const step = resolveFieldFormStep(field.settings);
     return step > max ? step : max;
   }, 1);
 };
@@ -479,11 +491,10 @@ export function FormBuilderPage() {
         field.id === fieldId
           ? {
               ...field,
-              settings: {
+              settings: normalizeFieldSettingsForState({
                 ...field.settings,
                 ...updates,
-                step: normalizeFormStep(updates.step ?? field.settings.step ?? 1),
-              },
+              }),
             }
           : field
       )
@@ -634,10 +645,7 @@ export function FormBuilderPage() {
         name,
         required: Boolean(field.required),
         orderIndex: index,
-        settings: {
-          ...(field.settings ?? {}),
-          step: normalizeFormStep(field.settings?.step),
-        },
+        settings: normalizeFieldSettingsForState(field.settings ?? {}),
       };
     });
 

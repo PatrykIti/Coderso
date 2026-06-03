@@ -1373,6 +1373,17 @@ function describeSuccessBehavior(value: string | undefined) {
   return findOptionLabel(successBehaviorOptions, value, "Hide form");
 }
 
+function describeSuccessMessageSource(value: FormEmbedData, selectedForm: FormRecord | null) {
+  const authored = value.successMessage?.trim();
+  if (authored && authored.length > 0) {
+    return "Widget message overrides form response";
+  }
+  if (selectedForm?.successMessage || value.resolved?.successMessage) {
+    return "Selected form response";
+  }
+  return "Default widget message";
+}
+
 function describeFormStyleOverrides(style: FormEmbedData["style"]) {
   const colorKeys: Array<keyof FormEmbedStyle> = [
     "background",
@@ -1665,6 +1676,22 @@ function FormEmbedAdvancedEditorBody({ value }: WidgetEditorProps<FormEmbedData>
           label="Success behavior"
           path="submitBehavior.successBehavior"
           value={describeSuccessBehavior(normalized.submitBehavior?.successBehavior)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.success-message-source"
+          label="Success message source"
+          path="successMessage"
+          value={describeSuccessMessageSource(value, selectedForm)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.redirect-policy"
+          label="Redirect policy"
+          path="resolved.successRedirectUrl"
+          value={
+            selectedForm?.successRedirectUrl || normalized.resolved?.successRedirectUrl
+              ? "Same-origin relative redirect only"
+              : "No redirect configured"
+          }
         />
       </EditorSection>
       <AuthoringSummarySection value={normalized} />

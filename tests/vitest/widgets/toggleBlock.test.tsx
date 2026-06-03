@@ -140,6 +140,42 @@ test("toggle block normalization applies bounded defaults and independent pane f
   });
 });
 
+test("toggle block normalization drops unsafe clearable colors", () => {
+  const normalized = normalizeToggleBlockData({
+    style: {
+      surfaceColor: "url(javascript:alert(1))",
+      borderColor: "expression(alert(2))",
+      accentColor: "url(javascript:alert(3))",
+      accentContrastColor: "expression(alert(4))",
+      panes: {
+        primary: {
+          surface: "contrast",
+          padding: "spacious",
+          radius: "lg",
+          borderEmphasis: "strong",
+        },
+      },
+    },
+  });
+
+  expect(normalized.style).toEqual({
+    panes: {
+      primary: {
+        surface: "contrast",
+        padding: "spacious",
+        radius: "lg",
+        borderEmphasis: "strong",
+      },
+      secondary: {
+        surface: "default",
+        padding: "comfortable",
+        radius: "md",
+        borderEmphasis: "subtle",
+      },
+    },
+  });
+});
+
 test("toggle block renders defaults with accessible labels and motion markers", () => {
   const html = renderToString(
     <ToggleBlock data={toggleBlockDefaults} variant="switch" blockId="toggle-default" />
@@ -317,6 +353,51 @@ test("toggle block pane class output dedupes shared shadow tokens", () => {
   expect(countClassToken(getAttributeValue(primaryPane, "class"), "shadow-sm")).toBe(1);
 });
 
+test("toggle block sanitizes imported clearable colors before public inline styles", () => {
+  const html = renderToString(
+    <ToggleBlock
+      blockId="toggle-unsafe-style"
+      variant="cards"
+      data={{
+        style: {
+          surfaceColor: "url(javascript:alert(1))",
+          borderColor: "expression(alert(2))",
+          accentColor: "url(javascript:alert(3))",
+          accentContrastColor: "expression(alert(4))",
+        },
+      }}
+    />
+  );
+
+  expect(html).not.toContain("javascript:");
+  expect(html).not.toContain("url(javascript");
+  expect(html).not.toContain("expression(");
+  expect(html).toContain("--nextless-toggle-accent:var(--color-text)");
+  expect(html).toContain("--nextless-toggle-accent-contrast:var(--color-background)");
+});
+
+test("toggle block preserves safe imported clearable colors", () => {
+  const html = renderToString(
+    <ToggleBlock
+      blockId="toggle-safe-style"
+      variant="cards"
+      data={{
+        style: {
+          surfaceColor: "#f8fafc",
+          borderColor: "#cbd5e1",
+          accentColor: "var(--color-text)",
+          accentContrastColor: "#ffffff",
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain("background-color:#f8fafc");
+  expect(html).toContain("border-color:#cbd5e1");
+  expect(html).toContain("--nextless-toggle-accent:var(--color-text)");
+  expect(html).toContain("--nextless-toggle-accent-contrast:#ffffff");
+});
+
 test("toggle block editor-preview placeholders use pane labels and stay out of public runtime", () => {
   const data: ToggleBlockData = {
     labels: {
@@ -368,6 +449,8 @@ test("toggle block validator accepts expanded task-292 schema", () => {
           motion: "fade",
         },
         style: {
+          surfaceColor: "RGB(12, 24, 36)",
+          borderColor: "Transparent",
           accentContrastColor: "#ffffff",
           panes: {
             primary: {
@@ -391,6 +474,36 @@ test("toggle block validator accepts expanded task-292 schema", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("toggle block validator rejects unsafe color strings", () => {
+  clearWidgets();
+  const widget = createToggleBlockWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  registerWidget(widget);
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "toggle-unsafe",
+      type: "toggle-block",
+      variant: "cards",
+      data: {
+        style: {
+          surfaceColor: "url(javascript:alert(1))",
+          borderColor: "expression(alert(2))",
+          accentColor: "url(javascript:alert(3))",
+          accentContrastColor: "expression(alert(4))",
+        },
+      },
+      slots: {
+        primary: [],
+        secondary: [],
+      },
+    })
+  ).toThrow(/widget_schema_invalid/);
 });
 
 test("toggle block wizard keeps setup focused on variant", () => {

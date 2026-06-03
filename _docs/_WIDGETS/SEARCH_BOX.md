@@ -48,6 +48,8 @@ Render a bounded listing or global public search form with runtime-safe source
 
 ### Advanced
 - read-only runtime diagnostics for source/routing state
+- active routing summary reflects the current mode; `Results page` and
+  `Search term routing` rows are shown only for `route-submit`
 - read-only human runtime status
 - read-only contract summary
 - no duplicate writable copy, source, or style controls

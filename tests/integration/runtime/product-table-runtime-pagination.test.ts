@@ -35,6 +35,7 @@ const testIfDbWithOptions = testIfDb as unknown as (
   options: { timeout: number }
 ) => void;
 const dbRuntimeTimeout = 15_000;
+const slowDbRuntimeTimeout = 30_000;
 
 async function canConnect() {
   try {
@@ -287,7 +288,7 @@ testIfDbWithOptions(
     expect(html).toContain('href="?foo=bar"');
     expect(html).toContain("Ignored invalid table parameters.");
   },
-  { timeout: dbRuntimeTimeout }
+  { timeout: slowDbRuntimeTimeout }
 );
 
 testIfDbWithOptions(

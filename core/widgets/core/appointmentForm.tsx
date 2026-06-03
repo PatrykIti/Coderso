@@ -1,6 +1,11 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import {
+  appointmentFormCustomFieldTypes,
+  appointmentFormFieldLimits,
+  clampAppointmentFormText,
+} from "./appointmentFormContract";
 import { getBookingRuntimeClientScript } from "./bookingRuntimeScript";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
@@ -315,14 +320,8 @@ const bookingLink = (value: string | undefined) => {
   return undefined;
 };
 
-const appointmentCustomFieldTypes = [
-  "text",
-  "email",
-  "phone",
-  "select",
-  "checkbox",
-  "textarea",
-] as const satisfies readonly AppointmentCustomFieldType[];
+const appointmentCustomFieldTypes =
+  appointmentFormCustomFieldTypes satisfies readonly AppointmentCustomFieldType[];
 
 const normalizeCustomFieldType = (value: unknown): AppointmentCustomFieldType =>
   typeof value === "string" &&
@@ -333,10 +332,26 @@ const normalizeCustomFieldType = (value: unknown): AppointmentCustomFieldType =>
 const normalizeCustomFieldOptions = (value: unknown) => {
   if (!Array.isArray(value)) return undefined;
   const options = value
-    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .map((entry) =>
+      typeof entry === "string"
+        ? clampAppointmentFormText(entry.trim(), appointmentFormFieldLimits.customFieldValue)
+        : ""
+    )
     .filter(Boolean)
-    .slice(0, 12);
+    .slice(0, appointmentFormFieldLimits.customFieldOptions);
   return options.length > 0 ? options : undefined;
+};
+
+const normalizeCustomFieldId = (value: string, suffix?: number) => {
+  if (suffix === undefined) {
+    return clampAppointmentFormText(value, appointmentFormFieldLimits.customFieldId);
+  }
+  const suffixText = `-${suffix}`;
+  const base = clampAppointmentFormText(
+    value,
+    Math.max(1, appointmentFormFieldLimits.customFieldId - suffixText.length)
+  );
+  return `${base}${suffixText}`;
 };
 
 const normalizeAppointmentCustomFields = (value: unknown): AppointmentCustomField[] | undefined => {
@@ -346,30 +361,38 @@ const normalizeAppointmentCustomFields = (value: unknown): AppointmentCustomFiel
     .map((entry, index) => {
       if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
       const field = entry as AppointmentCustomField;
-      const label = optionalText(field.label);
+      const rawLabel = optionalText(field.label);
+      const label = rawLabel
+        ? clampAppointmentFormText(rawLabel, appointmentFormFieldLimits.customFieldLabel)
+        : undefined;
       if (!label) return null;
 
       const type = normalizeCustomFieldType(field.type);
-      const baseId = optionalText(field.id) ?? `custom-field-${index + 1}`;
+      const baseId = normalizeCustomFieldId(optionalText(field.id) ?? `custom-field-${index + 1}`);
       let nextId = baseId;
       let suffix = 2;
       while (usedIds.has(nextId)) {
-        nextId = `${baseId}-${suffix}`;
+        nextId = normalizeCustomFieldId(baseId, suffix);
         suffix += 1;
       }
       usedIds.add(nextId);
+
+      const rawPlaceholder = optionalText(field.placeholder);
 
       return compactObject({
         id: nextId,
         label,
         type,
         required: bool(field.required, false) ? true : undefined,
-        placeholder: type === "checkbox" ? undefined : optionalText(field.placeholder),
+        placeholder:
+          type === "checkbox" || !rawPlaceholder
+            ? undefined
+            : clampAppointmentFormText(rawPlaceholder, appointmentFormFieldLimits.customFieldValue),
         options: type === "select" ? normalizeCustomFieldOptions(field.options) : undefined,
       }) as AppointmentCustomField;
     })
     .filter((field): field is AppointmentCustomField => Boolean(field))
-    .slice(0, 12);
+    .slice(0, appointmentFormFieldLimits.customFields);
 
   return fields.length > 0 ? fields : undefined;
 };
@@ -411,23 +434,35 @@ export const appointmentFormSchema = {
     nameMode: { enum: ["full", "split"] },
     phonePattern: { type: "string" },
     phonePatternMessage: { type: "string" },
-    notesMaxLength: { type: "integer", minimum: 50, maximum: 2000 },
+    notesMaxLength: { type: "integer", minimum: 50, maximum: appointmentFormFieldLimits.notes },
     customFields: {
       type: "array",
-      maxItems: 12,
+      maxItems: appointmentFormFieldLimits.customFields,
       items: {
         type: "object",
         additionalProperties: false,
         required: ["id", "label", "type"],
         properties: {
-          id: { type: "string" },
-          label: { type: "string" },
+          id: {
+            type: "string",
+            minLength: 1,
+            maxLength: appointmentFormFieldLimits.customFieldId,
+          },
+          label: {
+            type: "string",
+            minLength: 1,
+            maxLength: appointmentFormFieldLimits.customFieldLabel,
+          },
           type: { enum: [...appointmentCustomFieldTypes] },
           required: { type: "boolean" },
-          placeholder: { type: "string" },
+          placeholder: {
+            type: "string",
+            maxLength: appointmentFormFieldLimits.customFieldValue,
+          },
           options: {
             type: "array",
-            items: { type: "string" },
+            maxItems: appointmentFormFieldLimits.customFieldOptions,
+            items: { type: "string", maxLength: appointmentFormFieldLimits.customFieldValue },
           },
         },
       },
@@ -656,6 +691,7 @@ const renderAppointmentCustomField = (field: AppointmentCustomField) => {
         name={`customField:${field.id}`}
         required={field.required === true}
         placeholder={field.placeholder}
+        maxLength={appointmentFormFieldLimits.customFieldValue}
         className={`min-h-24 ${sharedProps.className}`}
       />
     );
@@ -710,6 +746,7 @@ const renderAppointmentCustomField = (field: AppointmentCustomField) => {
       name={`customField:${field.id}`}
       required={field.required === true}
       placeholder={field.placeholder}
+      maxLength={appointmentFormFieldLimits.customFieldValue}
     />
   );
 };
@@ -919,6 +956,7 @@ export function AppointmentFormBlock({
                 name="customerFirstName"
                 placeholder={customerFirstNamePlaceholder}
                 autoComplete="given-name"
+                maxLength={appointmentFormFieldLimits.customerNamePart}
                 className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
               />
             </Field>
@@ -929,6 +967,7 @@ export function AppointmentFormBlock({
                 name="customerLastName"
                 placeholder={customerLastNamePlaceholder}
                 autoComplete="family-name"
+                maxLength={appointmentFormFieldLimits.customerNamePart}
                 className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
               />
             </Field>
@@ -940,6 +979,7 @@ export function AppointmentFormBlock({
               name="customerName"
               placeholder={customerNamePlaceholder}
               autoComplete="name"
+              maxLength={appointmentFormFieldLimits.customerName}
               className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
             />
           </Field>
@@ -953,6 +993,7 @@ export function AppointmentFormBlock({
               required={normalized.requiredEmail === true}
               placeholder={customerEmailPlaceholder}
               autoComplete="email"
+              maxLength={appointmentFormFieldLimits.customerEmail}
               className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
             />
           </Field>
@@ -968,6 +1009,7 @@ export function AppointmentFormBlock({
               title={phonePatternMessage}
               placeholder={customerPhonePlaceholder}
               autoComplete="tel"
+              maxLength={appointmentFormFieldLimits.customerPhone}
               className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
             />
             {phonePatternMessage ? (

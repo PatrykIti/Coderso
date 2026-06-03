@@ -583,8 +583,14 @@ test("GridColumns visual editor explains saved asymmetric drift and allows prese
     const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
 
     expect(normalizeText(columnSection.textContent)).toContain("matching desktop spans");
+    const reapplyButton = findButtonsByText(columnSection, "Reapply asymmetric desktop widths")[0];
+    expect(reapplyButton?.getAttribute("data-widget-control")).toBe(
+      "grid-columns.visual.asymmetric-reapply"
+    );
+    expect(reapplyButton?.getAttribute("data-widget-control-path")).toBe("columns.desktopSpan");
+    expect(reapplyButton?.getAttribute("data-widget-control-ownership")).toBe("action");
 
-    clickButton(findButtonsByText(columnSection, "Reapply asymmetric desktop widths")[0]);
+    clickButton(reapplyButton);
 
     expect(view.getValue().columns?.map((column) => column.desktopSpan)).toEqual(["8", "4"]);
     expect(normalizeText(columnSection.textContent)).toContain(

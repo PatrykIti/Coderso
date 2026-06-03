@@ -140,3 +140,52 @@ test("resolveFormRuntimeData omits captcha projection for internal forms", async
   expect(result.botProtection).toBeNull();
   expect(result.error).toBe("form_unpublished");
 });
+
+test("resolveFormRuntimeData does not project public fields for published internal forms", async () => {
+  process.env.FORM_SUBMIT_NONCE_SECRET = NONCE_SECRET;
+
+  vi.doMock("../../../core/services/forms/formsService", () => ({
+    getForm: async () => ({
+      id: "form-3",
+      name: "Internal published",
+      description: "Private",
+      status: "published",
+      successMessage: null,
+      successRedirectUrl: null,
+      submissionAccess: "internal",
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+        preset: "custom",
+        automationRetry: {
+          enabled: false,
+          maxAttempts: 1,
+          baseDelayMs: 300,
+          maxDelayMs: 2000,
+        },
+      },
+    }),
+    listFormFields: async () => {
+      throw new Error("should_not_project_public_fields");
+    },
+    toFieldRecord: (field: Record<string, unknown>) => field,
+  }));
+
+  vi.doMock("../../../core/services/settings/securitySettings", () => ({
+    getSecuritySettingsPublic: async () => {
+      throw new Error("should_not_be_called");
+    },
+  }));
+
+  const { resolveFormRuntimeData } =
+    await import("../../../core/services/forms/formRuntimeResolver");
+
+  const result = await resolveFormRuntimeData("form-3", { preview: false });
+
+  expect(result.submissionAccess).toBe("internal");
+  expect(result.submissionNonce).toBeNull();
+  expect(result.botProtection).toBeNull();
+  expect(result.fields).toEqual([]);
+  expect(result.error).toBe("public_submission_disabled");
+});

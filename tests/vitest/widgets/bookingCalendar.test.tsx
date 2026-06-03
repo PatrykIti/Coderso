@@ -103,6 +103,7 @@ test("booking calendar renders selectors from resolved payload", () => {
               priceCents: null,
               currency: null,
               resourceIds: ["resource-1"],
+              submissionAccess: "internal",
             },
           ],
           resources: [
@@ -123,7 +124,48 @@ test("booking calendar renders selectors from resolved payload", () => {
   expect(html).toContain("Bay A");
   expect(html).toContain("data-booking-service");
   expect(html).toContain("data-booking-resource");
+  expect(html).toContain('data-submission-access="internal"');
   expect(html).toContain('data-slots-token="slots-token"');
+});
+
+test("booking calendar week mode renders an explicit admin runtime boundary without slots token", () => {
+  const html = renderToString(
+    <BookingCalendarBlock
+      variant="default"
+      data={normalizeBookingCalendarData({
+        ...bookingCalendarDefaults,
+        datePickerMode: "week",
+        resolved: {
+          slotsToken: null,
+          services: [
+            {
+              id: "service-1",
+              name: "Oil change",
+              description: null,
+              durationMinutes: 30,
+              bufferBeforeMinutes: 0,
+              bufferAfterMinutes: 0,
+              priceCents: null,
+              currency: null,
+              resourceIds: ["resource-1"],
+            },
+          ],
+          resources: [
+            {
+              id: "resource-1",
+              name: "Bay A",
+              type: "bay",
+              timezone: "UTC",
+              capacity: 1,
+            },
+          ],
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain("data-booking-week-runtime-boundary");
+  expect(html).toContain("Runtime interactions are available in public preview after saving.");
 });
 
 test("booking calendar renders accessibility labels and slot-region semantics", () => {

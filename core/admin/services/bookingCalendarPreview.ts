@@ -5,6 +5,7 @@ import {
   type BookingServiceRecord,
   type BookingServiceResourceRecord,
 } from "./bookingClient";
+import { buildBookingRuntimeCatalog } from "../../services/booking/bookingRuntimeCatalog";
 
 export type BookingCalendarPreviewResolved = NonNullable<BookingCalendarData["resolved"]>;
 
@@ -18,38 +19,16 @@ export type BookingCalendarPreviewInput = {
 export function buildBookingCalendarPreviewResolved(
   input: BookingCalendarPreviewInput
 ): BookingCalendarPreviewResolved {
-  const activeResources = input.resources.filter((resource) => resource.status === "active");
-  const activeResourceIds = new Set(activeResources.map((resource) => resource.id));
-
-  const services = input.services
-    .filter((service) => service.status === "active")
-    .map((service) => ({
-      id: service.id,
-      name: service.name,
-      description: service.description,
-      durationMinutes: service.durationMinutes,
-      bufferBeforeMinutes: service.bufferBeforeMinutes,
-      bufferAfterMinutes: service.bufferAfterMinutes,
-      priceCents: service.priceCents,
-      currency: service.currency,
-      status: service.status,
-      submissionAccess: resolveBookingSubmissionAccess(service.settings, "public"),
-      resourceIds: (input.serviceResourcesByServiceId[service.id] ?? [])
-        .map((item) => item.resourceId)
-        .filter((resourceId) => activeResourceIds.has(resourceId)),
-    }))
-    .filter((service) => service.resourceIds.length > 0);
+  const catalog = buildBookingRuntimeCatalog({
+    services: input.services,
+    resources: input.resources,
+    serviceResourcesByServiceId: input.serviceResourcesByServiceId,
+    resolveSubmissionAccess: resolveBookingSubmissionAccess,
+  });
 
   return {
-    services,
-    resources: activeResources.map((resource) => ({
-      id: resource.id,
-      name: resource.name,
-      type: resource.type,
-      timezone: resource.timezone,
-      capacity: resource.capacity,
-      status: resource.status,
-    })),
+    services: catalog.services,
+    resources: catalog.resources,
     slotsToken: null,
     ...(input.error ? { error: input.error } : {}),
   };

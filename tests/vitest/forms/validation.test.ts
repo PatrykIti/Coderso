@@ -164,7 +164,7 @@ test("typed fields validate number, time, range, and rating constraints", () => 
       settings: {
         min: 1,
         max: 20,
-        step: 1,
+        inputStep: 1,
       },
     },
     {
@@ -182,7 +182,7 @@ test("typed fields validate number, time, range, and rating constraints", () => 
       settings: {
         min: 0,
         max: 10,
-        step: 2,
+        inputStep: 2,
       },
     },
     {
@@ -231,6 +231,58 @@ test("typed fields validate number, time, range, and rating constraints", () => 
         preferred_time: "25:90",
         budget_score: "6",
         priority: "5",
+      },
+      fields
+    )
+  ).toThrow("form_payload_invalid");
+});
+
+test("normalizeFormFields splits form placement from input increment", () => {
+  const fields = normalizeFormFields([
+    {
+      type: "number",
+      label: "Legacy number",
+      name: "legacy_number",
+      settings: {
+        step: 3,
+      },
+    },
+    {
+      type: "range",
+      label: "Budget score",
+      name: "budget_score",
+      settings: {
+        formStep: 2,
+        inputStep: 0.5,
+      },
+    },
+  ]);
+
+  expect(fields[0]?.settings).toEqual({
+    step: 3,
+    formStep: 3,
+  });
+  expect(fields[1]?.settings).toEqual({
+    formStep: 2,
+    inputStep: 0.5,
+  });
+  expect(
+    validateSubmissionPayload(
+      {
+        legacy_number: "2.5",
+        budget_score: "4.5",
+      },
+      fields
+    )
+  ).toEqual({
+    legacy_number: "2.5",
+    budget_score: "4.5",
+  });
+  expect(() =>
+    validateSubmissionPayload(
+      {
+        legacy_number: "2.5",
+        budget_score: "4.25",
       },
       fields
     )

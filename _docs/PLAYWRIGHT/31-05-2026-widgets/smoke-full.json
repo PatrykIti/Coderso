@@ -1,0 +1,817 @@
+{
+  "generatedAt": "2026-05-31T19:47:05.542Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session codex-31-05-widgets-smoke --admin http://localhost:5173/admin --front http://localhost:3000 --output-json _docs/PLAYWRIGHT/31-05-2026-widgets/smoke-full.json --output-md _docs/PLAYWRIGHT/31-05-2026-widgets/smoke-full.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": [
+      "section",
+      "template-section",
+      "grid-columns",
+      "split-layout",
+      "tabs",
+      "accordion",
+      "toggle-block",
+      "spacer",
+      "divider",
+      "stack",
+      "hero",
+      "feature-grid",
+      "testimonials",
+      "pricing-plans",
+      "faq-accordion",
+      "cta-banner",
+      "logo-cloud",
+      "gallery-mosaic",
+      "stats-kpi",
+      "team",
+      "rich-text-section",
+      "content-list",
+      "posts-feed",
+      "entry-teaser",
+      "product-gallery",
+      "product-compare",
+      "product-table",
+      "listing-filters",
+      "search-box",
+      "timeline",
+      "compare-timeline",
+      "newsletter",
+      "booking-calendar",
+      "appointment-form",
+      "form-embed",
+      "contact",
+      "navigation",
+      "footer"
+    ]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true,
+    "resolvedPlaywrightSession": "codex-31-05-widgets-smoke"
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "section",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "template-section",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "grid-columns",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "split-layout",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "tabs",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "accordion",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "toggle-block",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "spacer",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "divider",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "stack",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "hero",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "feature-grid",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "testimonials",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "pricing-plans",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "faq-accordion",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "cta-banner",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "logo-cloud",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "gallery-mosaic",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "stats-kpi",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "team",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "rich-text-section",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "content-list",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "posts-feed",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "entry-teaser",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "product-gallery",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "product-compare",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "product-table",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "listing-filters",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "search-box",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "timeline",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "compare-timeline",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "newsletter",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "booking-calendar",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "appointment-form",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "form-embed",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "contact",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "navigation",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      },
+      {
+        "widgetType": "footer",
+        "status": "fixture-gap",
+        "modes": [],
+        "duplicateWritablePaths": [],
+        "error": "admin_fixture_not_found"
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "section",
+        "publicPath": "/section-widget-test",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "template-section",
+        "publicPath": "/ctr-template-section-2305",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "grid-columns",
+        "publicPath": "/test-grid-columns-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-grid-columns.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "split-layout",
+        "publicPath": "/test-split-layout-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-split-layout.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "tabs",
+        "publicPath": "/test-tabs-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "accordion",
+        "publicPath": "/test-accordion-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "toggle-block",
+        "publicPath": "/test-toggle-block-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "spacer",
+        "publicPath": "/test-spacer-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "divider",
+        "publicPath": "/test-divider-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "stack",
+        "publicPath": "/test-stack-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-stack.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "hero",
+        "publicPath": "/homepage",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-hero.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "feature-grid",
+        "publicPath": "/featuregridtest",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-feature-grid.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "testimonials",
+        "publicPath": "/test-testimonials-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-testimonials.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "pricing-plans",
+        "publicPath": "/test-pricing-plans-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-pricing-plans.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "faq-accordion",
+        "publicPath": "/test-faq-accordion-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "cta-banner",
+        "publicPath": "/test-cta-banner-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "logo-cloud",
+        "publicPath": "/test-logo-cloud-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "gallery-mosaic",
+        "publicPath": "/gallery-mosaic-test-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "stats-kpi",
+        "publicPath": "/stats-kpi-audit-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "team",
+        "publicPath": "/test-team-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-team.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "rich-text-section",
+        "publicPath": "/richtextsectiontest",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "content-list",
+        "publicPath": "/test-content-list-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-content-list.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "posts-feed",
+        "publicPath": "/posts-feed-test-page",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "entry-teaser",
+        "publicPath": "/test-entry-teaser-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "product-gallery",
+        "publicPath": "/test-product-gallery-widget",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-product-gallery.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "product-compare",
+        "publicPath": "/test-product-compare-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-product-compare.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "product-table",
+        "publicPath": "/producttabletestproducttabletest",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-product-table.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "listing-filters",
+        "publicPath": "/test-listing-filters-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-listing-filters.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "search-box",
+        "publicPath": "/ctr-search-box-2305",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-search-box.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "timeline",
+        "publicPath": "/ctr-timeline-2305",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "compare-timeline",
+        "publicPath": "/test-compare-timeline-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "newsletter",
+        "publicPath": "/test-newsletter-widget-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "booking-calendar",
+        "publicPath": "/test-booking-calendar-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "appointment-form",
+        "publicPath": "/test-appointment-form-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "form-embed",
+        "publicPath": "/ctr-form-embed-2305",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "contact",
+        "publicPath": "/contact-audit-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "navigation",
+        "publicPath": "/homepage",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      },
+      {
+        "widgetType": "footer",
+        "publicPath": "/test-footer-widget-0516",
+        "statusCode": 404,
+        "status": "failed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_http_failed"
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 38,
+    "fixtureGaps": 38,
+    "metadataGaps": 0
+  }
+}

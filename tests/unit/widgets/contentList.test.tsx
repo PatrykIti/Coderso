@@ -519,6 +519,31 @@ test("content list keeps backward compatibility for source.mode", () => {
   expect(legacyCompatible.source?.mode).toBe("legacy");
 });
 
+test("content list listing mode normalizer clears dormant legacy filters", () => {
+  const normalized = normalizeContentListData({
+    source: {
+      mode: "listing",
+      listingQueryId: "listing-query-1",
+      listingTemplateId: "listing-template-1",
+      contentTypeId: "type-1",
+    },
+    filters: {
+      taxonomy: "legacy-topic",
+      authorId: "user-1",
+      searchQuery: "launch",
+      featuredOnly: true,
+    },
+  });
+
+  expect(normalized.source?.mode).toBe("listing");
+  expect(normalized.filters).toEqual({
+    taxonomy: "",
+    authorId: "",
+    searchQuery: "",
+    featuredOnly: false,
+  });
+});
+
 test("content list validator accepts resolved payload and exposes visual variant ownership", () => {
   clearWidgets();
   const widget = createContentListWidget({

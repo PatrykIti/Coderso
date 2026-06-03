@@ -1,7 +1,12 @@
 const runtimeClientScript = String.raw`(() => {
   if (typeof window === "undefined") return;
-  if ((window).__nextlessFormRuntimeClient) return;
-  (window).__nextlessFormRuntimeClient = true;
+  if (window.__nextlessFormRuntimeClient) {
+    if (typeof window.__nextlessFormRuntimeBind === "function") {
+      window.__nextlessFormRuntimeBind();
+    }
+    return;
+  }
+  window.__nextlessFormRuntimeClient = true;
 
   const FORM_SELECTOR = 'form[data-nextless-form-runtime="1"]';
   let recaptchaScriptPromise = null;
@@ -37,7 +42,7 @@ const runtimeClientScript = String.raw`(() => {
   const readNamedValue = (input) => {
     if (input instanceof HTMLInputElement) {
       if (input.type === "checkbox") {
-        return input.checked ? input.value : null;
+        return input.checked ? true : null;
       }
       if (input.type === "radio") {
         return input.checked ? input.value : null;
@@ -292,6 +297,90 @@ const runtimeClientScript = String.raw`(() => {
     return true;
   };
 
+  const getStepControls = (step) =>
+    Array.from(step.querySelectorAll("input, textarea, select")).filter((element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      if (
+        !(element instanceof HTMLInputElement) &&
+        !(element instanceof HTMLTextAreaElement) &&
+        !(element instanceof HTMLSelectElement)
+      ) {
+        return false;
+      }
+      if (element.disabled) return false;
+      if (element instanceof HTMLInputElement && element.type === "hidden") {
+        return false;
+      }
+      const container = element.closest("[data-form-field]");
+      if (container instanceof HTMLElement && container.dataset.logicVisible === "0") {
+        return false;
+      }
+      return true;
+    });
+
+  const findFirstInvalidStepIndex = (form, maxStepIndex) => {
+    const steps = getStepElements(form);
+    const limit = Math.min(Math.max(0, maxStepIndex), steps.length - 1);
+    for (let index = 0; index <= limit; index += 1) {
+      const step = steps[index];
+      if (!(step instanceof HTMLElement)) continue;
+      const controls = getStepControls(step);
+      for (const control of controls) {
+        if (
+          control instanceof HTMLInputElement ||
+          control instanceof HTMLTextAreaElement ||
+          control instanceof HTMLSelectElement
+        ) {
+          if (!control.checkValidity()) return index;
+        }
+      }
+    }
+    return -1;
+  };
+
+  const reportFirstInvalidControl = (form, stepIndex) => {
+    const steps = getStepElements(form);
+    const step = steps[stepIndex];
+    if (!(step instanceof HTMLElement)) return;
+    const controls = getStepControls(step);
+    for (const control of controls) {
+      if (
+        control instanceof HTMLInputElement ||
+        control instanceof HTMLTextAreaElement ||
+        control instanceof HTMLSelectElement
+      ) {
+        if (!control.checkValidity()) {
+          control.reportValidity();
+          return;
+        }
+      }
+    }
+  };
+
+  const clampRestoredStep = (form) => {
+    const steps = getStepElements(form);
+    if (steps.length <= 1) return;
+    const currentStep = Math.min(getCurrentStep(form), steps.length);
+    const invalidIndex = findFirstInvalidStepIndex(form, currentStep - 2);
+    if (invalidIndex >= 0) {
+      setCurrentStep(form, invalidIndex + 1);
+    }
+  };
+
+  const validateStepsThroughCurrent = (form) => {
+    const steps = getStepElements(form);
+    if (steps.length <= 1) return validateCurrentStep(form);
+    const currentStep = Math.min(getCurrentStep(form), steps.length);
+    const invalidIndex = findFirstInvalidStepIndex(form, currentStep - 1);
+    if (invalidIndex >= 0) {
+      setCurrentStep(form, invalidIndex + 1);
+      refreshStepUi(form);
+      reportFirstInvalidControl(form, invalidIndex);
+      return false;
+    }
+    return true;
+  };
+
   const refreshStepUi = (form) => {
     const steps = getStepElements(form);
     const hasSteps = steps.length > 1;
@@ -336,22 +425,25 @@ const runtimeClientScript = String.raw`(() => {
   };
 
   const toPayload = (form) => {
-    const formData = new FormData(form);
     const data = {};
     let formNonce = null;
     let captchaToken = null;
 
-    for (const [key, value] of formData.entries()) {
-      if (key === "__nl_form_nonce") {
-        formNonce = String(value);
-        continue;
-      }
-      if (key === "captchaToken") {
-        captchaToken = String(value).trim() || null;
-        continue;
-      }
-      if (value instanceof File) continue;
-      data[key] = String(value);
+    getFormFields(form).forEach((field) => {
+      if (field.disabled) return;
+      const value = readNamedValue(field);
+      if (value === null) return;
+      data[field.name] = value;
+    });
+
+    const nonceInput = form.querySelector('input[name="__nl_form_nonce"]');
+    if (nonceInput instanceof HTMLInputElement) {
+      formNonce = nonceInput.value.trim() || null;
+    }
+
+    const captchaInput = form.querySelector('input[name="captchaToken"]');
+    if (captchaInput instanceof HTMLInputElement) {
+      captchaToken = captchaInput.value.trim() || null;
     }
 
     return {
@@ -421,12 +513,23 @@ const runtimeClientScript = String.raw`(() => {
     if (!(form instanceof HTMLFormElement)) return;
     if (form.dataset.formRuntimeBound === "1") return;
     form.dataset.formRuntimeBound = "1";
+    const submitButton = form.querySelector('[data-form-submit="1"]');
+    if (
+      submitButton instanceof HTMLButtonElement &&
+      !(form.dataset.formSubmitLabel || "").trim()
+    ) {
+      const submitLabel = (submitButton.textContent || "").trim();
+      if (submitLabel) {
+        form.dataset.formSubmitLabel = submitLabel;
+      }
+    }
     if (!form.dataset.currentStep) {
       form.dataset.currentStep = "1";
     }
 
     hydrateProgress(form);
     refreshFieldLogic(form);
+    clampRestoredStep(form);
     refreshStepUi(form);
 
     const successNode = form.querySelector("[data-form-embed-success]");
@@ -466,7 +569,7 @@ const runtimeClientScript = String.raw`(() => {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
 
-      if (!validateCurrentStep(form)) return;
+      if (!validateStepsThroughCurrent(form)) return;
 
       if (form.dataset.submitting === "1") return;
       setSubmitting(form, true);
@@ -507,16 +610,27 @@ const runtimeClientScript = String.raw`(() => {
         }
 
         const runtime = result && typeof result === "object" ? result.runtime || {} : {};
+        const resolveSafeRedirectUrl = (value) => {
+          const candidate = typeof value === "string" ? value.trim() : "";
+          if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//")) return "";
+          try {
+            const url = new URL(candidate, window.location.origin);
+            if (url.origin !== window.location.origin) return "";
+            return url.pathname + url.search + url.hash;
+          } catch {
+            return "";
+          }
+        };
         const redirectUrl =
           runtime && typeof runtime.redirectUrl === "string"
-            ? runtime.redirectUrl.trim()
+            ? resolveSafeRedirectUrl(runtime.redirectUrl)
             : "";
         const successMessageFromRuntime =
           runtime && typeof runtime.successMessage === "string"
             ? runtime.successMessage.trim()
             : "";
         const successMessage =
-          successMessageFromRuntime || (form.dataset.formSuccessMessage || "").trim();
+          (form.dataset.formSuccessMessage || "").trim() || successMessageFromRuntime;
         emitSuccessAnalyticsEvent(form, {
           redirectUrl: redirectUrl || null,
           successMessage: successMessage || null,
@@ -566,7 +680,16 @@ const runtimeClientScript = String.raw`(() => {
     forms.forEach((form) => bindForm(form));
   };
 
+  window.__nextlessFormRuntimeBind = bindForms;
   bindForms();
+  if (typeof window.queueMicrotask === "function") {
+    window.queueMicrotask(bindForms);
+  } else {
+    window.setTimeout(bindForms, 0);
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bindForms, { once: true });
+  }
 })();`;
 
 export function getFormRuntimeClientScript() {

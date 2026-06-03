@@ -57,6 +57,9 @@ Notes:
   to nontechnical authors.
 - Structure owns rendered tab panel count through repeatable `panel` slots.
   Removing a panel prompts before deleting the slot and any nested blocks.
+- Shared Structure actions expose stable metadata on `slots.panel`, including
+  add actions, panel rows, and per-row Move up / Move down / Remove actions
+  scoped to the rendered `panel:<id>` slot instance.
 
 ### Advanced
 - behavior summary for opening tab, default tab, unavailable count, and line
@@ -104,6 +107,12 @@ JSON snapshots, technical IDs, CSS token text, or implementation suffixes.
   `style.activeTextColor`, `style.inactiveTextColor`, and
   `style.panelBackgroundColor` are clearable. Clear removes the field and keeps
   the runtime from forcing an inline style for that color.
+- Imported/admin values for those six fields are color-only and normalize
+  through the bounded CSS color resolver before public rendering. Safe hex,
+  `rgb/rgba`, `hsl/hsla`, `transparent`, `currentColor`, and
+  `var(--color-*)` values remain valid; unsafe strings such as `javascript:`,
+  `expression(`, `data:`, raw URLs, semicolon injection, braces, or HTML-like
+  fragments are dropped.
 - When `style.activeBackgroundColor` is cleared but `style.borderColor` remains
   saved, the active trigger border falls back to the saved border color instead
   of disappearing with the active background.

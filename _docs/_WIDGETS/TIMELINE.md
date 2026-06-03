@@ -50,6 +50,9 @@ Mode preview cards and the `Timeline mode` select both use the same mode update
 contract: selecting a mode updates `data.mode` and applies that mode's preferred
 legacy variant (`process -> compact`, `axis -> milestones`, `chronology` and
 `alternating -> cards`).
+When `data.mode = "process"`, compact rendering owns the effective layout.
+Saved non-compact legacy variants remain stored but are marked inactive in
+Visual until the author chooses Axis, Chronology, or Alternating.
 
 Each step can now own:
 - optional `date` and `dateLabel`
@@ -66,6 +69,8 @@ backward-compatible as replace-or-clear state instead of raw URL text inputs.
 
 Visual also owns:
 - mode preview cards and mode-to-variant guidance
+- shared metadata for all mutating Visual controls, including real input/select
+  fields, destination pickers, variant/mode cards, and step action buttons
 - date-format feedback for `YYYY-MM-DD`
 - grouped marker/accent controls
 - drag reorder with button fallback preserved
@@ -110,6 +115,8 @@ and no longer exposes mutating support actions in the daily tab flow.
 - Whole-step links are sanitized through the shared safe-href contract and are
   suppressed whenever a step CTA is present, so nested anchors are never
   rendered.
+- Compact/process layouts render saved step CTAs as compact inline links instead
+  of dropping them silently.
 - Horizontal milestones use overflow-safe axis rendering and connector widths
   derived from spacing tokens instead of a fixed `4rem` connector.
 - Motion remains intentionally static. Timeline does not persist motion fields

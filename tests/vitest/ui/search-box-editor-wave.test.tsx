@@ -673,6 +673,85 @@ test("SearchBox advanced is read-only diagnostics and human runtime status", asy
   }
 });
 
+test("SearchBox advanced hides route-submit routing rows outside route-submit mode", async () => {
+  const { SearchBoxAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
+  const getControl = (container: ParentNode, id: string) =>
+    container.querySelector(`[data-widget-control="${id}"]`);
+
+  const listingView = mount(
+    <SearchBoxAdvancedEditor
+      value={{
+        mode: "listing",
+        listingQueryId: "query-1",
+        targetRoute: "/legacy-results",
+        queryParam: "legacyParam",
+      }}
+      onChange={() => undefined}
+      variant="default"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(listingView.container.textContent).toContain("Listing runtime search token");
+    expect(listingView.container.textContent).not.toContain("Results page");
+    expect(listingView.container.textContent).not.toContain("Search term routing");
+    expect(listingView.container.textContent).not.toContain("Default search results page");
+    expect(getControl(listingView.container, "search-box.advanced.route-target")).toBeNull();
+    expect(getControl(listingView.container, "search-box.advanced.query-param")).toBeNull();
+  } finally {
+    listingView.cleanup();
+  }
+
+  const globalView = mount(
+    <SearchBoxAdvancedEditor
+      value={{
+        mode: "global",
+        targetRoute: "/legacy-results",
+        queryParam: "legacyParam",
+      }}
+      onChange={() => undefined}
+      variant="default"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(globalView.container.textContent).toContain("Global public search endpoint");
+    expect(globalView.container.textContent).not.toContain("Results page");
+    expect(globalView.container.textContent).not.toContain("Search term routing");
+    expect(globalView.container.textContent).not.toContain("Standard search term routing");
+    expect(getControl(globalView.container, "search-box.advanced.route-target")).toBeNull();
+    expect(getControl(globalView.container, "search-box.advanced.query-param")).toBeNull();
+  } finally {
+    globalView.cleanup();
+  }
+
+  const routeView = mount(
+    <SearchBoxAdvancedEditor
+      value={{
+        mode: "route-submit",
+        targetRoute: "/results",
+        queryParam: "term",
+      }}
+      onChange={() => undefined}
+      variant="default"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(routeView.container.textContent).toContain("Route-submit page routing");
+    expect(routeView.container.textContent).toContain("Results page");
+    expect(routeView.container.textContent).toContain("Search term routing");
+    expect(getControl(routeView.container, "search-box.advanced.route-target")).not.toBeNull();
+    expect(getControl(routeView.container, "search-box.advanced.query-param")).not.toBeNull();
+  } finally {
+    routeView.cleanup();
+  }
+});
+
 test("SearchBox keeps legacy provider settings support-owned without raw author fields", async () => {
   const { SearchBoxWizardEditor, SearchBoxAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");

@@ -11,6 +11,7 @@ import {
   normalizePostsFeedData,
   postsFeedDefaults,
   PostsFeedBlock,
+  resolvePostsFeedActiveSourceFilterLabels,
   resolvePostsFeedRouteState,
   type PostsFeedData,
 } from "../../../core/widgets/core/postsFeed";
@@ -146,6 +147,42 @@ test("posts feed preserves none gap token through content list mapping", () => {
   expect(normalized.style?.gap).toBe("none");
   expect(mapPostsFeedToContentListData(normalized).style?.gap).toBe("none");
   expect(renderToString(<PostsFeedBlock data={normalized} variant="cards" />)).toContain("gap-0");
+});
+
+test("posts feed active source filter labels match runtime source-mode semantics", () => {
+  const source: NonNullable<PostsFeedData["source"]> = {
+    mode: "category",
+    category: "audit-category",
+    manualPostIds: ["post-1"],
+    authorId: "author-1",
+    featuredFirst: true,
+    dateRange: {
+      from: "2026-03-01",
+      to: "2026-03-31",
+    },
+    limit: 3,
+    sort: "published-desc",
+  };
+
+  expect(resolvePostsFeedActiveSourceFilterLabels(source)).toEqual([
+    "Category: audit-category",
+    "Author: author-1",
+    "From: 2026-03-01",
+    "To: 2026-03-31",
+    "Featured first",
+  ]);
+  expect(resolvePostsFeedActiveSourceFilterLabels({ ...source, mode: "latest" })).toEqual([
+    "Author: author-1",
+    "From: 2026-03-01",
+    "To: 2026-03-31",
+    "Featured first",
+  ]);
+  expect(resolvePostsFeedActiveSourceFilterLabels({ ...source, mode: "featured" })).toEqual([
+    "Author: author-1",
+    "From: 2026-03-01",
+    "To: 2026-03-31",
+  ]);
+  expect(resolvePostsFeedActiveSourceFilterLabels({ ...source, mode: "manual" })).toEqual([]);
 });
 
 test("posts feed cleared card background stays absent through content list mapping", () => {

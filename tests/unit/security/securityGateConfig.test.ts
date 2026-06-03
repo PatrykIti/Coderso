@@ -44,6 +44,7 @@ test("PR gates prepare the CI database before test lanes", () => {
   expect(preflight).toContain("bun run db:migrate");
   expect(vitestLane).toContain("needs: database-preflight");
   expect(bunLane).toContain("needs: database-preflight");
+  expect(vitestLane).toContain("DATABASE_URL: ${{ secrets.DATABASE_URL || vars.DATABASE_URL }}");
   expect(bunLane).toContain("DATABASE_URL: ${{ secrets.DATABASE_URL || vars.DATABASE_URL }}");
   expect(securityGate).toContain("vitest-lane");
   expect(securityGate).toContain("bun-lane");

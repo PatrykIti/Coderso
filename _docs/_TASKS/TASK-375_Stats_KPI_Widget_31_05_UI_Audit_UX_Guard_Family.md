@@ -1,0 +1,78 @@
+# TASK-375: Stats KPI 31-05 UI Audit UX Guard Family
+# FileName: TASK-375_Stats_KPI_Widget_31_05_UI_Audit_UX_Guard_Family.md
+
+**Priority:** Low
+**Category:** Widgets + Stats KPI + Admin UX + QA + Docs
+**Estimated Effort:** Small
+**Dependencies:** TASK-343, _docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_STATS_KPI_WIDGET.md
+**Status:** Done (2026-06-01)
+
+---
+
+## Overview
+
+The Stats KPI report found no product defect; add UX guidance for the only noted color-priority nuance.
+
+Source report: `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_STATS_KPI_WIDGET.md`.
+
+This task family is intentionally scoped to everything the report calls out for Stats KPI. Do not downgrade it to a partial MVP; if implementation discovers the report is stale, update the report, this task, and the changelog with evidence before closing.
+
+## Report Evidence
+
+- SKPI-31-05-01: Explain per-metric accent precedence over global value color
+
+## Sub-Tasks
+
+- [x] [TASK-375-01](TASK-375-01_SKPI_31_05_01_Explain_Per_Metric_Accent_Precedence_Over_Global_Value.md): SKPI-31-05-01 - Explain per-metric accent precedence over global value color
+
+## Implementation Pseudocode
+
+1. Reproduce the report fixture and capture the failing admin/public state before editing.
+2. Move contract logic into the widget/domain owner, not ad hoc route or editor code.
+3. Normalize external/admin/import payloads through explicit helper functions before persistence, rendering, caching, or runtime binding.
+4. Keep legacy data non-destructive: preserve saved dormant state only when the UI labels it as inactive; otherwise clear it through an explicit migration/normalizer path.
+5. Add focused tests first for each report finding, then implement until those tests and the existing widget lane pass.
+
+## Security Contract
+
+No route or public write changes. Do not expose raw color data beyond existing summaries.
+
+Minimum checks for any touched endpoint or payload boundary:
+
+- Endpoint visibility must remain explicit: internal admin routes under authenticated admin scope; public routes only where the widget runtime requires them.
+- Auth/RBAC/CSRF must follow existing admin route conventions for writes.
+- Public writes, where present, require nonce/signature/HMAC or the existing widget-specific equivalent, optional CAPTCHA policy, strict reject-unknown validation, and a named rate-limit bucket.
+- Public read/render paths must fail closed for unsafe URLs, unsafe CSS strings, malformed IDs, and stale runtime data.
+- Do not put secrets, provider keys, nonce material, or privileged settings in browser cache/localStorage/debug payloads.
+
+## Testing Requirements
+
+- `bun run test:vitest -- tests/vitest/widgets/statsKpi.test.tsx tests/vitest/ui/stats-kpi-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+
+For DB-backed tests, load env before execution: `set -a && source .env && set +a`. If DB is unavailable, record the skipped validation explicitly in the task closure notes.
+
+## Documentation Updates Required
+
+- `_docs/_WIDGETS/STATS_KPI.md`
+- `_docs/PLAYWRIGHT/31-05-2026-widgets/REPORT_STATS_KPI_WIDGET.md`
+- `_docs/_TASKS/README.md` status row when this task starts or closes.
+- Reserved changelog number 1065; create the changelog entry only when this family is implemented or closed, and list the parent task ID plus every leaf task ID closed by that entry.
+
+## Acceptance Criteria
+
+- Every report finding listed above is either fixed, covered by a regression test, or reclassified with new evidence and updated docs.
+- Admin Visual/Wizard/Advanced copy matches the effective runtime state.
+- Public SSR/runtime does not expose unsafe CSS, unsafe URLs, malformed identifiers, or misleading active-state markers.
+- Targeted widget tests, relevant route/security tests, lint/typecheck, and `git diff --check` have been run or explicitly documented as unavailable.
+
+## Closure Notes (2026-06-01)
+
+- Reproduced SKPI-31-05-01 with a failing focused UI regression: `Value color` did not explain that per-metric `Metric accent color` intentionally overrides it for a metric's value, trend, icon, and link.
+- Added concise help copy to the Visual `Value color` control without changing the renderer or saved data contract.
+- Added renderer regression coverage that locks the existing accent-over-global precedence for value, trend, icon, and metric link color.
+- The report remains classified as no product defect; this family adds UX guidance and regression guards for the nuanced color priority.
+- Validation: focused UI regression failed before the help copy and passed after; `bun run test:vitest -- tests/vitest/widgets/statsKpi.test.tsx tests/vitest/ui/stats-kpi-editor-wave.test.tsx`; `bun --cwd core lint`; `bun --cwd core lint:types`; `git diff --check`; Claude staged review reported no blockers.
+- Covered by changelog `1065` together with TASK-375-01.

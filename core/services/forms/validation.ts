@@ -31,6 +31,8 @@ export type FormFieldSettings = {
   pattern?: string;
   min?: number;
   max?: number;
+  formStep?: number;
+  inputStep?: number;
   step?: number;
   logic?: FormFieldLogic;
   style?: FormFieldStyle;
@@ -114,7 +116,25 @@ const normalizeOptionalFiniteNumber = (value: unknown) => {
   return parsed;
 };
 
+const normalizeOptionalPositiveFiniteNumber = (value: unknown) => {
+  const parsed = normalizeOptionalFiniteNumber(value);
+  if (parsed === undefined) return undefined;
+  if (parsed <= 0) throw new Error("form_field_invalid");
+  return parsed;
+};
+
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const resolveFormFieldStep = (
+  settings?: Pick<FormFieldSettings, "formStep" | "step"> | null
+) => normalizeFormStep(settings?.formStep ?? settings?.step ?? 1);
+
+export const resolveFormFieldInputStep = (
+  settings?: Pick<FormFieldSettings, "inputStep"> | null
+) => {
+  const value = settings?.inputStep;
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+};
 
 const normalizeSettings = (
   type: FormFieldType,
@@ -164,8 +184,25 @@ const normalizeSettings = (
     }
   }
 
-  if (settings.step !== undefined) {
-    normalized.step = normalizeFormStep(settings.step);
+  const legacyStep = settings.step !== undefined ? normalizeFormStep(settings.step) : undefined;
+  const explicitFormStep =
+    settings.formStep !== undefined ? normalizeFormStep(settings.formStep) : undefined;
+  const formStep = explicitFormStep ?? legacyStep;
+  if (legacyStep !== undefined) {
+    normalized.step = legacyStep;
+  }
+  if (formStep !== undefined) {
+    normalized.formStep = formStep;
+  }
+
+  if (settings.inputStep !== undefined) {
+    if (type !== "number" && type !== "range" && type !== "time") {
+      throw new Error("form_field_invalid");
+    }
+    const inputStep = normalizeOptionalPositiveFiniteNumber(settings.inputStep);
+    if (inputStep !== undefined) {
+      normalized.inputStep = inputStep;
+    }
   }
 
   if (type === "number" || type === "range" || type === "rating") {
@@ -347,13 +384,10 @@ export function validateSubmissionPayload(payload: unknown, fields: NormalizedFo
         if (field.settings.max !== undefined && parsed > field.settings.max) {
           throw new Error("form_payload_invalid");
         }
-        if (
-          field.settings.step !== undefined &&
-          field.settings.step > 0 &&
-          field.type !== "rating"
-        ) {
+        const inputStep = resolveFormFieldInputStep(field.settings);
+        if (inputStep !== undefined && field.type !== "rating") {
           const origin = field.settings.min ?? 0;
-          const delta = (parsed - origin) / field.settings.step;
+          const delta = (parsed - origin) / inputStep;
           if (Math.abs(delta - Math.round(delta)) > 1e-9) {
             throw new Error("form_payload_invalid");
           }

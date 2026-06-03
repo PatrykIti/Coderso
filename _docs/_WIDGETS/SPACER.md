@@ -68,6 +68,10 @@ Notes:
   - `data-spacer-mobile`
   - `data-spacer-show-guide`
   - `data-spacer-preview-height`
+- The 31-05 audit regression guard asserts these SSR markers and CSS variables
+  for responsive, fixed, unsafe-length fallback, guide-on, guide-off, and
+  invalid-variant fail-closed paths. Browser computed-height evidence remains
+  recorded in the Playwright audit report.
 
 ## Data Model (summary)
 
@@ -101,3 +105,5 @@ Notes:
   contexts instead of framework breakpoint labels.
 - Saved custom heights remain compatible and can be replaced by selecting a
   friendly rhythm preset.
+- Invalid variants fail closed through the shared widget renderer fallback and
+  do not emit Spacer runtime markers.

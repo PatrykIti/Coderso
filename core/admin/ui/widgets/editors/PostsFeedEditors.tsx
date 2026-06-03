@@ -19,6 +19,7 @@ import { getSiteSettings, type SiteContentRoute } from "@/services/siteSettingsC
 import {
   normalizePostsFeedData,
   postsFeedDefaults,
+  resolvePostsFeedActiveSourceFilterLabels,
   resolvePostsFeedRouteState,
   type PostsFeedData,
   type PostsFeedMotion,
@@ -1830,17 +1831,7 @@ function ResolvedQueryDiagnostics({
         id="posts-feed.advanced.source-filters"
         label="Source filters"
         path="source"
-        value={
-          [
-            source.category ? `Category: ${source.category}` : null,
-            source.authorId ? `Author: ${source.authorId}` : null,
-            source.dateRange?.from ? `From: ${source.dateRange.from}` : null,
-            source.dateRange?.to ? `To: ${source.dateRange.to}` : null,
-            source.featuredFirst ? "Featured first" : null,
-          ]
-            .filter(Boolean)
-            .join(" | ") || "No filters"
-        }
+        value={resolvePostsFeedActiveSourceFilterLabels(source).join(" | ") || "No filters"}
       />
       <ReadonlyWidgetSummaryRow
         id="posts-feed.advanced.manual-posts"

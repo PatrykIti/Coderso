@@ -52,6 +52,12 @@ CTA and badge destinations are authored through the shared page-first
 destination picker. Saved custom/hash/external destinations remain
 replace-or-clear compatible instead of editable raw URL text.
 
+Switching CTA layout to Single still stores a true single-CTA Hero by removing
+`secondaryCta` from the saved value. During the same Visual editing session,
+switching back to Dual restores the last useful secondary CTA, or the default
+secondary CTA when no authored secondary action exists, so Dual mode always
+returns with a renderable second action.
+
 Variant presets are persisted per user in `user_settings` key:
 `widgets.hero.presets`.
 The Visual preset UI supports local create/apply/update/delete plus search and
@@ -142,6 +148,9 @@ Advanced must not duplicate Visual as a second design panel.
   default normalization. A single-CTA Hero therefore stays single after save,
   reload, and server-side validation instead of restoring the default secondary
   action.
+- Visual's CTA layout selector keeps that persisted single-CTA contract while
+  still restoring a useful secondary CTA when an author switches Single back to
+  Dual in the editor.
 - `style.primaryButtonBg`, `style.secondaryButtonBg`, and related CTA color
   fields are clearable without changing CTA labels or links.
 - A deliberate user-entered `transparent` value remains valid authored data and

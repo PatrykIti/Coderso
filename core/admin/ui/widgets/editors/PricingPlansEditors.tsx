@@ -863,14 +863,14 @@ export function PricingPlansVisualEditor({
         id="pricing.billing"
         mode="visual"
         role="content"
-        title="Billing toggle"
-        description="Control whether plans show monthly vs annual pricing defaults."
+        title="Billing cycle display"
+        description="Choose whether public output shows a read-only billing cycle status and which cycle drives prices."
       >
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
-            <p className="text-sm font-medium">Enable billing toggle</p>
+            <p className="text-sm font-medium">Show billing cycle display</p>
             <p className="text-xs text-muted-foreground">
-              Use cycle-specific prices while keeping legacy price fields as fallback.
+              Public pages show a read-only billing cycle status; visitors do not switch cycles.
             </p>
           </div>
           <Switch
@@ -927,7 +927,7 @@ export function PricingPlansVisualEditor({
         </div>
         {billingToggle.enabled !== true ? (
           <p className="text-xs text-muted-foreground">
-            Billing labels and cycle selection stay read-only until the toggle is enabled.
+            Billing labels and cycle selection stay read-only until the display is enabled.
           </p>
         ) : null}
       </EditorSection>
@@ -1872,7 +1872,7 @@ export function PricingPlansAdvancedEditor({
             <div className="rounded-md border px-3 py-2 text-sm">{hiddenPlanCount}</div>
           </div>
           <div className="space-y-2">
-            <p className="text-sm font-medium">Billing toggle</p>
+            <p className="text-sm font-medium">Billing display</p>
             <div className="rounded-md border px-3 py-2 text-sm">
               {normalized.billingToggle?.enabled ? "Enabled" : "Disabled"}
             </div>

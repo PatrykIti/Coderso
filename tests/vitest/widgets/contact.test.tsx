@@ -154,6 +154,12 @@ test("contact drops unsafe social profile hrefs from rendered output", () => {
           address: "",
           hours: "",
           social: [
+            {
+              id: "social-0",
+              platform: "custom",
+              label: "Legacy custom",
+              href: "https://example.com/contact",
+            },
             { id: "social-1", platform: "custom", label: "Mail", href: "mailto:test@example.com" },
             { id: "social-2", platform: "custom", label: "Phone", href: "tel:+1555123456" },
             { id: "social-3", platform: "custom", label: "Hash", href: "#team" },
@@ -167,6 +173,7 @@ test("contact drops unsafe social profile hrefs from rendered output", () => {
     />
   );
 
+  expect(html).not.toContain("https://example.com/contact");
   expect(html).not.toContain("mailto:test@example.com");
   expect(html).not.toContain("tel:+1555123456");
   expect(html).not.toContain('href="#team"');
@@ -205,6 +212,11 @@ test("contact reuses Forms runtime markup when a public binding exactly matches 
           status: "published",
           submissionAccess: "public",
           submissionNonce: "signed-nonce",
+          botProtection: {
+            provider: "recaptcha_v3",
+            siteKey: "site-key-contact",
+            action: "public_write",
+          },
           fields: [
             {
               id: "field-1",
@@ -245,10 +257,14 @@ test("contact reuses Forms runtime markup when a public binding exactly matches 
   expect(html).toContain('action="/forms/form-public/submissions"');
   expect(html).toContain('data-nextless-form-runtime="1"');
   expect(html).toContain('data-form-id="form-public"');
+  expect(html).toContain('data-form-submit-label="Send message"');
+  expect(html).toContain('data-form-captcha-site-key="site-key-contact"');
+  expect(html).toContain('data-form-captcha-action="public_write"');
   expect(html).toContain('name="full_name"');
   expect(html).toContain('name="reply_email"');
   expect(html).toContain('name="message_body"');
   expect(html).toContain('name="__nl_form_nonce"');
+  expect(html).toContain('name="captchaToken"');
   expect(html).toContain('value="signed-nonce"');
   expect(html).toContain('data-form-embed-success="true"');
   expect(html).toContain('data-form-embed-error="true"');
@@ -374,6 +390,45 @@ test("contact keeps forms-runtime bindings static when the resolved form is miss
       },
     },
     {
+      label: "missing nonce",
+      resolved: {
+        formId: "form-missing-nonce",
+        formName: "Public support",
+        status: "published",
+        submissionAccess: "public",
+        submissionNonce: null,
+        fields: [
+          {
+            id: "field-1",
+            type: "text",
+            label: "Full name",
+            name: "full_name",
+            required: true,
+            orderIndex: 0,
+            settings: {},
+          },
+          {
+            id: "field-2",
+            type: "email",
+            label: "Reply email",
+            name: "reply_email",
+            required: true,
+            orderIndex: 1,
+            settings: {},
+          },
+          {
+            id: "field-3",
+            type: "textarea",
+            label: "Message",
+            name: "message_body",
+            required: true,
+            orderIndex: 2,
+            settings: {},
+          },
+        ],
+      },
+    },
+    {
       label: "conditional logic",
       resolved: {
         formId: "form-logic",
@@ -448,9 +503,65 @@ test("contact keeps forms-runtime bindings static when the resolved form is miss
 
     expect(html).not.toContain('data-nextless-form-runtime="1"');
     expect(html).not.toContain('action="/forms/');
+    expect(html).toContain('data-contact-form-mode="static"');
+    expect(html).toContain('data-contact-form-configured-mode="forms-runtime"');
+    expect(html).toContain('data-contact-runtime-boundary="');
     expect(html).toContain('type="button"');
     expect(html).toContain("This contact form is not connected yet.");
   }
+});
+
+test("contact fails closed for unsafe map, social, and color values", () => {
+  const html = renderToString(
+    <ContactBlock
+      data={{
+        ...contactDefaults,
+        contact: {
+          ...contactDefaults.contact,
+          phone: "",
+          email: "",
+          address: "",
+          hours: "",
+          social: [
+            {
+              id: "social-http",
+              platform: "linkedin",
+              label: "HTTP LinkedIn",
+              href: "http://www.linkedin.com/company/coderso",
+            },
+            {
+              id: "social-host",
+              platform: "linkedin",
+              label: "Wrong host",
+              href: "https://example.com/company/coderso",
+            },
+          ],
+        },
+        map: {
+          enabled: true,
+          embedUrl: "https://example.com/maps?q=coderso",
+          fallbackCopy: "Map fallback",
+        },
+        style: {
+          ...contactDefaults.style,
+          background: "url(javascript:alert(1))",
+          surfaceColor: "expression(alert(1))",
+          borderColor: "data:text/css,body{}",
+          buttonBackgroundColor: "#123456",
+        },
+      }}
+      variant="form-left"
+    />
+  );
+
+  expect(html).toContain("Map fallback");
+  expect(html).not.toContain("<iframe");
+  expect(html).not.toContain("http://www.linkedin.com/company/coderso");
+  expect(html).not.toContain("https://example.com/company/coderso");
+  expect(html).not.toContain("url(javascript");
+  expect(html).not.toContain("expression(alert");
+  expect(html).not.toContain("data:text/css");
+  expect(html).toContain("#123456");
 });
 
 test("contact normalization keeps bounded defaults, field metadata, and static submission state", () => {
@@ -483,6 +594,9 @@ test("contact normalization keeps bounded defaults, field metadata, and static s
       spacing: "weird" as never,
       columns: "strange" as never,
       borderWidth: "9" as never,
+      background: "url(javascript:alert(1))",
+      surfaceColor: "data:text/css,body{}",
+      borderColor: "expression(alert(1))",
       maxWidth: "huge" as never,
       paddingX: "tiny" as never,
     },
@@ -511,6 +625,9 @@ test("contact normalization keeps bounded defaults, field metadata, and static s
     spacing: "md",
     columns: "two",
     borderWidth: "1",
+    background: undefined,
+    surfaceColor: undefined,
+    borderColor: "var(--color-border)",
     textColor: undefined,
     mutedTextColor: undefined,
     buttonBackgroundColor: undefined,
@@ -629,6 +746,19 @@ test("contact validator accepts expanded schema and rejects unsupported nested k
           paddingX: "lg",
           panelRadius: "lg",
           buttonRadius: "full",
+        },
+        resolved: {
+          formId: "form-public",
+          formName: "Support form",
+          status: "published",
+          submissionAccess: "public",
+          submissionNonce: "signed-nonce",
+          botProtection: {
+            provider: "recaptcha_v3",
+            siteKey: "site-key-contact",
+            action: "public_write",
+          },
+          fields: [],
         },
       },
     })

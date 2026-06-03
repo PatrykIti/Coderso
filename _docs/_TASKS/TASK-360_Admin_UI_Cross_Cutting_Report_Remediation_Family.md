@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Cross-Cutting RBAC + Accessibility + QA Gates + Docs
 **Estimated Effort:** Very Large
-**Dependencies:** changelog 1051 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md` audit evidence
+**Dependencies:** changelog 1089 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_UI_AUDIT.md` audit evidence
 **Status:** Done (2026-06-02)
 
 ---

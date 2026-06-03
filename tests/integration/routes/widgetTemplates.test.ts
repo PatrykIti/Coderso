@@ -53,3 +53,10 @@ test("mapWidgetTemplateError maps name conflicts", () => {
   expect(error?.code).toBe("widget_template_name_conflict");
   expect(error?.status).toBe(409);
 });
+
+test("mapWidgetTemplateError maps widget schema failures to invalid template data", () => {
+  const error = mapWidgetTemplateError(new Error("widget_schema_invalid: data/templateId"));
+
+  expect(error?.code).toBe("widget_template_invalid");
+  expect(error?.status).toBe(400);
+});

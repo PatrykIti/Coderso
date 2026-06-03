@@ -100,6 +100,57 @@ test("accordion honors a default-open item beyond the first position", () => {
   expect(details[1]?.open).toBe(true);
 });
 
+test("accordion opens custom item ids through repeatable slot instances", () => {
+  const normalized = normalizeAccordionData({
+    ...accordionDefaults,
+    items: [
+      { id: "alpha", title: "Alpha" },
+      { id: "beta", title: "Beta" },
+    ],
+    options: {
+      openMode: "single",
+      defaultOpenIds: ["beta"],
+      initiallyOpenId: "beta",
+      collapsible: true,
+      allowMultiple: false,
+    },
+  });
+  const details = renderAccordionDom(normalized) as HTMLDetailsElement[];
+  const secondSummary = details[1]?.querySelector("[data-coderso-accordion-summary]");
+
+  expect(normalized.options?.defaultOpenIds).toEqual(["beta"]);
+  expect(details[0]?.getAttribute("data-coderso-accordion-item")).toBe("1");
+  expect(details[1]?.getAttribute("data-coderso-accordion-item")).toBe("2");
+  expect(details[0]?.open).toBe(false);
+  expect(details[1]?.open).toBe(true);
+  expect(secondSummary?.getAttribute("aria-expanded")).toBe("true");
+});
+
+test("accordion maps legacy slot default ids onto custom item ids", () => {
+  const normalized = normalizeAccordionData({
+    ...accordionDefaults,
+    items: [
+      { id: "alpha", title: "Alpha" },
+      { id: "beta", title: "Beta" },
+    ],
+    options: {
+      openMode: "single",
+      defaultOpenIds: ["2"],
+      initiallyOpenId: "2",
+      collapsible: true,
+      allowMultiple: false,
+    },
+  });
+  const details = renderAccordionDom(normalized) as HTMLDetailsElement[];
+  const secondSummary = details[1]?.querySelector("[data-coderso-accordion-summary]");
+
+  expect(normalized.options?.defaultOpenIds).toEqual(["beta"]);
+  expect(normalized.options?.initiallyOpenId).toBe("beta");
+  expect(details[0]?.open).toBe(false);
+  expect(details[1]?.open).toBe(true);
+  expect(secondSummary?.getAttribute("aria-expanded")).toBe("true");
+});
+
 test("accordion preserves an intentional all-collapsed default state when collapsible is enabled", () => {
   const normalized = normalizeAccordionData({
     ...accordionDefaults,
@@ -295,6 +346,58 @@ test("accordion cleared panel surface omits background style", () => {
   expect(normalized.style?.surfaceColor).toBeUndefined();
   expect(html).toContain('data-coderso-accordion-variant="soft"');
   expect(html).not.toContain("background-color:");
+});
+
+test("accordion sanitizes imported style colors before public inline styles", () => {
+  const normalized = normalizeAccordionData({
+    ...accordionDefaults,
+    style: {
+      surfaceColor: "url(javascript:alert(1))",
+      borderColor: "expression(alert(1))",
+      summaryTextColor: "data:text/css,body{}",
+      descriptionTextColor: "#fff;color:red",
+    },
+  });
+  const html = renderToString(<AccordionBlock data={normalized} variant="soft" />);
+
+  expect(normalized.style).toEqual(
+    expect.objectContaining({
+      surfaceColor: undefined,
+      borderColor: accordionDefaults.style?.borderColor,
+      summaryTextColor: accordionDefaults.style?.summaryTextColor,
+      descriptionTextColor: undefined,
+    })
+  );
+  expect(html).not.toContain("javascript:");
+  expect(html).not.toContain("expression(");
+  expect(html).not.toContain("data:text/css");
+  expect(html).not.toContain("color:red");
+});
+
+test("accordion preserves safe imported style colors and legacy tokens", () => {
+  const normalized = normalizeAccordionData({
+    ...accordionDefaults,
+    style: {
+      surfaceColor: "#abc",
+      borderColor: "accent-border",
+      summaryTextColor: "currentColor",
+      descriptionTextColor: "hsl(210, 50%, 40%)",
+    },
+  });
+  const html = renderToString(<AccordionBlock data={normalized} variant="soft" />);
+
+  expect(normalized.style).toEqual(
+    expect.objectContaining({
+      surfaceColor: "#abc",
+      borderColor: "accent-border",
+      summaryTextColor: "currentColor",
+      descriptionTextColor: "hsl(210, 50%, 40%)",
+    })
+  );
+  expect(html).toContain("background-color:#abc");
+  expect(html).toContain("border-color:accent-border");
+  expect(html).toContain("color:currentColor");
+  expect(html).toContain("color:hsl(210, 50%, 40%)");
 });
 
 test("accordion renders icon, motion, max width, and extended style tokens", () => {

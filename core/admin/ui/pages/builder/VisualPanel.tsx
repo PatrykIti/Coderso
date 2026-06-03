@@ -18,6 +18,7 @@ import {
 import { LayoutPanel } from "./LayoutPanel";
 import {
   WidgetControlRow,
+  type WidgetControlOwnership,
   WidgetEditorModeRoot,
   WidgetEditorSection,
 } from "../../widgets/editors/WidgetEditorControls";
@@ -31,8 +32,11 @@ const deviceLabels: { id: DeviceTarget; label: string }[] = [
 export type VisualPanelSlotControlItem = {
   id: string;
   label: string;
+  path?: string;
+  ownership?: WidgetControlOwnership;
   labelValue?: string;
   labelPlaceholder?: string;
+  labelPath?: string;
   count: number;
   empty: boolean;
   canRemove: boolean;
@@ -52,6 +56,8 @@ export type VisualPanelSlotControls = {
   addActions: Array<{
     id: string;
     label: string;
+    path?: string;
+    ownership?: WidgetControlOwnership;
     disabled: boolean;
     onClick: () => void;
   }>;
@@ -168,17 +174,30 @@ export function VisualPanel({
           {slotControls.addActions.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {slotControls.addActions.map((action) => (
-                <Button
+                <WidgetControlRow
                   key={action.id}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={action.disabled}
-                  onClick={action.onClick}
-                  className="h-8 px-2 text-[11px]"
+                  id={action.id}
+                  label={action.label}
+                  path={action.path}
+                  ownership={action.ownership ?? "action"}
+                  hideLabel
+                  className="space-y-0"
                 >
-                  {action.label}
-                </Button>
+                  {(fieldProps) => (
+                    <Button
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={action.disabled}
+                      onClick={action.onClick}
+                      className="h-8 px-2 text-[11px]"
+                    >
+                      {action.label}
+                    </Button>
+                  )}
+                </WidgetControlRow>
               ))}
             </div>
           ) : null}
@@ -187,7 +206,8 @@ export function VisualPanel({
               <div
                 key={item.id}
                 data-widget-control={item.id}
-                data-widget-control-ownership="action"
+                data-widget-control-path={item.path}
+                data-widget-control-ownership={item.ownership ?? "action"}
                 className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5"
               >
                 <div className="flex items-center justify-between gap-3">
@@ -197,53 +217,110 @@ export function VisualPanel({
                       {item.count} {item.count === 1 ? "item" : "items"}
                     </span>
                     {typeof item.canMoveUp === "boolean" ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-[10px]"
-                        onClick={item.onMoveUp}
-                        disabled={!item.canMoveUp}
+                      <WidgetControlRow
+                        id={`${item.id}.move-up`}
+                        label={`Move up ${item.label}`}
+                        path={item.path}
+                        ownership={item.ownership ?? "action"}
+                        hideLabel
+                        className="space-y-0"
                       >
-                        Move up
-                      </Button>
+                        {(fieldProps) => (
+                          <Button
+                            id={fieldProps.id}
+                            aria-labelledby={fieldProps["aria-labelledby"]}
+                            data-widget-control={`${item.id}.move-up`}
+                            data-widget-control-path={item.path}
+                            data-widget-control-ownership={item.ownership ?? "action"}
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={item.onMoveUp}
+                            disabled={!item.canMoveUp}
+                          >
+                            Move up
+                          </Button>
+                        )}
+                      </WidgetControlRow>
                     ) : null}
                     {typeof item.canMoveDown === "boolean" ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-[10px]"
-                        onClick={item.onMoveDown}
-                        disabled={!item.canMoveDown}
+                      <WidgetControlRow
+                        id={`${item.id}.move-down`}
+                        label={`Move down ${item.label}`}
+                        path={item.path}
+                        ownership={item.ownership ?? "action"}
+                        hideLabel
+                        className="space-y-0"
                       >
-                        Move down
-                      </Button>
+                        {(fieldProps) => (
+                          <Button
+                            id={fieldProps.id}
+                            aria-labelledby={fieldProps["aria-labelledby"]}
+                            data-widget-control={`${item.id}.move-down`}
+                            data-widget-control-path={item.path}
+                            data-widget-control-ownership={item.ownership ?? "action"}
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={item.onMoveDown}
+                            disabled={!item.canMoveDown}
+                          >
+                            Move down
+                          </Button>
+                        )}
+                      </WidgetControlRow>
                     ) : null}
                     {item.canRemove && item.onRemove ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-[10px]"
-                        onClick={item.onRemove}
+                      <WidgetControlRow
+                        id={`${item.id}.remove`}
+                        label={`Remove ${item.label}`}
+                        path={item.path}
+                        ownership={item.ownership ?? "action"}
+                        hideLabel
+                        className="space-y-0"
                       >
-                        Remove
-                      </Button>
+                        {(fieldProps) => (
+                          <Button
+                            id={fieldProps.id}
+                            aria-labelledby={fieldProps["aria-labelledby"]}
+                            data-widget-control={`${item.id}.remove`}
+                            data-widget-control-path={item.path}
+                            data-widget-control-ownership={item.ownership ?? "action"}
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={item.onRemove}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </WidgetControlRow>
                     ) : null}
                   </div>
                 </div>
                 {item.onLabelChange ? (
-                  <div className="mt-2 space-y-1">
-                    <p className="text-[11px] font-medium text-muted-foreground">Region label</p>
-                    <Input
-                      value={item.labelValue ?? ""}
-                      onChange={(event) => item.onLabelChange?.(event.target.value)}
-                      placeholder={item.labelPlaceholder ?? item.label}
-                      aria-label={`Rename ${item.label}`}
-                      className="h-8 text-xs"
-                    />
-                  </div>
+                  <WidgetControlRow
+                    id={`${item.id}.label`}
+                    label="Region label"
+                    path={item.labelPath}
+                    ownership="writable"
+                    className="mt-2 space-y-1"
+                  >
+                    {(fieldProps) => (
+                      <Input
+                        id={fieldProps.id}
+                        aria-labelledby={fieldProps["aria-labelledby"]}
+                        value={item.labelValue ?? ""}
+                        onChange={(event) => item.onLabelChange?.(event.target.value)}
+                        placeholder={item.labelPlaceholder ?? item.label}
+                        aria-label={`Rename ${item.label}`}
+                        className="h-8 text-xs"
+                      />
+                    )}
+                  </WidgetControlRow>
                 ) : null}
                 {item.empty ? (
                   <div className="mt-1 text-[11px] text-muted-foreground">

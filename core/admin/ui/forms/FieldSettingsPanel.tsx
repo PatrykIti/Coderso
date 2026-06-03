@@ -39,6 +39,8 @@ export type FieldSettings = {
     pattern?: string;
     min?: number;
     max?: number;
+    formStep?: number;
+    inputStep?: number;
     step?: number;
     logic?: FormFieldLogic;
     style?: FormFieldStyle;
@@ -359,14 +361,14 @@ export function FieldSettingsPanel({
                 <Separator />
                 <div className="space-y-2">
                   <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Step value
+                    Input increment
                   </label>
                   <Input
                     type="number"
-                    value={field.settings.step ?? ""}
+                    value={field.settings.inputStep ?? ""}
                     onChange={(event) =>
                       onSettingsChange(field.id, {
-                        step:
+                        inputStep:
                           event.target.value.trim().length === 0
                             ? undefined
                             : Number(event.target.value),
@@ -385,11 +387,11 @@ export function FieldSettingsPanel({
                 <label className="text-xs font-medium text-muted-foreground">Step number</label>
                 <Input
                   inputMode="numeric"
-                  value={String(field.settings.step ?? 1)}
+                  value={String(field.settings.formStep ?? field.settings.step ?? 1)}
                   onChange={(event) => {
                     const parsed = Number.parseInt(event.target.value, 10);
                     const step = Number.isFinite(parsed) ? Math.max(1, Math.min(10, parsed)) : 1;
-                    onSettingsChange(field.id, { step });
+                    onSettingsChange(field.id, { formStep: step });
                   }}
                 />
                 <p className="text-xs text-muted-foreground">

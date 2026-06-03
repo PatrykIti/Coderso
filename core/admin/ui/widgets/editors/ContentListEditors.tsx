@@ -857,6 +857,7 @@ function updateSourceMode(
       mode === "listing"
         ? {
             ...current.filters,
+            taxonomy: "",
             authorId: "",
             searchQuery: "",
             featuredOnly: false,

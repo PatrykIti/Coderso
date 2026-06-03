@@ -31,13 +31,13 @@ Pricing table for plans, tiers, and comparison-style rows.
 - sectioned Visual IA:
   - `Variant and plan structure`
   - `Header copy`
-  - `Billing toggle`
+  - `Billing cycle display`
   - `Plans, features, and actions`
   - `Comparison rows behavior` (comparison variant only)
   - `Layout and notes`
   - `Colors and emphasis`
-- billing toggle labels and default cycle; public rendering is a static billing
-  cycle status, not an interactive toggle
+- billing cycle display labels and default cycle; public rendering is a static
+  billing cycle status, not an interactive visitor-side toggle
 - highlighted plan
 - plan-level card hierarchy, CTA style, CTA destination, and product copy
 - comparison-table hierarchy, layout, notes, and width controls

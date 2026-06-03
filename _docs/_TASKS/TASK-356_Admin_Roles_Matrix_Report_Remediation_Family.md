@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + RBAC + Roles Matrix + Audit + QA + Docs
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm action pattern, TASK-355-01 Users/RoleEditor permission propagation, changelog 1051 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md` audit evidence
+**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm action pattern, TASK-355-01 Users/RoleEditor permission propagation, changelog 1089 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_ROLES_MATRIX.md` audit evidence
 **Status:** Done (2026-06-01)
 
 ---

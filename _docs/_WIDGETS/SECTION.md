@@ -47,6 +47,10 @@ Notes:
   changing `region:<id>` storage or public runtime copy.
 - Shared inspector rows emit stable `data-widget-editor-section` and
   `data-widget-control` metadata for automation and accessible labels.
+- Builder-owned Region controls also emit stable `data-widget-control-path`
+  metadata: Add Region maps to `regions`, region rows map to
+  `regions.<instanceId>`, and region-label inputs map to
+  `regions.<instanceId>.label` with writable ownership.
 - Width, min-height, region flow, and spacing are bounded by schema-owned
   layout tokens instead of raw CSS fields.
 - Width controls use friendly labels such as `7XL (80rem / 1280px)`, and the
@@ -99,6 +103,11 @@ Notes:
 
 - Renders semantic element selected in data (`section` or `div`).
 - Supports optional overlay on top of background color/gradient.
+- Public inline color output is allowlisted at render time. Section accepts
+  hex colors, bounded `rgb/rgba` and `hsl/hsla`, `var(--color-*)` theme
+  variables, and `transparent/currentColor/inherit`; unsafe strings such as
+  `url(...)`, `javascript:`, `expression(...)`, arbitrary CSS functions, and
+  non-color variables are omitted or fall back to safe defaults.
 - Optional `style.shadow` tokens stay bounded to `none`, `sm`, `md`, `lg`, and
   `xl`; when unset, contained sections keep the legacy `shadow-sm` framing while
   other variants stay flat.
@@ -114,6 +123,11 @@ Notes:
 - Supports decorative background image/video layers with bounded fit, position,
   opacity, blend, and overlay ordering; unsupported or unsafe media URLs fail
   closed at render time.
+- Page-builder data writes validate Section blocks through the same widget
+  schema used by public rendering before create/update/autosave snapshots and
+  publish. Invalid enum payloads are rejected before `currentData` or
+  `publishedData` persistence instead of becoming public invalid-widget
+  placeholders.
 - Background, border, radius, and overlay clipping now live in a decorative
   inset layer instead of the same wrapper that owns slotted child content.
 - Slotted child widgets are no longer clipped by the old live surface wrapper,
@@ -215,7 +229,8 @@ or desktop deviation from the base padding tokens.
 - `heading.descriptionSize`: `sm`, `base`, `lg`
 - `heading.labelColor`, `heading.titleColor`, `heading.descriptionColor`: optional
   clearable text colors authored through swatches; saved custom CSS/token values
-  remain replace-or-clear compatible but are not editable as raw text
+  remain replace-or-clear compatible but are not editable as raw text. Public
+  runtime emits only the allowlisted color grammar described above.
 
 ## Layout Tokens
 
@@ -243,6 +258,9 @@ or desktop deviation from the base padding tokens.
 - Shared builder surfaces (`VisualPanelSlotControls`, canvas slot headers, and
   insert-target selectors) may render custom labels, but public runtime output
   stays unlabeled unless a future user-facing caption contract is added.
+- In the Visual `Regions` section, `Add Region` is action-owned with path
+  `regions`, while each label input is writable at
+  `regions.<instanceId>.label`.
 
 ## Surface Tokens
 

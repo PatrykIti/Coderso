@@ -6,18 +6,21 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import type { TemplateSectionData } from "../../../core/widgets/core/templateSection";
 
+const publishedTemplateId = "11111111-1111-4111-8111-111111111111";
+const draftTemplateId = "22222222-2222-4222-8222-222222222222";
+
 const templateState = vi.hoisted(() => ({
   current: {
     items: [
       {
-        id: "template-1",
+        id: "11111111-1111-4111-8111-111111111111",
         name: "Hero banner",
         status: "published",
         description: "Published hero template",
         blocks: [{ id: "hero-1", type: "hero" }],
       },
       {
-        id: "template-2",
+        id: "22222222-2222-4222-8222-222222222222",
         name: "Promo grid",
         status: "draft",
         description: "Draft promotional grid",
@@ -175,14 +178,14 @@ afterEach(() => {
   templateState.current = {
     items: [
       {
-        id: "template-1",
+        id: publishedTemplateId,
         name: "Hero banner",
         status: "published",
         description: "Published hero template",
         blocks: [{ id: "hero-1", type: "hero" }],
       },
       {
-        id: "template-2",
+        id: draftTemplateId,
         name: "Promo grid",
         status: "draft",
         description: "Draft promotional grid",
@@ -277,7 +280,7 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
     );
 
     const selects = Array.from(view.container.querySelectorAll("select"));
-    setSelectValue(selects[0], "template-2");
+    setSelectValue(selects[0], draftTemplateId);
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const previewLabelInput = inputs.find((input) => input.placeholder === "Homepage Hero Cluster");
     const categoryInput = inputs.find((input) => input.placeholder === "Marketing");
@@ -293,7 +296,7 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
     setInputValue(categoryInput, "Marketing");
 
     expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.templateId).toBe("template-2");
+    expect(latestValue.templateId).toBe(draftTemplateId);
     expect(latestValue.templateName).toBe("Promo grid");
     expect(latestValue.metadata).toMatchObject({
       previewLabel: "Landing Hero",

@@ -266,6 +266,11 @@ test("normalizeWidgetBlock accepts Contact runtime hydration data but rejects un
           status: "published",
           submissionAccess: "public",
           submissionNonce: "signed-nonce",
+          botProtection: {
+            provider: "recaptcha_v3",
+            siteKey: "site-key-contact",
+            action: "public_write",
+          },
           fields: [
             {
               id: "field-1",
@@ -1442,6 +1447,34 @@ test("normalizeWidgetBlock accepts legacy and responsive stack axis or wrap shap
       } satisfies StackData,
     })
   ).not.toThrow();
+});
+
+test("normalizeWidgetBlock preserves absent stack direction for variant defaults", () => {
+  registerWidget(
+    createStackWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "stack-imported-responsive",
+    type: "stack",
+    variant: "responsive",
+    data: {
+      gap: {
+        desktop: "8",
+        tablet: "6",
+        mobile: "4",
+      },
+      align: "baseline",
+      justify: "around",
+      wrap: true,
+    } satisfies StackData,
+  });
+
+  expect(normalized.data).not.toHaveProperty("direction");
 });
 
 test("normalizeWidgetBlock rejects invalid stack responsive axis or wrap shapes", () => {

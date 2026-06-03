@@ -607,6 +607,75 @@ test("ContentList wizard editor owns source setup, clamps item limit, and clears
   }
 });
 
+test("ContentList wizard source switch to listing clears hidden legacy filters", async () => {
+  const { ContentListAdvancedEditor, ContentListWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
+
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({
+      source: {
+        mode: "legacy",
+        contentTypeId: "articles",
+        statusScope: "all",
+        sort: "title-asc",
+        limit: 6,
+      },
+      filters: {
+        taxonomy: "case-study",
+        authorId: "user-2",
+        searchQuery: "launch",
+        featuredOnly: true,
+      },
+    } as ContentListData);
+
+    return (
+      <>
+        <ContentListWizardEditor
+          value={value}
+          onChange={(next) => {
+            onChangeSpy(next);
+            setValue(next);
+          }}
+          variant="cards"
+        />
+        <ContentListAdvancedEditor value={value} onChange={() => undefined} variant="cards" />
+      </>
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "listing");
+    });
+    await flush();
+
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        source: expect.objectContaining({
+          mode: "listing",
+          contentTypeId: "",
+        }),
+        filters: {
+          taxonomy: "",
+          authorId: "",
+          searchQuery: "",
+          featuredOnly: false,
+        },
+      })
+    );
+    expect(view.container.textContent).not.toContain("Taxonomy: case-study");
+    expect(view.container.textContent).not.toContain("Author: editor@example.com");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("ContentList visual editor switches between listing and legacy sources, persists empty state content, and updates presentation fields", async () => {
   const { ContentListVisualEditor, ContentListWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
@@ -1068,7 +1137,9 @@ test("ContentList advanced editor renders read-only sanitized source, style, and
     expect(view.container.textContent).toContain("By listing query");
     expect(view.container.textContent).toContain("Listing query: Featured listing");
     expect(view.container.textContent).toContain("Template: Cards");
-    expect(view.container.textContent).toContain("Author: editor@example.com");
+    expect(view.container.textContent).toContain("No author filter");
+    expect(view.container.textContent).not.toContain("Author: editor@example.com");
+    expect(view.container.textContent).not.toContain("Taxonomy: case-study");
     expect(view.container.textContent).toContain("Style summary");
     expect(view.container.textContent).toContain("Card and text colors");
     expect(view.container.textContent).toContain("Runtime summary");

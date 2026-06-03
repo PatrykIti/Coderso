@@ -625,15 +625,31 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
       Array.from((trackLabelSizeSelect as HTMLSelectElement).options).map((option) => option.value)
     ).toContain("none");
     expect(
+      Array.from((trackLabelSizeSelect as HTMLSelectElement).options).map(
+        (option) => option.textContent
+      )
+    ).toContain("Inherit");
+    expect(
       Array.from((smallLabelSizeSelects[0] as HTMLSelectElement).options).map(
         (option) => option.value
       )
     ).toContain("none");
     expect(
+      Array.from((smallLabelSizeSelects[0] as HTMLSelectElement).options).map(
+        (option) => option.textContent
+      )
+    ).toContain("Inherit");
+    expect(
       Array.from((smallLabelSizeSelects[1] as HTMLSelectElement).options).map(
         (option) => option.value
       )
     ).toContain("none");
+    expect(
+      Array.from((smallLabelSizeSelects[1] as HTMLSelectElement).options).map(
+        (option) => option.textContent
+      )
+    ).toContain("Inherit");
+    expect(colorsSection?.textContent).not.toContain("Hidden");
     setSelectValue(trackLabelSizeSelect, "lg");
     setSelectValue(smallLabelSizeSelects[0], "base");
     setSelectValue(smallLabelSizeSelects[1], "base");
@@ -1007,6 +1023,47 @@ test("CompareTimeline editors cover visual marker toggles, saved custom colors, 
     expect(latestAdvancedValue.axis.steps).toHaveLength(3);
   } finally {
     advancedView.cleanup();
+  }
+});
+
+test("CompareTimeline advanced marks saved highlight targets dormant in dual-track", async () => {
+  const { CompareTimelineAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
+
+  const value: CompareTimelineData = {
+    ...compareTimelineDefaults,
+    highlight: {
+      targetTrackId: "b",
+      targetTrackIds: ["a", "b"],
+    },
+  };
+
+  const dormantView = mount(
+    <CompareTimelineAdvancedEditor value={value} onChange={() => undefined} variant="dual-track" />
+  );
+
+  try {
+    expect(dormantView.container.textContent).toContain("Disabled in Dual Track");
+    expect(dormantView.container.textContent).toContain("saved target Both tracks");
+    expect(dormantView.container.textContent).toContain("preserved for Dual Track Highlight");
+  } finally {
+    dormantView.cleanup();
+  }
+
+  const activeView = mount(
+    <CompareTimelineAdvancedEditor
+      value={value}
+      onChange={() => undefined}
+      variant="dual-track-highlight"
+    />
+  );
+
+  try {
+    expect(activeView.container.textContent).toContain("Highlight target");
+    expect(activeView.container.textContent).toContain("Both tracks");
+    expect(activeView.container.textContent).not.toContain("Disabled in Dual Track");
+  } finally {
+    activeView.cleanup();
   }
 });
 

@@ -39,7 +39,7 @@ import type {
   HeroMedia,
   HeroSocialProofAvatar,
 } from "../../../../widgets/core/hero";
-import { normalizeHeroData, normalizeHeroHref } from "../../../../widgets/core/hero";
+import { heroDefaults, normalizeHeroData, normalizeHeroHref } from "../../../../widgets/core/hero";
 import {
   richTextHtmlToPlainText,
   sanitizeRichTextHtmlWithDiagnostics,
@@ -248,6 +248,19 @@ const heroPalettePresets = [
 ] as const;
 
 type HeroMediaEditorValue = Partial<HeroMedia> & Partial<HeroBackgroundMedia>;
+type HeroCtaEditorValue = NonNullable<HeroData["secondaryCta"]>;
+
+const resolveUsefulHeroCta = (
+  value: HeroData["secondaryCta"] | undefined
+): HeroCtaEditorValue | undefined => {
+  const label = typeof value?.label === "string" ? value.label.trim() : "";
+  const href = normalizeHeroHref(value?.href);
+  if (!label || !href) return undefined;
+  return { label, href };
+};
+
+const heroSecondaryCtaFallback =
+  resolveUsefulHeroCta(heroDefaults.secondaryCta) ?? ({ label: "Learn more", href: "#" } as const);
 
 const isCompatibleExternalMediaUrl = (value: string | undefined, mediaType: HeroMediaType) => {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -1300,7 +1313,11 @@ export function HeroVisualEditor({
 }: WidgetEditorProps<HeroData>) {
   const update = (patch: Partial<HeroData>) => onChange({ ...value, ...patch });
   const primary = value.primaryCta ?? { label: "", href: "" };
-  const secondary = value.secondaryCta ?? { label: "", href: "" };
+  const usefulSecondaryCta = resolveUsefulHeroCta(value.secondaryCta);
+  const lastUsefulSecondaryCtaRef = useRef<HeroCtaEditorValue>(
+    usefulSecondaryCta ?? heroSecondaryCtaFallback
+  );
+  const secondary = value.secondaryCta ?? heroSecondaryCtaFallback;
   const ctaMode: CtaMode = value.secondaryCta ? "dual" : "single";
   const media = {
     type: value.media?.type ?? "none",
@@ -1340,6 +1357,12 @@ export function HeroVisualEditor({
     RichTextSanitizerDiagnostic[]
   >([]);
   const [richBodyDiagnostics, setRichBodyDiagnostics] = useState<RichTextSanitizerDiagnostic[]>([]);
+
+  useEffect(() => {
+    if (usefulSecondaryCta) {
+      lastUsefulSecondaryCtaRef.current = usefulSecondaryCta;
+    }
+  }, [usefulSecondaryCta]);
 
   const selectedVariant = isHeroVariant(variant) ? variant : "centered";
   const heroSolidBackground = resolveHeroSolidBackgroundForContrast(value.background);
@@ -1462,12 +1485,23 @@ export function HeroVisualEditor({
   const updateSecondary = (patch: Partial<HeroData["secondaryCta"]>) =>
     update({
       secondaryCta: {
-        label: value.secondaryCta?.label ?? "",
-        href: value.secondaryCta?.href ?? "",
+        label: secondary.label,
+        href: secondary.href,
         ...value.secondaryCta,
         ...patch,
       },
     });
+  const updateCtaMode = (next: string) => {
+    if (next === "single") {
+      const currentSecondary = resolveUsefulHeroCta(value.secondaryCta);
+      if (currentSecondary) {
+        lastUsefulSecondaryCtaRef.current = currentSecondary;
+      }
+      update({ secondaryCta: undefined });
+      return;
+    }
+    update({ secondaryCta: usefulSecondaryCta ?? lastUsefulSecondaryCtaRef.current });
+  };
   const updateMedia = (patch: Partial<HeroData["media"]>) =>
     update({
       media: {
@@ -1939,16 +1973,7 @@ export function HeroVisualEditor({
       >
         <WidgetControlRow id="hero.cta.layout" label="CTA layout">
           {(fieldProps) => (
-            <Select
-              value={ctaMode}
-              onValueChange={(next) => {
-                if (next === "single") {
-                  update({ secondaryCta: undefined });
-                } else {
-                  update({ secondaryCta: secondary });
-                }
-              }}
-            >
+            <Select value={ctaMode} onValueChange={updateCtaMode}>
               <SelectTrigger
                 id={fieldProps.id}
                 aria-labelledby={fieldProps["aria-labelledby"]}

@@ -47,11 +47,16 @@ Notes:
   silently discarded.
 - Variant cards include bounded graphical miniatures plus a beginner-facing
   device-layout summary that states the effective desktop/tablet/phone split.
+- When `collapseMobile = "stack"`, the summary reports the effective phone
+  state as `phone stacked`; any saved `ratio.mobile` remains dormant and is not
+  marked as an active custom device layout until the author chooses `keep`.
 - Variant card selected state follows the effective desktop split; the saved
   starter seed can differ when desktop/tablet/phone ratios have been tuned.
 - Desktop and tablet ratios remain directly editable.
 - Mobile ratio appears only when `collapseMobile = "keep"`; otherwise Visual
   shows explicit stacked-phone copy instead of an inactive control.
+- Fixed `left` / `right` pane rows in shared Structure expose `slots.left` and
+  `slots.right` metadata and do not render Move up / Move down actions.
 - Gap controls expose friendly labels and canonicalize legacy `"0"` payloads
   to the `none` control state while keeping backward compatibility.
 

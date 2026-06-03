@@ -15,6 +15,7 @@ import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import {
   footerSocialTypes,
+  normalizeFooterImageSrc,
   reorderFooterColumnsAndSlots,
   resolveFooterColumnCount,
   resolveFooterColumnsForVariant,
@@ -183,6 +184,8 @@ const controlAttributes = ({ id, path, ownership, readOnly }: FooterControlMetad
 
 const optionLabel = (options: Array<{ id: string; label: string }>, value: string | undefined) =>
   options.find((option) => option.id === value)?.label ?? (value?.trim() || "Default");
+
+const variantLabel = (value: string | undefined) => optionLabel(variantOptions, value);
 
 const colorDiagnostic = (value: string | undefined) => {
   const trimmed = value?.trim();
@@ -619,6 +622,7 @@ function BrandLogoField({
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const savedLogo = value.brand?.logoUrl?.trim() ?? "";
+  const safeSavedLogo = normalizeFooterImageSrc(savedLogo);
 
   const handleMediaChange = async (nextValue: unknown) => {
     const mediaId = typeof nextValue === "string" ? nextValue : null;
@@ -670,10 +674,10 @@ function BrandLogoField({
           </Button>
         ) : null}
       </div>
-      {savedLogo ? (
+      {safeSavedLogo ? (
         <div className="flex items-center gap-3 rounded-md border bg-background p-2">
           <img
-            src={savedLogo}
+            src={safeSavedLogo}
             alt={value.brand?.logoAlt?.trim() || value.brand?.logoText?.trim() || "Footer logo"}
             className="h-10 w-20 rounded border object-contain"
             loading="lazy"
@@ -682,6 +686,13 @@ function BrandLogoField({
             {selectedMediaId
               ? "Using the selected Media Library image."
               : "A saved logo image is configured. Browse media to replace it or clear the logo."}
+          </p>
+        </div>
+      ) : savedLogo ? (
+        <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <p>
+            A saved logo URL is not safe for preview or public rendering. Replace it with a Media
+            Library image or clear the logo.
           </p>
         </div>
       ) : (
@@ -844,17 +855,15 @@ function LegalEditor({
               placeholder="Privacy"
             />
           </FieldLabel>
-          <div {...controlAttributes({ id: "footer.legal.privacy", path: "legal.privacy" })}>
-            <LinkDestinationField
-              fieldId="footer-legal-privacy"
-              label="Privacy destination"
-              value={value.legal?.privacy}
-              controlPath="legal.privacy"
-              onChange={(next) => updateFooterLegal(value, onChange, { privacy: next })}
-              emptyLabel="No privacy destination"
-              helpText="Pick the page that explains the privacy policy. Saved custom destinations stay replace-or-clear compatible."
-            />
-          </div>
+          <LinkDestinationField
+            fieldId="footer-legal-privacy"
+            label="Privacy destination"
+            value={value.legal?.privacy}
+            controlPath="legal.privacy"
+            onChange={(next) => updateFooterLegal(value, onChange, { privacy: next })}
+            emptyLabel="No privacy destination"
+            helpText="Pick the page that explains the privacy policy. Saved custom destinations stay replace-or-clear compatible."
+          />
           {showTargets ? (
             <LabeledSelectField
               label="Link target"
@@ -879,17 +888,15 @@ function LegalEditor({
               placeholder="Terms"
             />
           </FieldLabel>
-          <div {...controlAttributes({ id: "footer.legal.terms", path: "legal.terms" })}>
-            <LinkDestinationField
-              fieldId="footer-legal-terms"
-              label="Terms destination"
-              value={value.legal?.terms}
-              controlPath="legal.terms"
-              onChange={(next) => updateFooterLegal(value, onChange, { terms: next })}
-              emptyLabel="No terms destination"
-              helpText="Pick the page that explains terms of use. Saved custom destinations stay replace-or-clear compatible."
-            />
-          </div>
+          <LinkDestinationField
+            fieldId="footer-legal-terms"
+            label="Terms destination"
+            value={value.legal?.terms}
+            controlPath="legal.terms"
+            onChange={(next) => updateFooterLegal(value, onChange, { terms: next })}
+            emptyLabel="No terms destination"
+            helpText="Pick the page that explains terms of use. Saved custom destinations stay replace-or-clear compatible."
+          />
           {showTargets ? (
             <LabeledSelectField
               label="Link target"
@@ -1029,22 +1036,15 @@ function SocialLinksEditor({
                 path={`social.${index}.type`}
               />
               {selectedType === "custom" ? (
-                <div
-                  {...controlAttributes({
-                    id: `footer.social.${index}.href`,
-                    path: `social.${index}.href`,
-                  })}
-                >
-                  <LinkDestinationField
-                    fieldId={`footer-social-${index + 1}-custom-destination`}
-                    label="Custom destination"
-                    value={item.href}
-                    controlPath={`social.${index}.href`}
-                    onChange={(next) => updateSocial(index, { href: next })}
-                    emptyLabel="No custom destination"
-                    helpText="Pick a site page for this custom social/community link. Saved custom destinations stay replace-or-clear compatible."
-                  />
-                </div>
+                <LinkDestinationField
+                  fieldId={`footer-social-${index + 1}-custom-destination`}
+                  label="Custom destination"
+                  value={item.href}
+                  controlPath={`social.${index}.href`}
+                  onChange={(next) => updateSocial(index, { href: next })}
+                  emptyLabel="No custom destination"
+                  helpText="Pick a site page for this custom social/community link. Saved custom destinations stay replace-or-clear compatible."
+                />
               ) : (
                 <FieldLabel
                   label="Profile name"
@@ -1115,11 +1115,7 @@ function SocialLinksEditor({
   );
 }
 
-export function FooterWizardEditor({
-  value,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<FooterData>) {
+export function FooterWizardEditor({ value, variant }: WidgetEditorProps<FooterData>) {
   const socialCount = Array.isArray(value.social) ? value.social.length : 0;
   const visibleCount = resolveFooterColumnCount(variant);
   const visibleColumns = resolveFooterColumnsForVariant(value.columns, variant).slice(
@@ -1140,11 +1136,11 @@ export function FooterWizardEditor({
       description="Seed visible columns and social visibility. Brand and legal content live in Visual."
     >
       <div className="space-y-5">
-        <FooterVariantSelect
-          value={variant}
-          onChange={onVariantChange}
-          path={undefined}
-          ownership="action"
+        <ReadonlyWidgetSummaryRow
+          id="footer.wizard.variant"
+          label="Footer variant"
+          path="variant"
+          value={`${variantLabel(variant)}. Change the footer variant in Visual mode.`}
         />
 
         <div className="space-y-2">
@@ -1356,26 +1352,19 @@ export function FooterVisualEditor({
                           placeholder="About"
                         />
                       </FieldLabel>
-                      <div
-                        {...controlAttributes({
-                          id: `footer.columns.${columnIndex}.links.${linkIndex}.href`,
-                          path: `columns.${columnIndex}.links.${linkIndex}.href`,
-                        })}
-                      >
-                        <LinkDestinationField
-                          fieldId={`footer-column-${columnIndex + 1}-link-${linkIndex + 1}`}
-                          label="Link destination"
-                          value={link.href}
-                          controlPath={`columns.${columnIndex}.links.${linkIndex}.href`}
-                          onChange={(next) =>
-                            updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
-                              href: next,
-                            })
-                          }
-                          emptyLabel="No destination"
-                          helpText="Pick a page for this footer link. Saved custom destinations stay replace-or-clear compatible."
-                        />
-                      </div>
+                      <LinkDestinationField
+                        fieldId={`footer-column-${columnIndex + 1}-link-${linkIndex + 1}`}
+                        label="Link destination"
+                        value={link.href}
+                        controlPath={`columns.${columnIndex}.links.${linkIndex}.href`}
+                        onChange={(next) =>
+                          updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
+                            href: next,
+                          })
+                        }
+                        emptyLabel="No destination"
+                        helpText="Pick a page for this footer link. Saved custom destinations stay replace-or-clear compatible."
+                      />
                     </div>
                     <LabeledSelectField
                       label="Link target"
@@ -1787,6 +1776,12 @@ export function FooterVisualEditor({
         title="Slots overview and insertion hints"
         description="Read-only placement guidance for footer nested widgets."
       >
+        <ReadonlyWidgetSummaryRow
+          id="footer.visual.slots"
+          label="Footer slots"
+          path="slots"
+          value="Column 1, Column 2, Column 3, and Bottom Strip regions are managed on the page canvas."
+        />
         <ul className="space-y-1 text-xs text-muted-foreground">
           <li>
             Column regions 1, 2, and 3 render inside the visible footer columns and move with those
@@ -2017,6 +2012,12 @@ export function FooterAdvancedEditor({ value, variant }: WidgetEditorProps<Foote
         title="Support summary"
         description="No Footer-specific support mutation is available here."
       >
+        <ReadonlyWidgetSummaryRow
+          id="footer.advanced.slots"
+          label="Footer slots"
+          path="slots"
+          value="Column and bottom slot payloads are read-only here. Manage nested widgets on the page canvas."
+        />
         <p className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
           Visibility, container tokens, block-level spacing, and background overrides are handled by
           shared block controls. Footer-specific content, layout, and style changes stay in Visual.

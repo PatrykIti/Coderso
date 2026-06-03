@@ -14,6 +14,7 @@ import {
   galleryMosaicDefaults,
   galleryMosaicItemMax,
   GalleryMosaicBlock,
+  countGalleryMosaicEligibleLightboxItems,
   describeGalleryMosaicCountReduction,
   getGalleryMosaicLightboxRuntimeScript,
   importGalleryMosaicConfig,
@@ -258,6 +259,43 @@ test("gallery mosaic lightbox stays opt-in, normalizes interaction defaults, and
   expect(html).toContain("data-gallery-lightbox-dialog");
   expect(html).toContain("galleryLightboxBound");
   expect(getGalleryMosaicLightboxRuntimeScript()).toContain("data-gallery-lightbox-root='1'");
+});
+
+test("gallery mosaic lightbox eligibility count matches renderer trigger semantics", () => {
+  expect(
+    countGalleryMosaicEligibleLightboxItems(
+      [
+        { id: "image", image: "https://cdn.example.com/one.jpg" },
+        { id: "video", video: "https://cdn.example.com/two.mp4" },
+        {
+          id: "linked-image",
+          image: "https://cdn.example.com/linked.jpg",
+          href: "/details",
+        },
+        { id: "placeholder", caption: "Placeholder" },
+      ],
+      "lightbox"
+    )
+  ).toBe(2);
+  expect(
+    countGalleryMosaicEligibleLightboxItems(
+      [
+        {
+          id: "linked-image",
+          image: "https://cdn.example.com/linked.jpg",
+          href: "/details",
+        },
+        { id: "placeholder", caption: "Placeholder" },
+      ],
+      "lightbox"
+    )
+  ).toBe(0);
+  expect(
+    countGalleryMosaicEligibleLightboxItems(
+      [{ id: "image", image: "https://cdn.example.com/one.jpg" }],
+      "none"
+    )
+  ).toBe(0);
 });
 
 test("gallery mosaic section naming falls back when no visible heading exists", () => {

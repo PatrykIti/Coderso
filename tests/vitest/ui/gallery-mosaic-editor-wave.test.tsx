@@ -38,13 +38,17 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
     open,
     title,
     description,
+    confirmLabel,
     children,
+    onOpenChange,
     onConfirm,
   }: {
     open: boolean;
     title: string;
     description?: string;
+    confirmLabel?: string;
     children?: React.ReactNode;
+    onOpenChange?: (open: boolean) => void;
     onConfirm: () => void;
   }) =>
     open ? (
@@ -52,8 +56,11 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
         <p>{title}</p>
         {description ? <p>{description}</p> : null}
         <div>{children}</div>
+        <button type="button" onClick={() => onOpenChange?.(false)}>
+          cancel-action
+        </button>
         <button type="button" onClick={onConfirm}>
-          confirm-action
+          confirm-action {confirmLabel}
         </button>
       </div>
     ) : null,
@@ -490,8 +497,6 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
-  const confirmSpy = vi.fn(() => true);
-  vi.stubGlobal("confirm", confirmSpy);
   let latestValue: GalleryMosaicData = {
     header: {
       title: "Launch assets",
@@ -679,7 +684,25 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     ]);
 
     clickElement(findButtonsByText(view.container, "Remove")[1]);
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(latestValue.items.map((item) => item.caption)).toEqual([
+      "Lead frame",
+      "Motion close-up",
+      "Story frame",
+    ]);
+    expect(view.container.textContent).toContain("Remove gallery item");
+    expect(view.container.textContent).toContain(
+      "This removes the saved media, caption, poster, and destination for Motion close-up."
+    );
+    clickElement(findButtonByText(view.container, "cancel-action"));
+    expect(latestValue.items.map((item) => item.caption)).toEqual([
+      "Lead frame",
+      "Motion close-up",
+      "Story frame",
+    ]);
+    expect(view.container.textContent).not.toContain("Remove gallery item");
+
+    clickElement(findButtonsByText(view.container, "Remove")[1]);
+    clickElement(findButtonByText(view.container, "confirm-action"));
     expect(latestValue.items.map((item) => item.caption)).toEqual(["Lead frame", "Story frame"]);
 
     clickElement(findButtonByText(view.container, "Add item"));
@@ -703,14 +726,12 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     expect(view.container.textContent).toContain("Item 3: failed to resolve selected media.");
 
     setSelectValue(Array.from(view.container.querySelectorAll("select"))[0], "1");
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
     expect(latestValue.items).toHaveLength(3);
     expect(view.container.textContent).toContain("Reduce gallery items");
     expect(view.container.textContent).toContain(
       "Increasing the count again creates new placeholder tiles; removed content is not restored."
     );
     clickElement(findButtonByText(view.container, "confirm-action"));
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
     expect(latestValue.items).toHaveLength(1);
     expect(view.container.textContent).toContain(
       "Feature Left works best with one lead tile plus at least one supporting item."
@@ -769,7 +790,6 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     );
   } finally {
     view.cleanup();
-    vi.unstubAllGlobals();
   }
 });
 
@@ -878,6 +898,40 @@ test("GalleryMosaic advanced editor keeps diagnostics read-only with truthful su
         ]),
       })
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GalleryMosaic advanced editor reports selected lightbox mode as inactive when no media can open", async () => {
+  const { GalleryMosaicAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
+
+  const view = mount(
+    <GalleryMosaicAdvancedEditor
+      value={{
+        items: [
+          {
+            id: "empty-media",
+            caption: "Empty media tile",
+          },
+        ],
+        interaction: {
+          mode: "lightbox",
+          zoom: "fill",
+        },
+      }}
+      onChange={() => undefined}
+      variant="mosaic"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain(
+      "Lightbox selected; no media tiles currently open"
+    );
+    expect(view.container.textContent).not.toContain("Lightbox, fill zoom");
   } finally {
     view.cleanup();
   }

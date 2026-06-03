@@ -19,8 +19,10 @@ import { FileImage, GripVertical, Video } from "lucide-react";
 import { reorderItemsById, resolveDropIndexFromPointer } from "@/ui/posts/editor/blocks/blockDnD";
 
 import {
+  countGalleryMosaicEligibleLightboxItems,
   describeGalleryMosaicCountReduction,
   galleryMosaicItemMax,
+  hasAuthoredGalleryMosaicItemData,
   normalizeGalleryMosaicData,
   normalizeGalleryMosaicItems,
   resolveGalleryMosaicItemRemovalLabel,
@@ -160,6 +162,11 @@ type GalleryItemPreviewState = {
 type PendingGalleryMosaicCountReduction = {
   nextCount: number;
   summary: GalleryMosaicCountReductionSummary;
+};
+type PendingGalleryMosaicItemRemoval = {
+  index: number;
+  itemId?: string;
+  label: string;
 };
 
 const resolvePickerColor = (value: string | undefined, fallback: string) => {
@@ -498,10 +505,19 @@ function describeGalleryPosterCoverage(items: GalleryMosaicItem[]) {
 
 function describeGalleryInteractionSummary(value: GalleryMosaicData, items: GalleryMosaicItem[]) {
   const normalized = normalizeValue(value);
-  if ((normalized.interaction?.mode ?? "none") !== "lightbox") {
+  const interactionMode = normalized.interaction?.mode ?? "none";
+  if (interactionMode !== "lightbox") {
     return "Static tiles";
   }
   const linkedItems = items.filter((item) => item.href?.trim()).length;
+  const eligibleLightboxItems = countGalleryMosaicEligibleLightboxItems(items, interactionMode);
+  if (eligibleLightboxItems === 0) {
+    return linkedItems > 0
+      ? `Lightbox selected; no media tiles currently open; ${linkedItems} linked item${
+          linkedItems === 1 ? "" : "s"
+        } ${linkedItems === 1 ? "keeps" : "keep"} navigation`
+      : "Lightbox selected; no media tiles currently open";
+  }
   return linkedItems > 0
     ? `Lightbox on unlinked items; ${linkedItems} linked item${
         linkedItems === 1 ? "" : "s"
@@ -595,26 +611,6 @@ function removeItem(
 
     const removedItem = items[index];
     if (!removedItem) return current;
-
-    const shouldConfirm =
-      !(
-        removedItem.image?.trim() ||
-        removedItem.video?.trim() ||
-        removedItem.caption?.trim() ||
-        removedItem.href?.trim()
-      ) ||
-      typeof window === "undefined" ||
-      typeof window.confirm !== "function" ||
-      window.confirm(
-        `Remove ${resolveGalleryMosaicItemRemovalLabel(
-          removedItem,
-          index
-        )}? This removes the saved media, caption, poster, and destination for this item. This cannot be undone.`
-      );
-
-    if (!shouldConfirm) {
-      return current;
-    }
 
     const nextItems = items.filter((_, currentIndex) => currentIndex !== index);
     return {
@@ -811,6 +807,8 @@ export function GalleryMosaicVisualEditor({
   const [itemMediaPickerErrors, setItemMediaPickerErrors] = useState<Record<string, string>>({});
   const [pendingCountReduction, setPendingCountReduction] =
     useState<PendingGalleryMosaicCountReduction | null>(null);
+  const [pendingItemRemoval, setPendingItemRemoval] =
+    useState<PendingGalleryMosaicItemRemoval | null>(null);
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
@@ -1016,6 +1014,35 @@ export function GalleryMosaicVisualEditor({
     setItemCount(value, onChange, nextCount);
   };
 
+  const requestItemRemoval = (index: number) => {
+    const item = items[index];
+    if (!item || items.length <= 1) return;
+
+    if (!hasAuthoredGalleryMosaicItemData(item)) {
+      removeItem(value, onChange, index);
+      return;
+    }
+
+    setPendingItemRemoval({
+      index,
+      itemId: item.id,
+      label: resolveGalleryMosaicItemRemovalLabel(item, index),
+    });
+  };
+
+  const confirmPendingItemRemoval = () => {
+    if (!pendingItemRemoval) return;
+    const currentItems = normalizeGalleryMosaicItems(value.items);
+    const removalIndex = pendingItemRemoval.itemId
+      ? currentItems.findIndex((item) => item.id === pendingItemRemoval.itemId)
+      : pendingItemRemoval.index;
+
+    if (removalIndex >= 0) {
+      removeItem(value, onChange, removalIndex);
+    }
+    setPendingItemRemoval(null);
+  };
+
   return (
     <div className="space-y-4">
       <EditorSection
@@ -1169,7 +1196,7 @@ export function GalleryMosaicVisualEditor({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => removeItem(value, onChange, index)}
+                      onClick={() => requestItemRemoval(index)}
                       disabled={items.length <= 1}
                     >
                       Remove
@@ -1469,6 +1496,23 @@ export function GalleryMosaicVisualEditor({
           </p>
         ) : null}
       </EditorSection>
+
+      <ConfirmActionDialog
+        open={pendingItemRemoval !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingItemRemoval(null);
+        }}
+        title="Remove gallery item"
+        description={
+          pendingItemRemoval
+            ? `This removes the saved media, caption, poster, and destination for ${pendingItemRemoval.label}. This cannot be undone.`
+            : "Removing a gallery item deletes its saved media, caption, poster, and destination."
+        }
+        confirmLabel="Remove item"
+        onConfirm={confirmPendingItemRemoval}
+      >
+        Cancel keeps the current gallery item order and authored media intact.
+      </ConfirmActionDialog>
 
       <ConfirmActionDialog
         open={pendingCountReduction !== null}

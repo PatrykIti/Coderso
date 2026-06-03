@@ -106,6 +106,78 @@ test("section renders bounded heading typography, alignment, and colors", () => 
   expect(html).toContain('style="color:#334155"');
 });
 
+test("section omits unsafe authored color strings from public inline styles", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        heading: {
+          label: "Unsafe label",
+          title: "Unsafe title",
+          description: "Unsafe description",
+          labelColor: "url(javascript:alert(1))",
+          titleColor: "expression(alert(1))",
+          descriptionColor: "javascript:alert(1)",
+        },
+        style: {
+          ...(sectionDefaults.style ?? {}),
+          backgroundColor: "url(javascript:alert(1))",
+          gradientFrom: "#ffffff",
+          gradientTo: "javascript:alert(1)",
+          borderColor: "expression(alert(1))",
+          overlayColor: "url(javascript:alert(1))",
+          overlayOpacity: 40,
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).not.toContain("javascript:");
+  expect(html).not.toContain("expression(");
+  expect(html).not.toContain("url(javascript");
+  expect(html).not.toContain("linear-gradient");
+  expect(html).toContain("background-color:#000000");
+  expect(html).toContain("border-color:var(--color-border)");
+});
+
+test("section renders only allowlisted color grammar in public inline styles", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        heading: {
+          label: "Safe label",
+          title: "Safe title",
+          description: "Safe description",
+          labelColor: "rgba(12, 24, 36, 0.8)",
+          titleColor: "hsl(210, 50%, 40%)",
+          descriptionColor: "currentColor",
+        },
+        style: {
+          ...(sectionDefaults.style ?? {}),
+          backgroundColor: "#112233",
+          gradientFrom: "#ffffff",
+          gradientTo: "var(--color-primary)",
+          gradientAngle: 135,
+          borderColor: "transparent",
+          overlayColor: "inherit",
+          overlayOpacity: 25,
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain("background-color:#112233");
+  expect(html).toContain("linear-gradient(135deg, #ffffff, var(--color-primary))");
+  expect(html).toContain("border-color:transparent");
+  expect(html).toContain("background-color:inherit;opacity:0.25");
+  expect(html).toContain("color:rgba(12, 24, 36, 0.8)");
+  expect(html).toContain("color:hsl(210, 50%, 40%)");
+  expect(html).toContain("color:currentColor");
+});
+
 test("section renders empty-region placeholders only in editor preview", () => {
   const publicHtml = renderToString(<SectionBlock data={sectionDefaults} variant="default" />);
   const previewHtml = renderToString(
@@ -461,6 +533,34 @@ test("section validator rejects invalid variant", () => {
       data: sectionDefaults,
     })
   ).toThrow("widget_invalid_variant");
+});
+
+test("section validator rejects invalid enum payloads before renderer fallback", () => {
+  clearWidgets();
+  registerWidget(
+    createSectionWidget({
+      wizard: StubSectionEditor,
+      visual: StubSectionEditor,
+      advanced: StubSectionEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "section-invalid-enums",
+      type: "section",
+      variant: "default",
+      data: {
+        heading: {
+          level: "h8",
+        },
+        style: {
+          borderWidth: "9",
+          radius: "circle",
+        },
+      },
+    })
+  ).toThrow("widget_schema_invalid");
 });
 
 test("section renders region flow, min-height, and explicit gap classes", () => {

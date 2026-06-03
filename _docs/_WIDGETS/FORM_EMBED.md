@@ -47,7 +47,7 @@ routine edits.
 
 - read-only runtime status and compatibility notes
 - read-only submission routing/access, nonce policy, bot-protection presence,
-  and submit success behavior
+  submit success behavior, success-message source, and redirect policy
 - read-only human authoring summary for copy, layout, field display, style,
   navigation, and submit behavior
 - read-only editor contract summary
@@ -92,6 +92,7 @@ explicit unsupported scope under the current trusted-field contract.
 
 - Runtime emits deterministic markers:
   - `data-nextless-form-runtime`
+  - `data-form-embed-runtime-boundary`
   - `data-form-progress-root`
   - `data-form-progress-text`
   - `data-form-progress-bar`
@@ -100,28 +101,54 @@ explicit unsupported scope under the current trusted-field contract.
 - Conditional field logic still disables hidden controls so they do not submit.
 - Multi-step forms support configurable Back/Next labels, progress display, and
   saved-progress expiry.
+- Saved progress never restores a user past an incomplete required previous
+  step; submit validates all visible steps up to the current step before
+  posting.
+- Checkbox controls submit backend-compatible boolean values, not the browser
+  default `on` string.
+- Runtime binding is idempotent. Additional Form Embed instances inserted after
+  the first runtime script call the shared binder and bind independently.
 - Success behavior is configurable:
   - hide form after success
   - reset form after success
   - keep form visible after success
-- Redirects follow `runtime.redirectUrl` from the submit response.
+- Widget success copy takes precedence over form/runtime response copy when it
+  is configured. Otherwise the selected form/runtime response can provide the
+  success message.
+- Redirects follow only same-origin relative `runtime.redirectUrl` values from
+  the submit response. Absolute, protocol-relative, and script URLs are ignored
+  by the browser runtime and rejected at the form persistence boundary for
+  form-level success redirects.
 - Shared public HTML cache freshness for nonce-bearing Form Embed runtime now
   skips site HTML caching at the shared runtime layer.
 - Public unresolved/error states render user-facing unavailable messages and do
   not expose raw internal runtime error codes.
+- Internal-only resolved forms render a noninteractive public boundary and do
+  not emit a submit form or runtime script.
+- Form field settings use `formStep` for multi-step grouping and `inputStep`
+  for number/range/time input increments. Legacy `settings.step` remains a
+  non-destructive form-step adapter and is not used as an input increment.
 
 ## Security Notes
 
-No new public write endpoint is introduced by the widget.
+The public Form Embed runtime submits to `POST /forms/:id/submissions`.
 
-- Nonce enforcement remains backend-owned.
+- Public route visibility is limited to the widget submit path.
+- Public submissions use the Forms access evaluator, the `public_write`
+  rate-limit bucket keyed by form id, strict request schema validation, and the
+  signed form submission nonce (`formId.timestamp.HMAC`).
+- Nonce enforcement remains backend-owned and runtime-only.
 - Public CAPTCHA policy remains backend-owned.
+- Internal forms require an authenticated session or API key with the existing
+  Forms submit scope; public pages fail closed to a noninteractive boundary.
 - The widget may project only safe public bot-protection metadata:
   - provider
   - public site key
   - action
-- Provider secrets, nonce secrets, thresholds, and other privileged security
-  settings must never appear in widget JSON or public DOM.
+- Provider secrets, nonce secrets, thresholds, privileged security settings, and
+  runtime nonce strings must never be persisted in widget JSON. Runtime-rendered
+  nonce inputs are injected only by server-side form resolution for the current
+  request.
 
 ## Clear Controls
 
@@ -183,3 +210,9 @@ remove the saved key and fall back to their runtime theme defaults.
   }
 }
 ```
+
+Runtime resolution may provide a `resolved` object with form metadata, field
+metadata, public bot-protection metadata, and a request-scoped
+`submissionNonce`. The persisted widget schema rejects `resolved.submissionNonce`;
+saved widget data should keep only author-owned settings such as `formId`, copy,
+layout, style, navigation, and submit behavior.

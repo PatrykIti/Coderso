@@ -427,7 +427,7 @@ export const pricingPlansEditorContract: WidgetEditorContract = {
     {
       mode: "visual",
       id: "pricing.billing",
-      title: "Billing toggle",
+      title: "Billing cycle display",
       role: "content",
       writablePaths: [
         "billingToggle.enabled",

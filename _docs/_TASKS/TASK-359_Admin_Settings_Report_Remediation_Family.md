@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI + Settings + Cache + Security UX + RBAC + QA + Docs
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm pattern, TASK-360-04 no-op gate, changelog 1051 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md` audit evidence
+**Dependencies:** TASK-360-01 shared permission snapshot contract, TASK-360-02 shared confirm pattern, TASK-360-04 no-op gate, changelog 1089 and `_docs/PLAYWRIGHT/31-05-2026-admin/REPORT_ADMIN_SETTINGS.md` audit evidence
 **Status:** Done (2026-06-02)
 
 ---

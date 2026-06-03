@@ -320,6 +320,37 @@ test("SplitLayout visual editor exposes keep-specific mobile ratio and truthful 
       view.container.querySelector('[data-split-mobile-ratio-control="stack-note"]')
     ).toBeTruthy();
     expect(reverseCopy?.textContent).toContain("right pane is shown above the left pane");
+
+    const stackedRatioSummary = view.container.querySelector("[data-split-ratio-summary]");
+    expect(stackedRatioSummary?.textContent).toContain(
+      "Desktop 60 / 40, tablet 50 / 50, phone stacked."
+    );
+    expect(stackedRatioSummary?.textContent).toContain(
+      "Saved phone split is kept for when you choose Keep two columns on phones."
+    );
+    expect(stackedRatioSummary?.textContent).not.toContain("mobile 40 / 60");
+
+    const updatedCollapseSelect = Array.from(
+      (findSectionByTitle(view.container, "Phone behavior") as ParentNode).querySelectorAll(
+        "select"
+      )
+    )[0];
+    setSelectValue(updatedCollapseSelect, "keep");
+
+    const restoredMobileSection = findSectionByTitle(
+      view.container,
+      "Phone behavior"
+    ) as ParentNode;
+    const restoredMobileRatioSelect = Array.from(
+      restoredMobileSection.querySelectorAll("select")
+    )[1] as HTMLSelectElement;
+    const restoredRatioSummary = view.container.querySelector("[data-split-ratio-summary]");
+
+    expect(
+      view.container.querySelector('[data-split-mobile-ratio-control="visible"]')
+    ).toBeTruthy();
+    expect(restoredMobileRatioSelect.value).toBe("40-60");
+    expect(restoredRatioSummary?.textContent).toContain("mobile 40 / 60.");
   } finally {
     view.cleanup();
   }
@@ -364,6 +395,88 @@ test("SplitLayout visual editor shows ratio disclosure, miniatures, and legacy z
     expect(optionValues).not.toContain("0");
     expect(gapSelect.value).toBe("none");
     expect(gapCopy?.textContent).toContain("Older saved zero-gap layouts are shown here.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("SplitLayout visual editor reports stacked phone layout as the effective summary", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {
+      ratio: {
+        desktop: "40-60",
+        tablet: "60-40",
+        mobile: "60-40",
+      },
+      collapseMobile: "stack",
+      gap: "none",
+      verticalAlign: "stretch",
+    },
+    initialVariant: "40-60",
+  });
+
+  try {
+    const ratioSummary = view.container.querySelector("[data-split-ratio-summary]");
+
+    expect(ratioSummary?.textContent).toContain("Desktop 40 / 60, tablet 60 / 40, phone stacked.");
+    expect(ratioSummary?.textContent).toContain(
+      "Saved phone split is kept for when you choose Keep two columns on phones."
+    );
+    expect(ratioSummary?.textContent).toContain(
+      "Saved phone split stays dormant while phones stack."
+    );
+    expect(ratioSummary?.textContent).not.toContain("mobile 60 / 40");
+    expect(view.container.querySelector('[data-split-mobile-ratio-control="visible"]')).toBeNull();
+    expect(
+      view.container.querySelector('[data-split-mobile-ratio-control="stack-note"]')
+    ).toBeTruthy();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("SplitLayout visual editor treats stacked saved phone ratios as dormant state", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {
+      ratio: {
+        desktop: "40-60",
+        tablet: "40-60",
+        mobile: "50-50",
+      },
+      collapseMobile: "stack",
+      gap: "none",
+      verticalAlign: "stretch",
+    },
+    initialVariant: "40-60",
+  });
+
+  try {
+    const ratioSummary = view.container.querySelector("[data-split-ratio-summary]");
+
+    expect(ratioSummary?.getAttribute("data-split-ratio-override")).toBe("false");
+    expect(ratioSummary?.getAttribute("data-split-ratio-effective-starter")).toBe("true");
+    expect(ratioSummary?.getAttribute("data-split-ratio-device-specific")).toBe("false");
+    expect(ratioSummary?.getAttribute("data-split-ratio-dormant-mobile")).toBe("true");
+    expect(ratioSummary?.textContent).toContain("Desktop 40 / 60, tablet 40 / 60, phone stacked.");
+    expect(ratioSummary?.textContent).toContain("Matches starter layout");
+    expect(ratioSummary?.textContent).toContain(
+      "Saved phone split is kept for when you choose Keep two columns on phones."
+    );
+    expect(ratioSummary?.textContent).not.toContain("Custom device layout");
+    expect(ratioSummary?.textContent).not.toContain("mobile 50 / 50");
+
+    clickByText(view.container, "60 / 40");
+
+    expect(view.getLatestVariant()).toBe("60-40");
+    expect(view.getLatestValue()).toMatchObject({
+      ratio: {
+        desktop: "60-40",
+        tablet: "60-40",
+        mobile: "50-50",
+      },
+    });
   } finally {
     view.cleanup();
   }

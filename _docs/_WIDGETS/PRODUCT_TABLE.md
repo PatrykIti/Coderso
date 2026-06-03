@@ -51,6 +51,9 @@ instead of asking editors to type CSS variables or token names. Advanced does
 not render raw JSON query payloads, collection IDs, or runtime payload dumps;
 it summarizes product limit, search scope, collection scope, status scope, sort
 order, visitor controls, and page size in read-only rows.
+Saved public filter toggles are distinguished from visible visitor controls:
+collection and status filters are labeled inactive in Advanced until enough
+runtime options resolve for the public renderer to show the fieldset.
 
 ## Column Model
 
@@ -192,6 +195,9 @@ order, visitor controls, and page size in read-only rows.
 - `resolved.items[].media` is attached only from public image media resolved via
   `primaryMediaId` or the first `mediaIds[]` entry; missing or non-image media
   resolves to a local fallback instead of an exposed URL.
+- The 31-05 smoke fixture seeds media-backed products, a safe
+  `/fixture-products/:slug` products route, linked Product cells, visible
+  action CTAs, and an out-of-stock product for browser proof.
 - Empty-state copy is rendered when no items resolve.
 - Product status, stock values, and excerpt text are normalized through the
   shared commerce card contract before render.

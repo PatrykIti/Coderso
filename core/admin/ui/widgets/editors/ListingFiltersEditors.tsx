@@ -2313,6 +2313,8 @@ function SurfaceEditor({
   onChange: (next: ListingFiltersData) => void;
 }) {
   const normalized = normalizeListingFiltersData(value);
+  const autoApplyEnabled = normalized.autoApply !== false;
+  const hasSavedActionBackground = Boolean(normalized.style?.actionBackground?.trim());
 
   return (
     <EditorSection
@@ -2362,15 +2364,25 @@ function SurfaceEditor({
         path="style.actionBackground"
       >
         {() => (
-          <SharedColorControl
-            label="Action background"
-            value={normalized.style?.actionBackground}
-            onChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
-            onSwatchChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
-            onClear={() => clearStyle(value, onChange, "actionBackground")}
-            pickerFallback="#2563eb"
-            showValueInput={false}
-          />
+          <div className="space-y-2">
+            <SharedColorControl
+              label="Action background"
+              value={normalized.style?.actionBackground}
+              onChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
+              onSwatchChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
+              onClear={() => clearStyle(value, onChange, "actionBackground")}
+              pickerFallback="#2563eb"
+              showValueInput={false}
+            />
+            {autoApplyEnabled && hasSavedActionBackground ? (
+              <p
+                className="text-xs text-muted-foreground"
+                data-listing-filters-action-background-inactive="true"
+              >
+                Action background saved, inactive while auto apply hides the manual action button.
+              </p>
+            ) : null}
+          </div>
         )}
       </WidgetControlRow>
     </EditorSection>

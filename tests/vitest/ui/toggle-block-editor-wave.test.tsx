@@ -500,3 +500,30 @@ test("ToggleBlock advanced editor is read-only diagnostics", async () => {
     view.cleanup();
   }
 });
+
+test("ToggleBlock advanced editor reports sanitized color diagnostics", async () => {
+  const view = await renderEditor({
+    editor: "advanced",
+    initialVariant: "cards",
+    initialValue: {
+      style: {
+        surfaceColor: "url(javascript:alert(1))",
+        borderColor: "expression(alert(2))",
+        accentColor: "url(javascript:alert(3))",
+        accentContrastColor: "expression(alert(4))",
+      },
+    },
+  });
+
+  try {
+    const styleSection = getSectionByTitle(view.container, "Style diagnostics");
+
+    expect(styleSection.textContent).toContain("Theme default");
+    expect(styleSection.textContent).not.toContain("javascript:");
+    expect(styleSection.textContent).not.toContain("url(javascript");
+    expect(styleSection.textContent).not.toContain("expression(");
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});

@@ -496,6 +496,7 @@ export const timelineEditorContract: WidgetEditorContract = {
       writablePaths: [
         "variant",
         "mode",
+        "steps.count",
         "layout.orientation",
         "layout.align",
         "layout.labelPosition",
@@ -507,9 +508,6 @@ export const timelineEditorContract: WidgetEditorContract = {
       title: "Steps content and order",
       role: "content",
       writablePaths: [
-        "header.title",
-        "header.description",
-        "steps.count",
         "steps.title",
         "steps.description",
         "steps.date",
@@ -537,6 +535,7 @@ export const timelineEditorContract: WidgetEditorContract = {
       writablePaths: [
         "style.markerSize",
         "style.markerDisplay",
+        "style.markerColor",
         "steps.accent",
         "steps.markerIcon",
         "steps.markerBackgroundColor",
@@ -550,7 +549,6 @@ export const timelineEditorContract: WidgetEditorContract = {
       role: "visual",
       writablePaths: [
         "style.lineColor",
-        "style.markerColor",
         "style.titleColor",
         "style.descriptionColor",
         "background.color",
@@ -562,6 +560,8 @@ export const timelineEditorContract: WidgetEditorContract = {
       title: "Typography and spacing",
       role: "visual",
       writablePaths: [
+        "header.title",
+        "header.description",
         "style.titleSize",
         "style.descriptionSize",
         "style.titleWeight",
@@ -947,15 +947,19 @@ function renderStepText({
           {step.description}
         </p>
       ) : null}
-      {!compact && step.cta ? (
+      {step.cta ? (
         <a
-          className="inline-flex text-xs font-medium underline underline-offset-2"
+          className={joinClasses(
+            "inline-flex text-xs font-medium underline underline-offset-2",
+            compact ? "mt-1" : undefined
+          )}
           href={step.cta.href}
           rel={
             step.cta.href.startsWith("http://") || step.cta.href.startsWith("https://")
               ? "noopener noreferrer"
               : undefined
           }
+          data-timeline-step-cta={compact ? "compact" : "default"}
         >
           {step.cta.label}
         </a>

@@ -230,6 +230,17 @@ test("footer normalizes unsafe legal, logo, and social hrefs before render", () 
     <FooterBlock
       data={{
         ...footerDefaults,
+        columns: [
+          {
+            title: "Unsafe column",
+            links: [
+              { label: "Script column", href: "javascript:alert(1)" },
+              { label: "Protocol relative", href: "//evil.example/path" },
+              { label: "Safe column", href: "/safe-footer" },
+            ],
+          },
+          footerDefaults.columns[1]!,
+        ],
         brand: {
           logoText: "Coderso",
           logoUrl: "javascript:alert(1)",
@@ -250,6 +261,10 @@ test("footer normalizes unsafe legal, logo, and social hrefs before render", () 
 
   expect(html).not.toContain("javascript:alert");
   expect(html).not.toContain("data:text/html");
+  expect(html).not.toContain('href="#"');
+  expect(html).not.toContain("Script column");
+  expect(html).not.toContain("Protocol relative");
+  expect(html).toContain('href="/safe-footer"');
   expect(html).not.toContain("<img");
   expect(html).toContain('href="/terms"');
   expect(html).toContain('href="https://github.com/coderso"');
@@ -460,6 +475,48 @@ test("footer minimal variant renders a compact row and hides disabled legal and 
   expect(html).not.toContain('aria-label="Footer social links"');
 });
 
+test("footer minimal variant keeps contact and back-to-top utility content when legal and social are disabled", () => {
+  const html = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        brand: {
+          logoText: "Minimal Utility Footer",
+        },
+        legal: {
+          ...footerDefaults.legal,
+          enabled: false,
+        },
+        socialEnabled: false,
+        contact: {
+          address: "Minimal Utility Address",
+          phone: "+48 501 502 503",
+          email: "utility@example.com",
+        },
+        backToTop: {
+          enabled: true,
+          label: "Return to top",
+        },
+        columns: [
+          {
+            title: "Primary",
+            links: [{ label: "Primary", href: "/primary-footer" }],
+          },
+        ],
+      }}
+      variant="minimal"
+    />
+  );
+
+  expect(html).toContain("Minimal Utility Address");
+  expect(html).toContain('href="tel:+48501502503"');
+  expect(html).toContain('href="mailto:utility@example.com"');
+  expect(html).toContain('href="#top"');
+  expect(html).toContain('data-footer-back-to-top="1"');
+  expect(html).not.toContain(">Privacy<");
+  expect(html).not.toContain('aria-label="Footer social links"');
+});
+
 test("footer target and layout controls render bounded runtime output", () => {
   const html = renderToString(
     <FooterBlock
@@ -592,6 +649,9 @@ test("footer wizard keeps quick setup scope", () => {
   expect(html).toContain("Use Visual to edit brand logo");
   expect(html).toContain("Social basics");
   expect(html).toContain("Visible columns");
+  expect(html).toContain("Change the footer variant in Visual mode.");
+  expect(html).toContain('data-widget-control-path="variant"');
   expect(html).not.toContain("Add social");
+  expect(html).not.toContain("<select");
   expect(html).toContain('data-widget-control-readonly="true"');
 });

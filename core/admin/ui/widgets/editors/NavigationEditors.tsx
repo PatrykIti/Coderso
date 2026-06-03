@@ -43,7 +43,11 @@ import type {
 } from "../../../../widgets/types";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 type NavigationLayout = NonNullable<NavigationData["layout"]>;
 type NavigationBehavior = NonNullable<NavigationData["behavior"]>;
@@ -242,6 +246,7 @@ function ColorField({
   pickerFallback = "#111827",
   onClear,
   themeDefault,
+  controlPath,
 }: {
   label: string;
   value: string | undefined;
@@ -250,9 +255,12 @@ function ColorField({
   pickerFallback?: string;
   onClear?: () => void;
   themeDefault?: string;
+  controlPath?: string;
 }) {
   return (
     <SharedColorControl
+      controlId={controlPath ? `navigation.visual.${controlPath}` : undefined}
+      controlPath={controlPath}
       label={label}
       value={value}
       onChange={onChange}
@@ -262,6 +270,35 @@ function ColorField({
       showValueInput={false}
       treatAsThemeDefaultValues={themeDefault ? [themeDefault] : undefined}
     />
+  );
+}
+
+function NavigationControlGroup({
+  id,
+  label,
+  path,
+  children,
+  className,
+}: {
+  id: string;
+  label: string;
+  path: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <WidgetControlRow id={id} label={label} path={path} className={className}>
+      {(fieldProps) => (
+        <div
+          id={fieldProps.id}
+          aria-labelledby={fieldProps["aria-labelledby"]}
+          aria-describedby={fieldProps["aria-describedby"]}
+          className="space-y-2"
+        >
+          {children}
+        </div>
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -328,26 +365,25 @@ function NavigationTargetField({
   onChange: (next: NavigationLinkTarget) => void;
 }) {
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-        Link target
-      </p>
-      <Select
-        value={value ?? "self"}
-        onValueChange={(next) => onChange(next as NavigationLinkTarget)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Choose target" />
-        </SelectTrigger>
-        <SelectContent>
-          {linkTargetOptions.map((option) => (
-            <SelectItem key={option.id} value={option.id}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <WidgetControlRow id="navigation.visual.link-target" label="Link target" path="items.target">
+      {() => (
+        <Select
+          value={value ?? "self"}
+          onValueChange={(next) => onChange(next as NavigationLinkTarget)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Choose target" />
+          </SelectTrigger>
+          <SelectContent>
+            {linkTargetOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -382,55 +418,84 @@ function NavigationMetadataFields({
         Link metadata
       </p>
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Icon text</span>
-          <Input
-            value={meta.icon ?? ""}
-            onChange={(event) => patchMeta({ icon: event.target.value || null })}
-            placeholder="sparkles"
-          />
-        </label>
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Description</span>
-          <Input
-            value={meta.description ?? ""}
-            onChange={(event) => patchMeta({ description: event.target.value || null })}
-            placeholder="Helpful context under the label"
-          />
-        </label>
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Badge label</span>
-          <Input
-            value={meta.badge?.label ?? ""}
-            onChange={(event) => {
-              const nextLabel = event.target.value;
-              if (nextLabel.trim().length === 0) {
-                patchMeta({ badge: null });
-                return;
-              }
-              patchBadge({ label: nextLabel });
-            }}
-            placeholder="New"
-          />
-        </label>
-        <div className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Badge tone</span>
-          <Select
-            value={meta.badge?.tone ?? "default"}
-            onValueChange={(next) => patchBadge({ tone: next as NavigationBadgeTone })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose tone" />
-            </SelectTrigger>
-            <SelectContent>
-              {badgeToneOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="navigation.visual.link-meta-icon"
+          label="Icon text"
+          path="items.meta.icon"
+        >
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+              value={meta.icon ?? ""}
+              onChange={(event) => patchMeta({ icon: event.target.value || null })}
+              placeholder="sparkles"
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="navigation.visual.link-meta-description"
+          label="Description"
+          path="items.meta.description"
+        >
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+              value={meta.description ?? ""}
+              onChange={(event) => patchMeta({ description: event.target.value || null })}
+              placeholder="Helpful context under the label"
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="navigation.visual.link-meta-badge-label"
+          label="Badge label"
+          path="items.meta.badge.label"
+        >
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+              value={meta.badge?.label ?? ""}
+              onChange={(event) => {
+                const nextLabel = event.target.value;
+                if (nextLabel.trim().length === 0) {
+                  patchMeta({ badge: null });
+                  return;
+                }
+                patchBadge({ label: nextLabel });
+              }}
+              placeholder="New"
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="navigation.visual.link-meta-badge-tone"
+          label="Badge tone"
+          path="items.meta.badge.tone"
+        >
+          {() => (
+            <Select
+              value={meta.badge?.tone ?? "default"}
+              onValueChange={(next) => patchBadge({ tone: next as NavigationBadgeTone })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose tone" />
+              </SelectTrigger>
+              <SelectContent>
+                {badgeToneOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
       </div>
       <NavigationTargetField value={item.target} onChange={(next) => onChange({ target: next })} />
       <p className="text-xs text-muted-foreground">
@@ -524,27 +589,32 @@ function MenuSelectField({
       : (menus.find((menu) => menu.id === selectValue)?.name ?? "Selected menu");
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Choose existing menu</p>
-      <Select value={selectValue} onValueChange={(next) => void handleMenuChange(next)}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select menu">{selectedMenuLabel}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NO_MENU_VALUE}>No menu selected</SelectItem>
-          {menus.map((menu) => (
-            <SelectItem key={menu.id} value={menu.id}>
-              {menu.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {isLoadingMenus ? <p className="text-xs text-muted-foreground">Loading menus...</p> : null}
-      {isResolvingMenu ? (
-        <p className="text-xs text-muted-foreground">Syncing links from selected menu...</p>
-      ) : null}
-      {menuError ? <p className="text-xs text-destructive">{menuError}</p> : null}
-    </div>
+    <WidgetControlRow id="navigation.visual.menu-key" label="Choose existing menu" path="menuKey">
+      {() => (
+        <div className="space-y-2">
+          <Select value={selectValue} onValueChange={(next) => void handleMenuChange(next)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select menu">{selectedMenuLabel}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_MENU_VALUE}>No menu selected</SelectItem>
+              {menus.map((menu) => (
+                <SelectItem key={menu.id} value={menu.id}>
+                  {menu.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isLoadingMenus ? (
+            <p className="text-xs text-muted-foreground">Loading menus...</p>
+          ) : null}
+          {isResolvingMenu ? (
+            <p className="text-xs text-muted-foreground">Syncing links from selected menu...</p>
+          ) : null}
+          {menuError ? <p className="text-xs text-destructive">{menuError}</p> : null}
+        </div>
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -600,9 +670,11 @@ function NavigationLogoSourceFields({
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium">Logo image</p>
+      <WidgetControlRow
+        id="navigation.visual.logo-image"
+        label="Logo image"
+        path="logo.value"
+        actions={
           <Button
             type="button"
             variant="outline"
@@ -612,13 +684,33 @@ function NavigationLogoSourceFields({
           >
             Clear image
           </Button>
-        </div>
-        <MediaPicker
-          value={source === "library" ? (logo.assetId ?? null) : null}
-          onChange={(value) => void handleAssetChange(value)}
-          multiple={false}
-          accept={["image/*"]}
-        />
+        }
+      >
+        {() => (
+          <div className="space-y-2">
+            <div
+              data-widget-control="navigation.visual.logo-source"
+              data-widget-control-path="logo.source"
+              data-widget-control-ownership="writable"
+            >
+              <span className="sr-only">Logo source</span>
+            </div>
+            <div
+              data-widget-control="navigation.visual.logo-asset"
+              data-widget-control-path="logo.assetId"
+              data-widget-control-ownership="writable"
+            >
+              <MediaPicker
+                value={source === "library" ? (logo.assetId ?? null) : null}
+                onChange={(value) => void handleAssetChange(value)}
+                multiple={false}
+                accept={["image/*"]}
+              />
+            </div>
+          </div>
+        )}
+      </WidgetControlRow>
+      <div className="space-y-2">
         {hasSavedImage ? (
           <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
             A logo image is already configured. Pick an image from the Media Library to replace it.
@@ -906,32 +998,40 @@ export function NavigationVisualEditor({
         title="Variant and Structure"
         description="Choose navigation structure and source strategy."
       >
-        <div className="space-y-2">
-          {variantOptions.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => onVariantChange?.(option.id)}
-              className={cn(
-                "w-full rounded-lg border p-3 text-left transition",
-                variant === option.id
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-background hover:border-primary/50"
-              )}
-            >
-              <div className="flex w-full items-start justify-between gap-2">
-                <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
-                <Badge className="shrink-0" variant={variant === option.id ? "default" : "outline"}>
-                  {variant === option.id ? "Selected" : "Pick"}
-                </Badge>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
-            </button>
-          ))}
-        </div>
+        <NavigationControlGroup id="navigation.visual.variant" label="Variant" path="variant">
+          <div className="space-y-2">
+            {variantOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onVariantChange?.(option.id)}
+                className={cn(
+                  "w-full rounded-lg border p-3 text-left transition",
+                  variant === option.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-background hover:border-primary/50"
+                )}
+              >
+                <div className="flex w-full items-start justify-between gap-2">
+                  <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+                  <Badge
+                    className="shrink-0"
+                    variant={variant === option.id ? "default" : "outline"}
+                  >
+                    {variant === option.id ? "Selected" : "Pick"}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+              </button>
+            ))}
+          </div>
+        </NavigationControlGroup>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Links source</p>
+        <NavigationControlGroup
+          id="navigation.visual.links-source"
+          label="Links source"
+          path="linksSource"
+        >
           <Select
             value={linksSource}
             onValueChange={(next) =>
@@ -952,7 +1052,7 @@ export function NavigationVisualEditor({
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </NavigationControlGroup>
 
         {linksSource === "menu" ? (
           <MenuSelectField
@@ -971,8 +1071,7 @@ export function NavigationVisualEditor({
         title="Brand and Logo"
         description="Configure brand mark and destination link."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Logo type</p>
+        <NavigationControlGroup id="navigation.visual.logo-type" label="Logo type" path="logo.type">
           <Select
             value={logo.type}
             onValueChange={(next) =>
@@ -990,17 +1089,21 @@ export function NavigationVisualEditor({
               <SelectItem value="image">Image logo</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </NavigationControlGroup>
 
         {logo.type === "text" ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Logo text</p>
-            <Input
-              value={logo.value}
-              onChange={(event) => updateLogo({ value: event.target.value })}
-              placeholder="Coderso"
-            />
-          </div>
+          <WidgetControlRow id="navigation.visual.logo-text" label="Logo text" path="logo.value">
+            {(fieldProps) => (
+              <Input
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+                value={logo.value}
+                onChange={(event) => updateLogo({ value: event.target.value })}
+                placeholder="Coderso"
+              />
+            )}
+          </WidgetControlRow>
         ) : (
           <NavigationLogoSourceFields logo={logo} onChange={updateLogo} />
         )}
@@ -1015,11 +1118,18 @@ export function NavigationVisualEditor({
           feedbackTone="destructive"
         />
         {logo.type === "image" ? (
-          <Input
-            value={logo.alt ?? ""}
-            onChange={(event) => updateLogo({ alt: event.target.value })}
-            placeholder="Logo alt text"
-          />
+          <WidgetControlRow id="navigation.visual.logo-alt" label="Logo alt text" path="logo.alt">
+            {(fieldProps) => (
+              <Input
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+                value={logo.alt ?? ""}
+                onChange={(event) => updateLogo({ alt: event.target.value })}
+                placeholder="Logo alt text"
+              />
+            )}
+          </WidgetControlRow>
         ) : null}
       </EditorSection>
 
@@ -1030,8 +1140,11 @@ export function NavigationVisualEditor({
         title="Navigation Links"
         description={navigationLinksDescription}
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Active link state</p>
+        <NavigationControlGroup
+          id="navigation.visual.active-link-mode"
+          label="Active link state"
+          path="behavior.activeLinkMode"
+        >
           <Select
             value={behavior.activeLinkMode ?? "none"}
             onValueChange={(next) =>
@@ -1049,6 +1162,8 @@ export function NavigationVisualEditor({
               ))}
             </SelectContent>
           </Select>
+        </NavigationControlGroup>
+        <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
             Active links are detected in runtime from the current browser pathname. Menu and Pages
             sources stay on same-tab targets until their upstream owners define target metadata.
@@ -1089,7 +1204,12 @@ export function NavigationVisualEditor({
                 />
               </div>
             ) : null}
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              data-widget-control="navigation.visual.items"
+              data-widget-control-path="items"
+              data-widget-control-ownership="writable"
+            >
               {items.map((item, index) => (
                 <div
                   key={`${item.href || item.label}-${index}`}
@@ -1130,14 +1250,22 @@ export function NavigationVisualEditor({
                     </div>
                   </div>
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
-                    <label className="space-y-1 text-sm">
-                      <span className="font-medium text-foreground">Label</span>
-                      <Input
-                        value={item.label}
-                        onChange={(event) => updateItem(index, { label: event.target.value })}
-                        placeholder={`Item ${index + 1} label`}
-                      />
-                    </label>
+                    <WidgetControlRow
+                      id={`navigation.visual.link-${index + 1}-label`}
+                      label="Label"
+                      path="items.label"
+                    >
+                      {(fieldProps) => (
+                        <Input
+                          id={fieldProps.id}
+                          aria-labelledby={fieldProps["aria-labelledby"]}
+                          aria-describedby={fieldProps["aria-describedby"]}
+                          value={item.label}
+                          onChange={(event) => updateItem(index, { label: event.target.value })}
+                          placeholder={`Item ${index + 1} label`}
+                        />
+                      )}
+                    </WidgetControlRow>
                     <LinkDestinationField
                       fieldId={`navigation-visual-link-${index + 1}-destination`}
                       label="Destination"
@@ -1219,18 +1347,26 @@ export function NavigationVisualEditor({
                               </div>
                             </div>
                             <div className="mt-3 grid gap-2 md:grid-cols-2">
-                              <label className="space-y-1 text-sm">
-                                <span className="font-medium text-foreground">Label</span>
-                                <Input
-                                  value={child.label}
-                                  onChange={(event) =>
-                                    updateChild(index, childIndex, {
-                                      label: event.target.value,
-                                    })
-                                  }
-                                  placeholder="Sub-link label"
-                                />
-                              </label>
+                              <WidgetControlRow
+                                id={`navigation.visual.link-${index + 1}-child-${childIndex + 1}-label`}
+                                label="Label"
+                                path="items.children.label"
+                              >
+                                {(fieldProps) => (
+                                  <Input
+                                    id={fieldProps.id}
+                                    aria-labelledby={fieldProps["aria-labelledby"]}
+                                    aria-describedby={fieldProps["aria-describedby"]}
+                                    value={child.label}
+                                    onChange={(event) =>
+                                      updateChild(index, childIndex, {
+                                        label: event.target.value,
+                                      })
+                                    }
+                                    placeholder="Sub-link label"
+                                  />
+                                )}
+                              </WidgetControlRow>
                               <LinkDestinationField
                                 fieldId={`navigation-visual-link-${index + 1}-child-${childIndex + 1}-destination`}
                                 label="Destination"
@@ -1289,18 +1425,25 @@ export function NavigationVisualEditor({
       >
         {ctaEnabled ? (
           <div className="space-y-2">
-            <Input
-              value={value.cta?.label ?? ""}
-              onChange={(event) =>
-                update({
-                  cta: {
-                    label: event.target.value,
-                    href: value.cta?.href ?? "",
-                  },
-                })
-              }
-              placeholder="CTA label"
-            />
+            <WidgetControlRow id="navigation.visual.cta-label" label="CTA label" path="cta.label">
+              {(fieldProps) => (
+                <Input
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                  value={value.cta?.label ?? ""}
+                  onChange={(event) =>
+                    update({
+                      cta: {
+                        label: event.target.value,
+                        href: value.cta?.href ?? "",
+                      },
+                    })
+                  }
+                  placeholder="CTA label"
+                />
+              )}
+            </WidgetControlRow>
             <LinkDestinationField
               fieldId="navigation-visual-cta-destination"
               label="Primary CTA destination"
@@ -1337,8 +1480,11 @@ export function NavigationVisualEditor({
         title="Mobile Behavior"
         description="Control how navigation behaves on small devices."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Mobile mode</p>
+        <NavigationControlGroup
+          id="navigation.visual.mobile-mode"
+          label="Mobile mode"
+          path="behavior.mobileMode"
+        >
           <Select
             value={behavior.mobileMode ?? "expanded"}
             onValueChange={(next) =>
@@ -1358,7 +1504,7 @@ export function NavigationVisualEditor({
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </NavigationControlGroup>
         <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
           <p className="font-medium text-foreground">
             {mobileModeDetails[behavior.mobileMode ?? "expanded"].summary}
@@ -1369,18 +1515,20 @@ export function NavigationVisualEditor({
             to the trigger on close.
           </p>
         </div>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Hide CTA on mobile</p>
-            <p className="text-xs text-muted-foreground">
-              Keep CTA visible only on tablet/desktop.
-            </p>
-          </div>
-          <Switch
-            checked={behavior.hideCtaOnMobile ?? false}
-            onCheckedChange={(checked) => updateBehavior({ hideCtaOnMobile: checked })}
-          />
-        </div>
+        <WidgetControlRow
+          id="navigation.visual.hide-cta-on-mobile"
+          label="Hide CTA on mobile"
+          path="behavior.hideCtaOnMobile"
+          help="Keep CTA visible only on tablet/desktop."
+          className="rounded-lg border p-3"
+        >
+          {() => (
+            <Switch
+              checked={behavior.hideCtaOnMobile ?? false}
+              onCheckedChange={(checked) => updateBehavior({ hideCtaOnMobile: checked })}
+            />
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
@@ -1398,6 +1546,7 @@ export function NavigationVisualEditor({
           placeholder="#ffffff"
           pickerFallback="#ffffff"
           themeDefault={navigationDefaults.style?.surfaceColor}
+          controlPath="style.surfaceColor"
         />
         <p className="text-xs text-muted-foreground">
           The default surface uses the active theme token. The admin swatch is a fallback preview;
@@ -1411,6 +1560,7 @@ export function NavigationVisualEditor({
           placeholder="#e2e8f0"
           pickerFallback="#e2e8f0"
           themeDefault={navigationDefaults.style?.borderColor}
+          controlPath="style.borderColor"
         />
         <ColorField
           label="Text color"
@@ -1420,6 +1570,7 @@ export function NavigationVisualEditor({
           placeholder="#0f172a"
           pickerFallback="#0f172a"
           themeDefault={navigationDefaults.style?.textColor}
+          controlPath="style.textColor"
         />
         <ColorField
           label="Logo color"
@@ -1429,6 +1580,7 @@ export function NavigationVisualEditor({
           placeholder="#0f172a"
           pickerFallback="#0f172a"
           themeDefault={navigationDefaults.style?.logoColor}
+          controlPath="style.logoColor"
         />
         <ColorField
           label="Link color"
@@ -1438,6 +1590,7 @@ export function NavigationVisualEditor({
           placeholder="#334155"
           pickerFallback="#334155"
           themeDefault={navigationDefaults.style?.linkColor}
+          controlPath="style.linkColor"
         />
         {!isHexColorValue(style.linkColor) ? (
           <p className="text-xs text-destructive">
@@ -1452,6 +1605,7 @@ export function NavigationVisualEditor({
           placeholder="#0f172a"
           pickerFallback="#0f172a"
           themeDefault={navigationDefaults.style?.linkHoverColor}
+          controlPath="style.linkHoverColor"
         />
         {!isHexColorValue(style.linkHoverColor) ? (
           <p className="text-xs text-destructive">
@@ -1466,6 +1620,7 @@ export function NavigationVisualEditor({
           placeholder="#1d4ed8"
           pickerFallback="#1d4ed8"
           themeDefault={navigationDefaults.style?.linkActiveColor}
+          controlPath="style.linkActiveColor"
         />
         {!isHexColorValue(style.linkActiveColor) ? (
           <p className="text-xs text-destructive">
@@ -1480,6 +1635,7 @@ export function NavigationVisualEditor({
           placeholder="#1d4ed8"
           pickerFallback="#1d4ed8"
           themeDefault={navigationDefaults.style?.ctaBackgroundColor}
+          controlPath="style.ctaBackgroundColor"
         />
         <ColorField
           label="CTA text color"
@@ -1489,6 +1645,7 @@ export function NavigationVisualEditor({
           placeholder="#ffffff"
           pickerFallback="#ffffff"
           themeDefault={navigationDefaults.style?.ctaTextColor}
+          controlPath="style.ctaTextColor"
         />
         <ColorField
           label="CTA border color"
@@ -1498,11 +1655,15 @@ export function NavigationVisualEditor({
           placeholder="#1d4ed8"
           pickerFallback="#1d4ed8"
           themeDefault={navigationDefaults.style?.ctaBorderColor}
+          controlPath="style.ctaBorderColor"
         />
 
         <div className="grid gap-2 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Border width</p>
+          <NavigationControlGroup
+            id="navigation.visual.border-width"
+            label="Border width"
+            path="style.borderWidth"
+          >
             <Select
               value={style.borderWidth ?? "1"}
               onValueChange={(next) =>
@@ -1520,9 +1681,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Font size</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.font-size"
+            label="Font size"
+            path="style.fontSize"
+          >
             <Select
               value={style.fontSize ?? "sm"}
               onValueChange={(next) =>
@@ -1540,9 +1704,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Font weight</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.font-weight"
+            label="Font weight"
+            path="style.fontWeight"
+          >
             <Select
               value={style.fontWeight ?? "medium"}
               onValueChange={(next) =>
@@ -1560,9 +1727,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Text transform</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.text-transform"
+            label="Text transform"
+            path="style.textTransform"
+          >
             <Select
               value={style.textTransform ?? "none"}
               onValueChange={(next) =>
@@ -1580,9 +1750,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Letter spacing</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.letter-spacing"
+            label="Letter spacing"
+            path="style.letterSpacing"
+          >
             <Select
               value={style.letterSpacing ?? "none"}
               onValueChange={(next) =>
@@ -1600,9 +1773,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Link underline</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.link-underline"
+            label="Link underline"
+            path="style.linkUnderline"
+          >
             <Select
               value={style.linkUnderline ?? "none"}
               onValueChange={(next) =>
@@ -1618,9 +1794,12 @@ export function NavigationVisualEditor({
                 <SelectItem value="always">Always</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Surface shadow</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.surface-shadow"
+            label="Surface shadow"
+            path="style.shadow"
+          >
             <Select
               value={style.shadow ?? "none"}
               onValueChange={(next) => updateStyle({ shadow: next as NavigationStyle["shadow"] })}
@@ -1636,9 +1815,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Backdrop blur</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.backdrop-blur"
+            label="Backdrop blur"
+            path="style.backdropBlur"
+          >
             <Select
               value={style.backdropBlur ?? "none"}
               onValueChange={(next) =>
@@ -1656,9 +1838,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Dropdown direction</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.dropdown-direction"
+            label="Dropdown direction"
+            path="style.dropdownDirection"
+          >
             <Select
               value={style.dropdownDirection ?? "bottom"}
               onValueChange={(next) =>
@@ -1676,9 +1861,8 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Motion</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup id="navigation.visual.motion" label="Motion" path="style.motion">
             <Select
               value={style.motion ?? "subtle"}
               onValueChange={(next) => updateStyle({ motion: next as NavigationStyle["motion"] })}
@@ -1694,9 +1878,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Logo size</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.logo-size"
+            label="Logo size"
+            path="style.logoHeight"
+          >
             <Select
               value={style.logoHeight ?? "md"}
               onValueChange={(next) =>
@@ -1714,9 +1901,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">CTA radius</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.cta-radius"
+            label="CTA radius"
+            path="style.ctaBorderRadius"
+          >
             <Select
               value={style.ctaBorderRadius ?? "md"}
               onValueChange={(next) =>
@@ -1734,9 +1924,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">CTA separator</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.cta-separator"
+            label="CTA separator"
+            path="style.ctaSeparator"
+          >
             <Select
               value={style.ctaSeparator ?? "none"}
               onValueChange={(next) =>
@@ -1754,7 +1947,7 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </NavigationControlGroup>
         </div>
       </EditorSection>
 
@@ -1766,8 +1959,11 @@ export function NavigationVisualEditor({
         description="Control layout width, spacing, and overlay behavior on top of hero sections."
       >
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Alignment</p>
+          <NavigationControlGroup
+            id="navigation.visual.alignment"
+            label="Alignment"
+            path="layout.alignment"
+          >
             <Select
               value={layout.alignment}
               onValueChange={(next) =>
@@ -1785,9 +1981,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Max width</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.max-width"
+            label="Max width"
+            path="layout.maxWidth"
+          >
             <Select
               value={layout.maxWidth}
               onValueChange={(next) =>
@@ -1805,9 +2004,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Vertical padding</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.vertical-padding"
+            label="Vertical padding"
+            path="layout.paddingY"
+          >
             <Select
               value={layout.paddingY}
               onValueChange={(next) =>
@@ -1825,9 +2027,12 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Links gap</p>
+          </NavigationControlGroup>
+          <NavigationControlGroup
+            id="navigation.visual.links-gap"
+            label="Links gap"
+            path="layout.itemGap"
+          >
             <Select
               value={layout.itemGap}
               onValueChange={(next) =>
@@ -1845,42 +2050,50 @@ export function NavigationVisualEditor({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </NavigationControlGroup>
         </div>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Transparent surface</p>
-            <p className="text-xs text-muted-foreground">
-              Ignore surface color and render transparent background.
-            </p>
-          </div>
-          <Switch
-            checked={behavior.transparent ?? false}
-            onCheckedChange={(checked) => updateBehavior({ transparent: checked })}
-          />
-        </div>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Sticky navigation</p>
-            <p className="text-xs text-muted-foreground">Pin navigation to top during scroll.</p>
-          </div>
-          <Switch
-            checked={behavior.sticky ?? false}
-            onCheckedChange={(checked) => updateBehavior({ sticky: checked })}
-          />
-        </div>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Collapse on scroll</p>
-            <p className="text-xs text-muted-foreground">
-              Shrink the Navigation header while scrolling down.
-            </p>
-          </div>
-          <Switch
-            checked={behavior.collapseOnScroll ?? false}
-            onCheckedChange={(checked) => updateBehavior({ collapseOnScroll: checked })}
-          />
-        </div>
+        <WidgetControlRow
+          id="navigation.visual.transparent-surface"
+          label="Transparent surface"
+          path="behavior.transparent"
+          help="Ignore surface color and render transparent background."
+          className="rounded-lg border p-3"
+        >
+          {() => (
+            <Switch
+              checked={behavior.transparent ?? false}
+              onCheckedChange={(checked) => updateBehavior({ transparent: checked })}
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="navigation.visual.sticky"
+          label="Sticky navigation"
+          path="behavior.sticky"
+          help="Pin navigation to top during scroll."
+          className="rounded-lg border p-3"
+        >
+          {() => (
+            <Switch
+              checked={behavior.sticky ?? false}
+              onCheckedChange={(checked) => updateBehavior({ sticky: checked })}
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="navigation.visual.collapse-on-scroll"
+          label="Collapse on scroll"
+          path="behavior.collapseOnScroll"
+          help="Shrink the Navigation header while scrolling down."
+          className="rounded-lg border p-3"
+        >
+          {() => (
+            <Switch
+              checked={behavior.collapseOnScroll ?? false}
+              onCheckedChange={(checked) => updateBehavior({ collapseOnScroll: checked })}
+            />
+          )}
+        </WidgetControlRow>
       </EditorSection>
     </div>
   );
