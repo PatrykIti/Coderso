@@ -292,6 +292,22 @@ bunMock?.module("../../../core/services/content/entryTeaserResolver", () => ({
   resolveEntryTeaserRuntimeData: async () => null,
 }));
 
+bunMock?.module("../../../core/services/seo/seoService", () => ({
+  resolvePublicSeoMetadata: async (input: {
+    fallback?: {
+      title?: string | null;
+      description?: string | null;
+      canonicalUrl?: string | null;
+      robots?: string | null;
+    } | null;
+  }) => ({
+    title: input.fallback?.title ?? null,
+    description: input.fallback?.description ?? null,
+    canonicalUrl: input.fallback?.canonicalUrl ?? null,
+    robots: input.fallback?.robots ?? null,
+  }),
+}));
+
 const { handlePublicRequest } = await import("../../../core/server/publicSite");
 
 const requestPublicPath = (path: string) =>

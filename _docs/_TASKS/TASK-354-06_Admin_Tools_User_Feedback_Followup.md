@@ -91,6 +91,10 @@ Primary feedback to address:
   physical-proof concern was superseded by the HTTP E2E evidence. Playwright
   Chromium install via `npx @playwright/test@1.57.0 install chromium` hung in
   this environment, so browser automation could not be rerun after TASK-354-06.
+- Test-maintenance follow-up on 2026-06-03 kept the closure inside TASK-354-06:
+  PR gate workflow assertions now match the documented `DATABASE_URL` secret or
+  variable source, and DB-free public runtime tests mock SEO metadata fallback
+  so appointment/detail rendering does not require live `seo_documents` rows.
 
 ## Implementation Pseudocode
 
@@ -179,6 +183,7 @@ Executed validation:
 - `set -a && source .env && set +a && bun .tmp/task-354-06-http-e2e.ts`
 - Claude CLI review: `claude --print --permission-mode bypassPermissions ...`
 - Playwright install attempt: `NODE_PATH=/home/coder/.npm/_npx/d07fa91bd3497047/node_modules npx --yes @playwright/test@1.57.0 install chromium`; stopped after hanging without installing `/ms-playwright/chromium_headless_shell-1200/chrome-linux/headless_shell`.
+- `bun test tests/unit/security/securityGateConfig.test.ts tests/integration/runtime/appointment-form-runtime-hydration.test.ts tests/integration/runtime/detail-page-runtime-lite.test.ts`
 
 ## Documentation Updates Required
 

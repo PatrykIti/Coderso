@@ -4,8 +4,7 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dir, "../../../");
 
-const readFile = (relativePath: string) =>
-  readFileSync(path.join(root, relativePath), "utf-8");
+const readFile = (relativePath: string) => readFileSync(path.join(root, relativePath), "utf-8");
 
 const expectFile = (relativePath: string) => {
   const fullPath = path.join(root, relativePath);
@@ -39,13 +38,13 @@ test("PR gates prepare the CI database before test lanes", () => {
   const securityGate = getJobBlock(workflow, "security-gate");
   const releaseGates = getJobBlock(workflow, "coderso-release-gates");
 
-  expect(preflight).toContain("DATABASE_URL: ${{ secrets.DATABASE_URL }}");
-  expect(preflight).toContain("Verify CI database secret");
-  expect(preflight).toContain("DATABASE_URL repository secret is required");
+  expect(preflight).toContain("DATABASE_URL: ${{ secrets.DATABASE_URL || vars.DATABASE_URL }}");
+  expect(preflight).toContain("Verify CI database env");
+  expect(preflight).toContain("DATABASE_URL repository secret or variable is required");
   expect(preflight).toContain("bun run db:migrate");
   expect(vitestLane).toContain("needs: database-preflight");
   expect(bunLane).toContain("needs: database-preflight");
-  expect(bunLane).toContain("DATABASE_URL: ${{ secrets.DATABASE_URL }}");
+  expect(bunLane).toContain("DATABASE_URL: ${{ secrets.DATABASE_URL || vars.DATABASE_URL }}");
   expect(securityGate).toContain("vitest-lane");
   expect(securityGate).toContain("bun-lane");
   expect(releaseGates).toContain("needs: security-gate");
@@ -84,7 +83,7 @@ test("security gate workflow wires semgrep, trivy, and gitleaks", () => {
   expect(securityGate).toContain("fetch-depth: 0");
   expect(securityGate).toContain("aquasecurity/trivy-action@v0.36.0");
   expect(securityGate).toContain("Generate Trivy SARIF (SCA/CVE)");
-  expect(securityGate).toContain('format: sarif');
+  expect(securityGate).toContain("format: sarif");
   expect(securityGate).toContain("output: trivy.sarif");
   expect(securityGate).toContain('exit-code: "0"');
   expect(securityGate).toContain("limit-severities-for-sarif: true");

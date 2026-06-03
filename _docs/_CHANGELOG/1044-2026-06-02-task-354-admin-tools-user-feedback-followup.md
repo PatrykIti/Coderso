@@ -34,6 +34,13 @@ Tasks: TASK-354, TASK-354-06
   browser proof could not be rerun because Chromium installation hung before
   the executable was available.
 
+### Test Maintenance
+
+- Repaired focused Bun regression tests after the PR gate database source and
+  public SEO metadata contracts moved forward: the workflow test now accepts the
+  documented secret-or-variable CI database source, and DB-free public runtime
+  tests mock SEO metadata fallback instead of reaching live `seo_documents`.
+
 ## Validation
 
 - `bun --cwd core lint`
@@ -42,3 +49,4 @@ Tasks: TASK-354, TASK-354-06
 - `set -a && source .env && set +a && bun test --parallel=1 tests/integration/routes/backups.test.ts tests/integration/routes/importExport.test.ts tests/integration/routes/seo.test.ts tests/unit/backups/backupService.test.ts tests/unit/tools/importExport.test.ts tests/unit/seo/seoService.test.ts tests/integration/runtime/pages-runtime.test.ts`
 - `set -a && source .env && set +a && bun .tmp/task-354-06-http-e2e.ts`
 - Claude CLI review with `claude --print --permission-mode bypassPermissions`
+- `bun test tests/unit/security/securityGateConfig.test.ts tests/integration/runtime/appointment-form-runtime-hydration.test.ts tests/integration/runtime/detail-page-runtime-lite.test.ts`
