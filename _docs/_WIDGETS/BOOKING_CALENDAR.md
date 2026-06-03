@@ -52,6 +52,7 @@ offer endpoint text editing in normal authoring.
   - `data-nextless-booking-calendar`
   - `data-widget="booking-calendar"`
   - `data-booking-service`
+  - `data-submission-access` on service options
   - `data-booking-resource`
   - `data-booking-date`
   - `data-booking-refresh`
@@ -63,9 +64,22 @@ offer endpoint text editing in normal authoring.
   - `data-booking-resource-timezone`
   - `data-booking-week-picker`
   - `data-booking-week-days`
+  - `data-booking-week-date`
+  - `data-booking-week-runtime-boundary`
   - `data-booking-slots`
 - Admin page-builder preview hydrates a catalog-only `resolved` payload from
   booking admin caches without persisting preview data into page JSON.
+- Admin page-builder preview does not bootstrap the public booking submission
+  runtime. When `datePickerMode="week"` has catalog data but no injected slots
+  token, the canvas renders an explicit noninteractive runtime boundary instead
+  of an empty week shell.
+- Admin preview and public runtime preview share the same visible booking
+  catalog filter: active resources, active services, and services with at least
+  one active resource link. Inactive or unlinked rows stay out of the rendered
+  picker catalog.
+- Booking Calendar projects each service option's `submissionAccess` into the
+  public DOM and includes it in slot-selection events so paired Appointment Form
+  widgets can scope nonce/CAPTCHA behavior to the selected service.
 - Public slot reads remain server-authoritative for past-date blocking. Signed
   slot tokens add optional `minDate` / `maxDate` claims when the widget uses an
   explicit date range.
@@ -73,11 +87,15 @@ offer endpoint text editing in normal authoring.
   - `fixed` uses `intervalMinutes`
   - `service-duration` uses the selected service duration
   - `non-overlapping` uses `max(intervalMinutes, serviceDuration)`
-- `datePickerMode="week"` renders a bounded seven-day picker and fetches
-  per-day availability counts through the existing public slots route.
+- `datePickerMode="week"` renders unique bounded dates and fetches per-day
+  availability counts through the existing public slots route without duplicate
+  clamped date buttons or duplicate first-batch availability requests.
 - Runtime preserves the current selection when the refreshed slot list still
   contains it, otherwise clears selection and emits
   `nextless:booking-slot-selected` with `selection: null`.
+- Runtime service-context, empty/missing/error status copy, and week labels are
+  rendered through DOM text nodes. Decoded author or catalog copy is never
+  reassigned as HTML.
 - `appointment-form` compatibility remains additive: the shared runtime event
   still carries `serviceId`, `resourceId`, `startsAt`, `endsAt`, and `timezone`.
 

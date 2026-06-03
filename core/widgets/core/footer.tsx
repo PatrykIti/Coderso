@@ -684,7 +684,7 @@ const normalizeFooterHref = (value: unknown) =>
     allowHttp: true,
   });
 
-const normalizeFooterImageSrc = (value: unknown) =>
+export const normalizeFooterImageSrc = (value: unknown) =>
   normalizeWidgetSafeHref(value, {
     allowRelative: true,
     allowHash: false,
@@ -734,9 +734,10 @@ const resolveFooterSocialLinkAttrs = (href: unknown): FooterResolvedLinkAttrs | 
   return { href: safeHref };
 };
 
-const normalizeFooterLink = (link: FooterLink, index: number): FooterLink => {
+const normalizeFooterLink = (link: FooterLink, index: number): FooterLink | null => {
   const label = toTrimmedString(link.label) ?? `Link ${index + 1}`;
-  const href = normalizeFooterHref(link.href) ?? "#";
+  const href = normalizeFooterHref(link.href);
+  if (!href) return null;
   return {
     label,
     href,
@@ -746,7 +747,9 @@ const normalizeFooterLink = (link: FooterLink, index: number): FooterLink => {
 
 const normalizeFooterColumn = (column: FooterColumn, index: number): FooterColumn => {
   const title = toTrimmedString(column.title) ?? `Column ${index + 1}`;
-  const links = Array.isArray(column.links) ? column.links.map(normalizeFooterLink) : [];
+  const links = Array.isArray(column.links)
+    ? column.links.map(normalizeFooterLink).filter((link): link is FooterLink => link !== null)
+    : [];
   return { title, links };
 };
 
@@ -1347,7 +1350,7 @@ export function FooterBlock({
               </nav>
             ) : null}
           </div>
-          {showLegalContent || socialVisible ? (
+          {showLegalContent || socialVisible || Boolean(contact) || Boolean(backToTop) ? (
             <div
               className={joinClasses(
                 "flex flex-wrap items-center gap-4",

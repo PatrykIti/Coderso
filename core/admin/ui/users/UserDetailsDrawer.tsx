@@ -14,9 +14,20 @@ export type UserDetailsDrawerProps = {
   user?: UserSummary | null;
   roles: RoleSummary[];
   canManageUsers?: boolean;
+  canEditUser?: boolean;
+  canResetPassword?: boolean;
+  canManageUserLifecycle?: boolean;
+  isProtectedUser?: boolean;
+  roleDetailsUnavailableReason?: string;
+  resetPasswordUnavailableReason?: string;
   onEditUser: () => void;
   onResetPassword: () => void;
+  onToggleStatus?: () => void;
+  onDeleteUser?: () => void;
 };
+
+const notificationPreferencesUnavailableReason =
+  "Notification preferences are read-only. Delivery rules are managed in Settings and workspace policy.";
 
 const getInitials = (name: string) =>
   name
@@ -45,9 +56,7 @@ const getPermissionSummary = (user: UserSummary, roles: RoleSummary[]) => {
   return {
     hasFullAccess,
     count: hasFullAccess ? "Full access" : `${permissions.size} permissions`,
-    items: hasFullAccess
-      ? ["All admin capabilities"]
-      : Array.from(permissions).slice(0, 3),
+    items: hasFullAccess ? ["All admin capabilities"] : Array.from(permissions).slice(0, 3),
   };
 };
 
@@ -55,8 +64,16 @@ export function UserDetailsDrawer({
   user,
   roles,
   canManageUsers = true,
+  canEditUser,
+  canResetPassword,
+  canManageUserLifecycle,
+  isProtectedUser = false,
+  roleDetailsUnavailableReason,
+  resetPasswordUnavailableReason,
   onEditUser,
   onResetPassword,
+  onToggleStatus,
+  onDeleteUser,
 }: UserDetailsDrawerProps) {
   if (!user) {
     return (
@@ -68,8 +85,18 @@ export function UserDetailsDrawer({
   }
 
   const roleMap = new Map(roles.map((role) => [role.id, role.name]));
-  const roleNames = user.roleIds.map((roleId) => roleMap.get(roleId) ?? roleId);
-  const permissionSummary = getPermissionSummary(user, roles);
+  const roleNames = roleDetailsUnavailableReason
+    ? []
+    : user.roleIds.map((roleId) => roleMap.get(roleId) ?? roleId);
+  const permissionSummary = roleDetailsUnavailableReason
+    ? {
+        count: "Role details unavailable",
+        items: [roleDetailsUnavailableReason],
+      }
+    : getPermissionSummary(user, roles);
+  const editEnabled = canEditUser ?? canManageUsers;
+  const resetEnabled = canResetPassword ?? canManageUsers;
+  const lifecycleEnabled = canManageUserLifecycle ?? canManageUsers;
 
   return (
     <div className="flex h-full flex-col">
@@ -84,16 +111,14 @@ export function UserDetailsDrawer({
           </div>
         </div>
         <Badge variant="outline" className="text-xs">
-          {roleNames[0] ?? "User"}
+          {roleNames[0] ?? (roleDetailsUnavailableReason ? "Roles unavailable" : "User")}
         </Badge>
       </div>
       <Separator className="my-4" />
       <ScrollArea className="flex-1 pr-2">
         <div className="space-y-4">
           <div className="rounded-lg border bg-muted/30 p-4">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">
-              Last active
-            </p>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Last active</p>
             <p className="mt-1 text-sm font-medium">{user.lastActive}</p>
           </div>
           <div className="space-y-3">
@@ -102,9 +127,7 @@ export function UserDetailsDrawer({
               Permissions summary
             </div>
             <div className="rounded-lg border bg-background p-3">
-              <p className="text-xs text-muted-foreground">
-                {permissionSummary.count}
-              </p>
+              <p className="text-xs text-muted-foreground">{permissionSummary.count}</p>
               <ul className="mt-2 space-y-1 text-sm">
                 {permissionSummary.items.map((permission) => (
                   <li key={permission}>{permission}</li>
@@ -117,23 +140,32 @@ export function UserDetailsDrawer({
               <Mail className="h-4 w-4 text-muted-foreground" />
               Email notifications
             </div>
+            <p className="text-xs text-muted-foreground">
+              {notificationPreferencesUnavailableReason}
+            </p>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <p className="text-sm font-medium">Weekly summary</p>
-                <p className="text-xs text-muted-foreground">
-                  Digest of changes and alerts
-                </p>
+                <p className="text-xs text-muted-foreground">Digest of changes and alerts</p>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                disabled
+                aria-label="Weekly summary notifications unavailable"
+                title={notificationPreferencesUnavailableReason}
+                data-no-op-control="users-notification-weekly-summary"
+              />
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <p className="text-sm font-medium">Security alerts</p>
-                <p className="text-xs text-muted-foreground">
-                  Login + permission changes
-                </p>
+                <p className="text-xs text-muted-foreground">Login + permission changes</p>
               </div>
-              <Switch defaultChecked />
+              <Switch
+                disabled
+                aria-label="Security alert notifications unavailable"
+                title={notificationPreferencesUnavailableReason}
+                data-no-op-control="users-notification-security-alerts"
+              />
             </div>
           </div>
           <div className="space-y-3">
@@ -151,17 +183,40 @@ export function UserDetailsDrawer({
       </ScrollArea>
       <Separator className="my-4" />
       <div className="space-y-2">
-        <Button className="w-full" onClick={onEditUser} disabled={!canManageUsers}>
+        <Button className="w-full" onClick={onEditUser} disabled={!editEnabled}>
           Edit permissions
         </Button>
         <Button
           variant="outline"
           className="w-full"
           onClick={onResetPassword}
-          disabled={!canManageUsers}
+          disabled={!resetEnabled || Boolean(resetPasswordUnavailableReason)}
+          title={resetPasswordUnavailableReason}
+          data-no-op-control={resetPasswordUnavailableReason ? "users-reset-password" : undefined}
         >
           Reset password
         </Button>
+        {onToggleStatus ? (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={onToggleStatus}
+            disabled={!lifecycleEnabled}
+          >
+            {user.status === "inactive" ? "Activate user" : "Deactivate user"}
+          </Button>
+        ) : null}
+        {onDeleteUser ? (
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={onDeleteUser}
+            disabled={!lifecycleEnabled || isProtectedUser}
+            title={isProtectedUser ? "The last admin cannot be deleted." : undefined}
+          >
+            Delete user
+          </Button>
+        ) : null}
       </div>
     </div>
   );

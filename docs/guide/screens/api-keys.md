@@ -72,6 +72,8 @@ lifecycle contract for copy/rotate/revoke is confirmed in the shipped UI source.
     - `Copy key` only when the current UI still allows one-time copy,
     - `Rotate key` when a fresh secret is required,
     - `Revoke key` when the integration should no longer be trusted.
+14. Rotation and revocation both require confirmation. Cancel does not call the
+    mutation. A rotated secret is still shown only in the one-time secret dialog.
 
 Use this safe API key workflow when you want fewer access mistakes:
 1. Name the key clearly.
@@ -89,9 +91,10 @@ Use this safe API key workflow when you want fewer access mistakes:
 - One-time secret visibility is a deliberate security boundary, not a UI
   limitation.
 - Rotation should be treated as the normal recovery path when a secret might be
-  exposed or lost.
+  exposed or lost, and it requires confirmation because existing integrations
+  must switch to the new credential.
 - Revocation is stronger than “not using the key anymore”; it is an explicit
-  trust-ending action.
+  trust-ending action and requires confirmation.
 
 # Troubleshooting
 

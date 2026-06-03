@@ -68,6 +68,9 @@ vi.mock("@/components/ui/dialog", () => ({
   DialogHeader: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
     <div {...props}>{children}</div>
   ),
+  DialogFooter: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <div {...props}>{children}</div>
+  ),
   DialogTitle: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
     <h2 {...props}>{children}</h2>
   ),
@@ -111,6 +114,13 @@ vi.mock("@/components/ui/sheet", () => ({
   SheetTitle: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
     <h2 {...props}>{children}</h2>
   ),
+  SheetDescription: ({
+    children,
+    ...props
+  }: {
+    children: React.ReactNode;
+    [key: string]: unknown;
+  }) => <p {...props}>{children}</p>,
 }));
 
 vi.mock("@/components/ui/textarea", () => ({
@@ -488,6 +498,11 @@ test("IntegrationsPage trims drawer payload before saving integration updates", 
 
     await React.act(async () => {
       findButton(view.host, "Save Changes")?.click();
+      await Promise.resolve();
+    });
+
+    await React.act(async () => {
+      findButton(view.host, "Save secrets")?.click();
       await Promise.resolve();
     });
 

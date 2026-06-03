@@ -41,6 +41,7 @@ import {
   reopenWidgetSetup,
   resolveWidgetEditorState,
 } from "./blockUtils";
+import { AdminWidgetPreviewRuntimeBridge } from "./AdminWidgetPreviewRuntimeBridge";
 
 export type BlockSettingsProps = {
   block?: Block | null;
@@ -186,11 +187,13 @@ function WidgetEditorLivePreview({
             </div>
           }
         >
-          <WidgetRenderer
-            block={previewBlock}
-            pageDefaults={pageDefaults}
-            renderContext={{ mode: "editor-preview", previewState: previewState ?? null }}
-          />
+          <AdminWidgetPreviewRuntimeBridge>
+            <WidgetRenderer
+              block={previewBlock}
+              pageDefaults={pageDefaults}
+              renderContext={{ mode: "editor-preview", previewState: previewState ?? null }}
+            />
+          </AdminWidgetPreviewRuntimeBridge>
         </WidgetPreviewErrorBoundary>
       </div>
     </section>
@@ -260,6 +263,17 @@ export function BlockSettings({
           ),
         }
       : nextBlock;
+
+  const resolveSectionRegionControlPath = (slotId: string, suffix?: string) => {
+    const instanceId = parseRepeatableSlotId(slotId)?.instanceId;
+    return instanceId ? ["regions", instanceId, suffix].filter(Boolean).join(".") : "regions";
+  };
+  const resolveSlotControlPath = (definitionId: string, slotId?: string, suffix?: string) => {
+    if (widget.type === "section" && definitionId === sectionRegionSlot.id) {
+      return slotId ? resolveSectionRegionControlPath(slotId, suffix) : "regions";
+    }
+    return ["slots", definitionId, suffix].filter(Boolean).join(".");
+  };
 
   const handleAddRepeatableSlotInstance = (definitionId: string) => {
     const definition = slotDefinitions.find((slot) => slot.id === definitionId);
@@ -331,8 +345,13 @@ export function BlockSettings({
               ? Math.max(0, Math.floor(slot.maxItems ?? 0))
               : undefined;
             return {
-              id: `add-${slot.id}`,
+              id:
+                widget.type === "section" && slot.id === sectionRegionSlot.id
+                  ? "section.regions.add-region"
+                  : `add-${slot.id}`,
               label: `Add ${slot.label}`,
+              path: resolveSlotControlPath(slot.id),
+              ownership: "action" as const,
               disabled: typeof maximum === "number" && count >= maximum,
               onClick: () => handleAddRepeatableSlotInstance(slot.id),
             };
@@ -364,9 +383,12 @@ export function BlockSettings({
               repeatableCount > repeatableMinimum;
             const isSectionRegion =
               widget.type === "section" && slot.definitionId === sectionRegionSlot.id;
+            const slotControlPath = resolveSlotControlPath(slot.definitionId, slot.slotId);
             return {
               id: `${widget.type}.slot.${slot.slotId}`,
               label: `${slot.label} slot`,
+              path: slotControlPath,
+              ownership: "action" as const,
               labelValue: isSectionRegion
                 ? resolveSectionRegionLabelValue(
                     block.data as SectionData | undefined,
@@ -375,6 +397,9 @@ export function BlockSettings({
                   )
                 : undefined,
               labelPlaceholder: isSectionRegion ? rawSlot.label : undefined,
+              labelPath: isSectionRegion
+                ? resolveSlotControlPath(slot.definitionId, slot.slotId, "label")
+                : undefined,
               onLabelChange: isSectionRegion
                 ? (nextLabel: string) =>
                     patchBlock((current) => ({
@@ -395,11 +420,11 @@ export function BlockSettings({
               onRemove: canRemoveRepeatable
                 ? () => handleRemoveRepeatableSlotInstance(slot.slotId)
                 : undefined,
-              canMoveUp: slot.kind === "repeatable" && repeatableIndex > 0,
+              canMoveUp: slot.kind === "repeatable" ? repeatableIndex > 0 : undefined,
               canMoveDown:
-                slot.kind === "repeatable" &&
-                repeatableIndex >= 0 &&
-                repeatableIndex < repeatableSlotIds.length - 1,
+                slot.kind === "repeatable"
+                  ? repeatableIndex >= 0 && repeatableIndex < repeatableSlotIds.length - 1
+                  : undefined,
               onMoveUp:
                 slot.kind === "repeatable" && repeatableIndex > 0
                   ? () =>

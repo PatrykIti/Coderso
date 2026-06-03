@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
 type IntegrationRequestDialogProps = {
   open: boolean;
@@ -32,6 +33,9 @@ export function IntegrationRequestDialog({
   const [website, setWebsite] = useState("");
   const [notes, setNotes] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  useRegisterSettingsDirty(
+    open && (name.trim().length > 0 || website.trim().length > 0 || notes.trim().length > 0)
+  );
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
@@ -99,9 +103,7 @@ export function IntegrationRequestDialog({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase text-muted-foreground">
-              Notes
-            </label>
+            <label className="text-xs font-semibold uppercase text-muted-foreground">Notes</label>
             <Textarea
               rows={4}
               placeholder="Describe what you need (events, data sync, etc.)"

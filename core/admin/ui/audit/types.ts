@@ -4,6 +4,8 @@ export type AuditStatus = "success" | "warning" | "error";
 
 export type AuditCategory = "authentication" | "content" | "system";
 
+export type AuditDateRange = "last-7-days" | "last-30-days" | "this-month";
+
 export type AuditActor = {
   name: string;
   role: string;
@@ -18,6 +20,7 @@ export type AuditLog = {
   resource: string;
   resourceLabel: string;
   ipAddress: string;
+  createdAt: string;
   timestamp: string;
   timestampLabel: string;
   status: AuditStatus;

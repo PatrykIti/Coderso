@@ -688,6 +688,18 @@ Zakres CMS, model danych, auth i security opisane sa w:
 
 - Przekierowania trzymane w tabeli `redirects` z kodami 301/302/307/308.
 - Admin UI zarzadza redirectami przez `/redirects`.
+- Admin CRUD jest internal-only (`settings:read` / `settings:write`), ale
+  wlaczone rekordy sa publicznym runtime contractem: `handlePublicRequest`
+  sprawdza redirect po public API/preview/asset exclusions i przed
+  page/content resolution.
+- `fromPath` i `toPath` sa normalizowane jako sciezki wewnetrzne. Zewnetrzne
+  albo protocol-relative destinations sa odrzucane, aby adminowy redirect nie
+  stal sie open-redirect primitive.
+- Runtime zwija bezpieczne lancuchy do finalnej sciezki z pierwszym statusem,
+  a self-loop, cykle i przekroczenie limitu hopow fail-closed przez HTTP `508`.
+- Redirects admin list korzysta z cache `redirects:list`; create/update/delete
+  patchuja cache i emituja cache-bus update, bo wlaczone rekordy natychmiast
+  zmieniaja publiczna warstwe routingu i inne karty admina musza odswiezyc stan.
 
 ## Forms (v1)
 
@@ -925,10 +937,26 @@ Zakres CMS, model danych, auth i security opisane sa w:
 
 ## Backups (v1)
 
-- Backupy w v1 to **metadata-only** zapisane w tabeli `backups`.
+- Backupy w v1 sa rekordami w tabeli `backups` z CMS-managed lokalnym
+  artefaktem JSON dla manualnych requestow.
 - Harmonogram trzymany jest w `backup_schedules` i konfigurowany z Admin UI.
 - Storage driver dla backupu jest brany z ustawien storage (local/s3/azure).
-- Faktyczne tworzenie/restore plikow backupu realizuje przyszly worker/plugin.
+- Manual create zapisuje running row, request-time include option keys
+  (`database`, `media`, `settings`) do service/audit contractu, tworzy artefakt
+  w `BACKUP_DIR` albo `storage/backups`, a potem oznacza row jako `complete`.
+  Core nie zapisuje sekretnych wartosci ani zawartosci artefaktu w
+  localStorage/debug payloadach.
+- Local download zwraca JSON content tylko w odpowiedzi `/backups/:id/download`;
+  listy i browser cache redaktuja lokalny `artifactPath` do wartosci `local`.
+  Publiczne `http(s)` artifact URLs pozostaja dozwolone dla przyszlych
+  integracji storage/plugin, ale raw local filesystem paths nie sa ujawniane.
+- Restore pozostaje unsupported (`backup_restore_unsupported`) do czasu
+  osobnego restore contractu. Delete usuwa wybrany metadata row i nalezacy do
+  niego lokalny artefakt, jesli sciezka jest w dozwolonym katalogu backupow.
+- Backups admin list i schedule korzystaja z cache
+  `backups:list:<page>:<limit>:<queryKey>` oraz `backups:schedule`; mutacje
+  invaliduja cache przez cache bus, a cache nigdy nie przechowuje zawartosci
+  artefaktu.
 
 ## Kluczowe decyzje architektoniczne
 
@@ -1249,6 +1277,30 @@ Zachowanie:
 
 Kontrakt pluginu (client):
 - eksport `registerAdmin(ctx)` oraz `registerBlocks(ctx)` (v1).
+
+---
+
+## Admin UI shared actions
+
+- Destructive, high-risk, or lockout-prone admin actions use
+  `ConfirmActionDialog`; native `window.confirm` and one-off active confirms are
+  not accepted for new admin surfaces.
+- Confirm dialogs must provide title, description, redacted target labels where
+  useful, and typed confirmation for delete/full-access/lockout-prone actions.
+- Shared export surfaces use `ExportDialog`. Enabled submit requires a real
+  `onExport` handler; unsupported exports must pass explicit unavailable copy.
+- Shared export helpers handle JSON file/job metadata under canonical
+  `/admin/api/*` paths. Direct blob downloads require explicit router
+  `Response` passthrough before adoption.
+- Active-looking Admin UI controls must have a real handler that produces
+  observable success/error/route-change feedback. Unsupported or deferred
+  controls must render as disabled/hidden with user-facing unavailable copy and
+  a targeted regression expectation; placeholder buttons, fake totals, and
+  inert pagination controls are not valid shipped states.
+- Admin log/query surfaces use shared query conventions: strict raw query
+  schemas reject unknown params, limits are normalized through one helper, date
+  ranges validate before service work, count copy is derived from response
+  metadata only, and filter labels must match the source field they query.
 
 ---
 

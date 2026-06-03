@@ -548,6 +548,19 @@ function summarizeProductTableSource(value: ProductTableData) {
     sortDir: "desc",
   });
   const controls = normalizeProductTableControls(normalized.controls);
+  const runtime = normalized.resolved?.runtime;
+  const availableCollectionCount = runtime?.availableCollections?.length ?? 0;
+  const availableStatusCount = runtime?.availableStatuses?.length ?? 0;
+  const collectionControlSummary = controls.showCollectionFilter
+    ? availableCollectionCount > 1
+      ? "Collection filters"
+      : "Collection filters saved, inactive until at least two collections resolve"
+    : null;
+  const statusControlSummary = controls.showStatusFilter
+    ? availableStatusCount > 1
+      ? "Status filter"
+      : "Status filter saved, inactive until at least two statuses resolve"
+    : null;
 
   return {
     productLimit: `${source.limit} products per page`,
@@ -565,8 +578,8 @@ function summarizeProductTableSource(value: ProductTableData) {
     }`,
     visitorControls: [
       controls.showSearchInput ? "Search" : null,
-      controls.showCollectionFilter ? "Collection filters" : null,
-      controls.showStatusFilter ? "Status filter" : null,
+      collectionControlSummary,
+      statusControlSummary,
       controls.sorting !== "none" ? "Sorting headers" : null,
       controls.pagination !== "none" ? "Pagination" : null,
     ]

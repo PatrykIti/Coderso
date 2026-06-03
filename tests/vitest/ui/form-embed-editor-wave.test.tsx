@@ -893,6 +893,10 @@ test("FormEmbed modes split diagnostics and multi-step metadata using fetched fo
     expect(advanced.container.textContent).toContain("Loaded");
     expect(advanced.container.textContent).toContain("Bot protection");
     expect(advanced.container.textContent).toContain("Enabled");
+    expect(advanced.container.textContent).toContain("Success message source");
+    expect(advanced.container.textContent).toContain("Selected form response");
+    expect(advanced.container.textContent).toContain("Redirect policy");
+    expect(advanced.container.textContent).toContain("No redirect configured");
     expect(advanced.container.textContent).not.toContain("Normalized payload snapshot");
     expect(advanced.container.textContent).not.toContain("form-public");
     expect(advanced.container.textContent).not.toContain("Detail cache status");

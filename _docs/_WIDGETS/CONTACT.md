@@ -156,13 +156,16 @@ Advanced zostaje techniczny i Contact-local:
 - Dane kontaktowe renderuja sie semantycznie jako `<address>` + `<dl>/<dt>/<dd>`.
 - `phone` i `email` dostaja bezpieczne `tel:` / `mailto:` tylko dla poprawnych
   wartosci. Nieprawidlowe dane zostaja zwyklym tekstem.
-- Social links przechodza przez Contact-local safe href normalization i
-  wpuszczaja tylko absolutne linki webowe (`http/https`).
+- Social links przechodza przez Contact-local safe href normalization. Public
+  runtime renderuje tylko znane platformy z bezpiecznym `https` hostem
+  odpowiadajacym platformie. Legacy `custom`/arbitrary web href pozostaje
+  stanem supportowym do zastapienia lub wyczyszczenia w edytorze i nie jest
+  publikowany jako aktywny link.
 - Visual authoring dla znanych platform social zapisuje `social.href` z
   nietechnicznego profile name/handle; custom `href` pozostaje legacy/support.
 - Mapa renderuje sie tylko gdy:
   - `map.enabled = true`
-  - `map.embedUrl` jest poprawnym `http/https` URL
+  - `map.embedUrl` jest poprawnym `https` Google Maps embed URL
 - Visual authoring zapisuje Google Maps embed URL z publicznej lokalizacji lub
   adresu, bez proszenia uzytkownika o kod osadzenia.
 - Gdy mapa jest wlaczona, ale URL nie przechodzi walidacji runtime, widget
@@ -187,6 +190,7 @@ Contact moze aktywowac realny submit tylko przez istniejacy Forms runtime:
 - `form.submission.formId` wskazuje istniejący Forms record
 - `publicSite.tsx` hydratuje render-only `resolved`
 - `resolved.submissionAccess === "public"`
+- `resolved.submissionNonce` jest obecny dla public runtime
 - kazde widoczne Contact field mapuje sie 1:1 do zgodnego typem Forms field:
   - `name -> text`
   - `email -> email`
@@ -194,22 +198,32 @@ Contact moze aktywowac realny submit tylko przez istniejacy Forms runtime:
   - `message -> textarea`
 - liczba widocznych Contact fields musi odpowiadac liczbie runtime fields
 - Contact nie aktywuje runtime submit dla Forms field logic, extra step groups,
-  internal-only forms, missing forms, unpublished public forms, ani dla form
-  z dodatkowymi lub niekompatybilnymi polami
+  internal-only forms, missing forms, unpublished public forms, missing nonce,
+  ani dla form z dodatkowymi lub niekompatybilnymi polami
 
 Gdy ktorykolwiek z warunkow nie jest spelniony, Contact wraca do static-safe
 renderu zamiast udawac aktywna wysylke.
+
+Public DOM rozdziela stan skonfigurowany od efektywnego:
+
+- `data-contact-form-configured-mode` pokazuje zapisany tryb edytora
+- `data-contact-form-mode` pokazuje efektywny tryb renderu
+- `data-contact-runtime-boundary` wyjasnia fallback (`internal`,
+  `nonce-missing`, `field-mismatch`, `runtime-data-missing`, itd.)
 
 ### Shared runtime boundary
 
 - Contact reuzywa `POST /forms/:id/submissions`, `__nl_form_nonce`,
   `getFormRuntimeClientScript()`, `data-form-embed-success`, i
   `data-form-embed-error`.
+- Contact emituje `data-form-submit-label`, `data-form-captcha-site-key`,
+  `data-form-captcha-action`, i hidden `captchaToken` tylko dla aktywnego
+  public Forms runtime z server-side projection.
 - Contact nie wprowadza wlasnego public endpointu ani widget-owned nonce/CAPTCHA
   konfiguracji.
-- Shared busy/live-region/CAPTCHA projection jest juz domknieta w shared
-  Forms runtime; Contact emituje tylko kompatybilne markery i nie definiuje
-  własnego runtime/public-write kontraktu.
+- Shared busy/live-region/CAPTCHA projection i idempotentny multi-instance
+  binder sa domkniete w shared Forms runtime; Contact emituje tylko
+  kompatybilne markery i nie definiuje wlasnego runtime/public-write kontraktu.
 
 ## Accessibility and Diagnostics
 
@@ -228,6 +242,11 @@ renderu zamiast udawac aktywna wysylke.
   `style.buttonBackgroundColor`, `style.buttonTextColor`, i
   `style.buttonBorderColor` sa clearable z disabled-state gdy Contact jest w
   stanie theme-default, zgodnie z hero-like daily authoring.
+- Public inline colors przechodza przez bounded CSS color normalizer
+  (`hex`, bounded `rgb/hsl`, `transparent/currentColor/inherit`, albo
+  `var(--color-*)`). Unsafe fragments typu `url(...)`, `data:`,
+  `javascript:`, `expression(...)`, braces i semicolons sa ignorowane przed
+  renderem.
 
 ## Normalization Rules
 

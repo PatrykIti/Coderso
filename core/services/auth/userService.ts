@@ -44,12 +44,26 @@ export async function updateLastLogin(userId: string) {
   return row ?? null;
 }
 
-export async function updatePassword(userId: string, passwordHash: string) {
-  const [row] = await db
-    .update(users)
-    .set({ passwordHash, updatedAt: new Date() })
-    .where(eq(users.id, userId))
-    .returning();
+export async function updatePassword(
+  userId: string,
+  options: { passwordHash: string; activatePending?: boolean }
+) {
+  const [existing] = await db
+    .select({ status: users.status })
+    .from(users)
+    .where(eq(users.id, userId));
+  if (!existing) return null;
+
+  const update: Partial<typeof users.$inferInsert> = {
+    passwordHash: options.passwordHash,
+    updatedAt: new Date(),
+  };
+
+  if (options.activatePending && existing.status === "pending") {
+    update.status = "active";
+  }
+
+  const [row] = await db.update(users).set(update).where(eq(users.id, userId)).returning();
 
   return row ?? null;
 }

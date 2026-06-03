@@ -89,6 +89,38 @@ const summarizeCollectionFilters = (collectionIds: string[] | undefined) => {
   return `${count} ${count === 1 ? "collection" : "collections"} selected`;
 };
 
+const selectedProductsInactiveSuffix = "inactive while selected products are used";
+
+const summarizeSearchFilter = (search: string | undefined, usesSelectedProducts: boolean) => {
+  if (!normalizeText(search)) return "None";
+  if (usesSelectedProducts) return `Configured, ${selectedProductsInactiveSuffix}`;
+  return "Configured";
+};
+
+const summarizeSelectedProductCollectionFilters = (
+  collectionIds: string[] | undefined,
+  usesSelectedProducts: boolean
+) => {
+  const count = collectionIds?.length ?? 0;
+  if (count === 0) return "No collection filter";
+  if (usesSelectedProducts) {
+    return `${count} saved ${count === 1 ? "collection" : "collections"}, ${selectedProductsInactiveSuffix}`;
+  }
+  return summarizeCollectionFilters(collectionIds);
+};
+
+const summarizeSelectedProductStatusFilters = (
+  status: string[] | undefined,
+  usesSelectedProducts: boolean
+) => {
+  const count = status?.length ?? 0;
+  if (count === 0) return "Public-ready default";
+  if (usesSelectedProducts) {
+    return `${count} saved ${count === 1 ? "status filter" : "status filters"}, ${selectedProductsInactiveSuffix}`;
+  }
+  return summarizeStatusFilters(status);
+};
+
 const summarizeCommerceSort = (
   field: CommerceWidgetSortField | undefined,
   direction: CommerceWidgetSortDirection | undefined
@@ -414,6 +446,7 @@ function QuerySummarySection({ value }: { value: ProductCompareData }) {
   const normalized = normalizeProductCompareData(value);
   const query = buildProductCompareQueryInput(normalized);
   const selectedCount = normalized.source?.productIds?.length ?? 0;
+  const usesSelectedProducts = selectedCount > 0;
 
   return (
     <CommerceEditorSection
@@ -443,26 +476,32 @@ function QuerySummarySection({ value }: { value: ProductCompareData }) {
         id="product-compare-advanced-search"
         label="Search"
         path="source.search"
-        value={normalizeText(normalized.source?.search) ? "Configured" : "None"}
+        value={summarizeSearchFilter(normalized.source?.search, usesSelectedProducts)}
       />
       <ReadonlyWidgetSummaryRow
         id="product-compare-advanced-collections"
         label="Collections"
         path="source.collectionIds"
-        value={summarizeCollectionFilters(normalized.source?.collectionIds)}
+        value={summarizeSelectedProductCollectionFilters(
+          normalized.source?.collectionIds,
+          usesSelectedProducts
+        )}
       />
       <ReadonlyWidgetSummaryRow
         id="product-compare-advanced-status"
         label="Status filters"
         path="source.status"
-        value={summarizeStatusFilters(normalized.source?.status)}
+        value={summarizeSelectedProductStatusFilters(
+          normalized.source?.status,
+          usesSelectedProducts
+        )}
       />
       <ReadonlyWidgetSummaryRow
         id="product-compare-advanced-sort"
         label="Sort"
         path="source.sortField"
         value={
-          selectedCount > 0
+          usesSelectedProducts
             ? "Ignored while selected products are used"
             : summarizeCommerceSort(normalized.source?.sortField, normalized.source?.sortDir)
         }

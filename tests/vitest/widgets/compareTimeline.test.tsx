@@ -30,6 +30,18 @@ const extractFirstSegmentLabelClass = (html: string) => {
   return match[1];
 };
 
+const extractFirstAxisStepLabelClass = (html: string) => {
+  const match = html.match(/data-compare-axis="true"[\s\S]*?<p class="([^"]*)" style=/);
+  if (!match?.[1]) throw new Error("Missing axis step label class");
+  return match[1];
+};
+
+const extractFirstTrackStepLabelClass = (html: string) => {
+  const match = html.match(/data-compare-track="a"[\s\S]*?<p class="([^"]*)">Plan<\/p>/);
+  if (!match?.[1]) throw new Error("Missing track step label class");
+  return match[1];
+};
+
 test("compare timeline renders defaults", () => {
   const html = renderToString(
     <CompareTimelineBlock data={compareTimelineDefaults} variant="dual-track" />
@@ -304,6 +316,51 @@ test("compare timeline renderer applies typography size tokens", () => {
   expect(html).toContain("text-base font-bold");
   expect(html).toContain("text-base font-medium");
   expect(html).toContain("font-semibold");
+});
+
+test("compare timeline step label size applies to axis and track row labels", () => {
+  const html = renderToString(
+    <CompareTimelineBlock
+      variant="dual-track-highlight"
+      data={{
+        ...compareTimelineDefaults,
+        style: {
+          ...compareTimelineDefaults.style,
+          stepLabelSize: "base",
+          stepLabelFontWeight: "medium",
+        },
+      }}
+    />
+  );
+
+  expect(extractFirstAxisStepLabelClass(html)).toContain("text-base");
+  expect(extractFirstAxisStepLabelClass(html)).toContain("font-medium");
+  expect(extractFirstTrackStepLabelClass(html)).toContain("text-base");
+  expect(extractFirstTrackStepLabelClass(html)).toContain("font-medium");
+});
+
+test("compare timeline none label sizes keep labels visible without explicit size classes", () => {
+  const html = renderToString(
+    <CompareTimelineBlock
+      variant="dual-track-highlight"
+      data={{
+        ...compareTimelineDefaults,
+        style: {
+          ...compareTimelineDefaults.style,
+          trackLabelSize: "none",
+          stepLabelSize: "none",
+          segmentLabelSize: "none",
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain(">Traditional</p>");
+  expect(html).toContain(">Plan</p>");
+  expect(html).toContain("Accelerated");
+  expect(extractFirstAxisStepLabelClass(html)).not.toMatch(/\btext-(?:xs|sm|base|lg)\b/);
+  expect(extractFirstTrackStepLabelClass(html)).not.toMatch(/\btext-(?:xs|sm|base|lg)\b/);
+  expect(extractFirstSegmentLabelClass(html)).not.toMatch(/\btext-(?:xs|sm|base)\b/);
 });
 
 test("compare timeline segment label size owns the rendered badge text size", () => {

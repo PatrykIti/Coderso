@@ -9,10 +9,13 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
 const webhookEvents = [
   {
@@ -47,6 +50,21 @@ const webhookEvents = [
   },
 ];
 
+const getWebhookDirtySignature = (input: {
+  name: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  secret: string;
+}) =>
+  JSON.stringify({
+    name: input.name,
+    url: input.url,
+    events: input.events,
+    enabled: input.enabled,
+    secret: input.secret.trim() ? "draft-secret" : "",
+  });
+
 type WebhookDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -66,8 +84,8 @@ type WebhookDrawerProps = {
     events: string[];
     enabled: boolean;
     secret?: string | null;
-  }) => void;
-  onTest?: () => void;
+  }) => void | Promise<void>;
+  onTest?: () => void | Promise<void>;
 };
 
 export function WebhookDrawer({
@@ -90,6 +108,33 @@ export function WebhookDrawer({
   const [secret, setSecret] = useState("");
   const [enabled, setEnabled] = useState(webhook?.enabled ?? true);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [pendingSave, setPendingSave] = useState<{
+    name: string;
+    url: string;
+    events: string[];
+    enabled: boolean;
+    secret?: string | null;
+  } | null>(null);
+  const [testReviewOpen, setTestReviewOpen] = useState(false);
+  const initialSignature = useMemo(
+    () =>
+      getWebhookDirtySignature({
+        name: webhook?.name ?? "",
+        url: webhook?.url ?? "",
+        events: initialEvents,
+        enabled: webhook?.enabled ?? true,
+        secret: "",
+      }),
+    [initialEvents, webhook]
+  );
+  const currentSignature = getWebhookDirtySignature({
+    name,
+    url,
+    events,
+    enabled,
+    secret,
+  });
+  useRegisterSettingsDirty(open && currentSignature !== initialSignature);
 
   const handleToggleEvent = (id: string, checked: boolean) => {
     setEvents((prev) => {
@@ -110,6 +155,16 @@ export function WebhookDrawer({
     setSecret(`whsec_${base64}`);
   };
 
+  const executeSave = async (payload: {
+    name: string;
+    url: string;
+    events: string[];
+    enabled: boolean;
+    secret?: string | null;
+  }) => {
+    await onSave(payload);
+  };
+
   const handleSave = () => {
     const trimmedName = name.trim();
     const trimmedUrl = url.trim();
@@ -126,13 +181,18 @@ export function WebhookDrawer({
       return;
     }
     setLocalError(null);
-    onSave({
+    const payload = {
       name: trimmedName,
       url: trimmedUrl,
       events,
       enabled,
       secret: secret.trim() ? secret.trim() : undefined,
-    });
+    };
+    if (mode === "edit") {
+      setPendingSave(payload);
+      return;
+    }
+    void executeSave(payload);
   };
 
   const errorMessage = error ?? localError;
@@ -147,7 +207,14 @@ export function WebhookDrawer({
         showCloseButton={false}
       >
         <div className="flex items-center justify-between border-b px-6 py-4">
-          <SheetTitle>{mode === "create" ? "Create New Webhook" : "Edit Webhook"}</SheetTitle>
+          <div className="space-y-1">
+            <SheetTitle>{mode === "create" ? "Create New Webhook" : "Edit Webhook"}</SheetTitle>
+            <SheetDescription className="text-xs text-muted-foreground">
+              {mode === "create"
+                ? "Configure the endpoint, signing secret, and event triggers for this webhook."
+                : "Update the endpoint, signing secret, and event triggers for this webhook."}
+            </SheetDescription>
+          </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close webhook drawer">
               <X className="h-4 w-4" />
@@ -197,17 +264,11 @@ export function WebhookDrawer({
                     <Checkbox
                       className="mt-1"
                       checked={events.includes(event.id)}
-                      onCheckedChange={(value) =>
-                        handleToggleEvent(event.id, value === true)
-                      }
+                      onCheckedChange={(value) => handleToggleEvent(event.id, value === true)}
                     />
                     <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {event.label}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {event.description}
-                      </p>
+                      <p className="text-sm font-semibold text-foreground">{event.label}</p>
+                      <p className="text-xs text-muted-foreground">{event.description}</p>
                     </div>
                   </label>
                 ))}
@@ -250,7 +311,7 @@ export function WebhookDrawer({
             variant="outline"
             className="w-full gap-2"
             type="button"
-            onClick={onTest}
+            onClick={() => setTestReviewOpen(true)}
             disabled={!canTest || isSaving}
           >
             <Activity className="h-4 w-4" />
@@ -266,6 +327,42 @@ export function WebhookDrawer({
           </div>
         </div>
       </SheetContent>
+      <ConfirmActionDialog
+        open={Boolean(pendingSave)}
+        onOpenChange={(open) => {
+          if (!open) setPendingSave(null);
+        }}
+        title="Review webhook changes"
+        description="These settings control delivery to an external endpoint. Confirm the destination, enabled state, events, and signing secret before saving."
+        targetLabel={pendingSave?.url}
+        confirmLabel="Save webhook changes"
+        confirmingLabel="Saving..."
+        tone="warning"
+        closeOnSuccess
+        onConfirm={async () => {
+          if (pendingSave) {
+            await executeSave(pendingSave);
+          }
+        }}
+      >
+        Updating a webhook can immediately affect future CMS event deliveries.
+      </ConfirmActionDialog>
+      <ConfirmActionDialog
+        open={testReviewOpen}
+        onOpenChange={setTestReviewOpen}
+        title="Send webhook test?"
+        description="This sends a test delivery to the configured external endpoint."
+        targetLabel={url.trim() || webhook?.url}
+        confirmLabel="Send test"
+        confirmingLabel="Sending..."
+        tone="warning"
+        closeOnSuccess
+        onConfirm={async () => {
+          await onTest?.();
+        }}
+      >
+        Confirm that the destination can safely receive a test event.
+      </ConfirmActionDialog>
     </Sheet>
   );
 }

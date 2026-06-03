@@ -57,11 +57,22 @@ server-injected nonce values and show presence only.
 - Runtime clears stale API errors on the first user edit after a failed submit.
 - Successful submission clears the selected booking slot from shared runtime
   state before re-enabling the form.
+- Repeated Booking Calendar / Appointment Form inline runtime scripts call a
+  shared idempotent rebinder, so either widget can appear first in public DOM
+  order and both still bind.
 - Selected-slot summary can render service/resource context and uses the widget
   locale override when configured.
+- Booking Calendar selections include the selected service `submissionAccess`.
+  Appointment Form runs CAPTCHA and sends nonce material only for `public`
+  selections; `internal` selections stay auth/API-key scoped at the public API
+  boundary and are not blocked by a public CAPTCHA client.
 - Success redirect and consent links are authored through page pickers in
   Wizard/Visual. Legacy custom destinations remain compatible as replace-or-
   clear state.
+- Widget `successMessage` is the first success-copy source. The public API
+  runtime success copy is a fallback only when the widget has no effective copy.
+- Full-name, split-name, email, phone, notes, and text-like custom fields expose
+  `maxLength` values aligned with the public reservation API schema.
 - `phonePattern: ""` and `phonePatternMessage: ""` explicitly disable extra
   browser phone validation. Runtime omits the phone `pattern`, `title`, and
   validation help text instead of serializing empty attributes.
@@ -77,6 +88,9 @@ server-injected nonce values and show presence only.
 - `data-booking-submit`
 - `data-booking-notes-counter`
 - `data-booking-consent-input`
+- `data-appointment-custom-field`
+- `data-appointment-custom-field-label`
+- `data-appointment-custom-field-type`
 
 ## Clear Controls
 
@@ -140,6 +154,9 @@ default international phone validation.
   `WidgetEditorContext.bookingFlows`.
 - Bounded custom-field answers now serialize into `metadata.customFields` using
   the existing public booking metadata contract.
+- Shared Appointment Form field limits live in
+  `core/widgets/core/appointmentFormContract.ts` and are consumed by the widget
+  schema, renderer/runtime payload shaping, and public booking API validation.
 - Shared public runtime nonce-cache freshness is handled at the site runtime
   cache layer.
 - `UX-04` clearable style inheritance-state indicators route through

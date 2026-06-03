@@ -10,6 +10,9 @@ import {
   type MenuItemRecord,
 } from "./treeBuilder";
 
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type DbClient = typeof db | DbTransaction;
+
 export type CreateMenuInput = {
   name: string;
   location?: string | null;
@@ -45,10 +48,7 @@ function normalizeString(value: unknown) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export function normalizeMenuStatus(
-  value: unknown,
-  fallback: MenuStatus = "draft"
-): MenuStatus {
+export function normalizeMenuStatus(value: unknown, fallback: MenuStatus = "draft"): MenuStatus {
   return value === "published" || value === "draft" ? value : fallback;
 }
 
@@ -76,9 +76,7 @@ function normalizeMenuItems(items: MenuItemInput[]): MenuItemRecord[] {
 
     const id = normalizeString(item.id) ?? randomUUID();
     const parentId = normalizeString(item.parentId ?? null);
-    const orderIndex = Number.isFinite(item.orderIndex)
-      ? Number(item.orderIndex)
-      : index;
+    const orderIndex = Number.isFinite(item.orderIndex) ? Number(item.orderIndex) : index;
 
     return {
       id,
@@ -116,11 +114,10 @@ export async function listMenus() {
   return db.select().from(menus).orderBy(asc(menus.createdAt));
 }
 
-export async function getMenu(menuId: string) {
-  const [row] = await db.select().from(menus).where(eq(menus.id, menuId));
+export async function getMenu(menuId: string, client: DbClient = db) {
+  const [row] = await client.select().from(menus).where(eq(menus.id, menuId));
   return row ?? null;
 }
-
 
 export async function createMenu(input: CreateMenuInput) {
   const status = normalizeMenuStatus(input.status, "draft");
@@ -151,25 +148,16 @@ export async function updateMenu(menuId: string, input: UpdateMenuInput) {
     patch.publishedAt = status === "published" ? new Date() : null;
   }
 
-  const [row] = await db
-    .update(menus)
-    .set(patch)
-    .where(eq(menus.id, menuId))
-    .returning();
+  const [row] = await db.update(menus).set(patch).where(eq(menus.id, menuId)).returning();
   return row ?? null;
 }
 
-export const publishMenu = (menuId: string) =>
-  updateMenu(menuId, { status: "published" });
+export const publishMenu = (menuId: string) => updateMenu(menuId, { status: "published" });
 
-export const moveMenuToDraft = (menuId: string) =>
-  updateMenu(menuId, { status: "draft" });
+export const moveMenuToDraft = (menuId: string) => updateMenu(menuId, { status: "draft" });
 
 export async function deleteMenu(menuId: string) {
-  const [row] = await db
-    .delete(menus)
-    .where(eq(menus.id, menuId))
-    .returning();
+  const [row] = await db.delete(menus).where(eq(menus.id, menuId)).returning();
   return row ?? null;
 }
 
@@ -212,21 +200,21 @@ export async function getMenuWithItemsByLocation(location: string): Promise<Menu
   return { menu, items };
 }
 
-export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
-  const menu = await getMenu(menuId);
+async function replaceMenuItemsWithClient(
+  client: DbClient,
+  menuId: string,
+  items: MenuItemInput[]
+) {
+  const menu = await getMenu(menuId, client);
   if (!menu) throw new Error("menu_not_found");
 
   const normalized = normalizeMenuItems(items);
   const pageIds = Array.from(
-    new Set(
-      normalized
-        .map((item) => item.pageId)
-        .filter((id): id is string => Boolean(id))
-    )
+    new Set(normalized.map((item) => item.pageId).filter((id): id is string => Boolean(id)))
   );
 
   if (pageIds.length > 0) {
-    const rows = await db
+    const rows = await client
       .select({ id: pages.id })
       .from(pages)
       .where(inArray(pages.id, pageIds));
@@ -237,20 +225,19 @@ export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
     }
   }
 
-  const inserted = await db.transaction(async (tx) => {
-    await tx.delete(menuItems).where(eq(menuItems.menuId, menuId));
-    if (normalized.length === 0) return [] as MenuItemRecord[];
-
-    return tx
-      .insert(menuItems)
-      .values(
-        normalized.map((item) => ({
-          ...item,
-          menuId,
-        }))
-      )
-      .returning();
-  });
+  await client.delete(menuItems).where(eq(menuItems.menuId, menuId));
+  const inserted =
+    normalized.length === 0
+      ? ([] as MenuItemRecord[])
+      : await client
+          .insert(menuItems)
+          .values(
+            normalized.map((item) => ({
+              ...item,
+              menuId,
+            }))
+          )
+          .returning();
 
   const records: MenuItemRecord[] = inserted.map((row) => ({
     id: row.id,
@@ -263,6 +250,18 @@ export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
   }));
 
   return buildMenuTree(records);
+}
+
+export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
+  return db.transaction((tx) => replaceMenuItemsWithClient(tx, menuId, items));
+}
+
+export async function replaceMenuItemsTx(
+  tx: DbTransaction,
+  menuId: string,
+  items: MenuItemInput[]
+) {
+  return replaceMenuItemsWithClient(tx, menuId, items);
 }
 
 const flattenMenuNodes = (nodes: MenuItemNode[]): MenuItemRecord[] =>

@@ -58,7 +58,9 @@ enforced by entries on this route.
 9. Use `Add to Allowlist` only when the range is truly trusted.
 10. Use the remove action in the table when a range should no longer keep admin
     access.
-11. Remember that changes can take up to 2 minutes to propagate globally.
+11. Review the remove confirmation before applying it. Cancel does not remove
+    the range.
+12. Remember that changes can take up to 2 minutes to propagate globally.
 
 Use this safe allowlist workflow when you want fewer lockout mistakes:
 1. Confirm the trusted network exactly.
@@ -73,6 +75,8 @@ Use this safe allowlist workflow when you want fewer lockout mistakes:
   happens to be convenient.
 - The route is security-sensitive even when the table is empty because adding a
   wrong range can affect who can reach the admin panel at all.
+- Removing a range can lock operators out of the admin panel, so removal
+  requires confirmation and shows lockout warning copy.
 - Labels and notes are operationally useful because future admins may need to
   understand why a range was trusted in the first place.
 - The propagation delay note is important: immediate lock/unlock assumptions can
@@ -89,7 +93,8 @@ Use this safe allowlist workflow when you want fewer lockout mistakes:
 - You are unsure whether a range is too broad:
   prefer the narrowest CIDR that still covers the trusted network.
 - A range should be removed:
-  use the table remove action instead of leaving stale trusted networks in place.
+  use the table remove action and confirm the lockout warning instead of
+  leaving stale trusted networks in place.
 
 # Decision Guide
 

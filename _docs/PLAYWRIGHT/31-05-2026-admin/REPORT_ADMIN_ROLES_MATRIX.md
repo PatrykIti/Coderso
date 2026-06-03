@@ -1,0 +1,159 @@
+# Admin Roles Matrix - raport klikany (31-05-2026)
+
+## Zakres i źródła
+
+Trasa: `/admin/roles`. Źródła: `core/admin/ui/roles/PermissionsMatrixPage.tsx`,
+`PermissionsMatrix.tsx`, local `PermissionsMatrixSearch` in
+`PermissionsMatrixPage.tsx`, `RoleEditor.tsx`.
+
+## Co faktycznie kliknięto
+
+### Druga fala E2E - 2026-06-01
+
+- Przez dialog `Create new role` utworzono testową rolę
+  `QA Admin Matrix 20260601050816` z trzema uprawnieniami:
+  `users:read`, `roles:read`, `audit:read`.
+- Jako admin w `/admin/roles` wyszukano `View settings`, kliknięto checkbox
+  `View settings for QA Admin Matrix 20260601050816` i zapisano macierz;
+  `PATCH /admin-roles/:id` zwrócił `200`.
+- Następnie cofnięto tę samą zmianę w macierzy i zapisano ponownie; rola wróciła
+  do pierwotnych trzech uprawnień.
+- Jako restricted user z tą rolą otwarto `/admin/roles`: kolumna roli była
+  widoczna, `Add Role` było aktywne, checkboxy dały się przełączać lokalnie,
+  a `Save changes` aktywował się po zmianie.
+- Restricted user próbował zapisać zmianę `View settings`; backend zwrócił
+  `403 forbidden`, więc RBAC API działa, ale UI pozwala dojść do błędnego
+  submitu.
+- Po zakończeniu testu rola została usunięta przez UI z `/admin/users` po
+  wcześniejszym usunięciu testowego usera.
+
+### Pierwsza fala - 2026-05-31
+
+- Wejście w `Roles Matrix`.
+- Search `media`; tabela zawęziła widoczne grupy uprawnień do media-related.
+- `Add Role`; dialog otworzył się bez zapisu.
+- W dialogu `Select all`; pojawił się stan `Full access`.
+- `Clear`/cancel w dialogu, bez zapisu roli.
+- Jeden checkbox uprawnienia w macierzy; footer zmienił się na dirty state.
+- `Cancel`; footer wrócił do `No pending permission changes.`
+
+W pierwszej fali nie klikano finalnie `Save changes`, tworzenia roli ani zapisu
+pełnego dostępu. W drugiej fali wykonano create role i save matrix na
+jednorazowej roli testowej oraz przywrócono stan.
+
+## Co działało
+
+- Search po grupach/uprawnieniach działa.
+- Matrix renderuje role i permission groups.
+- Pojedynczy toggle uprawnienia poprawnie ustawia dirty state.
+- `Cancel` przywraca draft do stanu z backendu.
+- Dialog `Add Role` ma title/description i guard wizualny `Full access`.
+- Pozytywny save macierzy działa dla admina: dodanie i usunięcie
+  `settings:read` zapisało się przez `PATCH /admin-roles/:id`.
+- API poprawnie odrzuca zapis macierzy dla restricted usera bez `roles:write`.
+- Po `TASK-356-01` UI ma denied/read-only/editable mode: brak `roles:read` nie
+  wykonuje roles/catalog fetch, a `roles:read` bez `roles:write` pozwala
+  wyszukiwac i ogladac matrix bez aktywnego `Add Role`, checkbox toggles,
+  bulk toggles ani `Save changes`.
+- Stale `403 permission_denied` na load/save odswieza permission snapshot; save
+  403 zostawia dirty draft i pokazuje refresh-required copy.
+- Po `TASK-356-02` dirty footer pokazuje role-by-role diff summary
+  (`changed roles`, `+added`, `-removed`) zamiast samego dirty/clean.
+- `Review changes` otwiera modal z dodanymi/usunietymi scopes per rola; Cancel
+  w modalu nie wykonuje zadnego PATCH.
+- Confirm w review modalu wysyla PATCH tylko dla rol z faktycznym diffem.
+  Partial failure zostawia tylko nieudane role dirty, pokazuje role-specific
+  error i nie oznacza ich jako zapisanych.
+- Stale role conflict (`409`/`412`/`role_conflict`/`role_stale`) pokazuje
+  refresh-required copy i blokuje retry do czasu jawnego odswiezenia rol.
+- Playwright CLI pass `task-356-02-review-modal` potwierdzil realny admin flow:
+  tymczasowa rola dostala `content:write` przez matrix, review modal pokazal
+  `+ content:write`, confirm zapisal backend, a fixture user/role zostaly
+  usuniete. Lokalny screenshot: `.tmp/task-356-02-review-modal.png`.
+- Po `TASK-356-03` `Select all` w `RoleEditor` nie mutuje draftu przed
+  potwierdzeniem. Cancel w high-risk dialogu zostawia dotychczasowe
+  permissions, a confirm dopiero wtedy pokazuje `Full access enabled`.
+- Matrix bulk full-access promotion jest blokowany w review modalu dopoki admin
+  nie zaakceptuje osobnego `Confirm high-risk role permissions`; samo
+  `Confirm changes` pozostaje disabled przed tym krokiem.
+- Playwright CLI pass `task-356-03-full-access-confirm` potwierdzil realny
+  flow: `Add Role -> Select all` cancel/confirm oraz matrix bulk full-access
+  dla tymczasowej roli. DB potwierdzila `permissions: ["*"]` dopiero po
+  high-risk confirm; fixture zostal usuniety po weryfikacji. Lokalny
+  screenshot: `.tmp/task-356-03-full-access-confirm.png`.
+- Po `TASK-356-04` backendowe audit events dla role create/duplicate/update/delete
+  maja machine-readable metadata: `roleId`, `name`, sorted stored
+  `permissions`, `fullAccess`, a update events dodatkowo
+  `addedPermissions`/`removedPermissions`. Full-access grant rozwija `*`
+  przeciw aktualnemu katalogowi permissions w diffie, ale snapshot zostaje
+  literalnym `["*"]`.
+
+## Co nie działało / co jest ryzykowne
+
+| Problem | Dowód z audytu | Skutek | Status |
+| --- | --- | --- | --- |
+| Roles Matrix nie był bramkowany uprawnieniami użytkownika | `PermissionsMatrixPage.tsx` nie przyjmował permissions/current user, a `AdminApp.tsx` renderował `<PermissionsMatrixPage />` bez kontekstu RBAC | restricted user mógł lokalnie zmieniać checkboxy i klikać save, dopiero API zwracało 403 | Zamknięte w `TASK-356-01` |
+| `Add Role` było aktywne dla restricted usera | brak `can("roles:write")` w topbar actions | user dostawał aktywny create dialog mimo braku prawa do zapisu | Zamknięte w `TASK-356-01` |
+| `Save changes` zapisywało masowe zmiany bez potwierdzenia | `handleSaveChanges` budował update dla zmienionych ról i od razu wołał `updateAdminRole` | jeden błędny klik mógł zmienić RBAC wielu ról | Zamknięte w `TASK-356-02` |
+| `Select all` w RoleEditor przełączał pełen dostęp bez confirm | `handleSelectAll` ustawiał `fullAccess` i wszystkie permissions | UI ostrzegał badge, ale nie wymuszał świadomego potwierdzenia | Zamknięte w `TASK-356-03` |
+| Brak podsumowania diffu przed zapisem | footer pokazywał tylko dirty/clean | admin nie widział dokładnie, które role i scopes zmienia | Zamknięte w `TASK-356-02` |
+| Audit role update zapisywał fakt zmiany bez deterministycznego permission diffu | wcześniejszy event nie dawał added/removed scopes per rola | po zapisie RBAC trudniej bylo odtworzyc, co realnie sie zmienilo | Zamknięte w `TASK-356-04` |
+
+Status po `TASK-356-01`:
+
+- Pierwsze dwa problemy z tabeli sa zamkniete w kodzie i Vitest: Roles Matrix
+  konsumuje shared permission snapshot, a restricted `roles:read` user dostaje
+  searchable read-only matrix bez lokalnego dirty state i bez aktywnego
+  role-create/save flow.
+- Playwright CLI pass `task-356-01-roles-readonly` potwierdzil ten sam kontrakt
+  w realnym UI: tymczasowy `roles:read`-only user zalogowal sie na
+  `/admin/roles`, `Add Role` bylo disabled, `Save changes` bylo nieobecne,
+  checkbox/bulk toggles byly disabled, forced click nie ustawil dirty state, a
+  search nadal dzialal. Fixture user/role zostaly usuniete po tescie; lokalny
+  screenshot: `.tmp/task-356-01-roles-readonly.png`.
+- Po `TASK-356-02` diff review jest zamkniety w kodzie, testach i realnym UI.
+- Po `TASK-356-03` high-risk/full-access confirm jest zamkniety w kodzie,
+  testach i realnym UI.
+- Po `TASK-356-04` audit diff jest zamkniety w kodzie, testach i dokumentacji;
+  rodzina `TASK-356` nie ma juz otwartego findings driftu.
+
+## Dlaczego
+
+Macierz działa jako draft state po stronie klienta. Przed `TASK-356-02` moment
+zapisu byl zbyt lekki jak na RBAC: kod mial poprawny `Cancel`, ale nie mial
+review step ani confirm dla szerokich zmian. `TASK-356-02` dodal review step i
+partial-failure handling, a `TASK-356-03` dodal osobny confirm dla
+szerokich/full-access oraz high-risk grants.
+
+## Jak naprawić
+
+- Dodać backendowy/current-user `can(permission)` do route shell i przekazać go
+  do `PermissionsMatrixPage`; dla braku `roles:write` matrix powinien być
+  read-only, a `Add Role`/`Save changes` ukryte albo disabled.
+- Przed zapisem pokazać modal z listą ról i liczbą dodanych/usuniętych
+  permissions. Status: zamkniete w `TASK-356-02`.
+- Dla `*`/full access wymagać dodatkowego confirm z nazwą roli. Status:
+  zamkniete w `TASK-356-03`.
+- Dodać testy: dirty state, cancel reset, save payload dla jednej roli, save
+  payload dla full access, confirm cancel. Status: diff review/cancel/payload
+  pokryte w `TASK-356-02`; full access/high-risk confirm pokryte w
+  `TASK-356-03`.
+- Rozważyć audit log event opisujący diff RBAC, nie tylko fakt zapisu.
+  Status: zamkniete w `TASK-356-04`.
+
+## Finalna weryfikacja - 2026-06-02
+
+- Subagent Playwright smoke `codex-02-06-admin-final-areas` otworzył
+  `/admin/roles` i potwierdził widoczność permissions search, `Add Role`, bulk
+  toggles oraz permission checkboxes.
+- Bez zmian w matrix `Cancel` i `Review changes` były disabled. Nie przełączano
+  permissions w finalnym smoke, żeby nie tworzyć dodatkowego RBAC diffu.
+- Final console dla tego smoke'a: 0 errors, 0 warnings. Po loginie role/
+  permissions requesty wracały `200`.
+- Dodatkowy końcowy pass `codex-02-06-physical` oraz niezależny Claude pass
+  `claude-02-06-admin-physical` ponownie otworzyły `/admin/roles` przez
+  fizyczne kliknięcie sidebaru. Claude raportuje PASS, 0 console errors/
+  warnings i requesty po loginie `200`.
+- Status raportu: wszystkie Roles Matrix findings są zamknięte w
+  `TASK-356-01` through `TASK-356-04`; ten finalny smoke jest ewidencją
+  `TASK-360-07`.

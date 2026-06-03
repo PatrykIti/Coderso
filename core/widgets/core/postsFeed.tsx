@@ -539,6 +539,33 @@ export function normalizePostsFeedData(data: PostsFeedData): PostsFeedData {
   };
 }
 
+export function resolvePostsFeedActiveSourceFilterLabels(
+  sourceInput: PostsFeedData["source"] | undefined
+): string[] {
+  const source =
+    normalizePostsFeedData({ source: sourceInput }).source ?? postsFeedDefaults.source!;
+  const mode = source.mode ?? "latest";
+  const labels: string[] = [];
+
+  if (mode === "category" && source.category?.trim()) {
+    labels.push(`Category: ${source.category.trim()}`);
+  }
+  if (mode !== "manual" && source.authorId?.trim()) {
+    labels.push(`Author: ${source.authorId.trim()}`);
+  }
+  if (mode !== "manual" && source.dateRange?.from) {
+    labels.push(`From: ${source.dateRange.from}`);
+  }
+  if (mode !== "manual" && source.dateRange?.to) {
+    labels.push(`To: ${source.dateRange.to}`);
+  }
+  if ((mode === "latest" || mode === "category") && source.featuredFirst) {
+    labels.push("Featured first");
+  }
+
+  return labels;
+}
+
 export function mapPostsFeedToContentListData(data: PostsFeedData): ContentListData {
   const normalized = normalizePostsFeedData(data);
   const fields = normalized.fields ?? postsFeedDefaults.fields!;

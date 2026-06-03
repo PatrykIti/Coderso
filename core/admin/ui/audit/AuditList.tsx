@@ -1,29 +1,42 @@
 import { Download } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
-import { listAuditLogs, type AuditRecord } from "@/services/auditClient";
+import {
+  exportAuditLogs,
+  listAuditLogs,
+  type AuditLogListResponse,
+  type AuditLogQuery,
+  type AuditRecord,
+} from "@/services/auditClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { ExportDialog } from "@/ui/shared/ExportDialog";
+import { resolveTruthfulCountCopy } from "../../../services/admin/adminQueryConventions";
+import {
+  resolveAuditCategory,
+  resolveAuditSeverity,
+} from "../../../services/audit/auditClassification";
+import {
+  auditExportColumnLabels,
+  isAuditExportColumn,
+  type AuditExportColumn,
+} from "../../../services/audit/auditExportContract";
 
+import { copyAuditEntryJson } from "./auditEntryActions";
 import { AuditDetailsDrawer } from "./AuditDetailsDrawer";
 import { AuditFilters } from "./AuditFilters";
 import { AuditTable } from "./AuditTable";
-import type { AuditCategory, AuditLog, AuditSeverity, AuditStatus } from "./types";
+import type { AuditCategory, AuditDateRange, AuditLog, AuditSeverity, AuditStatus } from "./types";
+import type { ExportDialogPayload, ExportField } from "@/ui/shared/ExportDialog";
 
-const categoryByTarget = new Set([
-  "page",
-  "content",
-  "entry",
-  "menu",
-  "media",
-  "seo",
-  "redirect",
-  "theme",
-  "admin-theme",
-]);
+type AuditCursor = string | null;
+type AuditPageState = {
+  cursor: AuditCursor;
+  previousCursors: AuditCursor[];
+};
 
 const formatTitle = (value: string) =>
   value
@@ -44,29 +57,6 @@ const formatRelative = (value: string) => {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days} days ago`;
   return date.toLocaleDateString();
-};
-
-const resolveCategory = (record: AuditRecord): AuditCategory => {
-  const action = record.action.toLowerCase();
-  if (action.startsWith("auth.") || action.startsWith("sessions.")) {
-    return "authentication";
-  }
-  if (categoryByTarget.has(record.targetType.toLowerCase())) {
-    return "content";
-  }
-  return "system";
-};
-
-const resolveSeverity = (record: AuditRecord, metadata: Record<string, unknown>): AuditSeverity => {
-  const metaSeverity = typeof metadata.severity === "string" ? metadata.severity : null;
-  if (metaSeverity === "info" || metaSeverity === "warning" || metaSeverity === "error") {
-    return metaSeverity;
-  }
-
-  const action = record.action.toLowerCase();
-  if (action.includes("error") || action.includes("fail")) return "error";
-  if (action.includes("warn") || action.includes("denied")) return "warning";
-  return "info";
 };
 
 const resolveStatus = (severity: AuditSeverity): AuditStatus => {
@@ -99,15 +89,15 @@ const resolveDescription = (record: AuditRecord, metadata: Record<string, unknow
 
 const mapAuditRecord = (record: AuditRecord): AuditLog => {
   const metadata = record.metadata ?? {};
-  const category = resolveCategory(record);
-  const severity = resolveSeverity(record, metadata);
+  const category = resolveAuditCategory(record);
+  const severity = resolveAuditSeverity(record, metadata);
   const status = resolveStatus(severity);
   const actorName = resolveActorName(record, metadata);
 
   return {
     id: record.id,
     event: formatTitle(record.action),
-    category,
+    category: category as AuditCategory,
     actor: {
       name: actorName,
       role: record.actorId ? "Admin" : "System",
@@ -116,39 +106,134 @@ const mapAuditRecord = (record: AuditRecord): AuditLog => {
     resource: `/${record.targetType}/${record.targetId}`,
     resourceLabel: `${formatTitle(record.targetType)} ${record.targetId}`,
     ipAddress: resolveIp(metadata),
+    createdAt: record.createdAt,
     timestamp: formatRelative(record.createdAt),
     timestampLabel: new Date(record.createdAt).toLocaleString(),
     status,
-    severity,
+    severity: severity as AuditSeverity,
     requestId: resolveRequestId(metadata),
     description: resolveDescription(record, metadata),
     payload: metadata,
   };
 };
 
+const startOfUtcDay = (date: Date) =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+
+const endOfUtcDay = (date: Date) =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+
+export function buildAuditQueryFromFilters(input: {
+  query: string;
+  dateRange: AuditDateRange;
+  eventType: "all" | AuditCategory;
+  severity: "all" | AuditSeverity;
+  now?: Date;
+}): AuditLogQuery {
+  const now = input.now ?? new Date();
+  const to = endOfUtcDay(now);
+  const from =
+    input.dateRange === "this-month"
+      ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+      : startOfUtcDay(
+          new Date(
+            Date.UTC(
+              now.getUTCFullYear(),
+              now.getUTCMonth(),
+              now.getUTCDate() - (input.dateRange === "last-30-days" ? 29 : 6)
+            )
+          )
+        );
+  const trimmedQuery = input.query.trim();
+
+  return {
+    limit: 50,
+    ...(trimmedQuery ? { query: trimmedQuery } : {}),
+    ...(input.eventType !== "all" ? { category: input.eventType } : {}),
+    ...(input.severity !== "all" ? { severity: input.severity } : {}),
+    from: from.toISOString(),
+    to: to.toISOString(),
+  };
+}
+
+const buildAuditCountCopy = (response: AuditLogListResponse) => {
+  return resolveTruthfulCountCopy(response, { resourceLabel: "audit logs" });
+};
+
+const firstAuditPageState = (): AuditPageState => ({
+  cursor: null,
+  previousCursors: [],
+});
+
+const auditExportColumns: AuditExportColumn[] = [
+  "event",
+  "actor",
+  "resource",
+  "ip",
+  "timestamp",
+  "status",
+  "severity",
+  "requestId",
+  "payload",
+];
+
+const auditExportFields: ExportField[] = auditExportColumns.map((column) => ({
+  id: column,
+  label: auditExportColumnLabels[column],
+  defaultChecked: ["event", "actor", "resource", "timestamp", "status"].includes(column),
+}));
+
 export function AuditList() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [dateRange, setDateRange] = useState("last-7-days");
-  const [eventType, setEventType] = useState("all");
-  const [severity, setSeverity] = useState("all");
+  const [dateRange, setDateRange] = useState<AuditDateRange>("last-7-days");
+  const [eventType, setEventType] = useState<"all" | AuditCategory>("all");
+  const [severity, setSeverity] = useState<"all" | AuditSeverity>("all");
+  const [countCopy, setCountCopy] = useState("Showing 0 loaded audit logs.");
+  const [nextCursor, setNextCursor] = useState<AuditCursor>(null);
+  const [pageRequest, setPageRequest] = useState<AuditPageState>(() => firstAuditPageState());
+  const [loadedPage, setLoadedPage] = useState<AuditPageState>(() => firstAuditPageState());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
+  const baseAuditQuery = useMemo(
+    () => buildAuditQueryFromFilters({ query, dateRange, eventType, severity }),
+    [dateRange, eventType, query, severity]
+  );
+  const auditQuery = useMemo(
+    () => ({
+      ...baseAuditQuery,
+      ...(pageRequest.cursor ? { cursor: pageRequest.cursor } : {}),
+    }),
+    [baseAuditQuery, pageRequest]
+  );
+
   useEffect(() => {
     let active = true;
-    listAuditLogs(200)
-      .then((items) => {
+    const requestedPage = pageRequest;
+    listAuditLogs(auditQuery)
+      .then((response) => {
         if (!active) return;
         setError(null);
-        setLogs(items.map(mapAuditRecord));
+        setLogs(response.items.map(mapAuditRecord));
+        setCountCopy(buildAuditCountCopy(response));
+        setNextCursor(response.nextCursor ?? null);
+        setLoadedPage(requestedPage);
       })
       .catch((err: unknown) => {
         if (!active) return;
         if (isApiClientError(err)) {
+          if (err.code === "audit_cursor_invalid") {
+            setError(null);
+            setNotice("Audit cursor expired. Showing the first page again.");
+            setNextCursor(null);
+            setPageRequest(firstAuditPageState());
+            return;
+          }
           setError(err.message);
         } else {
           setError("Failed to load audit logs.");
@@ -160,23 +245,34 @@ export function AuditList() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [auditQuery, pageRequest]);
 
-  const filteredLogs = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+  const startFilterRefresh = () => {
+    setIsLoading(true);
+    setPageRequest(firstAuditPageState());
+    setNextCursor(null);
+    setNotice(null);
+  };
 
-    return logs.filter((log) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        log.event.toLowerCase().includes(normalizedQuery) ||
-        log.actor.name.toLowerCase().includes(normalizedQuery) ||
-        log.resource.toLowerCase().includes(normalizedQuery);
-      const matchesType = eventType === "all" || log.category === eventType;
-      const matchesSeverity = severity === "all" || log.severity === severity;
+  const handleQueryChange = (value: string) => {
+    startFilterRefresh();
+    setQuery(value);
+  };
 
-      return matchesQuery && matchesType && matchesSeverity;
-    });
-  }, [logs, query, eventType, severity]);
+  const handleDateRangeChange = (value: AuditDateRange) => {
+    startFilterRefresh();
+    setDateRange(value);
+  };
+
+  const handleEventTypeChange = (value: "all" | AuditCategory) => {
+    startFilterRefresh();
+    setEventType(value);
+  };
+
+  const handleSeverityChange = (value: "all" | AuditSeverity) => {
+    startFilterRefresh();
+    setSeverity(value);
+  };
 
   const selectedLog = useMemo(
     () => logs.find((log) => log.id === selectedId) ?? null,
@@ -188,6 +284,52 @@ export function AuditList() {
     setDrawerOpen(true);
   };
 
+  const handleCopyJson = useCallback((log: AuditLog) => {
+    void copyAuditEntryJson(log);
+  }, []);
+
+  const handleNextPage = useCallback(() => {
+    if (!nextCursor) return;
+    setIsLoading(true);
+    setNotice(null);
+    setPageRequest({
+      cursor: nextCursor,
+      previousCursors: [...loadedPage.previousCursors, loadedPage.cursor],
+    });
+  }, [loadedPage, nextCursor]);
+
+  const handlePreviousPage = useCallback(() => {
+    if (loadedPage.previousCursors.length === 0) return;
+    const previousCursor = loadedPage.previousCursors.at(-1) ?? null;
+    setIsLoading(true);
+    setNotice(null);
+    setPageRequest({
+      cursor: previousCursor,
+      previousCursors: loadedPage.previousCursors.slice(0, -1),
+    });
+  }, [loadedPage]);
+
+  const handleExport = useCallback(
+    async (payload: ExportDialogPayload) => {
+      const columns = payload.fields.filter(isAuditExportColumn);
+      if (columns.length !== payload.fields.length) {
+        throw new Error("Audit export fields are invalid.");
+      }
+      const result = await exportAuditLogs({
+        format: payload.format,
+        columns,
+        filters: baseAuditQuery,
+      });
+      if (result.status === "queued") {
+        toast.success("Audit export queued.");
+      } else {
+        toast.success(`Audit export downloaded: ${result.filename}`);
+      }
+      setExportOpen(false);
+    },
+    [baseAuditQuery]
+  );
+
   const handleDrawerChange = (open: boolean) => {
     setDrawerOpen(open);
     if (!open) {
@@ -196,7 +338,7 @@ export function AuditList() {
   };
 
   return (
-    <AdminShell activeHref="/admin/audit" breadcrumbs={["Security", "Audit Logs"]}>
+    <AdminShell activeHref="/admin/audit" breadcrumbs={["Admin", "Audit Logs"]}>
       <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6">
         <PageHeader
           title="Audit Logs"
@@ -204,7 +346,7 @@ export function AuditList() {
           actions={
             <Button variant="outline" className="gap-2" onClick={() => setExportOpen(true)}>
               <Download className="h-4 w-4" />
-              Export CSV
+              Export
             </Button>
           }
         />
@@ -213,43 +355,64 @@ export function AuditList() {
           dateRange={dateRange}
           eventType={eventType}
           severity={severity}
-          onQueryChange={setQuery}
-          onDateRangeChange={setDateRange}
-          onEventTypeChange={setEventType}
-          onSeverityChange={setSeverity}
+          onQueryChange={handleQueryChange}
+          onDateRangeChange={handleDateRangeChange}
+          onEventTypeChange={handleEventTypeChange}
+          onSeverityChange={handleSeverityChange}
         />
         {error ? (
           <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
             {error}
           </div>
         ) : null}
-        {isLoading ? (
+        {notice ? (
+          <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+            {notice}
+          </div>
+        ) : null}
+        {isLoading && logs.length === 0 ? (
           <div className="rounded-xl border bg-muted/20 p-6 text-sm text-muted-foreground">
             Loading audit logs...
           </div>
-        ) : filteredLogs.length === 0 ? (
+        ) : logs.length === 0 && error ? (
+          <div className="rounded-xl border border-dashed bg-muted/10 p-6 text-sm text-muted-foreground">
+            Audit logs could not be loaded.
+          </div>
+        ) : logs.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-muted/10 p-6 text-sm text-muted-foreground">
             No audit logs match the current filters.
           </div>
         ) : (
-          <AuditTable logs={filteredLogs} selectedId={selectedId} onSelect={handleSelect} />
+          <AuditTable
+            logs={logs}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            onCopyJson={handleCopyJson}
+            pageInfo={{
+              countCopy,
+              canNext: Boolean(nextCursor),
+              canPrevious: loadedPage.previousCursors.length > 0,
+              isLoading,
+              onNext: handleNextPage,
+              onPrevious: handlePreviousPage,
+            }}
+          />
         )}
       </div>
-      <AuditDetailsDrawer log={selectedLog} open={drawerOpen} onOpenChange={handleDrawerChange} />
+      <AuditDetailsDrawer
+        log={selectedLog}
+        open={drawerOpen}
+        onOpenChange={handleDrawerChange}
+        onCopyJson={handleCopyJson}
+      />
       <ExportDialog
         open={exportOpen}
         onOpenChange={setExportOpen}
         title="Export Audit Logs"
         description="Download audit events for compliance reviews."
-        filename="audit-logs.csv"
-        fields={[
-          { id: "event", label: "Event", defaultChecked: true },
-          { id: "actor", label: "Actor", defaultChecked: true },
-          { id: "resource", label: "Resource", defaultChecked: true },
-          { id: "ip", label: "IP address" },
-          { id: "timestamp", label: "Timestamp", defaultChecked: true },
-          { id: "status", label: "Status" },
-        ]}
+        filename="audit-logs-current-filters.csv"
+        fields={auditExportFields}
+        onExport={handleExport}
       />
     </AdminShell>
   );

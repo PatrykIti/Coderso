@@ -1,7 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
-import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
 import type { NormalizedFormField } from "../../services/forms/validation";
@@ -69,6 +69,11 @@ export type ContactResolvedRuntimeData = {
   successRedirectUrl?: string | null;
   submissionAccess?: "public" | "internal";
   submissionNonce?: string | null;
+  botProtection?: {
+    provider?: "recaptcha_v3";
+    siteKey?: string;
+    action?: "public_write";
+  } | null;
   fields?: NormalizedFormField[];
   error?: string;
 };
@@ -400,7 +405,14 @@ const resolveMapEmbedUrl = (value: string | undefined) => {
 
   try {
     const parsed = new URL(trimmed);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    if (parsed.protocol !== "https:") return "";
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const isGoogleMapsHost =
+      host === "google.com" ||
+      host === "maps.google.com" ||
+      /^google\.[a-z.]+$/.test(host) ||
+      /^maps\.google\.[a-z.]+$/.test(host);
+    if (!isGoogleMapsHost) return "";
     return parsed.toString();
   } catch {
     return "";
@@ -412,7 +424,7 @@ export const getContactMapUrlState = (value: string | undefined) => {
     return {
       valid: false,
       safeUrl: "",
-      message: "Add an http:// or https:// map embed URL. HTTPS is recommended.",
+      message: "Add a Google Maps HTTPS embed URL.",
     };
   }
 
@@ -421,17 +433,14 @@ export const getContactMapUrlState = (value: string | undefined) => {
     return {
       valid: false,
       safeUrl: "",
-      message: "Use a valid http:// or https:// map embed URL. HTTPS is recommended.",
+      message: "Use a valid HTTPS Google Maps embed URL.",
     };
   }
 
-  const prefersHttps = safeUrl.startsWith("https://");
   return {
     valid: true,
     safeUrl,
-    message: prefersHttps
-      ? "Valid map URL. HTTPS embed is ready for runtime."
-      : "Valid map URL. HTTPS is recommended when your provider supports it.",
+    message: "Valid Google Maps HTTPS embed is ready for runtime.",
   };
 };
 
@@ -536,11 +545,33 @@ export const readContactSocialProfile = (
   }
 };
 
-const normalizeContactSocialHref = (value: string | undefined) =>
-  resolveWidgetLinkAttrs(value, {
+const socialHostByPlatform: Record<Exclude<ContactSocialPlatform, "custom">, Set<string>> = {
+  x: new Set(["x.com", "twitter.com"]),
+  linkedin: new Set(["linkedin.com"]),
+  facebook: new Set(["facebook.com"]),
+  instagram: new Set(["instagram.com"]),
+  youtube: new Set(["youtube.com"]),
+};
+
+const normalizeContactSocialHref = (link: ContactSocialLink) => {
+  const platform = link.platform ?? "custom";
+  if (platform === "custom") return undefined;
+  const attrs = resolveWidgetLinkAttrs(link.href, {
     allowHttp: true,
     openExternalInNewTab: true,
   });
+  if (!attrs) return undefined;
+
+  try {
+    const parsed = new URL(attrs.href);
+    if (parsed.protocol !== "https:") return undefined;
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    if (!socialHostByPlatform[platform].has(host)) return undefined;
+    return attrs;
+  } catch {
+    return undefined;
+  }
+};
 
 export const contactSchema = {
   type: "object",
@@ -744,6 +775,15 @@ export const contactSchema = {
         successRedirectUrl: { type: ["string", "null"] },
         submissionAccess: { enum: ["public", "internal"] },
         submissionNonce: { type: ["string", "null"] },
+        botProtection: {
+          type: ["object", "null"],
+          additionalProperties: false,
+          properties: {
+            provider: { enum: ["recaptcha_v3"] },
+            siteKey: { type: "string" },
+            action: { enum: ["public_write"] },
+          },
+        },
         error: { type: "string" },
         fields: {
           type: "array",
@@ -1075,31 +1115,31 @@ export function normalizeContactData(data: ContactData): ContactData {
     style: {
       spacing: resolveContactSpacing(data.style?.spacing),
       background: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.background)
+        ? resolveClearableCssColorValue(data.style?.background)
         : styleDefaults.background,
       columns: resolveContactColumns(data.style?.columns),
       surfaceColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.surfaceColor)
+        ? resolveClearableCssColorValue(data.style?.surfaceColor)
         : styleDefaults.surfaceColor,
-      borderColor: resolveString(
-        data.style?.borderColor,
-        styleDefaults.borderColor ?? "var(--color-border)"
-      ),
+      borderColor:
+        resolveClearableCssColorValue(data.style?.borderColor) ??
+        styleDefaults.borderColor ??
+        "var(--color-border)",
       borderWidth: resolveContactBorderWidth(data.style?.borderWidth),
       textColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.textColor)
+        ? resolveClearableCssColorValue(data.style?.textColor)
         : styleDefaults.textColor,
       mutedTextColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.mutedTextColor)
+        ? resolveClearableCssColorValue(data.style?.mutedTextColor)
         : styleDefaults.mutedTextColor,
       buttonBackgroundColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.buttonBackgroundColor)
+        ? resolveClearableCssColorValue(data.style?.buttonBackgroundColor)
         : styleDefaults.buttonBackgroundColor,
       buttonTextColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.buttonTextColor)
+        ? resolveClearableCssColorValue(data.style?.buttonTextColor)
         : styleDefaults.buttonTextColor,
       buttonBorderColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.buttonBorderColor)
+        ? resolveClearableCssColorValue(data.style?.buttonBorderColor)
         : styleDefaults.buttonBorderColor,
       maxWidth: resolveContactMaxWidth(data.style?.maxWidth),
       paddingX: resolveContactPaddingX(data.style?.paddingX),
@@ -1347,9 +1387,11 @@ export function ContactBlock({
   });
   const hasMultiStepRuntimeFields = resolvedFields.some((field) => {
     const step =
-      field.settings && typeof field.settings === "object" && "step" in field.settings
-        ? field.settings.step
-        : undefined;
+      field.settings && typeof field.settings === "object" && "formStep" in field.settings
+        ? field.settings.formStep
+        : field.settings && typeof field.settings === "object" && "step" in field.settings
+          ? field.settings.step
+          : undefined;
     return typeof step === "number" && Number.isFinite(step) && step > 1;
   });
   const runtimeFields = resolveContactRuntimeFields(
@@ -1357,6 +1399,8 @@ export function ContactBlock({
     resolvedFields,
     form.submission?.fieldMap
   );
+  const hasSubmissionNonce =
+    typeof resolved?.submissionNonce === "string" && resolved.submissionNonce.trim().length > 0;
   const canSubmit =
     showForm &&
     form.submission?.mode === "forms-runtime" &&
@@ -1364,11 +1408,33 @@ export function ContactBlock({
     resolved !== undefined &&
     !resolved.error &&
     resolved.submissionAccess === "public" &&
+    hasSubmissionNonce &&
     !hasConditionalRuntimeFields &&
     !hasMultiStepRuntimeFields &&
     runtimeFields.length > 0 &&
     runtimeFields.length === visibleFields.length &&
     runtimeFields.length === resolvedFields.length;
+  const configuredFormMode = form.submission?.mode ?? "static";
+  const effectiveFormMode = canSubmit ? "forms-runtime" : "static";
+  const runtimeBoundary = (() => {
+    if (!showForm) return "hidden";
+    if (configuredFormMode !== "forms-runtime") return "static";
+    if ((form.submission?.formId ?? "").trim().length === 0) return "missing-form-id";
+    if (!resolved) return "runtime-data-missing";
+    if (resolved.error) return resolved.error;
+    if (resolved.submissionAccess !== "public") return "internal";
+    if (!hasSubmissionNonce) return "nonce-missing";
+    if (hasConditionalRuntimeFields) return "conditional-fields";
+    if (hasMultiStepRuntimeFields) return "multi-step-fields";
+    if (
+      runtimeFields.length === 0 ||
+      runtimeFields.length !== visibleFields.length ||
+      runtimeFields.length !== resolvedFields.length
+    ) {
+      return "field-mismatch";
+    }
+    return "interactive";
+  })();
   const formSuccessMessage = (
     form.submission?.successMessage ||
     resolved?.successMessage ||
@@ -1397,7 +1463,7 @@ export function ContactBlock({
 
   const sectionStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableStyleValue(style.background),
+      backgroundColor: resolveClearableCssColorValue(style.background),
     }) ?? {};
 
   const panelBorderWidth = style.borderWidth ?? "1";
@@ -1405,24 +1471,24 @@ export function ContactBlock({
   const buttonRadius = style.buttonRadius ?? "md";
   const panelStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
-      borderColor: style.borderColor ?? "var(--color-border)",
+      backgroundColor: resolveClearableCssColorValue(style.surfaceColor),
+      borderColor: resolveClearableCssColorValue(style.borderColor) ?? "var(--color-border)",
       borderStyle: "solid",
       borderWidth: `${panelBorderWidth}px`,
     }) ?? {};
   const headingTextStyle = compactStyle({
-    color: resolveClearableStyleValue(style.textColor),
+    color: resolveClearableCssColorValue(style.textColor),
   });
   const bodyTextStyle = compactStyle({
-    color: resolveClearableStyleValue(style.mutedTextColor),
+    color: resolveClearableCssColorValue(style.mutedTextColor),
   });
   const fieldBorderStyle = compactStyle({
-    borderColor: style.borderColor ?? "var(--color-border)",
+    borderColor: resolveClearableCssColorValue(style.borderColor) ?? "var(--color-border)",
   });
   const submitButtonStyle = compactStyle({
-    backgroundColor: resolveClearableStyleValue(style.buttonBackgroundColor),
-    color: resolveClearableStyleValue(style.buttonTextColor),
-    borderColor: resolveClearableStyleValue(style.buttonBorderColor) ?? "transparent",
+    backgroundColor: resolveClearableCssColorValue(style.buttonBackgroundColor),
+    color: resolveClearableCssColorValue(style.buttonTextColor),
+    borderColor: resolveClearableCssColorValue(style.buttonBorderColor) ?? "transparent",
     borderStyle: "solid",
     borderWidth: "1px",
   });
@@ -1452,7 +1518,7 @@ export function ContactBlock({
   });
 
   const socialLinks = (contact.social ?? []).flatMap((link, index) => {
-    const linkAttrs = normalizeContactSocialHref(link.href);
+    const linkAttrs = normalizeContactSocialHref(link);
     if (!linkAttrs) return [];
     const label = link.label?.trim();
     if (!label) return [];
@@ -1521,7 +1587,9 @@ export function ContactBlock({
           role="group"
           aria-labelledby={formTitleId}
           aria-label={formTitleId ? undefined : "Contact form"}
-          data-contact-form-mode={form.submission?.mode ?? "static"}
+          data-contact-form-mode={effectiveFormMode}
+          data-contact-form-configured-mode={configuredFormMode}
+          data-contact-runtime-boundary={runtimeBoundary}
         >
           {form.title ? (
             <h3
@@ -1539,6 +1607,9 @@ export function ContactBlock({
               data-form-id={form.submission?.formId ?? ""}
               data-nextless-form-runtime="1"
               data-form-success-message={formSuccessMessage}
+              data-form-submit-label={form.submitLabel}
+              data-form-captcha-site-key={resolved?.botProtection?.siteKey ?? ""}
+              data-form-captcha-action={resolved?.botProtection?.action ?? ""}
               className="space-y-4"
               aria-labelledby={formTitleId}
               aria-label={formTitleId ? undefined : "Contact form"}
@@ -1568,6 +1639,9 @@ export function ContactBlock({
               </div>
               {resolved?.submissionNonce ? (
                 <input type="hidden" name="__nl_form_nonce" value={resolved.submissionNonce} />
+              ) : null}
+              {resolved?.botProtection?.siteKey ? (
+                <input type="hidden" name="captchaToken" value="" />
               ) : null}
               <div className="space-y-2">
                 <button

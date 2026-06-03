@@ -1,16 +1,31 @@
 import { BarChart3, X } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { isApiClientError } from "@/services/apiClient";
 
 import type { TopContentRow } from "./TopContentTable";
+
+type TopContentExportFile = {
+  fileName: string;
+  contentType: string;
+  content: string;
+};
 
 type TopContentDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   items: TopContentRow[];
+  onExport: () => Promise<TopContentExportFile>;
 };
 
 const formatScore = (score: number) => `${score}%`;
@@ -22,7 +37,39 @@ const formatDate = (value: string) =>
     year: "numeric",
   });
 
-export function TopContentDrawer({ open, onOpenChange, items }: TopContentDrawerProps) {
+const downloadTextFile = (file: TopContentExportFile) => {
+  if (typeof document === "undefined" || typeof URL.createObjectURL !== "function") {
+    throw new Error("download_unavailable");
+  }
+  const blob = new Blob([file.content], { type: file.contentType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = file.fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+};
+
+export function TopContentDrawer({ open, onOpenChange, items, onExport }: TopContentDrawerProps) {
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleExport = async () => {
+    if (items.length === 0 || isExporting) return;
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const file = await onExport();
+      downloadTextFile(file);
+    } catch (err) {
+      setExportError(isApiClientError(err) ? err.message : "Failed to export top content.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -33,9 +80,9 @@ export function TopContentDrawer({ open, onOpenChange, items }: TopContentDrawer
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>Top Content</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs">
               Full ranking for the selected date range.
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close top content drawer">
@@ -47,7 +94,7 @@ export function TopContentDrawer({ open, onOpenChange, items }: TopContentDrawer
           <div className="space-y-4 px-6 py-6">
             {items.length === 0 ? (
               <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                No content activity yet.
+                No content activity yet. Publish content or widen the date range.
               </div>
             ) : (
               items.map((row) => (
@@ -68,10 +115,21 @@ export function TopContentDrawer({ open, onOpenChange, items }: TopContentDrawer
         </ScrollArea>
         <Separator />
         <div className="flex flex-col gap-3 bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">
+          <div className="min-h-5 flex-1 text-sm text-muted-foreground">
+            {exportError ? (
+              <p className="text-destructive" role="alert">
+                {exportError}
+              </p>
+            ) : items.length === 0 ? (
+              <p>No rows to export.</p>
+            ) : null}
+          </div>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button onClick={() => onOpenChange(false)}>Export</Button>
+          <Button disabled={items.length === 0 || isExporting} onClick={() => void handleExport()}>
+            {isExporting ? "Exporting..." : "Export"}
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

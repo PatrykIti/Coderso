@@ -127,6 +127,25 @@ JSON payloads and it does not expose normalize/reset mutations.
   token/boolean semantics. `logoHeight: "none"` remains a shared “no fixed
   token” choice rather than an unbounded image-height escape hatch.
 
+## Playwright Fixture Seed
+
+The widget contract smoke harness seeds one deterministic Logo Cloud image when
+the selected smoke cases include `logo-cloud`. The seed uses the existing
+authenticated admin media API, including CSRF, and uploads
+`widget-fixture-logo-cloud-acme.svg` as `image/svg+xml` only when a valid
+matching image is not already present. Existing matching fixtures keep their
+stored file and receive only metadata updates for `alt`, `title`, and
+`caption`.
+
+After the seed, the smoke admin probe runs a Logo Cloud `mediaProof`: it opens
+Visual, selects the seeded asset through the real MediaPicker, confirms admin
+preview image/alt/grayscale/hover output, publishes the fixture page, and then
+checks the public fixture route for the same `<img>` behavior.
+
+This seed exists only to make browser-level MediaPicker proof reproducible. It
+does not change public runtime behavior, widget defaults, or production media
+resolution.
+
 ## Data Model (summary)
 
 ```json

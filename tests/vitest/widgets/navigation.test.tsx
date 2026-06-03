@@ -1,3 +1,5 @@
+// @vitest-environment happy-dom
+
 import React from "react";
 import type { ComponentType } from "react";
 import { expect, test } from "vitest";
@@ -257,6 +259,29 @@ test("navigation schema accepts submenu children and image logo metadata", () =>
   ).not.toThrow();
 });
 
+test("navigation schema accepts resolved empty item lists", () => {
+  clearWidgets();
+  registerWidget(
+    createNavigationWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "nav-empty-resolved-links",
+      type: "navigation",
+      variant: "simple",
+      data: {
+        ...navigationDefaults,
+        items: [],
+      },
+    })
+  ).not.toThrow();
+});
+
 test("navigation schema rejects unknown nested keys", () => {
   clearWidgets();
   registerWidget(
@@ -305,6 +330,32 @@ test("navigation schema rejects unknown nested keys", () => {
   ).toThrow("widget_schema_invalid");
 });
 
+test("navigation schema rejects unsafe imported style color strings", () => {
+  clearWidgets();
+  registerWidget(
+    createNavigationWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "nav-unsafe-style-color",
+      type: "navigation",
+      variant: "simple",
+      data: {
+        ...navigationDefaults,
+        style: {
+          ...navigationDefaults.style,
+          textColor: "url(javascript:alert(1))",
+        },
+      },
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
 test("navigation schema accepts pages links source", () => {
   clearWidgets();
   registerWidget(
@@ -348,6 +399,7 @@ test("navigation normalizes unsafe item, child, CTA, and logo hrefs before rende
     },
     items: [
       { label: "Safe", href: "/safe" },
+      { label: "Resolver placeholder", href: "#" },
       {
         label: "Unsafe",
         href: "javascript:alert(2)",
@@ -367,9 +419,34 @@ test("navigation normalizes unsafe item, child, CTA, and logo hrefs before rende
 
   const html = renderToString(<NavigationBlock data={normalized} variant="with-cta" />);
   expect(html).toContain('href="/safe"');
+  expect(html).not.toContain("Resolver placeholder");
   expect(html).not.toContain("javascript:alert");
   expect(html).not.toContain("//evil.example");
   expect(html).not.toContain("data:text/html");
+});
+
+test("navigation normalizes unsafe imported color values before render", () => {
+  const normalized = normalizeNavigationData({
+    ...navigationDefaults,
+    style: {
+      ...navigationDefaults.style,
+      surfaceColor: "url(javascript:alert(1))",
+      textColor: "var(--color-text)",
+      linkColor: "#123abc",
+      ctaBorderColor: "rgb(10, 20, 30)",
+    },
+  });
+
+  expect(normalized.style?.surfaceColor).toBeUndefined();
+  expect(normalized.style?.textColor).toBe("var(--color-text)");
+  expect(normalized.style?.linkColor).toBe("#123abc");
+  expect(normalized.style?.ctaBorderColor).toBe("rgb(10, 20, 30)");
+
+  const html = renderToString(<NavigationBlock data={normalized} variant="with-cta" />);
+  expect(html).not.toContain("javascript:");
+  expect(html).not.toContain("url(");
+  expect(html).toContain("var(--color-text)");
+  expect(html).toContain("#123abc");
 });
 
 test("navigation minimal mode skips the mobile drawer toggle and panel", () => {
@@ -448,6 +525,77 @@ test("navigation renders metadata, target rel, and drawer-only mobile CTA contra
   expect(html).toContain("border-l");
   expect(html).toContain("h-8");
   expect(html).toContain('data-navigation-submenu-toggle="1"');
+});
+
+test("navigation public DOM redacts menu keys", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        linksSource: "menu",
+        menuKey: "internal-primary-menu",
+      }}
+      variant="simple"
+    />
+  );
+
+  expect(html).toContain('data-menu-configured="true"');
+  expect(html).not.toContain("data-menu-key");
+  expect(html).not.toContain("internal-primary-menu");
+});
+
+test("navigation runtime marks duplicate drawer active clones with aria-current", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        items: [{ label: "Docs", href: "/docs" }],
+        behavior: {
+          ...navigationDefaults.behavior,
+          mobileMode: "drawer",
+          activeLinkMode: "pathname",
+        },
+      }}
+      variant="simple"
+      blockId="drawer-current"
+    />
+  );
+  const navigationWindow = window as Window & { __nextlessNavigationBound?: boolean };
+
+  try {
+    navigationWindow.history.pushState({}, "", "http://localhost:3000/docs");
+    document.body.innerHTML = html;
+    const script = document.querySelector("script")?.textContent;
+    expect(script).toContain("__nextlessNavigationBound");
+
+    const runScript = new Function(
+      "window",
+      "document",
+      "HTMLElement",
+      "HTMLAnchorElement",
+      "HTMLButtonElement",
+      "Element",
+      script ?? ""
+    );
+    runScript(
+      window,
+      document,
+      window.HTMLElement,
+      window.HTMLAnchorElement,
+      window.HTMLButtonElement,
+      window.Element
+    );
+
+    const activeLinks = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>('a[data-navigation-link="1"][href="/docs"]')
+    );
+    expect(activeLinks).toHaveLength(2);
+    expect(activeLinks.map((link) => link.dataset.navigationActive)).toEqual(["true", "true"]);
+    expect(activeLinks.map((link) => link.getAttribute("aria-current"))).toEqual(["page", "page"]);
+  } finally {
+    document.body.innerHTML = "";
+    delete navigationWindow.__nextlessNavigationBound;
+  }
 });
 
 test("navigation injects submenu runtime in expanded mode and uses image alt for the logo link name", () => {

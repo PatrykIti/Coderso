@@ -52,6 +52,14 @@ const describeCommerceColor = (value: string | undefined) => {
 const summarizeCount = (count: number, singular: string, plural: string) =>
   `${count} ${count === 1 ? singular : plural}`;
 
+const summarizeManualSelectionState = (curation: ProductGalleryData["curation"]) => {
+  const count = curation?.productIds?.length ?? 0;
+  const countLabel = summarizeCount(count, "product", "products");
+  if (curation?.mode === "manual") return countLabel;
+  if (count === 0) return "None";
+  return `${countLabel} saved, inactive in query mode`;
+};
+
 const summarizeStatusFilters = (status: string[] | undefined) => {
   const count = status?.length ?? 0;
   if (count === 0) return "Public-ready default";
@@ -1094,13 +1102,11 @@ export function ProductGalleryAdvancedEditor({
         />
         <ReadonlyWidgetSummaryRow
           id="product-gallery-advanced-selected-products"
-          label="Selected products"
+          label={
+            normalized.curation?.mode === "manual" ? "Selected products" : "Saved manual selection"
+          }
           path="curation.productIds"
-          value={summarizeCount(
-            normalized.curation?.productIds?.length ?? 0,
-            "product",
-            "products"
-          )}
+          value={summarizeManualSelectionState(normalized.curation)}
         />
         <ReadonlyWidgetSummaryRow
           id="product-gallery-advanced-card-route"

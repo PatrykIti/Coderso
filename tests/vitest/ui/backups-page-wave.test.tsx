@@ -4,10 +4,15 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import type { BackupItem, BackupSchedule } from "../../../core/admin/services/backupsClient";
+import type {
+  BackupIncludeOption,
+  BackupItem,
+  BackupListResult,
+  BackupSchedule,
+} from "../../../core/admin/services/backupsClient";
 
 const backupsState = vi.hoisted(() => ({
-  listResult: [
+  listItems: [
     {
       id: "backup-1",
       kind: "manual",
@@ -19,7 +24,21 @@ const backupsState = vi.hoisted(() => ({
       createdAt: "2026-03-15T08:00:00.000Z",
       finishedAt: "2026-03-15T08:01:00.000Z",
     },
-  ],
+  ] as BackupItem[],
+  listMeta: {
+    page: 1,
+    limit: 10,
+    total: 1,
+    hasNext: false,
+    hasPrevious: false,
+    worker: {
+      mode: "internal",
+      healthy: true,
+      queuedCount: 0,
+      oldestQueuedAt: null,
+      message: "CMS backup worker is ready.",
+    },
+  } as Omit<BackupListResult, "items">,
   scheduleResult: {
     id: "schedule-1",
     enabled: true,
@@ -35,14 +54,26 @@ const backupsState = vi.hoisted(() => ({
   nextUpdateError: null as unknown,
   nextRestoreError: null as unknown,
   nextDownloadError: null as unknown,
-  nextDownloadPayload: { url: "https://cdn.test/backup-1.zip" } as { url: string | null },
-  listBackups: vi.fn(async () => {
+  nextDeleteError: null as unknown,
+  nextDownloadPayload: { url: "https://cdn.test/backup-1.zip", path: null } as {
+    url: string | null;
+    path: string | null;
+    content?: string;
+    contentType?: string;
+    fileName?: string;
+  },
+  listBackups: vi.fn(async (options?: Record<string, unknown>) => {
     if (backupsState.nextListError) {
       const error = backupsState.nextListError;
       backupsState.nextListError = null;
       throw error;
     }
-    return backupsState.listResult;
+    return {
+      items: backupsState.listItems,
+      ...backupsState.listMeta,
+      page: Number(options?.page ?? backupsState.listMeta.page),
+      limit: Number(options?.limit ?? backupsState.listMeta.limit),
+    };
   }),
   getBackupSchedule: vi.fn(async () => {
     if (backupsState.nextScheduleError) {
@@ -58,7 +89,7 @@ const backupsState = vi.hoisted(() => ({
       backupsState.nextCreateError = null;
       throw error;
     }
-    return { ok: true };
+    return backupsState.listItems[0];
   }),
   updateBackupSchedule: vi.fn(async (payload: Record<string, unknown>) => {
     if (backupsState.nextUpdateError) {
@@ -88,11 +119,26 @@ const backupsState = vi.hoisted(() => ({
     }
     return backupsState.nextDownloadPayload;
   }),
+  deleteBackup: vi.fn(async (id: string) => {
+    if (backupsState.nextDeleteError) {
+      const error = backupsState.nextDeleteError;
+      backupsState.nextDeleteError = null;
+      throw error;
+    }
+    backupsState.listItems = backupsState.listItems.filter((item) => item.id !== id);
+    backupsState.listMeta = {
+      ...backupsState.listMeta,
+      total: backupsState.listItems.length,
+      hasNext: false,
+      hasPrevious: false,
+    };
+    return { ok: true, id };
+  }),
   apiError(message: string) {
     return { kind: "api", message };
   },
   reset() {
-    backupsState.listResult = [
+    backupsState.listItems = [
       {
         id: "backup-1",
         kind: "manual",
@@ -105,6 +151,20 @@ const backupsState = vi.hoisted(() => ({
         finishedAt: "2026-03-15T08:01:00.000Z",
       },
     ];
+    backupsState.listMeta = {
+      page: 1,
+      limit: 10,
+      total: 1,
+      hasNext: false,
+      hasPrevious: false,
+      worker: {
+        mode: "internal",
+        healthy: true,
+        queuedCount: 0,
+        oldestQueuedAt: null,
+        message: "CMS backup worker is ready.",
+      },
+    };
     backupsState.scheduleResult = {
       id: "schedule-1",
       enabled: true,
@@ -120,13 +180,15 @@ const backupsState = vi.hoisted(() => ({
     backupsState.nextUpdateError = null;
     backupsState.nextRestoreError = null;
     backupsState.nextDownloadError = null;
-    backupsState.nextDownloadPayload = { url: "https://cdn.test/backup-1.zip" };
+    backupsState.nextDeleteError = null;
+    backupsState.nextDownloadPayload = { url: "https://cdn.test/backup-1.zip", path: null };
     backupsState.listBackups.mockClear();
     backupsState.getBackupSchedule.mockClear();
     backupsState.createBackup.mockClear();
     backupsState.updateBackupSchedule.mockClear();
     backupsState.restoreBackup.mockClear();
     backupsState.downloadBackup.mockClear();
+    backupsState.deleteBackup.mockClear();
   },
 }));
 
@@ -166,11 +228,16 @@ vi.mock("@/services/apiClient", () => ({
 
 vi.mock("@/services/backupsClient", () => ({
   listBackups: backupsState.listBackups,
+  listBackupsCached: backupsState.listBackups,
+  getCachedBackups: vi.fn(() => null),
   getBackupSchedule: backupsState.getBackupSchedule,
+  getBackupScheduleCached: backupsState.getBackupSchedule,
+  getCachedBackupSchedule: vi.fn(() => null),
   createBackup: backupsState.createBackup,
   updateBackupSchedule: backupsState.updateBackupSchedule,
   restoreBackup: backupsState.restoreBackup,
   downloadBackup: backupsState.downloadBackup,
+  deleteBackup: backupsState.deleteBackup,
 }));
 
 vi.mock("@/ui/layouts/AdminShell", () => ({
@@ -206,6 +273,28 @@ vi.mock("@/ui/shared/PageHeader", () => ({
   ),
 }));
 
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    confirmLabel,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    confirmLabel: string;
+    onConfirm: () => void | Promise<void>;
+  }) =>
+    open ? (
+      <div>
+        <span>{title}</span>
+        <button type="button" onClick={() => void onConfirm()}>
+          {`confirm:${confirmLabel}`}
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("../../../core/admin/ui/backups/BackupNowDialog", () => ({
   BackupNowDialog: ({
     open,
@@ -214,11 +303,11 @@ vi.mock("../../../core/admin/ui/backups/BackupNowDialog", () => ({
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onCreate: () => Promise<boolean>;
+    onCreate: (include: BackupIncludeOption[]) => Promise<boolean>;
   }) =>
     open ? (
       <div>
-        <button type="button" onClick={() => void onCreate()}>
+        <button type="button" onClick={() => void onCreate(["database", "media"])}>
           backup-now-confirm
         </button>
         <button type="button" onClick={() => onOpenChange(false)}>
@@ -262,23 +351,33 @@ vi.mock("../../../core/admin/ui/backups/BackupScheduleCard", () => ({
 
 vi.mock("../../../core/admin/ui/backups/BackupsTable", () => ({
   BackupsTable: ({
-    items,
+    result,
     isLoading,
     isSaving,
     onRestore,
     onDownload,
+    onDelete,
+    onPageChange,
+    onQueryChange,
   }: {
-    items: BackupItem[];
+    result: BackupListResult;
+    query: string;
     isLoading: boolean;
     isSaving: boolean;
     onRestore: (id: string) => Promise<void>;
     onDownload: (id: string) => Promise<void>;
+    onDelete: (id: string) => Promise<void>;
+    onPageChange: (page: number) => void;
+    onQueryChange: (query: string) => void;
   }) => (
     <div>
-      <span>{`backup-count:${items.length}`}</span>
+      <span>{`backup-count:${result.items.length}`}</span>
+      <span>{`backup-page:${result.page}`}</span>
+      <span>{`backup-total:${result.total}`}</span>
+      <span>{`worker:${result.worker.message}`}</span>
       <span>{`backups-loading:${String(isLoading)}`}</span>
       <span>{`backups-saving:${String(isSaving)}`}</span>
-      {items.map((item) => (
+      {result.items.map((item) => (
         <div key={item.id}>
           <span>{item.id}</span>
           <button type="button" onClick={() => void onRestore(item.id)}>
@@ -287,8 +386,17 @@ vi.mock("../../../core/admin/ui/backups/BackupsTable", () => ({
           <button type="button" onClick={() => void onDownload(item.id)}>
             download:{item.id}
           </button>
+          <button type="button" onClick={() => void onDelete(item.id)}>
+            delete:{item.id}
+          </button>
         </div>
       ))}
+      <button type="button" onClick={() => onPageChange(result.page + 1)}>
+        next-page
+      </button>
+      <button type="button" onClick={() => onQueryChange("queued")}>
+        query-queued
+      </button>
     </div>
   ),
 }));
@@ -341,6 +449,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   document.body.innerHTML = "";
 });
 
@@ -355,12 +464,15 @@ test("BackupsPage loads data, creates manual backups, updates schedule, restores
     expect(view.container.textContent).toContain("schedule:daily");
     expect(view.container.textContent).toContain("backup-count:1");
 
-    clickByText(view.container, "Create Backup Now");
+    clickByText(view.container, "Create");
     await flush();
     clickByText(view.container, "backup-now-confirm");
     await flush();
 
-    expect(backupsState.createBackup).toHaveBeenCalledWith({ kind: "manual" });
+    expect(backupsState.createBackup).toHaveBeenCalledWith({
+      kind: "manual",
+      include: ["database", "media"],
+    });
     expect(backupsState.listBackups).toHaveBeenCalledTimes(2);
 
     clickByText(view.container, "schedule-save");
@@ -386,6 +498,29 @@ test("BackupsPage loads data, creates manual backups, updates schedule, restores
       "_blank",
       "noopener,noreferrer"
     );
+
+    clickByText(view.container, "delete:backup-1");
+    await flush();
+    expect(view.container.textContent).toContain("Delete backup?");
+    clickByText(view.container, "confirm:Delete");
+    await flush();
+    expect(backupsState.deleteBackup).toHaveBeenCalledWith("backup-1");
+
+    clickByText(view.container, "next-page");
+    await flush();
+    expect(backupsState.listBackups).toHaveBeenLastCalledWith({
+      page: 2,
+      limit: 10,
+      query: "",
+    });
+
+    clickByText(view.container, "query-queued");
+    await flush();
+    expect(backupsState.listBackups).toHaveBeenLastCalledWith({
+      page: 1,
+      limit: 10,
+      query: "queued",
+    });
   } finally {
     view.cleanup();
   }
@@ -410,7 +545,7 @@ test("BackupsPage surfaces load and action errors, including missing download UR
     await flush();
 
     backupsState.nextCreateError = new Error("create exploded");
-    clickByText(view.container, "Create Backup Now");
+    clickByText(view.container, "Create");
     await flush();
     clickByText(view.container, "backup-now-confirm");
     await flush();
@@ -426,7 +561,7 @@ test("BackupsPage surfaces load and action errors, including missing download UR
     await flush();
     expect(view.container.textContent).toContain("Failed to restore backup.");
 
-    backupsState.nextDownloadPayload = { url: null };
+    backupsState.nextDownloadPayload = { url: null, path: null };
     clickByText(view.container, "download:backup-1");
     await flush();
     expect(view.container.textContent).toContain("Backup is not ready for download.");
@@ -435,6 +570,64 @@ test("BackupsPage surfaces load and action errors, including missing download UR
     clickByText(view.container, "download:backup-1");
     await flush();
     expect(view.container.textContent).toContain("Download denied");
+
+    backupsState.nextDeleteError = backupsState.apiError("Delete denied");
+    clickByText(view.container, "delete:backup-1");
+    await flush();
+    clickByText(view.container, "confirm:Delete");
+    await flush();
+    expect(view.container.textContent).toContain("Delete denied");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BackupsPage polls while backup jobs are queued", async () => {
+  vi.useFakeTimers();
+  backupsState.listItems = [
+    {
+      id: "backup-queued",
+      kind: "manual",
+      status: "queued",
+      storageDriver: "local",
+      artifactPath: null,
+      sizeBytes: null,
+      error: null,
+      createdAt: "2026-03-15T08:00:00.000Z",
+      finishedAt: null,
+    },
+  ];
+  backupsState.listMeta = {
+    ...backupsState.listMeta,
+    total: 1,
+    worker: {
+      mode: "internal",
+      healthy: true,
+      queuedCount: 1,
+      oldestQueuedAt: "2026-03-15T08:00:00.000Z",
+      message: "CMS backup worker is processing backup jobs.",
+    },
+  };
+
+  const view = mount(<BackupsPage />);
+
+  try {
+    await flush();
+    expect(backupsState.listBackups).toHaveBeenCalledTimes(1);
+
+    await React.act(async () => {
+      vi.advanceTimersByTime(30_000);
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(backupsState.listBackups).toHaveBeenCalledTimes(2);
+    expect(backupsState.listBackups).toHaveBeenLastCalledWith({
+      page: 1,
+      limit: 10,
+      query: "",
+      force: true,
+    });
   } finally {
     view.cleanup();
   }

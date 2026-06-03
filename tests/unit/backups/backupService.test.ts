@@ -5,8 +5,13 @@ import { db } from "../../../core/db/client";
 import { backups } from "../../../core/db/schema";
 import {
   createBackup,
+  deleteBackup,
   getBackupSchedule,
+  markBackupComplete,
+  normalizeBackupInclude,
   listBackups,
+  resolveBackupDownload,
+  restoreBackup,
   setBackupSchedule,
 } from "../../../core/services/backups/backupService";
 
@@ -26,20 +31,87 @@ const createdIds: string[] = [];
 
 afterEach(async () => {
   if (!hasDb || createdIds.length === 0) return;
-  await db.delete(backups).where(inArray(backups.id, [...createdIds]));
+  for (const id of [...createdIds]) {
+    await deleteBackup(id).catch(async () => {
+      await db.delete(backups).where(inArray(backups.id, [id]));
+    });
+  }
   createdIds.length = 0;
 });
 
 testIfDb("createBackup adds backup and listBackups returns it", async () => {
-  const created = await createBackup("manual");
+  const created = await createBackup({ kind: "manual", include: ["database", "settings"] });
   createdIds.push(created.id);
 
-  const list = await listBackups();
-  const match = list.find((item) => item.id === created.id);
+  const list = await listBackups({ page: 1, limit: 5 });
+  const match = list.items.find((item) => item.id === created.id);
 
   expect(match).not.toBeNull();
-  expect(match?.status).toBe("queued");
+  expect(match?.status).toBe("complete");
   expect(match?.kind).toBe("manual");
+  expect(match?.artifactPath).toBe("local");
+  expect(list.total).toBeGreaterThanOrEqual(1);
+  expect(list.worker.mode).toBe("internal");
+});
+
+test("normalizeBackupInclude defaults, dedupes, and rejects invalid selections", () => {
+  expect(normalizeBackupInclude(undefined)).toEqual(["database", "media"]);
+  expect(normalizeBackupInclude(["media", "media", "database"])).toEqual(["media", "database"]);
+  expect(() => normalizeBackupInclude([])).toThrow("backup_include_required");
+  expect(() => normalizeBackupInclude(["unknown"])).toThrow("backup_include_invalid");
+});
+
+testIfDb("queued backups reject restore and download until a worker completes them", async () => {
+  const [created] = await db
+    .insert(backups)
+    .values({
+      status: "queued",
+      kind: "manual",
+      storageDriver: "local",
+    })
+    .returning();
+  if (!created) throw new Error("backup_create_failed");
+  createdIds.push(created.id);
+
+  await expect(restoreBackup(created.id)).rejects.toThrow("backup_not_ready");
+  await expect(resolveBackupDownload(created.id)).rejects.toThrow("backup_not_ready");
+});
+
+testIfDb("completed backups download CMS-managed artifacts and external URLs", async () => {
+  const localArtifact = await createBackup({ kind: "manual", include: ["database"] });
+  const invalidArtifact = await createBackup({ kind: "manual", include: ["database"] });
+  const urlArtifact = await createBackup({ kind: "manual", include: ["database"] });
+  createdIds.push(localArtifact.id, invalidArtifact.id, urlArtifact.id);
+
+  await markBackupComplete(invalidArtifact.id, "/var/backups/local.zip", 42);
+  await markBackupComplete(urlArtifact.id, "https://backups.example.test/url.zip", 42);
+
+  const localDownload = await resolveBackupDownload(localArtifact.id);
+  expect(localDownload.url).toBeNull();
+  expect(localDownload.path).toBeNull();
+  expect(localDownload.fileName).toContain(localArtifact.id);
+  expect(localDownload.contentType).toBe("application/json");
+  expect(localDownload.content).toContain(localArtifact.id);
+  await expect(resolveBackupDownload(invalidArtifact.id)).rejects.toThrow(
+    "backup_artifact_invalid"
+  );
+  await expect(resolveBackupDownload(urlArtifact.id)).resolves.toEqual({
+    url: "https://backups.example.test/url.zip",
+    path: null,
+  });
+});
+
+testIfDb("deleteBackup removes only the targeted row", async () => {
+  const first = await createBackup({ kind: "manual", include: ["database"] });
+  const second = await createBackup({ kind: "manual", include: ["database"] });
+  createdIds.push(first.id, second.id);
+
+  await expect(deleteBackup(first.id)).resolves.toEqual({ ok: true, id: first.id });
+  createdIds.splice(createdIds.indexOf(first.id), 1);
+
+  const remaining = await listBackups({ page: 1, limit: 50 });
+  expect(remaining.items.some((item) => item.id === first.id)).toBe(false);
+  expect(remaining.items.some((item) => item.id === second.id)).toBe(true);
 });
 
 testIfDb("getBackupSchedule returns defaults and setBackupSchedule updates", async () => {

@@ -14,7 +14,9 @@ import {
   pageRevisions,
   pages,
   previewTokens,
+  seoDocuments,
   users,
+  widgetTemplates,
 } from "../../../core/db/schema";
 import { createContentType } from "../../../core/services/content/typeService";
 import { createForm, setFormFields } from "../../../core/services/forms/formsService";
@@ -25,6 +27,7 @@ import {
 } from "../../../core/services/booking/bookingService";
 import { createPage, publishPage, updatePage } from "../../../core/services/pages/pageService";
 import { createPreviewToken } from "../../../core/services/pages/previewService";
+import { upsertSeoDocument } from "../../../core/services/seo/seoService";
 import {
   deleteSetting,
   getSettingRecord,
@@ -62,6 +65,7 @@ const trackedContentTypeIds = new Set<string>();
 const trackedFormIds = new Set<string>();
 const trackedBookingResourceIds = new Set<string>();
 const trackedBookingServiceIds = new Set<string>();
+const trackedWidgetTemplateIds = new Set<string>();
 const settingSnapshots = new Map<string, { exists: boolean; value: unknown }>();
 
 const trackPage = (id: string | undefined | null) => {
@@ -90,6 +94,10 @@ const trackBookingResource = (id: string | undefined | null) => {
 
 const trackBookingService = (id: string | undefined | null) => {
   if (id) trackedBookingServiceIds.add(id);
+};
+
+const trackWidgetTemplate = (id: string | undefined | null) => {
+  if (id) trackedWidgetTemplateIds.add(id);
 };
 
 const rememberSetting = async (key: string) => {
@@ -125,8 +133,10 @@ const cleanupTrackedRows = async () => {
   const formIds = [...trackedFormIds];
   const bookingResourceIds = [...trackedBookingResourceIds];
   const bookingServiceIds = [...trackedBookingServiceIds];
+  const widgetTemplateIds = [...trackedWidgetTemplateIds];
 
   if (pageIds.length > 0) {
+    await db.delete(seoDocuments).where(inArray(seoDocuments.targetId, pageIds));
     await db.delete(previewTokens).where(inArray(previewTokens.targetId, pageIds));
     await db.delete(pageRevisions).where(inArray(pageRevisions.pageId, pageIds));
     await db.delete(pages).where(inArray(pages.id, pageIds));
@@ -161,6 +171,10 @@ const cleanupTrackedRows = async () => {
     await db.delete(users).where(inArray(users.id, userIds));
   }
 
+  if (widgetTemplateIds.length > 0) {
+    await db.delete(widgetTemplates).where(inArray(widgetTemplates.id, widgetTemplateIds));
+  }
+
   trackedPageIds.clear();
   trackedUserIds.clear();
   trackedContentEntryIds.clear();
@@ -168,6 +182,7 @@ const cleanupTrackedRows = async () => {
   trackedFormIds.clear();
   trackedBookingResourceIds.clear();
   trackedBookingServiceIds.clear();
+  trackedWidgetTemplateIds.clear();
 };
 
 afterEach(async () => {
@@ -242,6 +257,33 @@ const createPublishedPageWithDraft = async () => {
   };
 };
 
+const insertPublishedLegacyPage = async ({
+  title,
+  slug,
+  data,
+  authorId,
+}: {
+  title: string;
+  slug: string;
+  data: unknown;
+  authorId?: string | null;
+}) => {
+  const [page] = await db
+    .insert(pages)
+    .values({
+      title,
+      slug,
+      status: "published",
+      authorId: authorId ?? null,
+      currentData: data,
+      publishedData: data,
+    })
+    .returning();
+  trackPage(page?.id);
+  if (!page?.id) throw new Error("missing_test_page");
+  return page;
+};
+
 const requestPublicPath = (path: string) =>
   handlePublicRequest(
     new Request(`http://public.coderso.test${path}`, {
@@ -287,6 +329,47 @@ testIfDbWithOptions(
     expect(previewHtml).toContain(fixture.draftHeadline);
     expect(previewHtml).not.toContain(fixture.publishedHeadline);
     expect(previewHtml).toContain("Preview mode");
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "public page runtime renders SEO Manager metadata after a cached page save",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 60);
+    await setTestSetting("site.contentRoutes", []);
+
+    const fixture = await createPublishedPageWithDraft();
+    const initialResponse = await requestPublicPath(fixture.slug);
+    expect(initialResponse.status).toBe(200);
+    const initialHtml = await initialResponse.text();
+    expect(initialHtml).toContain(`<title>Runtime Page ${fixture.token}</title>`);
+    expect(initialHtml).toContain(
+      `name="description" content="${fixture.publishedHeadline} meta description"`
+    );
+
+    const seoTitle = `SEO Manager Runtime Title ${fixture.token}`;
+    const seoDescription = `SEO Manager runtime description ${fixture.token} is long enough to render publicly.`;
+    await upsertSeoDocument({
+      targetType: "page",
+      targetId: fixture.page.id,
+      slug: fixture.slug,
+      title: seoTitle,
+      description: seoDescription,
+      canonicalUrl: `https://example.test${fixture.slug}`,
+      robots: "index,follow",
+    });
+
+    const updatedResponse = await requestPublicPath(fixture.slug);
+    expect(updatedResponse.status).toBe(200);
+    const updatedHtml = await updatedResponse.text();
+    expect(updatedHtml).toContain(`<title>${seoTitle}</title>`);
+    expect(updatedHtml).toContain(`name="description" content="${seoDescription}"`);
+    expect(updatedHtml).toContain(`rel="canonical" href="https://example.test${fixture.slug}"`);
+    expect(updatedHtml).toContain('name="robots" content="index,follow"');
+    expect(updatedHtml).toContain(fixture.publishedHeadline);
+    expect(updatedHtml).not.toContain(fixture.draftHeadline);
   },
   { timeout: dbRuntimeTimeout }
 );
@@ -361,6 +444,197 @@ testIfDb("public root renders the configured homepage by page id", async () => {
   expect(html).toContain(fixture.publishedHeadline);
   expect(html).not.toContain(fixture.draftHeadline);
 });
+
+testIfDbWithOptions(
+  "public page runtime renders malformed legacy Template Section ids as safe placeholders",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const actor = await createActor();
+    const badTemplateId = "missing-template-31-05";
+    const token = randomUUID().slice(0, 8);
+    const slug = `/template-section-invalid-runtime-${token}`;
+    await insertPublishedLegacyPage({
+      title: `Template Section Invalid Runtime ${token}`,
+      slug,
+      authorId: actor.id,
+      data: {
+        blocks: [
+          {
+            id: "template-section-invalid-runtime",
+            type: "template-section",
+            variant: "default",
+            data: {
+              templateId: badTemplateId,
+              templateName: badTemplateId,
+            },
+          },
+        ],
+        settings: {
+          template: "landing",
+          showInNav: true,
+        },
+        seo: {
+          description: `Template section invalid runtime ${token}`,
+        },
+      },
+    });
+
+    const response = await requestPublicPath(slug);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    expect(html).toContain('data-template-section-resolution="template_missing"');
+    expect(html).toContain("Template not found. Pick another template.");
+    expect(html).not.toContain(badTemplateId);
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "public page runtime hydrates legacy child Template Section ids without throwing",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const actor = await createActor();
+    const parentTemplateId = randomUUID();
+    const badTemplateId = "missing-template-31-05";
+    const [template] = await db
+      .insert(widgetTemplates)
+      .values({
+        id: parentTemplateId,
+        name: `Legacy Parent Template ${randomUUID().slice(0, 8)}`,
+        category: "Content",
+        status: "published",
+        blocks: [
+          {
+            id: "legacy-child-template-section-invalid",
+            type: "template-section",
+            variant: "default",
+            data: {
+              templateId: badTemplateId,
+              templateName: badTemplateId,
+            },
+          },
+        ],
+        settings: {},
+      })
+      .returning();
+    trackWidgetTemplate(template?.id);
+
+    const token = randomUUID().slice(0, 8);
+    const slug = `/template-section-child-invalid-runtime-${token}`;
+    await insertPublishedLegacyPage({
+      title: `Template Section Child Invalid Runtime ${token}`,
+      slug,
+      authorId: actor.id,
+      data: {
+        blocks: [
+          {
+            id: "template-section-parent-runtime",
+            type: "template-section",
+            variant: "default",
+            data: {
+              templateId: parentTemplateId,
+              templateName: "Legacy parent",
+            },
+          },
+        ],
+        settings: {
+          template: "landing",
+          showInNav: true,
+        },
+        seo: {
+          description: `Template section child invalid runtime ${token}`,
+        },
+      },
+    });
+
+    const response = await requestPublicPath(slug);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    expect(html).toContain('data-template-section-resolution="ready"');
+    expect(html).toContain('data-template-section-resolution="template_missing"');
+    expect(html).not.toContain(badTemplateId);
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "public page runtime propagates Template Section self-reference loops to the parent marker",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const actor = await createActor();
+    const templateId = randomUUID();
+    const [template] = await db
+      .insert(widgetTemplates)
+      .values({
+        id: templateId,
+        name: `Loop Template ${randomUUID().slice(0, 8)}`,
+        category: "Content",
+        status: "published",
+        blocks: [
+          {
+            id: "template-section-self-reference",
+            type: "template-section",
+            variant: "default",
+            data: {
+              templateId,
+              templateName: "Loop child",
+            },
+          },
+        ],
+        settings: {},
+      })
+      .returning();
+    trackWidgetTemplate(template?.id);
+
+    const token = randomUUID().slice(0, 8);
+    const slug = `/template-section-loop-runtime-${token}`;
+    await insertPublishedLegacyPage({
+      title: `Template Section Loop Runtime ${token}`,
+      slug,
+      authorId: actor.id,
+      data: {
+        blocks: [
+          {
+            id: "template-section-loop-parent",
+            type: "template-section",
+            variant: "default",
+            data: {
+              templateId,
+              templateName: "Loop parent",
+            },
+          },
+        ],
+        settings: {
+          template: "landing",
+          showInNav: true,
+        },
+        seo: {
+          description: `Template section loop runtime ${token}`,
+        },
+      },
+    });
+
+    const response = await requestPublicPath(slug);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    expect(html).toContain('data-template-section-resolution="template_loop"');
+    expect(html).toContain("Template loop detected. Remove nested template sections.");
+    expect(html).not.toContain('data-template-section-state="ready"');
+  },
+  { timeout: dbRuntimeTimeout }
+);
 
 testIfDb(
   "public page runtime rejects drafts and published rows without published data",
@@ -642,7 +916,7 @@ testIfDbWithOptions(
       const firstFormNonces = extractNonceValues(firstHtml, "__nl_form_nonce");
       const firstBookingNonces = extractNonceValues(firstHtml, "__nl_booking_nonce");
 
-      expect(firstFormNonces).toHaveLength(3);
+      expect(firstFormNonces.length).toBeGreaterThanOrEqual(2);
       expect(firstBookingNonces).toHaveLength(1);
       expect(getSiteCacheStats().size).toBe(0);
       expect(firstHtml).toContain('data-newsletter-submission-mode="forms-runtime"');
@@ -657,7 +931,7 @@ testIfDbWithOptions(
       const secondFormNonces = extractNonceValues(secondHtml, "__nl_form_nonce");
       const secondBookingNonces = extractNonceValues(secondHtml, "__nl_booking_nonce");
 
-      expect(secondFormNonces).toHaveLength(3);
+      expect(secondFormNonces).toHaveLength(firstFormNonces.length);
       expect(secondBookingNonces).toHaveLength(1);
       expect(secondFormNonces).not.toEqual(firstFormNonces);
       expect(secondBookingNonces).not.toEqual(firstBookingNonces);

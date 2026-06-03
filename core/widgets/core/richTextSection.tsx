@@ -316,7 +316,8 @@ export const richTextSectionDefaults: RichTextSectionData = {
         heading: "Clear structure for readable content",
         headingLevel: 2,
         contentHtml:
-          "<p>Use this section for longer explanations, product narratives, or in-depth guides.</p>",
+          "<p>Use this section for longer explanations, product narratives, or in-depth guides.</p>" +
+          "<p>Keep paragraphs concise and add subheadings for scanning.</p>",
       },
       {
         id: "block-2",

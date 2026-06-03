@@ -891,25 +891,25 @@ function StyleSummarySection({ value }: { value: ToggleBlockData }) {
         id="toggle-block.advanced.surfaceColor"
         label="Surface color"
         path="style.surfaceColor"
-        value={colorDiagnostic(value.style?.surfaceColor)}
+        value={colorDiagnostic(normalized.style.surfaceColor)}
       />
       <ReadonlyWidgetSummaryRow
         id="toggle-block.advanced.borderColor"
         label="Border color"
         path="style.borderColor"
-        value={colorDiagnostic(value.style?.borderColor)}
+        value={colorDiagnostic(normalized.style.borderColor)}
       />
       <ReadonlyWidgetSummaryRow
         id="toggle-block.advanced.accentColor"
         label="Accent color"
         path="style.accentColor"
-        value={colorDiagnostic(value.style?.accentColor)}
+        value={colorDiagnostic(normalized.style.accentColor)}
       />
       <ReadonlyWidgetSummaryRow
         id="toggle-block.advanced.accentContrastColor"
         label="Accent contrast color"
         path="style.accentContrastColor"
-        value={colorDiagnostic(value.style?.accentContrastColor)}
+        value={colorDiagnostic(normalized.style.accentContrastColor)}
       />
       <ReadonlyWidgetSummaryRow
         id="toggle-block.advanced.primaryPane"

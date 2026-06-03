@@ -177,22 +177,28 @@ function buildVisualVariantSplitLayoutData(
 ): SplitLayoutData {
   const current = normalizeValue(value, currentVariant);
   const disclosure = getSplitLayoutRatioDisclosure(value, currentVariant);
-  const shouldPreserveDeviceOverrides = disclosure.hasDeviceSpecificChanges;
+  const collapseMobile = current.collapseMobile ?? "stack";
+  const hasTabletOverride = disclosure.tablet !== disclosure.desktop;
+  const hasActivePhoneOverride =
+    collapseMobile === "keep" && disclosure.mobile !== disclosure.tablet;
+  const hasDormantPhoneSplit = collapseMobile === "stack" && disclosure.hasExplicitMobile;
+  const shouldPreserveDeviceOverrides = hasTabletOverride || hasActivePhoneOverride;
+  const ratio = shouldPreserveDeviceOverrides
+    ? {
+        ...current.ratio,
+        desktop: nextVariant,
+      }
+    : {
+        ...current.ratio,
+        desktop: nextVariant,
+        tablet: nextVariant,
+        mobile: hasDormantPhoneSplit ? current.ratio?.mobile : nextVariant,
+      };
 
   return normalizeValue(
     {
       ...current,
-      ratio: shouldPreserveDeviceOverrides
-        ? {
-            ...current.ratio,
-            desktop: nextVariant,
-          }
-        : {
-            ...current.ratio,
-            desktop: nextVariant,
-            tablet: nextVariant,
-            mobile: nextVariant,
-          },
+      ratio,
     },
     nextVariant
   );
@@ -251,14 +257,26 @@ function SplitRatioMiniature({ ratio }: { ratio: SplitLayoutRatio }) {
 function VariantCards({
   selectedRatio,
   disclosure,
+  collapseMobile,
   fieldProps,
   onChange,
 }: {
   selectedRatio: SplitLayoutRatio;
   disclosure: ReturnType<typeof getSplitLayoutRatioDisclosure>;
+  collapseMobile: SplitLayoutCollapseMobile;
   fieldProps?: WidgetControlFieldProps;
   onChange?: (next: string) => void;
 }) {
+  const phoneLayoutSummary =
+    collapseMobile === "stack"
+      ? "phone stacked"
+      : `mobile ${formatSplitLayoutRatioLabel(disclosure.mobile)}`;
+  const desktopCardCopy =
+    collapseMobile === "stack"
+      ? "Desktop split cards update the desktop layout. Tablet overrides stay intact. Saved phone split stays dormant while phones stack."
+      : "Desktop split cards update the desktop layout. Tablet and phone overrides stay intact when they differ from desktop.";
+  const effectiveDisclosure = getEffectiveSplitLayoutRatioDisclosure(disclosure, collapseMobile);
+
   return (
     <div className="space-y-3">
       <div
@@ -305,36 +323,64 @@ function VariantCards({
       <div
         className="rounded-md border border-dashed border-border/80 bg-muted/20 p-3"
         data-split-ratio-summary
-        data-split-ratio-override={disclosure.hasOverride ? "true" : "false"}
-        data-split-ratio-effective-starter={disclosure.effectiveMatchesStarter ? "true" : "false"}
-        data-split-ratio-device-specific={disclosure.hasDeviceSpecificChanges ? "true" : "false"}
+        data-split-ratio-override={effectiveDisclosure.hasOverride ? "true" : "false"}
+        data-split-ratio-effective-starter={
+          effectiveDisclosure.effectiveMatchesStarter ? "true" : "false"
+        }
+        data-split-ratio-device-specific={
+          effectiveDisclosure.hasDeviceSpecificChanges ? "true" : "false"
+        }
+        data-split-ratio-dormant-mobile={
+          effectiveDisclosure.hasDormantPhoneRatio ? "true" : "false"
+        }
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium">Current layout on devices</p>
-          <Badge variant={disclosure.hasOverride ? "outline" : "default"}>
-            {disclosure.hasOverride ? "Custom device layout" : "Matches starter layout"}
+          <Badge variant={effectiveDisclosure.hasOverride ? "outline" : "default"}>
+            {effectiveDisclosure.hasOverride ? "Custom device layout" : "Matches starter layout"}
           </Badge>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           Desktop {formatSplitLayoutRatioLabel(disclosure.desktop)}, tablet{" "}
-          {formatSplitLayoutRatioLabel(disclosure.tablet)}, mobile{" "}
-          {formatSplitLayoutRatioLabel(disclosure.mobile)}.
+          {formatSplitLayoutRatioLabel(disclosure.tablet)}, {phoneLayoutSummary}.
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          {getPhoneSplitDisclosureCopy(disclosure)}
+          {getPhoneSplitDisclosureCopy(disclosure, collapseMobile)}
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Desktop split cards update the desktop layout. Tablet and phone overrides stay intact when
-          they differ from desktop.
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{desktopCardCopy}</p>
       </div>
     </div>
   );
 }
 
+function getEffectiveSplitLayoutRatioDisclosure(
+  disclosure: ReturnType<typeof getSplitLayoutRatioDisclosure>,
+  collapseMobile: SplitLayoutCollapseMobile
+) {
+  const phoneRatioIsActive = collapseMobile === "keep";
+  const effectiveMatchesStarter =
+    disclosure.desktop === disclosure.variant &&
+    disclosure.tablet === disclosure.variant &&
+    (!phoneRatioIsActive || disclosure.mobile === disclosure.variant);
+  const hasDeviceSpecificChanges =
+    disclosure.tablet !== disclosure.desktop ||
+    (phoneRatioIsActive && disclosure.mobile !== disclosure.tablet);
+
+  return {
+    hasOverride: !effectiveMatchesStarter,
+    hasDeviceSpecificChanges,
+    effectiveMatchesStarter,
+    hasDormantPhoneRatio: collapseMobile === "stack" && disclosure.hasExplicitMobile,
+  };
+}
+
 function getPhoneSplitDisclosureCopy(
-  disclosure: ReturnType<typeof getSplitLayoutRatioDisclosure>
+  disclosure: ReturnType<typeof getSplitLayoutRatioDisclosure>,
+  collapseMobile: SplitLayoutCollapseMobile
 ): string {
+  if (collapseMobile === "stack") {
+    return "Saved phone split is kept for when you choose Keep two columns on phones.";
+  }
   if (!disclosure.hasExplicitMobile) {
     return "Phone layout follows the tablet layout until you choose a phone-specific split.";
   }
@@ -478,6 +524,7 @@ export function SplitLayoutVisualEditor({
             <VariantCards
               selectedRatio={disclosure.desktop}
               disclosure={disclosure}
+              collapseMobile={normalized.collapseMobile ?? "stack"}
               fieldProps={fieldProps}
               onChange={(next) =>
                 applyVariantDataPatch(

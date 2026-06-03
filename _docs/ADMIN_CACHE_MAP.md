@@ -165,8 +165,17 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/layouts/AdminShell.tsx`
   - Cached APIs: `listCustomScreensCached`
   - Cache bus: `customScreens:list`
+  - Permission gate: shortcut cache hydration and revalidation require
+    `content:read`; unauthorized shells keep shortcuts empty and do not call the
+    endpoint.
   - Shortcut gate: only active screens with `supportsDedicatedEditor=true`
     become sidebar workspace links
+- Advanced solution-kit nav context
+  - UI: `core/admin/ui/layouts/AdminShell.tsx`
+  - Cached APIs: `listSolutionKitsCached`
+  - Permission gate: hydration and revalidation require `solution-kits:read`;
+    users without that permission keep default Advanced nav context without a
+    solution-kit list fetch.
 
 ## Widget Templates
 - Template editor
@@ -209,19 +218,88 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Menu editor
   - UI: `core/admin/ui/menus/MenuEditorPage.tsx`
   - Cached APIs: `getMenuWithItemsCached`, `getCachedMenuDetail`, `listPagesCached`, `getCachedPages`
+- Search
+  - UI: `core/admin/ui/search/SearchPage.tsx`,
+    `core/admin/ui/search/useSearchResults.ts`
+  - Cached APIs: `listRecentSearchesCached`, `getCachedRecentSearches`,
+    `searchAllCached`, `getCachedSearchResults`
+  - Cache keys: `search:recent`,
+    `search:results:<boundedQuery>:limit:<limit>:date:<dateRange>`
+  - Hydration: recent searches hydrate immediately; result caches are keyed by
+    query, limit, and date range, then revalidated through explicit searches.
 - SEO manager
   - UI: `core/admin/ui/seo/SeoManagerPage.tsx`
-  - Cached APIs: none; consumes cache bus events for assistant/direct SEO mutations
+  - Cached APIs: `listSeoCached`, `getCachedSeo`, `getSeoCached`,
+    `getCachedSeoDetail`
+  - Mutations: SEO save/audit update list/detail caches and clear public HTML
+    cache so saved metadata reaches public rendering.
   - Cache bus: `seo:list`, `seo:detail:<id>`
+- Analytics
+  - UI: `core/admin/ui/analytics/AnalyticsPage.tsx`
+  - Cached APIs: `getOverviewCached`, `getCachedOverview`,
+    `getTopContentCached`, `getCachedTopContent`
+  - Cache keys: `analytics:overview:<rangeDays>`,
+    `analytics:topContent:<rangeDays>:<limit>:<type>`
+  - Hydration: selected range hydrates from cache when available and
+    background refreshes preserve the visible table/card state.
+- Backups
+  - UI: `core/admin/ui/backups/BackupsPage.tsx`
+  - Cached APIs: `listBackupsCached`, `getCachedBackups`,
+    `getBackupScheduleCached`, `getCachedBackupSchedule`
+  - Cache keys: `backups:list:<page>:<limit>:<boundedQuery>`,
+    `backups:schedule`
+  - Mutations: create, delete, restore, and schedule updates patch cache pages
+    only when local row/totals can remain correct; affected pages whose
+    pagination can shift are invalidated through cache-bus events.
+  - Security: browser cache redacts local artifact paths to
+    `artifactPath: "local"` and never stores backup download content.
+- Import / Export
+  - UI: `core/admin/ui/import-export/ImportExportPage.tsx`,
+    `core/admin/ui/import-export/ImportDropzone.tsx`
+  - Cached APIs: `listImportHistoryCached`, `getCachedImportHistory`,
+    `writeImportHistoryCache`
+  - Cache key: `tools:import:history`
+  - Cache scope: Recent Imports is browser-local activity history; export
+    bundle payloads and uploaded bundle contents are not cached.
+  - Mutations: successful import invalidates only the imported resource-family
+    caches, including menus, admin themes, and redirects when present in the
+    bundle scope.
+- Redirects
+  - UI: `core/admin/ui/redirects/RedirectsPage.tsx`,
+    `core/admin/ui/redirects/RedirectsTable.tsx`,
+    `core/admin/ui/redirects/RedirectDrawer.tsx`
+  - Cached APIs: `listRedirectsCached`, `getCachedRedirects`
+  - Mutations: `createRedirect`, `updateRedirect`, and `deleteRedirect` patch
+    or remove rows from `redirects:list` and broadcast cache-bus updates.
+  - Cache bus: `redirects:list`
 - Admin UI themes
   - UI: `core/admin/ui/themes/ThemesPage.tsx`
   - Cached APIs: `listAdminThemeTemplatesCached`, `getCachedAdminThemeTemplates`, `listAdminThemeProfilesCached`, `getCachedAdminThemeProfiles`
+  - Shell token refresh: `core/admin/app/AdminApp.tsx` uses cached theme
+    template/profile reads only when the current permission snapshot has
+    `themes:read`; otherwise stored/default tokens render without network
+    refresh.
 - Theme editor
   - UI: `core/admin/ui/themes/ThemeEditorPage.tsx`
   - Cached APIs: `listPagesCached`
+- General / Assistant settings
+  - UI: `core/admin/app/AdminApp.tsx`,
+    `core/admin/ui/settings/GeneralSettingsPage.tsx`,
+    `core/admin/ui/settings/AssistantSettingsPage.tsx`
+  - Cached APIs: `getSettingsCached`, `getCachedSettings`
+  - Cache bus: `settings:redacted`
+  - Prefetch: `/settings` warms `settings:redacted`
 - Site settings
   - UI: `core/admin/ui/site/SiteSettingsPage.tsx`
-  - Cached APIs: `listPagesCached`, `listContentTypesCached`
+  - Cached APIs: `getSiteSettingsCached`, `getCachedSiteSettings`,
+    `listPagesCached`, `getCachedPages`, `listContentTypesCached`,
+    `getCachedContentTypes`
+  - Cache bus: `settings:redacted`, `pages:list`, `contentTypes:list`
+  - Prefetch: `/settings/site` warms `settings:redacted`, `pages:list`, and
+    `contentTypes:list` with `{ force: false }`
+  - Safety: only redacted/non-secret Settings values are stored in
+    `settings:redacted`; credential-bearing Settings endpoints remain uncached
+    in browser storage.
 
 ## Widget Editors (data selectors)
 - Hero
@@ -246,16 +324,29 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 ## Prefetch Routes
 - `/pages` -> `listPagesCached`
 - `/advanced/widgets` -> `listWidgetCatalogCached`, `listWidgetTemplateCategoriesCached`, `listWidgetTemplatesCached`
+- `/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId` -> `getContentTypeCollectionWorkspaceCached`, `getDetailPageCached`, `listContentTypesCached`, optional `listEntriesCached`
+- `/advanced/engine/:contentTypeId/collection` -> `listContentTypesCached`, `getContentTypeCollectionWorkspaceCached`
 - `/advanced/engine` -> `listContentTypesCached`
 - `/advanced/entries` -> `listContentTypesCached`, `listAllEntriesCached`
+- `/advanced/custom-screens` -> `listCustomScreensCached`, `listContentTypesCached`
+- `/advanced/custom-screens/:screenId/entries/:entryId?` -> `listCustomScreensCached`, `getCustomScreenCached`, `listContentTypesCached`, `listEntriesCached`, optional `getEntryCached`
 - `/advanced/forms` -> `listFormsCached`
 - `/advanced/listings` -> `listListingQueriesCached`, `listListingTemplatesCached`
 - `/advanced/filters` -> `listListingQueriesCached`
 - `/advanced/search` -> `listListingQueriesCached`
 - `/advanced/booking` -> `listBookingResourcesCached`, `listBookingServicesCached`, `listBookingReservationsCached`, `listBookingBlackoutsCached`
-- `/advanced/reviews` -> `listReviewsCached`
 - `/advanced/commerce` -> `listCommerceProductsCached`, `listCommerceCollectionsCached`
 - `/advanced/popups` -> `listPopupsCached`
+- `/advanced/reviews` -> `listReviewsCached`
+- `/advanced/solution-kits` -> `listSolutionKitsCached`, `listSolutionKitRunsCached`
 - `/menus` -> `listMenusCached`
 - `/media` -> `listMediaCached`
 - `/themes` -> `listAdminThemeTemplatesCached`, `listAdminThemeProfilesCached`
+- `/search` -> `listRecentSearchesCached`
+- `/seo` -> `listSeoCached`
+- `/analytics` -> `getOverviewCached`, `getTopContentCached`
+- `/backups` -> `listBackupsCached`, `getBackupScheduleCached`
+- `/tools/import-export` -> `listImportHistoryCached`
+- `/redirects` -> `listRedirectsCached`
+- `/settings` -> `getSettingsCached`
+- `/settings/site` -> `getSiteSettingsCached`, `listPagesCached`, `listContentTypesCached`

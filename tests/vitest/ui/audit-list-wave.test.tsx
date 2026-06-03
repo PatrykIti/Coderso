@@ -4,79 +4,143 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
+import type { AuditLogListResponse, AuditLogQuery } from "../../../core/admin/services/auditClient";
+
+type ListAuditLogsMock = (query?: AuditLogQuery | number) => Promise<AuditLogListResponse>;
+
 const auditState = vi.hoisted(() => ({
-  listAuditLogs: vi.fn(async () => [
-    {
-      id: "audit-1",
-      action: "content.publish",
-      actorId: "user-1",
-      targetType: "page",
-      targetId: "home",
-      createdAt: "2026-03-15T10:00:00.000Z",
-      metadata: {
-        actorName: "Ada Lovelace",
-        ip: "127.0.0.1",
-        requestId: "req-1",
+  listAuditLogs: vi.fn<ListAuditLogsMock>(async () => ({
+    items: [
+      {
+        id: "audit-1",
+        action: "content.publish",
+        actorId: "user-1",
+        targetType: "page",
+        targetId: "home",
+        createdAt: "2026-03-15T10:00:00.000Z",
+        metadata: {
+          actorName: "Ada Lovelace",
+          ip: "127.0.0.1",
+          requestId: "req-1",
+        },
       },
-    },
-    {
-      id: "audit-2",
-      action: "auth.denied",
-      actorId: "user-2",
-      targetType: "session",
-      targetId: "sess-1",
-      createdAt: "2026-03-15T09:00:00.000Z",
-      metadata: {
-        actorEmail: "grace@example.com",
-        severity: "warning",
+      {
+        id: "audit-2",
+        action: "auth.denied",
+        actorId: "user-2",
+        targetType: "session",
+        targetId: "sess-1",
+        createdAt: "2026-03-15T09:00:00.000Z",
+        metadata: {
+          actorEmail: "grace@example.com",
+          severity: "warning",
+        },
       },
-    },
-  ]),
+    ],
+    nextCursor: null,
+  })),
+  exportAuditLogs: vi.fn(async () => ({
+    status: "downloaded" as const,
+    filename: "audit-logs-2026-06-01-authentication.csv",
+    mimeType: "text/csv",
+  })),
   nextError: null as unknown,
   reset() {
     this.listAuditLogs.mockReset();
+    this.exportAuditLogs.mockReset();
     this.nextError = null;
-    this.listAuditLogs.mockImplementation(async () => {
+    this.exportAuditLogs.mockResolvedValue({
+      status: "downloaded",
+      filename: "audit-logs-2026-06-01-authentication.csv",
+      mimeType: "text/csv",
+    });
+    this.listAuditLogs.mockImplementation(async (query) => {
+      const auditQuery = typeof query === "object" ? query : undefined;
       if (this.nextError) {
         const error = this.nextError;
         this.nextError = null;
         throw error;
       }
-      return [
-        {
-          id: "audit-1",
-          action: "content.publish",
-          actorId: "user-1",
-          targetType: "page",
-          targetId: "home",
-          createdAt: "2026-03-15T10:00:00.000Z",
-          metadata: {
-            actorName: "Ada Lovelace",
-            ip: "127.0.0.1",
-            requestId: "req-1",
+      if (auditQuery?.query === "zzz") {
+        return { items: [], nextCursor: null };
+      }
+      if (auditQuery?.cursor === "cursor-1") {
+        return {
+          items: [
+            {
+              id: "audit-3",
+              action: "content.update",
+              actorId: "user-3",
+              targetType: "page",
+              targetId: "about",
+              createdAt: "2026-03-15T08:30:00.000Z",
+              metadata: {
+                actorName: "Katherine Johnson",
+                ip: "127.0.0.2",
+                requestId: "req-3",
+              },
+            },
+          ],
+          nextCursor: null,
+        };
+      }
+      return {
+        items: [
+          {
+            id: "audit-1",
+            action: "content.publish",
+            actorId: "user-1",
+            targetType: "page",
+            targetId: "home",
+            createdAt: "2026-03-15T10:00:00.000Z",
+            metadata: {
+              actorName: "Ada Lovelace",
+              ip: "127.0.0.1",
+              requestId: "req-1",
+            },
           },
-        },
-        {
-          id: "audit-2",
-          action: "auth.denied",
-          actorId: "user-2",
-          targetType: "session",
-          targetId: "sess-1",
-          createdAt: "2026-03-15T09:00:00.000Z",
-          metadata: {
-            actorEmail: "grace@example.com",
-            severity: "warning",
+          {
+            id: "audit-2",
+            action: "auth.denied",
+            actorId: "user-2",
+            targetType: "session",
+            targetId: "sess-1",
+            createdAt: "2026-03-15T09:00:00.000Z",
+            metadata: {
+              actorEmail: "grace@example.com",
+              severity: "warning",
+            },
           },
-        },
-      ];
+        ],
+        nextCursor: auditQuery?.query === "ada" ? "cursor-1" : null,
+      };
     });
   },
-  apiError(message: string) {
-    return { kind: "api", message };
+  apiError(message: string, code = "api_error") {
+    return { kind: "api", message, code };
+  },
+}));
+
+const auditActionState = vi.hoisted(() => ({
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
+  clipboardWriteText: vi.fn(async (_value: string) => undefined),
+  reset() {
+    this.toastSuccess.mockReset();
+    this.toastError.mockReset();
+    this.clipboardWriteText.mockReset();
+    this.clipboardWriteText.mockResolvedValue(undefined);
   },
 }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: auditActionState.toastSuccess,
+    error: auditActionState.toastError,
+  },
+}));
 
 vi.mock("@/components/ui/button", () => ({
   Button: ({
@@ -103,6 +167,7 @@ vi.mock("@/services/apiClient", () => ({
 }));
 
 vi.mock("@/services/auditClient", () => ({
+  exportAuditLogs: auditState.exportAuditLogs,
   listAuditLogs: auditState.listAuditLogs,
 }));
 
@@ -115,7 +180,9 @@ vi.mock("@/ui/layouts/AdminShell", () => ({
     breadcrumbs?: React.ReactNode;
   }) => (
     <div>
-      <div>{breadcrumbs}</div>
+      <div data-testid="breadcrumbs">
+        {Array.isArray(breadcrumbs) ? breadcrumbs.join(" / ") : breadcrumbs}
+      </div>
       <div>{children}</div>
     </div>
   ),
@@ -144,14 +211,31 @@ vi.mock("@/ui/shared/ExportDialog", () => ({
     open,
     onOpenChange,
     title,
+    fields,
+    onExport,
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     title: string;
+    fields: Array<{ id: string; defaultChecked?: boolean }>;
+    onExport?: (payload: { format: "csv" | "json"; fields: string[] }) => Promise<void> | void;
   }) =>
     open ? (
       <div>
         <span>{title}</span>
+        <button
+          type="button"
+          onClick={() =>
+            void onExport?.({
+              format: "csv",
+              fields: fields
+                .filter((field) => field.defaultChecked !== false)
+                .map((field) => field.id),
+            })
+          }
+        >
+          submit-export
+        </button>
         <button type="button" onClick={() => onOpenChange(false)}>
           close-export
         </button>
@@ -162,23 +246,30 @@ vi.mock("@/ui/shared/ExportDialog", () => ({
 vi.mock("../../../core/admin/ui/audit/AuditFilters", () => ({
   AuditFilters: ({
     query,
+    dateRange,
     eventType,
     severity,
     onQueryChange,
+    onDateRangeChange,
     onEventTypeChange,
     onSeverityChange,
   }: {
     query: string;
+    dateRange: string;
     eventType: string;
     severity: string;
     onQueryChange: (value: string) => void;
+    onDateRangeChange: (value: string) => void;
     onEventTypeChange: (value: string) => void;
     onSeverityChange: (value: string) => void;
   }) => (
     <div>
-      <span>{`filters:${query}:${eventType}:${severity}`}</span>
+      <span>{`filters:${query}:${dateRange}:${eventType}:${severity}`}</span>
       <button type="button" onClick={() => onQueryChange("ada")}>
         filter-query
+      </button>
+      <button type="button" onClick={() => onDateRangeChange("last-30-days")}>
+        filter-date
       </button>
       <button type="button" onClick={() => onEventTypeChange("authentication")}>
         filter-type
@@ -197,18 +288,40 @@ vi.mock("../../../core/admin/ui/audit/AuditTable", () => ({
   AuditTable: ({
     logs,
     selectedId,
+    pageInfo,
     onSelect,
+    onCopyJson,
   }: {
     logs: Array<{ id: string; event: string }>;
     selectedId?: string | null;
+    pageInfo?: {
+      countCopy: string;
+      canNext: boolean;
+      canPrevious: boolean;
+      onNext: () => void;
+      onPrevious: () => void;
+    };
     onSelect: (log: { id: string; event: string }) => void;
+    onCopyJson: (log: { id: string; event: string }) => void;
   }) => (
     <div>
       <span>{`audit-table:${logs.length}:${selectedId ?? "none"}`}</span>
+      <span>{`page-info:${pageInfo?.countCopy ?? "none"}:${pageInfo?.canNext ?? false}:${pageInfo?.canPrevious ?? false}`}</span>
+      <button type="button" disabled={!pageInfo?.canPrevious} onClick={pageInfo?.onPrevious}>
+        previous-page
+      </button>
+      <button type="button" disabled={!pageInfo?.canNext} onClick={pageInfo?.onNext}>
+        next-page
+      </button>
       {logs.map((log) => (
-        <button key={log.id} type="button" onClick={() => onSelect(log)}>
-          {`select:${log.event}`}
-        </button>
+        <React.Fragment key={log.id}>
+          <button type="button" onClick={() => onSelect(log)}>
+            {`select:${log.event}`}
+          </button>
+          <button type="button" onClick={() => onCopyJson(log)}>
+            {`copy-table:${log.event}`}
+          </button>
+        </React.Fragment>
       ))}
     </div>
   ),
@@ -219,14 +332,21 @@ vi.mock("../../../core/admin/ui/audit/AuditDetailsDrawer", () => ({
     log,
     open,
     onOpenChange,
+    onCopyJson,
   }: {
     log?: { id: string; event: string } | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onCopyJson: (log: { id: string; event: string }) => void;
   }) =>
     open ? (
       <div>
         <span>{`drawer:${log?.id ?? "none"}:${log?.event ?? "none"}`}</span>
+        {log ? (
+          <button type="button" onClick={() => onCopyJson(log)}>
+            copy-drawer
+          </button>
+        ) : null}
         <button type="button" onClick={() => onOpenChange(false)}>
           close-drawer
         </button>
@@ -275,8 +395,21 @@ const flush = async () => {
   });
 };
 
+const lastAuditQuery = () => {
+  const query = auditState.listAuditLogs.mock.calls.at(-1)?.[0];
+  if (!query || typeof query === "number") {
+    throw new Error("Expected the latest audit call to use an object query.");
+  }
+  return query;
+};
+
 beforeEach(() => {
   auditState.reset();
+  auditActionState.reset();
+  Object.defineProperty(navigator, "clipboard", {
+    value: { writeText: auditActionState.clipboardWriteText },
+    configurable: true,
+  });
 });
 
 afterEach(() => {
@@ -288,26 +421,96 @@ test("AuditList loads logs, filters them, opens export dialog, and clears select
 
   try {
     await flush();
-    expect(auditState.listAuditLogs).toHaveBeenCalledWith(200);
+    expect(auditState.listAuditLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 50, from: expect.any(String), to: expect.any(String) })
+    );
+    expect(view.container.querySelector("[data-testid='breadcrumbs']")?.textContent).toBe(
+      "Admin / Audit Logs"
+    );
     expect(view.container.textContent).toContain("audit-table:2:none");
+
+    clickByText(view.container, "copy-table:Content Publish");
+    await flush();
+    expect(auditActionState.clipboardWriteText).toHaveBeenCalledTimes(1);
+    expect(auditActionState.toastSuccess).toHaveBeenCalledWith("Audit entry JSON copied.");
 
     clickByText(view.container, "select:Content Publish");
     expect(view.container.textContent).toContain("drawer:audit-1:Content Publish");
+    clickByText(view.container, "copy-drawer");
+    await flush();
+    expect(auditActionState.clipboardWriteText).toHaveBeenCalledTimes(2);
     clickByText(view.container, "close-drawer");
     expect(view.container.textContent).not.toContain("drawer:audit-1:Content Publish");
     expect(view.container.textContent).toContain("audit-table:2:none");
 
     clickByText(view.container, "filter-query");
     await flush();
-    expect(view.container.textContent).toContain("audit-table:1:none");
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "ada" })
+    );
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 2 loaded audit logs. More results are available.:true:false"
+    );
+
+    clickByText(view.container, "next-page");
+    await flush();
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "ada", cursor: "cursor-1" })
+    );
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 1 loaded audit logs.:false:true"
+    );
+
+    clickByText(view.container, "previous-page");
+    await flush();
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ cursor: expect.any(String) })
+    );
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "ada" })
+    );
+
+    const queryBeforeDate = lastAuditQuery();
+    clickByText(view.container, "filter-date");
+    await flush();
+    const queryAfterDate = lastAuditQuery();
+    expect(queryAfterDate.from).not.toBe(queryBeforeDate.from);
+    expect(queryAfterDate.to).toEqual(expect.any(String));
+    expect(queryAfterDate.cursor).toBeUndefined();
 
     clickByText(view.container, "filter-type");
     clickByText(view.container, "filter-severity");
     clickByText(view.container, "filter-empty");
     await flush();
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        category: "authentication",
+        severity: "warning",
+        query: "zzz",
+      })
+    );
     expect(view.container.textContent).toContain("No audit logs match the current filters.");
 
-    clickByText(view.container, "Export CSV");
+    clickByText(view.container, "Export");
+    expect(view.container.textContent).toContain("Export Audit Logs");
+    clickByText(view.container, "submit-export");
+    await flush();
+    expect(auditState.exportAuditLogs).toHaveBeenCalledWith({
+      format: "csv",
+      columns: ["event", "actor", "resource", "timestamp", "status"],
+      filters: expect.objectContaining({
+        limit: 50,
+        category: "authentication",
+        severity: "warning",
+        query: "zzz",
+      }),
+    });
+    expect(auditActionState.toastSuccess).toHaveBeenCalledWith(
+      "Audit export downloaded: audit-logs-2026-06-01-authentication.csv"
+    );
+    expect(view.container.textContent).not.toContain("Export Audit Logs");
+
+    clickByText(view.container, "Export");
     expect(view.container.textContent).toContain("Export Audit Logs");
     clickByText(view.container, "close-export");
     expect(view.container.textContent).not.toContain("Export Audit Logs");
@@ -323,6 +526,8 @@ test("AuditList surfaces api and generic load failures", async () => {
   try {
     await flush();
     expect(apiView.container.textContent).toContain("Load denied");
+    expect(apiView.container.textContent).toContain("Audit logs could not be loaded.");
+    expect(apiView.container.textContent).not.toContain("No audit logs match the current filters.");
   } finally {
     apiView.cleanup();
   }
@@ -336,5 +541,87 @@ test("AuditList surfaces api and generic load failures", async () => {
     expect(genericView.container.textContent).toContain("Failed to load audit logs.");
   } finally {
     genericView.cleanup();
+  }
+});
+
+test("AuditList preserves visible rows when a server-filter refresh fails", async () => {
+  const view = mount(<AuditList />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("audit-table:2:none");
+
+    auditState.nextError = auditState.apiError("Filter failed");
+    clickByText(view.container, "filter-query");
+    await flush();
+
+    expect(view.container.textContent).toContain("Filter failed");
+    expect(view.container.textContent).toContain("audit-table:2:none");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AuditList preserves the loaded page state when a next-page request fails", async () => {
+  const view = mount(<AuditList />);
+
+  try {
+    await flush();
+    clickByText(view.container, "filter-query");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 2 loaded audit logs. More results are available.:true:false"
+    );
+
+    auditState.nextError = auditState.apiError("Next page failed");
+    clickByText(view.container, "next-page");
+    await flush();
+
+    expect(view.container.textContent).toContain("Next page failed");
+    expect(view.container.textContent).toContain("audit-table:2:none");
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 2 loaded audit logs. More results are available.:true:false"
+    );
+
+    clickByText(view.container, "next-page");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 1 loaded audit logs.:false:true"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AuditList resets to the first page when the server rejects a cursor", async () => {
+  const view = mount(<AuditList />);
+
+  try {
+    await flush();
+    clickByText(view.container, "filter-query");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 2 loaded audit logs. More results are available.:true:false"
+    );
+
+    auditState.nextError = auditState.apiError("Cursor invalid", "audit_cursor_invalid");
+    clickByText(view.container, "next-page");
+    await flush();
+    await flush();
+
+    expect(view.container.textContent).toContain(
+      "Audit cursor expired. Showing the first page again."
+    );
+    expect(view.container.textContent).toContain(
+      "page-info:Showing 2 loaded audit logs. More results are available.:true:false"
+    );
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ cursor: expect.any(String) })
+    );
+    expect(auditState.listAuditLogs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: "ada" })
+    );
+  } finally {
+    view.cleanup();
   }
 });

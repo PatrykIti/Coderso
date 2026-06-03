@@ -1,3 +1,8 @@
+import {
+  appointmentFormCustomFieldTypes,
+  appointmentFormFieldLimits,
+} from "../../widgets/core/appointmentFormContract";
+
 const uuidPattern =
   "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$";
 const dateTimePattern =
@@ -133,11 +138,21 @@ export const bookingReservationCreateSchema = {
     resourceId: { type: "string", pattern: uuidPattern },
     startsAt: { type: "string", pattern: dateTimePattern },
     endsAt: { type: "string", pattern: dateTimePattern },
-    timezone: { type: "string", minLength: 1, maxLength: 120 },
-    customerName: { type: "string", minLength: 1, maxLength: 200 },
-    customerEmail: { type: ["string", "null"], maxLength: 320 },
-    customerPhone: { type: ["string", "null"], maxLength: 64 },
-    notes: { type: ["string", "null"], maxLength: 2000 },
+    timezone: { type: "string", minLength: 1, maxLength: appointmentFormFieldLimits.timezone },
+    customerName: {
+      type: "string",
+      minLength: 1,
+      maxLength: appointmentFormFieldLimits.customerName,
+    },
+    customerEmail: {
+      type: ["string", "null"],
+      maxLength: appointmentFormFieldLimits.customerEmail,
+    },
+    customerPhone: {
+      type: ["string", "null"],
+      maxLength: appointmentFormFieldLimits.customerPhone,
+    },
+    notes: { type: ["string", "null"], maxLength: appointmentFormFieldLimits.notes },
     metadata: { type: "object" },
   },
   additionalProperties: false,
@@ -168,21 +183,16 @@ export const bookingPublicSlotQuerySchema = {
   additionalProperties: false,
 } as const;
 
-const bookingPublicReservationCustomFieldTypes = [
-  "text",
-  "email",
-  "phone",
-  "select",
-  "checkbox",
-  "textarea",
-] as const;
-
 export const bookingPublicReservationMetadataConsentSchema = {
   type: "object",
   required: ["accepted", "label"],
   properties: {
     accepted: { type: "boolean" },
-    label: { type: "string", minLength: 1, maxLength: 240 },
+    label: {
+      type: "string",
+      minLength: 1,
+      maxLength: appointmentFormFieldLimits.consentLabel,
+    },
   },
   additionalProperties: false,
 } as const;
@@ -191,10 +201,17 @@ export const bookingPublicReservationMetadataCustomFieldSchema = {
   type: "object",
   required: ["id", "label", "type"],
   properties: {
-    id: { type: "string", minLength: 1, maxLength: 120 },
-    label: { type: "string", minLength: 1, maxLength: 240 },
-    type: { enum: bookingPublicReservationCustomFieldTypes },
-    value: { type: ["string", "null"], maxLength: 2000 },
+    id: { type: "string", minLength: 1, maxLength: appointmentFormFieldLimits.customFieldId },
+    label: {
+      type: "string",
+      minLength: 1,
+      maxLength: appointmentFormFieldLimits.customFieldLabel,
+    },
+    type: { enum: [...appointmentFormCustomFieldTypes] },
+    value: {
+      type: ["string", "null"],
+      maxLength: appointmentFormFieldLimits.customFieldValue,
+    },
     checked: { type: "boolean" },
   },
   additionalProperties: false,
@@ -203,12 +220,20 @@ export const bookingPublicReservationMetadataCustomFieldSchema = {
 export const bookingPublicReservationMetadataSchema = {
   type: "object",
   properties: {
-    flowId: { type: "string", minLength: 1, maxLength: 120 },
-    pathname: { type: "string", minLength: 1, maxLength: 512 },
+    flowId: {
+      type: "string",
+      minLength: 1,
+      maxLength: appointmentFormFieldLimits.metadataFlowId,
+    },
+    pathname: {
+      type: "string",
+      minLength: 1,
+      maxLength: appointmentFormFieldLimits.metadataPathname,
+    },
     consent: bookingPublicReservationMetadataConsentSchema,
     customFields: {
       type: "array",
-      maxItems: 12,
+      maxItems: appointmentFormFieldLimits.customFields,
       items: bookingPublicReservationMetadataCustomFieldSchema,
     },
   },
@@ -223,14 +248,32 @@ export const bookingPublicReservationSchema = {
     resourceId: { type: "string", pattern: uuidPattern },
     startsAt: { type: "string", pattern: dateTimePattern },
     endsAt: { type: "string", pattern: dateTimePattern },
-    timezone: { type: "string", minLength: 1, maxLength: 120 },
-    customerName: { type: "string", minLength: 1, maxLength: 200 },
-    customerEmail: { type: ["string", "null"], maxLength: 320 },
-    customerPhone: { type: ["string", "null"], maxLength: 64 },
-    notes: { type: ["string", "null"], maxLength: 2000 },
+    timezone: { type: "string", minLength: 1, maxLength: appointmentFormFieldLimits.timezone },
+    customerName: {
+      type: "string",
+      minLength: 1,
+      maxLength: appointmentFormFieldLimits.customerName,
+    },
+    customerEmail: {
+      type: ["string", "null"],
+      maxLength: appointmentFormFieldLimits.customerEmail,
+    },
+    customerPhone: {
+      type: ["string", "null"],
+      maxLength: appointmentFormFieldLimits.customerPhone,
+    },
+    notes: { type: ["string", "null"], maxLength: appointmentFormFieldLimits.notes },
     metadata: bookingPublicReservationMetadataSchema,
-    captchaToken: { type: "string", minLength: 1, maxLength: 4096 },
-    formNonce: { type: "string", minLength: 1, maxLength: 1024 },
+    captchaToken: {
+      type: "string",
+      minLength: 1,
+      maxLength: appointmentFormFieldLimits.captchaToken,
+    },
+    formNonce: {
+      type: "string",
+      minLength: 1,
+      maxLength: appointmentFormFieldLimits.formNonce,
+    },
   },
   additionalProperties: false,
 } as const;

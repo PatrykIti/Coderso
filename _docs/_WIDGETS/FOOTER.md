@@ -17,8 +17,9 @@ icon-based social actions.
   Three visible footer columns plus an optional lower legal/actions strip.
 - `minimal`
   Compact footer row that reuses the first column links inline, keeps brand /
-  legal / social content visible when enabled, and preserves hidden columns in
-  data without rendering them as a fake one-column grid.
+  legal / social / contact / back-to-top content visible when enabled, and
+  preserves hidden columns in data without rendering them as a fake one-column
+  grid.
 
 ## Slots
 
@@ -36,7 +37,7 @@ icon-based social actions.
 ## Editor Modes
 
 ### Wizard
-- Layout variant selection.
+- Read-only layout variant summary. Footer variant selection belongs to Visual.
 - Read-only visible-columns summary; all column titles, links, order, and
   hidden columns stay in Visual mode.
 - Read-only social-visibility summary. Saved social profiles stay preserved and
@@ -68,6 +69,9 @@ belong to Visual.
 - Visual owns daily footer layout controls: column/legal alignment, max width,
   column gap, horizontal padding, responsive breakpoint, and section padding.
 - Link reordering is supported.
+- Visual logo preview uses the same safe media URL contract as runtime. Unsafe
+  saved `brand.logoUrl` values show a replace-or-clear warning instead of an
+  image preview.
 - Column reordering is supported only through the live footer block patch path,
   where the visible column data and matching `column-1/2/3` slot payloads move
   together as one atomic contract. Static previews keep those controls
@@ -105,6 +109,10 @@ belong to Visual.
   - `email` renders only when it can be normalized to a safe `mailto:` href.
 - Back-to-top renders only when enabled, uses `href="#top"`, and does not add
   JavaScript-only scroll behavior.
+- Minimal footers render configured contact and back-to-top utility content even
+  when legal and social content are disabled.
+- Unsafe column link destinations are omitted from public anchors instead of
+  degrading to clickable `href="#"` placeholders.
 - Footer landmark naming:
   - uses `aria-labelledby` when visible brand text exists,
   - otherwise falls back to `aria-label="Site footer"`.
@@ -219,10 +227,13 @@ belong to Visual.
 ## TASK-336-18 Editor Contract
 
 - Exports `footerEditorContract` with `version: 2`.
-- Contract target: Wizard exposes a setup-only variant action plus read-only
-  visible-columns and social-visibility summaries; Visual owns all daily
+- Contract target: Wizard exposes read-only variant, visible-columns, and
+  social-visibility summaries; Visual owns variant selection plus all daily
   link/contact/social/content and presentation controls; Advanced is read-only
   runtime diagnostics.
 - `TASK-336-19` moves the previously writable Advanced layout controls into
   Visual, adds explicit section/control ownership metadata, and removes raw
   color text inputs from normal Footer authoring.
+- `TASK-398` closes the 31-05 audit findings: minimal utility rendering,
+  unsafe column link fail-closed behavior, safe logo preview, Visual-only
+  variant ownership, and precise `slots` / destination-control metadata.

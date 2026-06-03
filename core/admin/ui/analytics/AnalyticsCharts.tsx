@@ -39,7 +39,9 @@ const formatLabel = (trend: TrendPoint[], index: number) => {
 
 export function AnalyticsCharts({ trend, topPages }: AnalyticsChartsProps) {
   const linePath = buildPath(trend);
-  const fadedPath = buildPath(trend.map((point) => ({ ...point, value: Math.max(0, point.value - 2) })));
+  const fadedPath = buildPath(
+    trend.map((point) => ({ ...point, value: Math.max(0, point.value - 2) }))
+  );
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -102,12 +104,12 @@ export function AnalyticsCharts({ trend, topPages }: AnalyticsChartsProps) {
       <Card className="border-border/60">
         <CardHeader className="space-y-1">
           <CardTitle className="text-lg">Top Performing Content</CardTitle>
-          <CardDescription>Most recently updated content items</CardDescription>
+          <CardDescription>Highest activity items in the selected range</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           {topPages.length === 0 ? (
             <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              No content activity yet.
+              No content activity yet. Publish content or widen the date range.
             </div>
           ) : (
             topPages.map((page) => (

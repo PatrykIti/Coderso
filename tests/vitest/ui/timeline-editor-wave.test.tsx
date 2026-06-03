@@ -322,6 +322,12 @@ const findSectionByTitle = (container: ParentNode, title: string) =>
     )
   );
 
+const writableControlPaths = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("[data-widget-control-path]"))
+    .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+    .map((element) => element.getAttribute("data-widget-control-path"))
+    .filter((path): path is string => Boolean(path));
+
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
@@ -643,6 +649,156 @@ test("Timeline visual editor covers mode previews, drag reorder, no-status, grou
     expect(latestValue.steps.find((step) => step.id === "alpha")?.link).toEqual(
       expect.objectContaining({ href: "/timeline-link", label: "Open discovery" })
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Timeline visual editor maps mutating control metadata to the rendered sections", async () => {
+  const { TimelineVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
+
+  const view = mount(
+    <TimelineVisualEditor
+      value={{
+        steps: [
+          { id: "alpha", title: "Discover", cta: { label: "Read", href: "/read" } },
+          { id: "beta", title: "Plan" },
+          { id: "gamma", title: "Ship" },
+        ],
+      }}
+      onChange={() => undefined}
+      variant="milestones"
+      onVariantChange={() => undefined}
+    />
+  );
+  await flushAsyncEffects();
+
+  try {
+    const modeLayoutPaths = writableControlPaths(
+      findSectionByTitle(view.container, "Variant and timeline structure") as ParentNode
+    );
+    expect(modeLayoutPaths).toEqual(
+      expect.arrayContaining([
+        "variant",
+        "mode",
+        "steps.count",
+        "layout.orientation",
+        "layout.labelPosition",
+        "layout.align",
+      ])
+    );
+
+    const itemPaths = writableControlPaths(
+      findSectionByTitle(view.container, "Steps content and order") as ParentNode
+    );
+    expect(itemPaths).toEqual(
+      expect.arrayContaining([
+        "steps",
+        "steps.order",
+        "steps.title",
+        "steps.description",
+        "steps.date",
+        "steps.dateLabel",
+        "steps.status",
+        "steps.icon",
+        "steps.cta.label",
+        "steps.cta.href",
+        "steps.link.label",
+        "steps.link.href",
+      ])
+    );
+
+    const markerPaths = writableControlPaths(
+      findSectionByTitle(view.container, "Markers and accents") as ParentNode
+    );
+    expect(markerPaths).toEqual(
+      expect.arrayContaining([
+        "style.markerSize",
+        "style.markerDisplay",
+        "style.markerColor",
+        "steps.accent",
+        "steps.markerIcon",
+        "steps.markerBackgroundColor",
+        "steps.markerIconColor",
+      ])
+    );
+
+    const colorPaths = writableControlPaths(
+      findSectionByTitle(view.container, "Colors and background") as ParentNode
+    );
+    expect(colorPaths).toEqual(
+      expect.arrayContaining([
+        "style.lineColor",
+        "style.titleColor",
+        "style.descriptionColor",
+        "background.color",
+      ])
+    );
+    expect(colorPaths).not.toContain("style.markerColor");
+
+    const typographyPaths = writableControlPaths(
+      findSectionByTitle(view.container, "Typography and spacing") as ParentNode
+    );
+    expect(typographyPaths).toEqual(
+      expect.arrayContaining([
+        "header.title",
+        "header.description",
+        "style.titleSize",
+        "style.titleWeight",
+        "style.descriptionSize",
+        "layout.spacing",
+        "layout.padding",
+        "layout.sectionSpacing",
+        "layout.maxWidth",
+      ])
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Timeline visual marks saved variant inactive while process mode owns compact rendering", async () => {
+  const { TimelineVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
+
+  let currentVariant = "compact";
+  const Harness = () => {
+    const [variant, setVariant] = useState(currentVariant);
+    return (
+      <TimelineVisualEditor
+        value={{
+          mode: "process",
+          steps: [
+            { id: "alpha", title: "Discover" },
+            { id: "beta", title: "Plan" },
+            { id: "gamma", title: "Ship" },
+          ],
+        }}
+        onChange={() => undefined}
+        variant={variant}
+        onVariantChange={(next) => {
+          currentVariant = next;
+          setVariant(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+  await flushAsyncEffects();
+
+  try {
+    expect(view.container.textContent).toContain("Process mode uses compact rendering");
+    clickButtonByText(view.container, "Cards");
+    const cardsButton = view.container.querySelector('[data-timeline-variant-card="cards"]');
+    const compactButton = view.container.querySelector('[data-timeline-variant-card="compact"]');
+
+    expect(currentVariant).toBe("cards");
+    expect(cardsButton?.getAttribute("data-timeline-variant-card-state")).toBe("saved-inactive");
+    expect(compactButton?.getAttribute("data-timeline-variant-card-state")).toBe("effective");
+    expect(cardsButton?.textContent).toContain("Saved, inactive");
+    expect(compactButton?.textContent).toContain("Active");
   } finally {
     view.cleanup();
   }

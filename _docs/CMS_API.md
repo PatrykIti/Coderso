@@ -91,10 +91,12 @@ Permissions: `users:read`, `users:write`
 
 - `GET /admin-users`
 - `POST /admin-users`
+- `POST /admin-users/invite`
 - `PATCH /admin-users/:id`
 - `POST /admin-users/:id/disable`
 - `POST /admin-users/:id/enable`
 - `PUT /admin-users/:id/roles`
+- `POST /admin-users/:id/password-reset`
 - `DELETE /admin-users/:id`
 
 Create user payload (summary):
@@ -104,8 +106,18 @@ Create user payload (summary):
   "name": "Alex Morgan",
   "email": "alex@example.com",
   "roleIds": ["editor"],
-  "status": "pending",
-  "password": "optional"
+  "status": "pending"
+}
+```
+
+Invite user payload (summary):
+
+```json
+{
+  "name": "Alex Morgan",
+  "email": "alex@example.com",
+  "roleIds": ["editor"],
+  "sendSetPasswordInvite": true
 }
 ```
 
@@ -125,6 +137,29 @@ Replace roles payload:
 { "roleIds": ["editor", "viewer"] }
 ```
 
+Password reset payload:
+
+```json
+{ "delivery": "email" }
+```
+
+Invite/reset responses return delivery status and never return the reset token:
+
+```json
+{
+  "delivery": "email",
+  "status": "sent",
+  "expiresAt": "2026-06-01T11:00:00.000Z"
+}
+```
+
+Relevant errors:
+
+- `email_not_configured` when Settings -> Email is not configured.
+- `email_send_failed` when SMTP delivery fails.
+- `set_password_token_invalid`, `set_password_token_expired`,
+  `set_password_token_used` on reset-confirm.
+
 ---
 
 ## Admin roles (v1)
@@ -143,9 +178,22 @@ Create role payload (summary):
 {
   "name": "editor",
   "description": "Content editors",
-  "permissions": ["content:read", "content:write", "media:read"]
+  "permissions": ["content:read", "content:write", "media:read"],
+  "sourceRoleId": "optional-source-role-id",
+  "sourceRoleName": "optional source role name"
 }
 ```
+
+`sourceRoleId` and `sourceRoleName` are accepted only as duplicate-role audit
+context. The route strips them before persistence and records
+`admin.role.duplicate` audit metadata when `sourceRoleId` is present.
+
+Relevant role errors:
+
+- `role_not_found` when the target role does not exist.
+- `role_invalid` or `permission_invalid` for invalid payloads.
+- `role_exists` on name conflicts.
+- `last_admin` when a role mutation would remove the last administrator path.
 
 Permissions catalog response (summary):
 
@@ -2366,8 +2414,13 @@ Taxonomy overview error contract:
 
 Permissions: `content:read`
 
-- `GET /search?q=...&limit=20`
+- `GET /search?q=...&limit=20&dateRange=last-7-days`
 - `GET /search/recent`
+
+`dateRange` is optional and defaults to `last-7-days`. Allowed values are
+`last-7-days`, `last-30-days`, `last-12-months`, and `all-time`; unknown values
+return `search_date_range_invalid` with HTTP 400. Finite ranges filter page,
+entry, and user `updatedAt` timestamps plus media `createdAt` timestamps.
 
 Response:
 
@@ -2396,7 +2449,14 @@ Response:
     { "id": "page", "label": "Pages", "count": 4 },
     { "id": "entry:blog", "label": "Blog", "count": 2 },
     { "id": "media", "label": "Media", "count": 1 }
-  ]
+  ],
+  "meta": {
+    "dateRange": "last-7-days",
+    "hasSearchableContent": true,
+    "hasQueryMatches": true,
+    "hasMatchesOutsideDateRange": false,
+    "returnedItems": 7
+  }
 }
 ```
 
@@ -2410,6 +2470,10 @@ Recent response (summary):
   ]
 }
 ```
+
+`meta` is aggregate-only and supports Search empty states without exposing
+private row data. `hasSearchableContent` is `null` only for minimum-length
+requests that do not execute search.
 
 Category labels can be overridden via settings key `search.categoryOverrides` (map of categoryId -> { label, hidden }).
 
@@ -2449,14 +2513,30 @@ Example item:
 `POST /seo/audit` payload:
 
 ```json
-{ "targetType": "page", "targetId": "uuid" }
+{
+  "targetType": "page",
+  "targetId": "uuid",
+  "checks": ["meta", "links", "robots"]
+}
 ```
+
+`targetType` and `targetId` are optional, but must be provided together for a
+scoped audit. `checks` is optional and defaults to all supported checks. Unknown
+checks are rejected with `validation_error`; an empty array is rejected before
+the audit runs.
 
 Response:
 
 ```json
 { "audited": 12 }
 ```
+
+Saving `/seo/:id` recalculates `score`, `status`, and `issues` from the saved
+metadata and clears the server-side public HTML cache. Public page rendering
+uses SEO Manager documents as the first public source of truth for page title,
+description, canonical URL, and robots directives, then falls back to published
+page SEO data and page title. Detail-page explicit SEO title/description field
+mappings keep precedence over entry SEO document fallbacks.
 
 ---
 
@@ -2467,7 +2547,14 @@ Permissions: `content:read`
 Note: v1 analytics are derived from CMS data (counts + recent updates), not real traffic.
 
 - `GET /analytics/overview?rangeDays=30`
-- `GET /analytics/top-content?limit=10&type=page`
+- `GET /analytics/top-content?limit=10&rangeDays=30&type=page`
+- `GET /analytics/top-content/export?limit=50&rangeDays=30&format=csv&type=page`
+
+All Analytics endpoints are internal admin reads. They require the existing
+session cookie and `content:read`; GET requests use the `admin_read` rate-limit
+bucket and do not require CSRF. Query strings are strict: unknown parameters,
+invalid `type`, unsupported export formats, and out-of-range `limit`/
+`rangeDays` values are rejected with `validation_error`.
 
 Overview response:
 
@@ -2491,6 +2578,21 @@ Top content response:
 [
   { "id": "page-id", "type": "page", "title": "Homepage", "slug": "/", "updatedAt": "2026-01-30T09:00:00Z", "score": 90 }
 ]
+```
+
+Top content is scoped to items updated inside the selected `rangeDays` window.
+`type` is optional and may be `page` or `entry`. Export currently supports CSV
+only and returns the file payload in a JSON envelope so the admin UI can create
+the browser download:
+
+```json
+{
+  "fileName": "coderso-analytics-top-content-30d-2026-01-30.csv",
+  "contentType": "text/csv",
+  "content": "type,title,slug,updatedAt,score\npage,Homepage,/,2026-01-30T09:00:00.000Z,90",
+  "rangeDays": 30,
+  "totalRows": 1
+}
 ```
 
 ---
@@ -2574,19 +2676,42 @@ Response:
 
 Permissions: `backups:read`, `backups:write`
 
-Note: v1 backupy to metadane + placeholder na artefakt. Faktyczne backupy realizuje worker/plugin.
+Note: v1 manual backups are CMS-managed metadata rows plus a local JSON artifact.
+`POST /backups` creates the row, writes the artifact under `BACKUP_DIR` or
+`storage/backups`, and returns a completed row when artifact creation succeeds.
+Restore is still unsupported until a separate restore contract exists.
 
-- `GET /backups`
+- `GET /backups?page=1&limit=10&query=queued`
 - `POST /backups` (manual create)
 - `POST /backups/:id/restore`
 - `GET /backups/:id/download`
+- `DELETE /backups/:id`
 - `GET /backups/schedule`
 - `PATCH /backups/schedule`
 
 Create payload (optional):
 
 ```json
-{ "kind": "manual" }
+{
+  "kind": "manual",
+  "include": ["database", "media"]
+}
+```
+
+`include` is optional and defaults to `["database", "media"]`. Allowed values
+are `database`, `media`, and `settings`; the array must contain 1-3 unique
+values. The selected option keys are accepted by the service and recorded in
+audit metadata, but v1 does not persist secret values or artifact contents in
+the browser/API payload.
+
+List query:
+
+```json
+{
+  "page": 1,
+  "limit": 10,
+  "query": "queued"
+}
 ```
 
 List response:
@@ -2598,16 +2723,31 @@ List response:
       "id": "backup-id",
       "status": "complete",
       "kind": "manual",
-      "storageDriver": "s3",
-      "artifactPath": "s3://bucket/backup.tar",
+      "storageDriver": "local",
+      "artifactPath": "local",
       "sizeBytes": 1048576,
       "error": null,
       "createdAt": "2026-01-30T10:00:00Z",
       "finishedAt": "2026-01-30T10:05:00Z"
     }
-  ]
+  ],
+  "page": 1,
+  "limit": 10,
+  "total": 1,
+  "hasNext": false,
+  "hasPrevious": false,
+  "worker": {
+    "mode": "internal",
+    "healthy": true,
+    "queuedCount": 0,
+    "oldestQueuedAt": null,
+    "message": "Backups are processed by the CMS."
+  }
 }
 ```
+
+Unknown query fields are rejected. `page` must be an integer >= 1 and `limit`
+must be 1-100.
 
 Schedule payload:
 
@@ -2623,8 +2763,45 @@ Schedule payload:
 Download response:
 
 ```json
-{ "url": "https://cdn.example.com/backups/backup.tar", "path": "s3://bucket/backup.tar" }
+{
+  "url": null,
+  "path": null,
+  "fileName": "coderso-backup-backup-id.json",
+  "contentType": "application/json",
+  "content": "{...redacted example...}"
+}
 ```
+
+Download returns `backup_not_ready` for queued/running/failed/artifact-less
+rows and `backup_artifact_invalid` when a completed row has a non-downloadable
+artifact path outside the configured backup directory. Local CMS artifacts are
+returned as JSON content with `url: null` and `path: null`; list responses and
+browser cache redact local artifact paths to `artifactPath: "local"` and never
+persist downloaded artifact content. Future plugin/storage integrations may
+still return public `http(s)` artifact URLs.
+
+Restore returns `backup_not_ready` until a completed artifact exists, then
+`backup_restore_unsupported` until the CMS ships an explicit restore
+implementation.
+
+Delete response:
+
+```json
+{ "ok": true, "id": "backup-id" }
+```
+
+Delete removes the target metadata row and deletes the owned local artifact only
+when the path resolves inside the configured backup directory.
+
+Known backup error codes:
+
+- `backup_not_found`
+- `backup_not_ready`
+- `backup_restore_unsupported`
+- `backup_artifact_invalid`
+- `backup_include_required`
+- `backup_include_invalid`
+- `backup_schedule_invalid`
 
 ---
 
@@ -2636,12 +2813,38 @@ Permissions: `settings:read`, `settings:write`
 - `POST /tools/import/preview`
 - `POST /tools/import`
 
+Export query:
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `target` | `full` \| `settings` \| `menus` \| `themes` \| `redirects` | `full` | Selects the export surface. Unsupported Content Types, Pages, Media, CSV, and ZIP exports are not exposed by v1. |
+| `include` | comma-separated include options | target defaults | Allowed values: `settings`, `menus`, `menu-items`, `theme-profiles`, `theme-routes`, `admin-theme-templates`, `admin-theme-profiles`, `redirects`. Values must belong to the selected target. |
+
+Example targeted export:
+
+```http
+GET /tools/export?target=menus&include=menus,menu-items
+```
+
 Export response (bundle):
 
 ```json
 {
   "version": 1,
   "exportedAt": "2026-01-30T10:00:00Z",
+  "scope": {
+    "target": "full",
+    "include": [
+      "settings",
+      "menus",
+      "menu-items",
+      "theme-profiles",
+      "theme-routes",
+      "admin-theme-templates",
+      "admin-theme-profiles",
+      "redirects"
+    ]
+  },
   "settings": {
     "site.name": "Coderso",
     "site.locale": "en",
@@ -2653,29 +2856,68 @@ Export response (bundle):
   },
   "menus": [
     {
+      "id": "11111111-1111-4111-8111-111111111111",
       "name": "Main",
       "location": "primary",
-      "items": [{ "id": "item-1", "label": "Home", "href": "/", "orderIndex": 0 }]
+      "items": [
+        {
+          "id": "22222222-2222-4222-8222-222222222222",
+          "label": "Home",
+          "href": "/",
+          "orderIndex": 0
+        }
+      ]
     }
   ],
   "themeProfiles": [
     {
-      "id": "profile-1",
+      "id": "33333333-3333-4333-8333-333333333333",
       "name": "Default",
       "description": null,
       "themeName": "admin-default",
       "tokens": {},
       "isActive": true,
-      "routes": [{ "id": "route-1", "path": "/", "pageId": null }]
+      "routes": [
+        {
+          "id": "44444444-4444-4444-8444-444444444444",
+          "path": "/",
+          "pageId": null
+        }
+      ]
     }
   ],
   "adminThemes": {
-    "templates": [{ "id": "template-1", "name": "Admin Default", "tokens": {} }],
-    "profiles": [{ "id": "admin-profile-1", "name": "Admin", "templateId": "template-1", "isActive": true }]
+    "templates": [
+      {
+        "id": "55555555-5555-4555-8555-555555555555",
+        "name": "Admin Default",
+        "tokens": {}
+      }
+    ],
+    "profiles": [
+      {
+        "id": "66666666-6666-4666-8666-666666666666",
+        "name": "Admin",
+        "templateId": "55555555-5555-4555-8555-555555555555",
+        "isActive": true
+      }
+    ]
   },
-  "redirects": []
+  "redirects": [
+    {
+      "id": "77777777-7777-4777-8777-777777777777",
+      "fromPath": "/old",
+      "toPath": "/new",
+      "statusCode": 301,
+      "enabled": true
+    }
+  ]
 }
 ```
+
+Targeted export bundles include empty arrays/objects for omitted sections and
+carry `scope`. Import preview/apply use that scope so omitted sections are not
+treated as delete instructions.
 
 Preview/import response:
 
@@ -2694,6 +2936,21 @@ Preview/import response:
   }
 }
 ```
+
+Known import/export error codes:
+
+- `export_target_invalid`
+- `export_include_required`
+- `export_include_invalid`
+- `import_bundle_version_invalid`
+- `import_bundle_exported_at_invalid`
+- `import_*_invalid` for malformed UUID-backed IDs/references
+- `theme_routes_duplicate`
+- `redirects_duplicate`
+- `admin_theme_template_not_found`
+- `menu_item_link_invalid`
+- `redirect_invalid`
+- `redirect_target_external`
 
 ---
 
@@ -2733,6 +2990,37 @@ List response (array):
 ]
 ```
 
+Validation and runtime contract:
+
+- `fromPath` and `toPath` are internal path strings with a 512 character
+  maximum. Both are normalized with a leading `/`; trailing slashes are removed
+  except for `/`.
+- `toPath` must stay internal. Absolute URLs, protocol-relative URLs, and
+  backslash/network-path variants are rejected with `redirect_target_external`
+  or `redirect_invalid`.
+- `statusCode` accepts only `301`, `302`, `307`, and `308`.
+- Duplicate `fromPath` rows return `redirect_exists`.
+- Missing rows return `redirect_not_found`.
+- Source-to-self redirects and redirect chains that loop return
+  `redirect_loop`.
+- Public runtime applies enabled redirects before page/content resolution and
+  after public API, preview, and site-asset exclusions. Disabled/no-match rows
+  fall through to normal public routing. Runtime loops fail closed with HTTP
+  `508`.
+
+---
+
+## Admin log query conventions
+
+Admin log list endpoints use strict query validation. Unknown query parameters
+are rejected, `limit` is normalized through the shared Admin query helper after
+raw string validation, and date query params must be RFC3339 `date-time` values
+when a route accepts them. UI copy must not invent totals: exact totals may
+only be shown when response metadata supplies them; otherwise copy must describe
+loaded rows and cursor availability. Custom ranges must expose real `from`/`to`
+inputs before they can be applied, and filter labels must match their source
+(`User` for user ids, `Role` for role ids).
+
 ---
 
 ## Audit logs
@@ -2740,6 +3028,13 @@ List response (array):
 Permissions: `audit:read`
 
 - `GET /audit?limit=100`
+- `POST /audit/export`
+- Optional strict filters: `q=search`, `category=authentication|content|system`,
+  `severity=info|warning|error`, `from`, `to`, `cursor`.
+- `from` and `to` must be RFC3339 `date-time` values. Reversed ranges are
+  rejected as `audit_query_invalid`.
+- Cursors are opaque keyset cursors that preserve database timestamp precision.
+  Malformed cursors are rejected as `audit_cursor_invalid`.
 
 Response:
 
@@ -2755,20 +3050,70 @@ Response:
       "metadata": { "slug": "home" },
       "createdAt": "2026-01-27T10:00:00Z"
     }
-  ]
+  ],
+  "nextCursor": null
 }
 ```
 
-Uwaga: Admin UI korzysta z `GET /audit` do listowania logow (limit 200).
+Uwaga: Admin UI korzysta z `GET /audit` do listowania logow. `limit` jest
+walidowany jako dodatnia liczba calkowita i clampowany do 200 przez wspolne
+konwencje query. `category` i `severity` sa deterministycznie wyprowadzane z
+`action`, `targetType` i `metadata.severity`; odpowiedz jest sortowana po
+`createdAt DESC, id DESC`.
+
+`POST /audit/export` body:
+
+```json
+{
+  "format": "csv",
+  "columns": ["event", "actor", "resource", "timestamp", "status", "payload"],
+  "filters": {
+    "limit": 50,
+    "query": "auth",
+    "category": "authentication",
+    "from": "2026-06-01T00:00:00.000Z",
+    "to": "2026-06-01T23:59:59.999Z"
+  }
+}
+```
+
+The export route is an internal admin POST (`/admin/api/audit/export` over
+HTTP), uses the global admin CSRF and `admin_write` rate-limit pipeline, and
+requires `audit:read`. It rejects unknown body fields and unsupported columns.
+Supported formats are `csv` and `json`; synchronous exports are limited to 200
+rows. Responses use the shared admin export JSON contract:
+
+```json
+{
+  "type": "file",
+  "filename": "audit-logs-2026-06-01-search.csv",
+  "mimeType": "text/csv",
+  "content": "Event,Timestamp\ncontent.publish,2026-06-01T10:30:00.000Z"
+}
+```
+
+Exported payload values are redacted recursively before serialization. CSV
+output escapes commas, quotes, newlines, and formula prefixes.
 
 ---
 
 ## Access logs
 
-Permissions: `audit:read`
+Permissions:
+
+- `audit:read` for `GET /access-logs`.
+- `audit:read` for `POST /access-logs/export`.
+- `settings:write` for `POST /access-logs/:id/revoke`.
 
 - `GET /access-logs?limit=100`
-- Optional filters: `status=success|failed`, `q=search`, `from`, `to`
+- `POST /access-logs/export`
+- `POST /access-logs/:id/revoke`
+- Optional strict filters: `status=success|failed`, `q=search`, `userId`,
+  `method`, `ip`, `from`, `to`, `cursor`.
+- `from` and `to` must be RFC3339 `date-time` values. Reversed ranges are
+  rejected as `access_log_query_invalid`.
+- `cursor` is an opaque keyset cursor returned by the previous response.
+  Malformed cursors are rejected as `access_log_cursor_invalid`.
 
 Response:
 
@@ -2786,13 +3131,121 @@ Response:
       "userName": "Admin",
       "userEmail": "admin@example.com",
       "durationMs": 120,
-      "createdAt": "2026-01-31T10:00:00Z"
+      "createdAt": "2026-01-31T10:00:00Z",
+      "matchContext": {
+        "field": "email",
+        "label": "Matched user email"
+      },
+      "session": {
+        "state": "active",
+        "label": "Active session",
+        "sessionId": "session-id",
+        "userId": "user-id",
+        "current": false,
+        "expiresAt": "2026-02-01T10:00:00Z",
+        "revokedAt": null,
+        "view": { "enabled": true },
+        "revoke": { "enabled": true }
+      }
     }
-  ]
+  ],
+  "nextCursor": null
 }
 ```
 
-Uwaga: Admin UI korzysta z `GET /access-logs` do listowania (limit 200).
+Uwaga: Admin UI korzysta z `GET /access-logs` do listowania. `limit` jest
+walidowany jako dodatnia liczba calkowita i clampowany do 200 przez wspolne
+konwencje query. Wyniki sa sortowane `createdAt DESC, id DESC`; `Next` i
+`Previous` w UI korzystaja wylacznie z `nextCursor` i lokalnego stosu
+zaladowanych cursorow. `matchContext` wyjasnia dopasowania query do pol, ktore
+nie zawsze sa oczywiste w tabeli, bez dodawania nowych wartosci PII.
+
+`session` opisuje deterministyczny stan sesji zwiazanej z access logiem:
+`active`, `current`, `revoked`, `expired`, `none`, albo `missing`. Raw
+`sessionId`, `userId`, `current`, `expiresAt`, and `revokedAt` are returned only
+when the current admin also has `settings:read`; `audit:read` without settings
+access sees only state and unavailable copy. `userId` lets the Settings Sessions
+surface focus a linked active session that belongs to another user without
+guessing from browser hints. Historical rows without `session_id` and
+failed/system rows do not call session actions.
+
+`POST /access-logs/export` body:
+
+```json
+{
+  "format": "csv",
+  "columns": ["user", "ip", "timestamp", "status", "path"],
+  "filters": {
+    "limit": 50,
+    "status": "failed",
+    "query": "login",
+    "userId": "user-id",
+    "method": "POST",
+    "ip": "127.0.0.1",
+    "from": "2026-06-01T00:00:00.000Z",
+    "to": "2026-06-01T23:59:59.999Z"
+  }
+}
+```
+
+The export route is an internal admin POST (`/admin/api/access-logs/export`
+over HTTP), uses the global admin CSRF and `admin_write` rate-limit pipeline,
+and requires `audit:read`. It rejects unknown body fields and unsupported
+columns. Supported formats are `csv` and `json`; synchronous exports are
+limited to 200 rows. The body uses `query` instead of the URL `q` parameter.
+Supported columns are `id`, `user`, `userId`, `method`, `path`, `status`, `ip`,
+`device`, `userAgent`, `timestamp`, `durationMs`, `sessionState`, and `match`.
+Raw `sessionId` is not an export column.
+
+Responses use the shared admin export JSON contract:
+
+```json
+{
+  "type": "file",
+  "filename": "access-logs-2026-06-01-failed-POST-search-user-ip.csv",
+  "mimeType": "text/csv",
+  "content": "User,Status\nAdmin,401"
+}
+```
+
+Exported `path`, `userAgent`, IP, and user labels are redacted for cookies,
+authorization headers, CSRF/reset/session tokens, API keys, passwords, and raw
+secret-like values before serialization. CSV output escapes commas, quotes,
+newlines, and formula prefixes. Export emits `access_logs.export` with format,
+selected columns, sanitized filter summary, row count, and request id only.
+
+`POST /access-logs/:id/revoke` strict JSON body:
+
+```json
+{
+  "reason": "admin_manual_revoke"
+}
+```
+
+The revoke route is internal admin-only, uses the global admin CSRF pipeline and
+`admin_write` rate-limit bucket, and requires `settings:write`; `audit:read`
+alone is never sufficient. The browser sends only the reason. The server
+resolves the target session from `access_logs.session_id`, blocks current-session
+self-lockout, treats already-revoked sessions idempotently, and emits a redacted
+audit event with `accessLogRef`, `revokedSessionRef`, `targetUserRef`, `reason`,
+and `result`.
+
+Known errors:
+
+- `access_log_query_invalid`: invalid/unknown list query params.
+- `access_log_cursor_invalid`: malformed list cursor.
+- `access_log_export_invalid`: invalid/unknown export payload.
+- `access_log_export_invalid_columns`: unsupported or empty export column
+  selection.
+- `access_log_export_too_large`: requested synchronous export limit is above
+  the supported cap.
+- `access_log_export_forbidden`: `audit:read` is missing for export.
+- `access_log_revoke_invalid`: invalid revoke body or reason.
+- `access_log_not_found`: access log row does not exist.
+- `access_log_session_not_found`: row has no resolvable session relation.
+- `access_log_session_expired`: linked session is already expired.
+- `access_log_current_session_revoke_blocked`: linked session is the current
+  admin session.
 
 ---
 
@@ -3549,7 +4002,8 @@ Permissions: `forms:read`, `forms:write`
 - `GET /forms/:id/fields`
 - `PUT /forms/:id/fields`
 - `GET /forms/:id/submissions`
-- `POST /forms/:id/submissions` (public submit)
+- `POST /forms/:id/submissions` (public submit; mounted both through the
+  admin API router and the public site request handler)
 - `GET /forms/:id/actions`
 - `PUT /forms/:id/actions`
 - `GET /forms/:id/action-runs`
@@ -3585,7 +4039,9 @@ Opcjonalne pola:
 - `status`: `draft`, `published` albo `archived`; inne wartosci sa odrzucane
   na granicy route schema.
 - `successMessage`: fallback dla sukcesu submission (uzywane, gdy widget nie ma override).
-- `successRedirectUrl`: po sukcesie przekierowuje na podany URL.
+- `successRedirectUrl`: po sukcesie przekierowuje tylko na same-origin relative
+  path (`/thank-you`, z opcjonalnym query/hash). Absolute, protocol-relative i
+  `javascript:` URL sa odrzucane przed zapisem.
 - `submissionAccess`: `public` (default) lub `internal` (wymaga sesji admina lub API key).
 - `settings.layoutMode`: `single` lub `multi_step`.
 - `settings.saveProgress`: runtime zapisuje postep do `localStorage`.
@@ -3606,7 +4062,8 @@ Opcjonalne pola:
     "orderIndex": 0,
     "settings": {
       "placeholder": "John Doe",
-      "step": 1
+      "formStep": 1,
+      "inputStep": 1
     }
   }
 ]
@@ -3615,6 +4072,10 @@ Opcjonalne pola:
 Top-level keys in each field input are strict (`id`, `type`, `label`, `name`,
 `required`, `orderIndex`, `settings`). Flexible per-field extension data must
 stay inside `settings`.
+
+Field settings use `formStep` for multi-step placement and `inputStep` for
+number/range/time input increments. Legacy `settings.step` is preserved as a
+non-destructive form-step adapter and is not interpreted as an input increment.
 
 Known Forms errors are returned as machine-readable API errors:
 - `form_invalid` -> 400,
@@ -3627,7 +4088,9 @@ Known Forms errors are returned as machine-readable API errors:
   `form_field_invalid`, `form_field_label_required`,
   `form_field_id_duplicate`, and `form_field_name_duplicate` -> 400,
 - submission payload errors such as `form_payload_invalid`,
-  `form_payload_unknown_field`, and `form_payload_required` -> 400.
+  `form_payload_unknown_field`, and `form_payload_required` -> 400,
+- `form_success_redirect_url_invalid` -> 400 when a form-level success redirect
+  is not a same-origin relative path.
 
 `POST /forms/:id/submissions`
 
@@ -3643,7 +4106,15 @@ Known Forms errors are returned as machine-readable API errors:
 ```
 
 Uwaga:
-- runtime widget `form-embed` wysyla JSON do `POST /forms/:id/submissions` i obsluguje `runtime.successMessage` / `runtime.redirectUrl` inline.
+- runtime widget `form-embed` wysyla JSON do `POST /forms/:id/submissions` i
+  obsluguje `runtime.successMessage` / `runtime.redirectUrl` inline.
+- public Form Embed submissions use the Forms access evaluator, strict
+  reject-unknown validation, the `public_write` rate-limit bucket keyed by form
+  id, and the signed form nonce (`formId.timestamp.HMAC`) projected only at
+  runtime. Optional bot protection remains backend-owned.
+- widget-level success copy has precedence over `runtime.successMessage` when
+  configured. `runtime.redirectUrl` is followed only when it is a same-origin
+  relative URL.
 - bez JS endpoint nadal przyjmuje payload form-urlencoded (mapowany do `data`).
 
 Przyklad odpowiedzi:
@@ -3771,9 +4242,9 @@ Permissions: `themes:read`, `themes:write`
 
 ## Search
 
-Permissions: `content:read`, `media:read`
+Permissions: `content:read`
 
-- `GET /search?q=...`
+- `GET /search?q=...&limit=20&dateRange=last-7-days`
 
 ---
 
@@ -3782,6 +4253,11 @@ Permissions: `content:read`, `media:read`
 Permissions: `audit:read`
 
 - `GET /audit`
+- `POST /audit/export`
+- Optional strict filters: `limit`, `q`, `category`, `severity`, `from`, `to`,
+  `cursor`
+- Export body filters use `query` instead of `q`, plus `format` (`csv`/`json`)
+  and allowlisted `columns`.
 
 ---
 

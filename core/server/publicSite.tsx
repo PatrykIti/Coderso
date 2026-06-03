@@ -43,9 +43,11 @@ import {
 } from "../services/commerce/commerceWidgetRuntime";
 import { getWidgetTemplatePreviewModel } from "../services/widgets/widgetTemplatePreviewService";
 import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
+import { resolvePublicSeoMetadata } from "../services/seo/seoService";
 import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
 import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
+import { resolvePublicRedirect } from "../services/redirects/redirectService";
 import type { ContentSchema } from "../services/content/validation";
 import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
 import { getWidgetTemplateLayoutSettings } from "../services/widgets/widgetTemplateSettings";
@@ -95,9 +97,11 @@ import { searchPublicIndex } from "../services/search/searchIndexService";
 import { publicSearchRequestSchema } from "./validation/filterSchemas";
 import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
+import { handlePublicFormsApi } from "./publicFormsApi";
 import { readBindingPathValue } from "../services/utils/bindingPath";
 
 export type PublicPageData = {
+  id: string;
   title: string;
   slug: string;
   status: string;
@@ -213,6 +217,28 @@ const ensureRecord = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
 };
+
+const hasNestedTemplateSectionError = (blocks: WidgetBlock[], error: string): boolean =>
+  blocks.some((block) => {
+    const data = ensureRecord(block.data);
+    const resolved = ensureRecord(data.resolved);
+    if (block.type === "template-section" && resolved.error === error) {
+      return true;
+    }
+
+    const resolvedBlocks = Array.isArray(resolved.blocks) ? (resolved.blocks as WidgetBlock[]) : [];
+    if (hasNestedTemplateSectionError(resolvedBlocks, error)) return true;
+
+    const children = Array.isArray(block.children) ? block.children : [];
+    if (hasNestedTemplateSectionError(children, error)) return true;
+
+    const slots = ensureRecord(block.slots);
+    return Object.values(slots).some((slotBlocks) =>
+      Array.isArray(slotBlocks)
+        ? hasNestedTemplateSectionError(slotBlocks as WidgetBlock[], error)
+        : false
+    );
+  });
 
 const appointmentFormSupportsRuntimeCaptchaHydration = (() => {
   const properties = ensureRecord((appointmentFormSchema as { properties?: unknown }).properties);
@@ -412,6 +438,7 @@ const hydrateRuntimeBlock = async (
           successRedirectUrl: resolvedData.successRedirectUrl,
           submissionAccess: resolvedData.submissionAccess,
           submissionNonce: resolvedData.submissionNonce ?? null,
+          botProtection: resolvedData.botProtection ?? null,
           fields: resolvedData.fields,
           ...(resolvedData.error ? { error: resolvedData.error } : {}),
         }
@@ -526,11 +553,12 @@ const hydrateRuntimeBlock = async (
   }
   if (block.type === "template-section") {
     const data = ensureRecord(block.data);
-    const templateId = typeof data.templateId === "string" ? data.templateId.trim() : "";
-    const resolution = await resolveTemplateSectionRuntimeData(templateId, {
+    const rawTemplateId = typeof data.templateId === "string" ? data.templateId : "";
+    const resolution = await resolveTemplateSectionRuntimeData(rawTemplateId, {
       preview: options.preview,
       templateStack: options.templateStack ?? [],
     });
+    const templateId = resolution.templateId ?? "";
     const nextStack = templateId
       ? [...(options.templateStack ?? []), templateId]
       : options.templateStack;
@@ -540,16 +568,21 @@ const hydrateRuntimeBlock = async (
           templateStack: nextStack,
         })
       : [];
+    const resolvedError =
+      resolution.error ??
+      (hasNestedTemplateSectionError(resolvedBlocks, "template_loop")
+        ? "template_loop"
+        : undefined);
 
     nextBlock = {
       ...block,
       data: {
         ...data,
-        ...(templateId ? { templateId } : {}),
+        templateId,
         ...(resolution.templateName ? { templateName: resolution.templateName } : {}),
         resolved: {
           blocks: resolvedBlocks,
-          ...(resolution.error ? { error: resolution.error } : {}),
+          ...(resolvedError ? { error: resolvedError } : {}),
         },
       },
     };
@@ -605,8 +638,10 @@ const jsonResponse = (payload: unknown, status = 200) =>
   });
 
 type DetailPageRuntimeEntrySeo = {
+  title?: string | null;
   description?: string | null;
   canonicalUrl?: string | null;
+  robots?: string | null;
 };
 
 type DetailPageRuntimeEntry = {
@@ -745,10 +780,21 @@ const renderPublicPageHtmlInternal = async (
   const settingsRecord = ensureRecord(sourceRecord.settings);
   const seoRecord = ensureRecord(sourceRecord.seo);
   const themeName = options?.themeName ?? (await resolvePublicThemeName());
-  const metaDescription =
-    typeof seoRecord.description === "string" && seoRecord.description.trim().length > 0
-      ? seoRecord.description.trim()
-      : null;
+  const fallbackSeo = {
+    title: toPublicSeoText(seoRecord.title) ?? page.title ?? "Page",
+    description: toPublicSeoText(seoRecord.description),
+    canonicalUrl: toPublicSeoText(seoRecord.canonicalUrl),
+    robots: toPublicSeoText(seoRecord.robots),
+  };
+  const resolvedSeo = options?.preview
+    ? fallbackSeo
+    : await resolvePublicSeoMetadata({
+        targetType: "page",
+        targetId: page.id,
+        slug: page.slug,
+        fallback: fallbackSeo,
+      });
+  const imageUrl = resolveDetailPageImageUrl(seoRecord.imageUrl ?? seoRecord.socialImage);
   const blocks = await hydrateRuntimeBlocks(toBlocks(sourceData), {
     preview: options?.preview ?? false,
     contentRoutes,
@@ -758,7 +804,7 @@ const renderPublicPageHtmlInternal = async (
 
   return {
     html: await renderPublicPageRuntimeHtml({
-      title: page.title ?? "Page",
+      title: resolvedSeo.title ?? page.title ?? "Page",
       blocks,
       cssHref,
       inlineCss,
@@ -766,7 +812,10 @@ const renderPublicPageHtmlInternal = async (
       previewDevice: options?.previewDevice,
       layoutSettings: getPageLayoutSettingsFromData(sourceData),
       devModuleScripts,
-      metaDescription,
+      metaDescription: resolvedSeo.description,
+      canonicalUrl: resolvedSeo.canonicalUrl,
+      robots: resolvedSeo.robots,
+      imageUrl,
       themeName,
       templateKey: settingsRecord.template,
     }),
@@ -933,7 +982,7 @@ const renderEntryDetailHtml = async (
 
     const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
     return renderPublicEntryDetailHtml({
-      title: post.title ?? POST_CONTENT_TYPE_NAME,
+      title: post.seo?.title ?? post.title ?? POST_CONTENT_TYPE_NAME,
       contentType: {
         id: POST_CONTENT_TYPE_SLUG,
         name: POST_CONTENT_TYPE_NAME,
@@ -948,6 +997,7 @@ const renderEntryDetailHtml = async (
       themeName: options?.themeName ?? (await resolvePublicThemeName()),
       metaDescription: post.seo?.description ?? resolvePostRuntimeMetaDescription(post.data),
       canonicalUrl: post.seo?.canonicalUrl ?? null,
+      robots: post.seo?.robots ?? null,
     });
   }
 
@@ -1039,6 +1089,24 @@ const renderEntryDetailHtml = async (
       entry: entryDetail,
       contentTypeName: contentType.name,
     });
+    const resolvedSeo = options?.preview
+      ? {
+          title: detailSeo.title,
+          description: detailSeo.metaDescription,
+          canonicalUrl: detailSeo.canonicalUrl,
+          robots: entryDetail.seo?.robots ?? null,
+        }
+      : await resolvePublicSeoMetadata({
+          targetType: "entry",
+          targetId: entryDetail.id,
+          slug: entryDetail.slug,
+          fallback: {
+            title: detailSeo.title,
+            description: detailSeo.metaDescription,
+            canonicalUrl: detailSeo.canonicalUrl,
+            robots: entryDetail.seo?.robots ?? null,
+          },
+        });
     const blocks = await hydrateRuntimeBlocks(detailPage.blocks, {
       preview: options?.preview ?? false,
       contentRoutes,
@@ -1047,7 +1115,10 @@ const renderEntryDetailHtml = async (
     });
     return {
       html: await renderPublicPageRuntimeHtml({
-        title: detailSeo.title,
+        title:
+          detailPage.document.seo?.titlePattern || detailPage.document.titlePattern
+            ? detailSeo.title
+            : (resolvedSeo.title ?? detailSeo.title),
         blocks,
         cssHref,
         inlineCss,
@@ -1055,8 +1126,11 @@ const renderEntryDetailHtml = async (
         isPreview: options?.preview ?? false,
         previewDevice: options?.previewDevice,
         layoutSettings: detailPage.document.settings.layout,
-        metaDescription: detailSeo.metaDescription,
-        canonicalUrl: detailSeo.canonicalUrl,
+        metaDescription: detailPage.document.seo?.descriptionField
+          ? detailSeo.metaDescription
+          : resolvedSeo.description,
+        canonicalUrl: resolvedSeo.canonicalUrl,
+        robots: resolvedSeo.robots,
         imageUrl: detailSeo.imageUrl,
         themeName: options?.themeName ?? (await resolvePublicThemeName()),
         templateKey: detailPage.document.settings.template,
@@ -1065,8 +1139,27 @@ const renderEntryDetailHtml = async (
     };
   }
 
+  const fallbackSeo = {
+    title: entryDetail.seo?.title ?? entryDetail.title ?? contentType.name,
+    description:
+      "seo" in entryDetail && entryDetail.seo
+        ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
+        : resolvePostRuntimeMetaDescription(entryDetail.data),
+    canonicalUrl:
+      "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
+    robots: "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.robots ?? null) : null,
+  };
+  const resolvedSeo = options?.preview
+    ? fallbackSeo
+    : await resolvePublicSeoMetadata({
+        targetType: "entry",
+        targetId: entryDetail.id,
+        slug: entryDetail.slug,
+        fallback: fallbackSeo,
+      });
+
   return renderPublicEntryDetailHtml({
-    title: entryDetail.title ?? contentType.name,
+    title: resolvedSeo.title ?? entryDetail.title ?? contentType.name,
     contentType: contentTypeSnapshot,
     entry: entryDetail,
     cssHref,
@@ -1074,12 +1167,9 @@ const renderEntryDetailHtml = async (
     devModuleScripts,
     isPreview: options?.preview ?? false,
     themeName: options?.themeName ?? (await resolvePublicThemeName()),
-    metaDescription:
-      "seo" in entryDetail && entryDetail.seo
-        ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
-        : resolvePostRuntimeMetaDescription(entryDetail.data),
-    canonicalUrl:
-      "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
+    metaDescription: resolvedSeo.description,
+    canonicalUrl: resolvedSeo.canonicalUrl,
+    robots: resolvedSeo.robots,
   });
 };
 
@@ -1145,6 +1235,7 @@ const renderDetailPagePreviewHtml = async (input: {
     layoutSettings: detailPage.document.settings.layout,
     metaDescription: detailSeo.metaDescription,
     canonicalUrl: detailSeo.canonicalUrl,
+    robots: entryDetail.seo?.robots ?? null,
     imageUrl: detailSeo.imageUrl,
     themeName: await resolvePublicThemeName(),
     templateKey: detailPage.document.settings.template,
@@ -1164,6 +1255,14 @@ export async function handlePublicRequest(req: Request) {
     security,
   });
   if (bookingApiResponse) return bookingApiResponse;
+
+  const formsApiResponse = await handlePublicFormsApi(req, {
+    url,
+    ip,
+    userAgent,
+    security,
+  });
+  if (formsApiResponse) return formsApiResponse;
 
   checkRateLimit(
     "public_read",
@@ -1295,6 +1394,22 @@ export async function handlePublicRequest(req: Request) {
         throw error;
       }
     }
+  }
+
+  try {
+    const redirect = await resolvePublicRedirect(url.pathname);
+    if (redirect) {
+      const location = new URL(redirect.location, url);
+      return Response.redirect(location.toString(), redirect.statusCode);
+    }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message === "redirect_loop" || error.message === "redirect_target_external")
+    ) {
+      return new Response("Redirect Loop", { status: 508 });
+    }
+    throw error;
   }
 
   const slugPath = normalizeSitePath(url.pathname);

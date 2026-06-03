@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, ShieldCheck, X, XCircle } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -59,15 +60,10 @@ export type InviteUserDialogProps = {
   open: boolean;
   roles: RoleSummary[];
   onOpenChange: (open: boolean) => void;
-  onInvite?: (values: InviteUserValues) => void;
+  onInvite?: (values: InviteUserValues) => void | Promise<void>;
 };
 
-export function InviteUserDialog({
-  open,
-  roles,
-  onOpenChange,
-  onInvite,
-}: InviteUserDialogProps) {
+export function InviteUserDialog({ open, roles, onOpenChange, onInvite }: InviteUserDialogProps) {
   const defaultRoleId = useMemo(() => {
     const preferredRole = roles.find((role) => role.id === "editor");
     return preferredRole?.id ?? roles[0]?.id ?? "";
@@ -76,31 +72,44 @@ export function InviteUserDialog({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState(defaultRoleId);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const selectedRole = useMemo(
-    () => roles.find((role) => role.id === roleId),
-    [roleId, roles]
-  );
+  const selectedRole = useMemo(() => roles.find((role) => role.id === roleId), [roleId, roles]);
 
   const canSubmit =
-    name.trim().length > 0 && email.trim().length > 0 && roleId.length > 0;
+    !isSending && name.trim().length > 0 && email.trim().length > 0 && roleId.length > 0;
 
   const hasPermission = (permission: string) =>
     Boolean(
-      selectedRole?.permissions.includes("*") ||
-        selectedRole?.permissions.includes(permission)
+      selectedRole?.permissions.includes("*") || selectedRole?.permissions.includes(permission)
     );
 
-  const handleClose = () => onOpenChange(false);
-
-  const handleSend = () => {
-    if (!canSubmit) return;
-    onInvite?.({
-      name: name.trim(),
-      email: email.trim(),
-      roleId,
-    });
+  const handleClose = () => {
+    if (isSending) return;
     onOpenChange(false);
+  };
+
+  const handleSend = async () => {
+    if (!canSubmit) return;
+    setError(null);
+    setIsSending(true);
+    try {
+      await onInvite?.({
+        name: name.trim(),
+        email: email.trim(),
+        roleId,
+      });
+      onOpenChange(false);
+    } catch (inviteError) {
+      setError(
+        inviteError instanceof Error && inviteError.message.trim().length > 0
+          ? inviteError.message
+          : "Invitation could not be sent. Review email settings and try again."
+      );
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -128,6 +137,11 @@ export function InviteUserDialog({
         <ScrollArea className="flex-1">
           <div className="space-y-6 px-6 py-6">
             <div className="space-y-4">
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 User Details
               </p>
@@ -178,10 +192,7 @@ export function InviteUserDialog({
                   Workspace Role
                 </label>
                 <Select value={roleId} onValueChange={setRoleId}>
-                  <SelectTrigger
-                    id="invite-user-role"
-                    className="w-full bg-muted/40"
-                  >
+                  <SelectTrigger id="invite-user-role" className="w-full bg-muted/40">
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -212,9 +223,7 @@ export function InviteUserDialog({
                       ) : (
                         <XCircle className="h-4 w-4 text-muted-foreground/50" />
                       )}
-                      <span>
-                        {allowed ? item.allowLabel : item.denyLabel}
-                      </span>
+                      <span>{allowed ? item.allowLabel : item.denyLabel}</span>
                     </li>
                   );
                 })}
@@ -224,14 +233,10 @@ export function InviteUserDialog({
         </ScrollArea>
         <div className="border-t px-6 py-5">
           <div className="flex gap-3">
-            <Button className="flex-1" onClick={handleSend} disabled={!canSubmit}>
-              Send Invitation
+            <Button className="flex-1" onClick={() => void handleSend()} disabled={!canSubmit}>
+              {isSending ? "Sending..." : "Send Invitation"}
             </Button>
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={handleClose}
-            >
+            <Button variant="outline" className="flex-1" onClick={handleClose} disabled={isSending}>
               Cancel
             </Button>
           </div>

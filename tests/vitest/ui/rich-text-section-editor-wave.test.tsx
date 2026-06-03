@@ -669,6 +669,78 @@ test("RichTextSection visual editor shows source ownership, sanitizes body edits
   }
 });
 
+test("RichTextSection visual editor preserves body sanitizer diagnostics after clean structured block edits", async () => {
+  const { RichTextSectionAdvancedEditor, RichTextSectionVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
+
+  let latestValue: RichTextSectionData = {
+    body: {
+      html: "<p>Existing body</p>",
+      blocks: [{ id: "block-1", kind: "text", heading: "Intro", contentHtml: "<p>Alpha</p>" }],
+    },
+    options: {
+      outputMode: "blocks-fallback",
+    },
+  };
+
+  const VisualHarness = () => {
+    const [value, setValue] = useState<RichTextSectionData>(latestValue);
+
+    return (
+      <RichTextSectionVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="single-column"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const visual = mount(<VisualHarness />);
+
+  try {
+    setTextareaValue(
+      findTextareaByPlaceholder(visual.container, "Write the primary story body here..."),
+      "<h1>Bad heading</h1><p>Updated body</p>"
+    );
+    expect(latestValue.body?.sanitizerDiagnostics).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "tag_removed", tagName: "h1" })])
+    );
+
+    setTextareaValue(
+      findTextareaByPlaceholder(visual.container, "Add the supporting copy for this block..."),
+      "<p>Clean structured update</p>"
+    );
+  } finally {
+    visual.cleanup();
+  }
+
+  expect(latestValue.body?.sanitizerDiagnostics).toEqual(
+    expect.arrayContaining([expect.objectContaining({ code: "tag_removed", tagName: "h1" })])
+  );
+
+  const advanced = mount(
+    <RichTextSectionAdvancedEditor
+      value={latestValue}
+      onChange={() => undefined}
+      variant="single-column"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(advanced.container.textContent).toContain("Latest editor events: 1");
+    expect(advanced.container.textContent).toContain(
+      "H1 is removed from the body. Use the section title or H2/H3/H4 headings instead."
+    );
+  } finally {
+    advanced.cleanup();
+  }
+});
+
 test("RichTextSection visual editor manages image, attachment, and embed blocks through widget-owned controls", async () => {
   const { RichTextSectionVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");

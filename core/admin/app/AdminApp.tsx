@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { resolveAuthBootstrap } from "@/services/authClient";
-import { isApiClientError } from "@/services/apiClient";
+import { canAdmin, resolveAuthBootstrap, type AuthUser } from "@/services/authClient";
+import { isApiClientError, subscribeAdminPermissionFailure } from "@/services/apiClient";
 import {
-  getSettings,
+  getCachedSettings,
+  getSettingsCached,
   updateSettings,
   type GeneralSettingsPayload,
 } from "@/services/settingsClient";
@@ -104,6 +105,7 @@ import {
 } from "@/utils/adminPaths";
 import { AdminBasePathProvider } from "@/ui/contexts/AdminBasePathContext";
 import { AdminAssistantConfigProvider } from "@/ui/contexts/AdminAssistantConfigContext";
+import { AdminAuthProvider } from "@/ui/contexts/AdminAuthContext";
 import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { clearAssistantRuntimeStateCache } from "@/ui/assistant/AssistantPanel";
 
@@ -116,6 +118,8 @@ const ADMIN_THEME_TOKENS_STYLE_ID = "coderso-theme-tokens";
 type RouteMatch = {
   element: React.ReactNode;
   params: Record<string, string>;
+  permission?: string;
+  anyPermissions?: string[];
 };
 
 const normalizePath = (input: string) => {
@@ -168,12 +172,21 @@ type SettingsState = {
 type RouteDefinition = {
   pattern: string;
   element: React.ReactNode;
+  permission?: string;
+  anyPermissions?: string[];
 };
 
 const resolveRoute = (path: string, routes: RouteDefinition[]): RouteMatch => {
   for (const route of routes) {
     const params = matchRoute(route.pattern, path);
-    if (params) return { element: route.element, params };
+    if (params) {
+      return {
+        element: route.element,
+        params,
+        permission: route.permission,
+        anyPermissions: route.anyPermissions,
+      };
+    }
   }
   return { element: <NotFound />, params: {} };
 };
@@ -209,6 +222,17 @@ const NotFound = () => (
 const Loading = () => (
   <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
     Loading...
+  </div>
+);
+
+const AccessDenied = () => (
+  <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
+    <div>
+      <h1 className="text-base font-semibold text-foreground">Access denied</h1>
+      <p className="mt-2 max-w-md text-sm text-muted-foreground">
+        Your account does not have permission to open this admin area.
+      </p>
+    </div>
   </div>
 );
 
@@ -403,6 +427,7 @@ export function AdminApp({ path }: AdminAppProps) {
   const [authState, setAuthState] = useState<"checking" | "authenticated" | "unauthenticated">(
     isProtected ? "checking" : "unauthenticated"
   );
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
 
   const [settingsState, setSettingsState] = useState<SettingsState>({
     status: "idle",
@@ -523,68 +548,161 @@ export function AdminApp({ path }: AdminAppProps) {
     [settingsState.values]
   );
 
+  const permissionSnapshot = authUser?.permissionSnapshot ?? null;
+  const canReadSettings = canAdmin("settings:read", permissionSnapshot);
+  const canReadThemes = canAdmin("themes:read", permissionSnapshot);
+  const canAccessRoute = useCallback(
+    (route: Pick<RouteMatch, "permission" | "anyPermissions">) => {
+      if (route.permission && !canAdmin(route.permission, permissionSnapshot)) return false;
+      if (route.anyPermissions?.length) {
+        return route.anyPermissions.some((permission) => canAdmin(permission, permissionSnapshot));
+      }
+      return true;
+    },
+    [permissionSnapshot]
+  );
+  const refreshPermissions = useCallback(async () => {
+    const result = await resolveAuthBootstrap({ force: true });
+    setAuthState(result.state);
+    setAuthUser(result.user);
+    if (!canAdmin("settings:read", result.user?.permissionSnapshot ?? null)) {
+      setSettingsState({
+        status: "idle",
+        values: defaultSettingsValues,
+        error: null,
+      });
+    }
+  }, []);
+  const authPermissions = useMemo(
+    () => permissionSnapshot?.permissions ?? [],
+    [permissionSnapshot]
+  );
+
   const match = useMemo(() => {
     const routes: RouteDefinition[] = [
-      { pattern: "/", element: <DashboardPage /> },
+      { pattern: "/", element: <DashboardPage />, permission: "content:read" },
       { pattern: "/login", element: <LoginPage /> },
       { pattern: "/2fa", element: <TwoFactorPage /> },
       { pattern: "/reset", element: <ResetPasswordPage /> },
       { pattern: "/reset/confirm", element: <SetPasswordPage /> },
-      { pattern: "/analytics", element: <AnalyticsPage /> },
-      { pattern: "/audit", element: <AuditList /> },
-      { pattern: "/access-logs", element: <AccessLogsPage /> },
-      { pattern: "/backups", element: <BackupsPage /> },
-      { pattern: "/search", element: <SearchPage /> },
-      { pattern: "/seo", element: <SeoManagerPage /> },
-      { pattern: "/redirects", element: <RedirectsPage /> },
-      { pattern: "/tools/import-export", element: <ImportExportPage /> },
-      { pattern: "/advanced/forms", element: <FormListPage /> },
-      { pattern: "/advanced/forms/:id/action-runs", element: <FormActionLogsPage /> },
-      { pattern: "/advanced/forms/:id", element: <FormBuilderPage /> },
-      { pattern: "/advanced/engine", element: <ContentTypeList /> },
-      { pattern: "/advanced/engine/:id", element: <ContentTypeEditor /> },
-      { pattern: "/advanced/engine/:id/collection", element: <CollectionWorkspacePage /> },
+      { pattern: "/analytics", element: <AnalyticsPage />, permission: "content:read" },
+      { pattern: "/audit", element: <AuditList />, permission: "audit:read" },
+      { pattern: "/access-logs", element: <AccessLogsPage />, permission: "audit:read" },
+      { pattern: "/backups", element: <BackupsPage />, permission: "backups:read" },
+      { pattern: "/search", element: <SearchPage />, permission: "content:read" },
+      { pattern: "/seo", element: <SeoManagerPage />, permission: "content:read" },
+      { pattern: "/redirects", element: <RedirectsPage />, permission: "settings:read" },
+      {
+        pattern: "/tools/import-export",
+        element: <ImportExportPage />,
+        permission: "settings:read",
+      },
+      { pattern: "/advanced/forms", element: <FormListPage />, permission: "forms:read" },
+      {
+        pattern: "/advanced/forms/:id/action-runs",
+        element: <FormActionLogsPage />,
+        permission: "forms:read",
+      },
+      { pattern: "/advanced/forms/:id", element: <FormBuilderPage />, permission: "forms:read" },
+      { pattern: "/advanced/engine", element: <ContentTypeList />, permission: "content:read" },
+      {
+        pattern: "/advanced/engine/:id",
+        element: <ContentTypeEditor />,
+        permission: "content:read",
+      },
+      {
+        pattern: "/advanced/engine/:id/collection",
+        element: <CollectionWorkspacePage />,
+        permission: "content:read",
+      },
       {
         pattern: "/advanced/engine/:id/collection/detail-template/:detailPageId",
         element: <DetailTemplateEditorPage />,
+        permission: "content:read",
       },
-      { pattern: "/advanced/engine/:id/schema", element: <SchemaBuilderPage /> },
-      { pattern: "/advanced/entries", element: <EntryList /> },
-      { pattern: "/advanced/entries/:type/:id", element: <EntryEditor /> },
-      { pattern: "/advanced/custom-screens", element: <CustomScreenListPage /> },
+      {
+        pattern: "/advanced/engine/:id/schema",
+        element: <SchemaBuilderPage />,
+        permission: "content:read",
+      },
+      { pattern: "/advanced/entries", element: <EntryList />, permission: "content:read" },
+      {
+        pattern: "/advanced/entries/:type/:id",
+        element: <EntryEditor />,
+        permission: "content:read",
+      },
+      {
+        pattern: "/advanced/custom-screens",
+        element: <CustomScreenListPage />,
+        permission: "content:read",
+      },
       {
         pattern: "/advanced/custom-screens/:id/entries/:entryId",
         element: <CustomScreenEntryEditor />,
+        permission: "content:read",
       },
       {
         pattern: "/advanced/custom-screens/:id/entries",
         element: <CustomScreenEntriesPage />,
+        permission: "content:read",
       },
-      { pattern: "/advanced/custom-screens/:id", element: <CustomScreenEditorPage /> },
-      { pattern: "/posts", element: <PostsListPage /> },
-      { pattern: "/posts/:id", element: <PostEditorPage /> },
-      { pattern: "/advanced/listings", element: <ListingListPage /> },
-      { pattern: "/advanced/listings/:id", element: <ListingEditorPage /> },
-      { pattern: "/advanced/filters", element: <ListingFiltersPage /> },
-      { pattern: "/advanced/search", element: <ListingSearchPage /> },
-      { pattern: "/advanced/booking", element: <BookingPage /> },
-      { pattern: "/advanced/reviews", element: <ReviewsModerationPage /> },
-      { pattern: "/advanced/commerce", element: <CommerceListPage /> },
-      { pattern: "/advanced/commerce/:id", element: <CommerceEditorPage /> },
-      { pattern: "/advanced/popups", element: <PopupsListPage /> },
-      { pattern: "/advanced/popups/:id", element: <PopupEditorPage /> },
-      { pattern: "/advanced/solution-kits", element: <SolutionKitsPage /> },
-      { pattern: "/pages", element: <PageListPage /> },
-      { pattern: "/pages/:id", element: <PageEditor /> },
+      {
+        pattern: "/advanced/custom-screens/:id",
+        element: <CustomScreenEditorPage />,
+        permission: "content:read",
+      },
+      { pattern: "/posts", element: <PostsListPage />, permission: "content:read" },
+      { pattern: "/posts/:id", element: <PostEditorPage />, permission: "content:read" },
+      { pattern: "/advanced/listings", element: <ListingListPage />, permission: "content:read" },
+      {
+        pattern: "/advanced/listings/:id",
+        element: <ListingEditorPage />,
+        permission: "content:read",
+      },
+      { pattern: "/advanced/filters", element: <ListingFiltersPage />, permission: "content:read" },
+      { pattern: "/advanced/search", element: <ListingSearchPage />, permission: "content:read" },
+      { pattern: "/advanced/booking", element: <BookingPage />, permission: "booking:read" },
+      {
+        pattern: "/advanced/reviews",
+        element: <ReviewsModerationPage />,
+        permission: "reviews:read",
+      },
+      { pattern: "/advanced/commerce", element: <CommerceListPage />, permission: "commerce:read" },
+      {
+        pattern: "/advanced/commerce/:id",
+        element: <CommerceEditorPage />,
+        permission: "commerce:read",
+      },
+      { pattern: "/advanced/popups", element: <PopupsListPage />, permission: "popups:read" },
+      { pattern: "/advanced/popups/:id", element: <PopupEditorPage />, permission: "popups:read" },
+      {
+        pattern: "/advanced/solution-kits",
+        element: <SolutionKitsPage />,
+        permission: "solution-kits:read",
+      },
+      { pattern: "/pages", element: <PageListPage />, permission: "content:read" },
+      { pattern: "/pages/:id", element: <PageEditor />, permission: "content:read" },
       { pattern: "/preview", element: <PagePreview /> },
-      { pattern: "/media", element: <MediaLibraryPage /> },
-      { pattern: "/menus", element: <MenuListPage /> },
-      { pattern: "/menus/:id", element: <MenuEditorPage /> },
-      { pattern: "/users", element: <UsersRolesPage /> },
-      { pattern: "/roles", element: <PermissionsMatrixPage /> },
-      { pattern: "/themes", element: <ThemesPage /> },
-      { pattern: "/advanced/widgets", element: <WidgetLibraryPage /> },
-      { pattern: "/advanced/widgets/templates/:id", element: <WidgetTemplateEditorPage /> },
+      { pattern: "/media", element: <MediaLibraryPage />, permission: "media:read" },
+      { pattern: "/menus", element: <MenuListPage />, permission: "menus:read" },
+      { pattern: "/menus/:id", element: <MenuEditorPage />, permission: "menus:read" },
+      {
+        pattern: "/users",
+        element: <UsersRolesPage permissions={authPermissions} />,
+        anyPermissions: ["users:read", "roles:read"],
+      },
+      {
+        pattern: "/roles",
+        element: <PermissionsMatrixPage permissions={authPermissions} />,
+        permission: "roles:read",
+      },
+      { pattern: "/themes", element: <ThemesPage />, permission: "themes:read" },
+      { pattern: "/advanced/widgets", element: <WidgetLibraryPage />, permission: "widgets:read" },
+      {
+        pattern: "/advanced/widgets/templates/:id",
+        element: <WidgetTemplateEditorPage />,
+        permission: "widgets:read",
+      },
       {
         pattern: "/settings",
         element: (
@@ -596,6 +714,7 @@ export function AdminApp({ path }: AdminAppProps) {
             onSave={saveGeneralSettings}
           />
         ),
+        permission: "settings:read",
       },
       {
         pattern: "/settings/general",
@@ -608,8 +727,9 @@ export function AdminApp({ path }: AdminAppProps) {
             onSave={saveGeneralSettings}
           />
         ),
+        permission: "settings:read",
       },
-      { pattern: "/settings/site", element: <SiteSettingsPage /> },
+      { pattern: "/settings/site", element: <SiteSettingsPage />, permission: "settings:read" },
       {
         pattern: "/settings/assistant",
         element: (
@@ -621,60 +741,114 @@ export function AdminApp({ path }: AdminAppProps) {
             onSave={saveAssistantSettings}
           />
         ),
+        permission: "settings:read",
       },
-      { pattern: "/settings/security", element: <SecuritySettingsPage /> },
-      { pattern: "/settings/security/ip-allowlist", element: <IpAllowlistPage /> },
-      { pattern: "/settings/security/sessions", element: <SessionsPage /> },
-      { pattern: "/settings/security/login-alerts", element: <LoginAlertsPage /> },
-      { pattern: "/settings/api-keys", element: <ApiKeysPage /> },
-      { pattern: "/settings/webhooks", element: <WebhooksPage /> },
-      { pattern: "/settings/email", element: <EmailSettingsPage /> },
-      { pattern: "/settings/storage", element: <StorageSettingsPage /> },
-      { pattern: "/settings/integrations", element: <IntegrationsPage /> },
-      { pattern: "/store", element: <PluginStorePage /> },
-      { pattern: "/store/plugins/:id", element: <PluginDetailsPage /> },
+      {
+        pattern: "/settings/security",
+        element: <SecuritySettingsPage />,
+        permission: "settings:read",
+      },
+      {
+        pattern: "/settings/security/ip-allowlist",
+        element: <IpAllowlistPage />,
+        permission: "settings:read",
+      },
+      {
+        pattern: "/settings/security/sessions",
+        element: <SessionsPage />,
+        permission: "settings:read",
+      },
+      {
+        pattern: "/settings/security/login-alerts",
+        element: <LoginAlertsPage />,
+        permission: "settings:read",
+      },
+      { pattern: "/settings/api-keys", element: <ApiKeysPage />, permission: "settings:read" },
+      { pattern: "/settings/webhooks", element: <WebhooksPage />, permission: "settings:read" },
+      { pattern: "/settings/email", element: <EmailSettingsPage />, permission: "settings:read" },
+      {
+        pattern: "/settings/storage",
+        element: <StorageSettingsPage />,
+        permission: "settings:read",
+      },
+      {
+        pattern: "/settings/integrations",
+        element: <IntegrationsPage />,
+        permission: "settings:read",
+      },
+      { pattern: "/store", element: <PluginStorePage />, permission: "store:browse" },
+      { pattern: "/store/plugins/:id", element: <PluginDetailsPage />, permission: "store:browse" },
     ];
 
-    return resolveRoute(canonicalRelativePath, routes);
+    const route = resolveRoute(canonicalRelativePath, routes);
+    if (isProtected && !canAccessRoute(route)) {
+      return { ...route, element: <AccessDenied /> };
+    }
+    return route;
   }, [
+    authPermissions,
+    canAccessRoute,
     canonicalRelativePath,
+    isProtected,
     saveAssistantSettings,
     saveGeneralSettings,
     settingsSaving,
     settingsState,
   ]);
 
-  const refreshSettings = useCallback(() => {
-    setSettingsState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: null,
-    }));
+  const refreshSettings = useCallback(
+    (options?: { force?: boolean; background?: boolean }) => {
+      if (!canReadSettings) {
+        setSettingsState({
+          status: "idle",
+          values: defaultSettingsValues,
+          error: null,
+        });
+        return;
+      }
+      const fallbackState: SettingsState = {
+        status: "idle",
+        values: defaultSettingsValues,
+        error: null,
+      };
+      const cached = options?.force ? null : getCachedSettings();
 
-    const fallbackState: SettingsState = {
-      status: "idle",
-      values: defaultSettingsValues,
-      error: null,
-    };
-
-    getSettings()
-      .then((payload) => {
-        const resolved = resolveSettingsPayload(payload, fallbackState);
+      if (cached) {
+        const resolved = resolveSettingsPayload(cached, fallbackState);
         setSettingsState((prev) => ({
           ...prev,
-          status: "ready",
+          status: "loading",
+          error: null,
           ...resolved,
         }));
-      })
-      .catch((error) => {
-        const message = isApiClientError(error) ? error.message : "Failed to load settings.";
+      } else if (!options?.background) {
         setSettingsState((prev) => ({
           ...prev,
-          status: "error",
-          error: message,
+          status: "loading",
+          error: null,
         }));
-      });
-  }, []);
+      }
+
+      getSettingsCached({ force: options?.force ?? Boolean(cached) })
+        .then((payload) => {
+          const resolved = resolveSettingsPayload(payload, fallbackState);
+          setSettingsState((prev) => ({
+            ...prev,
+            status: "ready",
+            ...resolved,
+          }));
+        })
+        .catch((error) => {
+          const message = isApiClientError(error) ? error.message : "Failed to load settings.";
+          setSettingsState((prev) => ({
+            ...prev,
+            status: "error",
+            error: message,
+          }));
+        });
+    },
+    [canReadSettings]
+  );
 
   const refreshAdminTheme = useCallback((options?: { force?: boolean }) => {
     const fallback = DEFAULT_ADMIN_THEME_TOKENS;
@@ -703,10 +877,21 @@ export function AdminApp({ path }: AdminAppProps) {
     let active = true;
     resolveAuthBootstrap()
       .then((result) => {
-        if (active) setAuthState(result.state);
+        if (!active) return;
+        setAuthState(result.state);
+        setAuthUser(result.user);
+        if (!canAdmin("settings:read", result.user?.permissionSnapshot ?? null)) {
+          setSettingsState({
+            status: "idle",
+            values: defaultSettingsValues,
+            error: null,
+          });
+        }
       })
       .catch(() => {
-        if (active) setAuthState("unauthenticated");
+        if (!active) return;
+        setAuthState("unauthenticated");
+        setAuthUser(null);
       });
     return () => {
       active = false;
@@ -715,56 +900,44 @@ export function AdminApp({ path }: AdminAppProps) {
 
   useEffect(() => {
     if (authState !== "authenticated") return;
+    if (!canReadSettings) return;
     let active = true;
-    const fallbackState: SettingsState = {
-      status: "idle",
-      values: defaultSettingsValues,
-      error: null,
-    };
-    getSettings()
-      .then((payload) => {
-        if (!active) return;
-        const resolved = resolveSettingsPayload(payload, fallbackState);
-        setSettingsState((prev) => ({
-          ...prev,
-          status: "ready",
-          ...resolved,
-        }));
-      })
-      .catch((error) => {
-        if (!active) return;
-        const message = isApiClientError(error) ? error.message : "Failed to load settings.";
-        setSettingsState((prev) => ({
-          ...prev,
-          status: "error",
-          error: message,
-        }));
-      });
+    Promise.resolve().then(() => {
+      if (active) refreshSettings();
+    });
     return () => {
       active = false;
     };
-  }, [authState]);
+  }, [authState, canReadSettings, refreshSettings]);
 
   useEffect(() => {
     if (authState !== "authenticated") return;
+    if (!canReadThemes) return;
     refreshAdminTheme({ force: false });
-  }, [authState, refreshAdminTheme]);
+  }, [authState, canReadThemes, refreshAdminTheme]);
+
+  useEffect(() => {
+    if (authState !== "authenticated") return undefined;
+    return subscribeAdminPermissionFailure(() => {
+      void refreshPermissions();
+    });
+  }, [authState, refreshPermissions]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (authState !== "authenticated") return;
     const handler = () => {
       const scope = resolveThemeUpdatedRefreshScope();
-      if (scope.refreshSettings) {
+      if (scope.refreshSettings && canReadSettings) {
         refreshSettings();
       }
-      if (scope.refreshTheme) {
+      if (scope.refreshTheme && canReadThemes) {
         refreshAdminTheme({ force: true });
       }
     };
     window.addEventListener("theme:updated", handler);
     return () => window.removeEventListener("theme:updated", handler);
-  }, [authState, refreshAdminTheme, refreshSettings]);
+  }, [authState, canReadSettings, canReadThemes, refreshAdminTheme, refreshSettings]);
 
   useEffect(() => {
     if (!isAdminPath) return;
@@ -822,19 +995,21 @@ export function AdminApp({ path }: AdminAppProps) {
 
   return (
     <AdminBasePathProvider value={adminBasePath}>
-      <AdminAssistantConfigProvider value={assistantConfig}>
-        <>
-          <AdminThemeTokensStyle css={tokenCss} />
-          <Toaster
-            position="top-right"
-            richColors
-            closeButton
-            duration={4000}
-            containerAriaLabel="Admin notifications"
-          />
-          {match.element}
-        </>
-      </AdminAssistantConfigProvider>
+      <AdminAuthProvider user={authUser} refreshPermissions={refreshPermissions}>
+        <AdminAssistantConfigProvider value={assistantConfig}>
+          <>
+            <AdminThemeTokensStyle css={tokenCss} />
+            <Toaster
+              position="top-right"
+              richColors
+              closeButton
+              duration={4000}
+              containerAriaLabel="Admin notifications"
+            />
+            {match.element}
+          </>
+        </AdminAssistantConfigProvider>
+      </AdminAuthProvider>
     </AdminBasePathProvider>
   );
 }

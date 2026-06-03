@@ -4,7 +4,9 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+import { AdminWidgetPreviewRuntimeBridge } from "../../../core/admin/ui/pages/builder/AdminWidgetPreviewRuntimeBridge";
 import {
+  FaqAccordionBlock,
   faqAccordionDefaults,
   faqAccordionItemMax,
   type FaqAccordionData,
@@ -801,6 +803,53 @@ test("FaqAccordion visual editor keeps item count capped when add item is used a
         answer: `Answer seed ${faqAccordionItemMax}`,
       })
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FaqAccordion admin preview bridge syncs summary aria-expanded after disclosure toggles", () => {
+  const view = mount(
+    <AdminWidgetPreviewRuntimeBridge>
+      <FaqAccordionBlock
+        data={{
+          ...faqAccordionDefaults,
+          options: {
+            allowMultipleOpen: false,
+            defaultOpenIndex: 0,
+          },
+        }}
+        variant="single-column"
+        blockId="faq-admin-preview"
+      />
+    </AdminWidgetPreviewRuntimeBridge>
+  );
+
+  try {
+    const summaries = Array.from(
+      view.container.querySelectorAll("[data-coderso-faq-summary]")
+    ).filter((element): element is HTMLElement => element instanceof HTMLElement);
+    const details = Array.from(
+      view.container.querySelectorAll("[data-coderso-faq-item-details]")
+    ).filter((element): element is HTMLDetailsElement => element instanceof HTMLDetailsElement);
+
+    expect(summaries.map((summary) => summary.getAttribute("aria-expanded"))).toEqual([
+      "true",
+      "false",
+      "false",
+    ]);
+
+    React.act(() => {
+      details[0].open = false;
+      details[1].open = true;
+      details[1].dispatchEvent(new Event("toggle"));
+    });
+
+    expect(summaries.map((summary) => summary.getAttribute("aria-expanded"))).toEqual([
+      "false",
+      "true",
+      "false",
+    ]);
   } finally {
     view.cleanup();
   }

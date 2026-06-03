@@ -1,7 +1,9 @@
 import { expect, test } from "vitest";
 
 import {
+  canAdmin,
   clearAuthBootstrapCache,
+  normalizeAdminPermissionSnapshot,
   resolveAuthBootstrap,
 } from "../../../core/admin/services/authClient";
 
@@ -32,20 +34,65 @@ test("resolveAuthBootstrap caches authenticated result and dedupes in-flight cal
 
   try {
     clearAuthBootstrapCache();
-    const [first, second] = await Promise.all([
-      resolveAuthBootstrap(),
-      resolveAuthBootstrap(),
-    ]);
+    const [first, second] = await Promise.all([resolveAuthBootstrap(), resolveAuthBootstrap()]);
     const third = await resolveAuthBootstrap();
 
     expect(first.state).toBe("authenticated");
     expect(second.state).toBe("authenticated");
     expect(third.state).toBe("authenticated");
+    expect(first.user?.permissionSnapshot).toBeNull();
     expect(meCalls).toBe(1);
   } finally {
     clearAuthBootstrapCache();
     globalThis.fetch = originalFetch;
   }
+});
+
+test("resolveAuthBootstrap normalizes permission snapshots", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/me")) {
+      return jsonResponse({
+        user: {
+          id: "user-1",
+          email: "admin@example.com",
+          name: null,
+          permissionSnapshot: {
+            permissions: ["users:read", "*", "users:read", 123],
+            roles: [
+              { id: "role-1", slug: "admin", name: "Admin" },
+              { id: "broken-role", name: "Broken" },
+            ],
+          },
+        },
+      });
+    }
+    return jsonResponse({});
+  };
+
+  try {
+    clearAuthBootstrapCache();
+    const result = await resolveAuthBootstrap({ force: true });
+    expect(result.user?.permissionSnapshot).toEqual({
+      permissions: ["*", "users:read"],
+      roles: [{ id: "role-1", slug: "admin", name: "Admin" }],
+    });
+    expect(canAdmin("settings:write", result.user?.permissionSnapshot)).toBe(true);
+    expect(canAdmin("users:read", result.user?.permissionSnapshot)).toBe(true);
+  } finally {
+    clearAuthBootstrapCache();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("canAdmin fails closed for missing or malformed snapshots", () => {
+  expect(canAdmin("users:read", null)).toBe(false);
+  expect(normalizeAdminPermissionSnapshot({ permissions: ["users:read"] })).toBeNull();
+  expect(
+    canAdmin("users:read", normalizeAdminPermissionSnapshot({ permissions: ["users:read"] }))
+  ).toBe(false);
 });
 
 test("resolveAuthBootstrap maps unauthorized errors to unauthenticated state", async () => {

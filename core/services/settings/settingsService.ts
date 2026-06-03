@@ -10,6 +10,8 @@ import {
 } from "./contentRoutePaths";
 import { normalizeOptionalDetailPageId } from "./detailPageIdContract";
 
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 type WidgetTemplateCategorySetting = {
   id: string;
   name: string;
@@ -771,6 +773,68 @@ export async function setSettings(values: Record<string, unknown>) {
   }
 
   return listSettings();
+}
+
+export async function setSettingsTx(tx: DbTransaction, values: Record<string, unknown>) {
+  await ensureLegacyAssistantSettingsMigrated();
+  if (!values || typeof values !== "object" || Array.isArray(values)) {
+    throw new Error("settings_payload_invalid");
+  }
+
+  const entries = Object.entries(values);
+  const now = new Date();
+  const usedKeys = new Set<SettingKey>();
+  const previousContentRoutes = entries.some(
+    ([rawKey]) => resolveSettingKey(rawKey) === "site.contentRoutes"
+  )
+    ? (((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])
+    : null;
+  const validated = entries.map(([rawKey, value]) => {
+    const normalizedKey = resolveSettingKey(rawKey);
+    if (usedKeys.has(normalizedKey)) {
+      throw new Error("settings_payload_invalid");
+    }
+    usedKeys.add(normalizedKey);
+    const typedValue = validateSettingValue(normalizedKey, value);
+    return { key: normalizedKey, value: typedValue };
+  });
+
+  if (validated.some((entry) => isAssistantSettingKey(entry.key))) {
+    const current = await listSettings();
+    const next = { ...current } as SettingValueMap;
+    for (const entry of validated) {
+      (next as Record<string, unknown>)[entry.key] = entry.value;
+    }
+    assertAssistantSettingsConsistency(pickAssistantSettings(next));
+  }
+
+  for (const entry of validated) {
+    await tx
+      .insert(settings)
+      .values({ key: entry.key, value: entry.value, updatedAt: now })
+      .onConflictDoUpdate({
+        target: settings.key,
+        set: { value: entry.value, updatedAt: now },
+      });
+  }
+
+  if (previousContentRoutes) {
+    const nextContentRoutes =
+      (validated.find((entry) => entry.key === "site.contentRoutes")?.value as
+        | ContentRouteSetting[]
+        | undefined) ?? previousContentRoutes;
+    const touchedTypes = new Set([
+      ...previousContentRoutes.map((entry) => entry.type),
+      ...nextContentRoutes.map((entry) => entry.type),
+    ]);
+    for (const typeSlug of touchedTypes) {
+      invalidateContentRouteCacheTransition({
+        previousRoutes: previousContentRoutes,
+        nextRoutes: nextContentRoutes,
+        typeSlug,
+      });
+    }
+  }
 }
 
 export async function deleteSetting(key: string) {

@@ -355,6 +355,71 @@ test("tabs active background clear preserves the saved active trigger border", (
   expect(activeTrigger).not.toContain("background-color:");
 });
 
+test("tabs sanitize imported style colors before public inline styles", () => {
+  const normalized = normalizeTabsData(
+    {
+      ...tabsDefaults,
+      style: {
+        surfaceColor: "url(javascript:alert(1))",
+        borderColor: "expression(alert(1))",
+        activeBackgroundColor: "javascript:alert(2)",
+        activeTextColor: "data:text/css,body{}",
+        inactiveTextColor: "#fff;color:red",
+        panelBackgroundColor: "rgb(1, 2, 3);background:url(javascript:alert(3))",
+      },
+    },
+    tabsDefaults.items?.length ?? 0
+  );
+  const html = renderToString(<TabsBlock data={normalized} variant="pills" />);
+
+  expect(normalized.style).toEqual({
+    surfaceColor: undefined,
+    borderColor: undefined,
+    activeBackgroundColor: undefined,
+    activeTextColor: undefined,
+    inactiveTextColor: undefined,
+    panelBackgroundColor: undefined,
+  });
+  expect(html).not.toContain("javascript:");
+  expect(html).not.toContain("expression(");
+  expect(html).not.toContain("data:text/css");
+  expect(html).not.toContain("color:red");
+  expect(html).not.toContain("background:url");
+});
+
+test("tabs preserve bounded imported style colors", () => {
+  const normalized = normalizeTabsData(
+    {
+      ...tabsDefaults,
+      style: {
+        surfaceColor: "#abc",
+        borderColor: "#112233",
+        activeBackgroundColor: "rgba(17, 24, 39, 0.8)",
+        activeTextColor: "currentColor",
+        inactiveTextColor: "hsl(210, 50%, 40%)",
+        panelBackgroundColor: "var(--color-surface)",
+      },
+    },
+    tabsDefaults.items?.length ?? 0
+  );
+  const html = renderToString(<TabsBlock data={normalized} variant="pills" />);
+
+  expect(normalized.style).toEqual({
+    surfaceColor: "#abc",
+    borderColor: "#112233",
+    activeBackgroundColor: "rgba(17, 24, 39, 0.8)",
+    activeTextColor: "currentColor",
+    inactiveTextColor: "hsl(210, 50%, 40%)",
+    panelBackgroundColor: "var(--color-surface)",
+  });
+  expect(html).toContain("background-color:#abc");
+  expect(html).toContain("border-color:#112233");
+  expect(html).toContain("background-color:rgba(17, 24, 39, 0.8)");
+  expect(html).toContain("color:currentColor");
+  expect(html).toContain("color:hsl(210, 50%, 40%)");
+  expect(html).toContain("background-color:var(--color-surface)");
+});
+
 test("tabs render editor placeholders only in preview contexts", () => {
   const publicHtml = renderToString(<TabsBlock data={tabsDefaults} variant="pills" />);
   const previewHtml = renderToString(

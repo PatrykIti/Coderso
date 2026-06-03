@@ -45,6 +45,17 @@ vi.mock("@/components/ui/badge", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 
+vi.mock("@/components/ui/tabs", () => ({
+  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  TabsTrigger: ({ children, value }: { children: React.ReactNode; value?: string }) => (
+    <button type="button" data-tabs-trigger={value}>
+      {children}
+    </button>
+  ),
+}));
+
 vi.mock("@/components/ui/input", () => ({
   Input: ({
     value,
@@ -488,6 +499,101 @@ const renderEditors = async ({
     getLatestVariant: () => latestVariant,
   };
 };
+
+const renderSectionBlockSettings = async () => {
+  const { BlockSettings } = await import("../../../core/admin/ui/pages/builder/BlockSettings");
+  const { SectionAdvancedEditor, SectionVisualEditor, SectionWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SectionEditors");
+  const { createSectionWidget, sectionDefaults } =
+    await import("../../../core/widgets/core/section");
+
+  const widget = createSectionWidget({
+    wizard: SectionWizardEditor,
+    visual: SectionVisualEditor,
+    advanced: SectionAdvancedEditor,
+  });
+  const initialBlock: WidgetBlock = {
+    id: "section-test-block",
+    type: "section",
+    variant: "default",
+    data: {
+      ...sectionDefaults,
+      regions: [{ id: "1", label: "Hero" }],
+    },
+    slots: {
+      "region:1": [],
+    },
+    editor: { mode: "visual", wizardCompleted: true },
+  };
+  let latestBlock = initialBlock;
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [block, setBlock] = useState<WidgetBlock>(initialBlock);
+    const handleChange = (nextBlock: WidgetBlock) => {
+      latestBlock = nextBlock;
+      onChangeSpy(nextBlock);
+      setBlock(nextBlock);
+    };
+
+    return <BlockSettings block={block} widget={widget} onChange={handleChange} />;
+  };
+
+  return {
+    ...mount(<Harness />),
+    getLatestBlock: () => latestBlock,
+    onChangeSpy,
+  };
+};
+
+test("Section builder-owned Region controls expose stable control paths", async () => {
+  const view = await renderSectionBlockSettings();
+
+  try {
+    await flush();
+    const regionsSection = view.container.querySelector(
+      '[data-widget-editor-section="section.regions"]'
+    );
+    if (!(regionsSection instanceof HTMLElement)) {
+      throw new Error("Missing Section regions section");
+    }
+
+    const addRegionControl = findWidgetControl(regionsSection, "section.regions.add-region");
+    expect(addRegionControl.getAttribute("data-widget-control-path")).toBe("regions");
+    expect(addRegionControl.getAttribute("data-widget-control-ownership")).toBe("action");
+    expect(addRegionControl.textContent).toContain("Add Region");
+
+    const regionRow = findWidgetControl(regionsSection, "section.slot.region:1");
+    expect(regionRow.getAttribute("data-widget-control-path")).toBe("regions.1");
+    expect(regionRow.getAttribute("data-widget-control-ownership")).toBe("action");
+
+    const labelControl = findWidgetControl(regionsSection, "section.slot.region:1.label");
+    expect(labelControl.getAttribute("data-widget-control-path")).toBe("regions.1.label");
+    expect(labelControl.getAttribute("data-widget-control-ownership")).toBe("writable");
+    const labelInput = labelControl.querySelector("input");
+    expect(labelInput?.getAttribute("aria-label")).toBe("Rename Hero slot");
+
+    setInputValue(labelInput, "Main");
+    expect(view.getLatestBlock().data).toMatchObject({
+      regions: [{ id: "1", label: "Main" }],
+    });
+
+    clickByText(regionsSection, "Add Region");
+    expect(view.getLatestBlock().slots).toMatchObject({
+      "region:1": [],
+      "region:2": [],
+    });
+    const nextLabelControl = findWidgetControl(view.container, "section.slot.region:2.label");
+    expect(nextLabelControl.getAttribute("data-widget-control-path")).toBe("regions.2.label");
+
+    const unmappedControls = Array.from(regionsSection.querySelectorAll("button, input")).filter(
+      (element) => !element.closest("[data-widget-control-path]")
+    );
+    expect(unmappedControls).toHaveLength(0);
+  } finally {
+    view.cleanup();
+  }
+}, 10000);
 
 const mockSectionContract = async ({
   normalizedValue,

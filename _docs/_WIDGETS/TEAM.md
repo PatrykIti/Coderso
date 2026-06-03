@@ -43,6 +43,9 @@ Notes:
 - Add-member affordances are available at both the top and bottom of long
   member lists.
 - Member removal and social-link removal require explicit confirmation.
+- Destructive member-count reductions also use the shared
+  `ConfirmActionDialog`; cancel keeps member order, photos, bios, and social
+  links intact, and no Team count path calls native `window.confirm`.
 - Social links live inside each member panel instead of a detached global
   section.
 - Spotlight exposes an explicit `Set as spotlight lead` action plus an active
@@ -52,6 +55,10 @@ Notes:
 - Photo authoring uses media-library picking, inline preview, saved-photo
   compatibility copy, and clear-photo recovery. Visual no longer asks authors
   to paste image URLs.
+- The widget Playwright smoke harness now seeds a deterministic Team portrait
+  image through the authenticated admin media API and can verify real
+  MediaPicker photo selection, clear-photo recovery, publish, and public image
+  rendering when the live admin/frontend environment is available.
 - Social authoring uses known platform choices plus profile names/handles.
   Legacy custom social destinations remain clearable compatibility state
   instead of editable raw URL fields.

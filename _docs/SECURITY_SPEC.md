@@ -167,6 +167,20 @@ Semgrep local suppressions:
   - plugins (safeMode)
   - validation (rejectUnknownFields)
 
+### Browser cache dla Settings
+
+- Admin Settings moze uzywac tylko redacted browser cache
+  (`settings:redacted`) dla nie-sekretnych wartosci UX i boolean-only
+  configured flags.
+- Cache payload jest allowlistowany, schema-versioned i walidowany przeciwko
+  kluczom `password`, `secret`, `token`, `accessKey`, `connectionString` oraz
+  `apiKey`.
+- Raw SMTP/storage/integration/webhook/API-key credentials, bot-protection
+  secret, provider keys, session/csrf material i inne sekrety nie moga trafic
+  do `localStorage`, debug payloadow ani cache-bus eventow.
+- Credential-bearing Settings endpoints pozostaja uncached w browser storage;
+  mutacje moga co najwyzej zaktualizowac redacted configured flags.
+
 Uwaga: header CSRF jest weryfikowany na podstawie tokenu z prefiksem timestamp (`<ts>.<token>`),
 co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 
@@ -191,6 +205,36 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 - RBAC: `content:read` dla odczytu, `content:write` dla mutacji.
 - Rate-limit: `admin_read` / `admin_write`.
 - Brak public write; nonce/HMAC/reCAPTCHA nie dotyczy.
+
+### Redirects admin API and public runtime
+
+- Endpointy CRUD sa internal-only:
+  - `GET /admin/api/redirects`
+  - `POST /admin/api/redirects`
+  - `PATCH /admin/api/redirects/:id`
+  - `DELETE /admin/api/redirects/:id`
+- Auth/RBAC:
+  - admin session cookie,
+  - `settings:read` dla listy,
+  - `settings:write` dla create/update/delete.
+- CSRF:
+  - wymagany dla `POST`, `PATCH`, i `DELETE`.
+- Rate-limit:
+  - `admin_read` / `admin_write` dla CRUD,
+  - public redirect lookup korzysta z public request path i nie dodaje public
+    write surface.
+- Validation:
+  - strict schema odrzuca unknown fields,
+  - `fromPath` i `toPath` sa ograniczone do wewnetrznych sciezek,
+  - absolute/protocol-relative/backslash destinations sa odrzucane, aby
+    zapobiec open redirect,
+  - self-loop i redirect-chain loop sa blokowane.
+- Runtime hardening:
+  - public lookup wykonuje tylko wlaczone rekordy i nie ujawnia admin payloadow,
+  - public API, preview i site assets nie sa shadowowane przez redirect rows,
+  - loop lub unsafe legacy target fail-closed przez HTTP `508`.
+- Anti-abuse:
+  - nonce/HMAC/reCAPTCHA nie dotycza, bo nie dodano public write.
 
 ## File uploads
 

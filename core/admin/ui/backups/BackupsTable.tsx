@@ -1,8 +1,8 @@
 import { Calendar, Download, FileText, RotateCcw, Search, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -13,16 +13,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { BackupItem, BackupStatus } from "@/services/backupsClient";
+import type { BackupItem, BackupListResult, BackupStatus } from "@/services/backupsClient";
 
-const statusMeta: Record<
-  BackupStatus,
-  { label: string; className: string }
-> = {
+const statusMeta: Record<BackupStatus, { label: string; className: string }> = {
   queued: {
     label: "Queued",
     className:
-      "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-400",
+      "border-slate-500/20 bg-slate-500/10 text-slate-600 dark:border-slate-500/30 dark:bg-slate-500/15 dark:text-slate-300",
   },
   running: {
     label: "Running",
@@ -66,50 +63,113 @@ const formatDate = (value: string) => {
 };
 
 type BackupsTableProps = {
-  items: BackupItem[];
+  result: BackupListResult;
+  query: string;
   isLoading: boolean;
   isSaving: boolean;
+  selectedIds?: string[];
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
+  onToggleAll?: () => void;
+  onToggleBackup?: (id: string) => void;
   onRestore: (id: string) => void;
   onDownload: (id: string) => void;
+  onDelete: (id: string) => void;
+  onRefresh: () => void;
+  onPageChange: (page: number) => void;
+  onQueryChange: (query: string) => void;
+};
+
+const queuedWarningMs = 15 * 60 * 1000;
+
+const getActionState = (
+  backup: BackupItem
+): { restore: string | null; download: string | null } => {
+  if (backup.status === "queued" || backup.status === "running") {
+    return {
+      restore: "Backup is still being processed.",
+      download: "Backup is still being processed.",
+    };
+  }
+  if (backup.status === "failed") {
+    return {
+      restore: backup.error || "Backup failed.",
+      download: backup.error || "Backup failed.",
+    };
+  }
+  if (!backup.artifactPath) {
+    return {
+      restore: "Backup artifact is not ready.",
+      download: "Backup artifact is not ready.",
+    };
+  }
+  return {
+    restore: "Restore is not available for CMS-managed backup files yet.",
+    download: null,
+  };
+};
+
+const getQueueMessage = (backup: BackupItem) => {
+  if (backup.status !== "queued" && backup.status !== "running") return null;
+  const createdAt = new Date(backup.createdAt).getTime();
+  if (Number.isFinite(createdAt) && Date.now() - createdAt > queuedWarningMs) {
+    return "Processing for more than 15 minutes.";
+  }
+  return "Processing backup.";
 };
 
 export function BackupsTable({
-  items,
+  result,
+  query,
   isLoading,
   isSaving,
+  selectedIds = [],
+  isAllSelected = false,
+  isIndeterminate = false,
+  onToggleAll,
+  onToggleBackup,
   onRestore,
   onDownload,
+  onDelete,
+  onRefresh,
+  onPageChange,
+  onQueryChange,
 }: BackupsTableProps) {
-  const [query, setQuery] = useState("");
-
-  const filtered = useMemo(() => {
-    if (!query) return items;
-    const needle = query.toLowerCase();
-    return items.filter((backup) => {
-      return (
-        backup.id.toLowerCase().includes(needle) ||
-        backup.status.toLowerCase().includes(needle)
-      );
-    });
-  }, [items, query]);
+  const items = result.items;
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className="flex flex-col gap-4 border-b bg-muted/10 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-base font-semibold">Recent Backups</h3>
+        <div className="space-y-1">
+          <h3 className="text-base font-semibold">Recent Backups</h3>
+          <p className="text-xs text-muted-foreground">{result.worker.message}</p>
+        </div>
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search backups..."
             className="pl-9"
           />
         </div>
       </div>
+      {!result.worker.healthy ? (
+        <div className="border-b border-border bg-muted/30 px-6 py-3 text-sm text-muted-foreground">
+          Backup jobs are taking longer than expected. Refresh to check the latest worker state.
+        </div>
+      ) : null}
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
+            <TableHead className="px-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <Checkbox
+                aria-label="Select all backups"
+                checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                onCheckedChange={() => onToggleAll?.()}
+                disabled={isLoading || items.length === 0}
+              />
+            </TableHead>
             <TableHead className="px-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Backup ID
             </TableHead>
@@ -130,24 +190,35 @@ export function BackupsTable({
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={5} className="px-6 py-6 text-sm text-muted-foreground">
+              <TableCell colSpan={6} className="px-6 py-6 text-sm text-muted-foreground">
                 Loading backups...
               </TableCell>
             </TableRow>
-          ) : filtered.length === 0 ? (
+          ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="px-6 py-6 text-sm text-muted-foreground">
-                No backups found.
+              <TableCell colSpan={6} className="px-6 py-6 text-sm text-muted-foreground">
+                {query ? "No backups match this search." : "No backups found."}
               </TableCell>
             </TableRow>
           ) : (
-            filtered.map((backup) => {
+            items.map((backup) => {
               const status = statusMeta[backup.status];
-              const canRestore = backup.status === "complete";
-              const canDownload = backup.status === "complete" && Boolean(backup.artifactPath);
+              const actionState = getActionState(backup);
+              const queueMessage = getQueueMessage(backup);
+              const canRestore = actionState.restore === null;
+              const canDownload = actionState.download === null;
+              const isSelected = selectedIds.includes(backup.id);
 
               return (
-                <TableRow key={backup.id}>
+                <TableRow key={backup.id} className={cn(isSelected && "bg-muted/30")}>
+                  <TableCell className="px-6 py-4">
+                    <Checkbox
+                      aria-label={`Select backup ${backup.id}`}
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleBackup?.(backup.id)}
+                      disabled={isSaving}
+                    />
+                  </TableCell>
                   <TableCell className="px-6 py-4">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                       <FileText className="h-4 w-4 text-muted-foreground" />
@@ -164,53 +235,78 @@ export function BackupsTable({
                     </div>
                   </TableCell>
                   <TableCell className="px-6 py-4">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide",
-                        status.className
-                      )}
-                    >
-                      {status.label}
-                    </Badge>
+                    <div className="space-y-1">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide",
+                          status.className
+                        )}
+                      >
+                        {status.label}
+                      </Badge>
+                      {queueMessage ? (
+                        <p className="max-w-64 text-xs text-muted-foreground">{queueMessage}</p>
+                      ) : backup.error ? (
+                        <p className="max-w-64 text-xs text-destructive">{backup.error}</p>
+                      ) : null}
+                    </div>
                   </TableCell>
                   <TableCell className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className={cn(
-                          "text-muted-foreground",
-                          canRestore && "hover:text-primary"
-                        )}
-                        disabled={!canRestore || isSaving}
-                        aria-label="Restore backup"
-                        onClick={() => onRestore(backup.id)}
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className={cn(
-                          "text-muted-foreground",
-                          canDownload && "hover:text-foreground"
-                        )}
-                        disabled={!canDownload || isSaving}
-                        aria-label="Download backup"
-                        onClick={() => onDownload(backup.id)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-muted-foreground hover:text-destructive"
-                        aria-label="Delete backup"
-                        disabled
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div className="space-y-1">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className={cn(
+                            "text-muted-foreground",
+                            canRestore && "hover:text-primary"
+                          )}
+                          disabled={!canRestore || isSaving}
+                          title={actionState.restore ?? "Restore backup"}
+                          aria-label={
+                            actionState.restore
+                              ? `Restore unavailable: ${actionState.restore}`
+                              : "Restore backup"
+                          }
+                          onClick={() => onRestore(backup.id)}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className={cn(
+                            "text-muted-foreground",
+                            canDownload && "hover:text-foreground"
+                          )}
+                          disabled={!canDownload || isSaving}
+                          title={actionState.download ?? "Download backup"}
+                          aria-label={
+                            actionState.download
+                              ? `Download unavailable: ${actionState.download}`
+                              : "Download backup"
+                          }
+                          onClick={() => onDownload(backup.id)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="text-muted-foreground hover:text-destructive"
+                          aria-label="Delete backup"
+                          disabled={isSaving}
+                          onClick={() => onDelete(backup.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {actionState.download ? (
+                        <p className="max-w-64 text-right text-xs text-muted-foreground">
+                          {actionState.download}
+                        </p>
+                      ) : null}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -221,13 +317,26 @@ export function BackupsTable({
       </Table>
       <div className="flex flex-col items-start gap-3 border-t px-6 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <span>
-          Showing {filtered.length} of {items.length} backups
+          Showing {items.length} of {result.total} backups
         </span>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading || isSaving}>
+            Refresh
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!result.hasPrevious || isLoading || isSaving}
+            onClick={() => onPageChange(Math.max(1, result.page - 1))}
+          >
             Previous
           </Button>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!result.hasNext || isLoading || isSaving}
+            onClick={() => onPageChange(result.page + 1)}
+          >
             Next
           </Button>
         </div>

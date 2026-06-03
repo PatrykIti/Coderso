@@ -471,3 +471,44 @@ test("ProductCompare advanced editor keeps runtime diagnostics read-only and exp
     view.cleanup();
   }
 });
+
+test("ProductCompare advanced editor marks query filters inactive for selected products", async () => {
+  const { ProductCompareAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
+
+  const view = mount(
+    <ProductCompareAdvancedEditor
+      value={{
+        source: {
+          productIds: ["product-1", "product-3"],
+          search: "loft",
+          collectionIds: ["collection-homes"],
+          status: ["draft"],
+          sortField: "pricing.amount",
+          sortDir: "desc",
+        },
+      }}
+      onChange={() => undefined}
+      variant="matrix"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    const text = normalizeText(view.container.textContent);
+
+    expect(text).toContain(normalizeText("2 selected products in manual order"));
+    expect(text).toContain(normalizeText("Configured, inactive while selected products are used"));
+    expect(text).toContain(
+      normalizeText("1 saved collection, inactive while selected products are used")
+    );
+    expect(text).toContain(
+      normalizeText("1 saved status filter, inactive while selected products are used")
+    );
+    expect(text).toContain(normalizeText("Ignored while selected products are used"));
+    expect(text).not.toContain(normalizeText("Collections 1 collection selected"));
+    expect(text).not.toContain(normalizeText("Status filters 1 status filter selected"));
+  } finally {
+    view.cleanup();
+  }
+});

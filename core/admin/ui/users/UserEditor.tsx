@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 
 import type { RoleSummary } from "../roles/types";
 import type { UserDraft, UserStatus, UserSummary } from "./types";
@@ -30,7 +29,7 @@ const emptyDraft: UserDraft = {
   name: "",
   email: "",
   roleIds: [],
-  status: "active",
+  status: "pending",
 };
 
 const statusLabels: Record<UserStatus, string> = {
@@ -68,12 +67,8 @@ export function UserEditor({
     : emptyDraft;
 
   const [draft, setDraft] = useState<UserDraft>(initialDraft);
-  const [sendInvite, setSendInvite] = useState(!user);
 
-  const lockedSet = useMemo(
-    () => new Set(lockedRoleIds),
-    [lockedRoleIds]
-  );
+  const lockedSet = useMemo(() => new Set(lockedRoleIds), [lockedRoleIds]);
 
   const isValid = draft.name.trim().length > 0 && draft.email.trim().length > 0;
   const mode: "create" | "edit" = user ? "edit" : "create";
@@ -104,9 +99,7 @@ export function UserEditor({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {user ? "Edit user" : "Invite new user"}
-          </DialogTitle>
+          <DialogTitle>{user ? "Edit user" : "Invite new user"}</DialogTitle>
           <DialogDescription>
             {user
               ? "Update profile details and access permissions."
@@ -116,36 +109,26 @@ export function UserEditor({
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Name
-              </label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Name</label>
               <Input
                 value={draft.name}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, name: event.target.value }))
-                }
+                onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))}
                 placeholder="Full name"
                 disabled={!canManageUsers}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Email
-              </label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Email</label>
               <Input
                 value={draft.email}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, email: event.target.value }))
-                }
+                onChange={(event) => setDraft((prev) => ({ ...prev, email: event.target.value }))}
                 placeholder="name@company.com"
                 disabled={!canManageUsers}
               />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase text-muted-foreground">
-              Status
-            </label>
+            <label className="text-xs font-semibold uppercase text-muted-foreground">Status</label>
             <Select
               value={draft.status}
               onValueChange={(value) =>
@@ -154,7 +137,7 @@ export function UserEditor({
                   status: value as UserStatus,
                 }))
               }
-              disabled={!canManageUsers}
+              disabled={!canManageUsers || mode === "create"}
             >
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Select status" />
@@ -186,10 +169,7 @@ export function UserEditor({
                 const checked = draft.roleIds.includes(role.id);
                 const locked = checked && lockedSet.has(role.id);
                 return (
-                  <label
-                    key={role.id}
-                    className="flex items-start gap-3 rounded-lg border p-3"
-                  >
+                  <label key={role.id} className="flex items-start gap-3 rounded-lg border p-3">
                     <Checkbox
                       checked={checked}
                       onCheckedChange={() => handleToggleRole(role.id)}
@@ -198,9 +178,7 @@ export function UserEditor({
                     <div>
                       <p className="text-sm font-medium">{role.name}</p>
                       {role.description ? (
-                        <p className="text-xs text-muted-foreground">
-                          {role.description}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{role.description}</p>
                       ) : null}
                     </div>
                   </label>
@@ -208,27 +186,11 @@ export function UserEditor({
               })}
             </div>
           </div>
-          {!user ? (
-            <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
-              <div>
-                <p className="text-sm font-medium">Send invite email</p>
-                <p className="text-xs text-muted-foreground">
-                  Automatically send login instructions to the user.
-                </p>
-              </div>
-              <Switch
-                checked={sendInvite}
-                onCheckedChange={setSendInvite}
-                disabled={!canManageUsers}
-              />
-            </div>
-          ) : null}
           {hasLockedRole ? (
             <Alert>
               <AlertTitle>Primary admin protected</AlertTitle>
               <AlertDescription>
-                The last admin account cannot lose its admin role until another
-                admin is created.
+                The last admin account cannot lose its admin role until another admin is created.
               </AlertDescription>
             </Alert>
           ) : null}

@@ -18,7 +18,10 @@ wrap control.
 
 Variant selection is a starting preset, not a hard lock. Once an author edits
 `direction.desktop|tablet|mobile`, the saved direction data remains the runtime
-source of truth for that breakpoint.
+source of truth for that breakpoint. For non-empty imported/admin payloads that
+omit `direction`, Stack preserves the omission through generic validation so the
+variant default can apply at render: `vertical` -> `column/column/column`,
+`horizontal` -> `row/row/row`, and `responsive` -> `row/row/column`.
 
 ## Slots
 
@@ -59,9 +62,14 @@ Notes:
   on runtime prefix composition.
 - Legacy scalar `align`, `justify`, and `wrap` values remain valid input and
   normalize to all three breakpoints.
+- Non-empty saved/imported data that omits `direction` keeps it absent until
+  Stack resolves the effective variant defaults; explicit saved `direction`
+  still wins.
 - Compatibility markers `data-stack-align`, `data-stack-justify`, and
   `data-stack-wrap` always mirror the resolved mobile values.
 - Breakpoint-specific markers expose the full responsive truth:
+  - `data-stack-direction-desktop|tablet|mobile`
+  - `data-stack-gap-desktop|tablet|mobile`
   - `data-stack-align-desktop|tablet|mobile`
   - `data-stack-justify-desktop|tablet|mobile`
   - `data-stack-wrap-desktop|tablet|mobile`

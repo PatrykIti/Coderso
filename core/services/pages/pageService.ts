@@ -12,6 +12,7 @@ import { invalidateSiteCachePath, normalizeSitePath } from "../../site/cache/sit
 import { getSetting } from "../settings/settingsService";
 import { normalizePageDataLayout } from "./layoutSettings";
 import { normalizePageDataCollectionLink } from "./pageCollectionLink";
+import { normalizePageWidgetData } from "./pageWidgetData";
 import { resolveEmailValue } from "../security/piiEmail";
 import { resolvePageRevisionRetention } from "./revisionRetention";
 
@@ -83,7 +84,9 @@ function applyTemplate(data: PageData, template?: string): PageData {
 
 function preparePageData(data: PageData, template?: string): PageData {
   const withTemplate = applyTemplate(data, template);
-  return normalizePageDataCollectionLink(normalizePageDataLayout(withTemplate)) as PageData;
+  return normalizePageWidgetData(
+    normalizePageDataCollectionLink(normalizePageDataLayout(withTemplate)) as PageData
+  ) as PageData;
 }
 
 const buildRevisionSnapshot = (
@@ -156,8 +159,18 @@ export async function getPage(id: string) {
 }
 
 export async function getPageBySlug(slug: string) {
-  const [page] = await db.select().from(pages).where(eq(pages.slug, slug));
-  return page ?? null;
+  const candidates = [
+    slug,
+    normalizeSitePath(slug),
+    slug.startsWith("/") ? slug.slice(1) : `/${slug}`,
+  ].filter((candidate, index, items) => candidate && items.indexOf(candidate) === index);
+
+  for (const candidate of candidates) {
+    const [page] = await db.select().from(pages).where(eq(pages.slug, candidate)).limit(1);
+    if (page) return page;
+  }
+
+  return null;
 }
 
 export async function updatePage(id: string, input: UpdatePageInput) {

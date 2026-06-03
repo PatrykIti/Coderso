@@ -1,4 +1,24 @@
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
+const MAX_DYNAMIC_KEY_SEGMENT_LENGTH = 96;
+
+const hashCacheKeySegment = (value: string) => {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+};
+
+export const createBoundedCacheKeySegment = (
+  value: string | null | undefined,
+  fallback = "all"
+) => {
+  const normalized = (value ?? "").trim().replace(/\s+/g, " ");
+  if (!normalized) return fallback;
+  const encoded = encodeURIComponent(normalized);
+  return `${encoded.slice(0, MAX_DYNAMIC_KEY_SEGMENT_LENGTH)}:${hashCacheKeySegment(normalized)}`;
+};
 
 export const cacheTtlMs = {
   list: DEFAULT_TTL_MS,
@@ -27,6 +47,16 @@ export const cacheKeys = {
   menuDetail: (id: string) => `menus:detail:${id}`,
   seoList: "seo:list",
   seoDetail: (id: string) => `seo:detail:${id}`,
+  searchRecent: "search:recent",
+  searchResults: (queryKey: string) => `search:results:${queryKey}`,
+  analyticsOverview: (rangeDays: number | string) => `analytics:overview:${rangeDays}`,
+  analyticsTopContent: (rangeDays: number | string, limit: number | string, type: string = "all") =>
+    `analytics:topContent:${rangeDays}:${limit}:${type}`,
+  backupsList: (page: number | string, limit: number | string, queryKey: string = "all") =>
+    `backups:list:${page}:${limit}:${queryKey}`,
+  backupSchedule: "backups:schedule",
+  importHistory: "tools:import:history",
+  redirectsList: "redirects:list",
   formsList: "forms:list",
   formDetail: (id: string) => `forms:detail:${id}`,
   formActions: (id: string) => `forms:actions:${id}`,
@@ -59,6 +89,7 @@ export const cacheKeys = {
   mediaList: "media:list",
   adminThemeTemplatesList: "adminThemeTemplates:list",
   adminThemeProfilesList: "adminThemeProfiles:list",
+  settingsRedacted: "settings:redacted",
 };
 
 export const getCacheTtlMs = () => DEFAULT_TTL_MS;

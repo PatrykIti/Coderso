@@ -30,6 +30,8 @@ type RuntimePreviewField = {
     pattern?: string;
     min?: number;
     max?: number;
+    formStep?: number;
+    inputStep?: number;
     step?: number;
     logic?: FormFieldLogic;
     style?: FormFieldStyle;
@@ -71,7 +73,7 @@ const buildInitialValues = (fields: RuntimePreviewField[]): RuntimeValues => {
 const toStepGroups = (fields: RuntimePreviewField[]) => {
   const groups = new Map<number, RuntimePreviewField[]>();
   for (const field of fields) {
-    const step = normalizeFormStep(field.settings.step);
+    const step = normalizeFormStep(field.settings.formStep ?? field.settings.step);
     const list = groups.get(step) ?? [];
     list.push(field);
     groups.set(step, list);
@@ -428,8 +430,8 @@ export function FormRuntimePreviewDialog({
                                   : undefined
                               }
                               step={
-                                typeof field.settings.step === "number"
-                                  ? String(field.settings.step)
+                                typeof field.settings.inputStep === "number"
+                                  ? String(field.settings.inputStep)
                                   : undefined
                               }
                             />

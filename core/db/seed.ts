@@ -1,9 +1,9 @@
-import { Algorithm, hash } from "@node-rs/argon2";
 import { and, eq } from "drizzle-orm";
 import { db } from "./client";
 import { getUserByEmail } from "../services/auth/userService";
 import { buildEmailFields, normalizeEmail } from "../services/security/piiEmail";
 import { roles, userRoles, users } from "./schema";
+import { hashSeedAdminPassword } from "./seedPassword";
 
 export async function seedAdmin() {
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -18,12 +18,15 @@ export async function seedAdmin() {
 
   // 1. Create or get admin role.
   let [role] = await db.select().from(roles).where(eq(roles.name, "admin"));
-  
+
   if (!role) {
-    [role] = await db.insert(roles).values({
-      name: "admin",
-      permissions: ["*"],
-    }).returning();
+    [role] = await db
+      .insert(roles)
+      .values({
+        name: "admin",
+        permissions: ["*"],
+      })
+      .returning();
     console.log("Created admin role");
   } else {
     console.log("Admin role already exists");
@@ -34,9 +37,7 @@ export async function seedAdmin() {
   let user = await getUserByEmail(normalizedEmail);
 
   if (!user) {
-    const passwordHash = await hash(adminPassword, {
-      algorithm: Algorithm.Argon2id,
-    });
+    const passwordHash = await hashSeedAdminPassword(adminPassword);
     const emailFields = buildEmailFields(normalizedEmail);
     [user] = await db
       .insert(users)
@@ -60,10 +61,7 @@ export async function seedAdmin() {
     .where(and(eq(userRoles.userId, user.id), eq(userRoles.roleId, role.id)));
 
   if (!existingUserRole) {
-    await db
-      .insert(userRoles)
-      .values({ userId: user.id, roleId: role.id })
-      .onConflictDoNothing();
+    await db.insert(userRoles).values({ userId: user.id, roleId: role.id }).onConflictDoNothing();
     console.log("Assigned admin role to user");
   } else {
     console.log("Admin role already assigned");
@@ -72,11 +70,13 @@ export async function seedAdmin() {
 
 // Allow running directly if executed as a script
 if (import.meta.main) {
-  seedAdmin().then(() => {
-    console.log("Seed complete");
-    process.exit(0);
-  }).catch((err) => {
-    console.error("Seed failed", err);
-    process.exit(1);
-  });
+  seedAdmin()
+    .then(() => {
+      console.log("Seed complete");
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error("Seed failed", err);
+      process.exit(1);
+    });
 }

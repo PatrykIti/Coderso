@@ -56,6 +56,9 @@ Notes:
 ### Advanced
 
 - Read-only style diagnostics for resolved color/border state.
+- Background gradient diagnostics use `Configured` / `Not configured` state
+  labels instead of exposing the raw CSS gradient string; Visual owns gradient
+  editing and runtime rendering uses the normalized widget background contract.
 - Confirm-gated `Normalize now` and `Reset to defaults` support actions.
 - Human runtime summary for variant, configured actions, background media, and motion.
 - Advanced does not expose raw CTA JSON or editable color-token text fields.

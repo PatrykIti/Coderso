@@ -259,6 +259,7 @@ test("form embed renders accessible field wiring and unsupported-field diagnosti
 
   expect(html).toContain('aria-required="true"');
   expect(html).toContain("aria-describedby=");
+  expect(html).toContain('value="true"');
   expect(html).toContain('type="number"');
   expect(html).not.toContain('data-form-field-unsupported="number"');
 });
@@ -383,6 +384,76 @@ test("form embed renders typed controls for number, time, range, and rating", ()
   expect(html).toContain('value="3"');
   expect(html).not.toContain('data-form-field-unsupported="number"');
   expect(html).not.toContain('data-form-field-unsupported="rating"');
+});
+
+test("form embed separates form step placement from input increment", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Intake",
+          settings: {
+            layoutMode: "multi_step",
+            saveProgress: false,
+            stepTitles: ["Contact", "Details"],
+          },
+          fields: [
+            {
+              id: "field-legacy",
+              type: "number",
+              label: "Legacy number",
+              name: "legacy_number",
+              required: false,
+              settings: { step: 2 },
+            },
+            {
+              id: "field-budget",
+              type: "range",
+              label: "Budget",
+              name: "budget",
+              required: false,
+              settings: { formStep: 2, inputStep: 0.5, min: 0, max: 10 },
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain('data-step-index="2"');
+  expect(getOpeningTagByAttribute(html, "input", "name", "legacy_number")).not.toContain("step=");
+  expect(getOpeningTagByAttribute(html, "input", "name", "budget")).toContain('step="0.5"');
+});
+
+test("form embed renders internal-only resolved forms as a noninteractive boundary", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-internal",
+        resolved: {
+          formName: "Internal intake",
+          submissionAccess: "internal",
+          fields: [
+            {
+              id: "field-1",
+              type: "text",
+              label: "Name",
+              name: "name",
+              required: true,
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain('data-form-embed-runtime-boundary="internal"');
+  expect(html).toContain("not accepting public submissions");
+  expect(html).not.toContain('data-nextless-form-runtime="1"');
+  expect(html).not.toContain("__nextlessFormRuntimeClient");
 });
 
 test("form embed supports hidden fields and keeps file fields explicitly unsupported", () => {
@@ -589,7 +660,33 @@ test("form embed cleared style colors omit authored color values", () => {
   expect(html).not.toContain("background-color:transparent");
 });
 
-test("form embed validator accepts resolved runtime payload", () => {
+test("form embed validator rejects persisted resolved nonce", () => {
+  clearWidgets();
+  const widget = createFormEmbedWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  registerWidget(widget);
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "form-embed-runtime",
+      type: "form-embed",
+      variant: "standard",
+      data: {
+        formId: "form-123",
+        resolved: {
+          formName: "Contact",
+          submissionAccess: "public",
+          submissionNonce: "nonce-1",
+        },
+      },
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("form embed validator accepts non-secret resolved runtime payload", () => {
   clearWidgets();
   const widget = createFormEmbedWidget({
     wizard: StubEditor,
@@ -611,7 +708,6 @@ test("form embed validator accepts resolved runtime payload", () => {
           status: "published",
           successMessage: "Done",
           submissionAccess: "public",
-          submissionNonce: "nonce-1",
           settings: {
             layoutMode: "single",
             saveProgress: false,

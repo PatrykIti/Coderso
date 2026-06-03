@@ -244,6 +244,17 @@ test("UserFilters routes search and select changes through the provided callback
   try {
     expect(view.container.textContent).toContain("All roles");
     expect(view.container.textContent).toContain("Active");
+    const advancedFilterButton = view.container.querySelector(
+      '[data-no-op-control="users-advanced-filters"]'
+    );
+    expect(advancedFilterButton).toBeInstanceOf(HTMLButtonElement);
+    expect((advancedFilterButton as HTMLButtonElement).disabled).toBe(true);
+    expect(advancedFilterButton?.getAttribute("aria-label")).toBe(
+      "Advanced user filters unavailable"
+    );
+    expect(advancedFilterButton?.getAttribute("title")).toContain(
+      "Advanced user filters are unavailable"
+    );
 
     setInputValue(
       view.container.querySelector('input[placeholder="Search users by name or email..."]'),
@@ -256,6 +267,36 @@ test("UserFilters routes search and select changes through the provided callback
     expect(onQueryChange).toHaveBeenCalledWith("grace");
     expect(onRoleChange).toHaveBeenCalledWith("editor");
     expect(onStatusChange).toHaveBeenCalledWith("inactive");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UserFilters makes role filtering truthful without roles read access", async () => {
+  const { UserFilters } = await import("../../../core/admin/ui/users/UserFilters");
+
+  const onRoleChange = vi.fn();
+
+  const view = mount(
+    <UserFilters
+      query=""
+      roleFilter="all"
+      statusFilter="any"
+      roles={[{ id: "admin", name: "Admin", permissions: ["*"] }]}
+      canReadRoles={false}
+      roleFilterUnavailableReason="Role filtering requires roles:read permission."
+      onQueryChange={() => undefined}
+      onRoleChange={onRoleChange}
+      onStatusChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Role filter unavailable");
+    expect(view.container.textContent).not.toContain("All roles");
+    expect(view.container.textContent).not.toContain("Admin");
+    expect(view.container.textContent).toContain("All status");
+    expect(onRoleChange).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -402,6 +443,92 @@ test("UserList read-only mode disables management actions and falls back to onSe
     expect(onToggleStatus).not.toHaveBeenCalled();
     expect(onResetPassword).not.toHaveBeenCalled();
     expect(onDelete).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UserList hides raw role ids when role details are unavailable", async () => {
+  const { UserList } = await import("../../../core/admin/ui/users/UserList");
+
+  const user = {
+    id: "user-4",
+    name: "Partial Reader",
+    email: "partial@example.com",
+    roleIds: ["role-secret"],
+    status: "active" as const,
+    lastActive: "Today",
+    mfaEnabled: false,
+  };
+
+  const view = mount(
+    <UserList
+      items={[user]}
+      roles={[]}
+      roleDetailsUnavailableReason="Role names require roles:read permission."
+      onSelect={() => undefined}
+      onEdit={() => undefined}
+      onToggleStatus={() => undefined}
+      onResetPassword={() => undefined}
+      onDelete={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Role details unavailable");
+    expect(view.container.textContent).not.toContain("role-secret");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UserList can disable role editing while keeping lifecycle writes available", async () => {
+  const { UserList } = await import("../../../core/admin/ui/users/UserList");
+
+  const user = {
+    id: "user-5",
+    name: "Lifecycle Writer",
+    email: "lifecycle@example.com",
+    roleIds: ["role-secret"],
+    status: "active" as const,
+    lastActive: "Today",
+    mfaEnabled: false,
+  };
+  const onEdit = vi.fn();
+  const onToggleStatus = vi.fn();
+  const onDelete = vi.fn();
+
+  const view = mount(
+    <UserList
+      items={[user]}
+      roles={[]}
+      canEditUsers={false}
+      canManageUserLifecycle
+      roleDetailsUnavailableReason="Role names require roles:read permission."
+      onSelect={() => undefined}
+      onEdit={onEdit}
+      onToggleStatus={onToggleStatus}
+      onResetPassword={() => undefined}
+      onDelete={onDelete}
+    />
+  );
+
+  try {
+    const editButton = findButtonsByText(view.container, "Edit user")[0];
+    const statusButton = findButtonsByText(view.container, "Deactivate user")[0];
+    const deleteButton = findButtonsByText(view.container, "Delete user")[0];
+
+    expect(editButton?.disabled).toBe(true);
+    expect(statusButton?.disabled).toBe(false);
+    expect(deleteButton?.disabled).toBe(false);
+
+    click(editButton);
+    click(statusButton);
+    click(deleteButton);
+
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onToggleStatus).toHaveBeenCalledWith(user);
+    expect(onDelete).toHaveBeenCalledWith(user);
   } finally {
     view.cleanup();
   }

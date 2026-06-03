@@ -125,6 +125,16 @@ export type NewsletterExpectedRuntimeField = {
   required: boolean;
 };
 
+export type NewsletterResolvedFieldInput = {
+  id?: string;
+  type?: string;
+  label?: string;
+  name?: string;
+  required?: boolean;
+  orderIndex?: number;
+  settings?: unknown;
+};
+
 type NewsletterTransport = {
   mode: NewsletterIntegrationMode;
   method: NewsletterMethod;
@@ -179,6 +189,21 @@ const safeHexColorPattern = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 const safeRgbColorPattern =
   /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*((?:0|1|0?\.\d+)))?\s*\)$/i;
 const newsletterFormsRoutePattern = /^\/forms\/[a-zA-Z0-9_-]+\/submissions$/;
+const newsletterRuntimeFieldTypes = new Set<NormalizedFormField["type"]>([
+  "text",
+  "email",
+  "select",
+  "radio",
+  "number",
+  "time",
+  "range",
+  "rating",
+  "hidden",
+  "checkbox",
+  "textarea",
+  "phone",
+  "date",
+]);
 
 const spacingClassMap: Record<NewsletterSpacing, string> = {
   none: "gap-0",
@@ -754,6 +779,43 @@ export const resolveNewsletterVariant = (variant: string): NewsletterVariantId =
 const isNewsletterFormsRouteActionUrl = (value: string | undefined) =>
   newsletterFormsRoutePattern.test((value ?? "").trim());
 
+const normalizeNewsletterRuntimeFieldType = (
+  value: string | undefined
+): NormalizedFormField["type"] => {
+  const candidate = value as NormalizedFormField["type"] | undefined;
+  return candidate && newsletterRuntimeFieldTypes.has(candidate) ? candidate : "text";
+};
+
+const normalizeNewsletterResolvedFieldSettings = (
+  value: unknown
+): NormalizedFormField["settings"] => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return { ...(value as Record<string, unknown>) } as NormalizedFormField["settings"];
+};
+
+export function normalizeNewsletterResolvedField(
+  field: NewsletterResolvedFieldInput
+): NormalizedFormField {
+  return {
+    id: resolveString(field.id, ""),
+    type: normalizeNewsletterRuntimeFieldType(field.type),
+    label: resolveString(field.label, ""),
+    name: normalizeSafeFieldName(field.name, normalizeSafeFieldName(field.id, "field")),
+    required: Boolean(field.required),
+    orderIndex:
+      typeof field.orderIndex === "number" && Number.isFinite(field.orderIndex)
+        ? field.orderIndex
+        : 0,
+    settings: normalizeNewsletterResolvedFieldSettings(field.settings),
+  };
+}
+
+export function normalizeNewsletterResolvedFields(
+  fields: NewsletterResolvedFieldInput[] | undefined
+): NormalizedFormField[] {
+  return Array.isArray(fields) ? fields.map(normalizeNewsletterResolvedField) : [];
+}
+
 export function normalizeNewsletterData(data: NewsletterData): NormalizedNewsletterData {
   const transport = resolveNewsletterTransport(data.integration);
   const styleDefaults = newsletterDefaults.style ?? {};
@@ -1000,8 +1062,9 @@ export function NewsletterBlock({
     !resolved?.error &&
     (resolved.formId ?? "").trim().length > 0 &&
     formsRuntimeCompatible;
-  const canUseFormsRuntime =
-    formsRuntimeReady && (renderContext?.mode === "public" || Boolean(resolved?.submissionNonce));
+  const hasSubmissionNonce =
+    typeof resolved?.submissionNonce === "string" && resolved.submissionNonce.trim().length > 0;
+  const canUseFormsRuntime = formsRuntimeReady && hasSubmissionNonce;
   const canUseNativeAction =
     submission.mode !== "forms-runtime" &&
     transport.mode === "action-url" &&
@@ -1050,8 +1113,10 @@ export function NewsletterBlock({
           : actionRequiresFormsRuntime
             ? "Switch Newsletter submission mode to Forms runtime when you target a Coderso Forms route."
             : "Connect a Forms runtime binding or a safe external action URL to enable submissions."
-    : renderContext?.mode === "editor-preview" && formsRuntimeReady && !canUseFormsRuntime
-      ? "Editor preview shows the bound Forms contract. Public runtime injects nonce and bot protection at render time."
+    : formsRuntimeReady && !canUseFormsRuntime
+      ? renderContext?.mode === "editor-preview"
+        ? "Editor preview shows the bound Forms contract. Public runtime injects nonce and bot protection at render time."
+        : "This signup form is temporarily unavailable because its submission security token is missing."
       : "";
   const NewsletterFormShell = submitReady ? "form" : "div";
   const formShellSubmitProps = submitReady

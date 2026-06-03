@@ -82,7 +82,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerSearchRoutes(router, { requirePermission: deps.requirePermission });
-  registerAuditRoutes(router, { requirePermission: deps.requirePermission });
+  registerAuditRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerThemeRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,

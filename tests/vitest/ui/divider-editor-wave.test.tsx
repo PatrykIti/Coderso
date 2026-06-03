@@ -494,3 +494,38 @@ test("Divider editors cover visual label input, color picker changes, custom spa
     view.cleanup();
   }
 });
+
+test("Divider advanced preview and summary sanitize unsafe saved colors", async () => {
+  const { DividerAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/DividerEditors");
+
+  const view = mount(
+    <DividerAdvancedEditor
+      value={{
+        label: "Unsafe divider",
+        color: "url(javascript:alert(1))",
+        labelColor: "expression(alert(2))",
+        lineStyle: "dashed",
+        dashPattern: "wide",
+      }}
+      onChange={() => undefined}
+      variant="label-center"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    const html = view.container.innerHTML;
+    const runtimeSection = findSectionByTitle(view.container, "Runtime divider summary");
+
+    expect(runtimeSection).toBeDefined();
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("url(javascript");
+    expect(html).not.toContain("expression(");
+    expect(html).toContain("repeating-linear-gradient(90deg, var(--color-border)");
+    expect(html).toContain("color: var(--color-border)");
+    expect(view.container.querySelectorAll("input, select, button")).toHaveLength(0);
+  } finally {
+    view.cleanup();
+  }
+});

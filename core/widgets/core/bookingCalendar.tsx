@@ -653,6 +653,7 @@ export function BookingCalendarBlock({
   const services = normalized.resolved?.services ?? [];
   const resources = normalized.resolved?.resources ?? [];
   const hasCatalog = services.length > 0 && resources.length > 0;
+  const hasSlotsToken = Boolean(normalized.resolved?.slotsToken);
   const variantId = resolveBookingCalendarVariant(variant);
   const frameBackground = resolveClearableStyleValue(normalized.style?.frameBackground);
   const frameBorderColor = resolveClearableStyleValue(normalized.style?.frameBorderColor);
@@ -771,6 +772,14 @@ export function BookingCalendarBlock({
                     </button>
                   </div>
                   <div className="mt-3 grid grid-cols-7 gap-2" data-booking-week-days />
+                  {!hasSlotsToken ? (
+                    <p
+                      className="mt-3 rounded-md border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-text)]/70"
+                      data-booking-week-runtime-boundary
+                    >
+                      Runtime interactions are available in public preview after saving.
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -793,6 +802,7 @@ export function BookingCalendarBlock({
                         data-buffer-after-minutes={service.bufferAfterMinutes}
                         data-price-cents={service.priceCents ?? ""}
                         data-currency={service.currency ?? ""}
+                        data-submission-access={service.submissionAccess ?? "public"}
                       >
                         {service.name}
                       </option>

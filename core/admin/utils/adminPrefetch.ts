@@ -27,6 +27,14 @@ import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
 } from "@/services/adminThemeClient";
+import { getOverviewCached, getTopContentCached } from "@/services/analyticsClient";
+import { getBackupScheduleCached, listBackupsCached } from "@/services/backupsClient";
+import { listImportHistoryCached } from "@/services/importExportClient";
+import { listRedirectsCached } from "@/services/redirectsClient";
+import { listRecentSearchesCached } from "@/services/searchClient";
+import { listSeoCached } from "@/services/seoClient";
+import { getSettingsCached } from "@/services/settingsClient";
+import { getSiteSettingsCached } from "@/services/siteSettingsClient";
 import { listWidgetTemplateCategoriesCached } from "@/services/widgetTemplateCategoriesClient";
 import { listWidgetTemplatesCached } from "@/services/widgetTemplatesClient";
 import { listWidgetCatalogCached } from "@/services/widgetsClient";
@@ -276,6 +284,20 @@ export async function prefetchDetailTemplateEditor(path: string) {
   return true;
 }
 
+export async function prefetchSettingsRoute(path: string) {
+  if (path === "/settings/site" || path.startsWith("/settings/site/")) {
+    await Promise.all([
+      getSiteSettingsCached(prefetchWarmupOptions),
+      listPagesCached(prefetchWarmupOptions),
+      listContentTypesCached(prefetchWarmupOptions),
+    ]);
+    return true;
+  }
+
+  await getSettingsCached(prefetchWarmupOptions);
+  return true;
+}
+
 const defaultEntries: AdminPrefetchEntry[] = [
   {
     match: "/pages",
@@ -412,6 +434,45 @@ const defaultEntries: AdminPrefetchEntry[] = [
         listAdminThemeTemplatesCached(prefetchWarmupOptions),
         listAdminThemeProfilesCached(prefetchWarmupOptions),
       ]),
+  },
+  {
+    match: "/search",
+    run: () => listRecentSearchesCached(prefetchWarmupOptions),
+  },
+  {
+    match: "/seo",
+    run: () => listSeoCached(prefetchWarmupOptions),
+  },
+  {
+    match: "/analytics",
+    run: () =>
+      Promise.all([
+        getOverviewCached(30, prefetchWarmupOptions),
+        getTopContentCached({ limit: 50, rangeDays: 30, ...prefetchWarmupOptions }),
+      ]),
+  },
+  {
+    match: "/backups",
+    run: () =>
+      Promise.all([
+        listBackupsCached({ page: 1, limit: 10, ...prefetchWarmupOptions }),
+        getBackupScheduleCached(prefetchWarmupOptions),
+      ]),
+  },
+  {
+    match: "/tools/import-export",
+    run: () => {
+      listImportHistoryCached();
+    },
+  },
+  {
+    match: "/redirects",
+    run: () => listRedirectsCached(prefetchWarmupOptions),
+  },
+  {
+    match: "/settings",
+    resolveKey: ({ path }) => path,
+    run: ({ path }) => prefetchSettingsRoute(path),
   },
 ];
 

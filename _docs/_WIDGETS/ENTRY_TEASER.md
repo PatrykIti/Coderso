@@ -124,6 +124,16 @@ Rows without stable IDs are not offered in the manual picker.
 - Advanced runtime summary reads preview state when available, but renders
   human-readable summary rows instead of raw JSON.
 
+### Playwright fixture coverage
+
+- The 31-05 widget smoke bootstrap creates a dedicated content type, three
+  published entries, a content detail route, listing queries, and a listing
+  template for `/audit-31-05-entry-teaser`.
+- The smoke page renders three branches: legacy manual, listing featured, and
+  listing fallback-to-latest.
+- The smoke proof checks admin and public resolved roots, image output, tags,
+  CTA hrefs, and console-error hygiene.
+
 ### CTA safety
 
 - `hrefMode: "auto"` uses the resolved entry detail route from

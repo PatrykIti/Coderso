@@ -10,7 +10,7 @@ import type {
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
-import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { renderSharedWidgetRuntimeScript } from "../runtimeScripts";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
@@ -89,6 +89,22 @@ const togglePaneSurfaceTokens = ["default", "soft", "contrast"] as const;
 const togglePanePaddingTokens = ["compact", "comfortable", "spacious"] as const;
 const togglePaneRadiusTokens = ["sm", "md", "lg"] as const;
 const togglePaneBorderTokens = ["subtle", "strong"] as const;
+const transparentKeywordPattern = "[tT][rR][aA][nN][sS][pP][aA][rR][eE][nN][tT]";
+const currentColorKeywordPattern = "[cC][uU][rR][rR][eE][nN][tT][cC][oO][lL][oO][rR]";
+const inheritKeywordPattern = "[iI][nN][hH][eE][rR][iI][tT]";
+const toggleBlockColorValueSchemaPattern = [
+  "^\\s*(?:",
+  "#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})",
+  "|var\\(\\s*--color-[a-zA-Z0-9_-]+\\s*\\)",
+  "|[rR][gG][bB][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
+  "|[hH][sS][lL][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?(?:deg)?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
+  `|${transparentKeywordPattern}|${currentColorKeywordPattern}|${inheritKeywordPattern}`,
+  ")?\\s*$",
+].join("");
+const toggleBlockColorValueSchema = {
+  type: "string",
+  pattern: toggleBlockColorValueSchemaPattern,
+} as const;
 export const toggleBlockSchema = {
   type: "object",
   additionalProperties: false,
@@ -116,10 +132,10 @@ export const toggleBlockSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        surfaceColor: { type: "string" },
-        borderColor: { type: "string" },
-        accentColor: { type: "string" },
-        accentContrastColor: { type: "string" },
+        surfaceColor: toggleBlockColorValueSchema,
+        borderColor: toggleBlockColorValueSchema,
+        accentColor: toggleBlockColorValueSchema,
+        accentContrastColor: toggleBlockColorValueSchema,
         panes: {
           type: "object",
           additionalProperties: false,
@@ -339,6 +355,10 @@ const toTrimmedString = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+export function normalizeToggleBlockColorValue(value: unknown): string | undefined {
+  return resolveClearableCssColorValue(value);
+}
+
 const resolveVariant = (variant: string): ToggleBlockVariantId => {
   if (variant === "cards") return variant;
   return "switch";
@@ -385,11 +405,11 @@ function normalizeToggleBlockStyle(style: unknown): NormalizedToggleBlockData["s
   const hasStyleObject = style !== undefined;
 
   return {
-    surfaceColor: hasStyleObject ? resolveClearableStyleValue(current.surfaceColor) : undefined,
-    borderColor: hasStyleObject ? resolveClearableStyleValue(current.borderColor) : undefined,
-    accentColor: hasStyleObject ? resolveClearableStyleValue(current.accentColor) : undefined,
+    surfaceColor: hasStyleObject ? normalizeToggleBlockColorValue(current.surfaceColor) : undefined,
+    borderColor: hasStyleObject ? normalizeToggleBlockColorValue(current.borderColor) : undefined,
+    accentColor: hasStyleObject ? normalizeToggleBlockColorValue(current.accentColor) : undefined,
     accentContrastColor: hasStyleObject
-      ? resolveClearableStyleValue(current.accentContrastColor)
+      ? normalizeToggleBlockColorValue(current.accentContrastColor)
       : undefined,
     panes: {
       primary: normalizeToggleBlockPaneStyle(panes.primary),
@@ -596,8 +616,8 @@ function resolveTriggerStyle(
   isActive: boolean
 ): CSSProperties | undefined {
   return compactStyle({
-    borderColor: style.borderColor,
-    color: isActive ? undefined : style.accentColor,
+    borderColor: normalizeToggleBlockColorValue(style.borderColor),
+    color: isActive ? undefined : normalizeToggleBlockColorValue(style.accentColor),
   });
 }
 
@@ -647,6 +667,9 @@ export function ToggleBlock({
   const state = normalized.options.defaultState;
   const motion = normalized.options.motion;
   const style = normalized.style;
+  const borderColor = normalizeToggleBlockColorValue(style.borderColor);
+  const accentColor = normalizeToggleBlockColorValue(style.accentColor);
+  const accentContrastColor = normalizeToggleBlockColorValue(style.accentContrastColor);
   const labels = normalized.labels;
   const states = resolveToggleStates(normalized);
   const rootInstanceId = createWidgetInstanceId("toggle-block", blockId, state);
@@ -670,18 +693,18 @@ export function ToggleBlock({
 
   const containerStyle: CSSProperties =
     compactStyle({
-      borderColor: style.borderColor,
-      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
+      borderColor,
+      backgroundColor: normalizeToggleBlockColorValue(style.surfaceColor),
     }) ?? {};
 
   const primaryPaneStyle: CSSProperties =
     compactStyle({
-      borderColor: style.borderColor,
+      borderColor,
       borderWidth: paneBorderWidthMap[style.panes.primary.borderEmphasis],
     }) ?? {};
   const secondaryPaneStyle: CSSProperties =
     compactStyle({
-      borderColor: style.borderColor,
+      borderColor,
       borderWidth: paneBorderWidthMap[style.panes.secondary.borderEmphasis],
     }) ?? {};
 
@@ -693,9 +716,9 @@ export function ToggleBlock({
       )}
       style={{
         ...containerStyle,
-        ["--nextless-toggle-accent" as string]: style.accentColor ?? "var(--color-text)",
+        ["--nextless-toggle-accent" as string]: accentColor ?? "var(--color-text)",
         ["--nextless-toggle-accent-contrast" as string]:
-          style.accentContrastColor ?? "var(--color-background)",
+          accentContrastColor ?? "var(--color-background)",
       }}
       data-coderso-toggle-block="1"
       data-coderso-toggle-variant={resolvedVariant}

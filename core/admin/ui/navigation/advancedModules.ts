@@ -93,6 +93,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
       href: "/admin/advanced/engine",
       icon: Database,
       defaultEnabled: true,
+      permission: "content:read",
     },
   },
   {
@@ -107,6 +108,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
       href: "/admin/advanced/entries",
       icon: Layers,
       defaultEnabled: true,
+      permission: "content:read",
     },
   },
   {
@@ -122,6 +124,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
       icon: LayoutGrid,
       defaultEnabled: true,
       badge: "Beta",
+      permission: "content:read",
     },
   },
   {
@@ -136,6 +139,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
       href: "/admin/advanced/widgets",
       icon: Blocks,
       defaultEnabled: true,
+      permission: "widgets:read",
     },
   },
   {
@@ -160,6 +164,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
       href: "/admin/advanced/forms",
       icon: ClipboardList,
       defaultEnabled: true,
+      permission: "forms:read",
     },
   },
   {
@@ -185,6 +190,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
       icon: LayoutGrid,
       defaultEnabled: true,
       badge: "Beta",
+      permission: "content:read",
     },
   },
   {
@@ -200,6 +206,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
       icon: Filter,
       defaultEnabled: true,
       badge: "Beta",
+      permission: "content:read",
     },
   },
   {
@@ -215,6 +222,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
       icon: Search,
       defaultEnabled: true,
       badge: "Beta",
+      permission: "content:read",
     },
   },
   {
@@ -230,6 +238,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
       icon: Calendar,
       defaultEnabled: true,
       badge: "Beta",
+      permission: "booking:read",
     },
   },
   {
@@ -358,10 +367,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
   },
 ];
 
-const isNavEnabled = (
-  module: AdvancedModuleDefinition,
-  flags: AdvancedFeatureFlags
-): boolean => {
+const isNavEnabled = (module: AdvancedModuleDefinition, flags: AdvancedFeatureFlags): boolean => {
   if (!module.nav) return false;
   const override = flags[module.id];
   if (typeof override === "boolean") {
@@ -370,23 +376,19 @@ const isNavEnabled = (
   return module.nav.defaultEnabled;
 };
 
-export const buildAdvancedNavItems = (
-  flags: AdvancedFeatureFlags = {}
-): AdvancedNavItem[] =>
-  ADVANCED_MODULE_REGISTRY.filter((module) => isNavEnabled(module, flags)).flatMap(
-    (module) => {
-      if (!module.nav) return [];
-      return [
-        {
-          label: module.label,
-          href: module.nav.href,
-          icon: module.nav.icon,
-          badge: module.nav.badge,
-          permission: module.nav.permission,
-        },
-      ];
-    }
-  );
+export const buildAdvancedNavItems = (flags: AdvancedFeatureFlags = {}): AdvancedNavItem[] =>
+  ADVANCED_MODULE_REGISTRY.filter((module) => isNavEnabled(module, flags)).flatMap((module) => {
+    if (!module.nav) return [];
+    return [
+      {
+        label: module.label,
+        href: module.nav.href,
+        icon: module.nav.icon,
+        badge: module.nav.badge,
+        permission: module.nav.permission,
+      },
+    ];
+  });
 
 export const advancedModulesByTier = (tier: AdvancedModuleTier) =>
   ADVANCED_MODULE_REGISTRY.filter((module) => module.tier === tier);

@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-06-01T21:48:21.754Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session task-371-hero-admin-2026-06-01 --admin http://localhost:5173/admin/ --front http://localhost:3000 --widget hero --strict --skip-front --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-371-hero-admin-2026-06-01.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-371-hero-admin-2026-06-01.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["hero"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin/",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": false,
+    "frontReachable": null,
+    "playwrightCliAvailable": true,
+    "resolvedPlaywrightSession": "task-371-hero-admin-2026-06-01"
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": false,
+    "authenticated": null,
+    "results": [],
+    "error": "admin_unreachable"
+  },
+  "public": {
+    "skipped": true,
+    "results": []
+  },
+  "summary": {
+    "adminFailures": 1,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

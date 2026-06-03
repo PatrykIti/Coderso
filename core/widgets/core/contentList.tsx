@@ -627,6 +627,24 @@ export function normalizeContentListData(data: ContentListData): ContentListData
     textColor: "var(--color-text)",
   };
   const hasStyleObject = data.style !== undefined;
+  const sourceMode = resolveContentListSourceMode(data.source?.mode, data.source?.listingQueryId);
+  const normalizedFilters =
+    sourceMode === "listing"
+      ? {
+          taxonomy: "",
+          featuredOnly: false,
+          searchQuery: "",
+          authorId: "",
+        }
+      : {
+          taxonomy: resolveString(data.filters?.taxonomy, filterDefaults.taxonomy ?? ""),
+          featuredOnly:
+            typeof data.filters?.featuredOnly === "boolean"
+              ? data.filters.featuredOnly
+              : Boolean(filterDefaults.featuredOnly),
+          searchQuery: resolveString(data.filters?.searchQuery, filterDefaults.searchQuery ?? ""),
+          authorId: resolveString(data.filters?.authorId, filterDefaults.authorId ?? ""),
+        };
 
   return {
     ...data,
@@ -651,7 +669,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
       ),
     },
     source: {
-      mode: resolveContentListSourceMode(data.source?.mode, data.source?.listingQueryId),
+      mode: sourceMode,
       listingQueryId: resolveString(data.source?.listingQueryId, ""),
       listingTemplateId: resolveString(data.source?.listingTemplateId, ""),
       contentTypeId: resolveString(data.source?.contentTypeId, sourceDefaults.contentTypeId ?? ""),
@@ -659,15 +677,7 @@ export function normalizeContentListData(data: ContentListData): ContentListData
       limit: normalizeContentListLimit(data.source?.limit ?? sourceDefaults.limit ?? 6),
       sort: resolveContentListSort(data.source?.sort),
     },
-    filters: {
-      taxonomy: resolveString(data.filters?.taxonomy, filterDefaults.taxonomy ?? ""),
-      featuredOnly:
-        typeof data.filters?.featuredOnly === "boolean"
-          ? data.filters.featuredOnly
-          : Boolean(filterDefaults.featuredOnly),
-      searchQuery: resolveString(data.filters?.searchQuery, filterDefaults.searchQuery ?? ""),
-      authorId: resolveString(data.filters?.authorId, filterDefaults.authorId ?? ""),
-    },
+    filters: normalizedFilters,
     fields: {
       showImage:
         typeof data.fields?.showImage === "boolean"

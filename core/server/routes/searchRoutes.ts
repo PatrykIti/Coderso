@@ -1,14 +1,15 @@
 import {
   buildSearchCategories,
+  buildSearchResponseMeta,
+  isSearchDateRange,
   normalizeSearchQuery,
+  normalizeSearchDateRange,
   searchAll,
 } from "../../services/search/searchService";
 import { searchPublicIndex } from "../../services/search/searchIndexService";
-import {
-  listRecentSearches,
-  recordSearch,
-} from "../../services/search/searchHistoryService";
+import { listRecentSearches, recordSearch } from "../../services/search/searchHistoryService";
 import { getSetting, type ContentRouteSetting } from "../../services/settings/settingsService";
+import { ApiError } from "../errorHandler";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -37,6 +38,14 @@ function parseLimit(input: string | undefined) {
   return value;
 }
 
+function parseSearchDateRange(input: string | undefined) {
+  if (input === undefined) return normalizeSearchDateRange(input);
+  if (isSearchDateRange(input)) return input;
+  throw new ApiError("search_date_range_invalid", "Search dateRange is invalid.", 400, {
+    allowed: ["last-7-days", "last-30-days", "last-12-months", "all-time"],
+  });
+}
+
 export function registerSearchRoutes(router: Router, deps: SearchRouteDeps) {
   const { requirePermission } = deps;
 
@@ -44,43 +53,49 @@ export function registerSearchRoutes(router: Router, deps: SearchRouteDeps) {
     const query = ctx.query.q ?? "";
     const normalized = normalizeSearchQuery(query);
     const limit = parseLimit(ctx.query.limit);
+    const dateRange = parseSearchDateRange(ctx.query.dateRange);
     if (normalized.length < 2) {
-      return { items: [], categories: [] };
+      const meta = {
+        dateRange,
+        hasSearchableContent: null,
+        hasQueryMatches: false,
+        hasMatchesOutsideDateRange: false,
+        returnedItems: 0,
+      };
+      return { items: [], categories: [], meta };
     }
-    const items = await searchAll(query, { limit });
+    const items = await searchAll(query, { limit, dateRange });
     const categories = await buildSearchCategories(items);
+    const meta = await buildSearchResponseMeta(normalized, {
+      limit,
+      dateRange,
+      items,
+    });
     if (ctx.user?.id && normalized.length >= 2) {
       await recordSearch(ctx.user.id, normalized, {
         limit: limit ?? undefined,
+        dateRange,
       });
     }
-    return { items, categories };
+    return { items, categories, meta };
   });
 
-  router.get(
-    "/search/recent",
-    requirePermission("content:read"),
-    async (ctx) => {
-      if (!ctx.user?.id) return { items: [] };
-      const items = await listRecentSearches(ctx.user.id, 10);
-      return { items };
-    }
-  );
+  router.get("/search/recent", requirePermission("content:read"), async (ctx) => {
+    if (!ctx.user?.id) return { items: [] };
+    const items = await listRecentSearches(ctx.user.id, 10);
+    return { items };
+  });
 
-  router.get(
-    "/search/public-preview",
-    requirePermission("content:read"),
-    async (ctx) => {
-      const query = ctx.query.q ?? "";
-      const limit = parseLimit(ctx.query.limit);
-      const sources = ctx.query.sources ?? undefined;
-      const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+  router.get("/search/public-preview", requirePermission("content:read"), async (ctx) => {
+    const query = ctx.query.q ?? "";
+    const limit = parseLimit(ctx.query.limit);
+    const sources = ctx.query.sources ?? undefined;
+    const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
 
-      return searchPublicIndex(query, {
-        ...(limit !== undefined ? { limit } : {}),
-        ...(sources ? { sources } : {}),
-        contentRoutes,
-      });
-    }
-  );
+    return searchPublicIndex(query, {
+      ...(limit !== undefined ? { limit } : {}),
+      ...(sources ? { sources } : {}),
+      contentRoutes,
+    });
+  });
 }

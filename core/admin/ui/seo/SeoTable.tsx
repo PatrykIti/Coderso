@@ -17,10 +17,13 @@ export type SeoItem = {
   title: string;
   path: string;
   score: number;
+  lastAuditAt: string | null;
   metaStatus: "optimized" | "short" | "missing";
   socialStatus: "ready" | "missing";
   metaTitle: string;
   metaDescription: string;
+  canonicalUrl: string;
+  robots: string;
   keywords: string[];
   previewUrl: string;
   previewPath: string;
@@ -28,10 +31,19 @@ export type SeoItem = {
   analysisNotes: string[];
 };
 
+export type SeoTableEmptyState = {
+  title: string;
+  description: string;
+  actionLabel?: string;
+};
+
 type SeoTableProps = {
   items: SeoItem[];
   activeId?: string | null;
   onEdit?: (id: string) => void;
+  emptyState?: SeoTableEmptyState;
+  onEmptyAction?: () => void;
+  emptyActionDisabled?: boolean;
 };
 
 const metaStatusLabels: Record<SeoItem["metaStatus"], string> = {
@@ -58,7 +70,14 @@ function getScoreTone(score: number) {
   return scoreTones.low;
 }
 
-export function SeoTable({ items, activeId, onEdit }: SeoTableProps) {
+export function SeoTable({
+  items,
+  activeId,
+  onEdit,
+  emptyState,
+  onEmptyAction,
+  emptyActionDisabled = false,
+}: SeoTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -72,6 +91,32 @@ export function SeoTable({ items, activeId, onEdit }: SeoTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
+          {items.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5}>
+                <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {emptyState?.title ?? "No SEO pages found"}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {emptyState?.description ?? "Try a different search or status filter."}
+                    </p>
+                  </div>
+                  {emptyState?.actionLabel ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onEmptyAction}
+                      disabled={emptyActionDisabled}
+                    >
+                      {emptyState.actionLabel}
+                    </Button>
+                  ) : null}
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : null}
           {items.map((item) => {
             const tone = getScoreTone(item.score);
             const isActive = item.id === activeId;
@@ -80,37 +125,25 @@ export function SeoTable({ items, activeId, onEdit }: SeoTableProps) {
                 key={item.id}
                 className={cn(
                   "transition-colors",
-                  isActive
-                    ? "bg-primary/5 ring-1 ring-inset ring-primary/20"
-                    : "hover:bg-muted/40"
+                  isActive ? "bg-primary/5 ring-1 ring-inset ring-primary/20" : "hover:bg-muted/40"
                 )}
               >
                 <TableCell>
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">
-                      {item.title}
-                    </p>
+                    <p className="text-sm font-semibold text-foreground">{item.title}</p>
                     <p className="text-xs text-muted-foreground">{item.path}</p>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={cn("h-full", tone.bar)}
-                        style={{ width: `${item.score}%` }}
-                      />
+                      <div className={cn("h-full", tone.bar)} style={{ width: `${item.score}%` }} />
                     </div>
-                    <span className={cn("text-xs font-semibold", tone.text)}>
-                      {item.score}
-                    </span>
+                    <span className={cn("text-xs font-semibold", tone.text)}>{item.score}</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={metaStatusStyles[item.metaStatus]}
-                  >
+                  <Badge variant="outline" className={metaStatusStyles[item.metaStatus]}>
                     {metaStatusLabels[item.metaStatus]}
                   </Badge>
                 </TableCell>
@@ -125,9 +158,7 @@ export function SeoTable({ items, activeId, onEdit }: SeoTableProps) {
                           <Share2 className="h-3.5 w-3.5" />
                         </span>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        Preview ready
-                      </span>
+                      <span className="text-xs text-muted-foreground">Preview ready</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -138,9 +169,7 @@ export function SeoTable({ items, activeId, onEdit }: SeoTableProps) {
                 </TableCell>
                 <TableCell className="text-right">
                   {isActive ? (
-                    <span className="text-xs font-semibold text-primary">
-                      Editing...
-                    </span>
+                    <span className="text-xs font-semibold text-primary">Editing...</span>
                   ) : (
                     <Button
                       variant="ghost"

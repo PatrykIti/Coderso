@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, expect, test, vi } from "vitest";
 
 import * as mediaClient from "../../../core/admin/services/mediaClient";
@@ -11,7 +12,7 @@ import {
   TestimonialsWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/TestimonialsEditors";
 import type { TestimonialsData } from "../../../core/widgets/core/testimonials";
-import { testimonialsDefaults } from "../../../core/widgets/core/testimonials";
+import { testimonialsDefaults, TestimonialsBlock } from "../../../core/widgets/core/testimonials";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -754,6 +755,37 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
       pageSize: 4,
       loadMoreLabel: "More proof",
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("TestimonialsVisualEditor rich quote clear keeps the plain quote visible in preview rendering", () => {
+  const view = renderEditor(TestimonialsVisualEditor, {
+    initialValue: {
+      ...testimonialsDefaults,
+      testimonials: [
+        { id: "t-1", quote: "Fallback quote remains visible", author: "Alice", rating: 5 },
+        { id: "t-2", quote: "Quote B", author: "Bob", rating: 4 },
+        { id: "t-3", quote: "Quote C", author: "Cara", rating: 3 },
+      ],
+    },
+  });
+
+  try {
+    const richQuoteArea = view.container.querySelector('[data-rich-text-adapter="true"]');
+    setTextareaValue(richQuoteArea, "<br>");
+
+    expect(view.getLatestValue().testimonials[0]?.quoteHtml).toBeUndefined();
+
+    const previewHtml = renderToString(
+      <TestimonialsBlock variant={view.getLatestVariant()} data={view.getLatestValue()} />
+    );
+
+    expect(previewHtml).toContain('data-testimonial-quote-mode="plain"');
+    expect(previewHtml).not.toContain('data-testimonial-quote-mode="html"');
+    expect(previewHtml).toContain("Fallback quote remains visible");
+    expect(previewHtml).not.toContain("<br>");
   } finally {
     view.cleanup();
   }

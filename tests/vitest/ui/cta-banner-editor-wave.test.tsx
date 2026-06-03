@@ -719,6 +719,9 @@ test("CtaBanner advanced keeps style diagnostics read-only and confirms support 
       primaryButtonBorder: "var(--cta-primary-border)",
       secondaryButtonBorder: "var(--cta-secondary-border)",
     },
+    background: {
+      gradient: "linear-gradient(45deg, #111111, #eeeeee)",
+    },
   };
 
   const { cleanup, container, getLatestValue } = mountCtaBannerHarness({
@@ -732,6 +735,11 @@ test("CtaBanner advanced keeps style diagnostics read-only and confirms support 
     expect(diagnosticsSection.textContent).toContain("Visual owns color editing");
     expect(diagnosticsSection.textContent).toContain("#111111");
     expect(diagnosticsSection.textContent).toContain("var(--cta-border)");
+    expect(diagnosticsSection.textContent).toContain("Background gradient");
+    expect(diagnosticsSection.textContent).toContain("Configured");
+    expect(diagnosticsSection.textContent).not.toContain(
+      "linear-gradient(45deg, #111111, #eeeeee)"
+    );
     expect(findInputsByPlaceholder(container, "background token")).toHaveLength(0);
     expect(findInputsByPlaceholder(container, "text token")).toHaveLength(0);
     expect(findInputsByPlaceholder(container, "border token")).toHaveLength(0);

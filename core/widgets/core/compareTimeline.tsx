@@ -812,10 +812,12 @@ const renderLinkedCompareContent = (
 function CompareAxisRow({
   steps,
   stepLabelColor,
+  stepLabelSizeClass,
   stepLabelWeightClass,
 }: {
   steps: CompareAxisStep[];
   stepLabelColor: string;
+  stepLabelSizeClass: string | undefined;
   stepLabelWeightClass: string;
 }) {
   const gridStyle = resolveCompareGridStyle(steps.length);
@@ -847,7 +849,7 @@ function CompareAxisRow({
                 ) : null}
                 <div className="min-w-0">
                   <p
-                    className={joinClasses("break-words text-xs", stepLabelWeightClass)}
+                    className={joinClasses("break-words", stepLabelSizeClass, stepLabelWeightClass)}
                     style={{ color: stepLabelColor }}
                   >
                     {step.label}
@@ -1107,6 +1109,7 @@ export function CompareTimelineBlock({
   const sectionSubtitle = normalizedData.header?.subtitle?.trim();
   const sectionHeadingId = sectionTitle ? "compare-timeline-heading" : undefined;
   const stepLabelWeightClass = fontWeightClassMap[style.stepLabelFontWeight ?? "semibold"];
+  const stepLabelSizeClass = stepLabelSizeClassMap[style.stepLabelSize ?? "xs"];
 
   return (
     <section
@@ -1146,6 +1149,7 @@ export function CompareTimelineBlock({
           <CompareAxisRow
             steps={steps}
             stepLabelColor={style.stepLabelColor ?? "var(--color-text)"}
+            stepLabelSizeClass={stepLabelSizeClass}
             stepLabelWeightClass={stepLabelWeightClass}
           />
         ) : null}
@@ -1174,6 +1178,7 @@ export function CompareTimelineBlock({
           <CompareAxisRow
             steps={steps}
             stepLabelColor={style.stepLabelColor ?? "var(--color-text)"}
+            stepLabelSizeClass={stepLabelSizeClass}
             stepLabelWeightClass={stepLabelWeightClass}
           />
         ) : null}

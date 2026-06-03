@@ -7,6 +7,7 @@ import {
   createRedirect,
   deleteRedirect,
   listRedirects,
+  resolvePublicRedirect,
   updateRedirect,
 } from "../../../core/services/redirects/redirectService";
 
@@ -51,4 +52,94 @@ testIfDb("create/update/delete redirect lifecycle", async () => {
 
   const deleted = await deleteRedirect(created.id);
   expect(deleted?.id).toBe(created.id);
+});
+
+testIfDb("resolvePublicRedirect follows enabled internal redirects and detects loops", async () => {
+  const direct = await createRedirect({
+    fromPath: "campaign-old",
+    toPath: "/campaign-new",
+    statusCode: 302,
+    enabled: true,
+  });
+  expect(direct).not.toBeNull();
+  if (!direct) return;
+  createdIds.push(direct.id);
+
+  await expect(resolvePublicRedirect("/campaign-old")).resolves.toEqual({
+    location: "/campaign-new",
+    statusCode: 302,
+  });
+
+  const disabled = await createRedirect({
+    fromPath: "/disabled-old",
+    toPath: "/disabled-new",
+    statusCode: 301,
+    enabled: false,
+  });
+  if (disabled) createdIds.push(disabled.id);
+  await expect(resolvePublicRedirect("/disabled-old")).resolves.toBeNull();
+
+  const first = await createRedirect({
+    fromPath: "/loop-a",
+    toPath: "/loop-b",
+    statusCode: 301,
+    enabled: true,
+  });
+  const second = await createRedirect({
+    fromPath: "/loop-b",
+    toPath: "/loop-a",
+    statusCode: 302,
+    enabled: true,
+  });
+  if (first) createdIds.push(first.id);
+  if (second) createdIds.push(second.id);
+
+  await expect(resolvePublicRedirect("/loop-a")).rejects.toThrow("redirect_loop");
+});
+
+testIfDb("redirect service rejects external targets and self loops", async () => {
+  await expect(
+    createRedirect({
+      fromPath: "/external-old",
+      toPath: "https://evil.example.com",
+      statusCode: 301,
+      enabled: true,
+    })
+  ).rejects.toThrow("redirect_target_external");
+
+  await expect(
+    createRedirect({
+      fromPath: "//network-source",
+      toPath: "/safe-target",
+      statusCode: 301,
+      enabled: true,
+    })
+  ).rejects.toThrow("redirect_invalid");
+
+  await expect(
+    createRedirect({
+      fromPath: "/network-old",
+      toPath: "//evil.example.com",
+      statusCode: 301,
+      enabled: true,
+    })
+  ).rejects.toThrow("redirect_target_external");
+
+  await expect(
+    createRedirect({
+      fromPath: "/backslash-old",
+      toPath: "/\\evil.example.com",
+      statusCode: 301,
+      enabled: true,
+    })
+  ).rejects.toThrow("redirect_invalid");
+
+  await expect(
+    createRedirect({
+      fromPath: "/same",
+      toPath: "/same",
+      statusCode: 301,
+      enabled: true,
+    })
+  ).rejects.toThrow("redirect_loop");
 });

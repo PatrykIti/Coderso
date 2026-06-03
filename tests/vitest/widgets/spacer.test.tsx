@@ -38,6 +38,78 @@ test("spacer renders defaults", () => {
   expect(html).toContain('data-spacer-mobile="8"');
 });
 
+test("spacer locks report responsive markers, fixed reuse, and public guide gating", () => {
+  const responsiveHtml = renderToString(
+    <SpacerBlock
+      data={{
+        height: {
+          desktop: "24",
+          tablet: "20",
+          mobile: "16",
+        },
+        showGuideInEditor: true,
+      }}
+      variant="responsive"
+    />
+  );
+
+  expect(responsiveHtml).toContain('aria-hidden="true"');
+  expect(responsiveHtml).toContain('data-spacer-variant="responsive"');
+  expect(responsiveHtml).toContain('data-spacer-desktop="24"');
+  expect(responsiveHtml).toContain('data-spacer-tablet="20"');
+  expect(responsiveHtml).toContain('data-spacer-mobile="16"');
+  expect(responsiveHtml).toContain('data-spacer-show-guide="true"');
+  expect(responsiveHtml).toContain("--spacer-desktop-height:6rem");
+  expect(responsiveHtml).toContain("--spacer-tablet-height:5rem");
+  expect(responsiveHtml).toContain("--spacer-mobile-height:4rem");
+  expect(responsiveHtml).not.toContain("Spacer Hero gap");
+
+  const fixedHtml = renderToString(
+    <SpacerBlock
+      data={{
+        height: {
+          desktop: "10vh",
+          tablet: "20",
+          mobile: "16",
+        },
+        showGuideInEditor: true,
+      }}
+      variant="fixed"
+    />
+  );
+
+  expect(fixedHtml).toContain('data-spacer-variant="fixed"');
+  expect(fixedHtml).toContain('data-spacer-desktop="10vh"');
+  expect(fixedHtml).toContain('data-spacer-tablet="10vh"');
+  expect(fixedHtml).toContain('data-spacer-mobile="10vh"');
+  expect(fixedHtml).toContain("--spacer-desktop-height:10vh");
+  expect(fixedHtml).toContain("--spacer-tablet-height:10vh");
+  expect(fixedHtml).toContain("--spacer-mobile-height:10vh");
+  expect(fixedHtml).not.toContain('data-spacer-tablet="20"');
+  expect(fixedHtml).not.toContain('data-spacer-mobile="16"');
+  expect(fixedHtml).not.toContain("Spacer Saved custom height");
+
+  const noGuideHtml = renderToString(
+    <SpacerBlock
+      data={{
+        height: {
+          desktop: "8",
+          tablet: "6",
+          mobile: "4",
+        },
+        showGuideInEditor: false,
+      }}
+      variant="responsive"
+      previewDevice="desktop"
+    />
+  );
+
+  expect(noGuideHtml).toContain('data-spacer-show-guide="false"');
+  expect(noGuideHtml).toContain('data-spacer-desktop="8"');
+  expect(noGuideHtml).toContain("--spacer-desktop-height:2rem");
+  expect(noGuideHtml).not.toContain("Spacer Card gap");
+});
+
 test("spacer normalization keeps deterministic defaults", () => {
   const normalizedResponsive = normalizeSpacerData({
     height: {

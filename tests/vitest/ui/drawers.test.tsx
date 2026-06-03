@@ -25,6 +25,16 @@ const accessLog: AccessLogItem = {
   method: "GET",
   path: "/admin",
   statusCode: 200,
+  session: {
+    state: "active",
+    label: "Active session",
+    sessionId: "session-1",
+    current: false,
+    expiresAt: "2026-06-02T10:00:00.000Z",
+    revokedAt: null,
+    view: { enabled: true },
+    revoke: { enabled: true },
+  },
 };
 
 const widget: WidgetItem = {
@@ -133,9 +143,7 @@ test("EntryCreateDrawer renders title", () => {
 });
 
 test("ContentTypeCreateDrawer renders title", () => {
-  const html = renderAdminUi(
-    <ContentTypeCreateDrawer open onOpenChange={() => undefined} />
-  );
+  const html = renderAdminUi(<ContentTypeCreateDrawer open onOpenChange={() => undefined} />);
 
   expect(html).toContain("Create New Collection");
 });
@@ -151,11 +159,7 @@ test("AccessLogDetailsDrawer renders log info", () => {
 
 test("WidgetDetailsDrawer renders widget name", () => {
   const html = renderAdminUi(
-    <WidgetDetailsDrawer
-      widget={widget}
-      open
-      onOpenChange={() => undefined}
-    />
+    <WidgetDetailsDrawer widget={widget} open onOpenChange={() => undefined} />
   );
 
   expect(html).toContain("Hero");
@@ -205,9 +209,7 @@ test("IntegrationDrawer renders integration", () => {
 });
 
 test("EmailLogsDrawer renders delivery logs", () => {
-  const html = renderAdminUi(
-    <EmailLogsDrawer open onOpenChange={() => undefined} logs={[]} />
-  );
+  const html = renderAdminUi(<EmailLogsDrawer open onOpenChange={() => undefined} logs={[]} />);
 
   expect(html).toContain("Delivery Logs");
 });

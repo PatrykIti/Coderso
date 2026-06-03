@@ -53,11 +53,15 @@ Notes:
 - Step and segment destination authoring uses the shared page-first destination
   picker. Legacy custom destinations stay replace-or-clear compatible instead
   of editable raw URL fields.
+- Label size option `none` is displayed as `Inherit`; it intentionally removes
+  an explicit size class while keeping labels visible.
 
 ### Advanced
 
 - Read-only runtime layout, guide, highlight, motion, and render-order diagnostics
 - Read-only normalized track IDs, axis step IDs, descriptions, and step-count diagnostics
+- Variant-aware highlight diagnostics: saved targets are marked dormant in
+  `dual-track` and active only in `dual-track-highlight`.
 - Confirmed normalization support action for stable IDs, clamped markers/segments, and safe step count
 
 Advanced does not duplicate Visual layout controls and does not expose raw IDs
@@ -79,6 +83,10 @@ or step descriptions as editable fields for normal authoring.
 - Section, track rows, step cells, and segment badges now expose readable
   accessibility labels.
 - `guides.enabled=false` removes guide borders fully.
+- `style.trackLabelSize`, `style.stepLabelSize`, and `style.segmentLabelSize`
+  use `none` as inherited/no explicit text-size semantics; labels stay visible
+  and accessible.
+- `style.stepLabelSize` owns both shared axis labels and track-row step labels.
 - `style.segmentLabelSize` owns the segment badge text-size class. `none`
   emits no explicit text-size class, while `xs`, `sm`, and `base` emit their
   matching bounded class without a competing hard-coded fallback.

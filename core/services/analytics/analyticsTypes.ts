@@ -28,3 +28,20 @@ export type TopContentItem = {
   updatedAt: string;
   score: number;
 };
+
+export type TopContentType = TopContentItem["type"];
+
+export type TopContentQuery = {
+  limit: number;
+  rangeDays: number;
+  type?: TopContentType;
+  now?: Date;
+};
+
+export type TopContentExport = {
+  fileName: string;
+  contentType: "text/csv";
+  content: string;
+  rangeDays: number;
+  totalRows: number;
+};

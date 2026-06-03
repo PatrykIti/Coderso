@@ -15,7 +15,7 @@ export function IpAllowlistPage() {
     <SettingsShell
       activeHref="/admin/settings"
       showSearch={false}
-      sidebar={<SettingsSidebar activeId="security" />}
+      sidebar={<SettingsSidebar activeId="ip-allowlist" />}
       preview={<IpAllowlistDrawerPanel readOnly />}
       breadcrumbs={["Settings", "Security", "IP Allowlist"]}
       topbarActions={

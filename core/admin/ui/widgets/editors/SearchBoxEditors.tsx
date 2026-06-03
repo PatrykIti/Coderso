@@ -643,6 +643,13 @@ export function SearchBoxVisualEditor({ value, onChange }: WidgetEditorProps<Sea
 
 export function SearchBoxAdvancedEditor({ value }: WidgetEditorProps<SearchBoxData>) {
   const normalized = normalizeSearchBoxData(value);
+  const mode = normalized.mode ?? "listing";
+  const activeRoutingSummary =
+    mode === "route-submit"
+      ? "Route-submit page routing"
+      : mode === "global"
+        ? "Global public search endpoint with q parameter"
+        : "Listing runtime search token";
 
   return (
     <>
@@ -657,7 +664,7 @@ export function SearchBoxAdvancedEditor({ value }: WidgetEditorProps<SearchBoxDa
           id="search-box.advanced.mode"
           label="Mode"
           path="mode"
-          value={normalized.mode}
+          value={mode}
         />
         <ReadonlyWidgetSummaryRow
           id="search-box.advanced.listing-query"
@@ -672,17 +679,27 @@ export function SearchBoxAdvancedEditor({ value }: WidgetEditorProps<SearchBoxDa
           value={describeEndpoint(normalized.endpoint)}
         />
         <ReadonlyWidgetSummaryRow
-          id="search-box.advanced.route-target"
-          label="Results page"
-          path="targetRoute"
-          value={describeTargetRoute(normalized.targetRoute)}
+          id="search-box.advanced.active-routing"
+          label="Active routing"
+          path="mode"
+          value={activeRoutingSummary}
         />
-        <ReadonlyWidgetSummaryRow
-          id="search-box.advanced.query-param"
-          label="Search term routing"
-          path="queryParam"
-          value={describeQueryParam(normalized.queryParam)}
-        />
+        {mode === "route-submit" ? (
+          <>
+            <ReadonlyWidgetSummaryRow
+              id="search-box.advanced.route-target"
+              label="Results page"
+              path="targetRoute"
+              value={describeTargetRoute(normalized.targetRoute)}
+            />
+            <ReadonlyWidgetSummaryRow
+              id="search-box.advanced.query-param"
+              label="Search term routing"
+              path="queryParam"
+              value={describeQueryParam(normalized.queryParam)}
+            />
+          </>
+        ) : null}
       </EditorSection>
       <RuntimeStatus value={value} />
       <EditorSection

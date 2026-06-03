@@ -147,6 +147,8 @@ type FormCanvasProps = {
       helper?: string;
       options?: string[];
       defaultValue?: string | boolean;
+      formStep?: number;
+      inputStep?: number;
       step?: number;
       style?: {
         width?: "full" | "half";
@@ -174,7 +176,7 @@ export function FormCanvas({
   const hasFields = fields.length > 0;
   const groupedFields = fields.reduce(
     (acc, field) => {
-      const rawStep = field.settings.step;
+      const rawStep = field.settings.formStep ?? field.settings.step;
       const step = Number.isFinite(rawStep) ? Math.max(1, Number(rawStep)) : 1;
       if (!acc[step]) {
         acc[step] = [];

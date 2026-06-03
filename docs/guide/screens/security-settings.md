@@ -93,6 +93,9 @@ It is the right place when you need to answer questions such as:
 11. Use the shared auto-save toggle intentionally.
 12. Use `Save changes` when you want an explicit save after reviewing the full
     policy set.
+13. Risky policy edits open `Review security policy changes` before the save is
+    applied. The dialog lists the affected policy areas and requires typing
+    `APPLY` for lockout-prone security changes.
 
 Use this safe hardening order when you want fewer lockout mistakes:
 1. Review auth protection.
@@ -115,6 +118,9 @@ Use this safe hardening order when you want fewer lockout mistakes:
   environment hardening decision outside the form itself.
 - The IP allowlist section is inline here, but it still represents a high-impact
   access control change that should be treated carefully.
+- High-impact saves, including rate limits, CSRF/CORS, security headers,
+  session policy, bot protection, plugin policy, and allowlist-related changes,
+  require an explicit review instead of silent auto-save.
 
 # Troubleshooting
 
@@ -151,6 +157,17 @@ Use this safe hardening order when you want fewer lockout mistakes:
 5. Confirm access restrictions such as IP allowlist are deliberate.
 6. Save only after checking the whole policy set.
 
+# Navigation And Drafts
+
+- Settings section links use in-app navigation on desktop and mobile.
+- If this screen has unsaved edits, moving to another Settings section,
+  browser Back/Forward, or refresh/close prompts before the draft is discarded.
+- Choose cancel/keep editing when you need to preserve the current draft.
+- Overly aggressive settings can lock out legitimate users; overly relaxed
+  settings can expose the environment. Changes here require deliberate review.
+- Auto-save does not silently apply risky security-policy drafts. Those drafts
+  require the same review dialog as manual save.
+
 # Security
 
 - Security Settings is an authenticated admin surface and should only be used by
@@ -158,5 +175,3 @@ Use this safe hardening order when you want fewer lockout mistakes:
 - These controls affect authentication, public write protection, assistant
   runtime, and admin reachability, so they should be treated as operationally
   sensitive configuration.
-- Overly aggressive settings can lock out legitimate users; overly relaxed
-  settings can expose the environment. Changes here require deliberate review.

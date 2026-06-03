@@ -24,6 +24,7 @@ In the current UI, this screen includes:
   `Daily`, `Weekly`, `Monthly`,
 - a storage target selector,
 - a `Recent Backups` table,
+- backup search and pagination controls,
 - a storage-retention information notice.
 
 # Medium
@@ -36,6 +37,11 @@ for:
 - checking where backups are stored,
 - inspecting recent backup job state,
 - triggering a manual snapshot immediately.
+
+In v1, backup execution is metadata-only in the core app. Creating a backup
+adds a queued job for the configured external worker/plugin. The UI shows that
+worker boundary explicitly; artifact creation, artifact URL publication, and
+restore execution are owned by the worker.
 
 This screen combines two kinds of work:
 - policy:
@@ -66,9 +72,12 @@ This screen combines two kinds of work:
    - available actions.
 10. Treat status carefully:
     queued, running, completed, and failed have different operational meaning.
-11. Use table actions when the backup is eligible:
-    - restore
-    - download
+11. Use table actions only when they are eligible:
+    - download is available only after the external worker publishes a secure
+      artifact URL,
+    - restore is unavailable in v1 until a configured backup worker provides a
+      restore implementation,
+    - delete removes the selected backup record after confirmation.
 12. Use `Create Backup Now` when you need a manual snapshot before a risky
     operation.
 13. In the dialog, review what the on-demand backup includes:
@@ -91,7 +100,8 @@ Use this safe backup workflow when you want fewer recovery mistakes:
   schedule does not remove the need for a manual backup before a high-risk
   change.
 - `Queued` backup state is useful operationally because it tells you the request
-  was accepted even when the artifact is not ready yet.
+  was accepted even when the artifact is not ready yet. If queued jobs stay
+  aged, confirm that the external backup worker is running.
 - Storage target choice is part of resilience strategy, not just a dropdown
   preference.
 - The 30-day retention note matters: long-term recovery expectations should not
@@ -102,9 +112,14 @@ Use this safe backup workflow when you want fewer recovery mistakes:
 # Troubleshooting
 
 - The latest backup is not downloadable:
-  check whether its status is complete and whether an artifact is actually ready.
+  check whether its status is complete and whether the external worker has
+  published a secure artifact URL.
+- Restore is disabled:
+  v1 restore requires a configured backup worker; queued, running, failed, and
+  artifact-less backups are not restorable from the core UI.
 - The table looks empty or too small:
-  confirm whether the environment has only a small backup history right now.
+  clear search terms, use pagination, and confirm whether the environment has
+  only a small backup history right now.
 - The team assumes automated retention is enough:
   use the storage information note to reset that assumption for long-term needs.
 - You are unsure whether to wait for schedule or create one manually:
@@ -118,7 +133,8 @@ Use this safe backup workflow when you want fewer recovery mistakes:
 - Choose daily vs weekly vs monthly:
   match the cadence to operational risk and change frequency, not to habit.
 - Choose keep-in-system vs download:
-  download the artifact when retention requirements exceed the default automated
+  download the artifact only after the worker publishes a secure URL, and use
+  external retention policy when requirements exceed the default automated
   window.
 
 # Checklist
@@ -127,13 +143,16 @@ Use this safe backup workflow when you want fewer recovery mistakes:
 2. Confirm the storage target is correct.
 3. Review recent backup status before risky work.
 4. Run a manual backup when immediate protection is needed.
-5. Download important artifacts when longer retention is required.
+5. Confirm the external worker completed the job before relying on an artifact.
+6. Download important artifacts when longer retention is required.
 
 # Security
 
 - Backups is an authenticated admin surface and should only be used by users
   with recovery, infrastructure, or high-trust operational permissions.
-- Restore and download actions can affect business continuity and data exposure,
-  so they should be treated as controlled operational actions.
+- Restore, download, and delete actions can affect business continuity and data
+  exposure, so they should be treated as controlled operational actions.
 - Backups can contain sensitive data and configuration, so exported artifacts
   should be handled like protected system material.
+- Selecting `settings & tokens` affects backup scope only; the UI and audit log
+  record option keys, not secret values.

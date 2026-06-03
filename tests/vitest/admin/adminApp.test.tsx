@@ -3,22 +3,59 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
-import { expect, test, vi } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
+
+const adminAuthState = vi.hoisted(() => ({
+  bootstrap: {
+    state: "authenticated" as const,
+    user: {
+      id: "admin-1",
+      email: "admin@example.com",
+      name: "Admin",
+      permissionSnapshot: {
+        permissions: ["*"],
+        roles: [{ id: "role-1", slug: "admin", name: "Admin" }],
+      },
+    },
+  },
+}));
+const adminAppServiceMocks = vi.hoisted(() => ({
+  getCachedSettings: vi.fn(() => null),
+  getSettings: vi.fn(async () => ({
+    "setup.completed": true,
+  })),
+  getSettingsCached: vi.fn(async () => ({
+    "setup.completed": true,
+  })),
+  getSecuritySettings: vi.fn(async () => ({})),
+  getStorageSettings: vi.fn(async () => ({})),
+  updateSettings: vi.fn(async () => ({})),
+  updateSecuritySettings: vi.fn(async () => ({})),
+  updateStorageSettings: vi.fn(async () => ({})),
+  listAdminThemeProfilesCached: vi.fn(async () => []),
+  listAdminThemeTemplatesCached: vi.fn(async () => []),
+}));
 
 vi.mock("@/services/authClient", () => ({
-  resolveAuthBootstrap: vi.fn().mockResolvedValue({ state: "authenticated" }),
+  canAdmin: (permission: string, snapshot: { permissions?: string[] } | null | undefined) =>
+    Boolean(snapshot?.permissions?.includes("*") || snapshot?.permissions?.includes(permission)),
+  resolveAuthBootstrap: vi.fn(() => Promise.resolve(adminAuthState.bootstrap)),
 }));
 
 vi.mock("@/services/settingsClient", () => ({
-  getSettings: vi.fn().mockResolvedValue({
-    "setup.completed": true,
-  }),
-  updateSettings: vi.fn().mockResolvedValue({}),
+  getCachedSettings: adminAppServiceMocks.getCachedSettings,
+  getSettings: adminAppServiceMocks.getSettings,
+  getSettingsCached: adminAppServiceMocks.getSettingsCached,
+  getSecuritySettings: adminAppServiceMocks.getSecuritySettings,
+  getStorageSettings: adminAppServiceMocks.getStorageSettings,
+  updateSettings: adminAppServiceMocks.updateSettings,
+  updateSecuritySettings: adminAppServiceMocks.updateSecuritySettings,
+  updateStorageSettings: adminAppServiceMocks.updateStorageSettings,
 }));
 
 vi.mock("@/services/adminThemeClient", () => ({
-  listAdminThemeProfilesCached: vi.fn().mockResolvedValue([]),
-  listAdminThemeTemplatesCached: vi.fn().mockResolvedValue([]),
+  listAdminThemeProfilesCached: adminAppServiceMocks.listAdminThemeProfilesCached,
+  listAdminThemeTemplatesCached: adminAppServiceMocks.listAdminThemeTemplatesCached,
 }));
 
 vi.mock("@/components/ui/sonner", () => ({
@@ -64,6 +101,18 @@ vi.mock("@/ui/content-types/DetailTemplateEditorPage", () => ({
   DetailTemplateEditorPage: () => <div>Detail template editor route</div>,
 }));
 
+vi.mock("@/ui/users/UsersRolesPage", () => ({
+  UsersRolesPage: ({ permissions = [] }: { permissions?: string[] }) => (
+    <div>Users route {permissions.join("|")}</div>
+  ),
+}));
+
+vi.mock("@/ui/roles/PermissionsMatrixPage", () => ({
+  PermissionsMatrixPage: ({ permissions = [] }: { permissions?: string[] }) => (
+    <div>Roles matrix route {permissions.join("|")}</div>
+  ),
+}));
+
 import {
   AdminApp,
   resolveThemeUpdatedRefreshScope,
@@ -104,6 +153,22 @@ const flush = async () => {
   });
 };
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "admin-1",
+      email: "admin@example.com",
+      name: "Admin",
+      permissionSnapshot: {
+        permissions: ["*"],
+        roles: [{ id: "role-1", slug: "admin", name: "Admin" }],
+      },
+    },
+  };
+});
+
 test("AdminApp renders theme tokens during loading state", () => {
   const html = renderToString(
     <AdminRouterProvider initialPath="/admin/pages">
@@ -112,6 +177,153 @@ test("AdminApp renders theme tokens during loading state", () => {
   );
   expect(html).toContain("coderso-theme-tokens");
   expect(html).toContain("Loading...");
+});
+
+test("AdminApp denies guarded routes when the permission snapshot is missing the route permission", async () => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "restricted-1",
+      email: "restricted@example.com",
+      name: "Restricted",
+      permissionSnapshot: {
+        permissions: ["settings:read"],
+        roles: [{ id: "role-2", slug: "settings-reader", name: "Settings Reader" }],
+      },
+    },
+  };
+  const view = mount("/admin/users");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Access denied");
+    expect(view.container.textContent).toContain(
+      "Your account does not have permission to open this admin area."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminApp allows the Users route when the user only has roles:read", async () => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "roles-reader-1",
+      email: "roles-reader@example.com",
+      name: "Roles Reader",
+      permissionSnapshot: {
+        permissions: ["roles:read"],
+        roles: [{ id: "role-3", slug: "roles-reader", name: "Roles Reader" }],
+      },
+    },
+  };
+  const view = mount("/admin/users");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Users route roles:read");
+    expect(view.container.textContent).not.toContain("Access denied");
+    expect(adminAppServiceMocks.getSettings).not.toHaveBeenCalled();
+    expect(adminAppServiceMocks.getSettingsCached).not.toHaveBeenCalled();
+    expect(adminAppServiceMocks.listAdminThemeProfilesCached).not.toHaveBeenCalled();
+    expect(adminAppServiceMocks.listAdminThemeTemplatesCached).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+const restrictedSettingsRouteCases: Array<[string, string[]]> = [
+  ["/admin/settings", ["Site name", "Settings error"]],
+  ["/admin/settings/security", ["Security policy", "Rate limits"]],
+  ["/admin/settings/storage", ["Storage provider", "Media storage"]],
+];
+
+test.each(restrictedSettingsRouteCases)(
+  "AdminApp denies direct Settings route %s without loading settings clients",
+  async (path, blockedCopy) => {
+    adminAuthState.bootstrap = {
+      state: "authenticated",
+      user: {
+        id: "roles-reader-1",
+        email: "roles-reader@example.com",
+        name: "Roles Reader",
+        permissionSnapshot: {
+          permissions: ["roles:read"],
+          roles: [{ id: "role-3", slug: "roles-reader", name: "Roles Reader" }],
+        },
+      },
+    };
+    const view = mount(path);
+
+    try {
+      await flush();
+      expect(view.container.textContent).toContain("Access denied");
+      expect(view.container.textContent).toContain(
+        "Your account does not have permission to open this admin area."
+      );
+      for (const copy of blockedCopy) {
+        expect(view.container.textContent).not.toContain(copy);
+      }
+      expect(adminAppServiceMocks.getSettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.getSettingsCached).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.getSecuritySettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.getStorageSettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.updateSettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.updateSecuritySettings).not.toHaveBeenCalled();
+      expect(adminAppServiceMocks.updateStorageSettings).not.toHaveBeenCalled();
+    } finally {
+      view.cleanup();
+    }
+  }
+);
+
+test("AdminApp passes the permission snapshot into the Roles Matrix route", async () => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "roles-reader-1",
+      email: "roles-reader@example.com",
+      name: "Roles Reader",
+      permissionSnapshot: {
+        permissions: ["roles:read"],
+        roles: [{ id: "role-3", slug: "roles-reader", name: "Roles Reader" }],
+      },
+    },
+  };
+  const view = mount("/admin/roles");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Roles matrix route roles:read");
+    expect(view.container.textContent).not.toContain("Access denied");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminApp denies the Roles Matrix route without roles:read", async () => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "settings-reader-1",
+      email: "settings-reader@example.com",
+      name: "Settings Reader",
+      permissionSnapshot: {
+        permissions: ["settings:read"],
+        roles: [{ id: "role-4", slug: "settings-reader", name: "Settings Reader" }],
+      },
+    },
+  };
+  const view = mount("/admin/roles");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Access denied");
+    expect(view.container.textContent).not.toContain("Roles matrix route");
+  } finally {
+    view.cleanup();
+  }
 });
 
 test("AdminApp resolves /menus to the menus list route", async () => {

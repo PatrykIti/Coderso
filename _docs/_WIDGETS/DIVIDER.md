@@ -73,6 +73,15 @@ Notes:
   - `dashed` with bounded dash patterns
   - `dotted`
 - Transparency is controlled through bounded opacity tokens.
+- `color` and `labelColor` are normalized before rendering. Imported/admin/API
+  payloads may only use bounded clearable CSS colors:
+  - hex colors (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`)
+  - bounded `rgb/rgba` and `hsl/hsla` values
+  - `var(--color-*)` theme tokens
+  - `transparent`, `currentColor`, and `inherit`
+- Unsafe CSS strings such as `url(...)`, `expression(...)`, `javascript:`,
+  `data:`, delimiter injection, unknown functions, and malformed colors are
+  rejected before they can reach inline styles or dashed/dotted gradients.
 
 ## Runtime Marker Contract
 
@@ -128,3 +137,6 @@ Exposed markers:
   was not previously persisted.
 - Saved custom width and spacing values remain compatible and can be replaced
   through friendly Visual presets.
+- Unsafe saved colors are not preserved as active runtime behavior. The line
+  color falls back to `var(--color-border)`, and label color falls back to the
+  sanitized line color.

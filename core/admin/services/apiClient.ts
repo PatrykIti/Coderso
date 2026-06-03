@@ -9,7 +9,17 @@ export type ApiErrorPayload = {
   };
 };
 
-export type AdminApiFailureKind = "csrf_refresh" | "session_expired" | "generic_error";
+export type AdminApiFailureKind =
+  | "csrf_refresh"
+  | "session_expired"
+  | "permission_denied"
+  | "generic_error";
+
+export type AdminPermissionFailureEvent = {
+  error: ApiClientError;
+  method: string;
+  path: string;
+};
 
 export class ApiClientError extends Error {
   public readonly code: string;
@@ -30,6 +40,7 @@ export class ApiClientError extends Error {
 const getApiBase = () => `${resolveAdminBasePath()}/api`;
 let cachedCsrfToken: string | null = null;
 let csrfTokenPromise: Promise<string | null> | null = null;
+const permissionFailureListeners = new Set<(event: AdminPermissionFailureEvent) => void>();
 
 const csrfRefreshErrorCodes = new Set(["csrf_invalid", "csrf_expired"]);
 
@@ -76,11 +87,15 @@ export async function getCsrfToken(options?: { force?: boolean }) {
 const isRefreshableCsrfError = (error: ApiClientError) =>
   error.status === 403 && csrfRefreshErrorCodes.has(error.code);
 
+const isPermissionDeniedError = (error: ApiClientError) =>
+  error.status === 403 && !isRefreshableCsrfError(error);
+
 export const classifyAdminApiFailure = (error: ApiClientError): AdminApiFailureKind => {
   if (isRefreshableCsrfError(error)) return "csrf_refresh";
   if (error.status === 401 || error.code === "session_expired" || error.code === "auth_required") {
     return "session_expired";
   }
+  if (isPermissionDeniedError(error)) return "permission_denied";
   return "generic_error";
 };
 
@@ -91,6 +106,22 @@ const annotateAdminApiFailure = (error: ApiClientError) => {
 
 export const isSessionExpiredApiError = (error: unknown): error is ApiClientError =>
   isApiClientError(error) && classifyAdminApiFailure(error) === "session_expired";
+
+export const subscribeAdminPermissionFailure = (
+  listener: (event: AdminPermissionFailureEvent) => void
+) => {
+  permissionFailureListeners.add(listener);
+  return () => {
+    permissionFailureListeners.delete(listener);
+  };
+};
+
+const notifyPermissionFailure = (event: AdminPermissionFailureEvent) => {
+  if (classifyAdminApiFailure(event.error) !== "permission_denied") return;
+  for (const listener of permissionFailureListeners) {
+    listener(event);
+  }
+};
 
 async function sendApiRequest(
   path: string,
@@ -168,10 +199,12 @@ export async function apiRequest<T>(
             resetCsrfToken();
           }
           finishMetric({ status: response.status, ok: false, errorCode: "http_error" });
+          notifyPermissionFailure({ error: retryError, method, path });
           throw retryError;
         }
       } else {
         finishMetric({ status: response.status, ok: false, errorCode: "http_error" });
+        notifyPermissionFailure({ error, method, path });
         throw error;
       }
     }

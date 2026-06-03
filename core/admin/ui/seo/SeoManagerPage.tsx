@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Filter, Search, SearchCheck } from "lucide-react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
-import { listSeo, runSeoAudit, updateSeo, type SeoDocumentItem } from "@/services/seoClient";
+import {
+  getCachedSeo,
+  listSeoCached,
+  runSeoAudit,
+  updateSeo,
+  type SeoAuditCheckId,
+  type SeoDocumentItem,
+} from "@/services/seoClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
@@ -47,18 +55,22 @@ const resolvePreviewInfo = (slug: string | null) => {
 };
 
 const mapSeoItem = (item: SeoDocumentItem): SeoItem => {
-  const metaTitle = item.title ?? item.targetTitle;
+  const targetTitle = item.targetTitle ?? item.title ?? item.slug ?? item.targetId;
+  const metaTitle = item.title ?? targetTitle;
   const metaDescription = item.description ?? "";
   const { path, previewUrl, previewPath } = resolvePreviewInfo(item.slug);
   return {
     id: item.id,
-    title: item.targetTitle,
+    title: targetTitle,
     path,
     score: item.score ?? 0,
+    lastAuditAt: item.lastAuditAt,
     metaStatus: resolveMetaStatus(metaDescription),
     socialStatus: "missing",
     metaTitle,
     metaDescription,
+    canonicalUrl: item.canonicalUrl ?? "",
+    robots: item.robots ?? "",
     keywords: [],
     previewUrl,
     previewPath,
@@ -69,22 +81,31 @@ const mapSeoItem = (item: SeoDocumentItem): SeoItem => {
   };
 };
 
+const createInitialSeoState = () => {
+  const cached = getCachedSeo();
+  return {
+    items: cached ? cached.map(mapSeoItem) : [],
+    hasCache: Boolean(cached),
+  };
+};
+
 export function SeoManagerPage() {
+  const [initialState] = useState(createInitialSeoState);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<SeoFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
-  const [items, setItems] = useState<SeoItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [items, setItems] = useState<SeoItem[]>(initialState.items);
+  const [isLoading, setIsLoading] = useState(!initialState.hasCache);
   const [isAuditing, setIsAuditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
+  const refresh = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
+    if (!options?.background) setIsLoading(true);
     setError(null);
     try {
-      const result = await listSeo();
+      const result = await listSeoCached({ force: options?.force });
       setItems(result.map(mapSeoItem));
     } catch (err) {
       if (isApiClientError(err)) {
@@ -99,25 +120,14 @@ export function SeoManagerPage() {
 
   useEffect(() => {
     let active = true;
-    listSeo()
-      .then((result) => {
-        if (active) setItems(result.map(mapSeoItem));
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load SEO data.");
-        }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+    void Promise.resolve().then(() => {
+      if (active)
+        void refresh({ force: !initialState.hasCache, background: initialState.hasCache });
+    });
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialState.hasCache, refresh]);
 
   const activeSelectedId =
     selectedId && items.some((item) => item.id === selectedId) ? selectedId : null;
@@ -128,17 +138,18 @@ export function SeoManagerPage() {
         event.key === cacheKeys.seoList ||
         (activeSelectedId && event.key === cacheKeys.seoDetail(activeSelectedId))
       ) {
-        void refresh();
+        void refresh({ force: event.action === "invalidate", background: true });
       }
     });
   }, [activeSelectedId, refresh]);
 
   const filteredItems = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
     return items.filter((item) => {
       const matchesQuery =
-        !query ||
-        item.title.toLowerCase().includes(query.toLowerCase()) ||
-        item.path.toLowerCase().includes(query.toLowerCase());
+        !normalizedQuery ||
+        (item.title ?? "").toLowerCase().includes(normalizedQuery) ||
+        (item.path ?? "").toLowerCase().includes(normalizedQuery);
       const matchesStatus = statusFilter === "all" || getHealth(item) === statusFilter;
       return matchesQuery && matchesStatus;
     });
@@ -147,42 +158,89 @@ export function SeoManagerPage() {
   const selectedItem = items.find((item) => item.id === activeSelectedId) ?? null;
 
   const averageScore = useMemo(() => {
-    if (!items.length) return 0;
-    const total = items.reduce((sum, item) => sum + item.score, 0);
-    return Math.round(total / items.length);
+    const auditedItems = items.filter((item) => item.lastAuditAt);
+    if (!auditedItems.length) return 0;
+    const total = auditedItems.reduce((sum, item) => sum + item.score, 0);
+    return Math.round(total / auditedItems.length);
   }, [items]);
 
-  const handleAudit = async () => {
+  const hasAuditRun = items.some((item) => item.lastAuditAt);
+  const scanLabel = isAuditing
+    ? "Global Scan: Running"
+    : hasAuditRun
+      ? `Global Scan: ${averageScore}%`
+      : "Audit not run";
+  const lastScanLabel = isAuditing
+    ? "Running now"
+    : hasAuditRun
+      ? "Latest audit available"
+      : "Not run yet";
+
+  const emptyState = useMemo(() => {
+    if (items.length === 0) {
+      return {
+        title: "No SEO pages found",
+        description: "Run a full audit to scan available pages and entries.",
+        actionLabel: "Run Full Audit",
+      };
+    }
+    if (query.trim() || statusFilter !== "all") {
+      return {
+        title: "No pages match these filters",
+        description: "Adjust the search term or status filter to widen the table.",
+      };
+    }
+    return {
+      title: "No SEO pages found",
+      description: "Run a full audit to scan available pages and entries.",
+      actionLabel: "Run Full Audit",
+    };
+  }, [items.length, query, statusFilter]);
+
+  const handleAudit = async (checks: SeoAuditCheckId[]) => {
     setIsAuditing(true);
     setError(null);
     try {
-      await runSeoAudit();
-      await refresh();
+      await runSeoAudit({ checks });
+      await refresh({ force: true });
+      toast.success("SEO audit completed.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Failed to run SEO audit.");
+        const message = "Failed to run SEO audit.";
+        setError(message);
+        toast.error(message);
       }
     } finally {
       setIsAuditing(false);
     }
   };
 
-  const handleSave = async (id: string, payload: { title: string; description: string }) => {
+  const handleSave = async (
+    id: string,
+    payload: { title: string; description: string; canonicalUrl: string; robots: string }
+  ) => {
     setIsSaving(true);
     setError(null);
     try {
       await updateSeo(id, {
         title: payload.title,
         description: payload.description,
+        canonicalUrl: payload.canonicalUrl,
+        robots: payload.robots,
       });
-      await refresh();
+      await refresh({ force: true });
+      toast.success("SEO updated.");
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
+        toast.error(err.message);
       } else {
-        setError("Failed to update SEO data.");
+        const message = "Failed to update SEO data.";
+        setError(message);
+        toast.error(message);
       }
     } finally {
       setIsSaving(false);
@@ -200,7 +258,7 @@ export function SeoManagerPage() {
                 variant="secondary"
                 className="text-[10px] font-semibold uppercase tracking-wide"
               >
-                Global Scan: {averageScore}%
+                {scanLabel}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -217,7 +275,11 @@ export function SeoManagerPage() {
                 className="pl-9"
               />
             </div>
-            <Button className="gap-2" onClick={() => setAuditDialogOpen(true)}>
+            <Button
+              className="gap-2"
+              onClick={() => setAuditDialogOpen(true)}
+              disabled={isAuditing}
+            >
               <SearchCheck className="h-4 w-4" />
               Run Full Audit
             </Button>
@@ -236,7 +298,14 @@ export function SeoManagerPage() {
                 {option.label}
               </Button>
             ))}
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled
+              aria-label="Advanced SEO filters unavailable"
+              title="Advanced SEO filters unavailable"
+            >
               <Filter className="h-4 w-4" />
             </Button>
           </div>
@@ -244,7 +313,7 @@ export function SeoManagerPage() {
             <Badge variant="outline" className="text-xs">
               {filteredItems.length} pages
             </Badge>
-            <span>Last scan: {items.length ? "Latest audit available" : "Not run yet"}</span>
+            <span>Last scan: {lastScanLabel}</span>
           </div>
         </div>
 
@@ -260,7 +329,14 @@ export function SeoManagerPage() {
             Loading SEO data...
           </div>
         ) : (
-          <SeoTable items={filteredItems} activeId={activeSelectedId} onEdit={setSelectedId} />
+          <SeoTable
+            items={filteredItems}
+            activeId={activeSelectedId}
+            onEdit={setSelectedId}
+            emptyState={emptyState}
+            onEmptyAction={() => setAuditDialogOpen(true)}
+            emptyActionDisabled={isAuditing}
+          />
         )}
       </div>
 

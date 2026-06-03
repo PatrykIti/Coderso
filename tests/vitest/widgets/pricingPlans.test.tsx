@@ -16,6 +16,7 @@ import {
   normalizePricingPlansData,
   pricingPlansDefaults,
   PricingPlansBlock,
+  pricingPlansEditorContract,
   type PricingPlansData,
 } from "../../../core/widgets/core/pricingPlans";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -477,6 +478,8 @@ test("pricing plans render annual cycle and feature marker when billing toggle i
   expect(html).toContain("/year");
   expect(html).toContain("✓");
   expect(html).toContain('role="status"');
+  expect(html).not.toContain('role="switch"');
+  expect(html).not.toContain("aria-pressed");
   expect(html).not.toContain('data-state="active"');
   expect(html).not.toContain("Scale");
 });
@@ -585,6 +588,10 @@ test("pricing plans wizard renders onboarding fields", () => {
 });
 
 test("pricing plans visual renders section-based IA", () => {
+  expect(
+    pricingPlansEditorContract.sections.find((section) => section.id === "pricing.billing")?.title
+  ).toBe("Billing cycle display");
+
   const html = renderToString(
     <PricingPlansVisualEditor
       value={pricingPlansDefaults}
@@ -596,7 +603,11 @@ test("pricing plans visual renders section-based IA", () => {
 
   expect(html).toContain("Variant and plan structure");
   expect(html).toContain("Header copy");
-  expect(html).toContain("Billing toggle");
+  expect(html).toContain("Billing cycle display");
+  expect(html).toContain("Show billing cycle display");
+  expect(html).toContain("read-only billing cycle status");
+  expect(html).not.toContain("Billing toggle");
+  expect(html).not.toContain("Enable billing toggle");
   expect(html).toContain("Plans, features, and actions");
   expect(html).toContain("Layout and notes");
   expect(html).toContain("Colors and emphasis");

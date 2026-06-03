@@ -394,6 +394,37 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+test("FeatureGridAdvancedEditor describes theme token colors without custom-color drift", async () => {
+  const { FeatureGridAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+
+  const view = mount(
+    <FeatureGridAdvancedEditor
+      value={{
+        ...featureGridDefaults,
+        style: {
+          ...featureGridDefaults.style,
+          surfaceColor: "var(--color-bg)",
+          borderColor: "var(--color-border)",
+          sectionBackground: "color-mix(in srgb, var(--color-bg), transparent 20%)",
+        },
+      }}
+      onChange={() => undefined}
+      variant="cards-3"
+    />
+  );
+
+  try {
+    const presentationSection = findSectionByTitle(view.container, "Presentation summary");
+    const text = presentationSection?.textContent ?? "";
+
+    expect(text.match(/Theme token/g)).toHaveLength(3);
+    expect(text).not.toContain("Saved custom color");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("FeatureGrid editors cover variant changes, card editing, swatch colors, and read-only advanced summaries", async () => {
   const { FeatureGridAdvancedEditor, FeatureGridVisualEditor, FeatureGridWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");

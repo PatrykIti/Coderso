@@ -27,22 +27,17 @@ export type UserCreateInput = {
   email: string;
   roleIds: string[];
   status?: UserStatus;
-  password?: string;
 };
 
 export type UserUpdateInput = {
   name?: string;
   email?: string;
   status?: UserStatus;
-  password?: string;
 };
 
 async function listRoleIdsForUsers(userIds: string[]) {
   if (userIds.length === 0) return new Map<string, string[]>();
-  const rows = await db
-    .select()
-    .from(userRoles)
-    .where(inArray(userRoles.userId, userIds));
+  const rows = await db.select().from(userRoles).where(inArray(userRoles.userId, userIds));
 
   const map = new Map<string, string[]>();
   rows.forEach((row) => {
@@ -52,7 +47,6 @@ async function listRoleIdsForUsers(userIds: string[]) {
   });
   return map;
 }
-
 
 const resolveUserEmail = (row: { emailEncrypted?: unknown; email?: string | null }) =>
   resolveEmailValue({ emailEncrypted: row.emailEncrypted, email: row.email }) ?? "";
@@ -88,10 +82,7 @@ async function userHasAdminRole(userId: string) {
 
 async function assertRoleIdsExist(roleIds: string[]) {
   if (roleIds.length === 0) return;
-  const rows = await db
-    .select({ id: roles.id })
-    .from(roles)
-    .where(inArray(roles.id, roleIds));
+  const rows = await db.select({ id: roles.id }).from(roles).where(inArray(roles.id, roleIds));
   if (rows.length !== roleIds.length) {
     throw new Error("role_invalid");
   }
@@ -151,13 +142,8 @@ export async function createUser(input: UserCreateInput) {
     throw new Error("user_exists");
   }
 
-  const password =
-    input.password && input.password.trim().length > 0
-      ? input.password
-      : randomBytes(16).toString("hex");
-  const passwordHash = await hashPassword(password);
-  const status: UserStatus =
-    input.status ?? (input.password ? "active" : "pending");
+  const passwordHash = await hashPassword(randomBytes(16).toString("hex"));
+  const status: UserStatus = input.status ?? "pending";
 
   return db.transaction(async (tx) => {
     const [row] = await tx
@@ -233,13 +219,6 @@ export async function updateUser(id: string, input: UserUpdateInput) {
 
   if (input.status !== undefined) {
     update.status = input.status;
-  }
-
-  if (input.password !== undefined) {
-    if (input.password.trim().length === 0) {
-      throw new Error("user_invalid");
-    }
-    update.passwordHash = await hashPassword(input.password);
   }
 
   const [row] = await db.update(users).set(update).where(eq(users.id, id)).returning();

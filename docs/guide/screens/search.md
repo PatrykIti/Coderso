@@ -34,7 +34,10 @@ This route is more than a simple omnibox. It is a search workspace with:
 - minimum query gating:
   you need at least 2 characters before search runs,
 - recent-search shortcuts in two places:
-  the left sidebar list and the `Try:` chips under the main search field,
+  the left sidebar list and the `Try:` chips under the main search field;
+  generic chips appear when you do not have recent searches yet,
+- date narrowing with:
+  `Last 7 days`, `Last 30 days`, `Last 12 months`, and `All time`,
 - content narrowing through tabs and category filters,
 - grouped results that can route directly to the right admin surface.
 
@@ -57,6 +60,7 @@ The current route is designed to help you:
    - `Date Range`
    - `Category`
    - `Clear`
+   Use `All time` when a precise query should include older content.
 7. Use the content-type tabs to narrow the result set:
    - `All`
    - `Pages`
@@ -85,6 +89,8 @@ Use this safe search order when you want fewer wrong clicks:
 - Tabs and category filters solve different problems:
   tabs narrow by broad content type, while category filters refine the current
   result set after matches are available.
+- Empty states name the cause: minimum query length, no searchable content, no
+  match, date range too narrow, or category filters too narrow.
 - Search is strongest when titles, slugs, and category labels are stable.
   Weak naming conventions reduce the value of the whole surface.
 
@@ -93,7 +99,11 @@ Use this safe search order when you want fewer wrong clicks:
 - Nothing happens when you type:
   make sure the query has at least 2 characters.
 - Categories do not appear yet:
-  that is expected before a search returns categorized results.
+  that is expected before a search returns categorized results. After a
+  completed search, the helper explains whether no categories match the query or
+  the workspace has no searchable content yet.
+- A precise query returns no results:
+  switch `Date Range` to `All time` before assuming the item does not exist.
 - The result set is too broad:
   switch away from `All` and use a more specific content-type tab or category.
 - Search stays empty or fails:

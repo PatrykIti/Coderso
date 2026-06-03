@@ -1987,6 +1987,11 @@ function AsymmetricVariantNotice({
         type="button"
         size="sm"
         variant="outline"
+        {...controlAttributes({
+          id: "grid-columns.visual.asymmetric-reapply",
+          path: "columns.desktopSpan",
+          ownership: "action",
+        })}
         onClick={() =>
           onChange(applyGridColumnsAsymmetricPreset(value, slotDriftState.orderedInstanceIds))
         }

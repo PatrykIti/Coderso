@@ -55,6 +55,9 @@ Notes:
   lead tile remains. Count-reduction confirmation names removed tiles and calls
   out that saved media, captions, alt text, posters, and destinations are
   removed from the widget data.
+- Per-item row removal uses the shared `ConfirmActionDialog` cancel/accept
+  flow. It no longer calls native `window.confirm`, and cancel keeps the item
+  order plus authored media intact.
 - Per-item media presentation fields now include dedicated `alt` text, an
   image-only MediaPicker for video poster frames, bounded focus point
   (`center/top/bottom/left/right`), and an optional per-item ratio override that
@@ -89,6 +92,10 @@ Notes:
 Advanced no longer duplicates the live shared style controls that Visual owns
 for ratio, gap, radius, caption position, and overlay. It no longer renders a
 raw payload snapshot or mutating support actions in the daily tab flow.
+When lightbox mode is selected, Advanced reports the effective runtime state:
+linked items keep navigation, and a gallery with zero eligible media tiles says
+`Lightbox selected; no media tiles currently open` instead of claiming active
+lightbox triggers.
 
 ## Runtime Behavior Notes
 
@@ -115,6 +122,11 @@ raw payload snapshot or mutating support actions in the daily tab flow.
   compatibility. When enabled, non-linked media tiles render deterministic
   trigger/dialog markers, use instance-scoped ids, close via backdrop, close
   button, or `Escape`, and return focus to the originating trigger.
+- The widget Playwright smoke harness now seeds a deterministic Gallery Mosaic
+  image through the authenticated admin media API before media proofs. It also
+  defines a video seed for environments whose storage policy allows `video/mp4`;
+  the default storage MIME policy may reject that optional video upload without
+  failing the image/lightbox proof.
 - Tiles with `href` keep the shared safe-link runtime contract and do not open
   the lightbox.
 - Default Gallery Mosaic items no longer seed `href: "#"` so newly inserted or

@@ -11,6 +11,10 @@ Project Change Log.
 - Format: `{N}-{YYYY-MM-DD}-short-title.md`
 - Example: `1-2025-11-22-project-init-and-rpc.md`
 - `N` increments by 1 and is never reused.
+- Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
+  Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
+  2026-06-03 assistant policy coverage fix.
+  Ordinary new entries continue at 1091.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -23,8 +27,70 @@ Project Change Log.
 
 ## Index
 
+Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
+TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
+assistant policy coverage fix. Use 1091 for the next changelog entry.
+
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1090 | 2026-06-03 | Assistant settings security route policy coverage | Assistant/Settings/Security/Testing/Docs |
+| 1089 | 2026-05-31 | Admin UI Playwright audit | QA/Admin UI/Playwright/Docs |
+| 1088 | 2026-06-02 | Footer widget 31-05 UI audit remediation | CMS Widgets/Footer/Runtime Security/Admin UI/QA/Docs |
+| 1087 | 2026-06-02 | Navigation widget 31-05 UI audit remediation | CMS Widgets/Navigation/Runtime Security/Admin UI/QA/Docs |
+| 1086 | 2026-06-02 | Contact widget 31-05 UI audit remediation | CMS Widgets/Contact/Public Forms API/Runtime Security/Admin UI/QA/Docs |
+| 1085 | 2026-06-02 | Form Embed widget 31-05 UI audit remediation | CMS Widgets/Form Embed/Public Forms API/Runtime Security/Admin UI/QA/Docs |
+| 1084 | 2026-06-02 | Appointment Form widget 31-05 UI audit remediation | CMS Widgets/Appointment Form/Public Booking API/Runtime Security/QA/Docs |
+| 1083 | 2026-06-02 | Booking Calendar widget 31-05 UI audit remediation | CMS Widgets/Booking Calendar/Runtime Security/Admin UI/Public Resolver/QA/Docs |
+| 1082 | 2026-06-02 | Newsletter widget 31-05 UI audit remediation | CMS Widgets/Newsletter/Admin UI/Forms Runtime/Public Security/QA/Docs |
+| 1081 | 2026-06-02 | Compare Timeline widget 31-05 UI audit remediation | CMS Widgets/Compare Timeline/Admin UI/Runtime/QA/Docs |
+| 1080 | 2026-06-02 | Timeline widget 31-05 UI audit remediation | CMS Widgets/Timeline/Admin UI/Runtime/QA/Docs |
+| 1079 | 2026-06-02 | Search Box widget 31-05 UI audit remediation | CMS Widgets/Search Box/Admin UI/QA/Docs |
+| 1078 | 2026-06-02 | Listing Filters widget 31-05 UI audit remediation | CMS Widgets/Listing Filters/Admin UI/QA/Docs |
+| 1077 | 2026-06-02 | Product Table widget 31-05 UI audit remediation | CMS Widgets/Product Table/Admin UI/Commerce Fixtures/Playwright/QA/Docs |
+| 1076 | 2026-06-02 | Product Compare widget 31-05 UI audit remediation | CMS Widgets/Product Compare/Admin UI/Commerce Fixtures/Playwright/QA/Docs |
+| 1075 | 2026-06-02 | Product Gallery widget 31-05 UI audit remediation | CMS Widgets/Product Gallery/Admin UI/Commerce Fixtures/Playwright/QA/Docs |
+| 1074 | 2026-06-02 | Entry Teaser widget 31-05 UI audit fixture and console hygiene | CMS Widgets/Entry Teaser/Playwright/Fixtures/Console Hygiene/QA/Docs |
+| 1073 | 2026-06-02 | Posts Feed widget 31-05 UI audit remediation | CMS Widgets/Posts Feed/Admin UI/Playwright/Fixtures/QA/Docs |
+| 1072 | 2026-06-01 | Content List widget 31-05 UI audit remediation | CMS Widgets/Content List/Admin UI/Playwright/Fixtures/QA/Docs |
+| 1071 | 2026-06-01 | Rich Text Section widget 31-05 UI audit remediation | CMS Widgets/Rich Text/Admin UI/Sanitizer/Playwright/Media Fixtures/QA/Docs |
+| 1070 | 2026-06-01 | Team widget 31-05 UI audit UX and fixtures | CMS Widgets/Team/Admin UX/Playwright/Media Fixtures/QA/Docs |
+| 1069 | 2026-06-01 | Gallery Mosaic widget 31-05 UI audit remediation | CMS Widgets/Gallery Mosaic/Admin UI/Playwright/Media Fixtures/QA/Docs |
+| 1068 | 2026-06-01 | Logo Cloud widget 31-05 UI audit media fixture seed | CMS Widgets/Logo Cloud/Playwright/Media Fixtures/QA/Docs |
+| 1067 | 2026-06-01 | Pricing Plans widget 31-05 UI audit contract copy | CMS Widgets/Pricing Plans/Admin UX/Runtime QA/Docs |
+| 1066 | 2026-06-01 | Testimonials widget 31-05 UI audit remediation | CMS Widgets/Testimonials/Runtime Sanitizer/Admin UI/QA/Docs |
+| 1065 | 2026-06-01 | Stats KPI widget 31-05 UI audit UX guard | CMS Widgets/Stats KPI/Admin UX/Runtime QA/Docs |
+| 1064 | 2026-06-01 | FAQ Accordion widget 31-05 UI audit remediation | CMS Widgets/FAQ Accordion/Admin Preview/Accessibility/QA/Docs |
+| 1063 | 2026-06-01 | CTA Banner widget 31-05 UI audit remediation | CMS Widgets/CTA Banner/Admin UI/Runtime QA/Docs |
+| 1062 | 2026-06-01 | Feature Grid widget 31-05 UI audit remediation | CMS Widgets/Feature Grid/Admin UI/QA/Docs |
+| 1061 | 2026-06-01 | Hero widget 31-05 UI audit continuation and remediation | CMS Widgets/Hero/Admin UI/Runtime QA/Docs |
+| 1060 | 2026-06-01 | Stack widget 31-05 UI audit remediation | CMS Widgets/Stack/Runtime Normalization/Validator/QA/Docs |
+| 1059 | 2026-06-01 | Divider widget 31-05 UI audit remediation | CMS Widgets/Divider/Runtime Security/Admin UI/QA/Docs |
+| 1058 | 2026-06-01 | Spacer widget 31-05 UI audit regression guard | CMS Widgets/Spacer/Runtime QA/Admin UI/Docs |
+| 1057 | 2026-06-01 | Toggle Block widget 31-05 UI audit remediation | CMS Widgets/Toggle Block/Runtime Security/Admin UI/QA/Docs |
+| 1056 | 2026-06-01 | Accordion widget 31-05 UI audit remediation | CMS Widgets/Accordion/Runtime Security/Admin UI/Builder Metadata/QA/Docs |
+| 1055 | 2026-06-01 | Tabs widget 31-05 UI audit remediation | CMS Widgets/Tabs/Runtime Security/Admin UI/Builder Metadata/QA/Docs |
+| 1054 | 2026-06-01 | Split Layout widget 31-05 UI audit remediation | CMS Widgets/Split Layout/Admin UI/Builder Metadata/QA/Docs |
+| 1053 | 2026-06-01 | Grid Columns widget 31-05 UI audit remediation | CMS Widgets/Grid Columns/Admin UI/Builder Metadata/QA/Docs |
+| 1052 | 2026-06-01 | Template Section widget 31-05 UI audit remediation | CMS Widgets/Template Section/Admin UI/Runtime/Security/QA/Docs |
+| 1051 | 2026-06-01 | Section widget 31-05 UI audit remediation | CMS Widgets/Section/Admin UI/Runtime/Security/QA/Docs |
+| 1050 | 2026-06-01 | TASK-360 Admin UI cross-cutting remediation family | Planning/Admin UI/RBAC/QA/Docs |
+| 1049 | 2026-06-01 | TASK-359 Admin Settings remediation family | Planning/Admin UI/Settings/Security/Navigation/Cache/QA/Docs |
+| 1048 | 2026-06-01 | TASK-358 Admin Access Logs remediation family | Planning/Admin UI/Access Logs/Security/QA/Docs |
+| 1047 | 2026-06-01 | TASK-357 Admin Audit Logs remediation family | Planning/Admin UI/Audit Logs/Compliance/QA/Docs |
+| 1046 | 2026-06-01 | TASK-356 Admin Roles Matrix remediation family | Planning/Admin UI/RBAC/QA/Docs |
+| 1045 | 2026-06-01 | TASK-355 Admin Users remediation family | Admin UI/Users/RBAC/QA/Docs |
+| 1044 | 2026-06-02 | TASK-354 Admin Tools user feedback follow-up | Admin Tools/UX/Cache/QA/Docs |
+| 1043 | 2026-06-01 | TASK-354 Cross Tools remediation closure | Admin Tools/UX/Auth Bootstrap/Playwright/QA/Docs |
+| 1042 | 2026-06-01 | TASK-353 Redirects tools remediation closure | Admin Tools/Redirects/Public Runtime/API/UI/QA/Docs |
+| 1041 | 2026-06-01 | TASK-352 Import Export tools remediation closure | Admin Tools/Import Export/API/UI/QA/Docs |
+| 1040 | 2026-06-01 | TASK-351 Backups tools remediation closure | Admin Tools/Backups/API/UI/QA/Docs |
+| 1039 | 2026-06-01 | TASK-350 Analytics tools remediation closure | Admin Tools/Analytics/API/UI/QA/Docs |
+| 1038 | 2026-06-01 | TASK-349 SEO Manager tools remediation closure | Admin Tools/SEO/Public Runtime/API/UI/QA/Docs |
+| 1037 | 2026-06-01 | TASK-348 Search Tools remediation closure | Admin Tools/Search/API/UI/QA/Docs |
+| 1036 | 2026-06-01 | TASK-348-354 Tools remediation refinement | Admin Tools/Tasks/Reports/API Docs/Security/Cache |
+| 1035 | 2026-06-01 | TASK-348-354 Tools remediation planning | Admin Tools/Search/SEO/Analytics/Backups/Import Export/Redirects/Cross Tools |
+| 1034 | 2026-05-31 | Admin Tools Playwright audit reports | QA/Admin UI/Playwright/Docs |
+| 1033 | 2026-05-31 | Admin seed package command | Developer Tooling/Auth Bootstrap/Docs |
 | 1032 | 2026-05-31 | CodeQL widget sanitizer and validation DoS remediation | Security/CodeQL/Widgets/Testing |
 | 1031 | 2026-05-31 | Bun coverage WriteFailed stabilization | CI/Testing/Tooling/Docs |
 | 1030 | 2026-05-31 | CI env loading for test lanes | CI/Testing/Docs |

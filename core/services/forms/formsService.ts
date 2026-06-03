@@ -12,6 +12,7 @@ import {
 } from "./validation";
 import { normalizeFormSettings } from "./formSettings";
 import { normalizeFormStatus, type FormStatus } from "./formStatus";
+import { normalizeFormSuccessRedirectUrl } from "./formRedirects";
 
 export type FormCreateInput = {
   name: string;
@@ -55,13 +56,6 @@ const normalizeSuccessMessage = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-const normalizeSuccessRedirectUrl = (value: unknown) => {
-  if (value === null || value === undefined) return null;
-  if (typeof value !== "string") throw new Error("form_invalid");
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
 export async function listForms() {
   return db.select().from(forms).orderBy(desc(forms.updatedAt));
 }
@@ -94,7 +88,7 @@ export async function createForm(input: FormCreateInput) {
   const status = normalizeFormStatus(input.status, "draft");
   const description = normalizeDescription(input.description);
   const successMessage = normalizeSuccessMessage(input.successMessage);
-  const successRedirectUrl = normalizeSuccessRedirectUrl(input.successRedirectUrl);
+  const successRedirectUrl = normalizeFormSuccessRedirectUrl(input.successRedirectUrl);
   const submissionAccess = normalizeSubmissionAccess(input.submissionAccess, "public");
   const settings = normalizeFormSettings(input.settings);
 
@@ -156,7 +150,7 @@ export async function updateForm(id: string, input: FormUpdateInput) {
   }
 
   if (input.successRedirectUrl !== undefined) {
-    update.successRedirectUrl = normalizeSuccessRedirectUrl(input.successRedirectUrl);
+    update.successRedirectUrl = normalizeFormSuccessRedirectUrl(input.successRedirectUrl);
   }
 
   if (input.submissionAccess !== undefined) {

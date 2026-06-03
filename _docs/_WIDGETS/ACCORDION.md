@@ -46,6 +46,9 @@ Notes:
 - Accordion owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - The shared page-builder Structure section owns repeatable slot add/remove
   actions. Accordion-specific add/reorder UX is not shipped yet.
+- Shared Structure controls expose stable metadata on `slots.item`, including
+  add actions, item rows, and per-row Move up / Move down / Remove actions
+  scoped to the rendered `item:<id>` slot instance.
 - Item content owns title, description, and optional decorative icon edits.
 - Behavior and style owns open mode, collapsible behavior, motion, max-width,
   padding, radius, title typography, and swatch-only color controls.
@@ -79,6 +82,10 @@ controls, raw JSON payloads, DOM id suffixes, CSS variables, or token text.
   backward compatibility.
 - Stale saved `defaultOpenIds` fall back to the first resolved item instead of
   becoming an accidental all-collapsed state.
+- Saved `defaultOpenIds` may target custom item IDs or legacy positional slot
+  IDs. Normalization resolves legacy positional IDs such as `"2"` to the
+  matching custom item while public DOM and slot markers remain based on
+  `item:<id>`.
 - `openMode=single` uses a shared details-group name so only one item stays
   open at a time; admin preview scopes this name per render instance so the
   canvas and setup/live preview do not close each other.
@@ -102,6 +109,12 @@ controls, raw JSON payloads, DOM id suffixes, CSS variables, or token text.
   theme defaults instead of saved custom values.
 - Saved custom colors can be replaced with a swatch or cleared when the field
   has a real custom value.
+- Imported/admin values for surface, border, summary text, and description text
+  colors are sanitized before public inline style output. Safe hex,
+  `rgb/rgba`, `hsl/hsla`, `transparent`, `currentColor`, `var(--color-*)`, and
+  legacy hyphenated color tokens are preserved; unsafe strings such as
+  `javascript:`, `expression(`, `data:`, raw URLs, semicolon injection, braces,
+  or HTML-like fragments are dropped or resolved back to theme defaults.
 
 ## Data Model (summary)
 

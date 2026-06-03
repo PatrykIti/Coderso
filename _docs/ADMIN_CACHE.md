@@ -47,6 +47,14 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `menus:detail:<id>`
 - `seo:list`
 - `seo:detail:<id>`
+- `search:recent`
+- `search:results:<queryKey>`
+- `analytics:overview:<rangeDays>`
+- `analytics:topContent:<rangeDays>:<limit>:<type>`
+- `backups:list:<page>:<limit>:<queryKey>`
+- `backups:schedule`
+- `tools:import:history`
+- `redirects:list`
 - `forms:list`
 - `forms:detail:<id>`
 - `forms:actions:<id>`
@@ -79,6 +87,7 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `media:list`
 - `adminThemeTemplates:list`
 - `adminThemeProfiles:list`
+- `settings:redacted`
 
 ## Prefetch
 - Sidebar navigation can trigger optional prefetch on hover/focus.
@@ -102,6 +111,15 @@ Defined in `core/admin/services/cachePolicy.ts`:
   `contentTypes:list` and `contentTypes:collectionWorkspace:<contentTypeId>`
   with `{ force: false }`, so the workspace shell hydrates from the current
   Engine cache family without a parallel `collections:*` namespace.
+- Tools route prefetch warms the same cached resources used by the page shells:
+  `/admin/search` warms `search:recent`, `/admin/seo` warms `seo:list`,
+  `/admin/analytics` warms the default overview and Top Content caches,
+  `/admin/backups` warms the first backup page plus schedule cache,
+  `/admin/tools/import-export` hydrates the local import history cache, and
+  `/admin/redirects` warms `redirects:list`.
+- `/settings` prefetch warms only `settings:redacted` with `{ force: false }`.
+  `/settings/site` additionally warms `pages:list` and `contentTypes:list` for
+  selectors, also with `{ force: false }`.
 
 ### Prefetch budgets
 - Per-hover burst request budget is gated by:
@@ -149,6 +167,17 @@ Contract:
 - `theme:updated` event:
   - refresh scope is limited to admin theme token reload,
   - global settings refresh is not triggered by theme update.
+- Permission-gated shell reads:
+  - `AdminApp` only calls `getSettingsCached()` when the current permission
+    snapshot has `settings:read`; cache hits hydrate from `settings:redacted`
+    and then revalidate through `/settings`.
+  - `AdminApp` only refreshes admin theme token caches when the snapshot has
+    `themes:read`.
+  - `AdminShell` only hydrates/revalidates custom screen shortcuts with
+    `content:read` and solution-kit navigation context with
+    `solution-kits:read`.
+  - Missing permissions clear route-local shell state instead of issuing
+    avoidable 403-producing reads.
 
 ## Release Gate Link
 - Admin cache/SPA transition behavior is part of Coderso release gates:
@@ -201,6 +230,41 @@ Consumers subscribe and revalidate when matching keys change.
    - Show a “remote update” hint.
    - Allow manual refresh to apply the latest data.
 
+### Settings
+Settings uses a dedicated redacted cache because raw settings payloads can
+contain credentials or security-sensitive material.
+
+- Cache key: `settings:redacted`.
+- TTL: `cacheTtlMs.detail`.
+- Owner: `core/admin/services/settingsCache.ts`.
+- Cached wrappers:
+  - `getSettingsCached()` / `getCachedSettings()` for safe general/runtime/
+    assistant values.
+  - `getSiteSettingsCached()` / `getCachedSiteSettings()` for Site settings.
+- Stored payload is schema-versioned and allowlisted:
+  - general site name/locale/public base URL,
+  - runtime auth/session TTL and setup completion flags,
+  - assistant non-secret configuration, with token-limit field names stored as
+    `llmInputLimit` / `llmOutputLimit`,
+  - Site routing/cache values needed by the Site Settings page,
+  - boolean-only configured flags for bot protection and password pepper.
+- The cache validator rejects unknown keys and keys matching
+  `password`, `secret`, `token`, `accessKey`, `connectionString`, or `apiKey`.
+- Raw storage, email, integration, webhook, API-key, bot-protection secret, and
+  provider credential payloads are not cached in browser storage.
+- `updateSettings()` and `updateSiteSettings()` prime `settings:redacted` from
+  the server response and broadcast `settings:redacted` `update`.
+- `updateSecuritySettings()` only patches boolean configured flags when a safe
+  cache entry exists; otherwise it broadcasts `invalidate` and clears the
+  redacted settings cache.
+- Site Settings hydrates from `settings:redacted`, `pages:list`, and
+  `contentTypes:list`, revalidates Settings in the background when cache exists,
+  and no longer force-refetches pages/content types on every mount when those
+  selector caches are fresh.
+- `settings:redacted` cache-bus updates hydrate from storage first, so same-tab
+  and cross-tab mutations see the patched cache. Dirty Settings forms ignore
+  background cache updates to avoid draft overwrites.
+
 ## Invalidation Rules
 Clients update caches and broadcast events on:
 - Create / update / delete / publish / unpublish.
@@ -234,6 +298,26 @@ Clients update caches and broadcast events on:
   do not currently emit assistant client cache events because their safe cache
   address is either not represented in the admin cache key contract or is
   handled by the existing site-kit execution surface.
+- Tools cache event coverage:
+  - `seo.document.*` writes `seo:list` and touched `seo:detail:<id>`.
+  - Search recent/results caches are browser-local read caches; explicit search
+    calls patch the relevant result key and recent-search list.
+  - Analytics overview and Top Content caches are range-scoped read caches and
+    are refreshed explicitly by range changes or route prefetch.
+  - Backups create/delete/restore and schedule updates patch or selectively
+    invalidate `backups:list:<page>:<limit>:<queryKey>` and
+    `backups:schedule`. Create patches first-page matching caches and
+    invalidates later pages where pagination can shift. Delete patches caches
+    only when the visible page can stay correct; otherwise it invalidates the
+    affected query/page cache so the next read refetches. Browser cache stores
+    local backup artifacts with `artifactPath: "local"` only; raw filesystem
+    paths and backup JSON content are never persisted in cache.
+  - Import / Export caches only session-local Recent Imports in
+    `tools:import:history`; downloaded export bundle content is not cached.
+    Successful imports invalidate the imported resource families such as menus,
+    admin theme templates/profiles, and redirects.
+  - Redirect create/update/delete patches `redirects:list` and broadcasts an
+    update so other tabs refresh public-routing-affecting rows promptly.
 
 ### Widget template cache note
 
@@ -420,6 +504,24 @@ Clients update caches and broadcast events on:
   caches and broadcasts invalidation. Retained submissions or action-run
   diagnostics block hard delete through `form_delete_restricted`, so failed
   deletes must not remove rows from browser cache as success.
+
+### Tools cache note
+
+- Tools pages now follow the same cached-first contract as Pages/Posts where
+  the resource is safe to cache:
+  - Search caches recent searches and query/date-range result payloads.
+  - SEO Manager caches list/detail rows and invalidates public HTML cache after
+    writes.
+  - Analytics caches range-scoped overview and Top Content rows; CSV export
+    payloads are not cached.
+  - Backups caches redacted list/schedule rows, patches create/delete cache
+    state when the cached page can stay correct, selectively invalidates pages
+    whose totals/row order can shift, and never stores local filesystem
+    artifact paths or download content in browser cache.
+  - Import / Export caches only browser-local Recent Imports activity; export
+    bundle payloads and uploaded bundle contents are intentionally uncached.
+  - Redirects caches list rows and patches create/update/delete cache state so
+    admin revisits do not wait for a foreground list refetch.
 
 ## Extending The Cache
 When adding a new resource:

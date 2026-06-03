@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { isApiClientError } from "@/services/apiClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 import { BrandingCard } from "./BrandingCard";
 import { LogoUploadCard } from "./LogoUploadCard";
@@ -46,6 +47,7 @@ export function GeneralSettingsPage({
   const [formState, setFormState] = useState(() => ({
     source: values,
     form: normalizeValues(values),
+    savedForm: normalizeValues(values),
   }));
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -55,17 +57,22 @@ export function GeneralSettingsPage({
   const hasValidationErrors = false;
 
   const form = formState.source === values ? formState.form : normalizeValues(values);
+  const savedForm = formState.source === values ? formState.savedForm : normalizeValues(values);
   const setForm = (
     next: GeneralSettingsValues | ((previous: GeneralSettingsValues) => GeneralSettingsValues)
   ) => {
     setFormState((previous) => {
       const current = previous.source === values ? previous.form : normalizeValues(values);
+      const saved = previous.source === values ? previous.savedForm : normalizeValues(values);
       return {
         source: values,
         form: typeof next === "function" ? next(current) : next,
+        savedForm: saved,
       };
     });
   };
+  const isDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
+  useRegisterSettingsDirty(isDirty);
 
   const handleSave = useCallback(async () => {
     if (!onSave) return false;
@@ -75,6 +82,11 @@ export function GeneralSettingsPage({
     setLocalSaving(true);
     try {
       await onSave(form);
+      setFormState({
+        source: values,
+        form,
+        savedForm: form,
+      });
       setSaveSuccess("General settings updated.");
       return true;
     } catch (err) {
@@ -87,7 +99,7 @@ export function GeneralSettingsPage({
     } finally {
       setLocalSaving(false);
     }
-  }, [form, hasValidationErrors, onSave]);
+  }, [form, hasValidationErrors, onSave, values]);
 
   useAutoSaveEffect({
     enabled: autoSaveEnabled,

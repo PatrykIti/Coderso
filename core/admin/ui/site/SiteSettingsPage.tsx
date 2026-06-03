@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Eye, Gauge, Home, LayoutList, Link2, Timer } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -15,21 +15,35 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { isApiClientError } from "@/services/apiClient";
-import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
-import { listPagesCached, previewPage, type PageSummary } from "@/services/pagesClient";
 import {
-  getSiteSettings,
+  getCachedContentTypes,
+  listContentTypesCached,
+  type ContentTypeSummary,
+} from "@/services/contentTypesClient";
+import {
+  getCachedPages,
+  listPagesCached,
+  previewPage,
+  type PageSummary,
+} from "@/services/pagesClient";
+import {
+  getCachedSiteSettings,
+  getSiteSettingsCached,
   updateSiteSettings,
   type SiteSettingsResponse,
 } from "@/services/siteSettingsClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { InfoTip } from "@/ui/shared/InfoTip";
-import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
-import { resolveAdminHref } from "@/utils/adminPaths";
+import { AdminLink } from "@/ui/shared/AdminLink";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { SettingsSidebar } from "@/ui/settings/SettingsSidebar";
 import { AdminAccessCard } from "@/ui/settings/AdminAccessCard";
 import { BaseUrlCard } from "@/ui/settings/BaseUrlCard";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
+import { resolveListMountRefreshOptions } from "@/utils/cacheRefresh";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { cn } from "@/lib/utils";
 
 import { SiteRouteEditor } from "./SiteRouteEditor";
@@ -124,6 +138,32 @@ const toFormValues = (settings: SiteSettingsResponse): SiteSettingsForm => ({
   contentRoutes: settings.contentRoutes ?? [],
 });
 
+const toLoadedForm = (
+  settings: SiteSettingsResponse,
+  contentTypes: ContentTypeSummary[]
+): SiteSettingsForm => ({
+  ...toFormValues(settings),
+  contentRoutes: mergeContentRoutes(toFormValues(settings).contentRoutes, contentTypes),
+});
+
+const resolveInitialSiteSettingsState = () => {
+  const settings = getCachedSiteSettings();
+  const pages = getCachedPages();
+  const contentTypes = getCachedContentTypes();
+  const resolvedContentTypes = contentTypes ?? [];
+  const form = settings ? toLoadedForm(settings, resolvedContentTypes) : defaultForm;
+  return {
+    form,
+    savedForm: form,
+    pages: pages ?? [],
+    contentTypes: resolvedContentTypes,
+    status: settings ? ("ready" as const) : ("loading" as const),
+    hasSettingsCache: Boolean(settings),
+    hasPagesCache: Boolean(pages),
+    hasContentTypesCache: Boolean(contentTypes),
+  };
+};
+
 const validateBaseUrl = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -159,37 +199,90 @@ const resolvePublicBaseUrl = (value: string) => {
   return window.location.origin;
 };
 
+const normalizeComparableUrl = (value: string) => value.trim().replace(/\/$/, "");
+
+const classifySiteSettingsRisk = (before: SiteSettingsForm, after: SiteSettingsForm) => {
+  const risks: string[] = [];
+  if (normalizeComparableUrl(before.adminBaseUrl) !== normalizeComparableUrl(after.adminBaseUrl)) {
+    risks.push("Admin base URL");
+  }
+  if (
+    normalizeComparableUrl(before.publicBaseUrl) !== normalizeComparableUrl(after.publicBaseUrl)
+  ) {
+    risks.push("Public site URL");
+  }
+  if (before.adminPath.trim() !== after.adminPath.trim()) {
+    risks.push("Admin access path");
+  }
+  if (before.adminRedirectEnabled !== after.adminRedirectEnabled) {
+    risks.push("Admin host redirect");
+  }
+  if (before.homepageId !== after.homepageId) {
+    risks.push("Homepage route");
+  }
+  if (before.notFoundPageId !== after.notFoundPageId) {
+    risks.push("404 route");
+  }
+  if (before.previewEnabled !== after.previewEnabled) {
+    risks.push("Preview access");
+  }
+  if (JSON.stringify(before.contentRoutes) !== JSON.stringify(after.contentRoutes)) {
+    risks.push("Content route map");
+  }
+  return risks;
+};
+
 export function SiteSettingsPage() {
-  const adminBasePath = useAdminBasePath();
-  const [form, setForm] = useState<SiteSettingsForm>(defaultForm);
-  const [pages, setPages] = useState<PageSummary[]>([]);
-  const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>([]);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("loading");
+  const [initialState] = useState(resolveInitialSiteSettingsState);
+  const [form, setForm] = useState<SiteSettingsForm>(initialState.form);
+  const [savedForm, setSavedForm] = useState<SiteSettingsForm>(initialState.savedForm);
+  const [pages, setPages] = useState<PageSummary[]>(initialState.pages);
+  const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>(initialState.contentTypes);
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(initialState.status);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState<SiteSectionId>("base");
+  const [pendingRiskReview, setPendingRiskReview] = useState<string[] | null>(null);
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
+  const hasSettingsCacheRef = useRef(initialState.hasSettingsCache);
+  const hasPagesCacheRef = useRef(initialState.hasPagesCache);
+  const hasContentTypesCacheRef = useRef(initialState.hasContentTypesCache);
+  const isDirtyRef = useRef(false);
+  const formRef = useRef(initialState.form);
+  const contentTypesRef = useRef(initialState.contentTypes);
 
   useEffect(() => {
     let active = true;
+    const settingsHadCache = hasSettingsCacheRef.current;
+    const pagesMountOptions = resolveListMountRefreshOptions(hasPagesCacheRef.current);
+    const contentTypesMountOptions = resolveListMountRefreshOptions(
+      hasContentTypesCacheRef.current
+    );
+
+    if (!settingsHadCache) {
+      setStatus("loading");
+    }
 
     Promise.all([
-      getSiteSettings(),
-      listPagesCached({ force: true }),
-      listContentTypesCached({ force: true }),
+      getSiteSettingsCached({ force: settingsHadCache }),
+      listPagesCached({ force: pagesMountOptions.force }),
+      listContentTypesCached({ force: contentTypesMountOptions.force }),
     ])
       .then(([settings, pagesResult, typesResult]) => {
         if (!active) return;
-        setForm((prev) => ({
-          ...prev,
-          ...toFormValues(settings),
-          contentRoutes: mergeContentRoutes(toFormValues(settings).contentRoutes, typesResult),
-        }));
+        const loadedForm = toLoadedForm(settings, typesResult);
+        if (!isDirtyRef.current) {
+          setForm(loadedForm);
+          setSavedForm(loadedForm);
+        }
         setPages(pagesResult);
         setContentTypes(typesResult);
+        hasSettingsCacheRef.current = true;
+        hasPagesCacheRef.current = true;
+        hasContentTypesCacheRef.current = true;
         setStatus("ready");
       })
       .catch((err) => {
@@ -208,6 +301,66 @@ export function SiteSettingsPage() {
     () => validateContentRoutes(form.contentRoutes),
     [form.contentRoutes]
   );
+  const isDirty = JSON.stringify(form) !== JSON.stringify(savedForm);
+  useRegisterSettingsDirty(status === "ready" && isDirty);
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
+
+  useEffect(() => {
+    contentTypesRef.current = contentTypes;
+  }, [contentTypes]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key === cacheKeys.settingsRedacted) {
+        getSiteSettingsCached({
+          force: event.action === "invalidate",
+          storageFirst: event.action === "update",
+        })
+          .then((settings) => {
+            if (isDirtyRef.current) return;
+            const loadedForm = toLoadedForm(settings, contentTypesRef.current);
+            setForm(loadedForm);
+            setSavedForm(loadedForm);
+            setStatus("ready");
+          })
+          .catch(() => undefined);
+        return;
+      }
+
+      if (event.key === cacheKeys.pagesList) {
+        listPagesCached({ force: true })
+          .then((items) => {
+            setPages(items);
+            hasPagesCacheRef.current = true;
+          })
+          .catch(() => undefined);
+        return;
+      }
+
+      if (event.key === cacheKeys.contentTypesList) {
+        listContentTypesCached({ force: true })
+          .then((items) => {
+            setContentTypes(items);
+            hasContentTypesCacheRef.current = true;
+            if (isDirtyRef.current) return;
+            const next = {
+              ...formRef.current,
+              contentRoutes: mergeContentRoutes(formRef.current.contentRoutes, items),
+            };
+            setForm(next);
+            setSavedForm(next);
+          })
+          .catch(() => undefined);
+      }
+    });
+  }, []);
 
   const publicBaseUrlError = validateBaseUrl(form.publicBaseUrl);
   const adminBaseUrlError = validateBaseUrl(form.adminBaseUrl);
@@ -232,8 +385,13 @@ export function SiteSettingsPage() {
   );
 
   const busy = saving || status === "loading";
+  const siteRiskChanges = useMemo(
+    () => classifySiteSettingsRisk(savedForm, form),
+    [form, savedForm]
+  );
+  const hasRiskyChanges = siteRiskChanges.length > 0;
 
-  const handleSave = useCallback(async () => {
+  const performSave = useCallback(async () => {
     if (hasValidationErrors) return false;
     setSaveError(null);
     setSaveSuccess(null);
@@ -257,7 +415,12 @@ export function SiteSettingsPage() {
         cacheTtlSeconds: Math.max(0, Math.floor(cacheTtlValue || 0)),
         contentRoutes: normalizedRoutes,
       });
-      setForm((prev) => ({ ...prev, ...toFormValues(updated) }));
+      const updatedForm = {
+        ...toFormValues(updated),
+        contentRoutes: mergeContentRoutes(toFormValues(updated).contentRoutes, contentTypes),
+      };
+      setForm(updatedForm);
+      setSavedForm(updatedForm);
       setSaveSuccess("Site settings updated.");
       return true;
     } catch (err) {
@@ -267,7 +430,15 @@ export function SiteSettingsPage() {
     } finally {
       setSaving(false);
     }
-  }, [cacheTtlValue, form, hasValidationErrors]);
+  }, [cacheTtlValue, contentTypes, form, hasValidationErrors]);
+
+  const handleSave = useCallback(async () => {
+    if (hasRiskyChanges) {
+      setPendingRiskReview(siteRiskChanges);
+      return false;
+    }
+    return performSave();
+  }, [hasRiskyChanges, performSave, siteRiskChanges]);
 
   const handleViewHomepage = () => {
     setActionError(null);
@@ -304,9 +475,11 @@ export function SiteSettingsPage() {
   useAutoSaveEffect({
     enabled: autoSaveEnabled,
     isReady: status === "ready",
-    hasErrors: hasValidationErrors,
+    hasErrors: hasValidationErrors || hasRiskyChanges,
     value: form,
+    savedValue: savedForm,
     onSave: handleSave,
+    syncSnapshotWhenBlocked: true,
   });
 
   return (
@@ -505,12 +678,12 @@ export function SiteSettingsPage() {
                       {pages.length === 0 ? (
                         <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
                           No pages yet. Create one in the
-                          <a
+                          <AdminLink
                             className="ml-1 text-primary underline-offset-4 hover:underline"
-                            href={resolveAdminHref(adminBasePath, "/admin/pages")}
+                            href="/admin/pages"
                           >
                             Pages section
-                          </a>
+                          </AdminLink>
                           .
                         </div>
                       ) : null}
@@ -583,12 +756,12 @@ export function SiteSettingsPage() {
                       {contentTypes.length === 0 ? (
                         <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
                           No content types yet. Create one in
-                          <a
+                          <AdminLink
                             className="ml-1 text-primary underline-offset-4 hover:underline"
-                            href={resolveAdminHref(adminBasePath, "/admin/content-types")}
+                            href="/admin/content-types"
                           >
                             Content Types
-                          </a>
+                          </AdminLink>
                           .
                         </div>
                       ) : null}
@@ -745,6 +918,25 @@ export function SiteSettingsPage() {
           </div>
         </div>
       </div>
+      <ConfirmActionDialog
+        open={Boolean(pendingRiskReview)}
+        onOpenChange={(open) => {
+          if (!open) setPendingRiskReview(null);
+        }}
+        title="Review site routing changes"
+        description="These settings can affect admin access or public routing. Confirm before applying them."
+        targetLabel={(pendingRiskReview ?? []).join(", ")}
+        confirmLabel="Apply site changes"
+        confirmingLabel="Applying..."
+        tone="warning"
+        closeOnSuccess
+        onConfirm={async () => {
+          await performSave();
+        }}
+      >
+        Keep a rollback path ready before changing admin URLs, default pages, preview access, or
+        content route patterns.
+      </ConfirmActionDialog>
     </SettingsShell>
   );
 }

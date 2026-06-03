@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type Trend = "up" | "down";
+type Trend = "up" | "down" | "neutral";
 
 export type KpiCard = {
   id: "publishedPages" | "entries" | "media";
@@ -17,6 +17,7 @@ export type KpiCard = {
 const trendStyles: Record<Trend, string> = {
   up: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600",
   down: "border-rose-500/20 bg-rose-500/10 text-rose-600",
+  neutral: "border-muted-foreground/20 bg-muted text-muted-foreground",
 };
 
 const iconMap: Record<KpiCard["id"], React.ComponentType<{ className?: string }>> = {
@@ -36,7 +37,8 @@ export function KpiCards({ items }: { items: KpiCard[] }) {
     <div className="grid gap-6 md:grid-cols-3">
       {items.map((card) => {
         const Icon = iconMap[card.id];
-        const TrendIcon = card.trend === "up" ? TrendingUp : TrendingDown;
+        const TrendIcon =
+          card.trend === "neutral" ? null : card.trend === "up" ? TrendingUp : TrendingDown;
 
         return (
           <Card key={card.id} className="border-border/60">
@@ -54,7 +56,7 @@ export function KpiCards({ items }: { items: KpiCard[] }) {
                   variant="outline"
                   className={cn("gap-1 text-xs font-semibold", trendStyles[card.trend])}
                 >
-                  <TrendIcon className="h-3 w-3" />
+                  {TrendIcon ? <TrendIcon className="h-3 w-3" /> : null}
                   {card.change}
                 </Badge>
               </div>

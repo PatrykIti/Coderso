@@ -1,4 +1,15 @@
 import { apiRequest } from "./apiClient";
+import {
+  clearRedactedSettingsCache,
+  findUnsafeRedactedSettingsCachePaths,
+  getCachedRedactedSettings,
+  getCachedSettingsResponse,
+  patchRedactedSettingsSecurity,
+  primeRedactedSettingsCache,
+  type RedactedSettingsCache,
+} from "./settingsCache";
+import { cacheKeys } from "@/services/cachePolicy";
+import { broadcastCacheEvent } from "@/utils/cacheBus";
 
 export type StorageDriver = "local" | "s3" | "azure";
 
@@ -181,6 +192,25 @@ export type SecuritySettingsUpdate = {
   };
 };
 
+let cachedSettingsPromise: Promise<SettingsResponse> | null = null;
+
+export {
+  findUnsafeRedactedSettingsCachePaths,
+  getCachedRedactedSettings,
+  type RedactedSettingsCache,
+};
+
+export const getCachedSettings = () => getCachedSettingsResponse() as SettingsResponse | null;
+
+export const clearSettingsCache = () => {
+  cachedSettingsPromise = null;
+  clearRedactedSettingsCache();
+};
+
+const primeSettingsCache = (payload: SettingsResponse) => {
+  primeRedactedSettingsCache(payload);
+};
+
 export async function getStorageSettings() {
   return apiRequest<StorageSettingsResponse>("/settings/storage", {
     method: "GET",
@@ -191,6 +221,25 @@ export async function getSettings() {
   return apiRequest<SettingsResponse>("/settings", {
     method: "GET",
   });
+}
+
+export async function getSettingsCached(options?: { force?: boolean }) {
+  if (!options?.force) {
+    const cached = getCachedSettings();
+    if (cached) return cached;
+    if (cachedSettingsPromise) return cachedSettingsPromise;
+  }
+
+  const request = getSettings()
+    .then((payload) => {
+      primeSettingsCache(payload);
+      return payload;
+    })
+    .finally(() => {
+      cachedSettingsPromise = null;
+    });
+  cachedSettingsPromise = request;
+  return request;
 }
 
 export async function getSecuritySettings() {
@@ -206,7 +255,7 @@ export async function getSetting(key: string) {
 }
 
 export async function updateSettings(payload: SettingsUpdate) {
-  return apiRequest<SettingsResponse>(
+  const updated = await apiRequest<SettingsResponse>(
     "/settings",
     {
       method: "PATCH",
@@ -215,10 +264,13 @@ export async function updateSettings(payload: SettingsUpdate) {
     },
     { withCsrf: true }
   );
+  primeSettingsCache(updated);
+  broadcastCacheEvent({ key: cacheKeys.settingsRedacted, action: "update" });
+  return updated;
 }
 
 export async function updateSecuritySettings(payload: SecuritySettingsUpdate) {
-  return apiRequest<SecuritySettingsResponse>(
+  const updated = await apiRequest<SecuritySettingsResponse>(
     "/settings/security",
     {
       method: "PATCH",
@@ -227,6 +279,13 @@ export async function updateSecuritySettings(payload: SecuritySettingsUpdate) {
     },
     { withCsrf: true }
   );
+  const patched = patchRedactedSettingsSecurity(updated);
+  broadcastCacheEvent({
+    key: cacheKeys.settingsRedacted,
+    action: patched ? "update" : "invalidate",
+  });
+  if (!patched) clearSettingsCache();
+  return updated;
 }
 
 export async function updateStorageSettings(payload: StorageSettingsUpdate) {

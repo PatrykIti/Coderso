@@ -11,7 +11,7 @@ import type {
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
-import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
 export type AccordionVariantId = "soft" | "bordered" | "compact";
@@ -315,8 +315,39 @@ const resolveOptionalToken = <T extends string>(value: unknown, allowed: readonl
 const resolveToken = <T extends string>(value: unknown, fallback: T, allowed: readonly T[]) =>
   isAllowedToken(value, allowed) ? value : fallback;
 
-const normalizeAccordionColor = (value: unknown, fallback?: string) =>
-  toTrimmedString(value) ?? fallback;
+const legacyAccordionColorTokenPattern = /^[a-zA-Z][a-zA-Z0-9_-]*-[a-zA-Z0-9_-]+$/;
+const unsafeAccordionColorFragments = /(?:url\s*\(|expression\s*\(|javascript:|data:|[;{}<>])/i;
+
+const resolveAccordionColorValue = (value: unknown, fallback?: string) => {
+  const safeColor = resolveClearableCssColorValue(value);
+  if (safeColor) return safeColor;
+
+  const trimmed = toTrimmedString(value);
+  if (trimmed && !unsafeAccordionColorFragments.test(trimmed)) {
+    return legacyAccordionColorTokenPattern.test(trimmed) ? trimmed : fallback;
+  }
+
+  return fallback;
+};
+
+const resolveAccordionDefaultOpenId = (
+  value: unknown,
+  items: NormalizedAccordionItem[]
+): string | undefined => {
+  const trimmed = toTrimmedString(value);
+  if (!trimmed) return undefined;
+
+  if (items.some((item) => item.id === trimmed)) {
+    return trimmed;
+  }
+
+  const legacyIndex = Number.parseInt(trimmed, 10);
+  if (String(legacyIndex) === trimmed && legacyIndex >= 1 && legacyIndex <= items.length) {
+    return items[legacyIndex - 1]?.id;
+  }
+
+  return undefined;
+};
 
 export const accordionVariantFallbackTokenMap: Record<
   AccordionVariantId,
@@ -463,7 +494,6 @@ export function normalizeAccordionItems(
 
 export function normalizeAccordionData(data: AccordionData, desiredCount?: number): AccordionData {
   const items = normalizeAccordionItems(data.items, desiredCount);
-  const itemIds = new Set(items.map((item) => item.id));
   const legacyInitialId = toTrimmedString(data.options?.initiallyOpenId);
   const openMode =
     data.options?.openMode === "multiple" || data.options?.allowMultiple === true
@@ -482,8 +512,8 @@ export function normalizeAccordionData(data: AccordionData, desiredCount?: numbe
   const defaultOpenIds = Array.from(
     new Set(
       defaultOpenIdsRaw
-        .map((value) => toTrimmedString(value))
-        .filter((value): value is string => typeof value === "string" && itemIds.has(value))
+        .map((value) => resolveAccordionDefaultOpenId(value, items))
+        .filter((value): value is string => typeof value === "string")
     )
   );
   const wantsAllClosed =
@@ -517,17 +547,23 @@ export function normalizeAccordionData(data: AccordionData, desiredCount?: numbe
     },
     style: {
       surfaceColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.surfaceColor)
+        ? resolveAccordionColorValue(data.style?.surfaceColor)
         : (accordionDefaults.style?.surfaceColor ?? "var(--color-surface)"),
-      borderColor: normalizeAccordionColor(
-        data.style?.borderColor,
-        accordionDefaults.style?.borderColor ?? "var(--color-border)"
-      ),
-      summaryTextColor: normalizeAccordionColor(
-        data.style?.summaryTextColor,
-        accordionDefaults.style?.summaryTextColor ?? "var(--color-text)"
-      ),
-      descriptionTextColor: normalizeAccordionColor(data.style?.descriptionTextColor),
+      borderColor: hasStyleObject
+        ? resolveAccordionColorValue(
+            data.style?.borderColor,
+            accordionDefaults.style?.borderColor ?? "var(--color-border)"
+          )
+        : (accordionDefaults.style?.borderColor ?? "var(--color-border)"),
+      summaryTextColor: hasStyleObject
+        ? resolveAccordionColorValue(
+            data.style?.summaryTextColor,
+            accordionDefaults.style?.summaryTextColor ?? "var(--color-text)"
+          )
+        : (accordionDefaults.style?.summaryTextColor ?? "var(--color-text)"),
+      descriptionTextColor: hasStyleObject
+        ? resolveAccordionColorValue(data.style?.descriptionTextColor)
+        : accordionDefaults.style?.descriptionTextColor,
       summaryPadding: resolveOptionalToken(data.style?.summaryPadding, accordionPaddingTokens),
       contentPadding: resolveOptionalToken(data.style?.contentPadding, accordionPaddingTokens),
       radius: resolveOptionalToken(data.style?.radius, accordionRadiusTokens),
@@ -553,6 +589,7 @@ export function normalizeAccordionData(data: AccordionData, desiredCount?: numbe
 type ResolvedAccordionItem = {
   slotId: string;
   instanceId: string;
+  selectionId: string;
   title: string;
   description: string | null;
   icon: string | null;
@@ -578,6 +615,7 @@ const resolveAccordionItems = (
     return {
       slotId: target.slotId,
       instanceId,
+      selectionId: source?.id ?? instanceId,
       title: source?.title ?? `Section ${index + 1}`,
       description: source?.description ?? null,
       icon: source?.icon ?? null,
@@ -689,7 +727,7 @@ export function AccordionBlock({
   const collapsible = normalized.options?.collapsible ?? true;
   const defaultOpenIds =
     normalized.options?.defaultOpenIds?.filter((id) =>
-      resolvedItems.some((item) => item.instanceId === id)
+      resolvedItems.some((item) => item.instanceId === id || item.selectionId === id)
     ) ?? [];
   const style = normalized.style ?? accordionDefaults.style!;
   const renderClasses = resolveAccordionRenderClasses(normalized, resolvedVariant);
@@ -707,17 +745,17 @@ export function AccordionBlock({
 
   const containerStyle: CSSProperties =
     compactStyle({
-      borderColor: style.borderColor,
-      backgroundColor: resolveClearableStyleValue(style.surfaceColor),
+      borderColor: resolveAccordionColorValue(style.borderColor),
+      backgroundColor: resolveAccordionColorValue(style.surfaceColor),
     }) ?? {};
 
   const summaryStyle: CSSProperties = {
-    color: style.summaryTextColor,
-    borderColor: style.borderColor,
+    color: resolveAccordionColorValue(style.summaryTextColor),
+    borderColor: resolveAccordionColorValue(style.borderColor),
   };
   const descriptionStyle =
     compactStyle({
-      color: style.descriptionTextColor,
+      color: resolveAccordionColorValue(style.descriptionTextColor),
     }) ?? undefined;
 
   return (
@@ -733,12 +771,15 @@ export function AccordionBlock({
       data-coderso-accordion-motion={normalized.options?.motion ?? "none"}
     >
       {resolvedItems.map((item, index) => {
+        const itemDefaultOpen = defaultOpenIds.some(
+          (id) => id === item.instanceId || id === item.selectionId
+        );
         const shouldOpen =
           openMode === "multiple"
-            ? defaultOpenIds.includes(item.instanceId)
+            ? itemDefaultOpen
             : defaultOpenIds.length === 0
               ? false
-              : item.instanceId === defaultOpenIds[0];
+              : itemDefaultOpen;
 
         return (
           <details
@@ -792,7 +833,9 @@ export function AccordionBlock({
               role="region"
               aria-labelledby={scopedId(rootInstanceId, `summary-${item.instanceId}`)}
               className={joinClasses("space-y-4 border-t", renderClasses.contentPaddingClass)}
-              style={{ borderColor: style.borderColor }}
+              style={compactStyle({
+                borderColor: resolveAccordionColorValue(style.borderColor),
+              })}
             >
               {item.description ? (
                 <p className="text-sm" style={descriptionStyle}>

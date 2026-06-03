@@ -2,13 +2,17 @@ import { and, desc, eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { contentEntries, pages, seoDocuments } from "../../db/schema";
+import { clearSiteCache } from "../../site/cache/siteCache";
 import {
+  type PublicSeoMetadata,
+  type SeoAuditCheckId,
   type SeoDocument,
   type SeoIssue,
   type SeoListItem,
   type SeoStatus,
   type SeoTargetType,
   type SeoUpsertInput,
+  seoAuditCheckIds,
 } from "./seoTypes";
 
 type TargetRow = {
@@ -21,6 +25,44 @@ type TargetRow = {
 const normalizeSlug = (value: string | null) => {
   if (!value) return null;
   return value.startsWith("/") ? value : `/${value}`;
+};
+
+const normalizeNullableText = (value: string | null | undefined) => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizePublicCanonicalUrl = (value: string | null | undefined) => {
+  const trimmed = normalizeNullableText(value);
+  if (!trimmed) return null;
+  if (trimmed.startsWith("/") || trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
+    return trimmed;
+  }
+  return null;
+};
+
+const normalizePublicRobots = (value: string | null | undefined) => {
+  const trimmed = normalizeNullableText(value);
+  if (!trimmed) return null;
+  if (trimmed.length > 120 || /[<>"']/.test(trimmed)) return null;
+  return trimmed;
+};
+
+const normalizeCanonicalForStorage = (value: string | null | undefined) => {
+  const trimmed = normalizeNullableText(value);
+  if (!trimmed) return null;
+  const normalized = normalizePublicCanonicalUrl(trimmed);
+  if (!normalized) throw new Error("seo_canonical_invalid");
+  return normalized;
+};
+
+const normalizeRobotsForStorage = (value: string | null | undefined) => {
+  const trimmed = normalizeNullableText(value);
+  if (!trimmed) return null;
+  const normalized = normalizePublicRobots(trimmed);
+  if (!normalized) throw new Error("seo_robots_invalid");
+  return normalized;
 };
 
 const targetLookupKeys = (target: TargetRow) => {
@@ -77,12 +119,20 @@ const canonicalScore = (canonicalUrl: string | null, issues: SeoIssue[]) => {
     issues.push(toIssue("canonical_missing", "warning", "Canonical URL is missing."));
     return 0;
   }
+  if (!normalizePublicCanonicalUrl(canonicalUrl)) {
+    issues.push(toIssue("canonical_invalid", "warning", "Canonical URL is invalid."));
+    return 0;
+  }
   return 10;
 };
 
 const robotsScore = (robots: string | null, issues: SeoIssue[]) => {
   if (!robots) {
     issues.push(toIssue("robots_missing", "warning", "Robots tag is missing."));
+    return 0;
+  }
+  if (!normalizePublicRobots(robots)) {
+    issues.push(toIssue("robots_invalid", "warning", "Robots directive is invalid."));
     return 0;
   }
   return 10;
@@ -110,6 +160,63 @@ const mapDocument = (row: typeof seoDocuments.$inferSelect): SeoDocument => ({
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 });
+
+export const defaultSeoAuditChecks = [...seoAuditCheckIds];
+
+export const isSeoAuditCheckId = (value: unknown): value is SeoAuditCheckId =>
+  typeof value === "string" && seoAuditCheckIds.includes(value as SeoAuditCheckId);
+
+export const normalizeSeoAuditChecks = (
+  checks?: readonly SeoAuditCheckId[] | null
+): SeoAuditCheckId[] => {
+  if (!checks) return [...defaultSeoAuditChecks];
+  if (checks.length === 0) throw new Error("seo_audit_checks_required");
+  const selected = [...new Set(checks.filter(isSeoAuditCheckId))];
+  if (selected.length === 0) {
+    throw new Error("seo_audit_checks_required");
+  }
+  return selected;
+};
+
+export function analyzeSeoDocument(
+  input: Pick<SeoUpsertInput, "title" | "description" | "canonicalUrl" | "robots">,
+  checks: readonly SeoAuditCheckId[] = defaultSeoAuditChecks
+) {
+  const selectedChecks = normalizeSeoAuditChecks(checks);
+  const issues: SeoIssue[] = [];
+  let score = 0;
+  let maxScore = 0;
+
+  if (selectedChecks.includes("meta")) {
+    maxScore += 80;
+    score += titleScore(normalizeNullableText(input.title), issues);
+    score += descriptionScore(normalizeNullableText(input.description), issues);
+  }
+
+  if (selectedChecks.includes("links")) {
+    maxScore += 10;
+    score += canonicalScore(normalizeNullableText(input.canonicalUrl), issues);
+  }
+
+  if (selectedChecks.includes("robots")) {
+    maxScore += 10;
+    score += robotsScore(normalizeNullableText(input.robots), issues);
+  }
+
+  const normalizedScore = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+
+  return {
+    score: normalizedScore,
+    status: deriveStatus(issues),
+    issues,
+  };
+}
+
+const resolvePublicSeoValue = (
+  documentValue: string | null | undefined,
+  fallbackValue: string | null | undefined,
+  normalizer: (value: string | null | undefined) => string | null = normalizeNullableText
+) => normalizer(documentValue) ?? normalizer(fallbackValue);
 
 async function loadTargets(): Promise<TargetRow[]> {
   const pagesRows = await db
@@ -200,9 +307,7 @@ export async function listSeoDocuments(): Promise<SeoListItem[]> {
     })
     .filter((item): item is SeoListItem => item !== null);
 
-  results.sort(
-    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
-  );
+  results.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
   return results;
 }
@@ -225,7 +330,9 @@ export async function listExistingSeoDocuments(): Promise<SeoListItem[]> {
       const target =
         targetByKey.get(`${doc.targetType}:${doc.targetId}`) ??
         (doc.slug ? targetByKey.get(`${doc.targetType}:${doc.slug}`) : undefined) ??
-        (doc.slug ? targetByKey.get(`${doc.targetType}:${doc.slug.replace(/^\//, "")}`) : undefined);
+        (doc.slug
+          ? targetByKey.get(`${doc.targetType}:${doc.slug.replace(/^\//, "")}`)
+          : undefined);
       return {
         ...doc,
         targetTitle: target?.title ?? doc.title ?? doc.slug ?? doc.targetId,
@@ -255,38 +362,102 @@ export async function getSeoDocumentByTarget(
   return row ? mapDocument(row) : null;
 }
 
+export async function resolvePublicSeoMetadata(input: {
+  targetType: SeoTargetType;
+  targetId?: string | null;
+  slug?: string | null;
+  fallback?: Partial<PublicSeoMetadata> | null;
+}): Promise<PublicSeoMetadata> {
+  const normalizedSlug = normalizeSlug(input.slug ?? null);
+  const conditions = [];
+  if (input.targetId) {
+    conditions.push(
+      and(eq(seoDocuments.targetType, input.targetType), eq(seoDocuments.targetId, input.targetId))
+    );
+  } else if (normalizedSlug) {
+    conditions.push(
+      and(eq(seoDocuments.targetType, input.targetType), eq(seoDocuments.slug, normalizedSlug))
+    );
+    conditions.push(
+      and(
+        eq(seoDocuments.targetType, input.targetType),
+        eq(seoDocuments.slug, normalizedSlug.replace(/^\//, ""))
+      )
+    );
+  }
+
+  let document: SeoDocument | null = null;
+  for (const condition of conditions) {
+    if (!condition) continue;
+    const [row] = await db.select().from(seoDocuments).where(condition).limit(1);
+    if (row) {
+      document = mapDocument(row);
+      break;
+    }
+  }
+
+  const fallback = input.fallback ?? null;
+  return {
+    title: resolvePublicSeoValue(document?.title, fallback?.title),
+    description: resolvePublicSeoValue(document?.description, fallback?.description),
+    canonicalUrl: resolvePublicSeoValue(
+      document?.canonicalUrl,
+      fallback?.canonicalUrl,
+      normalizePublicCanonicalUrl
+    ),
+    robots: resolvePublicSeoValue(document?.robots, fallback?.robots, normalizePublicRobots),
+  };
+}
+
 export async function upsertSeoDocument(input: SeoUpsertInput) {
   const existing = await getSeoDocumentByTarget(input.targetType, input.targetId);
   if (existing) {
+    const next = {
+      slug: input.slug ?? existing.slug,
+      title: input.title !== undefined ? normalizeNullableText(input.title) : existing.title,
+      description:
+        input.description !== undefined
+          ? normalizeNullableText(input.description)
+          : existing.description,
+      canonicalUrl:
+        input.canonicalUrl !== undefined
+          ? normalizeCanonicalForStorage(input.canonicalUrl)
+          : existing.canonicalUrl,
+      robots:
+        input.robots !== undefined ? normalizeRobotsForStorage(input.robots) : existing.robots,
+    };
+    const analysis = analyzeSeoDocument(next);
     const [row] = await db
       .update(seoDocuments)
       .set({
-        slug: input.slug ?? existing.slug,
-        title: input.title ?? existing.title,
-        description: input.description ?? existing.description,
-        canonicalUrl: input.canonicalUrl ?? existing.canonicalUrl,
-        robots: input.robots ?? existing.robots,
+        ...next,
+        ...analysis,
         updatedAt: new Date(),
       })
       .where(eq(seoDocuments.id, existing.id))
       .returning();
+    if (row) clearSiteCache();
     return row ? mapDocument(row) : null;
   }
 
+  const next = {
+    title: normalizeNullableText(input.title),
+    description: normalizeNullableText(input.description),
+    canonicalUrl: normalizeCanonicalForStorage(input.canonicalUrl),
+    robots: normalizeRobotsForStorage(input.robots),
+  };
+  const analysis = analyzeSeoDocument(next);
   const [row] = await db
     .insert(seoDocuments)
     .values({
       targetType: input.targetType,
       targetId: input.targetId,
       slug: input.slug ?? null,
-      title: input.title ?? null,
-      description: input.description ?? null,
-      canonicalUrl: input.canonicalUrl ?? null,
-      robots: input.robots ?? null,
-      status: "warning",
-      issues: [],
+      ...next,
+      ...analysis,
     })
     .returning();
+  if (row) clearSiteCache();
   return row ? mapDocument(row) : null;
 }
 
@@ -294,26 +465,46 @@ export async function updateSeoDocumentById(
   id: string,
   input: Pick<SeoUpsertInput, "title" | "description" | "canonicalUrl" | "robots">
 ): Promise<SeoDocument | null> {
+  const existing = await getSeoDocument(id);
+  if (!existing) return null;
+  const next = {
+    title: input.title !== undefined ? normalizeNullableText(input.title) : existing.title,
+    description:
+      input.description !== undefined
+        ? normalizeNullableText(input.description)
+        : existing.description,
+    canonicalUrl:
+      input.canonicalUrl !== undefined
+        ? normalizeCanonicalForStorage(input.canonicalUrl)
+        : existing.canonicalUrl,
+    robots: input.robots !== undefined ? normalizeRobotsForStorage(input.robots) : existing.robots,
+  };
+  const analysis = analyzeSeoDocument(next);
   const [row] = await db
     .update(seoDocuments)
     .set({
-      title: input.title ?? null,
-      description: input.description ?? null,
-      canonicalUrl: input.canonicalUrl ?? null,
-      robots: input.robots ?? null,
+      ...next,
+      ...analysis,
       updatedAt: new Date(),
     })
     .where(eq(seoDocuments.id, id))
     .returning();
+  if (row) clearSiteCache();
   return row ? mapDocument(row) : null;
 }
 
 export async function deleteSeoDocument(id: string): Promise<SeoDocument | null> {
   const [row] = await db.delete(seoDocuments).where(eq(seoDocuments.id, id)).returning();
+  if (row) clearSiteCache();
   return row ? mapDocument(row) : null;
 }
 
-export async function runSeoAudit(targetType?: SeoTargetType, targetId?: string) {
+export async function runSeoAudit(
+  targetType?: SeoTargetType,
+  targetId?: string,
+  checks?: readonly SeoAuditCheckId[]
+) {
+  const selectedChecks = normalizeSeoAuditChecks(checks);
   const targets = await loadTargets();
   await ensureSeoDocuments(targets);
 
@@ -327,20 +518,19 @@ export async function runSeoAudit(targetType?: SeoTargetType, targetId?: string)
 
   let audited = 0;
   for (const row of rows) {
-    const issues: SeoIssue[] = [];
-    let score = 0;
-    score += titleScore(row.title ?? null, issues);
-    score += descriptionScore(row.description ?? null, issues);
-    score += canonicalScore(row.canonicalUrl ?? null, issues);
-    score += robotsScore(row.robots ?? null, issues);
-
-    const status = deriveStatus(issues);
+    const analysis = analyzeSeoDocument(
+      {
+        title: row.title ?? null,
+        description: row.description ?? null,
+        canonicalUrl: row.canonicalUrl ?? null,
+        robots: row.robots ?? null,
+      },
+      selectedChecks
+    );
     await db
       .update(seoDocuments)
       .set({
-        score,
-        status,
-        issues,
+        ...analysis,
         lastAuditAt: new Date(),
         updatedAt: new Date(),
       })

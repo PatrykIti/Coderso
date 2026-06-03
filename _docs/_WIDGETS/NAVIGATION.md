@@ -47,6 +47,10 @@ Primary CTA jest renderowane tylko dla:
 - owns metadata/target controls, reorder UX, menu previews, active-link mode,
   mobile copy, Media Library logo replacement, bounded style/brand controls,
   layout width/spacing, sticky behavior, and collapse-on-scroll behavior
+- all Visual controls that mutate Navigation data expose stable
+  `data-widget-control-path` metadata matching the widget editor contract;
+  reorder/add/remove buttons remain action controls around the owned `items`
+  path
 - daily color authoring is swatch-first like `hero`; theme tokens, transparent
   values, and saved custom values remain replace-or-clear compatible without
   visible raw color text inputs
@@ -132,8 +136,10 @@ Primary CTA jest renderowane tylko dla:
 
 - logo, item, child, and CTA destinations use the shared safe-href normalization
 - hash links like `#overview` are valid for Navigation
-- unsafe destinations fall back safely instead of rendering `javascript:` or
-  protocol-relative URLs
+- bare `#` is treated as a missing destination so unsafe resolver placeholders
+  cannot become clickable fake links
+- unsafe destinations are hidden instead of rendering `javascript:`,
+  protocol-relative URLs, or clickable placeholder links
 
 ### Logo
 
@@ -188,10 +194,30 @@ Primary CTA jest renderowane tylko dla:
   - `exact`: only exact path matches become active
 - SSR output starts inactive; client runtime marks links after `window.location`
   is available
+- duplicate responsive clones for the best active match, including drawer
+  clones, receive truthful `aria-current="page"` alongside
+  `data-navigation-active="true"`
 - manual links can open in the same tab or a new tab
 - `target = blank` always emits `rel="noopener noreferrer"`
 - menu/pages source items remain `self` until their upstream owners define
   target metadata
+
+### Public DOM and menu identifiers
+
+- public Navigation markup exposes `data-menu-configured="true"` for menu-backed
+  diagnostics
+- raw `menuKey` values stay out of public DOM; Advanced may summarize whether a
+  menu is configured without exposing the identifier
+
+### Style color bounds
+
+- persisted/imported Navigation color fields are schema-bounded and normalized
+  before render
+- accepted color values are safe hex colors, `var(--color-*)` theme tokens,
+  bounded `rgb(a)`/`hsl(a)` values, and safe keywords such as `transparent`
+- unsafe CSS fragments such as `url(...)`, `javascript:`, `data:`, braces, and
+  semicolon injection are rejected by schema validation or dropped by the
+  normalizer before inline styles are emitted
 
 ### Collapse and sticky
 

@@ -51,7 +51,7 @@ import type {
 } from "../../../../widgets/types";
 import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import { LinkDestinationField } from "./LinkDestinationField";
-import { SharedColorControl } from "./SharedColorControl";
+import { SharedColorControl, describeSharedColorControlState } from "./SharedColorControl";
 import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -474,9 +474,7 @@ const findOptionLabel = <T extends string>(
 ) => options.find((option) => option.id === value)?.label ?? fallback;
 
 const describeFeatureGridColor = (value: string | undefined) => {
-  const trimmed = value?.trim() ?? "";
-  if (trimmed.length === 0) return "Theme default";
-  return /^#[0-9a-f]{3,8}$/i.test(trimmed) ? "Selected swatch" : "Saved custom color";
+  return describeSharedColorControlState({ value }).label;
 };
 
 function summarizeFeatureGridMedia(items: FeatureGridItem[]) {

@@ -10,6 +10,14 @@ const MIN_RESET_TTL_MINUTES = 5;
 const MAX_RESET_TTL_MINUTES = 1440;
 
 export type PasswordResetRow = typeof passwordResets.$inferSelect;
+export type PasswordResetTokenErrorCode =
+  | "set_password_token_invalid"
+  | "set_password_token_expired"
+  | "set_password_token_used";
+
+export type ConsumeResetTokenResult =
+  | { ok: true; reset: PasswordResetRow }
+  | { ok: false; code: PasswordResetTokenErrorCode };
 
 export function hashResetToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
@@ -37,16 +45,30 @@ export async function resolveResetTtlMinutes() {
   return resolveResetTtlMinutesFromSetting(configured);
 }
 
-export async function createResetToken(userId: string) {
+export async function invalidateResetTokensForUser(userId: string, now = new Date()) {
+  const rows = await db
+    .update(passwordResets)
+    .set({ usedAt: now, updatedAt: now })
+    .where(and(eq(passwordResets.userId, userId), isNull(passwordResets.usedAt)))
+    .returning({ id: passwordResets.id });
+
+  return rows.length;
+}
+
+export async function createResetToken(
+  userId: string,
+  options: { invalidateExisting?: boolean } = {}
+) {
   const token = generateToken();
   const tokenHash = hashResetToken(token);
   const ttlMinutes = await resolveResetTtlMinutes();
   const expiresAt = new Date(Date.now() + ttlMinutes * 60_000);
 
-  await db
-    .insert(passwordResets)
-    .values({ userId, tokenHash, expiresAt })
-    .returning();
+  if (options.invalidateExisting ?? true) {
+    await invalidateResetTokensForUser(userId);
+  }
+
+  await db.insert(passwordResets).values({ userId, tokenHash, expiresAt }).returning();
 
   return { token, tokenHash, expiresAt };
 }
@@ -77,4 +99,48 @@ export async function consumeResetToken(token: string) {
     .returning();
 
   return row ?? null;
+}
+
+const classifyResetTokenRow = (
+  row: PasswordResetRow | null,
+  now: Date
+): PasswordResetTokenErrorCode => {
+  if (!row) return "set_password_token_invalid";
+  if (row.usedAt) return "set_password_token_used";
+  if (row.expiresAt.getTime() <= now.getTime()) return "set_password_token_expired";
+  return "set_password_token_invalid";
+};
+
+export async function consumeResetTokenWithStatus(token: string): Promise<ConsumeResetTokenResult> {
+  const tokenHash = hashResetToken(token);
+  const now = new Date();
+
+  const [existing] = await db
+    .select()
+    .from(passwordResets)
+    .where(eq(passwordResets.tokenHash, tokenHash));
+
+  if (!existing || existing.usedAt || existing.expiresAt.getTime() <= now.getTime()) {
+    return { ok: false, code: classifyResetTokenRow(existing ?? null, now) };
+  }
+
+  const [row] = await db
+    .update(passwordResets)
+    .set({ usedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(passwordResets.tokenHash, tokenHash),
+        isNull(passwordResets.usedAt),
+        gt(passwordResets.expiresAt, now)
+      )
+    )
+    .returning();
+
+  if (row) return { ok: true, reset: row };
+
+  const [latest] = await db
+    .select()
+    .from(passwordResets)
+    .where(eq(passwordResets.tokenHash, tokenHash));
+  return { ok: false, code: classifyResetTokenRow(latest ?? null, new Date()) };
 }

@@ -21,12 +21,17 @@ const redirectsState = vi.hoisted(() => ({
   }),
   createRedirect: vi.fn(async () => ({})),
   updateRedirect: vi.fn(async () => ({})),
+  deleteRedirect: vi.fn(async (id: string) => {
+    redirectsState.listResult = redirectsState.listResult.filter((item) => item.id !== id);
+    return { ok: true };
+  }),
   reset() {
     redirectsState.listResult = [];
     redirectsState.listError = null;
     redirectsState.listRedirects.mockClear();
     redirectsState.createRedirect.mockClear();
     redirectsState.updateRedirect.mockClear();
+    redirectsState.deleteRedirect.mockClear();
   },
 }));
 
@@ -95,8 +100,11 @@ vi.mock("@/services/apiClient", () => ({
 
 vi.mock("@/services/redirectsClient", () => ({
   listRedirects: redirectsState.listRedirects,
+  listRedirectsCached: redirectsState.listRedirects,
+  getCachedRedirects: vi.fn(() => null),
   createRedirect: redirectsState.createRedirect,
   updateRedirect: redirectsState.updateRedirect,
+  deleteRedirect: redirectsState.deleteRedirect,
 }));
 
 vi.mock("@/ui/layouts/AdminShell", () => ({
@@ -132,17 +140,67 @@ vi.mock("@/ui/shared/PageHeader", () => ({
   ),
 }));
 
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    onConfirm,
+    onOpenChange,
+  }: {
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    confirmLabel: string;
+    onConfirm: () => void | Promise<void>;
+    onOpenChange: (open: boolean) => void;
+  }) =>
+    open ? (
+      <div>
+        <span>{title}</span>
+        <span>{description}</span>
+        <button type="button" onClick={() => void onConfirm()}>
+          {confirmLabel}
+        </button>
+        <button type="button" onClick={() => onOpenChange(false)}>
+          cancel-confirm
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("../../../core/admin/ui/redirects/RedirectsTable", () => ({
   RedirectsTable: ({
     items,
     isLoading,
     isSaving,
+    total,
+    page,
+    limit,
+    isFiltering,
+    selectedIds,
+    isAllSelected,
+    isIndeterminate,
+    onToggleAll,
+    onToggleRedirect,
     onEdit,
     onToggle,
+    onDelete,
+    onPageChange,
   }: {
     items: Array<{ id: string; from: string; to: string; type: string; status: string }>;
     isLoading: boolean;
     isSaving: boolean;
+    selectedIds: string[];
+    isAllSelected: boolean;
+    isIndeterminate: boolean;
+    total: number;
+    page: number;
+    limit: number;
+    isFiltering: boolean;
+    onToggleAll: () => void;
+    onToggleRedirect: (id: string) => void;
     onEdit: (item: { id: string; from: string; to: string; type: string; status: string }) => void;
     onToggle: (item: {
       id: string;
@@ -151,18 +209,46 @@ vi.mock("../../../core/admin/ui/redirects/RedirectsTable", () => ({
       type: string;
       status: string;
     }) => void;
+    onDelete: (item: {
+      id: string;
+      from: string;
+      to: string;
+      type: string;
+      status: string;
+    }) => void;
+    onPageChange: (page: number) => void;
   }) => (
     <div>
       <span>{isLoading ? "loading" : "loaded"}</span>
       <span>{isSaving ? "saving" : "idle"}</span>
+      <span>{`table-count:${items.length}`}</span>
+      <span>{`table-total:${total}`}</span>
+      <span>{`table-page:${page}`}</span>
+      <span>{`table-limit:${limit}`}</span>
+      <span>{`filtering:${String(isFiltering)}`}</span>
+      <span>{`selected:${selectedIds.length}`}</span>
+      <span>{`all:${String(isAllSelected)}`}</span>
+      <span>{`mixed:${String(isIndeterminate)}`}</span>
       {items.map((item) => (
         <div key={item.id}>{`${item.from}->${item.to}`}</div>
       ))}
+      <button type="button" onClick={onToggleAll}>
+        select-all
+      </button>
+      <button type="button" onClick={() => items[0] && onToggleRedirect(items[0].id)}>
+        select-first
+      </button>
       <button type="button" onClick={() => items[0] && onEdit(items[0])}>
         edit-first
       </button>
       <button type="button" onClick={() => items[0] && onToggle(items[0])}>
         toggle-first
+      </button>
+      <button type="button" onClick={() => items[0] && onDelete(items[0])}>
+        delete-first
+      </button>
+      <button type="button" onClick={() => onPageChange(page + 1)}>
+        page-two
       </button>
     </div>
   ),
@@ -267,6 +353,9 @@ test("RedirectsPage loads, filters, creates, edits, and toggles redirects", asyn
     expect(view.container.textContent).toContain("Redirects");
     expect(view.container.textContent).toContain("Site management - 1 active routes.");
     expect(view.container.textContent).toContain("/old-home->/home");
+    expect(view.container.textContent).toContain("table-total:2");
+    expect(view.container.textContent).toContain("table-page:1");
+    expect(view.container.textContent).toContain("table-limit:10");
 
     React.act(() => {
       view.container
@@ -276,10 +365,11 @@ test("RedirectsPage loads, filters, creates, edits, and toggles redirects", asyn
 
     expect(view.container.textContent).toContain("/shop-old->/shop");
     expect(view.container.textContent).not.toContain("/old-home->/home");
+    expect(view.container.textContent).toContain("filtering:true");
 
     React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent?.includes("Create redirect"))
+        .find((button) => button.textContent?.trim() === "Create")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(view.container.textContent).toContain("drawer:create");
@@ -328,6 +418,76 @@ test("RedirectsPage loads, filters, creates, edits, and toggles redirects", asyn
     expect(redirectsState.updateRedirect).toHaveBeenCalledWith("redirect-2", {
       enabled: true,
     });
+
+    await React.act(async () => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "delete-first")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(view.container.textContent).toContain("Delete redirect?");
+
+    await React.act(async () => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Delete")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(redirectsState.deleteRedirect).toHaveBeenCalledWith("redirect-2");
+    expect(view.container.textContent).not.toContain("/shop-old->/shop");
+
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent?.trim() === "Create")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(view.container.textContent).toContain("drawer:create");
+  } finally {
+    view.cleanup();
+    redirectsState.reset();
+  }
+});
+
+test("RedirectsPage paginates local rows and resets page on search", async () => {
+  redirectsState.reset();
+  redirectsState.listResult = Array.from({ length: 12 }, (_, index) => ({
+    id: `redirect-${index + 1}`,
+    fromPath: `/old-${index + 1}`,
+    toPath: `/new-${index + 1}`,
+    statusCode: 301 as const,
+    enabled: true,
+    createdAt: "2026-03-06",
+    updatedAt: "2026-03-06",
+  }));
+
+  const view = mount(<RedirectsPage />);
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain("table-count:10");
+    expect(view.container.textContent).toContain("table-total:12");
+    expect(view.container.textContent).toContain("table-page:1");
+
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "page-two")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(view.container.textContent).toContain("/old-11->/new-11");
+    expect(view.container.textContent).toContain("table-page:2");
+
+    React.act(() => {
+      view.container
+        .querySelector("button[data-input-action='match']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(view.container.textContent).toContain("table-count:0");
+    expect(view.container.textContent).toContain("table-page:1");
+    expect(view.container.textContent).toContain("filtering:true");
   } finally {
     view.cleanup();
     redirectsState.reset();

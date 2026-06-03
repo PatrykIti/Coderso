@@ -78,9 +78,12 @@ normalization/repair actions.
 - FAQ sections now expose a named section (`aria-labelledby` or fallback
   `aria-label`) and per-item `summary`/`region` relationships.
 - FAQ summaries render a visible chevron affordance. `aria-expanded` is
-  runtime-owned: static SSR/admin-preview markup omits it so it cannot become
-  stale when the preview shell does not execute scripts, and the public runtime
-  sets and syncs it after binding.
+  runtime-owned: static SSR markup omits it so it cannot become stale before
+  binding, while the public runtime and admin preview runtime bridge both set
+  and sync it after binding.
+- Admin preview uses a bounded FAQ disclosure bridge for the page-builder
+  canvas, shared live preview, and custom-screen read-only widget preview. It
+  does not execute arbitrary persisted widget scripts.
 - `defaultOpenIndex = -1` renders all FAQ items collapsed by default.
 - `defaultOpenIndex` is normalized to valid item bounds.
 - `style.motion = "smooth"` enables CSS-only open/close transitions.

@@ -9,7 +9,11 @@ import type {
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
-import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import {
+  compactStyle,
+  resolveClearableCssColorValue,
+  resolveClearableStyleValue,
+} from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type NavigationLinkTarget = "self" | "blank";
@@ -101,6 +105,22 @@ export type NavigationData = {
   style?: NavigationStyle;
 };
 
+const navigationColorValueSchemaPattern = [
+  "^\\s*(?:",
+  "#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})",
+  "|var\\(\\s*--color-[a-zA-Z0-9_-]+\\s*\\)",
+  "|[rR][gG][bB][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
+  "|[hH][sS][lL][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?(?:deg)?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
+  "|[tT][rR][aA][nN][sS][pP][aA][rR][eE][nN][tT]",
+  "|[cC][uU][rR][rR][eE][nN][tT][cC][oO][lL][oO][rR]",
+  "|[iI][nN][hH][eE][rR][iI][tT]",
+  ")?\\s*$",
+].join("");
+const navigationColorValueSchema = {
+  type: "string",
+  pattern: navigationColorValueSchemaPattern,
+} as const;
+
 export const navigationSchema = {
   type: "object",
   additionalProperties: false,
@@ -121,7 +141,6 @@ export const navigationSchema = {
     },
     items: {
       type: "array",
-      minItems: 1,
       items: {
         type: "object",
         additionalProperties: false,
@@ -221,18 +240,18 @@ export const navigationSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        textColor: { type: "string" },
-        logoColor: { type: "string" },
-        linkColor: { type: "string" },
-        linkHoverColor: { type: "string" },
-        linkActiveColor: { type: "string" },
+        textColor: navigationColorValueSchema,
+        logoColor: navigationColorValueSchema,
+        linkColor: navigationColorValueSchema,
+        linkHoverColor: navigationColorValueSchema,
+        linkActiveColor: navigationColorValueSchema,
         linkUnderline: { enum: ["none", "hover", "always"] },
-        surfaceColor: { type: "string" },
-        borderColor: { type: "string" },
+        surfaceColor: navigationColorValueSchema,
+        borderColor: navigationColorValueSchema,
         borderWidth: { enum: ["0", "1", "2", "3"] },
-        ctaTextColor: { type: "string" },
-        ctaBackgroundColor: { type: "string" },
-        ctaBorderColor: { type: "string" },
+        ctaTextColor: navigationColorValueSchema,
+        ctaBackgroundColor: navigationColorValueSchema,
+        ctaBorderColor: navigationColorValueSchema,
         fontSize: { enum: ["none", "xs", "sm", "base", "lg"] },
         fontWeight: { enum: ["none", "normal", "medium", "semibold", "bold"] },
         textTransform: { enum: ["none", "uppercase", "capitalize"] },
@@ -425,12 +444,14 @@ const toTrimmedString = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const normalizeNavigationHref = (value: unknown) =>
-  normalizeWidgetSafeHref(value, {
+const normalizeNavigationHref = (value: unknown) => {
+  const href = normalizeWidgetSafeHref(value, {
     allowRelative: true,
     allowHash: true,
     allowHttp: true,
   });
+  return href === "#" ? undefined : href;
+};
 
 const normalizeNavigationImageHref = (value: unknown) =>
   normalizeWidgetSafeHref(value, {
@@ -621,14 +642,10 @@ const navigationRuntimeClientScript = `
       (longest, match) => Math.max(longest, match.path.length),
       0
     );
-    let currentAssigned = false;
     for (const match of matches) {
       if (match.path.length !== bestLength) continue;
       match.anchor.dataset.navigationActive = "true";
-      if (!currentAssigned) {
-        match.anchor.setAttribute("aria-current", "page");
-        currentAssigned = true;
-      }
+      match.anchor.setAttribute("aria-current", "page");
     }
   };
 
@@ -912,8 +929,46 @@ function normalizeNavigationItemMeta(meta: NavigationItem["meta"]): NavigationIt
 const normalizeNavigationActiveLinkMode = (value: unknown): NavigationActiveLinkMode =>
   value === "pathname" || value === "exact" ? value : "none";
 
+const hasStyleKey = (style: NavigationData["style"], key: keyof NavigationStyle) =>
+  Boolean(style && Object.prototype.hasOwnProperty.call(style, key));
+
+const normalizeNavigationColorValue = (
+  style: NavigationData["style"],
+  key: keyof NavigationStyle
+) => (hasStyleKey(style, key) ? resolveClearableCssColorValue(style?.[key]) : undefined);
+
 const normalizeNavigationStyle = (style: NavigationData["style"]): NavigationStyle => ({
   ...(style ?? {}),
+  ...(hasStyleKey(style, "textColor")
+    ? { textColor: normalizeNavigationColorValue(style, "textColor") }
+    : {}),
+  ...(hasStyleKey(style, "logoColor")
+    ? { logoColor: normalizeNavigationColorValue(style, "logoColor") }
+    : {}),
+  ...(hasStyleKey(style, "linkColor")
+    ? { linkColor: normalizeNavigationColorValue(style, "linkColor") }
+    : {}),
+  ...(hasStyleKey(style, "linkHoverColor")
+    ? { linkHoverColor: normalizeNavigationColorValue(style, "linkHoverColor") }
+    : {}),
+  ...(hasStyleKey(style, "linkActiveColor")
+    ? { linkActiveColor: normalizeNavigationColorValue(style, "linkActiveColor") }
+    : {}),
+  ...(hasStyleKey(style, "surfaceColor")
+    ? { surfaceColor: normalizeNavigationColorValue(style, "surfaceColor") }
+    : {}),
+  ...(hasStyleKey(style, "borderColor")
+    ? { borderColor: normalizeNavigationColorValue(style, "borderColor") }
+    : {}),
+  ...(hasStyleKey(style, "ctaTextColor")
+    ? { ctaTextColor: normalizeNavigationColorValue(style, "ctaTextColor") }
+    : {}),
+  ...(hasStyleKey(style, "ctaBackgroundColor")
+    ? { ctaBackgroundColor: normalizeNavigationColorValue(style, "ctaBackgroundColor") }
+    : {}),
+  ...(hasStyleKey(style, "ctaBorderColor")
+    ? { ctaBorderColor: normalizeNavigationColorValue(style, "ctaBorderColor") }
+    : {}),
   borderWidth:
     style?.borderWidth === "0" ||
     style?.borderWidth === "1" ||
@@ -1340,7 +1395,7 @@ export function NavigationBlock({
       data-collapse-on-scroll={behavior.collapseOnScroll ? "true" : undefined}
       data-mobile-mode={mobileMode}
       data-link-source={linksSource}
-      data-menu-key={normalized.menuKey ?? undefined}
+      data-menu-configured={normalized.menuKey ? "true" : undefined}
       data-navigation-active-mode={behavior.activeLinkMode ?? "none"}
       style={navStyle}
       aria-label="Primary navigation"

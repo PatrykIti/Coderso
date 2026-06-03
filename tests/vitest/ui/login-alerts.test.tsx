@@ -13,4 +13,8 @@ test("LoginAlertsPage renders toggles", () => {
   expect(html).toContain("Admin-only alerts");
   expect(html).toContain("Email");
   expect(html).toContain("Webhook");
+  expect(html).toContain('data-no-op-control="settings-login-alerts-tab-general"');
+  expect(html).toContain('data-no-op-control="settings-login-alerts-tab-active-sessions"');
+  expect(html).toContain('data-no-op-control="settings-login-alerts-tab-audit-log"');
+  expect(html).toContain('data-no-op-control="settings-login-alerts-tab-two-factor"');
 });

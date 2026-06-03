@@ -141,3 +141,53 @@ test("PermissionsMatrix renders custom groups and descriptions", () => {
     view.cleanup();
   }
 });
+
+test("PermissionsMatrix exposes disabled read-only controls with an accessible reason", () => {
+  const onTogglePermission = vi.fn();
+  const onToggleRoleAll = vi.fn();
+  const reason = "roles:write permission is required to edit roles.";
+  const view = mount(
+    <PermissionsMatrix
+      roles={[{ id: "viewer", name: "Viewer", permissions: [] }]}
+      permissionGroups={[
+        {
+          id: "custom",
+          label: "Custom",
+          permissions: [
+            {
+              id: "custom:read",
+              label: "Read custom",
+            },
+          ],
+        },
+      ]}
+      rolePermissions={{ viewer: ["custom:read"] }}
+      readOnlyReason={reason}
+      onTogglePermission={onTogglePermission}
+      onToggleRoleAll={onToggleRoleAll}
+    />
+  );
+
+  try {
+    const bulk = view.container.querySelector("button[aria-label='Toggle all Viewer permissions']");
+    const permission = view.container.querySelector("button[aria-label='Read custom for Viewer']");
+
+    expect(view.container.textContent).toContain(reason);
+    expect(bulk).toBeInstanceOf(HTMLButtonElement);
+    expect(permission).toBeInstanceOf(HTMLButtonElement);
+    expect((bulk as HTMLButtonElement).disabled).toBe(true);
+    expect((permission as HTMLButtonElement).disabled).toBe(true);
+    expect(bulk?.getAttribute("aria-describedby")).toBe("permissions-matrix-readonly-reason");
+    expect(permission?.getAttribute("aria-describedby")).toBe("permissions-matrix-readonly-reason");
+
+    React.act(() => {
+      (bulk as HTMLButtonElement).click();
+      (permission as HTMLButtonElement).click();
+    });
+
+    expect(onToggleRoleAll).not.toHaveBeenCalled();
+    expect(onTogglePermission).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});

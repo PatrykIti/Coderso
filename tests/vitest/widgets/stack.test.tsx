@@ -342,6 +342,107 @@ test("stack validator accepts legacy scalar and responsive axis or wrap models",
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
+test("stack validator preserves absent direction for variant defaults", () => {
+  clearWidgets();
+  registerWidget(
+    createStackWidget({
+      wizard: StubStackEditor,
+      visual: StubStackEditor,
+      advanced: StubStackEditor,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "stack-imported-responsive",
+    type: "stack",
+    variant: "responsive",
+    data: {
+      gap: {
+        desktop: "8",
+        tablet: "6",
+        mobile: "4",
+      },
+      align: "baseline",
+      justify: "around",
+      wrap: true,
+    },
+    slots: {
+      content: [],
+    },
+  });
+
+  expect(normalized.data).not.toHaveProperty("direction");
+});
+
+test("stack renderer applies variant direction defaults when direction is absent", () => {
+  clearWidgets();
+  registerWidget(
+    createStackWidget({
+      wizard: StubStackEditor,
+      visual: StubStackEditor,
+      advanced: StubStackEditor,
+    })
+  );
+
+  const responsiveHtml = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "stack-imported-responsive",
+        type: "stack",
+        variant: "responsive",
+        data: {
+          gap: {
+            desktop: "8",
+            tablet: "6",
+            mobile: "4",
+          },
+          align: "baseline",
+          justify: "around",
+          wrap: true,
+        },
+        slots: {
+          content: [],
+        },
+      }}
+    />
+  );
+  const horizontalHtml = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "stack-imported-horizontal",
+        type: "stack",
+        variant: "horizontal",
+        data: {
+          gap: {
+            desktop: "8",
+            tablet: "6",
+            mobile: "4",
+          },
+          align: "center",
+          justify: "between",
+          wrap: false,
+        },
+        slots: {
+          content: [],
+        },
+      }}
+    />
+  );
+
+  expect(responsiveHtml).toContain('data-stack-variant="responsive"');
+  expect(responsiveHtml).toContain('data-stack-direction-desktop="row"');
+  expect(responsiveHtml).toContain('data-stack-direction-tablet="row"');
+  expect(responsiveHtml).toContain('data-stack-direction-mobile="column"');
+  expect(responsiveHtml).toContain('data-stack-align-desktop="baseline"');
+  expect(responsiveHtml).toContain('data-stack-wrap="true"');
+
+  expect(horizontalHtml).toContain('data-stack-variant="horizontal"');
+  expect(horizontalHtml).toContain('data-stack-direction-desktop="row"');
+  expect(horizontalHtml).toContain('data-stack-direction-tablet="row"');
+  expect(horizontalHtml).toContain('data-stack-direction-mobile="row"');
+  expect(horizontalHtml).toContain('data-stack-justify-desktop="between"');
+});
+
 test("stack validator rejects invalid responsive axis keys and values", () => {
   clearWidgets();
   registerWidget(

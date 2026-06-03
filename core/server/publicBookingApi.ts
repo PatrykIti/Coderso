@@ -187,6 +187,55 @@ const ensureSlotRequestAllowed = async (input: BookingSlotPreviewInput) => {
   return { service, resource };
 };
 
+const normalizeIsoInstant = (value: string, errorCode: string) => {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) throw new Error(errorCode);
+  return date.toISOString();
+};
+
+const toDateOnlyInTimezone = (isoInstant: string, timezone: string) => {
+  const date = new Date(isoInstant);
+  if (!Number.isFinite(date.getTime())) throw new Error("booking_slot_date_invalid");
+
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date);
+    const year = parts.find((part) => part.type === "year")?.value;
+    const month = parts.find((part) => part.type === "month")?.value;
+    const day = parts.find((part) => part.type === "day")?.value;
+    if (!year || !month || !day) throw new Error("booking_slot_date_invalid");
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    if (error instanceof Error && error.message === "booking_slot_date_invalid") throw error;
+    throw new Error("booking_timezone_invalid");
+  }
+};
+
+const assertReservationSlotMatchesAvailability = async (body: PublicReservationBody) => {
+  const resource = await getBookingResource(body.resourceId);
+  if (!resource) throw new Error("booking_resource_not_found");
+
+  const timezone = body.timezone ?? resource.timezone ?? "UTC";
+  const startsAt = normalizeIsoInstant(body.startsAt, "booking_reservation_starts_at_invalid");
+  const endsAt = normalizeIsoInstant(body.endsAt, "booking_reservation_ends_at_invalid");
+  const date = toDateOnlyInTimezone(startsAt, timezone);
+  const input = {
+    serviceId: body.serviceId,
+    resourceId: body.resourceId,
+    date,
+    timezone,
+  };
+
+  await ensureSlotRequestAllowed(input);
+  const slots = await previewBookingSlots(input);
+  const hasExactMatch = slots.some((slot) => slot.startsAt === startsAt && slot.endsAt === endsAt);
+  if (!hasExactMatch) throw new Error("booking_slot_unavailable");
+};
+
 const parseCookies = (header: string | null) => {
   if (!header) return {} as Record<string, string>;
   const cookies: Record<string, string> = {};
@@ -336,6 +385,8 @@ export async function handlePublicBookingApi(
           settings: security.botProtection,
         });
       }
+
+      await assertReservationSlotMatchesAvailability(body);
 
       const created = await createBookingReservation({
         serviceId: body.serviceId,

@@ -162,6 +162,22 @@ testIfDb("form slug must be unique", async () => {
   await expect(createForm({ name: "Contact 2", slug })).rejects.toThrow("form_slug_exists");
 });
 
+testIfDb("form success redirects must be same-origin relative paths", async () => {
+  await expect(
+    createForm({
+      name: `Unsafe redirect ${randomUUID()}`,
+      successRedirectUrl: "https://evil.example/thanks",
+    })
+  ).rejects.toThrow("form_success_redirect_url_invalid");
+
+  await expect(
+    createForm({
+      name: `Script redirect ${randomUUID()}`,
+      successRedirectUrl: "javascript:alert(1)",
+    })
+  ).rejects.toThrow("form_success_redirect_url_invalid");
+});
+
 testIfDb("retained submissions block hard delete with stable domain error", async () => {
   const form = await createForm({ name: "Counted Form" });
   await db.insert(formSubmissions).values({

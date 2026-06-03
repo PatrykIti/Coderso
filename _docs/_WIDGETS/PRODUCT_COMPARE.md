@@ -47,6 +47,9 @@ Notes:
   relying on the shared wrapper variant surface.
 - Advanced now opens with an explicit read-only banner plus a contract summary,
   while the preview refresh button remains a diagnostics-only action.
+- Advanced labels saved search, collection, and status filters as inactive
+  whenever selected products own runtime resolution; saved dormant values stay
+  visible for authors but are not presented as active filters.
 
 ## Runtime Behavior Notes
 
@@ -57,6 +60,9 @@ Notes:
   curated product set in manual order and ignores search/collection/status
   filters.
 - Public rendering and admin preview both use backend-owned commerce resolution.
+- The 31-05 smoke fixture seeds media-backed commerce products, a safe
+  `/fixture-products/:slug` products route, visible title links/CTAs, and an
+  out-of-stock product for Product Compare browser proof.
 - Admin canvas refresh uses the internal widget preview route and keeps preview
   data transient; it does not persist resolved product payload into author data.
 - Matrix/compact variants render table caption, scoped column headers, alert

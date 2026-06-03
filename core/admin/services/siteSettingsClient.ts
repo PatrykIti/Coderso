@@ -1,4 +1,12 @@
 import { apiRequest } from "./apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
+import {
+  clearRedactedSettingsCache,
+  getCachedSettingsResponse,
+  getCachedSettingsResponseStorageFirst,
+  primeRedactedSettingsCache,
+} from "@/services/settingsCache";
+import { broadcastCacheEvent } from "@/utils/cacheBus";
 
 export type SiteContentRoute = {
   type: string;
@@ -31,6 +39,8 @@ export type ContentSlugRouteContext = PostSlugRouteContext & {
   contentTypeSlug: string;
   routeEnabled: boolean;
 };
+
+let cachedSiteSettingsPromise: Promise<SiteSettingsResponse> | null = null;
 
 export type PostSlugDisplay = {
   label: "Public URL" | "Route hint";
@@ -193,6 +203,39 @@ export async function getSiteSettings() {
   return resolveSiteSettings(payload);
 }
 
+export const getCachedSiteSettings = (options?: { storageFirst?: boolean }) => {
+  const cached = options?.storageFirst
+    ? getCachedSettingsResponseStorageFirst()
+    : getCachedSettingsResponse();
+  return cached ? resolveSiteSettings(cached) : null;
+};
+
+export const clearSiteSettingsCache = () => {
+  cachedSiteSettingsPromise = null;
+  clearRedactedSettingsCache();
+};
+
+export async function getSiteSettingsCached(options?: { force?: boolean; storageFirst?: boolean }) {
+  if (!options?.force) {
+    const cached = getCachedSiteSettings({ storageFirst: options?.storageFirst });
+    if (cached) return cached;
+    if (cachedSiteSettingsPromise) return cachedSiteSettingsPromise;
+  }
+
+  const request = apiRequest<Record<string, unknown>>("/settings", {
+    method: "GET",
+  })
+    .then((payload) => {
+      primeRedactedSettingsCache(payload);
+      return resolveSiteSettings(payload);
+    })
+    .finally(() => {
+      cachedSiteSettingsPromise = null;
+    });
+  cachedSiteSettingsPromise = request;
+  return request;
+}
+
 export async function updateSiteSettings(update: SiteSettingsUpdate) {
   const payload: Record<string, unknown> = {};
   if ("publicBaseUrl" in update) {
@@ -233,5 +276,7 @@ export async function updateSiteSettings(update: SiteSettingsUpdate) {
     { withCsrf: true }
   );
 
+  primeRedactedSettingsCache(result);
+  broadcastCacheEvent({ key: cacheKeys.settingsRedacted, action: "update" });
   return resolveSiteSettings(result);
 }

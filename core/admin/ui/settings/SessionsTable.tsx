@@ -30,6 +30,7 @@ export type SessionsTableProps = {
   sessions: SessionItem[];
   isLoading?: boolean;
   isRevoking?: boolean;
+  selectedSessionId?: string | null;
   onRevoke?: (session: SessionItem) => void;
 };
 
@@ -45,7 +46,13 @@ const statusMeta: Record<SessionStatus, { label: string; className?: string; dot
   },
 };
 
-export function SessionsTable({ sessions, isLoading = false, isRevoking = false, onRevoke }: SessionsTableProps) {
+export function SessionsTable({
+  sessions,
+  isLoading = false,
+  isRevoking = false,
+  selectedSessionId,
+  onRevoke,
+}: SessionsTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -86,9 +93,13 @@ export function SessionsTable({ sessions, isLoading = false, isRevoking = false,
               const status = statusMeta[session.status];
               const isCurrent = session.status === "current";
               const Icon = session.icon;
+              const isSelected = session.id === selectedSessionId;
 
               return (
-                <TableRow key={session.id} className="group">
+                <TableRow
+                  key={session.id}
+                  className={cn("group", isSelected ? "bg-primary/5" : undefined)}
+                >
                   <TableCell className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       <div
@@ -102,20 +113,19 @@ export function SessionsTable({ sessions, isLoading = false, isRevoking = false,
                         <Icon className="h-4 w-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-foreground">
-                          {session.device}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {session.deviceDetail}
-                        </p>
+                        <p className="text-sm font-semibold text-foreground">{session.device}</p>
+                        <p className="text-xs text-muted-foreground">{session.deviceDetail}</p>
+                        {isSelected ? (
+                          <p className="mt-1 text-[11px] font-medium text-primary">
+                            Selected from access log
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm text-foreground">
-                        {session.location}
-                      </span>
+                      <span className="text-sm text-foreground">{session.location}</span>
                       <Badge
                         variant="outline"
                         className="rounded-md border-border/60 bg-muted/60 px-1.5 py-0 text-[10px] font-medium text-muted-foreground"
@@ -136,15 +146,11 @@ export function SessionsTable({ sessions, isLoading = false, isRevoking = false,
                           status.className
                         )}
                       >
-                        <span
-                          className={cn("h-1.5 w-1.5 rounded-full", status.dot)}
-                        />
+                        <span className={cn("h-1.5 w-1.5 rounded-full", status.dot)} />
                         {status.label}
                       </Badge>
                     ) : (
-                      <span className="text-xs text-muted-foreground">
-                        {status.label}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{status.label}</span>
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-4 text-right">

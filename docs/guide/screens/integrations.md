@@ -69,8 +69,10 @@ workspace that balances catalog review with configuration and procurement.
 9. Treat secret updates carefully; the drawer explicitly distinguishes regular
    fields from secret fields that may already be configured.
 10. Review `Security scopes` before saving so the provider’s access model is
-   understood.
-11. Use `Save Changes` only when the provider configuration is coherent.
+    understood.
+11. Use `Save Changes` only when the provider configuration is coherent. When a
+    secret field changed, review the `Review integration secrets` dialog before
+    applying it.
 12. Use `Request new` when the catalog does not contain the integration you need.
 13. In the request dialog, provide:
     - service name,
@@ -99,6 +101,8 @@ Use this safe integrations workflow when you want fewer misconfigurations:
   will be allowed to do or read.
 - Secret fields should be handled differently from plain text fields; the drawer
   already models that distinction explicitly.
+- Secret review dialogs show provider and field labels only. They must not echo
+  the submitted secret value.
 - `Request new` is part of governance. It keeps the product from turning into a
   one-off unmanaged integration layer.
 
@@ -114,7 +118,8 @@ Use this safe integrations workflow when you want fewer misconfigurations:
   values.
 - A field is already configured but should change:
   update the field intentionally; only secret fields stay masked behind
-  `Update secret`, while plain text and URL fields remain visible.
+  `Update secret`, while plain text and URL fields remain visible. Secret
+  updates require the extra review dialog.
 - Too many services look relevant:
   filter by category first, then compare description and scope expectations.
 

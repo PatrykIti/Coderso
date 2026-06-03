@@ -18,7 +18,7 @@ entries. It is where you monitor SEO scores, filter weak items, run a full-site
 audit, and open a focused editor for title and description updates.
 
 In the current UI, this screen includes:
-- a `Global Scan` score badge,
+- an audit status badge,
 - a page search field,
 - `Run Full Audit`,
 - score-health filters:
@@ -47,7 +47,7 @@ combines:
 # Instruction
 
 1. Open `SEO Manager`.
-2. Start with the `Global Scan` badge and the page-count summary to understand
+2. Start with the audit status badge and the page-count summary to understand
    overall health.
 3. Use the search field when you already know the page title or route you want
    to inspect.
@@ -67,7 +67,6 @@ combines:
    - search engine preview,
    - meta title field and character counter,
    - meta description field and character counter,
-   - focus keywords area,
    - analysis status and notes.
 8. Use `Discard` when you only needed to inspect the current values.
 9. Use `Update SEO` when the title or description changes are ready.
@@ -75,9 +74,8 @@ combines:
     library.
 11. In the audit dialog, review the available checks:
     - `Meta titles & descriptions`
-    - `Open Graph & social cards`
-    - `Internal links`
-    - `Performance snapshot`
+    - `Canonical links`
+    - `Robots directives`
 12. Treat the audit as a heavier site-wide operation, not a casual click.
 
 Use this safe SEO workflow when you want fewer publishing mistakes:
@@ -93,12 +91,14 @@ Use this safe SEO workflow when you want fewer publishing mistakes:
   help choose whether to work broad-first or fix the worst pages first.
 - `Quick SEO Edit` is intentionally narrow. It focuses on high-value metadata
   corrections without turning the screen into a full content editor.
+- Saving in `Quick SEO Edit` updates the public page metadata used for the
+  published HTML title, meta description, canonical URL, and robots directives.
 - The search engine preview is one of the most useful parts of the drawer
   because it shows the likely search-result impression before you save.
 - `Missing assets` in social preview status means SEO work is not only about
   text fields; preview media readiness still matters.
-- Audit checks have different cost and value. A full-site performance snapshot
-  is a more operational decision than a simple metadata validation pass.
+- Audit checks are scoped to the metadata checks currently supported by the
+  backend audit service.
 
 # Troubleshooting
 

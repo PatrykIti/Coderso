@@ -1,6 +1,7 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import { resolveClearableCssColorValue } from "./clearableStyle";
 
 export const dividerSpaceTokens = [
   "none",
@@ -30,6 +31,22 @@ export const dividerLineStyleTokens = ["solid", "dashed", "dotted"] as const;
 export const dividerOpacityTokens = ["100", "75", "50", "25"] as const;
 export const dividerDashPatternTokens = ["browser", "short", "wide"] as const;
 export const dividerVisibilityTokens = ["line", "spacer-only"] as const;
+const transparentKeywordPattern = "[tT][rR][aA][nN][sS][pP][aA][rR][eE][nN][tT]";
+const currentColorKeywordPattern = "[cC][uU][rR][rR][eE][nN][tT][cC][oO][lL][oO][rR]";
+const inheritKeywordPattern = "[iI][nN][hH][eE][rR][iI][tT]";
+const dividerColorValueSchemaPattern = [
+  "^\\s*(?:",
+  "#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})",
+  "|var\\(\\s*--color-[a-zA-Z0-9_-]+\\s*\\)",
+  "|[rR][gG][bB][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
+  "|[hH][sS][lL][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?(?:deg)?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
+  `|${transparentKeywordPattern}|${currentColorKeywordPattern}|${inheritKeywordPattern}`,
+  ")?\\s*$",
+].join("");
+const dividerColorValueSchema = {
+  type: "string",
+  pattern: dividerColorValueSchemaPattern,
+} as const;
 
 export type DividerVariantId = "line" | "dashed" | "label-center";
 export type DividerWidthMode = "full" | "container" | "custom";
@@ -179,14 +196,14 @@ export const dividerSchema = {
   additionalProperties: false,
   properties: {
     label: { type: "string" },
-    labelColor: { type: "string" },
+    labelColor: dividerColorValueSchema,
     labelSize: { enum: dividerLabelSizeTokens },
     labelWeight: { enum: dividerLabelWeightTokens },
     labelTransform: { enum: dividerLabelTransformTokens },
     labelLetterSpacing: { enum: dividerLabelLetterSpacingTokens },
     labelGap: { enum: dividerLabelGapTokens },
     thickness: { type: "number" },
-    color: { type: "string" },
+    color: dividerColorValueSchema,
     width: { enum: ["full", "container", "custom"] },
     containerWidth: { enum: dividerContainerWidthTokens },
     customWidth: { type: "string" },
@@ -319,7 +336,7 @@ const dividerDashPatternValueMap: Record<DividerDashPattern, { dash: number; gap
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+const hexColorPattern = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const pxPattern = /^\d+(?:\.\d+)?px$/i;
 const numberPattern = /^\d+(?:\.\d+)?$/;
 const cssLengthPattern = /^\d+(?:\.\d+)?(?:px|rem|em|%)$/i;
@@ -357,8 +374,12 @@ const resolveEnumToken = <T extends readonly string[]>(
   fallback: T[number]
 ): T[number] => (tokens.includes(value as T[number]) ? (value as T[number]) : fallback);
 
-const resolveString = (value: string | undefined, fallback: string) =>
-  typeof value === "string" && value.trim().length > 0 ? value : fallback;
+export function normalizeDividerColorValue(value: unknown): string | undefined {
+  return resolveClearableCssColorValue(value);
+}
+
+const resolveColorString = (value: string | undefined, fallback: string) =>
+  normalizeDividerColorValue(value) ?? fallback;
 
 export function resolveDividerVariant(variant: string): DividerVariantId {
   if (variant === "dashed" || variant === "label-center") return variant;
@@ -464,11 +485,11 @@ function resolveDividerWidthCss(
 
 export function normalizeDividerData(data: DividerData, variant: string = "line"): DividerData {
   const resolvedVariant = resolveDividerVariant(variant);
-  const color = resolveString(data.color, dividerDefaults.color ?? "var(--color-border)");
+  const color = resolveColorString(data.color, dividerDefaults.color ?? "var(--color-border)");
 
   return {
     label: typeof data.label === "string" ? data.label : (dividerDefaults.label ?? ""),
-    labelColor: resolveString(data.labelColor, color),
+    labelColor: resolveColorString(data.labelColor, color),
     labelSize: resolveEnumToken(data.labelSize, dividerLabelSizeTokens, "xs"),
     labelWeight: resolveEnumToken(data.labelWeight, dividerLabelWeightTokens, "medium"),
     labelTransform: resolveEnumToken(data.labelTransform, dividerLabelTransformTokens, "uppercase"),
@@ -548,7 +569,7 @@ export function DividerBlock({ data, variant }: { data: DividerData; variant: st
   const normalized = normalizeDividerData(data, variant);
   const label = (normalized.label ?? "").trim();
   const thickness = normalized.thickness ?? 1;
-  const color = normalized.color ?? "var(--color-border)";
+  const color = normalizeDividerColorValue(normalized.color) ?? "var(--color-border)";
   const widthMode = normalized.width ?? "full";
   const containerWidth = normalized.containerWidth ?? "md";
   const widthCss = resolveDividerWidthCss(widthMode, containerWidth, normalized.customWidth);
@@ -560,7 +581,7 @@ export function DividerBlock({ data, variant }: { data: DividerData; variant: st
   const marginTop = normalized.marginTop ?? "6";
   const marginBottom = normalized.marginBottom ?? "6";
   const hasLabel = visibility === "line" && resolvedVariant === "label-center" && label.length > 0;
-  const labelColor = normalized.labelColor ?? color;
+  const labelColor = normalizeDividerColorValue(normalized.labelColor) ?? color;
   const labelGap = normalized.labelGap ?? "3";
   const constrainedWidthClass = widthMode === "full" ? "w-full" : dividerAlignmentClassMap[align];
   const constrainedWidthStyle =

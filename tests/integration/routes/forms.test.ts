@@ -1,9 +1,6 @@
 import { expect, test } from "bun:test";
 
-import {
-  mapFormError,
-  registerFormsRoutes,
-} from "../../../core/server/routes/formsRoutes";
+import { mapFormError, registerFormsRoutes } from "../../../core/server/routes/formsRoutes";
 import {
   formCreateSchema,
   formFieldsSchema,
@@ -79,6 +76,7 @@ test("mapFormError returns stable API errors for known form domain failures", ()
     ["form_payload_invalid", "form_payload_invalid", 400],
     ["form_payload_unknown_field", "form_payload_unknown_field", 400],
     ["form_payload_required", "form_payload_required", 400],
+    ["form_success_redirect_url_invalid", "form_success_redirect_url_invalid", 400],
   ];
 
   for (const [message, code, status] of cases) {

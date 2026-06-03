@@ -39,6 +39,8 @@ styling.
 - preview status and refresh
 - read-only product behavior, source, preview, and surface summaries
 - read-only contract summary
+- saved manual selections are reported as inactive when `curation.mode` is
+  `query`; Advanced reports active selected products only in manual mode
 
 Notes:
 
@@ -73,6 +75,9 @@ Notes:
 - `view-all` pagination renders only when a destination is configured and the
   resolved total is greater than the shown cards. Hidden states are exposed as
   `missing_destination` or `all_products_visible` in runtime/editor guidance.
+- The 31-05 Product Gallery smoke fixture seeds media-backed products, configures
+  `/fixture-products` card links, uses a shown limit smaller than total, and
+  verifies admin/public images, ready links, and visible view-all output.
 - Editor previews never render raw media IDs. Media diagnostics stay
   backend/support-owned instead of becoming beginner-facing card controls.
 - Legacy `fields.showMediaHint` payloads are accepted for backward

@@ -23,10 +23,7 @@ import { cn } from "@/lib/utils";
 import type { RoleSummary } from "../roles/types";
 import type { UserStatus, UserSummary } from "./types";
 
-const statusMeta: Record<
-  UserStatus,
-  { label: string; className: string; dot: string }
-> = {
+const statusMeta: Record<UserStatus, { label: string; className: string; dot: string }> = {
   active: {
     label: "Active",
     className: "text-emerald-600",
@@ -68,6 +65,11 @@ export type UserListProps = {
   selectedId?: string;
   protectedIds?: string[];
   canManageUsers?: boolean;
+  canEditUsers?: boolean;
+  canManageUserLifecycle?: boolean;
+  canResetPassword?: boolean;
+  roleDetailsUnavailableReason?: string;
+  resetPasswordUnavailableReason?: string;
   onSelect: (id: string) => void;
   onViewProfile?: (user: UserSummary) => void;
   onEdit: (user: UserSummary) => void;
@@ -82,6 +84,11 @@ export function UserList({
   selectedId,
   protectedIds = [],
   canManageUsers = true,
+  canEditUsers,
+  canManageUserLifecycle,
+  canResetPassword,
+  roleDetailsUnavailableReason,
+  resetPasswordUnavailableReason,
   onSelect,
   onViewProfile,
   onEdit,
@@ -90,6 +97,9 @@ export function UserList({
   onDelete,
 }: UserListProps) {
   const roleMap = new Map(roles.map((role) => [role.id, role.name]));
+  const canEdit = canEditUsers ?? canManageUsers;
+  const canManageLifecycle = canManageUserLifecycle ?? canManageUsers;
+  const canReset = canResetPassword ?? canManageUsers;
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -108,9 +118,9 @@ export function UserList({
             const status = statusMeta[user.status];
             const isSelected = selectedId === user.id;
             const isProtected = protectedIds.includes(user.id);
-            const roleNames = user.roleIds.map(
-              (roleId) => roleMap.get(roleId) ?? roleId
-            );
+            const roleNames = roleDetailsUnavailableReason
+              ? []
+              : user.roleIds.map((roleId) => roleMap.get(roleId) ?? roleId);
             const overflowRoles = Math.max(roleNames.length - 2, 0);
 
             return (
@@ -119,8 +129,7 @@ export function UserList({
                 onClick={() => onSelect(user.id)}
                 className={cn(
                   "cursor-pointer transition-colors",
-                  isSelected &&
-                    "border-l-4 border-l-primary bg-primary/5",
+                  isSelected && "border-l-4 border-l-primary bg-primary/5",
                   !isSelected && "hover:bg-muted/30"
                 )}
               >
@@ -130,12 +139,8 @@ export function UserList({
                       <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {user.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {user.email}
-                      </p>
+                      <p className="text-sm font-semibold text-foreground">{user.name}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
                   </div>
                 </TableCell>
@@ -147,9 +152,7 @@ export function UserList({
                         <Badge
                           key={roleName}
                           variant="outline"
-                          className={
-                            roleBadgeClasses[roleId] ?? fallbackRoleClass
-                          }
+                          className={roleBadgeClasses[roleId] ?? fallbackRoleClass}
                         >
                           {roleName}
                         </Badge>
@@ -160,11 +163,17 @@ export function UserList({
                         +{overflowRoles}
                       </Badge>
                     ) : null}
-                    {isProtected ? (
+                    {roleDetailsUnavailableReason && user.roleIds.length > 0 ? (
                       <Badge
-                        variant="secondary"
-                        className="text-xs text-amber-700"
+                        variant="outline"
+                        className="border-dashed text-xs"
+                        title={roleDetailsUnavailableReason}
                       >
+                        Role details unavailable
+                      </Badge>
+                    ) : null}
+                    {isProtected ? (
+                      <Badge variant="secondary" className="text-xs text-amber-700">
                         Last admin
                       </Badge>
                     ) : null}
@@ -173,14 +182,10 @@ export function UserList({
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <span className={cn("h-2 w-2 rounded-full", status.dot)} />
-                    <span className={cn("text-sm", status.className)}>
-                      {status.label}
-                    </span>
+                    <span className={cn("text-sm", status.className)}>{status.label}</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {user.lastActive}
-                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{user.lastActive}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -194,30 +199,29 @@ export function UserList({
                       >
                         View profile
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={!canManageUsers}
-                        onClick={() => onEdit(user)}
-                      >
+                      <DropdownMenuItem disabled={!canEdit} onClick={() => onEdit(user)}>
                         Edit user
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        disabled={!canManageUsers}
+                        disabled={!canReset || Boolean(resetPasswordUnavailableReason)}
+                        title={resetPasswordUnavailableReason}
+                        data-no-op-control={
+                          resetPasswordUnavailableReason ? "users-reset-password" : undefined
+                        }
                         onClick={() => onResetPassword(user)}
                       >
                         Reset password
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        disabled={!canManageUsers}
+                        disabled={!canManageLifecycle}
                         onClick={() => onToggleStatus(user)}
                       >
-                        {user.status === "inactive"
-                          ? "Activate user"
-                          : "Deactivate user"}
+                        {user.status === "inactive" ? "Activate user" : "Deactivate user"}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         variant="destructive"
-                        disabled={!canManageUsers || isProtected}
+                        disabled={!canManageLifecycle || isProtected}
                         onClick={() => onDelete(user)}
                       >
                         Delete user

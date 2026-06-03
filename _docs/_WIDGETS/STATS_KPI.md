@@ -45,6 +45,9 @@ Notes:
 - Stats KPI owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - Metric management includes drag-friendly reorder, Move up/Move down fallback, and confirmed removal.
 - Per-metric links stay presentational and reuse the shared safe-href contract.
+- `Metric accent color` intentionally overrides global `Value color` for that
+  metric's value, trend, icon, and metric link. Visual explains this priority on
+  the `Value color` control.
 - `inline` has no card boxes. Card background and card border controls are
   shown as read-only/inactive in `inline`, while icon surface controls remain
   active because they still render.

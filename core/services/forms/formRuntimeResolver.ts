@@ -86,9 +86,26 @@ export async function resolveFormRuntimeData(
     };
   }
 
-  const fields = await listFormFields(formId);
   const submissionAccess = resolveFormSubmissionAccess(form.submissionAccess);
   const settings = normalizeFormSettings(form.settings);
+  if (!options.preview && submissionAccess === "internal") {
+    return {
+      formId,
+      formName: form.name,
+      description: form.description ?? null,
+      status: form.status,
+      successMessage: form.successMessage ?? null,
+      successRedirectUrl: form.successRedirectUrl ?? null,
+      settings,
+      submissionAccess,
+      submissionNonce: null,
+      botProtection: null,
+      fields: [],
+      error: "public_submission_disabled",
+    };
+  }
+
+  const fields = await listFormFields(formId);
   const botProtection = await resolveBotProtectionProjection(submissionAccess);
   return {
     formId,

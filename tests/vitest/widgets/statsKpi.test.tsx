@@ -300,6 +300,50 @@ test("stats kpi renders safe links but blocks unsafe href output", () => {
   expect(unsafeHtml).toContain('data-stats-kpi-link="false"');
 });
 
+test("stats kpi metric accent overrides global value color for value trend icon and link", () => {
+  const html = renderToString(
+    <StatsKpiBlock
+      data={{
+        ...statsKpiDefaults,
+        items: [
+          {
+            id: "accented",
+            value: "88",
+            label: "Accented",
+            icon: "A",
+            accentColor: "#ff0000",
+            trend: { label: "+31%", direction: "up" },
+            link: { href: "/accented", label: "Open accented" },
+          },
+          {
+            id: "global",
+            value: "42",
+            label: "Global",
+            icon: "G",
+            trend: { label: "+5%", direction: "up" },
+            link: { href: "/global", label: "Open global" },
+          },
+        ],
+        style: {
+          ...statsKpiDefaults.style,
+          valueColor: "#00ff00",
+        },
+      }}
+      variant="cards"
+    />
+  );
+
+  const firstItemHtml = html.slice(
+    html.indexOf('data-stats-kpi-item="1"'),
+    html.indexOf('data-stats-kpi-item="2"')
+  );
+  const secondItemHtml = html.slice(html.indexOf('data-stats-kpi-item="2"'));
+
+  expect(firstItemHtml).toContain("color:#ff0000");
+  expect(firstItemHtml).not.toContain("color:#00ff00");
+  expect(secondItemHtml).toContain("color:#00ff00");
+});
+
 test("stats kpi cleared section and card surfaces omit inline styles", () => {
   const normalized = normalizeStatsKpiData({
     ...statsKpiDefaults,

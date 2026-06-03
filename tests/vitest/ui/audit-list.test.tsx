@@ -8,6 +8,6 @@ test("AuditList renders filters and table", () => {
   const html = renderAdminUi(<AuditList />);
 
   expect(html).toContain("Audit Logs");
-  expect(html).toContain("Export CSV");
+  expect(html).toContain("Export");
   expect(html).toContain("Loading audit logs");
 });

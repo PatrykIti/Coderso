@@ -28,6 +28,11 @@ In the current UI, this route includes:
 - an invite dialog,
 - a role summary section at the bottom of the same route.
 
+What you see depends on your admin permissions. With `users:read` you can
+review users. With `roles:read` you can review roles and permission summaries.
+If you only have one of those permissions, the other half of the screen is
+shown as unavailable instead of silently loading or submitting forbidden data.
+
 # Medium
 
 Use Users when the main question is about people and their access state, not
@@ -49,6 +54,8 @@ screen.
    - search by name or email,
    - role filter,
    - status filter.
+   The advanced filter icon is intentionally unavailable; use these visible
+   filters for the current Users list.
 3. Review the user table in order:
    - user identity,
    - role badges,
@@ -59,7 +66,7 @@ screen.
 5. Use the right-side details panel to review:
    - last active,
    - permissions summary,
-   - email notification toggles,
+   - read-only email notification state,
    - account controls,
    - two-factor state.
 6. Treat the `Last admin` badge carefully.
@@ -69,14 +76,24 @@ screen.
    - email address,
    - workspace role.
 9. Review the permissions preview before sending the invitation.
-10. Use `Send Invitation` only after the selected role is intentional.
+10. Use `Send Invitation` only after the selected role is intentional. The
+    invited user receives a single-use set-password email and starts as
+    `pending`.
 11. Use the row action menu when you need lifecycle actions such as:
     - view profile,
     - edit user,
     - reset password,
     - activate/deactivate,
     - delete.
-12. Treat the bottom `Roles` section as supporting context for user assignment,
+12. Review the confirmation dialog before destructive or high-risk actions:
+    - deactivate user,
+    - delete user,
+    - delete role,
+    - duplicate a role with sensitive permissions,
+    - create or edit a role so it grants full access or sensitive write/security
+      permissions,
+    - reactivate a user when role risk is high or cannot be verified.
+13. Treat the bottom `Roles` section as supporting context for user assignment,
     not as the full permissions-matrix replacement.
 
 Use this safe user-management order when you want fewer access mistakes:
@@ -95,8 +112,17 @@ Use this safe user-management order when you want fewer access mistakes:
   access work often needs both contexts together.
 - Invitation preview is more than a convenience. It helps stop obvious
   over-permissioning before the user is even created.
-- The route’s details panel exposes notification and two-factor context, which
-  makes it stronger than a simple members list.
+- `Reset password` sends a single-use set-password email. It does not reveal or
+  cache the token in the browser.
+- Deactivate, delete, delete-role, and high-risk duplicate actions require an
+  explicit confirmation that names the target user or role.
+- Role creation and role edits reuse the same high-risk confirmation as Roles
+  Matrix when a change grants full access or sensitive permissions.
+- The route’s details panel exposes read-only notification and two-factor
+  context, which makes it stronger than a simple members list without implying
+  local notification preference writes.
+- Missing role-read access hides role filters and role names/details. Missing
+  user-read access hides the user table and invite entry points.
 
 # Troubleshooting
 
@@ -109,6 +135,15 @@ Use this safe user-management order when you want fewer access mistakes:
   check whether the account is marked `Last admin`.
 - The invite role feels uncertain:
   use the permissions preview to compare expected capabilities before sending.
+- A role editor high-risk confirmation appears:
+  review the named role and scopes; cancel keeps the role draft unchanged.
+- Invite or reset cannot send email:
+  ask a settings admin to configure Settings -> Email before retrying.
+- Role details are unavailable:
+  ask for `roles:read` if your work requires role names, filters, or permission
+  summaries.
+- The user table is unavailable:
+  ask for `users:read` if your work requires person-level access review.
 
 # Decision Guide
 
@@ -128,13 +163,18 @@ Use this safe user-management order when you want fewer access mistakes:
 2. Confirm status and role filters are intentional.
 3. Review the details panel before changing access.
 4. Confirm invitation role choice before sending.
-5. Treat `Last admin` state carefully.
+5. Treat full-access, high-risk, and `Last admin` state carefully.
 
 # Security
 
 - Users is an authenticated admin surface and should only be used by
   high-trust administrators responsible for workspace access.
+- The route uses the current admin's permission snapshot. Read-only and
+  partial-read states are intentional, and write actions stay unavailable until
+  the matching write permission is present.
 - Invitation, status changes, password resets, and deletion are access-control
   actions, not just profile edits.
+- Admins do not type another user's password. Invite and reset both use
+  TTL-bound, single-use set-password emails.
 - Be especially careful with last-admin and high-privilege accounts, because
   those changes can affect the whole workspace’s recoverability.

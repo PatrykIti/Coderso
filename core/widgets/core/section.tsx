@@ -11,7 +11,11 @@ import type {
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
-import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import {
+  compactStyle,
+  resolveClearableCssColorValue,
+  resolveClearableStyleValue,
+} from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type SectionVariantId = "default" | "contained" | "bleed";
@@ -1125,9 +1129,9 @@ export function SectionBlock({
   );
   const heading = normalized.heading ?? sectionDefaults.heading!;
   const layout = normalized.layout ?? sectionDefaults.layout!;
-  const headingLabelColor = resolveClearableStyleValue(heading.labelColor);
-  const headingTitleColor = resolveClearableStyleValue(heading.titleColor);
-  const headingDescriptionColor = resolveClearableStyleValue(heading.descriptionColor);
+  const headingLabelColor = resolveClearableCssColorValue(heading.labelColor);
+  const headingTitleColor = resolveClearableCssColorValue(heading.titleColor);
+  const headingDescriptionColor = resolveClearableCssColorValue(heading.descriptionColor);
   const semantics = normalized.semantics ?? sectionDefaults.semantics!;
   const style = normalized.style ?? sectionDefaults.style!;
   const resolvedShadow = resolveRenderedSectionShadow(resolvedVariant, style.shadow);
@@ -1188,8 +1192,9 @@ export function SectionBlock({
   );
   const regionItemClass = regionItemClassMap[layout.regionFlow ?? "stack"];
 
-  const hasGradient =
-    (style.gradientFrom ?? "").trim().length > 0 && (style.gradientTo ?? "").trim().length > 0;
+  const gradientFrom = resolveClearableCssColorValue(style.gradientFrom);
+  const gradientTo = resolveClearableCssColorValue(style.gradientTo);
+  const hasGradient = Boolean(gradientFrom && gradientTo);
   const hasHeading =
     (heading.label ?? "").trim().length > 0 ||
     (heading.title ?? "").trim().length > 0 ||
@@ -1226,11 +1231,11 @@ export function SectionBlock({
 
   const surfaceStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableStyleValue(style.backgroundColor),
+      backgroundColor: resolveClearableCssColorValue(style.backgroundColor),
       backgroundImage: hasGradient
-        ? `linear-gradient(${resolveGradientAngle(style.gradientAngle)}deg, ${style.gradientFrom}, ${style.gradientTo})`
+        ? `linear-gradient(${resolveGradientAngle(style.gradientAngle)}deg, ${gradientFrom}, ${gradientTo})`
         : undefined,
-      borderColor: style.borderColor ?? "var(--color-border)",
+      borderColor: resolveClearableCssColorValue(style.borderColor) ?? "var(--color-border)",
       borderStyle: "solid",
       borderWidth: borderWidthValueMap[style.borderWidth ?? "0"] ?? "0px",
     }) ?? {};
@@ -1316,7 +1321,7 @@ export function SectionBlock({
               data-section-background-overlay="true"
               className={overlayLayerClass}
               style={{
-                backgroundColor: style.overlayColor ?? "#000000",
+                backgroundColor: resolveClearableCssColorValue(style.overlayColor) ?? "#000000",
                 opacity: overlayOpacity / 100,
               }}
             />

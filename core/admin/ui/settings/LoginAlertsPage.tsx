@@ -26,11 +26,16 @@ import {
   type SecuritySettingsResponse,
 } from "@/services/settingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
 import { LoginAlertsCard } from "./LoginAlertsCard";
 import { SettingsSidebar } from "./SettingsSidebar";
 
 const tabTriggerClassName = "after:bg-primary data-[state=active]:text-primary";
+const loginAlertAdvancedUnavailableReason =
+  "Advanced login alert recipients and brute-force controls are not wired yet. TASK-359-07 owns persistence.";
+const loginAlertTabsUnavailableReason =
+  "Only Login Alerts is wired on this screen. TASK-359-07 owns the remaining security tabs.";
 
 type LoginAlertsFormState = {
   enabled: boolean;
@@ -126,11 +131,13 @@ export function LoginAlertsPage() {
   };
 
   const busy = isLoading || isSaving;
+  const isDirty = settings ? JSON.stringify(form) !== JSON.stringify(toFormState(settings)) : false;
+  useRegisterSettingsDirty(isDirty);
 
   return (
     <SettingsShell
       activeHref="/admin/settings"
-      sidebar={<SettingsSidebar activeId="security" />}
+      sidebar={<SettingsSidebar activeId="login-alerts" />}
       showSearch={false}
       breadcrumbs={["Security", "Login Alerts"]}
       topbarActions={
@@ -163,19 +170,43 @@ export function LoginAlertsPage() {
         <Tabs defaultValue="login-alerts" className="flex flex-1 flex-col">
           <div className="border-b bg-background px-6">
             <TabsList variant="line" className="h-12 gap-6">
-              <TabsTrigger value="general" className={tabTriggerClassName}>
+              <TabsTrigger
+                value="general"
+                className={tabTriggerClassName}
+                disabled
+                title={loginAlertTabsUnavailableReason}
+                data-no-op-control="settings-login-alerts-tab-general"
+              >
                 General
               </TabsTrigger>
-              <TabsTrigger value="active-sessions" className={tabTriggerClassName}>
+              <TabsTrigger
+                value="active-sessions"
+                className={tabTriggerClassName}
+                disabled
+                title={loginAlertTabsUnavailableReason}
+                data-no-op-control="settings-login-alerts-tab-active-sessions"
+              >
                 Active Sessions
               </TabsTrigger>
               <TabsTrigger value="login-alerts" className={tabTriggerClassName}>
                 Login Alerts
               </TabsTrigger>
-              <TabsTrigger value="audit-log" className={tabTriggerClassName}>
+              <TabsTrigger
+                value="audit-log"
+                className={tabTriggerClassName}
+                disabled
+                title={loginAlertTabsUnavailableReason}
+                data-no-op-control="settings-login-alerts-tab-audit-log"
+              >
                 Audit Log
               </TabsTrigger>
-              <TabsTrigger value="two-factor" className={tabTriggerClassName}>
+              <TabsTrigger
+                value="two-factor"
+                className={tabTriggerClassName}
+                disabled
+                title={loginAlertTabsUnavailableReason}
+                data-no-op-control="settings-login-alerts-tab-two-factor"
+              >
                 Two-Factor Auth
               </TabsTrigger>
             </TabsList>
@@ -248,7 +279,10 @@ export function LoginAlertsPage() {
                       min={3}
                       max={15}
                       step={1}
+                      disabled
                       aria-label="Failed attempts threshold"
+                      title={loginAlertAdvancedUnavailableReason}
+                      data-no-op-control="settings-login-alerts-brute-force-threshold"
                     />
                     <p className="text-xs text-muted-foreground italic">
                       User will be temporarily locked out for 30 minutes after reaching the
@@ -277,6 +311,9 @@ export function LoginAlertsPage() {
                       description="Send notifications only to account administrators."
                       checked
                       switchSize="sm"
+                      disabled
+                      unavailableReason={loginAlertAdvancedUnavailableReason}
+                      noOpControlId="settings-login-alerts-admin-only"
                       className="border-muted/60 bg-muted/40 py-4 shadow-none"
                       contentClassName="px-4"
                     />
@@ -290,6 +327,9 @@ export function LoginAlertsPage() {
                         <Input
                           className="pl-9"
                           placeholder="security@company.com, admin@company.com"
+                          disabled
+                          title={loginAlertAdvancedUnavailableReason}
+                          data-no-op-control="settings-login-alerts-custom-recipients"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -319,14 +359,27 @@ export function LoginAlertsPage() {
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Email</span>
                       </div>
-                      <Switch size="sm" defaultChecked />
+                      <Switch
+                        size="sm"
+                        defaultChecked
+                        disabled
+                        aria-label="Email login alerts channel unavailable"
+                        title={loginAlertAdvancedUnavailableReason}
+                        data-no-op-control="settings-login-alerts-email-channel"
+                      />
                     </div>
                     <div className="flex items-center justify-between rounded-lg border bg-background px-4 py-3">
                       <div className="flex items-center gap-3">
                         <Webhook className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Webhook</span>
                       </div>
-                      <Switch size="sm" />
+                      <Switch
+                        size="sm"
+                        disabled
+                        aria-label="Webhook login alerts channel unavailable"
+                        title={loginAlertAdvancedUnavailableReason}
+                        data-no-op-control="settings-login-alerts-webhook-channel"
+                      />
                     </div>
                   </div>
                 </CardContent>
@@ -337,10 +390,23 @@ export function LoginAlertsPage() {
 
         <div className="sticky bottom-0 mt-auto border-t bg-background/80 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">Unsaved changes in Security settings</p>
+            <p className="text-sm text-muted-foreground">{loginAlertAdvancedUnavailableReason}</p>
             <div className="flex items-center gap-2">
-              <Button variant="ghost">Discard</Button>
-              <Button>Save Changes</Button>
+              <Button
+                variant="ghost"
+                disabled
+                title={loginAlertAdvancedUnavailableReason}
+                data-no-op-control="settings-login-alerts-sticky-discard"
+              >
+                Discard
+              </Button>
+              <Button
+                disabled
+                title={loginAlertAdvancedUnavailableReason}
+                data-no-op-control="settings-login-alerts-sticky-save"
+              >
+                Save Changes
+              </Button>
             </div>
           </div>
         </div>

@@ -69,6 +69,25 @@ export type EmailDeliveryLog = {
   createdAt: Date;
 };
 
+export type SystemEmailMessage = {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+};
+
+type ConfiguredEmail = {
+  provider: "smtp";
+  from: string;
+  transport: {
+    host: string;
+    port: number;
+    secure: boolean;
+    user: string;
+    password: string;
+  };
+};
+
 const EMAIL_KEYS = {
   provider: "email.provider",
   smtpHost: "email.smtp.host",
@@ -120,14 +139,12 @@ const normalizeBoolean = (value: unknown) => {
   throw new Error("email_settings_invalid");
 };
 
-const getStringValue = (value: unknown) =>
-  typeof value === "string" ? value : null;
+const getStringValue = (value: unknown) => (typeof value === "string" ? value : null);
 
 const getNumberValue = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
-const getBooleanValue = (value: unknown) =>
-  typeof value === "boolean" ? value : null;
+const getBooleanValue = (value: unknown) => (typeof value === "boolean" ? value : null);
 
 const buildUpdatedAt = (rows: Array<{ updatedAt: Date }>) => {
   if (!rows.length) return null;
@@ -136,10 +153,7 @@ const buildUpdatedAt = (rows: Array<{ updatedAt: Date }>) => {
 
 async function loadEmailRecords() {
   try {
-    const rows = await db
-      .select()
-      .from(settings)
-      .where(inArray(settings.key, ALL_KEYS));
+    const rows = await db.select().from(settings).where(inArray(settings.key, ALL_KEYS));
     const map = new Map(rows.map((row) => [row.key, row]));
     return { map, updatedAt: buildUpdatedAt(rows) };
   } catch (error) {
@@ -159,16 +173,12 @@ const resolveSecret = (value: unknown) => {
 const resolvePasswordConfigured = (value: unknown) =>
   typeof value === "string" || isEncryptedSecret(value);
 
-const buildPublicSettings = (
-  map: Map<string, { value: unknown }>
-): EmailSettingsPublic => {
+const buildPublicSettings = (map: Map<string, { value: unknown }>): EmailSettingsPublic => {
   const provider =
-    (getStringValue(map.get(EMAIL_KEYS.provider)?.value) as "smtp") ??
-    DEFAULT_PROVIDER;
+    (getStringValue(map.get(EMAIL_KEYS.provider)?.value) as "smtp") ?? DEFAULT_PROVIDER;
   const smtpHost = getStringValue(map.get(EMAIL_KEYS.smtpHost)?.value);
   const smtpPort = getNumberValue(map.get(EMAIL_KEYS.smtpPort)?.value) ?? DEFAULT_PORT;
-  const smtpSecure =
-    getBooleanValue(map.get(EMAIL_KEYS.smtpSecure)?.value) ?? false;
+  const smtpSecure = getBooleanValue(map.get(EMAIL_KEYS.smtpSecure)?.value) ?? false;
   const smtpUser = getStringValue(map.get(EMAIL_KEYS.smtpUser)?.value);
   const smtpPasswordValue = map.get(EMAIL_KEYS.smtpPassword)?.value;
   const fromName = getStringValue(map.get(EMAIL_KEYS.fromName)?.value);
@@ -195,16 +205,12 @@ const buildPublicSettings = (
   };
 };
 
-const buildInternalSettings = (
-  map: Map<string, { value: unknown }>
-): EmailSettingsInternal => {
+const buildInternalSettings = (map: Map<string, { value: unknown }>): EmailSettingsInternal => {
   const provider =
-    (getStringValue(map.get(EMAIL_KEYS.provider)?.value) as "smtp") ??
-    DEFAULT_PROVIDER;
+    (getStringValue(map.get(EMAIL_KEYS.provider)?.value) as "smtp") ?? DEFAULT_PROVIDER;
   const smtpHost = getStringValue(map.get(EMAIL_KEYS.smtpHost)?.value);
   const smtpPort = getNumberValue(map.get(EMAIL_KEYS.smtpPort)?.value) ?? DEFAULT_PORT;
-  const smtpSecure =
-    getBooleanValue(map.get(EMAIL_KEYS.smtpSecure)?.value) ?? false;
+  const smtpSecure = getBooleanValue(map.get(EMAIL_KEYS.smtpSecure)?.value) ?? false;
   const smtpUser = getStringValue(map.get(EMAIL_KEYS.smtpUser)?.value);
   const smtpPassword = resolveSecret(map.get(EMAIL_KEYS.smtpPassword)?.value);
   const fromName = getStringValue(map.get(EMAIL_KEYS.fromName)?.value);
@@ -365,7 +371,12 @@ async function logDelivery(entry: Omit<EmailDeliveryLog, "id" | "createdAt">) {
     .orderBy(desc(emailDeliveryLogs.createdAt))
     .offset(50);
   if (rows.length > 0) {
-    await db.delete(emailDeliveryLogs).where(inArray(emailDeliveryLogs.id, rows.map((row) => row.id)));
+    await db.delete(emailDeliveryLogs).where(
+      inArray(
+        emailDeliveryLogs.id,
+        rows.map((row) => row.id)
+      )
+    );
   }
 
   return row ?? null;
@@ -380,58 +391,86 @@ export async function listDeliveryLogs(limit = 50) {
   return rows as EmailDeliveryLog[];
 }
 
+const resolveConfiguredEmail = (settings: EmailSettingsInternal): ConfiguredEmail => {
+  if (
+    !settings.smtp.host ||
+    !settings.smtp.port ||
+    !settings.smtp.user ||
+    !settings.smtp.password ||
+    !settings.from.email
+  ) {
+    throw new Error("email_not_configured");
+  }
+
+  const fromName = settings.from.name ?? "Coderso";
+  return {
+    provider: settings.provider,
+    from: `${fromName} <${settings.from.email}>`,
+    transport: {
+      host: settings.smtp.host,
+      port: settings.smtp.port,
+      secure: settings.smtp.secure,
+      user: settings.smtp.user,
+      password: settings.smtp.password,
+    },
+  };
+};
+
+export async function assertSystemEmailConfigured() {
+  const settings = await getEmailSettingsInternal();
+  resolveConfiguredEmail(settings);
+}
+
+export async function sendSystemEmail(message: SystemEmailMessage) {
+  const trimmed = message.to.trim();
+  if (!trimmed || !trimmed.includes("@")) {
+    throw new Error("email_recipient_invalid");
+  }
+
+  const settings = await getEmailSettingsInternal();
+  const configured = resolveConfiguredEmail(settings);
+  const transport = await createTransport(configured.transport);
+
+  try {
+    const result = await transport.sendMail({
+      from: configured.from,
+      to: trimmed,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+    });
+    await logDelivery({
+      recipient: trimmed,
+      subject: message.subject,
+      status: "delivered",
+      provider: configured.provider,
+      messageId: result.messageId,
+      error: null,
+    });
+    return { ok: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "email_send_failed";
+    await logDelivery({
+      recipient: trimmed,
+      subject: message.subject,
+      status: "failed",
+      provider: configured.provider,
+      messageId: null,
+      error: errorMessage,
+    });
+    throw new Error("email_send_failed");
+  }
+}
+
 export async function sendTestEmail(to: string) {
   const trimmed = to.trim();
   if (!trimmed || !trimmed.includes("@")) {
     throw new Error("email_recipient_invalid");
   }
 
-  const settings = await getEmailSettingsInternal();
-  if (!settings.smtp.host || !settings.smtp.port || !settings.smtp.user || !settings.smtp.password) {
-    throw new Error("email_not_configured");
-  }
-
-  const fromName = settings.from.name ?? "Coderso";
-  const fromEmail = settings.from.email ?? settings.smtp.user;
-  if (!fromEmail) throw new Error("email_not_configured");
-
-  const transport = await createTransport({
-    host: settings.smtp.host,
-    port: settings.smtp.port,
-    secure: settings.smtp.secure,
-    user: settings.smtp.user,
-    password: settings.smtp.password,
-  });
-
-  const subject = "Coderso SMTP test";
-  const payload = {
-    from: `${fromName} <${fromEmail}>`,
+  return sendSystemEmail({
     to: trimmed,
-    subject,
+    subject: "Coderso SMTP test",
     text: "This is a test email from Coderso.",
-  };
-
-  try {
-    const result = await transport.sendMail(payload);
-    await logDelivery({
-      recipient: trimmed,
-      subject,
-      status: "delivered",
-      provider: settings.provider,
-      messageId: result.messageId,
-      error: null,
-    });
-    return { ok: true };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "email_send_failed";
-    await logDelivery({
-      recipient: trimmed,
-      subject,
-      status: "failed",
-      provider: settings.provider,
-      messageId: null,
-      error: message,
-    });
-    throw new Error("email_send_failed");
-  }
+  });
 }

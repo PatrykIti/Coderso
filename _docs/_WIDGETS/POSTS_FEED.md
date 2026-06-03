@@ -29,6 +29,10 @@ Render a ready-to-use feed of posts without building a custom listing query.
   legacy values normalize to empty filters and the editor warns that they were
   cleared.
 - `source.featuredFirst`: optional featured-first ordering for non-manual modes.
+- Advanced source-filter diagnostics report only runtime-active filters for the
+  selected source mode. Saved `source.category` values are preserved as dormant
+  state outside `category` mode, but they are not presented as active filters in
+  `latest`, `featured`, or `manual`.
 - `pagination.mode`: shared Content List pagination contract:
   - `none`
   - `paged`
@@ -97,6 +101,19 @@ Render a ready-to-use feed of posts without building a custom listing query.
 - Advanced has no writable Posts Feed controls.
 - Advanced route capability reports whether cards/CTAs can link or whether
   they render as non-links because no posts list/detail route is resolved.
+
+## Smoke Fixture
+
+- The widget contract smoke harness bootstraps a deterministic Posts Feed
+  fixture through authenticated admin APIs before browser proof:
+  - creates or updates three prefixed fixture posts under `fixture-posts-*`,
+  - prepends an enabled `posts` content route for `/fixture-posts/:slug` while
+    preserving existing route entries,
+  - publishes the posts through the existing admin publish endpoint,
+  - patches `/posts-feed-test-page` with a populated Posts Feed block containing
+    image, tags, author/date, CTA hrefs, motion, and load-more runtime data,
+  - publishes the fixture page so public smoke can prove cards, links, tags,
+    images, and view-all pagination.
 
 ## Manual Selection UX
 
