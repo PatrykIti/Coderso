@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.2.1] - 2026-06-03
+### Added
+- Added public Forms widget submissions through the shared signed nonce/HMAC, bot-protection, strict validation, error mapping, and public-write rate-limit contract.
+- Added deterministic widget smoke/regression coverage and assistant policy coverage for Settings Security subroutes.
+
+### Changed
+- Admin Tools and Admin UI audit surfaces now share cache, notification, loading-state, table, permission, confirmation, export, drawer, and server-backed query/pagination contracts.
+- Widget admin editors now expose more truthful Visual/Wizard/Advanced ownership, dormant-state copy, slot/destination metadata, disabled states, and diagnostics.
+
+### Fixed
+- Fixed Admin Tools regressions in Search, SEO Manager, Analytics, Backups, Import/Export, Redirects, public SEO metadata verification, and cache revisit behavior.
+- Fixed Users, Roles Matrix, Audit Logs, Access Logs, and Settings audit findings for no-op controls, missing confirmations, placeholder behavior, export/pagination drift, secret-safe cache handling, and accessibility gaps.
+- Fixed remaining 31-05 widget audit drifts across public runtimes, unsafe URL/CSS handling, editor truthfulness, booking/form runtime boundaries, and smoke coverage.
+
+### Security
+- Hardened admin RBAC, destructive actions, session revocation, export redaction, Settings cache redaction, public Forms submissions, and booking widget write paths with stricter validation, redaction, nonce, bot-protection, rate-limit, and server-side availability checks.
 ## [1.2.0] - 2026-05-31
 ### Added
 - Detail-page (per-entry detail template) subsystem: document, revision, runtime, binding, and schema services with an internal admin API (CRUD, autosave, preview, publish/unpublish, revision restore) and public rendering on content routes (TASK-190)
