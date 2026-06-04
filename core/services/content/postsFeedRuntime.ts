@@ -1,4 +1,4 @@
-import { resolvePostRuntimeExcerpt } from "../posts/runtime/postBlockRuntimeMapper";
+import { resolvePostRuntimeExcerpt } from "../posts/runtime/postRuntimeExcerpt";
 import {
   postsFeedDefaults,
   normalizePostsFeedData,

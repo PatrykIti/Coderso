@@ -1,13 +1,14 @@
 import type { PostBlockType } from "../editor/postBlockDocument";
-import { coercePostDocument, adaptLegacyDocumentForRuntime } from "../editor/postBlockLegacyAdapter";
 import {
-  postRichTextToPlainText,
-  serializePostRichText,
-} from "../editor/postRichTextSerializer";
+  coercePostDocument,
+  adaptLegacyDocumentForRuntime,
+} from "../editor/postBlockLegacyAdapter";
+import { postRichTextToPlainText, serializePostRichText } from "../editor/postRichTextSerializer";
 import {
   resolvePostStableAnchorId,
   sanitizePostHeadingAnchorId,
 } from "../editor/postDocumentOutline";
+export { resolvePostRuntimeExcerpt, resolvePostRuntimeMetaDescription } from "./postRuntimeExcerpt";
 import {
   resolvePostImageLayoutFromAttrs,
   type PostImageMargin,
@@ -17,9 +18,6 @@ import {
 import { toYoutubeEmbedUrl } from "../shared/videoEmbed";
 
 type ReadMediaById = typeof import("../../media/mediaService").getMediaById;
-
-const DEFAULT_EXCERPT_MAX_LENGTH = 220;
-const META_DESCRIPTION_MAX_LENGTH = 160;
 
 const alignValues = new Set(["left", "center", "right"]);
 const widthValues = new Set(["auto", "narrow", "wide", "full"]);
@@ -35,8 +33,7 @@ const embedAspectValues = new Set(["16:9", "4:3", "1:1"]);
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, value));
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const toTrimmedOptional = (value: unknown) => {
   if (typeof value !== "string") return undefined;
@@ -44,11 +41,7 @@ const toTrimmedOptional = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const normalizeToken = (
-  value: unknown,
-  allowed: Set<string>,
-  fallback: string
-) => {
+const normalizeToken = (value: unknown, allowed: Set<string>, fallback: string) => {
   if (typeof value !== "string") return fallback;
   const normalized = value.trim().toLowerCase();
   return allowed.has(normalized) ? normalized : fallback;
@@ -64,11 +57,6 @@ const sanitizeClassName = (value: unknown) => {
     .filter(Boolean)
     .slice(0, 8);
   return tokens.length > 0 ? tokens.join(" ") : undefined;
-};
-
-const truncate = (value: string, maxLength: number) => {
-  if (value.length <= maxLength) return value;
-  return `${value.slice(0, maxLength).trimEnd()}...`;
 };
 
 const isSafeHref = (value: string) =>
@@ -380,11 +368,7 @@ const resolveImageSrc = async (
 const sanitizeMediaUrl = (value: unknown) => {
   const trimmed = toTrimmedOptional(value);
   if (!trimmed) return null;
-  if (
-    trimmed.startsWith("/") ||
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("https://")
-  ) {
+  if (trimmed.startsWith("/") || trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     return trimmed;
   }
   return null;
@@ -425,9 +409,7 @@ const resolveMediaAsset = async (
       label,
       mimeType: toTrimmedOptional(media?.mimeType),
       sizeBytes:
-        typeof media?.size === "number" && Number.isFinite(media.size)
-          ? media.size
-          : undefined,
+        typeof media?.size === "number" && Number.isFinite(media.size) ? media.size : undefined,
       alt: toTrimmedOptional(media?.alt),
       caption: toTrimmedOptional(media?.caption),
     };
@@ -624,7 +606,10 @@ const mapWritingCanvasNodesForRuntime = async (
       continue;
     }
 
-    pushRuntimeWarning(warnings, `runtime_writing_canvas_node_dropped:${blockId}:${nodeId}:${type}`);
+    pushRuntimeWarning(
+      warnings,
+      `runtime_writing_canvas_node_dropped:${blockId}:${nodeId}:${type}`
+    );
     ordinal += 1;
   }
 
@@ -638,33 +623,6 @@ const readListItemText = (items: string[]) =>
     .filter(Boolean)
     .join(" ");
 
-const readWritingCanvasText = (content: unknown) => {
-  if (!isRecord(content) || !Array.isArray(content.nodes)) return "";
-  return content.nodes
-    .map((node) => {
-      if (!isRecord(node)) return "";
-      const type = typeof node.type === "string" ? node.type.trim().toLowerCase() : "";
-      if (type === "paragraph" || type === "heading" || type === "quote") {
-        return postRichTextToPlainText(typeof node.text === "string" ? node.text : "");
-      }
-      if (type === "list" && Array.isArray(node.items)) {
-        return node.items
-          .filter((item): item is string => typeof item === "string")
-          .map((item) => postRichTextToPlainText(item))
-          .join(" ");
-      }
-      if (type === "image") {
-        const alt = typeof node.alt === "string" ? node.alt : "";
-        const caption = typeof node.caption === "string" ? node.caption : "";
-        return `${alt} ${caption}`.trim();
-      }
-      return "";
-    })
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .join(" ");
-};
-
 const readRuntimeWritingCanvasText = (nodes: RuntimeWritingCanvasNode[]) =>
   nodes
     .map((node) => {
@@ -672,9 +630,7 @@ const readRuntimeWritingCanvasText = (nodes: RuntimeWritingCanvasNode[]) =>
         return postRichTextToPlainText(node.html);
       }
       if (node.type === "list") {
-        return node.items
-          .map((item) => postRichTextToPlainText(item))
-          .join(" ");
+        return node.items.map((item) => postRichTextToPlainText(item)).join(" ");
       }
       if (node.type === "image") {
         return `${node.alt} ${node.caption ?? ""}`.trim();
@@ -750,7 +706,10 @@ const readBlockPlainText = (block: PostRuntimeMappedBlock) => {
     return block.content.code.trim();
   }
   if (block.content.toc?.items) {
-    return block.content.toc.items.map((item) => item.text).join(" ").trim();
+    return block.content.toc.items
+      .map((item) => item.text)
+      .join(" ")
+      .trim();
   }
   if (block.content.button?.label) {
     return block.content.button.label.trim();
@@ -915,11 +874,7 @@ export async function mapPostDocumentForRuntime(
               buttonVariantValues,
               "primary"
             ) as RuntimeButtonConfig["variant"],
-            size: normalizeToken(
-              attrs.size,
-              buttonSizeValues,
-              "md"
-            ) as RuntimeButtonConfig["size"],
+            size: normalizeToken(attrs.size, buttonSizeValues, "md") as RuntimeButtonConfig["size"],
             newTab: attrs.newTab === true,
           },
         };
@@ -993,70 +948,13 @@ export async function mapPostDocumentForRuntime(
     blocks,
     warnings,
     meta: {
-      ...(typeof document.meta.title === "string"
-        ? { title: document.meta.title }
-        : {}),
-      ...(typeof document.meta.excerpt === "string"
-        ? { excerpt: document.meta.excerpt }
-        : {}),
+      ...(typeof document.meta.title === "string" ? { title: document.meta.title } : {}),
+      ...(typeof document.meta.excerpt === "string" ? { excerpt: document.meta.excerpt } : {}),
       ...(typeof document.meta.readingTimeMinutes === "number"
         ? { readingTimeMinutes: document.meta.readingTimeMinutes }
         : {}),
     },
   };
-}
-
-const resolveDocumentExcerpt = (data: Record<string, unknown>, maxLength: number) => {
-  const document = coercePostDocument(data);
-  const fromMeta = toTrimmedOptional(document.meta.excerpt);
-  if (fromMeta) return truncate(fromMeta, maxLength);
-
-  const runtimeBlocks = document.blocks
-    .map((block) => {
-      if (block.type === "list" && Array.isArray(block.content)) {
-        return block.content
-          .filter((item): item is string => typeof item === "string")
-          .join(" ");
-      }
-      if (block.type === "writing-canvas") {
-        return readWritingCanvasText(block.content);
-      }
-      if (typeof block.content === "string") return postRichTextToPlainText(block.content);
-      return "";
-    })
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (runtimeBlocks.length === 0) return undefined;
-  return truncate(runtimeBlocks.join(" "), maxLength);
-};
-
-export function resolvePostRuntimeExcerpt(
-  data: unknown,
-  maxLength = DEFAULT_EXCERPT_MAX_LENGTH
-) {
-  if (!isRecord(data)) return undefined;
-  const normalizedMax = clamp(Math.round(maxLength), 40, 500);
-  const candidates = [
-    data.excerpt,
-    data.summary,
-    data.description,
-    data.lead,
-    data.intro,
-    data.content,
-  ];
-  for (const candidate of candidates) {
-    if (typeof candidate !== "string") continue;
-    const plain = postRichTextToPlainText(candidate);
-    if (!plain) continue;
-    return truncate(plain, normalizedMax);
-  }
-
-  return resolveDocumentExcerpt(data, normalizedMax);
-}
-
-export function resolvePostRuntimeMetaDescription(data: unknown) {
-  return resolvePostRuntimeExcerpt(data, META_DESCRIPTION_MAX_LENGTH) ?? null;
 }
 
 export function isPostContentTypeSlug(slug: string | undefined | null) {
