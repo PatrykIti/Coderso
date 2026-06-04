@@ -5,7 +5,7 @@
 **Category:** Process + Task Quality + Assistant
 **Estimated Effort:** Medium
 **Dependencies:** TASK-404
-**Status:** In Progress (2026-06-04)
+**Status:** Done (2026-06-04)
 
 ---
 
@@ -139,6 +139,19 @@ Error handling:
 - `_docs/_TASKS/TASK-404*.md`
 - Source docs only if the task audit finds immediate docs drift that must be
   fixed before implementation begins.
+
+## Closure Evidence (2026-06-04)
+
+- TASK-404 parent and leaf task files now reflect completed status and closure
+  evidence for the Playwright/agent/Claude loop.
+- `_docs/_TASKS/README.md` statistics and board placement are synchronized with
+  the physical TASK-404 files.
+- Changelog entry 1098 covers TASK-404 and TASK-404-01 through TASK-404-08.
+- Final task-plan audit found status/changelog/evidence blockers; those are
+  addressed during this closure pass.
+- The task-plan drift audit also found missing public-runtime evidence and
+  admin launch-readiness UI evidence; both are now covered by physical tests and
+  closure notes.
 
 ## Acceptance Criteria
 

@@ -219,22 +219,22 @@ test("planAssistantActions creates a full-service architecture studio site", () 
       .filter((action) => action.type === "content-type.upsert")
       .map((action) => (action.type === "content-type.upsert" ? action.input.slug : null))
   ).toEqual(expect.arrayContaining(["portfolio-projects", "services-directory"]));
+  const requiredPageSlugs = [
+    "/",
+    "/portfolio",
+    "/uslugi",
+    "/o-nas",
+    "/proces",
+    "/referencje",
+    "/kontakt",
+  ];
   expect(
     plan.actions
       .filter((action) => action.type === "page.upsert")
       .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
-  ).toEqual(
-    expect.arrayContaining([
-      "/",
-      "/portfolio",
-      "/uslugi",
-      "/o-nas",
-      "/proces",
-      "/referencje",
-      "/kontakt",
-    ])
-  );
+  ).toEqual(expect.arrayContaining(requiredPageSlugs));
   const pageActions = plan.actions.filter((action) => action.type === "page.upsert");
+  const allowedPageSlugs = new Set(requiredPageSlugs);
   for (const action of pageActions) {
     if (action.type !== "page.upsert") {
       throw new Error("expected_page_upsert_action");
@@ -247,6 +247,24 @@ test("planAssistantActions creates a full-service architecture studio site", () 
       type: "footer",
       variant: "columns-3",
     });
+    const footerBlock = action.input.blocks?.find((block) => block.type === "footer");
+    const footerData = footerBlock?.data as
+      | {
+          columns?: Array<{ links?: Array<{ href?: string }> }>;
+          legal?: { enabled?: boolean };
+        }
+      | undefined;
+    expect(footerData?.legal?.enabled).toBe(false);
+    const footerHrefs =
+      footerData?.columns?.flatMap((column) =>
+        (column.links ?? [])
+          .map((link) => link.href)
+          .filter((href): href is string => Boolean(href))
+      ) ?? [];
+    expect(footerHrefs).not.toEqual(
+      expect.arrayContaining(["/polityka-prywatnosci", "/regulamin"])
+    );
+    expect(footerHrefs.every((href) => allowedPageSlugs.has(href))).toBe(true);
   }
   for (const slug of ["/", "/o-nas", "/proces", "/referencje"]) {
     const pageAction = plan.actions.find(

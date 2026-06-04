@@ -8,6 +8,7 @@ import type {
   AssistantActionDryRunResponse,
   AssistantActionPlanResponse,
 } from "@/services/assistantClient";
+import { LaunchReadinessSummary } from "./LaunchReadinessSummary";
 
 type ActionPlanReviewProps = {
   plan: AssistantActionPlanResponse;
@@ -228,6 +229,8 @@ export function ActionPlanReview({
             </ul>
           </div>
         ) : null}
+
+        <LaunchReadinessSummary readiness={plan.metadata?.launchReadiness} />
 
         {composition ? (
           <div className="space-y-2">

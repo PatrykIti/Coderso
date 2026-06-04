@@ -4879,6 +4879,7 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
     "/referencje",
     "/uslugi",
   ]);
+  const allowedPageSlugs = new Set(deps.__state.pages.map((page) => page.slug));
   for (const page of deps.__state.pages) {
     const publishedData = page.publishedData as { blocks?: unknown[] } | null;
     expect(page.status).toBe("published");
@@ -4886,6 +4887,29 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
     expect(publishedData?.blocks?.length).toBeGreaterThan(0);
     expect(publishedData?.blocks?.[0]).toMatchObject({ type: "navigation" });
     expect(publishedData?.blocks?.at(-1)).toMatchObject({ type: "footer" });
+    const footerBlock = publishedData?.blocks?.find(
+      (block): block is { type?: string; data?: unknown } =>
+        Boolean(block) &&
+        typeof block === "object" &&
+        (block as { type?: string }).type === "footer"
+    );
+    const footerData = footerBlock?.data as
+      | {
+          columns?: Array<{ links?: Array<{ href?: string }> }>;
+          legal?: { enabled?: boolean };
+        }
+      | undefined;
+    expect(footerData?.legal?.enabled).toBe(false);
+    const footerHrefs =
+      footerData?.columns?.flatMap((column) =>
+        (column.links ?? [])
+          .map((link) => link.href)
+          .filter((href): href is string => Boolean(href))
+      ) ?? [];
+    expect(footerHrefs).not.toEqual(
+      expect.arrayContaining(["/polityka-prywatnosci", "/regulamin"])
+    );
+    expect(footerHrefs.every((href) => allowedPageSlugs.has(href))).toBe(true);
   }
   const homePage = deps.__state.pages.find((page) => page.slug === "/");
   const homeBlocks = homePage?.publishedData as

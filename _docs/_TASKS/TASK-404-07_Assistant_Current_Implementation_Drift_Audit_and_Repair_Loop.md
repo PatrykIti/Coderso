@@ -5,7 +5,7 @@
 **Category:** Assistant + QA + Drift Audit + Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-404, TASK-403
-**Status:** In Progress (2026-06-04)
+**Status:** Done (2026-06-04)
 
 ---
 
@@ -162,6 +162,23 @@ Error handling:
 - `_docs/ASSISTANT_SITE_BUILDER.md` if runtime capability or gates change.
 - `docs/develop/assistant.md` if contributor/runtime behavior changes.
 - `_docs/_TASKS/TASK-404*.md` and changelog on closure.
+
+## Closure Evidence (2026-06-04)
+
+- Drift loop fixed empty published page content, non-idempotent menu item
+  reruns, missing public navigation/footer shell blocks, and provider-path
+  routing to stale CMS inspection.
+- Regression coverage now includes full-service published page blocks,
+  navigation/footer shell, catalog pages with content-list plus shell blocks,
+  same-plan menu rerun idempotency, public-runtime rendering, launch-readiness
+  admin UI, dead legal-link prevention, and provider path full-service
+  precedence.
+- Playwright CLI E2E passed after helper restart and validates admin planning,
+  dry-run, execute, public pages, detail pages, navigation links, contact form,
+  launch-readiness UI, absence of dead legal footer links, console/page errors,
+  and mobile horizontal scroll.
+- Final implementation drift audit with Claude/sub-agents was requested after
+  the passing E2E; no blocking implementation drift is known at closure time.
 
 ## Acceptance Criteria
 

@@ -5,7 +5,7 @@
 **Category:** Assistant + QA + Docs + Process
 **Estimated Effort:** Large
 **Dependencies:** TASK-404-01, TASK-404-02, TASK-404-03, TASK-404-04, TASK-404-05
-**Status:** In Progress (2026-06-04)
+**Status:** Done (2026-06-04)
 
 ---
 
@@ -151,6 +151,29 @@ Error handling:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - New `_docs/_CHANGELOG/NNNN-*.md` entry on closure.
+
+## Closure Evidence (2026-06-04)
+
+- Restarted `coderso-dev-core-host` with admin Vite on
+  `http://coderso-b.localhost:5175/admin/` and public/core on
+  `http://coderso-b.localhost:3001/`.
+- Playwright CLI full-service E2E passed with Assistant Settings/OpenRouter
+  configured: `intentId === "service-business-full-site"`, 49 planned actions,
+  `dryRun.readyToExecute === true`, zero blocking dry-run conflicts, and
+  `execute.summary.failed === 0`.
+- Admin review displayed the launch-readiness checklist before execution.
+- Public assertions passed for `/`, `/uslugi`, `/portfolio`, `/o-nas`,
+  `/proces`, `/referencje`, `/kontakt`, `/uslugi/projekt-koncepcyjny`, and
+  `/portfolio/apartament-nad-parkiem`.
+- Home navigation contained `/`, `/uslugi`, `/portfolio`, `/o-nas`, `/proces`,
+  `/referencje`, and `/kontakt`; no unsafe `#` or `javascript:` links were
+  found, and no dead `/polityka-prywatnosci` or `/regulamin` footer links were
+  present.
+- Mobile viewport `390x844` passed without horizontal scroll; page errors and
+  severe console errors were zero. Screenshot evidence:
+  `.tmp/task-404-full-service-e2e.png`.
+- Committed runtime regression coverage includes
+  `tests/integration/server/assistantFullServiceSitePublicRuntime.test.ts`.
 
 ## Acceptance Criteria
 

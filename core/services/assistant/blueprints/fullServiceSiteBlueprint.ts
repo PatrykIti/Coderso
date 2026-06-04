@@ -149,12 +149,10 @@ const buildFooterBlock = (): PageUpsertBlocks[number] => ({
       },
     ],
     legal: {
-      enabled: true,
+      enabled: false,
       copyright: "(c) 2026 Studio Forma",
-      privacy: "/polityka-prywatnosci",
-      privacyLabel: "Polityka prywatnosci",
-      terms: "/regulamin",
-      termsLabel: "Regulamin",
+      privacyLabel: "",
+      termsLabel: "",
     },
     socialEnabled: false,
     layout: {

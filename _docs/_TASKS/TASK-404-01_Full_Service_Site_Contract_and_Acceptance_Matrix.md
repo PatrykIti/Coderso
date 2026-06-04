@@ -5,7 +5,7 @@
 **Category:** Assistant + Product Contract + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-404, TASK-403
-**Status:** In Progress (2026-06-04)
+**Status:** Done (2026-06-04)
 
 ---
 

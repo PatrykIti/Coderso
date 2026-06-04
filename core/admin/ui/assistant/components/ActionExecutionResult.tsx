@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AssistantActionExecuteResponse } from "@/services/assistantClient";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { LaunchReadinessSummary } from "./LaunchReadinessSummary";
 
 type ActionExecutionResultProps = {
   result: AssistantActionExecuteResponse;
@@ -135,6 +136,8 @@ export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
             </AlertDescription>
           </Alert>
         ) : null}
+
+        <LaunchReadinessSummary readiness={result.plan.metadata?.launchReadiness} />
 
         {result.results.map((item) => (
           <div key={item.actionId} className="rounded-xl border bg-background px-3 py-3 text-sm">

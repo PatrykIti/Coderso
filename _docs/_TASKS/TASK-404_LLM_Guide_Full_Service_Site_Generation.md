@@ -5,7 +5,7 @@
 **Category:** Assistant + LLM Guide + Site Builder + Runtime
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-403, TASK-101, TASK-170, TASK-171, TASK-188, TASK-190
-**Status:** In Progress (2026-06-04)
+**Status:** Done (2026-06-04)
 
 ---
 
@@ -88,22 +88,22 @@ must be assembled locally from strict schemas and trusted server context.
 
 | ID | Title | Status |
 |---|---|---|
-| TASK-404-01 | Full Service Site Contract and Acceptance Matrix | In Progress (2026-06-04) |
-| TASK-404-02 | Same-Plan Resource Locators and Dependency Graph | In Progress (2026-06-04) |
-| TASK-404-03 | Full Service Page and Section Composer | In Progress (2026-06-04) |
-| TASK-404-04 | Public Sample Content Navigation Footer and Lead Form Actions | In Progress (2026-06-04) |
-| TASK-404-05 | SEO Media and Launch Readiness Validation | In Progress (2026-06-04) |
-| TASK-404-06 | Full Service E2E Live Review Docs and Closure | In Progress (2026-06-04) |
-| TASK-404-07 | Assistant Current Implementation Drift Audit and Repair Loop | In Progress (2026-06-04) |
-| TASK-404-08 | TASK-404 Task Drift Audit and Repair Loop | In Progress (2026-06-04) |
+| TASK-404-01 | Full Service Site Contract and Acceptance Matrix | Done (2026-06-04) |
+| TASK-404-02 | Same-Plan Resource Locators and Dependency Graph | Done (2026-06-04) |
+| TASK-404-03 | Full Service Page and Section Composer | Done (2026-06-04) |
+| TASK-404-04 | Public Sample Content Navigation Footer and Lead Form Actions | Done (2026-06-04) |
+| TASK-404-05 | SEO Media and Launch Readiness Validation | Done (2026-06-04) |
+| TASK-404-06 | Full Service E2E Live Review Docs and Closure | Done (2026-06-04) |
+| TASK-404-07 | Assistant Current Implementation Drift Audit and Repair Loop | Done (2026-06-04) |
+| TASK-404-08 | TASK-404 Task Drift Audit and Repair Loop | Done (2026-06-04) |
 
 ## Implementation Order
 
-Catch-up note (2026-06-04): implementation work began before the audit leaves
-were fully reflected in the board. TASK-404-07 and TASK-404-08 now run as
-active repair loops over commits `7c5ecac0`, `b44b0726`, `e430a7bd`, and the
-current branch changes. Do not close TASK-404 until those loops, Playwright CLI,
-Claude review, docs, changelog, and board closure all pass.
+Closure note (2026-06-04): implementation work began before the audit leaves
+were fully reflected in the board. TASK-404-07 and TASK-404-08 were completed
+as repair loops over commits `7c5ecac0`, `b44b0726`, `e430a7bd`, `44c23973`,
+`5344818e`, and `166f6786`. Closure required helper restart, Playwright CLI,
+Claude/sub-agent review, docs, changelog, and board sync.
 
 1. Run TASK-404-08 so the task breakdown itself has no known drift before
    implementation starts.
@@ -215,6 +215,28 @@ Error handling:
 - `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md`
 - `docs/develop/assistant.md`
 - Task board and changelog only when implementation leaves close.
+
+## Closure Evidence (2026-06-04)
+
+- Planner/provider path: English full-service prompts from Assistant Settings
+  route to `service-business-full-site` before stale planning-state inspection
+  or provider draft fallback.
+- Executed plan: 49 actions covering content types, detail pages, routes,
+  custom screens, listing queries/templates, seven public pages, lead form,
+  sample entries, menus, menu items, and SEO documents.
+- Playwright CLI after `coderso-dev-core-host` restart passed against
+  `http://coderso-b.localhost:5175/admin/` and
+  `http://coderso-b.localhost:3001/`: plan ready, dry-run ready,
+  `execute.summary.failed === 0`, public pages/detail pages render, nav/footer
+  links are present without dead legal footer links, launch-readiness UI is
+  visible in admin review, contact form renders, console/page errors are zero,
+  and mobile has no horizontal scroll.
+- Launch readiness remains explicit: required pages/catalogs/content/nav/SEO
+  satisfy after execute; media import remains gated until trusted media-library
+  assets are selected.
+- GitHub push is operationally blocked in this environment by missing
+  non-interactive GitHub credentials; local branch remains ahead with closure
+  commits.
 
 ## Acceptance Criteria
 

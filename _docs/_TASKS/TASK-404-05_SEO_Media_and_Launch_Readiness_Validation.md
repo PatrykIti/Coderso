@@ -5,7 +5,7 @@
 **Category:** Assistant + SEO + Media + Validation
 **Estimated Effort:** Large
 **Dependencies:** TASK-404-01, TASK-404-02, TASK-404-03, TASK-404-04
-**Status:** In Progress (2026-06-04)
+**Status:** Done (2026-06-04)
 
 ---
 
@@ -162,6 +162,16 @@ Error handling:
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`
 - `docs/develop/assistant.md`
+
+## Closure Evidence (2026-06-04)
+
+- Full-service plans emit launch-readiness metadata for required pages,
+  catalogs, sample content, navigation/footer, SEO, and gated trusted media.
+- Admin review and execution result UI now render the launch-readiness checklist
+  through `LaunchReadinessSummary`; UI coverage lives in
+  `tests/vitest/ui/assistant-panel.test.tsx`.
+- Executor tests verify readiness statuses move from `pending_execute` to
+  `satisfied` after successful execution while trusted media remains gated.
 
 ## Acceptance Criteria
 
