@@ -1,5 +1,6 @@
 import type { AssistantIntentFamily } from "../actionPlanTypes";
 import { getBusinessBlueprintPack, listBusinessBlueprintPacks } from "./businessBlueprintTypes";
+import { getCatalogFamilyDetailPageId } from "./catalogFamilyBlueprint";
 import { CATALOG_FAMILY_PRESETS, PRODUCT_CATALOG_PRESET } from "./catalogFamilyPresets";
 import {
   buildProductCheckoutNeedsInputPlan,
@@ -108,10 +109,10 @@ const createCatalogCapability = (
           key: `detail-page:${preset.contentTypeSlug}`,
           kind: "detail-page",
           label: `${preset.contentTypeName} detail template`,
-          executable: false,
-          actionTypes: [],
-          stableTarget: preset.detailPath,
-          owner: "core/services/content/*",
+          executable: true,
+          actionTypes: ["detail-page.upsert"],
+          stableTarget: getCatalogFamilyDetailPageId(preset),
+          owner: "detail-page.upsert",
         },
       ],
       pageSections: [
@@ -136,16 +137,7 @@ const createCatalogCapability = (
           routeHint: "/admin/advanced/entries",
         },
       ],
-      gated: [
-        {
-          key: `gated:${preset.contentTypeSlug}:detail-page`,
-          kind: "detail-page",
-          label: `${preset.contentTypeName} detail template`,
-          reason:
-            "Detail-page route/runtime linkage is available, but assistant CRUD, workspace, and admin editing flows remain deferred to later TASK-190 slices.",
-          blocking: false,
-        },
-      ],
+      gated: [],
       merge: {
         role: "primary",
         resourceStrategy: "dedupe-by-key",

@@ -204,8 +204,9 @@ export const detailPageDeleteGuardContext = baseContext({
 });
 
 const singlePackActions: ExpectedActionType[] = [
-  "setting.content-route.upsert",
   "content-type.upsert",
+  "detail-page.upsert",
+  "setting.content-route.upsert",
   "custom-screen.upsert",
   "listing-query.upsert",
   "listing-template.upsert",
@@ -284,6 +285,7 @@ export const blueprintCompositionFixtures: BlueprintCompositionPlanFixture[] = [
         "form.upsert",
         "page.upsert",
         "page.upsert",
+        "detail-page.upsert",
         "setting.content-route.upsert",
       ],
       pageSlugs: ["/produkty", "/blog"],
@@ -318,6 +320,7 @@ export const blueprintCompositionFixtures: BlueprintCompositionPlanFixture[] = [
         "page.upsert",
         "page.upsert",
         "page.upsert",
+        "detail-page.upsert",
         "setting.content-route.upsert",
       ],
       pageSlugs: ["/portfolio", "/kontakt", "/blog"],
@@ -408,6 +411,7 @@ export const blueprintCompositionFixtures: BlueprintCompositionPlanFixture[] = [
         "form.upsert",
         "page.upsert",
         "page.upsert",
+        "detail-page.upsert",
         "setting.content-route.upsert",
       ],
       primaryCapabilityId: "product-catalog",
@@ -446,6 +450,7 @@ export const blueprintCompositionProviderFixtures: BlueprintCompositionProviderF
         "form.upsert",
         "page.upsert",
         "page.upsert",
+        "detail-page.upsert",
         "setting.content-route.upsert",
       ],
       serializedExcludes: ["database.drop", "provider-mabudo"],

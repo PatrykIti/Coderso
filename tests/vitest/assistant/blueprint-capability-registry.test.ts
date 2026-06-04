@@ -24,7 +24,7 @@ test("blueprint capability registry exposes current packs and adjunct modules", 
   expect(listBlueprintCapabilityRegistrations()).toHaveLength(9);
 });
 
-test("catalog capabilities expose latent public detail-page metadata without executable detail-page actions", () => {
+test("catalog capabilities expose executable public detail-page metadata", () => {
   const productCatalog = getBlueprintCapability("product-catalog");
 
   expect(productCatalog?.provides.map((entry) => entry.kind)).toContain("public-detail-page");
@@ -36,14 +36,11 @@ test("catalog capabilities expose latent public detail-page metadata without exe
     kind: "content-route",
     owner: "setting.content-route.upsert",
   });
-  expect(productCatalog?.gated).toContainEqual(
-    expect.objectContaining({
-      kind: "detail-page",
-    })
-  );
+  expect(productCatalog?.gated).toEqual([]);
   expect(productCatalog?.resources.find((entry) => entry.kind === "detail-page")).toMatchObject({
-    executable: false,
-    actionTypes: [],
+    executable: true,
+    actionTypes: ["detail-page.upsert"],
+    owner: "detail-page.upsert",
   });
 });
 
@@ -62,8 +59,9 @@ test("registry supports provide lookups and gated module builders", () => {
   expect(
     productInquiry?.buildPlan({ promptKind: "setup_request" }).actions.map((action) => action.type)
   ).toEqual([
-    "setting.content-route.upsert",
     "content-type.upsert",
+    "detail-page.upsert",
+    "setting.content-route.upsert",
     "custom-screen.upsert",
     "listing-query.upsert",
     "listing-template.upsert",

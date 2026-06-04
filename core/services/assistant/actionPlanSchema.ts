@@ -324,6 +324,52 @@ const normalizeBlueprintCompositionMetadata = (value: unknown) => {
   };
 };
 
+const launchReadinessStatuses = new Set(["satisfied", "pending_execute", "gated"] as const);
+
+const normalizeLaunchReadinessMetadata = (
+  value: unknown
+): AssistantActionPlanMetadata["launchReadiness"] => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "schemaVersion",
+      "kind",
+      "requiredPages",
+      "requiredCatalogs",
+      "minimumPublishedEntries",
+      "checks",
+    ])
+  );
+  if (readFiniteNumber(input.schemaVersion) !== 1) fail();
+  const minimumsInput = assertRecord(input.minimumPublishedEntries);
+  const minimumPublishedEntries = Object.fromEntries(
+    Object.entries(minimumsInput).map(([key, minimum]) => [
+      redactMetadataText(readText(key)),
+      readFiniteNumber(minimum),
+    ])
+  );
+  const checks = readRecordArray(input.checks).map((check) => {
+    assertKeys(check, new Set(["id", "label", "status", "evidence", "gates"]));
+    return {
+      id: readMetadataText(check.id),
+      label: readMetadataText(check.label),
+      status: readEnum(check.status, launchReadinessStatuses),
+      evidence: readMetadataStringArray(check.evidence),
+      gates: readMetadataStringArray(check.gates),
+    };
+  });
+
+  return {
+    schemaVersion: 1 as const,
+    kind: readEnum(input.kind, new Set(["full-service-site"] as const)),
+    requiredPages: readMetadataStringArray(input.requiredPages),
+    requiredCatalogs: readMetadataStringArray(input.requiredCatalogs),
+    minimumPublishedEntries,
+    checks,
+  };
+};
+
 const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | undefined => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
@@ -334,6 +380,7 @@ const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | un
       "providerDraftUsed",
       "providerId",
       "blueprintComposition",
+      "launchReadiness",
       "blueprintShadow",
     ])
   );
@@ -391,6 +438,9 @@ const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | un
     ...(input.providerId !== undefined ? { providerId: readOptionalText(input.providerId) } : {}),
     ...(input.blueprintComposition !== undefined
       ? { blueprintComposition: normalizeBlueprintCompositionMetadata(input.blueprintComposition) }
+      : {}),
+    ...(input.launchReadiness !== undefined
+      ? { launchReadiness: normalizeLaunchReadinessMetadata(input.launchReadiness) }
       : {}),
     ...(blueprintShadow !== undefined ? { blueprintShadow } : {}),
   };
@@ -994,7 +1044,10 @@ const normalizeSeoPayload = (value: unknown) => {
 const normalizeSamePlanLocator = (value: unknown) => {
   const input = assertRecord(value);
   const kind = readEnum(input.kind, new Set(["action-result", "stable-slug", "stable-location"]));
-  const resourceType = readEnum(input.resourceType, new Set(["page", "entry", "menu"]));
+  const resourceType = readEnum(
+    input.resourceType,
+    new Set(["content-type", "page", "entry", "menu", "detail-page"])
+  );
   if (kind === "action-result") {
     assertKeys(input, new Set(["kind", "actionId", "resourceType", "field"]));
     return {
@@ -1013,6 +1066,14 @@ const normalizeSamePlanLocator = (value: unknown) => {
       location: readText(input.location),
     };
   }
+  if (resourceType === "content-type") {
+    assertKeys(input, new Set(["kind", "resourceType", "slug"]));
+    return {
+      kind,
+      resourceType,
+      slug: readText(input.slug),
+    };
+  }
   if (resourceType === "page") {
     assertKeys(input, new Set(["kind", "resourceType", "slug"]));
     return {
@@ -1021,6 +1082,7 @@ const normalizeSamePlanLocator = (value: unknown) => {
       slug: readSafeRelativeHref(input.slug),
     };
   }
+  if (resourceType !== "entry") fail();
   assertKeys(input, new Set(["kind", "resourceType", "contentTypeSlug", "slug"]));
   return {
     kind,
@@ -1351,9 +1413,12 @@ const normalizePageInput = (input: JsonRecord) => {
 };
 
 const normalizeDetailPageUpsertInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["document", "expectedExistingId"]));
+  assertKeys(input, new Set(["document", "contentTypeId", "expectedExistingId"]));
   return {
     document: normalizeDetailPageDocument(input.document),
+    ...(input.contentTypeId !== undefined
+      ? { contentTypeId: normalizeResourceIdInput(input.contentTypeId) }
+      : {}),
     ...(input.expectedExistingId !== undefined
       ? { expectedExistingId: readOptionalText(input.expectedExistingId) }
       : {}),

@@ -18,8 +18,9 @@ test("normalizeAssistantActionPlan accepts current catalog family plans", () => 
 
   expect(normalized.intentId).toBe("product-catalog");
   expect(normalized.actions.map((action) => action.type)).toEqual([
-    "setting.content-route.upsert",
     "content-type.upsert",
+    "detail-page.upsert",
+    "setting.content-route.upsert",
     "custom-screen.upsert",
     "listing-query.upsert",
     "listing-template.upsert",
@@ -1367,6 +1368,86 @@ test("normalizeAssistantActionPlan accepts detail-page upsert documents", () => 
         id: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
         contentTypeSlug: "products",
         status: "published",
+      },
+    },
+  });
+});
+
+test("normalizeAssistantActionPlan accepts detail-page content type locators", () => {
+  const normalized = normalizeAssistantActionPlan({
+    id: "plan-detail-page-upsert-locator",
+    status: "ready",
+    intentId: "detail-page-upsert-locator",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can create the detail template.",
+    summary: "Create a products detail template.",
+    confidence: 0.91,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          contentTypeId: {
+            kind: "stable-slug",
+            resourceType: "content-type",
+            slug: "products",
+          },
+          document: {
+            schemaVersion: 1,
+            id: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            name: "Products detail template",
+            contentTypeId: "4fd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            contentTypeSlug: "products",
+            status: "published",
+            titlePattern: "{{ title }}",
+            settings: {
+              template: "detail",
+              layout: {
+                wrapper: {
+                  container: "default",
+                  padding: { top: "md", bottom: "lg" },
+                  background: {
+                    color: "#ffffff",
+                    image: null,
+                    media: {
+                      type: "none",
+                      source: "external",
+                      src: null,
+                    },
+                  },
+                },
+                sections: {
+                  gap: "lg",
+                  defaults: {
+                    container: "default",
+                    padding: { top: "xl", bottom: "xl" },
+                    margin: { top: "none", bottom: "none" },
+                  },
+                },
+                applyDefaultsToNewBlocks: false,
+              },
+            },
+            blocks: [],
+            bindings: [],
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "detail-page.upsert",
+    input: {
+      contentTypeId: {
+        kind: "stable-slug",
+        resourceType: "content-type",
+        slug: "products",
       },
     },
   });

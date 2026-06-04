@@ -289,6 +289,71 @@ const pageSeoActions = (): AssistantPlannedAction[] =>
     },
   }));
 
+const launchReadinessMetadata = {
+  schemaVersion: 1 as const,
+  kind: "full-service-site" as const,
+  requiredPages: pageMap.map((page) => page.slug),
+  requiredCatalogs: [
+    PORTFOLIO_PROJECTS_PRESET.contentTypeSlug,
+    SERVICES_DIRECTORY_PRESET.contentTypeSlug,
+  ],
+  minimumPublishedEntries: {
+    [PORTFOLIO_PROJECTS_PRESET.contentTypeSlug]: 3,
+    [SERVICES_DIRECTORY_PRESET.contentTypeSlug]: 3,
+  },
+  checks: [
+    {
+      id: "pages",
+      label: "Required public pages",
+      status: "pending_execute" as const,
+      evidence: pageMap.map((page) => page.slug),
+      gates: [],
+    },
+    {
+      id: "catalogs",
+      label: "Services and portfolio catalogs",
+      status: "pending_execute" as const,
+      evidence: [
+        PORTFOLIO_PROJECTS_PRESET.contentTypeSlug,
+        SERVICES_DIRECTORY_PRESET.contentTypeSlug,
+        "listing-query.upsert",
+        "listing-template.upsert",
+        "detail-page.upsert",
+        "setting.content-route.upsert",
+      ],
+      gates: [],
+    },
+    {
+      id: "public-content",
+      label: "Published sample content",
+      status: "pending_execute" as const,
+      evidence: ["3 service entries", "3 portfolio entries"],
+      gates: [],
+    },
+    {
+      id: "navigation-footer",
+      label: "Primary and footer navigation",
+      status: "pending_execute" as const,
+      evidence: ["primary menu", "footer menu", "14 menu links"],
+      gates: [],
+    },
+    {
+      id: "seo",
+      label: "Main page and entry SEO",
+      status: "pending_execute" as const,
+      evidence: ["7 page SEO documents", "sample entry SEO metadata"],
+      gates: [],
+    },
+    {
+      id: "media",
+      label: "Trusted media handling",
+      status: "gated" as const,
+      evidence: ["sample content avoids raw media fields"],
+      gates: ["media_upload_gated"],
+    },
+  ],
+};
+
 export const buildFullServiceSitePlan = (options?: {
   promptKind?: AssistantPromptKind;
 }): AssistantActionPlan => {
@@ -313,10 +378,16 @@ export const buildFullServiceSitePlan = (options?: {
     summary:
       "Create a launch-shaped architecture studio site with services, portfolio, process, references, contact, public samples, navigation, footer, and SEO.",
     confidence: 0.9,
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+      launchReadiness: launchReadinessMetadata,
+    },
     assumptions: [
       "Sample entries use local schema-valid content and avoid untrusted media fields.",
       "Primary and footer navigation are created as published menus before menu items are added.",
       "Public contact form uses the existing Forms runtime hardening.",
+      "Raw media import remains gated until the user selects trusted media-library assets.",
     ],
     questions: [],
     actions: [

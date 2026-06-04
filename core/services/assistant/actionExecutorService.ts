@@ -2234,6 +2234,7 @@ const resourceIdInputKey = (value: AssistantResourceIdInput) => {
     return `${value.resourceType}:${value.actionId}:${value.field}`;
   }
   if (value.kind === "stable-location") return `menu:${value.location}`;
+  if (value.resourceType === "content-type") return `content-type:${value.slug}`;
   if (value.resourceType === "page") return `page:${value.slug}`;
   return `entry:${value.contentTypeSlug}/${value.slug}`;
 };
@@ -2245,9 +2246,13 @@ const findPriorPlannedStableSlugAction = (
   const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
   return (
     actions.find((action) => {
+      if (locator.resourceType === "content-type") {
+        return action.type === "content-type.upsert" && action.input.slug === locator.slug;
+      }
       if (locator.resourceType === "page") {
         return action.type === "page.upsert" && action.input.slug === locator.slug;
       }
+      if (locator.resourceType !== "entry") return false;
       return (
         (action.type === "entry.sample.create" || action.type === "entry.upsert-draft") &&
         action.input.contentTypeSlug === locator.contentTypeSlug &&
@@ -2269,10 +2274,15 @@ const resolveStableSlugResourceId = async (
   locator: Extract<AssistantSamePlanLocator, { kind: "stable-slug" }>,
   deps: ActionExecutorDeps
 ) => {
+  if (locator.resourceType === "content-type") {
+    const contentType = await deps.getContentTypeBySlug(locator.slug);
+    return contentType?.id ?? null;
+  }
   if (locator.resourceType === "page") {
     const page = await deps.getPageBySlug(locator.slug);
     return page?.id ?? null;
   }
+  if (locator.resourceType !== "entry") return null;
   const contentType = await deps.getContentTypeBySlug(locator.contentTypeSlug);
   if (!contentType) return null;
   const entry = await deps.getEntryBySlug(contentType.id, locator.slug);
@@ -2311,7 +2321,7 @@ const resolveResourceIdInput = async (
 
 const buildLocatorPreviewDependency = async (
   targetId: AssistantResourceIdInput,
-  targetType: "page" | "entry" | "menu",
+  targetType: "content-type" | "page" | "entry" | "menu" | "detail-page",
   deps: ActionExecutorDeps,
   ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
 ) => {
@@ -2895,15 +2905,77 @@ const summarizeDetailPageDocument = (document: DetailPageDocument) => ({
     document.status === "published" ? "published-detail-template" : "draft-detail-template",
 });
 
+const resolveDetailPageActionDocument = async (
+  action: AssistantDetailPageUpsertAction,
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "priorResults">
+) => {
+  if (action.input.contentTypeId === undefined) return action.input.document;
+  const contentTypeId = await resolveResourceIdInput(action.input.contentTypeId, deps, ctx);
+  return {
+    ...action.input.document,
+    contentTypeId,
+  };
+};
+
 const buildDetailPagePreview = async (
   action: AssistantDetailPageUpsertAction,
-  deps: ActionExecutorDeps
+  ctx: ActionHandlerContext
 ) => {
   const targetKey = action.input.document.id;
+  const contentTypeDependency =
+    action.input.contentTypeId === undefined
+      ? null
+      : await buildLocatorPreviewDependency(
+          action.input.contentTypeId,
+          "content-type",
+          ctx.deps,
+          ctx
+        );
+
+  if (contentTypeDependency?.pending) {
+    const existing = await ctx.deps.getDetailPageDocument(action.input.document.id);
+    return createPreviewChange({
+      action,
+      targetType: "detail-page",
+      targetKey,
+      summary: `${existing ? "Update" : "Create"} detail template ${action.input.document.name}`,
+      dependencies: [contentTypeDependency.dependency],
+      beforeValue: existing ? summarizeDetailPageDocument(existing.currentDocument) : null,
+      nextValue: summarizeDetailPageDocument(action.input.document),
+    });
+  }
+
+  if (contentTypeDependency && !contentTypeDependency.resolvedId) {
+    return createPreviewChange({
+      action,
+      targetType: "detail-page",
+      targetKey,
+      summary: `Create/update detail template ${action.input.document.name}`,
+      dependencies: [contentTypeDependency.dependency],
+      conflicts: [
+        {
+          code: "assistant_action_locator_unresolved",
+          severity: "error",
+          message: "The detail template content type locator could not be resolved.",
+        },
+      ],
+      beforeValue: null,
+      nextValue: summarizeDetailPageDocument(action.input.document),
+    });
+  }
+
+  const document =
+    contentTypeDependency?.resolvedId !== undefined && contentTypeDependency.resolvedId !== null
+      ? {
+          ...action.input.document,
+          contentTypeId: contentTypeDependency.resolvedId,
+        }
+      : action.input.document;
 
   try {
-    const prepared = await deps.prepareDetailPageDocumentUpsert({
-      document: action.input.document,
+    const prepared = await ctx.deps.prepareDetailPageDocumentUpsert({
+      document,
       expectedExistingId: action.input.expectedExistingId,
     });
 
@@ -4954,10 +5026,11 @@ const executePageAction = async (
 const executeDetailPageAction = async (
   action: AssistantDetailPageUpsertAction,
   preview: AssistantActionPreviewChange,
-  deps: ActionExecutorDeps
+  ctx: ActionHandlerContext
 ): Promise<AssistantActionExecutionItem> => {
-  const prepared = await deps.prepareDetailPageDocumentUpsert({
-    document: action.input.document,
+  const document = await resolveDetailPageActionDocument(action, ctx.deps, ctx);
+  const prepared = await ctx.deps.prepareDetailPageDocumentUpsert({
+    document,
     expectedExistingId: action.input.expectedExistingId,
   });
   const targetKey = `${prepared.contentType.slug}/${prepared.document.id}`;
@@ -4966,7 +5039,7 @@ const executeDetailPageAction = async (
     preview.operation === "noop"
       ? prepared.existing
       : (
-          await deps.upsertDetailPageDocument({
+          await ctx.deps.upsertDetailPageDocument({
             document: prepared.document,
             expectedExistingId: action.input.expectedExistingId,
           })
@@ -5655,11 +5728,11 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   "detail-page.upsert": {
     preview: (action, ctx) =>
       action.type === "detail-page.upsert"
-        ? buildDetailPagePreview(action, ctx.deps)
+        ? buildDetailPagePreview(action, ctx)
         : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "detail-page.upsert"
-        ? executeDetailPageAction(action, preview, ctx.deps)
+        ? executeDetailPageAction(action, preview, ctx)
         : unexpectedAction(),
   },
   "page.update": {

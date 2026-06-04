@@ -145,8 +145,9 @@ test("planAssistantActions builds ready house projects catalog plan", () => {
   expect(plan.intentFamily).toBe("catalog_showcase");
   expect(plan.intentId).toBe("house-projects-catalog");
   expect(plan.actions.map((action) => action.type)).toEqual([
-    "setting.content-route.upsert",
     "content-type.upsert",
+    "detail-page.upsert",
+    "setting.content-route.upsert",
     "custom-screen.upsert",
     "listing-query.upsert",
     "listing-template.upsert",
@@ -2766,6 +2767,7 @@ test("planAssistantActions builds product inquiry catalog for catalog plus form 
     "listing-template.upsert",
     "form.upsert",
     "page.upsert",
+    "detail-page.upsert",
     "setting.content-route.upsert",
   ]);
   expect(plan.actions.find((action) => action.type === "page.upsert")).toMatchObject({

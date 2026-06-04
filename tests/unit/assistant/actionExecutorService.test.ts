@@ -1048,8 +1048,18 @@ test("dryRunAssistantActionPlan previews create operations for house projects ca
   const preview = await dryRunAssistantActionPlan({ plan }, createDeps());
 
   expect(preview.readyToExecute).toBe(true);
-  expect(preview.changes).toHaveLength(6);
+  expect(preview.changes).toHaveLength(7);
   expect(preview.changes.every((change) => change.operation === "create")).toBe(true);
+  expect(preview.changes.find((change) => change.targetType === "detail-page")).toMatchObject({
+    dependencies: [
+      {
+        actionId: "content-type-house-projects-catalog",
+        targetType: "content-type",
+        targetKey: "content-type:house-projects",
+        optional: false,
+      },
+    ],
+  });
   expect(preview.warnings.some((warning) => warning.includes("system list route"))).toBe(true);
 });
 
@@ -4454,9 +4464,14 @@ test("executeAssistantActionPlan creates resources and reuses idempotency key", 
   );
 
   expect(first.summary.failed).toBe(0);
-  expect(first.summary.create).toBe(6);
+  expect(first.summary.create).toBe(7);
   expect(first.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
   expect(first.results.some((item) => item.publicHref === "/projekty-domow")).toBe(true);
+  expect(deps.__state.detailPages).toHaveLength(1);
+  expect(
+    (((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])[0]
+      ?.detailPageId
+  ).toBe(deps.__state.detailPages[0]?.id);
   expect(second.summary).toEqual(first.summary);
   expect(second.results).toEqual(first.results);
   expect(second.idempotency).toEqual({ replayed: true, scope: "actor_plan_hash" });
@@ -4607,7 +4622,8 @@ test("dryRunAssistantActionPlan supports product catalog preset through the same
   const preview = await dryRunAssistantActionPlan({ plan }, createDeps());
 
   expect(preview.readyToExecute).toBe(true);
-  expect(preview.changes).toHaveLength(6);
+  expect(preview.changes).toHaveLength(7);
+  expect(preview.changes.some((change) => change.targetType === "detail-page")).toBe(true);
   expect(preview.changes.some((change) => change.targetKey === "products")).toBe(true);
   expect(preview.changes.some((change) => change.targetKey === "/produkty")).toBe(true);
 });
@@ -4802,7 +4818,7 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
   });
 
   expect(plan.intentId).toBe("service-business-full-site");
-  expect(plan.actions).toHaveLength(47);
+  expect(plan.actions).toHaveLength(49);
 
   const executed = await executeAssistantActionPlan(
     {
@@ -4824,6 +4840,12 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
     "/uslugi",
   ]);
   expect(deps.__state.entries.filter((entry) => entry.status === "published")).toHaveLength(6);
+  expect(deps.__state.detailPages).toHaveLength(2);
+  const contentRoutes =
+    ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+  expect(contentRoutes.map((route) => route.detailPageId).sort()).toEqual(
+    deps.__state.detailPages.map((detailPage) => detailPage.id).sort()
+  );
   expect(deps.__state.menus.map((menu) => menu.location).sort()).toEqual(["footer", "primary"]);
   expect(deps.__state.menuItemsByMenu.get("menu-1")).toHaveLength(7);
   expect(deps.__state.menuItemsByMenu.get("menu-2")).toHaveLength(7);

@@ -513,6 +513,8 @@ export const buildBlueprintActionMergeKey = (action: AssistantPlannedAction) => 
       return `${action.type}:${action.input.location}`;
     case "page.upsert":
       return `${action.type}:${action.input.slug}`;
+    case "detail-page.upsert":
+      return `${action.type}:${action.input.document.id}`;
     default:
       return `${action.type}:${action.id}`;
   }
@@ -635,6 +637,8 @@ export const mergeBlueprintActions = (
     }
     case "page.upsert":
       return mergePageUpsert(left, right as typeof left);
+    case "detail-page.upsert":
+      return isDeepStrictEqual(left.input, (right as typeof left).input) ? left : null;
     default:
       return isDeepStrictEqual(left, right) ? left : null;
   }

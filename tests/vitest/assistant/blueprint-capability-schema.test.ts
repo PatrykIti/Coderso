@@ -146,7 +146,7 @@ test("normalizeBlueprintCapability rejects unknown keys and raw media payload me
   ).toThrow("assistant_blueprint_capability_invalid");
 });
 
-test("normalizeBlueprintCapability rejects executable detail pages even when a latent gate exists", () => {
+test("normalizeBlueprintCapability rejects executable detail pages with the wrong action owner", () => {
   expect(() =>
     normalizeBlueprintCapability({
       id: "detail-page-invalid",
@@ -187,8 +187,8 @@ test("normalizeBlueprintCapability rejects executable detail pages even when a l
   ).toThrow("assistant_blueprint_capability_invalid");
 });
 
-test("normalizeBlueprintCapability rejects latent detail-page metadata without a matching gate", () => {
-  expect(() =>
+test("normalizeBlueprintCapability accepts non-executable detail-page metadata without a gate", () => {
+  expect(
     normalizeBlueprintCapability({
       id: "detail-page-missing-gate",
       version: 1,
@@ -220,7 +220,16 @@ test("normalizeBlueprintCapability rejects latent detail-page metadata without a
         priority: 70,
       },
     })
-  ).toThrow("assistant_blueprint_capability_invalid");
+  ).toMatchObject({
+    resources: [
+      {
+        kind: "detail-page",
+        executable: false,
+        actionTypes: [],
+      },
+    ],
+    gated: [],
+  });
 
   expect(() =>
     normalizeBlueprintCapability({

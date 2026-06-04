@@ -672,8 +672,13 @@ export type AssistantSamePlanLocator =
   | {
       kind: "action-result";
       actionId: string;
-      resourceType: "page" | "entry" | "menu";
+      resourceType: "content-type" | "page" | "entry" | "menu" | "detail-page";
       field: "id";
+    }
+  | {
+      kind: "stable-slug";
+      resourceType: "content-type";
+      slug: string;
     }
   | {
       kind: "stable-slug";
@@ -883,6 +888,7 @@ export type AssistantDetailPageUpsertAction = {
   description: string;
   input: {
     document: DetailPageDocument;
+    contentTypeId?: AssistantResourceIdInput;
     expectedExistingId?: string | null;
   };
 };
@@ -1159,11 +1165,31 @@ export type AssistantBlueprintCompositionMetadata = {
   };
 };
 
+export type AssistantLaunchReadinessCheckStatus = "satisfied" | "pending_execute" | "gated";
+
+export type AssistantLaunchReadinessCheckMetadata = {
+  id: string;
+  label: string;
+  status: AssistantLaunchReadinessCheckStatus;
+  evidence: string[];
+  gates: string[];
+};
+
+export type AssistantLaunchReadinessMetadata = {
+  schemaVersion: 1;
+  kind: "full-service-site";
+  requiredPages: string[];
+  requiredCatalogs: string[];
+  minimumPublishedEntries: Record<string, number>;
+  checks: AssistantLaunchReadinessCheckMetadata[];
+};
+
 export type AssistantActionPlanMetadata = {
   planner: "local" | "provider" | "fallback";
   providerDraftUsed: boolean;
   providerId?: string | null;
   blueprintComposition?: AssistantBlueprintCompositionMetadata;
+  launchReadiness?: AssistantLaunchReadinessMetadata;
   blueprintShadow?: {
     schemaVersion: 1;
     currentIntentId: string;
