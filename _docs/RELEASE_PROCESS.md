@@ -92,6 +92,23 @@ sets `CORE_VERSION` plus OCI labels to the same value.
 GHCR publishing still uses the workflow `GITHUB_TOKEN` with `packages: write`
 because package publishing does not require branch-protection bypass.
 
+The Dockerfile uses the named core build scripts:
+
+```bash
+bun --cwd core build:admin
+bun --cwd core build:site
+```
+
+When admin bundle structure or static chunk serving changes, run the local
+image build before release closure:
+
+```bash
+docker build -t coderso-docker-smoke:lazy-routes --build-arg APP_VERSION=0.0.0-lazy-routes -f Dockerfile .
+```
+
+The smoke must preserve `/admin/assets/*` serving for hashed lazy chunks and
+deep-link fallback to admin `index.html`.
+
 ## Local Validation
 
 Run the release config and workflow contract tests before changing release

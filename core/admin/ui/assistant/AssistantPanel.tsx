@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Loader2,
-  MessageCircleDashed,
-  MessageSquareText,
-  Send,
-} from "lucide-react";
+import { Loader2, MessageCircleDashed, MessageSquareText, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +7,6 @@ import { isApiClientError } from "@/services/apiClient";
 import {
   dryRunAssistantActions,
   executeAssistantActions,
-  getAssistantStatus,
   planAssistantActions,
   sendAssistantMessage,
   type AssistantActionDryRunResponse,
@@ -44,6 +38,16 @@ import {
   readAssistantConversationState,
   writeAssistantConversationState,
 } from "./assistantConversationState";
+import {
+  loadAssistantRuntimeStateCached,
+  readAssistantRuntimeStateCache,
+  type AssistantRuntimeState,
+} from "./assistantRuntimeStateCache";
+
+export {
+  clearAssistantRuntimeStateCache,
+  loadAssistantRuntimeStateCached,
+} from "./assistantRuntimeStateCache";
 
 type AssistantEntry = {
   id: string;
@@ -52,10 +56,6 @@ type AssistantEntry = {
   sourceQuestion?: string;
   response?: AssistantChatResponse;
   error?: string;
-};
-
-type AssistantRuntimeState = {
-  status: AssistantStatusResponse;
 };
 
 type LauncherPosition = {
@@ -75,10 +75,8 @@ export type AssistantPanelViewState = "loading" | "error" | "disabled" | "ready"
 
 export type AssistantConversationState = "empty" | "messages" | "docs-not-ready";
 
-const ASSISTANT_RUNTIME_CACHE_TTL_MS = 60_000;
 const ASSISTANT_LAUNCHER_POSITION_KEY = "coderso.assistant.launcher.position";
-const LEGACY_ASSISTANT_LAUNCHER_POSITION_KEY =
-  "nextless.assistant.launcher.position";
+const LEGACY_ASSISTANT_LAUNCHER_POSITION_KEY = "nextless.assistant.launcher.position";
 const ASSISTANT_LAUNCHER_SIZE_PX = 56;
 const ASSISTANT_LAUNCHER_MARGIN_PX = 24;
 const ASSISTANT_CONVERSATION_DEFAULT_WIDTH_PX = 380;
@@ -86,21 +84,9 @@ const ASSISTANT_CONVERSATION_MIN_WIDTH_PX = 320;
 const ASSISTANT_CONVERSATION_MAX_WIDTH_PX = 520;
 const ASSISTANT_CONVERSATION_GAP_PX = 12;
 
-let runtimeStateCache:
-  | {
-      value: AssistantRuntimeState;
-      savedAt: number;
-    }
-  | null = null;
-let runtimeStatePromise: Promise<AssistantRuntimeState> | null = null;
+const createEntryId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-const createEntryId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-
-const buildFollowUpQuestion = (
-  baseQuestion: string,
-  option: AssistantFollowUpOption
-) => {
+const buildFollowUpQuestion = (baseQuestion: string, option: AssistantFollowUpOption) => {
   const normalizedBase = baseQuestion.trim();
   if (!normalizedBase) return option.promptHint;
   return `${normalizedBase}\n\n${option.promptHint}`;
@@ -110,14 +96,6 @@ const resolveApiError = (error: unknown, fallback: string) => {
   if (isApiClientError(error)) return error.message;
   if (error instanceof Error && error.message) return error.message;
   return fallback;
-};
-
-const readRuntimeStateCache = (nowMs: number) => {
-  if (!runtimeStateCache) return null;
-  if (nowMs - runtimeStateCache.savedAt > ASSISTANT_RUNTIME_CACHE_TTL_MS) {
-    return null;
-  }
-  return runtimeStateCache.value;
 };
 
 const getViewportSize = () => {
@@ -167,9 +145,7 @@ const readLauncherPosition = (): LauncherPosition => {
   if (typeof window === "undefined") return fallback;
   try {
     const currentRaw = window.localStorage.getItem(ASSISTANT_LAUNCHER_POSITION_KEY);
-    const legacyRaw = window.localStorage.getItem(
-      LEGACY_ASSISTANT_LAUNCHER_POSITION_KEY
-    );
+    const legacyRaw = window.localStorage.getItem(LEGACY_ASSISTANT_LAUNCHER_POSITION_KEY);
     const raw = currentRaw ?? legacyRaw;
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<LauncherPosition>;
@@ -188,10 +164,7 @@ const readLauncherPosition = (): LauncherPosition => {
 
 const persistLauncherPosition = (position: LauncherPosition) => {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    ASSISTANT_LAUNCHER_POSITION_KEY,
-    JSON.stringify(position)
-  );
+  window.localStorage.setItem(ASSISTANT_LAUNCHER_POSITION_KEY, JSON.stringify(position));
 };
 
 const resolveLauncherAssetKind = (assetUrl: string | null): LauncherAssetKind => {
@@ -246,50 +219,6 @@ export const resolveAssistantConversationWindowPosition = (input: {
   };
 };
 
-const buildRuntimeState = (
-  assistantStatus: AssistantStatusResponse
-): AssistantRuntimeState => ({
-  status: assistantStatus,
-});
-
-export const clearAssistantRuntimeStateCache = () => {
-  runtimeStateCache = null;
-  runtimeStatePromise = null;
-};
-
-export async function loadAssistantRuntimeStateCached(options?: {
-  force?: boolean;
-  now?: () => number;
-}) {
-  const force = options?.force ?? false;
-  const now = options?.now ?? (() => Date.now());
-
-  if (!force) {
-    const cached = readRuntimeStateCache(now());
-    if (cached) return cached;
-  }
-
-  if (runtimeStatePromise) {
-    return runtimeStatePromise;
-  }
-
-  const request = getAssistantStatus({ force })
-    .then((assistantStatus) => buildRuntimeState(assistantStatus))
-    .then((nextState) => {
-      runtimeStateCache = {
-        value: nextState,
-        savedAt: now(),
-      };
-      return nextState;
-    })
-    .finally(() => {
-      runtimeStatePromise = null;
-    });
-
-  runtimeStatePromise = request;
-  return request;
-}
-
 export const shouldLoadAssistantRuntimeState = (input: {
   open: boolean;
   isReady: boolean;
@@ -326,7 +255,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     launcherAvatarEnabled,
     launcherAvatarAsset,
   } = useAdminAssistantConfig();
-  const cachedRuntimeState = readRuntimeStateCache(Date.now());
+  const cachedRuntimeState = readAssistantRuntimeStateCache(Date.now());
   const cachedConversationState = readAssistantConversationState();
   const [open, setOpen] = useState(false);
   const [isReady, setIsReady] = useState(() => cachedRuntimeState !== null);
@@ -334,19 +263,28 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   const [status, setStatus] = useState<AssistantStatusResponse | null>(
     () => cachedRuntimeState?.status ?? null
   );
-  const [messages, setMessages] = useState<AssistantEntry[]>(() => cachedConversationState?.messages ?? []);
+  const [messages, setMessages] = useState<AssistantEntry[]>(
+    () => cachedConversationState?.messages ?? []
+  );
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [assistantMode, setAssistantMode] = useState<AssistantMode | null>(() => cachedConversationState?.assistantMode ?? null);
-  const [activePlan, setActivePlan] = useState<AssistantActionPlanResponse | null>(() => cachedConversationState?.activePlan ?? null);
+  const [assistantMode, setAssistantMode] = useState<AssistantMode | null>(
+    () => cachedConversationState?.assistantMode ?? null
+  );
+  const [activePlan, setActivePlan] = useState<AssistantActionPlanResponse | null>(
+    () => cachedConversationState?.activePlan ?? null
+  );
   const [activePreview, setActivePreview] = useState<AssistantActionDryRunResponse | null>(
     () => cachedConversationState?.activePreview ?? null
   );
-  const [activeExecution, setActiveExecution] =
-    useState<AssistantActionExecuteResponse | null>(() => cachedConversationState?.activeExecution ?? null);
-  const [planningState, setPlanningState] = useState<AssistantPlanningState | null>(() => cachedConversationState?.planningState ?? null);
+  const [activeExecution, setActiveExecution] = useState<AssistantActionExecuteResponse | null>(
+    () => cachedConversationState?.activeExecution ?? null
+  );
+  const [planningState, setPlanningState] = useState<AssistantPlanningState | null>(
+    () => cachedConversationState?.planningState ?? null
+  );
   const [isPreviewingPlan, setIsPreviewingPlan] = useState(false);
   const [isExecutingPlan, setIsExecutingPlan] = useState(false);
   const [launcherPosition, setLauncherPosition] = useState<LauncherPosition>(() =>
@@ -409,9 +347,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     getUserSettings()
       .then((settings) => {
         if (!active) return;
-        setAssistantMode(
-          settings["assistant.mode"] ?? status.defaultMode ?? "docs-only"
-        );
+        setAssistantMode(settings["assistant.mode"] ?? status.defaultMode ?? "docs-only");
       })
       .catch(() => {
         if (!active) return;
@@ -437,9 +373,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   useEffect(() => {
     const handleResize = () => {
       const { width, height } = getViewportSize();
-      setLauncherPosition((previous) =>
-        clampLauncherPosition(previous, width, height)
-      );
+      setLauncherPosition((previous) => clampLauncherPosition(previous, width, height));
     };
 
     if (typeof window === "undefined") return undefined;
@@ -545,9 +479,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
         if (moveEvent.pointerId !== pointerId) return;
         const deltaX = startX - moveEvent.clientX;
         const { width } = getViewportSize();
-        setConversationWidth(
-          clampConversationWidth(originWidth + deltaX, width)
-        );
+        setConversationWidth(clampConversationWidth(originWidth + deltaX, width));
       };
 
       const handleStop = (stopEvent: PointerEvent) => {
@@ -905,7 +837,8 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                           Assistant docs are not ready yet
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Reindex the assistant knowledge base in global settings before starting a conversation.
+                          Reindex the assistant knowledge base in global settings before starting a
+                          conversation.
                         </p>
                       </div>
                     ) : null}
@@ -918,9 +851,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                             text={entry.text}
                             response={entry.response}
                             error={entry.error}
-                            onFollowUpSelect={(option) =>
-                              handleFollowUpSelect(entry, option)
-                            }
+                            onFollowUpSelect={(option) => handleFollowUpSelect(entry, option)}
                           />
                         ))
                       : null}
@@ -937,9 +868,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                       />
                     ) : null}
 
-                    {activeExecution ? (
-                      <ActionExecutionResult result={activeExecution} />
-                    ) : null}
+                    {activeExecution ? <ActionExecutionResult result={activeExecution} /> : null}
                   </div>
                 </div>
 
@@ -965,12 +894,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                     >
                       New
                     </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleSendClick}
-                      disabled={!canSend}
-                    >
+                    <Button type="button" size="sm" onClick={handleSendClick} disabled={!canSend}>
                       {isSending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (

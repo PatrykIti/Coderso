@@ -1118,6 +1118,42 @@ Oczekiwana konfiguracja build:
 
 Core nie kompiluje pluginow w runtime.
 
+## Admin SPA route-level code splitting
+
+Admin SPA ma osobny kontrakt ladowania pierwszego ekranu:
+
+- auth/public/bootstrap routes pozostaja eager: login, 2FA, reset, preview,
+  setup wizard, provider shell, theme tokens i toaster;
+- chronione workspace routes sa importowane przez `adminRouteComponents.tsx`
+  jako dynamiczne route descriptors;
+- `AdminApp` wywoluje protected route render callback dopiero po auth/RBAC i
+  setup-gating, wiec denied routes nie powinny pobierac swojego lazy chunka;
+- chunk-load failure jest ograniczony przez `AdminRouteErrorBoundary`, ktory
+  nie pokazuje stack trace ani wygenerowanych URL-i chunkow.
+
+Regularny guard:
+
+```bash
+bun --cwd core build:admin
+bun run check:admin-bundle
+```
+
+`check:admin-bundle` czyta `core/dist/client/index.html`, rozpoznaje HTML entry
+scripts, modulepreloads i rekurencyjne statyczne importy JS, zapisuje
+`.tmp/admin-bundle-report.json` oraz pilnuje:
+
+- JavaScript chunk count `>= 2`;
+- entry gzip `<= 160,000 B`;
+- initial static graph gzip `<= 500,000 B`.
+
+Pomiar TASK-399 z 2026-06-04: poprzedni admin bundle mial jeden JS chunk
+`4,369.13 kB` raw / `1,036.45 kB` gzip. Po route-level split build emituje
+`160` JS chunks, entry gzip `94,947 B`, a initial static graph gzip
+`400,812 B`. Vite nadal ostrzega o duzych raw chunkach wspoldzielonych
+(`registry`, assistant/runtime); to jest follow-up dla dalszego chunk groupingu
+lub intra-page editor splittingu, nie powod do podnoszenia
+`chunkSizeWarningLimit`.
+
 ---
 
 ## Specyfikacja paczki pluginu

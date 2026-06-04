@@ -5,7 +5,7 @@
 **Category:** Build Performance + Vite/Rolldown + Regression Gates
 **Estimated Effort:** Medium
 **Dependencies:** TASK-399-01, TASK-399-02, TASK-399-03
-**Status:** To Do
+**Status:** Done (2026-06-04)
 
 ---
 
@@ -182,3 +182,18 @@ Error handling:
   `.tmp/admin-bundle-report.json` evidence.
 - Follow-up candidates are recorded for largest remaining route chunk if one
   route still exceeds the warning threshold.
+
+## Closure Notes
+
+Done (2026-06-04):
+
+- Added `bun --cwd core build:admin` and `bun run check:admin-bundle`.
+- The guard resolves HTML module scripts, modulepreloads, and recursive static
+  JS imports before measuring the initial static graph.
+- Final guard budgets:
+  - entry gzip `<= 160,000 B`;
+  - initial static graph gzip `<= 500,000 B`;
+  - JavaScript chunk count `>= 2`.
+- Measured output: 160 JS chunks, entry gzip `94,947 B`, initial static graph
+  gzip `400,812 B`, largest dynamic chunk `registry-DhnPgsYo.js` at
+  `229,525 B` gzip.

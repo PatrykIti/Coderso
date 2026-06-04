@@ -5,7 +5,7 @@
 **Category:** Docker + Production Serving + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-399-01, TASK-399-02, TASK-399-03, TASK-399-04
-**Status:** To Do
+**Status:** Done (2026-06-04)
 
 ---
 
@@ -151,3 +151,14 @@ Error handling:
 - Final docs include before/after metrics and any remaining follow-up chunk
   target.
 - Task board, task files, and changelog leaf coverage are synchronized.
+
+## Closure Notes
+
+Done (2026-06-04):
+
+- Dockerfile now uses the canonical `build:admin` and `build:site` scripts.
+- Admin asset routing tests cover direct hashed JS chunks, nested lazy chunk
+  rewrites, and custom admin base paths.
+- Production serving uses the unchanged `/admin/assets/*` static asset handler
+  plus deep-link fallback to `index.html` with injected admin base href.
+- Local Docker image build is part of final validation for this task family.

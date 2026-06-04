@@ -18,8 +18,8 @@ COPY packages packages
 COPY themes themes
 
 WORKDIR /app/core
-RUN bun x vite build --config vite.config.ts
-RUN bun x vite build --config vite.site.config.ts \
+RUN bun run build:admin
+RUN bun run build:site \
   && if [ -f dist/site/.vite/manifest.json ] && [ ! -f dist/site/manifest.json ]; then \
        cp dist/site/.vite/manifest.json dist/site/manifest.json; \
      fi

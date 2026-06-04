@@ -5,7 +5,7 @@
 **Category:** Admin UI + Build Performance + Vite/Rolldown + Docker + QA
 **Estimated Effort:** Large
 **Dependencies:** Docker build smoke on `fix/docker`; Vite 8.0.10 / Rolldown 1.0.0-rc.17 build behavior
-**Status:** To Do
+**Status:** Done (2026-06-04)
 
 ---
 
@@ -133,10 +133,24 @@ Before/after table to complete during `TASK-399-04` / `TASK-399-05`:
 
 | Metric | Before | After | Budget / follow-up |
 |---|---:|---:|---|
-| Admin JS chunk count | 1 | TBD | `> 1` |
-| Initial admin JS raw | `4,369.13 kB` | TBD | TBD |
-| Initial admin JS gzip | `1,036.45 kB` | TBD | `<= 50% baseline` target, final value from guard |
-| Largest lazy route JS raw/gzip | N/A | TBD | document follow-up if warning remains |
+| Admin JS chunk count | 1 | 160 | `> 1` |
+| Initial admin JS raw | `4,369.13 kB` | Entry `314.50 kB`; initial static graph `1,495,404 B` | Guard records both HTML entry and static graph |
+| Initial admin JS gzip | `1,036.45 kB` | Entry `94,947 B`; initial static graph `400,812 B` (`391.42 KiB`) | Static graph budget `500,000 B`, below the 50% baseline target |
+| Largest lazy route JS raw/gzip | N/A | `registry-DhnPgsYo.js`: `1,131.47 kB` raw / `229,525 B` gzip | Follow-up: split shared widget/registry/editor helpers if the warning must be removed |
+
+Closure notes (2026-06-04):
+
+- `AdminApp` keeps auth/public/bootstrap routes eager and renders protected
+  routes through guarded lazy descriptors after auth/RBAC checks.
+- `bun --cwd core build:admin` emits route chunks without a
+  `chunkSizeWarningLimit` override.
+- `bun run check:admin-bundle` writes `.tmp/admin-bundle-report.json` and
+  enforces `minJsChunkCount >= 2`, entry gzip `<= 160,000 B`, and initial
+  static graph gzip `<= 500,000 B`.
+- Vite still reports a large-chunk warning because the remaining shared dynamic
+  `registry` chunk and initial static assistant/runtime chunk exceed the raw
+  warning threshold. That is documented as a follow-up boundary, not hidden by
+  increasing the warning limit.
 
 ## Security Contract
 

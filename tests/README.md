@@ -41,6 +41,8 @@ bun run test:bun:lane
 bun run test:coverage:bun
 bun run test:coverage:bun:full
 bun run test:coverage:all
+bun --cwd core build:admin
+bun run check:admin-bundle
 ```
 
 `test:vitest` loads `.env` when the file exists and then forces `NODE_ENV=test`
@@ -55,6 +57,9 @@ the lane exercises real database and runtime flows that can exceed Bun's default
 It writes `coverage/bun/lcov.info` and prints a compact LCOV-derived summary,
 instead of streaming Bun's full per-file text coverage table into CI logs.
 `test:coverage` now uses `scripts/run-vitest-coverage.ts` and the canonical full-lane report path `coverage/vitest/coverage-summary.json`.
+`check:admin-bundle` must run after `bun --cwd core build:admin`; it writes
+`.tmp/admin-bundle-report.json` and guards the admin SPA chunk count, HTML entry
+gzip, and initial static JS graph gzip.
 
 ## Manual Smoke
 

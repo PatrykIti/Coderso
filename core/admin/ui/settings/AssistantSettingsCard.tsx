@@ -11,38 +11,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { ASSISTANT_SETTINGS_DEFAULT_VALUES, type AssistantSettingsValues } from "./settingsValues";
 
-export type AssistantSettingsValues = {
-  assistantEnabled: boolean;
-  assistantLauncherAvatarEnabled: boolean;
-  assistantLauncherAvatarAsset: string;
-  assistantDefaultMode: "docs-only" | "llm-guide";
-  assistantDocsReindexOnBoot: boolean;
-  assistantLlmEnabled: boolean;
-  assistantLlmProvider: "openai" | "openrouter" | "none";
-  assistantLlmModel: string;
-  assistantLlmMaxInputTokens: number;
-  assistantLlmMaxOutputTokens: number;
-  assistantLlmTimeoutMs: number;
-  assistantQuotaRequestsPerMinute: number;
-  assistantQuotaRequestsPerDay: number;
-};
-export const ASSISTANT_SETTINGS_DEFAULT_VALUES: AssistantSettingsValues = {
-  assistantEnabled: false,
-  assistantLauncherAvatarEnabled: false,
-  assistantLauncherAvatarAsset: "",
-  assistantDefaultMode: "docs-only",
-  assistantDocsReindexOnBoot: false,
-  assistantLlmEnabled: false,
-  assistantLlmProvider: "none",
-  assistantLlmModel: "google/gemma-3n-e2b-it:free",
-  assistantLlmMaxInputTokens: 8192,
-  assistantLlmMaxOutputTokens: 2048,
-  assistantLlmTimeoutMs: 20000,
-  assistantQuotaRequestsPerMinute: 20,
-  assistantQuotaRequestsPerDay: 1000,
-};
-
+export { ASSISTANT_SETTINGS_DEFAULT_VALUES };
+export type { AssistantSettingsValues };
 
 type AssistantSettingsCardProps = {
   values: AssistantSettingsValues;
@@ -50,8 +22,7 @@ type AssistantSettingsCardProps = {
   disabled?: boolean;
 };
 
-const labelClassName =
-  "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
+const labelClassName = "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 
 const parsePositiveNumber = (value: string, fallback: number) => {
   const parsed = Number(value);
@@ -94,9 +65,7 @@ export function AssistantSettingsCard({
               </div>
               <Switch
                 checked={values.assistantEnabled}
-                onCheckedChange={(checked) =>
-                  onChange?.({ assistantEnabled: Boolean(checked) })
-                }
+                onCheckedChange={(checked) => onChange?.({ assistantEnabled: Boolean(checked) })}
                 disabled={disabled}
               />
             </div>
@@ -107,7 +76,8 @@ export function AssistantSettingsCard({
               <div className="space-y-1">
                 <p className="text-sm font-medium">Launcher avatar</p>
                 <p className="text-xs text-muted-foreground">
-                  When enabled, the floating assistant launcher uses the configured avatar asset instead of the default message bubble.
+                  When enabled, the floating assistant launcher uses the configured avatar asset
+                  instead of the default message bubble.
                 </p>
               </div>
               <Switch
@@ -120,9 +90,7 @@ export function AssistantSettingsCard({
             </div>
             <Input
               value={values.assistantLauncherAvatarAsset}
-              onChange={(event) =>
-                onChange?.({ assistantLauncherAvatarAsset: event.target.value })
-              }
+              onChange={(event) => onChange?.({ assistantLauncherAvatarAsset: event.target.value })}
               placeholder="https://cdn.example.com/assistant-avatar.png"
               disabled={disabled || !values.assistantLauncherAvatarEnabled}
             />
@@ -206,8 +174,8 @@ export function AssistantSettingsCard({
             <p className="text-xs text-muted-foreground">
               Assistant documentation is sourced from the official English
               <code> docs/ </code>
-              directory and becomes available to runtime only after DB reindex/seeding.
-              The official corpus does not rely on filesystem fallback.
+              directory and becomes available to runtime only after DB reindex/seeding. The official
+              corpus does not rely on filesystem fallback.
             </p>
           </div>
 
@@ -234,14 +202,13 @@ export function AssistantSettingsCard({
               <div className="space-y-1">
                 <p className="text-sm font-medium">Enable LLM mode</p>
                 <p className="text-xs text-muted-foreground">
-                  Allows guide planning and LLM-backed assistant responses when provider and model are configured.
+                  Allows guide planning and LLM-backed assistant responses when provider and model
+                  are configured.
                 </p>
               </div>
               <Switch
                 checked={values.assistantLlmEnabled}
-                onCheckedChange={(checked) =>
-                  onChange?.({ assistantLlmEnabled: Boolean(checked) })
-                }
+                onCheckedChange={(checked) => onChange?.({ assistantLlmEnabled: Boolean(checked) })}
                 disabled={disabled}
               />
             </div>

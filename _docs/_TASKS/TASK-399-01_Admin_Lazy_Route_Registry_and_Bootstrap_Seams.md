@@ -5,7 +5,7 @@
 **Category:** Admin UI + Bundle Performance + Routing
 **Estimated Effort:** Large
 **Dependencies:** TASK-399
-**Status:** To Do
+**Status:** Done (2026-06-04)
 
 ---
 

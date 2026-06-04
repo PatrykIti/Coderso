@@ -1,9 +1,6 @@
 import { expect, test } from "bun:test";
 
-import {
-  injectAdminBaseHref,
-  normalizeAdminAssetPath,
-} from "../../../core/server/httpServer";
+import { injectAdminBaseHref, normalizeAdminAssetPath } from "../../../core/server/httpServer";
 
 test("injectAdminBaseHref inserts base href for admin path", () => {
   const html = "<!doctype html><html><head><title>Admin</title></head><body></body></html>";
@@ -26,12 +23,27 @@ test("normalizeAdminAssetPath accepts direct admin assets path", () => {
   expect(result).toBe("/admin/assets/index.css");
 });
 
+test("normalizeAdminAssetPath accepts hashed admin JavaScript chunks", () => {
+  const result = normalizeAdminAssetPath("/admin/assets/index-AbC123.js", "/admin");
+  expect(result).toBe("/admin/assets/index-AbC123.js");
+});
+
 test("normalizeAdminAssetPath rewrites nested assets path under admin routes", () => {
+  const result = normalizeAdminAssetPath("/admin/widgets/templates/assets/index.css", "/admin");
+  expect(result).toBe("/admin/assets/index.css");
+});
+
+test("normalizeAdminAssetPath rewrites nested lazy JavaScript chunks under admin routes", () => {
   const result = normalizeAdminAssetPath(
-    "/admin/widgets/templates/assets/index.css",
+    "/admin/pages/example/assets/PageEditor-XyZ987.js",
     "/admin"
   );
-  expect(result).toBe("/admin/assets/index.css");
+  expect(result).toBe("/admin/assets/PageEditor-XyZ987.js");
+});
+
+test("normalizeAdminAssetPath supports custom admin base paths", () => {
+  const result = normalizeAdminAssetPath("/control/assets/index-AbC123.js", "/control");
+  expect(result).toBe("/control/assets/index-AbC123.js");
 });
 
 test("normalizeAdminAssetPath returns null for non-admin paths", () => {

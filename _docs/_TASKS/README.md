@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 16 tasks
+- **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2213 tasks
+- **Done:** 2219 tasks
 
 ---
 
@@ -42,12 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-399 | Admin SPA Route-Level Code Splitting and Bundle Reduction | High | Large | First real admin bundle reduction step: lazy protected route pages, keep bootstrap/auth eager, and verify Vite/Docker lazy chunks |
-| TASK-399-01 | Admin Lazy Route Registry and Bootstrap Seams | High | Large | Create lazy named-export route descriptors and pure Settings/Assistant bootstrap seams before AdminApp stops static page imports |
-| TASK-399-02 | Guarded Lazy Route Rendering and Suspense Recovery | High | Large | Render protected lazy routes only after auth/RBAC checks and add bounded chunk-load recovery |
-| TASK-399-03 | Protected Workspace Route Migration | High | Large | Move authenticated admin workspace pages to the lazy route registry while preserving route props and permissions |
-| TASK-399-04 | Admin Bundle Measurement and Budget Guard | High | Medium | Measure before/after Vite output and add a guard against collapsing back to one admin JS chunk |
-| TASK-399-05 | Docker Lazy Chunk Serving QA Docs and Closure | High | Medium | Prove Docker build and production static serving for hashed lazy chunks, then close docs/changelog |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -74,6 +68,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-399 | Admin SPA Route-Level Code Splitting and Bundle Reduction | High | Large | Done (2026-06-04): protected admin pages now load through guarded lazy route descriptors; initial static graph gzip is `400,812 B` against the `500,000 B` guard budget. |
+| TASK-399-01 | Admin Lazy Route Registry and Bootstrap Seams | High | Large | Done (2026-06-04): lazy named-export descriptors plus pure Settings and Assistant bootstrap seams are in place. |
+| TASK-399-02 | Guarded Lazy Route Rendering and Suspense Recovery | High | Large | Done (2026-06-04): protected route render callbacks run only after auth/RBAC and chunk-load failures are bounded by an error boundary. |
+| TASK-399-03 | Protected Workspace Route Migration | High | Large | Done (2026-06-04): authenticated admin workspace routes were migrated to the lazy registry while preserving permissions and route props. |
+| TASK-399-04 | Admin Bundle Measurement and Budget Guard | High | Medium | Done (2026-06-04): `check:admin-bundle` writes `.tmp/admin-bundle-report.json` and guards chunk count, entry gzip, and initial static graph gzip. |
+| TASK-399-05 | Docker Lazy Chunk Serving QA Docs and Closure | High | Medium | Done (2026-06-04): Docker uses named build scripts and admin asset tests cover hashed lazy chunks and custom admin base paths. |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-02): minimal utility rendering, unsafe link/logo fail-closed behavior, Wizard/Visual ownership, and precise slot/destination metadata are closed. |
 | TASK-398-01 | FT-31-05-01 - Minimal variant must not omit useful contact/back-to-top utilities unintentionally | High | Medium | Done (2026-06-02): minimal footers keep configured contact and back-to-top utilities available. |
 | TASK-398-02 | FT-31-05-02 - Unsafe column links must not degrade to clickable `#` | High | Medium | Done (2026-06-02): unsafe or empty column links are omitted instead of becoming placeholder anchors. |

@@ -35,6 +35,10 @@ const adminAppServiceMocks = vi.hoisted(() => ({
   listAdminThemeProfilesCached: vi.fn(async () => []),
   listAdminThemeTemplatesCached: vi.fn(async () => []),
 }));
+const lazyRouteMocks = vi.hoisted(() => ({
+  backupsRender: vi.fn(),
+  settingsRender: vi.fn(),
+}));
 
 vi.mock("@/services/authClient", () => ({
   canAdmin: (permission: string, snapshot: { permissions?: string[] } | null | undefined) =>
@@ -83,6 +87,26 @@ vi.mock("@/components/ui/sonner", () => ({
       Admin toaster
     </div>
   ),
+}));
+
+vi.mock("@/ui/backups/BackupsPage", () => ({
+  BackupsPage: () => {
+    lazyRouteMocks.backupsRender();
+    return <div>Backups lazy route</div>;
+  },
+}));
+
+vi.mock("@/ui/settings/GeneralSettingsPage", () => ({
+  GeneralSettingsPage: ({
+    values,
+  }: {
+    values?: {
+      siteName?: string;
+    };
+  }) => {
+    lazyRouteMocks.settingsRender();
+    return <div>General settings lazy route {values?.siteName ?? ""}</div>;
+  },
 }));
 
 vi.mock("@/ui/menus/MenuListPage", () => ({
@@ -205,6 +229,56 @@ test("AdminApp denies guarded routes when the permission snapshot is missing the
   }
 });
 
+test("AdminApp does not render the lazy Backups route before RBAC allows it", async () => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "settings-reader-1",
+      email: "settings-reader@example.com",
+      name: "Settings Reader",
+      permissionSnapshot: {
+        permissions: ["settings:read"],
+        roles: [{ id: "role-4", slug: "settings-reader", name: "Settings Reader" }],
+      },
+    },
+  };
+  const view = mount("/admin/backups");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Access denied");
+    expect(view.container.textContent).not.toContain("Backups lazy route");
+    expect(lazyRouteMocks.backupsRender).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminApp renders the lazy Backups route after RBAC allows it", async () => {
+  adminAuthState.bootstrap = {
+    state: "authenticated",
+    user: {
+      id: "backup-reader-1",
+      email: "backup-reader@example.com",
+      name: "Backup Reader",
+      permissionSnapshot: {
+        permissions: ["backups:read"],
+        roles: [{ id: "role-5", slug: "backup-reader", name: "Backup Reader" }],
+      },
+    },
+  };
+  const view = mount("/admin/backups");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Backups lazy route");
+    expect(view.container.textContent).not.toContain("Access denied");
+    expect(lazyRouteMocks.backupsRender).toHaveBeenCalledTimes(1);
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("AdminApp allows the Users route when the user only has roles:read", async () => {
   adminAuthState.bootstrap = {
     state: "authenticated",
@@ -272,6 +346,7 @@ test.each(restrictedSettingsRouteCases)(
       expect(adminAppServiceMocks.updateSettings).not.toHaveBeenCalled();
       expect(adminAppServiceMocks.updateSecuritySettings).not.toHaveBeenCalled();
       expect(adminAppServiceMocks.updateStorageSettings).not.toHaveBeenCalled();
+      expect(lazyRouteMocks.settingsRender).not.toHaveBeenCalled();
     } finally {
       view.cleanup();
     }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { canAdmin, resolveAuthBootstrap, type AuthUser } from "@/services/authClient";
 import { isApiClientError, subscribeAdminPermissionFailure } from "@/services/apiClient";
@@ -13,81 +13,82 @@ import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
 } from "@/services/adminThemeClient";
-import { DashboardPage } from "@/ui/dashboard/DashboardPage";
-import { AnalyticsPage } from "@/ui/analytics/AnalyticsPage";
-import { AuditList } from "@/ui/audit/AuditList";
 import { LoginPage } from "@/ui/auth/LoginPage";
 import { TwoFactorPage } from "@/ui/auth/TwoFactorPage";
 import { ResetPasswordPage } from "@/ui/auth/ResetPasswordPage";
 import { SetPasswordPage } from "@/ui/auth/SetPasswordPage";
-import { BackupsPage } from "@/ui/backups/BackupsPage";
-import { ContentTypeEditor } from "@/ui/content-types/ContentTypeEditor";
-import { ContentTypeList } from "@/ui/content-types/ContentTypeList";
-import { CollectionWorkspacePage } from "@/ui/content-types/CollectionWorkspacePage";
-import { DetailTemplateEditorPage } from "@/ui/content-types/DetailTemplateEditorPage";
-import { SchemaBuilderPage } from "@/ui/content-types/SchemaBuilderPage";
-import { EntryEditor } from "@/ui/entries/EntryEditor";
-import { EntryList } from "@/ui/entries/EntryList";
-import { CustomScreenEntriesPage } from "@/ui/custom-screens/CustomScreenEntriesPage";
-import { CustomScreenEditorPage } from "@/ui/custom-screens/CustomScreenEditorPage";
-import { CustomScreenEntryEditor } from "@/ui/custom-screens/CustomScreenEntryEditor";
-import { CustomScreenListPage } from "@/ui/custom-screens/CustomScreenListPage";
-import { FormBuilderPage } from "@/ui/forms/FormBuilderPage";
-import { FormActionLogsPage } from "@/ui/forms/FormActionLogsPage";
-import { FormListPage } from "@/ui/forms/FormListPage";
-import { ImportExportPage } from "@/ui/import-export/ImportExportPage";
-import { ListingEditorPage } from "@/ui/listings/ListingEditorPage";
-import { ListingFiltersPage } from "@/ui/listings/ListingFiltersPage";
-import { ListingListPage } from "@/ui/listings/ListingListPage";
-import { ListingSearchPage } from "@/ui/listings/ListingSearchPage";
-import { SolutionKitsPage } from "@/ui/kits/SolutionKitsPage";
-import { BookingPage } from "@/ui/booking/BookingPage";
-import { CommerceEditorPage } from "@/ui/commerce/CommerceEditorPage";
-import { CommerceListPage } from "@/ui/commerce/CommerceListPage";
-import { PopupEditorPage } from "@/ui/popups/PopupEditorPage";
-import { PopupsListPage } from "@/ui/popups/PopupsListPage";
-import { ReviewsModerationPage } from "@/ui/reviews/ReviewsModerationPage";
-import { PageListPage } from "@/ui/pages/PageListPage";
-import { PageEditor } from "@/ui/pages/PageEditor";
-import { PostEditorPage } from "@/ui/posts/PostEditorPage";
-import { PostsListPage } from "@/ui/posts/PostsListPage";
-import { MediaLibraryPage } from "@/ui/media/MediaLibraryPage";
-import { MenuEditorPage } from "@/ui/menus/MenuEditorPage";
-import { MenuListPage } from "@/ui/menus/MenuListPage";
-import { PermissionsMatrixPage } from "@/ui/roles/PermissionsMatrixPage";
-import { RedirectsPage } from "@/ui/redirects/RedirectsPage";
-import { SearchPage } from "@/ui/search/SearchPage";
-import { AccessLogsPage } from "@/ui/security/AccessLogsPage";
-import { SeoManagerPage } from "@/ui/seo/SeoManagerPage";
-import { UsersRolesPage } from "@/ui/users/UsersRolesPage";
-import { ThemesPage } from "@/ui/themes/ThemesPage";
-import { WidgetLibraryPage } from "@/ui/widgets/WidgetLibraryPage";
-import { WidgetTemplateEditorPage } from "@/ui/widgets/WidgetTemplateEditorPage";
-import { ApiKeysPage } from "@/ui/settings/ApiKeysPage";
-import { AssistantSettingsPage } from "@/ui/settings/AssistantSettingsPage";
-import { EmailSettingsPage } from "@/ui/settings/EmailSettingsPage";
 import {
-  ASSISTANT_SETTINGS_DEFAULT_VALUES,
+  defaultSettingsValues,
   type AssistantSettingsValues,
-} from "@/ui/settings/AssistantSettingsCard";
-import {
-  GeneralSettingsPage,
   type GeneralSettingsValues,
-  GENERAL_SETTINGS_DEFAULT_VALUES,
-} from "@/ui/settings/GeneralSettingsPage";
-import { IntegrationsPage } from "@/ui/settings/IntegrationsPage";
-import { IpAllowlistPage } from "@/ui/settings/IpAllowlistPage";
-import { LoginAlertsPage } from "@/ui/settings/LoginAlertsPage";
-import { SecuritySettingsPage } from "@/ui/settings/SecuritySettingsPage";
-import { SessionsPage } from "@/ui/settings/SessionsPage";
-import { StorageSettingsPage } from "@/ui/settings/StorageSettingsPage";
-import { WebhooksPage } from "@/ui/settings/WebhooksPage";
-import { PluginDetailsPage } from "@/ui/store/PluginDetailsPage";
-import { PluginStorePage } from "@/ui/store/PluginStorePage";
+  type SettingsValues,
+} from "@/ui/settings/settingsValues";
 import { PagePreview } from "@/ui/pages/PagePreview";
-import { SiteSettingsPage } from "@/ui/site/SiteSettingsPage";
 import { SetupWizard } from "@/ui/setup/SetupWizard";
 import { Toaster } from "@/components/ui/sonner";
+import {
+  AccessLogsRoute,
+  AnalyticsRoute,
+  ApiKeysRoute,
+  AssistantSettingsRoute,
+  AuditRoute,
+  BackupsRoute,
+  BookingRoute,
+  CollectionWorkspaceRoute,
+  CommerceEditorRoute,
+  CommerceListRoute,
+  ContentTypeEditorRoute,
+  ContentTypeListRoute,
+  CustomScreenEditorRoute,
+  CustomScreenEntriesRoute,
+  CustomScreenEntryEditorRoute,
+  CustomScreenListRoute,
+  DashboardRoute,
+  DetailTemplateEditorRoute,
+  EmailSettingsRoute,
+  EntryEditorRoute,
+  EntryListRoute,
+  FormActionLogsRoute,
+  FormBuilderRoute,
+  FormListRoute,
+  GeneralSettingsRoute,
+  ImportExportRoute,
+  IntegrationsRoute,
+  IpAllowlistRoute,
+  ListingEditorRoute,
+  ListingFiltersRoute,
+  ListingListRoute,
+  ListingSearchRoute,
+  LoginAlertsRoute,
+  MediaLibraryRoute,
+  MenuEditorRoute,
+  MenuListRoute,
+  PageEditorRoute,
+  PageListRoute,
+  PermissionsMatrixRoute,
+  PluginDetailsRoute,
+  PluginStoreRoute,
+  PopupEditorRoute,
+  PopupsListRoute,
+  PostEditorRoute,
+  PostsListRoute,
+  RedirectsRoute,
+  ReviewsModerationRoute,
+  SchemaBuilderRoute,
+  SearchRoute,
+  SecuritySettingsRoute,
+  SeoRoute,
+  SessionsRoute,
+  SiteSettingsRoute,
+  SolutionKitsRoute,
+  StorageSettingsRoute,
+  ThemesRoute,
+  UsersRolesRoute,
+  WebhooksRoute,
+  WidgetLibraryRoute,
+  WidgetTemplateEditorRoute,
+} from "@/app/adminRouteComponents";
+import { AdminRouteErrorBoundary } from "@/app/AdminRouteErrorBoundary";
 import {
   toSetupWizardSettingsPayload,
   type SetupWizardValues,
@@ -107,7 +108,7 @@ import { AdminBasePathProvider } from "@/ui/contexts/AdminBasePathContext";
 import { AdminAssistantConfigProvider } from "@/ui/contexts/AdminAssistantConfigContext";
 import { AdminAuthProvider } from "@/ui/contexts/AdminAuthContext";
 import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
-import { clearAssistantRuntimeStateCache } from "@/ui/assistant/AssistantPanel";
+import { clearAssistantRuntimeStateCache } from "@/ui/assistant/assistantRuntimeStateCache";
 
 const publicRoutes = new Set(["/login", "/2fa", "/reset", "/reset/confirm", "/preview"]);
 
@@ -116,10 +117,10 @@ const LEGACY_ADMIN_THEME_TOKENS_STORAGE_KEY = "nextless.adminThemeTokens";
 const ADMIN_THEME_TOKENS_STYLE_ID = "coderso-theme-tokens";
 
 type RouteMatch = {
-  element: React.ReactNode;
   params: Record<string, string>;
   permission?: string;
   anyPermissions?: string[];
+  render: (ctx: RouteRenderContext) => React.ReactNode;
 };
 
 const normalizePath = (input: string) => {
@@ -146,34 +147,25 @@ const matchRoute = (pattern: string, path: string) => {
   return params;
 };
 
-type SettingsValues = GeneralSettingsValues &
-  AssistantSettingsValues & {
-    publicBaseUrl: string;
-    authSessionTtlDays: number;
-    authResetTtlMinutes: number;
-    setupCompleted: boolean;
-  };
-
-const defaultSettingsValues: SettingsValues = {
-  ...GENERAL_SETTINGS_DEFAULT_VALUES,
-  ...ASSISTANT_SETTINGS_DEFAULT_VALUES,
-  publicBaseUrl: "",
-  authSessionTtlDays: 14,
-  authResetTtlMinutes: 60,
-  setupCompleted: false,
-};
-
 type SettingsState = {
   status: "idle" | "loading" | "ready" | "error";
   values: SettingsValues;
   error: string | null;
 };
 
+type RouteRenderContext = {
+  authPermissions: string[];
+  settingsState: SettingsState;
+  settingsSaving: boolean;
+  saveGeneralSettings: (values: GeneralSettingsValues) => Promise<void>;
+  saveAssistantSettings: (values: AssistantSettingsValues) => Promise<void>;
+};
+
 type RouteDefinition = {
   pattern: string;
-  element: React.ReactNode;
   permission?: string;
   anyPermissions?: string[];
+  render: (ctx: RouteRenderContext) => React.ReactNode;
 };
 
 const resolveRoute = (path: string, routes: RouteDefinition[]): RouteMatch => {
@@ -181,14 +173,14 @@ const resolveRoute = (path: string, routes: RouteDefinition[]): RouteMatch => {
     const params = matchRoute(route.pattern, path);
     if (params) {
       return {
-        element: route.element,
         params,
         permission: route.permission,
         anyPermissions: route.anyPermissions,
+        render: route.render,
       };
     }
   }
-  return { element: <NotFound />, params: {} };
+  return { render: () => <NotFound />, params: {} };
 };
 
 const readStoredAdminThemeTokens = () => {
@@ -580,133 +572,213 @@ export function AdminApp({ path }: AdminAppProps) {
 
   const match = useMemo(() => {
     const routes: RouteDefinition[] = [
-      { pattern: "/", element: <DashboardPage />, permission: "content:read" },
-      { pattern: "/login", element: <LoginPage /> },
-      { pattern: "/2fa", element: <TwoFactorPage /> },
-      { pattern: "/reset", element: <ResetPasswordPage /> },
-      { pattern: "/reset/confirm", element: <SetPasswordPage /> },
-      { pattern: "/analytics", element: <AnalyticsPage />, permission: "content:read" },
-      { pattern: "/audit", element: <AuditList />, permission: "audit:read" },
-      { pattern: "/access-logs", element: <AccessLogsPage />, permission: "audit:read" },
-      { pattern: "/backups", element: <BackupsPage />, permission: "backups:read" },
-      { pattern: "/search", element: <SearchPage />, permission: "content:read" },
-      { pattern: "/seo", element: <SeoManagerPage />, permission: "content:read" },
-      { pattern: "/redirects", element: <RedirectsPage />, permission: "settings:read" },
+      { pattern: "/", render: () => <DashboardRoute.Component />, permission: "content:read" },
+      { pattern: "/login", render: () => <LoginPage /> },
+      { pattern: "/2fa", render: () => <TwoFactorPage /> },
+      { pattern: "/reset", render: () => <ResetPasswordPage /> },
+      { pattern: "/reset/confirm", render: () => <SetPasswordPage /> },
       {
-        pattern: "/tools/import-export",
-        element: <ImportExportPage />,
+        pattern: "/analytics",
+        render: () => <AnalyticsRoute.Component />,
+        permission: "content:read",
+      },
+      { pattern: "/audit", render: () => <AuditRoute.Component />, permission: "audit:read" },
+      {
+        pattern: "/access-logs",
+        render: () => <AccessLogsRoute.Component />,
+        permission: "audit:read",
+      },
+      { pattern: "/backups", render: () => <BackupsRoute.Component />, permission: "backups:read" },
+      { pattern: "/search", render: () => <SearchRoute.Component />, permission: "content:read" },
+      { pattern: "/seo", render: () => <SeoRoute.Component />, permission: "content:read" },
+      {
+        pattern: "/redirects",
+        render: () => <RedirectsRoute.Component />,
         permission: "settings:read",
       },
-      { pattern: "/advanced/forms", element: <FormListPage />, permission: "forms:read" },
       {
-        pattern: "/advanced/forms/:id/action-runs",
-        element: <FormActionLogsPage />,
+        pattern: "/tools/import-export",
+        render: () => <ImportExportRoute.Component />,
+        permission: "settings:read",
+      },
+      {
+        pattern: "/advanced/forms",
+        render: () => <FormListRoute.Component />,
         permission: "forms:read",
       },
-      { pattern: "/advanced/forms/:id", element: <FormBuilderPage />, permission: "forms:read" },
-      { pattern: "/advanced/engine", element: <ContentTypeList />, permission: "content:read" },
+      {
+        pattern: "/advanced/forms/:id/action-runs",
+        render: () => <FormActionLogsRoute.Component />,
+        permission: "forms:read",
+      },
+      {
+        pattern: "/advanced/forms/:id",
+        render: () => <FormBuilderRoute.Component />,
+        permission: "forms:read",
+      },
+      {
+        pattern: "/advanced/engine",
+        render: () => <ContentTypeListRoute.Component />,
+        permission: "content:read",
+      },
       {
         pattern: "/advanced/engine/:id",
-        element: <ContentTypeEditor />,
+        render: () => <ContentTypeEditorRoute.Component />,
         permission: "content:read",
       },
       {
         pattern: "/advanced/engine/:id/collection",
-        element: <CollectionWorkspacePage />,
+        render: () => <CollectionWorkspaceRoute.Component />,
         permission: "content:read",
       },
       {
         pattern: "/advanced/engine/:id/collection/detail-template/:detailPageId",
-        element: <DetailTemplateEditorPage />,
+        render: () => <DetailTemplateEditorRoute.Component />,
         permission: "content:read",
       },
       {
         pattern: "/advanced/engine/:id/schema",
-        element: <SchemaBuilderPage />,
+        render: () => <SchemaBuilderRoute.Component />,
         permission: "content:read",
       },
-      { pattern: "/advanced/entries", element: <EntryList />, permission: "content:read" },
+      {
+        pattern: "/advanced/entries",
+        render: () => <EntryListRoute.Component />,
+        permission: "content:read",
+      },
       {
         pattern: "/advanced/entries/:type/:id",
-        element: <EntryEditor />,
+        render: () => <EntryEditorRoute.Component />,
         permission: "content:read",
       },
       {
         pattern: "/advanced/custom-screens",
-        element: <CustomScreenListPage />,
+        render: () => <CustomScreenListRoute.Component />,
         permission: "content:read",
       },
       {
         pattern: "/advanced/custom-screens/:id/entries/:entryId",
-        element: <CustomScreenEntryEditor />,
+        render: () => <CustomScreenEntryEditorRoute.Component />,
         permission: "content:read",
       },
       {
         pattern: "/advanced/custom-screens/:id/entries",
-        element: <CustomScreenEntriesPage />,
+        render: () => <CustomScreenEntriesRoute.Component />,
         permission: "content:read",
       },
       {
         pattern: "/advanced/custom-screens/:id",
-        element: <CustomScreenEditorPage />,
+        render: () => <CustomScreenEditorRoute.Component />,
         permission: "content:read",
       },
-      { pattern: "/posts", element: <PostsListPage />, permission: "content:read" },
-      { pattern: "/posts/:id", element: <PostEditorPage />, permission: "content:read" },
-      { pattern: "/advanced/listings", element: <ListingListPage />, permission: "content:read" },
+      { pattern: "/posts", render: () => <PostsListRoute.Component />, permission: "content:read" },
+      {
+        pattern: "/posts/:id",
+        render: () => <PostEditorRoute.Component />,
+        permission: "content:read",
+      },
+      {
+        pattern: "/advanced/listings",
+        render: () => <ListingListRoute.Component />,
+        permission: "content:read",
+      },
       {
         pattern: "/advanced/listings/:id",
-        element: <ListingEditorPage />,
+        render: () => <ListingEditorRoute.Component />,
         permission: "content:read",
       },
-      { pattern: "/advanced/filters", element: <ListingFiltersPage />, permission: "content:read" },
-      { pattern: "/advanced/search", element: <ListingSearchPage />, permission: "content:read" },
-      { pattern: "/advanced/booking", element: <BookingPage />, permission: "booking:read" },
+      {
+        pattern: "/advanced/filters",
+        render: () => <ListingFiltersRoute.Component />,
+        permission: "content:read",
+      },
+      {
+        pattern: "/advanced/search",
+        render: () => <ListingSearchRoute.Component />,
+        permission: "content:read",
+      },
+      {
+        pattern: "/advanced/booking",
+        render: () => <BookingRoute.Component />,
+        permission: "booking:read",
+      },
       {
         pattern: "/advanced/reviews",
-        element: <ReviewsModerationPage />,
+        render: () => <ReviewsModerationRoute.Component />,
         permission: "reviews:read",
       },
-      { pattern: "/advanced/commerce", element: <CommerceListPage />, permission: "commerce:read" },
       {
-        pattern: "/advanced/commerce/:id",
-        element: <CommerceEditorPage />,
+        pattern: "/advanced/commerce",
+        render: () => <CommerceListRoute.Component />,
         permission: "commerce:read",
       },
-      { pattern: "/advanced/popups", element: <PopupsListPage />, permission: "popups:read" },
-      { pattern: "/advanced/popups/:id", element: <PopupEditorPage />, permission: "popups:read" },
+      {
+        pattern: "/advanced/commerce/:id",
+        render: () => <CommerceEditorRoute.Component />,
+        permission: "commerce:read",
+      },
+      {
+        pattern: "/advanced/popups",
+        render: () => <PopupsListRoute.Component />,
+        permission: "popups:read",
+      },
+      {
+        pattern: "/advanced/popups/:id",
+        render: () => <PopupEditorRoute.Component />,
+        permission: "popups:read",
+      },
       {
         pattern: "/advanced/solution-kits",
-        element: <SolutionKitsPage />,
+        render: () => <SolutionKitsRoute.Component />,
         permission: "solution-kits:read",
       },
-      { pattern: "/pages", element: <PageListPage />, permission: "content:read" },
-      { pattern: "/pages/:id", element: <PageEditor />, permission: "content:read" },
-      { pattern: "/preview", element: <PagePreview /> },
-      { pattern: "/media", element: <MediaLibraryPage />, permission: "media:read" },
-      { pattern: "/menus", element: <MenuListPage />, permission: "menus:read" },
-      { pattern: "/menus/:id", element: <MenuEditorPage />, permission: "menus:read" },
+      { pattern: "/pages", render: () => <PageListRoute.Component />, permission: "content:read" },
+      {
+        pattern: "/pages/:id",
+        render: () => <PageEditorRoute.Component />,
+        permission: "content:read",
+      },
+      { pattern: "/preview", render: () => <PagePreview /> },
+      {
+        pattern: "/media",
+        render: () => <MediaLibraryRoute.Component />,
+        permission: "media:read",
+      },
+      { pattern: "/menus", render: () => <MenuListRoute.Component />, permission: "menus:read" },
+      {
+        pattern: "/menus/:id",
+        render: () => <MenuEditorRoute.Component />,
+        permission: "menus:read",
+      },
       {
         pattern: "/users",
-        element: <UsersRolesPage permissions={authPermissions} />,
+        render: ({ authPermissions: permissions }) => (
+          <UsersRolesRoute.Component permissions={permissions} />
+        ),
         anyPermissions: ["users:read", "roles:read"],
       },
       {
         pattern: "/roles",
-        element: <PermissionsMatrixPage permissions={authPermissions} />,
+        render: ({ authPermissions: permissions }) => (
+          <PermissionsMatrixRoute.Component permissions={permissions} />
+        ),
         permission: "roles:read",
       },
-      { pattern: "/themes", element: <ThemesPage />, permission: "themes:read" },
-      { pattern: "/advanced/widgets", element: <WidgetLibraryPage />, permission: "widgets:read" },
+      { pattern: "/themes", render: () => <ThemesRoute.Component />, permission: "themes:read" },
+      {
+        pattern: "/advanced/widgets",
+        render: () => <WidgetLibraryRoute.Component />,
+        permission: "widgets:read",
+      },
       {
         pattern: "/advanced/widgets/templates/:id",
-        element: <WidgetTemplateEditorPage />,
+        render: () => <WidgetTemplateEditorRoute.Component />,
         permission: "widgets:read",
       },
       {
         pattern: "/settings",
-        element: (
-          <GeneralSettingsPage
+        render: ({ settingsState, settingsSaving, saveGeneralSettings }) => (
+          <GeneralSettingsRoute.Component
             values={settingsState.values}
             isLoading={settingsState.status === "loading"}
             isSaving={settingsSaving}
@@ -718,8 +790,8 @@ export function AdminApp({ path }: AdminAppProps) {
       },
       {
         pattern: "/settings/general",
-        element: (
-          <GeneralSettingsPage
+        render: ({ settingsState, settingsSaving, saveGeneralSettings }) => (
+          <GeneralSettingsRoute.Component
             values={settingsState.values}
             isLoading={settingsState.status === "loading"}
             isSaving={settingsSaving}
@@ -729,11 +801,15 @@ export function AdminApp({ path }: AdminAppProps) {
         ),
         permission: "settings:read",
       },
-      { pattern: "/settings/site", element: <SiteSettingsPage />, permission: "settings:read" },
+      {
+        pattern: "/settings/site",
+        render: () => <SiteSettingsRoute.Component />,
+        permission: "settings:read",
+      },
       {
         pattern: "/settings/assistant",
-        element: (
-          <AssistantSettingsPage
+        render: ({ settingsState, settingsSaving, saveAssistantSettings }) => (
+          <AssistantSettingsRoute.Component
             values={settingsState.values}
             isLoading={settingsState.status === "loading"}
             isSaving={settingsSaving}
@@ -745,56 +821,67 @@ export function AdminApp({ path }: AdminAppProps) {
       },
       {
         pattern: "/settings/security",
-        element: <SecuritySettingsPage />,
+        render: () => <SecuritySettingsRoute.Component />,
         permission: "settings:read",
       },
       {
         pattern: "/settings/security/ip-allowlist",
-        element: <IpAllowlistPage />,
+        render: () => <IpAllowlistRoute.Component />,
         permission: "settings:read",
       },
       {
         pattern: "/settings/security/sessions",
-        element: <SessionsPage />,
+        render: () => <SessionsRoute.Component />,
         permission: "settings:read",
       },
       {
         pattern: "/settings/security/login-alerts",
-        element: <LoginAlertsPage />,
+        render: () => <LoginAlertsRoute.Component />,
         permission: "settings:read",
       },
-      { pattern: "/settings/api-keys", element: <ApiKeysPage />, permission: "settings:read" },
-      { pattern: "/settings/webhooks", element: <WebhooksPage />, permission: "settings:read" },
-      { pattern: "/settings/email", element: <EmailSettingsPage />, permission: "settings:read" },
+      {
+        pattern: "/settings/api-keys",
+        render: () => <ApiKeysRoute.Component />,
+        permission: "settings:read",
+      },
+      {
+        pattern: "/settings/webhooks",
+        render: () => <WebhooksRoute.Component />,
+        permission: "settings:read",
+      },
+      {
+        pattern: "/settings/email",
+        render: () => <EmailSettingsRoute.Component />,
+        permission: "settings:read",
+      },
       {
         pattern: "/settings/storage",
-        element: <StorageSettingsPage />,
+        render: () => <StorageSettingsRoute.Component />,
         permission: "settings:read",
       },
       {
         pattern: "/settings/integrations",
-        element: <IntegrationsPage />,
+        render: () => <IntegrationsRoute.Component />,
         permission: "settings:read",
       },
-      { pattern: "/store", element: <PluginStorePage />, permission: "store:browse" },
-      { pattern: "/store/plugins/:id", element: <PluginDetailsPage />, permission: "store:browse" },
+      {
+        pattern: "/store",
+        render: () => <PluginStoreRoute.Component />,
+        permission: "store:browse",
+      },
+      {
+        pattern: "/store/plugins/:id",
+        render: () => <PluginDetailsRoute.Component />,
+        permission: "store:browse",
+      },
     ];
 
     const route = resolveRoute(canonicalRelativePath, routes);
     if (isProtected && !canAccessRoute(route)) {
-      return { ...route, element: <AccessDenied /> };
+      return { ...route, render: () => <AccessDenied /> };
     }
     return route;
-  }, [
-    authPermissions,
-    canAccessRoute,
-    canonicalRelativePath,
-    isProtected,
-    saveAssistantSettings,
-    saveGeneralSettings,
-    settingsSaving,
-    settingsState,
-  ]);
+  }, [canAccessRoute, canonicalRelativePath, isProtected]);
 
   const refreshSettings = useCallback(
     (options?: { force?: boolean; background?: boolean }) => {
@@ -993,6 +1080,15 @@ export function AdminApp({ path }: AdminAppProps) {
     );
   }
 
+  const routeRenderContext: RouteRenderContext = {
+    authPermissions,
+    settingsState,
+    settingsSaving,
+    saveGeneralSettings,
+    saveAssistantSettings,
+  };
+  const routeElement = match.render(routeRenderContext);
+
   return (
     <AdminBasePathProvider value={adminBasePath}>
       <AdminAuthProvider user={authUser} refreshPermissions={refreshPermissions}>
@@ -1006,7 +1102,9 @@ export function AdminApp({ path }: AdminAppProps) {
               duration={4000}
               containerAriaLabel="Admin notifications"
             />
-            {match.element}
+            <AdminRouteErrorBoundary resetKey={canonicalRelativePath}>
+              <Suspense fallback={<Loading />}>{routeElement}</Suspense>
+            </AdminRouteErrorBoundary>
           </>
         </AdminAssistantConfigProvider>
       </AdminAuthProvider>

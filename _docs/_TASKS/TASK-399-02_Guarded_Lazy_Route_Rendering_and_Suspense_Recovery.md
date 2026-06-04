@@ -5,7 +5,7 @@
 **Category:** Admin UI + Routing + RBAC + Resilience
 **Estimated Effort:** Large
 **Dependencies:** TASK-399-01
-**Status:** To Do
+**Status:** Done (2026-06-04)
 
 ---
 
