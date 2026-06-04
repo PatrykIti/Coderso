@@ -5,7 +5,11 @@ import {
   reindexAssistantDocs,
   type AssistantChatInput,
 } from "../../services/assistant/assistantService";
-import { assistantChatSchema, assistantReindexSchema } from "../validation/assistantSchemas";
+import {
+  assistantChatSchema,
+  assistantModelMetadataSchema,
+  assistantReindexSchema,
+} from "../validation/assistantSchemas";
 import {
   assistantActionDryRunRequestSchema,
   assistantActionExecuteRequestSchema,
@@ -30,6 +34,8 @@ import {
   isAssistantKnownActionContractType,
 } from "../../services/assistant/actionFamilyContracts";
 import { getUserPermissions } from "../../services/auth/roleService";
+import { resolveAssistantModelMetadata } from "../../services/assistant/providers";
+import type { AssistantLlmProvider } from "../../services/settings/settingsService";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -50,6 +56,7 @@ type AssistantRouteService = {
   getStatus: typeof getAssistantStatus;
   reindex: typeof reindexAssistantDocs;
   chat: typeof answerAssistantQuestion;
+  getModelMetadata: typeof resolveAssistantModelMetadata;
   planActions: (
     input: AssistantActionPlanInput
   ) => AssistantActionPlan | Promise<AssistantActionPlan>;
@@ -92,6 +99,7 @@ const defaultService: AssistantRouteService = {
   getStatus: getAssistantStatus,
   reindex: reindexAssistantDocs,
   chat: answerAssistantQuestion,
+  getModelMetadata: resolveAssistantModelMetadata,
   planActions: async (input) => {
     const provider = await resolveProviderForActionPlanning();
     return planAssistantActionsWithProviderDraft({
@@ -371,6 +379,20 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         actorId: ctx.user?.id ?? null,
       });
     });
+  });
+
+  router.post("/assistant/model-metadata", requirePermission("settings:read"), async (ctx) => {
+    validate(assistantModelMetadataSchema, ctx.body ?? {});
+    const body = ctx.body as {
+      provider: AssistantLlmProvider;
+      model: string;
+    };
+    return withAssistantErrors(ctx.requestId, async () =>
+      service.getModelMetadata({
+        provider: body.provider,
+        model: body.model,
+      })
+    );
   });
 
   router.post("/assistant/chat", requirePermission("settings:read"), async (ctx) => {

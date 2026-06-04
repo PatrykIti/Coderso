@@ -196,6 +196,45 @@ test("planAssistantActions composes mixed product prompts through the live bluep
   expect(plan.metadata?.blueprintShadow).toBeUndefined();
 });
 
+test("planAssistantActions composes architecture studio setup as portfolio, services, and lead capture", () => {
+  const plan = planAssistantActions({
+    prompt: [
+      "Stwórz premium stronę dla studia architektonicznego Studio Forma.",
+      "Potrzebuję portfolio realizacji, ofertę usług z podstronami, proces współpracy i kontakt z formularzem leadowym.",
+      "Realizacje mają mieć katalog z kategorią, lokalizacją i rokiem.",
+    ].join(" "),
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("portfolio_projects");
+  expect(plan.intentId).toBe("blueprint-composed-portfolio-projects");
+  expect(plan.title).toBe("Portfolio Projects Catalog with Services Directory, Lead Capture Site");
+  expect(
+    plan.actions
+      .filter((action) => action.type === "content-type.upsert")
+      .map((action) => (action.type === "content-type.upsert" ? action.input.slug : null))
+  ).toEqual(expect.arrayContaining(["portfolio-projects", "services-directory"]));
+  expect(
+    plan.actions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+  ).toEqual(expect.arrayContaining(["/portfolio", "/uslugi", "/kontakt"]));
+  expect(
+    plan.actions.some(
+      (action) => action.type === "form.upsert" && action.input.slug === "lead-capture-inquiry"
+    )
+  ).toBe(true);
+  expect(
+    plan.actions.some(
+      (action) => action.type === "content-type.upsert" && action.input.slug === "house-projects"
+    )
+  ).toBe(false);
+});
+
 test("planAssistantActions composes single-adjunct prompts through the live blueprint planner path", () => {
   const plan = planAssistantActions({
     prompt: "Create a contact page and blog hub.",

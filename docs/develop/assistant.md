@@ -65,6 +65,16 @@ POST /assistant/actions/execute
 
 Planner responses are tagged so the UI can render without parsing prompt text: `docs`, `inspection`, `action_plan`, `needs_input`, or `gated`.
 
+Current setup blueprints are deterministic typed scaffolds. For example, an
+architecture studio prompt that asks for portfolio, services/offer, and contact
+routes to a composed plan with `portfolio-projects`, `services-directory`, and
+`lead-capture-site` actions. That creates catalog/admin surfaces, listing
+resources, public `/portfolio` and `/uslugi` pages, and a `/kontakt` lead form.
+It is not a launch-ready marketing site yet: home/about/process/references
+pages, seeded entries, media assets, navigation, and full SEO metadata still
+need dedicated typed actions or site-kit coverage before they can be claimed in
+acceptance tests.
+
 ### RBAC per step
 
 | Step | Required permissions |
@@ -88,6 +98,8 @@ The provider is treated as untrusted. The backend reconstructs any executable pl
 
 The provider only runs when retrieval returns snippets; a missing or failed provider falls back to `docs-only`. Per-user and optional global limits are enforced by `assistantQuota.ts`, and `assistantMetrics.ts` / `assistantRedaction.ts` record request, error, fallback, no-hit, and latency signals without leaking secrets.
 
+Assistant Settings can ask the backend for OpenRouter model metadata through `POST /assistant/model-metadata`. The provider adapter reads OpenRouter's model list, applies published input/output limits when present, and returns conservative editable defaults when the provider does not publish those values.
+
 ## How the corpus is ingested
 
 The source-of-truth root is `docs/guide`. This is hard-coded in two services:
@@ -103,7 +115,9 @@ Markdown files under `docs/guide/*.md` are ingested into three DB tables:
 | `assistant_doc_chunks` | Retrievable content chunks (queried at runtime) |
 | `assistant_doc_ingest_runs` | Ingest run records |
 
-Reindexing runs through `POST /assistant/reindex` (route in `core/server/routes/assistantRoutes.ts`, validated by `assistantReindexSchema`, CSRF protected, and requires `settings:write`). The same operation is exposed as a **Run reindex** action under `Settings -> Assistant`.
+Normal Docker startup runs `core/server/startupAssistantDocs.ts` after migrations and before serving traffic. The helper fingerprints markdown files in `docs/guide`, records the completed image/docs fingerprint in `assistant.docs.startupReindexState`, and skips later starts until the image version or docs fingerprint changes. It can be disabled with `CODERSO_ASSISTANT_DOCS_REINDEX_ON_START=false`; `CODERSO_ASSISTANT_DOCS_SOURCE_ROOT` overrides the source root for controlled deployments.
+
+Manual recovery still runs through `POST /assistant/reindex` (route in `core/server/routes/assistantRoutes.ts`, validated by `assistantReindexSchema`, CSRF protected, and requires `settings:write`). In the admin UI the same operation is kept as **Run support reindex** under `Settings -> Assistant -> Advanced`, not as a routine configuration step.
 
 Reindex also prunes orphaned `assistant_docs` whose source file was removed (`pruneStaleAssistantDocs`), so stale DB-only records stop surfacing, and writes a best-effort `assistant.docs.reindex` audit event.
 
@@ -128,7 +142,7 @@ keywords:
 
 3. **Author the multi-level sections.** Required: `Basic`, `Medium`, `Instruction`, `Advanced`. Recommended optional: `Troubleshooting`, `Decision Guide`, `Checklist`, `Security`. The legacy pack (`What Is It`, `When To Use`, `Step By Step`, `Examples`, `Common Mistakes`) is still ingest-compatible, but new docs should use the multi-level pack.
 4. **Follow the writing rules** (per `docs/guide/README.md`): English, product language over developer shorthand, real route and screen names, practical examples and failure modes — and do not document unshipped roadmap behavior.
-5. **Reindex** with `POST /assistant/reindex` or `Settings -> Assistant -> Run reindex` to seed it into the DB and make it retrievable.
+5. **Seed the DB corpus.** In Docker deployments this happens on startup when the image/docs fingerprint changes. In local development or support recovery, use `POST /assistant/reindex` or `Settings -> Assistant -> Advanced -> Run support reindex` to seed it into the DB and make it retrievable.
 
 Section selection is deterministic via the intent-to-section mapping in `docs/guide/README.md` — for example "what is this" maps to `Basic`, "how do I configure" maps to `Instruction`, an error or fix maps to `Troubleshooting`, "which option" maps to `Decision Guide`, launch checks map to `Checklist`, and security questions map to `Security`.
 

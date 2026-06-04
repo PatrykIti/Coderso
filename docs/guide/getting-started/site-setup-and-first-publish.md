@@ -9,6 +9,7 @@ keywords:
   - settings
   - pages
   - menus
+  - assistant
 ---
 
 # What Is It
@@ -31,7 +32,11 @@ between screens ad hoc.
 3. Prepare foundational content: pages, menus, media assets, and theme choices.
 4. If the site needs structured records, define them in Coderso Engine before
    populating Entries, Listings, Booking, or Commerce.
-5. Review SEO, redirects, preview behavior, and publishing status before the
+5. For the assistant, keep Docs Assistant as the safe default unless you
+   intentionally need LLM Guide. Docs Assistant reads the `docs/guide` corpus
+   after startup indexing; LLM Guide also needs an OpenRouter or OpenAI key in
+   `Settings > Integrations`.
+6. Review SEO, redirects, preview behavior, and publishing status before the
    first public release.
 
 # Examples

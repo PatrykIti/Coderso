@@ -19,7 +19,6 @@ import {
   type AssistantChatResponse,
   type AssistantStatusResponse,
 } from "@/services/assistantClient";
-import { getUserSettings } from "@/services/userSettingsClient";
 import { useAdminAssistantConfig } from "@/ui/contexts/AdminAssistantConfigContext";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +36,7 @@ import type { AssistantPlanningState } from "../../../services/assistant/actionP
 import {
   readAssistantConversationState,
   writeAssistantConversationState,
+  type AssistantConversationSnapshot,
 } from "./assistantConversationState";
 import {
   loadAssistantRuntimeStateCached,
@@ -74,6 +74,16 @@ type ConversationWindowPosition = {
 export type AssistantPanelViewState = "loading" | "error" | "disabled" | "ready";
 
 export type AssistantConversationState = "empty" | "messages" | "docs-not-ready";
+export type AssistantComposerState = {
+  disabled: boolean;
+  reason:
+    | "empty_message"
+    | "sending"
+    | "status_missing"
+    | "docs_not_ready"
+    | "llm_unavailable"
+    | null;
+};
 
 const ASSISTANT_LAUNCHER_POSITION_KEY = "coderso.assistant.launcher.position";
 const LEGACY_ASSISTANT_LAUNCHER_POSITION_KEY = "nextless.assistant.launcher.position";
@@ -239,10 +249,58 @@ export const resolveAssistantPanelViewState = (input: {
 export const resolveAssistantConversationState = (input: {
   messageCount: number;
   indexReady: boolean;
+  mode?: AssistantMode;
 }): AssistantConversationState => {
   if (input.messageCount > 0) return "messages";
-  if (!input.indexReady) return "docs-not-ready";
+  if (input.mode !== "llm-guide" && !input.indexReady) return "docs-not-ready";
   return "empty";
+};
+
+export const resolveAssistantComposerState = (input: {
+  message: string;
+  isSending: boolean;
+  status: AssistantStatusResponse | null;
+  mode: AssistantMode;
+}): AssistantComposerState => {
+  if (input.isSending) return { disabled: true, reason: "sending" };
+  if (!input.status) return { disabled: true, reason: "status_missing" };
+  if (!input.message.trim()) return { disabled: true, reason: "empty_message" };
+  if (input.mode === "llm-guide") {
+    return input.status.llmAvailable
+      ? { disabled: false, reason: null }
+      : { disabled: true, reason: "llm_unavailable" };
+  }
+  return input.status.indexReady
+    ? { disabled: false, reason: null }
+    : { disabled: true, reason: "docs_not_ready" };
+};
+
+export const hasRestorableAssistantConversation = (
+  snapshot: AssistantConversationSnapshot | null
+) =>
+  Boolean(
+    snapshot &&
+    (snapshot.messages.length > 0 ||
+      snapshot.activePlan ||
+      snapshot.activePreview ||
+      snapshot.activeExecution ||
+      snapshot.planningState)
+  );
+
+export const resolveAssistantCurrentMode = (input: {
+  status: AssistantStatusResponse | null;
+  preferredMode: AssistantMode | null;
+  hasConversation: boolean;
+}): AssistantMode => {
+  const mode = input.preferredMode ?? input.status?.defaultMode ?? "docs-only";
+  if (!input.status || (input.hasConversation && input.preferredMode)) return mode;
+  if (mode === "docs-only" && !input.status.indexReady && input.status.llmAvailable) {
+    return "llm-guide";
+  }
+  if (mode === "llm-guide" && !input.status.llmAvailable && input.status.indexReady) {
+    return "docs-only";
+  }
+  return mode;
 };
 
 type AssistantPanelProps = {
@@ -257,6 +315,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   } = useAdminAssistantConfig();
   const cachedRuntimeState = readAssistantRuntimeStateCache(Date.now());
   const cachedConversationState = readAssistantConversationState();
+  const shouldRestoreConversationMode = hasRestorableAssistantConversation(cachedConversationState);
   const [open, setOpen] = useState(false);
   const [isReady, setIsReady] = useState(() => cachedRuntimeState !== null);
   const [isLoadingRuntime, setIsLoadingRuntime] = useState(false);
@@ -270,8 +329,8 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   const [isSending, setIsSending] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [assistantMode, setAssistantMode] = useState<AssistantMode | null>(
-    () => cachedConversationState?.assistantMode ?? null
+  const [assistantMode, setAssistantMode] = useState<AssistantMode | null>(() =>
+    shouldRestoreConversationMode ? (cachedConversationState?.assistantMode ?? null) : null
   );
   const [activePlan, setActivePlan] = useState<AssistantActionPlanResponse | null>(
     () => cachedConversationState?.activePlan ?? null
@@ -340,35 +399,6 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     }
     loadRuntimeState().catch(() => undefined);
   }, [isLoadingRuntime, isReady, loadRuntimeState, open]);
-
-  useEffect(() => {
-    if (!open || !status) return;
-    let active = true;
-    getUserSettings()
-      .then((settings) => {
-        if (!active) return;
-        setAssistantMode(settings["assistant.mode"] ?? status.defaultMode ?? "docs-only");
-      })
-      .catch(() => {
-        if (!active) return;
-        setAssistantMode(status.defaultMode ?? "docs-only");
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [open, status]);
-
-  useEffect(() => {
-    writeAssistantConversationState({
-      messages,
-      activePlan,
-      activePreview,
-      activeExecution,
-      planningState,
-      assistantMode,
-    });
-  }, [activeExecution, activePlan, activePreview, assistantMode, messages, planningState]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -496,6 +526,33 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     [conversationWidth]
   );
 
+  const hasRestoredConversation =
+    messages.length > 0 ||
+    Boolean(activePlan) ||
+    Boolean(activePreview) ||
+    Boolean(activeExecution) ||
+    Boolean(planningState);
+  const currentMode = useMemo(
+    () =>
+      resolveAssistantCurrentMode({
+        status,
+        preferredMode: assistantMode,
+        hasConversation: hasRestoredConversation,
+      }),
+    [assistantMode, hasRestoredConversation, status]
+  );
+
+  useEffect(() => {
+    writeAssistantConversationState({
+      messages,
+      activePlan,
+      activePreview,
+      activeExecution,
+      planningState,
+      assistantMode: currentMode,
+    });
+  }, [activeExecution, activePlan, activePreview, currentMode, messages, planningState]);
+
   const submitMessage = useCallback(
     async (input?: {
       message: string;
@@ -505,8 +562,8 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     }) => {
       const outgoingMessage = (input?.message ?? message).trim();
       if (!outgoingMessage || isSending || !status) return;
-      const currentMode = assistantMode ?? status.defaultMode;
 
+      setAssistantMode(currentMode);
       if (!input?.message) {
         setMessage("");
       }
@@ -593,7 +650,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
         setIsSending(false);
       }
     },
-    [assistantAdminContext, assistantMode, isSending, message, planningState, status]
+    [assistantAdminContext, currentMode, isSending, message, planningState, status]
   );
 
   const handleFollowUpSelect = useCallback(
@@ -665,10 +722,17 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     setActionError(null);
   }, []);
 
-  const canSend = useMemo(
-    () => Boolean(message.trim()) && !isSending && Boolean(status?.indexReady),
-    [isSending, message, status?.indexReady]
+  const composerState = useMemo(
+    () =>
+      resolveAssistantComposerState({
+        message,
+        isSending,
+        status,
+        mode: currentMode,
+      }),
+    [currentMode, isSending, message, status]
   );
+  const canSend = !composerState.disabled;
 
   const conversationWindowPosition = useMemo(() => {
     const { width, height } = getViewportSize();
@@ -680,9 +744,6 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     });
   }, [conversationWidth, launcherPosition]);
 
-  const currentMode = assistantMode ?? status?.defaultMode ?? "docs-only";
-  const hasRestoredConversation =
-    messages.length > 0 || Boolean(activePlan) || Boolean(activeExecution);
   const resolvedViewState = useMemo(
     () =>
       resolveAssistantPanelViewState({
@@ -697,8 +758,9 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
       resolveAssistantConversationState({
         messageCount: messages.length,
         indexReady: status ? Boolean(status.indexReady) : hasRestoredConversation,
+        mode: currentMode,
       }),
-    [hasRestoredConversation, messages.length, status]
+    [currentMode, hasRestoredConversation, messages.length, status]
   );
 
   if (!launcherEnabled) {
@@ -873,6 +935,16 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                 </div>
 
                 <div className="shrink-0 space-y-2 border-t pt-3">
+                  {composerState.reason === "llm_unavailable" ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      LLM Guide needs an enabled provider and model before messages can be sent.
+                    </div>
+                  ) : null}
+                  {composerState.reason === "docs_not_ready" ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      Docs Assistant needs the DB documentation index before messages can be sent.
+                    </div>
+                  ) : null}
                   <Textarea
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
@@ -882,7 +954,11 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                         : "Ask where to find a feature in documentation..."
                     }
                     rows={4}
-                    disabled={isSending || !status?.indexReady}
+                    disabled={
+                      isSending ||
+                      composerState.reason === "docs_not_ready" ||
+                      composerState.reason === "llm_unavailable"
+                    }
                   />
                   <div className="flex items-center justify-between gap-3">
                     <Button

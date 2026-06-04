@@ -258,13 +258,14 @@ przez `setup.completed=true`.
   - pages/menus nie wymuszaja mount-force refetch przy istniejacym cache,
   - closure validated przez `lint + lint:types + bun test` i perf/security gates.
 
-## Assistant Doc Navigator (Phase A + A2)
+## Assistant Docs Assistant (Phase A + A2)
 
 Aktualny fundament asystenta (bez LLM) sklada sie z warstw:
-- `core/services/assistant/docsIngestService.ts` (ingest `docs/` -> DB + ingest runs)
+- `core/services/assistant/docsIngestService.ts` (ingest `docs/guide` -> DB + ingest runs)
 - `core/services/assistant/docsDbRetriever.ts` (DB-backed ranking/search)
 - `core/services/assistant/docsAnswerComposer.ts` (content-first deterministic answer templates)
 - `core/services/assistant/assistantService.ts` (DB-only assistant runtime)
+- `core/server/startupAssistantDocs.ts` (Docker/startup docs seed helper)
 
 Przeplyw runtime:
 1. `assistantService` czyta official assistant corpus status z DB ingest tables.
@@ -287,14 +288,18 @@ Przeplyw runtime:
 15. Response moze zawierac `followUpOptions[]`, ktore prowadza usera do kolejnego poziomu szczegolowosci lub trybu pomocniczego w tej samej tematyce.
 
 Przeplyw reindex:
-1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs/guide`.
-2. Wyniki ingest trafiaja do `assistant_docs`, `assistant_doc_chunks`, `assistant_doc_ingest_runs`.
-3. Reindex wykonuje tez cleanup osieroconych rekordow `assistant_docs`, gdy plik
+1. Docker startup uruchamia `runStartupAssistantDocsReindex` po migracjach i przed importem `prod`.
+2. Helper liczy fingerprint plikow markdown w `docs/guide` i porownuje go z markerem `assistant.docs.startupReindexState` dla aktualnego `CODERSO_IMAGE_VERSION` / `CORE_VERSION` / `APP_VERSION`.
+3. Gdy image/docs fingerprint jest juz oznaczony jako zakonczony, startup pomija ingest.
+4. `POST /assistant/reindex` nadal uruchamia ingest z fixed source root `docs/guide` jako support/admin recovery path.
+5. Wyniki ingest trafiaja do `assistant_docs`, `assistant_doc_chunks`, `assistant_doc_ingest_runs`.
+6. Reindex wykonuje tez cleanup osieroconych rekordow `assistant_docs`, gdy plik
    zostal usuniety z aktualnego source root i nie powinien juz pozostawac w DB-only corpus.
 
 Zasady runtime:
 - Official assistant corpus korzysta z root `docs/guide/` jako source-of-truth.
 - Seed do DB jest warunkiem gotowosci official assistant corpus.
+- Startup seed jest wlaczony domyslnie i moze byc wylaczony przez `CODERSO_ASSISTANT_DOCS_REINDEX_ON_START=false`; alternatywny root wspiera `CODERSO_ASSISTANT_DOCS_SOURCE_ROOT`.
 - Przy braku trafienia system zwraca `missing_answer` (bez halucynacji).
 
 ## Assistant LLM Guide mode + Admin UI integration (Phase B)
@@ -333,12 +338,14 @@ Warstwa Admin UI:
 - Konfiguracja globalna pozostaje w `core/admin/ui/settings/AssistantSettingsPage.tsx`; okno rozmowy nie renderuje globalnych ustawien assistant runtime.
 - `core/admin/services/assistantClient.ts` obsluguje:
   - `/assistant/status`, `/assistant/chat`, `/assistant/reindex`,
+  - `/assistant/model-metadata`,
   - `/assistant/actions/plan`, `/assistant/actions/dry-run`, `/assistant/actions/execute`.
 - Globalne ustawienia launchera (`assistant.launcher.avatarEnabled`, `assistant.launcher.avatarAsset`) sa trzymane w `settings`.
 - Legacy per-user klucze assistant UI moga nadal istniec w `user_settings`, ale nie steruja juz widocznoscia floating launchera.
 - `AssistantPanel` wspiera teraz dwa user-facing flow:
   - `Docs Assistant` dla docs-only navigation/Q&A,
   - `LLM Guide` dla setup-planning prompts prowadzacych do typed plan + dry-run + execute review.
+- Composer readiness jest mode-aware: `Docs Assistant` wymaga gotowego DB docs indexu, a `LLM Guide` wymaga dostepnego providera; brak docs indexu nie blokuje juz samego wpisywania promptu w LLM Guide.
 
 ## Assistant Action Engine (Initial LLM Guide Slice)
 

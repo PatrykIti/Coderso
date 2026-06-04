@@ -129,6 +129,19 @@ export type AssistantReindexResponse = {
   actorId: string | null;
 };
 
+export type AssistantModelMetadataRequest = {
+  provider: "none" | "openai" | "openrouter";
+  model: string;
+};
+
+export type AssistantModelMetadataResponse = {
+  model: string;
+  maxInputTokens: number;
+  maxOutputTokens: number;
+  supportedParameters: string[];
+  source: "provider" | "default";
+};
+
 export type AssistantActionPlanRequest = {
   prompt: string;
   context?: AssistantActionContext;
@@ -257,6 +270,18 @@ export async function reindexAssistantDocs() {
   );
   assistantStatusReadCache.invalidate();
   return result;
+}
+
+export async function getAssistantModelMetadata(payload: AssistantModelMetadataRequest) {
+  return apiRequest<AssistantModelMetadataResponse>(
+    "/assistant/model-metadata",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
 }
 
 export async function planAssistantActions(payload: AssistantActionPlanRequest) {

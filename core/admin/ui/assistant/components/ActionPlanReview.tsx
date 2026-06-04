@@ -206,8 +206,8 @@ export function ActionPlanReview({
             <AlertTitle>Preview warnings</AlertTitle>
             <AlertDescription>
               <ul className="ml-5 mt-2 list-disc space-y-1">
-                {preview.warnings.map((warning) => (
-                  <li key={warning}>{redactUiText(warning)}</li>
+                {preview.warnings.map((warning, index) => (
+                  <li key={`${index}-${warning}`}>{redactUiText(warning)}</li>
                 ))}
               </ul>
             </AlertDescription>
@@ -220,8 +220,8 @@ export function ActionPlanReview({
               Assumptions
             </p>
             <ul className="ml-5 list-disc space-y-1 text-sm text-foreground">
-              {plan.assumptions.map((item) => (
-                <li key={item}>{redactUiText(item)}</li>
+              {plan.assumptions.map((item, index) => (
+                <li key={`${index}-${item}`}>{redactUiText(item)}</li>
               ))}
             </ul>
           </div>
@@ -376,16 +376,18 @@ export function ActionPlanReview({
                       ) : null}
                       {previewChange?.warnings.length ? (
                         <ul className="ml-5 mt-2 list-disc space-y-1 text-xs text-muted-foreground">
-                          {previewChange.warnings.map((warning) => (
-                            <li key={warning}>{redactUiText(warning)}</li>
+                          {previewChange.warnings.map((warning, index) => (
+                            <li key={`${previewChange.actionId}-${index}-${warning}`}>
+                              {redactUiText(warning)}
+                            </li>
                           ))}
                         </ul>
                       ) : null}
                       {previewChange?.conflicts?.length ? (
                         <div className="mt-2 space-y-1 text-xs">
-                          {previewChange.conflicts.map((conflict) => (
+                          {previewChange.conflicts.map((conflict, index) => (
                             <p
-                              key={`${conflict.code}-${conflict.message}`}
+                              key={`${previewChange.actionId}-${index}-${conflict.code}-${conflict.message}`}
                               className={
                                 conflict.severity === "error"
                                   ? "text-destructive"

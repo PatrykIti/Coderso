@@ -48,6 +48,7 @@ test("registerAssistantRoutes wires endpoints", () => {
     expect.arrayContaining([
       "GET /assistant/status",
       "POST /assistant/reindex",
+      "POST /assistant/model-metadata",
       "POST /assistant/chat",
       "POST /assistant/actions/plan",
       "POST /assistant/actions/dry-run",
@@ -63,8 +64,47 @@ test("registerAssistantRoutes wires endpoints", () => {
     "settings:write",
     "settings:read",
     "settings:read",
+    "settings:read",
     "content:read",
   ]);
+});
+
+test("model metadata route validates payload and calls service", async () => {
+  const { router, routes } = makeRouter();
+  let validateCalls = 0;
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => {
+      validateCalls += 1;
+    },
+    service: {
+      getModelMetadata: async () => ({
+        model: "openai/gpt-5.4-nano",
+        maxInputTokens: 128000,
+        maxOutputTokens: 8192,
+        supportedParameters: ["max_tokens"],
+        source: "provider",
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/model-metadata");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const result = await handler?.({
+    params: {},
+    query: {},
+    body: { provider: "openrouter", model: "openai/gpt-5.4-nano" },
+    requestId: "req-model-metadata",
+    user: { id: "user-1" },
+  });
+
+  expect(validateCalls).toBe(1);
+  expect(result).toMatchObject({
+    model: "openai/gpt-5.4-nano",
+    maxInputTokens: 128000,
+    maxOutputTokens: 8192,
+  });
 });
 
 test("chat route calls service and returns payload", async () => {

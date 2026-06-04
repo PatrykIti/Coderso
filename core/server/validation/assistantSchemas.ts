@@ -31,3 +31,13 @@ export const assistantReindexSchema = {
     force: { type: "boolean" },
   },
 };
+
+export const assistantModelMetadataSchema = {
+  type: "object",
+  required: ["provider", "model"],
+  additionalProperties: false,
+  properties: {
+    provider: { type: "string", enum: ["openai", "openrouter", "none"] },
+    model: { type: "string", minLength: 1, maxLength: 200 },
+  },
+};

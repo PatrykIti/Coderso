@@ -1,11 +1,14 @@
 import type {
   AssistantProvider,
+  AssistantProviderModelMetadata,
   AssistantProviderRequest,
   AssistantProviderResponse,
 } from "./providerTypes";
 
 const DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const DEFAULT_RETRY_COUNT = 1;
+const DEFAULT_MODEL_MAX_INPUT_TOKENS = 4096;
+const DEFAULT_MODEL_MAX_OUTPUT_TOKENS = 1024;
 
 type OpenRouterFetch = typeof fetch;
 
@@ -36,6 +39,20 @@ type OpenRouterResponseBody = {
   error?: {
     message?: string;
   };
+};
+
+type OpenRouterModelObject = {
+  id?: string;
+  context_length?: number;
+  supported_parameters?: string[];
+  top_provider?: {
+    context_length?: number;
+    max_completion_tokens?: number;
+  } | null;
+};
+
+type OpenRouterModelsResponseBody = {
+  data?: OpenRouterModelObject[];
 };
 
 class OpenRouterRequestError extends Error {
@@ -108,16 +125,10 @@ const parseUsage = (body: OpenRouterResponseBody): AssistantProviderResponse["us
   const inputTokens =
     typeof usage.prompt_tokens === "number" ? Math.max(0, usage.prompt_tokens) : undefined;
   const outputTokens =
-    typeof usage.completion_tokens === "number"
-      ? Math.max(0, usage.completion_tokens)
-      : undefined;
+    typeof usage.completion_tokens === "number" ? Math.max(0, usage.completion_tokens) : undefined;
   const totalTokens =
     typeof usage.total_tokens === "number" ? Math.max(0, usage.total_tokens) : undefined;
-  if (
-    inputTokens === undefined &&
-    outputTokens === undefined &&
-    totalTokens === undefined
-  ) {
+  if (inputTokens === undefined && outputTokens === undefined && totalTokens === undefined) {
     return undefined;
   }
   return {
@@ -183,9 +194,68 @@ const parseJsonSafe = async (response: Response): Promise<OpenRouterResponseBody
   }
 };
 
-export const createOpenRouterProvider = (
-  config: OpenRouterProviderConfig
-): AssistantProvider => {
+const parseModelsJsonSafe = async (response: Response): Promise<OpenRouterModelsResponseBody> => {
+  try {
+    return (await response.json()) as OpenRouterModelsResponseBody;
+  } catch {
+    return {};
+  }
+};
+
+const normalizePositiveInteger = (value: unknown) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const normalized = Math.floor(value);
+  return normalized > 0 ? normalized : null;
+};
+
+const normalizeSupportedParameters = (value: unknown) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter((entry) => entry.length > 0)
+    .sort((left, right) => left.localeCompare(right));
+};
+
+const findOpenRouterModel = (body: OpenRouterModelsResponseBody, model: string) => {
+  const normalizedModel = model.trim();
+  if (!normalizedModel) return null;
+  return (body.data ?? []).find((entry) => entry.id === normalizedModel) ?? null;
+};
+
+const buildDefaultModelMetadata = (model: string): AssistantProviderModelMetadata => ({
+  model,
+  maxInputTokens: DEFAULT_MODEL_MAX_INPUT_TOKENS,
+  maxOutputTokens: DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
+  supportedParameters: [],
+  source: "default",
+});
+
+export const parseOpenRouterModelMetadata = (
+  body: OpenRouterModelsResponseBody,
+  model: string
+): AssistantProviderModelMetadata => {
+  const normalizedModel = model.trim();
+  const fallback = buildDefaultModelMetadata(normalizedModel);
+  const match = findOpenRouterModel(body, normalizedModel);
+  if (!match) return fallback;
+
+  const maxInputTokens =
+    normalizePositiveInteger(match.top_provider?.context_length) ??
+    normalizePositiveInteger(match.context_length);
+  const maxOutputTokens = normalizePositiveInteger(match.top_provider?.max_completion_tokens);
+
+  if (!maxInputTokens && !maxOutputTokens) return fallback;
+
+  return {
+    model: normalizedModel,
+    maxInputTokens: maxInputTokens ?? fallback.maxInputTokens,
+    maxOutputTokens: maxOutputTokens ?? fallback.maxOutputTokens,
+    supportedParameters: normalizeSupportedParameters(match.supported_parameters),
+    source: "provider",
+  };
+};
+
+export const createOpenRouterProvider = (config: OpenRouterProviderConfig): AssistantProvider => {
   const apiKey = config.apiKey.trim();
   const model = config.model.trim();
   const baseUrl = normalizeBaseUrl(config.baseUrl);
@@ -197,9 +267,22 @@ export const createOpenRouterProvider = (
   }
 
   const endpoint = `${baseUrl}/chat/completions`;
+  const modelsEndpoint = `${baseUrl}/models`;
 
   return {
     id: "openrouter",
+    getModelMetadata: async () => {
+      const headers = new Headers({
+        Authorization: `Bearer ${apiKey}`,
+      });
+      const response = await fetchImpl(modelsEndpoint, {
+        method: "GET",
+        headers,
+      });
+      if (!response.ok) return buildDefaultModelMetadata(model);
+      const body = await parseModelsJsonSafe(response);
+      return parseOpenRouterModelMetadata(body, model);
+    },
     complete: async (request) => {
       let lastError: OpenRouterRequestError | null = null;
 
@@ -263,7 +346,9 @@ export const createOpenRouterProvider = (
         }
       }
 
-      throw new Error(lastError?.message ? "assistant_provider_failed" : "assistant_provider_failed");
+      throw new Error(
+        lastError?.message ? "assistant_provider_failed" : "assistant_provider_failed"
+      );
     },
   };
 };

@@ -6,6 +6,7 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import * as assistantClient from "../../../core/admin/services/assistantClient";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
+import { AssistantSettingsCard } from "../../../core/admin/ui/settings/AssistantSettingsCard";
 import { AssistantSettingsPage } from "../../../core/admin/ui/settings/AssistantSettingsPage";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
@@ -56,9 +57,55 @@ test("AssistantSettingsPage renders assistant settings", () => {
 
   expect(html).toContain("Assistant");
   expect(html).toContain("Launcher avatar");
-  expect(html).toContain("Run reindex");
+  expect(html).toContain("Advanced");
   expect(html).toContain("Save changes");
   expect(html).toContain("Auto-save settings across all screens");
+});
+
+test("AssistantSettingsCard keeps token and support controls in Advanced", async () => {
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/settings/assistant">
+      <AssistantSettingsCard
+        values={{
+          assistantEnabled: true,
+          assistantLauncherAvatarEnabled: false,
+          assistantLauncherAvatarAsset: "",
+          assistantDefaultMode: "llm-guide",
+          assistantDocsReindexOnBoot: false,
+          assistantLlmEnabled: true,
+          assistantLlmProvider: "openrouter",
+          assistantLlmModel: "openai/gpt-5.4-nano",
+          assistantLlmMaxInputTokens: 128000,
+          assistantLlmMaxOutputTokens: 8192,
+          assistantLlmTimeoutMs: 20000,
+          assistantQuotaRequestsPerMinute: 20,
+          assistantQuotaRequestsPerDay: 1000,
+        }}
+        modelMetadata={{
+          model: "openai/gpt-5.4-nano",
+          maxInputTokens: 128000,
+          maxOutputTokens: 8192,
+          supportedParameters: ["max_tokens"],
+          source: "provider",
+        }}
+        onRunReindex={() => undefined}
+      />
+    </AdminRouterProvider>
+  );
+
+  expect(document.body.textContent).toContain("OpenRouter limits loaded");
+  expect(document.body.textContent).toContain("Advanced");
+  expect(document.body.textContent).not.toContain("Max input tokens");
+
+  await clickButton("Advanced");
+
+  const html = view.container.innerHTML;
+  expect(html).toContain("OpenRouter limits loaded");
+  expect(html).toContain("Advanced");
+  expect(html).toContain("Max input tokens");
+  expect(html).toContain("Run support reindex");
+
+  view.cleanup();
 });
 
 test("AssistantSettingsPage links OpenRouter provider to integrations secrets", () => {
@@ -111,7 +158,8 @@ test("Run reindex requires confirmation before calling assistant reindex", async
     </AdminRouterProvider>
   );
 
-  await clickButton("Run reindex");
+  await clickButton("Advanced");
+  await clickButton("Run support reindex");
   expect(document.body.textContent).toContain("Run assistant reindex?");
   expect(onSave).not.toHaveBeenCalled();
   expect(reindexSpy).not.toHaveBeenCalled();
@@ -119,7 +167,7 @@ test("Run reindex requires confirmation before calling assistant reindex", async
   await clickButton("Cancel");
   expect(reindexSpy).not.toHaveBeenCalled();
 
-  await clickButton("Run reindex");
+  await clickButton("Run support reindex");
   await clickButton("Run reindex", { last: true });
 
   expect(onSave).not.toHaveBeenCalled();

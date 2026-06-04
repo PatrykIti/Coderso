@@ -528,6 +528,106 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
   }
 });
 
+test("AssistantPanel starts LLM Guide when docs are not ready but LLM is available", async () => {
+  window.localStorage.setItem(
+    "coderso.assistant.conversation.state",
+    JSON.stringify({
+      schemaVersion: 1,
+      messages: [],
+      activePlan: null,
+      activePreview: null,
+      activeExecution: null,
+      planningState: null,
+      assistantMode: "docs-only",
+      savedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+  );
+
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "docs-only",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: false,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 0,
+    chunkCount: 0,
+  });
+  mockUserSettings({ "assistant.mode": "docs-only" });
+  const chatSpy = vi.spyOn(assistantClient, "sendAssistantMessage");
+  const planSpy = vi.spyOn(assistantClient, "planAssistantActions").mockResolvedValue({
+    id: "plan-full-service",
+    status: "ready",
+    intentId: "full-service",
+    title: "Full Service Website",
+    answer: "I can prepare a complete service website structure.",
+    summary: "Create a complete service website plan.",
+    confidence: 0.88,
+    assumptions: [],
+    questions: [],
+    actions: [],
+  });
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/settings/assistant">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const launcher = findButton(view.container, "");
+    if (!launcher) throw new Error("missing_launcher");
+
+    await React.act(async () => {
+      launcher.click();
+      await flush();
+    });
+
+    expect(view.container.textContent).not.toContain("Assistant docs are not ready yet");
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+    expect(textarea.disabled).toBe(false);
+    expect(textarea.getAttribute("placeholder")).toContain("LLM Guide");
+
+    await React.act(async () => {
+      setTextareaValue(textarea, "utworz kompletny serwis dla pracowni architektury");
+      await flush();
+    });
+
+    const sendButton = findButton(view.container, "Send");
+    if (!sendButton) throw new Error("missing_send_button");
+
+    await React.act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    expect(planSpy).toHaveBeenCalledTimes(1);
+    expect(chatSpy).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain("complete service website structure");
+    expect(
+      JSON.parse(window.localStorage.getItem("coderso.assistant.conversation.state") ?? "{}")
+        .assistantMode
+    ).toBe("llm-guide");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("AssistantPanel keeps docs-only mode on assistant chat route", async () => {
   vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,

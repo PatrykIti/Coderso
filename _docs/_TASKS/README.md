@@ -34,7 +34,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2221 tasks
+- **Done:** 2227 tasks
 
 ---
 
@@ -68,6 +68,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-403 | Assistant Docs Only LLM Guide and Settings UX Audit | High | Large | Done (2026-06-04): parent task closed by TASK-403-01 through TASK-403-05; mode-aware LLM Guide composer, architecture-studio typed scaffold E2E, OpenRouter metadata, Assistant Settings Advanced UX, Docker startup docs indexing, docs refresh, Playwright/Claude review, and live OpenRouter validation completed. |
+| TASK-403-01 | Assistant Docs Only Corpus and Answer Quality | High | Medium | Done (2026-06-04): guide corpus copy for Assistant Settings, Integrations, getting started, and admin orientation was refreshed while deterministic docs-only answer tests stayed green. |
+| TASK-403-02 | LLM Guide Composer Availability and OpenRouter Live Verification | High | Medium | Done (2026-06-04): floating assistant composer gating is mode-aware and OpenRouter live smoke/CMS matrix validation passed. |
+| TASK-403-03 | Assistant Settings UX and OpenRouter Model Metadata | High | Large | Done (2026-06-04): Assistant Settings now defaults to routine controls, keeps Advanced collapsed, routes secrets to Integrations, and reads OpenRouter model metadata. |
+| TASK-403-04 | Docker Startup Assistant Docs Reindex Helper | High | Medium | Done (2026-06-04): Docker startup runs idempotent assistant docs indexing after migrations with advisory-lock protection and docs copied into the image. |
+| TASK-403-05 | Assistant Docs QA Docs Changelog and Closure | High | Medium | Done (2026-06-04): docs, task board, changelog, Playwright full-service scaffold E2E, Claude limitation review, lint/typecheck, targeted tests, live OpenRouter lanes, and release gates were recorded. |
 | TASK-401 | DB Runtime Test Idle Timeout | Medium | Small | Done (2026-06-04): DB-backed media runtime tests now opt into a 30-second Bun.serve idle timeout to avoid socket resets under full-lane load. |
 | TASK-400 | Docker Startup Migrations | High | Medium | Done (2026-06-04): Docker runtime entrypoint now runs Drizzle migrations behind a Postgres advisory lock before starting the core HTTP server. |
 | TASK-399 | Admin SPA Route-Level Code Splitting and Bundle Reduction | High | Large | Done (2026-06-04): protected admin pages now load through guarded lazy route descriptors; initial static graph gzip is `400,812 B` against the `500,000 B` guard budget. |

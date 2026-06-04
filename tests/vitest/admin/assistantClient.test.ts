@@ -4,6 +4,7 @@ import {
   dryRunAssistantActions,
   executeAssistantActions,
   executeAssistantSiteKitActions,
+  getAssistantModelMetadata,
   getAssistantStatus,
   planAssistantActions,
   planAssistantSiteKitActions,
@@ -45,6 +46,41 @@ test("getAssistantStatus hits GET /assistant/status", async () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]?.input).toBe("/admin/api/assistant/status");
     expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("getAssistantModelMetadata uses CSRF and POST", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      model: "openai/gpt-5.4-nano",
+      maxInputTokens: 128000,
+      maxOutputTokens: 8192,
+      supportedParameters: ["max_tokens"],
+      source: "provider",
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    const result = await getAssistantModelMetadata({
+      provider: "openrouter",
+      model: "openai/gpt-5.4-nano",
+    });
+
+    expect(result.maxInputTokens).toBe(128000);
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/assistant/model-metadata");
+    expect(calls[1]?.init?.method).toBe("POST");
   } finally {
     globalThis.fetch = originalFetch;
   }

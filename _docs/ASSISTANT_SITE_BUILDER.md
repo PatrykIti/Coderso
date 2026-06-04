@@ -75,6 +75,11 @@ Current implemented guide blueprint:
   - mixed setup prompts can now be analyzed into primary + adjunct capability candidates inside the foundation layer
   - composed graph/assembler helpers still reuse the current strict typed action families; no parallel blueprint executor was introduced
   - supported mixed-capability and primary-plus-gated setup prompts now route through the composed planner path; single-pack setup/refinement still uses the existing legacy pack builders outside this bounded mixed-setup cutover
+  - architecture-studio/service prompts that mention portfolio, offer/services,
+    and contact now route to a composed scaffold of `portfolio-projects`,
+    `services-directory`, and `lead-capture-site` instead of collapsing to the
+    house-projects catalog; each composed fragment builds from its own intent
+    family so adjunct catalogs do not inherit the primary catalog preset
   - compatible `content-type.upsert` fragments now merge server-side through `blueprintSchemaMerger.ts` plus the existing content schema validator, so additive field/enum extensions stay in one strict action instead of surfacing as duplicate-resource drift
   - compatible listing facet/card fragments now merge through schema-backed listing owners, and the assembler widens `listing-query.upsert.fields` automatically so merged filters/card bindings keep the runtime projection fields they need
   - assistant-facing page section aliases and merge slots now resolve through a deterministic library over the current page-builder widget registry and alias-specific `modulePackMatrix` helper mappings; unsupported aliases stay gated instead of inventing a second section catalog
@@ -115,6 +120,13 @@ Current capability limits:
 - `docs-only` answers are read-only and never return executable action plans.
 - `LLM Guide` can plan, dry-run, and execute only the strict typed actions
   listed in `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`.
+- Mixed service-site prompts currently produce a typed scaffold, not a
+  launch-ready marketing site. The architecture-studio path can create
+  portfolio/services catalogs, admin screens, listing resources, a contact page,
+  and a public lead form, but it does not yet generate a home page, about/team,
+  process, references, seed entries, media assets, global navigation, or full SEO
+  metadata. E2E acceptance must not treat `200` plus empty catalog states as
+  proof that a full service site is complete.
 - Booking resources, checkout/payment setup, webhook automation, nested page
   widget patches, and installed solution-kit refinements remain gated until
   their adapters, permissions, and hardening are explicit.

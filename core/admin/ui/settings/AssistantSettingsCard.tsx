@@ -1,6 +1,9 @@
-import { Bot } from "lucide-react";
+import { Bot, ChevronDown, RefreshCw, Settings2 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -10,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import type { AssistantModelMetadataResponse } from "@/services/assistantClient";
 import { AdminLink } from "@/ui/shared/AdminLink";
 import { ASSISTANT_SETTINGS_DEFAULT_VALUES, type AssistantSettingsValues } from "./settingsValues";
 
@@ -20,6 +24,13 @@ type AssistantSettingsCardProps = {
   values: AssistantSettingsValues;
   onChange?: (patch: Partial<AssistantSettingsValues>) => void;
   disabled?: boolean;
+  modelMetadata?: AssistantModelMetadataResponse | null;
+  modelMetadataError?: string | null;
+  isModelMetadataLoading?: boolean;
+  onRefreshModelMetadata?: () => void;
+  onRunReindex?: () => void;
+  isReindexing?: boolean;
+  reindexDisabled?: boolean;
 };
 
 const labelClassName = "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
@@ -35,8 +46,16 @@ export function AssistantSettingsCard({
   values,
   onChange,
   disabled = false,
+  modelMetadata = null,
+  modelMetadataError = null,
+  isModelMetadataLoading = false,
+  onRefreshModelMetadata,
+  onRunReindex,
+  isReindexing = false,
+  reindexDisabled = false,
 }: AssistantSettingsCardProps) {
   const llmConfigDisabled = disabled || !values.assistantLlmEnabled;
+  const showOpenRouterMetadata = values.assistantLlmProvider === "openrouter";
 
   return (
     <Card className="border-border/60">
@@ -48,7 +67,7 @@ export function AssistantSettingsCard({
           <div>
             <CardTitle>Assistant</CardTitle>
             <CardDescription>
-              Configure Doc Navigator defaults and optional LLM behavior.
+              Configure Docs Assistant defaults and optional LLM Guide behavior.
             </CardDescription>
           </div>
         </div>
@@ -120,6 +139,23 @@ export function AssistantSettingsCard({
             </Select>
           </div>
 
+          <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Enable LLM Guide</p>
+                <p className="text-xs text-muted-foreground">
+                  Allows reviewed setup planning and typed assistant actions when provider and model
+                  are configured.
+                </p>
+              </div>
+              <Switch
+                checked={values.assistantLlmEnabled}
+                onCheckedChange={(checked) => onChange?.({ assistantLlmEnabled: Boolean(checked) })}
+                disabled={disabled}
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <label className={labelClassName}>LLM provider</label>
             <Select
@@ -166,54 +202,6 @@ export function AssistantSettingsCard({
             ) : null}
           </div>
 
-          <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
-            <p className={labelClassName}>Official assistant corpus</p>
-            <p className="text-sm font-medium text-foreground">
-              Root <code>docs/</code> corpus seeded to database knowledge base
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Assistant documentation is sourced from the official English
-              <code> docs/ </code>
-              directory and becomes available to runtime only after DB reindex/seeding. The official
-              corpus does not rely on filesystem fallback.
-            </p>
-          </div>
-
-          <div className="space-y-2 rounded-lg border p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Reindex on boot</p>
-                <p className="text-xs text-muted-foreground">
-                  Rebuild docs index automatically at startup.
-                </p>
-              </div>
-              <Switch
-                checked={values.assistantDocsReindexOnBoot}
-                onCheckedChange={(checked) =>
-                  onChange?.({ assistantDocsReindexOnBoot: Boolean(checked) })
-                }
-                disabled={disabled}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2 rounded-lg border p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Enable LLM mode</p>
-                <p className="text-xs text-muted-foreground">
-                  Allows guide planning and LLM-backed assistant responses when provider and model
-                  are configured.
-                </p>
-              </div>
-              <Switch
-                checked={values.assistantLlmEnabled}
-                onCheckedChange={(checked) => onChange?.({ assistantLlmEnabled: Boolean(checked) })}
-                disabled={disabled}
-              />
-            </div>
-          </div>
-
           <div className="space-y-2 md:col-span-2">
             <label className={labelClassName}>LLM model</label>
             <Input
@@ -222,97 +210,210 @@ export function AssistantSettingsCard({
               placeholder="google/gemma-3n-e2b-it:free"
               disabled={llmConfigDisabled}
             />
+            {showOpenRouterMetadata ? (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {isModelMetadataLoading ? (
+                  <Badge variant="outline">Reading OpenRouter limits...</Badge>
+                ) : null}
+                {modelMetadata ? (
+                  <Badge variant={modelMetadata.source === "provider" ? "secondary" : "outline"}>
+                    {modelMetadata.source === "provider"
+                      ? "OpenRouter limits loaded"
+                      : "Safe default limits"}
+                  </Badge>
+                ) : null}
+                {modelMetadata ? (
+                  <span>
+                    Input {modelMetadata.maxInputTokens.toLocaleString()} / output{" "}
+                    {modelMetadata.maxOutputTokens.toLocaleString()} tokens
+                  </span>
+                ) : null}
+                {modelMetadataError ? <span>{modelMetadataError}</span> : null}
+              </div>
+            ) : null}
           </div>
 
-          <div className="space-y-2">
-            <label className={labelClassName}>Max input tokens</label>
-            <Input
-              type="number"
-              min={1}
-              value={values.assistantLlmMaxInputTokens}
-              onChange={(event) =>
-                onChange?.({
-                  assistantLlmMaxInputTokens: parsePositiveNumber(
-                    event.target.value,
-                    values.assistantLlmMaxInputTokens
-                  ),
-                })
-              }
-              disabled={llmConfigDisabled}
-            />
+          <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+            <p className={labelClassName}>Official assistant corpus</p>
+            <p className="text-sm font-medium text-foreground">
+              Official <code>docs/guide</code> docs are indexed automatically for assistant answers
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Docker startup seeds the database index from the English
+              <code> docs/guide </code>
+              directory when the image or docs change. If the assistant says docs are not ready,
+              support can rebuild the index from Advanced.
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <label className={labelClassName}>Max output tokens</label>
-            <Input
-              type="number"
-              min={1}
-              value={values.assistantLlmMaxOutputTokens}
-              onChange={(event) =>
-                onChange?.({
-                  assistantLlmMaxOutputTokens: parsePositiveNumber(
-                    event.target.value,
-                    values.assistantLlmMaxOutputTokens
-                  ),
-                })
-              }
-              disabled={llmConfigDisabled}
-            />
-          </div>
+          <Collapsible className="md:col-span-2">
+            <div className="rounded-lg border">
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex h-auto w-full justify-between rounded-lg px-3 py-3 text-left"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Settings2 className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      <span className="block text-sm font-medium">Advanced</span>
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        Token limits, quotas, timeout, and support indexing actions.
+                      </span>
+                    </span>
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="grid gap-4 border-t p-3 md:grid-cols-2">
+                  <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Reindex on boot</p>
+                        <p className="text-xs text-muted-foreground">
+                          Docker startup owns normal docs indexing. Keep this off unless support
+                          needs a temporary startup rebuild.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={values.assistantDocsReindexOnBoot}
+                        onCheckedChange={(checked) =>
+                          onChange?.({ assistantDocsReindexOnBoot: Boolean(checked) })
+                        }
+                        disabled={disabled}
+                      />
+                    </div>
+                  </div>
 
-          <div className="space-y-2">
-            <label className={labelClassName}>LLM timeout (ms)</label>
-            <Input
-              type="number"
-              min={1}
-              value={values.assistantLlmTimeoutMs}
-              onChange={(event) =>
-                onChange?.({
-                  assistantLlmTimeoutMs: parsePositiveNumber(
-                    event.target.value,
-                    values.assistantLlmTimeoutMs
-                  ),
-                })
-              }
-              disabled={llmConfigDisabled}
-            />
-          </div>
+                  {showOpenRouterMetadata ? (
+                    <div className="space-y-2 md:col-span-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={onRefreshModelMetadata}
+                        disabled={disabled || isModelMetadataLoading || !values.assistantLlmModel}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        {isModelMetadataLoading ? "Reading limits..." : "Read model limits"}
+                      </Button>
+                    </div>
+                  ) : null}
 
-          <div className="space-y-2">
-            <label className={labelClassName}>Requests per minute</label>
-            <Input
-              type="number"
-              min={1}
-              value={values.assistantQuotaRequestsPerMinute}
-              onChange={(event) =>
-                onChange?.({
-                  assistantQuotaRequestsPerMinute: parsePositiveNumber(
-                    event.target.value,
-                    values.assistantQuotaRequestsPerMinute
-                  ),
-                })
-              }
-              disabled={disabled}
-            />
-          </div>
+                  <div className="space-y-2">
+                    <label className={labelClassName}>Max input tokens</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={values.assistantLlmMaxInputTokens}
+                      onChange={(event) =>
+                        onChange?.({
+                          assistantLlmMaxInputTokens: parsePositiveNumber(
+                            event.target.value,
+                            values.assistantLlmMaxInputTokens
+                          ),
+                        })
+                      }
+                      disabled={llmConfigDisabled}
+                    />
+                  </div>
 
-          <div className="space-y-2 md:col-span-2">
-            <label className={labelClassName}>Requests per day</label>
-            <Input
-              type="number"
-              min={1}
-              value={values.assistantQuotaRequestsPerDay}
-              onChange={(event) =>
-                onChange?.({
-                  assistantQuotaRequestsPerDay: parsePositiveNumber(
-                    event.target.value,
-                    values.assistantQuotaRequestsPerDay
-                  ),
-                })
-              }
-              disabled={disabled}
-            />
-          </div>
+                  <div className="space-y-2">
+                    <label className={labelClassName}>Max output tokens</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={values.assistantLlmMaxOutputTokens}
+                      onChange={(event) =>
+                        onChange?.({
+                          assistantLlmMaxOutputTokens: parsePositiveNumber(
+                            event.target.value,
+                            values.assistantLlmMaxOutputTokens
+                          ),
+                        })
+                      }
+                      disabled={llmConfigDisabled}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className={labelClassName}>LLM timeout (ms)</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={values.assistantLlmTimeoutMs}
+                      onChange={(event) =>
+                        onChange?.({
+                          assistantLlmTimeoutMs: parsePositiveNumber(
+                            event.target.value,
+                            values.assistantLlmTimeoutMs
+                          ),
+                        })
+                      }
+                      disabled={llmConfigDisabled}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className={labelClassName}>Requests per minute</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={values.assistantQuotaRequestsPerMinute}
+                      onChange={(event) =>
+                        onChange?.({
+                          assistantQuotaRequestsPerMinute: parsePositiveNumber(
+                            event.target.value,
+                            values.assistantQuotaRequestsPerMinute
+                          ),
+                        })
+                      }
+                      disabled={disabled}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className={labelClassName}>Requests per day</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={values.assistantQuotaRequestsPerDay}
+                      onChange={(event) =>
+                        onChange?.({
+                          assistantQuotaRequestsPerDay: parsePositiveNumber(
+                            event.target.value,
+                            values.assistantQuotaRequestsPerDay
+                          ),
+                        })
+                      }
+                      disabled={disabled}
+                    />
+                  </div>
+
+                  {onRunReindex ? (
+                    <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+                      <p className="text-sm font-medium">Support reindex</p>
+                      <p className="text-xs text-muted-foreground">
+                        Normal Docker startup should seed docs once per image/docs version. Use this
+                        only for support recovery after confirming saved settings.
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={onRunReindex}
+                        disabled={reindexDisabled}
+                      >
+                        {isReindexing ? "Reindexing..." : "Run support reindex"}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
         </div>
       </CardContent>
     </Card>

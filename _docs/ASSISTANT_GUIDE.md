@@ -32,11 +32,12 @@ Global assistant configuration remains on `Settings -> Assistant`.
 The conversation window does not expose global assistant settings actions.
 
 Knowledge source contract:
-- official assistant docs live in root `docs/`,
+- official assistant docs live in root `docs/guide`,
 - official docs become available to runtime only after DB reindex/seeding,
 - missing seeded DB corpus means assistant docs are `not ready`, not filesystem fallback.
-- `Settings -> Assistant` exposes the operational `Run reindex` action for seeding the corpus into DB.
-- reindex also prunes official assistant docs that were removed from the current `docs/` source tree, so stale DB-only records do not keep surfacing in answers.
+- Docker startup normally seeds the `docs/guide` corpus once per image/docs fingerprint before serving traffic.
+- `Settings -> Assistant -> Advanced` keeps a `Run support reindex` action for recovery, not routine configuration.
+- reindex also prunes official assistant docs that were removed from the current `docs/guide` source tree, so stale DB-only records do not keep surfacing in answers.
 - legacy `_docs/filesystem` assistant docs mode is no longer an active supported runtime path.
 
 Answer contract:

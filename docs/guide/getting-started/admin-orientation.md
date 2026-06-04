@@ -9,6 +9,7 @@ keywords:
   - dashboard
   - coderso
   - settings
+  - assistant
 ---
 
 # What Is It
@@ -32,7 +33,9 @@ site management or in Advanced workflows.
 3. Use Advanced > Engine to model structured content and Entries to manage records.
 4. Use Widgets, Forms, Listings, Booking, Commerce, Reviews, and Popups when
    you are building customer-facing product workflows.
-5. Use Solution Kits when you want a guided, package-based starting point
+5. Use Settings > Assistant to decide whether the admin assistant stays in
+   read-only Docs Assistant mode or uses LLM Guide with a configured provider.
+6. Use Solution Kits when you want a guided, package-based starting point
    instead of building the structure manually.
 
 # Examples

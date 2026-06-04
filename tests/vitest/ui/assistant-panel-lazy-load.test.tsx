@@ -2,9 +2,12 @@ import React from "react";
 import { expect, test } from "vitest";
 
 import {
+  resolveAssistantComposerState,
   resolveAssistantConversationState,
   resolveAssistantConversationWindowPosition,
   resolveAssistantPanelViewState,
+  resolveAssistantCurrentMode,
+  hasRestorableAssistantConversation,
   shouldLoadAssistantRuntimeState,
 } from "../../../core/admin/ui/assistant/AssistantPanel";
 
@@ -91,6 +94,14 @@ test("assistant conversation state keeps docs-not-ready separate from empty chat
   expect(
     resolveAssistantConversationState({
       messageCount: 0,
+      indexReady: false,
+      mode: "llm-guide",
+    })
+  ).toBe("empty");
+
+  expect(
+    resolveAssistantConversationState({
+      messageCount: 0,
       indexReady: true,
     })
   ).toBe("empty");
@@ -101,6 +112,113 @@ test("assistant conversation state keeps docs-not-ready separate from empty chat
       indexReady: false,
     })
   ).toBe("messages");
+});
+
+test("assistant composer gates docs-only by docs index and LLM Guide by provider availability", () => {
+  const baseStatus = {
+    enabled: true,
+    defaultMode: "docs-only" as const,
+    retrievalBackend: "db" as const,
+    llmAvailable: true,
+    indexReady: false,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 0,
+    chunkCount: 0,
+  };
+
+  expect(
+    resolveAssistantComposerState({
+      message: "Create a product catalog",
+      isSending: false,
+      status: baseStatus,
+      mode: "llm-guide",
+    })
+  ).toEqual({ disabled: false, reason: null });
+
+  expect(
+    resolveAssistantComposerState({
+      message: "Where are assistant settings?",
+      isSending: false,
+      status: baseStatus,
+      mode: "docs-only",
+    })
+  ).toEqual({ disabled: true, reason: "docs_not_ready" });
+
+  expect(
+    resolveAssistantComposerState({
+      message: "Create a product catalog",
+      isSending: false,
+      status: { ...baseStatus, llmAvailable: false },
+      mode: "llm-guide",
+    })
+  ).toEqual({ disabled: true, reason: "llm_unavailable" });
+});
+
+test("assistant panel ignores stale empty conversation mode when choosing the global default", () => {
+  const emptySnapshot = {
+    messages: [],
+    activePlan: null,
+    activePreview: null,
+    activeExecution: null,
+    planningState: null,
+    assistantMode: "docs-only" as const,
+  };
+
+  expect(hasRestorableAssistantConversation(null)).toBe(false);
+  expect(hasRestorableAssistantConversation(emptySnapshot)).toBe(false);
+  expect(
+    hasRestorableAssistantConversation({
+      ...emptySnapshot,
+      messages: [
+        {
+          id: "message-1",
+          role: "assistant",
+          text: "Existing answer",
+        },
+      ],
+    })
+  ).toBe(true);
+});
+
+test("assistant panel starts LLM Guide for a new chat when docs are missing but LLM is ready", () => {
+  const status = {
+    enabled: true,
+    defaultMode: "docs-only" as const,
+    retrievalBackend: "db" as const,
+    llmAvailable: true,
+    indexReady: false,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 0,
+    chunkCount: 0,
+  };
+
+  expect(
+    resolveAssistantCurrentMode({
+      status,
+      preferredMode: null,
+      hasConversation: false,
+    })
+  ).toBe("llm-guide");
+
+  expect(
+    resolveAssistantCurrentMode({
+      status,
+      preferredMode: "docs-only",
+      hasConversation: true,
+    })
+  ).toBe("docs-only");
+
+  expect(
+    resolveAssistantCurrentMode({
+      status,
+      preferredMode: null,
+      hasConversation: true,
+    })
+  ).toBe("llm-guide");
 });
 
 test("assistant conversation window stays anchored near launcher and within viewport bounds", () => {

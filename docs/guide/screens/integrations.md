@@ -9,6 +9,10 @@ keywords:
   - connect service
   - integration scopes
   - request integration
+  - openrouter
+  - openai
+  - assistant provider
+  - llm api key
 ---
 
 # Basic
@@ -17,6 +21,10 @@ Integrations is the service-catalog surface for connecting the product to
 third-party providers. It is where you browse available integrations, filter by
 category, open a configuration drawer, and request a new integration that does
 not yet exist in the catalog.
+
+Assistant provider API keys also live here. OpenRouter and OpenAI keys are
+stored as encrypted integration secrets; Assistant Settings only selects which
+configured provider and model the assistant should use.
 
 In the current UI, this route includes:
 - category chips:
@@ -36,6 +44,7 @@ LLM API key. The current route is designed for:
 - narrowing the list by category,
 - opening a provider-specific configuration drawer,
 - reviewing required fields and security scopes,
+- configuring encrypted OpenRouter or OpenAI secrets for `LLM Guide`,
 - requesting a missing provider from the team.
 
 This is not only a settings list. It is a service-discovery and connection
@@ -73,15 +82,18 @@ workspace that balances catalog review with configuration and procurement.
 11. Use `Save Changes` only when the provider configuration is coherent. When a
     secret field changed, review the `Review integration secrets` dialog before
     applying it.
-12. Use `Request new` when the catalog does not contain the integration you need.
-13. In the request dialog, provide:
+12. For LLM Guide, configure the OpenRouter or OpenAI integration here first,
+    then return to `Settings > Assistant` to enable LLM Guide and select the
+    provider/model.
+13. Use `Request new` when the catalog does not contain the integration you need.
+14. In the request dialog, provide:
     - service name,
     - website URL,
     - notes.
-14. Submit the request when the need is real:
+15. Submit the request when the need is real:
     - success closes the dialog,
     - validation or backend failures stay inline in the dialog until corrected.
-15. Use the request flow when a real product need exists, not as a substitute
+16. Use the request flow when a real product need exists, not as a substitute
     for choosing from the existing catalog.
 
 Use this safe integrations workflow when you want fewer misconfigurations:
@@ -103,6 +115,9 @@ Use this safe integrations workflow when you want fewer misconfigurations:
   already models that distinction explicitly.
 - Secret review dialogs show provider and field labels only. They must not echo
   the submitted secret value.
+- OpenRouter/OpenAI assistant keys are provider secrets, not Assistant Settings
+  form values. Keep them in the integration drawer so encryption, masking, and
+  secret-review behavior apply.
 - `Request new` is part of governance. It keeps the product from turning into a
   one-off unmanaged integration layer.
 
@@ -120,6 +135,9 @@ Use this safe integrations workflow when you want fewer misconfigurations:
   update the field intentionally; only secret fields stay masked behind
   `Update secret`, while plain text and URL fields remain visible. Secret
   updates require the extra review dialog.
+- LLM Guide says the provider is unavailable:
+  confirm the matching OpenRouter or OpenAI integration is connected here, then
+  return to `Settings > Assistant` and select that provider/model.
 - Too many services look relevant:
   filter by category first, then compare description and scope expectations.
 
@@ -149,5 +167,8 @@ Use this safe integrations workflow when you want fewer misconfigurations:
   high-trust administrators responsible for third-party connectivity.
 - Provider configuration and secret fields are sensitive integration material and
   should be treated as operational secrets.
+- Assistant provider API keys must remain encrypted integration secrets. Do not
+  paste them into Assistant Settings fields, prompts, docs, screenshots, or
+  support notes.
 - Scope review matters because integrations can widen system access in ways that
   are easy to overlook if the card is treated as just another settings row.

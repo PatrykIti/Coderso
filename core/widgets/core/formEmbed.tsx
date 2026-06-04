@@ -77,6 +77,7 @@ export type ResolvedFormField = {
 };
 
 export type FormEmbedResolvedData = {
+  formId?: string;
   formName?: string;
   description?: string | null;
   status?: string;
@@ -439,12 +440,14 @@ export const formEmbedSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
+        formId: { type: "string" },
         formName: { type: "string" },
         description: { type: ["string", "null"] },
         status: { type: "string" },
         successMessage: { type: ["string", "null"] },
         successRedirectUrl: { type: ["string", "null"] },
         submissionAccess: { enum: ["public", "internal"] },
+        submissionNonce: { type: ["string", "null"] },
         botProtection: {
           type: ["object", "null"],
           additionalProperties: false,

@@ -6,10 +6,7 @@ import type {
 import { resolveResourceKindFromPromptWithPolicy } from "./operationPolicy/resolverPolicy";
 
 export const normalizeAssistantPlannerPrompt = (value: string) =>
-  value
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLowerCase();
+  value.trim().replace(/\s+/g, " ").toLowerCase();
 
 export const includesAny = (value: string, candidates: string[]) =>
   candidates.some((candidate) => value.includes(candidate));
@@ -26,14 +23,7 @@ const houseProjectKeywords = [
   "home designs",
 ];
 
-const catalogKeywords = [
-  "katalog",
-  "catalog",
-  "showcase",
-  "prezentowac",
-  "present",
-  "listing",
-];
+const catalogKeywords = ["katalog", "catalog", "showcase", "prezentowac", "present", "listing"];
 
 const setupKeywords = [
   "potrzebuje",
@@ -83,15 +73,7 @@ const refinementKeywords = [
   "cenę",
 ];
 
-const destructiveKeywords = [
-  "usun",
-  "usuń",
-  "usuw",
-  "skasuj",
-  "kasuj",
-  "delete",
-  "remove",
-];
+const destructiveKeywords = ["usun", "usuń", "usuw", "skasuj", "kasuj", "delete", "remove"];
 
 export const isLikelyDeletePrompt = (prompt: string) =>
   includesAny(normalizeAssistantPlannerPrompt(prompt), destructiveKeywords);
@@ -175,6 +157,22 @@ const portfolioKeywords = [
   "realizacja",
   "realizacje",
   "showreel",
+];
+
+const architectureStudioKeywords = [
+  "studio architektoniczne",
+  "studia architektonicznego",
+  "pracownia architektoniczna",
+  "pracowni architektonicznej",
+  "architekt",
+  "architekci",
+  "architektoniczny",
+  "architektoniczna",
+  "architektoniczne",
+  "architect",
+  "architects",
+  "architecture studio",
+  "architectural studio",
 ];
 
 const serviceDirectoryKeywords = [
@@ -268,18 +266,14 @@ const portfolioRefinementKeywords = [
 
 export const isLikelyHouseProjectsCatalogPrompt = (prompt: string) => {
   const normalized = normalizeAssistantPlannerPrompt(prompt);
-  return (
-    includesAny(normalized, catalogKeywords) &&
-    includesAny(normalized, houseProjectKeywords)
-  );
+  return includesAny(normalized, catalogKeywords) && includesAny(normalized, houseProjectKeywords);
 };
 
 const isLikelyProductCatalogPrompt = (prompt: string) => {
   const normalized = normalizeAssistantPlannerPrompt(prompt);
   if (isLikelyHouseProjectsCatalogPrompt(normalized)) return false;
   return (
-    includesAny(normalized, productCatalogKeywords) &&
-    includesAny(normalized, catalogKeywords)
+    includesAny(normalized, productCatalogKeywords) && includesAny(normalized, catalogKeywords)
   );
 };
 
@@ -289,6 +283,14 @@ const isLikelyPortfolioProjectsPrompt = (prompt: string) => {
   return includesAny(normalized, portfolioKeywords);
 };
 
+const isLikelyArchitecturePortfolioPrompt = (prompt: string) => {
+  const normalized = normalizeAssistantPlannerPrompt(prompt);
+  return (
+    includesAny(normalized, architectureStudioKeywords) &&
+    includesAny(normalized, [...portfolioKeywords, "projekty", "project", "projects"])
+  );
+};
+
 const isLikelyServicesDirectoryPrompt = (prompt: string) => {
   const normalized = normalizeAssistantPlannerPrompt(prompt);
   return includesAny(normalized, serviceDirectoryKeywords);
@@ -296,11 +298,15 @@ const isLikelyServicesDirectoryPrompt = (prompt: string) => {
 
 export const resolveIntentFamily = (prompt: string): AssistantIntentFamily => {
   const normalized = normalizeAssistantPlannerPrompt(prompt);
+  if (isLikelyArchitecturePortfolioPrompt(normalized)) return "portfolio_projects";
   if (isLikelyHouseProjectsCatalogPrompt(normalized)) return "catalog_showcase";
   if (includesAny(normalized, houseProjectsRefinementKeywords)) return "catalog_showcase";
   if (isLikelyProductCatalogPrompt(normalized)) return "product_catalog";
   if (includesAny(normalized, productRefinementKeywords)) return "product_catalog";
-  if (includesAny(normalized, productCatalogKeywords) && includesAny(normalized, productCheckoutKeywords)) {
+  if (
+    includesAny(normalized, productCatalogKeywords) &&
+    includesAny(normalized, productCheckoutKeywords)
+  ) {
     return "product_catalog";
   }
   if (isLikelyServicesDirectoryPrompt(normalized)) return "services_directory";
@@ -353,25 +359,11 @@ export const isLikelyGuidePlanningPrompt = (prompt: string) => {
 const catalogContextText = (context: AssistantAdminContext) => {
   const catalog = context.resourceCatalog;
   if (!catalog) return "";
-  const contentTypes = catalog.contentTypes.flatMap((item) => [
-    item.id,
-    item.slug,
-    item.name,
-  ]);
+  const contentTypes = catalog.contentTypes.flatMap((item) => [item.id, item.slug, item.name]);
   const queries = catalog.listings.queries.flatMap((item) => [item.id, item.name]);
-  const templates = catalog.listings.templates.flatMap((item) => [
-    item.id,
-    item.slug,
-    item.name,
-  ]);
-  const forms = catalog.forms.flatMap((item) => [
-    item.id,
-    item.slug ?? "",
-    item.name,
-  ]);
-  return [...contentTypes, ...queries, ...templates, ...forms]
-    .join(" ")
-    .toLowerCase();
+  const templates = catalog.listings.templates.flatMap((item) => [item.id, item.slug, item.name]);
+  const forms = catalog.forms.flatMap((item) => [item.id, item.slug ?? "", item.name]);
+  return [...contentTypes, ...queries, ...templates, ...forms].join(" ").toLowerCase();
 };
 
 export const resolveContextualRefinementFamily = (

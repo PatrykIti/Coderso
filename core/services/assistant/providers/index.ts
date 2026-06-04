@@ -2,7 +2,7 @@ import type { AssistantLlmProvider } from "../../settings/settingsService";
 import type { IntegrationRuntimeConfig } from "../../integrations/integrationsService";
 import { createOpenAiProvider } from "./openAiProvider";
 import { createOpenRouterProvider } from "./openRouterProvider";
-import type { AssistantProvider } from "./providerTypes";
+import type { AssistantProvider, AssistantProviderModelMetadata } from "./providerTypes";
 
 type ProviderResolverDeps = {
   getIntegrationRuntimeConfig: (id: string) => Promise<IntegrationRuntimeConfig | null>;
@@ -22,6 +22,15 @@ const defaultDeps: ProviderResolverDeps = {
 export type ResolveAssistantProviderInput = {
   provider: AssistantLlmProvider;
   model: string;
+};
+
+export type ResolveAssistantModelMetadataInput = ResolveAssistantProviderInput;
+
+const DEFAULT_ASSISTANT_MODEL_METADATA: Omit<AssistantProviderModelMetadata, "model"> = {
+  maxInputTokens: 4096,
+  maxOutputTokens: 1024,
+  supportedParameters: [],
+  source: "default",
 };
 
 const normalizeOptionalString = (value: string | null | undefined) => {
@@ -69,4 +78,24 @@ export const resolveAssistantProvider = async (
     siteUrl: normalizeOptionalString(config.siteUrl),
     appName: normalizeOptionalString(config.appName),
   });
+};
+
+export const resolveAssistantModelMetadata = async (
+  input: ResolveAssistantModelMetadataInput,
+  deps: ProviderResolverDeps = defaultDeps
+): Promise<AssistantProviderModelMetadata> => {
+  const model = input.model.trim();
+  const fallback: AssistantProviderModelMetadata = {
+    model,
+    ...DEFAULT_ASSISTANT_MODEL_METADATA,
+  };
+  if (!model) return fallback;
+  if (input.provider !== "openrouter") return fallback;
+
+  try {
+    const provider = await resolveAssistantProvider(input, deps);
+    return (await provider?.getModelMetadata?.()) ?? fallback;
+  } catch {
+    return fallback;
+  }
 };

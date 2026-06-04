@@ -660,7 +660,7 @@ test("form embed cleared style colors omit authored color values", () => {
   expect(html).not.toContain("background-color:transparent");
 });
 
-test("form embed validator rejects persisted resolved nonce", () => {
+test("form embed validator accepts transient resolved nonce runtime payload", () => {
   clearWidgets();
   const widget = createFormEmbedWidget({
     wizard: StubEditor,
@@ -677,13 +677,14 @@ test("form embed validator rejects persisted resolved nonce", () => {
       data: {
         formId: "form-123",
         resolved: {
+          formId: "form-123",
           formName: "Contact",
           submissionAccess: "public",
           submissionNonce: "nonce-1",
         },
       },
     })
-  ).toThrow("widget_schema_invalid");
+  ).not.toThrow();
 });
 
 test("form embed validator accepts non-secret resolved runtime payload", () => {
@@ -703,6 +704,7 @@ test("form embed validator accepts non-secret resolved runtime payload", () => {
       data: {
         formId: "form-123",
         resolved: {
+          formId: "form-123",
           formName: "Contact",
           description: "Reach us",
           status: "published",
