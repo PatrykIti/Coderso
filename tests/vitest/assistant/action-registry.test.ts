@@ -28,6 +28,7 @@ test("assistantActionTypes lists every supported action type once", () => {
     "form.archive",
     "form.update",
     "entry.upsert-draft",
+    "entry.sample.create",
     "entry.delete",
     "entry.update",
     "menu.item.upsert",
@@ -83,6 +84,7 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
 
   expect(isAssistantActionType("site-kit.install")).toBe(true);
   expect(isAssistantActionType("entry.upsert-draft")).toBe(true);
+  expect(isAssistantActionType("entry.sample.create")).toBe(true);
   expect(isAssistantActionType("entry.delete")).toBe(true);
   expect(isAssistantActionType("content-type.delete")).toBe(true);
   expect(isAssistantActionType("custom-screen.delete")).toBe(true);
@@ -112,7 +114,6 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("detail-page.upsert")).toBe(true);
   expect(isAssistantActionType("widget-template.update")).toBe(true);
   expect(isAssistantActionType("widget-template.block.patch")).toBe(true);
-  expect(isAssistantActionType("entry.sample.create")).toBe(false);
   expect(isAssistantActionType("database.drop")).toBe(false);
   expect(getAssistantActionHandler(registry, "site-kit.install").label).toBe("site-kit.install");
 });

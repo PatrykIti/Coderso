@@ -810,6 +810,18 @@ const normalizeEntryUpsertDraftInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeEntrySampleCreateInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["contentTypeSlug", "title", "slug", "status", "values", "seo"]));
+  return {
+    contentTypeSlug: readText(input.contentTypeSlug),
+    title: readText(input.title),
+    slug: readText(input.slug),
+    status: readEnum(input.status, new Set(["published"])),
+    values: assertRecord(input.values),
+    ...(input.seo !== undefined ? { seo: normalizeSeoPayload(input.seo) } : {}),
+  };
+};
+
 const normalizeEntryDeleteInput = (input: JsonRecord) => {
   assertKeys(
     input,
@@ -969,11 +981,44 @@ const normalizeSeoPayload = (value: unknown) => {
   };
 };
 
+const normalizeSamePlanLocator = (value: unknown) => {
+  const input = assertRecord(value);
+  const kind = readEnum(input.kind, new Set(["action-result", "stable-slug"]));
+  const resourceType = readEnum(input.resourceType, new Set(["page", "entry"]));
+  if (kind === "action-result") {
+    assertKeys(input, new Set(["kind", "actionId", "resourceType", "field"]));
+    return {
+      kind,
+      actionId: readText(input.actionId),
+      resourceType,
+      field: readEnum(input.field, new Set(["id"])),
+    };
+  }
+  if (resourceType === "page") {
+    assertKeys(input, new Set(["kind", "resourceType", "slug"]));
+    return {
+      kind,
+      resourceType,
+      slug: readSafeRelativeHref(input.slug),
+    };
+  }
+  assertKeys(input, new Set(["kind", "resourceType", "contentTypeSlug", "slug"]));
+  return {
+    kind,
+    resourceType,
+    contentTypeSlug: readText(input.contentTypeSlug),
+    slug: readText(input.slug),
+  };
+};
+
+const normalizeResourceIdInput = (value: unknown) =>
+  typeof value === "string" ? readText(value) : normalizeSamePlanLocator(value);
+
 const normalizeSeoDocumentUpsertInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["targetType", "targetId", "seo"]));
   return {
     targetType: readEnum(input.targetType, new Set(["page", "entry"])),
-    targetId: readText(input.targetId),
+    targetId: normalizeResourceIdInput(input.targetId),
     seo: normalizeSeoPayload(input.seo),
   };
 };
@@ -1547,6 +1592,8 @@ const normalizeActionInput = (type: AssistantPlannedAction["type"], input: unkno
       return normalizeFormUpdateInput(record);
     case "entry.upsert-draft":
       return normalizeEntryUpsertDraftInput(record);
+    case "entry.sample.create":
+      return normalizeEntrySampleCreateInput(record);
     case "entry.delete":
       return normalizeEntryDeleteInput(record);
     case "entry.update":

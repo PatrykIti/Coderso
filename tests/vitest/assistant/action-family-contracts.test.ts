@@ -21,9 +21,9 @@ test("assistant action family contracts list executable and contract-only action
 });
 
 test("contract-only action families are known but not executable", () => {
-  expect(isAssistantKnownActionContractType("entry.sample.create")).toBe(true);
-  expect(isAssistantContractOnlyActionType("entry.sample.create")).toBe(true);
-  expect(isAssistantActionType("entry.sample.create")).toBe(false);
+  expect(isAssistantKnownActionContractType("entry.bulk-draft.create")).toBe(true);
+  expect(isAssistantContractOnlyActionType("entry.bulk-draft.create")).toBe(true);
+  expect(isAssistantActionType("entry.bulk-draft.create")).toBe(false);
   expect(isAssistantKnownActionContractType("database.drop")).toBe(false);
 });
 
@@ -36,6 +36,23 @@ test("entry upsert draft action is executable and stays draft-scoped", () => {
   expect(contract.permissions.execute).toEqual(["content:write"]);
   expect(contract.strictInput.required).toEqual(["contentTypeSlug", "title", "slug", "values"]);
   expect(contract.strictInput.notes.join(" ")).toContain("Draft-only");
+});
+
+test("entry sample create action is executable and publish-scoped", () => {
+  const contract = getAssistantActionFamilyContract("entry.sample.create");
+
+  expect(contract.status).toBe("executable");
+  expect(contract.family).toBe("entry");
+  expect(contract.schemaOwner).toBe("core/services/content/entryService.ts");
+  expect(contract.permissions.execute).toEqual(["content:write", "content:publish"]);
+  expect(contract.strictInput.required).toEqual([
+    "contentTypeSlug",
+    "title",
+    "slug",
+    "status",
+    "values",
+  ]);
+  expect(contract.strictInput.notes.join(" ")).toContain("publish lifecycle");
 });
 
 test("menu seo media and surface expansion contracts declare domain permissions", () => {
@@ -142,10 +159,10 @@ test("menu seo media and surface expansion contracts declare domain permissions"
 });
 
 test("normalizeAssistantActionFamilyContract enforces strict contract shape", () => {
-  const contract = getAssistantActionFamilyContract("entry.sample.create");
+  const contract = getAssistantActionFamilyContract("entry.bulk-draft.create");
 
   expect(normalizeAssistantActionFamilyContract(contract)).toMatchObject({
-    type: "entry.sample.create",
+    type: "entry.bulk-draft.create",
     status: "contract-only",
     family: "entry",
   });

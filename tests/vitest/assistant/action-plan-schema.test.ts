@@ -492,6 +492,32 @@ test("normalizeAssistantActionPlan rejects unknown plan and action fields", () =
       ],
     })
   ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "seo-products",
+          type: "seo.document.upsert",
+          title: "Update product SEO",
+          description: "Add SEO metadata to products page.",
+          input: {
+            targetType: "page",
+            targetId: {
+              kind: "stable-slug",
+              resourceType: "page",
+              slug: "/products",
+              debug: true,
+            },
+            seo: {
+              title: "Products",
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
 });
 
 test("normalizeAssistantActionPlan rejects malformed action inputs", () => {
@@ -561,6 +587,48 @@ test("normalizeAssistantActionPlan accepts entry upsert draft actions", () => {
   expect(normalized.actions[0]?.type).toBe("entry.upsert-draft");
 });
 
+test("normalizeAssistantActionPlan accepts public sample entry actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "entry-sample-service",
+        type: "entry.sample.create",
+        title: "Publish service sample",
+        description: "Create a published sample service entry.",
+        input: {
+          contentTypeSlug: "services-directory",
+          title: "Projekt koncepcyjny",
+          slug: "projekt-koncepcyjny",
+          status: "published",
+          values: {
+            title: "Projekt koncepcyjny",
+          },
+          seo: {
+            title: "Projekt koncepcyjny | Studio Forma",
+            description: "Poznaj zakres projektu koncepcyjnego dla inwestorow.",
+            canonicalUrl: "/uslugi/projekt-koncepcyjny",
+            robots: "index,follow",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "entry.sample.create",
+    input: {
+      status: "published",
+      slug: "projekt-koncepcyjny",
+    },
+  });
+});
+
 test("normalizeAssistantActionPlan accepts safe menu item upsert actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -620,6 +688,77 @@ test("normalizeAssistantActionPlan accepts seo document upsert actions", () => {
   });
 
   expect(normalized.actions[0]?.type).toBe("seo.document.upsert");
+});
+
+test("normalizeAssistantActionPlan accepts seo target locators", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "seo-home",
+        type: "seo.document.upsert",
+        title: "Update home SEO",
+        description: "Add SEO metadata to the home page.",
+        input: {
+          targetType: "page",
+          targetId: {
+            kind: "stable-slug",
+            resourceType: "page",
+            slug: "/",
+          },
+          seo: {
+            title: "Studio Forma",
+            description: "Architektura w pelnym procesie.",
+            canonicalUrl: "/",
+            robots: "index,follow",
+          },
+        },
+      },
+      {
+        id: "seo-service",
+        type: "seo.document.upsert",
+        title: "Update service SEO",
+        description: "Add SEO metadata to a sample service.",
+        input: {
+          targetType: "entry",
+          targetId: {
+            kind: "action-result",
+            actionId: "entry-sample-service",
+            resourceType: "entry",
+            field: "id",
+          },
+          seo: {
+            title: "Projekt koncepcyjny | Studio Forma",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "seo.document.upsert",
+    input: {
+      targetId: {
+        kind: "stable-slug",
+        resourceType: "page",
+        slug: "/",
+      },
+    },
+  });
+  expect(normalized.actions[1]).toMatchObject({
+    type: "seo.document.upsert",
+    input: {
+      targetId: {
+        kind: "action-result",
+        actionId: "entry-sample-service",
+      },
+    },
+  });
 });
 
 test("normalizeAssistantActionPlan accepts menu and seo delete actions", () => {
@@ -2134,7 +2273,7 @@ test("normalizeAssistantActionPlan rejects unsafe menu hrefs", () => {
   ).toThrow("assistant_action_plan_invalid");
 });
 
-test("normalizeAssistantActionPlan rejects remaining contract-only actions until adapters land", () => {
+test("normalizeAssistantActionPlan rejects malformed sample entry actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
     intentFamily: "product_catalog",
@@ -2151,7 +2290,61 @@ test("normalizeAssistantActionPlan rejects remaining contract-only actions until
           description: "Draft sample product entry.",
           input: {
             contentTypeSlug: "products",
-            samples: [],
+            title: "Sample",
+            slug: "sample",
+            status: "draft",
+            values: {
+              title: "Sample",
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "entry-products",
+          type: "entry.sample.create",
+          title: "Create product entry",
+          description: "Published sample product entry.",
+          input: {
+            contentTypeSlug: "products",
+            title: "Sample",
+            slug: "sample",
+            status: "published",
+            values: {
+              title: "Sample",
+            },
+            debug: true,
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects remaining contract-only actions until adapters land", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "entry-products",
+          type: "entry.bulk-draft.create",
+          title: "Create product entries",
+          description: "Draft sample product entries.",
+          input: {
+            contentTypeSlug: "products",
+            entries: [],
           },
         },
       ],

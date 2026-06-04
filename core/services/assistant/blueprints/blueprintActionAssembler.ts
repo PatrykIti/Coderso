@@ -50,6 +50,7 @@ const actionOrder: Record<AssistantPlannedAction["type"], number> = {
   "form.archive": 90,
   "form.update": 90,
   "entry.upsert-draft": 90,
+  "entry.sample.create": 82,
   "entry.delete": 90,
   "entry.update": 90,
   "menu.item.upsert": 90,

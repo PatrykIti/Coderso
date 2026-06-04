@@ -19,6 +19,7 @@ export const assistantActionTypes = [
   "form.archive",
   "form.update",
   "entry.upsert-draft",
+  "entry.sample.create",
   "entry.delete",
   "entry.update",
   "menu.item.upsert",

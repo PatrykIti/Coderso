@@ -556,6 +556,28 @@ export type AssistantEntryUpsertDraftAction = {
   };
 };
 
+export type AssistantSeoDraft = {
+  title?: string | null;
+  description?: string | null;
+  canonicalUrl?: string | null;
+  robots?: string | null;
+};
+
+export type AssistantEntrySampleCreateAction = {
+  id: string;
+  type: "entry.sample.create";
+  title: string;
+  description: string;
+  input: {
+    contentTypeSlug: string;
+    title: string;
+    slug: string;
+    status: "published";
+    values: Record<string, unknown>;
+    seo?: AssistantSeoDraft;
+  };
+};
+
 export type AssistantEntryDeleteAction = {
   id: string;
   type: "entry.delete";
@@ -645,6 +667,27 @@ export type AssistantMenuItemUpdateAction = {
   };
 };
 
+export type AssistantSamePlanLocator =
+  | {
+      kind: "action-result";
+      actionId: string;
+      resourceType: "page" | "entry";
+      field: "id";
+    }
+  | {
+      kind: "stable-slug";
+      resourceType: "page";
+      slug: string;
+    }
+  | {
+      kind: "stable-slug";
+      resourceType: "entry";
+      contentTypeSlug: string;
+      slug: string;
+    };
+
+export type AssistantResourceIdInput = string | AssistantSamePlanLocator;
+
 export type AssistantSeoDocumentUpsertAction = {
   id: string;
   type: "seo.document.upsert";
@@ -652,7 +695,7 @@ export type AssistantSeoDocumentUpsertAction = {
   description: string;
   input: {
     targetType: "page" | "entry";
-    targetId: string;
+    targetId: AssistantResourceIdInput;
     seo: {
       slug?: string | null;
       title?: string | null;
@@ -965,6 +1008,7 @@ export type AssistantPlannedAction =
   | AssistantFormArchiveAction
   | AssistantFormUpdateAction
   | AssistantEntryUpsertDraftAction
+  | AssistantEntrySampleCreateAction
   | AssistantEntryDeleteAction
   | AssistantEntryUpdateAction
   | AssistantMenuItemUpsertAction

@@ -690,6 +690,15 @@ const createDeps = () => {
         ReturnType<(typeof import("../../../core/services/content/entryService"))["updateEntry"]>
       >;
     },
+    publishEntry: async (id: string) => {
+      const existing = entries.find((entry) => entry.id === id) ?? null;
+      if (!existing) return null;
+      existing.status = "published";
+      existing.updatedAt = new Date("2026-04-10T12:02:00.000Z");
+      return existing as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/content/entryService"))["publishEntry"]>
+      >;
+    },
     updateEntryMetadata: async (
       id: string,
       input: {
@@ -1063,6 +1072,88 @@ test("executeAssistantActionPlan creates and reuses draft entry actions", async 
   expect(executed.summary.create).toBe(1);
   expect(executed.results[0]?.adminHref).toBe("/admin/advanced/entries/products/entry-1");
   expect(deps.__state.entries[0]?.authorId).toBe("user-1");
+
+  const replayPreview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(replayPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan creates published sample entries idempotently", async () => {
+  const deps = createDeps();
+  await deps.createContentType({
+    name: "Services",
+    slug: "services-directory",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        summary: { type: "string" },
+      },
+    },
+  });
+  deps.__state.contentRoutes.push({
+    type: "services-directory",
+    listPath: "/uslugi",
+    detailPath: "/uslugi/:slug",
+    enabled: true,
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-entry-sample",
+    status: "ready",
+    intentId: "entry-sample",
+    promptKind: "setup_request",
+    intentFamily: "services_directory",
+    title: "Create sample entry",
+    answer: "I can create a public sample entry.",
+    summary: "Create one published service entry.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "entry-service-sample",
+        type: "entry.sample.create",
+        title: "Publish service sample",
+        description: "Create a published service sample.",
+        input: {
+          contentTypeSlug: "services-directory",
+          title: "Projekt koncepcyjny",
+          slug: "projekt-koncepcyjny",
+          status: "published",
+          values: {
+            title: "Projekt koncepcyjny",
+            summary: "Zakres koncepcji architektonicznej.",
+          },
+          seo: {
+            title: "Projekt koncepcyjny | Studio Forma",
+            description: "Poznaj zakres projektu koncepcyjnego.",
+            canonicalUrl: "/uslugi/projekt-koncepcyjny",
+            robots: "index,follow",
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes[0]?.operation).toBe("create");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-entry-sample-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.create).toBe(1);
+  expect(executed.results[0]?.publicHref).toBe("/uslugi/projekt-koncepcyjny");
+  expect(deps.__state.entries).toHaveLength(1);
+  expect(deps.__state.entries[0]?.status).toBe("published");
+  expect(deps.__state.seoDocuments[0]?.targetId).toBe("entry-1");
+  expect(deps.__state.seoDocuments[0]?.robots).toBe("index,follow");
 
   const replayPreview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(replayPreview.changes[0]?.operation).toBe("noop");
@@ -3116,6 +3207,97 @@ test("executeAssistantActionPlan upserts seo documents for known targets", async
 
   const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan resolves same-plan seo action-result locators", async () => {
+  const deps = createDeps();
+  await deps.createContentType({
+    name: "Services",
+    slug: "services-directory",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+      },
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-seo-locator",
+    status: "ready",
+    intentId: "seo-locator",
+    promptKind: "setup_request",
+    intentFamily: "services_directory",
+    title: "Create sample entry and SEO",
+    answer: "I can create a sample entry and SEO.",
+    summary: "Create sample entry then SEO by locator.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "entry-service-sample",
+        type: "entry.sample.create",
+        title: "Publish service sample",
+        description: "Create a published service sample.",
+        input: {
+          contentTypeSlug: "services-directory",
+          title: "Projekt koncepcyjny",
+          slug: "projekt-koncepcyjny",
+          status: "published",
+          values: {
+            title: "Projekt koncepcyjny",
+          },
+        },
+      },
+      {
+        id: "seo-service-sample",
+        type: "seo.document.upsert",
+        title: "Update service SEO",
+        description: "Create SEO metadata for the sample service.",
+        input: {
+          targetType: "entry",
+          targetId: {
+            kind: "action-result",
+            actionId: "entry-service-sample",
+            resourceType: "entry",
+            field: "id",
+          },
+          seo: {
+            title: "Projekt koncepcyjny | Studio Forma",
+            description: "Poznaj zakres projektu koncepcyjnego.",
+            canonicalUrl: "/uslugi/projekt-koncepcyjny",
+            robots: "index,follow",
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes[1]?.dependencies).toEqual([
+    {
+      actionId: "entry-service-sample",
+      targetType: "entry",
+      targetKey: "entry:entry-service-sample:id",
+      optional: false,
+    },
+  ]);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-seo-locator-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.create).toBe(2);
+  expect(deps.__state.seoDocuments[0]?.targetType).toBe("entry");
+  expect(deps.__state.seoDocuments[0]?.targetId).toBe("entry-1");
+  expect(deps.__state.seoDocuments[0]?.title).toBe("Projekt koncepcyjny | Studio Forma");
 });
 
 test("executeAssistantActionPlan deletes menu items while preserving unrelated items", async () => {

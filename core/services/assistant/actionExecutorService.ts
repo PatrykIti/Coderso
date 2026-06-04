@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from "node:util";
+
 import { getSetting, setSetting, type ContentRouteSetting } from "../settings/settingsService";
 import {
   createContentType,
@@ -40,6 +42,7 @@ import {
   deleteEntry,
   getEntry,
   getEntryBySlug,
+  publishEntry,
   updateEntry,
   updateEntryMetadata,
 } from "../content/entryService";
@@ -108,6 +111,7 @@ import type {
   AssistantCustomScreenWidgetPatchAction,
   AssistantEntryUpsertDraftAction,
   AssistantEntryDeleteAction,
+  AssistantEntrySampleCreateAction,
   AssistantEntryUpdateAction,
   AssistantFormUpsertAction,
   AssistantFormDeleteAction,
@@ -135,6 +139,8 @@ import type {
   AssistantWidgetTemplateUpdateAction,
   AssistantWidgetTemplateBlockPatchAction,
   AssistantPlannedAction,
+  AssistantResourceIdInput,
+  AssistantSamePlanLocator,
   AssistantSeoDocumentDeleteAction,
   AssistantSeoDocumentUpdateAction,
   AssistantSeoDocumentUpsertAction,
@@ -624,6 +630,7 @@ type ActionExecutorDeps = {
   createEntry: typeof createEntry;
   deleteEntry: typeof deleteEntry;
   updateEntry: typeof updateEntry;
+  publishEntry: typeof publishEntry;
   updateEntryMetadata: typeof updateEntryMetadata;
   getEntry: typeof getEntry;
   deleteMenuItem: typeof deleteMenuItem;
@@ -709,6 +716,7 @@ const defaultDeps: ActionExecutorDeps = {
   createEntry,
   deleteEntry,
   updateEntry,
+  publishEntry,
   updateEntryMetadata,
   getEntry,
   deleteMenuItem,
@@ -1806,6 +1814,89 @@ const buildEntryUpsertDraftPreview = async (
   });
 };
 
+const buildEntryPublicHref = async (
+  contentTypeSlug: string,
+  entrySlug: string,
+  deps: ActionExecutorDeps
+) => {
+  const routes = ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+  const route = routes.find((entry) => entry.type === contentTypeSlug && entry.enabled);
+  if (!route?.detailPath) return null;
+  return normalizeSitePath(route.detailPath.replace(":slug", entrySlug));
+};
+
+const readEntrySeoForPreview = async (entryId: string | null, deps: ActionExecutorDeps) =>
+  entryId ? await deps.getSeoDocumentByTarget("entry", entryId) : null;
+
+const buildEntrySampleCreatePreview = async (
+  action: AssistantEntrySampleCreateAction,
+  deps: ActionExecutorDeps
+) => {
+  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  const existing = contentType
+    ? await deps.getEntryBySlug(contentType.id, action.input.slug)
+    : null;
+  const existingSeo = await readEntrySeoForPreview(existing?.id ?? null, deps);
+  const existingSeoRecord = existingSeo as Record<string, unknown> | null;
+  const seoMatches =
+    action.input.seo === undefined ||
+    (Boolean(existingSeo) &&
+      Object.entries(action.input.seo).every(([key, value]) => existingSeoRecord?.[key] === value));
+  const beforeValue = existing
+    ? {
+        title: existing.title,
+        slug: existing.slug,
+        status: existing.status,
+        data: existing.data,
+        seo: existingSeo
+          ? {
+              title: existingSeo.title,
+              description: existingSeo.description,
+              canonicalUrl: existingSeo.canonicalUrl,
+              robots: existingSeo.robots,
+            }
+          : null,
+      }
+    : null;
+  const nextValue = {
+    title: action.input.title,
+    slug: action.input.slug,
+    status: action.input.status,
+    data: action.input.values,
+    seo: action.input.seo ?? null,
+  };
+  const operation =
+    existing &&
+    existing.status === "published" &&
+    existing.title === action.input.title &&
+    existing.slug === action.input.slug &&
+    isDeepStrictEqual(existing.data, action.input.values) &&
+    seoMatches
+      ? "noop"
+      : undefined;
+
+  return createPreviewChange({
+    action,
+    targetType: "entry",
+    targetKey: `${action.input.contentTypeSlug}/${action.input.slug}`,
+    operation,
+    summary: `${existing ? "Update" : "Create"} public sample entry "${action.input.title}"`,
+    warnings: contentType
+      ? ["Publishing this sample entry may make it visible on the public site."]
+      : ["The content type does not exist yet and must be created earlier in the plan."],
+    dependencies: [
+      {
+        actionId: null,
+        targetType: "content-type",
+        targetKey: action.input.contentTypeSlug,
+        optional: false,
+      },
+    ],
+    beforeValue,
+    nextValue,
+  });
+};
+
 const buildEntryDeletePreview = async (
   action: AssistantEntryDeleteAction,
   deps: ActionExecutorDeps
@@ -2083,8 +2174,142 @@ const normalizeSeoSlugForAction = (value: string | null | undefined) => {
   return value.startsWith("/") ? value : `/${value}`;
 };
 
+const isSamePlanLocator = (value: AssistantResourceIdInput): value is AssistantSamePlanLocator =>
+  typeof value !== "string";
+
+const resourceIdInputKey = (value: AssistantResourceIdInput) => {
+  if (!isSamePlanLocator(value)) return value;
+  if (value.kind === "action-result") {
+    return `${value.resourceType}:${value.actionId}:${value.field}`;
+  }
+  if (value.resourceType === "page") return `page:${value.slug}`;
+  return `entry:${value.contentTypeSlug}/${value.slug}`;
+};
+
+const findPriorPlannedStableSlugAction = (
+  locator: Extract<AssistantSamePlanLocator, { kind: "stable-slug" }>,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
+  return (
+    actions.find((action) => {
+      if (locator.resourceType === "page") {
+        return action.type === "page.upsert" && action.input.slug === locator.slug;
+      }
+      return (
+        (action.type === "entry.sample.create" || action.type === "entry.upsert-draft") &&
+        action.input.contentTypeSlug === locator.contentTypeSlug &&
+        action.input.slug === locator.slug
+      );
+    }) ?? null
+  );
+};
+
+const findPriorActionResultDependency = (
+  locator: Extract<AssistantSamePlanLocator, { kind: "action-result" }>,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
+  return actions.find((action) => action.id === locator.actionId) ?? null;
+};
+
+const resolveStableSlugResourceId = async (
+  locator: Extract<AssistantSamePlanLocator, { kind: "stable-slug" }>,
+  deps: ActionExecutorDeps
+) => {
+  if (locator.resourceType === "page") {
+    const page = await deps.getPageBySlug(locator.slug);
+    return page?.id ?? null;
+  }
+  const contentType = await deps.getContentTypeBySlug(locator.contentTypeSlug);
+  if (!contentType) return null;
+  const entry = await deps.getEntryBySlug(contentType.id, locator.slug);
+  return entry?.id ?? null;
+};
+
+const resolveResourceIdInput = async (
+  targetId: AssistantResourceIdInput,
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "priorResults">
+) => {
+  if (!isSamePlanLocator(targetId)) return targetId;
+  if (targetId.kind === "stable-slug") {
+    const resolved = await resolveStableSlugResourceId(targetId, deps);
+    if (resolved) return resolved;
+    throw new Error("assistant_action_locator_unresolved");
+  }
+  const result = ctx.priorResults?.get(targetId.actionId) ?? null;
+  if (
+    result?.status === "success" &&
+    result.targetType === targetId.resourceType &&
+    result.resourceId
+  ) {
+    return result.resourceId;
+  }
+  throw new Error("assistant_action_locator_unresolved");
+};
+
+const buildLocatorPreviewDependency = async (
+  targetId: AssistantResourceIdInput,
+  targetType: "page" | "entry",
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  if (!isSamePlanLocator(targetId)) {
+    return {
+      resolvedId: targetId,
+      pending: false,
+      dependency: {
+        actionId: null,
+        targetType,
+        targetKey: targetId,
+        optional: false,
+      },
+    };
+  }
+
+  if (targetId.kind === "stable-slug") {
+    if (targetId.resourceType !== targetType) {
+      return {
+        resolvedId: null,
+        pending: false,
+        dependency: {
+          actionId: null,
+          targetType: targetId.resourceType,
+          targetKey: resourceIdInputKey(targetId),
+          optional: false,
+        },
+      };
+    }
+    const resolvedId = await resolveStableSlugResourceId(targetId, deps);
+    const planned = resolvedId ? null : findPriorPlannedStableSlugAction(targetId, ctx);
+    return {
+      resolvedId,
+      pending: Boolean(planned),
+      dependency: {
+        actionId: planned?.id ?? null,
+        targetType: targetId.resourceType,
+        targetKey: resourceIdInputKey(targetId),
+        optional: false,
+      },
+    };
+  }
+
+  const planned = findPriorActionResultDependency(targetId, ctx);
+  return {
+    resolvedId: null,
+    pending: Boolean(planned && targetId.resourceType === targetType),
+    dependency: {
+      actionId: targetId.actionId,
+      targetType: targetId.resourceType,
+      targetKey: resourceIdInputKey(targetId),
+      optional: false,
+    },
+  };
+};
+
 const loadSeoActionTarget = async (
-  action: AssistantSeoDocumentUpsertAction,
+  action: AssistantSeoDocumentUpsertAction & { input: { targetId: string } },
   deps: ActionExecutorDeps
 ) => {
   if (action.input.targetType === "page") {
@@ -2108,7 +2333,7 @@ const loadSeoActionTarget = async (
 };
 
 const buildSeoNextValue = (
-  action: AssistantSeoDocumentUpsertAction,
+  action: AssistantSeoDocumentUpsertAction & { input: { targetId: string } },
   existing: Awaited<ReturnType<typeof getSeoDocumentByTarget>>,
   target: { title: string; slug: string | null }
 ) => ({
@@ -2136,43 +2361,55 @@ const buildSeoNextValue = (
 
 const buildSeoDocumentPreview = async (
   action: AssistantSeoDocumentUpsertAction,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
 ) => {
-  const target = await loadSeoActionTarget(action, deps);
-  const existing = target
-    ? await deps.getSeoDocumentByTarget(action.input.targetType, action.input.targetId)
+  const locator = await buildLocatorPreviewDependency(
+    action.input.targetId,
+    action.input.targetType,
+    deps,
+    ctx
+  );
+  const resolvedAction = locator.resolvedId
+    ? {
+        ...action,
+        input: {
+          ...action.input,
+          targetId: locator.resolvedId,
+        },
+      }
     : null;
-  const nextValue = target
-    ? buildSeoNextValue(action, existing, target)
-    : {
-        targetType: action.input.targetType,
-        targetId: action.input.targetId,
-        ...action.input.seo,
-      };
+  const target = resolvedAction ? await loadSeoActionTarget(resolvedAction, deps) : null;
+  const existing = target
+    ? await deps.getSeoDocumentByTarget(action.input.targetType, target.id)
+    : null;
+  const nextValue =
+    target && resolvedAction
+      ? buildSeoNextValue(resolvedAction, existing, target)
+      : {
+          targetType: action.input.targetType,
+          targetId: resourceIdInputKey(action.input.targetId),
+          ...action.input.seo,
+        };
+  const targetKey = `${action.input.targetType}/${resourceIdInputKey(action.input.targetId)}`;
 
   return createPreviewChange({
     action,
     targetType: "seo-document",
-    targetKey: `${action.input.targetType}/${action.input.targetId}`,
-    summary: `${existing ? "Update" : "Create"} SEO document for ${action.input.targetType} ${action.input.targetId}`,
-    warnings: target ? [] : ["The SEO target does not exist."],
-    dependencies: [
-      {
-        actionId: null,
-        targetType: action.input.targetType,
-        targetKey: action.input.targetId,
-        optional: false,
-      },
-    ],
-    conflicts: target
-      ? []
-      : [
-          {
-            code: "assistant_action_dependency_missing",
-            severity: "error",
-            message: "SEO target is required before the document can be updated.",
-          },
-        ],
+    targetKey,
+    summary: `${existing ? "Update" : "Create"} SEO document for ${targetKey}`,
+    warnings: target || locator.pending ? [] : ["The SEO target does not exist."],
+    dependencies: [locator.dependency],
+    conflicts:
+      target || locator.pending
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: "SEO target is required before the document can be updated.",
+            },
+          ],
     beforeValue: existing
       ? {
           targetType: existing.targetType,
@@ -3031,6 +3268,9 @@ const buildSiteKitValidatePreview = async (action: AssistantSiteKitValidateActio
 type ActionHandlerContext = {
   deps: ActionExecutorDeps;
   actorId: string;
+  planActions?: AssistantPlannedAction[];
+  actionIndex?: number;
+  priorResults?: Map<string, AssistantActionExecutionItem>;
 };
 
 type AssistantActionHandler = {
@@ -4014,6 +4254,67 @@ const executeEntryUpsertDraftAction = async (
   };
 };
 
+const executeEntrySampleCreateAction = async (
+  action: AssistantEntrySampleCreateAction,
+  preview: AssistantActionPreviewChange,
+  actorId: string,
+  deps: ActionExecutorDeps
+) => {
+  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  if (!contentType) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const existing = await deps.getEntryBySlug(contentType.id, action.input.slug);
+  const needsEntryUpdate =
+    !existing ||
+    existing.title !== action.input.title ||
+    existing.slug !== action.input.slug ||
+    !isDeepStrictEqual(existing.data, action.input.values);
+
+  const upserted =
+    preview.operation === "create"
+      ? await deps.createEntry(contentType.id, {
+          title: action.input.title,
+          slug: action.input.slug,
+          data: action.input.values,
+          authorId: actorId,
+        })
+      : preview.operation === "update" && existing && needsEntryUpdate
+        ? await deps.updateEntry(existing.id, {
+            title: action.input.title,
+            slug: action.input.slug,
+            data: action.input.values,
+          })
+        : existing;
+  if (!upserted) throw new Error("assistant_action_dependency_missing");
+
+  if (action.input.seo && preview.operation !== "noop") {
+    await deps.updateEntryMetadata(upserted.id, { seo: action.input.seo }, actorId);
+  }
+
+  const record =
+    preview.operation === "noop" ? upserted : await deps.publishEntry(upserted.id, actorId);
+  if (!record) throw new Error("assistant_action_dependency_missing");
+  const publicHref = await buildEntryPublicHref(action.input.contentTypeSlug, record.slug, deps);
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "entry",
+    targetKey: `${action.input.contentTypeSlug}/${action.input.slug}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record.id,
+    adminHref: `/admin/advanced/entries/${encodeURIComponent(action.input.contentTypeSlug)}/${encodeURIComponent(record.id)}`,
+    publicHref,
+    message:
+      preview.operation === "noop"
+        ? "Public sample entry already matched the planned data."
+        : "Public sample entry is published.",
+  };
+};
+
 const executeEntryDeleteAction = async (
   action: AssistantEntryDeleteAction,
   preview: AssistantActionPreviewChange,
@@ -4236,25 +4537,31 @@ const executeMenuItemUpdateAction = async (
 const executeSeoDocumentAction = async (
   action: AssistantSeoDocumentUpsertAction,
   preview: AssistantActionPreviewChange,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "priorResults">
 ) => {
-  const target = await loadSeoActionTarget(action, deps);
+  const resolvedTargetId = await resolveResourceIdInput(action.input.targetId, deps, ctx);
+  const resolvedAction = {
+    ...action,
+    input: {
+      ...action.input,
+      targetId: resolvedTargetId,
+    },
+  };
+  const target = await loadSeoActionTarget(resolvedAction, deps);
   if (!target) {
     throw new Error("assistant_action_dependency_missing");
   }
 
-  const existing = await deps.getSeoDocumentByTarget(
-    action.input.targetType,
-    action.input.targetId
-  );
-  const nextValue = buildSeoNextValue(action, existing, target);
+  const existing = await deps.getSeoDocumentByTarget(action.input.targetType, resolvedTargetId);
+  const nextValue = buildSeoNextValue(resolvedAction, existing, target);
   const record = preview.operation === "noop" ? existing : await deps.upsertSeoDocument(nextValue);
 
   return {
     actionId: action.id,
     type: action.type,
     targetType: "seo-document",
-    targetKey: `${action.input.targetType}/${action.input.targetId}`,
+    targetKey: `${action.input.targetType}/${resolvedTargetId}`,
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,
@@ -5122,6 +5429,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeEntryUpsertDraftAction(action, preview, ctx.actorId, ctx.deps)
         : unexpectedAction(),
   },
+  "entry.sample.create": {
+    preview: (action, ctx) =>
+      action.type === "entry.sample.create"
+        ? buildEntrySampleCreatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "entry.sample.create"
+        ? executeEntrySampleCreateAction(action, preview, ctx.actorId, ctx.deps)
+        : unexpectedAction(),
+  },
   "entry.delete": {
     preview: (action, ctx) =>
       action.type === "entry.delete"
@@ -5175,11 +5492,11 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   "seo.document.upsert": {
     preview: (action, ctx) =>
       action.type === "seo.document.upsert"
-        ? buildSeoDocumentPreview(action, ctx.deps)
+        ? buildSeoDocumentPreview(action, ctx.deps, ctx)
         : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "seo.document.upsert"
-        ? executeSeoDocumentAction(action, preview, ctx.deps)
+        ? executeSeoDocumentAction(action, preview, ctx.deps, ctx)
         : unexpectedAction(),
   },
   "seo.document.delete": {
@@ -5310,11 +5627,15 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
 
 const buildPreviewForAction = async (
   action: AssistantPlannedAction,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  planActions: AssistantPlannedAction[] = [],
+  actionIndex = 0
 ): Promise<AssistantActionPreviewChange> =>
   getAssistantActionHandler(actionHandlers, action.type).preview(action, {
     deps,
     actorId: "",
+    planActions,
+    actionIndex,
   });
 
 export const dryRunAssistantActionPlan = async (
@@ -5322,9 +5643,10 @@ export const dryRunAssistantActionPlan = async (
   deps: ActionExecutorDeps = defaultDeps
 ): Promise<AssistantActionDryRunResult> => {
   const plan = assertAssistantActionPlan(input.plan);
-  const changes = await Promise.all(
-    plan.actions.map((action) => buildPreviewForAction(action, deps))
-  );
+  const changes: AssistantActionPreviewChange[] = [];
+  for (const [index, action] of plan.actions.entries()) {
+    changes.push(await buildPreviewForAction(action, deps, plan.actions, index));
+  }
 
   return {
     plan,
@@ -5339,11 +5661,15 @@ const executeAction = async (
   action: AssistantPlannedAction,
   preview: AssistantActionPreviewChange,
   actorId: string,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex" | "priorResults">
 ): Promise<AssistantActionExecutionItem> =>
   getAssistantActionHandler(actionHandlers, action.type).execute(action, preview, {
     deps,
     actorId,
+    planActions: ctx.planActions,
+    actionIndex: ctx.actionIndex,
+    priorResults: ctx.priorResults,
   });
 
 export const executeAssistantActionPlan = async (
@@ -5391,16 +5717,22 @@ export const executeAssistantActionPlan = async (
   }
 
   const results: AssistantActionExecutionItem[] = [];
-  for (const change of preview.changes) {
+  const priorResults = new Map<string, AssistantActionExecutionItem>();
+  for (const [index, change] of preview.changes.entries()) {
     const action = plan.actions.find((entry) => entry.id === change.actionId);
     if (!action) {
       throw new Error("assistant_action_plan_invalid");
     }
     try {
-      const result = await executeAction(action, change, input.actorId, deps);
+      const result = await executeAction(action, change, input.actorId, deps, {
+        planActions: plan.actions,
+        actionIndex: index,
+        priorResults,
+      });
       results.push(result);
+      priorResults.set(action.id, result);
     } catch (error) {
-      results.push({
+      const result: AssistantActionExecutionItem = {
         actionId: action.id,
         type: action.type,
         targetType: change.targetType,
@@ -5412,7 +5744,9 @@ export const executeAssistantActionPlan = async (
         publicHref: null,
         message: error instanceof Error ? error.message : "Assistant action failed.",
         errorCode: error instanceof Error ? error.message : "assistant_action_failed",
-      });
+      };
+      results.push(result);
+      priorResults.set(action.id, result);
     }
   }
 
