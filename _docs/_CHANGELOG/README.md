@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-  Ordinary new entries continue at 1091.
+Ordinary new entries continue at 1092.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,11 @@ Project Change Log.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1091 for the next changelog entry.
+assistant policy coverage fix. Use 1092 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1091 | 2026-06-04 | TASK-399 admin SPA code-splitting planning | Planning/Admin UI/Build Performance/Vite/Docker/QA |
 | 1090 | 2026-06-03 | Assistant settings security route policy coverage | Assistant/Settings/Security/Testing/Docs |
 | 1089 | 2026-05-31 | Admin UI Playwright audit | QA/Admin UI/Playwright/Docs |
 | 1088 | 2026-06-02 | Footer widget 31-05 UI audit remediation | CMS Widgets/Footer/Runtime Security/Admin UI/QA/Docs |

@@ -32,7 +32,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 10 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2213 tasks
 
@@ -42,6 +42,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-399 | Admin SPA Route-Level Code Splitting and Bundle Reduction | High | Large | First real admin bundle reduction step: lazy protected route pages, keep bootstrap/auth eager, and verify Vite/Docker lazy chunks |
+| TASK-399-01 | Admin Lazy Route Registry and Bootstrap Seams | High | Large | Create lazy named-export route descriptors and pure Settings/Assistant bootstrap seams before AdminApp stops static page imports |
+| TASK-399-02 | Guarded Lazy Route Rendering and Suspense Recovery | High | Large | Render protected lazy routes only after auth/RBAC checks and add bounded chunk-load recovery |
+| TASK-399-03 | Protected Workspace Route Migration | High | Large | Move authenticated admin workspace pages to the lazy route registry while preserving route props and permissions |
+| TASK-399-04 | Admin Bundle Measurement and Budget Guard | High | Medium | Measure before/after Vite output and add a guard against collapsing back to one admin JS chunk |
+| TASK-399-05 | Docker Lazy Chunk Serving QA Docs and Closure | High | Medium | Prove Docker build and production static serving for hashed lazy chunks, then close docs/changelog |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
