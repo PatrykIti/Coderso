@@ -10,8 +10,8 @@
   ],
   "scripts": {
     "dev": "concurrently -n core,store -c blue,magenta \"bun --cwd core dev\" \"bun --cwd store dev\"",
-    "dev:core": "bun --cwd core dev",
-    "dev:store": "bun --cwd store dev",
+    "dev:core": "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun --cwd core dev",
+    "dev:store": "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun --cwd store dev",
     "format:staged": "bun scripts/format-staged.ts",
     "precommit": "bun run format:staged && bun run precommit:check",
     "precommit:check": "bun --cwd core lint && bun --cwd core lint:types && bun --cwd store lint && ./node_modules/.bin/tsc -p packages/sdk/tsconfig.json --noEmit && tsc -p tsconfig.json --noEmit",
