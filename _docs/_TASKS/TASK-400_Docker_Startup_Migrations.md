@@ -96,9 +96,7 @@ Regression-test shape:
 - ✅ `bun --cwd core lint`
 - ✅ `bun --cwd core lint:types`
 - ✅ `docker build -t coderso-docker-smoke:startup-migrations --build-arg APP_VERSION=0.0.0-startup-migrations -f Dockerfile .`
-- ⚠️ `.env` DB smoke attempted with `runStartupMigrations()`; local shell could
-  not resolve the configured `DATABASE_URL` host (`getaddrinfo ENOTFOUND`) and
-  no local DB container/network was available in `docker ps`.
+- ✅ `set -a && source .env && set +a && bun -e 'const { runStartupMigrations } = await import("./core/server/startupMigrations.ts"); await runStartupMigrations();'`
 - ✅ `bun run precommit`
 
 ## Documentation Updates Required

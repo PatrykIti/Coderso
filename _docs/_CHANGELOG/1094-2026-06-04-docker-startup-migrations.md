@@ -36,6 +36,4 @@ Tasks: TASK-400
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `docker build -t coderso-docker-smoke:startup-migrations --build-arg APP_VERSION=0.0.0-startup-migrations -f Dockerfile .`
-- `.env` DB smoke with `runStartupMigrations()` was attempted, but the local
-  shell could not resolve the configured `DATABASE_URL` host
-  (`getaddrinfo ENOTFOUND`) and no local DB container/network was available.
+- `set -a && source .env && set +a && bun -e 'const { runStartupMigrations } = await import("./core/server/startupMigrations.ts"); await runStartupMigrations();'`
