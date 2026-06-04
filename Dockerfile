@@ -41,4 +41,4 @@ EXPOSE 3000
 
 USER bun
 
-CMD ["bun", "run", "server/prod.ts"]
+CMD ["bun", "run", "server/dockerStart.ts"]

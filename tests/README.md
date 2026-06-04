@@ -28,6 +28,8 @@ This repository uses a hybrid testing model aligned with the product architectur
   - Bun-free posts editor/model helper suites
   - Bun-free forms contract/helper/automation-core suites
   - Bun-free server helper suites
+    - `tests/vitest/server/startupMigrations.test.ts` owns the Docker startup
+      migration policy and injection seam without touching a live database.
   - Bun-free search pure-logic suites
   - DOM-rich editor helpers through `happy-dom`
   - UI integration/render suites moved from `tests/integration/ui/*`

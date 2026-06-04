@@ -34,6 +34,13 @@ Nie-cele:
   (np. `DATABASE_URL`, `MEDIA_SECRET_MASTER_KEY`).
 - Ustawienia security middleware (CORS/CSRF/rate-limit/headers) konfigurowalne
   z Admin UI i stosowane runtime (bez restartu).
+- Produkcyjny obraz Docker startuje przez `core/server/dockerStart.ts`: przed
+  uruchomieniem glownego serwera HTTP wykonuje migracje Drizzle z
+  `core/db/migrations`, uzywajac `DATABASE_URL`. Blad migracji zatrzymuje start
+  aplikacji. Migrator trzyma Postgres advisory lock na czas migracji, zeby
+  rownolegle repliki nie wykonywaly tego samego kroku jednoczesnie;
+  `CODERSO_RUN_MIGRATIONS_ON_START=false` jest dopuszczalne tylko wtedy, gdy
+  zewnetrzny release/orchestrator uruchamia migracje osobnym krokiem.
 
 ## Strategia testow i coverage (TASK-102 target)
 

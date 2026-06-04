@@ -99,6 +99,27 @@ bun --cwd core build:admin
 bun --cwd core build:site
 ```
 
+The runtime image starts through `core/server/dockerStart.ts`. By default it
+runs Drizzle migrations from `core/db/migrations` before importing the main
+production server:
+
+```text
+run startup migrations -> start core HTTP server
+```
+
+`DATABASE_URL` must be present at container runtime. If migrations fail, the
+container exits before serving traffic so the app is not run against an older
+schema. The startup migrator takes a Postgres advisory lock while Drizzle runs,
+so multiple replicas wait on the same migration step instead of racing it. Set
+`CODERSO_RUN_MIGRATIONS_ON_START=false` only when the deployment uses a
+separate migration job. `CODERSO_MIGRATIONS_FOLDER` may override the migration
+folder for custom image layouts, but the default Docker image uses the
+checked-in core migration artifacts.
+
+For local Docker smoke tests, pass runtime database settings through the
+container environment, for example `docker run --env-file .env ...`, as long as
+the `DATABASE_URL` host is reachable from that container/network.
+
 When admin bundle structure or static chunk serving changes, run the local
 image build before release closure:
 
