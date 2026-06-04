@@ -32,7 +32,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 10 tasks
+- **To Do:** 19 tasks
 - **In Progress:** 4 tasks
 - **Done:** 2227 tasks
 
@@ -42,6 +42,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-404 | LLM Guide Full Service Site Generation | High | Very Large | New program: make LLM Guide create launch-shaped service sites instead of portfolio/services/contact scaffolds. |
+| TASK-404-01 | Full Service Site Contract and Acceptance Matrix | High | Medium | Define full-service site map, public content minimums, readiness metadata, gates, docs, and matrix ownership. |
+| TASK-404-02 | Same-Plan Resource Locators and Dependency Graph | High | Large | Add strict locators so pages, entries, menu, SEO, and dependent actions created in one reviewed plan resolve safely. |
+| TASK-404-03 | Full Service Page and Section Composer | High | Large | Add a distinct full-service-site capability and deterministic home/about/process/proof/contact page composition. |
+| TASK-404-04 | Public Sample Content Navigation Footer and Lead Form Actions | High | Large | Promote safe public sample content, navigation/footer IA, and lead-capture form ownership so generated sites are not dead scaffolds. |
+| TASK-404-05 | SEO Media and Launch Readiness Validation | High | Large | Add SEO/media gates and launch-readiness checklist for plan, dry-run, execute, and public runtime validation. |
+| TASK-404-06 | Full Service E2E Live Review Docs and Closure | High | Large | Restart helper, run Playwright/Claude/live-provider validation, docs, changelog, and closure gates. |
+| TASK-404-07 | Assistant Current Implementation Drift Audit and Repair Loop | High | Large | Audit current Assistant implementation with Claude/agents, fix drifts in a loop, and verify via Playwright CLI after helper restart. |
+| TASK-404-08 | TASK-404 Task Drift Audit and Repair Loop | High | Medium | Audit the TASK-404 breakdown itself with Claude/agents, patch task drift, and repeat until execution-ready. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
