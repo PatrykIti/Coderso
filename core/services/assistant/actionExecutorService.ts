@@ -488,6 +488,7 @@ const formatListingReferenceSummary = (references: ListingResourceReference[]) =
 const buildCatalogPageData = (input: {
   introTitle: string;
   introBody: string;
+  blocks?: WidgetBlock[];
   listingQueryId: string;
   listingTemplateId: string;
   ctaLabel: string;
@@ -517,6 +518,7 @@ const buildCatalogPageData = (input: {
   composeBlueprintPageData({
     introTitle: input.introTitle,
     introBody: input.introBody,
+    blocks: input.blocks,
     listingQueryId: input.listingQueryId,
     listingTemplateId: input.listingTemplateId,
     ctaLabel: input.ctaLabel,
@@ -2134,6 +2136,7 @@ const buildMenuUpsertPreview = async (
 ) => {
   const existing = await findMenuByLocation(action.input.location, deps);
   const nextValue = {
+    ...(existing ? { id: existing.id } : {}),
     name: action.input.name,
     location: action.input.location,
     status: action.input.status,
@@ -2208,6 +2211,26 @@ const buildMenuItemPreview = async (
     beforeValue: existing,
     nextValue,
   });
+};
+
+const resolveActionResultPreviewResourceId = async (
+  locator: Extract<AssistantSamePlanLocator, { kind: "action-result" }>,
+  planned: AssistantPlannedAction | null,
+  deps: ActionExecutorDeps
+) => {
+  if (locator.resourceType === "menu" && planned?.type === "menu.upsert") {
+    return (await findMenuByLocation(planned.input.location, deps))?.id ?? null;
+  }
+  return null;
+};
+
+const resolveMenuItemExecutionOperation = (
+  preview: AssistantActionPreviewChange,
+  existing: MenuItemRecord | null,
+  nextItem: MenuItemInput
+): AssistantActionPreviewChange["operation"] => {
+  if (!existing) return preview.operation === "noop" ? "noop" : "create";
+  return isDeepStrictEqual(existing, nextItem) ? "noop" : "update";
 };
 
 const buildMenuItemDeletePreview = async (
@@ -2509,9 +2532,10 @@ const buildLocatorPreviewDependency = async (
   }
 
   const planned = findPriorActionResultDependency(targetId, ctx);
+  const resolvedId = await resolveActionResultPreviewResourceId(targetId, planned, deps);
   return {
-    resolvedId: null,
-    pending: Boolean(planned && targetId.resourceType === targetType),
+    resolvedId,
+    pending: Boolean(planned && targetId.resourceType === targetType && !resolvedId),
     dependency: {
       actionId: targetId.actionId,
       targetType: targetId.resourceType,
@@ -4778,13 +4802,16 @@ const executeMenuItemAction = async (
   const existingItems = flattenMenuNodes(await deps.listMenuItems(menuId));
   const existing = findMenuItemForAction(existingItems, action);
   const nextItem = buildNextMenuItem(action, existing, existingItems.length);
+  const operation = resolveMenuItemExecutionOperation(preview, existing, nextItem);
   const nextItems =
-    preview.operation === "create"
+    operation === "create"
       ? [...existingItems, nextItem]
-      : existingItems.map((item) => (existing && item.id === existing.id ? nextItem : item));
+      : operation === "update"
+        ? existingItems.map((item) => (existing && item.id === existing.id ? nextItem : item))
+        : existingItems;
 
   const tree =
-    preview.operation === "noop"
+    operation === "noop"
       ? await deps.listMenuItems(menuId)
       : await deps.replaceMenuItems(menuId, nextItems);
   const saved =
@@ -4795,13 +4822,13 @@ const executeMenuItemAction = async (
     type: action.type,
     targetType: "menu-item",
     targetKey: `${menuId}/${action.input.href}`,
-    operation: preview.operation,
+    operation,
     status: "success" as const,
     resourceId: saved?.id ?? null,
     adminHref: `/admin/menus/${encodeURIComponent(menuId)}`,
     publicHref: action.input.href,
     message:
-      preview.operation === "noop"
+      operation === "noop"
         ? "Menu item already matched the planned navigation link."
         : "Menu item is ready in navigation.",
   };
@@ -5058,17 +5085,17 @@ const executePageAction = async (
   const listingQueries = await deps.listListingQueries();
   const listingTemplates = await deps.listListingTemplates();
   const forms = action.input.formEmbed ? await deps.listForms() : [];
-  const simplePageMode =
-    Boolean(action.input.blocks) ||
-    !action.input.listingQueryName ||
-    !action.input.listingTemplateSlug;
-
   const requestedListingQueryName =
     action.input.listingQueryName ?? action.input.collectionLink?.listingQueryName ?? null;
   const requestedListingTemplateSlug =
     action.input.listingTemplateSlug ?? action.input.collectionLink?.listingTemplateSlug ?? null;
   const requestedListingQueryId = action.input.collectionLink?.listingQueryId ?? null;
   const requestedListingTemplateId = action.input.collectionLink?.listingTemplateId ?? null;
+  const simplePageMode =
+    !requestedListingQueryName &&
+    !requestedListingTemplateSlug &&
+    !requestedListingQueryId &&
+    !requestedListingTemplateId;
   const listingQueryById = requestedListingQueryId
     ? (listingQueries.find((entry) => entry.id === requestedListingQueryId) ?? null)
     : null;
@@ -5149,6 +5176,7 @@ const executePageAction = async (
     : buildCatalogPageData({
         introTitle: action.input.introTitle,
         introBody: action.input.introBody,
+        blocks: action.input.blocks,
         listingQueryId: listingQuery!.id,
         listingTemplateId: listingTemplate!.id,
         ctaLabel: action.input.ctaLabel ?? "Read more",

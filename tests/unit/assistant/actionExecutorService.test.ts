@@ -3173,6 +3173,23 @@ test("executeAssistantActionPlan creates menus and resolves menu item locators",
   expect(executed.summary.create).toBe(2);
   expect(deps.__state.menus[0]?.location).toBe("primary");
   expect(deps.__state.menuItemsByMenu.get("menu-1")?.[0]?.href).toBe("/");
+
+  const rerunPreview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(rerunPreview.readyToExecute).toBe(true);
+  expect(rerunPreview.changes.map((change) => change.operation)).toEqual(["noop", "noop"]);
+
+  const rerun = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-menu-locator-2",
+    },
+    deps
+  );
+
+  expect(rerun.summary.failed).toBe(0);
+  expect(rerun.summary.noop).toBe(2);
+  expect(deps.__state.menuItemsByMenu.get("menu-1")).toHaveLength(1);
 });
 
 test("executeAssistantActionPlan updates menu items and preserves unrelated tree", async () => {
@@ -4867,20 +4884,30 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
     expect(page.status).toBe("published");
     expect(Array.isArray(publishedData?.blocks)).toBe(true);
     expect(publishedData?.blocks?.length).toBeGreaterThan(0);
+    expect(publishedData?.blocks?.[0]).toMatchObject({ type: "navigation" });
+    expect(publishedData?.blocks?.at(-1)).toMatchObject({ type: "footer" });
   }
   const homePage = deps.__state.pages.find((page) => page.slug === "/");
   const homeBlocks = homePage?.publishedData as
     | { blocks?: Array<{ type?: string; data?: { titleBlock?: { title?: string } } }> }
     | null
     | undefined;
-  expect(homeBlocks?.blocks?.[0]).toMatchObject({
-    type: "rich-text-section",
-    data: {
-      titleBlock: {
-        title: "Studio Forma",
-      },
-    },
-  });
+  expect(
+    homeBlocks?.blocks?.some(
+      (block) =>
+        block.type === "rich-text-section" && block.data?.titleBlock?.title === "Studio Forma"
+    )
+  ).toBe(true);
+  const servicesPage = deps.__state.pages.find((page) => page.slug === "/uslugi");
+  const servicesBlocks = servicesPage?.publishedData as
+    | { blocks?: Array<{ type?: string }> }
+    | null
+    | undefined;
+  expect(servicesBlocks?.blocks?.map((block) => block.type)).toEqual([
+    "navigation",
+    "content-list",
+    "footer",
+  ]);
   expect(deps.__state.entries.filter((entry) => entry.status === "published")).toHaveLength(6);
   expect(deps.__state.detailPages).toHaveLength(2);
   const contentRoutes =

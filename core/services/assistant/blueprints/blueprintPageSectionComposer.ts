@@ -69,103 +69,118 @@ const composeCollectionBlocks = (
   > &
     Pick<
       BlueprintPageSectionCompositionInput,
-      "ctaLabel" | "contentListStyle" | "listingFilters" | "formEmbed"
+      "blocks" | "ctaLabel" | "contentListStyle" | "listingFilters" | "formEmbed"
     >
-) => [
-  ...(input.listingFilters
-    ? [
-        buildBlueprintPageSectionSeed("listing-filters", {
-          id: "catalog-listing-filters",
-          data: {
-            listingQueryId: input.listingQueryId,
-            title: input.listingFilters.title,
-            description: input.listingFilters.description,
-            autoApply: input.listingFilters.autoApply,
-            showSearch: input.listingFilters.showSearch,
-            searchPlaceholder: input.listingFilters.searchPlaceholder,
-            searchLabel: input.listingFilters.searchLabel,
-            applyLabel: input.listingFilters.applyLabel,
-            facets: input.listingFilters.facets,
-            resolved: {
+) => {
+  const inputBlocks = (input.blocks ?? []).map(normalizePageBlock);
+  const beforeCollectionBlocks = inputBlocks.filter((block) => block.type !== "footer");
+  const afterCollectionBlocks = inputBlocks.filter((block) => block.type === "footer");
+
+  return [
+    ...beforeCollectionBlocks,
+    ...(input.listingFilters
+      ? [
+          buildBlueprintPageSectionSeed("listing-filters", {
+            id: "catalog-listing-filters",
+            data: {
               listingQueryId: input.listingQueryId,
-              metrics: [],
-              searchQuery: "",
-              rejectedTokens: [],
+              title: input.listingFilters.title,
+              description: input.listingFilters.description,
+              autoApply: input.listingFilters.autoApply,
+              showSearch: input.listingFilters.showSearch,
+              searchPlaceholder: input.listingFilters.searchPlaceholder,
+              searchLabel: input.listingFilters.searchLabel,
+              applyLabel: input.listingFilters.applyLabel,
+              facets: input.listingFilters.facets,
+              resolved: {
+                listingQueryId: input.listingQueryId,
+                metrics: [],
+                searchQuery: "",
+                rejectedTokens: [],
+              },
             },
+          }),
+        ]
+      : []),
+    buildBlueprintPageSectionSeed("content-list", {
+      id: "catalog-content-list",
+      variant: "cards",
+      data: {
+        source: {
+          mode: "listing",
+          listingQueryId: input.listingQueryId,
+          listingTemplateId: input.listingTemplateId,
+          statusScope: "published",
+          limit: 9,
+          sort: "title-asc",
+        },
+        fields: {
+          showImage: true,
+          showExcerpt: true,
+          showMeta: true,
+          showCta: true,
+        },
+        emptyState: {
+          title: "No catalog items yet",
+          description: "Add your first catalog entry in Coderso to populate this page.",
+        },
+        style: {
+          columns: input.contentListStyle?.columns ?? "3",
+          gap: "md",
+          cardStyle: input.contentListStyle?.cardStyle ?? "outlined",
+          ctaLabel: input.ctaLabel ?? "Read more",
+          backgroundColor: "var(--color-bg)",
+          borderColor: "var(--color-border)",
+          textColor: "var(--color-text)",
+        },
+        resolved: {
+          items: [],
+          total: 0,
+          sourceTypeId: "",
+          sourceTypeSlug: "",
+          listingQueryId: input.listingQueryId,
+          listingTemplateId: input.listingTemplateId,
+          resolvedAt: "",
+          runtime: {
+            rejectedTokens: [],
+            searchQuery: "",
+            page: 1,
           },
-        }),
-      ]
-    : []),
-  buildBlueprintPageSectionSeed("content-list", {
-    id: "catalog-content-list",
-    variant: "cards",
-    data: {
-      source: {
-        mode: "listing",
-        listingQueryId: input.listingQueryId,
-        listingTemplateId: input.listingTemplateId,
-        statusScope: "published",
-        limit: 9,
-        sort: "title-asc",
-      },
-      fields: {
-        showImage: true,
-        showExcerpt: true,
-        showMeta: true,
-        showCta: true,
-      },
-      emptyState: {
-        title: "No catalog items yet",
-        description: "Add your first catalog entry in Coderso to populate this page.",
-      },
-      style: {
-        columns: input.contentListStyle?.columns ?? "3",
-        gap: "md",
-        cardStyle: input.contentListStyle?.cardStyle ?? "outlined",
-        ctaLabel: input.ctaLabel ?? "Read more",
-        backgroundColor: "var(--color-bg)",
-        borderColor: "var(--color-border)",
-        textColor: "var(--color-text)",
-      },
-      resolved: {
-        items: [],
-        total: 0,
-        sourceTypeId: "",
-        sourceTypeSlug: "",
-        listingQueryId: input.listingQueryId,
-        listingTemplateId: input.listingTemplateId,
-        resolvedAt: "",
-        runtime: {
-          rejectedTokens: [],
-          searchQuery: "",
-          page: 1,
         },
       },
-    },
-  }),
-  ...(input.formEmbed
-    ? [
-        buildResolvedFormEmbedBlock({
-          id: "catalog-inquiry-form",
-          formEmbed: input.formEmbed,
-        }),
-      ]
-    : []),
-];
+    }),
+    ...(input.formEmbed
+      ? [
+          buildResolvedFormEmbedBlock({
+            id: "catalog-inquiry-form",
+            formEmbed: input.formEmbed,
+          }),
+        ]
+      : []),
+    ...afterCollectionBlocks,
+  ];
+};
 
 const composeSimpleBlocks = (
   input: Pick<BlueprintPageSectionCompositionInput, "blocks" | "formEmbed">
-) => [
-  ...(input.blocks ?? []).map(normalizePageBlock),
-  ...(input.formEmbed
-    ? [
-        buildResolvedFormEmbedBlock({
-          id: "lead-capture-form",
-          formEmbed: input.formEmbed,
-        }),
-      ]
-    : []),
-];
+) => {
+  const inputBlocks = (input.blocks ?? []).map(normalizePageBlock);
+  const beforeFormBlocks = inputBlocks.filter((block) => block.type !== "footer");
+  const afterFormBlocks = inputBlocks.filter((block) => block.type === "footer");
+
+  return [
+    ...beforeFormBlocks,
+    ...(input.formEmbed
+      ? [
+          buildResolvedFormEmbedBlock({
+            id: "lead-capture-form",
+            formEmbed: input.formEmbed,
+          }),
+        ]
+      : []),
+    ...afterFormBlocks,
+  ];
+};
 
 export const composeBlueprintPageData = (input: BlueprintPageSectionCompositionInput) => {
   const blocks =
@@ -173,6 +188,7 @@ export const composeBlueprintPageData = (input: BlueprintPageSectionCompositionI
       ? composeCollectionBlocks({
           listingQueryId: input.listingQueryId,
           listingTemplateId: input.listingTemplateId,
+          blocks: input.blocks,
           ctaLabel: input.ctaLabel,
           contentListStyle: input.contentListStyle,
           listingFilters: input.listingFilters,

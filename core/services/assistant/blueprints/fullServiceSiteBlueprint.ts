@@ -67,6 +67,133 @@ type FullServicePage = (typeof pageMap)[number];
 type PageUpsertBlocks = NonNullable<
   Extract<AssistantPlannedAction, { type: "page.upsert" }>["input"]["blocks"]
 >;
+type PageUpsertAction = Extract<AssistantPlannedAction, { type: "page.upsert" }>;
+
+const navigationItems = pageMap.map((page) => ({
+  label: page.label,
+  href: page.slug,
+}));
+
+const buildNavigationBlock = (): PageUpsertBlocks[number] => ({
+  id: "full-service-primary-navigation",
+  type: "navigation",
+  variant: "with-cta",
+  data: {
+    logo: {
+      type: "text",
+      value: "Studio Forma",
+      href: "/",
+      source: "external",
+    },
+    items: navigationItems,
+    linksSource: "menu",
+    cta: {
+      label: "Kontakt",
+      href: "/kontakt",
+    },
+    behavior: {
+      sticky: true,
+      transparent: false,
+      collapseOnScroll: false,
+      mobileMode: "drawer",
+      hideCtaOnMobile: false,
+      activeLinkMode: "exact",
+    },
+    layout: {
+      alignment: "right",
+      maxWidth: "6xl",
+      paddingY: "4",
+      itemGap: "4",
+    },
+    style: {
+      surfaceColor: "var(--color-bg)",
+      borderColor: "var(--color-border)",
+      linkUnderline: "none",
+      shadow: "sm",
+      backdropBlur: "sm",
+      ctaBackgroundColor: "var(--color-primary)",
+      ctaTextColor: "var(--color-bg)",
+      ctaBorderColor: "transparent",
+    },
+  },
+});
+
+const buildFooterBlock = (): PageUpsertBlocks[number] => ({
+  id: "full-service-footer",
+  type: "footer",
+  variant: "columns-3",
+  data: {
+    brand: {
+      logoText: "Studio Forma",
+      tagline: "Architektura, wnetrza i proces inwestycyjny prowadzone w jednym miejscu.",
+    },
+    columns: [
+      {
+        title: "Studio",
+        links: navigationItems.slice(0, 4),
+      },
+      {
+        title: "Oferta",
+        links: [
+          { label: "Uslugi", href: "/uslugi" },
+          { label: "Portfolio", href: "/portfolio" },
+          { label: "Proces", href: "/proces" },
+        ],
+      },
+      {
+        title: "Kontakt",
+        links: [
+          { label: "Kontakt i wycena", href: "/kontakt" },
+          { label: "Referencje", href: "/referencje" },
+        ],
+      },
+    ],
+    legal: {
+      enabled: true,
+      copyright: "(c) 2026 Studio Forma",
+      privacy: "/polityka-prywatnosci",
+      privacyLabel: "Polityka prywatnosci",
+      terms: "/regulamin",
+      termsLabel: "Regulamin",
+    },
+    socialEnabled: false,
+    layout: {
+      align: "left",
+      legalAlign: "right",
+      maxWidth: "6xl",
+      columnGap: "6",
+      columnBreakpoint: "md",
+      sectionPaddingY: "10",
+    },
+    style: {
+      surfaceColor: "var(--color-surface)",
+      textColor: "var(--color-text)",
+      linkColor: "var(--color-text)",
+      linkHoverColor: "var(--color-primary)",
+      borderColor: "var(--color-border)",
+    },
+  },
+});
+
+const withSiteShellBlocks = (action: AssistantPlannedAction): AssistantPlannedAction => {
+  if (action.type !== "page.upsert") return action;
+  const blocks = action.input.blocks ?? [];
+  const hasNavigation = blocks.some((block) => block.type === "navigation");
+  const hasFooter = blocks.some((block) => block.type === "footer");
+  const nextBlocks: PageUpsertBlocks = [
+    ...(hasNavigation ? [] : [buildNavigationBlock()]),
+    ...blocks,
+    ...(hasFooter ? [] : [buildFooterBlock()]),
+  ];
+
+  return {
+    ...action,
+    input: {
+      ...action.input,
+      blocks: nextBlocks,
+    },
+  } satisfies PageUpsertAction;
+};
 
 const supportingPageDetails: Record<
   Extract<FullServicePage["role"], "home" | "about" | "process" | "proof">,
@@ -149,12 +276,13 @@ const supportingPageActions = (): AssistantPlannedAction[] =>
       input: {
         title: page.title,
         slug: page.slug,
-        status: "published",
+        status: "published" as const,
         introTitle: page.title,
         introBody: page.body,
         blocks: buildSupportingPageBlocks(page),
       },
-    }));
+    }))
+    .map(withSiteShellBlocks);
 
 const leadCaptureActions = () => {
   const leadPlan = buildLeadCaptureSitePlan({ promptKind: "setup_request" });
@@ -467,9 +595,9 @@ export const buildFullServiceSitePlan = (options?: {
     ],
     questions: [],
     actions: [
-      ...portfolio.actions,
-      ...services.actions,
-      ...leadCaptureActions(),
+      ...portfolio.actions.map(withSiteShellBlocks),
+      ...services.actions.map(withSiteShellBlocks),
+      ...leadCaptureActions().map(withSiteShellBlocks),
       ...supportingPageActions(),
       ...serviceSamples(),
       ...portfolioSamples(),

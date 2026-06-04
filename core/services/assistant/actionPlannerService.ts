@@ -1204,6 +1204,12 @@ export const planAssistantActionsWithProviderDraft = async (
   if (requiresProviderLlmGate(trustedContext) && (!input.llmAvailable || !input.provider)) {
     throw new Error("assistant_llm_unavailable");
   }
+  if (
+    routedClassification.intentFamily === "service_business_full_site" &&
+    routedClassification.promptKind !== "docs_question"
+  ) {
+    return planAssistantActions({ ...input, context: trustedContext });
+  }
   const preferredBlueprintSetupPlan = buildPreferredBlueprintSetupPlan({
     prompt: input.prompt,
     context: trustedContext,

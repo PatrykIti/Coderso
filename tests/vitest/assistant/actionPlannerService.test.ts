@@ -234,6 +234,20 @@ test("planAssistantActions creates a full-service architecture studio site", () 
       "/kontakt",
     ])
   );
+  const pageActions = plan.actions.filter((action) => action.type === "page.upsert");
+  for (const action of pageActions) {
+    if (action.type !== "page.upsert") {
+      throw new Error("expected_page_upsert_action");
+    }
+    expect(action.input.blocks?.[0]).toMatchObject({
+      type: "navigation",
+      variant: "with-cta",
+    });
+    expect(action.input.blocks?.at(-1)).toMatchObject({
+      type: "footer",
+      variant: "columns-3",
+    });
+  }
   for (const slug of ["/", "/o-nas", "/proces", "/referencje"]) {
     const pageAction = plan.actions.find(
       (action) => action.type === "page.upsert" && action.input.slug === slug
@@ -242,14 +256,31 @@ test("planAssistantActions creates a full-service architecture studio site", () 
       throw new Error(`expected_full_service_page_action:${slug}`);
     }
     expect(pageAction.input.blocks?.length).toBeGreaterThan(0);
-    expect(pageAction.input.blocks?.[0]).toMatchObject({
-      type: "rich-text-section",
-      variant: "single-column",
-      data: {
-        options: { outputMode: "blocks" },
-      },
-    });
+    expect(pageAction.input.blocks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "rich-text-section",
+          variant: "single-column",
+          data: expect.objectContaining({
+            options: expect.objectContaining({ outputMode: "blocks" }),
+          }),
+        }),
+      ])
+    );
   }
+  expect(
+    pageActions.find((action) => action.type === "page.upsert" && action.input.slug === "/uslugi")
+      ?.input.blocks
+  ).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        type: "navigation",
+      }),
+      expect.objectContaining({
+        type: "footer",
+      }),
+    ])
+  );
   expect(plan.actions.filter((action) => action.type === "entry.sample.create")).toHaveLength(6);
   expect(plan.actions.filter((action) => action.type === "menu.upsert")).toHaveLength(2);
   expect(plan.actions.filter((action) => action.type === "menu.item.upsert")).toHaveLength(14);
@@ -301,6 +332,63 @@ test("planAssistantActions routes English full-service site prompts away from CM
     "menu.item.upsert": 14,
     "seo.document.upsert": 7,
   });
+});
+
+test("planAssistantActionsWithProviderDraft routes English full-service prompts before planning-state inspection", async () => {
+  const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: [
+      "Create a premium full-service architecture studio site for Studio Forma.",
+      "It must include home, services, portfolio, about, process, references, contact with lead form, primary nav, footer, SEO, public sample content, and working services and portfolio detail pages.",
+      "Use a clean premium architecture-studio UX with strong public pages, not a scaffold.",
+    ].join(" "),
+    llmAvailable: true,
+    provider: {
+      id: "openrouter",
+      complete: async (request) => {
+        requests.push(request);
+        return {
+          text: JSON.stringify({
+            operation: "inspect",
+            resourceKind: "page",
+            targetQuery: { exactName: "home" },
+            filters: null,
+            mutation: null,
+            constraints: null,
+          }),
+        };
+      },
+    },
+    providerModel: "anthropic/claude-sonnet-4",
+    context: {
+      page: "/admin/settings/assistant",
+      locale: "en-US",
+      planningState: {
+        schemaVersion: 1,
+        sourcePlanId: "plan-cms-page-inspect",
+        route: "/admin/pages",
+        resourceKind: "page",
+        operation: "inspect",
+        query: "home",
+        candidates: [
+          {
+            kind: "page",
+            id: "page-home",
+            label: "home",
+            status: "published",
+          },
+        ],
+        createdAt: "2026-06-04T10:00:00.000Z",
+        expiresAt: "2099-06-04T10:10:00.000Z",
+      },
+    },
+  });
+
+  expect(requests).toHaveLength(0);
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("service_business_full_site");
+  expect(plan.intentId).toBe("service-business-full-site");
+  expect(plan.actions).toHaveLength(49);
 });
 
 test("planAssistantActions composes single-adjunct prompts through the live blueprint planner path", () => {
