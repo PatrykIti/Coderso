@@ -401,6 +401,20 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "menu.upsert",
+    "menu",
+    "core/services/menus/menuService.ts",
+    ["name", "location", "status"],
+    {
+      permissions: {
+        plan: ["menus:read"],
+        dryRun: ["menus:read"],
+        execute: ["menus:write"],
+      },
+      notes: ["Creates or updates one named menu by stable theme location."],
+    }
+  ),
+  executableContract(
     "menu.item.upsert",
     "menu",
     "core/services/menus/menuService.ts",

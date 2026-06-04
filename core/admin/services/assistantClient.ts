@@ -530,19 +530,26 @@ const notifyAssistantExecutionCacheEvent = (input: {
       return;
     }
 
+    case "menu.upsert":
     case "menu.item.upsert":
     case "menu.item.delete":
     case "menu.item.update": {
+      const plannedMenu = readActionId(action, "menu.upsert");
       const plannedUpsert = readActionId(action, "menu.item.upsert");
       const plannedDelete = readActionId(action, "menu.item.delete");
       const plannedUpdate = readActionId(action, "menu.item.update");
       const menuId =
-        plannedUpsert?.input.menuId ?? plannedDelete?.input.menuId ?? plannedUpdate?.input.menuId;
-      if (!menuId) return;
+        item.resourceId ??
+        plannedMenu?.input.location ??
+        plannedUpsert?.input.menuId ??
+        plannedDelete?.input.menuId ??
+        plannedUpdate?.input.menuId;
       clearMenusCache();
-      clearLocalCache(cacheKeys.menuDetail(menuId));
       emit(cacheKeys.menusList, cacheAction);
-      emit(cacheKeys.menuDetail(menuId), cacheAction);
+      if (typeof menuId === "string") {
+        clearLocalCache(cacheKeys.menuDetail(menuId));
+        emit(cacheKeys.menuDetail(menuId), cacheAction);
+      }
       return;
     }
 

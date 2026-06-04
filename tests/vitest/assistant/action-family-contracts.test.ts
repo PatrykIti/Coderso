@@ -63,6 +63,10 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(contentRouteContract.permissions.execute).toEqual(["settings:write"]);
   expect(contentRouteContract.strictInput.notes.join(" ")).toContain("settings owner seam");
   const menuContract = getAssistantActionFamilyContract("menu.item.upsert");
+  const menuUpsertContract = getAssistantActionFamilyContract("menu.upsert");
+  expect(menuUpsertContract.status).toBe("executable");
+  expect(menuUpsertContract.permissions.execute).toEqual(["menus:write"]);
+  expect(menuUpsertContract.strictInput.notes.join(" ")).toContain("stable theme location");
   expect(menuContract.status).toBe("executable");
   expect(menuContract.permissions.execute).toEqual(["menus:write"]);
   expect(getAssistantActionFamilyContract("menu.item.delete").permissions.execute).toEqual([

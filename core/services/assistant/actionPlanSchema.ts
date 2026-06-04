@@ -53,6 +53,7 @@ const intentFamilies = new Set<AssistantIntentFamily>([
   "product_catalog",
   "portfolio_projects",
   "services_directory",
+  "service_business_full_site",
   "lead_capture_site",
   "booking_service",
   "editorial_content_hub",
@@ -907,7 +908,7 @@ const readOptionalSafeRelativeHref = (value: unknown) => {
 const normalizeMenuItemUpsertInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["menuId", "label", "href", "parentId", "orderIndex", "settings"]));
   return {
-    menuId: readText(input.menuId),
+    menuId: normalizeResourceIdInput(input.menuId),
     label: readText(input.label),
     href: readSafeRelativeHref(input.href),
     ...(input.parentId !== undefined ? { parentId: readOptionalText(input.parentId) } : {}),
@@ -915,6 +916,15 @@ const normalizeMenuItemUpsertInput = (input: JsonRecord) => {
       ? { orderIndex: readOptionalFiniteNumber(input.orderIndex) }
       : {}),
     ...(input.settings !== undefined ? { settings: assertRecord(input.settings) } : {}),
+  };
+};
+
+const normalizeMenuUpsertInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["name", "location", "status"]));
+  return {
+    name: readText(input.name),
+    location: readText(input.location),
+    status: readEnum(input.status, new Set(["draft", "published"])),
   };
 };
 
@@ -983,8 +993,8 @@ const normalizeSeoPayload = (value: unknown) => {
 
 const normalizeSamePlanLocator = (value: unknown) => {
   const input = assertRecord(value);
-  const kind = readEnum(input.kind, new Set(["action-result", "stable-slug"]));
-  const resourceType = readEnum(input.resourceType, new Set(["page", "entry"]));
+  const kind = readEnum(input.kind, new Set(["action-result", "stable-slug", "stable-location"]));
+  const resourceType = readEnum(input.resourceType, new Set(["page", "entry", "menu"]));
   if (kind === "action-result") {
     assertKeys(input, new Set(["kind", "actionId", "resourceType", "field"]));
     return {
@@ -992,6 +1002,15 @@ const normalizeSamePlanLocator = (value: unknown) => {
       actionId: readText(input.actionId),
       resourceType,
       field: readEnum(input.field, new Set(["id"])),
+    };
+  }
+  if (kind === "stable-location") {
+    if (resourceType !== "menu") fail();
+    assertKeys(input, new Set(["kind", "resourceType", "location"]));
+    return {
+      kind,
+      resourceType,
+      location: readText(input.location),
     };
   }
   if (resourceType === "page") {
@@ -1598,6 +1617,8 @@ const normalizeActionInput = (type: AssistantPlannedAction["type"], input: unkno
       return normalizeEntryDeleteInput(record);
     case "entry.update":
       return normalizeEntryUpdateInput(record);
+    case "menu.upsert":
+      return normalizeMenuUpsertInput(record);
     case "menu.item.upsert":
       return normalizeMenuItemUpsertInput(record);
     case "menu.item.delete":

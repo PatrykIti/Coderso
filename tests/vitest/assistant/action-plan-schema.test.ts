@@ -639,12 +639,28 @@ test("normalizeAssistantActionPlan accepts safe menu item upsert actions", () =>
     ...plan,
     actions: [
       {
+        id: "menu-primary",
+        type: "menu.upsert",
+        title: "Create primary menu",
+        description: "Create the primary navigation menu.",
+        input: {
+          name: "Primary navigation",
+          location: "primary",
+          status: "published",
+        },
+      },
+      {
         id: "menu-products",
         type: "menu.item.upsert",
         title: "Add products to menu",
         description: "Add products catalog link.",
         input: {
-          menuId: "menu-primary",
+          menuId: {
+            kind: "action-result",
+            actionId: "menu-primary",
+            resourceType: "menu",
+            field: "id",
+          },
           label: "Products",
           href: "/products",
           orderIndex: 1,
@@ -656,7 +672,17 @@ test("normalizeAssistantActionPlan accepts safe menu item upsert actions", () =>
     ],
   });
 
-  expect(normalized.actions[0]?.type).toBe("menu.item.upsert");
+  expect(normalized.actions[0]?.type).toBe("menu.upsert");
+  expect(normalized.actions[1]).toMatchObject({
+    type: "menu.item.upsert",
+    input: {
+      menuId: {
+        kind: "action-result",
+        actionId: "menu-primary",
+        resourceType: "menu",
+      },
+    },
+  });
 });
 
 test("normalizeAssistantActionPlan accepts seo document upsert actions", () => {

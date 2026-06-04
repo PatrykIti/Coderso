@@ -127,6 +127,14 @@ const createDeps = () => {
     createdAt: Date;
     updatedAt: Date;
   }> = [];
+  const menus: Array<{
+    id: string;
+    name: string;
+    location: string | null;
+    status: "draft" | "published";
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
   const menuItemsByMenu = new Map<
     string,
     Array<{
@@ -754,6 +762,44 @@ const createDeps = () => {
         >
       >;
     },
+    listMenus: async () => menus,
+    createMenu: async (input: {
+      name: string;
+      location?: string | null;
+      status?: "draft" | "published";
+    }) => {
+      const now = new Date("2026-04-10T12:00:00.000Z");
+      const record = {
+        id: `menu-${menus.length + 1}`,
+        name: input.name,
+        location: input.location ?? null,
+        status: input.status ?? "draft",
+        createdAt: now,
+        updatedAt: now,
+      };
+      menus.push(record);
+      return record as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/menus/menuService"))["createMenu"]>
+      >;
+    },
+    updateMenu: async (
+      id: string,
+      input: {
+        name?: string;
+        location?: string | null;
+        status?: "draft" | "published";
+      }
+    ) => {
+      const existing = menus.find((entry) => entry.id === id) ?? null;
+      if (!existing) return null;
+      if (input.name !== undefined) existing.name = input.name;
+      if (input.location !== undefined) existing.location = input.location;
+      if (input.status !== undefined) existing.status = input.status;
+      existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
+      return existing as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/menus/menuService"))["updateMenu"]>
+      >;
+    },
     listMenuItems: async (menuId: string) =>
       (menuItemsByMenu.get(menuId) ?? []).map((item) => ({
         ...item,
@@ -985,6 +1031,7 @@ const createDeps = () => {
       formSubmissionCounts,
       formActions,
       entries,
+      menus,
       menuItemsByMenu,
       seoDocuments,
       mediaAssets,
@@ -2984,6 +3031,12 @@ test("executeAssistantActionPlan upserts menu items without duplicates", async (
   expect(preview.changes[0]?.dependencies).toEqual([
     {
       actionId: null,
+      targetType: "menu",
+      targetKey: "menu-primary",
+      optional: false,
+    },
+    {
+      actionId: null,
       targetType: "permission",
       targetKey: "menus:write",
       optional: false,
@@ -3036,6 +3089,75 @@ test("executeAssistantActionPlan upserts menu items without duplicates", async (
 
   const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan creates menus and resolves menu item locators", async () => {
+  const deps = createDeps();
+  const plan: AssistantActionPlan = {
+    id: "plan-menu-locator",
+    status: "ready",
+    intentId: "menu-locator",
+    promptKind: "setup_request",
+    intentFamily: "unknown",
+    title: "Create navigation menu",
+    answer: "I can create navigation and links.",
+    summary: "Create primary menu and one link.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "menu-primary",
+        type: "menu.upsert",
+        title: "Create primary menu",
+        description: "Create the primary navigation menu.",
+        input: {
+          name: "Primary navigation",
+          location: "primary",
+          status: "published",
+        },
+      },
+      {
+        id: "menu-primary-home",
+        type: "menu.item.upsert",
+        title: "Add home link",
+        description: "Add the home link to primary navigation.",
+        input: {
+          menuId: {
+            kind: "action-result",
+            actionId: "menu-primary",
+            resourceType: "menu",
+            field: "id",
+          },
+          label: "Start",
+          href: "/",
+          orderIndex: 0,
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes[1]?.dependencies[0]).toEqual({
+    actionId: "menu-primary",
+    targetType: "menu",
+    targetKey: "menu:menu-primary:id",
+    optional: false,
+  });
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-menu-locator-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.create).toBe(2);
+  expect(deps.__state.menus[0]?.location).toBe("primary");
+  expect(deps.__state.menuItemsByMenu.get("menu-1")?.[0]?.href).toBe("/");
 });
 
 test("executeAssistantActionPlan updates menu items and preserves unrelated tree", async () => {
@@ -4663,6 +4785,49 @@ test("executeAssistantActionPlan creates product inquiry catalog and form", asyn
       }
     )?.collectionLink?.contentTypeId
   ).toBe(deps.__state.contentTypes[0]?.id);
+});
+
+test("executeAssistantActionPlan executes the full-service architecture studio plan", async () => {
+  const deps = createDeps();
+  const plan = planAssistantActions({
+    prompt: [
+      "Stworz premium strone dla studia architektonicznego Studio Forma.",
+      "Potrzebuje portfolio realizacji, oferte uslug z podstronami, proces wspolpracy i kontakt z formularzem leadowym.",
+      "Realizacje maja miec katalog z kategoria, lokalizacja i rokiem.",
+    ].join(" "),
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.intentId).toBe("service-business-full-site");
+  expect(plan.actions).toHaveLength(47);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-full-service-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(0);
+  expect(deps.__state.pages.map((page) => page.slug).sort()).toEqual([
+    "/",
+    "/kontakt",
+    "/o-nas",
+    "/portfolio",
+    "/proces",
+    "/referencje",
+    "/uslugi",
+  ]);
+  expect(deps.__state.entries.filter((entry) => entry.status === "published")).toHaveLength(6);
+  expect(deps.__state.menus.map((menu) => menu.location).sort()).toEqual(["footer", "primary"]);
+  expect(deps.__state.menuItemsByMenu.get("menu-1")).toHaveLength(7);
+  expect(deps.__state.menuItemsByMenu.get("menu-2")).toHaveLength(7);
+  expect(deps.__state.seoDocuments.filter((entry) => entry.targetType === "page")).toHaveLength(7);
 });
 
 test("executeAssistantActionPlan resolves supporting page collection links from content type slugs", async () => {

@@ -33,6 +33,7 @@ export type AssistantIntentFamily =
   | "product_catalog"
   | "portfolio_projects"
   | "services_directory"
+  | "service_business_full_site"
   | "lead_capture_site"
   | "booking_service"
   | "editorial_content_hub"
@@ -624,7 +625,7 @@ export type AssistantMenuItemUpsertAction = {
   title: string;
   description: string;
   input: {
-    menuId: string;
+    menuId: AssistantResourceIdInput;
     label: string;
     href: string;
     parentId?: string | null;
@@ -671,7 +672,7 @@ export type AssistantSamePlanLocator =
   | {
       kind: "action-result";
       actionId: string;
-      resourceType: "page" | "entry";
+      resourceType: "page" | "entry" | "menu";
       field: "id";
     }
   | {
@@ -684,9 +685,26 @@ export type AssistantSamePlanLocator =
       resourceType: "entry";
       contentTypeSlug: string;
       slug: string;
+    }
+  | {
+      kind: "stable-location";
+      resourceType: "menu";
+      location: string;
     };
 
 export type AssistantResourceIdInput = string | AssistantSamePlanLocator;
+
+export type AssistantMenuUpsertAction = {
+  id: string;
+  type: "menu.upsert";
+  title: string;
+  description: string;
+  input: {
+    name: string;
+    location: string;
+    status: "draft" | "published";
+  };
+};
 
 export type AssistantSeoDocumentUpsertAction = {
   id: string;
@@ -1011,6 +1029,7 @@ export type AssistantPlannedAction =
   | AssistantEntrySampleCreateAction
   | AssistantEntryDeleteAction
   | AssistantEntryUpdateAction
+  | AssistantMenuUpsertAction
   | AssistantMenuItemUpsertAction
   | AssistantMenuItemDeleteAction
   | AssistantMenuItemUpdateAction

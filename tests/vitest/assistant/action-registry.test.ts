@@ -31,6 +31,7 @@ test("assistantActionTypes lists every supported action type once", () => {
     "entry.sample.create",
     "entry.delete",
     "entry.update",
+    "menu.upsert",
     "menu.item.upsert",
     "menu.item.delete",
     "menu.item.update",
@@ -106,6 +107,7 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("form.archive")).toBe(true);
   expect(isAssistantActionType("form.update")).toBe(true);
   expect(isAssistantActionType("entry.update")).toBe(true);
+  expect(isAssistantActionType("menu.upsert")).toBe(true);
   expect(isAssistantActionType("menu.item.update")).toBe(true);
   expect(isAssistantActionType("page.widget.patch")).toBe(true);
   expect(isAssistantActionType("form.automation.upsert")).toBe(true);

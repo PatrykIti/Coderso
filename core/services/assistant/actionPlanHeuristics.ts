@@ -191,6 +191,22 @@ const serviceDirectoryKeywords = [
   "providers",
 ];
 
+const fullServiceSiteKeywords = [
+  "full-service",
+  "full service",
+  "pelnoprawny",
+  "pełnoprawny",
+  "kompletny serwis",
+  "pelny serwis",
+  "pełny serwis",
+  "cala strone",
+  "całą stronę",
+  "strone firmowa",
+  "stronę firmową",
+  "caly serwis",
+  "cały serwis",
+];
+
 const leadCaptureKeywords = [
   "lead",
   "leady",
@@ -200,6 +216,15 @@ const leadCaptureKeywords = [
   "contact form",
   "wycena",
   "quote",
+];
+
+const processKeywords = [
+  "proces",
+  "process",
+  "methodology",
+  "metodyka",
+  "wspolpracy",
+  "współpracy",
 ];
 
 const bookingServiceKeywords = [
@@ -298,6 +323,18 @@ const isLikelyServicesDirectoryPrompt = (prompt: string) => {
 
 export const resolveIntentFamily = (prompt: string): AssistantIntentFamily => {
   const normalized = normalizeAssistantPlannerPrompt(prompt);
+  if (
+    (includesAny(normalized, fullServiceSiteKeywords) &&
+      (includesAny(normalized, architectureStudioKeywords) ||
+        (includesAny(normalized, portfolioKeywords) &&
+          includesAny(normalized, serviceDirectoryKeywords)))) ||
+    (includesAny(normalized, architectureStudioKeywords) &&
+      includesAny(normalized, portfolioKeywords) &&
+      includesAny(normalized, serviceDirectoryKeywords) &&
+      (includesAny(normalized, leadCaptureKeywords) || includesAny(normalized, processKeywords)))
+  ) {
+    return "service_business_full_site";
+  }
   if (isLikelyArchitecturePortfolioPrompt(normalized)) return "portfolio_projects";
   if (isLikelyHouseProjectsCatalogPrompt(normalized)) return "catalog_showcase";
   if (includesAny(normalized, houseProjectsRefinementKeywords)) return "catalog_showcase";

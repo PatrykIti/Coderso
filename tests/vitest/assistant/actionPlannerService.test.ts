@@ -196,7 +196,7 @@ test("planAssistantActions composes mixed product prompts through the live bluep
   expect(plan.metadata?.blueprintShadow).toBeUndefined();
 });
 
-test("planAssistantActions composes architecture studio setup as portfolio, services, and lead capture", () => {
+test("planAssistantActions creates a full-service architecture studio site", () => {
   const plan = planAssistantActions({
     prompt: [
       "Stwórz premium stronę dla studia architektonicznego Studio Forma.",
@@ -210,9 +210,9 @@ test("planAssistantActions composes architecture studio setup as portfolio, serv
   });
 
   expect(plan.status).toBe("ready");
-  expect(plan.intentFamily).toBe("portfolio_projects");
-  expect(plan.intentId).toBe("blueprint-composed-portfolio-projects");
-  expect(plan.title).toBe("Portfolio Projects Catalog with Services Directory, Lead Capture Site");
+  expect(plan.intentFamily).toBe("service_business_full_site");
+  expect(plan.intentId).toBe("service-business-full-site");
+  expect(plan.title).toBe("Full-Service Architecture Studio Site");
   expect(
     plan.actions
       .filter((action) => action.type === "content-type.upsert")
@@ -222,7 +222,21 @@ test("planAssistantActions composes architecture studio setup as portfolio, serv
     plan.actions
       .filter((action) => action.type === "page.upsert")
       .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
-  ).toEqual(expect.arrayContaining(["/portfolio", "/uslugi", "/kontakt"]));
+  ).toEqual(
+    expect.arrayContaining([
+      "/",
+      "/portfolio",
+      "/uslugi",
+      "/o-nas",
+      "/proces",
+      "/referencje",
+      "/kontakt",
+    ])
+  );
+  expect(plan.actions.filter((action) => action.type === "entry.sample.create")).toHaveLength(6);
+  expect(plan.actions.filter((action) => action.type === "menu.upsert")).toHaveLength(2);
+  expect(plan.actions.filter((action) => action.type === "menu.item.upsert")).toHaveLength(14);
+  expect(plan.actions.filter((action) => action.type === "seo.document.upsert")).toHaveLength(7);
   expect(
     plan.actions.some(
       (action) => action.type === "form.upsert" && action.input.slug === "lead-capture-inquiry"

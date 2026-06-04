@@ -53,6 +53,7 @@ const actionOrder: Record<AssistantPlannedAction["type"], number> = {
   "entry.sample.create": 82,
   "entry.delete": 90,
   "entry.update": 90,
+  "menu.upsert": 84,
   "menu.item.upsert": 90,
   "menu.item.delete": 90,
   "menu.item.update": 90,
@@ -508,6 +509,8 @@ export const buildBlueprintActionMergeKey = (action: AssistantPlannedAction) => 
       return `${action.type}:${action.input.slug}`;
     case "form.upsert":
       return `${action.type}:${action.input.slug}`;
+    case "menu.upsert":
+      return `${action.type}:${action.input.location}`;
     case "page.upsert":
       return `${action.type}:${action.input.slug}`;
     default:

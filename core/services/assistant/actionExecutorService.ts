@@ -81,9 +81,12 @@ import {
 } from "../forms/formsService";
 import { listFormActions, setFormActions } from "../forms/formActionsService";
 import {
+  createMenu,
   deleteMenuItem,
+  listMenus,
   listMenuItems,
   replaceMenuItems,
+  updateMenu,
   type MenuItemInput,
 } from "../menus/menuService";
 import { getMediaById } from "../media/mediaService";
@@ -131,6 +134,7 @@ import type {
   AssistantMenuItemDeleteAction,
   AssistantMenuItemUpdateAction,
   AssistantMenuItemUpsertAction,
+  AssistantMenuUpsertAction,
   AssistantPageWidgetPatchAction,
   AssistantPageUpdateAction,
   AssistantPageUpsertAction,
@@ -633,6 +637,9 @@ type ActionExecutorDeps = {
   publishEntry: typeof publishEntry;
   updateEntryMetadata: typeof updateEntryMetadata;
   getEntry: typeof getEntry;
+  listMenus: typeof listMenus;
+  createMenu: typeof createMenu;
+  updateMenu: typeof updateMenu;
   deleteMenuItem: typeof deleteMenuItem;
   listMenuItems: typeof listMenuItems;
   replaceMenuItems: typeof replaceMenuItems;
@@ -719,6 +726,9 @@ const defaultDeps: ActionExecutorDeps = {
   publishEntry,
   updateEntryMetadata,
   getEntry,
+  listMenus,
+  createMenu,
+  updateMenu,
   deleteMenuItem,
   listMenuItems,
   replaceMenuItems,
@@ -2031,6 +2041,42 @@ const collectMenuItemDeleteIds = (items: MenuItemRecord[], itemId: string) => {
   return deleteIds;
 };
 
+const buildMenuUpsertPreview = async (
+  action: AssistantMenuUpsertAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await findMenuByLocation(action.input.location, deps);
+  const nextValue = {
+    name: action.input.name,
+    location: action.input.location,
+    status: action.input.status,
+  };
+
+  return createPreviewChange({
+    action,
+    targetType: "menu",
+    targetKey: action.input.location,
+    summary: `${existing ? "Update" : "Create"} menu "${action.input.name}"`,
+    dependencies: [
+      {
+        actionId: null,
+        targetType: "permission",
+        targetKey: "menus:write",
+        optional: false,
+      },
+    ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          name: existing.name,
+          location: existing.location,
+          status: existing.status,
+        }
+      : null,
+    nextValue,
+  });
+};
+
 const buildNextMenuItem = (
   action: AssistantMenuItemUpsertAction,
   existing: MenuItemRecord | null,
@@ -2048,18 +2094,23 @@ const buildNextMenuItem = (
 
 const buildMenuItemPreview = async (
   action: AssistantMenuItemUpsertAction,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
 ) => {
-  const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
+  const locator = await buildLocatorPreviewDependency(action.input.menuId, "menu", deps, ctx);
+  const menuId = locator.resolvedId;
+  const existingItems = menuId ? flattenMenuNodes(await deps.listMenuItems(menuId)) : [];
   const existing = findMenuItemForAction(existingItems, action);
   const nextValue = buildNextMenuItem(action, existing, existingItems.length);
+  const targetKey = `${resourceIdInputKey(action.input.menuId)}/${action.input.href}`;
 
   return createPreviewChange({
     action,
     targetType: "menu-item",
-    targetKey: `${action.input.menuId}/${action.input.href}`,
+    targetKey,
     summary: `${existing ? "Update" : "Create"} menu item "${action.input.label}"`,
     dependencies: [
+      locator.dependency,
       {
         actionId: null,
         targetType: "permission",
@@ -2182,6 +2233,7 @@ const resourceIdInputKey = (value: AssistantResourceIdInput) => {
   if (value.kind === "action-result") {
     return `${value.resourceType}:${value.actionId}:${value.field}`;
   }
+  if (value.kind === "stable-location") return `menu:${value.location}`;
   if (value.resourceType === "page") return `page:${value.slug}`;
   return `entry:${value.contentTypeSlug}/${value.slug}`;
 };
@@ -2227,6 +2279,9 @@ const resolveStableSlugResourceId = async (
   return entry?.id ?? null;
 };
 
+const findMenuByLocation = async (location: string, deps: ActionExecutorDeps) =>
+  (await deps.listMenus()).find((menu) => menu.location === location) ?? null;
+
 const resolveResourceIdInput = async (
   targetId: AssistantResourceIdInput,
   deps: ActionExecutorDeps,
@@ -2236,6 +2291,11 @@ const resolveResourceIdInput = async (
   if (targetId.kind === "stable-slug") {
     const resolved = await resolveStableSlugResourceId(targetId, deps);
     if (resolved) return resolved;
+    throw new Error("assistant_action_locator_unresolved");
+  }
+  if (targetId.kind === "stable-location") {
+    const resolved = await findMenuByLocation(targetId.location, deps);
+    if (resolved) return resolved.id;
     throw new Error("assistant_action_locator_unresolved");
   }
   const result = ctx.priorResults?.get(targetId.actionId) ?? null;
@@ -2251,7 +2311,7 @@ const resolveResourceIdInput = async (
 
 const buildLocatorPreviewDependency = async (
   targetId: AssistantResourceIdInput,
-  targetType: "page" | "entry",
+  targetType: "page" | "entry" | "menu",
   deps: ActionExecutorDeps,
   ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
 ) => {
@@ -2288,6 +2348,20 @@ const buildLocatorPreviewDependency = async (
       pending: Boolean(planned),
       dependency: {
         actionId: planned?.id ?? null,
+        targetType: targetId.resourceType,
+        targetKey: resourceIdInputKey(targetId),
+        optional: false,
+      },
+    };
+  }
+
+  if (targetId.kind === "stable-location") {
+    const resolved = await findMenuByLocation(targetId.location, deps);
+    return {
+      resolvedId: resolved?.id ?? null,
+      pending: false,
+      dependency: {
+        actionId: null,
         targetType: targetId.resourceType,
         targetKey: resourceIdInputKey(targetId),
         optional: false,
@@ -4414,12 +4488,45 @@ const executeEntryUpdateAction = async (
   };
 };
 
+const executeMenuUpsertAction = async (
+  action: AssistantMenuUpsertAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await findMenuByLocation(action.input.location, deps);
+  const record =
+    preview.operation === "create"
+      ? await deps.createMenu(action.input)
+      : preview.operation === "update" && existing
+        ? await deps.updateMenu(existing.id, action.input)
+        : existing;
+  if (!record) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "menu",
+    targetKey: action.input.location,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record.id,
+    adminHref: `/admin/menus/${encodeURIComponent(record.id)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Menu already matched the planned location."
+        : `Menu "${record.name}" is ready.`,
+  };
+};
+
 const executeMenuItemAction = async (
   action: AssistantMenuItemUpsertAction,
   preview: AssistantActionPreviewChange,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "priorResults">
 ) => {
-  const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
+  const menuId = await resolveResourceIdInput(action.input.menuId, deps, ctx);
+  const existingItems = flattenMenuNodes(await deps.listMenuItems(menuId));
   const existing = findMenuItemForAction(existingItems, action);
   const nextItem = buildNextMenuItem(action, existing, existingItems.length);
   const nextItems =
@@ -4429,8 +4536,8 @@ const executeMenuItemAction = async (
 
   const tree =
     preview.operation === "noop"
-      ? await deps.listMenuItems(action.input.menuId)
-      : await deps.replaceMenuItems(action.input.menuId, nextItems);
+      ? await deps.listMenuItems(menuId)
+      : await deps.replaceMenuItems(menuId, nextItems);
   const saved =
     flattenMenuNodes(tree).find((item) => item.href === action.input.href) ?? existing ?? null;
 
@@ -4438,11 +4545,11 @@ const executeMenuItemAction = async (
     actionId: action.id,
     type: action.type,
     targetType: "menu-item",
-    targetKey: `${action.input.menuId}/${action.input.href}`,
+    targetKey: `${menuId}/${action.input.href}`,
     operation: preview.operation,
     status: "success" as const,
     resourceId: saved?.id ?? null,
-    adminHref: `/admin/menus/${encodeURIComponent(action.input.menuId)}`,
+    adminHref: `/admin/menus/${encodeURIComponent(menuId)}`,
     publicHref: action.input.href,
     message:
       preview.operation === "noop"
@@ -5459,14 +5566,22 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeEntryUpdateAction(action, preview, ctx.actorId, ctx.deps)
         : unexpectedAction(),
   },
+  "menu.upsert": {
+    preview: (action, ctx) =>
+      action.type === "menu.upsert" ? buildMenuUpsertPreview(action, ctx.deps) : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "menu.upsert"
+        ? executeMenuUpsertAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
   "menu.item.upsert": {
     preview: (action, ctx) =>
       action.type === "menu.item.upsert"
-        ? buildMenuItemPreview(action, ctx.deps)
+        ? buildMenuItemPreview(action, ctx.deps, ctx)
         : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "menu.item.upsert"
-        ? executeMenuItemAction(action, preview, ctx.deps)
+        ? executeMenuItemAction(action, preview, ctx.deps, ctx)
         : unexpectedAction(),
   },
   "menu.item.delete": {

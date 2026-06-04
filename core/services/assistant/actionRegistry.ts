@@ -22,6 +22,7 @@ export const assistantActionTypes = [
   "entry.sample.create",
   "entry.delete",
   "entry.update",
+  "menu.upsert",
   "menu.item.upsert",
   "menu.item.delete",
   "menu.item.update",

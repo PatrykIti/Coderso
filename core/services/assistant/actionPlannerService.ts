@@ -41,6 +41,7 @@ import { resolveBlueprintCandidates } from "./blueprints/blueprintCandidateResol
 import { buildBlueprintCompositionGraph } from "./blueprints/blueprintCompositionGraph";
 import { attachBlueprintShadowMetadata } from "./blueprints/blueprintComposerShadow";
 import { buildEditorialContentHubPlan } from "./blueprints/editorialContentHubBlueprint";
+import { buildFullServiceSitePlan } from "./blueprints/fullServiceSiteBlueprint";
 import { buildLeadCaptureSitePlan } from "./blueprints/leadCaptureBlueprint";
 import {
   buildProductCheckoutNeedsInputPlan,
@@ -134,6 +135,8 @@ const buildReadyPlanForIntentFamily = (
       return buildCatalogFamilyPlan(PORTFOLIO_PROJECTS_PRESET, options);
     case "services_directory":
       return buildCatalogFamilyPlan(SERVICES_DIRECTORY_PRESET, options);
+    case "service_business_full_site":
+      return buildFullServiceSitePlan({ promptKind: options.promptKind });
     case "lead_capture_site":
       return buildLeadCaptureSitePlan({ promptKind: options.promptKind });
     case "booking_service":
@@ -1115,11 +1118,21 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
       buildDocsGuidancePlan(input.prompt, context)
     );
   }
-  const setupPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
-  if (setupPolicyPlan)
-    return finalizeAssistantPlan(normalizedInput, context, routedClassification, setupPolicyPlan);
-
   if (classification.promptKind === "setup_request" && intentFamily !== "unknown") {
+    if (intentFamily === "service_business_full_site") {
+      const readyPlan = buildReadyPlanForIntentFamily(intentFamily, {
+        promptKind: classification.promptKind,
+        intentFamily,
+        normalizedPrompt: classification.normalizedPrompt,
+      });
+      if (readyPlan)
+        return finalizeAssistantPlan(normalizedInput, context, routedClassification, readyPlan);
+    }
+
+    const setupPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
+    if (setupPolicyPlan)
+      return finalizeAssistantPlan(normalizedInput, context, routedClassification, setupPolicyPlan);
+
     const composedPlan = buildBlueprintComposerSetupPlan({
       prompt: input.prompt,
       context: {
