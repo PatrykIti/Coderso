@@ -11,12 +11,9 @@ import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
-import {
-  AssistantSettingsCard,
-  ASSISTANT_SETTINGS_DEFAULT_VALUES,
-  type AssistantSettingsValues,
-} from "./AssistantSettingsCard";
+import { AssistantSettingsCard } from "./AssistantSettingsCard";
 import { SettingsSidebar } from "./SettingsSidebar";
+import { ASSISTANT_SETTINGS_DEFAULT_VALUES, type AssistantSettingsValues } from "./settingsValues";
 
 export type AssistantSettingsPageProps = {
   values?: Partial<AssistantSettingsValues>;

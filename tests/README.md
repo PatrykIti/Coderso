@@ -28,6 +28,8 @@ This repository uses a hybrid testing model aligned with the product architectur
   - Bun-free posts editor/model helper suites
   - Bun-free forms contract/helper/automation-core suites
   - Bun-free server helper suites
+    - `tests/vitest/server/startupMigrations.test.ts` owns the Docker startup
+      migration policy and injection seam without touching a live database.
   - Bun-free search pure-logic suites
   - DOM-rich editor helpers through `happy-dom`
   - UI integration/render suites moved from `tests/integration/ui/*`
@@ -41,6 +43,8 @@ bun run test:bun:lane
 bun run test:coverage:bun
 bun run test:coverage:bun:full
 bun run test:coverage:all
+bun --cwd core build:admin
+bun run check:admin-bundle
 ```
 
 `test:vitest` loads `.env` when the file exists and then forces `NODE_ENV=test`
@@ -50,11 +54,17 @@ job environment variables without creating a local `.env` file.
 `test:bun` runs the DB/runtime lane serially with a `15000ms` per-test timeout;
 the lane exercises real database and runtime flows that can exceed Bun's default
 `5000ms` timeout under full-suite load.
+Selected DB-backed runtime HTTP suites may also pass a higher `idleTimeout` to
+`startHttpServer` so Bun does not reset an in-flight request while the handler
+waits on database-backed settings or auth checks.
 `test:bun:lane` runs curated Bun-owned route/plugin/perf suites without coverage.
 `test:coverage:bun` uses the same curated Bun-owned route/plugin/perf suites through `scripts/run-bun-lane.ts`.
 It writes `coverage/bun/lcov.info` and prints a compact LCOV-derived summary,
 instead of streaming Bun's full per-file text coverage table into CI logs.
 `test:coverage` now uses `scripts/run-vitest-coverage.ts` and the canonical full-lane report path `coverage/vitest/coverage-summary.json`.
+`check:admin-bundle` must run after `bun --cwd core build:admin`; it writes
+`.tmp/admin-bundle-report.json` and guards the admin SPA chunk count, HTML entry
+gzip, and initial static JS graph gzip.
 
 ## Manual Smoke
 

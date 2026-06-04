@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "bun run server/dev.ts",
+    "build:admin": "vite build --config vite.config.ts",
     "build:site": "vite build --config vite.site.config.ts",
     "lint": "eslint --max-warnings=0 \"{admin,server,services,ui,db,plugins,store}/**/*.{ts,tsx}\"",
     "lint:types": "tsc -p tsconfig.json --noEmit",

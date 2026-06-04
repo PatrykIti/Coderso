@@ -34,7 +34,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2213 tasks
+- **Done:** 2221 tasks
 
 ---
 
@@ -68,6 +68,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-401 | DB Runtime Test Idle Timeout | Medium | Small | Done (2026-06-04): DB-backed media runtime tests now opt into a 30-second Bun.serve idle timeout to avoid socket resets under full-lane load. |
+| TASK-400 | Docker Startup Migrations | High | Medium | Done (2026-06-04): Docker runtime entrypoint now runs Drizzle migrations behind a Postgres advisory lock before starting the core HTTP server. |
+| TASK-399 | Admin SPA Route-Level Code Splitting and Bundle Reduction | High | Large | Done (2026-06-04): protected admin pages now load through guarded lazy route descriptors; initial static graph gzip is `400,812 B` against the `500,000 B` guard budget. |
+| TASK-399-01 | Admin Lazy Route Registry and Bootstrap Seams | High | Large | Done (2026-06-04): lazy named-export descriptors plus pure Settings and Assistant bootstrap seams are in place. |
+| TASK-399-02 | Guarded Lazy Route Rendering and Suspense Recovery | High | Large | Done (2026-06-04): protected route render callbacks run only after auth/RBAC and chunk-load failures are bounded by an error boundary. |
+| TASK-399-03 | Protected Workspace Route Migration | High | Large | Done (2026-06-04): authenticated admin workspace routes were migrated to the lazy registry while preserving permissions and route props. |
+| TASK-399-04 | Admin Bundle Measurement and Budget Guard | High | Medium | Done (2026-06-04): `check:admin-bundle` writes `.tmp/admin-bundle-report.json` and guards chunk count, entry gzip, and initial static graph gzip. |
+| TASK-399-05 | Docker Lazy Chunk Serving QA Docs and Closure | High | Medium | Done (2026-06-04): Docker uses named build scripts and admin asset tests cover hashed lazy chunks and custom admin base paths. |
 | TASK-398 | Footer 31-05 UI Audit Remediation Family | High | Large | Done (2026-06-02): minimal utility rendering, unsafe link/logo fail-closed behavior, Wizard/Visual ownership, and precise slot/destination metadata are closed. |
 | TASK-398-01 | FT-31-05-01 - Minimal variant must not omit useful contact/back-to-top utilities unintentionally | High | Medium | Done (2026-06-02): minimal footers keep configured contact and back-to-top utilities available. |
 | TASK-398-02 | FT-31-05-02 - Unsafe column links must not degrade to clickable `#` | High | Medium | Done (2026-06-02): unsafe or empty column links are omitted instead of becoming placeholder anchors. |

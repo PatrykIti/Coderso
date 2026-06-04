@@ -11,11 +11,10 @@ import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSetting
 import { BrandingCard } from "./BrandingCard";
 import { LogoUploadCard } from "./LogoUploadCard";
 import { SettingsSidebar } from "./SettingsSidebar";
+import { GENERAL_SETTINGS_DEFAULT_VALUES, type GeneralSettingsValues } from "./settingsValues";
 
-export type GeneralSettingsValues = {
-  siteName: string;
-  siteLocale: string;
-};
+export { GENERAL_SETTINGS_DEFAULT_VALUES };
+export type { GeneralSettingsValues };
 
 type GeneralSettingsPageProps = {
   values?: Partial<GeneralSettingsValues>;
@@ -23,11 +22,6 @@ type GeneralSettingsPageProps = {
   isLoading?: boolean;
   isSaving?: boolean;
   error?: string | null;
-};
-
-export const GENERAL_SETTINGS_DEFAULT_VALUES: GeneralSettingsValues = {
-  siteName: "Coderso",
-  siteLocale: "en",
 };
 
 export function GeneralSettingsPage({

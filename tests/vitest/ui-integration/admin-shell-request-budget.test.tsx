@@ -8,7 +8,7 @@ import {
 import {
   clearAssistantRuntimeStateCache,
   loadAssistantRuntimeStateCached,
-} from "../../../core/admin/ui/assistant/AssistantPanel";
+} from "../../../core/admin/ui/assistant/assistantRuntimeStateCache";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -38,10 +38,7 @@ test("admin shell auth bootstrap stays within single-shot request budget", async
   try {
     clearAuthBootstrapCache();
     const first = await resolveAuthBootstrap();
-    const [second, third] = await Promise.all([
-      resolveAuthBootstrap(),
-      resolveAuthBootstrap(),
-    ]);
+    const [second, third] = await Promise.all([resolveAuthBootstrap(), resolveAuthBootstrap()]);
 
     expect(first.state).toBe("authenticated");
     expect(second.state).toBe("authenticated");

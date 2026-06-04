@@ -144,6 +144,44 @@ jobs:
           name: bun-coverage
           path: coverage/bun
 
+  admin-bundle-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Verify CI runtime
+        run: |
+          node --version
+          bun --version
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build admin bundle
+        run: bun --cwd core build:admin
+
+      - name: Check admin bundle budget
+        run: bun run check:admin-bundle
+
+      - name: Upload admin bundle report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-bundle-report
+          path: .tmp/admin-bundle-report.json
+
   security-gate:
     needs:
       - vitest-lane
