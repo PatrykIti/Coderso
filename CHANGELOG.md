@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.2.2] - 2026-06-04
+### Changed
+- Protected admin workspace routes now load lazily after auth, RBAC, and setup gates, with stale lazy-chunk recovery and an admin bundle budget guard in PR gates.
+- The production Docker image now runs Drizzle migrations before starting the core HTTP server, with a Postgres advisory lock and an explicit
+
+### Fixed
+- Post feed runtime excerpt logic no longer pulls server-bound post runtime mapping into the admin bundle.
+
+### Security
+- Startup migration failure logs redact direct `DATABASE_URL` values and do not expose database connection strings to browser-side surfaces.
 ## [1.2.1] - 2026-06-03
 ### Added
 - Added public Forms widget submissions through the shared signed nonce/HMAC, bot-protection, strict validation, error mapping, and public-write rate-limit contract.
