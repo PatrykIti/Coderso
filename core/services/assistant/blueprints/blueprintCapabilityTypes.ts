@@ -8,6 +8,7 @@ import type {
 
 export type BlueprintProvideKind =
   | "catalog"
+  | "full-service-site"
   | "lead-capture"
   | "product-inquiry"
   | "editorial-content-hub"

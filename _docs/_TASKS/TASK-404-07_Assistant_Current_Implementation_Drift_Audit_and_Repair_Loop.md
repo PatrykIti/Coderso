@@ -5,7 +5,7 @@
 **Category:** Assistant + QA + Drift Audit + Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-404, TASK-403
-**Status:** To Do
+**Status:** In Progress (2026-06-04)
 
 ---
 
@@ -70,7 +70,7 @@ type AssistantDriftFinding = {
 
 async function runAssistantDriftLoop() {
   let pass = 0;
-  while (pass < MAX_DRIFT_PASSES) {
+  while (true) {
     pass += 1;
     const findings = await collectAssistantDrifts({
       claudeTimeoutMs: 25 * 60 * 1000,
@@ -91,7 +91,8 @@ async function runAssistantDriftLoop() {
     await runPlaywrightAssistantAudit();
   }
 
-  throw new Error("assistant_drift_loop_unresolved");
+  // The loop exits only on no blocking drift or on a documented repeated
+  // blocker that satisfies the repo blocked-task rules.
 }
 ```
 

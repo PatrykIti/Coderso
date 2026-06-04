@@ -5,7 +5,7 @@
 **Category:** Process + Task Quality + Assistant
 **Estimated Effort:** Medium
 **Dependencies:** TASK-404
-**Status:** To Do
+**Status:** In Progress (2026-06-04)
 
 ---
 
@@ -63,7 +63,7 @@ type TaskDriftFinding = {
 
 async function runTask404DriftLoop() {
   let pass = 0;
-  while (pass < MAX_TASK_DRIFT_PASSES) {
+  while (true) {
     pass += 1;
     const findings = await collectTaskDrifts({
       taskFiles: TASK_404_FILES,
@@ -83,7 +83,8 @@ async function runTask404DriftLoop() {
     runTaskFileChecks();
   }
 
-  throw new Error("task_404_drift_loop_unresolved");
+  // The loop exits only on no blocking task drift or on a documented repeated
+  // blocker that satisfies the repo blocked-task rules.
 }
 ```
 

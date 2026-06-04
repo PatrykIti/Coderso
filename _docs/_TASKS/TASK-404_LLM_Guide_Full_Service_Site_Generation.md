@@ -5,7 +5,7 @@
 **Category:** Assistant + LLM Guide + Site Builder + Runtime
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-403, TASK-101, TASK-170, TASK-171, TASK-188, TASK-190
-**Status:** To Do
+**Status:** In Progress (2026-06-04)
 
 ---
 
@@ -88,16 +88,22 @@ must be assembled locally from strict schemas and trusted server context.
 
 | ID | Title | Status |
 |---|---|---|
-| TASK-404-01 | Full Service Site Contract and Acceptance Matrix | To Do |
-| TASK-404-02 | Same-Plan Resource Locators and Dependency Graph | To Do |
-| TASK-404-03 | Full Service Page and Section Composer | To Do |
-| TASK-404-04 | Public Sample Content Navigation Footer and Lead Form Actions | To Do |
-| TASK-404-05 | SEO Media and Launch Readiness Validation | To Do |
-| TASK-404-06 | Full Service E2E Live Review Docs and Closure | To Do |
-| TASK-404-07 | Assistant Current Implementation Drift Audit and Repair Loop | To Do |
-| TASK-404-08 | TASK-404 Task Drift Audit and Repair Loop | To Do |
+| TASK-404-01 | Full Service Site Contract and Acceptance Matrix | In Progress (2026-06-04) |
+| TASK-404-02 | Same-Plan Resource Locators and Dependency Graph | In Progress (2026-06-04) |
+| TASK-404-03 | Full Service Page and Section Composer | In Progress (2026-06-04) |
+| TASK-404-04 | Public Sample Content Navigation Footer and Lead Form Actions | In Progress (2026-06-04) |
+| TASK-404-05 | SEO Media and Launch Readiness Validation | In Progress (2026-06-04) |
+| TASK-404-06 | Full Service E2E Live Review Docs and Closure | In Progress (2026-06-04) |
+| TASK-404-07 | Assistant Current Implementation Drift Audit and Repair Loop | In Progress (2026-06-04) |
+| TASK-404-08 | TASK-404 Task Drift Audit and Repair Loop | In Progress (2026-06-04) |
 
 ## Implementation Order
+
+Catch-up note (2026-06-04): implementation work began before the audit leaves
+were fully reflected in the board. TASK-404-07 and TASK-404-08 now run as
+active repair loops over commits `7c5ecac0`, `b44b0726`, `e430a7bd`, and the
+current branch changes. Do not close TASK-404 until those loops, Playwright CLI,
+Claude review, docs, changelog, and board closure all pass.
 
 1. Run TASK-404-08 so the task breakdown itself has no known drift before
    implementation starts.

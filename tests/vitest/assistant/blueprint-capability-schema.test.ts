@@ -84,6 +84,46 @@ test("normalizeBlueprintCapability accepts latent detail-page and bounded media 
   ]);
 });
 
+test("normalizeBlueprintCapability accepts full-service site provide kind", () => {
+  const capability = normalizeBlueprintCapability({
+    id: "service-business-full-site",
+    version: 1,
+    label: "Full-Service Site",
+    family: "service_business_full_site",
+    provides: [
+      {
+        kind: "full-service-site",
+        key: "service-business-full-site",
+        label: "Full-service website",
+      },
+    ],
+    requires: [],
+    resources: [
+      {
+        key: "page:/",
+        kind: "page",
+        label: "Home",
+        executable: true,
+        actionTypes: ["page.upsert"],
+        stableTarget: "/",
+        owner: "page.upsert",
+      },
+    ],
+    pageSections: [],
+    adminSurfaces: [],
+    gated: [],
+    merge: {
+      role: "primary",
+      resourceStrategy: "dedupe-by-key",
+      pageStrategy: "merge-page-upsert",
+      gatedStrategy: "metadata-only",
+      priority: 95,
+    },
+  });
+
+  expect(capability.provides[0]?.kind).toBe("full-service-site");
+});
+
 test("normalizeBlueprintCapability rejects unknown keys and raw media payload metadata", () => {
   expect(() =>
     normalizeBlueprintCapability({

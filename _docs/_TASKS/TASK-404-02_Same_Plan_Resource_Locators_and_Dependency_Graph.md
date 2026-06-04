@@ -5,7 +5,7 @@
 **Category:** Assistant + Action Contracts + Planner
 **Estimated Effort:** Large
 **Dependencies:** TASK-404-01
-**Status:** To Do
+**Status:** In Progress (2026-06-04)
 
 ---
 

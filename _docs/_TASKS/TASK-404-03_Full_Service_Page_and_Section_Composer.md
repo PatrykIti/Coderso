@@ -5,7 +5,7 @@
 **Category:** Assistant + Blueprints + Page Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-404-01, TASK-404-02
-**Status:** To Do
+**Status:** In Progress (2026-06-04)
 
 ---
 
@@ -18,6 +18,12 @@ and widget owner seams.
 This must be a distinct capability, not just the existing mixed composition of
 portfolio + services + contact. The plan must create the full site map and
 sections needed for a real service site.
+
+Implementation catch-up (2026-06-04): the branch now registers
+`service-business-full-site` in `blueprintCapabilityRegistry.ts` and routes the
+`service_business_full_site` intent to the deterministic
+`buildFullServiceSitePlan` builder. Further work must keep that registry
+contract, planner shortcut, and tests aligned.
 
 ## Sub-Tasks
 

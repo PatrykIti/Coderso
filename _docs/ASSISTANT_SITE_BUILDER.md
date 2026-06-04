@@ -57,6 +57,14 @@ Current implemented guide blueprint:
   - public hub page
   - posts-feed widget
   - no post mutations
+- full-service architecture studio site pack:
+  - seven public pages: `/`, `/uslugi`, `/portfolio`, `/o-nas`, `/proces`,
+    `/referencje`, `/kontakt`
+  - services and portfolio catalogs with route-linked detail templates
+  - six published sample entries
+  - primary and footer navigation
+  - lead-capture form and page SEO
+  - launch readiness metadata; media upload remains gated
 - site-kit guide actions:
   - `site-kit.recommend`
   - `site-kit.install`
@@ -120,13 +128,15 @@ Current capability limits:
 - `docs-only` answers are read-only and never return executable action plans.
 - `LLM Guide` can plan, dry-run, and execute only the strict typed actions
   listed in `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`.
-- Mixed service-site prompts currently produce a typed scaffold, not a
-  launch-ready marketing site. The architecture-studio path can create
-  portfolio/services catalogs, admin screens, listing resources, a contact page,
-  and a public lead form, but it does not yet generate a home page, about/team,
-  process, references, seed entries, media assets, global navigation, or full SEO
-  metadata. E2E acceptance must not treat `200` plus empty catalog states as
-  proof that a full service site is complete.
+- Full-service architecture-studio prompts route to the
+  `service-business-full-site` capability and emit a reviewed 49-action plan
+  for pages, catalogs, route-linked detail templates, published samples,
+  primary/footer navigation, lead capture, SEO, and launch readiness. E2E
+  acceptance still must verify public runtime pages, listings, detail routes,
+  SEO basics, and mobile/desktop layout after execution.
+- Raw media upload/import/generation is not part of full-service execution yet;
+  the plan marks media readiness as `gated` and uses safe sample copy without
+  raw media fields.
 - Booking resources, checkout/payment setup, webhook automation, nested page
   widget patches, and installed solution-kit refinements remain gated until
   their adapters, permissions, and hardening are explicit.

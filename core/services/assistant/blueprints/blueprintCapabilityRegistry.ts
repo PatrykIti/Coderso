@@ -1,7 +1,13 @@
 import type { AssistantIntentFamily } from "../actionPlanTypes";
 import { getBusinessBlueprintPack, listBusinessBlueprintPacks } from "./businessBlueprintTypes";
 import { getCatalogFamilyDetailPageId } from "./catalogFamilyBlueprint";
-import { CATALOG_FAMILY_PRESETS, PRODUCT_CATALOG_PRESET } from "./catalogFamilyPresets";
+import {
+  CATALOG_FAMILY_PRESETS,
+  PORTFOLIO_PROJECTS_PRESET,
+  PRODUCT_CATALOG_PRESET,
+  SERVICES_DIRECTORY_PRESET,
+} from "./catalogFamilyPresets";
+import { buildFullServiceSitePlan } from "./fullServiceSiteBlueprint";
 import {
   buildProductCheckoutNeedsInputPlan,
   buildProductInquiryCatalogPlan,
@@ -159,6 +165,228 @@ const createCatalogCapability = (
   };
 };
 
+const fullServicePages = [
+  { slug: "/", label: "Studio Forma" },
+  { slug: "/uslugi", label: "Uslugi architektoniczne" },
+  { slug: "/portfolio", label: "Portfolio realizacji" },
+  { slug: "/o-nas", label: "O Studio Forma" },
+  { slug: "/proces", label: "Proces wspolpracy" },
+  { slug: "/referencje", label: "Referencje i efekty" },
+  { slug: "/kontakt", label: "Kontakt i wycena" },
+] as const;
+
+const createFullServiceSiteCapability = (): BlueprintCapabilityRegistration => {
+  const [capability] = normalizeBlueprintCapabilities([
+    {
+      id: "service-business-full-site",
+      version: 1,
+      label: "Full-Service Architecture Studio Site",
+      family: "service_business_full_site",
+      description:
+        "Launch-shaped service business site with services, portfolio, detail pages, public samples, navigation, lead form, and SEO.",
+      aliases: [
+        "full-service site",
+        "complete architecture studio site",
+        "launch-ready service site",
+        "pelna strona uslugowa",
+      ],
+      provides: [
+        {
+          kind: "full-service-site",
+          key: "service-business-full-site",
+          label: "Full-service service business website",
+          aliases: ["complete site", "launch site", "architecture studio site"],
+        },
+        {
+          kind: "catalog",
+          key: "full-service-services-catalog",
+          label: "Services catalog",
+          aliases: ["services", "uslugi"],
+        },
+        {
+          kind: "catalog",
+          key: "full-service-portfolio-catalog",
+          label: "Portfolio catalog",
+          aliases: ["portfolio", "realizacje"],
+        },
+        {
+          kind: "lead-capture",
+          key: "full-service-lead-capture",
+          label: "Lead capture form and contact page",
+          aliases: ["contact form", "lead form"],
+        },
+        {
+          kind: "public-detail-page",
+          key: "full-service-detail-pages",
+          label: "Services and portfolio detail pages",
+          aliases: ["detail pages", "service detail", "portfolio detail"],
+        },
+      ],
+      requires: [],
+      resources: [
+        ...[SERVICES_DIRECTORY_PRESET, PORTFOLIO_PROJECTS_PRESET].flatMap((preset) => [
+          {
+            key: `content-type:${preset.contentTypeSlug}`,
+            kind: "content-type" as const,
+            label: preset.contentTypeName,
+            executable: true,
+            actionTypes: ["content-type.upsert" as const],
+            stableTarget: preset.contentTypeSlug,
+            owner: "content-type.upsert",
+          },
+          {
+            key: `route:${preset.contentTypeSlug}`,
+            kind: "content-route" as const,
+            label: `${preset.contentTypeName} public content route`,
+            executable: true,
+            actionTypes: ["setting.content-route.upsert" as const],
+            stableTarget: preset.contentTypeSlug,
+            owner: "setting.content-route.upsert",
+          },
+          {
+            key: `detail-page:${preset.contentTypeSlug}`,
+            kind: "detail-page" as const,
+            label: `${preset.contentTypeName} detail template`,
+            executable: true,
+            actionTypes: ["detail-page.upsert" as const],
+            stableTarget: getCatalogFamilyDetailPageId(preset),
+            owner: "detail-page.upsert",
+          },
+          {
+            key: `listing-query:${preset.listingQueryName}`,
+            kind: "listing-query" as const,
+            label: preset.listingQueryName,
+            executable: true,
+            actionTypes: ["listing-query.upsert" as const],
+            stableTarget: preset.listingQueryName,
+            owner: "listing-query.upsert",
+          },
+          {
+            key: `listing-template:${preset.listingTemplateSlug}`,
+            kind: "listing-template" as const,
+            label: preset.listingTemplateName,
+            executable: true,
+            actionTypes: ["listing-template.upsert" as const],
+            stableTarget: preset.listingTemplateSlug,
+            owner: "listing-template.upsert",
+          },
+          {
+            key: `entry:${preset.contentTypeSlug}:samples`,
+            kind: "entry" as const,
+            label: `${preset.contentTypeName} public samples`,
+            executable: true,
+            actionTypes: ["entry.sample.create" as const],
+            stableTarget: preset.contentTypeSlug,
+            owner: "entry.sample.create",
+          },
+          {
+            key: `screen:${preset.contentTypeSlug}`,
+            kind: "custom-screen" as const,
+            label: preset.customScreenName,
+            executable: true,
+            actionTypes: ["custom-screen.upsert" as const],
+            stableTarget: preset.customScreenName,
+            owner: "custom-screen.upsert",
+          },
+        ]),
+        {
+          key: "form:lead-capture-inquiry",
+          kind: "form",
+          label: "Lead Capture Inquiry",
+          executable: true,
+          actionTypes: ["form.upsert"],
+          stableTarget: "lead-capture-inquiry",
+          owner: "form.upsert",
+        },
+        {
+          key: "menu:primary",
+          kind: "menu",
+          label: "Primary navigation",
+          executable: true,
+          actionTypes: ["menu.upsert", "menu.item.upsert"],
+          stableTarget: "primary",
+          owner: "menu.upsert",
+        },
+        {
+          key: "menu:footer",
+          kind: "menu",
+          label: "Footer navigation",
+          executable: true,
+          actionTypes: ["menu.upsert", "menu.item.upsert"],
+          stableTarget: "footer",
+          owner: "menu.upsert",
+        },
+        {
+          key: "seo:full-service-pages",
+          kind: "seo",
+          label: "Main page SEO",
+          executable: true,
+          actionTypes: ["seo.document.upsert"],
+          stableTarget: "full-service-pages",
+          owner: "seo.document.upsert",
+        },
+        ...fullServicePages.map((page) => ({
+          key: `page:${page.slug}`,
+          kind: "page" as const,
+          label: page.label,
+          executable: true,
+          actionTypes: ["page.upsert" as const],
+          stableTarget: page.slug,
+          owner: "page.upsert",
+        })),
+      ],
+      pageSections: [],
+      adminSurfaces: [
+        { key: "admin:pages", label: "Pages", surface: "pages", routeHint: "/admin/pages" },
+        {
+          key: "admin:forms",
+          label: "Forms",
+          surface: "forms",
+          routeHint: "/admin/advanced/forms",
+        },
+        {
+          key: "admin:listings",
+          label: "Listings",
+          surface: "listings",
+          routeHint: "/admin/advanced/listings",
+        },
+        {
+          key: "admin:entries",
+          label: "Entries",
+          surface: "entries",
+          routeHint: "/admin/advanced/entries",
+        },
+      ],
+      gated: [
+        {
+          key: "gated:media-import",
+          kind: "media-import",
+          label: "Original media upload",
+          reason:
+            "The blueprint can ship launch-shaped copy and public samples, but original media upload remains a reviewed media workflow.",
+          blocking: false,
+        },
+      ],
+      merge: {
+        role: "primary",
+        resourceStrategy: "dedupe-by-key",
+        pageStrategy: "merge-page-upsert",
+        gatedStrategy: "metadata-only",
+        priority: 95,
+      },
+    },
+  ]);
+
+  return {
+    capability,
+    buildPlan: (options) =>
+      buildFullServiceSitePlan({
+        promptKind: options?.promptKind,
+      }),
+    primaryIntentFamilies: ["service_business_full_site"],
+  };
+};
+
 const currentBlueprintCapabilities = [
   createCatalogCapability("catalog_showcase", [
     "house projects",
@@ -173,6 +401,7 @@ const currentBlueprintCapabilities = [
     "services",
     "katalog usług",
   ]),
+  createFullServiceSiteCapability(),
   ...normalizeBlueprintCapabilities([
     {
       id: "lead-capture-site",

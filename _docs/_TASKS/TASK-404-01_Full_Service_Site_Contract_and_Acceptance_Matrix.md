@@ -5,7 +5,7 @@
 **Category:** Assistant + Product Contract + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-404, TASK-403
-**Status:** To Do
+**Status:** In Progress (2026-06-04)
 
 ---
 
@@ -95,10 +95,9 @@ Data flow:
 - Acceptance matrix maps every contract requirement to a test lane.
 - Portfolio/services listing and detail routing must reuse or extend the current
   catalog-family action path instead of relying on `page.upsert` alone.
-- `entry.sample.create` is currently contract-only/draft-oriented. This contract
-  requires TASK-404-04 to either promote a publish-capable sample action or
-  provide an equivalent reviewed typed publish flow before public sample content
-  can satisfy launch readiness.
+- `entry.sample.create` is now a publish-capable reviewed typed action. Public
+  sample content can satisfy launch readiness only when dry-run has no blocking
+  conflicts and execute returns successful published sample results.
 
 Error handling:
 
@@ -145,7 +144,7 @@ Error handling:
 - Portfolio/services listing query, listing template, content-route, and
   detail-page ownership are explicit so detail routes cannot be deferred until
   final E2E.
-- Published sample-entry semantics are called out as new TASK-404-04 scope, not
-  assumed to exist in the current draft-only contract.
+- Published sample-entry semantics are executable TASK-404 scope and are backed
+  by schema/executor/cache tests.
 - Later TASK-404 leaves can implement from this contract without rediscovering
   product scope.

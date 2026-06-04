@@ -1,8 +1,8 @@
 # LLM Guide Live Coverage Matrix
 
 **Status:** Active  
-**Last Updated:** 2026-05-11
-**Related Tasks:** TASK-184, TASK-188, TASK-190
+**Last Updated:** 2026-06-04
+**Related Tasks:** TASK-184, TASK-188, TASK-190, TASK-404
 
 TASK-188 mirrors this route matrix into `assistantOperationPolicy` and validates
 the checked-in markdown against generated policy coverage rows so planner/schema
@@ -33,6 +33,7 @@ report provider gating without trusting provider-authored executable actions.
 |---|---|---|---|---|
 | Mixed blueprint composition | live-execute | `tests/integration/assistant-live/blueprintCompositionLiveMatrix.test.ts` | TASK-190-08-01, TASK-190-08-04 | Product catalog + inquiry + editorial hub stays local-first and returns typed actions before provider drafting can inject executable payloads; second-pass OpenAI/OpenRouter live rerun passed on 2026-05-11. |
 | Gated mixed blueprint composition | live-gated | `tests/integration/assistant-live/blueprintCompositionLiveMatrix.test.ts` | TASK-190-08-01, TASK-190-08-04 | Booking and checkout/payment adjuncts are represented in metadata but return no executable actions until typed adapters exist; second-pass OpenAI/OpenRouter live rerun passed on 2026-05-11. |
+| Full-service architecture studio site | live-execute | `playwright-cli -s=task404-full-service-e2e run-code --filename .tmp/task-404-full-service-e2e.js` plus targeted planner/executor suites | TASK-404 | Uses configured admin LLM Guide/OpenRouter settings, dry-runs and executes the reviewed `service-business-full-site` plan, then checks public pages, populated services/portfolio listings, detail routes, navigation/footer, SEO basics, and mobile layout. |
 
 | Route | Label | Coverage | Task | Notes |
 |---|---|---|---|---|

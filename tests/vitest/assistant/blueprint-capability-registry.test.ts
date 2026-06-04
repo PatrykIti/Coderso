@@ -14,6 +14,7 @@ test("blueprint capability registry exposes current packs and adjunct modules", 
     "product-catalog",
     "portfolio-projects",
     "services-directory",
+    "service-business-full-site",
     "lead-capture-site",
     "product-inquiry-catalog",
     "editorial-content-hub",
@@ -21,7 +22,7 @@ test("blueprint capability registry exposes current packs and adjunct modules", 
     "checkout-payment",
   ]);
 
-  expect(listBlueprintCapabilityRegistrations()).toHaveLength(9);
+  expect(listBlueprintCapabilityRegistrations()).toHaveLength(10);
 });
 
 test("catalog capabilities expose executable public detail-page metadata", () => {
@@ -50,6 +51,7 @@ test("registry supports provide lookups and gated module builders", () => {
     "product-catalog",
     "portfolio-projects",
     "services-directory",
+    "service-business-full-site",
   ]);
 
   const productInquiry = getBlueprintCapabilityRegistration("product-inquiry-catalog");
@@ -74,4 +76,35 @@ test("registry supports provide lookups and gated module builders", () => {
   expect(booking?.buildPlan({ promptKind: "setup_request" }).questions[0]?.id).toBe(
     "booking-adapter-scope"
   );
+});
+
+test("registry exposes a primary full-service site capability", () => {
+  const registration = getBlueprintCapabilityRegistration("service-business-full-site");
+  const capability = registration?.capability;
+
+  expect(capability?.provides.map((entry) => entry.kind)).toEqual(
+    expect.arrayContaining(["full-service-site", "catalog", "lead-capture", "public-detail-page"])
+  );
+  expect(capability?.resources.map((entry) => entry.kind)).toEqual(
+    expect.arrayContaining([
+      "content-type",
+      "content-route",
+      "detail-page",
+      "listing-query",
+      "listing-template",
+      "entry",
+      "form",
+      "menu",
+      "seo",
+      "page",
+    ])
+  );
+  expect(capability?.gated.find((entry) => entry.kind === "media-import")).toMatchObject({
+    blocking: false,
+  });
+  expect(registration?.primaryIntentFamilies).toEqual(["service_business_full_site"]);
+  expect(registration?.buildPlan({ promptKind: "setup_request" })).toMatchObject({
+    intentId: "service-business-full-site",
+    status: "ready",
+  });
 });

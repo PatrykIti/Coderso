@@ -250,6 +250,43 @@ test("planAssistantActions creates a full-service architecture studio site", () 
   ).toBe(false);
 });
 
+test("planAssistantActions routes English full-service site prompts away from CMS inspection", () => {
+  const plan = planAssistantActions({
+    prompt: [
+      "Create a premium full-service architecture studio site for Studio Forma.",
+      "It must include home, services, portfolio, about, process, references, contact with lead form, primary nav, footer, SEO, public sample content, and working services and portfolio detail pages.",
+      "Use a clean premium architecture-studio UX with strong public pages, not a scaffold.",
+    ].join(" "),
+    context: {
+      page: "/admin/settings/assistant",
+      locale: "en-US",
+    },
+  });
+
+  const counts = plan.actions.reduce<Record<string, number>>((acc, action) => {
+    acc[action.type] = (acc[action.type] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  expect(plan.status).toBe("ready");
+  expect(plan.responseKind).toBe("action_plan");
+  expect(plan.promptKind).toBe("setup_request");
+  expect(plan.intentFamily).toBe("service_business_full_site");
+  expect(plan.intentId).toBe("service-business-full-site");
+  expect(plan.actions).toHaveLength(49);
+  expect(counts).toMatchObject({
+    "content-type.upsert": 2,
+    "detail-page.upsert": 2,
+    "setting.content-route.upsert": 2,
+    "custom-screen.upsert": 2,
+    "listing-query.upsert": 2,
+    "listing-template.upsert": 2,
+    "entry.sample.create": 6,
+    "menu.item.upsert": 14,
+    "seo.document.upsert": 7,
+  });
+});
+
 test("planAssistantActions composes single-adjunct prompts through the live blueprint planner path", () => {
   const plan = planAssistantActions({
     prompt: "Create a contact page and blog hub.",

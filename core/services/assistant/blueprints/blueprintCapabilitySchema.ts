@@ -31,6 +31,7 @@ const capabilityKeys = new Set([
 
 const provideKinds = new Set([
   "catalog",
+  "full-service-site",
   "lead-capture",
   "product-inquiry",
   "editorial-content-hub",

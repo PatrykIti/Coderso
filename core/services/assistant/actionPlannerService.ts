@@ -1074,6 +1074,23 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
     );
   }
 
+  if (
+    intentFamily === "service_business_full_site" &&
+    classification.promptKind !== "docs_question"
+  ) {
+    const setupClassification = {
+      ...routedClassification,
+      promptKind: "setup_request" as const,
+    };
+    const readyPlan = buildReadyPlanForIntentFamily(intentFamily, {
+      promptKind: setupClassification.promptKind,
+      intentFamily,
+      normalizedPrompt: classification.normalizedPrompt,
+    });
+    if (readyPlan)
+      return finalizeAssistantPlan(normalizedInput, context, setupClassification, readyPlan);
+  }
+
   if (classification.promptKind !== "setup_request") {
     const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
     if (planningStatePlan)

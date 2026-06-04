@@ -1,8 +1,8 @@
 # LLM Guide Acceptance Matrix
 
 **Status:** Active
-**Last Updated:** 2026-05-10
-**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188, TASK-190
+**Last Updated:** 2026-06-04
+**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188, TASK-190, TASK-404
 
 ---
 
@@ -73,6 +73,7 @@ Rules:
 | `form.archive` | Vitest planner/schema | Bun executor | Bun executor + DB service count | `forms:read/write` | Archives exact forms while retaining submission history |
 | `form.update` | Vitest planner/schema | Bun executor | Bun executor | `forms:read/write` | Updates form metadata/status/access without reading submissions |
 | `entry.upsert-draft` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Draft-only; no publish behavior |
+| `entry.sample.create` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write/publish` | Publishes bounded sample entries with optional entry SEO; used by full-service launch plans |
 | `entry.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Deletes active-context entries after review |
 | `entry.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Updates exact entry metadata/data and preserves unrelated fields |
 | `menu.item.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `menus:read/write` | Safe relative hrefs only |
@@ -114,6 +115,7 @@ Rules:
 | Services Directory | Executable | Vitest planner/catalog blueprint + local detail-page fixture | Catalog-family executor path | Detail-page composer runtime fixture | Existing generic catalog pack; booking remains gated |
 | Lead Capture Site | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Form runtime hardening remains existing Forms contract |
 | Editorial Content Hub | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Uses `posts-feed`; no post mutation |
+| Full-Service Architecture Studio Site | Executable | Vitest planner + capability registry + schema + blueprint fixtures | Bun executor + launch readiness reconciliation | Playwright CLI/public runtime validation required for TASK-404 closure | Creates the required seven public pages, services and portfolio catalogs, detail-page routes, six published samples, primary/footer menus, lead form, page SEO, and gated media readiness |
 | Mixed Blueprint Composition (current packs) | Bounded live cutover | Vitest capability registry + candidate resolver + graph + assembler + provider/shadow diagnostics + generic detail-page resource packaging + `blueprint-composition-fixtures` | Uses existing typed executor families only; closure docs and diagnostics are synchronized under TASK-190-08 | Bun opt-in `blueprintCompositionLiveMatrix` for OpenAI/OpenRouter local-first and gated coverage | Supported mixed-capability and primary-plus-gated setup prompts now use the composed planner path; TASK-190-08 fixture/closure coverage includes single-pack regressions, Mabudo-like tier-A parity, resource reuse, provider red-team, media safety, LLM-unavailable catalog gating, and final docs/changelog sync |
 | Detail-page Composer Local Fixtures | Local deterministic acceptance | Vitest `blueprint-detail-page-fixtures` | Existing `detail-page.upsert` executor family; no dedicated detail-page provider/live matrix | Bun DB-backed `detail-page-composer-runtime` | House projects, products, services, and portfolio fixtures now validate route-linked detail-page documents, public runtime render, preview, draft hiding, legacy fallback, negative bindings, duplicate routes, and gated checkout/booking metadata; TASK-190-08 live/provider coverage remains scoped to mixed blueprint composition |
 | Booking Service Business | Gated | Vitest `needs_input` | Not applicable | Not applicable | Requires booking action adapters |
@@ -144,7 +146,7 @@ These are intentional follow-up capabilities, not current production claims:
 - Webhook form automation through `form.automation.upsert`.
 - Nested/slot page widget patches.
 - `menu.structure.patch`.
-- `entry.sample.create`, `entry.bulk-draft.create`, and `entry.field.patch`.
+- `entry.bulk-draft.create` and `entry.field.patch`.
 - Booking resource/schedule/reservation assistant actions.
 - Checkout/payment assistant actions.
 - Solution-kit refinement from server-derived installed-kit resource context.

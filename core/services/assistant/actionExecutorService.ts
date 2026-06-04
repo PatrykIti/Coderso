@@ -229,6 +229,93 @@ const countExecutionOperations = (items: AssistantActionExecutionItem[]) =>
     }
   );
 
+const reconcileLaunchReadinessAfterExecution = (
+  plan: AssistantActionPlan,
+  results: AssistantActionExecutionItem[]
+): AssistantActionPlan => {
+  const metadata = plan.metadata;
+  const launchReadiness = metadata?.launchReadiness;
+  if (!launchReadiness) return plan;
+
+  const successfulActionIds = new Set(
+    results.filter((result) => result.status === "success").map((result) => result.actionId)
+  );
+  const successfulActions = plan.actions.filter((action) => successfulActionIds.has(action.id));
+  const successfulTypeCount = (type: AssistantPlannedAction["type"]) =>
+    successfulActions.filter((action) => action.type === type).length;
+  const successfulPages = new Set(
+    successfulActions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+      .filter((slug): slug is string => Boolean(slug))
+  );
+  const successfulSampleCounts = successfulActions.reduce<Record<string, number>>((acc, action) => {
+    if (action.type !== "entry.sample.create") return acc;
+    acc[action.input.contentTypeSlug] = (acc[action.input.contentTypeSlug] ?? 0) + 1;
+    return acc;
+  }, {});
+  const successfulPageSeoCount = successfulActions.filter(
+    (action) => action.type === "seo.document.upsert" && action.input.targetType === "page"
+  ).length;
+  const successfulEntrySamplesWithSeo = successfulActions.filter(
+    (action) => action.type === "entry.sample.create" && action.input.seo
+  ).length;
+  const allRequiredPagesSatisfied = launchReadiness.requiredPages.every((slug) =>
+    successfulPages.has(slug)
+  );
+  const allSampleMinimumsSatisfied = Object.entries(launchReadiness.minimumPublishedEntries).every(
+    ([contentTypeSlug, minimum]) => (successfulSampleCounts[contentTypeSlug] ?? 0) >= minimum
+  );
+  const catalogCount = launchReadiness.requiredCatalogs.length;
+  const allCatalogResourcesSatisfied =
+    successfulTypeCount("content-type.upsert") >= catalogCount &&
+    successfulTypeCount("detail-page.upsert") >= catalogCount &&
+    successfulTypeCount("setting.content-route.upsert") >= catalogCount &&
+    successfulTypeCount("listing-query.upsert") >= catalogCount &&
+    successfulTypeCount("listing-template.upsert") >= catalogCount;
+  const navigationSatisfied =
+    successfulTypeCount("menu.upsert") >= 2 &&
+    successfulTypeCount("menu.item.upsert") >= launchReadiness.requiredPages.length * 2;
+  const seoSatisfied =
+    successfulPageSeoCount >= launchReadiness.requiredPages.length &&
+    successfulEntrySamplesWithSeo >=
+      Object.values(launchReadiness.minimumPublishedEntries).reduce(
+        (sum, minimum) => sum + minimum,
+        0
+      );
+
+  const checks = launchReadiness.checks.map((check) => {
+    if (check.status === "gated") return check;
+    const satisfied =
+      check.id === "pages"
+        ? allRequiredPagesSatisfied
+        : check.id === "catalogs"
+          ? allCatalogResourcesSatisfied
+          : check.id === "public-content"
+            ? allSampleMinimumsSatisfied
+            : check.id === "navigation-footer"
+              ? navigationSatisfied
+              : check.id === "seo"
+                ? seoSatisfied
+                : false;
+    return {
+      ...check,
+      status: satisfied ? ("satisfied" as const) : ("pending_execute" as const),
+    };
+  });
+
+  return {
+    ...plan,
+    metadata: {
+      ...metadata,
+      launchReadiness: {
+        ...launchReadiness,
+        checks,
+      },
+    },
+  };
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
@@ -2270,6 +2357,48 @@ const findPriorActionResultDependency = (
   return actions.find((action) => action.id === locator.actionId) ?? null;
 };
 
+const findPriorPlannedListingQueryAction = (
+  name: string | null | undefined,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  const normalizedName = name?.trim();
+  if (!normalizedName) return null;
+  const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
+  return (
+    actions.find(
+      (action) => action.type === "listing-query.upsert" && action.input.name === normalizedName
+    ) ?? null
+  );
+};
+
+const findPriorPlannedListingTemplateAction = (
+  slug: string | null | undefined,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  const normalizedSlug = slug?.trim();
+  if (!normalizedSlug) return null;
+  const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
+  return (
+    actions.find(
+      (action) => action.type === "listing-template.upsert" && action.input.slug === normalizedSlug
+    ) ?? null
+  );
+};
+
+const findPriorPlannedFormAction = (
+  name: string | null | undefined,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  const normalizedName = name?.trim();
+  if (!normalizedName) return null;
+  const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
+  return (
+    actions.find(
+      (action) => action.type === "form.upsert" && action.input.name === normalizedName
+    ) ?? null
+  );
+};
+
 const resolveStableSlugResourceId = async (
   locator: Extract<AssistantSamePlanLocator, { kind: "stable-slug" }>,
   deps: ActionExecutorDeps
@@ -2679,7 +2808,8 @@ const buildMediaReferencePreview = async (
   });
 };
 
-const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionExecutorDeps) => {
+const buildPagePreview = async (action: AssistantPageUpsertAction, ctx: ActionHandlerContext) => {
+  const deps = ctx.deps;
   const existing = await deps.getPageBySlug(action.input.slug);
   const simplePageMode =
     Boolean(action.input.blocks) ||
@@ -2702,6 +2832,9 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
   const listingQueryByName = requestedListingQueryName
     ? (listingQueries.find((entry) => entry.name === requestedListingQueryName) ?? null)
     : null;
+  const plannedListingQuery = listingQueryByName
+    ? null
+    : findPriorPlannedListingQueryAction(requestedListingQueryName, ctx);
   if (
     requestedListingQueryId &&
     listingQueryByName &&
@@ -2719,6 +2852,9 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
   const listingTemplateBySlug = requestedListingTemplateSlug
     ? (listingTemplates.find((entry) => entry.slug === requestedListingTemplateSlug) ?? null)
     : null;
+  const plannedListingTemplate = listingTemplateBySlug
+    ? null
+    : findPriorPlannedListingTemplateAction(requestedListingTemplateSlug, ctx);
   if (
     requestedListingTemplateId &&
     listingTemplateBySlug &&
@@ -2740,8 +2876,48 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
         : null) ??
       null)
     : null;
+  const plannedForm = form
+    ? null
+    : findPriorPlannedFormAction(action.input.formEmbed?.formName, ctx);
+  const dependencies: AssistantActionPreviewChange["dependencies"] = [
+    ...(requestedListingQueryName
+      ? [
+          {
+            actionId: plannedListingQuery?.id ?? null,
+            targetType: "listing-query",
+            targetKey: requestedListingQueryName,
+            optional: false,
+          },
+        ]
+      : []),
+    ...(requestedListingTemplateSlug
+      ? [
+          {
+            actionId: plannedListingTemplate?.id ?? null,
+            targetType: "listing-template",
+            targetKey: requestedListingTemplateSlug,
+            optional: false,
+          },
+        ]
+      : []),
+    ...(action.input.formEmbed
+      ? [
+          {
+            actionId: plannedForm?.id ?? null,
+            targetType: "form",
+            targetKey: action.input.formEmbed.formName,
+            optional: false,
+          },
+        ]
+      : []),
+  ];
+  const hasPendingDependencies = Boolean(
+    plannedListingQuery || plannedListingTemplate || plannedForm
+  );
   const dependencyConflicts =
-    (!simplePageMode && (!listingQuery || !listingTemplate)) || (action.input.formEmbed && !form)
+    (!simplePageMode &&
+      ((!listingQuery && !plannedListingQuery) || (!listingTemplate && !plannedListingTemplate))) ||
+    (action.input.formEmbed && !form && !plannedForm)
       ? [
           {
             code: "assistant_action_dependency_missing" as const,
@@ -2752,7 +2928,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
         ]
       : [];
   let resolvedCollectionLink = existingCollectionLink;
-  if (dependencyConflicts.length === 0) {
+  if (dependencyConflicts.length === 0 && !hasPendingDependencies) {
     try {
       resolvedCollectionLink = await resolveAssistantPageCollectionLink({
         action,
@@ -2873,6 +3049,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
     targetKey: action.input.slug,
     summary: `${existing ? "Update" : "Create"} catalog page ${action.input.slug}`,
     conflicts: dependencyConflicts,
+    dependencies,
     beforeValue: existing
       ? {
           title: existing.title,
@@ -5719,7 +5896,7 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   },
   "page.upsert": {
     preview: (action, ctx) =>
-      action.type === "page.upsert" ? buildPagePreview(action, ctx.deps) : unexpectedAction(),
+      action.type === "page.upsert" ? buildPagePreview(action, ctx) : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "page.upsert"
         ? executePageAction(action, preview, ctx.actorId, ctx.deps)
@@ -5826,6 +6003,9 @@ const buildPreviewForAction = async (
     actionIndex,
   });
 
+const hasBlockingPreviewConflicts = (changes: AssistantActionPreviewChange[]) =>
+  changes.some((change) => change.conflicts.some((conflict) => conflict.severity === "error"));
+
 export const dryRunAssistantActionPlan = async (
   input: { plan: AssistantActionPlan },
   deps: ActionExecutorDeps = defaultDeps
@@ -5841,7 +6021,10 @@ export const dryRunAssistantActionPlan = async (
     changes,
     warnings: changes.flatMap((change) => change.warnings),
     readyToExecute:
-      plan.status === "ready" && plan.questions.length === 0 && plan.actions.length > 0,
+      plan.status === "ready" &&
+      plan.questions.length === 0 &&
+      plan.actions.length > 0 &&
+      !hasBlockingPreviewConflicts(changes),
   };
 };
 
@@ -5960,8 +6143,9 @@ export const executeAssistantActionPlan = async (
     },
   });
 
+  const executedPlan = reconcileLaunchReadinessAfterExecution(plan, results);
   const result: AssistantActionExecuteResult = {
-    plan,
+    plan: executedPlan,
     preview,
     results,
     idempotency,

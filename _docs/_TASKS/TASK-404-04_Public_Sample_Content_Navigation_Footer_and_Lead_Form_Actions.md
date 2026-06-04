@@ -5,7 +5,7 @@
 **Category:** Assistant + Content + Menus + Forms + Executor
 **Estimated Effort:** Large
 **Dependencies:** TASK-404-01, TASK-404-02, TASK-404-03
-**Status:** To Do
+**Status:** In Progress (2026-06-04)
 
 ---
 
@@ -13,15 +13,15 @@
 
 Make full-service plans populate public content, global navigation/footer IA,
 and the public contact conversion path safely.
-Current `entry.upsert-draft` is draft-only, and contract-only sample entry
-actions cannot satisfy public launch readiness. This leaf promotes or replaces
-the sample-entry gap with a strict executable path and wires deterministic menu
-items, footer links, and the lead-capture form for the generated site.
+Current `entry.upsert-draft` is draft-only, while `entry.sample.create` is now
+the strict publish-capable sample-entry path for public launch readiness. This
+leaf keeps that executable path wired into deterministic menu items, footer
+links, and the lead-capture form for the generated site.
 
 ## Sub-Tasks
 
-- Promote a bounded sample-entry action or extend the existing entry action
-  model with explicit reviewable publish semantics.
+- Keep the bounded sample-entry action aligned with explicit reviewable publish
+  semantics.
 - Create at least three visible service entries and three visible
   portfolio/reference entries for the full-service plan.
 - Ensure detail routes render populated entries.

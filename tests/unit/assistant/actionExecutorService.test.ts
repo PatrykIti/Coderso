@@ -1847,18 +1847,19 @@ test("executeAssistantActionPlan rejects same-name custom screens owned by other
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-custom-screen-upsert-conflicting-metadata",
-    },
-    deps
-  );
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-custom-screen-upsert-conflicting-metadata",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.customScreens).toHaveLength(1);
   expect(deps.__state.customScreens[0]?.id).toBe(existing.id);
   expect(deps.__state.customScreens[0]?.collectionRole).toBe("secondary-admin-screen");
@@ -1935,18 +1936,19 @@ test("executeAssistantActionPlan rejects ambiguous legacy custom screen name reu
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-custom-screen-upsert-ambiguous-legacy",
-    },
-    deps
-  );
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-custom-screen-upsert-ambiguous-legacy",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.customScreens).toHaveLength(2);
   expect(deps.__state.customScreens.every((entry) => entry.collectionRole === null)).toBe(true);
 });
@@ -2584,18 +2586,19 @@ test("executeAssistantActionPlan blocks listing deletes when page references rem
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.warnings[0]).toContain("referenced by 1 page");
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-listing-delete-blocked-1",
-    },
-    deps
-  );
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-listing-delete-blocked-1",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.listingQueries).toHaveLength(1);
 });
 
@@ -2759,18 +2762,19 @@ test("listing query upsert blocks ambiguous name matches", async () => {
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-listing-query-upsert-ambiguous",
-    },
-    deps
-  );
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-listing-query-upsert-ambiguous",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.listingQueries).toHaveLength(2);
   expect(
     deps.__state.listingQueries.every((query) => query.description === "Product listing")
@@ -2875,18 +2879,19 @@ test("executeAssistantActionPlan blocks form hard delete when submissions exist"
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.warnings[0]).toContain("2 submissions");
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-form-delete-blocked-1",
-    },
-    deps
-  );
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-form-delete-blocked-1",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.forms).toHaveLength(1);
 });
 
@@ -4819,6 +4824,14 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
 
   expect(plan.intentId).toBe("service-business-full-site");
   expect(plan.actions).toHaveLength(49);
+  expect(plan.metadata?.launchReadiness?.checks.map((check) => check.status)).toEqual([
+    "pending_execute",
+    "pending_execute",
+    "pending_execute",
+    "pending_execute",
+    "pending_execute",
+    "gated",
+  ]);
 
   const executed = await executeAssistantActionPlan(
     {
@@ -4830,6 +4843,16 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
   );
 
   expect(executed.summary.failed).toBe(0);
+  expect(executed.plan.metadata?.launchReadiness?.checks).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: "pages", status: "satisfied" }),
+      expect.objectContaining({ id: "catalogs", status: "satisfied" }),
+      expect.objectContaining({ id: "public-content", status: "satisfied" }),
+      expect.objectContaining({ id: "navigation-footer", status: "satisfied" }),
+      expect.objectContaining({ id: "seo", status: "satisfied" }),
+      expect.objectContaining({ id: "media", status: "gated" }),
+    ])
+  );
   expect(deps.__state.pages.map((page) => page.slug).sort()).toEqual([
     "/",
     "/kontakt",
@@ -5234,6 +5257,7 @@ test("dryRunAssistantActionPlan flags conflicting supporting page collection-lin
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
 
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 });
 
 test("executeAssistantActionPlan rejects conflicting collection-link content type and listing locators", async () => {
@@ -5315,17 +5339,20 @@ test("executeAssistantActionPlan rejects conflicting collection-link content typ
     ],
   };
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-supporting-page-collection-link-conflict",
-    },
-    deps
-  );
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-supporting-page-collection-link-conflict",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 });
 
 test("executeAssistantActionPlan rejects stale supporting page collection-link listing ids", async () => {
@@ -5400,18 +5427,18 @@ test("executeAssistantActionPlan rejects stale supporting page collection-link l
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_missing");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-supporting-page-collection-link-stale-id",
-    },
-    deps
-  );
-
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_missing");
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-supporting-page-collection-link-stale-id",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 });
 
 test("dryRunAssistantActionPlan flags detail-page upserts whose content type does not exist", async () => {
@@ -5491,6 +5518,17 @@ test("dryRunAssistantActionPlan flags detail-page upserts whose content type doe
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
 
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_invalid");
+  expect(preview.readyToExecute).toBe(false);
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-detail-page-missing-content-type",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 });
 
 test("dryRunAssistantActionPlan flags detail-page expectedExistingId mismatches", async () => {
@@ -5971,73 +6009,78 @@ test("executeAssistantActionPlan fails detail-page upserts that reuse an id acro
     publishedAt: null,
   });
 
-  const result = await executeAssistantActionPlan(
-    {
-      plan: {
-        id: "plan-detail-page-content-type-mismatch",
-        status: "ready",
-        intentId: "detail-page-content-type-mismatch",
-        promptKind: "setup_request",
-        intentFamily: "product_catalog",
-        title: "Create detail template",
-        answer: "I can create the detail template.",
-        summary: "Create a products detail template with a conflicting id.",
-        confidence: 0.91,
-        assumptions: [],
-        questions: [],
-        actions: [
-          {
-            id: "detail-page-products",
-            type: "detail-page.upsert",
-            title: "Create products detail template",
-            description: "Create a products detail template.",
-            input: {
-              document: {
-                schemaVersion: 1,
-                id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-                name: "Products detail template",
-                contentTypeId: productType.id,
-                contentTypeSlug: productType.slug,
-                status: "draft",
-                titlePattern: "{{ title }}",
-                settings: {
-                  template: "detail",
-                  layout: {
-                    wrapper: {
-                      container: "default",
-                      padding: { top: "md", bottom: "lg" },
-                      background: {
-                        color: "#ffffff",
-                        image: null,
-                        media: { type: "none", source: "external", src: null },
-                      },
-                    },
-                    sections: {
-                      gap: "lg",
-                      defaults: {
-                        container: "default",
-                        padding: { top: "xl", bottom: "xl" },
-                        margin: { top: "none", bottom: "none" },
-                      },
-                    },
-                    applyDefaultsToNewBlocks: false,
+  const plan: AssistantActionPlan = {
+    id: "plan-detail-page-content-type-mismatch",
+    status: "ready",
+    intentId: "detail-page-content-type-mismatch",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can create the detail template.",
+    summary: "Create a products detail template with a conflicting id.",
+    confidence: 0.91,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          document: {
+            schemaVersion: 1,
+            id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            name: "Products detail template",
+            contentTypeId: productType.id,
+            contentTypeSlug: productType.slug,
+            status: "draft",
+            titlePattern: "{{ title }}",
+            settings: {
+              template: "detail",
+              layout: {
+                wrapper: {
+                  container: "default",
+                  padding: { top: "md", bottom: "lg" },
+                  background: {
+                    color: "#ffffff",
+                    image: null,
+                    media: { type: "none", source: "external", src: null },
                   },
                 },
-                blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
-                bindings: [],
+                sections: {
+                  gap: "lg",
+                  defaults: {
+                    container: "default",
+                    padding: { top: "xl", bottom: "xl" },
+                    margin: { top: "none", bottom: "none" },
+                  },
+                },
+                applyDefaultsToNewBlocks: false,
               },
             },
+            blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
+            bindings: [],
           },
-        ],
+        },
       },
-      actorId: "user-1",
-      idempotencyKey: "assistant-detail-page-content-type-mismatch",
-    },
-    deps
-  );
+    ],
+  };
 
-  expect(result.summary.failed).toBe(1);
-  expect(result.results[0]?.errorCode).toBe("detail_page_content_type_mismatch");
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(false);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_content_type_mismatch");
+
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-detail-page-content-type-mismatch",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 });
 
 test("executeAssistantActionPlan fails detail-page upserts with stale expectedExistingId", async () => {
@@ -6057,74 +6100,79 @@ test("executeAssistantActionPlan fails detail-page upserts with stale expectedEx
     updatedAt: new Date("2026-04-10T12:00:00.000Z"),
   });
 
-  const result = await executeAssistantActionPlan(
-    {
-      plan: {
-        id: "plan-detail-page-execute-conflict",
-        status: "ready",
-        intentId: "detail-page-execute-conflict",
-        promptKind: "setup_request",
-        intentFamily: "product_catalog",
-        title: "Create detail template",
-        answer: "I can create the detail template.",
-        summary: "Create a detail template with a stale expectedExistingId.",
-        confidence: 0.91,
-        assumptions: [],
-        questions: [],
-        actions: [
-          {
-            id: "detail-page-products",
-            type: "detail-page.upsert",
-            title: "Create products detail template",
-            description: "Create a products detail template.",
-            input: {
-              expectedExistingId: "94d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-              document: {
-                schemaVersion: 1,
-                id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-                name: "Products detail template",
-                contentTypeId: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-                contentTypeSlug: "products",
-                status: "draft",
-                titlePattern: "{{ title }}",
-                settings: {
-                  template: "detail",
-                  layout: {
-                    wrapper: {
-                      container: "default",
-                      padding: { top: "md", bottom: "lg" },
-                      background: {
-                        color: "#ffffff",
-                        image: null,
-                        media: { type: "none", source: "external", src: null },
-                      },
-                    },
-                    sections: {
-                      gap: "lg",
-                      defaults: {
-                        container: "default",
-                        padding: { top: "xl", bottom: "xl" },
-                        margin: { top: "none", bottom: "none" },
-                      },
-                    },
-                    applyDefaultsToNewBlocks: false,
+  const plan: AssistantActionPlan = {
+    id: "plan-detail-page-execute-conflict",
+    status: "ready",
+    intentId: "detail-page-execute-conflict",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can create the detail template.",
+    summary: "Create a detail template with a stale expectedExistingId.",
+    confidence: 0.91,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          expectedExistingId: "94d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+          document: {
+            schemaVersion: 1,
+            id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            name: "Products detail template",
+            contentTypeId: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            contentTypeSlug: "products",
+            status: "draft",
+            titlePattern: "{{ title }}",
+            settings: {
+              template: "detail",
+              layout: {
+                wrapper: {
+                  container: "default",
+                  padding: { top: "md", bottom: "lg" },
+                  background: {
+                    color: "#ffffff",
+                    image: null,
+                    media: { type: "none", source: "external", src: null },
                   },
                 },
-                blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
-                bindings: [],
+                sections: {
+                  gap: "lg",
+                  defaults: {
+                    container: "default",
+                    padding: { top: "xl", bottom: "xl" },
+                    margin: { top: "none", bottom: "none" },
+                  },
+                },
+                applyDefaultsToNewBlocks: false,
               },
             },
+            blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
+            bindings: [],
           },
-        ],
+        },
       },
-      actorId: "user-1",
-      idempotencyKey: "assistant-detail-page-execute-conflict",
-    },
-    deps
-  );
+    ],
+  };
 
-  expect(result.summary.failed).toBe(1);
-  expect(result.results[0]?.errorCode).toBe("detail_page_conflict");
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(false);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_conflict");
+
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-detail-page-execute-conflict",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 });
 
 test("executeAssistantActionPlan resolves renamed listing resources from existing page state", async () => {

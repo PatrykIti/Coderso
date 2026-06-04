@@ -533,6 +533,19 @@ test("executeAssistantActions broadcasts cache events for supported CMS action f
         },
       },
       {
+        id: "entry-sample-products-2",
+        type: "entry.sample.create",
+        title: "Create public sample",
+        description: "Create sample entry.",
+        input: {
+          contentTypeSlug: "products",
+          title: "Sample Product",
+          slug: "sample-product",
+          status: "published",
+          values: { title: "Sample Product" },
+        },
+      },
+      {
         id: "form-archive-lead",
         type: "form.archive",
         title: "Archive form",
@@ -689,6 +702,18 @@ test("executeAssistantActions broadcasts cache events for supported CMS action f
           adminHref: "/admin/advanced/entries/products/entry-1",
           publicHref: null,
           message: "Updated.",
+        },
+        {
+          actionId: "entry-sample-products-2",
+          type: "entry.sample.create",
+          targetType: "entry",
+          targetKey: "products/sample-product",
+          operation: "create",
+          status: "success",
+          resourceId: "entry-2",
+          adminHref: "/admin/advanced/entries/products/entry-2",
+          publicHref: "/products/sample-product",
+          message: "Created.",
         },
         {
           actionId: "form-archive-lead",
@@ -848,6 +873,10 @@ test("executeAssistantActions broadcasts cache events for supported CMS action f
         expect.objectContaining({ key: cacheKeys.entriesAllList, action: "update" }),
         expect.objectContaining({
           key: cacheKeys.entryDetail("products", "entry-1"),
+          action: "update",
+        }),
+        expect.objectContaining({
+          key: cacheKeys.entryDetail("products", "entry-2"),
           action: "update",
         }),
         expect.objectContaining({ key: cacheKeys.formsList, action: "update" }),

@@ -359,6 +359,15 @@ const readActionId = <TType extends AssistantPlannedAction["type"]>(
 const resourceId = (item: AssistantActionExecutionItem, fallback?: string | null) =>
   readText(item.resourceId) ?? readText(fallback);
 
+const resourceIdInputText = (value: unknown) =>
+  typeof value === "string" ? readText(value) : null;
+
+const firstTargetKeySegment = (item: AssistantActionExecutionItem) => {
+  const targetKey = readText(item.targetKey);
+  if (!targetKey) return null;
+  return readText(targetKey.split("/")[0]);
+};
+
 const clearAndEmitDetail = (
   key: string,
   cacheAction: "invalidate" | "update",
@@ -388,13 +397,16 @@ const notifyAssistantExecutionCacheEvent = (input: {
     }
 
     case "entry.upsert-draft":
+    case "entry.sample.create":
     case "entry.delete":
     case "entry.update": {
       const plannedUpsert = readActionId(action, "entry.upsert-draft");
+      const plannedSample = readActionId(action, "entry.sample.create");
       const plannedDelete = readActionId(action, "entry.delete");
       const plannedUpdate = readActionId(action, "entry.update");
       const typeSlug =
         plannedUpsert?.input.contentTypeSlug ??
+        plannedSample?.input.contentTypeSlug ??
         plannedDelete?.input.contentTypeSlug ??
         plannedUpdate?.input.contentTypeSlug ??
         null;
@@ -538,12 +550,12 @@ const notifyAssistantExecutionCacheEvent = (input: {
       const plannedUpsert = readActionId(action, "menu.item.upsert");
       const plannedDelete = readActionId(action, "menu.item.delete");
       const plannedUpdate = readActionId(action, "menu.item.update");
-      const menuId =
-        item.resourceId ??
-        plannedMenu?.input.location ??
-        plannedUpsert?.input.menuId ??
-        plannedDelete?.input.menuId ??
-        plannedUpdate?.input.menuId;
+      const itemMenuId =
+        resourceIdInputText(plannedUpsert?.input.menuId) ??
+        readText(plannedDelete?.input.menuId) ??
+        readText(plannedUpdate?.input.menuId) ??
+        firstTargetKeySegment(item);
+      const menuId = plannedMenu ? resourceId(item, plannedMenu.input.location) : itemMenuId;
       clearMenusCache();
       emit(cacheKeys.menusList, cacheAction);
       if (typeof menuId === "string") {

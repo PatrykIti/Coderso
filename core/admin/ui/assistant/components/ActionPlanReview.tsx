@@ -142,8 +142,10 @@ export function ActionPlanReview({
       preview?.changes.find((change) => change.actionId === action.id)
     )
   );
-  const blocked = preview?.changes.some((change) =>
-    change.conflicts?.some((conflict) => conflict.severity === "error")
+  const blocked = Boolean(
+    preview?.changes.some((change) =>
+      change.conflicts?.some((conflict) => conflict.severity === "error")
+    )
   );
   const hasExecutableActions = plan.actions.length > 0;
   const isReadOnlyPlan =
@@ -444,7 +446,9 @@ export function ActionPlanReview({
             <Button
               type="button"
               onClick={onExecute}
-              disabled={!previewReady || isExecuting || isPreviewing || !hasExecutableActions}
+              disabled={
+                !previewReady || blocked || isExecuting || isPreviewing || !hasExecutableActions
+              }
             >
               {isExecuting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

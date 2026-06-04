@@ -65,15 +65,18 @@ POST /assistant/actions/execute
 
 Planner responses are tagged so the UI can render without parsing prompt text: `docs`, `inspection`, `action_plan`, `needs_input`, or `gated`.
 
-Current setup blueprints are deterministic typed scaffolds. For example, an
-architecture studio prompt that asks for portfolio, services/offer, and contact
-routes to a composed plan with `portfolio-projects`, `services-directory`, and
-`lead-capture-site` actions. That creates catalog/admin surfaces, listing
-resources, public `/portfolio` and `/uslugi` pages, and a `/kontakt` lead form.
-It is not a launch-ready marketing site yet: home/about/process/references
-pages, seeded entries, media assets, navigation, and full SEO metadata still
-need dedicated typed actions or site-kit coverage before they can be claimed in
-acceptance tests.
+Current setup blueprints are deterministic typed plans. Architecture-studio
+prompts that ask for a complete service site route to
+`service-business-full-site`, which creates the required public pages, services
+and portfolio catalogs, route-linked detail templates, six published sample
+entries, primary/footer navigation, a lead-capture form, page SEO, and launch
+readiness metadata. Media upload/generation remains a gated workflow: the plan
+can be launch-shaped with safe sample copy, but original media still has to come
+from trusted media-library assets or a later reviewed media action.
+
+Acceptance tests for this flow must not stop at a successful plan. They need to
+dry-run, execute, and verify public runtime pages, populated listings, working
+detail routes, navigation/footer links, SEO basics, and desktop/mobile layout.
 
 ### RBAC per step
 
