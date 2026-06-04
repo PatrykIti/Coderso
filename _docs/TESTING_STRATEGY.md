@@ -80,6 +80,11 @@ then that test should move to Vitest.
 - The repo `test:bun` command runs the DB/runtime gate serially with a
   `15000ms` per-test timeout because real database fixtures and runtime renders
   can exceed Bun's default `5000ms` timeout under full-suite load.
+- DB-backed Bun HTTP suites that start an in-process `Bun.serve` may raise the
+  server `idleTimeout` through `startHttpServer({ idleTimeout })` when the
+  handler legitimately waits on settings/auth/database work under full-lane
+  load. Keep this scoped to the test server instead of changing production
+  defaults.
 
 ### Vitest Owns
 

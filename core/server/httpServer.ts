@@ -164,7 +164,12 @@ const router = buildRouter();
 
 export type HttpServerOptions = {
   adminDevUrl?: string;
+  idleTimeout?: number;
   port?: number;
+};
+
+type HttpServerServeOptions = Parameters<typeof Bun.serve>[0] & {
+  idleTimeout?: number;
 };
 
 const ensureTrailingSlash = (value: string) => (value.endsWith("/") ? value : `${value}/`);
@@ -496,7 +501,8 @@ export function startHttpServer(options: HttpServerOptions = {}) {
     console.warn("Assistant docs index initialization failed:", error);
   });
 
-  return Bun.serve({
+  const serveOptions: HttpServerServeOptions = {
+    idleTimeout: options.idleTimeout,
     port,
     async fetch(req) {
       const url = new URL(req.url);
@@ -516,5 +522,7 @@ export function startHttpServer(options: HttpServerOptions = {}) {
       }
       return handlePublicRequest(req);
     },
-  });
+  };
+
+  return Bun.serve(serveOptions);
 }

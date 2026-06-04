@@ -15,6 +15,7 @@ import {
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const DB_RUNTIME_IDLE_TIMEOUT_SECONDS = 30;
 
 let server: ReturnType<typeof Bun.serve> | null = null;
 let tempDir: string | null = null;
@@ -54,10 +55,7 @@ const cleanupApiKeys = async () => {
 beforeAll(async () => {
   if (!hasDb) return;
 
-  existingStorageRows = await db
-    .select()
-    .from(settings)
-    .where(inArray(settings.key, storageKeys));
+  existingStorageRows = await db.select().from(settings).where(inArray(settings.key, storageKeys));
   await db.delete(settings).where(inArray(settings.key, storageKeys));
 });
 
@@ -74,7 +72,10 @@ beforeEach(async () => {
   });
   resetStorageSettingsCache();
 
-  server = startHttpServer({ port: 0 });
+  server = startHttpServer({
+    idleTimeout: DB_RUNTIME_IDLE_TIMEOUT_SECONDS,
+    port: 0,
+  });
 });
 
 afterEach(async () => {

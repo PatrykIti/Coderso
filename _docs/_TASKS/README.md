@@ -34,7 +34,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2220 tasks
+- **Done:** 2221 tasks
 
 ---
 
@@ -68,6 +68,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-401 | DB Runtime Test Idle Timeout | Medium | Small | Done (2026-06-04): DB-backed media runtime tests now opt into a 30-second Bun.serve idle timeout to avoid socket resets under full-lane load. |
 | TASK-400 | Docker Startup Migrations | High | Medium | Done (2026-06-04): Docker runtime entrypoint now runs Drizzle migrations behind a Postgres advisory lock before starting the core HTTP server. |
 | TASK-399 | Admin SPA Route-Level Code Splitting and Bundle Reduction | High | Large | Done (2026-06-04): protected admin pages now load through guarded lazy route descriptors; initial static graph gzip is `400,812 B` against the `500,000 B` guard budget. |
 | TASK-399-01 | Admin Lazy Route Registry and Bootstrap Seams | High | Large | Done (2026-06-04): lazy named-export descriptors plus pure Settings and Assistant bootstrap seams are in place. |

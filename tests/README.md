@@ -54,6 +54,9 @@ job environment variables without creating a local `.env` file.
 `test:bun` runs the DB/runtime lane serially with a `15000ms` per-test timeout;
 the lane exercises real database and runtime flows that can exceed Bun's default
 `5000ms` timeout under full-suite load.
+Selected DB-backed runtime HTTP suites may also pass a higher `idleTimeout` to
+`startHttpServer` so Bun does not reset an in-flight request while the handler
+waits on database-backed settings or auth checks.
 `test:bun:lane` runs curated Bun-owned route/plugin/perf suites without coverage.
 `test:coverage:bun` uses the same curated Bun-owned route/plugin/perf suites through `scripts/run-bun-lane.ts`.
 It writes `coverage/bun/lcov.info` and prints a compact LCOV-derived summary,
