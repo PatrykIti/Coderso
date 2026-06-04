@@ -63,6 +63,81 @@ const pageMap = [
   },
 ] as const;
 
+type FullServicePage = (typeof pageMap)[number];
+type PageUpsertBlocks = NonNullable<
+  Extract<AssistantPlannedAction, { type: "page.upsert" }>["input"]["blocks"]
+>;
+
+const supportingPageDetails: Record<
+  Extract<FullServicePage["role"], "home" | "about" | "process" | "proof">,
+  { eyebrow: string; heading: string; content: string }
+> = {
+  home: {
+    eyebrow: "Studio",
+    heading: "Architektura prowadzona od decyzji do realizacji",
+    content:
+      "Studio Forma laczy koncepcje, dokumentacje, koordynacje i nadzor w jednym procesie, z czytelnymi etapami dla inwestora.",
+  },
+  about: {
+    eyebrow: "O pracowni",
+    heading: "Zespol, ktory trzyma estetyke i proces w jednym rytmie",
+    content:
+      "Pracownia porzadkuje wymagania, budzet i decyzje materialowe, aby projekt byl spojny wizualnie i mozliwy do sprawnej realizacji.",
+  },
+  process: {
+    eyebrow: "Proces",
+    heading: "Od diagnozy potrzeb do wsparcia przy wykonaniu",
+    content:
+      "Kazdy etap konczy sie konkretnym zakresem decyzji: briefem, koncepcja, dokumentacja, koordynacja i rekomendacjami wykonawczymi.",
+  },
+  proof: {
+    eyebrow: "Referencje",
+    heading: "Rezultaty, ktore widac w gotowych przestrzeniach",
+    content:
+      "Historie klientow pokazuja, jak uporzadkowany proces skraca droge od pierwszej rozmowy do dopracowanej realizacji.",
+  },
+};
+
+const buildSupportingPageBlocks = (page: FullServicePage): PageUpsertBlocks => {
+  const details =
+    page.role === "home" ||
+    page.role === "about" ||
+    page.role === "process" ||
+    page.role === "proof"
+      ? supportingPageDetails[page.role]
+      : null;
+  if (!details) return [];
+
+  return [
+    {
+      id: `full-service-${page.role}-intro`,
+      type: "rich-text-section",
+      variant: "single-column",
+      data: {
+        titleBlock: {
+          eyebrow: details.eyebrow,
+          title: page.title,
+        },
+        body: {
+          html: "",
+          blocks: [
+            {
+              id: `full-service-${page.role}-copy`,
+              kind: "text",
+              heading: details.heading,
+              content: `${page.body} ${details.content}`,
+            },
+          ],
+        },
+        options: {
+          outputMode: "blocks",
+          maxWidth: "lg",
+        },
+      },
+    },
+  ];
+};
+
 const supportingPageActions = (): AssistantPlannedAction[] =>
   pageMap
     .filter((page) => !["services", "portfolio", "contact"].includes(page.role))
@@ -77,6 +152,7 @@ const supportingPageActions = (): AssistantPlannedAction[] =>
         status: "published",
         introTitle: page.title,
         introBody: page.body,
+        blocks: buildSupportingPageBlocks(page),
       },
     }));
 

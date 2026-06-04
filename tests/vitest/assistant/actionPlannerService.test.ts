@@ -234,6 +234,22 @@ test("planAssistantActions creates a full-service architecture studio site", () 
       "/kontakt",
     ])
   );
+  for (const slug of ["/", "/o-nas", "/proces", "/referencje"]) {
+    const pageAction = plan.actions.find(
+      (action) => action.type === "page.upsert" && action.input.slug === slug
+    );
+    if (!pageAction || pageAction.type !== "page.upsert") {
+      throw new Error(`expected_full_service_page_action:${slug}`);
+    }
+    expect(pageAction.input.blocks?.length).toBeGreaterThan(0);
+    expect(pageAction.input.blocks?.[0]).toMatchObject({
+      type: "rich-text-section",
+      variant: "single-column",
+      data: {
+        options: { outputMode: "blocks" },
+      },
+    });
+  }
   expect(plan.actions.filter((action) => action.type === "entry.sample.create")).toHaveLength(6);
   expect(plan.actions.filter((action) => action.type === "menu.upsert")).toHaveLength(2);
   expect(plan.actions.filter((action) => action.type === "menu.item.upsert")).toHaveLength(14);

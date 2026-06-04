@@ -4862,6 +4862,25 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
     "/referencje",
     "/uslugi",
   ]);
+  for (const page of deps.__state.pages) {
+    const publishedData = page.publishedData as { blocks?: unknown[] } | null;
+    expect(page.status).toBe("published");
+    expect(Array.isArray(publishedData?.blocks)).toBe(true);
+    expect(publishedData?.blocks?.length).toBeGreaterThan(0);
+  }
+  const homePage = deps.__state.pages.find((page) => page.slug === "/");
+  const homeBlocks = homePage?.publishedData as
+    | { blocks?: Array<{ type?: string; data?: { titleBlock?: { title?: string } } }> }
+    | null
+    | undefined;
+  expect(homeBlocks?.blocks?.[0]).toMatchObject({
+    type: "rich-text-section",
+    data: {
+      titleBlock: {
+        title: "Studio Forma",
+      },
+    },
+  });
   expect(deps.__state.entries.filter((entry) => entry.status === "published")).toHaveLength(6);
   expect(deps.__state.detailPages).toHaveLength(2);
   const contentRoutes =
