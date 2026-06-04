@@ -29,10 +29,11 @@ Ordinary new entries continue at 1096.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1096 for the next changelog entry.
+assistant policy coverage fix. Use 1097 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1096 | 2026-06-04 | reCAPTCHA backend configuration and eager loading | Security/Bot Protection/Admin UI/Public Forms/Widgets/QA/Docs |
 | 1095 | 2026-06-04 | DB runtime test idle timeout | Runtime Testing/Bun Server/Media/QA/Docs |
 | 1094 | 2026-06-04 | Docker startup migrations | Docker/Runtime/Database/Release/Testing/Docs |
 | 1093 | 2026-06-04 | TASK-399 admin SPA route code splitting | Admin UI/Build Performance/Vite/Docker/QA/Docs |
