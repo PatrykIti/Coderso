@@ -60,8 +60,8 @@ Keep eager in this first step:
   `SetPasswordPage`;
 - bootstrap-only UI: `SetupWizard`, `Loading`, `NotFound`, `AccessDenied`;
 - providers, theme token style, toaster, auth/bootstrap/settings state logic;
-- preview route unless runtime evidence proves `renderToString` and public
-  preview behavior remain stable behind Suspense.
+- public preview route: `/preview` is in `publicRoutes` and stays eager until a
+  separate SSR/public-preview task proves it can safely move behind Suspense.
 
 Lazy-load:
 
@@ -72,8 +72,11 @@ Lazy-load:
 Avoid these non-fixes:
 
 - Do not raise `build.chunkSizeWarningLimit` as the primary remediation.
-- Do not add `manualChunks` / `codeSplitting.groups` before route-level dynamic
-  imports are in place and measured.
+- Do not add manual chunk grouping before route-level dynamic imports are in
+  place and measured. If a later measured follow-up needs grouping under Vite 8,
+  use the documented `build.rolldownOptions.output.codeSplitting.groups`
+  contract; do not introduce deprecated `manualChunks` / `advancedChunks`
+  patterns as the first fix.
 - Do not weaken React Hooks lint rules to make the route refactor pass.
 
 ## Sub-Tasks
@@ -89,14 +92,17 @@ Physical execution leaves:
 ## Implementation Order
 
 1. Land `TASK-399-01` first so `AdminApp` can import pure bootstrap values and
-   stable lazy route descriptors without pulling Settings or Assistant panels
-   into the entry chunk.
+   stable lazy route helper/descriptors without pulling Settings or Assistant
+   panels into the entry chunk. This leaf creates the seam; it is not expected
+   to reduce the one-chunk build by itself.
 2. Land `TASK-399-02` to change route definitions from pre-created elements to
-   guarded render functions, add Suspense, and add dynamic-import recovery.
+   guarded render functions, add Suspense, add dynamic-import recovery, and
+   migrate one simple protected route plus one prop-passing protected route so
+   the new guard behavior is testable.
 3. Land `TASK-399-03` to migrate the protected route inventory in coherent
    groups with focused AdminApp regression tests.
-4. Land `TASK-399-04` to measure the real split, add a regression guard, and
-   document the Vite/Rolldown bundle contract.
+4. Land `TASK-399-04` to measure the real split, add a regression guard, add CI
+   enforcement for that guard, and document the Vite/Rolldown bundle contract.
 5. Land `TASK-399-05` only after local build metrics are green; prove Docker and
    production static serving for hashed lazy chunks, then close docs/changelog.
 
@@ -104,9 +110,12 @@ Physical execution leaves:
 
 - Admin build emits more than one JavaScript chunk without a
   `chunkSizeWarningLimit` override.
-- Initial admin entry JavaScript gzip is materially below the recorded
-  `1,036.45 kB` gzip baseline.
+- Initial admin entry JavaScript gzip is at least 50% below the recorded
+  `1,036.45 kB` gzip baseline, unless measured route-only splitting exposes a
+  remaining shared/vendor chunk that is documented as a separate follow-up.
 - Auth/public routes remain eager and render without a lazy-route fallback.
+- `renderToString` for public/auth routes and protected-route loading states
+  remains stable; no protected lazy route loader runs during SSR bootstrap.
 - Protected routes do not import their route chunk before auth and RBAC checks
   allow rendering.
 - Denied routes render `AccessDenied` without loading the denied page module.
@@ -116,8 +125,18 @@ Physical execution leaves:
   path redirects, theme tokens, toaster, and permission refresh remain intact.
 - Docker build succeeds and the production server can serve every hashed lazy
   chunk under `/admin/assets/*`.
-- Documentation records before/after bundle numbers and the follow-up boundary
-  for optional route chunk prefetching or intra-page editor splitting.
+- Documentation records before/after bundle numbers, the final budget values,
+  and the follow-up boundary for optional RBAC-aware route chunk prefetching or
+  intra-page editor splitting.
+
+Before/after table to complete during `TASK-399-04` / `TASK-399-05`:
+
+| Metric | Before | After | Budget / follow-up |
+|---|---:|---:|---|
+| Admin JS chunk count | 1 | TBD | `> 1` |
+| Initial admin JS raw | `4,369.13 kB` | TBD | TBD |
+| Initial admin JS gzip | `1,036.45 kB` | TBD | `<= 50% baseline` target, final value from guard |
+| Largest lazy route JS raw/gzip | N/A | TBD | document follow-up if warning remains |
 
 ## Security Contract
 
@@ -139,8 +158,10 @@ Physical execution leaves:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx tests/vitest/admin/adminRouteComponents.test.tsx`
-- `bun x vite build --config vite.config.ts` from `core/`
-- bundle guard script from `TASK-399-04`
+  (`adminRouteComponents.test.tsx` is created in `TASK-399-01`)
+- `bun test tests/unit/server/adminAssetsRouting.test.ts`
+- `bun --cwd core build:admin` after `TASK-399-04` adds the script
+- `bun run check:admin-bundle` after `TASK-399-04`
 - `docker build -t coderso-docker-smoke:lazy-routes --build-arg APP_VERSION=0.0.0-lazy-routes -f Dockerfile .`
 - production static-serving smoke from `TASK-399-05`
 - `bun run precommit` before final commits
@@ -150,6 +171,9 @@ Physical execution leaves:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/1091-2026-06-04-task-399-admin-spa-code-splitting-planning.md`
+- closure changelog `1093` or next available number for implemented and
+  verified TASK-399 work; changelogs `1091` and `1092` are planning/refinement
+  only and do not close any TASK-399 leaf.
 - `_docs/ARCHITECTURE.md`
 - `_docs/RELEASE_PROCESS.md` if Docker/build validation expectations change
 - `tests/README.md` if a bundle guard becomes a documented test lane
@@ -165,5 +189,6 @@ Physical execution leaves:
   before adding any grouping options.
 - Decide from measured output whether chunk prefetching belongs in this first
   family or a follow-up task.
-- Use Claude CLI and agents again after this first task draft to find drift
-  before implementation starts.
+- Claude CLI and agent drift pass ran after the first task draft commit; keep
+  implementation aligned with the corrected eager/lazy inventory and guard
+  ownership above.

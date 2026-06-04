@@ -27,11 +27,15 @@ Current protected route families in `AdminApp` include:
   Import / Export
 - Advanced: Forms, Content Types/Engine, Entries, Custom Screens, Listings,
   Filters, Search, Booking, Reviews, Commerce, Popups, Solution Kits
-- Core content: Posts, Pages, Preview, Media, Menus
+- Core content: Posts, Pages, Media, Menus
 - Admin governance: Users, Roles
 - Themes, Widgets, Widget Templates
 - Settings and Security subroutes
 - Store and Plugin details
+
+`/preview` is intentionally not in the protected inventory. It is listed in
+`publicRoutes` in `AdminApp` and stays eager with the auth/public route set for
+this task family.
 
 Routes with extra props must keep those props:
 
@@ -39,6 +43,79 @@ Routes with extra props must keep those props:
 - `PermissionsMatrixPage permissions={authPermissions}`
 - `GeneralSettingsPage values/isLoading/isSaving/error/onSave`
 - `AssistantSettingsPage values/isLoading/isSaving/error/onSave`
+
+## Route Inventory Matrix
+
+The implementation must reconcile every current `AdminApp` route against this
+matrix before closure:
+
+| Pattern | Component/export | Permission | Target |
+|---|---|---|---|
+| `/` | `DashboardPage` | `content:read` | Lazy |
+| `/login` | `LoginPage` | Public | Eager |
+| `/2fa` | `TwoFactorPage` | Public | Eager |
+| `/reset` | `ResetPasswordPage` | Public | Eager |
+| `/reset/confirm` | `SetPasswordPage` | Public | Eager |
+| `/preview` | `PagePreview` | Public | Eager |
+| `/analytics` | `AnalyticsPage` | `content:read` | Lazy |
+| `/audit` | `AuditList` | `audit:read` | Lazy |
+| `/access-logs` | `AccessLogsPage` | `audit:read` | Lazy |
+| `/backups` | `BackupsPage` | `backups:read` | Lazy |
+| `/search` | `SearchPage` | `content:read` | Lazy |
+| `/seo` | `SeoManagerPage` | `content:read` | Lazy |
+| `/redirects` | `RedirectsPage` | `settings:read` | Lazy |
+| `/tools/import-export` | `ImportExportPage` | `settings:read` | Lazy |
+| `/advanced/forms` | `FormListPage` | `forms:read` | Lazy |
+| `/advanced/forms/:id/action-runs` | `FormActionLogsPage` | `forms:read` | Lazy |
+| `/advanced/forms/:id` | `FormBuilderPage` | `forms:read` | Lazy |
+| `/advanced/engine` | `ContentTypeList` | `content:read` | Lazy |
+| `/advanced/engine/:id` | `ContentTypeEditor` | `content:read` | Lazy |
+| `/advanced/engine/:id/collection` | `CollectionWorkspacePage` | `content:read` | Lazy |
+| `/advanced/engine/:id/collection/detail-template/:detailPageId` | `DetailTemplateEditorPage` | `content:read` | Lazy |
+| `/advanced/engine/:id/schema` | `SchemaBuilderPage` | `content:read` | Lazy |
+| `/advanced/entries` | `EntryList` | `content:read` | Lazy |
+| `/advanced/entries/:type/:id` | `EntryEditor` | `content:read` | Lazy |
+| `/advanced/custom-screens` | `CustomScreenListPage` | `content:read` | Lazy |
+| `/advanced/custom-screens/:id/entries/:entryId` | `CustomScreenEntryEditor` | `content:read` | Lazy |
+| `/advanced/custom-screens/:id/entries` | `CustomScreenEntriesPage` | `content:read` | Lazy |
+| `/advanced/custom-screens/:id` | `CustomScreenEditorPage` | `content:read` | Lazy |
+| `/posts` | `PostsListPage` | `content:read` | Lazy |
+| `/posts/:id` | `PostEditorPage` | `content:read` | Lazy |
+| `/advanced/listings` | `ListingListPage` | `content:read` | Lazy |
+| `/advanced/listings/:id` | `ListingEditorPage` | `content:read` | Lazy |
+| `/advanced/filters` | `ListingFiltersPage` | `content:read` | Lazy |
+| `/advanced/search` | `ListingSearchPage` | `content:read` | Lazy |
+| `/advanced/booking` | `BookingPage` | `booking:read` | Lazy |
+| `/advanced/reviews` | `ReviewsModerationPage` | `reviews:read` | Lazy |
+| `/advanced/commerce` | `CommerceListPage` | `commerce:read` | Lazy |
+| `/advanced/commerce/:id` | `CommerceEditorPage` | `commerce:read` | Lazy |
+| `/advanced/popups` | `PopupsListPage` | `popups:read` | Lazy |
+| `/advanced/popups/:id` | `PopupEditorPage` | `popups:read` | Lazy |
+| `/advanced/solution-kits` | `SolutionKitsPage` | `solution-kits:read` | Lazy |
+| `/pages` | `PageListPage` | `content:read` | Lazy |
+| `/pages/:id` | `PageEditor` | `content:read` | Lazy |
+| `/media` | `MediaLibraryPage` | `media:read` | Lazy |
+| `/menus` | `MenuListPage` | `menus:read` | Lazy |
+| `/menus/:id` | `MenuEditorPage` | `menus:read` | Lazy |
+| `/users` | `UsersRolesPage` | `users:read` or `roles:read` | Lazy with `authPermissions` |
+| `/roles` | `PermissionsMatrixPage` | `roles:read` | Lazy with `authPermissions` |
+| `/themes` | `ThemesPage` | `themes:read` | Lazy |
+| `/advanced/widgets` | `WidgetLibraryPage` | `widgets:read` | Lazy |
+| `/advanced/widgets/templates/:id` | `WidgetTemplateEditorPage` | `widgets:read` | Lazy |
+| `/settings`, `/settings/general` | `GeneralSettingsPage` | `settings:read` | Lazy with settings props |
+| `/settings/site` | `SiteSettingsPage` | `settings:read` | Lazy |
+| `/settings/assistant` | `AssistantSettingsPage` | `settings:read` | Lazy with settings props |
+| `/settings/security` | `SecuritySettingsPage` | `settings:read` | Lazy |
+| `/settings/security/ip-allowlist` | `IpAllowlistPage` | `settings:read` | Lazy |
+| `/settings/security/sessions` | `SessionsPage` | `settings:read` | Lazy |
+| `/settings/security/login-alerts` | `LoginAlertsPage` | `settings:read` | Lazy |
+| `/settings/api-keys` | `ApiKeysPage` | `settings:read` | Lazy |
+| `/settings/webhooks` | `WebhooksPage` | `settings:read` | Lazy |
+| `/settings/email` | `EmailSettingsPage` | `settings:read` | Lazy |
+| `/settings/storage` | `StorageSettingsPage` | `settings:read` | Lazy |
+| `/settings/integrations` | `IntegrationsPage` | `settings:read` | Lazy |
+| `/store` | `PluginStorePage` | `store:browse` | Lazy |
+| `/store/plugins/:id` | `PluginDetailsPage` | `store:browse` | Lazy |
 
 ## Sub-Tasks
 
@@ -118,6 +195,9 @@ Data flow:
 - Pages continue to own their internal data fetching and admin shell rendering.
 - Existing admin data prefetch remains separate from chunk loading unless a
   later task explicitly wires chunk preload.
+- `AdminLink` / router prefetch remains data-prefetch only in this family.
+  Do not add hover/focus route chunk preloading until a follow-up defines an
+  RBAC-aware preload policy.
 
 Error handling:
 
@@ -151,8 +231,15 @@ Error handling:
   - `/admin/users`
   - `/admin/roles`
   - `/admin/settings`
+  - `/admin/settings/general`
+  - `/admin/settings/assistant`
+  - `/admin/settings/site`
+  - `/admin/settings/security`
   - one Tools route such as `/admin/backups`
   - one editor-heavy route such as `/admin/pages/:id`
+- Denied settings subroutes do not call their lazy loader.
+- Public `/admin/preview` stays eager and is not asserted as a protected lazy
+  route.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -169,3 +256,4 @@ Error handling:
 - Route permissions and aliases are unchanged.
 - Settings and Users/Roles prop-passing routes behave exactly as before.
 - Denied route tests prove protected lazy chunks are not loaded before RBAC.
+- No first-step chunk preloading is wired into `AdminLink` hover/focus behavior.

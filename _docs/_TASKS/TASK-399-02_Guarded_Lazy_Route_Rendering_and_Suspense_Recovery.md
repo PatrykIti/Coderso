@@ -20,6 +20,11 @@ module. Static `element` values are not enough because JSX creation can happen
 before the route is authorized. Route definitions need a render function that is
 called after `canAccessRoute(route)` has passed.
 
+This leaf changes the route table shape for the full table, but only migrates a
+minimal protected sample into dynamic imports: one propless route such as
+`/backups` and one prop-passing route such as `/settings`. `TASK-399-03` owns
+the remaining protected route inventory.
+
 ## Source Findings
 
 - `AdminApp` currently stores `element: React.ReactNode` in route definitions.
@@ -37,9 +42,10 @@ called after `canAccessRoute(route)` has passed.
 
 | File | Required change |
 |---|---|
-| `core/admin/app/AdminApp.tsx` | Change route definitions from `element` to guarded `render(ctx)` functions for protected routes. |
+| `core/admin/app/AdminApp.tsx` | Change route definitions from `element` to guarded `render(ctx)` functions across the table; migrate one simple protected route and one prop-passing protected route to lazy descriptors. |
 | `core/admin/app/AdminRouteErrorBoundary.tsx` | New small error boundary for dynamic import failures and reload affordance. |
-| `tests/vitest/admin/adminApp.test.tsx` | Cover denied routes not invoking lazy loaders, Suspense fallback, and prop-passing route behavior. |
+| `tests/vitest/admin/AdminRouteErrorBoundary.test.tsx` | New focused tests for route chunk failure UI and reset behavior. |
+| `tests/vitest/admin/adminApp.test.tsx` | Cover denied routes not invoking lazy loaders, setup wizard not invoking target loaders, Suspense fallback, SSR bootstrap, and prop-passing route behavior. |
 
 ## Implementation Pseudocode
 
@@ -67,14 +73,17 @@ type RouteMatch = {
 };
 
 const route = resolveRoute(canonicalRelativePath, routes);
+if (isProtected && authState === "checking") return <Loading />;
+if (isProtected && authState !== "authenticated") return redirectToLogin();
 if (isProtected && !canAccessRoute(route)) {
   return { ...route, render: () => <AccessDenied /> };
 }
+if (shouldShowSetupWizard(...)) return <SetupWizard ... />;
 
 const routeElement = match.render(routeRenderContext);
 
 return (
-  <AdminRouteErrorBoundary>
+  <AdminRouteErrorBoundary resetKey={canonicalRelativePath}>
     <Suspense fallback={<Loading />}>{routeElement}</Suspense>
   </AdminRouteErrorBoundary>
 );
@@ -86,6 +95,12 @@ Error boundary shape:
 class AdminRouteErrorBoundary extends React.Component<Props, State> {
   static getDerivedStateFromError(error: unknown) {
     return { error };
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.error) {
+      this.setState({ error: null });
+    }
   }
 
   render() {
@@ -105,6 +120,8 @@ Data flow:
 - Auth bootstrap resolves before protected route rendering.
 - `resolveRoute` returns metadata and a render callback, not a pre-created page.
 - `canAccessRoute` checks permission metadata.
+- Setup wizard routing is decided before the protected route render callback is
+  invoked, so incomplete setup does not load the target page chunk.
 - Only allowed routes call `render(ctx)`, which creates a lazy route component.
 - Suspense displays the existing `Loading` UI while the route chunk loads.
 
@@ -112,6 +129,9 @@ Error handling:
 
 - Dynamic-import failure renders a bounded error state with a manual reload.
 - The boundary must not auto-reload in a loop.
+- The boundary hides stack traces, generated chunk URLs, and query strings from
+  visible UI copy.
+- The boundary resets when `canonicalRelativePath` changes.
 - Unknown routes still render `NotFound`.
 - Denied routes still render `AccessDenied` and do not trigger lazy loader
   promise creation.
@@ -133,11 +153,16 @@ Error handling:
 - `bun run test:vitest -- tests/vitest/admin/adminApp.test.tsx`
 - Add/adjust tests for:
   - denied route does not call the route loader;
+  - setup wizard route does not call the target route loader;
+  - protected-route `renderToString` bootstrap/loading path does not call lazy
+    route loaders;
   - allowed lazy route shows fallback then page;
-  - `/login` remains eager and does not show lazy fallback;
+  - `/login`, `/2fa`, `/reset`, `/reset/confirm`, and `/preview` remain eager
+    and do not show lazy fallback;
   - Users/Roles receive `authPermissions`;
   - Settings routes receive the same save/loading/error props;
   - settings clients are not called for users without `settings:read`.
+- `bun run test:vitest -- tests/vitest/admin/AdminRouteErrorBoundary.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
@@ -155,4 +180,8 @@ Error handling:
 - Suspense fallback is scoped inside admin providers and does not remove theme
   token style or toaster.
 - Dynamic import failure is recoverable without exposing sensitive details.
+- The error boundary offers a manual reload button, never loops reloads, and
+  resets on route changes.
 - Existing AdminApp tests remain green after async route rendering adjustments.
+- `TASK-399-02` leaves the full route migration to `TASK-399-03`; only the
+  selected simple and prop-passing protected routes are lazy in this leaf.

@@ -4,6 +4,9 @@ Date: 2026-06-04
 Version: Unreleased
 Tasks: TASK-399, TASK-399-01, TASK-399-02, TASK-399-03, TASK-399-04, TASK-399-05
 
+Planning note: this entry records the first task draft only. It does not close
+TASK-399 or any TASK-399 leaf.
+
 ## Key Changes
 
 ### Admin UI / Build Performance

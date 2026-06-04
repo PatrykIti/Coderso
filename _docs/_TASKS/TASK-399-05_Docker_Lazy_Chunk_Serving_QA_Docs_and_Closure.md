@@ -28,6 +28,9 @@ image build.
   Docker image on every PR.
 - `core/server/httpServer.ts` serves admin assets and falls back to
   `index.html` for admin SPA routes.
+- `core/package.json` currently has `build:site`; `TASK-399-04` adds
+  `build:admin`, and the Dockerfile should use those named scripts instead of
+  inline Vite commands.
 
 ## Sub-Tasks
 
@@ -40,6 +43,9 @@ image build.
 | `_docs/ARCHITECTURE.md` | Record the admin route-level code-splitting contract and eager/lazy route partition. |
 | `_docs/RELEASE_PROCESS.md` | Note local Docker smoke expectations when admin bundle/chunk serving changes. |
 | `tests/README.md` | Record bundle/Docker smoke commands if they become standard validation. |
+| `Dockerfile` | Use `bun run build:admin` and `bun run build:site` after the named scripts exist. |
+| `.github/workflows/coderso-pr-gates.yml` or equivalent workflow | Add or document Docker build smoke coverage if not covered by the bundle gate. |
+| `tests/unit/server/adminAssetsRouting.test.ts` | Extend hashed JS asset, custom admin path, and deep-link fallback coverage. |
 | `_docs/_TASKS/README.md` | Move TASK-399 family rows through Done when completed. |
 | `_docs/_CHANGELOG/README.md` | Add closure changelog row if not covered by the planning entry. |
 | `_docs/_CHANGELOG/*.md` | Changelog entry listing parent and every closed leaf ID. |
@@ -53,12 +59,17 @@ docker build \
   -f Dockerfile .
 
 run image or local production server with built dist/client
+if DATABASE_URL is required for production boot:
+  set -a && source .env && set +a
+  verify DB reachability or record that runtime smoke is blocked
 
 request:
   GET /admin/ -> 200 index.html
   GET /admin/assets/index-*.js -> 200 application/javascript
   GET /admin/assets/<lazy-route-chunk>-*.js -> 200 application/javascript
   GET /admin/pages/example -> 200 index.html fallback
+  repeat asset/deep-link checks for custom admin path if configured, or record
+  custom admin path as explicitly out-of-scope with a follow-up task
 
 browser/manual network smoke:
   login route eager
@@ -78,6 +89,9 @@ Error handling:
 
 - If Docker is unavailable, record exact command/status and run the closest
   local production server smoke; do not claim Docker validation passed.
+- If the production server cannot boot because the configured `DATABASE_URL` is
+  unavailable, record the DB preflight result and do not claim runtime smoke
+  passed.
 - If a lazy chunk 404s, fix serving/base path behavior before closing.
 - If the largest remaining lazy route chunk still triggers Vite warning, record
   it as a follow-up target instead of hiding the warning.
@@ -87,8 +101,10 @@ Error handling:
 - Endpoint visibility: same-origin static admin assets only.
 - Auth model: admin route data remains session-authenticated; static chunks do
   not bypass API auth.
-- RBAC: route chunks may download after navigation intent, but protected data
-  fetches remain guarded by existing APIs and route permissions.
+- RBAC: route chunks may download only after allowed guarded render in this
+  first family. Do not add hover/focus chunk preloading unless a follow-up
+  defines an RBAC-aware preload policy. Protected data fetches remain guarded
+  by existing APIs and route permissions.
 - CSRF: unchanged.
 - Rate-limit bucket: unchanged static asset serving.
 - Reject unknown validation: unchanged.
@@ -102,11 +118,16 @@ Error handling:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Admin targeted Vitest tests from previous leaves.
-- `bun x vite build --config vite.config.ts` from `core/`
-- bundle guard script from `TASK-399-04`
+- `bun --cwd core build:admin`
+- `bun run check:admin-bundle`
+- `bun test tests/unit/server/adminAssetsRouting.test.ts`
 - `docker build -t coderso-docker-smoke:lazy-routes --build-arg APP_VERSION=0.0.0-lazy-routes -f Dockerfile .`
+- `docker run --env-file .env -p 3000:3000 coderso-docker-smoke:lazy-routes`
+  when DB/runtime prerequisites are available.
 - Production serving smoke for `/admin/`, `/admin/assets/index-*.js`, at least
   one lazy route chunk, and a deep-link admin route fallback.
+- Workflow/release tests for any changed PR gate files, or a clear note if the
+  workflow can only be validated by CI.
 - `git diff --check`
 - `bun run precommit` before final commit.
 
@@ -124,6 +145,9 @@ Error handling:
 - Docker build succeeds with the code-split admin output.
 - Production static serving returns 200 for entry and lazy route chunks.
 - Deep-link admin routes still fall back to `index.html`.
+- Admin asset routing tests cover hashed `.js` files, nested admin deep links,
+  and custom admin base paths or explicitly document a follow-up if custom base
+  path validation is not available locally.
 - Final docs include before/after metrics and any remaining follow-up chunk
   target.
 - Task board, task files, and changelog leaf coverage are synchronized.
