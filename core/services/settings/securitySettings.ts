@@ -321,19 +321,13 @@ const normalizeRateLimitBucket = (
   };
 };
 
-const normalizeBotProvider = (
-  value: unknown,
-  fallback: BotProtectionSettings["provider"]
-) => {
+const normalizeBotProvider = (value: unknown, fallback: BotProtectionSettings["provider"]) => {
   if (value === undefined) return fallback;
   if (value === "recaptcha_v3") return value;
   throw new Error("security_settings_invalid");
 };
 
-const normalizeBotSecret = (
-  value: unknown,
-  fallback: BotProtectionSettings["secretKey"]
-) => {
+const normalizeBotSecret = (value: unknown, fallback: BotProtectionSettings["secretKey"]) => {
   if (value === undefined) return fallback;
   if (value === null) return null;
   if (typeof value === "string") {
@@ -448,11 +442,7 @@ const mergeSecuritySettings = (
     assertAllowedKeys(update.session, ["ttlDays", "maxPerUser", "singleSession"]);
   }
   if (update.loginAlerts) {
-    assertAllowedKeys(update.loginAlerts, [
-      "enabled",
-      "notifyOnNewDevice",
-      "notifyOnNewLocation",
-    ]);
+    assertAllowedKeys(update.loginAlerts, ["enabled", "notifyOnNewDevice", "notifyOnNewLocation"]);
   }
   if (update.botProtection) {
     assertAllowedKeys(update.botProtection, [
@@ -515,10 +505,7 @@ const mergeSecuritySettings = (
   const bucketUpdates = update.rateLimit?.buckets ?? {};
 
   const rateLimitBuckets: Record<RateLimitBucket, RateLimitBucketConfig> = {
-    auth: normalizeRateLimitBucket(
-      bucketUpdates.auth ?? legacyAuth,
-      base.rateLimit.buckets.auth
-    ),
+    auth: normalizeRateLimitBucket(bucketUpdates.auth ?? legacyAuth, base.rateLimit.buckets.auth),
     admin_read: normalizeRateLimitBucket(
       bucketUpdates.admin_read ?? legacyAdmin,
       base.rateLimit.buckets.admin_read
@@ -535,10 +522,7 @@ const mergeSecuritySettings = (
       bucketUpdates.public_write,
       base.rateLimit.buckets.public_write
     ),
-    assistant: normalizeRateLimitBucket(
-      bucketUpdates.assistant,
-      base.rateLimit.buckets.assistant
-    ),
+    assistant: normalizeRateLimitBucket(bucketUpdates.assistant, base.rateLimit.buckets.assistant),
   };
 
   const rateLimit = {
@@ -556,9 +540,13 @@ const mergeSecuritySettings = (
     referrerPolicy: normalizeString(update.headers?.referrerPolicy, base.headers.referrerPolicy, {
       allowNull: true,
     }),
-    permissionsPolicy: normalizeString(update.headers?.permissionsPolicy, base.headers.permissionsPolicy, {
-      allowNull: true,
-    }),
+    permissionsPolicy: normalizeString(
+      update.headers?.permissionsPolicy,
+      base.headers.permissionsPolicy,
+      {
+        allowNull: true,
+      }
+    ),
     csp: normalizeString(update.headers?.csp, base.headers.csp, { allowNull: true }),
     hsts: normalizeString(update.headers?.hsts, base.headers.hsts, { allowNull: true }),
   };

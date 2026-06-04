@@ -24,6 +24,10 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
   - Internal forms (`submission_access=internal`) require admin session or API key and skip captcha by default.
   - Score thresholds per action (login/reset/public_write).
   - Moze byc wlaczone w dev (opcja `enforceOnLocalhost`).
+  - Konfiguracja reCAPTCHA jest backend-owned i pochodzi z
+    `security.settings.botProtection`; klucze reCAPTCHA nie sa bootstrapowane z
+    ENV. Publiczny endpoint zwraca wylacznie safe `siteKey`, a `secretKey`
+    pozostaje backend-only.
 - Security headers:
   - Content-Security-Policy (basic)
   - X-Content-Type-Options
@@ -154,6 +158,9 @@ Semgrep local suppressions:
 ### Konfiguracja runtime (Admin UI)
 
 - Wszystkie ustawienia middleware sa trzymane w DB (`settings.key = security.settings`).
+- reCAPTCHA v3 jest konfigurowana w `security.settings.botProtection`; publiczny
+  endpoint zwraca wylacznie safe `siteKey`, a `secretKey` pozostaje
+  backend-only.
 - Zmiany wchodza w zycie bez restartu (runtime config).
 - Zakres konfigurowalny z panelu:
   - requestId (enabled, headerName)

@@ -664,7 +664,41 @@ test("appointment form runtime executes recaptcha and submits consent metadata",
   });
 });
 
+test("appointment form runtime preloads recaptcha when captcha is resolved", () => {
+  let appendedScript: HTMLScriptElement | null = null;
+  vi.spyOn(document.head, "appendChild").mockImplementation((node) => {
+    appendedScript = node as HTMLScriptElement;
+    return node;
+  });
+
+  renderAppointmentFormDom(
+    normalizeAppointmentFormData({
+      ...appointmentFormDefaults,
+      resolved: {
+        captcha: {
+          provider: "recaptcha_v3",
+          siteKey: "site-key-1",
+          action: "public_write",
+        },
+      },
+    })
+  );
+
+  const script = appendedScript as HTMLScriptElement | null;
+  expect(script?.getAttribute("src")).toContain(
+    "https://www.google.com/recaptcha/api.js?render=site-key-1"
+  );
+});
+
 test("appointment form runtime skips captcha for an internal selected service in a mixed catalog", async () => {
+  const execute = vi.fn().mockResolvedValue("unused-captcha-token");
+  (
+    window as Window & {
+      grecaptcha?: {
+        execute: (siteKey: string, options: { action: string }) => Promise<string>;
+      };
+    }
+  ).grecaptcha = { execute };
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
     json: async () => ({
@@ -710,5 +744,6 @@ test("appointment form runtime skips captcha for an internal selected service in
     serviceId: "internal-service",
     formNonce: "",
   });
+  expect(execute).not.toHaveBeenCalled();
   expect(payload).not.toHaveProperty("captchaToken");
 });

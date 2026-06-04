@@ -88,20 +88,47 @@ const runtimeClientScript = String.raw`(() => {
   };
 
   let recaptchaLoader = null;
+  let recaptchaLoaderSiteKey = null;
 
   const ensureRecaptchaClient = (siteKey) => {
     if (window.grecaptcha?.execute) return Promise.resolve();
-    if (recaptchaLoader) return recaptchaLoader;
+    if (recaptchaLoader && recaptchaLoaderSiteKey === siteKey) return recaptchaLoader;
+    recaptchaLoaderSiteKey = siteKey;
     recaptchaLoader = new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = "https://www.google.com/recaptcha/api.js?render=" + encodeURIComponent(siteKey);
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error("recaptcha_load_failed"));
+      script.onerror = () => {
+        recaptchaLoader = null;
+        recaptchaLoaderSiteKey = null;
+        reject(new Error("recaptcha_load_failed"));
+      };
       document.head.appendChild(script);
     });
     return recaptchaLoader;
+  };
+
+  const waitForRecaptchaReady = () =>
+    new Promise((resolve, reject) => {
+      if (!window.grecaptcha?.execute) {
+        reject(new Error("recaptcha_unavailable"));
+        return;
+      }
+      if (typeof window.grecaptcha.ready !== "function") {
+        resolve();
+        return;
+      }
+      window.grecaptcha.ready(() => resolve());
+    });
+
+  const preloadRecaptchaClient = (siteKey) => {
+    const normalizedSiteKey = (siteKey || "").trim();
+    if (!normalizedSiteKey) return;
+    void ensureRecaptchaClient(normalizedSiteKey)
+      .then(waitForRecaptchaReady)
+      .catch(() => undefined);
   };
 
   const resolveCaptchaToken = async (form) => {
@@ -109,6 +136,7 @@ const runtimeClientScript = String.raw`(() => {
     const action = (form.dataset.captchaAction || "public_write").trim() || "public_write";
     if (!siteKey) return undefined;
     await ensureRecaptchaClient(siteKey);
+    await waitForRecaptchaReady();
     if (!window.grecaptcha?.execute) {
       throw new Error("recaptcha_unavailable");
     }
@@ -960,6 +988,7 @@ const runtimeClientScript = String.raw`(() => {
     applySelection(getSelection(flowId));
     setSubmittingState(false);
     renderNotesCounter();
+    preloadRecaptchaClient(form.dataset.captchaSiteKey);
 
     form.addEventListener(
       "input",

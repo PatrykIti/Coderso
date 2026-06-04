@@ -253,6 +253,10 @@ test("form runtime acquires captcha, posts payload, and hides the form body on s
   };
 
   const form = installFormRuntime(data);
+  const script = appendedScript as HTMLScriptElement | null;
+  expect(script?.getAttribute("src")).toContain(
+    "https://www.google.com/recaptcha/api.js?render=site-key-1"
+  );
   setInputValue('input[name="name"]', "Alice");
 
   const assignSpy = vi.spyOn(window.location, "assign").mockImplementation(() => undefined);

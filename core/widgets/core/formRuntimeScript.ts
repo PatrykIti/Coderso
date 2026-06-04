@@ -10,33 +10,60 @@ const runtimeClientScript = String.raw`(() => {
 
   const FORM_SELECTOR = 'form[data-nextless-form-runtime="1"]';
   let recaptchaScriptPromise = null;
+  let recaptchaScriptSiteKey = null;
 
   const loadRecaptcha = (siteKey) => {
     if (!siteKey) return Promise.reject(new Error("recaptcha_site_key_missing"));
     if (window.grecaptcha && typeof window.grecaptcha.execute === "function") {
       return Promise.resolve();
     }
-    if (recaptchaScriptPromise) return recaptchaScriptPromise;
+    if (recaptchaScriptPromise && recaptchaScriptSiteKey === siteKey) return recaptchaScriptPromise;
 
+    recaptchaScriptSiteKey = siteKey;
     recaptchaScriptPromise = new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = "https://www.google.com/recaptcha/api.js?render=" + encodeURIComponent(siteKey);
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error("recaptcha_load_failed"));
+      script.onerror = () => {
+        recaptchaScriptPromise = null;
+        recaptchaScriptSiteKey = null;
+        reject(new Error("recaptcha_load_failed"));
+      };
       document.head.appendChild(script);
     });
 
     return recaptchaScriptPromise;
   };
 
+  const waitForRecaptchaReady = () =>
+    new Promise((resolve, reject) => {
+      if (!window.grecaptcha || typeof window.grecaptcha.execute !== "function") {
+        reject(new Error("recaptcha_unavailable"));
+        return;
+      }
+      if (typeof window.grecaptcha.ready !== "function") {
+        resolve();
+        return;
+      }
+      window.grecaptcha.ready(() => resolve());
+    });
+
+  const preloadRecaptcha = (siteKey) => {
+    const normalizedSiteKey = (siteKey || "").trim();
+    if (!normalizedSiteKey) return;
+    void loadRecaptcha(normalizedSiteKey).then(waitForRecaptchaReady).catch(() => undefined);
+  };
+
   const executeRecaptcha = async (siteKey, action) => {
-    await loadRecaptcha(siteKey);
+    const normalizedSiteKey = (siteKey || "").trim();
+    await loadRecaptcha(normalizedSiteKey);
+    await waitForRecaptchaReady();
     if (!window.grecaptcha || typeof window.grecaptcha.execute !== "function") {
       throw new Error("recaptcha_unavailable");
     }
-    return window.grecaptcha.execute(siteKey, { action: action || "public_write" });
+    return window.grecaptcha.execute(normalizedSiteKey, { action: action || "public_write" });
   };
 
   const readNamedValue = (input) => {
@@ -526,6 +553,7 @@ const runtimeClientScript = String.raw`(() => {
     if (!form.dataset.currentStep) {
       form.dataset.currentStep = "1";
     }
+    preloadRecaptcha(form.dataset.formCaptchaSiteKey);
 
     hydrateProgress(form);
     refreshFieldLogic(form);
