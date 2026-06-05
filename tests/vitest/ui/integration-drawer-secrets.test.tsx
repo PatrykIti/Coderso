@@ -114,3 +114,51 @@ test("IntegrationDrawer requires confirmation before saving edited secrets", asy
     view.cleanup();
   }
 });
+
+test("IntegrationDrawer clears secret values without rendering existing secret payloads", async () => {
+  const onSave = vi.fn(async () => undefined);
+  const view = mount(
+    <IntegrationDrawer
+      open
+      onOpenChange={() => undefined}
+      onSave={onSave}
+      integration={{
+        id: "resend",
+        name: "Resend",
+        status: "connected",
+        description: "Transactional email",
+        scopes: ["email:send"],
+        fields: [
+          {
+            key: "apiKey",
+            label: "API Key",
+            type: "secret",
+            required: true,
+            configured: true,
+            value: "re_shouldNeverRender123456",
+          },
+        ],
+      }}
+    />
+  );
+
+  try {
+    const secretInput = document.body.querySelector('input[type="password"]');
+    if (!(secretInput instanceof HTMLInputElement)) {
+      throw new Error("missing secret input");
+    }
+
+    expect(secretInput.value).toBe("");
+    expect(document.body.textContent).not.toContain("re_shouldNeverRender123456");
+    expect(document.body.innerHTML).not.toContain("re_shouldNeverRender123456");
+
+    await clickButton("Update secret");
+    await clickButton("Save Changes");
+    await clickButton("Save secrets");
+    await flushEffects();
+
+    expect(onSave).toHaveBeenCalledWith("resend", { apiKey: null });
+  } finally {
+    view.cleanup();
+  }
+});

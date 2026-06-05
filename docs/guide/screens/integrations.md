@@ -6,6 +6,7 @@ language: "en"
 keywords:
   - integrations
   - third party services
+  - resend
   - connect service
   - integration scopes
   - request integration
@@ -30,7 +31,7 @@ In the current UI, this route includes:
 
 Use Integrations when the product needs a managed provider connection, whether
 that is a full service setup or a single encrypted provider secret such as an
-LLM API key. The current route is designed for:
+LLM API key or the Resend email API key. The current route is designed for:
 - browsing the available service catalog,
 - searching by provider name or description,
 - narrowing the list by category,
@@ -68,6 +69,8 @@ workspace that balances catalog review with configuration and procurement.
 8. Treat required fields as the minimum viable contract for that provider.
 9. Treat secret updates carefully; the drawer explicitly distinguishes regular
    fields from secret fields that may already be configured.
+   For Resend, the only supported field is the secret `API Key`; there is no
+   Base URL field.
 10. Review `Security scopes` before saving so the provider’s access model is
     understood.
 11. Use `Save Changes` only when the provider configuration is coherent. When a
@@ -103,6 +106,9 @@ Use this safe integrations workflow when you want fewer misconfigurations:
   already models that distinction explicitly.
 - Secret review dialogs show provider and field labels only. They must not echo
   the submitted secret value.
+- Clearing the Resend API key intentionally disconnects Resend. Email Settings
+  can still remain selected as Resend, but sends stay pending until a key is
+  saved again or Email Settings switches providers.
 - `Request new` is part of governance. It keeps the product from turning into a
   one-off unmanaged integration layer.
 
@@ -120,6 +126,9 @@ Use this safe integrations workflow when you want fewer misconfigurations:
   update the field intentionally; only secret fields stay masked behind
   `Update secret`, while plain text and URL fields remain visible. Secret
   updates require the extra review dialog.
+- Resend needs setup:
+  open Resend, update the `API Key` secret, review the secret confirmation, then
+  return to Email Settings and select Resend as the email provider.
 - Too many services look relevant:
   filter by category first, then compare description and scope expectations.
 
@@ -141,7 +150,8 @@ Use this safe integrations workflow when you want fewer misconfigurations:
 2. Confirm required fields are filled intentionally.
 3. Confirm secret handling is understood.
 4. Confirm the listed security scopes are acceptable.
-5. Save changes deliberately or submit a request for a missing service.
+5. For Resend, confirm only the `API Key` field is present.
+6. Save changes deliberately or submit a request for a missing service.
 
 # Security
 

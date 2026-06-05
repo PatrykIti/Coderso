@@ -11,7 +11,7 @@ import { EmailSettingsPage } from "../../../core/admin/ui/settings/EmailSettings
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const emailServices = vi.hoisted(() => {
-  const settings = {
+  const smtpSettings = {
     provider: "smtp" as const,
     smtp: {
       host: "smtp.example.com",
@@ -20,10 +20,27 @@ const emailServices = vi.hoisted(() => {
       user: "mailer",
       password: { configured: true },
     },
+    resend: {
+      integrationId: "resend" as const,
+      apiKey: { configured: false },
+      status: "disconnected" as const,
+    },
     from: { name: "Coderso", email: "hello@example.com" },
-    status: { configured: true },
+    status: { provider: "smtp" as const, configured: true },
+  };
+  const resendSettings = {
+    ...smtpSettings,
+    provider: "resend" as const,
+    resend: {
+      integrationId: "resend" as const,
+      apiKey: { configured: true },
+      status: "connected" as const,
+    },
+    status: { provider: "resend" as const, configured: true },
   };
   const state = {
+    smtpSettings,
+    resendSettings,
     getEmailSettings: vi.fn(),
     updateEmailSettings: vi.fn(),
     sendTestEmail: vi.fn(),
@@ -33,8 +50,8 @@ const emailServices = vi.hoisted(() => {
       state.updateEmailSettings.mockReset();
       state.sendTestEmail.mockReset();
       state.listEmailLogs.mockReset();
-      state.getEmailSettings.mockResolvedValue(settings);
-      state.updateEmailSettings.mockResolvedValue(settings);
+      state.getEmailSettings.mockResolvedValue(smtpSettings);
+      state.updateEmailSettings.mockResolvedValue(smtpSettings);
       state.sendTestEmail.mockResolvedValue({ ok: true });
       state.listEmailLogs.mockResolvedValue([]);
     },
@@ -107,11 +124,73 @@ afterEach(() => {
 test("EmailSettingsPage renders email settings cards", () => {
   const html = renderAdminUi(<EmailSettingsPage />);
 
+  expect(html).toContain("Email Provider");
   expect(html).toContain("SMTP Server Configuration");
   expect(html).toContain("Default Sender Info");
   expect(html).toContain("Test Email");
   expect(html).toContain("Connection Status");
   expect(html).toContain("Auto-save settings across all screens");
+});
+
+test("EmailSettingsPage saves Resend provider without SMTP payload", async () => {
+  emailServices.updateEmailSettings.mockResolvedValue(emailServices.resendSettings);
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/settings/email">
+      <EmailSettingsPage />
+    </AdminRouterProvider>
+  );
+
+  try {
+    await flushEffects();
+    await clickButton("Resend");
+
+    expect(view.container.querySelector("#smtp-host")).toBeNull();
+    expect(view.container.textContent).toContain("Resend Provider");
+    expect(view.container.textContent).toContain("Configure Resend");
+
+    await clickButton("Save changes");
+    await flushEffects();
+
+    expect(emailServices.updateEmailSettings).toHaveBeenCalledWith({
+      provider: "resend",
+      from: { name: "Coderso", email: "hello@example.com" },
+    });
+    expect(view.container.textContent).not.toContain("re_");
+    expect(view.container.innerHTML).not.toContain("apiKey");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("EmailSettingsPage displays provider labels in delivery logs", async () => {
+  emailServices.listEmailLogs.mockResolvedValue([
+    {
+      id: "log-1",
+      recipient: "lead@example.com",
+      subject: "Lead",
+      status: "delivered",
+      provider: "resend",
+      messageId: "email-1",
+      error: null,
+      createdAt: "2026-06-05T10:00:00.000Z",
+    },
+  ]);
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/settings/email">
+      <EmailSettingsPage />
+    </AdminRouterProvider>
+  );
+
+  try {
+    await flushEffects();
+    await clickButton("View delivery logs");
+    await flushEffects();
+
+    expect(document.body.textContent).toContain("lead@example.com");
+    expect(document.body.textContent).toContain("resend");
+  } finally {
+    view.cleanup();
+  }
 });
 
 test("EmailSettingsPage renders test email CTA", () => {

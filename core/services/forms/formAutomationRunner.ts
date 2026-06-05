@@ -3,7 +3,6 @@ import {
   runFormAutomationCore,
   summarizeAutomationRunStatus,
   isFormActionRunStatus,
-  type AutomationEmailSettings,
   type AutomationEntryLookup,
   type FormAutomationRunnerCoreDeps,
   type RunFormAutomationInput,
@@ -38,11 +37,6 @@ const sleep = (ms: number) =>
     setTimeout(resolve, ms);
   });
 
-const getEmailSettings = async (): Promise<AutomationEmailSettings> => {
-  const { getEmailSettingsInternal } = await import("../email/emailSettingsService");
-  return getEmailSettingsInternal();
-};
-
 const getEntryBySlug = async (
   contentTypeId: string,
   slug: string
@@ -72,10 +66,9 @@ const runtimeDeps: FormAutomationRunnerCoreDeps = {
     const { getForm } = await import("./formsService");
     return (await getForm(formId))?.settings;
   },
-  getEmailSettings,
-  createEmailTransport: async (settings) => {
-    const { createTransport } = await import("../email/emailProvider");
-    return createTransport(settings);
+  sendEmail: async (message) => {
+    const { sendSystemEmail } = await import("../email/emailSettingsService");
+    return sendSystemEmail(message);
   },
   getEntryBySlug,
   createEntry: async (contentTypeId, input) => {

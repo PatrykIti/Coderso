@@ -29,8 +29,13 @@ test("getEmailSettings hits GET /settings/email", async () => {
         user: "mailer",
         password: { configured: true },
       },
+      resend: {
+        integrationId: "resend",
+        apiKey: { configured: false },
+        status: "disconnected",
+      },
       from: { name: "Support", email: "support@example.com" },
-      status: { configured: true },
+      status: { provider: "smtp", configured: true },
     });
   };
 
@@ -63,8 +68,13 @@ test("updateEmailSettings puts JSON payload with CSRF", async () => {
         user: "mailer",
         password: { configured: true },
       },
+      resend: {
+        integrationId: "resend",
+        apiKey: { configured: false },
+        status: "disconnected",
+      },
       from: { name: "Support", email: "support@example.com" },
-      status: { configured: true },
+      status: { provider: "smtp", configured: true },
     });
   };
 
@@ -95,6 +105,55 @@ test("updateEmailSettings puts JSON payload with CSRF", async () => {
       from: { name: "Support", email: "support@example.com" },
     });
     expect(result.smtp.port).toBe(465);
+  } finally {
+    resetCsrfToken();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("updateEmailSettings accepts resend provider payload without SMTP fields", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      provider: "resend",
+      smtp: {
+        host: "smtp.example.com",
+        port: 465,
+        secure: true,
+        user: "mailer",
+        password: { configured: true },
+      },
+      resend: {
+        integrationId: "resend",
+        apiKey: { configured: true },
+        status: "connected",
+      },
+      from: { name: "Support", email: "support@example.com" },
+      status: { provider: "resend", configured: true },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    const result = await updateEmailSettings({
+      provider: "resend",
+      from: { name: "Support", email: "support@example.com" },
+    });
+
+    expect(calls[1]?.input).toBe("/admin/api/settings/email");
+    expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({
+      provider: "resend",
+      from: { name: "Support", email: "support@example.com" },
+    });
+    expect(result.provider).toBe("resend");
+    expect(result.resend.apiKey.configured).toBe(true);
+    expect(JSON.stringify(result)).not.toContain("re_");
   } finally {
     resetCsrfToken();
     globalThis.fetch = originalFetch;

@@ -13,9 +13,7 @@ import type {
 
 const now = new Date("2026-02-18T10:00:00.000Z");
 
-const createAction = (
-  overrides: Partial<NormalizedFormAction>
-): NormalizedFormAction => ({
+const createAction = (overrides: Partial<NormalizedFormAction>): NormalizedFormAction => ({
   id: overrides.id ?? "action-1",
   type: overrides.type ?? "success_message",
   label: overrides.label ?? "Action",
@@ -26,10 +24,7 @@ const createAction = (
   orderIndex: overrides.orderIndex ?? 0,
 });
 
-const createRunRecord = (
-  input: CreateFormActionRunInput,
-  index: number
-): FormActionRunRecord => ({
+const createRunRecord = (input: CreateFormActionRunInput, index: number): FormActionRunRecord => ({
   id: `run-${index + 1}`,
   formId: input.formId,
   submissionId: input.submissionId ?? null,
@@ -58,24 +53,9 @@ const createCoreDeps = (
   resolveNextAttempt: async () => 1,
   getRunById: async () => null,
   getFormSettingsById: async () => null,
-  getEmailSettings: async () => ({
-    smtp: {
-      host: "smtp.example.com",
-      port: 587,
-      secure: false,
-      user: "mailer@example.com",
-      password: "secret",
-    },
-    from: {
-      name: "Coderso",
-      email: "hello@example.com",
-    },
-  }),
-  createEmailTransport: async () => ({
-    sendMail: async () => ({
-      messageId: "message-1",
-      response: "queued",
-    }),
+  sendEmail: async () => ({
+    messageId: "message-1",
+    response: "queued",
   }),
   getEntryBySlug: async () => null,
   createEntry: async () => ({ id: "entry-1" }),
@@ -129,7 +109,7 @@ test("runFormAutomationCore executes ordered actions and merges runtime outcome"
   expect(logs[1]?.status).toBe("success");
 });
 
-test("runFormAutomationCore renders email actions with configured sender defaults", async () => {
+test("runFormAutomationCore renders email actions through provider-agnostic sender", async () => {
   const deliveries: Array<Record<string, string | undefined>> = [];
 
   const result = await runFormAutomationCore(
@@ -155,15 +135,13 @@ test("runFormAutomationCore renders email actions with configured sender default
           },
         }),
       ],
-      createEmailTransport: async () => ({
-        sendMail: async (message) => {
-          deliveries.push(message);
-          return {
-            messageId: "message-1",
-            response: "queued",
-          };
-        },
-      }),
+      sendEmail: async (message) => {
+        deliveries.push(message);
+        return {
+          messageId: "message-1",
+          response: "queued",
+        };
+      },
     })
   );
 
@@ -171,10 +149,53 @@ test("runFormAutomationCore renders email actions with configured sender default
   expect(result.runs[0]?.status).toBe("success");
   expect(deliveries).toEqual([
     {
-      from: "Coderso <hello@example.com>",
       to: "lead@example.com",
       subject: "Lead Patryk",
       text: "Body for Patryk",
+    },
+  ]);
+});
+
+test("runFormAutomationCore passes rendered sender overrides without SMTP config", async () => {
+  const deliveries: Array<Record<string, string | undefined>> = [];
+
+  await runFormAutomationCore(
+    {
+      formId: "form-1",
+      submissionId: "submission-1",
+      submissionPayload: {
+        email: "lead@example.com",
+        owner: "Sales",
+      },
+      submittedAt: now,
+    },
+    createCoreDeps({
+      listActions: async () => [
+        createAction({
+          id: "email",
+          type: "email",
+          label: "Send email",
+          config: {
+            to: "{{submission.email}}",
+            subject: "Lead",
+            fromName: "{{submission.owner}}",
+            fromEmail: "team@example.com",
+          },
+        }),
+      ],
+      sendEmail: async (message) => {
+        deliveries.push(message);
+        return { messageId: "message-1", response: "queued" };
+      },
+    })
+  );
+
+  expect(deliveries).toEqual([
+    {
+      to: "lead@example.com",
+      subject: "Lead",
+      fromName: "Sales",
+      fromEmail: "team@example.com",
     },
   ]);
 });
@@ -215,6 +236,44 @@ test("runFormAutomationCore skips action when condition is not met", async () =>
   expect(result.runs).toHaveLength(1);
   expect(result.runs[0]?.status).toBe("skipped");
   expect(logs[0]?.responsePayload).toEqual({ reason: "condition_not_met" });
+});
+
+test("runFormAutomationCore redacts provider secrets from email action failures", async () => {
+  const logs: CreateFormActionRunInput[] = [];
+
+  const result = await runFormAutomationCore(
+    {
+      formId: "form-1",
+      submissionId: "submission-1",
+      submissionPayload: {
+        email: "lead@example.com",
+      },
+    },
+    createCoreDeps({
+      listActions: async () => [
+        createAction({
+          id: "email",
+          type: "email",
+          label: "Send email",
+          config: {
+            to: "{{submission.email}}",
+            subject: "Lead",
+          },
+        }),
+      ],
+      createRun: async (input) => {
+        logs.push(input);
+        return createRunRecord(input, logs.length - 1);
+      },
+      sendEmail: async () => {
+        throw new Error("Provider rejected Bearer re_secretvalue123456");
+      },
+    })
+  );
+
+  expect(result.runs[0]?.status).toBe("failed");
+  expect(logs[0]?.errorMessage).toBe("Provider rejected Bearer [REDACTED]");
+  expect(JSON.stringify(logs[0])).not.toContain("re_secretvalue123456");
 });
 
 test("runFormAutomationCore stops when action fails and continueOnError is false", async () => {

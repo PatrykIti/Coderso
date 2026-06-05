@@ -6,7 +6,8 @@
 **Category:** Settings / Email / Domain
 **Estimated Effort:** Medium
 **Dependencies:** TASK-404-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-05
 
 ---
 

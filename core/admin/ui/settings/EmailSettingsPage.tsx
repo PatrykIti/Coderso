@@ -1,4 +1,15 @@
-import { CheckCircle2, History, Info, KeyRound, Send, User, Wifi } from "lucide-react";
+import {
+  CheckCircle2,
+  History,
+  Info,
+  KeyRound,
+  Mail,
+  Plug,
+  Send,
+  Server,
+  User,
+  Wifi,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -14,10 +25,13 @@ import {
   sendTestEmail,
   updateEmailSettings,
   type EmailDeliveryLog,
+  type EmailProviderId,
+  type EmailSettingsUpdate,
   type EmailSettingsResponse,
 } from "@/services/emailClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
@@ -36,10 +50,12 @@ const toLogItem = (log: EmailDeliveryLog): EmailLogItem => ({
   recipient: log.recipient,
   subject: log.subject,
   status: log.status === "failed" ? "failed" : log.status === "delivered" ? "delivered" : "queued",
+  provider: log.provider || "smtp",
   timestamp: formatTimestamp(log.createdAt),
 });
 
 type EmailSettingsDraft = {
+  provider: EmailProviderId;
   smtpHost: string;
   smtpPort: string;
   smtpSecure: boolean;
@@ -51,6 +67,7 @@ type EmailSettingsDraft = {
 };
 
 const emptyEmailDraft: EmailSettingsDraft = {
+  provider: "smtp",
   smtpHost: "",
   smtpPort: "",
   smtpSecure: false,
@@ -62,6 +79,7 @@ const emptyEmailDraft: EmailSettingsDraft = {
 };
 
 const toEmailDraft = (settings: EmailSettingsResponse): EmailSettingsDraft => ({
+  provider: settings.provider,
   smtpHost: settings.smtp.host ?? "",
   smtpPort: settings.smtp.port ? String(settings.smtp.port) : "",
   smtpSecure: settings.smtp.secure,
@@ -78,9 +96,43 @@ const getEmailDirtySignature = (draft: EmailSettingsDraft) =>
     smtpPassword: draft.updatePassword && draft.smtpPassword.trim() ? "draft-secret" : "",
   });
 
+const ProviderOption = ({
+  active,
+  description,
+  icon: Icon,
+  label,
+  onSelect,
+}: {
+  active: boolean;
+  description: string;
+  icon: typeof Server;
+  label: string;
+  onSelect: () => void;
+}) => (
+  <button
+    type="button"
+    aria-pressed={active}
+    onClick={onSelect}
+    className={`flex min-h-24 w-full items-start gap-3 rounded-md border px-4 py-3 text-left transition-colors ${
+      active
+        ? "border-primary bg-primary/10 text-foreground"
+        : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+    }`}
+  >
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-background">
+      <Icon className="h-4 w-4" />
+    </span>
+    <span className="space-y-1">
+      <span className="block text-sm font-semibold">{label}</span>
+      <span className="block text-xs leading-5">{description}</span>
+    </span>
+  </button>
+);
+
 export function EmailSettingsPage() {
   const [logsOpen, setLogsOpen] = useState(false);
   const [settings, setSettings] = useState<EmailSettingsResponse | null>(null);
+  const [provider, setProvider] = useState<EmailProviderId>("smtp");
   const [smtpHost, setSmtpHost] = useState("");
   const [smtpPort, setSmtpPort] = useState("");
   const [smtpSecure, setSmtpSecure] = useState(false);
@@ -104,33 +156,6 @@ export function EmailSettingsPage() {
   const [sendTestReviewOpen, setSendTestReviewOpen] = useState(false);
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } = useSettingsAutoSave();
 
-  const loadSettings = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await getEmailSettings();
-      const draft = toEmailDraft(data);
-      setSettings(data);
-      setSmtpHost(draft.smtpHost);
-      setSmtpPort(draft.smtpPort);
-      setSmtpSecure(draft.smtpSecure);
-      setSmtpUser(draft.smtpUser);
-      setFromName(draft.fromName);
-      setFromEmail(draft.fromEmail);
-      setUpdatePassword(draft.updatePassword);
-      setSmtpPassword(draft.smtpPassword);
-      setSavedSignature(getEmailDirtySignature(draft));
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load email settings.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     let active = true;
     getEmailSettings()
@@ -138,6 +163,7 @@ export function EmailSettingsPage() {
         if (!active) return;
         const draft = toEmailDraft(data);
         setSettings(data);
+        setProvider(draft.provider);
         setSmtpHost(draft.smtpHost);
         setSmtpPort(draft.smtpPort);
         setSmtpSecure(draft.smtpSecure);
@@ -164,28 +190,66 @@ export function EmailSettingsPage() {
     };
   }, []);
 
-  const statusConfigured = settings?.status.configured ?? false;
+  const smtpPasswordConfigured = updatePassword
+    ? Boolean(smtpPassword.trim())
+    : (settings?.smtp.password.configured ?? false);
+  const smtpConfigured = Boolean(
+    smtpHost.trim() && smtpUser.trim() && smtpPasswordConfigured && fromEmail.trim()
+  );
+  const resendConfigured = Boolean(
+    settings?.resend.status === "connected" && settings.resend.apiKey.configured && fromEmail.trim()
+  );
+  const statusConfigured = provider === "resend" ? resendConfigured : smtpConfigured;
   const statusItems = useMemo(
-    () => [
-      {
-        title: "Host Configured",
-        description: smtpHost ? "Host set" : "Missing host",
-        icon: Wifi,
-      },
-      {
-        title: "Authentication",
-        description:
-          settings?.smtp.user && settings.smtp.password.configured
-            ? "Credentials stored"
-            : "Missing credentials",
-        icon: KeyRound,
-      },
-    ],
-    [smtpHost, settings]
+    () =>
+      provider === "resend"
+        ? [
+            {
+              title: "Resend API Key",
+              description:
+                settings?.resend.apiKey.configured && settings?.resend.status === "connected"
+                  ? "Secret stored"
+                  : "Missing API key",
+              icon: KeyRound,
+            },
+            {
+              title: "Sender Address",
+              description: fromEmail.trim() ? "Sender set" : "Missing sender",
+              icon: Mail,
+            },
+          ]
+        : [
+            {
+              title: "Host Configured",
+              description: smtpHost ? "Host set" : "Missing host",
+              icon: Wifi,
+            },
+            {
+              title: "Authentication",
+              description:
+                settings?.smtp.user && smtpPasswordConfigured
+                  ? "Credentials stored"
+                  : "Missing credentials",
+              icon: KeyRound,
+            },
+          ],
+    [fromEmail, provider, settings, smtpHost, smtpPasswordConfigured]
   );
 
   const autoSaveValue = useMemo(
     () => ({
+      provider,
+      smtpHost,
+      smtpPort,
+      smtpSecure,
+      smtpUser,
+      smtpPassword: updatePassword && smtpPassword.trim() ? "draft-secret" : "",
+      updatePassword,
+      fromName,
+      fromEmail,
+    }),
+    [
+      provider,
       smtpHost,
       smtpPort,
       smtpSecure,
@@ -194,17 +258,17 @@ export function EmailSettingsPage() {
       updatePassword,
       fromName,
       fromEmail,
-    }),
-    [smtpHost, smtpPort, smtpSecure, smtpUser, smtpPassword, updatePassword, fromName, fromEmail]
+    ]
   );
 
   const portValue = smtpPort.trim();
   const portNumber = portValue ? Number(portValue) : null;
-  const portInvalid = Boolean(portValue) && !Number.isFinite(portNumber);
-  const passwordInvalid = updatePassword && !smtpPassword.trim();
+  const portInvalid = provider === "smtp" && Boolean(portValue) && !Number.isFinite(portNumber);
+  const passwordInvalid = provider === "smtp" && updatePassword && !smtpPassword.trim();
   const hasValidationErrors = portInvalid || passwordInvalid;
   const currentDraft = useMemo(
     () => ({
+      provider,
       smtpHost,
       smtpPort,
       smtpSecure,
@@ -214,7 +278,17 @@ export function EmailSettingsPage() {
       fromName,
       fromEmail,
     }),
-    [fromEmail, fromName, smtpHost, smtpPassword, smtpPort, smtpSecure, smtpUser, updatePassword]
+    [
+      provider,
+      fromEmail,
+      fromName,
+      smtpHost,
+      smtpPassword,
+      smtpPort,
+      smtpSecure,
+      smtpUser,
+      updatePassword,
+    ]
   );
   useRegisterSettingsDirty(!isLoading && getEmailDirtySignature(currentDraft) !== savedSignature);
 
@@ -224,33 +298,45 @@ export function EmailSettingsPage() {
     setError(null);
     setSuccess(null);
     try {
-      const normalizedPortValue = smtpPort.trim();
-      const port = normalizedPortValue ? Number(normalizedPortValue) : null;
-      if (normalizedPortValue && !Number.isFinite(port)) {
-        throw new Error("invalid_port");
+      let port: number | null = null;
+      if (provider === "smtp") {
+        const normalizedPortValue = smtpPort.trim();
+        port = normalizedPortValue ? Number(normalizedPortValue) : null;
+        if (normalizedPortValue && !Number.isFinite(port)) {
+          throw new Error("invalid_port");
+        }
+
+        if (updatePassword && !smtpPassword.trim()) {
+          throw new Error("password_required");
+        }
       }
 
-      if (updatePassword && !smtpPassword.trim()) {
-        throw new Error("password_required");
-      }
-
-      const payload = {
-        smtp: {
-          host: smtpHost.trim() || null,
-          port,
-          secure: smtpSecure,
-          user: smtpUser.trim() || null,
-          ...(updatePassword ? { password: smtpPassword.trim() || null } : {}),
-        },
-        from: {
-          name: fromName.trim() || null,
-          email: fromEmail.trim() || null,
-        },
+      const from = {
+        name: fromName.trim() || null,
+        email: fromEmail.trim() || null,
       };
+      const payload: EmailSettingsUpdate =
+        provider === "smtp"
+          ? {
+              provider: "smtp",
+              smtp: {
+                host: smtpHost.trim() || null,
+                port,
+                secure: smtpSecure,
+                user: smtpUser.trim() || null,
+                ...(updatePassword ? { password: smtpPassword.trim() || null } : {}),
+              },
+              from,
+            }
+          : {
+              provider: "resend",
+              from,
+            };
 
       const updated = await updateEmailSettings(payload);
       const draft = toEmailDraft(updated);
       setSettings(updated);
+      setProvider(draft.provider);
       setSmtpHost(draft.smtpHost);
       setSmtpPort(draft.smtpPort);
       setSmtpSecure(draft.smtpSecure);
@@ -281,6 +367,7 @@ export function EmailSettingsPage() {
     fromName,
     isLoading,
     isSaving,
+    provider,
     smtpHost,
     smtpPassword,
     smtpPort,
@@ -300,7 +387,6 @@ export function EmailSettingsPage() {
       }
       await sendTestEmail({ to: recipient });
       setSuccess("Test email sent.");
-      await loadSettings();
     } catch (err) {
       if (err instanceof Error && err.message === "recipient_required") {
         setError("Provide a recipient address.");
@@ -381,28 +467,97 @@ export function EmailSettingsPage() {
           <div className="border-b bg-background/70 px-6 py-4">
             <div className="space-y-1">
               <h1 className="text-2xl font-semibold">Email Settings</h1>
-              <p className="text-sm text-muted-foreground">System configuration - SMTP outbound</p>
+              <p className="text-sm text-muted-foreground">
+                System configuration - outbound email providers
+              </p>
             </div>
           </div>
           <div className="flex-1 p-6">
             <div className="mx-auto max-w-5xl">
               <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                 <div className="space-y-6">
-                  <SmtpCard
-                    host={smtpHost}
-                    port={smtpPort}
-                    secure={smtpSecure}
-                    user={smtpUser}
-                    password={smtpPassword}
-                    passwordConfigured={settings?.smtp.password.configured ?? false}
-                    updatePassword={updatePassword}
-                    onHostChange={setSmtpHost}
-                    onPortChange={setSmtpPort}
-                    onSecureChange={setSmtpSecure}
-                    onUserChange={setSmtpUser}
-                    onPasswordChange={setSmtpPassword}
-                    onTogglePassword={setUpdatePassword}
-                  />
+                  <Card className="border-muted/60">
+                    <CardHeader className="border-b">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Mail className="h-4 w-4 text-primary" />
+                        Email Provider
+                      </CardTitle>
+                      <CardDescription>Choose how Coderso sends outbound email.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 md:grid-cols-2">
+                      <ProviderOption
+                        active={provider === "smtp"}
+                        icon={Server}
+                        label="Manual SMTP"
+                        description="Use a configured SMTP host and stored SMTP credentials."
+                        onSelect={() => setProvider("smtp")}
+                      />
+                      <ProviderOption
+                        active={provider === "resend"}
+                        icon={Send}
+                        label="Resend"
+                        description="Use the encrypted Resend API key from Integrations."
+                        onSelect={() => setProvider("resend")}
+                      />
+                    </CardContent>
+                  </Card>
+                  {provider === "smtp" ? (
+                    <SmtpCard
+                      host={smtpHost}
+                      port={smtpPort}
+                      secure={smtpSecure}
+                      user={smtpUser}
+                      password={smtpPassword}
+                      passwordConfigured={settings?.smtp.password.configured ?? false}
+                      updatePassword={updatePassword}
+                      onHostChange={setSmtpHost}
+                      onPortChange={setSmtpPort}
+                      onSecureChange={setSmtpSecure}
+                      onUserChange={setSmtpUser}
+                      onPasswordChange={setSmtpPassword}
+                      onTogglePassword={setUpdatePassword}
+                    />
+                  ) : (
+                    <Card className="border-muted/60">
+                      <CardHeader className="border-b">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Send className="h-4 w-4 text-primary" />
+                          Resend Provider
+                        </CardTitle>
+                        <CardDescription>
+                          Uses the encrypted Resend API key stored in Integrations.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between rounded-md border bg-muted/30 px-4 py-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase text-muted-foreground">
+                              API Key
+                            </p>
+                            <p className="text-sm font-semibold">
+                              {settings?.resend.apiKey.configured ? "Stored" : "Not configured"}
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={
+                              settings?.resend.status === "connected"
+                                ? "border-emerald-200 text-emerald-600"
+                                : "border-amber-200 text-amber-700"
+                            }
+                          >
+                            {settings?.resend.status === "connected" ? "Connected" : "Needs key"}
+                          </Badge>
+                        </div>
+                        <Button asChild variant="outline" className="gap-2">
+                          <AdminLink href="/admin/settings/integrations" prefetch>
+                            <Plug className="h-4 w-4" />
+                            Configure Resend
+                          </AdminLink>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
                   <Card className="border-muted/60">
                     <CardHeader className="border-b">
                       <CardTitle className="flex items-center gap-2 text-base">
@@ -456,7 +611,7 @@ export function EmailSettingsPage() {
                         Test Email
                       </CardTitle>
                       <CardDescription>
-                        Send a test email to verify your SMTP settings.
+                        Send a test email through the active provider.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -551,9 +706,8 @@ export function EmailSettingsPage() {
                         <span className="font-semibold">Security Note</span>
                       </div>
                       <p className="text-xs text-blue-700">
-                        For production environments, we recommend using dedicated providers like
-                        Postmark or Resend rather than generic SMTP servers for better
-                        deliverability.
+                        Store provider secrets only in protected settings screens. Delivery logs
+                        show provider, status, and message IDs without credential payloads.
                       </p>
                     </CardContent>
                   </Card>
@@ -599,7 +753,7 @@ export function EmailSettingsPage() {
         open={sendTestReviewOpen}
         onOpenChange={setSendTestReviewOpen}
         title="Send test email?"
-        description="This sends a real email through the configured SMTP provider."
+        description="This sends a real email through the configured email provider."
         targetLabel={testRecipient.trim()}
         confirmLabel="Send test email"
         confirmingLabel="Sending..."

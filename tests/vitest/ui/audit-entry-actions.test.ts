@@ -50,6 +50,7 @@ const auditLog: AuditLog = {
     sessionId: "session-secret",
     nested: {
       apiKey: "sk-secretapikey",
+      resend: "Bearer re_resendSecretValue123456",
       headers: {
         authorization: "Bearer sk-testsecret",
         cookie: "session=abc",
@@ -57,7 +58,11 @@ const auditLog: AuditLog = {
         "x-csrf-token": "csrf-header",
       },
     },
-    list: ["Bearer sk-or-v1-abcdef1234567890", { sessionToken: "session-token" }],
+    list: [
+      "Bearer sk-or-v1-abcdef1234567890",
+      "raw re_anotherSecretValue123456",
+      { sessionToken: "session-token" },
+    ],
     publicValue: "ok",
   },
 };
@@ -84,6 +89,8 @@ test("redactAuditPayload strips sensitive keys and token-like values recursively
   expect(serialized).not.toContain("csrf-secret");
   expect(serialized).not.toContain("session-secret");
   expect(serialized).not.toContain("sk-testsecret");
+  expect(serialized).not.toContain("re_resendSecretValue123456");
+  expect(serialized).not.toContain("re_anotherSecretValue123456");
   expect(serialized).not.toContain("session-token");
   expect(serialized).toContain("[REDACTED]");
 

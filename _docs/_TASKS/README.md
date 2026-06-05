@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 25 tasks
+- **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2223 tasks
+- **Done:** 2238 tasks
 
 ---
 
@@ -88,21 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-404 | Resend Email Provider and Settings UX | High | Large | Index/parent family for Resend connector, provider-aware Email Settings UX, backend transport, security contract, tests, and docs |
-| TASK-404-01 | Resend Integration Secret Contract | High | Medium | Technical subtask for Resend registry, encrypted API key storage, redaction, and key-clear state |
-| TASK-404-01-L01 | Resend Connector and Secret Storage | High | Medium | Execution leaf for `resend` registry field allowlist, encrypted `apiKey`, runtime config, and unknown-key rejection |
-| TASK-404-01-L02 | Secret Redaction and Key Clear State | High | Medium | Execution leaf for `re_...` redaction and disconnected state after clearing Resend API key |
-| TASK-404-02 | Email Provider Backend Contract | High | Large | Technical subtask for provider normalization, shared transport, Resend egress, delivery logs, and form automation |
-| TASK-404-02-L01 | Provider Settings and Normalization | High | Medium | Execution leaf for `smtp | resend` settings contract, legacy SMTP default, and non-destructive provider switching |
-| TASK-404-02-L02 | Provider Transport and Delivery Logs | High | Large | Execution leaf for shared SMTP/Resend transport, fixed Resend endpoint, sanitized errors, and provider-aware logs |
-| TASK-404-02-L03 | Form Automation Provider Resolution | High | Medium | Execution leaf for provider-aware Form Action email sends without hidden SMTP-only behavior |
-| TASK-404-03 | Admin API and Client Contract | High | Medium | Technical subtask for strict schemas, route error mapping, audit metadata, and admin DTOs |
-| TASK-404-03-L01 | Email Settings Routes and Error Mapping | High | Medium | Execution leaf for Email Settings provider schema, route registration, permission guards, and `map*Error` coverage |
-| TASK-404-03-L02 | Integrations Routes and Admin DTOs | High | Medium | Execution leaf for Resend integration route/client DTO redaction and unknown-key rejection |
-| TASK-404-04 | Admin UX Validation and Closure | High | Large | Technical subtask for provider-aware Email Settings UX, Integrations UX, docs, changelog, and final gates |
-| TASK-404-04-L01 | Email Settings Provider UX | High | Large | Execution leaf for provider selector, hidden SMTP fields in Resend mode, configured panel, dirty/autosave, and logs |
-| TASK-404-04-L02 | Integrations Provider UX | High | Medium | Execution leaf for Resend integration card/drawer secret update and clear flows without secret DOM leakage |
-| TASK-404-04-L03 | Validation Docs Changelog and Board Closure | High | Medium | Execution leaf for source-of-truth docs, changelog, scanner checks, gates, and family closure |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -129,6 +114,21 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-404 | Resend Email Provider and Settings UX | High | Large | Done (2026-06-05): Resend integration secret storage, provider-aware email transport/settings, admin UX, docs, tests, and closure completed. |
+| TASK-404-01 | Resend Integration Secret Contract | High | Medium | Done (2026-06-05): Resend registry, encrypted `apiKey`, redaction, and clear/disconnected state completed. |
+| TASK-404-01-L01 | Resend Connector and Secret Storage | High | Medium | Done (2026-06-05): `resend` accepts only encrypted `apiKey`; summaries remain redacted and runtime config is backend-only. |
+| TASK-404-01-L02 | Secret Redaction and Key Clear State | High | Medium | Done (2026-06-05): `re_...` audit redaction and `apiKey: null` disconnected behavior completed. |
+| TASK-404-02 | Email Provider Backend Contract | High | Large | Done (2026-06-05): `smtp | resend` provider resolution, transport, logs, and form automation path completed. |
+| TASK-404-02-L01 | Provider Settings and Normalization | High | Medium | Done (2026-06-05): legacy SMTP default and non-destructive provider switching completed. |
+| TASK-404-02-L02 | Provider Transport and Delivery Logs | High | Large | Done (2026-06-05): fixed Resend egress, bounded headers, sanitized errors, and provider-aware delivery logs completed. |
+| TASK-404-02-L03 | Form Automation Provider Resolution | High | Medium | Done (2026-06-05): form email actions now use provider-aware `sendSystemEmail` through a pure injected sender. |
+| TASK-404-03 | Admin API and Client Contract | High | Medium | Done (2026-06-05): strict provider schemas, route error mapping, and admin DTOs completed. |
+| TASK-404-03-L01 | Email Settings Routes and Error Mapping | High | Medium | Done (2026-06-05): provider-aware Email Settings schema, permission order, and `mapEmailSettingsError` coverage completed. |
+| TASK-404-03-L02 | Integrations Routes and Admin DTOs | High | Medium | Done (2026-06-05): Resend DTO redaction and unknown-key rejection coverage completed. |
+| TASK-404-04 | Admin UX Validation and Closure | High | Large | Done (2026-06-05): provider selector, Resend integration UX, docs, changelog, and validation completed. |
+| TASK-404-04-L01 | Email Settings Provider UX | High | Large | Done (2026-06-05): Resend mode hides SMTP fields, preserves SMTP settings, links to Integrations, and labels logs by provider. |
+| TASK-404-04-L02 | Integrations Provider UX | High | Medium | Done (2026-06-05): Resend card/drawer supports update and clear flows without rendering secret values. |
+| TASK-404-04-L03 | Validation Docs Changelog and Board Closure | High | Medium | Done (2026-06-05): source-of-truth docs, changelog, board, targeted tests, lint, and typecheck completed. |
 | TASK-403 | Agent Task Workflow Rule Alignment | Medium | Medium | Done (2026-06-04): AGENTS task workflow rules, task board format, Coderso task example, and changelog numbering were aligned. |
 | TASK-402 | reCAPTCHA Runtime Configuration and Eager Client Loading | High | Medium | Done (2026-06-04): backend-owned bot-protection settings and eager v3 client loading for auth and public form runtimes. |
 | TASK-401 | DB Runtime Test Idle Timeout | Medium | Small | Done (2026-06-04): DB-backed media runtime tests now opt into a 30-second Bun.serve idle timeout to avoid socket resets under full-lane load. |

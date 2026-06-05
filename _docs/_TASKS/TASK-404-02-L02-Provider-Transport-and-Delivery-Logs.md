@@ -6,7 +6,8 @@
 **Category:** Settings / Email / Transport
 **Estimated Effort:** Large
 **Dependencies:** TASK-404-01-L01, TASK-404-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-05
 
 ---
 

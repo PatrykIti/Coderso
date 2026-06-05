@@ -185,6 +185,9 @@ Semgrep local suppressions:
 - Raw SMTP/storage/integration/webhook/API-key credentials, bot-protection
   secret, provider keys, session/csrf material i inne sekrety nie moga trafic
   do `localStorage`, debug payloadow ani cache-bus eventow.
+- Credential-bearing Email Settings and Integrations endpoints return only
+  configured flags for SMTP passwords and provider secrets such as
+  `resend.apiKey`.
 - Credential-bearing Settings endpoints pozostaja uncached w browser storage;
   mutacje moga co najwyzej zaktualizowac redacted configured flags.
 
@@ -297,6 +300,16 @@ Rotacja klucza:
 - ENV tylko po stronie serwera.
 - Opcjonalny pepper do hasel: `AUTH_PASSWORD_PEPPER` (rotacja wymaga resetu hasel).
 - Hasla SMTP sa szyfrowane w DB (AES-256-GCM) tym samym master key.
+- Resend API keys sa konfigurowane jako encrypted integration secret
+  `resend.apiKey`, redagowane jako `re_...`, i nigdy nie sa zapisywane w Email
+  Settings ani zwracane do admin browser payloadow.
+- Resend email egress uzywa stalego backend-only endpointu
+  `https://api.resend.com/emails` z `Authorization: Bearer ...`, wymaganym
+  `User-Agent`, opcjonalnym `Idempotency-Key` ograniczonym do 256 znakow, i bez
+  konfigurowalnego `baseUrl`.
+- Delivery logs moga zapisywac provider, recipient, subject, status, message id
+  i redagowany/blokowany blad, ale nie credential payloady ani upstream bearer
+  material.
 - Klucze providerow LLM (np. OpenAI/OpenRouter) traktujemy jak sekrety:
   - trzymane poza frontendem i poza plain text w logach,
   - redagowane w audit metadata oraz error payloadach.

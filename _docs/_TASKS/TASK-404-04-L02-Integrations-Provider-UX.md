@@ -6,7 +6,8 @@
 **Category:** Settings / Integrations / Admin UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-404-01-L01, TASK-404-01-L02, TASK-404-03-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-05
 
 ---
 

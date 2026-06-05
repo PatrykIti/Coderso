@@ -1,4 +1,4 @@
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, test } from "bun:test";
 import { sql, inArray } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
@@ -24,19 +24,26 @@ async function canConnect() {
   }
 }
 
-const cleanupIntegrations = new Set<string>();
+const touchedIntegrationIds = ["slack", "openrouter", "resend"] as const;
 const cleanupRequests: string[] = [];
+let originalIntegrations: Array<typeof integrations.$inferSelect> = [];
+
+beforeAll(async () => {
+  if (!hasDb) return;
+  originalIntegrations = await db
+    .select()
+    .from(integrations)
+    .where(inArray(integrations.id, [...touchedIntegrationIds]));
+});
 
 afterAll(async () => {
+  if (!hasDb) return;
   if (cleanupRequests.length > 0) {
-    await db
-      .delete(integrationRequests)
-      .where(inArray(integrationRequests.id, cleanupRequests));
+    await db.delete(integrationRequests).where(inArray(integrationRequests.id, cleanupRequests));
   }
-  if (cleanupIntegrations.size > 0) {
-    await db
-      .delete(integrations)
-      .where(inArray(integrations.id, Array.from(cleanupIntegrations)));
+  await db.delete(integrations).where(inArray(integrations.id, [...touchedIntegrationIds]));
+  if (originalIntegrations.length > 0) {
+    await db.insert(integrations).values(originalIntegrations);
   }
 });
 
@@ -49,7 +56,6 @@ testIfDb("update and list integrations", async () => {
   }
 
   const updated = await updateIntegration("slack", { config });
-  cleanupIntegrations.add(updated.id);
 
   expect(updated.id).toBe("slack");
   expect(updated.status).toBe(hasMasterKey ? "connected" : "disconnected");
@@ -82,7 +88,6 @@ testIfDb("openrouter runtime config resolves decrypted secret values", async () 
   }
 
   const updated = await updateIntegration("openrouter", { config });
-  cleanupIntegrations.add(updated.id);
 
   const runtime = await getIntegrationRuntimeConfig("openrouter");
   expect(runtime).not.toBeNull();
@@ -98,3 +103,55 @@ testIfDb("openrouter runtime config resolves decrypted secret values", async () 
     expect(updated.status).toBe("disconnected");
   }
 });
+
+testIfDb(
+  "resend integration stores only redacted api key summaries and rejects unknown fields",
+  async () => {
+    const reset = await updateIntegration("resend", { config: { apiKey: null } });
+
+    const list = await listIntegrations();
+    const definition = list.find((item) => item.id === "resend");
+
+    expect(definition).toBeTruthy();
+    expect(definition?.category).toBe("Communication");
+    expect(definition?.scopes).toEqual(["email:send"]);
+    expect(definition?.fields).toEqual([
+      {
+        key: "apiKey",
+        label: "API Key",
+        type: "secret",
+        required: true,
+        secret: true,
+        value: null,
+        configured: false,
+      },
+    ]);
+
+    await expect(
+      updateIntegration("resend", { config: { baseUrl: "https://evil.test" } })
+    ).rejects.toThrow("integration_config_invalid");
+
+    if (!hasMasterKey) {
+      return;
+    }
+
+    const updated = await updateIntegration("resend", {
+      config: { apiKey: "re_testSecretValue123456" },
+    });
+
+    expect(updated.status).toBe("connected");
+    expect(updated.fields[0]?.configured).toBe(true);
+    expect(updated.fields[0]?.value).toBeNull();
+    expect(JSON.stringify(updated)).not.toContain("re_testSecretValue123456");
+
+    const runtime = await getIntegrationRuntimeConfig("resend");
+    expect(runtime?.apiKey).toBe("re_testSecretValue123456");
+
+    const cleared = await updateIntegration("resend", { config: { apiKey: null } });
+    expect(cleared.status).toBe("disconnected");
+    expect(cleared.fields[0]?.configured).toBe(false);
+
+    const clearedRuntime = await getIntegrationRuntimeConfig("resend");
+    expect(clearedRuntime?.apiKey).toBeNull();
+  }
+);

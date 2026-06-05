@@ -1,4 +1,4 @@
-import { BarChart3, MessageSquare, Plus, Search, ShieldAlert, Zap } from "lucide-react";
+import { BarChart3, MessageSquare, Plus, Search, Send, ShieldAlert, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ const iconMap: Record<
 > = {
   "google-analytics": { icon: BarChart3, accent: "amber" },
   slack: { icon: MessageSquare, accent: "violet" },
+  resend: { icon: Send, accent: "emerald" },
   zapier: { icon: Zap, accent: "orange" },
   sentry: { icon: ShieldAlert, accent: "rose" },
   openai: { icon: Zap, accent: "violet" },

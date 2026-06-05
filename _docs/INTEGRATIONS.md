@@ -22,6 +22,17 @@ Overview of external integrations configured in Admin UI (`Settings -> Integrati
   - `webhookUrl` (`secret`, required)
   - `defaultChannel` (`text`, optional)
 
+### `resend`
+- Category: `Communication`
+- Used by Email Settings when `provider` is `resend`.
+- Fields:
+  - `apiKey` (`secret`, required, placeholder `re_...`)
+- No `baseUrl` field is supported; the backend transport always uses
+  `https://api.resend.com/emails`.
+- Clearing `apiKey` leaves Email Settings provider selection intact but marks
+  Resend disconnected until a key is saved again or Email Settings switches
+  back to SMTP.
+
 ### `zapier`
 - Category: `Automation`
 - Fields:

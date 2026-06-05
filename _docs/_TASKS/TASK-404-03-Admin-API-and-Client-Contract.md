@@ -6,7 +6,8 @@
 **Category:** Settings / API / Admin Clients
 **Estimated Effort:** Medium
 **Dependencies:** TASK-404-01, TASK-404-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-05
 
 ---
 

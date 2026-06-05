@@ -6,7 +6,8 @@
 **Category:** Settings / Email / Admin UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-404-03-L01, TASK-404-03-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-05
 
 ---
 

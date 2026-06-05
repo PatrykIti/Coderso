@@ -25,7 +25,9 @@ const record = (overrides: Partial<AuditRecord> = {}): AuditRecord => ({
     resetToken: "reset-secret",
     nested: {
       authorization: "Bearer token-secret",
+      resend: "Bearer re_resendSecretValue123456",
     },
+    delivery: "Resend key re_anotherSecretValue123456",
     safe: "public",
   },
   ...overrides,
@@ -42,6 +44,8 @@ test("buildAuditExportRow redacts sensitive payload values", () => {
   expect(payload).not.toContain("secret-password");
   expect(payload).not.toContain("reset-secret");
   expect(payload).not.toContain("token-secret");
+  expect(payload).not.toContain("re_resendSecretValue123456");
+  expect(payload).not.toContain("re_anotherSecretValue123456");
 });
 
 test("serializeAuditExportCsv escapes commas, quotes, newlines, and formula prefixes", () => {
