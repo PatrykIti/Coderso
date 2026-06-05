@@ -42,14 +42,14 @@ section-role presets for Basic mode without hardcoding one industry.
 
 | Area | Files |
 |---|---|
-| Defaults | `core/services/assistant/guidedSiteBuilderBasicDefaults.ts` |
-| Facts | `core/services/assistant/guidedSiteBuilderFacts.ts` |
-| Tests | `tests/vitest/assistant/guidedSiteBuilderBasicDefaults.test.ts` |
+| Defaults | `core/services/assistant/assistantSiteBuilderIntakeBasicDefaults.ts` |
+| Facts | `core/services/assistant/assistantSiteBuilderIntakeFacts.ts` |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeBasicDefaults.test.ts` |
 
 ## Implementation Pseudocode
 
 ```ts
-export function deriveBasicSiteMapFacts(answers: BasicGuideAnswers) {
+export function deriveBasicSiteMapFacts(answers: BasicIntakeAnswers) {
   const pageRoles = resolvePageRoles(answers.pages ?? DEFAULT_BASIC_PAGE_ROLES);
   const menu = resolveBasicMenuPreset(answers.menuPreset ?? "single-level");
   return {

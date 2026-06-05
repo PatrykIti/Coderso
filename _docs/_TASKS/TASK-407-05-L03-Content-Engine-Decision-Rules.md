@@ -12,7 +12,7 @@
 
 ## Overview
 
-Add decision rules for when guided facts require supported content engines
+Add decision rules for when intake facts require supported content engines
 instead of only static pages. Unsupported engine needs must become explicit
 gates.
 
@@ -20,7 +20,8 @@ gates.
 
 - Add rules for services, projects/portfolio, products, posts/editorial,
   testimonials/proof, team, locations, and FAQs where supported.
-- Map engine candidates to existing catalog/listing/detail blueprint helpers.
+- Map engine candidates to existing solution-kit/siteKit inputs and
+  catalog/listing/detail helpers.
 - Gate unsupported engines, unsupported fields, or unsupported listing/detail
   behavior.
 - Keep rules generic across industries and driven by page roles/goals/facts.
@@ -44,16 +45,16 @@ gates.
 
 | Area | Files |
 |---|---|
-| Decisions | `core/services/assistant/blueprints/guidedContentEngineDecisions.ts` |
-| Blueprint helpers | `core/services/assistant/blueprints/catalogFamilyPresets.ts`, related catalog/listing helpers if needed |
-| Tests | `tests/vitest/assistant/guidedContentEngineDecisions.test.ts` |
+| Decisions | `core/services/assistant/assistantSiteBuilderIntakeContentEngines.ts` |
+| SiteKit/catalog helpers | `core/services/kits/solutionKitTypes.ts`, `core/services/assistant/blueprints/catalogFamilyPresets.ts`, related catalog/listing helpers if needed |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeContentEngines.test.ts` |
 
 ## Implementation Pseudocode
 
 ```ts
-export function resolveGuidedContentEngines(facts: GuidedSiteBuilderFacts) {
+export function resolveSiteBuilderIntakeContentEngines(facts: AssistantSiteBuilderIntakeFacts) {
   return facts.siteMap.pageRoles.map((role) => {
-    const candidate = guidedEngineRegistry[role];
+    const candidate = siteBuilderIntakeEngineRegistry[role];
     if (!candidate) return staticPageOnly(role);
     if (!isEngineSupported(candidate, facts)) return gatedEngine(candidate, "engine_unsupported");
     return candidate;
@@ -63,7 +64,7 @@ export function resolveGuidedContentEngines(facts: GuidedSiteBuilderFacts) {
 
 ## Data Flow and Error Handling
 
-- Guided page roles/goals produce engine candidates after static shell assembly.
+- Intake page roles/goals produce engine candidates after static shell readiness.
 - Unsupported engines, unsupported detail pages, unsafe public writes, or missing
   required fields produce gates/needs_input.
 - Engine decisions feed later custom-screen and action assembly leaves; they do

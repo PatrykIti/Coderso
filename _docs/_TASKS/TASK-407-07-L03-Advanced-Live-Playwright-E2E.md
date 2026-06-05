@@ -12,7 +12,7 @@
 
 ## Overview
 
-Validate Advanced guided site creation through the real admin UI with design,
+Validate Advanced site-builder intake creation through the real admin UI with design,
 menu, hero, section, and reference-review choices.
 
 ## Sub-Tasks
@@ -52,13 +52,13 @@ menu, hero, section, and reference-review choices.
 ## Implementation Pseudocode
 
 ```ts
-async function runAdvancedLiveGuidedE2E(page) {
+async function runAdvancedLiveSiteBuilderIntakeE2E(page) {
   await openAdminAssistant(page);
-  await startGuidedSiteBuilder({ mode: "advanced" });
+  await startSiteBuilderIntake({ mode: "advanced" });
   await chooseDesignPreset("modern");
   await chooseAdvancedMenuHeroSections();
   await reviewReferenceBriefOrGate();
-  await confirmGuidedReview(page);
+  await confirmSiteBuilderIntakeReview(page);
   await dryRunAndExecute(page);
   await assertAdvancedPublicRuntime();
 }
@@ -67,7 +67,7 @@ async function runAdvancedLiveGuidedE2E(page) {
 ## Data Flow and Error Handling
 
 - Advanced UI choices become structured answers, then reviewed facts, then
-  strict actions.
+  existing siteKit plan input and strict actions.
 - Unsupported reference/media choices must display gates and keep execution
   safe.
 - Provider latency/failure, invalid option ids, reference scan failure, dry-run

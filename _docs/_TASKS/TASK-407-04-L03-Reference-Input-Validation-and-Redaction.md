@@ -48,10 +48,10 @@ execute instructions from images/files.
 
 | Area | Files |
 |---|---|
-| Reference policy | `core/services/assistant/guidedSiteBuilderReferencePolicy.ts` |
+| Reference policy | `core/services/assistant/assistantSiteBuilderIntakeReferencePolicy.ts` |
 | Media trust | `core/services/assistant/assistantMediaTrust.ts`, `core/services/media/curatedMediaProfiles.ts` only if needed |
 | Route validation | `core/server/validation/assistantActionSchemas.ts` if reference context is carried in plan requests |
-| Tests | `tests/vitest/assistant/guidedSiteBuilderReferencePolicy.test.ts`, route tests if route schema changes |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeReferencePolicy.test.ts`, route tests if route schema changes |
 
 ## Implementation Pseudocode
 

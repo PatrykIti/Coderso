@@ -12,15 +12,16 @@
 
 ## Overview
 
-Define how guided sessions are packaged for provider context, diagnostics, and
+Define how intake sessions are packaged for provider context, diagnostics, and
 browser-local persistence without leaking secrets or raw reference material.
-This leaf does not build visible UI controls.
+This leaf does not build visible UI controls and does not create a second
+site-builder execution context.
 
 ## Sub-Tasks
 
-- Add redacted guide diagnostic helpers with hashes/stable ids only.
-- Add policy-bounded provider context packaging from normalized guide facts.
-- Define browser-local guide state shape and size limits.
+- Add redacted intake diagnostic helpers with hashes/stable ids only.
+- Add policy-bounded provider context packaging from normalized intake facts.
+- Define browser-local intake state shape and size limits.
 - Add tests proving secrets/raw references are omitted from diagnostics,
   provider context, and local-state payloads.
 
@@ -43,26 +44,26 @@ This leaf does not build visible UI controls.
 
 | Area | Files |
 |---|---|
-| Redaction | `core/services/assistant/assistantRedaction.ts`, `core/services/assistant/guidedSiteBuilderRedaction.ts` |
+| Redaction | `core/services/assistant/assistantRedaction.ts`, `core/services/assistant/assistantSiteBuilderIntakeRedaction.ts` |
 | Provider context | `core/services/assistant/providerPlanningContext.ts` |
-| Browser state contract | `core/admin/ui/assistant/assistantConversationState.ts` or new guided state helper |
-| Tests | `tests/vitest/assistant/guidedSiteBuilderRedaction.test.ts`, admin state tests if touched |
+| Browser state contract | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/ui/setup/aiSiteWizardValidation.ts`, or new bounded intake state helper |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeRedaction.test.ts`, admin state tests if touched |
 
 ## Implementation Pseudocode
 
 ```ts
-export function redactGuidedSiteBuilderSession(session: GuidedSiteBuilderSession) {
+export function redactAssistantSiteBuilderIntakeSession(session: AssistantSiteBuilderIntakeSession) {
   return {
     version: session.version,
     mode: session.mode,
     currentStepId: session.currentStepId,
     answeredStepIds: session.answers.map((answer) => answer.stepId),
     factsHash: hashStableJson(session.facts),
-    warnings: session.securityWarnings.map(redactGuideWarning),
+    warnings: session.securityWarnings.map(redactIntakeWarning),
   };
 }
 
-export function buildGuidedProviderContext(facts: GuidedSiteBuilderFacts) {
+export function buildSiteBuilderIntakeProviderContext(facts: AssistantSiteBuilderIntakeFacts) {
   return {
     businessCategory: facts.businessProfile.category,
     goalIds: facts.siteGoals.ids,
@@ -75,7 +76,7 @@ export function buildGuidedProviderContext(facts: GuidedSiteBuilderFacts) {
 
 ## Data Flow and Error Handling
 
-- Normalized guide facts enter redaction helpers before logs, diagnostics, or
+- Normalized intake facts enter redaction helpers before logs, diagnostics, or
   provider context are built.
 - Browser state restore validates schema version and bounded payload size before
   rehydrating; invalid state is discarded and the server-normalized session wins.
@@ -98,6 +99,6 @@ export function buildGuidedProviderContext(facts: GuidedSiteBuilderFacts) {
 
 ## Acceptance Criteria
 
-- Guided diagnostics and provider context are sanitized and bounded.
-- Browser-local guide state has explicit schema/version limits.
+- Intake diagnostics and provider context are sanitized and bounded.
+- Browser-local intake state has explicit schema/version limits.
 - This leaf introduces no mode-specific UI implementation.

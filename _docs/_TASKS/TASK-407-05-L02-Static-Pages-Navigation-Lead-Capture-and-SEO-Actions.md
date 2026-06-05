@@ -13,12 +13,12 @@
 ## Overview
 
 Assemble strict actions for static pages, navigation/footer, lead capture, and
-SEO from the guided shell graph. This leaf must use existing action family
+SEO from the compiled siteKit plan input. This leaf must use existing action family
 contracts and same-plan locators.
 
 ## Sub-Tasks
 
-- Convert guided shell graph inputs into page create/update actions.
+- Convert compiled siteKit static-shell inputs into page create/update actions.
 - Assemble menu/footer actions from normalized menu facts and same-plan locators.
 - Add lead-capture/contact actions when selected by goals and supported forms.
 - Add SEO document actions for generated pages.
@@ -44,28 +44,31 @@ contracts and same-plan locators.
 
 | Area | Files |
 |---|---|
-| Action assembly | `core/services/assistant/blueprints/guidedStaticSiteActionAssembler.ts` or existing assembler |
+| Action assembly | `core/services/assistant/siteBuilderPlanAdapter.ts`, `core/services/assistant/actionPlannerService.ts`, or existing assembler |
 | Contracts | existing `core/services/assistant/actionFamilyContracts.ts` only if action coverage changes |
-| Tests | `tests/vitest/assistant/guidedStaticSiteActionAssembler.test.ts` |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeStaticActions.test.ts` |
 
 ## Implementation Pseudocode
 
 ```ts
-export function assembleGuidedStaticSiteActions(shell: GuidedBlueprintShellInput) {
-  const pageActions = buildPageActions(shell);
-  const menuActions = buildMenuActions(shell, samePlanLocators(pageActions));
-  const leadActions = buildLeadCaptureActions(shell);
-  const seoActions = buildSeoActions(shell, pageActions);
-  return validateAssistantActions([...pageActions, ...menuActions, ...leadActions, ...seoActions]);
+export function buildReviewedSiteKitStaticPlan(siteKit: AssistantSiteKitPlanInput) {
+  const plan = buildSiteKitActionPlan(siteKit);
+  const normalized = normalizeAssistantActionPlan(plan);
+  assertPlanContainsExpectedStaticFamilies(normalized, {
+    requiredFamilies: ["page", "navigation", "seo"],
+    optionalFamilies: ["form", "settings"],
+  });
+  return normalized;
 }
 ```
 
 ## Data Flow and Error Handling
 
-- Shell graph input becomes strict page/menu/footer/contact/SEO actions.
+- Compiled siteKit input enters the existing `buildSiteKitActionPlan` path and
+  normalizes into strict page/menu/footer/contact/SEO actions.
 - Missing locators, unsupported contact paths, unsafe hrefs, schema failures, or
   RBAC conflicts become blocking conflicts or gates before execute.
-- The assembler is idempotent: repeated dry-runs should produce stable actions
+- The existing siteKit planner path is idempotent: repeated dry-runs should produce stable actions
   and same-plan locators.
 
 ## Testing Requirements

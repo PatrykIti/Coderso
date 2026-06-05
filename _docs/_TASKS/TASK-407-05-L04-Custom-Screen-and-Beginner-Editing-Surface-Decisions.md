@@ -42,14 +42,14 @@ editing surfaces and when unsupported editing surfaces must be gated.
 
 | Area | Files |
 |---|---|
-| Decisions | `core/services/assistant/blueprints/guidedCustomScreenDecisions.ts` |
+| Decisions | `core/services/assistant/assistantSiteBuilderIntakeCustomScreens.ts` |
 | Admin surface helpers | `core/services/assistant/blueprints/blueprintAdminSurfaceComposer.ts` |
-| Tests | `tests/vitest/assistant/guidedCustomScreenDecisions.test.ts` |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeCustomScreens.test.ts` |
 
 ## Implementation Pseudocode
 
 ```ts
-export function resolveGuidedCustomScreens(engines: GuidedContentEngineCandidate[]) {
+export function resolveSiteBuilderIntakeCustomScreens(engines: SiteBuilderIntakeContentEngineCandidate[]) {
   return engines.map((engine) => {
     if (!engine.needsBeginnerEditingSurface) return noCustomScreen(engine);
     if (!supportsCustomScreen(engine)) return gatedCustomScreen(engine);

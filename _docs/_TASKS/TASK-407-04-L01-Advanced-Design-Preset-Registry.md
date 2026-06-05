@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Assistant + Advanced Design Contract
 **Estimated Effort:** Medium
-**Dependencies:** TASK-407-02-L04
+**Dependencies:** TASK-407-03-L04
 **Status:** ⏳ To Do
 
 ---
@@ -43,22 +43,22 @@ style prompts.
 
 | Area | Files |
 |---|---|
-| Presets | `core/services/assistant/guidedSiteBuilderDesignPresets.ts` |
-| Facts | `core/services/assistant/guidedSiteBuilderFacts.ts` |
+| Presets | `core/services/assistant/assistantSiteBuilderIntakeDesignPresets.ts` |
+| Facts | `core/services/assistant/assistantSiteBuilderIntakeFacts.ts` |
 | Docs | `_docs/ASSISTANT_SITE_BUILDER.md`, `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md` if coverage changes |
-| Tests | `tests/vitest/assistant/guidedSiteBuilderDesignPresets.test.ts` |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeDesignPresets.test.ts` |
 
 ## Implementation Pseudocode
 
 ```ts
-export const guidedDesignPresets = defineGuidedDesignPresets([
+export const siteBuilderIntakeDesignPresets = defineSiteBuilderIntakeDesignPresets([
   preset("modern", { tone: "clean", contrast: "medium", density: "balanced" }),
   preset("editorial", { tone: "calm", typography: "serif-accent" }),
   preset("utilitarian", { tone: "work-focused", density: "compact" }),
 ]);
 
-export function resolveGuidedDesignPreset(id: string) {
-  return getRegistryItem(guidedDesignPresetRegistry, id, "design_preset_invalid");
+export function resolveSiteBuilderIntakeDesignPreset(id: string) {
+  return getRegistryItem(siteBuilderIntakeDesignPresetRegistry, id, "design_preset_invalid");
 }
 ```
 

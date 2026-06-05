@@ -43,18 +43,18 @@ actions.
 
 | Area | Files |
 |---|---|
-| Basic flow | `core/services/assistant/guidedSiteBuilderBasicFlow.ts` |
-| Normalizers | `core/services/assistant/guidedSiteBuilderNormalizer.ts` |
-| Planner hook | `core/services/assistant/actionPlannerService.ts` only for `needs_input` handoff |
-| Tests | `tests/vitest/assistant/guidedSiteBuilderBasicFlow.test.ts` |
+| Basic flow | `core/services/assistant/assistantSiteBuilderIntakeBasicFlow.ts` |
+| Normalizers | `core/services/assistant/assistantSiteBuilderIntakeNormalizer.ts` |
+| Planner hook | `core/services/assistant/actionPlannerService.ts` only for full-site intent handoff into existing `siteKit` flow |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeBasicFlow.test.ts` |
 
 ## Implementation Pseudocode
 
 ```ts
-export function resolveBasicNextStep(session: GuidedSiteBuilderSession) {
-  const orderedSteps = BASIC_GUIDED_STEP_IDS;
+export function resolveBasicNextStep(session: AssistantSiteBuilderIntakeSession) {
+  const orderedSteps = BASIC_SITE_BUILDER_INTAKE_STEP_IDS;
   for (const stepId of orderedSteps) {
-    if (!isGuidedStepSatisfied(session, stepId)) {
+    if (!isSiteBuilderIntakeStepSatisfied(session, stepId)) {
       return needsInputForStep(stepId);
     }
   }
@@ -62,7 +62,7 @@ export function resolveBasicNextStep(session: GuidedSiteBuilderSession) {
 }
 
 export function shouldStartBasicGuide(input: AssistantPlanInput) {
-  return isFullSiteIntent(input.prompt) && !input.context?.siteBuilderGuide;
+  return isFullSiteIntent(input.prompt) && !input.context?.siteKit && !input.context?.siteBuilderIntake;
 }
 ```
 

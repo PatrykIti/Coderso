@@ -12,17 +12,20 @@
 
 ## Overview
 
-Wire `context.siteBuilderGuide` into the assistant action-plan request without
-duplicating schema ownership in the route layer. Route modules must stay
-orchestration-only.
+Wire reviewed intake sessions into the existing assistant action-plan request
+without duplicating schema ownership in the route layer. Final planning must
+continue through `context.siteKit`; route modules must stay orchestration-only.
 
 ## Sub-Tasks
 
-- Extend `AssistantActionContext` with optional `siteBuilderGuide`.
-- Reuse or wrap the service-owned guide schema in
-  `core/server/validation/assistantActionSchemas.ts`.
-- Map guide-domain validation errors to existing assistant route error shapes.
-- Add route tests for valid guide context, unknown fields, bad step ids, bad
+- Add `compileIntakeToSiteKitPlanInput` handoff tests for reviewed sessions.
+- Reuse existing strict `context.siteKit` validation for the final action-plan
+  request.
+- Add optional `context.siteBuilderIntake` schema wrapping only if
+  pre-execution intake metadata must be posted with the request.
+- Map intake-domain validation errors to existing assistant route error shapes if
+  a route wrapper is introduced.
+- Add route tests for valid `siteKit` context, unknown fields, bad step ids, bad
   options, and redacted errors.
 
 ## Security Contract
@@ -34,8 +37,9 @@ orchestration-only.
   for any server-derived guide catalogs.
 - CSRF: required for POST.
 - Rate-limit bucket: `assistant`.
-- Reject unknown validation: route validation must reject unknown
-  `context.siteBuilderGuide` fields by reusing service-owned schemas.
+- Reject unknown validation: route validation must reject unknown `siteKit`
+  fields and any optional `context.siteBuilderIntake` fields by reusing
+  service-owned schemas.
 - Anti-abuse: no public write endpoint and no execute before reviewed strict
   action plan.
 - Secret handling: route errors and logs must not echo raw prompt, cookies,
@@ -45,8 +49,9 @@ orchestration-only.
 
 | Area | Files |
 |---|---|
-| Types | `core/services/assistant/actionPlanTypes.ts` |
-| Validation | `core/server/validation/assistantActionSchemas.ts` |
+| Types | `core/services/assistant/actionPlanTypes.ts`, existing `AssistantSiteKitPlanInput` |
+| Intake compiler | `core/services/assistant/assistantSiteBuilderIntakeCompiler.ts` |
+| Validation | `core/server/validation/assistantActionSchemas.ts` only if optional intake metadata is added; existing `siteKit` validation remains required |
 | Routes/tests | `tests/integration/routes/assistant.test.ts`, `tests/unit/server/schemaValidator.test.ts` |
 
 ## Implementation Pseudocode
@@ -54,35 +59,49 @@ orchestration-only.
 ```ts
 export type AssistantActionContext = {
   // existing fields
-  siteBuilderGuide?: GuidedSiteBuilderSession;
+  siteKit?: AssistantSiteKitPlanInput;
+  siteBuilderIntake?: AssistantSiteBuilderIntakeSession;
 };
 
 export const assistantActionPlanRequestSchema = {
   // existing fields
   context: optionalObject({
     // existing context fields
-    siteBuilderGuide: optionalSchema(guidedSiteBuilderSessionRequestSchema),
+    siteKit: optionalSchema(siteKitPlanContextSchema),
+    siteBuilderIntake: optionalSchema(siteBuilderIntakeRequestSchema), // only if introduced
   }),
 };
 
-function mapGuidedRouteError(error: GuidedSiteBuilderError) {
-  return new ApiError(400, error.code, redactGuidedErrorDetails(error));
+function buildActionPlanRequestFromReviewedIntake(session: AssistantSiteBuilderIntakeSession) {
+  return {
+    prompt: buildSiteKitPromptSummary(session),
+    context: {
+      siteKit: compileIntakeToSiteKitPlanInput(session),
+    },
+  };
+}
+
+function mapIntakeRouteError(error: AssistantSiteBuilderIntakeError) {
+  return new ApiError(400, error.code, redactIntakeErrorDetails(error));
 }
 ```
 
 ## Data Flow and Error Handling
 
-- Admin UI posts a plan request with `context.siteBuilderGuide`; route
-  validation calls the service-owned schema before planner invocation.
-- Valid guide context reaches `actionPlannerService` as typed normalized data.
+- Admin UI posts a reviewed plan request with `context.siteKit`; optional
+  `context.siteBuilderIntake` metadata is posted only if the route explicitly
+  supports it.
+- Valid siteKit context reaches `actionPlannerService` through the existing
+  `buildSiteKitActionPlan` path.
 - Invalid fields return 400 machine-readable errors; auth/RBAC/CSRF failures use
   existing route behavior and must not be masked as guide errors.
 
 ## Testing Requirements
 
-- Route/schema tests for valid guide payload acceptance.
+- Route/schema tests for valid `siteKit` payload acceptance.
 - Route/schema tests for unknown nested fields, invalid step ids, invalid option
-  ids, oversized text, and secret redaction.
+  ids, oversized text, and secret redaction when optional intake metadata is
+  added.
 - Route registration/error-mapping coverage if a new route is added.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -94,6 +113,7 @@ function mapGuidedRouteError(error: GuidedSiteBuilderError) {
 
 ## Acceptance Criteria
 
-- Route validation reuses service-owned guide schemas.
-- Invalid guide context fails before planner/provider calls.
-- No duplicate route-owned `siteBuilderGuide` contract exists.
+- Route validation reuses service-owned siteKit/intake schemas.
+- Invalid siteKit or intake context fails before planner/provider calls.
+- No duplicate route-owned intake contract or parallel legacy guide context
+  exists.

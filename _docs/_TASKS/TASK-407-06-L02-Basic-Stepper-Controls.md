@@ -43,19 +43,20 @@ and driven by server-owned step definitions, not ad hoc prompt text.
 
 | Area | Files |
 |---|---|
-| UI controls | `core/admin/ui/assistant/GuidedBasicStepper.tsx` or equivalent components |
-| Panel integration | `core/admin/ui/assistant/AssistantPanel.tsx` |
-| Tests | `tests/vitest/ui/assistant-guided-basic.test.tsx` |
+| UI controls | `core/admin/ui/setup/AiSiteWizardSteps.tsx` or equivalent intake step components |
+| Wizard integration | `core/admin/ui/setup/AiSiteWizard.tsx` |
+| Assistant entry integration | `core/admin/ui/assistant/AssistantPanel.tsx` only if it starts/resumes the wizard |
+| Tests | `tests/vitest/ui/assistant-site-builder-intake-basic.test.tsx` |
 
 ## Implementation Pseudocode
 
 ```tsx
-function GuidedBasicStepper({ session, onAnswer }: GuidedStepperProps) {
-  const step = resolveVisibleGuidedStep(session);
+function SiteBuilderIntakeBasicStepper({ session, onAnswer }: SiteBuilderIntakeStepperProps) {
+  const step = resolveVisibleSiteBuilderIntakeStep(session);
   return (
-    <GuidedStepFrame step={step}>
-      <GuidedControlRenderer step={step} value={answerValue(session, step.id)} onAnswer={onAnswer} />
-    </GuidedStepFrame>
+    <SiteBuilderIntakeStepFrame step={step}>
+      <SiteBuilderIntakeControlRenderer step={step} value={answerValue(session, step.id)} onAnswer={onAnswer} />
+    </SiteBuilderIntakeStepFrame>
   );
 }
 ```

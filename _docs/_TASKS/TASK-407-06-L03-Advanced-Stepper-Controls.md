@@ -44,20 +44,20 @@ must not become a free-form execution prompt.
 
 | Area | Files |
 |---|---|
-| UI controls | `core/admin/ui/assistant/GuidedAdvancedStepper.tsx` or equivalent components |
+| UI controls | `core/admin/ui/setup/AiSiteWizardSteps.tsx` or equivalent intake step components |
 | Reference UI | reference brief/warning components |
-| Tests | `tests/vitest/ui/assistant-guided-advanced.test.tsx` |
+| Tests | `tests/vitest/ui/assistant-site-builder-intake-advanced.test.tsx` |
 
 ## Implementation Pseudocode
 
 ```tsx
-function GuidedAdvancedStepper({ session, optionCatalog, onAnswer }: GuidedAdvancedProps) {
+function SiteBuilderIntakeAdvancedStepper({ session, optionCatalog, onAnswer }: SiteBuilderIntakeAdvancedProps) {
   return (
-    <GuidedStepper mode="advanced">
+    <SiteBuilderIntakeStepper mode="advanced">
       <DesignPresetControl options={optionCatalog.designPresets} value={session.facts.visual.presetId} />
       <LayoutOptionControls options={optionCatalog.layoutOptions} />
       <ReferenceBriefReview brief={session.facts.referenceBrief} warnings={session.securityWarnings} />
-    </GuidedStepper>
+    </SiteBuilderIntakeStepper>
   );
 }
 ```

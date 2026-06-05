@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 47 tasks
+- **To Do:** 46 tasks
 - **In Progress:** 5 tasks
-- **Done:** 2237 tasks
+- **Done:** 2238 tasks
 
 ---
 
@@ -42,16 +42,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-407-01 | Task Contract Drift Audit and Scope Freeze | High | Medium | Audit the TASK-407 task breakdown with Claude/agents and fix drift before implementation starts. |
 | TASK-407-02 | Guided Intake Mode and Session Contract | High | Large | Add strict shared Basic/Advanced guided-intake session context, normalization, validation, and redaction. |
 | TASK-407-03 | Basic Mode Structured Site Flow | High | Large | Safe default guided flow for nontechnical users: profile, goals, pages, menu, hero, sections, subpages, media, review. |
 | TASK-407-04 | Advanced Mode Design Presets and Reference Intake | High | Large | Controlled design/menu/hero/section presets plus safe reference-image/file intake as bounded evidence only. |
-| TASK-407-05 | Blueprint Composer and Content Engine Decisions | High | Large | Map guided facts to supported static pages, content engines, detail routes, custom screens, and gates. |
+| TASK-407-05 | SiteKit Plan and Content Engine Decisions | High | Large | Map intake facts to existing siteKit plans, supported static pages, content engines, detail routes, custom screens, and gates. |
 | TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | Build the guided stepper/review UX and harden local state, warnings, and execute gating. |
 | TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Validate Basic, Advanced, scoped cleanup plus second-theme rebuild, follow-up refinement, and fail-closed media/reference flows through Playwright CLI and Claude/agent review. |
 | TASK-407-02-L01 | Session Types and Step Registry | High | Medium | Service-owned guide session types, mode/step ids, versions, and option registries. |
 | TASK-407-02-L02 | Answer Normalization and Fact Derivation | High | Large | Strict answer schemas, `normalize*` helpers, derived facts, and validation tests. |
-| TASK-407-02-L03 | Assistant Context and Route Validation Handoff | High | Medium | Wire `context.siteBuilderGuide` into planner context and route validation without duplicate schema ownership. |
+| TASK-407-02-L03 | Assistant Context and Route Validation Handoff | High | Medium | Compile reviewed intake into `context.siteKit` and add optional route metadata only without duplicate schema ownership. |
 | TASK-407-02-L04 | Guide Redaction and Browser State Contract | High | Medium | Redacted diagnostics, policy-bounded provider facts, and bounded browser state rules. |
 | TASK-407-03-L01 | Basic Step Definitions and Progression | High | Medium | Basic step definitions and deterministic `needs_input` progression. |
 | TASK-407-03-L02 | Basic Site Map and Section Role Defaults | High | Medium | Beginner-safe page/menu/section defaults without industry hardcoding. |
@@ -61,13 +60,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-407-04-L02 | Advanced Menu Hero and Section Options | High | Medium | Controlled menu, hero, and section options mapped to existing widget capabilities. |
 | TASK-407-04-L03 | Reference Input Validation and Redaction | High | Large | Media/file/reference id validation, URL fail-closed policy, and metadata/text redaction. |
 | TASK-407-04-L04 | Reference Design Brief and Review Gate | High | Medium | Non-executable design brief facts plus user review before planner influence. |
-| TASK-407-05-L01 | Guided Facts to Blueprint Graph Adapter | High | Large | Normalized facts converted to shell blueprint graph inputs. |
+| TASK-407-05-L01 | Intake Facts to SiteKit Plan Adapter | High | Large | Normalized intake facts converted to existing siteKit plan input. |
 | TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | High | Large | Static page/menu/footer/contact/SEO actions through strict action families. |
 | TASK-407-05-L03 | Content Engine Decision Rules | High | Large | Supported service/project/product/post/proof/team/location/FAQ engine selection and gates. |
 | TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | High | Medium | Beginner editing surface decisions and unsupported custom-screen gates. |
 | TASK-407-05-L05 | Follow Up Refinement Target Resolution | High | Large | Active-resource/server-catalog target resolution and ambiguity questions. |
 | TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | High | Large | Strict action validation, dry-run/idempotency tests, and one public runtime proof. |
-| TASK-407-06-L01 | Guided Assistant Panel State Machine | High | Large | Guided UI state transitions without breaking existing assistant flows. |
+| TASK-407-06-L01 | Site Builder Intake UI State Machine | High | Large | Intake UI state transitions without breaking existing assistant flows. |
 | TASK-407-06-L02 | Basic Stepper Controls | High | Large | Basic-only controls bound to server-normalized session state. |
 | TASK-407-06-L03 | Advanced Stepper Controls | High | Large | Advanced controls, preset selection, and reference brief display. |
 | TASK-407-06-L04 | Review Summary and Execution Gating | High | Large | Final review, disabled dry-run/execute states, confirmation, and plan handoff. |
@@ -95,7 +94,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | In progress (2026-06-05): plan and implement Basic/Advanced guided site-builder intake, structured `siteBuilderGuide` context, content-engine decisions, prompt-poisoning hardening, scoped second-theme E2E, and live closure. |
+| TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | In progress (2026-06-05): plan and implement Basic/Advanced site-builder intake compiled to existing `siteKit`, content-engine decisions, prompt-poisoning hardening, scoped second-theme E2E, and live closure. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -106,6 +105,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-407-01 | Task Contract Drift Audit and Scope Freeze | High | Medium | Done (2026-06-05): Claude/agent drift loop aligned TASK-407 with existing siteKit/AiSiteWizard contracts and fixed siteKit plan-context projection in the admin client. |
 | TASK-405 | Assistant Curated Media Profiles | High | Large | Done (2026-06-05): backend-owned curated media profiles render licensed public images for full-service sites, enforce curated URL/source/license trust, fix mobile rich-text images, and pass live Playwright CLI E2E. |
 | TASK-404 | LLM Guide Full Service Site Generation | High | Very Large | Done (2026-06-04): full-service assistant planning, dry-run, execute, public runtime, Playwright CLI, drift loops, docs, and changelog closure completed; media import remains explicitly gated. |
 | TASK-404-01 | Full Service Site Contract and Acceptance Matrix | High | Medium | Done (2026-06-04): full-service completion contract and acceptance matrix require real public pages, catalogs, details, nav/footer, contact, SEO, and explicit media gates. |

@@ -1252,6 +1252,10 @@ test("executeAssistantSiteKitActions plans then executes through generic action 
       locale: "en",
       selectedKitId: "automotive-workshop",
       enabledStepIds: ["settings", "pages", "qa"],
+      dryRun: false,
+      continueOnError: true,
+      settingsPatch: { siteName: "Workshop Pro" },
+      notes: ["Launch reviewed"],
       idempotencyKey: "site-kit-test-key",
     });
 
@@ -1260,6 +1264,26 @@ test("executeAssistantSiteKitActions plans then executes through generic action 
     expect(calls[1]?.input).toBe("/admin/api/assistant/actions/plan");
     expect(calls[2]?.input).toBe("/admin/api/assistant/actions/execute");
     expect(calls[2]?.init?.method).toBe("POST");
+    const planBody = JSON.parse(String(calls[1]?.init?.body));
+    expect(planBody.context.siteKit).toEqual({
+      businessType: "automotive_workshop",
+      goals: ["lead_generation"],
+      locale: "en",
+      selectedKitId: "automotive-workshop",
+      enabledStepIds: ["settings", "pages", "qa"],
+    });
+    expect(planBody.context.siteKit).not.toHaveProperty("dryRun");
+    expect(planBody.context.siteKit).not.toHaveProperty("continueOnError");
+    expect(planBody.context.siteKit).not.toHaveProperty("settingsPatch");
+    expect(planBody.context.siteKit).not.toHaveProperty("notes");
+    expect(planBody.context.siteKit).not.toHaveProperty("idempotencyKey");
+    const executeBody = JSON.parse(String(calls[2]?.init?.body));
+    expect(executeBody.plan.actions[0].input).toMatchObject({
+      dryRun: false,
+      continueOnError: true,
+      settingsPatch: { siteName: "Workshop Pro" },
+      notes: ["Launch reviewed"],
+    });
     const headers = new Headers(calls[2]?.init?.headers);
     expect(headers.get("X-CSRF-Token")).toBe("csrf-token");
   } finally {

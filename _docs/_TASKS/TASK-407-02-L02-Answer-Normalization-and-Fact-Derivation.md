@@ -12,9 +12,9 @@
 
 ## Overview
 
-Add strict answer schemas, `normalize*` helpers, and fact derivation for guided
-site-builder sessions. This leaf owns the rule that user text is bounded content
-data, not executable instruction.
+Add strict answer schemas, `normalize*` helpers, and fact derivation for
+site-builder intake sessions. This leaf owns the rule that user text is bounded
+content data, not executable instruction.
 
 ## Sub-Tasks
 
@@ -43,24 +43,27 @@ data, not executable instruction.
 
 | Area | Files |
 |---|---|
-| Normalizers | `core/services/assistant/guidedSiteBuilderNormalizer.ts`, `core/services/assistant/guidedSiteBuilderFacts.ts` |
-| Domain errors | `core/services/assistant/guidedSiteBuilderErrors.ts` |
-| Tests | `tests/vitest/assistant/guidedSiteBuilderNormalizer.test.ts` |
+| Normalizers | `core/services/assistant/assistantSiteBuilderIntakeNormalizer.ts`, `core/services/assistant/assistantSiteBuilderIntakeFacts.ts` |
+| Domain errors | `core/services/assistant/assistantSiteBuilderIntakeErrors.ts` |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeNormalizer.test.ts` |
 
 ## Implementation Pseudocode
 
 ```ts
-export function normalizeGuidedAnswer(input: unknown, step: GuidedSiteBuilderStepDefinition) {
-  const record = readRecord(input, "guided_answer_invalid");
+export function normalizeAssistantSiteBuilderIntakeAnswer(
+  input: unknown,
+  step: AssistantSiteBuilderIntakeStepDefinition
+) {
+  const record = readRecord(input, "intake_answer_invalid");
   rejectUnknownKeys(record, step.allowedKeys);
   return step.schema.normalize(record, {
-    clampText: clampGuidedText,
-    resolveOption: getGuidedOption,
+    clampText: clampSiteBuilderIntakeText,
+    resolveOption: getSiteBuilderIntakeOption,
     redact: redactSecretLikeValue,
   });
 }
 
-export function deriveGuidedSiteBuilderFacts(session: GuidedSiteBuilderSession) {
+export function deriveAssistantSiteBuilderIntakeFacts(session: AssistantSiteBuilderIntakeSession) {
   const answersByStep = indexAnswersByStep(session.answers);
   const siteMap = deriveSiteMapFacts(answersByStep);
   const menu = deriveMenuFacts(answersByStep, siteMap);
@@ -86,8 +89,8 @@ export function deriveGuidedSiteBuilderFacts(session: GuidedSiteBuilderSession) 
 
 - The UI or route submits unknown input; this leaf converts it to normalized
   answers and derived facts before any provider or planner call.
-- Missing required values produce `guided_answer_required`; unsupported option
-  ids produce `guided_option_invalid`; suspicious text is redacted or flagged.
+- Missing required values produce `intake_answer_required`; unsupported option
+  ids produce `intake_option_invalid`; suspicious text is redacted or flagged.
 - Derived facts preserve user intent as bounded fields and never include raw
   files, raw OCR/EXIF, provider keys, cookies, or executable instructions.
 
@@ -108,6 +111,6 @@ export function deriveGuidedSiteBuilderFacts(session: GuidedSiteBuilderSession) 
 
 ## Acceptance Criteria
 
-- Every guided answer normalizes through service-owned helpers.
+- Every intake answer normalizes through service-owned helpers.
 - Derived facts are deterministic, bounded, and provider-safe.
 - Unknown or hostile input fails closed before planner/provider handoff.

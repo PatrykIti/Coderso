@@ -12,18 +12,23 @@
 
 ## Overview
 
-Build the admin UX for the guided flow and harden the human review path. The UI
+Build the admin UX for the intake flow and harden the human review path. The UI
 must make Basic mode approachable, Advanced mode discoverable but not noisy, and
 the final review clear enough that users understand pages, menu, widgets,
 content engines, custom screens, media policy, and gates before execution.
 
+The primary surface is the existing AI site wizard under
+`core/admin/ui/setup/AiSiteWizard.tsx` and `AiSiteWizardSteps.tsx`. Floating
+assistant entry points may start or resume the same intake flow, but they must
+not create a second full-site builder UI with a divergent plan handoff.
+
 ## Sub-Tasks
 
-- Add guided-intake UI states to the assistant panel without breaking existing
-  docs/inspection/action-plan flows.
+- Add site-builder intake UI states to the AI site wizard and assistant entry
+  points without breaking existing docs/inspection/action-plan flows.
 - Add Basic/Advanced mode controls, stepper progress, structured controls, and
   review summary.
-- Disable dry-run/execute until the final reviewed guided session has produced a
+- Disable dry-run/execute until the final reviewed intake session has produced a
   strict plan.
 - Surface prompt-poisoning/reference warnings as user-facing gates without
   leaking raw suspicious text.
@@ -34,7 +39,7 @@ content engines, custom screens, media policy, and gates before execution.
 
 | ID | Title | Status | Output |
 |---|---|---|---|
-| TASK-407-06-L01 | Guided Assistant Panel State Machine | To Do | Guided UI state transitions without breaking existing assistant flows. |
+| TASK-407-06-L01 | Site Builder Intake UI State Machine | To Do | Intake UI state transitions without breaking existing assistant flows. |
 | TASK-407-06-L02 | Basic Stepper Controls | To Do | Basic-only controls bound to server-normalized session state. |
 | TASK-407-06-L03 | Advanced Stepper Controls | To Do | Advanced controls, preset selection, and reference brief display. |
 | TASK-407-06-L04 | Review Summary and Execution Gating | To Do | Final review, disabled dry-run/execute states, confirmation, and plan handoff. |
@@ -59,25 +64,26 @@ content engines, custom screens, media policy, and gates before execution.
 
 | Area | Files |
 |---|---|
-| Assistant UI | `core/admin/ui/assistant/AssistantPanel.tsx`, new guided-intake components |
-| Admin client | assistant client/request types if `siteBuilderGuide` is added |
+| Site wizard UI | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/ui/setup/AiSiteWizardSteps.tsx`, `core/admin/ui/setup/aiSiteWizardValidation.ts` |
+| Assistant entry UI | `core/admin/ui/assistant/AssistantPanel.tsx` only if full-site intent starts/resumes the wizard |
+| Admin client | `core/admin/services/assistantClient.ts` siteKit request/response types and intake helpers |
 | Tests | `tests/vitest/ui/assistant-*`, admin interaction tests |
 | Docs | assistant docs if UX behavior changes |
 
 ## Implementation Pseudocode
 
 ```tsx
-function GuidedSiteBuilderPanel({ session, onAnswer }) {
+function AssistantSiteBuilderIntakePanel({ session, onAnswer }) {
   const step = resolveVisibleStep(session);
   return (
-    <GuidedStepper mode={session.mode} step={step}>
-      <GuidedStepControls step={step} value={session.answers[step.id]} onChange={onAnswer} />
-      <GuidedReviewSummary session={session} hidden={!session.readyForReview} />
-    </GuidedStepper>
+    <SiteBuilderIntakeStepper mode={session.mode} step={step}>
+      <SiteBuilderIntakeStepControls step={step} value={session.answers[step.id]} onChange={onAnswer} />
+      <SiteBuilderIntakeReviewSummary session={session} hidden={!session.readyForReview} />
+    </SiteBuilderIntakeStepper>
   );
 }
 
-function canSubmitPlan(session: GuidedSiteBuilderSession) {
+function canSubmitPlan(session: AssistantSiteBuilderIntakeSession) {
   return session.readyForReview && session.confirmedReview && !session.securityWarnings.blocking;
 }
 ```
@@ -85,7 +91,7 @@ function canSubmitPlan(session: GuidedSiteBuilderSession) {
 ## Data Flow and Error Handling
 
 - Admin UI renders the current server-normalized session, lets the user answer
-  one guided step, and rehydrates from the returned normalized session.
+  one intake step, and rehydrates from the returned normalized session.
 - The review summary is derived from normalized facts; execute controls stay
   disabled until review confirmation and no blocking warning remains.
 - Dirty local edits are preserved during background revalidation, but stale or

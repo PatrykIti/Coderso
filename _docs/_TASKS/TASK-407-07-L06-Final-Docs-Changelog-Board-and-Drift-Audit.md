@@ -78,6 +78,9 @@ async function closeTask407() {
 - `bun --cwd core lint:types`
 - `bun run precommit`
 - Targeted suites and Playwright evidence from previous leaves must be recorded.
+- Any code, task, docs, changelog, test, or validation-contract change made
+  after a final drift finding must rerun the touched validation before the next
+  Claude/agent audit pass.
 - Final Claude/agent read-only audit with no blocking findings.
 
 ## Documentation Updates Required

@@ -21,7 +21,7 @@ require user review before those facts influence planning.
   layout, density, typography, and image-treatment hints.
 - Store blocked instructions as redacted warning metadata.
 - Require explicit review confirmation before reference facts are merged into
-  `siteBuilderGuide` planner facts.
+  site-builder intake facts.
 - Add provider-boundary tests proving reference text cannot become instructions.
 
 ## Security Contract
@@ -44,9 +44,9 @@ require user review before those facts influence planning.
 
 | Area | Files |
 |---|---|
-| Brief extraction | `core/services/assistant/guidedSiteBuilderReferenceBrief.ts` |
-| Facts merge | `core/services/assistant/guidedSiteBuilderFacts.ts` |
-| Tests | `tests/vitest/assistant/guidedSiteBuilderReferenceBrief.test.ts` |
+| Brief extraction | `core/services/assistant/assistantSiteBuilderIntakeReferenceBrief.ts` |
+| Facts merge | `core/services/assistant/assistantSiteBuilderIntakeFacts.ts` |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeReferenceBrief.test.ts` |
 
 ## Implementation Pseudocode
 

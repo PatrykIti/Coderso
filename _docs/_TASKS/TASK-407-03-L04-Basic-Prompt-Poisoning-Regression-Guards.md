@@ -22,7 +22,7 @@ CSRF, or review/execute confirmation.
 - Assert poisoning text cannot change mode, step ids, widget aliases, action
   families, media URL policy, route paths, or execution state.
 - Assert suspicious text is either sanitized into content hints or rejected with
-  machine-readable guide errors.
+  machine-readable intake errors.
 - Add tests for a slightly confused/nontechnical user prompt that remains usable
   without broadening execution privileges.
 
@@ -43,7 +43,7 @@ CSRF, or review/execute confirmation.
 
 | Area | Files |
 |---|---|
-| Tests | `tests/vitest/assistant/guidedSiteBuilderBasicSecurity.test.ts` |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeBasicSecurity.test.ts` |
 | Fixtures | inline synthetic fixtures or sanitized test helpers |
 | Code under test | only if preceding Basic leaves need hardening fixes |
 
@@ -51,7 +51,7 @@ CSRF, or review/execute confirmation.
 
 ```ts
 test("basic free text cannot override action policy", () => {
-  const session = normalizeGuidedSiteBuilderSession({
+  const session = normalizeAssistantSiteBuilderIntakeSession({
     mode: "basic",
     answers: [
       answer("business-profile", {
@@ -71,14 +71,14 @@ test("basic free text cannot override action policy", () => {
 - Synthetic hostile prompts pass through the same Basic normalizers and
   progression helpers as real prompts.
 - Expected output is either sanitized content data, `needs_input`, or a
-  guide-domain validation error.
+  intake-domain validation error.
 - Any output that mutates action policy, media trust, routes, or execution state
   is a failing test.
 
 ## Testing Requirements
 
 - Prompt-poisoning tests for profile description, custom labels, menu choices,
-  hero/section text, and media preference text.
+  hero/section text, and media-policy text.
 - Tests for unknown-key rejection and unsafe URL/media requests.
 - Tests that normal confused-user prompts still progress through Basic.
 - `bun --cwd core lint`

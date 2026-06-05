@@ -20,8 +20,9 @@ Claude/agent drift reviews.
 ## Sub-Tasks
 
 - Restart `coderso-dev-core-host` and expose the required local host ports.
-- Run Basic guided site creation from a nontechnical prompt.
-- Run Advanced guided site creation with design/menu/hero/section choices.
+- Run Basic site-builder intake creation from a nontechnical prompt.
+- Run Advanced site-builder intake creation with design/menu/hero/section
+  choices.
 - Clean up only the resources created by the first E2E run, then create a
   second full site from scratch in a different industry/theme to prove the flow
   is generic and not fitted to one prompt.
@@ -53,7 +54,7 @@ Claude/agent drift reviews.
 - CSRF: all POSTs go through normal admin UI/API paths.
 - Rate-limit bucket: `assistant`.
 - Reject unknown validation: E2E must include at least one rejected unknown or
-  poisoned guided answer where feasible.
+  poisoned intake answer where feasible.
 - Anti-abuse: public form tests use existing nonce/captcha/session hardening.
 - Secret handling: do not commit `.tmp` auth state, screenshots with secrets,
   provider keys, cookies, CSRF tokens, raw uploaded bytes, or secret-like prompt
@@ -70,15 +71,15 @@ Claude/agent drift reviews.
 ## Implementation Pseudocode
 
 ```ts
-async function runGuidedSiteBuilderE2E(
+async function runSiteBuilderIntakeE2E(
   mode: "basic" | "advanced",
   options: { userPrompt?: string; expectedDifferentVertical?: boolean } = {},
 ) {
   await openAssistant();
-  await startGuidedSiteBuilder({ mode, userPrompt: options.userPrompt });
+  await startSiteBuilderIntake({ mode, userPrompt: options.userPrompt });
   await answerStructuredSteps(mode);
   await assertReviewSummary();
-  const plan = await submitPlan();
+  const plan = await submitSiteKitPlan();
   await assertDryRunReady(plan);
   const execution = await executeReviewedPlan(plan);
   await assertPublicRuntime(execution);
@@ -86,7 +87,7 @@ async function runGuidedSiteBuilderE2E(
 
 async function runFollowUpRefinementE2E() {
   await prompt("chce zmienic podstrone projekty");
-  await assertNeedsScopedTargetOrGuidedFlow();
+  await assertNeedsScopedTargetOrIntakeFlow();
   await completeRefinementFlow();
   await assertPublicRuntimeUpdated();
 }
@@ -95,7 +96,7 @@ async function resetGeneratedSiteAndRunSecondThemeE2E() {
   const firstRunResources = await listResourcesCreatedByE2ERun();
   await deleteOnlyScopedE2EResources(firstRunResources);
   await assertNoFirstRunPagesRemain();
-  await runGuidedSiteBuilderE2E("basic", {
+  await runSiteBuilderIntakeE2E("basic", {
     userPrompt:
       "nie znam sie na cms, chce ladna strone dla zupelnie innej branzy",
     expectedDifferentVertical: true,
@@ -106,7 +107,8 @@ async function resetGeneratedSiteAndRunSecondThemeE2E() {
 ## Data Flow and Error Handling
 
 - Restart helper servers, open the admin assistant through `playwright-cli`,
-  complete guided intake, review, dry-run, execute, then verify public runtime.
+  complete intake, review, siteKit plan, dry-run, execute, then verify public
+  runtime.
 - The E2E harness records only resource ids/slugs created by the current run and
   uses those identifiers for scoped cleanup before the second-theme rebuild.
 - Wrong ports, missing provider configuration, auth/RBAC/CSRF failures,
@@ -143,7 +145,7 @@ async function resetGeneratedSiteAndRunSecondThemeE2E() {
 
 ## Acceptance Criteria
 
-- Basic, Advanced, and follow-up guided flows pass live Playwright CLI E2E.
+- Basic, Advanced, and follow-up intake flows pass live Playwright CLI E2E.
 - A second full-site E2E run after scoped cleanup succeeds for a different
   industry/theme, using a nontechnical prompt and fresh generated structure.
 - Public runtime output is usable on desktop and mobile.

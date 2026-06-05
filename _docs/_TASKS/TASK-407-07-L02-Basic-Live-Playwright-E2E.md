@@ -12,7 +12,7 @@
 
 ## Overview
 
-Validate Basic guided site creation through the real admin UI as a slightly
+Validate Basic site-builder intake creation through the real admin UI as a slightly
 nontechnical user, then verify the public runtime output.
 
 ## Sub-Tasks
@@ -21,7 +21,7 @@ nontechnical user, then verify the public runtime output.
 - Use `playwright-cli` against `http://coderso-b.localhost:5175/admin/`.
 - Start with a beginner prompt such as a user who does not know CMS concepts and
   wants a full service website.
-- Complete Basic guided questions, review, dry-run, execute, and public runtime
+- Complete Basic intake questions, review, dry-run, execute, and public runtime
   checks on `http://coderso-b.localhost:3001/`.
 - Verify desktop/mobile layout, nav/footer, contact path, SEO basics, and
   console/page errors.
@@ -49,11 +49,11 @@ nontechnical user, then verify the public runtime output.
 ## Implementation Pseudocode
 
 ```ts
-async function runBasicLiveGuidedE2E(page) {
+async function runBasicLiveSiteBuilderIntakeE2E(page) {
   await openAdminAssistant(page);
   await promptAsBeginner("nie znam cms, stworz mi pelna strone dla lokalnej uslugi");
   await completeBasicSteps(page);
-  await confirmGuidedReview(page);
+  await confirmSiteBuilderIntakeReview(page);
   await dryRunAndExecute(page);
   await assertPublicRuntime({ frontUrl: "http://coderso-b.localhost:3001/" });
 }

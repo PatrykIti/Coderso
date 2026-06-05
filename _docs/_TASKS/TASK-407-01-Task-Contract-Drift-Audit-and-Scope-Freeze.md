@@ -6,7 +6,7 @@
 **Category:** Process + Assistant + UX + Security
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -24,7 +24,11 @@ TASK-407 files and report no blocking task-plan drift.
 ## Sub-Tasks
 
 - Review TASK-407 parent and leaves against root `AGENTS.md`, `_docs/ASSISTANT_SITE_BUILDER.md`,
-  `docs/develop/assistant.md`, and the existing assistant action route contract.
+  `docs/develop/assistant.md`, the existing assistant action route contract, and
+  the existing `siteKit`/solution-kit implementation:
+  `AssistantSiteKitPlanInput`, `siteBuilderPlanStepIds`,
+  `previewGuidedSiteBuilderPlan`, `executeGuidedSiteBuilder`,
+  `validateGuidedSiteBuilderRun`, `AiSiteWizard*`, and solution-kit routes.
 - Ask Claude and at least one agent for read-only task-plan drift review.
 - Fix every blocking drift in physical task files.
 - Verify `_docs/_TASKS/README.md` statistics and rows match the added tasks.
@@ -90,6 +94,19 @@ async function runTask407TaskDriftLoop() {
     appropriate.
 - Claude read-only task-plan audit final pass.
 - Agent read-only task-plan audit final pass.
+
+## Closure Evidence
+
+- 2026-06-05 Claude and agent drift loops found and resolved blocking drifts
+  around the existing `siteKit`/solution-kit contract, Basic-before-Advanced
+  ordering, and TASK-407 compiler signatures.
+- Final focused Claude and agent passes reported no blocking findings for
+  TASK-407 docs and the admin client `context.siteKit` projection.
+- Validation passed:
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/assistantClient.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `git diff --check`
 
 ## Documentation Updates Required
 

@@ -12,7 +12,7 @@
 
 ## Overview
 
-Route follow-up prompts such as "change the projects page" into a scoped guided
+Route follow-up prompts such as "change the projects page" into a scoped intake
 flow by resolving trusted active resources or server-derived candidates.
 
 ## Sub-Tasks
@@ -43,14 +43,14 @@ flow by resolving trusted active resources or server-derived candidates.
 
 | Area | Files |
 |---|---|
-| Resolver | `core/services/assistant/guidedFollowUpResolver.ts`, `core/services/assistant/cmsTargetResolver.ts` |
+| Resolver | `core/services/assistant/assistantSiteBuilderFollowUpResolver.ts`, `core/services/assistant/cmsTargetResolver.ts` |
 | Operation policy | `core/services/assistant/operationPolicy/followUpPolicy.ts` if policy changes |
-| Tests | `tests/vitest/assistant/guidedFollowUpResolver.test.ts` |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderFollowUpResolver.test.ts` |
 
 ## Implementation Pseudocode
 
 ```ts
-export function resolveGuidedFollowUpTarget(input: FollowUpInput) {
+export function resolveSiteBuilderFollowUpTarget(input: FollowUpInput) {
   const candidates = collectTrustedCandidates(input.activeSurface, input.resourceCatalog);
   const matches = matchPromptHintToCandidates(input.promptHint, candidates);
   if (matches.length === 0) return needsInput("target_required", candidates);

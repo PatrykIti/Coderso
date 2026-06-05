@@ -12,17 +12,18 @@
 
 ## Overview
 
-Add planner/executor contract tests for guided action assembly, dry-run
-idempotency, and at least one public runtime proof for guided content-engine
-output.
+Add planner/executor contract tests for intake-to-siteKit action assembly,
+dry-run idempotency, and at least one public runtime proof for generated
+content-engine output.
 
 ## Sub-Tasks
 
-- Validate generated guided actions through strict schemas.
-- Prove dry-run output is stable and idempotent for repeated guided sessions.
+- Validate generated siteKit actions through strict schemas.
+- Prove dry-run output is stable and idempotent for repeated intake sessions.
 - Prove same-plan locators resolve for generated static and content-engine
   resources.
-- Add a Bun/runtime test for one guided content-engine public output path.
+- Add a Bun/runtime test for one intake-generated content-engine public output
+  path.
 
 ## Security Contract
 
@@ -44,23 +45,23 @@ output.
 
 | Area | Files |
 |---|---|
-| Planner/executor tests | `tests/vitest/assistant/guidedSiteBuilderPlanner.test.ts`, `tests/unit/assistant/*` if Bun-owned |
-| Runtime tests | `tests/integration/server/assistantGuidedSiteBuilderRuntime.test.ts` |
+| Planner/executor tests | `tests/vitest/assistant/assistantSiteBuilderIntakePlanner.test.ts`, `tests/unit/assistant/*` if Bun-owned |
+| Runtime tests | `tests/integration/server/assistantSiteBuilderIntakeRuntime.test.ts` |
 | Code under test | only hardening fixes uncovered by tests |
 
 ## Implementation Pseudocode
 
 ```ts
-test("guided plan dry-run is idempotent", async () => {
-  const session = buildCompleteGuidedSessionFixture();
+test("intake siteKit plan dry-run is idempotent", async () => {
+  const session = buildCompleteSiteBuilderIntakeSessionFixture();
   const first = await planAndDryRun(session);
   const second = await planAndDryRun(session);
   expect(stripTimestamps(first)).toEqual(stripTimestamps(second));
   expect(first.actions.every(actionPassesStrictSchema)).toBe(true);
 });
 
-test("guided content engine renders publicly", async () => {
-  const execution = await executeGuidedContentEngineFixture();
+test("intake content engine renders publicly", async () => {
+  const execution = await executeSiteBuilderIntakeContentEngineFixture();
   const response = await fetchPublicRoute(execution.detailRoute);
   expect(response.status).toBe(200);
   expect(await response.text()).toContain(execution.expectedTitle);
@@ -69,7 +70,8 @@ test("guided content engine renders publicly", async () => {
 
 ## Data Flow and Error Handling
 
-- Complete guided sessions go through plan -> dry-run -> execute test harnesses.
+- Complete intake sessions go through compile-to-siteKit -> plan -> dry-run ->
+  execute test harnesses.
 - Schema failures, locator conflicts, idempotency drift, runtime 404s, or public
   console/runtime errors fail tests.
 - DB-backed tests must create scoped fixtures and clean up only rows they own.
@@ -78,7 +80,7 @@ test("guided content engine renders publicly", async () => {
 
 - Targeted Vitest/Bun tests for strict action schema validation and dry-run
   idempotency.
-- Bun/runtime test for one guided content-engine public route.
+- Bun/runtime test for one intake-generated content-engine public route.
 - Load `.env` before DB-backed tests when needed:
   `set -a && source .env && set +a`.
 - `bun --cwd core lint`
@@ -92,6 +94,6 @@ test("guided content engine renders publicly", async () => {
 
 ## Acceptance Criteria
 
-- Guided action assembly is strict and idempotent.
-- At least one guided content-engine path renders publicly.
+- Intake-to-siteKit action assembly is strict and idempotent.
+- At least one intake-generated content-engine path renders publicly.
 - Tests use scoped fixtures and do not mutate unrelated data.

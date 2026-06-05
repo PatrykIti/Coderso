@@ -12,11 +12,12 @@
 
 ## Overview
 
-Implement Advanced mode as an expansion of the same guided-intake contract.
+Implement Advanced mode as an expansion of the same site-builder intake contract.
 Advanced users can choose design presets, hero/section variants, menu behavior,
 content engines, fields/facets, SEO defaults, sample density, and reference
 materials. Reference images/files are used only as bounded design evidence, not
-as executable instruction or raw media import.
+as executable instruction or raw media import. Reviewed Advanced answers must
+compile into the same existing `siteKit` planner path as Basic mode.
 
 ## Sub-Tasks
 
@@ -61,9 +62,9 @@ as executable instruction or raw media import.
 
 | Area | Files |
 |---|---|
-| Design presets | new guided/design preset modules under `core/services/assistant/` or blueprint helpers |
+| Design presets | `core/services/assistant/assistantSiteBuilderIntakeDesignPresets.ts` or existing design-token helpers |
 | Reference policy | media/reference validation helpers if introduced |
-| Admin UI | guided Advanced controls and review summary |
+| Admin UI | `core/admin/ui/setup/AiSiteWizardSteps.tsx` Advanced controls and review summary |
 | Tests | Advanced flow, reference redaction, poison/file safety |
 
 ## Implementation Pseudocode

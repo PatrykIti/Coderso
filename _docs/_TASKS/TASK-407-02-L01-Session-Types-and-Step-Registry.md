@@ -12,21 +12,26 @@
 
 ## Overview
 
-Create the service-owned guided site-builder session model and backend-owned
+Create the service-owned site-builder intake session model and backend-owned
 step/option registries. This leaf must not touch admin UI rendering or route
 handlers except for type imports needed by later leaves.
 
 ## Sub-Tasks
 
-- Add `GuidedSiteBuilderSession`, `GuidedSiteBuilderMode`,
-  `GuidedSiteBuilderStepId`, `GuidedSiteBuilderStepDefinition`,
-  `GuidedSiteBuilderAnswer`, and version constants under
+- Add `AssistantSiteBuilderIntakeSession`, `AssistantSiteBuilderIntakeMode`,
+  `AssistantSiteBuilderIntakeStepId`,
+  `AssistantSiteBuilderIntakeStepDefinition`,
+  `AssistantSiteBuilderIntakeAnswer`, and version constants under
   `core/services/assistant/`.
 - Define backend-owned registries for modes, step ids, page roles, menu
-  presets, hero presets, section roles, media preferences, and review state.
+  presets, hero presets, section roles, media policy options, and review state.
 - Export read-only registry lookup helpers with stable ids and explicit labels.
-- Keep `AssistantPlanQuestion` unchanged; the guided flow uses a richer step
+- Keep `AssistantPlanQuestion` unchanged and do not reuse existing
+  `GuidedSiteBuilder*` plan/executor names; the intake flow uses a richer step
   model owned by this task family.
+- Treat the step registry as the stable id set. Mode-specific leaves own visible
+  flow order, so Basic can render `hero` before `homepage-sections` without
+  changing the canonical id registry.
 
 ## Security Contract
 
@@ -46,17 +51,17 @@ handlers except for type imports needed by later leaves.
 
 | Area | Files |
 |---|---|
-| Domain contract | `core/services/assistant/guidedSiteBuilderTypes.ts`, `core/services/assistant/guidedSiteBuilderRegistry.ts` |
-| Type exports | `core/services/assistant/actionPlanTypes.ts` only if the context type needs to reference the new session type |
-| Tests | `tests/vitest/assistant/guidedSiteBuilderRegistry.test.ts` |
+| Domain contract | `core/services/assistant/assistantSiteBuilderIntakeTypes.ts`, `core/services/assistant/assistantSiteBuilderIntakeRegistry.ts` |
+| Existing siteKit references | `core/services/kits/solutionKitTypes.ts` for `siteBuilderPlanStepIds` imports only |
+| Type exports | `core/services/assistant/actionPlanTypes.ts` only if optional intake metadata needs to reference the new session type |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts` |
 
 ## Implementation Pseudocode
 
 ```ts
-export type GuidedSiteBuilderMode = "basic" | "advanced";
+export type AssistantSiteBuilderIntakeMode = "basic" | "advanced";
 
-export type GuidedSiteBuilderStepId =
-  | "mode"
+export type AssistantSiteBuilderIntakeStepId =
   | "business-profile"
   | "site-goals"
   | "site-map"
@@ -70,17 +75,17 @@ export type GuidedSiteBuilderStepId =
   | "reference-intake"
   | "review";
 
-export type GuidedSiteBuilderSession = {
+export type AssistantSiteBuilderIntakeSession = {
   version: 1;
-  mode: GuidedSiteBuilderMode;
-  currentStepId: GuidedSiteBuilderStepId;
-  answers: GuidedSiteBuilderAnswer[];
-  facts?: GuidedSiteBuilderFacts;
+  mode: AssistantSiteBuilderIntakeMode;
+  currentStepId: AssistantSiteBuilderIntakeStepId;
+  answers: AssistantSiteBuilderIntakeAnswer[];
+  facts?: AssistantSiteBuilderIntakeFacts;
 };
 
-export function getGuidedStepDefinition(stepId: string) {
-  const definition = guidedStepRegistry[stepId];
-  if (!definition) throw guidedSiteBuilderError("guided_step_invalid", { stepId });
+export function getSiteBuilderIntakeStepDefinition(stepId: string) {
+  const definition = siteBuilderIntakeStepRegistry[stepId];
+  if (!definition) throw siteBuilderIntakeError("intake_step_invalid", { stepId });
   return definition;
 }
 ```
@@ -110,6 +115,6 @@ export function getGuidedStepDefinition(stepId: string) {
 
 ## Acceptance Criteria
 
-- Guided session types and registries are service-owned and Bun-free.
+- Intake session types and registries are service-owned and Bun-free.
 - Unknown registry ids fail closed.
 - Later leaves can build normalizers and UI from stable backend-owned ids.

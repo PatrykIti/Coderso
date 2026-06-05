@@ -15,7 +15,7 @@
 Implement Basic mode: a safe default for users who do not understand CMS
 structure. The assistant asks a short, rigid sequence, accepts simple
 description text, chooses supported widgets/content models, and explains the
-result before planning actions.
+result before compiling the reviewed session into the existing `siteKit` planner.
 
 Basic mode should minimize free-form choices. It should use familiar controls:
 single-choice goals, checkbox pages, menu preset choices, hero preset choices,
@@ -24,7 +24,7 @@ and bounded text prompts for business copy.
 ## Sub-Tasks
 
 - Add Basic step definitions for profile, goal, pages, menu, hero, homepage
-  sections, subpages, media preference, and review.
+  sections, subpages, media policy, and review.
 - Define starter site maps for common service-business needs without hardcoding
   a single industry.
 - Let the backend choose widget aliases from supported widget/module registry
@@ -52,7 +52,7 @@ and bounded text prompts for business copy.
 - CSRF: required for POST.
 - Rate-limit bucket: `assistant`.
 - Reject unknown validation: Basic answers must reject unknown page roles, menu
-  presets, widget aliases, hero variants, and media preferences.
+  presets, widget aliases, hero variants, and media policy options.
 - Anti-abuse: Basic free text is content description only and cannot name tools,
   schemas, endpoints, ids, or override restrictions.
 - Secret handling: Basic answers and review summaries must redact secret-like
@@ -62,15 +62,15 @@ and bounded text prompts for business copy.
 
 | Area | Files |
 |---|---|
-| Guide definitions | `core/services/assistant/guidedSiteBuilder*.ts` |
-| Planner | `core/services/assistant/actionPlannerService.ts`, blueprint composer files |
-| Admin UI | assistant panel/intake components |
+| Intake definitions | `core/services/assistant/assistantSiteBuilderIntake*.ts` |
+| Existing siteKit planner | `core/services/kits/solutionKitTypes.ts`, `core/services/assistant/siteBuilderPlanner.ts`, `core/services/assistant/siteBuilderPlanAdapter.ts` |
+| Admin UI | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/ui/setup/AiSiteWizardSteps.tsx`, intake entry components if added |
 | Tests | guided Basic flow tests and UI tests |
 
 ## Implementation Pseudocode
 
 ```ts
-function buildBasicGuidedSteps(session: GuidedSiteBuilderSession) {
+function buildBasicIntakeSteps(session: AssistantSiteBuilderIntakeSession) {
   return [
     question("business-profile", { controls: ["businessName", "industry", "locale"] }),
     question("site-goals", { options: ["leads", "booking", "portfolio", "catalog"] }),
@@ -79,14 +79,15 @@ function buildBasicGuidedSteps(session: GuidedSiteBuilderSession) {
     question("hero", { options: ["simple", "split", "image-led"], default: "simple" }),
     question("homepage-sections", { options: BASIC_SECTION_ROLES }),
     question("subpages", { deriveFromPages: true }),
+    question("media-policy", { options: ["curated", "library", "placeholder"], default: "curated" }),
     review("review"),
   ];
 }
 
-function buildBasicPlanFromFacts(facts: BasicSiteBuilderFacts) {
+function buildBasicReviewFactsFromIntake(facts: BasicSiteBuilderFacts) {
   const selectedWidgets = selectWidgetsForSectionRoles(facts.homepageSectionRoles);
-  const contentEngines = inferContentEngines(facts.siteMap.pageRoles, facts.siteGoals);
-  return buildGuidedSiteBuilderPlan({ ...facts, selectedWidgets, contentEngines });
+  const contentEngineHints = inferReviewOnlyContentEngineHints(facts.siteMap.pageRoles, facts.siteGoals);
+  return buildBasicReviewFacts({ ...facts, selectedWidgets, contentEngineHints });
 }
 ```
 
@@ -94,7 +95,7 @@ function buildBasicPlanFromFacts(facts: BasicSiteBuilderFacts) {
 
 - A broad nontechnical prompt enters Basic mode and is converted into bounded
   `business-profile`/`site-goals`/`site-map`/`menu`/`hero`/
-  `homepage-sections` answers before planning.
+  `homepage-sections`/`subpages`/`media-policy` answers before planning.
 - Basic answers derive normalized facts; backend registries choose widget
   presets, page roles, subpage roles, and content-engine candidates.
 - Missing required answers return `needs_input` for the next Basic step; they

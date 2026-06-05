@@ -604,7 +604,16 @@ const createSiteKitPlanPayload = (payload: GuidedSiteBuilderPlanRequest) => ({
   prompt: buildSiteKitPrompt(payload),
   context: {
     locale: payload.locale,
-    siteKit: payload,
+    siteKit: {
+      businessType: payload.businessType,
+      goals: payload.goals,
+      locale: payload.locale,
+      region: payload.region,
+      siteName: payload.siteName,
+      preferredKitId: payload.preferredKitId,
+      selectedKitId: payload.selectedKitId,
+      enabledStepIds: payload.enabledStepIds,
+    },
   },
 });
 

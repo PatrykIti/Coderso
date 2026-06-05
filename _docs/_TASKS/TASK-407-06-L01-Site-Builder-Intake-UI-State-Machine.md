@@ -1,5 +1,5 @@
-# TASK-407-06-L01: Guided Assistant Panel State Machine
-# FileName: TASK-407-06-L01-Guided-Assistant-Panel-State-Machine.md
+# TASK-407-06-L01: Site Builder Intake UI State Machine
+# FileName: TASK-407-06-L01-Site-Builder-Intake-UI-State-Machine.md
 
 **Parent Subtask:** TASK-407-06
 **Priority:** High
@@ -12,12 +12,13 @@
 
 ## Overview
 
-Add the admin UI state machine for guided site-builder sessions without
-breaking existing docs, inspection, chat, or action-plan flows.
+Add the admin UI state machine for site-builder intake sessions without
+breaking the existing AI site wizard, docs, inspection, chat, or action-plan
+flows.
 
 ## Sub-Tasks
 
-- Add guided session UI state types and reducer/actions.
+- Add intake session UI state types and reducer/actions.
 - Add transitions for start, resume, answer step, server-normalized rehydrate,
   review-ready, planning, dry-run, execute, cancel, and reset.
 - Preserve existing assistant panel entry points and conversation behavior.
@@ -42,24 +43,27 @@ breaking existing docs, inspection, chat, or action-plan flows.
 
 | Area | Files |
 |---|---|
-| UI state | `core/admin/ui/assistant/AssistantPanel.tsx`, new guided state hook/reducer files |
+| UI state | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/ui/setup/AiSiteWizardSteps.tsx`, new intake state hook/reducer files |
 | Client types | assistant client/context types if needed |
-| Tests | `tests/vitest/ui/assistant-guided-state.test.tsx` |
+| Tests | `tests/vitest/ui/assistant-site-builder-intake-state.test.tsx` |
 
 ## Implementation Pseudocode
 
 ```tsx
-type GuidedUiState =
+type SiteBuilderIntakeUiState =
   | { kind: "idle" }
-  | { kind: "answering"; session: GuidedSiteBuilderSession }
-  | { kind: "review"; session: GuidedSiteBuilderSession }
-  | { kind: "planning"; session: GuidedSiteBuilderSession }
-  | { kind: "readyPlan"; planId: string; session: GuidedSiteBuilderSession };
+  | { kind: "answering"; session: AssistantSiteBuilderIntakeSession }
+  | { kind: "review"; session: AssistantSiteBuilderIntakeSession }
+  | { kind: "planning"; session: AssistantSiteBuilderIntakeSession }
+  | { kind: "readyPlan"; planId: string; siteKit: AssistantSiteKitPlanInput; session: AssistantSiteBuilderIntakeSession };
 
-function guidedAssistantReducer(state: GuidedUiState, event: GuidedUiEvent): GuidedUiState {
+function siteBuilderIntakeReducer(
+  state: SiteBuilderIntakeUiState,
+  event: SiteBuilderIntakeUiEvent
+): SiteBuilderIntakeUiState {
   if (event.type === "server_session_received") return hydrateFromServer(event.session);
   if (event.type === "stale_cache_detected") return { kind: "idle" };
-  return transitionGuidedState(state, event);
+  return transitionSiteBuilderIntakeState(state, event);
 }
 ```
 
@@ -69,7 +73,7 @@ function guidedAssistantReducer(state: GuidedUiState, event: GuidedUiEvent): Gui
   canonical normalized session.
 - Network errors, stale cached sessions, schema-version mismatches, and rejected
   answers produce visible non-executing states.
-- Existing assistant flows remain reachable and must not be converted to guided
+- Existing assistant flows remain reachable and must not be converted to intake
   mode unless full-site intent is detected or user chooses it.
 
 ## Testing Requirements
@@ -87,6 +91,6 @@ function guidedAssistantReducer(state: GuidedUiState, event: GuidedUiEvent): Gui
 
 ## Acceptance Criteria
 
-- Guided UI state is explicit and test-covered.
+- Site-builder intake UI state is explicit and test-covered.
 - Existing assistant panel flows still work.
 - Server-normalized session state is authoritative.

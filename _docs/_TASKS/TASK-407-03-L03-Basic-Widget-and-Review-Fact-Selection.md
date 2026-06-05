@@ -13,7 +13,8 @@
 ## Overview
 
 Map Basic facts to supported widget/page/content candidates and produce a
-reviewable summary. This leaf stops before blueprint graph/action assembly.
+reviewable summary. This leaf stops before `siteKit` compilation and action
+assembly.
 
 ## Sub-Tasks
 
@@ -42,9 +43,9 @@ reviewable summary. This leaf stops before blueprint graph/action assembly.
 
 | Area | Files |
 |---|---|
-| Candidate mapping | `core/services/assistant/guidedSiteBuilderBasicReview.ts` |
+| Candidate mapping | `core/services/assistant/assistantSiteBuilderIntakeBasicReview.ts` |
 | Widget registry lookup | existing widget/module registry helpers as needed |
-| Tests | `tests/vitest/assistant/guidedSiteBuilderBasicReview.test.ts` |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeBasicReview.test.ts` |
 
 ## Implementation Pseudocode
 
@@ -89,4 +90,4 @@ export function buildBasicReviewFacts(facts: BasicSiteBuilderFacts) {
 
 - Basic review facts are deterministic and explainable.
 - Unsupported Basic needs are explicit gates.
-- No action graph is assembled in this leaf.
+- No `siteKit` plan or action graph is assembled in this leaf.

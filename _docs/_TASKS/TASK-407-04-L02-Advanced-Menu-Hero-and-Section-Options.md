@@ -41,9 +41,9 @@ variants, mapped to existing widget/module capabilities.
 
 | Area | Files |
 |---|---|
-| Options | `core/services/assistant/guidedSiteBuilderAdvancedOptions.ts` |
-| Facts | `core/services/assistant/guidedSiteBuilderFacts.ts` |
-| Tests | `tests/vitest/assistant/guidedSiteBuilderAdvancedOptions.test.ts` |
+| Options | `core/services/assistant/assistantSiteBuilderIntakeAdvancedOptions.ts` |
+| Facts | `core/services/assistant/assistantSiteBuilderIntakeFacts.ts` |
+| Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeAdvancedOptions.test.ts` |
 
 ## Implementation Pseudocode
 

@@ -13,13 +13,14 @@
 ## Overview
 
 Harden warning rendering, localStorage/session persistence, dirty-state
-preservation, stale cache handling, and UI redaction for guided flows.
+preservation, stale cache handling, and UI redaction for site-builder intake
+flows.
 
 ## Sub-Tasks
 
 - Render poisoning/reference/media warnings as redacted user-facing gates.
-- Persist only bounded guided UI state, never raw secrets or raw reference data.
-- Discard stale or schema-incompatible cached guided state.
+- Persist only bounded intake UI state, never raw secrets or raw reference data.
+- Discard stale or schema-incompatible cached intake state.
 - Preserve dirty local edits during background revalidation without overwriting
   server truth.
 - Add tests that localStorage/debug payloads/screenshots cannot leak raw secrets.
@@ -43,26 +44,26 @@ preservation, stale cache handling, and UI redaction for guided flows.
 
 | Area | Files |
 |---|---|
-| Local state | `core/admin/ui/assistant/assistantConversationState.ts` or guided state helper |
-| Warning UI | guided warning/review components |
-| Tests | `tests/vitest/ui/assistant-guided-redaction.test.tsx` |
+| Local state | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/ui/setup/aiSiteWizardValidation.ts`, or intake state helper |
+| Warning UI | site-builder intake warning/review components |
+| Tests | `tests/vitest/ui/assistant-site-builder-intake-redaction.test.tsx` |
 
 ## Implementation Pseudocode
 
 ```ts
-export function serializeGuidedUiStateForStorage(state: GuidedUiState) {
+export function serializeSiteBuilderIntakeUiStateForStorage(state: SiteBuilderIntakeUiState) {
   return {
-    version: GUIDED_UI_STORAGE_VERSION,
+    version: SITE_BUILDER_INTAKE_UI_STORAGE_VERSION,
     sessionId: state.sessionId,
     mode: state.mode,
     currentStepId: state.currentStepId,
-    dirtyDraft: redactGuidedDraft(state.dirtyDraft),
+    dirtyDraft: redactSiteBuilderIntakeDraft(state.dirtyDraft),
   };
 }
 
-export function restoreGuidedUiState(raw: unknown) {
-  const state = normalizeStoredGuidedUiState(raw);
-  return state.version === GUIDED_UI_STORAGE_VERSION ? state : null;
+export function restoreSiteBuilderIntakeUiState(raw: unknown) {
+  const state = normalizeStoredSiteBuilderIntakeUiState(raw);
+  return state.version === SITE_BUILDER_INTAKE_UI_STORAGE_VERSION ? state : null;
 }
 ```
 
@@ -88,6 +89,6 @@ export function restoreGuidedUiState(raw: unknown) {
 
 ## Acceptance Criteria
 
-- Guided UI stores only bounded sanitized state.
+- Site-builder intake UI stores only bounded sanitized state.
 - Warning UI is useful without leaking raw hostile or secret-like content.
 - Stale client state cannot overwrite server-normalized sessions.

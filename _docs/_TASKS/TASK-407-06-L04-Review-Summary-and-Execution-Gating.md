@@ -12,7 +12,7 @@
 
 ## Overview
 
-Build the final guided review summary and dry-run/execute gating. Users must see
+Build the final site-builder intake review summary and dry-run/execute gating. Users must see
 what will be created before any mutation can be submitted.
 
 ## Sub-Tasks
@@ -42,19 +42,19 @@ what will be created before any mutation can be submitted.
 
 | Area | Files |
 |---|---|
-| Review UI | `core/admin/ui/assistant/GuidedReviewSummary.tsx` |
-| Plan handoff | `core/admin/ui/assistant/AssistantPanel.tsx`, assistant client helpers |
-| Tests | `tests/vitest/ui/assistant-guided-review.test.tsx` |
+| Review UI | `core/admin/ui/setup/AiSiteWizardSteps.tsx` or `SiteBuilderIntakeReviewSummary.tsx` |
+| Plan handoff | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/services/assistantClient.ts` siteKit helpers |
+| Tests | `tests/vitest/ui/assistant-site-builder-intake-review.test.tsx` |
 
 ## Implementation Pseudocode
 
 ```tsx
-function canSubmitGuidedPlan(session: GuidedSiteBuilderSession, review: ReviewState) {
+function canSubmitSiteBuilderIntakePlan(session: AssistantSiteBuilderIntakeSession, review: ReviewState) {
   return session.readyForReview && review.confirmedHash === session.reviewHash && !hasBlockingGate(session);
 }
 
-function GuidedReviewSummary({ session, onConfirm, onPlan }: Props) {
-  const canPlan = canSubmitGuidedPlan(session, session.reviewState);
+function SiteBuilderIntakeReviewSummary({ session, onConfirm, onPlan }: Props) {
+  const canPlan = canSubmitSiteBuilderIntakePlan(session, session.reviewState);
   return <ReviewPanel summary={session.reviewSummary} onConfirm={onConfirm} planDisabled={!canPlan} onPlan={onPlan} />;
 }
 ```
@@ -82,6 +82,6 @@ function GuidedReviewSummary({ session, onConfirm, onPlan }: Props) {
 
 ## Acceptance Criteria
 
-- Users see the full guided plan summary before mutation.
+- Users see the full intake-generated plan summary before mutation.
 - Dry-run/execute cannot be reached from unreviewed or stale sessions.
 - Blocking gates are visible and enforce execution disablement.

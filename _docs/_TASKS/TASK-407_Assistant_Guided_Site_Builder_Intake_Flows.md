@@ -40,10 +40,16 @@ verticals only when it asks bounded questions, maps answers to supported
 capabilities, and explicitly gates unsupported needs. It must not pretend that a
 single local blueprint can satisfy every website request.
 
-The new flow must add structured guide context such as
-`context.siteBuilderGuide`; it must not encode the intake answers only into a
-long prompt. The admin UI may still show a readable summary prompt, but backend
-planning must consume normalized facts from strict schemas.
+The new flow must extend the existing solution-kit/site-builder subsystem rather
+than creating a parallel planner. The existing backend handoff remains
+`context.siteKit` (`AssistantSiteKitPlanInput`) and the existing execution owners
+remain `previewGuidedSiteBuilderPlan`, `executeGuidedSiteBuilder`,
+`validateGuidedSiteBuilderRun`, `siteBuilderPlanStepIds`, `AiSiteWizard*`, and
+the solution-kit routes. TASK-407 adds a generic structured intake layer that
+compiles Basic/Advanced answers into the existing `siteKit` contract. If a
+temporary `context.siteBuilderIntake` payload is needed, it must be pre-execution
+metadata only, strictly validated by the intake owner, and compiled to
+`context.siteKit` before action planning.
 
 ## Agent Review Inputs
 
@@ -62,8 +68,8 @@ planning must consume normalized facts from strict schemas.
     Playwright evidence before closure.
 - Initial draft review on 2026-06-05:
   - agent review recommended one guided flow with Basic as the default,
-    Advanced as controlled expansion, strict `context.siteBuilderGuide`, and
-    user text/files/images treated as data rather than instructions,
+    Advanced as controlled expansion, strict structured context, and user
+    text/files/images treated as data rather than instructions,
   - Claude found a blocking dependency drift because TASK-407 depended on
     To-Do TASK-406 while already In Progress; TASK-407 now depends only on
     TASK-404/TASK-405 and records TASK-406 as related QA.
@@ -74,6 +80,36 @@ planning must consume normalized facts from strict schemas.
     UI, and E2E/closure work into bounded implementation units,
   - Claude re-audit found no blocking task-plan drift after fact-shape and
     step-id vocabulary fixes.
+- Site-builder subsystem re-audit on 2026-06-05:
+  - Claude found a blocking drift: the task plan initially ignored the existing
+    `siteKit`/solution-kit planner and proposed a parallel `GuidedSiteBuilder*`
+    contract,
+  - TASK-407 now explicitly treats `AssistantSiteBuilderIntake*` as the new
+    Basic/Advanced intake layer and keeps existing `GuidedSiteBuilder*` names for
+    the already-shipped plan/executor result types.
+
+## Existing Site-Builder Integration Contract
+
+- Schema owner for final execution handoff: existing `AssistantSiteKitPlanInput`
+  and `SiteBuilderPlanInput` types.
+- Existing step owner: `siteBuilderPlanStepIds` in
+  `core/services/kits/solutionKitTypes.ts`.
+- Existing planner/executor owners:
+  `core/services/assistant/siteBuilderPlanner.ts`,
+  `core/services/assistant/siteBuilderPlanAdapter.ts`, and
+  `core/services/assistant/siteBuilderExecutor.ts`.
+- Existing admin UX owners:
+  `core/admin/ui/setup/AiSiteWizard.tsx`,
+  `core/admin/ui/setup/AiSiteWizardSteps.tsx`, and
+  `core/admin/ui/setup/aiSiteWizardValidation.ts`.
+- Existing admin client/route handoff:
+  `core/admin/services/assistantClient.ts`,
+  `core/server/validation/assistantActionSchemas.ts`,
+  `core/server/routes/assistantRoutes.ts`, and
+  `core/services/assistant/actionPlannerService.ts`.
+- New TASK-407 modules must not create a second full-site mutation route or a
+  second full-site executor. They may add a Bun-free intake compiler, richer UI
+  state, option registries, and review metadata that normalize into `siteKit`.
 
 ## Security Contract
 
@@ -124,7 +160,7 @@ planning must consume normalized facts from strict schemas.
 | TASK-407-02 | Guided Intake Mode and Session Contract | To Do | TASK-407-02-L01 through TASK-407-02-L04 |
 | TASK-407-03 | Basic Mode Structured Site Flow | To Do | TASK-407-03-L01 through TASK-407-03-L04 |
 | TASK-407-04 | Advanced Mode Design Presets and Reference Intake | To Do | TASK-407-04-L01 through TASK-407-04-L04 |
-| TASK-407-05 | Blueprint Composer and Content Engine Decisions | To Do | TASK-407-05-L01 through TASK-407-05-L06 |
+| TASK-407-05 | SiteKit Plan and Content Engine Decisions | To Do | TASK-407-05-L01 through TASK-407-05-L06 |
 | TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | To Do | TASK-407-06-L01 through TASK-407-06-L05 |
 | TASK-407-07 | E2E Live Validation Docs and Closure | To Do | TASK-407-07-L01 through TASK-407-07-L06 |
 
@@ -144,13 +180,13 @@ planning must consume normalized facts from strict schemas.
 | TASK-407-04-L02 | Advanced Menu Hero and Section Options | To Do |
 | TASK-407-04-L03 | Reference Input Validation and Redaction | To Do |
 | TASK-407-04-L04 | Reference Design Brief and Review Gate | To Do |
-| TASK-407-05-L01 | Guided Facts to Blueprint Graph Adapter | To Do |
+| TASK-407-05-L01 | Intake Facts to SiteKit Plan Adapter | To Do |
 | TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | To Do |
 | TASK-407-05-L03 | Content Engine Decision Rules | To Do |
 | TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | To Do |
 | TASK-407-05-L05 | Follow Up Refinement Target Resolution | To Do |
 | TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | To Do |
-| TASK-407-06-L01 | Guided Assistant Panel State Machine | To Do |
+| TASK-407-06-L01 | Site Builder Intake UI State Machine | To Do |
 | TASK-407-06-L02 | Basic Stepper Controls | To Do |
 | TASK-407-06-L03 | Advanced Stepper Controls | To Do |
 | TASK-407-06-L04 | Review Summary and Execution Gating | To Do |
@@ -172,7 +208,9 @@ planning must consume normalized facts from strict schemas.
 4. Implement TASK-407-04 leaves as an additive Advanced expansion over the same
    step schema, not as a separate free-form prompt path.
 5. Implement TASK-407-05 leaves to connect completed intake sessions to the
-   existing blueprint composer/action engine and content-engine decision layer.
+   existing solution-kit/siteKit planner, action engine, and content-engine
+   decision layer. Blueprint-composer changes are optional adapters only when the
+   existing solution-kit contract cannot express an agreed capability.
 6. Implement TASK-407-06 leaves to harden admin review UI, prompt-poisoning
    boundaries, and reference intake.
 7. Implement TASK-407-07 leaves: restart helper, run Playwright CLI live E2E for
@@ -185,10 +223,11 @@ planning must consume normalized facts from strict schemas.
 
 | Area | Likely files |
 |---|---|
-| Assistant contracts | `core/services/assistant/actionPlanTypes.ts`, `core/services/assistant/actionPlanSchema.ts`, new guided-intake contract/service files under `core/services/assistant/` |
-| Route validation | `core/server/validation/assistantActionSchemas.ts` for `context.siteBuilderGuide` request validation if the existing action-plan route carries guide context |
-| Planner/composer | `core/services/assistant/actionPlannerService.ts`, `core/services/assistant/blueprints/*`, `core/services/assistant/operationPolicy/*` |
-| Admin UI | `core/admin/ui/assistant/AssistantPanel.tsx`, assistant review components, possible guided-intake stepper components |
+| Intake contracts | New Bun-free `core/services/assistant/assistantSiteBuilderIntake*.ts` files that own Basic/Advanced intake schemas, option registries, facts, redaction, and compile-to-siteKit helpers |
+| Existing siteKit contracts | `core/services/kits/solutionKitTypes.ts`, `core/services/assistant/siteBuilderPlanner.ts`, `core/services/assistant/siteBuilderPlanAdapter.ts`, `core/services/assistant/siteBuilderExecutor.ts`, `core/services/assistant/actionPlanTypes.ts` |
+| Route validation | `core/server/validation/assistantActionSchemas.ts` only if a temporary `context.siteBuilderIntake` payload is carried; final plan handoff must keep using strict `context.siteKit` |
+| Planner/composer | `core/services/assistant/actionPlannerService.ts` for choosing/receiving `context.siteKit`; `core/services/assistant/blueprints/*` only for optional composition capabilities not already expressible by solution kits |
+| Admin UI | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/ui/setup/AiSiteWizardSteps.tsx`, `core/admin/ui/setup/aiSiteWizardValidation.ts`, plus assistant/floating-panel entry points if full-site intent starts the wizard |
 | Reference/media policy | `core/services/media/curatedMediaProfiles.ts`, media/reference validation services if introduced |
 | Tests | `tests/vitest/assistant/*`, `tests/vitest/ui/assistant-*`, `tests/unit/assistant/*`, `tests/integration/routes/assistant.test.ts`, Playwright CLI scripts under `.tmp/` during local validation |
 | Docs/closure | `_docs/ASSISTANT_SITE_BUILDER.md`, `docs/develop/assistant.md`, task files, board, changelog |
@@ -196,10 +235,9 @@ planning must consume normalized facts from strict schemas.
 ## Implementation Pseudocode
 
 ```ts
-type GuidedSiteBuilderMode = "basic" | "advanced";
+type AssistantSiteBuilderIntakeMode = "basic" | "advanced";
 
-type GuidedSiteBuilderStepId =
-  | "mode"
+type AssistantSiteBuilderIntakeStepId =
   | "business-profile"
   | "site-goals"
   | "site-map"
@@ -213,16 +251,20 @@ type GuidedSiteBuilderStepId =
   | "reference-intake"
   | "review";
 
-type GuidedAnswer = {
-  stepId: GuidedSiteBuilderStepId;
+type AssistantSiteBuilderIntakeAnswer = {
+  stepId: AssistantSiteBuilderIntakeStepId;
   values: Record<string, unknown>;
 };
 
-type AssistantActionContextWithGuide = AssistantActionContext & {
-  siteBuilderGuide?: GuidedSiteBuilderSession;
+type AssistantActionContextWithIntake = AssistantActionContext & {
+  siteBuilderIntake?: AssistantSiteBuilderIntakeSession;
+  siteKit?: AssistantSiteKitPlanInput;
 };
 
-function normalizeGuidedAnswer(step: GuidedStepDefinition, value: unknown) {
+function normalizeAssistantSiteBuilderIntakeAnswer(
+  step: AssistantSiteBuilderIntakeStepDefinition,
+  value: unknown
+) {
   rejectUnknownKeys(value, step.schema.allowedKeys);
   return step.schema.normalize(value, {
     maxTextLength: step.freeTextMax,
@@ -230,43 +272,35 @@ function normalizeGuidedAnswer(step: GuidedStepDefinition, value: unknown) {
   });
 }
 
-function resolveNextGuidedStep(session: GuidedSiteBuilderSession) {
-  const steps = getGuidedStepDefinitionsForMode(session.mode);
+function resolveNextSiteBuilderIntakeStep(session: AssistantSiteBuilderIntakeSession) {
+  const steps = getSiteBuilderIntakeStepDefinitionsForMode(session.mode);
   const missing = steps.find((step) => !isStepSatisfied(step, session.answers));
   return missing ?? "review";
 }
 
-function buildGuidedSiteBuilderPlan(session: GuidedSiteBuilderSession) {
-  const normalized = normalizeGuidedSession(session);
+function buildReviewedSiteKitPlanFromIntake(session: AssistantSiteBuilderIntakeSession) {
+  const normalized = normalizeAssistantSiteBuilderIntakeSession(session);
   if (!normalized.readyForPlan) return buildNeedsInputPlan(normalized.nextStep);
 
-  const facts = extractBoundedSiteBuilderFacts(normalized);
+  const facts = deriveAssistantSiteBuilderIntakeFacts(normalized);
   const providerClassification = maybeClassifyFactsWithProvider({
     facts,
     providerContext: buildPolicyBoundedProviderContext(facts),
   });
 
-  const graph = buildBlueprintCompositionGraphFromGuidedAnswers({
-    mode: normalized.mode,
-    facts,
+  const compileResult = buildSiteBuilderIntakeCompileResult(facts, {
     providerClassification,
-    businessProfile: facts.businessProfile,
-    siteMap: facts.siteMap,
-    menu: facts.menu,
-    homepageSections: facts.homepageSections,
-    hero: facts.hero,
-    subpages: facts.subpages,
-    design: facts.visual.presetId,
-    contentEngines: resolveContentEngineCandidates(facts),
-    mediaPolicy: resolveMediaProfileOrGate(facts),
+    supportedSteps: siteBuilderPlanStepIds,
+    existingSolutionKits: solutionKitRegistry,
   });
+  const siteKit = compileResult.siteKit;
 
-  const conflicts = resolveSiteBuilderConflicts(graph);
+  const conflicts = validateCompiledSiteKitPlanInput(siteKit);
   if (conflicts.blocking.length > 0) return buildNeedsInputPlan(conflicts);
 
-  return assembleStrictActions(graph, {
-    resourceCatalog: normalized.trustedResourceCatalog,
-    actionSchemas: assistantActionSchemas,
+  return buildSiteKitActionPlanFromExistingPath({
+    siteKit,
+    preview: buildGuidedSiteBuilderPlanResult(siteKit),
   });
 }
 ```
@@ -277,8 +311,12 @@ Data flow:
   broad site restructuring.
 - The assistant asks one structured step at a time; each answer is schema
   normalized and stored as bounded session state.
-- `context.siteBuilderGuide` carries the normalized session/facts to the
-  backend plan route; prompt text is not the source of truth.
+- The reviewed intake session compiles into `AssistantSiteKitPlanInput` and is
+  submitted through existing `context.siteKit`; prompt text is not the source of
+  truth.
+- A temporary `context.siteBuilderIntake` field is allowed only for
+  server-normalized pre-execution metadata and must not bypass or replace
+  `context.siteKit`.
 - Basic mode exposes fewer choices and lets the backend choose widget presets.
 - Advanced mode exposes additional design/content-model options from the same
   backend registries.
@@ -287,7 +325,8 @@ Data flow:
   planning.
 - The final review step shows pages, menu structure, selected widgets,
   content-engine/custom-screen decisions, media readiness, and gated items.
-- Only the final reviewed session can become a strict typed action plan.
+- Only the final reviewed session can become a strict `siteKit` action plan
+  through the existing planner/executor path.
 
 Error handling:
 
@@ -310,8 +349,11 @@ Error handling:
 - Root precommit checks before commit: `bun run precommit`
 - Targeted contract tests:
   - guided-intake answer normalization,
-  - `assistantActionPlanRequestSchema` accepting strict
-    `context.siteBuilderGuide` and rejecting unknown guide fields,
+  - intake facts compiling into `AssistantSiteKitPlanInput`,
+  - `assistantActionPlanRequestSchema` still accepting strict `context.siteKit`
+    and rejecting unknown `siteKit` fields,
+  - route tests for `context.siteBuilderIntake` only if that temporary metadata
+    field is introduced,
   - mode/step transitions,
   - Basic/Advanced step visibility,
   - unknown-key rejection,
