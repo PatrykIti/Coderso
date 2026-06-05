@@ -2,6 +2,7 @@ import {
   assistantSiteBuilderIntakeModes,
   assistantSiteBuilderIntakeOptionRegistryIds,
   assistantSiteBuilderIntakeStepIds,
+  type AssistantSiteBuilderContentEngineId,
   type AssistantSiteBuilderHeroPresetId,
   type AssistantSiteBuilderIntakeMode,
   type AssistantSiteBuilderIntakeModeDefinition,
@@ -190,6 +191,7 @@ export const siteBuilderIntakeStepDefinitions = freezeRegistry(
         "Chooses whether catalogs, posts, listings, or detail pages should back parts of the site.",
       required: false,
       modeAvailability: advancedOnlyModes,
+      optionRegistryId: "contentEngines",
     },
     {
       id: "design-preset",
@@ -454,6 +456,57 @@ export const siteBuilderIntakeMediaPolicyDefinitions = freezeRegistry(
   "mediaPolicies"
 );
 
+export const siteBuilderIntakeContentEngineDefinitions = freezeRegistry(
+  [
+    {
+      id: "services",
+      label: "Services",
+      description: "Structured offers, service categories, or service detail pages.",
+    },
+    {
+      id: "products",
+      label: "Products",
+      description: "Structured products, packages, menus, or purchasable items.",
+    },
+    {
+      id: "portfolio",
+      label: "Portfolio",
+      description: "Structured projects, work examples, galleries, or showcases.",
+    },
+    {
+      id: "case-studies",
+      label: "Case studies",
+      description: "Structured stories, outcomes, before/after records, or results.",
+    },
+    {
+      id: "blog",
+      label: "Blog",
+      description: "Posts, updates, resources, guides, or editorial content.",
+    },
+    {
+      id: "team",
+      label: "Team",
+      description: "People, contributors, experts, instructors, staff, or partners.",
+    },
+    {
+      id: "locations",
+      label: "Locations",
+      description: "Venues, branches, offices, service areas, routes, or places.",
+    },
+    {
+      id: "faq",
+      label: "FAQ",
+      description: "Reusable questions and answers that may appear on multiple pages.",
+    },
+    {
+      id: "testimonials",
+      label: "Testimonials",
+      description: "Reviews, references, quotes, outcomes, or social proof entries.",
+    },
+  ] as const satisfies readonly AssistantSiteBuilderIntakeOptionDefinition<AssistantSiteBuilderContentEngineId>[],
+  "contentEngines"
+);
+
 export const siteBuilderIntakeReviewStateDefinitions = freezeRegistry(
   [
     {
@@ -496,6 +549,7 @@ const optionRegistries: Readonly<
   heroPresets: siteBuilderIntakeHeroPresetDefinitions,
   sectionRoles: siteBuilderIntakeSectionRoleDefinitions,
   mediaPolicies: siteBuilderIntakeMediaPolicyDefinitions,
+  contentEngines: siteBuilderIntakeContentEngineDefinitions,
   reviewStates: siteBuilderIntakeReviewStateDefinitions,
 });
 

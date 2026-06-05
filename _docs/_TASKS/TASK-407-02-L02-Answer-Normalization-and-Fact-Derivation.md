@@ -6,7 +6,7 @@
 **Category:** Assistant + Validation + Facts
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -104,6 +104,34 @@ export function deriveAssistantSiteBuilderIntakeFacts(session: AssistantSiteBuil
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
+
+## Closure Evidence
+
+- Added service-owned machine-readable intake errors in
+  `assistantSiteBuilderIntakeErrors.ts`.
+- Added per-step answer normalizers in
+  `assistantSiteBuilderIntakeNormalizer.ts` for profile, goals, site map, menu,
+  homepage sections, hero, subpages, media policy, content-engine,
+  design-preset, reference-intake, and review answers.
+- Added derived fact assembly in `assistantSiteBuilderIntakeFacts.ts` with
+  `readyForReview`, `readyForExecution`, missing-step lists, redaction state,
+  merged generic page roles, media policy, and Advanced content/design/reference
+  facts.
+- Client-supplied `facts` are not trusted; normalized sessions derive facts from
+  normalized answers.
+- Content-engine choices resolve through the same backend-owned option registry
+  path as page roles, menu presets, hero presets, section roles, media policies,
+  and review states.
+- `readyForExecution` requires explicit `confirmed: true`; a client-supplied
+  `reviewState: "confirmed"` alone cannot unlock execution.
+- Fixed a blocker found by agent audit where redaction markers could be clipped
+  in short bounded fields and make `redactionApplied` false.
+- Validation passed:
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeNormalizer.test.ts` (13 tests)
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `git diff --check`
+  - `bun run precommit`
 
 ## Documentation Updates Required
 

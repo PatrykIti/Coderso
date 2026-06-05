@@ -1,3 +1,7 @@
+import {
+  AssistantSiteBuilderIntakeError,
+  type AssistantSiteBuilderIntakeErrorCode,
+} from "./assistantSiteBuilderIntakeErrors";
 import type { SiteBuilderPlanStepId } from "../kits/solutionKitTypes";
 
 export const ASSISTANT_SITE_BUILDER_INTAKE_VERSION = 1 as const;
@@ -29,6 +33,7 @@ export const assistantSiteBuilderIntakeOptionRegistryIds = [
   "heroPresets",
   "sectionRoles",
   "mediaPolicies",
+  "contentEngines",
   "reviewStates",
 ] as const;
 
@@ -106,6 +111,21 @@ export const assistantSiteBuilderReviewStateIds = [
 
 export type AssistantSiteBuilderReviewStateId = (typeof assistantSiteBuilderReviewStateIds)[number];
 
+export const assistantSiteBuilderContentEngineIds = [
+  "services",
+  "products",
+  "portfolio",
+  "case-studies",
+  "blog",
+  "team",
+  "locations",
+  "faq",
+  "testimonials",
+] as const;
+
+export type AssistantSiteBuilderContentEngineId =
+  (typeof assistantSiteBuilderContentEngineIds)[number];
+
 export type AssistantSiteBuilderIntakeOptionDefinition<TId extends string = string> = {
   id: TId;
   label: string;
@@ -142,13 +162,29 @@ export type AssistantSiteBuilderIntakeFacts = {
   audience?: string | null;
   locale?: string | null;
   region?: string | null;
+  summary?: string | null;
+  offerSummary?: string | null;
   goals?: readonly string[];
+  primaryGoal?: string | null;
   pageRoles?: readonly AssistantSiteBuilderPageRoleId[];
   sectionRoles?: readonly AssistantSiteBuilderSectionRoleId[];
   menuPreset?: AssistantSiteBuilderMenuPresetId | null;
   heroPreset?: AssistantSiteBuilderHeroPresetId | null;
+  heroHeadline?: string | null;
+  heroSubheadline?: string | null;
   mediaPolicy?: AssistantSiteBuilderMediaPolicyId | null;
+  mediaNotes?: string | null;
+  contentEngines?: readonly AssistantSiteBuilderContentEngineId[];
+  designBrief?: string | null;
+  referenceNotes?: string | null;
   reviewState?: AssistantSiteBuilderReviewStateId;
+  reviewNotes?: string | null;
+  answeredStepIds?: readonly AssistantSiteBuilderIntakeStepId[];
+  missingRequiredStepIds?: readonly AssistantSiteBuilderIntakeStepId[];
+  missingReviewInputStepIds?: readonly AssistantSiteBuilderIntakeStepId[];
+  readyForReview?: boolean;
+  readyForExecution?: boolean;
+  redactionApplied?: boolean;
   siteKitPlanStepIds?: readonly SiteBuilderPlanStepId[];
 };
 
@@ -161,25 +197,22 @@ export type AssistantSiteBuilderIntakeSession = {
   reviewState?: AssistantSiteBuilderReviewStateId;
 };
 
-export type AssistantSiteBuilderIntakeRegistryErrorCode =
+export type AssistantSiteBuilderIntakeRegistryErrorCode = Extract<
+  AssistantSiteBuilderIntakeErrorCode,
   | "intake_mode_invalid"
   | "intake_step_invalid"
   | "intake_option_registry_invalid"
   | "intake_option_invalid"
   | "intake_registry_duplicate"
-  | "intake_registry_invalid";
+  | "intake_registry_invalid"
+>;
 
-export class AssistantSiteBuilderIntakeRegistryError extends Error {
-  readonly code: AssistantSiteBuilderIntakeRegistryErrorCode;
-  readonly details: Readonly<Record<string, unknown>>;
-
+export class AssistantSiteBuilderIntakeRegistryError extends AssistantSiteBuilderIntakeError {
   constructor(
     code: AssistantSiteBuilderIntakeRegistryErrorCode,
     details: Readonly<Record<string, unknown>> = {}
   ) {
-    super(code);
+    super(code, details);
     this.name = "AssistantSiteBuilderIntakeRegistryError";
-    this.code = code;
-    this.details = details;
   }
 }

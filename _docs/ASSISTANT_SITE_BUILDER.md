@@ -321,6 +321,25 @@ Unknown mode, step, option-registry, or option ids must fail closed through the
 service-owned registry helpers before route validation, provider planning, or
 execution.
 
+Answer normalization and fact derivation are service-owned:
+- `core/services/assistant/assistantSiteBuilderIntakeErrors.ts`
+- `core/services/assistant/assistantSiteBuilderIntakeNormalizer.ts`
+- `core/services/assistant/assistantSiteBuilderIntakeFacts.ts`
+
+The UI can submit structured answers, but it cannot author trusted facts. A
+normalized session derives facts from answers every time, ignores client-supplied
+`facts` as a source of truth, and rejects unknown answer keys before planner or
+provider handoff. User text is bounded content data only: prompt-injection-like
+phrases can remain as sanitized copy context, while secret-like values and
+provider tokens are redacted from normalized answers and derived facts.
+
+Review readiness is split deliberately:
+- `readyForReview` means required non-review answers are present and the user
+  can inspect the generated summary.
+- `readyForExecution` additionally requires the review answer to include
+  `confirmed: true`; a client-supplied `reviewState: "confirmed"` alone is not
+  enough.
+
 ## Auditability
 
 Execution writes assistant metadata to run options (`assistantSiteBuilder`), including:

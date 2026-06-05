@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 
 import {
+  assistantSiteBuilderContentEngineIds,
   assistantSiteBuilderHeroPresetIds,
   assistantSiteBuilderIntakeModes,
   assistantSiteBuilderIntakeOptionRegistryIds,
@@ -90,6 +91,7 @@ test("site-builder intake option registries expose generic reusable roles", () =
     heroPresets: [...assistantSiteBuilderHeroPresetIds],
     sectionRoles: [...assistantSiteBuilderSectionRoleIds],
     mediaPolicies: [...assistantSiteBuilderMediaPolicyIds],
+    contentEngines: [...assistantSiteBuilderContentEngineIds],
     reviewStates: [...assistantSiteBuilderReviewStateIds],
   } satisfies Record<AssistantSiteBuilderIntakeOptionRegistryId, readonly string[]>;
 

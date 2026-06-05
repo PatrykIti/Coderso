@@ -169,7 +169,7 @@ metadata only, strictly validated by the intake owner, and compiled to
 | ID | Title | Status |
 |---|---|---|
 | TASK-407-02-L01 | Session Types and Step Registry | Done (2026-06-05) |
-| TASK-407-02-L02 | Answer Normalization and Fact Derivation | To Do |
+| TASK-407-02-L02 | Answer Normalization and Fact Derivation | Done (2026-06-05) |
 | TASK-407-02-L03 | Assistant Context and Route Validation Handoff | To Do |
 | TASK-407-02-L04 | Guide Redaction and Browser State Contract | To Do |
 | TASK-407-03-L01 | Basic Step Definitions and Progression | To Do |
