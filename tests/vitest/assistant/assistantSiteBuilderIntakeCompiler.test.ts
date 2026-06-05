@@ -123,12 +123,19 @@ const productCatalogSession: AssistantSiteBuilderIntakeSession = {
         menuPreset: "conversion-focused",
         primaryActionLabel: "Ask about order",
         primaryActionPageRole: "contact",
+        advancedMenuBehaviorIds: ["grouped", "sticky", "mobile-drawer"],
+        advancedCtaTargetPageRole: "contact",
       },
     },
     {
       stepId: "homepage-sections",
       values: {
         sectionRoles: ["featured-items", "pricing", "proof", "lead-capture"],
+        advancedSectionVariantIds: [
+          "featured-items-cards",
+          "proof-spotlight",
+          "lead-capture-standard",
+        ],
       },
     },
     {
@@ -136,6 +143,7 @@ const productCatalogSession: AssistantSiteBuilderIntakeSession = {
       values: {
         heroPreset: "offer-with-proof",
         headline: "Ceramics made for daily use",
+        advancedHeroVariantId: "split",
       },
     },
     {
@@ -277,9 +285,12 @@ test("compileIntakeToSiteKitPlanInput does not treat generic workshops as automo
 });
 
 test("buildActionPlanRequestFromReviewedIntake uses existing strict siteKit route schema", () => {
-  const request = buildActionPlanRequestFromReviewedIntake(basicCoffeeDirectorySession);
+  const request = buildActionPlanRequestFromReviewedIntake(productCatalogSession);
 
   expect(request.context).toEqual({ siteKit: request.context.siteKit });
+  expect(JSON.stringify(request.context)).not.toContain("advancedLayout");
+  expect(JSON.stringify(request.context)).not.toContain("advancedSectionVariantIds");
+  expect(JSON.stringify(request.context)).not.toContain("actions");
   expect(() => validate(assistantActionPlanRequestSchema, request)).not.toThrow();
   expect(() =>
     validate(assistantActionPlanRequestSchema, {

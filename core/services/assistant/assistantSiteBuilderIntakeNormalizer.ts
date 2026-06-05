@@ -10,6 +10,9 @@ import { deriveAssistantSiteBuilderIntakeFacts } from "./assistantSiteBuilderInt
 import { throwAssistantSiteBuilderIntakeError } from "./assistantSiteBuilderIntakeErrors";
 import {
   ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  type AssistantSiteBuilderAdvancedHeroVariantId,
+  type AssistantSiteBuilderAdvancedMenuBehaviorId,
+  type AssistantSiteBuilderAdvancedSectionVariantId,
   type AssistantSiteBuilderContentEngineId,
   type AssistantSiteBuilderDesignPresetId,
   type AssistantSiteBuilderHeroPresetId,
@@ -50,9 +53,21 @@ const profileKeys = new Set([
 ]);
 const goalsKeys = new Set(["goals", "primaryGoal", "notes"]);
 const siteMapKeys = new Set(["pageRoles", "customLabels"]);
-const menuKeys = new Set(["menuPreset", "primaryActionLabel", "primaryActionPageRole"]);
-const sectionsKeys = new Set(["sectionRoles"]);
-const heroKeys = new Set(["heroPreset", "headline", "subheadline", "primaryCallToAction"]);
+const menuKeys = new Set([
+  "menuPreset",
+  "primaryActionLabel",
+  "primaryActionPageRole",
+  "advancedMenuBehaviorIds",
+  "advancedCtaTargetPageRole",
+]);
+const sectionsKeys = new Set(["sectionRoles", "advancedSectionVariantIds"]);
+const heroKeys = new Set([
+  "heroPreset",
+  "headline",
+  "subheadline",
+  "primaryCallToAction",
+  "advancedHeroVariantId",
+]);
 const subpagesKeys = new Set(["pageRoles", "customLabels", "notes"]);
 const mediaPolicyKeys = new Set(["mediaPolicy", "notes"]);
 const contentEngineKeys = new Set(["contentEngines", "notes"]);
@@ -65,6 +80,13 @@ const designPresetKeys = new Set([
 ]);
 const referenceIntakeKeys = new Set(["referenceNotes", "referenceLabels", "referenceIds"]);
 const reviewKeys = new Set(["reviewState", "confirmed", "notes"]);
+const advancedOnlyAnswerKeysByStep: Partial<
+  Record<AssistantSiteBuilderIntakeStepId, ReadonlySet<string>>
+> = {
+  menu: new Set(["advancedMenuBehaviorIds", "advancedCtaTargetPageRole"]),
+  hero: new Set(["advancedHeroVariantId"]),
+  "homepage-sections": new Set(["advancedSectionVariantIds"]),
+};
 
 const stableIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const secretLikeSegmentPattern =
@@ -228,6 +250,16 @@ const normalizeOptionArray = <TId extends string>(
   return unique;
 };
 
+const normalizeOptionalOptionArray = <TId extends string>(
+  value: unknown,
+  registryId: string,
+  field: string,
+  options: { maxItems?: number } = {}
+): TId[] | undefined => {
+  if (value === undefined || value === null) return undefined;
+  return normalizeOptionArray<TId>(value, registryId, field, options);
+};
+
 const normalizeDesignTextValue = (
   value: unknown,
   field: string,
@@ -312,6 +344,18 @@ const normalizeMenuValues: AnswerValueNormalizer = (input) => {
       "pageRoles",
       "primaryActionPageRole"
     ),
+    advancedMenuBehaviorIds:
+      normalizeOptionalOptionArray<AssistantSiteBuilderAdvancedMenuBehaviorId>(
+        record.advancedMenuBehaviorIds,
+        "advancedMenuBehaviors",
+        "advancedMenuBehaviorIds",
+        { maxItems: 6 }
+      ),
+    advancedCtaTargetPageRole: normalizeOption<AssistantSiteBuilderPageRoleId>(
+      record.advancedCtaTargetPageRole,
+      "pageRoles",
+      "advancedCtaTargetPageRole"
+    ),
   });
 };
 
@@ -319,14 +363,21 @@ const normalizeSectionsValues: AnswerValueNormalizer = (input) => {
   const record = readRecord(input, "intake_answer_invalid", { stepId: "homepage-sections" });
   rejectUnknownKeys(record, sectionsKeys, { stepId: "homepage-sections" });
 
-  return {
+  return omitUndefined({
     sectionRoles: normalizeOptionArray<AssistantSiteBuilderSectionRoleId>(
       record.sectionRoles,
       "sectionRoles",
       "sectionRoles",
       { required: true, maxItems: 12 }
     ),
-  };
+    advancedSectionVariantIds:
+      normalizeOptionalOptionArray<AssistantSiteBuilderAdvancedSectionVariantId>(
+        record.advancedSectionVariantIds,
+        "advancedSectionVariants",
+        "advancedSectionVariantIds",
+        { maxItems: 14 }
+      ),
+  });
 };
 
 const normalizeHeroValues: AnswerValueNormalizer = (input) => {
@@ -345,6 +396,11 @@ const normalizeHeroValues: AnswerValueNormalizer = (input) => {
     primaryCallToAction: normalizeTextValue(record.primaryCallToAction, "primaryCallToAction", {
       maxLength: 80,
     }),
+    advancedHeroVariantId: normalizeOption<AssistantSiteBuilderAdvancedHeroVariantId>(
+      record.advancedHeroVariantId,
+      "advancedHeroVariants",
+      "advancedHeroVariantId"
+    ),
   });
 };
 
@@ -501,6 +557,29 @@ const assertStepAvailableForMode = (
   }
 };
 
+const assertNoAdvancedAnswerValuesForBasicMode = (
+  mode: AssistantSiteBuilderIntakeMode,
+  answers: readonly AssistantSiteBuilderIntakeAnswer[]
+) => {
+  if (mode !== "basic") return;
+
+  for (const answer of answers) {
+    const advancedKeys = advancedOnlyAnswerKeysByStep[answer.stepId];
+    if (!advancedKeys) continue;
+
+    for (const key of Object.keys(answer.values)) {
+      if (advancedKeys.has(key)) {
+        fail("intake_answer_invalid", {
+          mode,
+          stepId: answer.stepId,
+          key,
+          reason: "advanced_field_unavailable",
+        });
+      }
+    }
+  }
+};
+
 export const normalizeAssistantSiteBuilderIntakeAnswerValues = (
   stepId: AssistantSiteBuilderIntakeStepId,
   input: unknown
@@ -562,6 +641,7 @@ export const normalizeAssistantSiteBuilderIntakeSession = (
     }
     seenStepIds.add(answer.stepId);
   }
+  assertNoAdvancedAnswerValuesForBasicMode(mode, answers);
 
   const facts = deriveAssistantSiteBuilderIntakeFacts({
     mode,

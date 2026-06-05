@@ -32,9 +32,12 @@ export type AssistantSiteBuilderIntakeStepId = (typeof assistantSiteBuilderIntak
 export const assistantSiteBuilderIntakeOptionRegistryIds = [
   "pageRoles",
   "menuPresets",
+  "advancedMenuBehaviors",
   "heroPresets",
+  "advancedHeroVariants",
   "designPresets",
   "sectionRoles",
+  "advancedSectionVariants",
   "mediaPolicies",
   "contentEngines",
   "reviewStates",
@@ -85,6 +88,18 @@ export const assistantSiteBuilderMenuPresetIds = [
 
 export type AssistantSiteBuilderMenuPresetId = (typeof assistantSiteBuilderMenuPresetIds)[number];
 
+export const assistantSiteBuilderAdvancedMenuBehaviorIds = [
+  "single-level",
+  "grouped",
+  "sticky",
+  "transparent",
+  "nontransparent",
+  "mobile-drawer",
+] as const;
+
+export type AssistantSiteBuilderAdvancedMenuBehaviorId =
+  (typeof assistantSiteBuilderAdvancedMenuBehaviorIds)[number];
+
 export const assistantSiteBuilderHeroPresetIds = [
   "copy-first",
   "media-first",
@@ -94,6 +109,16 @@ export const assistantSiteBuilderHeroPresetIds = [
 ] as const;
 
 export type AssistantSiteBuilderHeroPresetId = (typeof assistantSiteBuilderHeroPresetIds)[number];
+
+export const assistantSiteBuilderAdvancedHeroVariantIds = [
+  "centered",
+  "split",
+  "media-left",
+  "media-center",
+] as const;
+
+export type AssistantSiteBuilderAdvancedHeroVariantId =
+  (typeof assistantSiteBuilderAdvancedHeroVariantIds)[number];
 
 export const assistantSiteBuilderDesignPresetIds = [
   "modern",
@@ -125,6 +150,26 @@ export const assistantSiteBuilderSectionRoleIds = [
 ] as const;
 
 export type AssistantSiteBuilderSectionRoleId = (typeof assistantSiteBuilderSectionRoleIds)[number];
+
+export const assistantSiteBuilderAdvancedSectionVariantIds = [
+  "featured-items-cards",
+  "featured-items-list",
+  "services-overview-cards",
+  "proof-grid",
+  "proof-spotlight",
+  "faq-single-column",
+  "faq-two-column",
+  "lead-capture-standard",
+  "contact-form-left",
+  "contact-form-right",
+  "content-feed-cards",
+  "content-feed-list",
+  "call-to-action-centered",
+  "call-to-action-split",
+] as const;
+
+export type AssistantSiteBuilderAdvancedSectionVariantId =
+  (typeof assistantSiteBuilderAdvancedSectionVariantIds)[number];
 
 export const assistantSiteBuilderDesignToneIds = [
   "clean",
@@ -212,6 +257,62 @@ export type AssistantSiteBuilderDesignPresetFacts = {
   gapCodes: readonly string[];
 };
 
+export type AssistantSiteBuilderNavigationVariantId = "simple" | "with-cta" | "split";
+
+export type AssistantSiteBuilderNavigationMobileMode = "expanded" | "drawer" | "minimal";
+
+export type AssistantSiteBuilderAdvancedLayoutGate = {
+  code:
+    | "advanced_menu_structure_conflict"
+    | "advanced_menu_surface_conflict"
+    | "advanced_section_role_missing"
+    | "advanced_section_preset_unsupported";
+  severity: "info" | "warning";
+  message: string;
+  optionId?: string;
+  sectionRoleId?: AssistantSiteBuilderSectionRoleId;
+};
+
+export type AssistantSiteBuilderAdvancedMenuFacts = {
+  behaviorIds: readonly AssistantSiteBuilderAdvancedMenuBehaviorId[];
+  widgetType: "navigation";
+  module: "navigation";
+  variantId: AssistantSiteBuilderNavigationVariantId;
+  structure: "single-level" | "grouped";
+  sticky: boolean;
+  transparent: boolean;
+  mobileMode: AssistantSiteBuilderNavigationMobileMode;
+  ctaTargetPageRole: AssistantSiteBuilderPageRoleId | null;
+};
+
+export type AssistantSiteBuilderAdvancedHeroVariantFacts = {
+  variantId: AssistantSiteBuilderAdvancedHeroVariantId;
+  widgetType: "hero";
+  widgetVariantId: AssistantSiteBuilderAdvancedHeroVariantId;
+  module: "content";
+  alias: "hero";
+  pagePresetIds: readonly string[];
+  sectionPresetIds: readonly string[];
+};
+
+export type AssistantSiteBuilderAdvancedSectionVariantFacts = {
+  variantId: AssistantSiteBuilderAdvancedSectionVariantId;
+  sectionRoleId: AssistantSiteBuilderSectionRoleId;
+  alias: string;
+  widgetType: string;
+  widgetVariantId: string;
+  module: string;
+  pagePresetIds: readonly string[];
+  sectionPresetIds: readonly string[];
+};
+
+export type AssistantSiteBuilderAdvancedLayoutFacts = {
+  menu?: AssistantSiteBuilderAdvancedMenuFacts;
+  hero?: AssistantSiteBuilderAdvancedHeroVariantFacts;
+  sectionVariants?: readonly AssistantSiteBuilderAdvancedSectionVariantFacts[];
+  gates: readonly AssistantSiteBuilderAdvancedLayoutGate[];
+};
+
 export const assistantSiteBuilderMediaPolicyIds = ["curated", "library", "placeholder"] as const;
 
 export type AssistantSiteBuilderMediaPolicyId = (typeof assistantSiteBuilderMediaPolicyIds)[number];
@@ -285,6 +386,7 @@ export type AssistantSiteBuilderIntakeAnswerFieldDefinition = {
   description: string;
   control: AssistantSiteBuilderIntakeAnswerFieldControl;
   required: boolean;
+  modeAvailability?: readonly AssistantSiteBuilderIntakeMode[];
   requiredGroupId?: string | null;
   maxLength?: number;
   maxItems?: number;
@@ -332,6 +434,7 @@ export type AssistantSiteBuilderIntakeFacts = {
   designPresetId?: AssistantSiteBuilderDesignPresetId | null;
   designPreset?: AssistantSiteBuilderDesignPresetFacts;
   designBrief?: string | null;
+  advancedLayout?: AssistantSiteBuilderAdvancedLayoutFacts;
   referenceNotes?: string | null;
   reviewState?: AssistantSiteBuilderReviewStateId;
   reviewNotes?: string | null;

@@ -6,7 +6,8 @@
 **Category:** Assistant + Advanced Layout Options
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-04-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-05
 
 ---
 
@@ -86,3 +87,21 @@ export function normalizeAdvancedLayoutOptions(input: unknown) {
 - Advanced menu/hero/section choices are controlled and registry-backed.
 - Unsupported combinations are explicit gates.
 - No free-form layout/code path is introduced.
+
+## Completion Notes
+
+- Added backend-owned Advanced menu behavior, hero variant, and section variant
+  registries in `assistantSiteBuilderIntakeAdvancedOptions.ts`.
+- Mapped Advanced choices into review-only `advancedLayout` facts with explicit
+  gates for conflicting menu choices, missing selected section roles, and
+  design-preset support gaps.
+- Preserved the existing strict `context.siteKit` planner request; Advanced
+  options do not create route payloads, provider-authored actions, CSS, hrefs,
+  widget aliases, or executor paths.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeAdvancedOptions.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeNormalizer.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeDesignPresets.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`

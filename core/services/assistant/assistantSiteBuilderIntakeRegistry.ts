@@ -1,4 +1,12 @@
 import {
+  siteBuilderIntakeAdvancedHeroVariantOptionDefinitions,
+  siteBuilderIntakeAdvancedMenuBehaviorOptionDefinitions,
+  siteBuilderIntakeAdvancedSectionVariantOptionDefinitions,
+} from "./assistantSiteBuilderIntakeAdvancedOptions";
+import {
+  type AssistantSiteBuilderAdvancedHeroVariantId,
+  type AssistantSiteBuilderAdvancedMenuBehaviorId,
+  type AssistantSiteBuilderAdvancedSectionVariantId,
   assistantSiteBuilderIntakeModes,
   assistantSiteBuilderIntakeOptionRegistryIds,
   assistantSiteBuilderIntakeStepIds,
@@ -309,6 +317,26 @@ export const siteBuilderIntakeStepDefinitions = freezeRegistry(
           required: false,
           optionRegistryId: "pageRoles",
         },
+        {
+          key: "advancedMenuBehaviorIds",
+          label: "Advanced menu behavior",
+          description: "Controlled navigation behavior choices backed by the Navigation widget.",
+          control: "multi_select",
+          required: false,
+          maxItems: 6,
+          modeAvailability: advancedOnlyModes,
+          optionRegistryId: "advancedMenuBehaviors",
+        },
+        {
+          key: "advancedCtaTargetPageRole",
+          label: "Advanced CTA target",
+          description:
+            "Trusted page role used as the navigation CTA destination; arbitrary URLs are not accepted.",
+          control: "select",
+          required: false,
+          modeAvailability: advancedOnlyModes,
+          optionRegistryId: "pageRoles",
+        },
       ]),
     },
     {
@@ -351,6 +379,15 @@ export const siteBuilderIntakeStepDefinitions = freezeRegistry(
           required: false,
           maxLength: 80,
         },
+        {
+          key: "advancedHeroVariantId",
+          label: "Advanced hero variant",
+          description: "Existing Hero widget variant to prefer after review.",
+          control: "select",
+          required: false,
+          modeAvailability: advancedOnlyModes,
+          optionRegistryId: "advancedHeroVariants",
+        },
       ]),
     },
     {
@@ -369,6 +406,17 @@ export const siteBuilderIntakeStepDefinitions = freezeRegistry(
           required: true,
           maxItems: 12,
           optionRegistryId: "sectionRoles",
+        },
+        {
+          key: "advancedSectionVariantIds",
+          label: "Advanced section variants",
+          description:
+            "Existing widget variants for selected section roles; unsupported combinations are gated.",
+          control: "multi_select",
+          required: false,
+          maxItems: 14,
+          modeAvailability: advancedOnlyModes,
+          optionRegistryId: "advancedSectionVariants",
         },
       ]),
     },
@@ -697,6 +745,11 @@ export const siteBuilderIntakeMenuPresetDefinitions = freezeRegistry(
   "menuPresets"
 );
 
+export const siteBuilderIntakeAdvancedMenuBehaviorDefinitions = freezeRegistry(
+  siteBuilderIntakeAdvancedMenuBehaviorOptionDefinitions satisfies readonly AssistantSiteBuilderIntakeOptionDefinition<AssistantSiteBuilderAdvancedMenuBehaviorId>[],
+  "advancedMenuBehaviors"
+);
+
 export const siteBuilderIntakeHeroPresetDefinitions = freezeRegistry(
   [
     {
@@ -728,6 +781,11 @@ export const siteBuilderIntakeHeroPresetDefinitions = freezeRegistry(
     },
   ] as const satisfies readonly AssistantSiteBuilderIntakeOptionDefinition<AssistantSiteBuilderHeroPresetId>[],
   "heroPresets"
+);
+
+export const siteBuilderIntakeAdvancedHeroVariantDefinitions = freezeRegistry(
+  siteBuilderIntakeAdvancedHeroVariantOptionDefinitions satisfies readonly AssistantSiteBuilderIntakeOptionDefinition<AssistantSiteBuilderAdvancedHeroVariantId>[],
+  "advancedHeroVariants"
 );
 
 export const siteBuilderIntakeDesignPresetDefinitions = freezeRegistry(
@@ -805,6 +863,11 @@ export const siteBuilderIntakeSectionRoleDefinitions = freezeRegistry(
     },
   ] as const satisfies readonly AssistantSiteBuilderIntakeOptionDefinition<AssistantSiteBuilderSectionRoleId>[],
   "sectionRoles"
+);
+
+export const siteBuilderIntakeAdvancedSectionVariantDefinitions = freezeRegistry(
+  siteBuilderIntakeAdvancedSectionVariantOptionDefinitions satisfies readonly AssistantSiteBuilderIntakeOptionDefinition<AssistantSiteBuilderAdvancedSectionVariantId>[],
+  "advancedSectionVariants"
 );
 
 export const siteBuilderIntakeMediaPolicyDefinitions = freezeRegistry(
@@ -919,9 +982,12 @@ const optionRegistries: Readonly<
 > = Object.freeze({
   pageRoles: siteBuilderIntakePageRoleDefinitions,
   menuPresets: siteBuilderIntakeMenuPresetDefinitions,
+  advancedMenuBehaviors: siteBuilderIntakeAdvancedMenuBehaviorDefinitions,
   heroPresets: siteBuilderIntakeHeroPresetDefinitions,
+  advancedHeroVariants: siteBuilderIntakeAdvancedHeroVariantDefinitions,
   designPresets: siteBuilderIntakeDesignPresetDefinitions,
   sectionRoles: siteBuilderIntakeSectionRoleDefinitions,
+  advancedSectionVariants: siteBuilderIntakeAdvancedSectionVariantDefinitions,
   mediaPolicies: siteBuilderIntakeMediaPolicyDefinitions,
   contentEngines: siteBuilderIntakeContentEngineDefinitions,
   reviewStates: siteBuilderIntakeReviewStateDefinitions,

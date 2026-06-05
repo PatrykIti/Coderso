@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 
 import {
+  assistantSiteBuilderAdvancedHeroVariantIds,
+  assistantSiteBuilderAdvancedMenuBehaviorIds,
+  assistantSiteBuilderAdvancedSectionVariantIds,
   assistantSiteBuilderContentEngineIds,
   assistantSiteBuilderDesignPresetIds,
   assistantSiteBuilderHeroPresetIds,
@@ -86,6 +89,15 @@ test("site-builder intake registry owns stable mode and step ids", () => {
     control: "select",
     optionRegistryId: "designPresets",
   });
+  expect(
+    getSiteBuilderIntakeStepDefinition("menu").answerFields.find(
+      (field) => field.key === "advancedMenuBehaviorIds"
+    )
+  ).toMatchObject({
+    control: "multi_select",
+    modeAvailability: ["advanced"],
+    optionRegistryId: "advancedMenuBehaviors",
+  });
 });
 
 test("site-builder intake registry separates Basic guidance from Advanced controls", () => {
@@ -117,9 +129,12 @@ test("site-builder intake option registries expose generic reusable roles", () =
   const expectedOptionIdsByRegistry = {
     pageRoles: [...assistantSiteBuilderPageRoleIds],
     menuPresets: [...assistantSiteBuilderMenuPresetIds],
+    advancedMenuBehaviors: [...assistantSiteBuilderAdvancedMenuBehaviorIds],
     heroPresets: [...assistantSiteBuilderHeroPresetIds],
+    advancedHeroVariants: [...assistantSiteBuilderAdvancedHeroVariantIds],
     designPresets: [...assistantSiteBuilderDesignPresetIds],
     sectionRoles: [...assistantSiteBuilderSectionRoleIds],
+    advancedSectionVariants: [...assistantSiteBuilderAdvancedSectionVariantIds],
     mediaPolicies: [...assistantSiteBuilderMediaPolicyIds],
     contentEngines: [...assistantSiteBuilderContentEngineIds],
     reviewStates: [...assistantSiteBuilderReviewStateIds],
@@ -148,6 +163,12 @@ test("site-builder intake option registries expose generic reusable roles", () =
   expect(getSiteBuilderIntakeOption("designPresets", "editorial").description).toContain(
     "magazine"
   );
+  expect(getSiteBuilderIntakeOption("advancedHeroVariants", "media-left").description).toContain(
+    "left"
+  );
+  expect(
+    getSiteBuilderIntakeOption("advancedSectionVariants", "proof-spotlight").description
+  ).toContain("Testimonials");
   expect(getSiteBuilderIntakeOption("pageRoles", "portfolio").description).toContain(
     "work examples"
   );
@@ -176,6 +197,7 @@ test("site-builder intake registry modules stay Bun-free and service-owned", () 
     "assistantSiteBuilderIntakeTypes.ts",
     "assistantSiteBuilderIntakeRegistry.ts",
     "assistantSiteBuilderIntakeDesignPresets.ts",
+    "assistantSiteBuilderIntakeAdvancedOptions.ts",
   ].map((fileName) => readFileSync(join(sourceDir, fileName), "utf8"));
   const forbiddenRuntimeImports = [
     /from\s+["'][^"']*db\/client/,

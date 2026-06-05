@@ -1,7 +1,11 @@
 import { listSiteBuilderIntakeStepDefinitionsForMode } from "./assistantSiteBuilderIntakeRegistry";
 import { deriveBasicSiteMapDefaults } from "./assistantSiteBuilderIntakeBasicDefaults";
+import { buildSiteBuilderIntakeAdvancedLayoutFacts } from "./assistantSiteBuilderIntakeAdvancedOptions";
 import { buildSiteBuilderIntakeDesignPresetFacts } from "./assistantSiteBuilderIntakeDesignPresets";
 import type {
+  AssistantSiteBuilderAdvancedHeroVariantId,
+  AssistantSiteBuilderAdvancedMenuBehaviorId,
+  AssistantSiteBuilderAdvancedSectionVariantId,
   AssistantSiteBuilderContentEngineId,
   AssistantSiteBuilderDesignPresetId,
   AssistantSiteBuilderHeroPresetId,
@@ -145,6 +149,25 @@ export const deriveAssistantSiteBuilderIntakeFacts = ({
         })
       : undefined;
   const designPresetId = asText(design.designPresetId) as AssistantSiteBuilderDesignPresetId | null;
+  const designPreset = designPresetId
+    ? buildSiteBuilderIntakeDesignPresetFacts(designPresetId)
+    : undefined;
+  const advancedLayout = buildSiteBuilderIntakeAdvancedLayoutFacts({
+    menuBehaviorIds: asTypedArray<AssistantSiteBuilderAdvancedMenuBehaviorId>(
+      menu.advancedMenuBehaviorIds
+    ),
+    ctaTargetPageRole: asText(
+      menu.advancedCtaTargetPageRole
+    ) as AssistantSiteBuilderPageRoleId | null,
+    heroVariantId: asText(
+      hero.advancedHeroVariantId
+    ) as AssistantSiteBuilderAdvancedHeroVariantId | null,
+    sectionVariantIds: asTypedArray<AssistantSiteBuilderAdvancedSectionVariantId>(
+      sections.advancedSectionVariantIds
+    ),
+    selectedSectionRoleIds: sectionRoles,
+    designSupportedSectionRoleIds: designPreset?.supportedSectionRoleIds,
+  });
 
   return omitEmpty({
     siteName: asText(profile.siteName),
@@ -171,10 +194,9 @@ export const deriveAssistantSiteBuilderIntakeFacts = ({
       asTypedArray<AssistantSiteBuilderContentEngineId>(contentEngine.contentEngines)
     ),
     designPresetId,
-    designPreset: designPresetId
-      ? buildSiteBuilderIntakeDesignPresetFacts(designPresetId)
-      : undefined,
+    designPreset,
     designBrief: asText(design.designBrief),
+    advancedLayout,
     referenceNotes: asText(reference.referenceNotes),
     reviewState: resolvedReviewState,
     reviewNotes: asText(review.notes),

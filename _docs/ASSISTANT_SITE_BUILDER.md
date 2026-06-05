@@ -330,6 +330,19 @@ that pass the existing `DesignTokenOverrides` key contract, but current preset
 facts intentionally carry the `theme-application-pending` gap until later leaves
 apply those hints through the reviewed SiteKit/action adapter.
 
+Advanced layout options are backend-owned in
+`assistantSiteBuilderIntakeAdvancedOptions.ts`. The `advancedMenuBehaviors`,
+`advancedHeroVariants`, and `advancedSectionVariants` registries expose only
+stable ids for existing Navigation, Hero, Form, Listings, Engagement, and CTA
+widget capabilities. Advanced menu choices resolve to Navigation widget facts
+such as `sticky`, `transparent`, `mobileMode`, reviewed menu structure, and a
+CTA target page role; arbitrary CTA hrefs are rejected. Advanced hero choices
+resolve to current Hero widget variants (`centered`, `split`, `media-left`,
+`media-center`). Advanced section choices resolve to existing widget variants
+backed by `modulePackMatrix.assistantPageSections`; mismatched section roles,
+design-preset support gaps, or conflicting menu choices become review gates
+instead of invented widgets, CSS, layout code, or executor actions.
+
 Unknown mode, step, option-registry, or option ids must fail closed through the
 service-owned registry helpers before route validation, provider planning, or
 execution.

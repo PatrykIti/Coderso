@@ -146,6 +146,16 @@ existing `DesignTokenOverrides` key contract and currently expose an explicit
 `theme-application-pending` gap until later SiteKit/action leaves apply them
 after review.
 
+Advanced menu, hero, and section options live in
+`assistantSiteBuilderIntakeAdvancedOptions.ts`. They are controlled ids only:
+menu behavior maps to existing Navigation widget behavior fields and trusted
+CTA page-role targets, hero variants map to current Hero widget variants, and
+section variants map to existing widget variants backed by
+`modulePackMatrix.assistantPageSections`. Unknown ids, raw CTA URLs, conflicting
+menu surface choices, missing section roles, and design-preset support gaps fail
+closed or become review gates; they never add `context.siteBuilderIntake`,
+provider-authored actions, CSS, or custom layout code to the planner request.
+
 Basic prompt-poisoning coverage lives in
 `assistantSiteBuilderIntakeBasicSecurity.test.ts`. Free text can be preserved as
 bounded copy/context, but it cannot set action families, route paths, media trust,
