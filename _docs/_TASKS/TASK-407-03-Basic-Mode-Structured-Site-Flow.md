@@ -6,7 +6,7 @@
 **Category:** Assistant + Basic UX + Site Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-02
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress (2026-06-05)
 
 ---
 
@@ -38,7 +38,7 @@ and bounded text prompts for business copy.
 
 | ID | Title | Status | Output |
 |---|---|---|---|
-| TASK-407-03-L01 | Basic Step Definitions and Progression | To Do | Basic step definitions and deterministic `needs_input` progression. |
+| TASK-407-03-L01 | Basic Step Definitions and Progression | Done (2026-06-05) | Basic step definitions and deterministic `needs_input` progression. |
 | TASK-407-03-L02 | Basic Site Map and Section Role Defaults | To Do | Beginner-safe page/menu/section defaults without industry hardcoding. |
 | TASK-407-03-L03 | Basic Widget and Review Fact Selection | To Do | Backend widget/content candidates and review facts from Basic answers. |
 | TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | To Do | Tests proving Basic free text cannot override schema/action/security policy. |

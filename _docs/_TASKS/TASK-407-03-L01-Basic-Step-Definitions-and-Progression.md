@@ -6,7 +6,7 @@
 **Category:** Assistant + Basic UX Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-02-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -91,3 +91,38 @@ export function shouldStartBasicGuide(input: AssistantPlanInput) {
 - Basic mode has deterministic step progression.
 - No Basic session can become plan-ready before required answers are present.
 - The flow is beginner-safe and does not require widget/content-type knowledge.
+
+## Closure Evidence
+
+- Added `assistantSiteBuilderIntakeBasicFlow.ts` with Basic step metadata,
+  required-answer checks, deterministic next-step resolution, and a typed
+  `needs_input` action-plan response carrying `metadata.siteBuilderIntake`.
+- Derived the Basic step order from the backend registry so Basic uses the same
+  canonical order as the shared intake contract:
+  `business-profile`, `site-goals`, `site-map`, `menu`, `hero`,
+  `homepage-sections`, `subpages`, `media-policy`, `review`.
+- Required locale in the Basic business-profile gate so a user cannot reach
+  review with facts that the later compiler would reject.
+- Routed broad full-site prompts into Basic `needs_input` before provider
+  drafting or executable action assembly, while preserving explicit
+  `context.siteKit` handoff for already-reviewed plans.
+- Added strict action-plan metadata normalization for `siteBuilderIntake` so the
+  UI can render the current step, visible steps, missing required steps, and
+  readiness flags without parsing free-form text.
+- Added registry-owned `answerFields` metadata for every Basic step, including
+  required `locale`, accepted answer keys, control types, required groups,
+  length/item bounds, registry ids, and option values for select controls.
+- Added backend-only planner context state for requested intake mode and active
+  sessions so explicit Advanced mode bypasses the initial Basic broad-prompt
+  gate and active Basic sessions continue instead of restarting.
+- Fixed Curie audit drift risks for competing step order, too-broad full-site
+  routing, missing typed render metadata, locale readiness, incomplete-session
+  execution, secret echo, registry validation, and planner-level Advanced/resume
+  handling.
+- Curie final re-audit reported no blocking findings after those fixes.
+- Validation passed:
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeNormalizer.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRedaction.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeBasicFlow.test.ts tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/actionPlannerService.test.ts` (201 tests)
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `git diff --check`
+  - `bun run precommit`

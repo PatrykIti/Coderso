@@ -15,8 +15,8 @@ export const assistantSiteBuilderIntakeStepIds = [
   "site-goals",
   "site-map",
   "menu",
-  "homepage-sections",
   "hero",
+  "homepage-sections",
   "subpages",
   "media-policy",
   "content-engine",
@@ -39,6 +39,18 @@ export const assistantSiteBuilderIntakeOptionRegistryIds = [
 
 export type AssistantSiteBuilderIntakeOptionRegistryId =
   (typeof assistantSiteBuilderIntakeOptionRegistryIds)[number];
+
+export const assistantSiteBuilderIntakeAnswerFieldControls = [
+  "text",
+  "textarea",
+  "text_list",
+  "select",
+  "multi_select",
+  "checkbox",
+] as const;
+
+export type AssistantSiteBuilderIntakeAnswerFieldControl =
+  (typeof assistantSiteBuilderIntakeAnswerFieldControls)[number];
 
 export const assistantSiteBuilderPageRoleIds = [
   "home",
@@ -139,6 +151,18 @@ export type AssistantSiteBuilderIntakeModeDefinition = {
   defaultStepId: AssistantSiteBuilderIntakeStepId;
 };
 
+export type AssistantSiteBuilderIntakeAnswerFieldDefinition = {
+  key: string;
+  label: string;
+  description: string;
+  control: AssistantSiteBuilderIntakeAnswerFieldControl;
+  required: boolean;
+  requiredGroupId?: string | null;
+  maxLength?: number;
+  maxItems?: number;
+  optionRegistryId?: AssistantSiteBuilderIntakeOptionRegistryId;
+};
+
 export type AssistantSiteBuilderIntakeStepDefinition = {
   id: AssistantSiteBuilderIntakeStepId;
   label: string;
@@ -146,6 +170,7 @@ export type AssistantSiteBuilderIntakeStepDefinition = {
   required: boolean;
   modeAvailability: readonly AssistantSiteBuilderIntakeMode[];
   optionRegistryId?: AssistantSiteBuilderIntakeOptionRegistryId;
+  answerFields: readonly AssistantSiteBuilderIntakeAnswerFieldDefinition[];
 };
 
 export type AssistantSiteBuilderIntakeAnswer = {

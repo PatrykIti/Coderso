@@ -56,7 +56,27 @@ test("site-builder intake registry owns stable mode and step ids", () => {
     expect(definition.modeAvailability.length).toBeGreaterThan(0);
     expect(definition.modeAvailability.every(isSiteBuilderIntakeMode)).toBe(true);
     expect(isSiteBuilderIntakeStepId(definition.id)).toBe(true);
+    expect(Object.isFrozen(definition.answerFields)).toBe(true);
+    expect(definition.answerFields.length).toBeGreaterThan(0);
+
+    for (const field of definition.answerFields) {
+      expect(field.key.trim()).not.toBe("");
+      expect(field.label.trim()).not.toBe("");
+      expect(field.description.trim()).not.toBe("");
+      if (field.optionRegistryId) {
+        expect(listSiteBuilderIntakeOptions(field.optionRegistryId).length).toBeGreaterThan(0);
+      }
+    }
   }
+
+  expect(
+    getSiteBuilderIntakeStepDefinition("business-profile").answerFields.find(
+      (field) => field.key === "locale"
+    )
+  ).toMatchObject({
+    control: "text",
+    required: true,
+  });
 });
 
 test("site-builder intake registry separates Basic guidance from Advanced controls", () => {
@@ -72,8 +92,8 @@ test("site-builder intake registry separates Basic guidance from Advanced contro
     "site-goals",
     "site-map",
     "menu",
-    "homepage-sections",
     "hero",
+    "homepage-sections",
     "subpages",
     "media-policy",
     "review",

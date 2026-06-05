@@ -74,6 +74,10 @@ import {
 } from "./operationPolicy/resolverPolicy";
 import { chooseProviderResponseContract, resolveModelCapabilityProfile } from "./modelCapabilities";
 import { buildCmsOperationDraftFromPlanningState } from "./cmsPlanningState";
+import {
+  buildBasicSiteBuilderNeedsInputPlan,
+  shouldStartBasicSiteBuilderGuide,
+} from "./assistantSiteBuilderIntakeBasicFlow";
 
 export {
   classifyAssistantPrompt,
@@ -1000,6 +1004,11 @@ const withProviderPlannerMetadata = (
 const requiresProviderLlmGate = (context: AssistantActionContext | undefined) =>
   context?.includeResourceCatalog === true || Boolean(context?.siteKit);
 
+const getActiveBasicSiteBuilderIntakeSession = (context: AssistantActionContext | undefined) => {
+  const activeSession = context?.siteBuilderIntakeState?.activeSession;
+  return activeSession?.mode === "basic" ? activeSession : null;
+};
+
 const buildPreferredBlueprintSetupPlan = (input: {
   prompt: string;
   context: AssistantActionContext | undefined;
@@ -1064,6 +1073,7 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
   if (trustedContext?.siteKit) {
     return normalizeAssistantActionPlan(buildSiteKitActionPlan(trustedContext.siteKit));
   }
+  const activeBasicIntakeSession = getActiveBasicSiteBuilderIntakeSession(trustedContext);
 
   const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
   const intentFamily = routedClassification.intentFamily;
@@ -1074,6 +1084,29 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
       context,
       routedClassification,
       buildClarifyingPlan(input.prompt, context, routedClassification)
+    );
+  }
+
+  if (activeBasicIntakeSession) {
+    return finalizeAssistantPlan(
+      normalizedInput,
+      context,
+      routedClassification,
+      buildBasicSiteBuilderNeedsInputPlan({ session: activeBasicIntakeSession })
+    );
+  }
+
+  if (
+    shouldStartBasicSiteBuilderGuide({
+      prompt: input.prompt,
+      context: trustedContext,
+    })
+  ) {
+    return finalizeAssistantPlan(
+      normalizedInput,
+      context,
+      routedClassification,
+      buildBasicSiteBuilderNeedsInputPlan({})
     );
   }
 
@@ -1204,6 +1237,17 @@ export const planAssistantActionsWithProviderDraft = async (
   const trustedContext = sanitizeAssistantPlanningContext(input.context);
   const context = buildAssistantAdminContext(trustedContext);
   const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
+  if (getActiveBasicSiteBuilderIntakeSession(trustedContext)) {
+    return planAssistantActions({ prompt: input.prompt, context: trustedContext });
+  }
+  if (
+    shouldStartBasicSiteBuilderGuide({
+      prompt: input.prompt,
+      context: trustedContext,
+    })
+  ) {
+    return planAssistantActions({ prompt: input.prompt, context: trustedContext });
+  }
   if (requiresProviderLlmGate(trustedContext) && (!input.llmAvailable || !input.provider)) {
     throw new Error("assistant_llm_unavailable");
   }

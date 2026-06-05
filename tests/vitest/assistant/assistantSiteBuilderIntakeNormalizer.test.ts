@@ -288,8 +288,8 @@ test("normalizeAssistantSiteBuilderIntakeSession bounds and redacts text without
       "site-goals",
       "site-map",
       "menu",
-      "homepage-sections",
       "hero",
+      "homepage-sections",
       "media-policy",
     ],
   });

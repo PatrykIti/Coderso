@@ -4,6 +4,13 @@ import type {
   SiteBuilderPlanStepId,
   SolutionKitId,
 } from "../kits/solutionKitTypes";
+import type {
+  AssistantSiteBuilderIntakeAnswerFieldControl,
+  AssistantSiteBuilderIntakeMode,
+  AssistantSiteBuilderIntakeOptionRegistryId,
+  AssistantSiteBuilderIntakeSession,
+  AssistantSiteBuilderIntakeStepId,
+} from "./assistantSiteBuilderIntakeTypes";
 import type { WidgetBlock } from "../../widgets/types";
 import type { NormalizedFormAction } from "../forms/formActionsContract";
 import type {
@@ -77,6 +84,10 @@ export type AssistantActionContext = {
   page?: string;
   locale?: string;
   siteKit?: AssistantSiteKitPlanInput;
+  siteBuilderIntakeState?: {
+    requestedMode?: AssistantSiteBuilderIntakeMode | null;
+    activeSession?: AssistantSiteBuilderIntakeSession | null;
+  } | null;
   includeResourceCatalog?: boolean;
   resourceCatalog?: AssistantResourceCatalogSnapshot;
   runtimeSnapshot?: AssistantActionRuntimeSnapshot;
@@ -1185,12 +1196,57 @@ export type AssistantLaunchReadinessMetadata = {
   checks: AssistantLaunchReadinessCheckMetadata[];
 };
 
+export type AssistantSiteBuilderIntakeStepMetadata = {
+  id: AssistantSiteBuilderIntakeStepId;
+  label: string;
+  description: string;
+  required: boolean;
+  optionRegistryId: AssistantSiteBuilderIntakeOptionRegistryId | null;
+  position: number;
+  total: number;
+  answerFields: AssistantSiteBuilderIntakeAnswerFieldMetadata[];
+};
+
+export type AssistantSiteBuilderIntakeAnswerOptionMetadata = {
+  id: string;
+  label: string;
+  description: string;
+};
+
+export type AssistantSiteBuilderIntakeAnswerFieldMetadata = {
+  key: string;
+  label: string;
+  description: string;
+  control: AssistantSiteBuilderIntakeAnswerFieldControl;
+  required: boolean;
+  requiredGroupId: string | null;
+  maxLength: number | null;
+  maxItems: number | null;
+  optionRegistryId: AssistantSiteBuilderIntakeOptionRegistryId | null;
+  options: AssistantSiteBuilderIntakeAnswerOptionMetadata[];
+};
+
+export type AssistantSiteBuilderIntakePlanMetadata = {
+  schemaVersion: 1;
+  mode: AssistantSiteBuilderIntakeMode;
+  status: "needs_input" | "ready_for_execution";
+  currentStepId: AssistantSiteBuilderIntakeStepId;
+  nextStepId: AssistantSiteBuilderIntakeStepId | null;
+  visibleStepIds: AssistantSiteBuilderIntakeStepId[];
+  answeredStepIds: AssistantSiteBuilderIntakeStepId[];
+  missingRequiredStepIds: AssistantSiteBuilderIntakeStepId[];
+  canReview: boolean;
+  canExecute: boolean;
+  steps: AssistantSiteBuilderIntakeStepMetadata[];
+};
+
 export type AssistantActionPlanMetadata = {
   planner: "local" | "provider" | "fallback";
   providerDraftUsed: boolean;
   providerId?: string | null;
   blueprintComposition?: AssistantBlueprintCompositionMetadata;
   launchReadiness?: AssistantLaunchReadinessMetadata;
+  siteBuilderIntake?: AssistantSiteBuilderIntakePlanMetadata;
   blueprintShadow?: {
     schemaVersion: 1;
     currentIntentId: string;

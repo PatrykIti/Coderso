@@ -21,6 +21,12 @@ import {
 import { normalizeDetailPageDocument } from "../content/detailPageSchema";
 import { customScreenCollectionRoleValues } from "../customScreens/customScreenSchemas";
 import { normalizeOptionalDetailPageId } from "../settings/detailPageIdContract";
+import {
+  assistantSiteBuilderIntakeAnswerFieldControls,
+  assistantSiteBuilderIntakeModes,
+  assistantSiteBuilderIntakeOptionRegistryIds,
+  assistantSiteBuilderIntakeStepIds,
+} from "./assistantSiteBuilderIntakeTypes";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -365,6 +371,143 @@ const normalizeBlueprintCompositionMetadata = (value: unknown) => {
 };
 
 const launchReadinessStatuses = new Set(["satisfied", "pending_execute", "gated"] as const);
+const siteBuilderIntakeModes = new Set(assistantSiteBuilderIntakeModes);
+const siteBuilderIntakeStepIds = new Set(assistantSiteBuilderIntakeStepIds);
+const siteBuilderIntakeOptionRegistryIds = new Set(assistantSiteBuilderIntakeOptionRegistryIds);
+const siteBuilderIntakeAnswerFieldControls = new Set(assistantSiteBuilderIntakeAnswerFieldControls);
+const siteBuilderIntakeStatuses = new Set(["needs_input", "ready_for_execution"] as const);
+
+const readNullableSiteBuilderIntakeStepId = (value: unknown) => {
+  if (value === null) return null;
+  return readEnum(value, siteBuilderIntakeStepIds);
+};
+
+const readNullableSiteBuilderIntakeOptionRegistryId = (value: unknown) => {
+  if (value === null) return null;
+  return readEnum(value, siteBuilderIntakeOptionRegistryIds);
+};
+
+const readNullableMetadataText = (value: unknown) => {
+  if (value === null) return null;
+  return readMetadataText(value);
+};
+
+const readNullableFiniteNumber = (value: unknown) => {
+  if (value === null) return null;
+  return readFiniteNumber(value);
+};
+
+const normalizeSiteBuilderIntakeAnswerOptionMetadata = (value: unknown) => {
+  const option = assertRecord(value);
+  assertKeys(option, new Set(["id", "label", "description"]));
+  return {
+    id: readMetadataText(option.id),
+    label: readMetadataText(option.label),
+    description: readMetadataText(option.description),
+  };
+};
+
+const normalizeSiteBuilderIntakeAnswerFieldMetadata = (value: unknown) => {
+  const field = assertRecord(value);
+  assertKeys(
+    field,
+    new Set([
+      "key",
+      "label",
+      "description",
+      "control",
+      "required",
+      "requiredGroupId",
+      "maxLength",
+      "maxItems",
+      "optionRegistryId",
+      "options",
+    ])
+  );
+  return {
+    key: readMetadataText(field.key),
+    label: readMetadataText(field.label),
+    description: readMetadataText(field.description),
+    control: readEnum(field.control, siteBuilderIntakeAnswerFieldControls),
+    required: readBoolean(field.required),
+    requiredGroupId: readNullableMetadataText(field.requiredGroupId),
+    maxLength: readNullableFiniteNumber(field.maxLength),
+    maxItems: readNullableFiniteNumber(field.maxItems),
+    optionRegistryId: readNullableSiteBuilderIntakeOptionRegistryId(field.optionRegistryId),
+    options: readRecordArray(field.options).map(normalizeSiteBuilderIntakeAnswerOptionMetadata),
+  };
+};
+
+const normalizeSiteBuilderIntakeStepMetadata = (value: unknown) => {
+  const step = assertRecord(value);
+  assertKeys(
+    step,
+    new Set([
+      "id",
+      "label",
+      "description",
+      "required",
+      "optionRegistryId",
+      "position",
+      "total",
+      "answerFields",
+    ])
+  );
+  return {
+    id: readEnum(step.id, siteBuilderIntakeStepIds),
+    label: readMetadataText(step.label),
+    description: readMetadataText(step.description),
+    required: readBoolean(step.required),
+    optionRegistryId: readNullableSiteBuilderIntakeOptionRegistryId(step.optionRegistryId),
+    position: readFiniteNumber(step.position),
+    total: readFiniteNumber(step.total),
+    answerFields: readRecordArray(step.answerFields).map(
+      normalizeSiteBuilderIntakeAnswerFieldMetadata
+    ),
+  };
+};
+
+const normalizeSiteBuilderIntakeMetadata = (
+  value: unknown
+): AssistantActionPlanMetadata["siteBuilderIntake"] => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "schemaVersion",
+      "mode",
+      "status",
+      "currentStepId",
+      "nextStepId",
+      "visibleStepIds",
+      "answeredStepIds",
+      "missingRequiredStepIds",
+      "canReview",
+      "canExecute",
+      "steps",
+    ])
+  );
+  if (readFiniteNumber(input.schemaVersion) !== 1) fail();
+  return {
+    schemaVersion: 1,
+    mode: readEnum(input.mode, siteBuilderIntakeModes),
+    status: readEnum(input.status, siteBuilderIntakeStatuses),
+    currentStepId: readEnum(input.currentStepId, siteBuilderIntakeStepIds),
+    nextStepId: readNullableSiteBuilderIntakeStepId(input.nextStepId),
+    visibleStepIds: readStringArray(input.visibleStepIds).map((stepId) =>
+      readEnum(stepId, siteBuilderIntakeStepIds)
+    ),
+    answeredStepIds: readStringArray(input.answeredStepIds).map((stepId) =>
+      readEnum(stepId, siteBuilderIntakeStepIds)
+    ),
+    missingRequiredStepIds: readStringArray(input.missingRequiredStepIds).map((stepId) =>
+      readEnum(stepId, siteBuilderIntakeStepIds)
+    ),
+    canReview: readBoolean(input.canReview),
+    canExecute: readBoolean(input.canExecute),
+    steps: readRecordArray(input.steps).map(normalizeSiteBuilderIntakeStepMetadata),
+  };
+};
 
 const normalizeLaunchReadinessMetadata = (
   value: unknown
@@ -425,6 +568,7 @@ const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | un
       "providerId",
       "blueprintComposition",
       "launchReadiness",
+      "siteBuilderIntake",
       "blueprintShadow",
     ])
   );
@@ -485,6 +629,9 @@ const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | un
       : {}),
     ...(input.launchReadiness !== undefined
       ? { launchReadiness: normalizeLaunchReadinessMetadata(input.launchReadiness) }
+      : {}),
+    ...(input.siteBuilderIntake !== undefined
+      ? { siteBuilderIntake: normalizeSiteBuilderIntakeMetadata(input.siteBuilderIntake) }
       : {}),
     ...(blueprintShadow !== undefined ? { blueprintShadow } : {}),
   };

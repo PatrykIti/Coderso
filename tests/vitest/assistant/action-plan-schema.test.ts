@@ -8,6 +8,7 @@ import { buildCatalogFamilyPlan } from "../../../core/services/assistant/bluepri
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import { buildFullServiceSitePlan } from "../../../core/services/assistant/blueprints/fullServiceSiteBlueprint";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
+import { buildBasicSiteBuilderNeedsInputPlan } from "../../../core/services/assistant/assistantSiteBuilderIntakeBasicFlow";
 
 test("normalizeAssistantActionPlan accepts current catalog family plans", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
@@ -275,6 +276,43 @@ test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
       },
     })
   ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects unknown site-builder intake metadata registries", () => {
+  const validPlan = buildBasicSiteBuilderNeedsInputPlan({});
+
+  const invalidStepRegistryPlan = JSON.parse(JSON.stringify(validPlan)) as Record<string, unknown>;
+  const invalidStepMetadata = invalidStepRegistryPlan.metadata as Record<string, unknown>;
+  const invalidStepIntake = invalidStepMetadata.siteBuilderIntake as Record<string, unknown>;
+  const invalidStepSteps = invalidStepIntake.steps as Record<string, unknown>[];
+  const firstStep = invalidStepSteps[0];
+  if (!firstStep) throw new Error("site_builder_intake_step_missing");
+  invalidStepSteps[0] = {
+    ...firstStep,
+    optionRegistryId: "externalMedia",
+  };
+
+  expect(() => normalizeAssistantActionPlan(invalidStepRegistryPlan)).toThrow(
+    "assistant_action_plan_invalid"
+  );
+
+  const invalidFieldRegistryPlan = JSON.parse(JSON.stringify(validPlan)) as Record<string, unknown>;
+  const invalidFieldMetadata = invalidFieldRegistryPlan.metadata as Record<string, unknown>;
+  const invalidFieldIntake = invalidFieldMetadata.siteBuilderIntake as Record<string, unknown>;
+  const invalidFieldSteps = invalidFieldIntake.steps as Record<string, unknown>[];
+  const siteMapStep = invalidFieldSteps.find((step) => step.id === "site-map");
+  if (!siteMapStep) throw new Error("site_map_step_missing");
+  const answerFields = siteMapStep.answerFields as Record<string, unknown>[];
+  const firstAnswerField = answerFields[0];
+  if (!firstAnswerField) throw new Error("site_map_answer_field_missing");
+  answerFields[0] = {
+    ...firstAnswerField,
+    optionRegistryId: "remoteImages",
+  };
+
+  expect(() => normalizeAssistantActionPlan(invalidFieldRegistryPlan)).toThrow(
+    "assistant_action_plan_invalid"
+  );
 });
 
 test("normalizeAssistantActionPlan accepts strict blueprint composition metadata", () => {

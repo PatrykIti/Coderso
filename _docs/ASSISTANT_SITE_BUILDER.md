@@ -296,8 +296,8 @@ Canonical step ids:
 - `site-goals`
 - `site-map`
 - `menu`
-- `homepage-sections`
 - `hero`
+- `homepage-sections`
 - `subpages`
 - `media-policy`
 - `content-engine`
@@ -320,6 +320,23 @@ Media intake is policy-based:
 Unknown mode, step, option-registry, or option ids must fail closed through the
 service-owned registry helpers before route validation, provider planning, or
 execution.
+
+Basic planner progression is owned by
+`core/services/assistant/assistantSiteBuilderIntakeBasicFlow.ts`. Broad
+full-site setup prompts such as "website for ..." or "strona dla ..." enter
+Basic mode as a typed `needs_input` plan before provider drafting or executable
+action assembly. The response carries `metadata.siteBuilderIntake` with the
+schema version, mode, status, current/next step ids, visible step ids, answered
+step ids, missing required step ids, readiness flags, and per-step labels plus
+registry-owned `answerFields`. Answer fields include accepted keys, control
+types, required flags/groups, bounds, option registry ids, and concrete option
+values for select controls, including required `business-profile.locale`.
+Basic required steps are `business-profile`, `site-goals`, `site-map`, `menu`,
+`hero`, `homepage-sections`, `media-policy`, and `review`; `subpages` stays
+visible but optional. Explicit reviewed `context.siteKit` requests keep taking
+precedence over the Basic prompt gate. Backend-only planner state can also
+carry requested Basic/Advanced mode and active intake session state; this is
+not a route-owned `context.siteBuilderIntake` payload.
 
 Answer normalization and fact derivation are service-owned:
 - `core/services/assistant/assistantSiteBuilderIntakeErrors.ts`

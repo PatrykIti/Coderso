@@ -201,7 +201,7 @@ test("planAssistantActions composes mixed product prompts through the live bluep
   expect(plan.metadata?.blueprintShadow).toBeUndefined();
 });
 
-test("planAssistantActions creates a full-service architecture studio site", () => {
+test("planAssistantActions routes broad full-service architecture prompts into Basic intake", () => {
   const plan = planAssistantActions({
     prompt: [
       "Stwórz premium stronę dla studia architektonicznego Studio Forma.",
@@ -214,180 +214,17 @@ test("planAssistantActions creates a full-service architecture studio site", () 
     },
   });
 
-  expect(plan.status).toBe("ready");
-  expect(plan.intentFamily).toBe("service_business_full_site");
-  expect(plan.intentId).toBe("service-business-full-site");
-  expect(plan.title).toBe("Full-Service Architecture Studio Site");
-  expect(
-    plan.actions
-      .filter((action) => action.type === "content-type.upsert")
-      .map((action) => (action.type === "content-type.upsert" ? action.input.slug : null))
-  ).toEqual(expect.arrayContaining(["portfolio-projects", "services-directory"]));
-  const requiredPageSlugs = [
-    "/",
-    "/portfolio",
-    "/uslugi",
-    "/o-nas",
-    "/proces",
-    "/referencje",
-    "/kontakt",
-  ];
-  expect(
-    plan.actions
-      .filter((action) => action.type === "page.upsert")
-      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
-  ).toEqual(expect.arrayContaining(requiredPageSlugs));
-  const pageActions = plan.actions.filter((action) => action.type === "page.upsert");
-  const allowedPageSlugs = new Set(requiredPageSlugs);
-  for (const action of pageActions) {
-    if (action.type !== "page.upsert") {
-      throw new Error("expected_page_upsert_action");
-    }
-    expect(action.input.blocks?.[0]).toMatchObject({
-      type: "navigation",
-      variant: "with-cta",
-    });
-    expect(action.input.blocks?.at(-1)).toMatchObject({
-      type: "footer",
-      variant: "columns-3",
-    });
-    const footerBlock = action.input.blocks?.find((block) => block.type === "footer");
-    const footerData = footerBlock?.data as
-      | {
-          columns?: Array<{ links?: Array<{ href?: string }> }>;
-          legal?: { enabled?: boolean };
-        }
-      | undefined;
-    expect(footerData?.legal?.enabled).toBe(false);
-    const footerHrefs =
-      footerData?.columns?.flatMap((column) =>
-        (column.links ?? [])
-          .map((link) => link.href)
-          .filter((href): href is string => Boolean(href))
-      ) ?? [];
-    expect(footerHrefs).not.toEqual(
-      expect.arrayContaining(["/polityka-prywatnosci", "/regulamin"])
-    );
-    expect(footerHrefs.every((href) => allowedPageSlugs.has(href))).toBe(true);
-  }
-  for (const slug of ["/", "/o-nas", "/proces", "/referencje"]) {
-    const pageAction = plan.actions.find(
-      (action) => action.type === "page.upsert" && action.input.slug === slug
-    );
-    if (!pageAction || pageAction.type !== "page.upsert") {
-      throw new Error(`expected_full_service_page_action:${slug}`);
-    }
-    expect(pageAction.input.blocks?.length).toBeGreaterThan(0);
-    expect(pageAction.input.blocks).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: "rich-text-section",
-          variant: "single-column",
-          data: expect.objectContaining({
-            options: expect.objectContaining({ outputMode: "blocks" }),
-          }),
-        }),
-      ])
-    );
-    const richTextBlock = pageAction.input.blocks?.find(
-      (block) => block.type === "rich-text-section"
-    );
-    const bodyBlocks =
-      (richTextBlock?.data as { body?: { blocks?: Array<Record<string, unknown>> } } | undefined)
-        ?.body?.blocks ?? [];
-    expect(bodyBlocks.some((block) => isCuratedMediaUrl(block.src))).toBe(true);
-  }
-  expect(
-    pageActions.find((action) => action.type === "page.upsert" && action.input.slug === "/uslugi")
-      ?.input.blocks
-  ).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        type: "navigation",
-      }),
-      expect.objectContaining({
-        type: "footer",
-      }),
-    ])
-  );
-  const sampleActions = plan.actions.filter((action) => action.type === "entry.sample.create");
-  expect(sampleActions).toHaveLength(6);
-  for (const action of sampleActions) {
-    if (action.type !== "entry.sample.create") {
-      throw new Error("expected_entry_sample_action");
-    }
-    expect(isCuratedMediaUrl(action.input.values.coverImageUrl)).toBe(true);
-    expect(action.input.values.coverImageAlt).toEqual(expect.any(String));
-    expect(action.input.values.coverImageSourceName).toBe("Unsplash");
-    expect(action.input.values.coverImageSourceUrl).toEqual(
-      expect.stringMatching(/^https:\/\/images\.unsplash\.com\/photo-/)
-    );
-    expect(action.input.values.coverImageLicenseUrl).toBe("https://unsplash.com/license");
-    expect(Object.prototype.hasOwnProperty.call(action.input.values, "heroImage")).toBe(false);
-    expect(Object.prototype.hasOwnProperty.call(action.input.values, "gallery")).toBe(false);
-  }
-  expect(plan.metadata?.launchReadiness?.requiredMediaPages).toEqual([
-    "/",
-    "/o-nas",
-    "/proces",
-    "/referencje",
-  ]);
-  const listingQueries = plan.actions.filter((action) => action.type === "listing-query.upsert");
-  expect(
-    listingQueries.every(
-      (action) =>
-        action.type === "listing-query.upsert" && action.input.fields.includes("data.coverImageUrl")
-    )
-  ).toBe(true);
-  const listingTemplates = plan.actions.filter(
-    (action) => action.type === "listing-template.upsert"
-  );
-  expect(
-    listingTemplates.every((action) => {
-      if (action.type !== "listing-template.upsert") return false;
-      const fields = (action.input.config as { fields?: Array<Record<string, unknown>> }).fields;
-      return Boolean(
-        fields?.some(
-          (field) =>
-            field.key === "image" &&
-            field.source === "data.coverImageUrl" &&
-            field.format === "text"
-        )
-      );
-    })
-  ).toBe(true);
-  const detailPages = plan.actions.filter((action) => action.type === "detail-page.upsert");
-  expect(
-    detailPages.every((action) => {
-      if (action.type !== "detail-page.upsert") return false;
-      const document = action.input.document as {
-        seo?: { imageField?: string | null };
-        blocks?: Array<{ type?: string; variant?: string; data?: Record<string, unknown> }>;
-      };
-      return (
-        document.seo?.imageField === "coverImageUrl" &&
-        document.blocks?.some(
-          (block) =>
-            block.type === "hero" &&
-            block.variant === "split" &&
-            (block.data?.media as { type?: string } | undefined)?.type === "image"
-        ) === true
-      );
-    })
-  ).toBe(true);
-  expect(plan.actions.filter((action) => action.type === "menu.upsert")).toHaveLength(2);
-  expect(plan.actions.filter((action) => action.type === "menu.item.upsert")).toHaveLength(14);
-  expect(plan.actions.filter((action) => action.type === "seo.document.upsert")).toHaveLength(7);
-  expect(
-    plan.actions.some(
-      (action) => action.type === "form.upsert" && action.input.slug === "lead-capture-inquiry"
-    )
-  ).toBe(true);
-  expect(
-    plan.actions.some(
-      (action) => action.type === "content-type.upsert" && action.input.slug === "house-projects"
-    )
-  ).toBe(false);
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("needs_input");
+  expect(plan.intentFamily).toBe("site_kit");
+  expect(plan.intentId).toBe("site-builder-basic-intake");
+  expect(plan.actions).toEqual([]);
+  expect(plan.questions[0]?.id).toBe("site-builder-intake.business-profile");
+  expect(plan.metadata?.siteBuilderIntake).toMatchObject({
+    mode: "basic",
+    nextStepId: "business-profile",
+    canExecute: false,
+  });
 });
 
 test("selectCuratedMediaProfile matches supported industries without unsafe fallback", () => {
@@ -414,7 +251,7 @@ test("classifyAssistantPrompt does not route generic non-architecture full-site 
   ).not.toBe("service_business_full_site");
 });
 
-test("planAssistantActions routes English full-service site prompts away from CMS inspection", () => {
+test("planAssistantActions routes English full-service site prompts into Basic intake", () => {
   const plan = planAssistantActions({
     prompt: [
       "Create a premium full-service architecture studio site for Studio Forma.",
@@ -427,31 +264,19 @@ test("planAssistantActions routes English full-service site prompts away from CM
     },
   });
 
-  const counts = plan.actions.reduce<Record<string, number>>((acc, action) => {
-    acc[action.type] = (acc[action.type] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  expect(plan.status).toBe("ready");
-  expect(plan.responseKind).toBe("action_plan");
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("needs_input");
   expect(plan.promptKind).toBe("setup_request");
-  expect(plan.intentFamily).toBe("service_business_full_site");
-  expect(plan.intentId).toBe("service-business-full-site");
-  expect(plan.actions).toHaveLength(49);
-  expect(counts).toMatchObject({
-    "content-type.upsert": 2,
-    "detail-page.upsert": 2,
-    "setting.content-route.upsert": 2,
-    "custom-screen.upsert": 2,
-    "listing-query.upsert": 2,
-    "listing-template.upsert": 2,
-    "entry.sample.create": 6,
-    "menu.item.upsert": 14,
-    "seo.document.upsert": 7,
+  expect(plan.intentFamily).toBe("site_kit");
+  expect(plan.intentId).toBe("site-builder-basic-intake");
+  expect(plan.actions).toEqual([]);
+  expect(plan.metadata?.siteBuilderIntake).toMatchObject({
+    mode: "basic",
+    nextStepId: "business-profile",
   });
 });
 
-test("planAssistantActionsWithProviderDraft routes English full-service prompts before planning-state inspection", async () => {
+test("planAssistantActionsWithProviderDraft routes English full-service prompts into Basic intake before provider calls", async () => {
   const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
   const plan = await planAssistantActionsWithProviderDraft({
     prompt: [
@@ -502,10 +327,14 @@ test("planAssistantActionsWithProviderDraft routes English full-service prompts 
   });
 
   expect(requests).toHaveLength(0);
-  expect(plan.status).toBe("ready");
-  expect(plan.intentFamily).toBe("service_business_full_site");
-  expect(plan.intentId).toBe("service-business-full-site");
-  expect(plan.actions).toHaveLength(49);
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentFamily).toBe("site_kit");
+  expect(plan.intentId).toBe("site-builder-basic-intake");
+  expect(plan.actions).toEqual([]);
+  expect(plan.metadata?.siteBuilderIntake).toMatchObject({
+    mode: "basic",
+    nextStepId: "business-profile",
+  });
 });
 
 test("planAssistantActions composes single-adjunct prompts through the live blueprint planner path", () => {

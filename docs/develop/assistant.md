@@ -103,6 +103,19 @@ secrets, signed URLs, or executable instructions. Browser-local restore uses
 snapshot only and discards stale, oversized, unknown-version, or unknown-key
 payloads.
 
+Basic full-site prompts are intentionally routed into deterministic intake
+before provider drafting or action assembly. `assistantSiteBuilderIntakeBasicFlow.ts`
+recognizes broad setup prompts, creates a Basic `needs_input` plan with no
+actions, and exposes typed `metadata.siteBuilderIntake` for UI rendering. The
+metadata reports the current/next step, visible steps, answered steps, missing
+required steps, readiness flags, accepted answer fields, control kinds, option
+registry ids, and concrete option values. This path is generic: it asks for
+business/site facts and maps later adapters to backend-owned roles instead of
+hardcoding one industry. Already-reviewed `context.siteKit` handoff continues
+to bypass the prompt gate; backend-only planner state can also mark requested
+Advanced mode or an active intake session without adding a route-owned
+`context.siteBuilderIntake` payload.
+
 ### RBAC per step
 
 | Step | Required permissions |
