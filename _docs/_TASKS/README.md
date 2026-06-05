@@ -32,8 +32,8 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 11 tasks
-- **In Progress:** 4 tasks
+- **To Do:** 18 tasks
+- **In Progress:** 5 tasks
 - **Done:** 2237 tasks
 
 ---
@@ -42,6 +42,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-407-01 | Task Contract Drift Audit and Scope Freeze | High | Medium | Audit the TASK-407 task breakdown with Claude/agents and fix drift before implementation starts. |
+| TASK-407-02 | Guided Intake Mode and Session Contract | High | Large | Add strict shared Basic/Advanced guided-intake session context, normalization, validation, and redaction. |
+| TASK-407-03 | Basic Mode Structured Site Flow | High | Large | Safe default guided flow for nontechnical users: profile, goals, pages, menu, hero, sections, subpages, media, review. |
+| TASK-407-04 | Advanced Mode Design Presets and Reference Intake | High | Large | Controlled design/menu/hero/section presets plus safe reference-image/file intake as bounded evidence only. |
+| TASK-407-05 | Blueprint Composer and Content Engine Decisions | High | Large | Map guided facts to supported static pages, content engines, detail routes, custom screens, and gates. |
+| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | Build the guided stepper/review UX and harden local state, warnings, and execute gating. |
+| TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Validate Basic, Advanced, scoped cleanup plus second-theme rebuild, follow-up refinement, and fail-closed media/reference flows through Playwright CLI and Claude/agent review. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
@@ -59,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | In progress (2026-06-05): plan and implement Basic/Advanced guided site-builder intake, structured `siteBuilderGuide` context, content-engine decisions, prompt-poisoning hardening, scoped second-theme E2E, and live closure. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
