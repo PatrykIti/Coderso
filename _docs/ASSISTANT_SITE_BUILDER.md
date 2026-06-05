@@ -338,6 +338,18 @@ precedence over the Basic prompt gate. Backend-only planner state can also
 carry requested Basic/Advanced mode and active intake session state; this is
 not a route-owned `context.siteBuilderIntake` payload.
 
+Basic site-map defaults are advisory facts owned by
+`core/services/assistant/assistantSiteBuilderIntakeBasicDefaults.ts`. They
+provide deterministic beginner-friendly suggestions for page roles, stable
+role-derived routes, simple/grouped menu items, and homepage section roles while
+the required Basic answers still come from normalized user input. Default page
+roles are generic (`home`, `services`, `portfolio`, `testimonials`, `about`,
+`faq`, `contact`) and section suggestions are keyed by broad goals such as
+booking, sales, portfolio/work, content, and trust rather than specific
+industries. Custom labels are accepted only as bounded display hints keyed by
+page role; they cannot change paths, action ids, or route targets and unsafe
+URL/script/admin/action-like or secret-like strings fail closed.
+
 Answer normalization and fact derivation are service-owned:
 - `core/services/assistant/assistantSiteBuilderIntakeErrors.ts`
 - `core/services/assistant/assistantSiteBuilderIntakeNormalizer.ts`

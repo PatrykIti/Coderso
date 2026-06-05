@@ -1,4 +1,5 @@
 import { listSiteBuilderIntakeStepDefinitionsForMode } from "./assistantSiteBuilderIntakeRegistry";
+import { deriveBasicSiteMapDefaults } from "./assistantSiteBuilderIntakeBasicDefaults";
 import type {
   AssistantSiteBuilderContentEngineId,
   AssistantSiteBuilderHeroPresetId,
@@ -32,6 +33,20 @@ const asTextArray = (value: unknown): string[] =>
 
 const asTypedArray = <T extends string>(value: unknown): T[] =>
   Array.isArray(value) ? value.filter((item): item is T => typeof item === "string") : [];
+
+const asPageRoleLabels = (
+  value: unknown
+): Partial<Record<AssistantSiteBuilderPageRoleId, string>> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+
+  const labels: Partial<Record<AssistantSiteBuilderPageRoleId, string>> = {};
+  for (const [roleId, label] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof label === "string" && label.trim()) {
+      labels[roleId as AssistantSiteBuilderPageRoleId] = label;
+    }
+  }
+  return labels;
+};
 
 const indexAnswersByStep = (answers: readonly AssistantSiteBuilderIntakeAnswer[]) => {
   const indexed: AnswerValuesByStep = {};
@@ -112,6 +127,21 @@ export const deriveAssistantSiteBuilderIntakeFacts = ({
   const sectionRoles = unique(
     asTypedArray<AssistantSiteBuilderSectionRoleId>(sections.sectionRoles)
   );
+  const pageRoleLabels = {
+    ...asPageRoleLabels(siteMap.customLabels),
+    ...asPageRoleLabels(subpages.customLabels),
+  };
+  const basicDefaults =
+    mode === "basic"
+      ? deriveBasicSiteMapDefaults({
+          pageRoles,
+          goals: asTextArray(goals.goals),
+          primaryGoal: asText(goals.primaryGoal),
+          menuPreset: asText(menu.menuPreset) as AssistantSiteBuilderMenuPresetId | null,
+          sectionRoles,
+          customLabels: pageRoleLabels,
+        })
+      : undefined;
 
   return omitEmpty({
     siteName: asText(profile.siteName),
@@ -126,6 +156,7 @@ export const deriveAssistantSiteBuilderIntakeFacts = ({
     goals: asTextArray(goals.goals),
     primaryGoal: asText(goals.primaryGoal),
     pageRoles,
+    pageRoleLabels: Object.keys(pageRoleLabels).length > 0 ? pageRoleLabels : undefined,
     sectionRoles,
     menuPreset: asText(menu.menuPreset) as AssistantSiteBuilderMenuPresetId | null,
     heroPreset: asText(hero.heroPreset) as AssistantSiteBuilderHeroPresetId | null,
@@ -147,5 +178,6 @@ export const deriveAssistantSiteBuilderIntakeFacts = ({
     readyForExecution:
       missingRequiredStepIds.length === 0 && confirmed && resolvedReviewState === "confirmed",
     redactionApplied: answers.some((answer) => hasRedactedValue(answer.values)),
+    basicDefaults,
   });
 };

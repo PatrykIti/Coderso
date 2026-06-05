@@ -44,6 +44,7 @@ export const assistantSiteBuilderIntakeAnswerFieldControls = [
   "text",
   "textarea",
   "text_list",
+  "label_map",
   "select",
   "multi_select",
   "checkbox",
@@ -138,6 +139,31 @@ export const assistantSiteBuilderContentEngineIds = [
 export type AssistantSiteBuilderContentEngineId =
   (typeof assistantSiteBuilderContentEngineIds)[number];
 
+export type AssistantSiteBuilderBasicPageRouteDefault = {
+  roleId: AssistantSiteBuilderPageRoleId;
+  label: string;
+  path: string;
+  menuLabel: string;
+};
+
+export type AssistantSiteBuilderBasicMenuItemDefault = {
+  key: string;
+  roleId: AssistantSiteBuilderPageRoleId | null;
+  label: string;
+  href: string | null;
+  parentKey: string | null;
+  orderIndex: number;
+};
+
+export type AssistantSiteBuilderBasicDefaultsFacts = {
+  pageRoles: readonly AssistantSiteBuilderPageRoleId[];
+  pageRoutes: readonly AssistantSiteBuilderBasicPageRouteDefault[];
+  menuPreset: AssistantSiteBuilderMenuPresetId;
+  menuItems: readonly AssistantSiteBuilderBasicMenuItemDefault[];
+  homepageSectionRoles: readonly AssistantSiteBuilderSectionRoleId[];
+  goalSignals: readonly string[];
+};
+
 export type AssistantSiteBuilderIntakeOptionDefinition<TId extends string = string> = {
   id: TId;
   label: string;
@@ -192,6 +218,7 @@ export type AssistantSiteBuilderIntakeFacts = {
   goals?: readonly string[];
   primaryGoal?: string | null;
   pageRoles?: readonly AssistantSiteBuilderPageRoleId[];
+  pageRoleLabels?: Partial<Record<AssistantSiteBuilderPageRoleId, string>>;
   sectionRoles?: readonly AssistantSiteBuilderSectionRoleId[];
   menuPreset?: AssistantSiteBuilderMenuPresetId | null;
   heroPreset?: AssistantSiteBuilderHeroPresetId | null;
@@ -211,6 +238,7 @@ export type AssistantSiteBuilderIntakeFacts = {
   readyForExecution?: boolean;
   redactionApplied?: boolean;
   siteKitPlanStepIds?: readonly SiteBuilderPlanStepId[];
+  basicDefaults?: AssistantSiteBuilderBasicDefaultsFacts;
 };
 
 export type AssistantSiteBuilderIntakeSession = {

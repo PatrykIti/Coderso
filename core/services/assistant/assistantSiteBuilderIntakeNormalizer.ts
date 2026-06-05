@@ -1,4 +1,5 @@
 import { redactAssistantText } from "./assistantRedaction";
+import { normalizeBasicPageRoleLabels } from "./assistantSiteBuilderIntakeBasicDefaults";
 import {
   getSiteBuilderIntakeModeDefinition,
   getSiteBuilderIntakeOption,
@@ -47,11 +48,11 @@ const profileKeys = new Set([
   "offerSummary",
 ]);
 const goalsKeys = new Set(["goals", "primaryGoal", "notes"]);
-const siteMapKeys = new Set(["pageRoles"]);
+const siteMapKeys = new Set(["pageRoles", "customLabels"]);
 const menuKeys = new Set(["menuPreset", "primaryActionLabel", "primaryActionPageRole"]);
 const sectionsKeys = new Set(["sectionRoles"]);
 const heroKeys = new Set(["heroPreset", "headline", "subheadline", "primaryCallToAction"]);
-const subpagesKeys = new Set(["pageRoles", "notes"]);
+const subpagesKeys = new Set(["pageRoles", "customLabels", "notes"]);
 const mediaPolicyKeys = new Set(["mediaPolicy", "notes"]);
 const contentEngineKeys = new Set(["contentEngines", "notes"]);
 const designPresetKeys = new Set(["designBrief", "tone", "colorNotes", "layoutNotes"]);
@@ -267,6 +268,7 @@ const normalizeSiteMapValues: AnswerValueNormalizer = (input) => {
       "pageRoles",
       { required: true, maxItems: 14 }
     ),
+    customLabels: normalizeBasicPageRoleLabels(record.customLabels),
   };
 };
 
@@ -336,6 +338,7 @@ const normalizeSubpagesValues: AnswerValueNormalizer = (input) => {
       "pageRoles",
       { maxItems: 14 }
     ),
+    customLabels: normalizeBasicPageRoleLabels(record.customLabels),
     notes: normalizeTextValue(record.notes, "notes", { maxLength: 360 }),
   });
 };

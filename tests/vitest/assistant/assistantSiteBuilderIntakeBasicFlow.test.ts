@@ -119,7 +119,7 @@ test("Basic intake metadata exposes answer fields and registry options for UI re
       .map((field) => field.key)
   ).toEqual(["siteName", "entityName", "topic", "summary"]);
 
-  expect(siteMap?.answerFields).toHaveLength(1);
+  expect(siteMap?.answerFields).toHaveLength(2);
   expect(siteMap?.answerFields[0]).toMatchObject({
     key: "pageRoles",
     control: "multi_select",
@@ -127,6 +127,12 @@ test("Basic intake metadata exposes answer fields and registry options for UI re
     optionRegistryId: "pageRoles",
   });
   expect(siteMap?.answerFields[0]?.options.map((option) => option.id)).toContain("services");
+  expect(siteMap?.answerFields[1]).toMatchObject({
+    key: "customLabels",
+    control: "label_map",
+    required: false,
+    optionRegistryId: "pageRoles",
+  });
 
   expect(review?.answerFields.find((field) => field.key === "confirmed")).toMatchObject({
     control: "checkbox",

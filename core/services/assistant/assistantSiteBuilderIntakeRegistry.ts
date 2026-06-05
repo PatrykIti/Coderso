@@ -263,6 +263,16 @@ export const siteBuilderIntakeStepDefinitions = freezeRegistry(
           maxItems: 14,
           optionRegistryId: "pageRoles",
         },
+        {
+          key: "customLabels",
+          label: "Custom labels",
+          description:
+            "Optional display labels keyed by page role. Labels cannot change routes or action ids.",
+          control: "label_map",
+          required: false,
+          maxLength: 80,
+          optionRegistryId: "pageRoles",
+        },
       ]),
     },
     {
@@ -375,6 +385,16 @@ export const siteBuilderIntakeStepDefinitions = freezeRegistry(
           control: "multi_select",
           required: false,
           maxItems: 14,
+          optionRegistryId: "pageRoles",
+        },
+        {
+          key: "customLabels",
+          label: "Additional custom labels",
+          description:
+            "Optional display labels keyed by additional page role. Labels cannot change routes or action ids.",
+          control: "label_map",
+          required: false,
+          maxLength: 80,
           optionRegistryId: "pageRoles",
         },
         {

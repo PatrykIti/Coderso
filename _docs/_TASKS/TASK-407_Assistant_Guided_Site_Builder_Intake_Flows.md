@@ -173,7 +173,7 @@ metadata only, strictly validated by the intake owner, and compiled to
 | TASK-407-02-L03 | Assistant Context and Route Validation Handoff | Done (2026-06-05) |
 | TASK-407-02-L04 | Guide Redaction and Browser State Contract | Done (2026-06-05) |
 | TASK-407-03-L01 | Basic Step Definitions and Progression | Done (2026-06-05) |
-| TASK-407-03-L02 | Basic Site Map and Section Role Defaults | To Do |
+| TASK-407-03-L02 | Basic Site Map and Section Role Defaults | Done (2026-06-05) |
 | TASK-407-03-L03 | Basic Widget and Review Fact Selection | To Do |
 | TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | To Do |
 | TASK-407-04-L01 | Advanced Design Preset Registry | To Do |

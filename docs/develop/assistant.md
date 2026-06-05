@@ -116,6 +116,13 @@ to bypass the prompt gate; backend-only planner state can also mark requested
 Advanced mode or an active intake session without adding a route-owned
 `context.siteBuilderIntake` payload.
 
+Basic site-map/menu/section defaults live in
+`assistantSiteBuilderIntakeBasicDefaults.ts`. They are advisory facts only:
+`facts.basicDefaults` can suggest generic page roles, role-derived routes, menu
+items, and homepage section roles, but it does not mark required intake steps as
+answered. Custom labels are bounded display hints keyed by backend page roles
+and cannot influence paths, action ids, or route targets.
+
 ### RBAC per step
 
 | Step | Required permissions |

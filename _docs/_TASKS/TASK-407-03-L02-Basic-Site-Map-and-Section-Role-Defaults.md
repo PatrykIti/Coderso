@@ -6,7 +6,7 @@
 **Category:** Assistant + Basic Defaults
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -89,3 +89,28 @@ export function deriveBasicSiteMapFacts(answers: BasicIntakeAnswers) {
 - Basic site-map defaults are generic and deterministic.
 - Unsafe or unknown page/menu/section input fails closed.
 - Implementers can add new role presets without touching route validation.
+
+## Closure Evidence
+
+- Added `assistantSiteBuilderIntakeBasicDefaults.ts` as a Bun-free helper for
+  deterministic Basic advisory defaults.
+- Defaults remain generic and role/goal-based: default page roles are `home`,
+  `services`, `portfolio`, `testimonials`, `about`, `faq`, and `contact`; goal
+  signals cover booking, sales, portfolio, content, and trust without
+  industry-specific branching.
+- Stable route paths are generated from backend page-role ids only. Custom
+  labels affect display labels/menu labels as bounded content hints and never
+  affect paths, action ids, or route targets.
+- Added simple and grouped/content-heavy menu defaults with bounded static group
+  labels and role-derived item keys.
+- Added Basic-only advisory `facts.basicDefaults` plus `pageRoleLabels`; these
+  do not satisfy required Basic steps and do not bypass review.
+- Extended `site-map` and `subpages` answer normalization with safe
+  `customLabels`, strict page-role keys, URL/script/admin/action-looking string
+  rejection, and secret-like label rejection.
+- Validation passed:
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeNormalizer.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRedaction.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeBasicFlow.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeBasicDefaults.test.ts tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/actionPlannerService.test.ts` (207 tests)
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `git diff --check`
+  - `bun run precommit`
