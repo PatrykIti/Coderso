@@ -1,5 +1,11 @@
 const sensitiveKeyPattern =
-  /(password|token|secret|authorization|cookie|apikey|api_key|bearer|signed.*url)/i;
+  /(password|token|secret|authorization|cookie|apikey|api_key|bearer|csrf|credential|session|signed.*url|x-amz-signature)/i;
+
+const signedUrlPattern =
+  /\bhttps?:\/\/\S*[?&](?:x-amz-signature|awsaccesskeyid|signature|expires|token|sig|se|sp|sv)=\S*/gi;
+
+const secretLikePairPattern =
+  /\b(password|token|secret|api[-_\s]?key|authorization|cookie|bearer|csrf|credential|session)\b\s*[:=]\s*[^\s,;]+/gi;
 
 const tokenPatterns = [
   /\bsk-or-v1-[a-zA-Z0-9]{8,}\b/g,
@@ -9,7 +15,9 @@ const tokenPatterns = [
 ] as const;
 
 const replaceTokens = (value: string) => {
-  let output = value;
+  let output = value
+    .replace(signedUrlPattern, "[REDACTED_URL]")
+    .replace(secretLikePairPattern, "$1: [REDACTED]");
   for (const pattern of tokenPatterns) {
     output = output.replace(pattern, "[REDACTED]");
   }
@@ -17,7 +25,10 @@ const replaceTokens = (value: string) => {
 };
 
 const normalizeText = (value: string) =>
-  value.replace(/\p{Cc}+/gu, " ").replace(/\s+/g, " ").trim();
+  value
+    .replace(/\p{Cc}+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 export const redactAssistantText = (value: string, maxLength = 240) => {
   const normalized = normalizeText(replaceTokens(value));

@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1104.
+Ordinary new entries continue at 1105.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,11 @@ Ordinary new entries continue at 1104.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1104 for the next changelog entry.
+assistant policy coverage fix. Use 1105 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1104 | 2026-06-05 | TASK-407 site-builder intake redaction and browser state | Assistant/Site Builder/Redaction/Provider Context/Admin State/QA/Docs |
 | 1103 | 2026-06-05 | TASK-407 site-builder intake siteKit handoff | Assistant/Site Builder/SiteKit/Validation/QA/Docs |
 | 1102 | 2026-06-05 | TASK-407 site-builder intake normalization | Assistant/Site Builder/Validation/Facts/Security/QA/Docs |
 | 1101 | 2026-06-05 | TASK-407 site-builder intake registry | Assistant/Site Builder/Domain Contract/QA/Docs |

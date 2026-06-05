@@ -6,7 +6,7 @@
 **Category:** Assistant + Schema + Admin UI + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-01
-**Status:** 🚧 In Progress (2026-06-05)
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -49,7 +49,7 @@ types in `siteBuilderPlanAdapter.ts`, `siteBuilderExecutor.ts`, and
 | TASK-407-02-L01 | Session Types and Step Registry | Done (2026-06-05) | Service-owned intake session types, mode/step ids, versions, and option registries. |
 | TASK-407-02-L02 | Answer Normalization and Fact Derivation | Done (2026-06-05) | Strict answer schemas, `normalize*` helpers, derived facts, and validation tests. |
 | TASK-407-02-L03 | Assistant Context and Route Validation Handoff | Done (2026-06-05) | Intake-to-`context.siteKit` handoff, optional intake route-schema reuse, and route tests. |
-| TASK-407-02-L04 | Guide Redaction and Browser State Contract | To Do | Redacted intake diagnostics, policy-bounded provider facts, and bounded browser state rules. |
+| TASK-407-02-L04 | Guide Redaction and Browser State Contract | Done (2026-06-05) | Redacted intake diagnostics, policy-bounded provider facts, and bounded browser state rules. |
 
 ## Security Contract
 
@@ -163,3 +163,13 @@ export function redactAssistantSiteBuilderIntakeSession(session: AssistantSiteBu
 - Planning can consume normalized intake facts through compiled `siteKit` input
   separately from prompt text.
 - Unknown or secret-like payloads fail closed before provider planning.
+
+## Closure Evidence
+
+- TASK-407-02-L01 through TASK-407-02-L04 are complete.
+- The shared Basic/Advanced intake contract now owns mode/step registries,
+  strict answer normalization, normalized fact derivation, reviewed
+  intake-to-`context.siteKit` compilation, provider-only bounded intake context,
+  redacted diagnostics, and a pure browser-state restore contract.
+- No duplicate route-owned `context.siteBuilderIntake` payload or second
+  site-builder execution channel was introduced.

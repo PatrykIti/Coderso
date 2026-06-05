@@ -6,6 +6,11 @@ import {
   sanitizeAssistantPlanningContext,
 } from "./adminContextService";
 import { redactAssistantMetadata, redactAssistantText } from "./assistantRedaction";
+import {
+  buildSiteBuilderIntakeProviderContext,
+  type AssistantSiteBuilderIntakeProviderContext,
+} from "./assistantSiteBuilderIntakeRedaction";
+import type { AssistantSiteBuilderIntakeFacts } from "./assistantSiteBuilderIntakeTypes";
 import { assistantOperationPolicy } from "./operationPolicy/assistantOperationPolicy";
 import {
   buildProviderOperationDraftGuidance,
@@ -34,6 +39,7 @@ export type AssistantProviderPlanningPromptInput = {
   prompt: string;
   context?: AssistantActionContext;
   evidence?: AssistantProviderPlanningEvidence[];
+  siteBuilderIntakeFacts?: AssistantSiteBuilderIntakeFacts | null;
   maxDocs?: number;
   maxCharsPerDoc?: number;
   maxResourceItemsPerGroup?: number;
@@ -88,6 +94,7 @@ export type AssistantProviderPlanningPromptPackage = {
     warnings: string[];
   } | null;
   blueprints: BlueprintProviderContextPackage;
+  siteBuilderIntake: AssistantSiteBuilderIntakeProviderContext | null;
   registry: Array<{
     kind: string;
     aliases: string[];
@@ -292,6 +299,9 @@ export const buildProviderPlanningPromptPackage = (
     blueprints: buildBlueprintProviderContext({
       maxCapabilities: maxResourceItemsPerGroup,
     }),
+    siteBuilderIntake: input.siteBuilderIntakeFacts
+      ? buildSiteBuilderIntakeProviderContext(input.siteBuilderIntakeFacts)
+      : null,
     registry: providerPolicyRegistry,
     policyGuidance: providerPolicyGuidance,
     operationDraftGuidance: providerOperationDraftGuidance,

@@ -15,6 +15,26 @@ test("redactAssistantText redacts token-like values", () => {
   expect(output.includes("[REDACTED]")).toBe(true);
 });
 
+test("redactAssistantText redacts generic secret pairs and signed urls", () => {
+  const output = redactAssistantText(
+    [
+      "password=super-secret",
+      "cookie: session-id",
+      "csrf=csrf-token",
+      "https://cdn.example.test/private.jpg?X-Amz-Signature=abc&Expires=123",
+      "https://cdn.example.test/photo.jpg?token=abc",
+    ].join(" ")
+  );
+
+  expect(output).not.toContain("super-secret");
+  expect(output).not.toContain("session-id");
+  expect(output).not.toContain("csrf-token");
+  expect(output).not.toContain("X-Amz-Signature=abc");
+  expect(output).not.toContain("token=abc");
+  expect(output).toContain("[REDACTED]");
+  expect(output).toContain("[REDACTED_URL]");
+});
+
 test("redactAssistantMetadata removes sensitive keys and redacts nested strings", () => {
   const output = redactAssistantMetadata({
     provider: "openrouter",

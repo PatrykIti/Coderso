@@ -94,6 +94,15 @@ The `/assistant/actions/plan` route continues to validate only the strict
 roles, media policy, content-engine candidates, references, and review metadata
 remain outside that payload.
 
+Intake diagnostics and provider context are separate from the route payload.
+`assistantSiteBuilderIntakeRedaction.ts` emits diagnostics with stable ids and a
+facts hash only, while `buildSiteBuilderIntakeProviderContext` packages bounded
+advisory facts for provider classification without raw references, files,
+secrets, signed URLs, or executable instructions. Browser-local restore uses
+`assistantSiteBuilderIntakeBrowserState.ts`; it stores a small versioned
+snapshot only and discards stale, oversized, unknown-version, or unknown-key
+payloads.
+
 ### RBAC per step
 
 | Step | Required permissions |

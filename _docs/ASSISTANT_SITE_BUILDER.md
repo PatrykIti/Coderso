@@ -360,6 +360,24 @@ schema. Review-only facts such as page roles, section roles, media policy,
 content engines, hero/menu choices, references, gates, and diagnostics stay out
 of `context.siteKit` and remain compiler/review metadata for later adapters.
 
+TASK-407 intake redaction is owned by
+`core/services/assistant/assistantSiteBuilderIntakeRedaction.ts`.
+Diagnostics expose only schema version, mode/current step, answered step ids,
+readiness booleans, warning codes, and a deterministic facts hash. Provider
+planning may receive `siteBuilderIntakeFacts` only through
+`buildSiteBuilderIntakeProviderContext`; that package is provider-only,
+advisory, non-executable, raw-reference-free, and explicitly denies schema/RBAC,
+media-gate, or confirmation overrides. It does not create a
+`context.siteBuilderIntake` route contract.
+
+Browser-local intake restore is a separate bounded snapshot contract in
+`core/admin/ui/setup/assistantSiteBuilderIntakeBrowserState.ts`. It stores no
+answers, raw facts, plans, actions, files, run-option patches, references,
+provider keys, cookies, CSRF/session values, or signed URLs. Restore accepts only
+the current schema version, strict known keys, a bounded serialized size, and a
+fresh expiry window; invalid state is discarded and the server-normalized
+session remains the source of truth.
+
 ## Auditability
 
 Execution writes assistant metadata to run options (`assistantSiteBuilder`), including:

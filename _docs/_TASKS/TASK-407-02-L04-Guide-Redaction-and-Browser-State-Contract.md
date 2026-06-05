@@ -6,7 +6,7 @@
 **Category:** Assistant + Redaction + Browser State
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-02-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -82,6 +82,38 @@ export function buildSiteBuilderIntakeProviderContext(facts: AssistantSiteBuilde
   rehydrating; invalid state is discarded and the server-normalized session wins.
 - Any value classified as secret-like is removed or replaced with a stable hash
   before leaving the service boundary.
+
+## Closure Evidence
+
+- Expanded `assistantRedaction.ts` so provider-bound text redacts generic
+  `password=`, cookie/session/CSRF/API-key pairs, bearer tokens, OpenRouter keys,
+  JWT-like tokens, and signed/tokenized URLs embedded in normal strings.
+- Added `assistantSiteBuilderIntakeRedaction.ts` with:
+  - `redactAssistantSiteBuilderIntakeSession(session)` for hash/stable-id-only
+    diagnostics,
+  - `buildSiteBuilderIntakeProviderContext(facts)` for provider-only bounded
+    advisory facts.
+- Added provider planning package support for `siteBuilderIntakeFacts` without
+  adding a route/browser-owned `context.siteBuilderIntake` payload.
+- Added `assistantSiteBuilderIntakeBrowserState.ts` as a pure browser-state
+  helper with schema versioning, max serialized size, stale discard,
+  strict allowed keys, no run-option cloning, and no raw answers/references.
+- Curie read-only pre-implementation audit found the expected L04 drift risks:
+  generic secret/signed-URL text leaks, missing provider-only intake context,
+  missing browser-state restore contract, and missing diagnostics/tests. The
+  implementation addresses those findings.
+- Curie post-implementation re-audit found two blockers: unnormalized provider
+  fact ids could cross the provider boundary, and browser-state restore trusted
+  local readiness flags. The implementation now runtime-whitelists provider id
+  fields and treats restored browser readiness as diagnostic-only.
+- Curie final targeted re-audit reported no blocking findings after those
+  fixes.
+- Validation passed:
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/assistantRedaction.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeNormalizer.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRedaction.test.ts tests/vitest/assistant/provider-planning-context.test.ts tests/vitest/ui/assistant-site-builder-intake-browser-state.test.ts` (38 tests)
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `git diff --check`
+  - `bun run precommit`
 
 ## Testing Requirements
 
