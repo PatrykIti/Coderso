@@ -6,7 +6,7 @@
 **Category:** Assistant + API Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -106,6 +106,29 @@ function mapIntakeRouteError(error: AssistantSiteBuilderIntakeError) {
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
+
+## Closure Evidence
+
+- Added `assistantSiteBuilderIntakeCompiler.ts` with:
+  - `compileIntakeToSiteKitPlanInput(session)`,
+  - `buildSiteKitPlanInputFromIntakeFacts(facts)`,
+  - `buildActionPlanRequestFromReviewedIntake(session)`.
+- Kept the final route handoff on existing `context.siteKit`; no
+  `context.siteBuilderIntake` route payload or duplicate route-owned intake
+  schema was introduced.
+- Compiled `context.siteKit` is schema-exact and excludes review-only fields,
+  media policy, page roles, section roles, and intake metadata.
+- Reviewed sessions reach the existing `planAssistantActions` site-kit path,
+  while unconfirmed review sessions fail closed before planner handoff.
+- Fixed audit blockers where generic Polish workshop prompts, including ceramic
+  workshops and home automation workshops, could be misclassified as automotive
+  without vehicle/mechanic context.
+- Validation passed:
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeNormalizer.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts` (19 tests)
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `git diff --check`
+  - `bun run precommit`
 
 ## Documentation Updates Required
 

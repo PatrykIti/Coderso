@@ -340,6 +340,26 @@ Review readiness is split deliberately:
   `confirmed: true`; a client-supplied `reviewState: "confirmed"` alone is not
   enough.
 
+Reviewed intake handoff is compiled by
+`core/services/assistant/assistantSiteBuilderIntakeCompiler.ts`. The compiler
+normalizes the session, verifies explicit review confirmation, and builds the
+existing assistant action-plan request shape:
+
+```ts
+{
+  prompt: "...",
+  context: {
+    siteKit: AssistantSiteKitPlanInput
+  }
+}
+```
+
+No `context.siteBuilderIntake` route payload is introduced in TASK-407-02. The
+admin route continues to validate only the existing strict `context.siteKit`
+schema. Review-only facts such as page roles, section roles, media policy,
+content engines, hero/menu choices, references, gates, and diagnostics stay out
+of `context.siteKit` and remain compiler/review metadata for later adapters.
+
 ## Auditability
 
 Execution writes assistant metadata to run options (`assistantSiteBuilder`), including:

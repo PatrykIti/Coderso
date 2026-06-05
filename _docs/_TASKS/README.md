@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 43 tasks
+- **To Do:** 42 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2240 tasks
+- **Done:** 2241 tasks
 
 ---
 
@@ -47,7 +47,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-407-05 | SiteKit Plan and Content Engine Decisions | High | Large | Map intake facts to existing siteKit plans, supported static pages, content engines, detail routes, custom screens, and gates. |
 | TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | Build the guided stepper/review UX and harden local state, warnings, and execute gating. |
 | TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Validate Basic, Advanced, scoped cleanup plus second-theme rebuild, follow-up refinement, and fail-closed media/reference flows through Playwright CLI and Claude/agent review. |
-| TASK-407-02-L03 | Assistant Context and Route Validation Handoff | High | Medium | Compile reviewed intake into `context.siteKit` and add optional route metadata only without duplicate schema ownership. |
 | TASK-407-02-L04 | Guide Redaction and Browser State Contract | High | Medium | Redacted diagnostics, policy-bounded provider facts, and bounded browser state rules. |
 | TASK-407-03-L01 | Basic Step Definitions and Progression | High | Medium | Basic step definitions and deterministic `needs_input` progression. |
 | TASK-407-03-L02 | Basic Site Map and Section Role Defaults | High | Medium | Beginner-safe page/menu/section defaults without industry hardcoding. |
@@ -106,6 +105,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-407-01 | Task Contract Drift Audit and Scope Freeze | High | Medium | Done (2026-06-05): Claude/agent drift loop aligned TASK-407 with existing siteKit/AiSiteWizard contracts and fixed siteKit plan-context projection in the admin client. |
 | TASK-407-02-L01 | Session Types and Step Registry | High | Medium | Done (2026-06-05): service-owned Basic/Advanced intake session types, canonical step ids, generic role/preset/media-policy registries, and Bun-free fail-closed registry tests. |
 | TASK-407-02-L02 | Answer Normalization and Fact Derivation | High | Large | Done (2026-06-05): strict per-step answer normalizers derive bounded provider-safe facts, reject unknown fields/options, redact secret-like text, and block Advanced-only steps in Basic mode. |
+| TASK-407-02-L03 | Assistant Context and Route Validation Handoff | High | Medium | Done (2026-06-05): reviewed intake sessions compile into schema-exact `context.siteKit`, reuse the existing route schema, and reach the current site-kit planner path without adding route-owned intake payloads. |
 | TASK-405 | Assistant Curated Media Profiles | High | Large | Done (2026-06-05): backend-owned curated media profiles render licensed public images for full-service sites, enforce curated URL/source/license trust, fix mobile rich-text images, and pass live Playwright CLI E2E. |
 | TASK-404 | LLM Guide Full Service Site Generation | High | Very Large | Done (2026-06-04): full-service assistant planning, dry-run, execute, public runtime, Playwright CLI, drift loops, docs, and changelog closure completed; media import remains explicitly gated. |
 | TASK-404-01 | Full Service Site Contract and Acceptance Matrix | High | Medium | Done (2026-06-04): full-service completion contract and acceptance matrix require real public pages, catalogs, details, nav/footer, contact, SEO, and explicit media gates. |

@@ -83,6 +83,17 @@ Acceptance tests for this flow must not stop at a successful plan. They need to
 dry-run, execute, and verify public runtime pages, populated listings, working
 detail routes, navigation/footer links, SEO basics, and desktop/mobile layout.
 
+TASK-407 guided site-builder intake is a service-owned layer over the same
+site-kit action path. The intake session is normalized and reviewed in
+`core/services/assistant/assistantSiteBuilderIntake*.ts`, then
+`assistantSiteBuilderIntakeCompiler.ts` builds an action-plan request with the
+existing `context.siteKit` payload. Do not add a browser- or route-owned
+`context.siteBuilderIntake` contract unless a later task explicitly requires it.
+The `/assistant/actions/plan` route continues to validate only the strict
+`AssistantSiteKitPlanInput` fields under `context.siteKit`; page roles, section
+roles, media policy, content-engine candidates, references, and review metadata
+remain outside that payload.
+
 ### RBAC per step
 
 | Step | Required permissions |
