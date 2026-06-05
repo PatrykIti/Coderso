@@ -8,25 +8,71 @@ Task board for project work. Keep task files and this board in sync.
 3. Move to **In Progress** when work starts; update the task file status.
 4. When complete, move to **Done**, update the task file status, and add a changelog entry.
 5. Update any impacted docs after each task.
+6. For non-trivial task-contract or implementation work, follow the read-only
+   audit and drift-pass rules in root `AGENTS.md` when explicit external-agent
+   consultation approval exists.
 
 ## Task file format
-- File name: `TASK-XXX_Short_Title.md` (see `EXAMPLE_TASK.md`).
+- Board-level file name: `TASK-###_Short_Title.md` (see `EXAMPLE_TASK.md` for
+  a Coderso-specific template example).
+- Physical child file names:
+  - `TASK-###-NN-Title.md` for a technical subtask under `TASK-###`.
+  - `TASK-###-NN-LNN-Title.md` for an executable leaf under `TASK-###-NN`.
+  - `TASK-###-NN-SNN-Title.md` for an optional deeper technical subtask under
+    `TASK-###-NN`.
+- Existing task families may keep their established numeric descendant pattern,
+  such as `TASK-###-NN-NN-Title.md`; do not rename historical task families
+  outside a dedicated migration task.
+- Numbering is zero-padded and stable. Do not reuse retired numbers; supersede
+  old files and allocate the next number.
+- Board-level filename slugs use underscores after the task ID. Physical child
+  filename slugs use hyphens, not underscores or spaces.
 - Header lines:
-  - `# TASK-XXX: Title`
-  - `# FileName: TASK-XXX_Short_Title.md`
+  - `# TASK-###: Title` or `# TASK-###-NN: Title`
+  - `# FileName: <actual filename>`
+- Child files must include a parent field such as `**Parent Task:** TASK-###`
+  or `**Parent Subtask:** TASK-###-NN`.
+- Template-only files such as `EXAMPLE_TASK.md` may use `TASK-000` when the file
+  clearly says it is not a board task.
 - Required fields: Priority, Category, Estimated Effort, Dependencies, Status.
-- Required sections: Overview, Sub-Tasks, Testing Requirements, Documentation Updates Required.
-- For API-related tasks/subtasks add mandatory section: `Security Contract` (visibility: `internal/public`, auth path, rate-limit bucket, nonce/signature/HMAC expectations, optional reCAPTCHA, internal mode via session/API key where applicable).
+- Keep `**Status:**` canonical for new or substantially rewritten files:
+  `⏳ To Do`, `🚧 In Progress`, `✅ Done`, `⏭️ Superseded`, or `❌ Cancelled`.
+  Put dates, reasons, follow-on links, or completion notes in dedicated fields
+  such as `Started`, `Completed`, `Superseded By`, or `Cancellation Reason`.
+- Required sections: Overview, Sub-Tasks, Testing Requirements, Documentation
+  Updates Required.
+- Execution-ready leaf tasks must include `Implementation Pseudocode` with the
+  expected helper/function shape, data flow, error handling, regression-test
+  shape, and validation commands.
+- For API-related tasks/subtasks add mandatory section: `Security Contract`
+  (visibility: `internal/public`, auth path, rate-limit bucket,
+  nonce/signature/HMAC expectations, optional reCAPTCHA, internal mode via
+  session/API key where applicable).
 - Optional sections: Architecture, Implementation Order, New Files to Create.
-- Detail level: match `EXAMPLE_TASK.md` (explicit files/paths, example code or payloads, testing checklist with unit tests, and planned docs/changelog).
+- Detail level: explicit files/paths, example code or payloads where useful,
+  testing checklist with the correct Bun/Vitest lane, and planned
+  docs/changelog updates.
 
 ## Status rules
-- Use: To Do, In Progress, Done.
-- Include dates for In Progress/Done in the task file.
+- Canonical task-file statuses are:
+  - `⏳ To Do`
+  - `🚧 In Progress`
+  - `✅ Done`
+  - `⏭️ Superseded`
+  - `❌ Cancelled`
+- Board buckets remain **To Do**, **In Progress**, and **Done**. Superseded and
+  Cancelled tasks live in **Done** with a note that states the terminal reason.
+- New or substantially rewritten task files should keep date/reason metadata out
+  of `**Status:**` and in dedicated fields. Legacy status lines may be
+  normalized when touched or by a dedicated migration task.
+- Do not leave open direct children under a closed parent. A parent may move to
+  `✅ Done` only when all physical descendants are `✅ Done`, `⏭️ Superseded`,
+  or `❌ Cancelled`.
 - Update **Statistics** and the appropriate table on every status change.
 
 ## Changelog link
-- Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
+- Every completed task must have a matching entry in `_docs/_CHANGELOG/` and
+  list the task ID there.
 - Leaf tasks may be covered by the parent family changelog only when that
   entry explicitly lists the parent task ID and every closed leaf task ID.
   Do not move a leaf task to `Done` until either its standalone changelog
@@ -34,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2222 tasks
+- **Done:** 2223 tasks
 
 ---
 
@@ -68,6 +114,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-403 | Agent Task Workflow Rule Alignment | Medium | Medium | Done (2026-06-04): AGENTS task workflow rules, task board format, Coderso task example, and changelog numbering were aligned. |
 | TASK-402 | reCAPTCHA Runtime Configuration and Eager Client Loading | High | Medium | Done (2026-06-04): backend-owned bot-protection settings and eager v3 client loading for auth and public form runtimes. |
 | TASK-401 | DB Runtime Test Idle Timeout | Medium | Small | Done (2026-06-04): DB-backed media runtime tests now opt into a 30-second Bun.serve idle timeout to avoid socket resets under full-lane load. |
 | TASK-400 | Docker Startup Migrations | High | Medium | Done (2026-06-04): Docker runtime entrypoint now runs Drizzle migrations behind a Postgres advisory lock before starting the core HTTP server. |

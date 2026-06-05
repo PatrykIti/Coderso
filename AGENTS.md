@@ -70,16 +70,99 @@ Testing docs:
 ## Task Workflow (Mandatory)
 
 - Before starting any task, review:
-  - task documentation in `_docs/_TASKS/*`,
-  - related source files,
-  - related tests,
-  - relevant docs/contracts (`_docs/ARCHITECTURE.md`, `_docs/CMS_API.md`, `_docs/TESTING_STRATEGY.md`, etc.).
-- For non-trivial tasks, tasks that change contributor/process rules, or work done alongside other active agents, prefer a dedicated git branch + worktree so the change stays isolated from unrelated in-progress edits in the shared tree.
-- If a task is not broken down enough, create physical task/subtask files in `_docs/_TASKS/` first using the exact repo format from `_docs/_TASKS/README.md` (filename, header lines, required fields, required sections, dated statuses, tests, and docs/changelog plan).
-- Execution-ready leaf tasks must include implementation pseudocode for the expected code changes, including the main helper/function shape, data flow, error handling, and regression-test shape. The implementer should be able to execute from the task without rediscovering the fix strategy.
-- For any task/subtask that touches API routes, include an explicit **Security Contract** subsection: endpoint visibility (`internal` vs `public`), auth model, RBAC, CSRF expectations for admin/internal writes, rate-limit bucket, strict reject-unknown validation, and anti-abuse controls (`nonce` + signature/HMAC for public write; optional reCAPTCHA policy; `session` or `API key scope` for internal mode when applicable).
+  - the relevant task file in `_docs/_TASKS/`, if one exists,
+  - `_docs/_TASKS/README.md` plus parent/child task state,
+  - product and architecture constraints from `README.md`, `CONTRIBUTING.md`,
+    `_docs/ARCHITECTURE.md`, `_docs/CMS_SPEC.md`, `_docs/CMS_API.md`,
+    `_docs/TESTING_STRATEGY.md`, and the domain docs that own the touched area,
+  - related source files and tests,
+  - current git diff/status once code or docs changes exist.
+- For non-trivial tasks, tasks that change contributor/process rules, or work
+  done alongside other active agents, prefer a dedicated git branch + worktree
+  so the change stays isolated from unrelated in-progress edits in the shared
+  tree.
+- If scope is unclear or a task is not broken down enough, split or refine the
+  task before implementation. Do not silently downgrade agreed scope to a
+  smaller MVP.
+- Use `_docs/_TASKS/TASK-###_Short_Title.md` for board-level task files unless a dedicated migration task renames a board family.
+- Use physical child files for implementation work that is too large for one task file:
+  - `TASK-###-NN-Title.md` for a technical subtask under `TASK-###`,
+  - `TASK-###-NN-LNN-Title.md` for an executable leaf under `TASK-###-NN`,
+  - `TASK-###-NN-SNN-Title.md` for an optional deeper technical subtask under `TASK-###-NN`.
+- Existing task families may keep their established numeric descendant pattern,
+  such as `TASK-###-NN-NN-Title.md`. Do not rename historical task families
+  outside a dedicated migration task.
+- Numbering is zero-padded and stable after merge. `NN` starts at `01` inside
+  each parent task, while `LNN` and `SNN` start at `L01` and `S01` inside each
+  technical subtask. Do not reuse retired numbers; supersede old files and
+  allocate the next number.
+- Board-level task filename slugs use underscores after the task ID. Physical
+  child filename slugs use hyphens, not underscores or spaces. The H1 must match
+  the physical task ID, `# FileName:` must equal the actual filename, and child
+  files must include a parent field such as `**Parent Task:** TASK-###` or
+  `**Parent Subtask:** TASK-###-NN`.
+- Template-only files such as `_docs/_TASKS/EXAMPLE_TASK.md` may use `TASK-000`
+  as an illustrative ID when the file clearly says it is not a board task.
+- New or substantially rewritten task files must keep the `**Status:**` field
+  canonical: `⏳ To Do`, `🚧 In Progress`, `✅ Done`, `⏭️ Superseded`, or
+  `❌ Cancelled`. Put dates, reasons, follow-on links, and completion notes in
+  dedicated fields such as `**Started:**`, `**Completed:**`,
+  `**Superseded By:**`, or `**Cancellation Reason:**`. Legacy status lines may
+  be normalized when the task file is touched or by a dedicated migration task.
+- Execution-ready leaf tasks must include implementation pseudocode for the
+  expected code changes, including the main helper/function shape, data flow,
+  error handling, and regression-test shape. The implementer should be able to
+  execute from the task without rediscovering the fix strategy.
+- For any task/subtask that touches API routes, include an explicit
+  **Security Contract** subsection: endpoint visibility (`internal` vs
+  `public`), auth model, RBAC, CSRF expectations for admin/internal writes,
+  rate-limit bucket, strict reject-unknown validation, and anti-abuse controls
+  (`nonce` + signature/HMAC for public write; optional reCAPTCHA policy;
+  `session` or `API key scope` for internal mode when applicable).
+- If the user explicitly approves Claude/subagent consultation for non-trivial
+  implementation or task-contract work, run a read-only pre-implementation task
+  audit before editing the implementation contract. Agent consultation is
+  egress: do not send secrets, credentials, private provider keys, raw sensitive
+  logs, or unredacted user data. Use read-only planning by default; for Claude
+  CLI prefer
+  `claude -p --permission-mode plan --effort xhigh --tools Read,Grep,Bash` or
+  the highest supported effort value, and record any fallback in the
+  task/changelog closeout. Do not set artificial token, time, or cost budgets
+  unless the user explicitly asks for that constraint.
+- Pre-implementation audit prompts must state the repo path, current HEAD and
+  dirty-worktree context, task ID(s), that no files may be edited, and that
+  findings must be ordered by severity with concrete file/line references. The
+  audit must compare task file state, parent/child state, product and
+  architecture constraints, current implementation, tests, validation lanes, and
+  git diff.
+- Treat Claude and subagent reports as review evidence, not authority. Verify
+  every actionable finding against local files and command output before
+  changing code or task state.
+- If a pre-implementation audit finds real task drift, stale assumptions,
+  missing validation, or contradictions, fix the task contract first, validate
+  the correction, and rerun a fresh read-only audit before implementation when
+  the external audit is part of the task. If a workflow includes manual commits,
+  rerun on the new HEAD; otherwise rerun against the final working tree and
+  record the dirty-worktree context.
+- Do not begin implementation from a stale pre-audit. If any task, changelog,
+  source, test, or validation-contract file changes after the pass, that pass is
+  obsolete for the changed contract.
+- After implementation, docs, validation, and commits are complete, run fresh
+  read-only drift passes on the final committed HEAD when the task uses external
+  audit and commits. If the task does not include manual commits, run the final
+  pass against the validated working tree and include HEAD plus diff/status
+  context in the prompt.
+- Post-implementation drift passes must check the task contract, parent/child
+  statuses, changelog/index entries, validation evidence, code boundaries,
+  security invariants, and known drift risks discovered during the task.
+- If a drift pass reports real drift, fix it, validate the fix, update
+  docs/changelog evidence when needed, and repeat with a fresh pass. Continue
+  until no unresolved high/medium/low drift remains or every remaining item is
+  explicitly split into a non-blocking follow-up task with rationale.
+- Drift passes supplement dependency-shaped validation; they do not replace
+  required tests, linters, type checks, security scans, task graph audits, or
+  runtime smoke tests.
 - Implement in dependency order to avoid unnecessary refactors and rework.
-- Do not silently downgrade scope to MVP if full scope was agreed.
 
 ## Implementation Rules
 
@@ -166,8 +249,15 @@ Testing docs:
 ## Task Closure Rules
 
 - Update task/subtask status in `_docs/_TASKS/*`.
+- Do not leave open direct children under a closed parent. Convert remaining
+  work into explicit follow-on tasks when needed.
+- A parent may move to `✅ Done` only when all physical descendants are
+  `✅ Done`, `⏭️ Superseded`, or `❌ Cancelled`.
 - Keep `_docs/_TASKS/README.md` tables and statistics synchronized with task file status changes.
 - Add a changelog entry in `_docs/_CHANGELOG/` and update `_docs/_CHANGELOG/README.md` for every completed task, including docs/process-only work. Follow the numbering, index, and task-ID rules from `_docs/_CHANGELOG/README.md`.
+- Preserve review transcripts or concise summaries in the task/changelog
+  closeout when they materially affected the implementation, especially when a
+  drift finding caused an additional fix.
 - Update relevant documentation for any API/architecture/UX contract changes.
 - If you add or change admin cached resources, update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md`.
 - If you change plugin/runtime contracts, widget pack coverage, assistant workflow contracts, or release-gate contracts, update the corresponding source-of-truth docs (`_docs/CODERSO_PLUGIN_CONTRACT.md`, `_docs/WIDGET_PACK_MATRIX.md`, `_docs/ASSISTANT_SITE_BUILDER.md`, `_docs/CODERSO_RELEASE_GATES.md`).
