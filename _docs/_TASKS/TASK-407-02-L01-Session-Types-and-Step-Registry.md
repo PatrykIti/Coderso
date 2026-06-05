@@ -6,7 +6,7 @@
 **Category:** Assistant + Domain Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -108,6 +108,23 @@ export function getSiteBuilderIntakeStepDefinition(stepId: string) {
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
+
+## Closure Evidence
+
+- Added `AssistantSiteBuilderIntake*` session, mode, step, option, fact, and
+  registry error types.
+- Added service-owned registries for Basic/Advanced modes, canonical intake
+  steps, generic page/section roles, menu/hero presets, media policies, and
+  review states.
+- Added fail-closed lookup helpers for unknown modes, step ids, option registry
+  ids, and option ids.
+- Added Bun-free Vitest coverage:
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts`
+- Validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `git diff --check`
+  - `bun run precommit`
 
 ## Documentation Updates Required
 

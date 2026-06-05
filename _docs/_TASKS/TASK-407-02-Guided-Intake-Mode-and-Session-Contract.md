@@ -6,7 +6,7 @@
 **Category:** Assistant + Schema + Admin UI + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-01
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress (2026-06-05)
 
 ---
 
@@ -46,7 +46,7 @@ types in `siteBuilderPlanAdapter.ts`, `siteBuilderExecutor.ts`, and
 
 | ID | Title | Status | Output |
 |---|---|---|---|
-| TASK-407-02-L01 | Session Types and Step Registry | To Do | Service-owned intake session types, mode/step ids, versions, and option registries. |
+| TASK-407-02-L01 | Session Types and Step Registry | Done (2026-06-05) | Service-owned intake session types, mode/step ids, versions, and option registries. |
 | TASK-407-02-L02 | Answer Normalization and Fact Derivation | To Do | Strict answer schemas, `normalize*` helpers, derived facts, and validation tests. |
 | TASK-407-02-L03 | Assistant Context and Route Validation Handoff | To Do | Intake-to-`context.siteKit` handoff, optional intake route-schema reuse, and route tests. |
 | TASK-407-02-L04 | Guide Redaction and Browser State Contract | To Do | Redacted intake diagnostics, policy-bounded provider facts, and bounded browser state rules. |

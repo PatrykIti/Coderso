@@ -270,11 +270,56 @@ Primary UI:
 - `core/admin/ui/setup/AiSiteWizardSteps.tsx` (step rendering)
 
 Wizard stages:
-1. Business profile
+1. Site/entity profile
 2. Goals
 3. Recommendation
 4. Plan review (step toggles + explainable action map)
 5. Execute (apply/dry-run + validation checks + unresolved list)
+
+## Guided Intake Vocabulary
+
+TASK-407 adds a shared service-owned intake vocabulary before UI-specific Basic
+or Advanced flows are rendered. The source of truth is:
+
+- `core/services/assistant/assistantSiteBuilderIntakeTypes.ts`
+- `core/services/assistant/assistantSiteBuilderIntakeRegistry.ts`
+
+Modes:
+- `basic` is the guided default for non-technical users. It can ask simple
+  questions and choose safe defaults for page roles, sections, menu, hero, and
+  media policy.
+- `advanced` uses the same session contract but exposes additional controlled
+  choices for content-engine, design-preset, and reference-intake decisions.
+
+Canonical step ids:
+- `business-profile`
+- `site-goals`
+- `site-map`
+- `menu`
+- `homepage-sections`
+- `hero`
+- `subpages`
+- `media-policy`
+- `content-engine`
+- `design-preset`
+- `reference-intake`
+- `review`
+
+The canonical registry is intentionally generic. Page and section registries use
+roles such as services, products, portfolio, blog, team, locations, FAQ, proof,
+process, lead capture, and content feed instead of hardcoded industries. Later
+normalizers and adapters map user answers and business context onto these roles,
+then compile the reviewed result into the existing `context.siteKit` contract.
+
+Media intake is policy-based:
+- `curated` allows backend-owned curated media profiles with documented public
+  image licenses.
+- `library` uses only existing media-library assets.
+- `placeholder` creates reviewable media slots without external media.
+
+Unknown mode, step, option-registry, or option ids must fail closed through the
+service-owned registry helpers before route validation, provider planning, or
+execution.
 
 ## Auditability
 

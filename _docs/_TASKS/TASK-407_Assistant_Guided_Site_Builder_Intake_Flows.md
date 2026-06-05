@@ -156,8 +156,8 @@ metadata only, strictly validated by the intake owner, and compiled to
 
 | ID | Title | Status | Executable Leaves |
 |---|---|---|---|
-| TASK-407-01 | Task Contract Drift Audit and Scope Freeze | To Do | None; this is the pre-implementation drift gate. |
-| TASK-407-02 | Guided Intake Mode and Session Contract | To Do | TASK-407-02-L01 through TASK-407-02-L04 |
+| TASK-407-01 | Task Contract Drift Audit and Scope Freeze | Done (2026-06-05) | None; this is the pre-implementation drift gate. |
+| TASK-407-02 | Guided Intake Mode and Session Contract | In Progress (2026-06-05) | TASK-407-02-L01 through TASK-407-02-L04 |
 | TASK-407-03 | Basic Mode Structured Site Flow | To Do | TASK-407-03-L01 through TASK-407-03-L04 |
 | TASK-407-04 | Advanced Mode Design Presets and Reference Intake | To Do | TASK-407-04-L01 through TASK-407-04-L04 |
 | TASK-407-05 | SiteKit Plan and Content Engine Decisions | To Do | TASK-407-05-L01 through TASK-407-05-L06 |
@@ -168,7 +168,7 @@ metadata only, strictly validated by the intake owner, and compiled to
 
 | ID | Title | Status |
 |---|---|---|
-| TASK-407-02-L01 | Session Types and Step Registry | To Do |
+| TASK-407-02-L01 | Session Types and Step Registry | Done (2026-06-05) |
 | TASK-407-02-L02 | Answer Normalization and Fact Derivation | To Do |
 | TASK-407-02-L03 | Assistant Context and Route Validation Handoff | To Do |
 | TASK-407-02-L04 | Guide Redaction and Browser State Contract | To Do |
