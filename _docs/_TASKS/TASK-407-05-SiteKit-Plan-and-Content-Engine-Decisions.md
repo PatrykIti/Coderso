@@ -6,7 +6,7 @@
 **Category:** Assistant + SiteKit Planner + Content Engine
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-02, TASK-407-03, TASK-407-04
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress (2026-06-05)
 
 ---
 
@@ -43,7 +43,7 @@ contract cannot express an accepted capability.
 
 | ID | Title | Status | Output |
 |---|---|---|---|
-| TASK-407-05-L01 | Intake Facts to SiteKit Plan Adapter | To Do | Normalized intake facts converted to existing siteKit plan input. |
+| TASK-407-05-L01 | Intake Facts to SiteKit Plan Adapter | Done (2026-06-05) | Normalized intake facts converted to existing siteKit plan input. |
 | TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | To Do | Static page/menu/footer/contact/SEO actions through strict action families. |
 | TASK-407-05-L03 | Content Engine Decision Rules | To Do | Supported service/project/product/post/proof/team/location/FAQ engine selection and gates. |
 | TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | To Do | Beginner editing surface decisions and unsupported custom-screen gates. |

@@ -90,8 +90,10 @@ site-kit action path. The intake session is normalized and reviewed in
 existing `context.siteKit` payload. Do not add a browser- or route-owned
 `context.siteBuilderIntake` contract unless a later task explicitly requires it.
 The `/assistant/actions/plan` route continues to validate only the strict
-`AssistantSiteKitPlanInput` fields under `context.siteKit`; page roles, section
-roles, media policy, content-engine candidates, references, and review metadata
+`AssistantSiteKitPlanInput` fields under `context.siteKit`: `businessType`,
+`goals`, `locale`, optional `region`, `siteName`, `preferredKitId`,
+`selectedKitId`, and `enabledStepIds`. Page roles, section roles, media policy,
+content-engine candidates, design/reference facts, gates, and review metadata
 remain outside that payload.
 
 Intake diagnostics and provider context are separate from the route payload.

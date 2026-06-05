@@ -6,7 +6,7 @@
 **Category:** Assistant + SiteKit Adapter
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-03-L04, TASK-407-04-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -124,6 +124,28 @@ export function buildSiteBuilderIntakeCompileResult(
 - Tests for missing facts producing gates/needs_input.
 - Tests that raw prompt, review-only fields, gates, or unsafe media values are
   absent from `context.siteKit`.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+
+## Completion Notes
+
+- Completed the intake compiler handoff to the existing
+  `AssistantSiteKitPlanInput` shape: `businessType`, `goals`, `locale`,
+  optional `region`, `siteName`, `preferredKitId`, `selectedKitId`, and
+  `enabledStepIds`.
+- Kept page roles, section roles, menu/hero/media choices, content engines,
+  advanced layout, design/reference facts, and gates in sibling compile/review
+  metadata outside `context.siteKit`.
+- Added deterministic Basic and Advanced mappings without one-industry defaults;
+  generic workshops no longer collapse to the automotive kit unless automotive
+  context is explicit.
+- Preserved fail-closed behavior before explicit review confirmation through
+  `intake_session_invalid` details with site-kit handoff gates.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`

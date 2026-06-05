@@ -32,6 +32,9 @@ export type AssistantSiteBuilderIntakeCompileResult = {
     heroPreset: AssistantSiteBuilderIntakeFacts["heroPreset"];
     mediaPolicy: AssistantSiteBuilderIntakeFacts["mediaPolicy"];
     contentEngines: AssistantSiteBuilderIntakeFacts["contentEngines"];
+    designPresetId: AssistantSiteBuilderIntakeFacts["designPresetId"];
+    advancedLayout: AssistantSiteBuilderIntakeFacts["advancedLayout"];
+    referenceDesignBrief: AssistantSiteBuilderIntakeFacts["referenceDesignBrief"];
     readyForReview: boolean;
     readyForExecution: boolean;
     redactionApplied: boolean;
@@ -285,6 +288,7 @@ export const buildSiteKitPlanInputFromIntakeFacts = (
     region: facts.region ?? null,
     siteName: facts.siteName ?? facts.entityName ?? facts.topic ?? null,
     preferredKitId,
+    selectedKitId: preferredKitId,
     enabledStepIds: resolveEnabledSiteKitPlanStepIdsFromIntakeFacts(
       facts,
       options.supportedSteps ?? siteBuilderPlanStepIds
@@ -304,6 +308,9 @@ export const buildSiteBuilderIntakeCompileResult = (
     heroPreset: facts.heroPreset,
     mediaPolicy: facts.mediaPolicy,
     contentEngines: facts.contentEngines,
+    designPresetId: facts.designPresetId,
+    advancedLayout: facts.advancedLayout,
+    referenceDesignBrief: facts.referenceDesignBrief,
     readyForReview: facts.readyForReview === true,
     readyForExecution: facts.readyForExecution === true,
     redactionApplied: facts.redactionApplied === true,

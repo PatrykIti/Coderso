@@ -3,10 +3,12 @@ import { expect, test } from "vitest";
 import { normalizeAssistantActionPlan } from "../../../core/services/assistant/actionPlanSchema";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import {
+  buildSiteBuilderIntakeCompileResult,
   buildActionPlanRequestFromReviewedIntake,
   compileIntakeToSiteKitPlanInput,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeCompiler";
 import { AssistantSiteBuilderIntakeError } from "../../../core/services/assistant/assistantSiteBuilderIntakeErrors";
+import { normalizeAssistantSiteBuilderIntakeSession } from "../../../core/services/assistant/assistantSiteBuilderIntakeNormalizer";
 import {
   ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
   type AssistantSiteBuilderIntakeSession,
@@ -184,6 +186,7 @@ test("compileIntakeToSiteKitPlanInput maps reviewed Basic intake to schema-exact
       "locale",
       "preferredKitId",
       "region",
+      "selectedKitId",
       "siteName",
     ].sort()
   );
@@ -199,6 +202,7 @@ test("compileIntakeToSiteKitPlanInput maps reviewed Basic intake to schema-exact
     region: "Krakow",
     siteName: "Mapa Kawy",
     preferredKitId: "services-directory",
+    selectedKitId: "services-directory",
     enabledStepIds: ["settings", "content-model", "pages", "forms", "navigation", "qa"],
   });
   expect(siteKit).not.toHaveProperty("mediaPolicy");
@@ -212,6 +216,7 @@ test("compileIntakeToSiteKitPlanInput maps Advanced product facts without one-in
   expect(siteKit).toMatchObject({
     businessType: "small_ecommerce",
     preferredKitId: "small-ecommerce",
+    selectedKitId: "small-ecommerce",
     locale: "en",
     siteName: "Studio Ceramiki",
   });
@@ -289,6 +294,7 @@ test("buildActionPlanRequestFromReviewedIntake uses existing strict siteKit rout
 
   expect(request.context).toEqual({ siteKit: request.context.siteKit });
   expect(JSON.stringify(request.context)).not.toContain("advancedLayout");
+  expect(JSON.stringify(request.context)).not.toContain("referenceDesignBrief");
   expect(JSON.stringify(request.context)).not.toContain("advancedSectionVariantIds");
   expect(JSON.stringify(request.context)).not.toContain("actions");
   expect(() => validate(assistantActionPlanRequestSchema, request)).not.toThrow();
@@ -303,6 +309,37 @@ test("buildActionPlanRequestFromReviewedIntake uses existing strict siteKit rout
       },
     })
   ).toThrow("Invalid payload");
+});
+
+test("buildSiteBuilderIntakeCompileResult keeps review metadata outside siteKit", () => {
+  const normalized = normalizeAssistantSiteBuilderIntakeSession(productCatalogSession);
+  const result = buildSiteBuilderIntakeCompileResult(normalized.facts ?? {});
+  const serializedSiteKit = JSON.stringify(result.siteKit);
+
+  expect(result.siteKit).toMatchObject({
+    businessType: "small_ecommerce",
+    selectedKitId: "small-ecommerce",
+  });
+  expect(result.reviewFacts).toMatchObject({
+    menuPreset: "conversion-focused",
+    heroPreset: "offer-with-proof",
+    mediaPolicy: "placeholder",
+    contentEngines: ["products", "portfolio", "faq"],
+    designPresetId: undefined,
+  });
+  expect(result.reviewFacts.advancedLayout).toMatchObject({
+    menu: {
+      behaviorIds: ["grouped", "sticky", "mobile-drawer"],
+    },
+    hero: {
+      variantId: "split",
+    },
+  });
+  expect(serializedSiteKit).not.toContain("advancedLayout");
+  expect(serializedSiteKit).not.toContain("referenceDesignBrief");
+  expect(serializedSiteKit).not.toContain("mediaPolicy");
+  expect(serializedSiteKit).not.toContain("pageRoles");
+  expect(result.gates).toEqual([]);
 });
 
 test("compiled siteKit context reaches existing action planner site-kit path", () => {
