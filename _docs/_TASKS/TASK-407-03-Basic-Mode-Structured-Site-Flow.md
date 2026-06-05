@@ -34,6 +34,15 @@ and bounded text prompts for business copy.
 - Ensure incomplete Basic answers return `needs_input`, not partial executable
   plans.
 
+## Executable Leaves
+
+| ID | Title | Status | Output |
+|---|---|---|---|
+| TASK-407-03-L01 | Basic Step Definitions and Progression | To Do | Basic step definitions and deterministic `needs_input` progression. |
+| TASK-407-03-L02 | Basic Site Map and Section Role Defaults | To Do | Beginner-safe page/menu/section defaults without industry hardcoding. |
+| TASK-407-03-L03 | Basic Widget and Review Fact Selection | To Do | Backend widget/content candidates and review facts from Basic answers. |
+| TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | To Do | Tests proving Basic free text cannot override schema/action/security policy. |
+
 ## Security Contract
 
 - Endpoint visibility: internal assistant plan/dry-run/execute routes only.
@@ -63,12 +72,12 @@ and bounded text prompts for business copy.
 ```ts
 function buildBasicGuidedSteps(session: GuidedSiteBuilderSession) {
   return [
-    question("profile", { controls: ["businessName", "industry", "locale"] }),
-    question("goal", { options: ["leads", "booking", "portfolio", "catalog"] }),
-    question("pages", { preset: "starter-7", allowCustomLabels: false }),
+    question("business-profile", { controls: ["businessName", "industry", "locale"] }),
+    question("site-goals", { options: ["leads", "booking", "portfolio", "catalog"] }),
+    question("site-map", { preset: "starter-7", allowCustomLabels: false }),
     question("menu", { options: ["single-level", "grouped"], default: "single-level" }),
     question("hero", { options: ["simple", "split", "image-led"], default: "simple" }),
-    question("sections", { options: BASIC_SECTION_ROLES }),
+    question("homepage-sections", { options: BASIC_SECTION_ROLES }),
     question("subpages", { deriveFromPages: true }),
     review("review"),
   ];
@@ -76,7 +85,7 @@ function buildBasicGuidedSteps(session: GuidedSiteBuilderSession) {
 
 function buildBasicPlanFromFacts(facts: BasicSiteBuilderFacts) {
   const selectedWidgets = selectWidgetsForSectionRoles(facts.homepageSectionRoles);
-  const contentEngines = inferContentEngines(facts.pages, facts.goal);
+  const contentEngines = inferContentEngines(facts.siteMap.pageRoles, facts.siteGoals);
   return buildGuidedSiteBuilderPlan({ ...facts, selectedWidgets, contentEngines });
 }
 ```
@@ -84,7 +93,8 @@ function buildBasicPlanFromFacts(facts: BasicSiteBuilderFacts) {
 ## Data Flow and Error Handling
 
 - A broad nontechnical prompt enters Basic mode and is converted into bounded
-  profile/goal/page/menu/hero/section answers before planning.
+  `business-profile`/`site-goals`/`site-map`/`menu`/`hero`/
+  `homepage-sections` answers before planning.
 - Basic answers derive normalized facts; backend registries choose widget
   presets, page roles, subpage roles, and content-engine candidates.
 - Missing required answers return `needs_input` for the next Basic step; they

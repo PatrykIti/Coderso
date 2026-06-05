@@ -32,7 +32,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 18 tasks
+- **To Do:** 47 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2237 tasks
 
@@ -49,6 +49,35 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-407-05 | Blueprint Composer and Content Engine Decisions | High | Large | Map guided facts to supported static pages, content engines, detail routes, custom screens, and gates. |
 | TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | Build the guided stepper/review UX and harden local state, warnings, and execute gating. |
 | TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Validate Basic, Advanced, scoped cleanup plus second-theme rebuild, follow-up refinement, and fail-closed media/reference flows through Playwright CLI and Claude/agent review. |
+| TASK-407-02-L01 | Session Types and Step Registry | High | Medium | Service-owned guide session types, mode/step ids, versions, and option registries. |
+| TASK-407-02-L02 | Answer Normalization and Fact Derivation | High | Large | Strict answer schemas, `normalize*` helpers, derived facts, and validation tests. |
+| TASK-407-02-L03 | Assistant Context and Route Validation Handoff | High | Medium | Wire `context.siteBuilderGuide` into planner context and route validation without duplicate schema ownership. |
+| TASK-407-02-L04 | Guide Redaction and Browser State Contract | High | Medium | Redacted diagnostics, policy-bounded provider facts, and bounded browser state rules. |
+| TASK-407-03-L01 | Basic Step Definitions and Progression | High | Medium | Basic step definitions and deterministic `needs_input` progression. |
+| TASK-407-03-L02 | Basic Site Map and Section Role Defaults | High | Medium | Beginner-safe page/menu/section defaults without industry hardcoding. |
+| TASK-407-03-L03 | Basic Widget and Review Fact Selection | High | Medium | Backend widget/content candidates and review facts from Basic answers. |
+| TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | High | Medium | Regression tests proving Basic free text cannot override schema/action/security policy. |
+| TASK-407-04-L01 | Advanced Design Preset Registry | High | Medium | Backend-owned design preset ids, token mappings, docs matrix, and unknown-id rejection. |
+| TASK-407-04-L02 | Advanced Menu Hero and Section Options | High | Medium | Controlled menu, hero, and section options mapped to existing widget capabilities. |
+| TASK-407-04-L03 | Reference Input Validation and Redaction | High | Large | Media/file/reference id validation, URL fail-closed policy, and metadata/text redaction. |
+| TASK-407-04-L04 | Reference Design Brief and Review Gate | High | Medium | Non-executable design brief facts plus user review before planner influence. |
+| TASK-407-05-L01 | Guided Facts to Blueprint Graph Adapter | High | Large | Normalized facts converted to shell blueprint graph inputs. |
+| TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | High | Large | Static page/menu/footer/contact/SEO actions through strict action families. |
+| TASK-407-05-L03 | Content Engine Decision Rules | High | Large | Supported service/project/product/post/proof/team/location/FAQ engine selection and gates. |
+| TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | High | Medium | Beginner editing surface decisions and unsupported custom-screen gates. |
+| TASK-407-05-L05 | Follow Up Refinement Target Resolution | High | Large | Active-resource/server-catalog target resolution and ambiguity questions. |
+| TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | High | Large | Strict action validation, dry-run/idempotency tests, and one public runtime proof. |
+| TASK-407-06-L01 | Guided Assistant Panel State Machine | High | Large | Guided UI state transitions without breaking existing assistant flows. |
+| TASK-407-06-L02 | Basic Stepper Controls | High | Large | Basic-only controls bound to server-normalized session state. |
+| TASK-407-06-L03 | Advanced Stepper Controls | High | Large | Advanced controls, preset selection, and reference brief display. |
+| TASK-407-06-L04 | Review Summary and Execution Gating | High | Large | Final review, disabled dry-run/execute states, confirmation, and plan handoff. |
+| TASK-407-06-L05 | UI Warnings Local State and Redaction | High | Medium | Warning/gate rendering, localStorage bounds, stale cache discard, and redaction tests. |
+| TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | High | Medium | Lint/typecheck/precommit/gates plus targeted Bun/Vitest suites for changed contracts. |
+| TASK-407-07-L02 | Basic Live Playwright E2E | High | Large | Live Basic guided creation through admin UI and public runtime checks. |
+| TASK-407-07-L03 | Advanced Live Playwright E2E | High | Large | Live Advanced creation with design/menu/hero/section/reference gates. |
+| TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | High | Large | Scoped refinement plus rejected unknown/poisoned/media-reference cases. |
+| TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | High | Large | Resource-id scoped cleanup and second different-industry/theme rebuild. |
+| TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | High | Medium | Docs, coverage matrices, changelog leaf coverage, board sync, and final Claude/agent pass. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |

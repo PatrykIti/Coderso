@@ -33,6 +33,15 @@ UX is built.
 - Keep browser-local state bounded and non-secret; do not store raw files,
   cookies, provider keys, or auth state.
 
+## Executable Leaves
+
+| ID | Title | Status | Output |
+|---|---|---|---|
+| TASK-407-02-L01 | Session Types and Step Registry | To Do | Service-owned guide session types, mode/step ids, versions, and option registries. |
+| TASK-407-02-L02 | Answer Normalization and Fact Derivation | To Do | Strict answer schemas, `normalize*` helpers, derived facts, and validation tests. |
+| TASK-407-02-L03 | Assistant Context and Route Validation Handoff | To Do | `context.siteBuilderGuide` planner typing plus route-schema reuse and route tests. |
+| TASK-407-02-L04 | Guide Redaction and Browser State Contract | To Do | Redacted diagnostics, policy-bounded provider facts, and bounded browser state rules. |
+
 ## Security Contract
 
 - Endpoint visibility: existing internal `/admin/api/assistant/actions/plan`
@@ -64,10 +73,17 @@ UX is built.
 
 ```ts
 const guidedStepDefinitions = defineGuidedSteps([
-  step("profile", profileSchema),
-  step("goal", goalSchema),
-  step("structure", structureSchema),
+  step("business-profile", businessProfileSchema),
+  step("site-goals", siteGoalsSchema),
+  step("site-map", siteMapSchema),
   step("menu", menuSchema),
+  step("hero", heroSchema),
+  step("homepage-sections", homepageSectionsSchema),
+  step("subpages", subpagesSchema),
+  step("media-policy", mediaPolicySchema),
+  step("content-engine", contentEngineSchema),
+  step("design-preset", designPresetSchema),
+  step("reference-intake", referenceIntakeSchema),
   step("review", reviewSchema),
 ]);
 
@@ -80,12 +96,14 @@ export function normalizeGuidedSiteBuilderSession(input: unknown) {
 }
 
 export function redactGuidedSiteBuilderSession(session: GuidedSiteBuilderSession) {
+  // TASK-407-02-L04 owns the concrete redaction helper; keep this shape aligned.
   return {
     version: session.version,
     mode: session.mode,
     currentStepId: session.currentStepId,
-    factsHash: hashFacts(session.facts),
     answeredStepIds: session.answers.map((answer) => answer.stepId),
+    factsHash: hashStableJson(session.facts),
+    warnings: session.securityWarnings.map(redactGuideWarning),
   };
 }
 ```

@@ -30,6 +30,16 @@ content engines, custom screens, media policy, and gates before execution.
 - Preserve SPA/cache/dirty-state behavior and keep assistant localStorage
   bounded and non-secret.
 
+## Executable Leaves
+
+| ID | Title | Status | Output |
+|---|---|---|---|
+| TASK-407-06-L01 | Guided Assistant Panel State Machine | To Do | Guided UI state transitions without breaking existing assistant flows. |
+| TASK-407-06-L02 | Basic Stepper Controls | To Do | Basic-only controls bound to server-normalized session state. |
+| TASK-407-06-L03 | Advanced Stepper Controls | To Do | Advanced controls, preset selection, and reference brief display. |
+| TASK-407-06-L04 | Review Summary and Execution Gating | To Do | Final review, disabled dry-run/execute states, confirmation, and plan handoff. |
+| TASK-407-06-L05 | UI Warnings Local State and Redaction | To Do | Warning/gate rendering, localStorage bounds, stale cache discard, and redaction tests. |
+
 ## Security Contract
 
 - Endpoint visibility: no public endpoint.

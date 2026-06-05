@@ -23,7 +23,7 @@ TASK-407 files and report no blocking task-plan drift.
 
 ## Sub-Tasks
 
-- Review TASK-407 parent and leaves against `_docs/AGENTS.md`, `_docs/ASSISTANT_SITE_BUILDER.md`,
+- Review TASK-407 parent and leaves against root `AGENTS.md`, `_docs/ASSISTANT_SITE_BUILDER.md`,
   `docs/develop/assistant.md`, and the existing assistant action route contract.
 - Ask Claude and at least one agent for read-only task-plan drift review.
 - Fix every blocking drift in physical task files.

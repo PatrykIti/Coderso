@@ -30,6 +30,17 @@ must reuse trusted existing resources and ask for targets when ambiguous.
 - Implement follow-up refinement routing from active page/custom screen/listing
   context or server-derived candidates.
 
+## Executable Leaves
+
+| ID | Title | Status | Output |
+|---|---|---|---|
+| TASK-407-05-L01 | Guided Facts to Blueprint Graph Adapter | To Do | Normalized facts converted to shell blueprint graph inputs. |
+| TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | To Do | Static page/menu/footer/contact/SEO actions through strict action families. |
+| TASK-407-05-L03 | Content Engine Decision Rules | To Do | Supported service/project/product/post/proof/team/location/FAQ engine selection and gates. |
+| TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | To Do | Beginner editing surface decisions and unsupported custom-screen gates. |
+| TASK-407-05-L05 | Follow Up Refinement Target Resolution | To Do | Active-resource/server-catalog target resolution and ambiguity questions. |
+| TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | To Do | Strict action validation, dry-run/idempotency tests, and one public runtime proof. |
+
 ## Security Contract
 
 - Endpoint visibility: internal assistant action routes only.
@@ -57,7 +68,7 @@ must reuse trusted existing resources and ask for targets when ambiguous.
 
 ```ts
 function resolveContentEngineCandidates(facts: SiteBuilderFacts) {
-  return facts.pageRoles.flatMap((role) => {
+  return facts.siteMap.pageRoles.flatMap((role) => {
     if (role === "projects") return contentEngine("portfolio-projects");
     if (role === "services") return contentEngine("services-directory");
     if (role === "products") return contentEngine("product-catalog");

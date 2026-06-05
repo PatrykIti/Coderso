@@ -67,6 +67,13 @@ planning must consume normalized facts from strict schemas.
   - Claude found a blocking dependency drift because TASK-407 depended on
     To-Do TASK-406 while already In Progress; TASK-407 now depends only on
     TASK-404/TASK-405 and records TASK-406 as related QA.
+- Granularity review on 2026-06-05:
+  - agent review found TASK-407-02 through TASK-407-07 too broad for direct
+    implementation and proposed `TASK-407-NN-LNN-*` execution leaves,
+  - 29 physical leaves now split schema, Basic, Advanced/reference, planner,
+    UI, and E2E/closure work into bounded implementation units,
+  - Claude re-audit found no blocking task-plan drift after fact-shape and
+    step-id vocabulary fixes.
 
 ## Security Contract
 
@@ -111,29 +118,65 @@ planning must consume normalized facts from strict schemas.
 
 ## Sub-Tasks
 
+| ID | Title | Status | Executable Leaves |
+|---|---|---|---|
+| TASK-407-01 | Task Contract Drift Audit and Scope Freeze | To Do | None; this is the pre-implementation drift gate. |
+| TASK-407-02 | Guided Intake Mode and Session Contract | To Do | TASK-407-02-L01 through TASK-407-02-L04 |
+| TASK-407-03 | Basic Mode Structured Site Flow | To Do | TASK-407-03-L01 through TASK-407-03-L04 |
+| TASK-407-04 | Advanced Mode Design Presets and Reference Intake | To Do | TASK-407-04-L01 through TASK-407-04-L04 |
+| TASK-407-05 | Blueprint Composer and Content Engine Decisions | To Do | TASK-407-05-L01 through TASK-407-05-L06 |
+| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | To Do | TASK-407-06-L01 through TASK-407-06-L05 |
+| TASK-407-07 | E2E Live Validation Docs and Closure | To Do | TASK-407-07-L01 through TASK-407-07-L06 |
+
+## Granular Execution Leaves
+
 | ID | Title | Status |
 |---|---|---|
-| TASK-407-01 | Task Contract Drift Audit and Scope Freeze | To Do |
-| TASK-407-02 | Guided Intake Mode and Session Contract | To Do |
-| TASK-407-03 | Basic Mode Structured Site Flow | To Do |
-| TASK-407-04 | Advanced Mode Design Presets and Reference Intake | To Do |
-| TASK-407-05 | Blueprint Composer and Content Engine Decisions | To Do |
-| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | To Do |
-| TASK-407-07 | E2E Live Validation Docs and Closure | To Do |
+| TASK-407-02-L01 | Session Types and Step Registry | To Do |
+| TASK-407-02-L02 | Answer Normalization and Fact Derivation | To Do |
+| TASK-407-02-L03 | Assistant Context and Route Validation Handoff | To Do |
+| TASK-407-02-L04 | Guide Redaction and Browser State Contract | To Do |
+| TASK-407-03-L01 | Basic Step Definitions and Progression | To Do |
+| TASK-407-03-L02 | Basic Site Map and Section Role Defaults | To Do |
+| TASK-407-03-L03 | Basic Widget and Review Fact Selection | To Do |
+| TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | To Do |
+| TASK-407-04-L01 | Advanced Design Preset Registry | To Do |
+| TASK-407-04-L02 | Advanced Menu Hero and Section Options | To Do |
+| TASK-407-04-L03 | Reference Input Validation and Redaction | To Do |
+| TASK-407-04-L04 | Reference Design Brief and Review Gate | To Do |
+| TASK-407-05-L01 | Guided Facts to Blueprint Graph Adapter | To Do |
+| TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | To Do |
+| TASK-407-05-L03 | Content Engine Decision Rules | To Do |
+| TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | To Do |
+| TASK-407-05-L05 | Follow Up Refinement Target Resolution | To Do |
+| TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | To Do |
+| TASK-407-06-L01 | Guided Assistant Panel State Machine | To Do |
+| TASK-407-06-L02 | Basic Stepper Controls | To Do |
+| TASK-407-06-L03 | Advanced Stepper Controls | To Do |
+| TASK-407-06-L04 | Review Summary and Execution Gating | To Do |
+| TASK-407-06-L05 | UI Warnings Local State and Redaction | To Do |
+| TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | To Do |
+| TASK-407-07-L02 | Basic Live Playwright E2E | To Do |
+| TASK-407-07-L03 | Advanced Live Playwright E2E | To Do |
+| TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | To Do |
+| TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | To Do |
+| TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | To Do |
 
 ## Implementation Order
 
 1. Complete TASK-407-01 first. Patch the physical task files until Claude and
    agents report no blocking task-plan drift.
-2. Implement the shared guided-intake session contract before any Basic or
-   Advanced UI work.
-3. Implement Basic mode as the safe default with the narrowest useful choices.
-4. Implement Advanced mode as an additive expansion over the same step schema,
-   not as a separate free-form prompt path.
-5. Connect completed intake sessions to the existing blueprint composer/action
-   engine and content-engine decision layer.
-6. Harden admin review UI, prompt-poisoning boundaries, and reference intake.
-7. Restart helper, run Playwright CLI live E2E for Basic, Advanced, and
+2. Implement TASK-407-02 leaves in order before any Basic or Advanced UI work.
+3. Implement TASK-407-03 leaves as the safe Basic default with the narrowest
+   useful choices.
+4. Implement TASK-407-04 leaves as an additive Advanced expansion over the same
+   step schema, not as a separate free-form prompt path.
+5. Implement TASK-407-05 leaves to connect completed intake sessions to the
+   existing blueprint composer/action engine and content-engine decision layer.
+6. Implement TASK-407-06 leaves to harden admin review UI, prompt-poisoning
+   boundaries, and reference intake.
+7. Implement TASK-407-07 leaves: restart helper, run Playwright CLI live E2E for
+   Basic, Advanced, and
    follow-up refinement, run a scoped cleanup plus a second from-scratch site in
    a different industry/theme, then run final Claude/agent drift review before
    closure.
@@ -164,6 +207,7 @@ type GuidedSiteBuilderStepId =
   | "homepage-sections"
   | "hero"
   | "subpages"
+  | "media-policy"
   | "content-engine"
   | "design-preset"
   | "reference-intake"
@@ -187,7 +231,8 @@ function normalizeGuidedAnswer(step: GuidedStepDefinition, value: unknown) {
 }
 
 function resolveNextGuidedStep(session: GuidedSiteBuilderSession) {
-  const missing = session.steps.find((step) => !isStepSatisfied(step, session.answers));
+  const steps = getGuidedStepDefinitionsForMode(session.mode);
+  const missing = steps.find((step) => !isStepSatisfied(step, session.answers));
   return missing ?? "review";
 }
 
@@ -211,7 +256,7 @@ function buildGuidedSiteBuilderPlan(session: GuidedSiteBuilderSession) {
     homepageSections: facts.homepageSections,
     hero: facts.hero,
     subpages: facts.subpages,
-    design: facts.designPreset,
+    design: facts.visual.presetId,
     contentEngines: resolveContentEngineCandidates(facts),
     mediaPolicy: resolveMediaProfileOrGate(facts),
   });
