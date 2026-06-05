@@ -360,6 +360,19 @@ reference material, bytes, raw metadata, signed URLs, or raw reference ids; it
 exposes only redacted text-reference presence, a stable digest, and
 `rawIncluded:false`.
 
+Reviewed reference design briefs are owned by
+`assistantSiteBuilderIntakeReferenceBrief.ts`. A sanitized `SafeReferenceInput`
+can produce only enumerated color, layout, density, typography, and
+image-treatment hints plus redacted warning/gate metadata. The brief source is
+represented by a digest-only fingerprint that excludes raw reference ids,
+filenames, OCR/extracted text, metadata, and URLs. Reference brief facts are not
+merged into `AssistantSiteBuilderIntakeFacts` until
+`mergeReviewedReferenceDesignBrief` receives explicit confirmation; otherwise a
+`reference_review_required` gate is returned. Provider context receives only the
+reviewed enum ids, warning/gate codes, source digest, and `rawIncluded:false`;
+reference briefs never emit executable actions, media imports, CSS, RBAC/CSRF
+changes, or review-bypass instructions.
+
 Unknown mode, step, option-registry, or option ids must fail closed through the
 service-owned registry helpers before route validation, provider planning, or
 execution.

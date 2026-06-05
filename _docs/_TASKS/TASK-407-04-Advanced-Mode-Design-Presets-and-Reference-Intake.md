@@ -6,7 +6,7 @@
 **Category:** Assistant + Advanced UX + Media/Reference Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-02, TASK-407-03
-**Status:** 🚧 In Progress (2026-06-05)
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -40,7 +40,7 @@ compile into the same existing `siteKit` planner path as Basic mode.
 | TASK-407-04-L01 | Advanced Design Preset Registry | Done (2026-06-05) | Backend-owned design preset ids, token mappings, docs matrix, and unknown-id rejection. |
 | TASK-407-04-L02 | Advanced Menu Hero and Section Options | Done (2026-06-05) | Controlled menu, hero, and section options mapped to existing widget capabilities. |
 | TASK-407-04-L03 | Reference Input Validation and Redaction | Done (2026-06-05) | Media/file/reference id validation, URL fail-closed policy, and metadata/text redaction. |
-| TASK-407-04-L04 | Reference Design Brief and Review Gate | To Do | Non-executable design brief facts plus user review before planner influence. |
+| TASK-407-04-L04 | Reference Design Brief and Review Gate | Done (2026-06-05) | Non-executable design brief facts plus user review before planner influence. |
 
 ## Security Contract
 
@@ -126,3 +126,13 @@ function extractReferenceDesignBrief(reference: SafeReferenceInput) {
   prompt execution path.
 - Reference intake is design evidence only and is reviewed before planning.
 - Unsupported media/reference use cases are explicit gates.
+
+## Completion Notes
+
+- L01 added backend-owned Advanced design preset ids and supported token facts.
+- L02 added controlled menu, hero, and section options mapped to existing widget
+  capabilities.
+- L03 added reference input validation/redaction with deps-injected media/temp
+  checks and digest-only provider context.
+- L04 added reviewed, enum-only reference design brief facts and review gates
+  before provider/planner influence.

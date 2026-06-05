@@ -313,6 +313,85 @@ export type AssistantSiteBuilderAdvancedLayoutFacts = {
   gates: readonly AssistantSiteBuilderAdvancedLayoutGate[];
 };
 
+export const assistantSiteBuilderReferenceColorHintIds = [
+  "neutral",
+  "warm",
+  "cool",
+  "muted",
+  "high-contrast",
+  "accent-led",
+] as const;
+
+export type AssistantSiteBuilderReferenceColorHintId =
+  (typeof assistantSiteBuilderReferenceColorHintIds)[number];
+
+export const assistantSiteBuilderReferenceLayoutHintIds = [
+  "copy-first",
+  "media-support",
+  "grid",
+  "split",
+  "editorial",
+  "compact",
+] as const;
+
+export type AssistantSiteBuilderReferenceLayoutHintId =
+  (typeof assistantSiteBuilderReferenceLayoutHintIds)[number];
+
+export const assistantSiteBuilderReferenceDesignBriefWarningCodes = [
+  "reference_instruction_filtered",
+  "reference_secret_redacted",
+  "reference_metadata_redacted",
+  "reference_remote_url_unsupported",
+] as const;
+
+export type AssistantSiteBuilderReferenceDesignBriefWarningCode =
+  (typeof assistantSiteBuilderReferenceDesignBriefWarningCodes)[number];
+
+export const assistantSiteBuilderReferenceDesignBriefGateCodes = [
+  "reference_review_required",
+  "reference_material_gated",
+  "reference_brief_empty",
+] as const;
+
+export type AssistantSiteBuilderReferenceDesignBriefGateCode =
+  (typeof assistantSiteBuilderReferenceDesignBriefGateCodes)[number];
+
+export type AssistantSiteBuilderReferenceDesignBriefWarning = {
+  code: AssistantSiteBuilderReferenceDesignBriefWarningCode;
+  severity: "info" | "warning";
+  message: string;
+  count?: number;
+};
+
+export type AssistantSiteBuilderReferenceDesignBriefGate = {
+  code: AssistantSiteBuilderReferenceDesignBriefGateCode;
+  severity: "info" | "warning";
+  message: string;
+  count?: number;
+};
+
+export type AssistantSiteBuilderReferenceDesignBriefFacts = {
+  schemaVersion: 1;
+  sourceDigest: string;
+  colorHintIds: readonly AssistantSiteBuilderReferenceColorHintId[];
+  layoutHintIds: readonly AssistantSiteBuilderReferenceLayoutHintId[];
+  densityId: AssistantSiteBuilderDesignDensityId | null;
+  typographyId: AssistantSiteBuilderDesignTypographyId | null;
+  imageTreatmentId: AssistantSiteBuilderDesignImageTreatmentId | null;
+  evidence: {
+    mediaAssetCount: number;
+    temporaryReferenceCount: number;
+    hasTextBrief: boolean;
+  };
+  warnings: readonly AssistantSiteBuilderReferenceDesignBriefWarning[];
+  gates: readonly AssistantSiteBuilderReferenceDesignBriefGate[];
+  constraints: {
+    executableActionsAllowed: false;
+    mediaImportsAllowed: false;
+    rawReferenceMaterialIncluded: false;
+  };
+};
+
 export const assistantSiteBuilderMediaPolicyIds = ["curated", "library", "placeholder"] as const;
 
 export type AssistantSiteBuilderMediaPolicyId = (typeof assistantSiteBuilderMediaPolicyIds)[number];
@@ -437,6 +516,7 @@ export type AssistantSiteBuilderIntakeFacts = {
   advancedLayout?: AssistantSiteBuilderAdvancedLayoutFacts;
   referenceNotes?: string | null;
   referenceTextBrief?: string | null;
+  referenceDesignBrief?: AssistantSiteBuilderReferenceDesignBriefFacts;
   reviewState?: AssistantSiteBuilderReviewStateId;
   reviewNotes?: string | null;
   answeredStepIds?: readonly AssistantSiteBuilderIntakeStepId[];

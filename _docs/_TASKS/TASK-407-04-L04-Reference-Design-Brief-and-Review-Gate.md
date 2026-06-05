@@ -6,7 +6,7 @@
 **Category:** Assistant + Reference Review
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-04-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -81,6 +81,27 @@ export function mergeReviewedReferenceBrief(facts, brief, reviewState) {
 - Tests that brief output contains no executable actions.
 - Tests for unconfirmed brief gating and confirmed brief merge.
 - Tests for provider-boundary poisoning text.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+
+## Completion Notes
+
+- Added `assistantSiteBuilderIntakeReferenceBrief.ts` with a pure builder for
+  enum-only color, layout, density, typography, and image-treatment hints from
+  sanitized `SafeReferenceInput`.
+- Added fail-closed brief fact normalization for unknown keys, unsupported
+  hint ids, warning/gate codes, and unsafe constraints.
+- Added `mergeReviewedReferenceDesignBrief`, which returns a
+  `reference_review_required` gate until explicit review confirmation is
+  provided.
+- Projected confirmed reference brief hints into provider context as digest,
+  enum ids, warning/gate codes, and `rawIncluded:false` without raw reference
+  ids, text, metadata, filenames, URLs, media bytes, actions, or media imports.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeReferenceBrief.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeReferencePolicy.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRedaction.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`

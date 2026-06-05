@@ -105,6 +105,10 @@ diagnostics receive only bounded text facts, digests, and `rawIncluded:false`;
 raw bytes, signed URLs, raw metadata, and raw reference ids must not be stored
 in browser state or sent to a provider.
 
+Reference design briefs may use sanitized media evidence only as reviewed visual
+hints. They do not import remote media, create media-library assets, or carry
+raw file bytes/text into provider prompts or action execution.
+
 ## Admin UI behavior (v1)
 
 - Upload dropzone + manual browse.

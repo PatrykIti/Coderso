@@ -5,16 +5,27 @@ import type {
   AssistantSiteBuilderIntakeMode,
   AssistantSiteBuilderIntakeSession,
   AssistantSiteBuilderIntakeStepId,
+  AssistantSiteBuilderReferenceColorHintId,
+  AssistantSiteBuilderReferenceDesignBriefGateCode,
+  AssistantSiteBuilderReferenceDesignBriefWarningCode,
+  AssistantSiteBuilderReferenceLayoutHintId,
   AssistantSiteBuilderReviewStateId,
 } from "./assistantSiteBuilderIntakeTypes";
 import {
   assistantSiteBuilderContentEngineIds,
+  assistantSiteBuilderDesignDensityIds,
+  assistantSiteBuilderDesignImageTreatmentIds,
   assistantSiteBuilderDesignPresetIds,
+  assistantSiteBuilderDesignTypographyIds,
   assistantSiteBuilderHeroPresetIds,
   assistantSiteBuilderIntakeStepIds,
   assistantSiteBuilderMediaPolicyIds,
   assistantSiteBuilderMenuPresetIds,
   assistantSiteBuilderPageRoleIds,
+  assistantSiteBuilderReferenceColorHintIds,
+  assistantSiteBuilderReferenceDesignBriefGateCodes,
+  assistantSiteBuilderReferenceDesignBriefWarningCodes,
+  assistantSiteBuilderReferenceLayoutHintIds,
   assistantSiteBuilderReviewStateIds,
   assistantSiteBuilderSectionRoleIds,
 } from "./assistantSiteBuilderIntakeTypes";
@@ -72,6 +83,21 @@ export type AssistantSiteBuilderIntakeProviderContext = {
   references: {
     present: boolean;
     digest: string | null;
+    designBrief: {
+      sourceDigest: string;
+      colorHintIds: AssistantSiteBuilderReferenceColorHintId[];
+      layoutHintIds: AssistantSiteBuilderReferenceLayoutHintId[];
+      densityId: NonNullable<AssistantSiteBuilderIntakeFacts["referenceDesignBrief"]>["densityId"];
+      typographyId: NonNullable<
+        AssistantSiteBuilderIntakeFacts["referenceDesignBrief"]
+      >["typographyId"];
+      imageTreatmentId: NonNullable<
+        AssistantSiteBuilderIntakeFacts["referenceDesignBrief"]
+      >["imageTreatmentId"];
+      warningCodes: AssistantSiteBuilderReferenceDesignBriefWarningCode[];
+      gateCodes: AssistantSiteBuilderReferenceDesignBriefGateCode[];
+      rawIncluded: false;
+    } | null;
     rawIncluded: false;
   };
   readiness: {
@@ -121,6 +147,14 @@ const designPresetIds = new Set<string>(assistantSiteBuilderDesignPresetIds);
 const mediaPolicyIds = new Set<string>(assistantSiteBuilderMediaPolicyIds);
 const reviewStateIds = new Set<string>(assistantSiteBuilderReviewStateIds);
 const stepIds = new Set<string>(assistantSiteBuilderIntakeStepIds);
+const referenceColorHintIds = new Set<string>(assistantSiteBuilderReferenceColorHintIds);
+const referenceLayoutHintIds = new Set<string>(assistantSiteBuilderReferenceLayoutHintIds);
+const referenceWarningCodes = new Set<string>(assistantSiteBuilderReferenceDesignBriefWarningCodes);
+const referenceGateCodes = new Set<string>(assistantSiteBuilderReferenceDesignBriefGateCodes);
+const designDensityIds = new Set<string>(assistantSiteBuilderDesignDensityIds);
+const designTypographyIds = new Set<string>(assistantSiteBuilderDesignTypographyIds);
+const designImageTreatmentIds = new Set<string>(assistantSiteBuilderDesignImageTreatmentIds);
+const referenceDigestPattern = /^[a-f0-9]{8,64}$/;
 
 const stableJson = (value: unknown): string => {
   if (value === undefined) return "null";
@@ -222,7 +256,63 @@ const sanitizeReviewState = (
   sanitizeId<AssistantSiteBuilderReviewStateId>(value, reviewStateIds, warnings);
 
 const hasReferenceMaterial = (facts: AssistantSiteBuilderIntakeFacts): boolean =>
-  Boolean(facts.referenceNotes || facts.referenceTextBrief);
+  Boolean(facts.referenceNotes || facts.referenceTextBrief || facts.referenceDesignBrief);
+
+const buildReferenceBriefProviderContext = (
+  facts: AssistantSiteBuilderIntakeFacts,
+  warnings: string[]
+): AssistantSiteBuilderIntakeProviderContext["references"]["designBrief"] => {
+  const brief = facts.referenceDesignBrief;
+  if (!brief) return null;
+  const sourceDigest =
+    typeof brief.sourceDigest === "string" && referenceDigestPattern.test(brief.sourceDigest)
+      ? brief.sourceDigest
+      : null;
+  if (!sourceDigest) {
+    pushWarning(warnings, "invalid_reference_brief_dropped");
+    return null;
+  }
+
+  return {
+    sourceDigest,
+    colorHintIds: sanitizeIdArray<AssistantSiteBuilderReferenceColorHintId>(
+      brief.colorHintIds,
+      referenceColorHintIds,
+      warnings
+    ),
+    layoutHintIds: sanitizeIdArray<AssistantSiteBuilderReferenceLayoutHintId>(
+      brief.layoutHintIds,
+      referenceLayoutHintIds,
+      warnings
+    ),
+    densityId: sanitizeId<NonNullable<typeof brief.densityId>>(
+      brief.densityId,
+      designDensityIds,
+      warnings
+    ),
+    typographyId: sanitizeId<NonNullable<typeof brief.typographyId>>(
+      brief.typographyId,
+      designTypographyIds,
+      warnings
+    ),
+    imageTreatmentId: sanitizeId<NonNullable<typeof brief.imageTreatmentId>>(
+      brief.imageTreatmentId,
+      designImageTreatmentIds,
+      warnings
+    ),
+    warningCodes: sanitizeIdArray<AssistantSiteBuilderReferenceDesignBriefWarningCode>(
+      brief.warnings.map((warning) => warning.code),
+      referenceWarningCodes,
+      warnings
+    ),
+    gateCodes: sanitizeIdArray<AssistantSiteBuilderReferenceDesignBriefGateCode>(
+      brief.gates.map((gate) => gate.code),
+      referenceGateCodes,
+      warnings
+    ),
+    rawIncluded: false,
+  };
+};
 
 export const redactAssistantSiteBuilderIntakeSession = (
   session: AssistantSiteBuilderIntakeSession
@@ -260,11 +350,13 @@ export const buildSiteBuilderIntakeProviderContext = (
   const warnings: string[] = [];
   const referenceNotes = sanitizeProviderText(facts.referenceNotes, warnings, 360);
   const referenceTextBrief = sanitizeProviderText(facts.referenceTextBrief, warnings, 360);
-  const referencesPresent = Boolean(referenceNotes || referenceTextBrief);
+  const referenceDesignBrief = buildReferenceBriefProviderContext(facts, warnings);
+  const referencesPresent = Boolean(referenceNotes || referenceTextBrief || referenceDesignBrief);
   const referenceDigest = referencesPresent
     ? hashStableAssistantIntakeValue({
         referenceNotes,
         referenceTextBrief,
+        referenceDesignBrief,
       })
     : null;
   if (referenceDigest) pushWarning(warnings, "reference_material_hashed");
@@ -322,6 +414,7 @@ export const buildSiteBuilderIntakeProviderContext = (
     references: {
       present: referencesPresent,
       digest: referenceDigest,
+      designBrief: referenceDesignBrief,
       rawIncluded: false,
     },
     readiness: {

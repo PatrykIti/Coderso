@@ -169,6 +169,17 @@ context. Provider context exposes redacted text-reference presence and a digest
 only; raw bytes, raw metadata, raw URLs, and raw reference ids stay out of
 diagnostics, browser state, and prompt packages.
 
+Reference design briefs live in
+`assistantSiteBuilderIntakeReferenceBrief.ts`. They convert a sanitized
+`SafeReferenceInput` into enum-only color, layout, density, typography, and
+image-treatment hints plus redacted warning/gate codes. The brief source is
+digest-only and excludes raw ids, filenames, OCR/extracted text, metadata, and
+URLs. `mergeReviewedReferenceDesignBrief` must receive explicit confirmation
+before those hints are merged into intake facts; otherwise it returns a
+`reference_review_required` gate. Provider context projects reviewed hints only
+as enum ids/codes with `rawIncluded:false` and never as actions, media imports,
+CSS, or policy overrides.
+
 Basic prompt-poisoning coverage lives in
 `assistantSiteBuilderIntakeBasicSecurity.test.ts`. Free text can be preserved as
 bounded copy/context, but it cannot set action families, route paths, media trust,
