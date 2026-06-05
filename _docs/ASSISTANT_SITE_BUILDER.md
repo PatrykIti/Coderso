@@ -350,6 +350,20 @@ industries. Custom labels are accepted only as bounded display hints keyed by
 page role; they cannot change paths, action ids, or route targets and unsafe
 URL/script/admin/action-like or secret-like strings fail closed.
 
+Basic review facts are owned by
+`core/services/assistant/assistantSiteBuilderIntakeBasicReview.ts`. The helper
+turns completed Basic facts into review-only pages, menu items, supported
+homepage widget candidates, content-engine candidates, contact path, media
+policy, gates, and a bounded redacted summary. Widget support resolves through
+`modulePackMatrix` `assistantPageSections`; unsupported section roles become
+`widget_alias_unsupported` gates instead of invented widgets. Content-engine and
+media-library needs remain advisory gates until later adapters can create
+schemas, choose existing media-library ids, or compile `siteKit` actions. Review
+facts require Basic review readiness plus required non-review steps, Basic
+defaults, hero, and media policy; incomplete facts fail closed. `featured-items`
+stays a generic `content-list` widget candidate and does not imply a portfolio
+content engine unless the page roles include portfolio.
+
 Answer normalization and fact derivation are service-owned:
 - `core/services/assistant/assistantSiteBuilderIntakeErrors.ts`
 - `core/services/assistant/assistantSiteBuilderIntakeNormalizer.ts`

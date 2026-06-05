@@ -123,6 +123,16 @@ items, and homepage section roles, but it does not mark required intake steps as
 answered. Custom labels are bounded display hints keyed by backend page roles
 and cannot influence paths, action ids, or route targets.
 
+Basic review facts live in `assistantSiteBuilderIntakeBasicReview.ts`. They map
+completed Basic facts to review-only pages, menus, supported widget candidates,
+content-engine candidates, media policy, contact path, and gates. Widget aliases
+must resolve through `modulePackMatrix` `assistantPageSections`; unsupported
+section roles and media-library selection needs stay as explicit gates until a
+later adapter compiles reviewed facts into `siteKit` actions. The helper fails
+closed before review output when Basic review readiness, required non-review
+steps, Basic defaults, hero, or media policy are missing, and `featured-items`
+does not imply a portfolio content engine by itself.
+
 ### RBAC per step
 
 | Step | Required permissions |

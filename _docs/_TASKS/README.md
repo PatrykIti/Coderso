@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 38 tasks
+- **To Do:** 37 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2245 tasks
+- **Done:** 2246 tasks
 
 ---
 
@@ -46,7 +46,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-407-05 | SiteKit Plan and Content Engine Decisions | High | Large | Map intake facts to existing siteKit plans, supported static pages, content engines, detail routes, custom screens, and gates. |
 | TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | Build the guided stepper/review UX and harden local state, warnings, and execute gating. |
 | TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Validate Basic, Advanced, scoped cleanup plus second-theme rebuild, follow-up refinement, and fail-closed media/reference flows through Playwright CLI and Claude/agent review. |
-| TASK-407-03-L03 | Basic Widget and Review Fact Selection | High | Medium | Backend widget/content candidates and review facts from Basic answers. |
 | TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | High | Medium | Regression tests proving Basic free text cannot override schema/action/security policy. |
 | TASK-407-04-L01 | Advanced Design Preset Registry | High | Medium | Backend-owned design preset ids, token mappings, docs matrix, and unknown-id rejection. |
 | TASK-407-04-L02 | Advanced Menu Hero and Section Options | High | Medium | Controlled menu, hero, and section options mapped to existing widget capabilities. |
@@ -87,7 +86,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | In progress (2026-06-05): plan and implement Basic/Advanced site-builder intake compiled to existing `siteKit`, content-engine decisions, prompt-poisoning hardening, scoped second-theme E2E, and live closure. |
-| TASK-407-03 | Basic Mode Structured Site Flow | High | Large | In progress (2026-06-05): Basic deterministic `needs_input` progression is complete; remaining leaves add site-map defaults, widget/review facts, and prompt-poisoning guards. |
+| TASK-407-03 | Basic Mode Structured Site Flow | High | Large | In progress (2026-06-05): Basic deterministic `needs_input` progression, generic defaults, and review facts are complete; remaining leaf adds prompt-poisoning guards. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -106,6 +105,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-407-02 | Guided Intake Mode and Session Contract | High | Large | Done (2026-06-05): shared Basic/Advanced intake contract, strict normalization, fact derivation, siteKit handoff, redacted provider/diagnostic packaging, and browser-state contract completed. |
 | TASK-407-03-L01 | Basic Step Definitions and Progression | High | Medium | Done (2026-06-05): broad full-site prompts now enter typed Basic `needs_input` progression with registry-derived step order and no premature actions/provider draft. |
 | TASK-407-03-L02 | Basic Site Map and Section Role Defaults | High | Medium | Done (2026-06-05): Basic advisory site-map/menu/section defaults are generic, role/goal-based, label-safe, and do not bypass required intake steps. |
+| TASK-407-03-L03 | Basic Widget and Review Fact Selection | High | Medium | Done (2026-06-05): Basic review facts map page/menu defaults, supported widget aliases, content-engine candidates, contact path, media policy, and gates without compiling `siteKit` or actions. |
 | TASK-405 | Assistant Curated Media Profiles | High | Large | Done (2026-06-05): backend-owned curated media profiles render licensed public images for full-service sites, enforce curated URL/source/license trust, fix mobile rich-text images, and pass live Playwright CLI E2E. |
 | TASK-404 | LLM Guide Full Service Site Generation | High | Very Large | Done (2026-06-04): full-service assistant planning, dry-run, execute, public runtime, Playwright CLI, drift loops, docs, and changelog closure completed; media import remains explicitly gated. |
 | TASK-404-01 | Full Service Site Contract and Acceptance Matrix | High | Medium | Done (2026-06-04): full-service completion contract and acceptance matrix require real public pages, catalogs, details, nav/footer, contact, SEO, and explicit media gates. |
