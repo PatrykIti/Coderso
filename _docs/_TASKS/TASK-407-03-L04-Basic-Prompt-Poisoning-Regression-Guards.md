@@ -6,7 +6,7 @@
 **Category:** Assistant + Security Tests
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-03-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -95,3 +95,24 @@ test("basic free text cannot override action policy", () => {
 - Hostile text cannot override schema, action, media, RBAC, CSRF, or execution
   contracts.
 - Synthetic fixtures contain no real secrets.
+
+## Closure Evidence
+
+- Added `assistantSiteBuilderIntakeBasicSecurity.test.ts` with synthetic hostile
+  Basic fixtures covering free-text poisoning, unknown fields, unknown ids,
+  unsafe route/media label attempts, review shortcuts, and Basic/Advanced step
+  boundary violations.
+- Hardened provider-context instruction filtering for Polish Basic prompts such
+  as ignore previous instructions, disable RBAC/CSRF/schema validation, and
+  execute/publish without review or permissions.
+- Verified hostile Basic answers remain bounded content facts, cannot enable
+  execution before explicit review, cannot import arbitrary media, and produce
+  review-only gates instead of actions.
+- Verified broad confused-user prompts still enter Basic `needs_input` and bypass
+  provider drafting even when a provider is available.
+- Validation passed:
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeNormalizer.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRedaction.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeBasicFlow.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeBasicDefaults.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeBasicReview.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeBasicSecurity.test.ts tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/actionPlannerService.test.ts` (217 tests)
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `git diff --check`
+  - `bun run precommit`

@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1108.
+Ordinary new entries continue at 1109.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,11 @@ Ordinary new entries continue at 1108.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1108 for the next changelog entry.
+assistant policy coverage fix. Use 1109 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1108 | 2026-06-05 | TASK-407 Basic prompt-poisoning guards | Assistant/Site Builder/Basic Security/Validation/QA/Docs |
 | 1107 | 2026-06-05 | TASK-407 Basic review facts | Assistant/Site Builder/Basic Review/Widget Mapping/Validation/QA/Docs |
 | 1106 | 2026-06-05 | TASK-407 Basic site-map defaults | Assistant/Site Builder/Basic Defaults/Validation/QA/Docs |
 | 1105 | 2026-06-05 | TASK-407 Basic intake progression | Assistant/Site Builder/Basic Intake/Planning/QA/Docs |

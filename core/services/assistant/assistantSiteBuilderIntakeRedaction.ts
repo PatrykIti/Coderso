@@ -90,10 +90,24 @@ export type AssistantSiteBuilderIntakeProviderContext = {
   warnings: string[];
 };
 
+const textBoundary = String.raw`(?=$|[^\p{L}\p{N}_])`;
+
 const providerInstructionOverridePatterns = [
   /\b(ignore|disregard|forget)\s+(all\s+)?(previous|above|system|developer)\s+instructions?\b/gi,
   /\b(bypass|disable|override)\s+(rbac|csrf|schema|schemas|validation|media\s+gates?|confirmation|review)\b/gi,
   /\b(execute|publish|apply|mutate)\s+without\s+(review|confirmation|permission|permissions)\b/gi,
+  new RegExp(
+    String.raw`\b(ignoruj|zignoruj|pomin|pomiń|zapomnij)\s+(wszystkie\s+)?(poprzednie|systemowe|developerskie)\s+instrukcje${textBoundary}`,
+    "giu"
+  ),
+  new RegExp(
+    String.raw`\b(obejdz|obejdź|pomin|pomiń|wylacz|wyłącz|nadpisz)\s+(rbac|csrf|schema|schematy|walidacje|walidację|bramki\s+media|potwierdzenie|review|zatwierdzenie)${textBoundary}`,
+    "giu"
+  ),
+  new RegExp(
+    String.raw`\b(wykonaj|opublikuj|zastosuj|mutuj)\s+bez\s+(review|zatwierdzenia|potwierdzenia|uprawnien|uprawnień)${textBoundary}`,
+    "giu"
+  ),
 ] as const;
 
 const pageRoleIds = new Set<string>(assistantSiteBuilderPageRoleIds);

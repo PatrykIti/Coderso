@@ -133,6 +133,13 @@ closed before review output when Basic review readiness, required non-review
 steps, Basic defaults, hero, or media policy are missing, and `featured-items`
 does not imply a portfolio content engine by itself.
 
+Basic prompt-poisoning coverage lives in
+`assistantSiteBuilderIntakeBasicSecurity.test.ts`. Free text can be preserved as
+bounded copy/context, but it cannot set action families, route paths, media trust,
+RBAC/CSRF/schema policy, provider instructions, or execution readiness. Unknown
+keys/ids, unsafe labels, external-media policy attempts, and Basic/Advanced
+step-boundary violations fail closed before provider or planner execution.
+
 ### RBAC per step
 
 | Step | Required permissions |

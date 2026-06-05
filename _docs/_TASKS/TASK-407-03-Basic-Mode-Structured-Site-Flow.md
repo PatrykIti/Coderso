@@ -6,7 +6,7 @@
 **Category:** Assistant + Basic UX + Site Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-02
-**Status:** 🚧 In Progress (2026-06-05)
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -41,7 +41,7 @@ and bounded text prompts for business copy.
 | TASK-407-03-L01 | Basic Step Definitions and Progression | Done (2026-06-05) | Basic step definitions and deterministic `needs_input` progression. |
 | TASK-407-03-L02 | Basic Site Map and Section Role Defaults | Done (2026-06-05) | Beginner-safe page/menu/section defaults without industry hardcoding. |
 | TASK-407-03-L03 | Basic Widget and Review Fact Selection | Done (2026-06-05) | Backend widget/content candidates and review facts from Basic answers. |
-| TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | To Do | Tests proving Basic free text cannot override schema/action/security policy. |
+| TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | Done (2026-06-05) | Tests proving Basic free text cannot override schema/action/security policy. |
 
 ## Security Contract
 
@@ -125,3 +125,15 @@ function buildBasicReviewFactsFromIntake(facts: BasicSiteBuilderFacts) {
   types.
 - The assistant explains chosen widgets/pages/menu/subpages before execution.
 - Missing Basic data never produces a partial executable site plan.
+
+## Closure Evidence
+
+- Completed Basic deterministic progression, generic site-map/menu/section
+  defaults, review-only widget/content/media facts, and Basic prompt-poisoning
+  regression guards through TASK-407-03-L01 through TASK-407-03-L04.
+- Basic mode now guides broad nontechnical setup prompts through typed
+  `needs_input`, chooses generic role/goal-based defaults, maps supported
+  homepage widgets through backend registries, and blocks execution until review.
+- Hostile Basic free text, unknown ids, unsafe labels, media URL attempts, and
+  review shortcuts fail closed or stay bounded review/provider context facts with
+  no executable actions.

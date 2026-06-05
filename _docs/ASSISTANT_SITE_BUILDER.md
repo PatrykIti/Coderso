@@ -421,6 +421,16 @@ the current schema version, strict known keys, a bounded serialized size, and a
 fresh expiry window; invalid state is discarded and the server-normalized
 session remains the source of truth.
 
+Basic prompt-poisoning guards are regression-tested before planner/action work.
+Free text in Basic profile, goals, hero, media notes, and review notes remains
+bounded content data; it cannot change mode, step ids, widget aliases, action
+families, media URL policy, route paths, RBAC/CSRF/schema rules, or execution
+state. Hostile unknown keys, unsupported ids, unsafe custom labels, arbitrary
+media URL policy attempts, and Basic/Advanced step-boundary violations fail
+closed through intake-domain errors. Broad confused-user prompts still enter
+Basic `needs_input` and bypass provider drafting until the guided facts are
+reviewed.
+
 ## Auditability
 
 Execution writes assistant metadata to run options (`assistantSiteBuilder`), including:
