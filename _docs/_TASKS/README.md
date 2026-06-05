@@ -8,25 +8,71 @@ Task board for project work. Keep task files and this board in sync.
 3. Move to **In Progress** when work starts; update the task file status.
 4. When complete, move to **Done**, update the task file status, and add a changelog entry.
 5. Update any impacted docs after each task.
+6. For non-trivial task-contract or implementation work, follow the read-only
+   audit and drift-pass rules in root `AGENTS.md` when explicit external-agent
+   consultation approval exists.
 
 ## Task file format
-- File name: `TASK-XXX_Short_Title.md` (see `EXAMPLE_TASK.md`).
+- Board-level file name: `TASK-###_Short_Title.md` (see `EXAMPLE_TASK.md` for
+  a Coderso-specific template example).
+- Physical child file names:
+  - `TASK-###-NN-Title.md` for a technical subtask under `TASK-###`.
+  - `TASK-###-NN-LNN-Title.md` for an executable leaf under `TASK-###-NN`.
+  - `TASK-###-NN-SNN-Title.md` for an optional deeper technical subtask under
+    `TASK-###-NN`.
+- Existing task families may keep their established numeric descendant pattern,
+  such as `TASK-###-NN-NN-Title.md`; do not rename historical task families
+  outside a dedicated migration task.
+- Numbering is zero-padded and stable. Do not reuse retired numbers; supersede
+  old files and allocate the next number.
+- Board-level filename slugs use underscores after the task ID. Physical child
+  filename slugs use hyphens, not underscores or spaces.
 - Header lines:
-  - `# TASK-XXX: Title`
-  - `# FileName: TASK-XXX_Short_Title.md`
+  - `# TASK-###: Title` or `# TASK-###-NN: Title`
+  - `# FileName: <actual filename>`
+- Child files must include a parent field such as `**Parent Task:** TASK-###`
+  or `**Parent Subtask:** TASK-###-NN`.
+- Template-only files such as `EXAMPLE_TASK.md` may use `TASK-000` when the file
+  clearly says it is not a board task.
 - Required fields: Priority, Category, Estimated Effort, Dependencies, Status.
-- Required sections: Overview, Sub-Tasks, Testing Requirements, Documentation Updates Required.
-- For API-related tasks/subtasks add mandatory section: `Security Contract` (visibility: `internal/public`, auth path, rate-limit bucket, nonce/signature/HMAC expectations, optional reCAPTCHA, internal mode via session/API key where applicable).
+- Keep `**Status:**` canonical for new or substantially rewritten files:
+  `⏳ To Do`, `🚧 In Progress`, `✅ Done`, `⏭️ Superseded`, or `❌ Cancelled`.
+  Put dates, reasons, follow-on links, or completion notes in dedicated fields
+  such as `Started`, `Completed`, `Superseded By`, or `Cancellation Reason`.
+- Required sections: Overview, Sub-Tasks, Testing Requirements, Documentation
+  Updates Required.
+- Execution-ready leaf tasks must include `Implementation Pseudocode` with the
+  expected helper/function shape, data flow, error handling, regression-test
+  shape, and validation commands.
+- For API-related tasks/subtasks add mandatory section: `Security Contract`
+  (visibility: `internal/public`, auth path, rate-limit bucket,
+  nonce/signature/HMAC expectations, optional reCAPTCHA, internal mode via
+  session/API key where applicable).
 - Optional sections: Architecture, Implementation Order, New Files to Create.
-- Detail level: match `EXAMPLE_TASK.md` (explicit files/paths, example code or payloads, testing checklist with unit tests, and planned docs/changelog).
+- Detail level: explicit files/paths, example code or payloads where useful,
+  testing checklist with the correct Bun/Vitest lane, and planned
+  docs/changelog updates.
 
 ## Status rules
-- Use: To Do, In Progress, Done.
-- Include dates for In Progress/Done in the task file.
+- Canonical task-file statuses are:
+  - `⏳ To Do`
+  - `🚧 In Progress`
+  - `✅ Done`
+  - `⏭️ Superseded`
+  - `❌ Cancelled`
+- Board buckets remain **To Do**, **In Progress**, and **Done**. Superseded and
+  Cancelled tasks live in **Done** with a note that states the terminal reason.
+- New or substantially rewritten task files should keep date/reason metadata out
+  of `**Status:**` and in dedicated fields. Legacy status lines may be
+  normalized when touched or by a dedicated migration task.
+- Do not leave open direct children under a closed parent. A parent may move to
+  `✅ Done` only when all physical descendants are `✅ Done`, `⏭️ Superseded`,
+  or `❌ Cancelled`.
 - Update **Statistics** and the appropriate table on every status change.
 
 ## Changelog link
-- Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
+- Every completed task must have a matching entry in `_docs/_CHANGELOG/` and
+  list the task ID there.
 - Leaf tasks may be covered by the parent family changelog only when that
   entry explicitly lists the parent task ID and every closed leaf task ID.
   Do not move a leaf task to `Done` until either its standalone changelog
@@ -34,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 34 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2249 tasks
+- **Done:** 2266 tasks
 
 ---
 
@@ -122,6 +168,23 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-403-03 | Assistant Settings UX and OpenRouter Model Metadata | High | Large | Done (2026-06-04): Assistant Settings now defaults to routine controls, keeps Advanced collapsed, routes secrets to Integrations, and reads OpenRouter model metadata. |
 | TASK-403-04 | Docker Startup Assistant Docs Reindex Helper | High | Medium | Done (2026-06-04): Docker startup runs idempotent assistant docs indexing after migrations with advisory-lock protection and docs copied into the image. |
 | TASK-403-05 | Assistant Docs QA Docs Changelog and Closure | High | Medium | Done (2026-06-04): docs, task board, changelog, Playwright full-service scaffold E2E, Claude limitation review, lint/typecheck, targeted tests, live OpenRouter lanes, and release gates were recorded. |
+| TASK-409 | Resend Email Provider and Settings UX | High | Large | Done (2026-06-05): Resend integration secret storage, provider-aware email transport/settings, admin UX, docs, tests, and closure completed. |
+| TASK-409-01 | Resend Integration Secret Contract | High | Medium | Done (2026-06-05): Resend registry, encrypted `apiKey`, redaction, and clear/disconnected state completed. |
+| TASK-409-01-L01 | Resend Connector and Secret Storage | High | Medium | Done (2026-06-05): `resend` accepts only encrypted `apiKey`; summaries remain redacted and runtime config is backend-only. |
+| TASK-409-01-L02 | Secret Redaction and Key Clear State | High | Medium | Done (2026-06-05): `re_...` audit redaction and `apiKey: null` disconnected behavior completed. |
+| TASK-409-02 | Email Provider Backend Contract | High | Large | Done (2026-06-05): `smtp | resend` provider resolution, transport, logs, and form automation path completed. |
+| TASK-409-02-L01 | Provider Settings and Normalization | High | Medium | Done (2026-06-05): legacy SMTP default and non-destructive provider switching completed. |
+| TASK-409-02-L02 | Provider Transport and Delivery Logs | High | Large | Done (2026-06-05): fixed Resend egress, bounded headers, sanitized errors, and provider-aware delivery logs completed. |
+| TASK-409-02-L03 | Form Automation Provider Resolution | High | Medium | Done (2026-06-05): form email actions now use provider-aware `sendSystemEmail` through a pure injected sender. |
+| TASK-409-03 | Admin API and Client Contract | High | Medium | Done (2026-06-05): strict provider schemas, route error mapping, and admin DTOs completed. |
+| TASK-409-03-L01 | Email Settings Routes and Error Mapping | High | Medium | Done (2026-06-05): provider-aware Email Settings schema, permission order, and `mapEmailSettingsError` coverage completed. |
+| TASK-409-03-L02 | Integrations Routes and Admin DTOs | High | Medium | Done (2026-06-05): Resend DTO redaction and unknown-key rejection coverage completed. |
+| TASK-409-04 | Admin UX Validation and Closure | High | Large | Done (2026-06-05): provider selector, Resend integration UX, docs, changelog, and validation completed. |
+| TASK-409-04-L01 | Email Settings Provider UX | High | Large | Done (2026-06-05): Resend mode hides SMTP fields, preserves SMTP settings, links to Integrations, and labels logs by provider. |
+| TASK-409-04-L02 | Integrations Provider UX | High | Medium | Done (2026-06-05): Resend card/drawer supports update and clear flows without rendering secret values. |
+| TASK-409-04-L03 | Validation Docs Changelog and Board Closure | High | Medium | Done (2026-06-05): source-of-truth docs, changelog, board, targeted tests, lint, and typecheck completed. |
+| TASK-408 | Agent Task Workflow Rule Alignment | Medium | Medium | Done (2026-06-04): AGENTS task workflow rules, task board format, Coderso task example, and changelog numbering were aligned. |
+| TASK-402 | reCAPTCHA Runtime Configuration and Eager Client Loading | High | Medium | Done (2026-06-04): backend-owned bot-protection settings and eager v3 client loading for auth and public form runtimes. |
 | TASK-401 | DB Runtime Test Idle Timeout | Medium | Small | Done (2026-06-04): DB-backed media runtime tests now opt into a 30-second Bun.serve idle timeout to avoid socket resets under full-lane load. |
 | TASK-400 | Docker Startup Migrations | High | Medium | Done (2026-06-04): Docker runtime entrypoint now runs Drizzle migrations behind a Postgres advisory lock before starting the core HTTP server. |
 | TASK-399 | Admin SPA Route-Level Code Splitting and Bundle Reduction | High | Large | Done (2026-06-04): protected admin pages now load through guarded lazy route descriptors; initial static graph gzip is `400,812 B` against the `500,000 B` guard budget. |

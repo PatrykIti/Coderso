@@ -77,7 +77,7 @@ export function IntegrationDrawer({
   const [values, setValues] = useState<Record<string, string>>(() => {
     const nextValues: Record<string, string> = {};
     for (const field of fields) {
-      nextValues[field.key] = field.value ?? "";
+      nextValues[field.key] = field.type === "secret" ? "" : (field.value ?? "");
     }
     return nextValues;
   });
@@ -99,7 +99,7 @@ export function IntegrationDrawer({
     const initialValues: Record<string, string> = {};
     const initialSecretEdits: Record<string, boolean> = {};
     for (const field of fields) {
-      initialValues[field.key] = field.value ?? "";
+      initialValues[field.key] = field.type === "secret" ? "" : (field.value ?? "");
       initialSecretEdits[field.key] = false;
     }
     return getIntegrationDirtySignature(fields, initialValues, initialSecretEdits);
@@ -116,7 +116,11 @@ export function IntegrationDrawer({
   };
 
   const handleToggleSecret = (key: string) => {
-    setSecretEdits((prev) => ({ ...prev, [key]: !prev[key] }));
+    const nextEditing = !secretEdits[key];
+    setSecretEdits((prev) => ({ ...prev, [key]: nextEditing }));
+    if (!nextEditing) {
+      setValues((prev) => ({ ...prev, [key]: "" }));
+    }
     setLocalError(null);
   };
 

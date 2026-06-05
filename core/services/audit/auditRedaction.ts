@@ -16,6 +16,7 @@ const sensitiveKeyMatchers = [
 const redactionPatterns = [
   /\bsk-or-v1-[a-zA-Z0-9]{8,}\b/g,
   /\bsk-[a-zA-Z0-9_-]{8,}\b/g,
+  /\bre_[a-zA-Z0-9_-]{8,}\b/g,
   /Bearer\s+[a-zA-Z0-9\-_.=]{8,}/gi,
   /\beyJ[a-zA-Z0-9_-]+=*\.[a-zA-Z0-9_-]+=*\.[a-zA-Z0-9_-]+=*\b/g,
   /((?:access|refresh|reset|csrf|session|auth)?_?token=)[^&\s]+/gi,
@@ -38,6 +39,8 @@ const redactString = (value: string) => {
   }
   return output;
 };
+
+export const redactAuditText = (value: string) => redactString(value);
 
 const redactUnknown = (value: unknown): unknown => {
   if (typeof value === "string") return redactString(value);

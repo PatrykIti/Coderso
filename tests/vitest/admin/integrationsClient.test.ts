@@ -20,7 +20,21 @@ test("listIntegrations hits GET /settings/integrations", async () => {
 
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
-    return jsonResponse({ items: [{ id: "crm", name: "CRM", description: "desc", category: "sales", scopes: [], status: "connected", health: { status: "ok", lastCheckedAt: null, lastError: null }, updatedAt: null, fields: [] }] });
+    return jsonResponse({
+      items: [
+        {
+          id: "crm",
+          name: "CRM",
+          description: "desc",
+          category: "sales",
+          scopes: [],
+          status: "connected",
+          health: { status: "ok", lastCheckedAt: null, lastError: null },
+          updatedAt: null,
+          fields: [],
+        },
+      ],
+    });
   };
 
   try {
@@ -29,6 +43,46 @@ test("listIntegrations hits GET /settings/integrations", async () => {
     expect(calls[0]?.input).toBe("/admin/api/settings/integrations");
     expect(calls[0]?.init?.method).toBe("GET");
     expect(result[0]?.id).toBe("crm");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("listIntegrations keeps resend secret fields redacted", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    jsonResponse({
+      items: [
+        {
+          id: "resend",
+          name: "Resend",
+          description: "Transactional email",
+          category: "Communication",
+          scopes: ["email:send"],
+          status: "connected",
+          health: { status: "healthy", lastCheckedAt: null, lastError: null },
+          updatedAt: null,
+          fields: [
+            {
+              key: "apiKey",
+              label: "API Key",
+              type: "secret",
+              required: true,
+              secret: true,
+              configured: true,
+              value: null,
+            },
+          ],
+        },
+      ],
+    });
+
+  try {
+    const result = await listIntegrations();
+    expect(result[0]?.id).toBe("resend");
+    expect(result[0]?.fields[0]?.value).toBeNull();
+    expect(JSON.stringify(result)).not.toContain("re_");
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -101,9 +155,7 @@ test("updateIntegration patches JSON payload with CSRF", async () => {
     expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({
       config: { endpoint: "https://example.com", apiKey: null },
     });
-    expect(new Headers(calls[1]?.init?.headers).get("X-CSRF-Token")).toBe(
-      "csrf-token"
-    );
+    expect(new Headers(calls[1]?.init?.headers).get("X-CSRF-Token")).toBe("csrf-token");
     expect(result.item.name).toBe("CRM");
   } finally {
     resetCsrfToken();

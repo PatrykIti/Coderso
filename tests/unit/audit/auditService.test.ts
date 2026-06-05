@@ -85,16 +85,18 @@ test("sanitizeMetadata redacts token-like values in nested structures", () => {
     provider: "openrouter",
     nested: {
       details: "Bearer sk-or-v1-abcdef1234567890",
+      resend: "Authorization: Bearer re_superSecretValue123456",
     },
-    list: ["ok", "eyJabc.def.ghi"],
+    list: ["ok", "eyJabc.def.ghi", "raw re_anotherSecretValue123456"],
   });
 
   expect(meta).toEqual({
     provider: "openrouter",
     nested: {
       details: "Bearer [REDACTED]",
+      resend: "Authorization: Bearer [REDACTED]",
     },
-    list: ["ok", "[REDACTED]"],
+    list: ["ok", "[REDACTED]", "raw [REDACTED]"],
   });
 });
 

@@ -15,7 +15,7 @@ import {
   type BotProtectionConfig,
 } from "@/services/authClient";
 import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
-import { executeRecaptcha } from "@/ui/auth/recaptcha";
+import { executeRecaptcha, preloadRecaptcha } from "@/ui/auth/recaptcha";
 
 type ResetPasswordPageProps = {
   initialEmail?: string;
@@ -40,6 +40,9 @@ export function ResetPasswordPage({
       .then((config) => {
         if (!active) return;
         setBotConfig(config);
+        if (config.enabled && config.siteKey) {
+          void preloadRecaptcha(config.siteKey).catch(() => undefined);
+        }
       })
       .catch(() => {
         if (!active) return;

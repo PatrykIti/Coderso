@@ -7,6 +7,7 @@ import { EmailSettingsPage } from "../../../core/admin/ui/settings/EmailSettings
 test("EmailSettingsPage renders", () => {
   const html = renderAdminUi(<EmailSettingsPage />);
   expect(html).toContain("Email Settings");
+  expect(html).toContain("Email Provider");
   expect(html).toContain("Save changes");
   expect(html).toContain("Auto-save settings across all screens");
 });

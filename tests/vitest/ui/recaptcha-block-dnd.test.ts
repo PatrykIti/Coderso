@@ -16,13 +16,13 @@ afterEach(() => {
 
 test("executeRecaptcha uses the existing grecaptcha client without loading a script", async () => {
   const execute = vi.fn(async () => "token-1");
-  (window as Window & {
-    grecaptcha?: { execute: (siteKey: string, options: { action: string }) => Promise<string> };
-  }).grecaptcha = { execute };
+  (
+    window as Window & {
+      grecaptcha?: { execute: (siteKey: string, options: { action: string }) => Promise<string> };
+    }
+  ).grecaptcha = { execute };
 
-  const { executeRecaptcha } = await import(
-    "../../../core/admin/ui/auth/recaptcha"
-  );
+  const { executeRecaptcha } = await import("../../../core/admin/ui/auth/recaptcha");
 
   await expect(executeRecaptcha("site-key", "login")).resolves.toBe("token-1");
   expect(document.head.querySelector("script")).toBeNull();
@@ -34,25 +34,73 @@ test("executeRecaptcha loads the script before executing", async () => {
     appendedScript = node as HTMLScriptElement;
     return node;
   });
-  const { executeRecaptcha } = await import(
-    "../../../core/admin/ui/auth/recaptcha"
-  );
+  const { executeRecaptcha } = await import("../../../core/admin/ui/auth/recaptcha");
   const execute = vi.fn(async () => "token-2");
 
-  const promise = executeRecaptcha("site-key", "signup");
+  const promise = executeRecaptcha("site key", "signup");
 
   expect(appendedScript?.getAttribute("src")).toContain(
-    "https://www.google.com/recaptcha/api.js?render=site-key"
+    "https://www.google.com/recaptcha/api.js?render=site%20key"
   );
 
-  (window as Window & {
-    grecaptcha?: { execute: (siteKey: string, options: { action: string }) => Promise<string> };
-  }).grecaptcha = { execute };
+  (
+    window as Window & {
+      grecaptcha?: {
+        ready: (callback: () => void) => void;
+        execute: (siteKey: string, options: { action: string }) => Promise<string>;
+      };
+    }
+  ).grecaptcha = {
+    ready: (callback) => callback(),
+    execute,
+  };
 
   (appendedScript as unknown as EventTarget | null)?.dispatchEvent(new Event("load"));
 
   await expect(promise).resolves.toBe("token-2");
-  expect(execute).toHaveBeenCalledWith("site-key", { action: "signup" });
+  expect(execute).toHaveBeenCalledWith("site key", { action: "signup" });
+});
+
+test("preloadRecaptcha waits for ready and reuses the loaded script", async () => {
+  vi.spyOn(document.head, "appendChild").mockImplementation((node) => {
+    appendedScript = node as HTMLScriptElement;
+    return node;
+  });
+  const { executeRecaptcha, preloadRecaptcha } =
+    await import("../../../core/admin/ui/auth/recaptcha");
+  const ready = vi.fn((callback: () => void) => callback());
+  const execute = vi.fn(async () => "token-ready");
+
+  const preload = preloadRecaptcha("site-key");
+  expect(appendedScript?.getAttribute("src")).toContain(
+    "https://www.google.com/recaptcha/api.js?render=site-key"
+  );
+
+  (
+    window as Window & {
+      grecaptcha?: {
+        ready: (callback: () => void) => void;
+        execute: (siteKey: string, options: { action: string }) => Promise<string>;
+      };
+    }
+  ).grecaptcha = {
+    ready,
+    execute,
+  };
+
+  const onload = appendedScript?.onload;
+  if (typeof onload !== "function" || !appendedScript) {
+    throw new Error("recaptcha_test_onload_missing");
+  }
+  onload.call(appendedScript, new Event("load"));
+  await Promise.resolve();
+
+  await expect(preload).resolves.toBeUndefined();
+  expect(ready).toHaveBeenCalledTimes(1);
+
+  await expect(executeRecaptcha("site-key", "login")).resolves.toBe("token-ready");
+  expect(document.head.querySelectorAll("script")).toHaveLength(0);
+  expect(execute).toHaveBeenCalledWith("site-key", { action: "login" });
 });
 
 test("executeRecaptcha rejects when the script load fails or grecaptcha is unavailable", async () => {
@@ -61,14 +109,24 @@ test("executeRecaptcha rejects when the script load fails or grecaptcha is unava
       appendedScript = node as HTMLScriptElement;
       return node;
     });
-    const { executeRecaptcha } = await import(
-      "../../../core/admin/ui/auth/recaptcha"
-    );
+    const { executeRecaptcha } = await import("../../../core/admin/ui/auth/recaptcha");
 
     const promise = executeRecaptcha("site-key", "login");
     (appendedScript as unknown as EventTarget | null)?.dispatchEvent(new Event("error"));
 
     await expect(promise).rejects.toThrow("recaptcha_load_failed");
+
+    const retryPromise = executeRecaptcha("site-key", "login");
+    expect(appendedScript?.getAttribute("src")).toContain(
+      "https://www.google.com/recaptcha/api.js?render=site-key"
+    );
+    (
+      window as Window & {
+        grecaptcha?: { execute: (siteKey: string, options: { action: string }) => Promise<string> };
+      }
+    ).grecaptcha = { execute: vi.fn(async () => "retry-token") };
+    (appendedScript as unknown as EventTarget | null)?.dispatchEvent(new Event("load"));
+    await expect(retryPromise).resolves.toBe("retry-token");
   }
 
   vi.resetModules();
@@ -80,9 +138,7 @@ test("executeRecaptcha rejects when the script load fails or grecaptcha is unava
     return node;
   });
 
-  const { executeRecaptcha } = await import(
-    "../../../core/admin/ui/auth/recaptcha"
-  );
+  const { executeRecaptcha } = await import("../../../core/admin/ui/auth/recaptcha");
 
   const secondPromise = executeRecaptcha("site-key", "login");
   (appendedScript as unknown as EventTarget | null)?.dispatchEvent(new Event("load"));
@@ -91,11 +147,8 @@ test("executeRecaptcha rejects when the script load fails or grecaptcha is unava
 });
 
 test("block drag helpers clamp indexes, resolve pointer drops, and reorder items", async () => {
-  const {
-    clampDropIndex,
-    reorderItemsById,
-    resolveDropIndexFromPointer,
-  } = await import("../../../core/admin/ui/posts/editor/blocks/blockDnD");
+  const { clampDropIndex, reorderItemsById, resolveDropIndexFromPointer } =
+    await import("../../../core/admin/ui/posts/editor/blocks/blockDnD");
 
   expect(clampDropIndex(Number.NaN, 3)).toBe(0);
   expect(clampDropIndex(-1, 3)).toBe(0);
@@ -103,27 +156,13 @@ test("block drag helpers clamp indexes, resolve pointer drops, and reorder items
   expect(clampDropIndex(1.7, 3)).toBe(2);
   expect(clampDropIndex(1, 0)).toBe(0);
 
-  expect(
-    resolveDropIndexFromPointer(2, Number.NaN, { top: 0, height: 50 })
-  ).toBe(2);
-  expect(
-    resolveDropIndexFromPointer(2, 10, { top: 0, height: 50 })
-  ).toBe(2);
-  expect(
-    resolveDropIndexFromPointer(2, 40, { top: 0, height: 50 })
-  ).toBe(3);
+  expect(resolveDropIndexFromPointer(2, Number.NaN, { top: 0, height: 50 })).toBe(2);
+  expect(resolveDropIndexFromPointer(2, 10, { top: 0, height: 50 })).toBe(2);
+  expect(resolveDropIndexFromPointer(2, 40, { top: 0, height: 50 })).toBe(3);
 
   const items = [{ id: "a" }, { id: "b" }, { id: "c" }];
   expect(reorderItemsById(items, "missing", 1)).toBe(items);
   expect(reorderItemsById(items, "a", 1)).toBe(items);
-  expect(reorderItemsById(items, "a", 3)).toEqual([
-    { id: "b" },
-    { id: "c" },
-    { id: "a" },
-  ]);
-  expect(reorderItemsById(items, "c", 0)).toEqual([
-    { id: "c" },
-    { id: "a" },
-    { id: "b" },
-  ]);
+  expect(reorderItemsById(items, "a", 3)).toEqual([{ id: "b" }, { id: "c" }, { id: "a" }]);
+  expect(reorderItemsById(items, "c", 0)).toEqual([{ id: "c" }, { id: "a" }, { id: "b" }]);
 });

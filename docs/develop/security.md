@@ -23,6 +23,10 @@ Public form submission requires an HMAC nonce (`__nl_form_nonce`, signed with `F
 
 When a form runs in internal mode (`submission_access=internal`), the request must instead carry an admin session or an API-key scope, and the captcha step is skipped — the session/key is the proof of trust.
 
+reCAPTCHA v3 is configured from Admin Settings -> Security at runtime. The
+server reads bot-protection keys from backend-owned `security.settings`; only
+the public site key is ever projected to the browser.
+
 Outbound webhooks are signed with HMAC-SHA256 in the `X-Coderso-Signature` header (hex digest over `${timestamp}.${body}`). Legacy `X-Nextless-*` headers are still emitted during migration.
 
 > Plugins get the same treatment for free: any plugin route using `POST|PUT|PATCH|DELETE` must declare a `permission`, or registration fails with `plugin_route_permission_required`. See [./runtime-model.md](./runtime-model.md) for the plugin runtime.

@@ -1,7 +1,9 @@
 import { apiRequest } from "./apiClient";
 
+export type EmailProviderId = "smtp" | "resend";
+
 export type EmailSettingsResponse = {
-  provider: "smtp";
+  provider: EmailProviderId;
   smtp: {
     host: string | null;
     port: number | null;
@@ -9,17 +11,23 @@ export type EmailSettingsResponse = {
     user: string | null;
     password: { configured: boolean };
   };
+  resend: {
+    integrationId: "resend";
+    apiKey: { configured: boolean };
+    status: "connected" | "disconnected";
+  };
   from: {
     name: string | null;
     email: string | null;
   };
   status: {
+    provider: EmailProviderId;
     configured: boolean;
   };
 };
 
 export type EmailSettingsUpdate = {
-  provider?: "smtp";
+  provider?: EmailProviderId | null;
   smtp?: {
     host?: string | null;
     port?: number | null;
@@ -73,9 +81,8 @@ export async function sendTestEmail(payload: { to: string }) {
 }
 
 export async function listEmailLogs() {
-  const response = await apiRequest<{ items: EmailDeliveryLog[] }>(
-    "/settings/email/logs",
-    { method: "GET" }
-  );
+  const response = await apiRequest<{ items: EmailDeliveryLog[] }>("/settings/email/logs", {
+    method: "GET",
+  });
   return response.items ?? [];
 }

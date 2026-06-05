@@ -3,6 +3,26 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.3.0] - 2026-06-05
+### Added
+- Resend can now be configured as an email provider through Integrations and selected from Email Settings.
+
+### Changed
+- Aligned Coderso agent task workflow, task-board format, and task template rules.
+- Email delivery, delivery logs, and form email automation now resolve the active email provider instead of assuming SMTP.
+
+### Fixed
+- Replaced the foreign task example with a Coderso-specific template and corrected changelog next-number guidance.
+- Email secret redaction now covers Resend-shaped API keys in audit, export, UI copy, delivery failure, and automation error paths.
+
+### Security
+- Resend credentials are encrypted, backend-only, redacted, and sent only to the fixed Resend API endpoint.
+## [1.2.3] - 2026-06-04
+### Fixed
+- reCAPTCHA v3 now preloads on admin login/reset and public Forms/Appointment Form runtimes when backend settings project an enabled site key, so the Google client and badge can appear before submit.
+
+### Security
+- reCAPTCHA bot-protection keys remain backend-owned through Admin Settings -> Security; secret keys stay server-only and environment variables are ignored for bot-protection runtime configuration.
 ## [1.2.2] - 2026-06-04
 ### Changed
 - Protected admin workspace routes now load lazily after auth, RBAC, and setup gates, with stale lazy-chunk recovery and an admin bundle budget guard in PR gates.

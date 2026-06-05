@@ -12,9 +12,14 @@ import { AuthShell } from "@/ui/layouts/AuthShell";
 import { AuthBrandPanel } from "@/ui/auth/AuthBrandPanel";
 import { SsoButtons } from "@/ui/auth/SsoButtons";
 import { isApiClientError } from "@/services/apiClient";
-import { getAuthBotProtection, login, toFieldErrors, type BotProtectionConfig } from "@/services/authClient";
+import {
+  getAuthBotProtection,
+  login,
+  toFieldErrors,
+  type BotProtectionConfig,
+} from "@/services/authClient";
 import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
-import { executeRecaptcha } from "@/ui/auth/recaptcha";
+import { executeRecaptcha, preloadRecaptcha } from "@/ui/auth/recaptcha";
 
 type LoginPageProps = {
   initialEmail?: string;
@@ -37,6 +42,9 @@ export function LoginPage({ initialEmail = "", initialError = "" }: LoginPagePro
       .then((config) => {
         if (!active) return;
         setBotConfig(config);
+        if (config.enabled && config.siteKey) {
+          void preloadRecaptcha(config.siteKey).catch(() => undefined);
+        }
       })
       .catch(() => {
         if (!active) return;

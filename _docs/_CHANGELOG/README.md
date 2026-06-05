@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1110.
+Ordinary new entries continue at 1112.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,12 @@ Ordinary new entries continue at 1110.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1110 for the next changelog entry.
+assistant policy coverage fix. Use 1112 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1111 | 2026-06-05 | TASK-409 Resend email provider | Settings/Integrations/Email/Security/Admin UI/Forms/QA/Docs |
+| 1110 | 2026-06-04 | AGENTS task workflow alignment | Docs/Process/Agent Workflow/Task Board/QA |
 | 1109 | 2026-06-05 | TASK-407 Advanced design preset registry | Assistant/Site Builder/Advanced Design/Validation/QA/Docs |
 | 1108 | 2026-06-05 | TASK-407 Basic prompt-poisoning guards | Assistant/Site Builder/Basic Security/Validation/QA/Docs |
 | 1107 | 2026-06-05 | TASK-407 Basic review facts | Assistant/Site Builder/Basic Review/Widget Mapping/Validation/QA/Docs |
@@ -46,6 +48,7 @@ assistant policy coverage fix. Use 1110 for the next changelog entry.
 | 1099 | 2026-06-05 | Assistant curated media profiles | Assistant/Site Builder/Media/Public Runtime/QA/Docs |
 | 1098 | 2026-06-04 | TASK-404 full-service assistant site generation | Assistant/LLM Guide/Site Builder/Runtime/QA/Docs |
 | 1097 | 2026-06-04 | TASK-403 assistant docs and LLM Guide UX repair | Assistant/Admin UI/Docker/OpenRouter/Docs/QA |
+| 1096 | 2026-06-04 | reCAPTCHA backend configuration and eager loading | Security/Bot Protection/Admin UI/Public Forms/Widgets/QA/Docs |
 | 1095 | 2026-06-04 | DB runtime test idle timeout | Runtime Testing/Bun Server/Media/QA/Docs |
 | 1094 | 2026-06-04 | Docker startup migrations | Docker/Runtime/Database/Release/Testing/Docs |
 | 1093 | 2026-06-04 | TASK-399 admin SPA route code splitting | Admin UI/Build Performance/Vite/Docker/QA/Docs |

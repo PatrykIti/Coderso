@@ -24,6 +24,24 @@ async function canConnect() {
 }
 
 const SETTINGS_KEY = "security.settings";
+const BOT_ENV_KEYS = ["GOOGLE_SITE_KEY", "GOOGLE_PRIVATE_KEY"] as const;
+
+const snapshotBotEnv = () =>
+  Object.fromEntries(BOT_ENV_KEYS.map((key) => [key, process.env[key]])) as Record<
+    (typeof BOT_ENV_KEYS)[number],
+    string | undefined
+  >;
+
+const restoreBotEnv = (snapshot: ReturnType<typeof snapshotBotEnv>) => {
+  for (const key of BOT_ENV_KEYS) {
+    const value = snapshot[key];
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+};
 
 const cleanup = async () => {
   if (!hasDb) return;
@@ -66,6 +84,21 @@ testIfDb("getSecuritySettings returns defaults when missing", async () => {
   });
 });
 
+testIfDb("getSecuritySettings ignores recaptcha environment keys", async () => {
+  const envSnapshot = snapshotBotEnv();
+  try {
+    process.env.GOOGLE_SITE_KEY = "env-site-key";
+    process.env.GOOGLE_PRIVATE_KEY = "env-private-key";
+    resetSecuritySettingsCache();
+
+    const current = await getSecuritySettings();
+    expect(current.botProtection).toEqual(SECURITY_SETTINGS_DEFAULTS.botProtection);
+  } finally {
+    restoreBotEnv(envSnapshot);
+    resetSecuritySettingsCache();
+  }
+});
+
 testIfDb("setSecuritySettings merges partial updates", async () => {
   await setSecuritySettings({
     csrf: { enabled: false },
@@ -93,12 +126,12 @@ testIfDb("setSecuritySettings merges partial updates", async () => {
 });
 
 testIfDb("setSecuritySettings validates input", async () => {
-  await expect(
-    setSecuritySettings({ csrf: { tokenTtlMinutes: -1 } })
-  ).rejects.toThrow("security_settings_invalid");
-  await expect(
-    setSecuritySettings({ session: { maxPerUser: 0 } })
-  ).rejects.toThrow("security_settings_invalid");
+  await expect(setSecuritySettings({ csrf: { tokenTtlMinutes: -1 } })).rejects.toThrow(
+    "security_settings_invalid"
+  );
+  await expect(setSecuritySettings({ session: { maxPerUser: 0 } })).rejects.toThrow(
+    "security_settings_invalid"
+  );
 });
 
 testIfDb("bot protection requires keys when enabled", async () => {

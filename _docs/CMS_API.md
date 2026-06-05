@@ -415,6 +415,11 @@ List response (summary):
 }
 ```
 
+The built-in `resend` integration is a Communication provider with one secret
+field: `apiKey`. It has no configurable `baseUrl`; attempts to save unknown
+Resend config keys reject as `integration_config_invalid`. Secret fields return
+`value: null` with a boolean `configured` flag.
+
 Update payload (summary):
 
 ```json
@@ -451,6 +456,7 @@ Update payload (summary):
 
 ```json
 {
+  "provider": "smtp",
   "smtp": {
     "host": "smtp.example.com",
     "port": 587,
@@ -458,6 +464,19 @@ Update payload (summary):
     "user": "mailer@example.com",
     "password": "secret"
   },
+  "from": {
+    "name": "Coderso",
+    "email": "hello@example.com"
+  }
+}
+```
+
+For Resend, Email Settings stores only the provider selection and sender
+metadata. The Resend API key is configured through Integrations:
+
+```json
+{
+  "provider": "resend",
   "from": {
     "name": "Coderso",
     "email": "hello@example.com"
@@ -477,13 +496,22 @@ Response (summary):
     "user": "mailer@example.com",
     "password": { "configured": true }
   },
+  "resend": {
+    "integrationId": "resend",
+    "apiKey": { "configured": false },
+    "status": "disconnected"
+  },
   "from": {
     "name": "Coderso",
     "email": "hello@example.com"
   },
-  "status": { "configured": true }
+  "status": { "provider": "smtp", "configured": true }
 }
 ```
+
+`provider` is strictly `smtp | resend`. Missing legacy `email.provider` rows
+read as `smtp`. Unknown providers and unknown top-level fields are rejected as
+`email_settings_invalid`.
 
 Test email payload:
 
@@ -499,7 +527,7 @@ Delivery logs response (summary):
     {
       "id": "log-id",
       "recipient": "dev@example.com",
-      "subject": "Coderso SMTP test",
+      "subject": "Coderso email test",
       "status": "delivered",
       "provider": "smtp",
       "messageId": "mock",

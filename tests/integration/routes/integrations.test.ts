@@ -99,7 +99,7 @@ test("integration detail route maps unknown ids to 404 ApiError", async () => {
   }
 });
 
-test("integration update route validates payload and maps unknown keys to 400 ApiError", async () => {
+test("integration update route validates payload and maps unknown resend keys to 400 ApiError", async () => {
   const { router, routes } = makeRouter();
   const validations: Array<{ schema: unknown; payload: unknown }> = [];
 
@@ -114,11 +114,11 @@ test("integration update route validates payload and maps unknown keys to 400 Ap
     (item) => item.method === "PATCH" && item.path === "/settings/integrations/:id"
   );
   const handler = route?.handlers.at(-1);
-  const payload = { config: { unexpected: "value" } };
+  const payload = { config: { baseUrl: "https://evil.test" } };
 
   try {
     await handler?.({
-      params: { id: "slack" },
+      params: { id: "resend" },
       query: {},
       body: payload,
       user: { id: "user-1" },
