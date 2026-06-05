@@ -463,6 +463,16 @@ advanced layout, reference design brief, hero/menu choices, references, gates,
 and diagnostics stay out of `context.siteKit` and remain compiler/review
 metadata for later adapters.
 
+Static site-shell coverage for reviewed siteKit handoff is checked by
+`assistantSiteBuilderIntakeStaticActions.ts`. The production siteKit planner
+first builds the existing `site-kit.recommend` / `site-kit.install` action path,
+then the helper inspects the install preview for deterministic page resources,
+primary/footer menus,
+lead-capture forms, SEO defaults for generated pages, action ids, and same-plan
+`target:resourceKey` locators. Missing coverage becomes a blocking review gate;
+the existing solution-kit installer remains the only mutation owner for
+page/menu/form/SEO resources.
+
 TASK-407 intake redaction is owned by
 `core/services/assistant/assistantSiteBuilderIntakeRedaction.ts`.
 Diagnostics expose only schema version, mode/current step, answered step ids,

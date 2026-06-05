@@ -3411,7 +3411,7 @@ test("planAssistantActions builds site-kit actions from guided site-kit context"
       locale: "en",
       siteKit: {
         businessType: "automotive_workshop",
-        goals: ["lead_generation", "online_booking"],
+        goals: ["online_booking"],
         locale: "en",
         selectedKitId: "automotive-workshop",
         enabledStepIds: ["settings", "pages", "qa"],

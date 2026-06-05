@@ -6,7 +6,7 @@
 **Category:** Assistant + Static Site Actions
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-05-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -51,14 +51,22 @@ contracts and same-plan locators.
 ## Implementation Pseudocode
 
 ```ts
-export function buildReviewedSiteKitStaticPlan(siteKit: AssistantSiteKitPlanInput) {
-  const plan = buildSiteKitActionPlan(siteKit);
-  const normalized = normalizeAssistantActionPlan(plan);
-  assertPlanContainsExpectedStaticFamilies(normalized, {
-    requiredFamilies: ["page", "navigation", "seo"],
-    optionalFamilies: ["form", "settings"],
-  });
-  return normalized;
+function buildSiteKitActionPlan(siteKit: AssistantSiteKitPlanInput) {
+  const actionPlan = createExistingSiteKitRecommendAndInstallPlan(siteKit);
+  assertReviewedSiteKitStaticCoverage(actionPlan, siteKit);
+  return actionPlan;
+}
+
+function assertReviewedSiteKitStaticCoverage(
+  plan: AssistantActionPlan,
+  siteKit: AssistantSiteKitPlanInput
+) {
+  const installPreview = getSiteKitInstallPreview(plan);
+  assertExpectedPageActions(installPreview);
+  assertExpectedPrimaryAndFooterMenus(installPreview);
+  assertExpectedLeadCaptureForms(installPreview, siteKit.goals);
+  assertSeoDefaultsForEveryGeneratedPage(installPreview);
+  assertUniqueSamePlanLocators(installPreview);
 }
 ```
 
@@ -90,3 +98,29 @@ export function buildReviewedSiteKitStaticPlan(siteKit: AssistantSiteKitPlanInpu
 - Static site resources are assembled through existing action contracts.
 - Generated actions are strict, idempotent, and reviewable.
 - Unsupported static needs become gates rather than invented mutations.
+
+## Completion Notes
+
+- Added `assistantSiteBuilderIntakeStaticActions.ts` as a pure service helper
+  that normalizes reviewed siteKit input through the existing
+  `site-kit.recommend` / `site-kit.install` action path.
+- Wired the coverage gate into the production `buildSiteKitActionPlan` path, so
+  `planAssistantActions({ context: { siteKit } })` fails closed before returning
+  executable actions when required static shell coverage drifts.
+- Verified static shell coverage from the selected kit preview: page resources,
+  primary/footer menus, lead-capture forms, page SEO defaults, action ids, and
+  same-plan `target:resourceKey` locators.
+- Kept page/menu/form/SEO mutation ownership in the existing solution-kit
+  installer instead of introducing a parallel low-level action path.
+- Missing page/menu/lead form/SEO coverage or duplicate same-plan locators now
+  fail closed as review gates before execute.
+- Added regression tests for partial page, primary menu, lead form, and
+  generated-page-without-SEO drift.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeStaticActions.test.ts`
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeStaticActions.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`

@@ -96,6 +96,14 @@ The `/assistant/actions/plan` route continues to validate only the strict
 content-engine candidates, design/reference facts, gates, and review metadata
 remain outside that payload.
 
+Reviewed static shell plans pass through
+`assistantSiteBuilderIntakeStaticActions.ts`. It keeps the existing
+`site-kit.recommend` / `site-kit.install` action family as the executable
+contract and validates the install preview for pages, primary/footer menus,
+lead-capture forms, SEO defaults, action ids, and same-plan
+`target:resourceKey` locators before execution. Missing coverage is a gate, not
+a parallel ad-hoc mutation path.
+
 Intake diagnostics and provider context are separate from the route payload.
 `assistantSiteBuilderIntakeRedaction.ts` emits diagnostics with stable ids and a
 facts hash only, while `buildSiteBuilderIntakeProviderContext` packages bounded

@@ -527,7 +527,7 @@ test("normalizeAssistantActionPlan accepts site-kit action plans", () => {
         goals: ["lead_generation"],
         locale: "en",
         selectedKitId: "automotive-workshop",
-        enabledStepIds: ["settings", "pages", "qa"],
+        enabledStepIds: ["settings", "pages", "forms", "qa"],
       },
     },
   });

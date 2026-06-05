@@ -92,7 +92,7 @@ Rules:
 | `widget-template.update` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Edits reusable template metadata/settings |
 | `widget-template.block.patch` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Patches selected reusable template block data paths |
 | `form.automation.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `forms:read/write` | Safe non-webhook actions only |
-| `site-kit.recommend/install/validate` | Vitest + Bun | Bun executor | Bun executor | `solution-kits:read/write` + LLM availability gate | Existing unified site-kit action flow |
+| `site-kit.recommend/install/validate` | Vitest + Bun | Bun executor | Bun executor | `solution-kits:read/write` + LLM availability gate | Existing unified site-kit action flow; reviewed intake now gates static page/menu/form/SEO preview coverage before execute |
 
 ---
 

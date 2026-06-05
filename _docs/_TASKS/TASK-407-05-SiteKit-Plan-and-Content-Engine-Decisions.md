@@ -44,7 +44,7 @@ contract cannot express an accepted capability.
 | ID | Title | Status | Output |
 |---|---|---|---|
 | TASK-407-05-L01 | Intake Facts to SiteKit Plan Adapter | Done (2026-06-05) | Normalized intake facts converted to existing siteKit plan input. |
-| TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | To Do | Static page/menu/footer/contact/SEO actions through strict action families. |
+| TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | Done (2026-06-05) | Static page/menu/footer/contact/SEO coverage validated through existing siteKit actions and gates. |
 | TASK-407-05-L03 | Content Engine Decision Rules | To Do | Supported service/project/product/post/proof/team/location/FAQ engine selection and gates. |
 | TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | To Do | Beginner editing surface decisions and unsupported custom-screen gates. |
 | TASK-407-05-L05 | Follow Up Refinement Target Resolution | To Do | Active-resource/server-catalog target resolution and ambiguity questions. |
@@ -143,6 +143,9 @@ function buildSiteBuilderIntakeCompileResult(
   object enters `context.siteKit`; richer review/gate/engine facts stay in the
   compiler result and follow-on adapters. Strict typed action assembly still
   runs through the existing `buildSiteKitActionPlan` and action family contracts.
+- Static page, primary/footer menu, lead-capture form, and SEO default coverage
+  is checked from the normalized `site-kit.install` preview before execute. The
+  solution-kit installer remains the single mutation owner for those resources.
 - Static pages, listings/detail routes, content engines, custom screens, lead
   capture, SEO, and media policy are selected from supported registries.
 - Ambiguous follow-up prompts return a scoped target question; unsupported

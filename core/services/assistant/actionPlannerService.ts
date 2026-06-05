@@ -12,6 +12,7 @@ import {
   readTrustedAssistantResourceCatalog,
   sanitizeAssistantPlanningContext,
 } from "./adminContextService";
+import { assertReviewedSiteKitStaticCoverage } from "./assistantSiteBuilderIntakeStaticActions";
 import { normalizeAssistantActionPlan } from "./actionPlanSchema";
 import {
   classifyAssistantPrompt,
@@ -624,7 +625,7 @@ const buildSiteKitActionPlan = (siteKit: AssistantSiteKitPlanInput): AssistantAc
     enabledStepIds: [...preview.enabledStepIds],
   };
 
-  return {
+  const actionPlan: AssistantActionPlan = {
     id: `plan-site-kit-${preview.selectedKitId}`,
     status: "ready",
     intentId: "site-kit-install",
@@ -665,6 +666,8 @@ const buildSiteKitActionPlan = (siteKit: AssistantSiteKitPlanInput): AssistantAc
       },
     ],
   };
+  assertReviewedSiteKitStaticCoverage(actionPlan, resolvedInput);
+  return actionPlan;
 };
 
 export type AssistantActionPlanInput = {
