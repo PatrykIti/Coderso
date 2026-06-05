@@ -1,7 +1,9 @@
 import { listSiteBuilderIntakeStepDefinitionsForMode } from "./assistantSiteBuilderIntakeRegistry";
 import { deriveBasicSiteMapDefaults } from "./assistantSiteBuilderIntakeBasicDefaults";
+import { buildSiteBuilderIntakeDesignPresetFacts } from "./assistantSiteBuilderIntakeDesignPresets";
 import type {
   AssistantSiteBuilderContentEngineId,
+  AssistantSiteBuilderDesignPresetId,
   AssistantSiteBuilderHeroPresetId,
   AssistantSiteBuilderIntakeAnswer,
   AssistantSiteBuilderIntakeFacts,
@@ -142,6 +144,7 @@ export const deriveAssistantSiteBuilderIntakeFacts = ({
           customLabels: pageRoleLabels,
         })
       : undefined;
+  const designPresetId = asText(design.designPresetId) as AssistantSiteBuilderDesignPresetId | null;
 
   return omitEmpty({
     siteName: asText(profile.siteName),
@@ -167,6 +170,10 @@ export const deriveAssistantSiteBuilderIntakeFacts = ({
     contentEngines: unique(
       asTypedArray<AssistantSiteBuilderContentEngineId>(contentEngine.contentEngines)
     ),
+    designPresetId,
+    designPreset: designPresetId
+      ? buildSiteBuilderIntakeDesignPresetFacts(designPresetId)
+      : undefined,
     designBrief: asText(design.designBrief),
     referenceNotes: asText(reference.referenceNotes),
     reviewState: resolvedReviewState,

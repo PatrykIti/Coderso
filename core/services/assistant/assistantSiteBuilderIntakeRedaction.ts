@@ -9,6 +9,7 @@ import type {
 } from "./assistantSiteBuilderIntakeTypes";
 import {
   assistantSiteBuilderContentEngineIds,
+  assistantSiteBuilderDesignPresetIds,
   assistantSiteBuilderHeroPresetIds,
   assistantSiteBuilderIntakeStepIds,
   assistantSiteBuilderMediaPolicyIds,
@@ -59,6 +60,7 @@ export type AssistantSiteBuilderIntakeProviderContext = {
   visual: {
     menuPresetId: AssistantSiteBuilderIntakeFacts["menuPreset"] | null;
     heroPresetId: AssistantSiteBuilderIntakeFacts["heroPreset"] | null;
+    designPresetId: AssistantSiteBuilderIntakeFacts["designPresetId"] | null;
     heroHeadline: string | null;
     heroSubheadline: string | null;
     designBrief: string | null;
@@ -115,6 +117,7 @@ const sectionRoleIds = new Set<string>(assistantSiteBuilderSectionRoleIds);
 const contentEngineIds = new Set<string>(assistantSiteBuilderContentEngineIds);
 const menuPresetIds = new Set<string>(assistantSiteBuilderMenuPresetIds);
 const heroPresetIds = new Set<string>(assistantSiteBuilderHeroPresetIds);
+const designPresetIds = new Set<string>(assistantSiteBuilderDesignPresetIds);
 const mediaPolicyIds = new Set<string>(assistantSiteBuilderMediaPolicyIds);
 const reviewStateIds = new Set<string>(assistantSiteBuilderReviewStateIds);
 const stepIds = new Set<string>(assistantSiteBuilderIntakeStepIds);
@@ -288,6 +291,11 @@ export const buildSiteBuilderIntakeProviderContext = (
       heroPresetId: sanitizeId<NonNullable<AssistantSiteBuilderIntakeFacts["heroPreset"]>>(
         facts.heroPreset,
         heroPresetIds,
+        warnings
+      ),
+      designPresetId: sanitizeId<NonNullable<AssistantSiteBuilderIntakeFacts["designPresetId"]>>(
+        facts.designPresetId,
+        designPresetIds,
         warnings
       ),
       heroHeadline: sanitizeProviderText(facts.heroHeadline, warnings, 160),

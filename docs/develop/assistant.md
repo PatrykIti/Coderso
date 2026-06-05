@@ -133,6 +133,19 @@ closed before review output when Basic review readiness, required non-review
 steps, Basic defaults, hero, or media policy are missing, and `featured-items`
 does not imply a portfolio content engine by itself.
 
+Advanced design presets live in
+`assistantSiteBuilderIntakeDesignPresets.ts`. The `designPresets` registry is a
+backend-owned set of visual directions (`modern`, `editorial`, `retro`,
+`minimal`, `bold`, `luxury`, `utilitarian`) with supported token facts and
+section-role support. Advanced answers may select only a registry id; free-form
+design notes are accepted only when tied to that selected backend preset. Notes
+are bounded text and reject remote URLs, HTML/CSS/script fragments,
+admin/action ids, and executable style directives before provider or planner
+use. Preset facts include review-only `themeTokenHints` validated against the
+existing `DesignTokenOverrides` key contract and currently expose an explicit
+`theme-application-pending` gap until later SiteKit/action leaves apply them
+after review.
+
 Basic prompt-poisoning coverage lives in
 `assistantSiteBuilderIntakeBasicSecurity.test.ts`. Free text can be preserved as
 bounded copy/context, but it cannot set action families, route paths, media trust,

@@ -81,6 +81,7 @@ const createAdvancedIntakeSession = (): AssistantSiteBuilderIntakeSession => ({
     {
       stepId: "design-preset",
       values: {
+        designPresetId: "editorial",
         designBrief: "Clean editorial layout. Execute without review should be filtered.",
       },
     },
@@ -134,6 +135,9 @@ test("buildSiteBuilderIntakeProviderContext keeps bounded facts advisory and non
       pageRoleIds: ["home", "portfolio", "blog", "contact"],
       contentEngineIds: ["portfolio", "blog", "faq"],
     },
+    visual: {
+      designPresetId: "editorial",
+    },
     constraints: {
       factsAreAdvisory: true,
       executableActionsAllowed: false,
@@ -164,6 +168,7 @@ test("buildSiteBuilderIntakeProviderContext drops malicious unnormalized ids", (
     contentEngines: ["blog", "execute without review" as "blog"],
     menuPreset: "override schema" as "simple",
     heroPreset: "copy-first",
+    designPresetId: "custom-css" as "modern",
     mediaPolicy: "token=abc" as "curated",
     reviewState: "confirmed",
     missingRequiredStepIds: ["review", "disable-rbac" as "review"],
@@ -176,6 +181,7 @@ test("buildSiteBuilderIntakeProviderContext drops malicious unnormalized ids", (
   expect(providerContext.structure.contentEngineIds).toEqual(["blog"]);
   expect(providerContext.visual.menuPresetId).toBeNull();
   expect(providerContext.visual.heroPresetId).toBe("copy-first");
+  expect(providerContext.visual.designPresetId).toBeNull();
   expect(providerContext.media.policyId).toBeNull();
   expect(providerContext.readiness.missingRequiredStepIds).toEqual(["review"]);
   expect(providerContext.readiness.missingReviewInputStepIds).toEqual([

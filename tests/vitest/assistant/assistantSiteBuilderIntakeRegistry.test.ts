@@ -5,6 +5,7 @@ import { expect, test } from "vitest";
 
 import {
   assistantSiteBuilderContentEngineIds,
+  assistantSiteBuilderDesignPresetIds,
   assistantSiteBuilderHeroPresetIds,
   assistantSiteBuilderIntakeModes,
   assistantSiteBuilderIntakeOptionRegistryIds,
@@ -77,6 +78,14 @@ test("site-builder intake registry owns stable mode and step ids", () => {
     control: "text",
     required: true,
   });
+  expect(
+    getSiteBuilderIntakeStepDefinition("design-preset").answerFields.find(
+      (field) => field.key === "designPresetId"
+    )
+  ).toMatchObject({
+    control: "select",
+    optionRegistryId: "designPresets",
+  });
 });
 
 test("site-builder intake registry separates Basic guidance from Advanced controls", () => {
@@ -109,6 +118,7 @@ test("site-builder intake option registries expose generic reusable roles", () =
     pageRoles: [...assistantSiteBuilderPageRoleIds],
     menuPresets: [...assistantSiteBuilderMenuPresetIds],
     heroPresets: [...assistantSiteBuilderHeroPresetIds],
+    designPresets: [...assistantSiteBuilderDesignPresetIds],
     sectionRoles: [...assistantSiteBuilderSectionRoleIds],
     mediaPolicies: [...assistantSiteBuilderMediaPolicyIds],
     contentEngines: [...assistantSiteBuilderContentEngineIds],
@@ -134,6 +144,9 @@ test("site-builder intake option registries expose generic reusable roles", () =
 
   expect(getSiteBuilderIntakeOption("mediaPolicies", "curated").label).toBe(
     "Curated licensed media"
+  );
+  expect(getSiteBuilderIntakeOption("designPresets", "editorial").description).toContain(
+    "magazine"
   );
   expect(getSiteBuilderIntakeOption("pageRoles", "portfolio").description).toContain(
     "work examples"
@@ -162,6 +175,7 @@ test("site-builder intake registry modules stay Bun-free and service-owned", () 
   const moduleSources = [
     "assistantSiteBuilderIntakeTypes.ts",
     "assistantSiteBuilderIntakeRegistry.ts",
+    "assistantSiteBuilderIntakeDesignPresets.ts",
   ].map((fileName) => readFileSync(join(sourceDir, fileName), "utf8"));
   const forbiddenRuntimeImports = [
     /from\s+["'][^"']*db\/client/,

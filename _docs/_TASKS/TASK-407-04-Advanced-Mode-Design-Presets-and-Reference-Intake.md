@@ -6,7 +6,7 @@
 **Category:** Assistant + Advanced UX + Media/Reference Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-02, TASK-407-03
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress (2026-06-05)
 
 ---
 
@@ -37,7 +37,7 @@ compile into the same existing `siteKit` planner path as Basic mode.
 
 | ID | Title | Status | Output |
 |---|---|---|---|
-| TASK-407-04-L01 | Advanced Design Preset Registry | To Do | Backend-owned design preset ids, token mappings, docs matrix, and unknown-id rejection. |
+| TASK-407-04-L01 | Advanced Design Preset Registry | Done (2026-06-05) | Backend-owned design preset ids, token mappings, docs matrix, and unknown-id rejection. |
 | TASK-407-04-L02 | Advanced Menu Hero and Section Options | To Do | Controlled menu, hero, and section options mapped to existing widget capabilities. |
 | TASK-407-04-L03 | Reference Input Validation and Redaction | To Do | Media/file/reference id validation, URL fail-closed policy, and metadata/text redaction. |
 | TASK-407-04-L04 | Reference Design Brief and Review Gate | To Do | Non-executable design brief facts plus user review before planner influence. |

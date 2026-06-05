@@ -317,6 +317,19 @@ Media intake is policy-based:
 - `library` uses only existing media-library assets.
 - `placeholder` creates reviewable media slots without external media.
 
+Advanced design presets are also backend-owned. The `designPresets` option
+registry exposes `modern`, `editorial`, `retro`, `minimal`, `bold`, `luxury`,
+and `utilitarian`; each maps to supported tone, contrast, density, typography,
+image-treatment, spacing, corner-radius, accent, and section-role facts in
+`assistantSiteBuilderIntakeDesignPresets.ts`. Advanced `design-preset` answers
+may choose only one registry id plus bounded plain-language notes; notes are
+accepted only when tied to a selected backend preset. Unknown ids, remote URLs,
+HTML/CSS/script fragments, admin/action ids, and executable style directives
+fail closed before review. Preset facts include review-only `themeTokenHints`
+that pass the existing `DesignTokenOverrides` key contract, but current preset
+facts intentionally carry the `theme-application-pending` gap until later leaves
+apply those hints through the reviewed SiteKit/action adapter.
+
 Unknown mode, step, option-registry, or option ids must fail closed through the
 service-owned registry helpers before route validation, provider planning, or
 execution.

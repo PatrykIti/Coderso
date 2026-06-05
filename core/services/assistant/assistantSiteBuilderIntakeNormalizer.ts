@@ -11,6 +11,7 @@ import { throwAssistantSiteBuilderIntakeError } from "./assistantSiteBuilderInta
 import {
   ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
   type AssistantSiteBuilderContentEngineId,
+  type AssistantSiteBuilderDesignPresetId,
   type AssistantSiteBuilderHeroPresetId,
   type AssistantSiteBuilderIntakeAnswer,
   type AssistantSiteBuilderIntakeMode,
@@ -55,13 +56,21 @@ const heroKeys = new Set(["heroPreset", "headline", "subheadline", "primaryCallT
 const subpagesKeys = new Set(["pageRoles", "customLabels", "notes"]);
 const mediaPolicyKeys = new Set(["mediaPolicy", "notes"]);
 const contentEngineKeys = new Set(["contentEngines", "notes"]);
-const designPresetKeys = new Set(["designBrief", "tone", "colorNotes", "layoutNotes"]);
+const designPresetKeys = new Set([
+  "designPresetId",
+  "designBrief",
+  "tone",
+  "colorNotes",
+  "layoutNotes",
+]);
 const referenceIntakeKeys = new Set(["referenceNotes", "referenceLabels", "referenceIds"]);
 const reviewKeys = new Set(["reviewState", "confirmed", "notes"]);
 
 const stableIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const secretLikeSegmentPattern =
   /\b(password|token|secret|api[-_\s]?key|authorization|cookie|bearer|csrf|session)\b\s*[:=]\s*\S+/gi;
+const unsafeDesignTextPattern =
+  /(https?:\/\/|www\.|javascript:|data:|<\s*\/?\s*(?:script|style)|<\/|on[a-z]+\s*=|@import\b|url\s*\(|[{}]|\b(?:color|background|font-size|font-family|margin|padding|position|display|width|height|z-index|border|transform|animation|grid-template|--[a-z0-9-]+)\s*:|\b(?:action|page|entry|setting|database)\.[a-z0-9._-]+\b|\/admin\b)/iu;
 
 const isRecord = (value: unknown): value is JsonRecord =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -217,6 +226,18 @@ const normalizeOptionArray = <TId extends string>(
 
   if (options.required && unique.length === 0) fail("intake_answer_required", { field });
   return unique;
+};
+
+const normalizeDesignTextValue = (
+  value: unknown,
+  field: string,
+  options: { maxLength: number }
+): string | undefined => {
+  const text = normalizeTextValue(value, field, { maxLength: options.maxLength });
+  if (text && unsafeDesignTextPattern.test(text)) {
+    fail("intake_answer_invalid", { field, reason: "unsafe_design_text" });
+  }
+  return text;
 };
 
 const normalizeProfileValues: AnswerValueNormalizer = (input) => {
@@ -376,12 +397,33 @@ const normalizeContentEngineValues: AnswerValueNormalizer = (input) => {
 const normalizeDesignPresetValues: AnswerValueNormalizer = (input) => {
   const record = readRecord(input, "intake_answer_invalid", { stepId: "design-preset" });
   rejectUnknownKeys(record, designPresetKeys, { stepId: "design-preset" });
+  const designPresetId = normalizeOption<AssistantSiteBuilderDesignPresetId>(
+    record.designPresetId,
+    "designPresets",
+    "designPresetId"
+  );
+  const designBrief = normalizeDesignTextValue(record.designBrief, "designBrief", {
+    maxLength: 700,
+  });
+  const tone = normalizeDesignTextValue(record.tone, "tone", { maxLength: 160 });
+  const colorNotes = normalizeDesignTextValue(record.colorNotes, "colorNotes", { maxLength: 240 });
+  const layoutNotes = normalizeDesignTextValue(record.layoutNotes, "layoutNotes", {
+    maxLength: 360,
+  });
+
+  if (!designPresetId && (designBrief || tone || colorNotes || layoutNotes)) {
+    fail("intake_answer_required", {
+      field: "designPresetId",
+      reason: "design_preset_required_for_design_notes",
+    });
+  }
 
   return omitUndefined({
-    designBrief: normalizeTextValue(record.designBrief, "designBrief", { maxLength: 700 }),
-    tone: normalizeTextValue(record.tone, "tone", { maxLength: 160 }),
-    colorNotes: normalizeTextValue(record.colorNotes, "colorNotes", { maxLength: 240 }),
-    layoutNotes: normalizeTextValue(record.layoutNotes, "layoutNotes", { maxLength: 360 }),
+    designPresetId,
+    designBrief,
+    tone,
+    colorNotes,
+    layoutNotes,
   });
 };
 
@@ -506,13 +548,15 @@ export const normalizeAssistantSiteBuilderIntakeSession = (
     fail("intake_answer_invalid", { field: "answers" });
   }
 
-  const answers = (answerInputs as unknown[]).map((answer) =>
-    normalizeAssistantSiteBuilderIntakeAnswer(answer)
-  );
+  const answers = (answerInputs as unknown[]).map((answer) => {
+    const answerRecord = readRecord(answer, "intake_answer_invalid", { field: "answers" });
+    const stepId = readStepId(answerRecord.stepId);
+    assertStepAvailableForMode(mode, stepId);
+    return normalizeAssistantSiteBuilderIntakeAnswer(answer, stepId);
+  });
   const seenStepIds = new Set<AssistantSiteBuilderIntakeStepId>();
 
   for (const answer of answers) {
-    assertStepAvailableForMode(mode, answer.stepId);
     if (seenStepIds.has(answer.stepId)) {
       fail("intake_answer_duplicate", { stepId: answer.stepId });
     }

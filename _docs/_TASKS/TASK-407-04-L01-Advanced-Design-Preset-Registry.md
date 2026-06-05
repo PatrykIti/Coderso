@@ -6,7 +6,7 @@
 **Category:** Assistant + Advanced Design Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-03-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -89,3 +89,22 @@ export function resolveSiteBuilderIntakeDesignPreset(id: string) {
 - Advanced visual style is selected from backend-owned presets.
 - Unknown or arbitrary style input fails closed.
 - Preset support and gaps are documented.
+
+## Completion Notes
+
+- Added backend-owned `designPresets` ids and option registry coverage for
+  `modern`, `editorial`, `retro`, `minimal`, `bold`, `luxury`, and
+  `utilitarian`.
+- Added deterministic token/section-role facts, copied review facts, explicit
+  review-only `themeTokenHints`, `theme-application-pending` gap codes, and
+  provider-context `designPresetId` redaction.
+- Added Advanced normalizer guards so unknown preset ids and arbitrary
+  URL/HTML/CSS/script/admin/action design strings fail closed before review.
+- Required a selected backend preset whenever Advanced design notes are present,
+  preventing a free-form style-prompt bypass.
+
+## Validation Evidence
+
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/assistantSiteBuilderIntakeDesignPresets.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeNormalizer.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRedaction.test.ts` (22 tests)
+- Full targeted assistant intake batch, lint, typecheck, diff check, precommit,
+  and agent drift audit recorded in changelog 1109.

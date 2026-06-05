@@ -159,7 +159,7 @@ metadata only, strictly validated by the intake owner, and compiled to
 | TASK-407-01 | Task Contract Drift Audit and Scope Freeze | Done (2026-06-05) | None; this is the pre-implementation drift gate. |
 | TASK-407-02 | Guided Intake Mode and Session Contract | Done (2026-06-05) | TASK-407-02-L01 through TASK-407-02-L04 |
 | TASK-407-03 | Basic Mode Structured Site Flow | Done (2026-06-05) | TASK-407-03-L01 through TASK-407-03-L04 |
-| TASK-407-04 | Advanced Mode Design Presets and Reference Intake | To Do | TASK-407-04-L01 through TASK-407-04-L04 |
+| TASK-407-04 | Advanced Mode Design Presets and Reference Intake | In Progress (2026-06-05) | TASK-407-04-L01 through TASK-407-04-L04 |
 | TASK-407-05 | SiteKit Plan and Content Engine Decisions | To Do | TASK-407-05-L01 through TASK-407-05-L06 |
 | TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | To Do | TASK-407-06-L01 through TASK-407-06-L05 |
 | TASK-407-07 | E2E Live Validation Docs and Closure | To Do | TASK-407-07-L01 through TASK-407-07-L06 |
@@ -176,7 +176,7 @@ metadata only, strictly validated by the intake owner, and compiled to
 | TASK-407-03-L02 | Basic Site Map and Section Role Defaults | Done (2026-06-05) |
 | TASK-407-03-L03 | Basic Widget and Review Fact Selection | Done (2026-06-05) |
 | TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | Done (2026-06-05) |
-| TASK-407-04-L01 | Advanced Design Preset Registry | To Do |
+| TASK-407-04-L01 | Advanced Design Preset Registry | Done (2026-06-05) |
 | TASK-407-04-L02 | Advanced Menu Hero and Section Options | To Do |
 | TASK-407-04-L03 | Reference Input Validation and Redaction | To Do |
 | TASK-407-04-L04 | Reference Design Brief and Review Gate | To Do |

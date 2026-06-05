@@ -4,6 +4,8 @@ import {
 } from "./assistantSiteBuilderIntakeErrors";
 import type { SiteBuilderPlanStepId } from "../kits/solutionKitTypes";
 
+import type { DesignTokenOverrides } from "../theme/tokenTypes";
+
 export const ASSISTANT_SITE_BUILDER_INTAKE_VERSION = 1 as const;
 
 export const assistantSiteBuilderIntakeModes = ["basic", "advanced"] as const;
@@ -31,6 +33,7 @@ export const assistantSiteBuilderIntakeOptionRegistryIds = [
   "pageRoles",
   "menuPresets",
   "heroPresets",
+  "designPresets",
   "sectionRoles",
   "mediaPolicies",
   "contentEngines",
@@ -92,6 +95,19 @@ export const assistantSiteBuilderHeroPresetIds = [
 
 export type AssistantSiteBuilderHeroPresetId = (typeof assistantSiteBuilderHeroPresetIds)[number];
 
+export const assistantSiteBuilderDesignPresetIds = [
+  "modern",
+  "editorial",
+  "retro",
+  "minimal",
+  "bold",
+  "luxury",
+  "utilitarian",
+] as const;
+
+export type AssistantSiteBuilderDesignPresetId =
+  (typeof assistantSiteBuilderDesignPresetIds)[number];
+
 export const assistantSiteBuilderSectionRoleIds = [
   "value-proposition",
   "services-overview",
@@ -109,6 +125,92 @@ export const assistantSiteBuilderSectionRoleIds = [
 ] as const;
 
 export type AssistantSiteBuilderSectionRoleId = (typeof assistantSiteBuilderSectionRoleIds)[number];
+
+export const assistantSiteBuilderDesignToneIds = [
+  "clean",
+  "editorial",
+  "warm",
+  "minimal",
+  "expressive",
+  "premium",
+  "work-focused",
+] as const;
+
+export type AssistantSiteBuilderDesignToneId = (typeof assistantSiteBuilderDesignToneIds)[number];
+
+export const assistantSiteBuilderDesignContrastIds = ["low", "medium", "high"] as const;
+
+export type AssistantSiteBuilderDesignContrastId =
+  (typeof assistantSiteBuilderDesignContrastIds)[number];
+
+export const assistantSiteBuilderDesignDensityIds = ["compact", "balanced", "spacious"] as const;
+
+export type AssistantSiteBuilderDesignDensityId =
+  (typeof assistantSiteBuilderDesignDensityIds)[number];
+
+export const assistantSiteBuilderDesignTypographyIds = [
+  "sans",
+  "serif-accent",
+  "display-accent",
+] as const;
+
+export type AssistantSiteBuilderDesignTypographyId =
+  (typeof assistantSiteBuilderDesignTypographyIds)[number];
+
+export const assistantSiteBuilderDesignImageTreatmentIds = [
+  "crisp",
+  "editorial-crop",
+  "duotone",
+  "quiet",
+  "high-contrast",
+  "cinematic",
+  "functional",
+] as const;
+
+export type AssistantSiteBuilderDesignImageTreatmentId =
+  (typeof assistantSiteBuilderDesignImageTreatmentIds)[number];
+
+export const assistantSiteBuilderDesignSpacingIds = ["sm", "md", "lg", "xl"] as const;
+
+export type AssistantSiteBuilderDesignSpacingId =
+  (typeof assistantSiteBuilderDesignSpacingIds)[number];
+
+export const assistantSiteBuilderDesignCornerRadiusIds = ["sm", "md", "lg"] as const;
+
+export type AssistantSiteBuilderDesignCornerRadiusId =
+  (typeof assistantSiteBuilderDesignCornerRadiusIds)[number];
+
+export const assistantSiteBuilderDesignAccentIds = [
+  "subtle-accent",
+  "single-accent",
+  "warm-accent",
+  "strong-accent",
+  "muted-premium",
+  "status-accent",
+] as const;
+
+export type AssistantSiteBuilderDesignAccentId =
+  (typeof assistantSiteBuilderDesignAccentIds)[number];
+
+export type AssistantSiteBuilderDesignPresetTokenFacts = {
+  toneId: AssistantSiteBuilderDesignToneId;
+  contrastId: AssistantSiteBuilderDesignContrastId;
+  densityId: AssistantSiteBuilderDesignDensityId;
+  typographyId: AssistantSiteBuilderDesignTypographyId;
+  imageTreatmentId: AssistantSiteBuilderDesignImageTreatmentId;
+  spacingId: AssistantSiteBuilderDesignSpacingId;
+  cornerRadiusId: AssistantSiteBuilderDesignCornerRadiusId;
+  accentId: AssistantSiteBuilderDesignAccentId;
+};
+
+export type AssistantSiteBuilderDesignPresetFacts = {
+  presetId: AssistantSiteBuilderDesignPresetId;
+  label: string;
+  tokens: AssistantSiteBuilderDesignPresetTokenFacts;
+  themeTokenHints: DesignTokenOverrides;
+  supportedSectionRoleIds: readonly AssistantSiteBuilderSectionRoleId[];
+  gapCodes: readonly string[];
+};
 
 export const assistantSiteBuilderMediaPolicyIds = ["curated", "library", "placeholder"] as const;
 
@@ -227,6 +329,8 @@ export type AssistantSiteBuilderIntakeFacts = {
   mediaPolicy?: AssistantSiteBuilderMediaPolicyId | null;
   mediaNotes?: string | null;
   contentEngines?: readonly AssistantSiteBuilderContentEngineId[];
+  designPresetId?: AssistantSiteBuilderDesignPresetId | null;
+  designPreset?: AssistantSiteBuilderDesignPresetFacts;
   designBrief?: string | null;
   referenceNotes?: string | null;
   reviewState?: AssistantSiteBuilderReviewStateId;

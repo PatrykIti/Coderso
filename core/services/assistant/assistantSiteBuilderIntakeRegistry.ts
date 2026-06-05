@@ -3,6 +3,7 @@ import {
   assistantSiteBuilderIntakeOptionRegistryIds,
   assistantSiteBuilderIntakeStepIds,
   type AssistantSiteBuilderContentEngineId,
+  type AssistantSiteBuilderDesignPresetId,
   type AssistantSiteBuilderHeroPresetId,
   type AssistantSiteBuilderIntakeAnswerFieldDefinition,
   type AssistantSiteBuilderIntakeMode,
@@ -18,6 +19,7 @@ import {
   type AssistantSiteBuilderReviewStateId,
   type AssistantSiteBuilderSectionRoleId,
 } from "./assistantSiteBuilderIntakeTypes";
+import { siteBuilderIntakeDesignPresetOptionDefinitions } from "./assistantSiteBuilderIntakeDesignPresets";
 
 type RegistryItem = {
   readonly id: string;
@@ -468,7 +470,17 @@ export const siteBuilderIntakeStepDefinitions = freezeRegistry(
       description: "Captures controlled visual direction before token and widget preset mapping.",
       required: false,
       modeAvailability: advancedOnlyModes,
+      optionRegistryId: "designPresets",
       answerFields: answerFields([
+        {
+          key: "designPresetId",
+          label: "Design preset",
+          description:
+            "Backend-owned visual preset that maps Advanced design direction to supported token hints.",
+          control: "select",
+          required: false,
+          optionRegistryId: "designPresets",
+        },
         {
           key: "designBrief",
           label: "Design brief",
@@ -718,6 +730,11 @@ export const siteBuilderIntakeHeroPresetDefinitions = freezeRegistry(
   "heroPresets"
 );
 
+export const siteBuilderIntakeDesignPresetDefinitions = freezeRegistry(
+  siteBuilderIntakeDesignPresetOptionDefinitions satisfies readonly AssistantSiteBuilderIntakeOptionDefinition<AssistantSiteBuilderDesignPresetId>[],
+  "designPresets"
+);
+
 export const siteBuilderIntakeSectionRoleDefinitions = freezeRegistry(
   [
     {
@@ -903,6 +920,7 @@ const optionRegistries: Readonly<
   pageRoles: siteBuilderIntakePageRoleDefinitions,
   menuPresets: siteBuilderIntakeMenuPresetDefinitions,
   heroPresets: siteBuilderIntakeHeroPresetDefinitions,
+  designPresets: siteBuilderIntakeDesignPresetDefinitions,
   sectionRoles: siteBuilderIntakeSectionRoleDefinitions,
   mediaPolicies: siteBuilderIntakeMediaPolicyDefinitions,
   contentEngines: siteBuilderIntakeContentEngineDefinitions,
