@@ -135,6 +135,7 @@ export type BlueprintCapability = {
 };
 
 export type BlueprintCapabilityPlanBuilder = (options?: {
+  prompt?: string;
   promptKind?: AssistantPromptKind;
   intentFamily?: AssistantIntentFamily;
 }) => AssistantActionPlan;

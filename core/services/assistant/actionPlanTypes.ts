@@ -1180,6 +1180,7 @@ export type AssistantLaunchReadinessMetadata = {
   kind: "full-service-site";
   requiredPages: string[];
   requiredCatalogs: string[];
+  requiredMediaPages?: string[];
   minimumPublishedEntries: Record<string, number>;
   checks: AssistantLaunchReadinessCheckMetadata[];
 };

@@ -11,6 +11,7 @@ import type {
   AssistantPromptKind,
 } from "./actionPlanTypes";
 import { assertTrustedAssistantMediaReferences } from "./assistantMediaTrust";
+import { getCuratedMediaAssetByUrl } from "../media/curatedMediaProfiles";
 import { assistantActionTypes } from "./actionRegistry";
 import {
   normalizeFormActionInput,
@@ -107,6 +108,45 @@ const fail = (): never => {
 };
 
 const assertRecord = (value: unknown): JsonRecord => (isRecord(value) ? value : fail());
+
+const assertTrustedMediaReferences = (
+  value: unknown,
+  options?: Parameters<typeof assertTrustedAssistantMediaReferences>[2]
+) => {
+  try {
+    assertTrustedAssistantMediaReferences(value, [], options);
+  } catch (error) {
+    if (error instanceof Error && error.message === "assistant_media_reference_untrusted") fail();
+    throw error;
+  }
+};
+
+const readOptionalCuratedMetadata = (values: JsonRecord, key: string) => {
+  const value = values[key];
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") return fail();
+  const trimmed = value.trim();
+  if (!trimmed) fail();
+  return trimmed;
+};
+
+const assertTrustedCuratedMediaMetadata = (values: JsonRecord) => {
+  const coverImageUrl = readOptionalCuratedMetadata(values, "coverImageUrl");
+  const sourceUrl = readOptionalCuratedMetadata(values, "coverImageSourceUrl");
+  const licenseUrl = readOptionalCuratedMetadata(values, "coverImageLicenseUrl");
+  const sourceName = readOptionalCuratedMetadata(values, "coverImageSourceName");
+  const licenseName = readOptionalCuratedMetadata(values, "coverImageLicenseName");
+  const asset = coverImageUrl ? getCuratedMediaAssetByUrl(coverImageUrl) : null;
+  if (!asset) {
+    if (sourceUrl || licenseUrl || sourceName || licenseName) return fail();
+    return;
+  }
+  if (!sourceUrl || !licenseUrl || !sourceName || !licenseName) return fail();
+  if (sourceUrl && sourceUrl !== asset.sourceUrl) fail();
+  if (licenseUrl && licenseUrl !== asset.licenseUrl) fail();
+  if (sourceName && sourceName !== asset.sourceName) fail();
+  if (licenseName && licenseName !== asset.licenseName) fail();
+};
 
 const assertKeys = (value: JsonRecord, allowed: Set<string>) => {
   for (const key of Object.keys(value)) {
@@ -337,6 +377,7 @@ const normalizeLaunchReadinessMetadata = (
       "kind",
       "requiredPages",
       "requiredCatalogs",
+      "requiredMediaPages",
       "minimumPublishedEntries",
       "checks",
     ])
@@ -365,6 +406,9 @@ const normalizeLaunchReadinessMetadata = (
     kind: readEnum(input.kind, new Set(["full-service-site"] as const)),
     requiredPages: readMetadataStringArray(input.requiredPages),
     requiredCatalogs: readMetadataStringArray(input.requiredCatalogs),
+    ...(input.requiredMediaPages !== undefined
+      ? { requiredMediaPages: readMetadataStringArray(input.requiredMediaPages) }
+      : {}),
     minimumPublishedEntries,
     checks,
   };
@@ -853,22 +897,28 @@ const normalizeFormUpdateInput = (input: JsonRecord) => {
 
 const normalizeEntryUpsertDraftInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["contentTypeSlug", "title", "slug", "values"]));
+  const values = assertRecord(input.values);
+  assertTrustedMediaReferences(values, { allowCuratedTextUrlFields: true });
+  assertTrustedCuratedMediaMetadata(values);
   return {
     contentTypeSlug: readText(input.contentTypeSlug),
     title: readText(input.title),
     slug: readText(input.slug),
-    values: assertRecord(input.values),
+    values,
   };
 };
 
 const normalizeEntrySampleCreateInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["contentTypeSlug", "title", "slug", "status", "values", "seo"]));
+  const values = assertRecord(input.values);
+  assertTrustedMediaReferences(values, { allowCuratedTextUrlFields: true });
+  assertTrustedCuratedMediaMetadata(values);
   return {
     contentTypeSlug: readText(input.contentTypeSlug),
     title: readText(input.title),
     slug: readText(input.slug),
     status: readEnum(input.status, new Set(["published"])),
-    values: assertRecord(input.values),
+    values,
     ...(input.seo !== undefined ? { seo: normalizeSeoPayload(input.seo) } : {}),
   };
 };
@@ -898,13 +948,18 @@ const normalizeEntryDeleteInput = (input: JsonRecord) => {
 const normalizeEntryUpdatePatch = (value: unknown) => {
   const input = assertRecord(value);
   assertKeys(input, new Set(["title", "slug", "status", "values", "seo"]));
+  const values = input.values !== undefined ? assertRecord(input.values) : undefined;
+  if (values !== undefined) {
+    assertTrustedMediaReferences(values, { allowCuratedTextUrlFields: true });
+    assertTrustedCuratedMediaMetadata(values);
+  }
   return {
     ...(input.title !== undefined ? { title: readText(input.title) } : {}),
     ...(input.slug !== undefined ? { slug: readText(input.slug) } : {}),
     ...(input.status !== undefined
       ? { status: readEnum(input.status, new Set(["draft", "published", "archived"])) }
       : {}),
-    ...(input.values !== undefined ? { values: assertRecord(input.values) } : {}),
+    ...(values !== undefined ? { values } : {}),
     ...(input.seo !== undefined ? { seo: normalizeSeoPayload(input.seo) } : {}),
   };
 };
@@ -1167,15 +1222,18 @@ const normalizeListingTemplateCardPatchInput = (input: JsonRecord) => {
 const normalizePageWidgetPatchBlock = (value: unknown) => {
   const input = assertRecord(value);
   assertKeys(input, new Set(["id", "type", "variant", "data", "layout", "visibility", "editor"]));
-  try {
-    assertTrustedAssistantMediaReferences(input.data);
-    if (input.layout !== undefined) assertTrustedAssistantMediaReferences(input.layout);
-    if (input.visibility !== undefined) assertTrustedAssistantMediaReferences(input.visibility);
-    if (input.editor !== undefined) assertTrustedAssistantMediaReferences(input.editor);
-  } catch (error) {
-    if (error instanceof Error && error.message === "assistant_media_reference_untrusted") fail();
-    throw error;
+  assertTrustedMediaReferences(input.data, {
+    allowCuratedBlockSrc: true,
+    allowCuratedTextUrlFields: true,
+  });
+  if (input.layout !== undefined) {
+    assertTrustedMediaReferences(input.layout, {
+      allowCuratedBlockSrc: true,
+      allowCuratedTextUrlFields: true,
+    });
   }
+  if (input.visibility !== undefined) assertTrustedMediaReferences(input.visibility);
+  if (input.editor !== undefined) assertTrustedMediaReferences(input.editor);
   return {
     id: readText(input.id),
     type: readText(input.type),

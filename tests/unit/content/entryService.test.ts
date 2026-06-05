@@ -120,12 +120,8 @@ testIfDbWithOptions(
       expect(draft?.status).toBe("draft");
     } finally {
       if (localEntryId) {
-        await db
-          .delete(contentRevisions)
-          .where(eq(contentRevisions.entryId, localEntryId));
-        await db
-          .delete(previewTokens)
-          .where(eq(previewTokens.targetId, localEntryId));
+        await db.delete(contentRevisions).where(eq(contentRevisions.entryId, localEntryId));
+        await db.delete(previewTokens).where(eq(previewTokens.targetId, localEntryId));
         await db.delete(contentEntries).where(eq(contentEntries.id, localEntryId));
       }
       if (localContentTypeId) {
@@ -301,9 +297,7 @@ testIfDbWithOptions(
       expect(updated?.status).toBe("scheduled");
       expect(updated?.scheduledAt?.toISOString()).toBe(scheduledAt.toISOString());
       expect(updated?.tags).toEqual(["Release"]);
-      expect(updated?.taxonomy?.tags?.map((term) => term.name)).toEqual([
-        "Release",
-      ]);
+      expect(updated?.taxonomy?.tags?.map((term) => term.name)).toEqual(["Release"]);
       expect(updated?.seo?.description).toBe("SEO summary");
     } finally {
       if (localEntryId) {
@@ -374,9 +368,7 @@ testIfDbWithOptions(
       expect(duplicated?.publishedAt).toBeNull();
       expect(duplicated?.scheduledAt).toBeNull();
       expect(duplicated?.author?.id).toBe(localUserId);
-      expect(duplicated?.taxonomy?.tags?.map((term) => term.name)).toEqual([
-        "Featured",
-      ]);
+      expect(duplicated?.taxonomy?.tags?.map((term) => term.name)).toEqual(["Featured"]);
       expect(duplicated?.seo?.description).toBe("Source SEO summary");
       expect(duplicated?.seo?.robots).toBe("index,follow");
     } finally {
@@ -468,14 +460,10 @@ testIfDb("validates relation entry IDs", async () => {
     ).rejects.toThrow("relation_entry_missing");
   } finally {
     if (teamEntryId) {
-      await db
-        .delete(contentEntries)
-        .where(eq(contentEntries.id, teamEntryId));
+      await db.delete(contentEntries).where(eq(contentEntries.id, teamEntryId));
     }
     if (projectEntryId) {
-      await db
-        .delete(contentEntries)
-        .where(eq(contentEntries.id, projectEntryId));
+      await db.delete(contentEntries).where(eq(contentEntries.id, projectEntryId));
     }
     await db.delete(contentTypes).where(eq(contentTypes.id, teamType.id));
     await db.delete(contentTypes).where(eq(contentTypes.id, projectType.id));
@@ -504,6 +492,7 @@ testIfDb("validates media asset IDs and types", async () => {
           xFieldType: "media",
           xFieldConfig: { media: { multiple: true, accept: ["image/*"], maxItems: 2 } },
         },
+        coverImageUrl: { type: "string" },
       },
     },
   });
@@ -544,15 +533,30 @@ testIfDb("validates media asset IDs and types", async () => {
         title: "Gallery entry",
         heroImage: imageId,
         gallery: [imageId],
+        coverImageUrl: "https://images.unsplash.com/photo-1604014237800-1c9102c219da",
       },
     });
     entryId = entry?.id;
+    expect((entry.data as Record<string, unknown>).coverImageUrl).toBe(
+      "https://images.unsplash.com/photo-1604014237800-1c9102c219da"
+    );
 
     await expect(
       createEntry(type.id, {
         title: "Missing media",
         slug: `entry-${randomUUID()}`,
         data: { title: "Missing media", heroImage: randomUUID() },
+      })
+    ).rejects.toThrow("media_asset_missing");
+
+    await expect(
+      createEntry(type.id, {
+        title: "Remote media URL",
+        slug: `entry-${randomUUID()}`,
+        data: {
+          title: "Remote media URL",
+          heroImage: "https://images.unsplash.com/photo-1604014237800-1c9102c219da",
+        },
       })
     ).rejects.toThrow("media_asset_missing");
 

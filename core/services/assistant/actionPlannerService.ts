@@ -136,7 +136,10 @@ const buildReadyPlanForIntentFamily = (
     case "services_directory":
       return buildCatalogFamilyPlan(SERVICES_DIRECTORY_PRESET, options);
     case "service_business_full_site":
-      return buildFullServiceSitePlan({ promptKind: options.promptKind });
+      return buildFullServiceSitePlan({
+        prompt: options.normalizedPrompt,
+        promptKind: options.promptKind,
+      });
     case "lead_capture_site":
       return buildLeadCaptureSitePlan({ promptKind: options.promptKind });
     case "booking_service":

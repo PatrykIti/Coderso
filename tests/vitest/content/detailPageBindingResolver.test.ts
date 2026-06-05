@@ -277,6 +277,119 @@ test("resolveDetailPageBlocks uses fallback for optional missing bindings", asyn
   });
 });
 
+test("resolveDetailPageBlocks removes empty optional hero media before public render", async () => {
+  const document = createDocument({
+    blocks: [
+      {
+        id: "hero",
+        type: "hero",
+        variant: "split",
+        data: {
+          headline: "Default headline",
+          media: {
+            type: "image",
+            source: "external",
+            src: "",
+            alt: "",
+            ratio: "16:9",
+          },
+        },
+      },
+    ],
+    bindings: [
+      {
+        id: "binding-optional-cover",
+        blockId: "hero",
+        propPath: "media.src",
+        source: {
+          kind: "entry-field",
+          field: "coverImageUrl",
+        },
+        transform: "text",
+        required: false,
+      },
+    ],
+  });
+
+  const resolved = await resolveDetailPageBlocks({
+    document,
+    entry: createEntry(),
+    contentType: {
+      ...contentType,
+      schema: {
+        ...contentType.schema,
+        properties: {
+          ...contentType.schema.properties,
+          coverImageUrl: { type: "string", xFieldType: "text" },
+        },
+      },
+    },
+    preview: false,
+  });
+
+  expect(resolved[0]?.variant).toBe("centered");
+  expect((resolved[0]?.data as Record<string, unknown> | undefined)?.media).toBeUndefined();
+});
+
+test("resolveDetailPageBlocks filters non-curated cover image urls before public render", async () => {
+  const document = createDocument({
+    blocks: [
+      {
+        id: "hero",
+        type: "hero",
+        variant: "split",
+        data: {
+          headline: "Default headline",
+          media: {
+            type: "image",
+            source: "external",
+            src: "",
+            alt: "",
+            ratio: "16:9",
+          },
+        },
+      },
+    ],
+    bindings: [
+      {
+        id: "binding-cover-src",
+        blockId: "hero",
+        propPath: "media.src",
+        source: {
+          kind: "entry-field",
+          field: "coverImageUrl",
+        },
+        transform: "text",
+        required: false,
+      },
+    ],
+  });
+
+  const resolved = await resolveDetailPageBlocks({
+    document,
+    entry: {
+      ...createEntry(),
+      data: {
+        coverImageUrl: "https://example.com/untrusted.jpg",
+      },
+    },
+    contentType: {
+      ...contentType,
+      schema: {
+        ...contentType.schema,
+        properties: {
+          ...contentType.schema.properties,
+          coverImageUrl: { type: "string", xFieldType: "text" },
+        },
+      },
+    },
+    preview: false,
+  });
+
+  expect(resolved[0]?.variant).toBe("centered");
+  expect((resolved[0]?.data as Record<string, unknown> | undefined)?.media).toBeUndefined();
+});
+
 test("detail page bindings reject secret-like field paths during document normalization", () => {
   expect(() =>
     createDocument({

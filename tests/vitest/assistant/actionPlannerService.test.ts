@@ -7,6 +7,10 @@ import {
   planAssistantActions,
   planAssistantActionsWithProviderDraft,
 } from "../../../core/services/assistant/actionPlannerService";
+import {
+  isCuratedMediaUrl,
+  selectCuratedMediaProfile,
+} from "../../../core/services/media/curatedMediaProfiles";
 import type {
   AssistantActionContext,
   AssistantPlannedAction,
@@ -285,6 +289,13 @@ test("planAssistantActions creates a full-service architecture studio site", () 
         }),
       ])
     );
+    const richTextBlock = pageAction.input.blocks?.find(
+      (block) => block.type === "rich-text-section"
+    );
+    const bodyBlocks =
+      (richTextBlock?.data as { body?: { blocks?: Array<Record<string, unknown>> } } | undefined)
+        ?.body?.blocks ?? [];
+    expect(bodyBlocks.some((block) => isCuratedMediaUrl(block.src))).toBe(true);
   }
   expect(
     pageActions.find((action) => action.type === "page.upsert" && action.input.slug === "/uslugi")
@@ -299,7 +310,71 @@ test("planAssistantActions creates a full-service architecture studio site", () 
       }),
     ])
   );
-  expect(plan.actions.filter((action) => action.type === "entry.sample.create")).toHaveLength(6);
+  const sampleActions = plan.actions.filter((action) => action.type === "entry.sample.create");
+  expect(sampleActions).toHaveLength(6);
+  for (const action of sampleActions) {
+    if (action.type !== "entry.sample.create") {
+      throw new Error("expected_entry_sample_action");
+    }
+    expect(isCuratedMediaUrl(action.input.values.coverImageUrl)).toBe(true);
+    expect(action.input.values.coverImageAlt).toEqual(expect.any(String));
+    expect(action.input.values.coverImageSourceName).toBe("Unsplash");
+    expect(action.input.values.coverImageSourceUrl).toEqual(
+      expect.stringMatching(/^https:\/\/images\.unsplash\.com\/photo-/)
+    );
+    expect(action.input.values.coverImageLicenseUrl).toBe("https://unsplash.com/license");
+    expect(Object.prototype.hasOwnProperty.call(action.input.values, "heroImage")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(action.input.values, "gallery")).toBe(false);
+  }
+  expect(plan.metadata?.launchReadiness?.requiredMediaPages).toEqual([
+    "/",
+    "/o-nas",
+    "/proces",
+    "/referencje",
+  ]);
+  const listingQueries = plan.actions.filter((action) => action.type === "listing-query.upsert");
+  expect(
+    listingQueries.every(
+      (action) =>
+        action.type === "listing-query.upsert" && action.input.fields.includes("data.coverImageUrl")
+    )
+  ).toBe(true);
+  const listingTemplates = plan.actions.filter(
+    (action) => action.type === "listing-template.upsert"
+  );
+  expect(
+    listingTemplates.every((action) => {
+      if (action.type !== "listing-template.upsert") return false;
+      const fields = (action.input.config as { fields?: Array<Record<string, unknown>> }).fields;
+      return Boolean(
+        fields?.some(
+          (field) =>
+            field.key === "image" &&
+            field.source === "data.coverImageUrl" &&
+            field.format === "text"
+        )
+      );
+    })
+  ).toBe(true);
+  const detailPages = plan.actions.filter((action) => action.type === "detail-page.upsert");
+  expect(
+    detailPages.every((action) => {
+      if (action.type !== "detail-page.upsert") return false;
+      const document = action.input.document as {
+        seo?: { imageField?: string | null };
+        blocks?: Array<{ type?: string; variant?: string; data?: Record<string, unknown> }>;
+      };
+      return (
+        document.seo?.imageField === "coverImageUrl" &&
+        document.blocks?.some(
+          (block) =>
+            block.type === "hero" &&
+            block.variant === "split" &&
+            (block.data?.media as { type?: string } | undefined)?.type === "image"
+        ) === true
+      );
+    })
+  ).toBe(true);
   expect(plan.actions.filter((action) => action.type === "menu.upsert")).toHaveLength(2);
   expect(plan.actions.filter((action) => action.type === "menu.item.upsert")).toHaveLength(14);
   expect(plan.actions.filter((action) => action.type === "seo.document.upsert")).toHaveLength(7);
@@ -313,6 +388,30 @@ test("planAssistantActions creates a full-service architecture studio site", () 
       (action) => action.type === "content-type.upsert" && action.input.slug === "house-projects"
     )
   ).toBe(false);
+});
+
+test("selectCuratedMediaProfile matches supported industries without unsafe fallback", () => {
+  expect(
+    selectCuratedMediaProfile({
+      prompt: "Strona premium dla pracowni architektury z portfolio wnetrz.",
+      intentFamily: "service_business_full_site",
+    })?.id
+  ).toBe("architecture-studio");
+
+  expect(
+    selectCuratedMediaProfile({
+      prompt: "Strona dla restauracji z menu, rezerwacjami i filmem w tle.",
+      intentFamily: "service_business_full_site",
+    })
+  ).toBeNull();
+});
+
+test("classifyAssistantPrompt does not route generic non-architecture full-site prompts to architecture blueprint", () => {
+  expect(
+    classifyAssistantPrompt(
+      "Stworz kompletny serwis dla restauracji z menu, rezerwacjami, galeria i kontaktem."
+    ).intentFamily
+  ).not.toBe("service_business_full_site");
 });
 
 test("planAssistantActions routes English full-service site prompts away from CMS inspection", () => {

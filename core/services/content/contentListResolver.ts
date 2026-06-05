@@ -28,6 +28,7 @@ import {
   isPostContentTypeSlug,
   resolvePostRuntimeExcerpt,
 } from "../posts/runtime/postBlockRuntimeMapper";
+import { isCuratedMediaUrl } from "../media/curatedMediaProfiles";
 import { getMediaById } from "../media/mediaService";
 import {
   readMediaCandidate,
@@ -190,16 +191,49 @@ const imageFieldCandidates = [
   "image",
   "imageUrl",
   "coverImage",
+  "coverImageUrl",
   "featuredImage",
   "heroImage",
   "thumbnail",
 ] as const;
+const curatedExternalImageFieldCandidates = new Set(["coverImageUrl"]);
+
+const readImageFieldName = (field: string) => field.split(".").at(-1) ?? field;
+
+const imageAltFieldCandidates = [
+  "imageAlt",
+  "coverImageAlt",
+  "featuredImageAlt",
+  "heroImageAlt",
+  "thumbnailAlt",
+  "alt",
+] as const;
+
+const resolveImageAltFromRecord = (record: Record<string, unknown>): string | undefined => {
+  for (const key of imageAltFieldCandidates) {
+    const resolved = toDisplayString(record[key]);
+    if (resolved) return resolved;
+  }
+  return undefined;
+};
+
+const readImageCandidateForField = (
+  field: string,
+  value: unknown
+): ContentMediaCandidate | null => {
+  const candidate = readMediaCandidate(value);
+  if (!candidate?.url || !curatedExternalImageFieldCandidates.has(readImageFieldName(field))) {
+    return candidate;
+  }
+  return isCuratedMediaUrl(candidate.url) ? candidate : null;
+};
 
 const resolveImageCandidateFromEntry = (entry: ListEntriesRow): ContentMediaCandidate | null => {
   const data = isRecord(entry.data) ? entry.data : {};
+  const alt = resolveImageAltFromRecord(data);
   for (const key of imageFieldCandidates) {
-    const resolved = readMediaCandidate(data[key]);
-    if (resolved) return resolved;
+    const resolved = readImageCandidateForField(key, data[key]);
+    if (resolved) return resolved.alt ? resolved : { ...resolved, alt };
   }
   return null;
 };
@@ -364,6 +398,8 @@ type TemplateFieldResolutionState = {
   matched: boolean;
   visible: boolean;
   value: unknown;
+  key?: string;
+  source?: string;
 };
 
 const resolveTemplateFieldState = (
@@ -382,6 +418,8 @@ const resolveTemplateFieldState = (
     matched: true,
     visible: binding.visible,
     value: binding.value,
+    key: binding.key,
+    source: binding.source,
   };
 };
 
@@ -419,29 +457,50 @@ const resolveImageCandidateFromListingRow = (
   row: Record<string, unknown>,
   bindingIndex: Record<string, ListingRuntimeBindingState>
 ) => {
+  const data = isRecord(row.data) ? row.data : {};
+  const alt =
+    resolveStringFromTemplateOrPaths(
+      row,
+      bindingIndex,
+      ["imageAlt", "coverImageAlt", "alt"],
+      ["imageAlt", "coverImageAlt", "data.imageAlt", "data.coverImageAlt", "data.alt"]
+    ) ?? resolveImageAltFromRecord(data);
+  const withAlt = (candidate: ContentMediaCandidate | null) =>
+    candidate && !candidate.alt ? { ...candidate, alt } : candidate;
   const templateFieldState = resolveTemplateFieldState(bindingIndex, [
     "image",
     "imageSrc",
     "cover",
+    "coverImageUrl",
+    "imageUrl",
+    "heroImage",
     "thumbnail",
   ]);
   if (templateFieldState.matched) {
     if (!templateFieldState.visible) return null;
-    return readMediaCandidate(templateFieldState.value);
+    return withAlt(
+      readImageCandidateForField(templateFieldState.source ?? "", templateFieldState.value)
+    );
   }
 
-  const candidates: unknown[] = [
-    readPathValue(row, "imageSrc"),
-    readPathValue(row, "image"),
-    readPathValue(row, "coverImage"),
-    readPathValue(row, "featuredImage"),
-    readPathValue(row, "data.image"),
-    readPathValue(row, "data.coverImage"),
-    readPathValue(row, "data.featuredImage"),
+  const candidates: Array<{ field: string; value: unknown }> = [
+    { field: "imageSrc", value: readPathValue(row, "imageSrc") },
+    { field: "image", value: readPathValue(row, "image") },
+    { field: "imageUrl", value: readPathValue(row, "imageUrl") },
+    { field: "coverImage", value: readPathValue(row, "coverImage") },
+    { field: "coverImageUrl", value: readPathValue(row, "coverImageUrl") },
+    { field: "featuredImage", value: readPathValue(row, "featuredImage") },
+    { field: "heroImage", value: readPathValue(row, "heroImage") },
+    { field: "image", value: readPathValue(row, "data.image") },
+    { field: "imageUrl", value: readPathValue(row, "data.imageUrl") },
+    { field: "coverImage", value: readPathValue(row, "data.coverImage") },
+    { field: "coverImageUrl", value: readPathValue(row, "data.coverImageUrl") },
+    { field: "featuredImage", value: readPathValue(row, "data.featuredImage") },
+    { field: "heroImage", value: readPathValue(row, "data.heroImage") },
   ];
   for (const candidate of candidates) {
-    const resolved = readMediaCandidate(candidate);
-    if (resolved) return resolved;
+    const resolved = readImageCandidateForField(candidate.field, candidate.value);
+    if (resolved) return withAlt(resolved);
   }
   return null;
 };

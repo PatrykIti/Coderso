@@ -185,17 +185,17 @@ const createFullServiceSiteCapability = (): BlueprintCapabilityRegistration => {
       description:
         "Launch-shaped service business site with services, portfolio, detail pages, public samples, navigation, lead form, and SEO.",
       aliases: [
-        "full-service site",
         "complete architecture studio site",
-        "launch-ready service site",
-        "pelna strona uslugowa",
+        "full-service architecture site",
+        "launch-ready architecture studio site",
+        "pelna strona pracowni architektonicznej",
       ],
       provides: [
         {
           kind: "full-service-site",
           key: "service-business-full-site",
-          label: "Full-service service business website",
-          aliases: ["complete site", "launch site", "architecture studio site"],
+          label: "Full-service architecture studio website",
+          aliases: ["architecture studio site", "complete architecture site"],
         },
         {
           kind: "catalog",
@@ -381,6 +381,7 @@ const createFullServiceSiteCapability = (): BlueprintCapabilityRegistration => {
     capability,
     buildPlan: (options) =>
       buildFullServiceSitePlan({
+        prompt: options?.prompt,
         promptKind: options?.promptKind,
       }),
     primaryIntentFamilies: ["service_business_full_site"],

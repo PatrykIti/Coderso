@@ -32,9 +32,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 10 tasks
+- **To Do:** 11 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2236 tasks
+- **Done:** 2237 tasks
 
 ---
 
@@ -42,6 +42,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -68,6 +69,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-405 | Assistant Curated Media Profiles | High | Large | Done (2026-06-05): backend-owned curated media profiles render licensed public images for full-service sites, enforce curated URL/source/license trust, fix mobile rich-text images, and pass live Playwright CLI E2E. |
 | TASK-404 | LLM Guide Full Service Site Generation | High | Very Large | Done (2026-06-04): full-service assistant planning, dry-run, execute, public runtime, Playwright CLI, drift loops, docs, and changelog closure completed; media import remains explicitly gated. |
 | TASK-404-01 | Full Service Site Contract and Acceptance Matrix | High | Medium | Done (2026-06-04): full-service completion contract and acceptance matrix require real public pages, catalogs, details, nav/footer, contact, SEO, and explicit media gates. |
 | TASK-404-02 | Same-Plan Resource Locators and Dependency Graph | High | Large | Done (2026-06-04): same-plan locators and dependency preview support executable full-service resources without false blocking conflicts. |

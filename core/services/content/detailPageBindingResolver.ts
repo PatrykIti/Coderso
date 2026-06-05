@@ -11,6 +11,7 @@ import {
   splitBindingPath,
   writeBindingPathValue,
 } from "../utils/bindingPath";
+import { isCuratedMediaUrl } from "../media/curatedMediaProfiles";
 import type {
   DetailPageBinding,
   DetailPageBindingSource,
@@ -21,6 +22,7 @@ import type { listEntries } from "./entryService";
 
 const secretLikePattern =
   /\b[\w.-]*(token|secret|password|api[-_]?key|credential|cookie|session|csrf)[\w.-]*\b/i;
+const curatedExternalImageFieldCandidates = new Set(["coverImageUrl"]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -91,6 +93,11 @@ const collectSchemaFields = (schema: ContentSchema) => {
 };
 
 const readRootFieldName = (path: string) => splitBindingPath(path)[0] ?? null;
+
+const isCuratedExternalImageBinding = (binding: DetailPageBinding) =>
+  binding.source.kind === "entry-field" &&
+  curatedExternalImageFieldCandidates.has(readRootFieldName(binding.source.field) ?? "") &&
+  binding.propPath === "media.src";
 
 const resolveDetailPathPattern = (input: {
   contentTypeSlug: string;
@@ -216,6 +223,36 @@ const findBlockById = (blocks: WidgetBlock[], blockId: string): WidgetBlock | nu
   }
 
   return null;
+};
+
+const removeEmptyHeroMedia = (blocks: WidgetBlock[]): WidgetBlock[] => {
+  for (const block of blocks) {
+    const data = isRecord(block.data) ? block.data : null;
+    const media = data && isRecord(data.media) ? data.media : null;
+    const mediaType = toOptionalText(media?.type);
+    const mediaSrc = toOptionalText(media?.src);
+
+    if (block.type === "hero" && (mediaType === "image" || mediaType === "video") && !mediaSrc) {
+      const nextData = { ...(data ?? {}) };
+      delete nextData.media;
+      block.data = nextData;
+      if (block.variant === "split") {
+        block.variant = "centered";
+      }
+    }
+
+    if (Array.isArray(block.children)) {
+      removeEmptyHeroMedia(block.children);
+    }
+
+    if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
+      for (const items of Object.values(block.slots)) {
+        if (Array.isArray(items)) removeEmptyHeroMedia(items);
+      }
+    }
+  }
+
+  return blocks;
 };
 
 const resolveBindingFallbackValue = (binding: DetailPageBinding, value: unknown) =>
@@ -478,8 +515,13 @@ export async function resolveDetailPageBindingValue(
   const { binding, entry } = input;
 
   switch (binding.source.kind) {
-    case "entry-field":
-      return readEntryFieldValue(binding.source.field, entry, input.schemaFields, binding);
+    case "entry-field": {
+      const value = readEntryFieldValue(binding.source.field, entry, input.schemaFields, binding);
+      if (isCuratedExternalImageBinding(binding)) {
+        return typeof value === "string" && isCuratedMediaUrl(value) ? value : undefined;
+      }
+      return value;
+    }
     case "entry-meta":
       return readEntryMetaValue(binding.source, entry);
     case "computed":
@@ -553,5 +595,5 @@ export async function resolveDetailPageBlocks(
     }
   }
 
-  return blocks;
+  return removeEmptyHeroMedia(blocks);
 }

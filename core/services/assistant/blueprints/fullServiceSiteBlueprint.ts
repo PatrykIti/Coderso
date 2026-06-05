@@ -4,8 +4,18 @@ import type {
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "../actionPlanTypes";
+import type { RichTextSectionData } from "../../../widgets/core/richTextSection";
 import { buildCatalogFamilyPlan } from "./catalogFamilyBlueprint";
 import { PORTFOLIO_PROJECTS_PRESET, SERVICES_DIRECTORY_PRESET } from "./catalogFamilyPresets";
+import {
+  getCuratedMediaEvidence,
+  getCuratedMediaAssetsForProfile,
+  selectCuratedMediaProfile,
+  type CuratedMediaAsset,
+  type CuratedMediaProfileId,
+  type CuratedMediaProfile,
+  type CuratedMediaRole,
+} from "../../media/curatedMediaProfiles";
 import { buildLeadCaptureSitePlan } from "./leadCaptureBlueprint";
 
 const primaryMenuId = "menu-full-service-primary";
@@ -195,35 +205,65 @@ const withSiteShellBlocks = (action: AssistantPlannedAction): AssistantPlannedAc
 
 const supportingPageDetails: Record<
   Extract<FullServicePage["role"], "home" | "about" | "process" | "proof">,
-  { eyebrow: string; heading: string; content: string }
+  { eyebrow: string; heading: string; content: string; mediaRole: CuratedMediaRole }
 > = {
   home: {
     eyebrow: "Studio",
     heading: "Architektura prowadzona od decyzji do realizacji",
     content:
       "Studio Forma laczy koncepcje, dokumentacje, koordynacje i nadzor w jednym procesie, z czytelnymi etapami dla inwestora.",
+    mediaRole: "home",
   },
   about: {
     eyebrow: "O pracowni",
     heading: "Zespol, ktory trzyma estetyke i proces w jednym rytmie",
     content:
       "Pracownia porzadkuje wymagania, budzet i decyzje materialowe, aby projekt byl spojny wizualnie i mozliwy do sprawnej realizacji.",
+    mediaRole: "about",
   },
   process: {
     eyebrow: "Proces",
     heading: "Od diagnozy potrzeb do wsparcia przy wykonaniu",
     content:
       "Kazdy etap konczy sie konkretnym zakresem decyzji: briefem, koncepcja, dokumentacja, koordynacja i rekomendacjami wykonawczymi.",
+    mediaRole: "process",
   },
   proof: {
     eyebrow: "Referencje",
     heading: "Rezultaty, ktore widac w gotowych przestrzeniach",
     content:
       "Historie klientow pokazuja, jak uporzadkowany proces skraca droge od pierwszej rozmowy do dopracowanej realizacji.",
+    mediaRole: "proof",
   },
 };
 
-const buildSupportingPageBlocks = (page: FullServicePage): PageUpsertBlocks => {
+const defaultArchitectureProfilePrompt =
+  "studio architektoniczne pracownia architektury architektura wnetrza portfolio";
+
+const pickCuratedProfileImage = (
+  mediaProfile: CuratedMediaProfile | null,
+  role: CuratedMediaRole,
+  index = 0
+) => {
+  if (!mediaProfile) return null;
+  const assets = getCuratedMediaAssetsForProfile(mediaProfile.id, { kind: "image", role });
+  if (assets.length === 0) return null;
+  return assets[index % assets.length] ?? null;
+};
+
+const toCuratedCoverImageValues = (image: CuratedMediaAsset) => ({
+  coverImageUrl: image.src,
+  coverImageAlt: image.alt,
+  coverImageSourceName: image.sourceName,
+  coverImageSourceUrl: image.sourceUrl,
+  coverImageLicenseName: image.licenseName,
+  coverImageLicenseUrl: image.licenseUrl,
+});
+
+const buildSupportingPageBlocks = (
+  page: FullServicePage,
+  mediaProfile: CuratedMediaProfile | null
+): PageUpsertBlocks => {
   const details =
     page.role === "home" ||
     page.role === "about" ||
@@ -232,6 +272,27 @@ const buildSupportingPageBlocks = (page: FullServicePage): PageUpsertBlocks => {
       ? supportingPageDetails[page.role]
       : null;
   if (!details) return [];
+  const image = pickCuratedProfileImage(mediaProfile, details.mediaRole);
+  const blocks: NonNullable<RichTextSectionData["body"]>["blocks"] = [
+    {
+      id: `full-service-${page.role}-copy`,
+      kind: "text",
+      heading: details.heading,
+      content: `${page.body} ${details.content}`,
+    },
+  ];
+
+  if (image) {
+    blocks.push({
+      id: `full-service-${page.role}-image`,
+      kind: "image",
+      src: image.src,
+      alt: image.alt,
+      caption: `${image.sourceName} media reference, ${image.licenseName}`,
+      width: "wide",
+      align: "center",
+    });
+  }
 
   return [
     {
@@ -245,14 +306,7 @@ const buildSupportingPageBlocks = (page: FullServicePage): PageUpsertBlocks => {
         },
         body: {
           html: "",
-          blocks: [
-            {
-              id: `full-service-${page.role}-copy`,
-              kind: "text",
-              heading: details.heading,
-              content: `${page.body} ${details.content}`,
-            },
-          ],
+          blocks,
         },
         options: {
           outputMode: "blocks",
@@ -263,7 +317,9 @@ const buildSupportingPageBlocks = (page: FullServicePage): PageUpsertBlocks => {
   ];
 };
 
-const supportingPageActions = (): AssistantPlannedAction[] =>
+const supportingPageActions = (
+  mediaProfile: CuratedMediaProfile | null
+): AssistantPlannedAction[] =>
   pageMap
     .filter((page) => !["services", "portfolio", "contact"].includes(page.role))
     .map((page) => ({
@@ -277,7 +333,7 @@ const supportingPageActions = (): AssistantPlannedAction[] =>
         status: "published" as const,
         introTitle: page.title,
         introBody: page.body,
-        blocks: buildSupportingPageBlocks(page),
+        blocks: buildSupportingPageBlocks(page, mediaProfile),
       },
     }))
     .map(withSiteShellBlocks);
@@ -287,7 +343,7 @@ const leadCaptureActions = () => {
   return leadPlan.actions;
 };
 
-const serviceSamples = (): AssistantPlannedAction[] =>
+const serviceSamples = (mediaProfile: CuratedMediaProfile | null): AssistantPlannedAction[] =>
   [
     {
       title: "Projekt koncepcyjny",
@@ -316,37 +372,41 @@ const serviceSamples = (): AssistantPlannedAction[] =>
       responseTimeHours: 24,
       priceFrom: 3000,
     },
-  ].map((sample) => ({
-    id: `entry-sample-service-${sample.slug}`,
-    type: "entry.sample.create" as const,
-    title: `Publish ${sample.title}`,
-    description: "Create a published service sample entry for the public services catalog.",
-    input: {
-      contentTypeSlug: SERVICES_DIRECTORY_PRESET.contentTypeSlug,
-      title: sample.title,
-      slug: sample.slug,
-      status: "published",
-      values: {
+  ].map((sample, index) => {
+    const image = pickCuratedProfileImage(mediaProfile, "service", index);
+    return {
+      id: `entry-sample-service-${sample.slug}`,
+      type: "entry.sample.create" as const,
+      title: `Publish ${sample.title}`,
+      description: "Create a published service sample entry for the public services catalog.",
+      input: {
+        contentTypeSlug: SERVICES_DIRECTORY_PRESET.contentTypeSlug,
         title: sample.title,
         slug: sample.slug,
-        summary: sample.summary,
-        description: `${sample.summary} Ten zakres porzadkuje decyzje inwestora i daje zespolowi jasne kryteria realizacji.`,
-        serviceType: sample.serviceType,
-        responseTimeHours: sample.responseTimeHours,
-        priceFrom: sample.priceFrom,
-        location: sample.location,
-        projectStatus: "featured",
+        status: "published",
+        values: {
+          title: sample.title,
+          slug: sample.slug,
+          summary: sample.summary,
+          description: `${sample.summary} Ten zakres porzadkuje decyzje inwestora i daje zespolowi jasne kryteria realizacji.`,
+          serviceType: sample.serviceType,
+          responseTimeHours: sample.responseTimeHours,
+          priceFrom: sample.priceFrom,
+          location: sample.location,
+          projectStatus: "featured",
+          ...(image ? toCuratedCoverImageValues(image) : {}),
+        },
+        seo: {
+          title: `${sample.title} | Studio Forma`,
+          description: sample.summary,
+          canonicalUrl: `/uslugi/${sample.slug}`,
+          robots: "index,follow",
+        },
       },
-      seo: {
-        title: `${sample.title} | Studio Forma`,
-        description: sample.summary,
-        canonicalUrl: `/uslugi/${sample.slug}`,
-        robots: "index,follow",
-      },
-    },
-  }));
+    };
+  });
 
-const portfolioSamples = (): AssistantPlannedAction[] =>
+const portfolioSamples = (mediaProfile: CuratedMediaProfile | null): AssistantPlannedAction[] =>
   [
     {
       title: "Apartament nad parkiem",
@@ -375,37 +435,41 @@ const portfolioSamples = (): AssistantPlannedAction[] =>
       serviceType: "Komercja",
       location: "Krakow",
     },
-  ].map((sample) => ({
-    id: `entry-sample-portfolio-${sample.slug}`,
-    type: "entry.sample.create" as const,
-    title: `Publish ${sample.title}`,
-    description: "Create a published portfolio sample entry for the public portfolio catalog.",
-    input: {
-      contentTypeSlug: PORTFOLIO_PROJECTS_PRESET.contentTypeSlug,
-      title: sample.title,
-      slug: sample.slug,
-      status: "published",
-      values: {
+  ].map((sample, index) => {
+    const image = pickCuratedProfileImage(mediaProfile, "portfolio", index);
+    return {
+      id: `entry-sample-portfolio-${sample.slug}`,
+      type: "entry.sample.create" as const,
+      title: `Publish ${sample.title}`,
+      description: "Create a published portfolio sample entry for the public portfolio catalog.",
+      input: {
+        contentTypeSlug: PORTFOLIO_PROJECTS_PRESET.contentTypeSlug,
         title: sample.title,
         slug: sample.slug,
-        summary: sample.summary,
-        description: `${sample.summary} Projekt pokazuje, jak pracownia laczy funkcje, material i prowadzenie procesu.`,
-        resultSummary: "Spojny projekt gotowy do realizacji i latwiejsza koordynacja wykonawcza.",
-        testimonialQuote: "Proces byl czytelny, a decyzje projektowe dobrze uzasadnione.",
-        clientName: sample.clientName,
-        deliveryYear: sample.deliveryYear,
-        serviceType: sample.serviceType,
-        location: sample.location,
-        projectStatus: "featured",
+        status: "published",
+        values: {
+          title: sample.title,
+          slug: sample.slug,
+          summary: sample.summary,
+          description: `${sample.summary} Projekt pokazuje, jak pracownia laczy funkcje, material i prowadzenie procesu.`,
+          resultSummary: "Spojny projekt gotowy do realizacji i latwiejsza koordynacja wykonawcza.",
+          testimonialQuote: "Proces byl czytelny, a decyzje projektowe dobrze uzasadnione.",
+          clientName: sample.clientName,
+          deliveryYear: sample.deliveryYear,
+          serviceType: sample.serviceType,
+          location: sample.location,
+          projectStatus: "featured",
+          ...(image ? toCuratedCoverImageValues(image) : {}),
+        },
+        seo: {
+          title: `${sample.title} | Portfolio Studio Forma`,
+          description: sample.summary,
+          canonicalUrl: `/portfolio/${sample.slug}`,
+          robots: "index,follow",
+        },
       },
-      seo: {
-        title: `${sample.title} | Portfolio Studio Forma`,
-        description: sample.summary,
-        canonicalUrl: `/portfolio/${sample.slug}`,
-        robots: "index,follow",
-      },
-    },
-  }));
+    };
+  });
 
 const menuActions = (): AssistantPlannedAction[] => [
   {
@@ -491,7 +555,7 @@ const pageSeoActions = (): AssistantPlannedAction[] =>
     },
   }));
 
-const launchReadinessMetadata = {
+const buildLaunchReadinessMetadata = (mediaProfileId: CuratedMediaProfileId | null) => ({
   schemaVersion: 1 as const,
   kind: "full-service-site" as const,
   requiredPages: pageMap.map((page) => page.slug),
@@ -499,6 +563,7 @@ const launchReadinessMetadata = {
     PORTFOLIO_PROJECTS_PRESET.contentTypeSlug,
     SERVICES_DIRECTORY_PRESET.contentTypeSlug,
   ],
+  ...(mediaProfileId ? { requiredMediaPages: ["/", "/o-nas", "/proces", "/referencje"] } : {}),
   minimumPublishedEntries: {
     [PORTFOLIO_PROJECTS_PRESET.contentTypeSlug]: 3,
     [SERVICES_DIRECTORY_PRESET.contentTypeSlug]: 3,
@@ -546,19 +611,29 @@ const launchReadinessMetadata = {
       evidence: ["7 page SEO documents", "sample entry SEO metadata"],
       gates: [],
     },
-    {
-      id: "media",
-      label: "Trusted media handling",
-      status: "gated" as const,
-      evidence: ["sample content avoids raw media fields"],
-      gates: ["media_upload_gated"],
-    },
+    ...(mediaProfileId
+      ? [
+          {
+            id: "media",
+            label: "Curated media profile",
+            status: "pending_execute" as const,
+            evidence: getCuratedMediaEvidence(mediaProfileId),
+            gates: [],
+          },
+        ]
+      : []),
   ],
-};
+});
 
 export const buildFullServiceSitePlan = (options?: {
+  prompt?: string;
   promptKind?: AssistantPromptKind;
 }): AssistantActionPlan => {
+  const mediaProfile = selectCuratedMediaProfile({
+    prompt: options?.prompt ?? defaultArchitectureProfilePrompt,
+    intentFamily: "service_business_full_site",
+  });
+  const launchReadinessMetadata = buildLaunchReadinessMetadata(mediaProfile?.id ?? null);
   const portfolio = buildCatalogFamilyPlan(PORTFOLIO_PROJECTS_PRESET, {
     promptKind: options?.promptKind ?? "setup_request",
     intentFamily: "service_business_full_site",
@@ -586,19 +661,21 @@ export const buildFullServiceSitePlan = (options?: {
       launchReadiness: launchReadinessMetadata,
     },
     assumptions: [
-      "Sample entries use local schema-valid content and avoid untrusted media fields.",
+      mediaProfile
+        ? "Sample entries use local schema-valid content and curated media URL fields; media-library fields remain media asset ids."
+        : "No curated media profile matched the prompt, so media-library fields remain empty instead of using unrelated stock media.",
       "Primary and footer navigation are created as published menus before menu items are added.",
       "Public contact form uses the existing Forms runtime hardening.",
-      "Raw media import remains gated until the user selects trusted media-library assets.",
+      "Arbitrary raw media import remains gated until the user selects trusted media-library assets.",
     ],
     questions: [],
     actions: [
       ...portfolio.actions.map(withSiteShellBlocks),
       ...services.actions.map(withSiteShellBlocks),
       ...leadCaptureActions().map(withSiteShellBlocks),
-      ...supportingPageActions(),
-      ...serviceSamples(),
-      ...portfolioSamples(),
+      ...supportingPageActions(mediaProfile),
+      ...serviceSamples(mediaProfile),
+      ...portfolioSamples(mediaProfile),
       ...menuActions(),
       ...pageSeoActions(),
     ],

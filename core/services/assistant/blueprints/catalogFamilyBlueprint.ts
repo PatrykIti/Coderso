@@ -50,6 +50,8 @@ export type CatalogFamilyPreset = {
   ctaLabel: string;
   contentSchema: Record<string, unknown>;
   listingTemplateConfig: Record<string, unknown>;
+  coverImageUrlField?: string;
+  coverImageAltField?: string;
   screen: {
     eyebrow: string;
     subtitle: string;
@@ -198,6 +200,7 @@ const buildDetailPageLayout = (): DetailPageDocument["settings"]["layout"] => ({
 
 const buildDetailPageDocument = (preset: CatalogFamilyPreset): DetailPageDocument => {
   const heroId = `${preset.key}-detail-hero`;
+  const hasCoverImage = Boolean(preset.coverImageUrlField);
   return {
     schemaVersion: 1,
     id: getCatalogFamilyDetailPageId(preset),
@@ -209,7 +212,7 @@ const buildDetailPageDocument = (preset: CatalogFamilyPreset): DetailPageDocumen
     seo: {
       titlePattern: "{{ title }}",
       descriptionField: "summary",
-      imageField: "heroImage",
+      imageField: preset.coverImageUrlField ?? "heroImage",
     },
     settings: {
       template: "detail",
@@ -219,10 +222,21 @@ const buildDetailPageDocument = (preset: CatalogFamilyPreset): DetailPageDocumen
       {
         id: heroId,
         type: "hero",
-        variant: "centered",
+        variant: hasCoverImage ? "split" : "centered",
         data: {
           headline: preset.contentTypeName,
           body: preset.introBody,
+          ...(hasCoverImage
+            ? {
+                media: {
+                  type: "image",
+                  source: "external",
+                  src: "",
+                  alt: "",
+                  ratio: "16:9",
+                },
+              }
+            : {}),
         },
       },
     ],
@@ -249,6 +263,36 @@ const buildDetailPageDocument = (preset: CatalogFamilyPreset): DetailPageDocumen
         transform: "text",
         required: true,
       },
+      ...(preset.coverImageUrlField
+        ? [
+            {
+              id: `${preset.key}-detail-cover-image`,
+              blockId: heroId,
+              propPath: "media.src",
+              source: {
+                kind: "entry-field" as const,
+                field: preset.coverImageUrlField,
+              },
+              transform: "text" as const,
+              required: false,
+            },
+          ]
+        : []),
+      ...(preset.coverImageAltField
+        ? [
+            {
+              id: `${preset.key}-detail-cover-image-alt`,
+              blockId: heroId,
+              propPath: "media.alt",
+              source: {
+                kind: "entry-field" as const,
+                field: preset.coverImageAltField,
+              },
+              transform: "text" as const,
+              required: false,
+            },
+          ]
+        : []),
     ],
   };
 };
@@ -328,24 +372,24 @@ export const buildCatalogFamilyPlan = (
         name: preset.listingQueryName,
         description: `Published ${preset.contentTypeName.toLowerCase()} used by the public catalog page.`,
         contentTypeSlug: preset.contentTypeSlug,
-        fields: [
-          "id",
-          "title",
-          "slug",
-          "status",
-          "updatedAt",
-          "data.summary",
-          "data.heroImage",
-          ...Array.from(
-            new Set(
-              [
-                ...preset.screen.leftFields.map((field) => `data.${field.field}`),
-                ...preset.screen.rightFields.map((field) => `data.${field.field}`),
-              ].filter((field) => field !== "data.projectStatus")
-            )
-          ),
-          "data.projectStatus",
-        ],
+        fields: Array.from(
+          new Set([
+            "id",
+            "title",
+            "slug",
+            "status",
+            "updatedAt",
+            "data.summary",
+            "data.heroImage",
+            ...(preset.coverImageUrlField ? [`data.${preset.coverImageUrlField}`] : []),
+            ...(preset.coverImageAltField ? [`data.${preset.coverImageAltField}`] : []),
+            ...[
+              ...preset.screen.leftFields.map((field) => `data.${field.field}`),
+              ...preset.screen.rightFields.map((field) => `data.${field.field}`),
+            ].filter((field) => field !== "data.projectStatus"),
+            "data.projectStatus",
+          ])
+        ),
         includeDrafts: false,
         limit: 24,
         sort: [{ field: "title", dir: "asc" }],

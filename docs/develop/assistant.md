@@ -70,9 +70,14 @@ prompts that ask for a complete service site route to
 `service-business-full-site`, which creates the required public pages, services
 and portfolio catalogs, route-linked detail templates, six published sample
 entries, primary/footer navigation, a lead-capture form, page SEO, and launch
-readiness metadata. Media upload/generation remains a gated workflow: the plan
-can be launch-shaped with safe sample copy, but original media still has to come
-from trusted media-library assets or a later reviewed media action.
+readiness metadata. Site-builder blueprints may attach backend-owned curated
+media profile URLs to explicit string fields and page blocks so the first public
+site is visually populated with industry/theme-appropriate assets. Media
+upload/generation and arbitrary provider/user remote media remain gated
+workflows; `xFieldType: "media"` fields still require trusted media-library
+asset IDs. The curated media contract is shaped for future media kinds such as
+video, but TASK-405 ships image assets only; video remains gated until a profile,
+renderer, and validation contract are added together.
 
 Acceptance tests for this flow must not stop at a successful plan. They need to
 dry-run, execute, and verify public runtime pages, populated listings, working
@@ -97,7 +102,12 @@ The provider is treated as untrusted. The backend reconstructs any executable pl
 - **Strict schemas** reject unknown fields before persistence, render, or cache. Idempotency is enforced via `actionExecutionStore.ts`.
 - **Edits and deletes are reviewed operations** (typed plan + dry-run + conflict-aware execution), never shortcuts. Targets resolve only from active context or server-side catalogs — a browser-supplied `context.resourceCatalog` is not trusted and is only hydrated when `includeResourceCatalog=true`.
 - **Gated domains** (booking, checkout/payment, webhook automation, nested page-widget patches, installed solution-kit refinements) return `needs_input` / `gated` with no executable actions until adapters and permissions land.
-- **Secrets never leak.** Provider keys, cookies, auth headers, upload bytes, signed URLs, and raw media must not appear in provider packages, diagnostics, cache, or action payloads. Diagnostics log a prompt hash, not prompt text; media is referenced by trusted library id only.
+- **Secrets never leak.** Provider keys, cookies, auth headers, upload bytes,
+  signed URLs, and raw media must not appear in provider packages, diagnostics,
+  cache, or action payloads. Diagnostics log a prompt hash, not prompt text;
+  media-library fields reference trusted asset ids only, while curated profile
+  media references are selected from a backend-owned catalog of public
+  license-documented `https://` URLs.
 
 The provider only runs when retrieval returns snippets; a missing or failed provider falls back to `docs-only`. Per-user and optional global limits are enforced by `assistantQuota.ts`, and `assistantMetrics.ts` / `assistantRedaction.ts` record request, error, fallback, no-hit, and latency signals without leaking secrets.
 

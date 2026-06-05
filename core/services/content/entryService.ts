@@ -214,6 +214,8 @@ const matchesMimeAccept = (mimeType: string, accept?: string[]) => {
   });
 };
 
+const mediaAssetIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function validateMediaAssets(schema: ContentSchema, data: EntryData, client: DbClient) {
   const mediaFields = extractMediaFields(schema);
   if (mediaFields.length === 0) return;
@@ -238,6 +240,9 @@ async function validateMediaAssets(schema: ContentSchema, data: EntryData, clien
         if (typeof id !== "string" || id.trim() === "") {
           throw createEntryFieldError("media_value_invalid", field.name);
         }
+        if (!mediaAssetIdPattern.test(id)) {
+          throw createEntryFieldError("media_asset_missing", field.name);
+        }
         selectedIds.add(id);
         if (field.accept) {
           const bucket = allowedById.get(id) ?? [];
@@ -251,6 +256,9 @@ async function validateMediaAssets(schema: ContentSchema, data: EntryData, clien
       }
       if (typeof rawValue !== "string" || rawValue.trim() === "") {
         throw createEntryFieldError("media_value_invalid", field.name);
+      }
+      if (!mediaAssetIdPattern.test(rawValue)) {
+        throw createEntryFieldError("media_asset_missing", field.name);
       }
       selectedIds.add(rawValue);
       if (field.accept) {

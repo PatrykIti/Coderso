@@ -1,5 +1,56 @@
 import type { CatalogFamilyPreset } from "./catalogFamilyBlueprint";
 
+const curatedCoverImageSchemaProperties = {
+  coverImageUrl: {
+    type: "string",
+    title: "Curated cover image URL",
+    xFieldType: "text",
+    xFieldConfig: {
+      layout: { tab: "media", section: "Curated stock reference", width: "full" },
+    },
+  },
+  coverImageAlt: {
+    type: "string",
+    title: "Curated cover image alt text",
+    xFieldType: "text",
+    xFieldConfig: {
+      layout: { tab: "media", section: "Curated stock reference", width: "full" },
+    },
+  },
+  coverImageSourceName: {
+    type: "string",
+    title: "Curated cover image source",
+    xFieldType: "text",
+    xFieldConfig: {
+      layout: { tab: "media", section: "Curated stock reference", width: "half" },
+    },
+  },
+  coverImageSourceUrl: {
+    type: "string",
+    title: "Curated cover image source URL",
+    xFieldType: "text",
+    xFieldConfig: {
+      layout: { tab: "media", section: "Curated stock reference", width: "half" },
+    },
+  },
+  coverImageLicenseName: {
+    type: "string",
+    title: "Curated cover image license",
+    xFieldType: "text",
+    xFieldConfig: {
+      layout: { tab: "media", section: "Curated stock reference", width: "half" },
+    },
+  },
+  coverImageLicenseUrl: {
+    type: "string",
+    title: "Curated cover image license URL",
+    xFieldType: "text",
+    xFieldConfig: {
+      layout: { tab: "media", section: "Curated stock reference", width: "half" },
+    },
+  },
+} as const;
+
 const houseProjectsSchema = {
   type: "object",
   additionalProperties: false,
@@ -296,6 +347,7 @@ const portfolioProjectsSchema = {
         layout: { tab: "media", section: "Media", width: "full" },
       },
     },
+    ...curatedCoverImageSchemaProperties,
     clientName: {
       type: "string",
       title: "Client",
@@ -398,6 +450,7 @@ const servicesDirectorySchema = {
         layout: { tab: "media", section: "Media", width: "full" },
       },
     },
+    ...curatedCoverImageSchemaProperties,
     serviceType: {
       type: "string",
       title: "Service type",
@@ -455,8 +508,21 @@ const createListingTemplateConfig = (input: {
   numericField: string;
   secondaryNumericField: string;
   locationField?: string;
+  imageUrlField?: string;
 }) => ({
   fields: [
+    ...(input.imageUrlField
+      ? [
+          {
+            key: "image",
+            source: `data.${input.imageUrlField}`,
+            label: "Image",
+            fallback: null,
+            format: "text",
+            conditions: [],
+          },
+        ]
+      : []),
     {
       key: "summary",
       source: "data.summary",
@@ -806,6 +872,8 @@ export const PORTFOLIO_PROJECTS_PRESET: CatalogFamilyPreset = {
     "Przeglądaj realizacje, case studies i szczegóły projektów w jednym katalogu portfolio.",
   ctaLabel: "Zobacz realizację",
   contentSchema: portfolioProjectsSchema as unknown as Record<string, unknown>,
+  coverImageUrlField: "coverImageUrl",
+  coverImageAltField: "coverImageAlt",
   listingTemplateConfig: createListingTemplateConfig({
     emptyTitle: "No portfolio projects yet",
     emptyDescription:
@@ -818,6 +886,7 @@ export const PORTFOLIO_PROJECTS_PRESET: CatalogFamilyPreset = {
     numericField: "clientName",
     secondaryNumericField: "deliveryYear",
     locationField: "location",
+    imageUrlField: "coverImageUrl",
   }),
   screen: {
     eyebrow: "Portfolio projects",
@@ -944,6 +1013,8 @@ export const SERVICES_DIRECTORY_PRESET: CatalogFamilyPreset = {
     "Przeglądaj usługi, porównuj ich szczegóły i otwieraj dedykowane strony każdej pozycji w katalogu.",
   ctaLabel: "Zobacz usługę",
   contentSchema: servicesDirectorySchema as unknown as Record<string, unknown>,
+  coverImageUrlField: "coverImageUrl",
+  coverImageAltField: "coverImageAlt",
   listingTemplateConfig: createListingTemplateConfig({
     emptyTitle: "No services yet",
     emptyDescription:
@@ -956,6 +1027,7 @@ export const SERVICES_DIRECTORY_PRESET: CatalogFamilyPreset = {
     numericField: "serviceType",
     secondaryNumericField: "responseTimeHours",
     locationField: "location",
+    imageUrlField: "coverImageUrl",
   }),
   screen: {
     eyebrow: "Services directory",

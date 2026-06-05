@@ -98,6 +98,7 @@ import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
 import { normalizeWidgetBlock } from "../../widgets/validator";
 import type { WidgetBlock } from "../../widgets/types";
 import { composeBlueprintPageData } from "./blueprints/blueprintPageSectionComposer";
+import { isCuratedMediaUrl } from "../media/curatedMediaProfiles";
 import { normalizePageCollectionLink, type PageCollectionLink } from "../pages/pageCollectionLink";
 import type {
   AssistantActionDryRunResult,
@@ -229,6 +230,13 @@ const countExecutionOperations = (items: AssistantActionExecutionItem[]) =>
     }
   );
 
+const hasCuratedMediaUrl = (value: unknown): boolean => {
+  if (isCuratedMediaUrl(value)) return true;
+  if (Array.isArray(value)) return value.some((item) => hasCuratedMediaUrl(item));
+  if (!value || typeof value !== "object") return false;
+  return Object.values(value as Record<string, unknown>).some((item) => hasCuratedMediaUrl(item));
+};
+
 const reconcileLaunchReadinessAfterExecution = (
   plan: AssistantActionPlan,
   results: AssistantActionExecutionItem[]
@@ -260,6 +268,39 @@ const reconcileLaunchReadinessAfterExecution = (
   const successfulEntrySamplesWithSeo = successfulActions.filter(
     (action) => action.type === "entry.sample.create" && action.input.seo
   ).length;
+  const successfulPagesWithCuratedMedia = successfulActions.filter(
+    (action) => action.type === "page.upsert" && hasCuratedMediaUrl(action.input.blocks)
+  );
+  const successfulCuratedMediaPageSlugs = new Set(
+    successfulPagesWithCuratedMedia
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+      .filter((slug): slug is string => Boolean(slug))
+  );
+  const plannedPagesWithCuratedMedia = plan.actions.filter(
+    (action) => action.type === "page.upsert" && hasCuratedMediaUrl(action.input.blocks)
+  );
+  const successfulEntrySamplesWithCuratedMedia = successfulActions.filter(
+    (action) =>
+      action.type === "entry.sample.create" && hasCuratedMediaUrl(action.input.values.coverImageUrl)
+  );
+  const successfulCuratedSampleCounts = successfulEntrySamplesWithCuratedMedia.reduce<
+    Record<string, number>
+  >((acc, action) => {
+    if (action.type !== "entry.sample.create") return acc;
+    acc[action.input.contentTypeSlug] = (acc[action.input.contentTypeSlug] ?? 0) + 1;
+    return acc;
+  }, {});
+  const plannedEntrySamplesWithCuratedMedia = plan.actions.filter(
+    (action) =>
+      action.type === "entry.sample.create" && hasCuratedMediaUrl(action.input.values.coverImageUrl)
+  );
+  const plannedCuratedSampleCounts = plannedEntrySamplesWithCuratedMedia.reduce<
+    Record<string, number>
+  >((acc, action) => {
+    if (action.type !== "entry.sample.create") return acc;
+    acc[action.input.contentTypeSlug] = (acc[action.input.contentTypeSlug] ?? 0) + 1;
+    return acc;
+  }, {});
   const allRequiredPagesSatisfied = launchReadiness.requiredPages.every((slug) =>
     successfulPages.has(slug)
   );
@@ -283,6 +324,23 @@ const reconcileLaunchReadinessAfterExecution = (
         (sum, minimum) => sum + minimum,
         0
       );
+  const requiredMediaPages = launchReadiness.requiredMediaPages ?? [];
+  const requiredMediaPagesSatisfied =
+    requiredMediaPages.length > 0 &&
+    requiredMediaPages.every((slug) => successfulCuratedMediaPageSlugs.has(slug));
+  const allCuratedMediaPagesSatisfied =
+    requiredMediaPagesSatisfied &&
+    plannedPagesWithCuratedMedia.every((action) => successfulActionIds.has(action.id));
+  const allCuratedMediaSamplesSatisfied =
+    Object.entries(launchReadiness.minimumPublishedEntries).every(
+      ([contentTypeSlug, minimum]) =>
+        (plannedCuratedSampleCounts[contentTypeSlug] ?? 0) >= minimum &&
+        (successfulCuratedSampleCounts[contentTypeSlug] ?? 0) >= minimum
+    ) && plannedEntrySamplesWithCuratedMedia.every((action) => successfulActionIds.has(action.id));
+  const mediaSatisfied =
+    allCuratedMediaPagesSatisfied &&
+    allCuratedMediaSamplesSatisfied &&
+    successfulPagesWithCuratedMedia.length === plannedPagesWithCuratedMedia.length;
 
   const checks = launchReadiness.checks.map((check) => {
     if (check.status === "gated") return check;
@@ -297,7 +355,9 @@ const reconcileLaunchReadinessAfterExecution = (
               ? navigationSatisfied
               : check.id === "seo"
                 ? seoSatisfied
-                : false;
+                : check.id === "media"
+                  ? mediaSatisfied
+                  : false;
     return {
       ...check,
       status: satisfied ? ("satisfied" as const) : ("pending_execute" as const),

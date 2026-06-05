@@ -64,7 +64,8 @@ Current implemented guide blueprint:
   - six published sample entries
   - primary and footer navigation
   - lead-capture form and page SEO
-  - launch readiness metadata; media upload remains gated
+  - launch readiness metadata with curated media profile references; arbitrary
+    media upload/import remains gated
 - site-kit guide actions:
   - `site-kit.recommend`
   - `site-kit.install`
@@ -91,7 +92,12 @@ Current implemented guide blueprint:
   - compatible `content-type.upsert` fragments now merge server-side through `blueprintSchemaMerger.ts` plus the existing content schema validator, so additive field/enum extensions stay in one strict action instead of surfacing as duplicate-resource drift
   - compatible listing facet/card fragments now merge through schema-backed listing owners, and the assembler widens `listing-query.upsert.fields` automatically so merged filters/card bindings keep the runtime projection fields they need
   - assistant-facing page section aliases and merge slots now resolve through a deterministic library over the current page-builder widget registry and alias-specific `modulePackMatrix` helper mappings; unsupported aliases stay gated instead of inventing a second section catalog
-  - page section seed data still normalizes through the widget owner, but raw media URLs stay gated until the assistant has trusted media-library ids rather than arbitrary external/upload payloads
+  - page section seed data still normalizes through the widget owner; arbitrary
+    raw media URLs stay gated until the assistant has trusted media-library ids
+    rather than provider/user external-upload payloads. Site-builder blueprints
+    may use the shared backend-owned curated media profile adapter to attach
+    license-documented public media URLs in explicit non-media fields and page
+    blocks. The architecture-studio set is only the first profile.
   - blueprint graph conflicts now include media missing/ambiguous/upload/delete
     gates plus manifest permission gaps, so media and privileged boundaries
     return `needs_input`/`gated` before executable action assembly instead of
@@ -134,9 +140,13 @@ Current capability limits:
   primary/footer navigation, lead capture, SEO, and launch readiness. E2E
   acceptance still must verify public runtime pages, listings, detail routes,
   SEO basics, and mobile/desktop layout after execution.
-- Raw media upload/import/generation is not part of full-service execution yet;
-  the plan marks media readiness as `gated` and uses safe sample copy without
-  raw media fields.
+- Raw media upload/import/generation is not part of full-service execution yet.
+  Site-builder plans can satisfy media readiness only through backend-owned
+  curated media profiles with license-documented URLs stored in explicit string
+  fields and page blocks. `xFieldType: "media"` fields such as `heroImage` and
+  `gallery` remain media-library asset IDs. The profile contract can describe
+  future media kinds, but current executable readiness covers curated images
+  only; video remains gated until its renderer and validation contract ship.
 - Booking resources, checkout/payment setup, webhook automation, nested page
   widget patches, and installed solution-kit refinements remain gated until
   their adapters, permissions, and hardening are explicit.

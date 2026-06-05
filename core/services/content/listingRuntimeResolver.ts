@@ -12,9 +12,7 @@ export type ListingVisibilityOperator =
   | "lte";
 
 export type ListingVisibilityPrimitive = string | number | boolean | null;
-export type ListingVisibilityValue =
-  | ListingVisibilityPrimitive
-  | ListingVisibilityPrimitive[];
+export type ListingVisibilityValue = ListingVisibilityPrimitive | ListingVisibilityPrimitive[];
 
 export type ListingVisibilityCondition = {
   id: string;
@@ -25,6 +23,7 @@ export type ListingVisibilityCondition = {
 
 export type ListingRuntimeBindingState = {
   key: string;
+  source: string;
   visible: boolean;
   value: unknown;
 };
@@ -114,8 +113,7 @@ const toPrimitiveArray = (value: unknown): ListingVisibilityPrimitive[] => {
   );
 };
 
-const resolveExistsExpected = (value: unknown) =>
-  typeof value === "boolean" ? value : true;
+const resolveExistsExpected = (value: unknown) => (typeof value === "boolean" ? value : true);
 
 export function readListingRowField(row: Record<string, unknown>, path: string): unknown {
   const normalizedPath = path.trim();
@@ -225,10 +223,7 @@ export function evaluateListingVisibility(
   return conditions.every((condition) => evaluateListingCondition(condition, row));
 }
 
-const resolveBoundValue = (
-  row: Record<string, unknown>,
-  binding: ListingTemplateFieldBinding
-) => {
+const resolveBoundValue = (row: Record<string, unknown>, binding: ListingTemplateFieldBinding) => {
   const sourceValue = readListingRowField(row, binding.source);
   if (sourceValue === undefined || sourceValue === null || sourceValue === "") {
     return binding.fallback ?? undefined;
@@ -251,6 +246,7 @@ export function resolveListingBindingIndex(
     const visible = evaluateListingVisibility(binding.conditions, row);
     result[normalizedKey] = {
       key: binding.key,
+      source: binding.source,
       visible,
       value: visible ? resolveBoundValue(row, binding) : undefined,
     };
@@ -269,4 +265,3 @@ export function findListingBindingState(
   }
   return null;
 }
-

@@ -4847,7 +4847,7 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
     "pending_execute",
     "pending_execute",
     "pending_execute",
-    "gated",
+    "pending_execute",
   ]);
 
   const executed = await executeAssistantActionPlan(
@@ -4867,7 +4867,7 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
       expect.objectContaining({ id: "public-content", status: "satisfied" }),
       expect.objectContaining({ id: "navigation-footer", status: "satisfied" }),
       expect.objectContaining({ id: "seo", status: "satisfied" }),
-      expect.objectContaining({ id: "media", status: "gated" }),
+      expect.objectContaining({ id: "media", status: "satisfied" }),
     ])
   );
   expect(deps.__state.pages.map((page) => page.slug).sort()).toEqual([
@@ -4933,7 +4933,28 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
     "footer",
   ]);
   expect(deps.__state.entries.filter((entry) => entry.status === "published")).toHaveLength(6);
+  for (const entry of deps.__state.entries) {
+    expect(entry.data.coverImageUrl).toEqual(
+      expect.stringContaining("https://images.unsplash.com/")
+    );
+    expect(entry.data.coverImageAlt).toEqual(expect.any(String));
+    expect(entry.data.coverImageLicenseUrl).toBe("https://unsplash.com/license");
+    expect(Object.prototype.hasOwnProperty.call(entry.data, "heroImage")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(entry.data, "gallery")).toBe(false);
+  }
   expect(deps.__state.detailPages).toHaveLength(2);
+  expect(
+    deps.__state.detailPages.every(
+      (detailPage) =>
+        detailPage.currentDocument.seo?.imageField === "coverImageUrl" &&
+        detailPage.currentDocument.blocks.some(
+          (block) =>
+            block.type === "hero" &&
+            block.variant === "split" &&
+            (block.data?.media as { type?: string } | undefined)?.type === "image"
+        )
+    )
+  ).toBe(true);
   const contentRoutes =
     ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
   expect(contentRoutes.map((route) => route.detailPageId).sort()).toEqual(
@@ -4943,6 +4964,53 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
   expect(deps.__state.menuItemsByMenu.get("menu-1")).toHaveLength(7);
   expect(deps.__state.menuItemsByMenu.get("menu-2")).toHaveLength(7);
   expect(deps.__state.seoDocuments.filter((entry) => entry.targetType === "page")).toHaveLength(7);
+});
+
+test("executeAssistantActionPlan keeps media readiness pending without a required media page image", async () => {
+  const deps = createDeps();
+  const plan = planAssistantActions({
+    prompt: [
+      "Stworz premium strone dla studia architektonicznego Studio Forma.",
+      "Potrzebuje portfolio realizacji, oferte uslug z podstronami, proces wspolpracy i kontakt z formularzem leadowym.",
+      "Realizacje maja miec katalog z kategoria, lokalizacja i rokiem.",
+    ].join(" "),
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "pl-PL",
+    },
+  });
+  const driftedPlan = structuredClone(plan) as AssistantActionPlan;
+  for (const action of driftedPlan.actions) {
+    if (action.type !== "page.upsert" || action.input.slug !== "/o-nas") continue;
+    for (const block of action.input.blocks ?? []) {
+      if (block.type !== "rich-text-section") continue;
+      const data = block.data as {
+        body?: { blocks?: Array<Record<string, unknown>> };
+      };
+      data.body = {
+        ...data.body,
+        blocks: (data.body?.blocks ?? []).filter((bodyBlock) => bodyBlock.kind !== "image"),
+      };
+    }
+  }
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan: driftedPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-full-service-media-drift",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(0);
+  expect(executed.plan.metadata?.launchReadiness?.checks).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: "pages", status: "satisfied" }),
+      expect.objectContaining({ id: "public-content", status: "satisfied" }),
+      expect.objectContaining({ id: "media", status: "pending_execute" }),
+    ])
+  );
 });
 
 test("executeAssistantActionPlan resolves supporting page collection links from content type slugs", async () => {

@@ -6,6 +6,7 @@ import {
 } from "../../../core/services/assistant/actionPlanSchema";
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
+import { buildFullServiceSitePlan } from "../../../core/services/assistant/blueprints/fullServiceSiteBlueprint";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 
 test("normalizeAssistantActionPlan accepts current catalog family plans", () => {
@@ -26,6 +27,39 @@ test("normalizeAssistantActionPlan accepts current catalog family plans", () => 
     "listing-template.upsert",
     "page.upsert",
   ]);
+});
+
+test("normalizeAssistantActionPlan accepts curated media profile entry values", () => {
+  const plan = buildFullServiceSitePlan({ promptKind: "setup_request" });
+
+  const normalized = normalizeAssistantActionPlan(plan);
+
+  expect(normalized.intentId).toBe("service-business-full-site");
+  expect(
+    normalized.actions
+      .filter((action) => action.type === "entry.sample.create")
+      .every(
+        (action) =>
+          action.type === "entry.sample.create" &&
+          typeof action.input.values.coverImageUrl === "string" &&
+          action.input.values.coverImageUrl.startsWith("https://images.unsplash.com/")
+      )
+  ).toBe(true);
+});
+
+test("buildFullServiceSitePlan does not fall back to unrelated curated media profiles", () => {
+  const plan = buildFullServiceSitePlan({
+    prompt: "Stworz kompletny serwis dla restauracji z menu, rezerwacjami i filmem w tle.",
+    promptKind: "setup_request",
+  });
+
+  const normalized = normalizeAssistantActionPlan(plan);
+
+  expect(JSON.stringify(normalized.actions)).not.toContain("https://images.unsplash.com/");
+  expect(normalized.metadata?.launchReadiness?.requiredMediaPages).toBeUndefined();
+  expect(normalized.metadata?.launchReadiness?.checks.some((check) => check.id === "media")).toBe(
+    false
+  );
 });
 
 test("normalizeAssistantActionPlan accepts content route actions with explicit detailPageId semantics", () => {
@@ -2206,6 +2240,156 @@ test("normalizeAssistantActionPlan rejects raw media URLs inside page upsert blo
       })
     ).toThrow("assistant_action_plan_invalid");
   }
+});
+
+test("normalizeAssistantActionPlan rejects raw media URLs inside entry media fields", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  for (const key of ["coverImageUrl", "heroImage", "gallery"]) {
+    const values =
+      key === "gallery"
+        ? { title: "Unsafe entry", gallery: ["https://example.com/gallery.jpg"] }
+        : { title: "Unsafe entry", [key]: "https://example.com/cover.jpg" };
+    expect(() =>
+      normalizeAssistantActionPlan({
+        ...plan,
+        actions: [
+          {
+            id: `entry-unsafe-${key}`,
+            type: "entry.sample.create",
+            title: "Create unsafe sample",
+            description: "Attempt to render a remote media URL from provider output.",
+            input: {
+              contentTypeSlug: "portfolio-projects",
+              title: "Unsafe entry",
+              slug: "unsafe-entry",
+              status: "published",
+              values,
+            },
+          },
+        ],
+      })
+    ).toThrow("assistant_action_plan_invalid");
+  }
+});
+
+test("normalizeAssistantActionPlan rejects curated URLs inside media asset id fields", () => {
+  const fullServicePlan = buildFullServiceSitePlan({ promptKind: "setup_request" });
+  const curatedUrl = fullServicePlan.actions.find((action) => action.type === "entry.sample.create")
+    ?.input.values.coverImageUrl;
+  if (typeof curatedUrl !== "string") {
+    throw new Error("expected_curated_cover_url");
+  }
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  for (const key of ["heroImage", "gallery"]) {
+    const values =
+      key === "gallery"
+        ? { title: "Unsafe entry", gallery: [curatedUrl] }
+        : { title: "Unsafe entry", [key]: curatedUrl };
+    expect(() =>
+      normalizeAssistantActionPlan({
+        ...plan,
+        actions: [
+          {
+            id: `entry-curated-unsafe-${key}`,
+            type: "entry.sample.create",
+            title: "Create unsafe curated sample",
+            description: "Attempt to store a curated URL inside a media asset id field.",
+            input: {
+              contentTypeSlug: "portfolio-projects",
+              title: "Unsafe entry",
+              slug: "unsafe-entry",
+              status: "published",
+              values,
+            },
+          },
+        ],
+      })
+    ).toThrow("assistant_action_plan_invalid");
+  }
+});
+
+test("normalizeAssistantActionPlan rejects untrusted curated media metadata urls", () => {
+  const fullServicePlan = buildFullServiceSitePlan({ promptKind: "setup_request" });
+  const sample = fullServicePlan.actions.find((action) => action.type === "entry.sample.create");
+  if (!sample || sample.type !== "entry.sample.create") {
+    throw new Error("expected_curated_sample");
+  }
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "entry-unsafe-curated-source",
+          type: "entry.sample.create",
+          title: "Create unsafe curated source",
+          description: "Attempt to attach an arbitrary source URL to curated media.",
+          input: {
+            contentTypeSlug: "portfolio-projects",
+            title: "Unsafe source",
+            slug: "unsafe-source",
+            status: "published",
+            values: {
+              title: "Unsafe source",
+              coverImageUrl: sample.input.values.coverImageUrl,
+              coverImageSourceName: sample.input.values.coverImageSourceName,
+              coverImageSourceUrl: "https://example.com/source",
+              coverImageLicenseName: sample.input.values.coverImageLicenseName,
+              coverImageLicenseUrl: sample.input.values.coverImageLicenseUrl,
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan requires source and license metadata for curated cover urls", () => {
+  const fullServicePlan = buildFullServiceSitePlan({ promptKind: "setup_request" });
+  const sample = fullServicePlan.actions.find((action) => action.type === "entry.sample.create");
+  if (!sample || sample.type !== "entry.sample.create") {
+    throw new Error("expected_curated_sample");
+  }
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "entry-missing-curated-source",
+          type: "entry.sample.create",
+          title: "Create incomplete curated source",
+          description: "Attempt to attach curated media without source metadata.",
+          input: {
+            contentTypeSlug: "portfolio-projects",
+            title: "Incomplete source",
+            slug: "incomplete-source",
+            status: "published",
+            values: {
+              title: "Incomplete source",
+              coverImageUrl: sample.input.values.coverImageUrl,
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
 });
 
 test("normalizeAssistantActionPlan keeps non-media URL fields available to widget contracts", () => {

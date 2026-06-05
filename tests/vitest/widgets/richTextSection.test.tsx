@@ -47,6 +47,42 @@ test("rich text section renders defaults with semantic title and html source mar
   expect(resolveRichTextSourceDrift(richTextSectionDefaults)).toMatchObject({ hasDrift: false });
 });
 
+test("rich text section image blocks keep wide media responsive with inline max width", () => {
+  const html = renderToString(
+    <RichTextSectionBlock
+      data={{
+        ...richTextSectionDefaults,
+        body: {
+          html: "",
+          blocks: [
+            {
+              id: "image-1",
+              kind: "image",
+              src: "https://example.com/photo.jpg",
+              alt: "Responsive image",
+              caption: "Caption",
+              width: "wide",
+              align: "center",
+            },
+          ],
+        },
+        options: {
+          ...richTextSectionDefaults.options,
+          outputMode: "blocks",
+        },
+      }}
+      variant="single-column"
+      blockId="responsive-rich-text"
+    />
+  );
+
+  expect(html).toContain(
+    'style="max-width:min(100%,56rem);width:100%;margin-left:auto;margin-right:auto;"'
+  );
+  expect(html).toContain('style="display:block;width:100%;max-width:100%;height:auto;"');
+  expect(html).toContain('class="h-auto w-full object-cover"');
+});
+
 test("rich text section sanitization strips dangerous payloads and reports diagnostics", () => {
   const raw =
     '<script>alert(1)</script><h1>Main</h1><p onclick="evil()">Safe</p><a href="javascript:alert(1)">x</a><img src=x onerror="evil()">';

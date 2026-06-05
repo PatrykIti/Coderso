@@ -81,6 +81,15 @@ Multi:
 
 `media.accept` i `media.maxItems` sa konfigurowane w schema meta (`xFieldConfig`).
 
+Pola oznaczone `xFieldType: "media"` zawsze przechowuja ID assetu z biblioteki
+mediow. Zewnetrzne URL-e, nawet z backendowego profilu kuratorowanych mediow,
+nie moga byc zapisywane w takich polach. Jesli blueprint potrzebuje
+bezpiecznego publicznego obrazu bez uploadu, musi uzyc osobnego pola tekstowego,
+np. `coverImageUrl`, i udokumentowac zrodlo/licencje obok niego. Asystent moze
+dobierac takie URL-e tylko przez zaufany katalog/profil mediow po stronie
+backendu; prompt uzytkownika ani provider nie moga dostarczyc dowolnego URL-a do
+pola obrazka.
+
 ## Admin UI behavior (v1)
 
 - Upload dropzone + manual browse.

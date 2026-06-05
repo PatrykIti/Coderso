@@ -325,9 +325,7 @@ export const resolveIntentFamily = (prompt: string): AssistantIntentFamily => {
   const normalized = normalizeAssistantPlannerPrompt(prompt);
   if (
     (includesAny(normalized, fullServiceSiteKeywords) &&
-      (includesAny(normalized, architectureStudioKeywords) ||
-        (includesAny(normalized, portfolioKeywords) &&
-          includesAny(normalized, serviceDirectoryKeywords)))) ||
+      includesAny(normalized, architectureStudioKeywords)) ||
     (includesAny(normalized, architectureStudioKeywords) &&
       includesAny(normalized, portfolioKeywords) &&
       includesAny(normalized, serviceDirectoryKeywords) &&
