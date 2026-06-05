@@ -8,6 +8,7 @@ import {
 } from "./assistantSiteBuilderIntakeRegistry";
 import { deriveAssistantSiteBuilderIntakeFacts } from "./assistantSiteBuilderIntakeFacts";
 import { throwAssistantSiteBuilderIntakeError } from "./assistantSiteBuilderIntakeErrors";
+import { normalizeReferenceTextValue } from "./assistantSiteBuilderIntakeReferencePolicy";
 import {
   ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
   type AssistantSiteBuilderAdvancedHeroVariantId,
@@ -78,7 +79,14 @@ const designPresetKeys = new Set([
   "colorNotes",
   "layoutNotes",
 ]);
-const referenceIntakeKeys = new Set(["referenceNotes", "referenceLabels", "referenceIds"]);
+const referenceIntakeKeys = new Set([
+  "referenceNotes",
+  "referenceLabels",
+  "referenceIds",
+  "mediaAssetIds",
+  "temporaryReferenceIds",
+  "textBrief",
+]);
 const reviewKeys = new Set(["reviewState", "confirmed", "notes"]);
 const advancedOnlyAnswerKeysByStep: Partial<
   Record<AssistantSiteBuilderIntakeStepId, ReadonlySet<string>>
@@ -211,6 +219,15 @@ const normalizeStableIdArray = (
   }
 
   return values;
+};
+
+const normalizeOptionalStableIdArray = (
+  value: unknown,
+  field: string,
+  options: { maxItems?: number } = {}
+): string[] | undefined => {
+  if (value === undefined || value === null) return undefined;
+  return normalizeStableIdArray(value, field, options);
 };
 
 const normalizeOption = <TId extends string>(
@@ -488,14 +505,23 @@ const normalizeReferenceIntakeValues: AnswerValueNormalizer = (input) => {
   rejectUnknownKeys(record, referenceIntakeKeys, { stepId: "reference-intake" });
 
   return omitUndefined({
-    referenceNotes: normalizeTextValue(record.referenceNotes, "referenceNotes", {
+    referenceNotes: normalizeReferenceTextValue(record.referenceNotes, "referenceNotes", {
       maxLength: 700,
     }),
+    textBrief: normalizeReferenceTextValue(record.textBrief, "textBrief", { maxLength: 700 }),
     referenceLabels: normalizeTextArray(record.referenceLabels, "referenceLabels", {
       maxItems: 8,
       maxLength: 120,
     }),
     referenceIds: normalizeStableIdArray(record.referenceIds, "referenceIds", { maxItems: 8 }),
+    mediaAssetIds: normalizeOptionalStableIdArray(record.mediaAssetIds, "mediaAssetIds", {
+      maxItems: 12,
+    }),
+    temporaryReferenceIds: normalizeOptionalStableIdArray(
+      record.temporaryReferenceIds,
+      "temporaryReferenceIds",
+      { maxItems: 8 }
+    ),
   });
 };
 

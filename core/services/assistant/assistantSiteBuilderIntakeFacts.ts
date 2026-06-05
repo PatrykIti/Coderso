@@ -73,7 +73,9 @@ const getMissingRequiredStepIds = (
     .map((definition) => definition.id);
 
 const hasRedactedValue = (value: unknown): boolean => {
-  if (typeof value === "string") return value.includes("[REDACTED]");
+  if (typeof value === "string") {
+    return value.includes("[REDACTED]") || value.includes("[FILTERED_INSTRUCTION]");
+  }
   if (Array.isArray(value)) return value.some((item) => hasRedactedValue(item));
   if (value && typeof value === "object") {
     return Object.values(value as Record<string, unknown>).some((item) => hasRedactedValue(item));
@@ -198,6 +200,7 @@ export const deriveAssistantSiteBuilderIntakeFacts = ({
     designBrief: asText(design.designBrief),
     advancedLayout,
     referenceNotes: asText(reference.referenceNotes),
+    referenceTextBrief: asText(reference.textBrief),
     reviewState: resolvedReviewState,
     reviewNotes: asText(review.notes),
     answeredStepIds,

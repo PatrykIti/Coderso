@@ -343,6 +343,23 @@ backed by `modulePackMatrix.assistantPageSections`; mismatched section roles,
 design-preset support gaps, or conflicting menu choices become review gates
 instead of invented widgets, CSS, layout code, or executor actions.
 
+Advanced reference intake is bounded by
+`assistantSiteBuilderIntakeReferencePolicy.ts`. Session answers may carry
+plain-language `referenceNotes`, `textBrief`, existing `mediaAssetIds`, and
+temporary reference ids; arbitrary `remoteUrls` are not accepted as session
+answers and are converted to explicit gates only inside the backend reference
+policy. Candidate media/temp ids stay answer-local until they are validated by
+`normalizeSafeReferenceInput` with injected deps; they are not promoted into
+provider facts by the synchronous session normalizer. Existing media-library
+ids must be resolved through injected readable media deps before use. Temporary
+references influence design evidence only when they are scanned, supported by
+type, size-bounded, and converted to safe digests. Filenames, EXIF/metadata, OCR
+text, alt text, extracted text, signed URLs, cookies, and token-like values are
+redacted before facts or provider context. Provider context never includes raw
+reference material, bytes, raw metadata, signed URLs, or raw reference ids; it
+exposes only redacted text-reference presence, a stable digest, and
+`rawIncluded:false`.
+
 Unknown mode, step, option-registry, or option ids must fail closed through the
 service-owned registry helpers before route validation, provider planning, or
 execution.

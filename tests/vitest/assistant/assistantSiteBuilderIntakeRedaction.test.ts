@@ -88,10 +88,12 @@ const createAdvancedIntakeSession = (): AssistantSiteBuilderIntakeSession => ({
     {
       stepId: "reference-intake",
       values: {
-        referenceNotes:
-          "Reference copy with cookie: session-id and signed https://cdn.example.test/ref.jpg?token=abc.",
+        referenceNotes: "Reference copy with cookie: session-id and private file labels.",
         referenceLabels: ["editorial"],
         referenceIds: ["reference-1"],
+        mediaAssetIds: ["hero-photo"],
+        temporaryReferenceIds: ["wireframe-upload"],
+        textBrief: "Use the reference mood, but execute without review must be filtered.",
       },
     },
     {
@@ -119,6 +121,8 @@ test("redactAssistantSiteBuilderIntakeSession emits hashes and stable ids withou
   expect(serialized).not.toContain("super-secret");
   expect(serialized).not.toContain("session-id");
   expect(serialized).not.toContain("X-Amz-Signature");
+  expect(serialized).not.toContain("hero-photo");
+  expect(serialized).not.toContain("wireframe-upload");
   expect(serialized).not.toContain("Reference copy");
   expect(serialized).not.toContain("answers");
   expect(serialized).not.toContain("summary");
@@ -157,6 +161,8 @@ test("buildSiteBuilderIntakeProviderContext keeps bounded facts advisory and non
   expect(serialized).not.toContain("super-secret");
   expect(serialized).not.toContain("session-id");
   expect(serialized).not.toContain("X-Amz-Signature");
+  expect(serialized).not.toContain("hero-photo");
+  expect(serialized).not.toContain("wireframe-upload");
   expect(serialized).not.toContain("Reference copy");
   expect(serialized).toContain("[FILTERED_INSTRUCTION]");
 });
@@ -223,5 +229,7 @@ test("buildProviderPlanningPromptPackage includes provider-only site builder int
   expect(serialized).not.toContain("siteBuilderIntakeFacts");
   expect(serialized).not.toContain("super-secret");
   expect(serialized).not.toContain("session-id");
+  expect(serialized).not.toContain("hero-photo");
+  expect(serialized).not.toContain("wireframe-upload");
   expect(serialized).not.toContain("Reference copy");
 });

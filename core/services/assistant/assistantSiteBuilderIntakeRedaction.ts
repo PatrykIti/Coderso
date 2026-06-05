@@ -221,6 +221,9 @@ const sanitizeReviewState = (
 ): AssistantSiteBuilderReviewStateId | null =>
   sanitizeId<AssistantSiteBuilderReviewStateId>(value, reviewStateIds, warnings);
 
+const hasReferenceMaterial = (facts: AssistantSiteBuilderIntakeFacts): boolean =>
+  Boolean(facts.referenceNotes || facts.referenceTextBrief);
+
 export const redactAssistantSiteBuilderIntakeSession = (
   session: AssistantSiteBuilderIntakeSession
 ): AssistantSiteBuilderIntakeDiagnostic => {
@@ -229,7 +232,7 @@ export const redactAssistantSiteBuilderIntakeSession = (
   const warnings: string[] = [];
 
   if (facts.redactionApplied === true) pushWarning(warnings, "intake_text_redacted");
-  if (facts.referenceNotes) pushWarning(warnings, "reference_material_hashed");
+  if (hasReferenceMaterial(facts)) pushWarning(warnings, "reference_material_hashed");
   if (facts.readyForReview !== true) pushWarning(warnings, "intake_not_ready_for_review");
   if (facts.readyForExecution !== true) pushWarning(warnings, "intake_not_ready_for_execution");
   if ((facts.missingRequiredStepIds ?? []).length > 0) {
@@ -255,8 +258,14 @@ export const buildSiteBuilderIntakeProviderContext = (
   facts: AssistantSiteBuilderIntakeFacts
 ): AssistantSiteBuilderIntakeProviderContext => {
   const warnings: string[] = [];
-  const referenceDigest = facts.referenceNotes
-    ? hashStableAssistantIntakeValue(facts.referenceNotes)
+  const referenceNotes = sanitizeProviderText(facts.referenceNotes, warnings, 360);
+  const referenceTextBrief = sanitizeProviderText(facts.referenceTextBrief, warnings, 360);
+  const referencesPresent = Boolean(referenceNotes || referenceTextBrief);
+  const referenceDigest = referencesPresent
+    ? hashStableAssistantIntakeValue({
+        referenceNotes,
+        referenceTextBrief,
+      })
     : null;
   if (referenceDigest) pushWarning(warnings, "reference_material_hashed");
 
@@ -311,7 +320,7 @@ export const buildSiteBuilderIntakeProviderContext = (
       notes: sanitizeProviderText(facts.mediaNotes, warnings, 240),
     },
     references: {
-      present: Boolean(facts.referenceNotes),
+      present: referencesPresent,
       digest: referenceDigest,
       rawIncluded: false,
     },

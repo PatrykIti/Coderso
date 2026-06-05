@@ -436,6 +436,7 @@ export type AssistantSiteBuilderIntakeFacts = {
   designBrief?: string | null;
   advancedLayout?: AssistantSiteBuilderAdvancedLayoutFacts;
   referenceNotes?: string | null;
+  referenceTextBrief?: string | null;
   reviewState?: AssistantSiteBuilderReviewStateId;
   reviewNotes?: string | null;
   answeredStepIds?: readonly AssistantSiteBuilderIntakeStepId[];

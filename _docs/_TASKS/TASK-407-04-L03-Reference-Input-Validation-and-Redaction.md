@@ -6,7 +6,7 @@
 **Category:** Assistant + Media Reference Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-04-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-05)
 
 ---
 
@@ -49,6 +49,7 @@ execute instructions from images/files.
 | Area | Files |
 |---|---|
 | Reference policy | `core/services/assistant/assistantSiteBuilderIntakeReferencePolicy.ts` |
+| Intake session contract | `core/services/assistant/assistantSiteBuilderIntakeNormalizer.ts`, `core/services/assistant/assistantSiteBuilderIntakeFacts.ts`, `core/services/assistant/assistantSiteBuilderIntakeRedaction.ts`, `core/services/assistant/assistantSiteBuilderIntakeRegistry.ts`, `core/services/assistant/assistantSiteBuilderIntakeTypes.ts` |
 | Media trust | `core/services/assistant/assistantMediaTrust.ts`, `core/services/media/curatedMediaProfiles.ts` only if needed |
 | Route validation | `core/server/validation/assistantActionSchemas.ts` if reference context is carried in plan requests |
 | Tests | `tests/vitest/assistant/assistantSiteBuilderIntakeReferencePolicy.test.ts`, route tests if route schema changes |
@@ -83,6 +84,29 @@ export async function normalizeSafeReferenceInput(input: unknown, deps: Referenc
 - Tests for arbitrary remote URL rejection.
 - Tests for EXIF/OCR/filename/text redaction and instruction-like metadata.
 - Route tests if a dedicated reference route or plan context schema changes.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+
+## Completion Notes
+
+- Added a pure, deps-injected reference policy that resolves readable existing
+  media-library asset ids before use.
+- Added temporary-reference gates for missing, pending, rejected, unsupported
+  type, and oversized records; scanned supported records become digest-only
+  safe references.
+- Kept arbitrary remote media URLs out of session answers and converted them to
+  explicit backend policy gates when passed to the reference policy.
+- Extended Advanced `reference-intake` answers with bounded `textBrief`,
+  `mediaAssetIds`, and `temporaryReferenceIds`; candidate ids remain
+  answer-local until validated by `normalizeSafeReferenceInput`.
+- Updated provider context to expose redacted text-reference presence, stable
+  digest, and `rawIncluded:false` without raw reference ids, bytes, metadata,
+  signed URLs, filenames, OCR text, alt text, or extracted text.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeReferencePolicy.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeNormalizer.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRedaction.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeRegistry.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeAdvancedOptions.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`

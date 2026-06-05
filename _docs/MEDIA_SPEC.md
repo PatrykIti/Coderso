@@ -90,6 +90,21 @@ dobierac takie URL-e tylko przez zaufany katalog/profil mediow po stronie
 backendu; prompt uzytkownika ani provider nie moga dostarczyc dowolnego URL-a do
 pola obrazka.
 
+## Assistant reference intake
+
+Advanced assistant reference intake treats media as design evidence only. It may
+use existing media-library ids after backend permission/read checks, and
+temporary reference ids only after scan/type/size validation. Arbitrary remote
+media URLs are unsupported unless a backend-owned trusted adapter is introduced
+for that source.
+
+Before reference evidence can influence assistant facts or provider context,
+the backend redacts filenames, EXIF/metadata, OCR/extracted text, alt text,
+signed URLs, cookies, tokens, and secret-like values. Provider prompts and
+diagnostics receive only bounded text facts, digests, and `rawIncluded:false`;
+raw bytes, signed URLs, raw metadata, and raw reference ids must not be stored
+in browser state or sent to a provider.
+
 ## Admin UI behavior (v1)
 
 - Upload dropzone + manual browse.

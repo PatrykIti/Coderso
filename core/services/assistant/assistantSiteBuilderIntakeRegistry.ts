@@ -597,6 +597,35 @@ export const siteBuilderIntakeStepDefinitions = freezeRegistry(
           maxItems: 8,
           maxLength: 80,
         },
+        {
+          key: "mediaAssetIds",
+          label: "Media asset ids",
+          description:
+            "Existing media-library asset ids that backend reference policy must confirm as readable before use.",
+          control: "text_list",
+          required: false,
+          maxItems: 12,
+          maxLength: 80,
+        },
+        {
+          key: "temporaryReferenceIds",
+          label: "Temporary reference ids",
+          description:
+            "Temporary upload reference ids that backend reference policy must scan, bound, and redact before use.",
+          control: "text_list",
+          required: false,
+          maxItems: 8,
+          maxLength: 80,
+        },
+        {
+          key: "textBrief",
+          label: "Text brief",
+          description:
+            "Plain-language visual observations; remote URLs and executable instructions are rejected or filtered.",
+          control: "textarea",
+          required: false,
+          maxLength: 700,
+        },
       ]),
     },
     {

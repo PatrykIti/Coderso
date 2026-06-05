@@ -98,6 +98,22 @@ test("site-builder intake registry owns stable mode and step ids", () => {
     modeAvailability: ["advanced"],
     optionRegistryId: "advancedMenuBehaviors",
   });
+  expect(
+    getSiteBuilderIntakeStepDefinition("reference-intake").answerFields.find(
+      (field) => field.key === "mediaAssetIds"
+    )
+  ).toMatchObject({
+    control: "text_list",
+    maxItems: 12,
+  });
+  expect(
+    getSiteBuilderIntakeStepDefinition("reference-intake").answerFields.find(
+      (field) => field.key === "textBrief"
+    )
+  ).toMatchObject({
+    control: "textarea",
+    maxLength: 700,
+  });
 });
 
 test("site-builder intake registry separates Basic guidance from Advanced controls", () => {

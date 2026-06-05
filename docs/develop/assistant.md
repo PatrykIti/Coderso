@@ -156,6 +156,19 @@ menu surface choices, missing section roles, and design-preset support gaps fail
 closed or become review gates; they never add `context.siteBuilderIntake`,
 provider-authored actions, CSS, or custom layout code to the planner request.
 
+Advanced reference intake lives in
+`assistantSiteBuilderIntakeReferencePolicy.ts`. It accepts only bounded text,
+candidate media-library ids, and candidate temporary reference ids. Candidate
+ids stay answer-local until `normalizeSafeReferenceInput` resolves them through
+injected readable-media and scanned-reference deps; the synchronous session
+normalizer does not promote them into provider facts. Raw remote media URLs are
+unsupported unless a future backend-owned trusted adapter owns that source.
+Filenames, EXIF/metadata, OCR/extracted text, alt text, cookies, tokens, and
+signed URLs are redacted before any design evidence can reach facts or provider
+context. Provider context exposes redacted text-reference presence and a digest
+only; raw bytes, raw metadata, raw URLs, and raw reference ids stay out of
+diagnostics, browser state, and prompt packages.
+
 Basic prompt-poisoning coverage lives in
 `assistantSiteBuilderIntakeBasicSecurity.test.ts`. Free text can be preserved as
 bounded copy/context, but it cannot set action families, route paths, media trust,
