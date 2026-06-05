@@ -243,6 +243,28 @@ const openAiRecord = {
   ],
 };
 
+const resendRecord = {
+  id: "resend",
+  name: "Resend",
+  description: "Transactional email",
+  category: "Communication",
+  scopes: ["email:send"],
+  status: "connected" as const,
+  health: { status: "healthy", lastCheckedAt: null, lastError: null },
+  updatedAt: null,
+  fields: [
+    {
+      key: "apiKey",
+      label: "API Key",
+      type: "secret" as const,
+      required: true,
+      secret: true,
+      configured: true,
+      value: "re_shouldNeverRender123456",
+    },
+  ],
+};
+
 const mountPage = () => {
   const host = document.createElement("div");
   document.body.appendChild(host);
@@ -511,6 +533,61 @@ test("IntegrationsPage trims drawer payload before saving integration updates", 
         webhookUrl: "https://hooks.slack.com/services/test",
         defaultChannel: "#ops",
       },
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("IntegrationsPage exposes Resend without secret or base URL leakage and can clear key", async () => {
+  integrationsState.listIntegrations.mockResolvedValue([resendRecord]);
+  integrationsState.updateIntegration.mockResolvedValue({
+    item: {
+      ...resendRecord,
+      status: "disconnected",
+      fields: [
+        {
+          ...resendRecord.fields[0],
+          configured: false,
+          value: null,
+        },
+      ],
+    },
+  });
+
+  const view = mountPage();
+
+  try {
+    await flush();
+
+    expect(view.host.textContent).toContain("Resend");
+    expect(view.host.textContent).not.toContain("re_shouldNeverRender123456");
+
+    await React.act(async () => {
+      findButton(view.host, "Configure")?.click();
+    });
+
+    expect(view.host.textContent).toContain("API Key");
+    expect(view.host.textContent).not.toContain("Base URL");
+    expect(view.host.innerHTML).not.toContain("re_shouldNeverRender123456");
+
+    const secretInput = view.host.querySelector('input[type="password"]') as HTMLInputElement;
+    expect(secretInput.value).toBe("");
+
+    await React.act(async () => {
+      findButton(view.host, "Update secret")?.click();
+    });
+    await React.act(async () => {
+      findButton(view.host, "Save Changes")?.click();
+      await Promise.resolve();
+    });
+    await React.act(async () => {
+      findButton(view.host, "Save secrets")?.click();
+      await Promise.resolve();
+    });
+
+    expect(integrationsState.updateIntegration).toHaveBeenCalledWith("resend", {
+      config: { apiKey: null },
     });
   } finally {
     view.cleanup();

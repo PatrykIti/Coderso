@@ -6,6 +6,7 @@ language: "en"
 keywords:
   - email settings
   - smtp
+  - resend
   - test email
   - delivery logs
   - sender info
@@ -13,12 +14,14 @@ keywords:
 
 # Basic
 
-Email Settings is the SMTP configuration surface for outbound system email. It
-is where you define the SMTP server, sender defaults, send a test email, review
-connection status, and inspect delivery logs.
+Email Settings is the outbound email provider surface for system email. It is
+where you choose Manual SMTP or Resend, define sender defaults, send a test
+email, review connection status, and inspect delivery logs.
 
 In the current UI, this route includes:
-- SMTP server configuration,
+- email provider selection,
+- SMTP server configuration when Manual SMTP is active,
+- Resend configured state when Resend is active,
 - default sender info,
 - a test email card,
 - a connection-status panel,
@@ -29,8 +32,9 @@ In the current UI, this route includes:
 # Medium
 
 Use Email Settings when the system needs to send outbound mail reliably and the
-SMTP configuration or sender identity needs review. The current route is
+active provider or sender identity needs review. The current route is
 designed for:
+- selecting Manual SMTP or Resend,
 - defining host, port, encryption, and authentication,
 - controlling whether the stored SMTP password should be updated,
 - setting the default sender name and address,
@@ -38,51 +42,59 @@ designed for:
 - checking whether the connection looks operational or incomplete.
 
 This is not a generic messaging page. It is a delivery-configuration and
-validation workspace for SMTP-backed email.
+validation workspace for provider-backed email.
 
 # Instruction
 
 1. Open `Settings > Email`.
 2. Start with the status badge in the top area:
    `Connected` or `Needs setup`.
-3. In `SMTP Server Configuration`, review:
+3. In `Email Provider`, choose:
+   - Manual SMTP when using host/port credentials,
+   - Resend when using the encrypted Resend integration key.
+4. If Manual SMTP is selected, review `SMTP Server Configuration`:
    - SMTP host,
    - port,
    - encryption protocol,
    - username,
    - password state.
-4. Use the password update toggle only when the stored password really needs to
+5. Use the password update toggle only when the stored password really needs to
    change.
-5. In `Default Sender Info`, review:
+6. If Resend is selected, confirm the Resend provider panel shows a stored API
+   key. Use `Configure Resend` to open Settings > Integrations when it needs
+   setup.
+7. In `Default Sender Info`, review:
    - from name,
    - from email.
-6. Move to `Test Email`.
-7. Enter a real recipient address that can verify the result.
-8. Use `Send Test Email` only after the SMTP values and sender defaults are
+8. Move to `Test Email`.
+9. Enter a real recipient address that can verify the result.
+10. Use `Send Test Email` only after the active provider and sender defaults are
    coherent.
-9. Review the `Send test email?` confirmation. Cancel does not send mail;
+11. Review the `Send test email?` confirmation. Cancel does not send mail;
    confirm sends a real test email through the configured provider.
-10. Review the `Connection Status` card for:
+12. Review the `Connection Status` card for:
    - overall operational/pending state,
-   - host configured state,
-   - authentication state.
-11. Use `View delivery logs` when you need recent SMTP activity context.
-12. In `Delivery Logs`, review:
+   - SMTP host/authentication state for Manual SMTP,
+   - Resend API key and sender state for Resend.
+13. Use `View delivery logs` when you need recent provider activity context.
+14. In `Delivery Logs`, review:
     - whether logs exist,
     - delivery status,
+    - provider label,
     - export path.
-13. `Export Logs` is disabled until the delivery-log export contract is wired.
-14. Read the `Security Note` before finalizing production setup.
-15. Use `Save changes` when you want an explicit save instead of relying only on
+15. `Export Logs` is disabled until the delivery-log export contract is wired.
+16. Read the `Security Note` before finalizing production setup.
+17. Use `Save changes` when you want an explicit save instead of relying only on
     auto-save.
 
 Use this safe email-setup order when you want fewer delivery mistakes:
-1. Configure SMTP first.
-2. Configure sender info second.
-3. Review connection status.
-4. Send a test email.
-5. Review delivery logs if needed.
-6. Save deliberately.
+1. Select the provider first.
+2. Configure SMTP credentials or the Resend integration key second.
+3. Configure sender info third.
+4. Review connection status.
+5. Send a test email.
+6. Review delivery logs if needed.
+7. Save deliberately.
 
 # Advanced
 
@@ -90,25 +102,28 @@ Use this safe email-setup order when you want fewer delivery mistakes:
   which helps avoid casual credential overwrites.
 - `Needs setup` in the status area is an operational signal, not just a warning
   badge. It tells you outbound email should not yet be assumed reliable.
-- `Send Test Email` is a verification step, not a substitute for correct SMTP
+- `Send Test Email` is a verification step, not a substitute for correct provider
   setup, and it requires a confirmation because it is an external side effect.
 - Delivery logs matter even when empty, because the empty state still tells you
-  no recent SMTP attempts have been recorded.
-- The built-in security note reflects a real deliverability trade-off:
-  production-grade email often needs a dedicated provider rather than a generic
-  SMTP server.
+  no recent provider attempts have been recorded.
+- Resend API keys are configured in Integrations. Email Settings only selects
+  the provider and sender identity.
 
 # Troubleshooting
 
 - Email is not working:
-  review host, port, encryption, and credentials before changing sender info.
+  review the active provider, connection status, and sender info before changing
+  unrelated fields.
 - The password is stored but mail still fails:
   confirm that the password update toggle and current credential state match the
   real server expectation.
+- Resend is selected but still pending:
+  open `Configure Resend` and save a valid API key in Integrations.
 - Test email cannot be trusted yet:
   check connection status and then review delivery logs.
 - The route still says `Needs setup`:
-  confirm both host and authentication are configured, not just one of them.
+  confirm the selected provider has its required credential and sender state,
+  not just one of them.
 
 # Decision Guide
 
@@ -117,17 +132,17 @@ Use this safe email-setup order when you want fewer delivery mistakes:
 - Choose test email vs save only:
   save when configuration is draft-only; send a test email when delivery needs
   real validation now.
-- Choose generic SMTP vs dedicated provider:
-  use the dedicated provider path when production deliverability matters more
-  than convenience.
+- Choose Manual SMTP vs Resend:
+  use Manual SMTP for host/port credentials; use Resend when the encrypted
+  Resend API key is configured in Integrations.
 
 # Checklist
 
-1. Confirm SMTP host, port, and encryption are correct.
-2. Confirm authentication state is correct.
+1. Confirm the correct provider is selected.
+2. Confirm SMTP credentials or Resend API key state is correct.
 3. Confirm sender name and sender email are correct.
 4. Send a real test email when validation is needed.
-5. Review delivery logs if anything feels uncertain.
+5. Review provider-labeled delivery logs if anything feels uncertain.
 6. Save changes deliberately.
 
 # Navigation And Drafts
@@ -141,7 +156,7 @@ Use this safe email-setup order when you want fewer delivery mistakes:
 
 - Email Settings is an authenticated admin surface and should only be used by
   high-trust administrators responsible for outbound delivery configuration.
-- SMTP credentials are security-sensitive and should be handled as protected
-  infrastructure secrets.
+- SMTP credentials and Resend API keys are security-sensitive and should be
+  handled as protected infrastructure secrets.
 - Sender identity and delivery logs can affect trust, compliance, and incident
   review, so they should be managed carefully.

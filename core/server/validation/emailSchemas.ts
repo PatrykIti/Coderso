@@ -2,7 +2,7 @@ export const emailSettingsSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    provider: { enum: ["smtp"] },
+    provider: { enum: ["smtp", "resend"] },
     smtp: {
       type: "object",
       additionalProperties: false,
@@ -33,4 +33,3 @@ export const emailTestSchema = {
   },
   additionalProperties: false,
 };
-

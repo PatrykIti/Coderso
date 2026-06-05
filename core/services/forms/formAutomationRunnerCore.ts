@@ -7,10 +7,7 @@ import {
   type FormActionWebhookConfig,
   type NormalizedFormAction,
 } from "./formActionsContract";
-import {
-  normalizeFormSettings,
-  type FormAutomationRetrySettings,
-} from "./formSettings";
+import { normalizeFormSettings, type FormAutomationRetrySettings } from "./formSettings";
 import {
   renderTemplateRecord,
   renderTemplateString,
@@ -21,6 +18,7 @@ import type {
   FormActionRunRecord,
   FormActionRunStatus,
 } from "./formActionsService";
+import { redactAuditText } from "../audit/auditRedaction";
 
 export type RunFormAutomationInput = {
   formId: string;
@@ -43,34 +41,13 @@ export type ActionExecutionResult = {
   redirectUrl?: string | null;
 };
 
-export type AutomationEmailSettings = {
-  smtp: {
-    host: string | null;
-    port: number | null;
-    secure: boolean;
-    user: string | null;
-    password: string | null;
-  };
-  from: {
-    name: string | null;
-    email: string | null;
-  };
-};
-
-export type AutomationEmailTransportConfig = {
-  host: string;
-  port: number;
-  secure: boolean;
-  user: string;
-  password: string;
-};
-
 export type AutomationEmailMessage = {
-  from: string;
   to: string;
   subject: string;
   text?: string;
   html?: string;
+  fromName?: string;
+  fromEmail?: string;
 };
 
 export type AutomationEmailSendResult = {
@@ -78,9 +55,9 @@ export type AutomationEmailSendResult = {
   response?: string | null;
 };
 
-export type AutomationEmailTransport = {
-  sendMail: (message: AutomationEmailMessage) => Promise<AutomationEmailSendResult>;
-};
+export type AutomationEmailSender = (
+  message: AutomationEmailMessage
+) => Promise<AutomationEmailSendResult>;
 
 export type AutomationEntryData = Record<string, unknown>;
 
@@ -106,14 +83,8 @@ export type FormAutomationRunnerCoreDeps = {
   resolveNextAttempt: (params: ResolveNextActionAttemptInput) => Promise<number>;
   getRunById: (runId: string) => Promise<FormActionRunRecord | null>;
   getFormSettingsById: (formId: string) => Promise<unknown>;
-  getEmailSettings: () => Promise<AutomationEmailSettings>;
-  createEmailTransport: (
-    settings: AutomationEmailTransportConfig
-  ) => Promise<AutomationEmailTransport>;
-  getEntryBySlug: (
-    contentTypeId: string,
-    slug: string
-  ) => Promise<AutomationEntryLookup>;
+  sendEmail: AutomationEmailSender;
+  getEntryBySlug: (contentTypeId: string, slug: string) => Promise<AutomationEntryLookup>;
   createEntry: (
     contentTypeId: string,
     input: AutomationEntryMutationInput
@@ -168,13 +139,13 @@ const toTemplateContext = (
 
 const resolveActionErrorCode = (error: unknown) => {
   if (error instanceof Error) {
-    return error.message || "form_action_failed";
+    return error.message ? redactAuditText(error.message) : "form_action_failed";
   }
   return "form_action_failed";
 };
 
 const toErrorMessage = (error: unknown) => {
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) return redactAuditText(error.message);
   return "Action execution failed";
 };
 
@@ -194,10 +165,7 @@ const parseTemplateJson = (value: string) => {
   return null;
 };
 
-const resolveRetryDelayMs = (
-  retry: FormAutomationRetrySettings,
-  attemptNumber: number
-) => {
+const resolveRetryDelayMs = (retry: FormAutomationRetrySettings, attemptNumber: number) => {
   const factor = Math.max(0, attemptNumber - 1);
   const delay = retry.baseDelayMs * 2 ** factor;
   return Math.min(retry.maxDelayMs, delay);
@@ -213,41 +181,13 @@ const executeEmailAction = async (
   const renderedText = config.text ? renderTemplateString(config.text, context) : undefined;
   const renderedHtml = config.html ? renderTemplateString(config.html, context) : undefined;
 
-  const settings = await deps.getEmailSettings();
-  if (
-    !settings.smtp.host ||
-    !settings.smtp.port ||
-    !settings.smtp.user ||
-    !settings.smtp.password
-  ) {
-    throw new Error("email_not_configured");
-  }
-
-  const fromEmail =
-    (config.fromEmail ? renderTemplateString(config.fromEmail, context) : null) ??
-    settings.from.email ??
-    settings.smtp.user;
-  if (!fromEmail) throw new Error("email_not_configured");
-
-  const fromName =
-    (config.fromName ? renderTemplateString(config.fromName, context) : null) ??
-    settings.from.name ??
-    "Coderso";
-
-  const transport = await deps.createEmailTransport({
-    host: settings.smtp.host,
-    port: settings.smtp.port,
-    secure: settings.smtp.secure,
-    user: settings.smtp.user,
-    password: settings.smtp.password,
-  });
-
-  const delivery = await transport.sendMail({
-    from: `${fromName} <${fromEmail}>`,
+  const delivery = await deps.sendEmail({
     to: renderedTo,
     subject: renderedSubject,
     ...(renderedText ? { text: renderedText } : {}),
     ...(renderedHtml ? { html: renderedHtml } : {}),
+    ...(config.fromName ? { fromName: renderTemplateString(config.fromName, context) } : {}),
+    ...(config.fromEmail ? { fromEmail: renderTemplateString(config.fromEmail, context) } : {}),
   });
 
   return {
@@ -401,26 +341,15 @@ const executeAction = async (
     return executeEmailAction(action.config as FormActionEmailConfig, context, deps);
   }
   if (action.type === "webhook") {
-    return executeWebhookAction(
-      action.config as FormActionWebhookConfig,
-      context,
-      deps.fetchFn
-    );
+    return executeWebhookAction(action.config as FormActionWebhookConfig, context, deps.fetchFn);
   }
   if (action.type === "entry_sync") {
-    return executeEntrySyncAction(
-      action.config as FormActionEntrySyncConfig,
-      context,
-      deps
-    );
+    return executeEntrySyncAction(action.config as FormActionEntrySyncConfig, context, deps);
   }
   if (action.type === "redirect") {
     return executeRedirectAction(action.config as FormActionRedirectConfig, context);
   }
-  return executeSuccessMessageAction(
-    action.config as FormActionSuccessMessageConfig,
-    context
-  );
+  return executeSuccessMessageAction(action.config as FormActionSuccessMessageConfig, context);
 };
 
 const runOneAction = async (
@@ -470,9 +399,7 @@ const runOneAction = async (
     };
   }
 
-  const maxAttempts = retrySettings.enabled
-    ? Math.max(1, retrySettings.maxAttempts)
-    : 1;
+  const maxAttempts = retrySettings.enabled ? Math.max(1, retrySettings.maxAttempts) : 1;
   const runs: FormActionRunRecord[] = [];
   let attemptCounter = attempt;
 
@@ -602,13 +529,7 @@ export async function runFormAutomationCore(
   const retrySettings = normalizedSettings.automationRetry;
 
   for (const action of actions) {
-    const execution = await runOneAction(
-      action,
-      input,
-      context,
-      deps,
-      retrySettings
-    );
+    const execution = await runOneAction(action, input, context, deps, retrySettings);
     result.runs.push(...execution.runs);
     mergeResult(result, execution.outcome);
 
@@ -652,18 +573,11 @@ export async function retryFormAutomationRunCore(
     await deps.getFormSettingsById(sourceRun.formId)
   ).automationRetry;
 
-  const execution = await runOneAction(
-    action,
-    input,
-    context,
-    deps,
-    retrySettings,
-    {
-      trigger: "retry",
-      retryOfId: sourceRun.id,
-      forceRun: true,
-    }
-  );
+  const execution = await runOneAction(action, input, context, deps, retrySettings, {
+    trigger: "retry",
+    retryOfId: sourceRun.id,
+    forceRun: true,
+  });
   const run = execution.runs[execution.runs.length - 1];
   if (!run) {
     throw new Error("form_action_retry_failed");

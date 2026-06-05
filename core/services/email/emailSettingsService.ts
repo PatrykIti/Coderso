@@ -8,10 +8,31 @@ import {
   hasValidSecretMasterKey,
   isEncryptedSecret,
 } from "../security/secretStore";
-import { createTransport } from "./emailProvider";
+import { redactAuditText } from "../audit/auditRedaction";
+import {
+  createResendTransport,
+  createSmtpTransport,
+  type EmailSendResult,
+  type EmailTransport,
+} from "./emailProvider";
+import {
+  getIntegration,
+  getIntegrationRuntimeConfig,
+  type IntegrationSummary,
+} from "../integrations/integrationsService";
+
+export const EMAIL_PROVIDER_IDS = ["smtp", "resend"] as const;
+
+export type EmailProviderId = (typeof EMAIL_PROVIDER_IDS)[number];
+
+export type ResendSettingsSummary = {
+  integrationId: "resend";
+  apiKey: { configured: boolean };
+  status: "connected" | "disconnected";
+};
 
 export type EmailSettingsPublic = {
-  provider: "smtp";
+  provider: EmailProviderId;
   smtp: {
     host: string | null;
     port: number | null;
@@ -19,17 +40,19 @@ export type EmailSettingsPublic = {
     user: string | null;
     password: { configured: boolean };
   };
+  resend: ResendSettingsSummary;
   from: {
     name: string | null;
     email: string | null;
   };
   status: {
+    provider: EmailProviderId;
     configured: boolean;
   };
 };
 
 export type EmailSettingsInternal = {
-  provider: "smtp";
+  provider: EmailProviderId;
   smtp: {
     host: string | null;
     port: number | null;
@@ -37,6 +60,7 @@ export type EmailSettingsInternal = {
     user: string | null;
     password: string | null;
   };
+  resend: ResendSettingsSummary;
   from: {
     name: string | null;
     email: string | null;
@@ -44,7 +68,7 @@ export type EmailSettingsInternal = {
 };
 
 export type EmailSettingsUpdate = {
-  provider?: "smtp";
+  provider?: EmailProviderId | null;
   smtp?: {
     host?: string | null;
     port?: number | null;
@@ -72,20 +96,18 @@ export type EmailDeliveryLog = {
 export type SystemEmailMessage = {
   to: string;
   subject: string;
-  text: string;
+  text?: string;
   html?: string;
+  from?: string;
+  fromName?: string;
+  fromEmail?: string;
+  idempotencyKey?: string;
 };
 
 type ConfiguredEmail = {
-  provider: "smtp";
+  provider: EmailProviderId;
   from: string;
-  transport: {
-    host: string;
-    port: number;
-    secure: boolean;
-    user: string;
-    password: string;
-  };
+  transport: EmailTransport;
 };
 
 const EMAIL_KEYS = {
@@ -104,8 +126,9 @@ const ALL_KEYS: string[] = Object.values(EMAIL_KEYS);
 let cachedPublic: EmailSettingsPublic | null = null;
 let cachedInternal: EmailSettingsInternal | null = null;
 let cachedUpdatedAt: number | null = null;
+let cachedResendUpdatedAt: number | null = null;
 
-const DEFAULT_PROVIDER = "smtp";
+const DEFAULT_PROVIDER: EmailProviderId = "smtp";
 const DEFAULT_PORT = 587;
 
 const normalizeString = (value: unknown) => {
@@ -139,6 +162,13 @@ const normalizeBoolean = (value: unknown) => {
   throw new Error("email_settings_invalid");
 };
 
+const normalizeEmailProvider = (value: unknown): EmailProviderId => {
+  const normalized = normalizeString(value);
+  if (normalized === undefined || normalized === null) return DEFAULT_PROVIDER;
+  if (normalized === "smtp" || normalized === "resend") return normalized;
+  throw new Error("email_settings_invalid");
+};
+
 const getStringValue = (value: unknown) => (typeof value === "string" ? value : null);
 
 const getNumberValue = (value: unknown) =>
@@ -164,6 +194,17 @@ async function loadEmailRecords() {
   }
 }
 
+async function loadResendIntegration() {
+  try {
+    return await getIntegration("resend");
+  } catch (error) {
+    if (process.env.NODE_ENV === "test") {
+      return null;
+    }
+    throw error;
+  }
+}
+
 const resolveSecret = (value: unknown) => {
   if (typeof value === "string") return value;
   if (isEncryptedSecret(value)) return decryptSecret(value);
@@ -173,9 +214,30 @@ const resolveSecret = (value: unknown) => {
 const resolvePasswordConfigured = (value: unknown) =>
   typeof value === "string" || isEncryptedSecret(value);
 
-const buildPublicSettings = (map: Map<string, { value: unknown }>): EmailSettingsPublic => {
-  const provider =
-    (getStringValue(map.get(EMAIL_KEYS.provider)?.value) as "smtp") ?? DEFAULT_PROVIDER;
+const buildResendSummary = (summary: IntegrationSummary | null): ResendSettingsSummary => {
+  const apiKey = summary?.fields.find((field) => field.key === "apiKey");
+  return {
+    integrationId: "resend",
+    apiKey: { configured: Boolean(apiKey?.configured) },
+    status: summary?.status ?? "disconnected",
+  };
+};
+
+const isSmtpConfigured = (input: {
+  host: string | null;
+  user: string | null;
+  passwordValue: unknown;
+  fromEmail: string | null;
+}) => Boolean(input.host && input.user && input.passwordValue && input.fromEmail);
+
+const isResendConfigured = (summary: ResendSettingsSummary, fromEmail: string | null) =>
+  summary.status === "connected" && summary.apiKey.configured && Boolean(fromEmail);
+
+const buildPublicSettings = (
+  map: Map<string, { value: unknown }>,
+  resendIntegration: IntegrationSummary | null
+): EmailSettingsPublic => {
+  const provider = normalizeEmailProvider(map.get(EMAIL_KEYS.provider)?.value);
   const smtpHost = getStringValue(map.get(EMAIL_KEYS.smtpHost)?.value);
   const smtpPort = getNumberValue(map.get(EMAIL_KEYS.smtpPort)?.value) ?? DEFAULT_PORT;
   const smtpSecure = getBooleanValue(map.get(EMAIL_KEYS.smtpSecure)?.value) ?? false;
@@ -183,8 +245,15 @@ const buildPublicSettings = (map: Map<string, { value: unknown }>): EmailSetting
   const smtpPasswordValue = map.get(EMAIL_KEYS.smtpPassword)?.value;
   const fromName = getStringValue(map.get(EMAIL_KEYS.fromName)?.value);
   const fromEmail = getStringValue(map.get(EMAIL_KEYS.fromEmail)?.value);
+  const resend = buildResendSummary(resendIntegration);
 
-  const configured = Boolean(smtpHost && smtpUser && smtpPasswordValue && fromEmail);
+  const smtpConfigured = isSmtpConfigured({
+    host: smtpHost,
+    user: smtpUser,
+    passwordValue: smtpPasswordValue,
+    fromEmail,
+  });
+  const configured = provider === "resend" ? isResendConfigured(resend, fromEmail) : smtpConfigured;
 
   return {
     provider,
@@ -195,19 +264,23 @@ const buildPublicSettings = (map: Map<string, { value: unknown }>): EmailSetting
       user: smtpUser,
       password: { configured: resolvePasswordConfigured(smtpPasswordValue) },
     },
+    resend,
     from: {
       name: fromName,
       email: fromEmail,
     },
     status: {
+      provider,
       configured,
     },
   };
 };
 
-const buildInternalSettings = (map: Map<string, { value: unknown }>): EmailSettingsInternal => {
-  const provider =
-    (getStringValue(map.get(EMAIL_KEYS.provider)?.value) as "smtp") ?? DEFAULT_PROVIDER;
+const buildInternalSettings = (
+  map: Map<string, { value: unknown }>,
+  resendIntegration: IntegrationSummary | null
+): EmailSettingsInternal => {
+  const provider = normalizeEmailProvider(map.get(EMAIL_KEYS.provider)?.value);
   const smtpHost = getStringValue(map.get(EMAIL_KEYS.smtpHost)?.value);
   const smtpPort = getNumberValue(map.get(EMAIL_KEYS.smtpPort)?.value) ?? DEFAULT_PORT;
   const smtpSecure = getBooleanValue(map.get(EMAIL_KEYS.smtpSecure)?.value) ?? false;
@@ -215,6 +288,7 @@ const buildInternalSettings = (map: Map<string, { value: unknown }>): EmailSetti
   const smtpPassword = resolveSecret(map.get(EMAIL_KEYS.smtpPassword)?.value);
   const fromName = getStringValue(map.get(EMAIL_KEYS.fromName)?.value);
   const fromEmail = getStringValue(map.get(EMAIL_KEYS.fromEmail)?.value);
+  const resend = buildResendSummary(resendIntegration);
 
   return {
     provider,
@@ -225,6 +299,7 @@ const buildInternalSettings = (map: Map<string, { value: unknown }>): EmailSetti
       user: smtpUser,
       password: smtpPassword,
     },
+    resend,
     from: {
       name: fromName,
       email: fromEmail,
@@ -236,14 +311,23 @@ export function resetEmailSettingsCache() {
   cachedPublic = null;
   cachedInternal = null;
   cachedUpdatedAt = null;
+  cachedResendUpdatedAt = null;
 }
 
 async function getSettingsCache() {
   const { map, updatedAt } = await loadEmailRecords();
-  if (!cachedPublic || !cachedInternal || cachedUpdatedAt !== updatedAt) {
-    cachedPublic = buildPublicSettings(map);
-    cachedInternal = buildInternalSettings(map);
+  const resendIntegration = await loadResendIntegration();
+  const resendUpdatedAt = resendIntegration?.updatedAt?.getTime() ?? null;
+  if (
+    !cachedPublic ||
+    !cachedInternal ||
+    cachedUpdatedAt !== updatedAt ||
+    cachedResendUpdatedAt !== resendUpdatedAt
+  ) {
+    cachedPublic = buildPublicSettings(map, resendIntegration);
+    cachedInternal = buildInternalSettings(map, resendIntegration);
     cachedUpdatedAt = updatedAt;
+    cachedResendUpdatedAt = resendUpdatedAt;
   }
 
   if (!cachedPublic || !cachedInternal) {
@@ -268,10 +352,10 @@ export async function updateEmailSettings(input: EmailSettingsUpdate) {
   const now = new Date();
 
   if (input.provider !== undefined) {
-    if (input.provider !== "smtp") {
-      throw new Error("email_settings_invalid");
-    }
-    updates.push({ key: EMAIL_KEYS.provider, value: input.provider });
+    updates.push({
+      key: EMAIL_KEYS.provider,
+      value: normalizeEmailProvider(input.provider),
+    });
   }
 
   if (input.smtp) {
@@ -391,35 +475,102 @@ export async function listDeliveryLogs(limit = 50) {
   return rows as EmailDeliveryLog[];
 }
 
-const resolveConfiguredEmail = (settings: EmailSettingsInternal): ConfiguredEmail => {
+const formatSender = (from: { name: string | null; email: string | null }) => {
+  if (!from.email) {
+    throw new Error("email_not_configured");
+  }
+  const fromName = from.name ?? "Coderso";
+  return `${fromName} <${from.email}>`;
+};
+
+const resolveMessageFrom = (
+  settings: EmailSettingsInternal,
+  message: Pick<SystemEmailMessage, "from" | "fromEmail" | "fromName">
+) => {
+  const explicitFrom = message.from?.trim();
+  if (explicitFrom) return explicitFrom;
+
+  const fromEmail = message.fromEmail?.trim() || settings.from.email;
+  if (!fromEmail) {
+    throw new Error("email_not_configured");
+  }
+  const fromName = message.fromName?.trim() || settings.from.name || "Coderso";
+  return `${fromName} <${fromEmail}>`;
+};
+
+const resolveSmtpConfiguredEmail = async (
+  settings: EmailSettingsInternal,
+  from: string
+): Promise<ConfiguredEmail> => {
   if (
     !settings.smtp.host ||
     !settings.smtp.port ||
     !settings.smtp.user ||
-    !settings.smtp.password ||
-    !settings.from.email
+    !settings.smtp.password
   ) {
     throw new Error("email_not_configured");
   }
 
-  const fromName = settings.from.name ?? "Coderso";
   return {
-    provider: settings.provider,
-    from: `${fromName} <${settings.from.email}>`,
-    transport: {
+    provider: "smtp",
+    from,
+    transport: await createSmtpTransport({
       host: settings.smtp.host,
       port: settings.smtp.port,
       secure: settings.smtp.secure,
       user: settings.smtp.user,
       password: settings.smtp.password,
-    },
+    }),
   };
+};
+
+const normalizeRuntimeSecret = (value: unknown) => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+};
+
+const resolveResendConfiguredEmail = async (from: string): Promise<ConfiguredEmail> => {
+  const config = await getIntegrationRuntimeConfig("resend");
+  const apiKey = normalizeRuntimeSecret(config?.apiKey);
+  if (!apiKey) {
+    throw new Error("email_not_configured");
+  }
+
+  try {
+    return {
+      provider: "resend",
+      from,
+      transport: createResendTransport({ apiKey }),
+    };
+  } catch (error) {
+    if (error instanceof Error && error.message === "email_provider_invalid") {
+      throw new Error("email_not_configured");
+    }
+    throw error;
+  }
+};
+
+const resolveConfiguredEmail = async (
+  settings: EmailSettingsInternal,
+  message?: Pick<SystemEmailMessage, "from" | "fromEmail" | "fromName">
+): Promise<ConfiguredEmail> => {
+  const from = message ? resolveMessageFrom(settings, message) : formatSender(settings.from);
+  if (settings.provider === "resend") {
+    return resolveResendConfiguredEmail(from);
+  }
+  return resolveSmtpConfiguredEmail(settings, from);
 };
 
 export async function assertSystemEmailConfigured() {
   const settings = await getEmailSettingsInternal();
-  resolveConfiguredEmail(settings);
+  await resolveConfiguredEmail(settings);
 }
+
+const sanitizeDeliveryError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : "email_send_failed";
+  return redactAuditText(message).slice(0, 240);
+};
 
 export async function sendSystemEmail(message: SystemEmailMessage) {
   const trimmed = message.to.trim();
@@ -428,16 +579,16 @@ export async function sendSystemEmail(message: SystemEmailMessage) {
   }
 
   const settings = await getEmailSettingsInternal();
-  const configured = resolveConfiguredEmail(settings);
-  const transport = await createTransport(configured.transport);
+  const configured = await resolveConfiguredEmail(settings, message);
 
   try {
-    const result = await transport.sendMail({
+    const result: EmailSendResult = await configured.transport.sendMail({
       from: configured.from,
       to: trimmed,
       subject: message.subject,
       text: message.text,
       html: message.html,
+      idempotencyKey: message.idempotencyKey,
     });
     await logDelivery({
       recipient: trimmed,
@@ -447,9 +598,13 @@ export async function sendSystemEmail(message: SystemEmailMessage) {
       messageId: result.messageId,
       error: null,
     });
-    return { ok: true };
+    return {
+      ok: true,
+      messageId: result.messageId,
+      response: result.response ?? null,
+    };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "email_send_failed";
+    const errorMessage = sanitizeDeliveryError(error);
     await logDelivery({
       recipient: trimmed,
       subject: message.subject,
@@ -470,7 +625,7 @@ export async function sendTestEmail(to: string) {
 
   return sendSystemEmail({
     to: trimmed,
-    subject: "Coderso SMTP test",
+    subject: "Coderso email test",
     text: "This is a test email from Coderso.",
   });
 }

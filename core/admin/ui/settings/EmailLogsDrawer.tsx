@@ -17,6 +17,7 @@ export type EmailLogItem = {
   recipient: string;
   subject: string;
   status: "delivered" | "queued" | "failed";
+  provider: "smtp" | "resend" | string;
   timestamp: string;
 };
 
@@ -55,7 +56,7 @@ export function EmailLogsDrawer({
           <div className="space-y-1">
             <SheetTitle>Delivery Logs</SheetTitle>
             <SheetDescription className="text-xs text-muted-foreground">
-              Recent SMTP activity and delivery status.
+              Recent email provider activity and delivery status.
             </SheetDescription>
           </div>
           <SheetClose asChild>
@@ -91,6 +92,9 @@ export function EmailLogsDrawer({
                   <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
                     {log.timestamp}
+                    <span className="rounded-md border px-1.5 py-0.5 text-[10px] uppercase">
+                      {log.provider}
+                    </span>
                   </div>
                 </div>
               ))

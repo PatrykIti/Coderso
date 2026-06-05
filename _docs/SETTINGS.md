@@ -14,6 +14,25 @@ Dokument zbiera klucze `settings` i ich znaczenie dla runtime/admin UI.
 Alias kompatybilnosciowy:
 - `site.baseUrl` -> `site.publicBaseUrl` (read/write, brak osobnego source of truth).
 
+## Email settings (`settings`)
+
+Admin UI: Settings → Email.
+
+| Key | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `email.provider` | `"smtp" \| "resend"` | `"smtp"` | Missing legacy rows default to SMTP; switching providers preserves existing SMTP fields. |
+| `email.smtp.host` | `string \| null` | `null` | SMTP host used only when provider is `smtp`. |
+| `email.smtp.port` | `number \| null` | `587` | SMTP port. |
+| `email.smtp.secure` | `boolean` | `false` | `true` for SSL/TLS, `false` for STARTTLS-style transport. |
+| `email.smtp.user` | `string \| null` | `null` | SMTP username. |
+| `email.smtp.password` | encrypted secret \| `null` | `null` | SMTP password encrypted with the secret master key. |
+| `email.from.name` | `string \| null` | `null` | Default sender display name. |
+| `email.from.email` | `string \| null` | `null` | Default sender email address. |
+
+Resend API keys are not stored in Email Settings. Configure encrypted
+`resend.apiKey` in Settings → Integrations, then select `resend` as the email
+provider.
+
 ## Assistant settings (`settings`)
 
 Admin UI: Settings → Assistant.

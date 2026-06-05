@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 export type IntegrationStatus = "connected" | "disconnected";
 
-type IntegrationAccent = "amber" | "orange" | "rose" | "violet";
+type IntegrationAccent = "amber" | "emerald" | "orange" | "rose" | "violet";
 
 export type IntegrationCardProps = {
   name: string;
@@ -22,6 +22,7 @@ export type IntegrationCardProps = {
 
 const accentStyles: Record<IntegrationAccent, string> = {
   amber: "bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400",
+  emerald: "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400",
   orange: "bg-orange-500/10 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400",
   rose: "bg-rose-500/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400",
   violet: "bg-violet-500/10 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400",
@@ -69,17 +70,20 @@ export function IntegrationCard({
   const action = actionMeta[status];
 
   return (
-    <Card
-      className={cn(
-        "gap-5 border-border/60 p-6 transition-shadow hover:shadow-md",
-        className
-      )}
-    >
+    <Card className={cn("gap-5 border-border/60 p-6 transition-shadow hover:shadow-md", className)}>
       <div className="flex items-start justify-between">
-        <div className={cn("flex h-11 w-11 items-center justify-center rounded-xl", accentStyles[accent])}>
+        <div
+          className={cn(
+            "flex h-11 w-11 items-center justify-center rounded-xl",
+            accentStyles[accent]
+          )}
+        >
           <Icon className="h-5 w-5" />
         </div>
-        <Badge variant="outline" className={cn("gap-2 border-transparent text-[10px]", statusStyles[status])}>
+        <Badge
+          variant="outline"
+          className={cn("gap-2 border-transparent text-[10px]", statusStyles[status])}
+        >
           <span className={cn("h-1.5 w-1.5 rounded-full", statusDotStyles[status])} />
           {statusLabels[status]}
         </Badge>

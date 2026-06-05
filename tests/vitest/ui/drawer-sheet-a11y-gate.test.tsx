@@ -280,19 +280,19 @@ test("Settings drawers bind titles and descriptions without Radix warnings", asy
   await expectOpenDialogSemantics(
     <EmailLogsDrawer open onOpenChange={() => undefined} logs={[]} />,
     "Delivery Logs",
-    "Recent SMTP activity and delivery status."
+    "Recent email provider activity and delivery status."
   );
 
   await expectOpenDialogSemantics(
     <EmailLogsDrawer open onOpenChange={() => undefined} logs={[]} isLoading />,
     "Delivery Logs",
-    "Recent SMTP activity and delivery status."
+    "Recent email provider activity and delivery status."
   );
 
   await expectOpenDialogSemantics(
     <EmailLogsDrawer open onOpenChange={() => undefined} logs={[]} error="SMTP unavailable" />,
     "Delivery Logs",
-    "Recent SMTP activity and delivery status."
+    "Recent email provider activity and delivery status."
   );
 
   await expectOpenDialogSemantics(

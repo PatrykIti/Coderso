@@ -1,8 +1,4 @@
-export type IntegrationCategory =
-  | "Analytics"
-  | "Communication"
-  | "Developer Tools"
-  | "Automation";
+export type IntegrationCategory = "Analytics" | "Communication" | "Developer Tools" | "Automation";
 
 export type IntegrationField = {
   key: string;
@@ -25,8 +21,7 @@ const INTEGRATIONS: IntegrationDefinition[] = [
   {
     id: "google-analytics",
     name: "Google Analytics",
-    description:
-      "Track website traffic and user behavior patterns in real time with GA4.",
+    description: "Track website traffic and user behavior patterns in real time with GA4.",
     category: "Analytics",
     scopes: ["analytics:read", "events:read"],
     fields: [
@@ -42,8 +37,7 @@ const INTEGRATIONS: IntegrationDefinition[] = [
   {
     id: "slack",
     name: "Slack",
-    description:
-      "Send instant notifications to team channels when content is published.",
+    description: "Send instant notifications to team channels when content is published.",
     category: "Communication",
     scopes: ["notifications:send", "events:read"],
     fields: [
@@ -64,10 +58,25 @@ const INTEGRATIONS: IntegrationDefinition[] = [
     ],
   },
   {
+    id: "resend",
+    name: "Resend",
+    description: "Send transactional email through Resend.",
+    category: "Communication",
+    scopes: ["email:send"],
+    fields: [
+      {
+        key: "apiKey",
+        label: "API Key",
+        type: "secret",
+        required: true,
+        placeholder: "re_...",
+      },
+    ],
+  },
+  {
     id: "zapier",
     name: "Zapier",
-    description:
-      "Automate workflows by connecting Coderso with 5,000+ popular apps.",
+    description: "Automate workflows by connecting Coderso with 5,000+ popular apps.",
     category: "Automation",
     scopes: ["events:read", "webhooks:send"],
     fields: [
@@ -83,8 +92,7 @@ const INTEGRATIONS: IntegrationDefinition[] = [
   {
     id: "sentry",
     name: "Sentry",
-    description:
-      "Monitor production errors and performance issues with automatic alerts.",
+    description: "Monitor production errors and performance issues with automatic alerts.",
     category: "Developer Tools",
     scopes: ["errors:read", "events:read"],
     fields: [
@@ -145,8 +153,7 @@ const INTEGRATIONS: IntegrationDefinition[] = [
   {
     id: "openrouter",
     name: "OpenRouter",
-    description:
-      "Use OpenRouter as the optional LLM provider for Assistant LLM Guide responses.",
+    description: "Use OpenRouter as the optional LLM provider for Assistant LLM Guide responses.",
     category: "Developer Tools",
     scopes: ["assistant:generate", "assistant:retrieve"],
     fields: [
@@ -188,8 +195,6 @@ export function listIntegrationDefinitions(): IntegrationDefinition[] {
   return INTEGRATIONS.slice();
 }
 
-export function getIntegrationDefinition(
-  id: string
-): IntegrationDefinition | null {
+export function getIntegrationDefinition(id: string): IntegrationDefinition | null {
   return integrationMap.get(id) ?? null;
 }
