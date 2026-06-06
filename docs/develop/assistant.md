@@ -279,6 +279,15 @@ machine does not create a new assistant route payload and must not store raw
 answers, provider text, provider keys, signed URLs, upload bytes, cookies, or
 auth state in browser storage.
 
+Basic full-site intake controls render inside the floating LLM Guide action-plan
+review path from `metadata.siteBuilderIntake.steps[].answerFields[]`. The UI
+submits one normalized answer at a time through the existing
+`/assistant/actions/plan` route with `context.siteBuilderIntakeState.activeSession`;
+no public endpoint or parallel site-builder payload is introduced. Basic answer
+drafts stay in React state only, restored plans without answer state show a
+restart message, and the backend re-normalizes the session before returning the
+next server-owned step.
+
 ## How the corpus is ingested
 
 The source-of-truth root is `docs/guide`. This is hard-coded in two services:

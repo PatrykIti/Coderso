@@ -33,6 +33,12 @@ import {
   normalizeAssistantPlanningState,
 } from "../../../services/assistant/cmsPlanningState";
 import type { AssistantPlanningState } from "../../../services/assistant/actionPlanTypes";
+import { normalizeAssistantSiteBuilderIntakeSession } from "../../../services/assistant/assistantSiteBuilderIntakeNormalizer";
+import {
+  ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  type AssistantSiteBuilderIntakeSession,
+  type AssistantSiteBuilderIntakeStepId,
+} from "../../../services/assistant/assistantSiteBuilderIntakeTypes";
 import {
   readAssistantConversationState,
   writeAssistantConversationState,
@@ -57,6 +63,10 @@ type AssistantEntry = {
   response?: AssistantChatResponse;
   error?: string;
 };
+
+type SiteBuilderIntakeMetadata = NonNullable<
+  NonNullable<AssistantActionPlanResponse["metadata"]>["siteBuilderIntake"]
+>;
 
 type LauncherPosition = {
   x: number;
@@ -96,6 +106,8 @@ const ASSISTANT_CONVERSATION_GAP_PX = 12;
 
 const createEntryId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
+const SITE_BUILDER_INTAKE_CONTINUE_PROMPT = "Continue guided site-builder intake.";
+
 const buildFollowUpQuestion = (baseQuestion: string, option: AssistantFollowUpOption) => {
   const normalizedBase = baseQuestion.trim();
   if (!normalizedBase) return option.promptHint;
@@ -107,6 +119,77 @@ const resolveApiError = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 };
+
+const siteBuilderIntakeErrorMessages: Record<string, string> = {
+  intake_answer_required: "Fill the required fields before saving this step.",
+  intake_text_invalid: "Use plain text within the allowed length for this step.",
+  intake_answer_invalid: "Choose one of the available options before saving this step.",
+  intake_option_invalid: "Choose one of the available options before saving this step.",
+  intake_step_invalid: "This step changed on the server. Review the current step and try again.",
+  intake_session_invalid:
+    "This guided setup state is stale. Start a new guided setup and try again.",
+  intake_answer_unknown_key: "This step contains unsupported fields. Refresh and try again.",
+  intake_answer_duplicate:
+    "This guided setup has duplicate answers. Start a new guided setup and try again.",
+};
+
+const resolveSiteBuilderIntakeError = (error: unknown) => {
+  const code =
+    error && typeof error === "object" && typeof (error as { code?: unknown }).code === "string"
+      ? (error as { code: string }).code
+      : error instanceof Error
+        ? error.message
+        : null;
+  if (code && siteBuilderIntakeErrorMessages[code]) {
+    return siteBuilderIntakeErrorMessages[code];
+  }
+  if (isApiClientError(error)) return error.message;
+  if (error instanceof Error && error.message) return error.message;
+  return "Site-builder intake step was rejected.";
+};
+
+const resolveSiteBuilderIntakeSessionStepId = (metadata: SiteBuilderIntakeMetadata) =>
+  metadata.nextStepId ?? metadata.currentStepId;
+
+const createBasicSiteBuilderIntakeSession = (
+  metadata: SiteBuilderIntakeMetadata,
+  previousSession: AssistantSiteBuilderIntakeSession | null
+): AssistantSiteBuilderIntakeSession | null => {
+  if (metadata.mode !== "basic") return null;
+  return normalizeAssistantSiteBuilderIntakeSession({
+    version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+    mode: "basic",
+    currentStepId: resolveSiteBuilderIntakeSessionStepId(metadata),
+    answers: previousSession?.mode === "basic" ? previousSession.answers : [],
+  });
+};
+
+const mergeBasicSiteBuilderIntakeAnswer = (
+  session: AssistantSiteBuilderIntakeSession,
+  stepId: AssistantSiteBuilderIntakeStepId,
+  values: Record<string, unknown>
+) =>
+  normalizeAssistantSiteBuilderIntakeSession({
+    ...session,
+    currentStepId: stepId,
+    answers: [
+      ...session.answers.filter((answer) => answer.stepId !== stepId),
+      {
+        stepId,
+        values,
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+  });
+
+const toSiteBuilderIntakeRequestSession = (
+  session: AssistantSiteBuilderIntakeSession
+): AssistantSiteBuilderIntakeSession => ({
+  version: session.version,
+  mode: session.mode,
+  currentStepId: session.currentStepId,
+  answers: session.answers,
+});
 
 const getViewportSize = () => {
   if (typeof window === "undefined") {
@@ -335,17 +418,22 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   const [activePlan, setActivePlan] = useState<AssistantActionPlanResponse | null>(
     () => cachedConversationState?.activePlan ?? null
   );
+  const [activePlanSourcePrompt, setActivePlanSourcePrompt] = useState<string | null>(null);
   const [activePreview, setActivePreview] = useState<AssistantActionDryRunResponse | null>(
     () => cachedConversationState?.activePreview ?? null
   );
   const [activeExecution, setActiveExecution] = useState<AssistantActionExecuteResponse | null>(
     () => cachedConversationState?.activeExecution ?? null
   );
+  const [activeBasicIntakeSession, setActiveBasicIntakeSession] =
+    useState<AssistantSiteBuilderIntakeSession | null>(null);
   const [planningState, setPlanningState] = useState<AssistantPlanningState | null>(
     () => cachedConversationState?.planningState ?? null
   );
   const [isPreviewingPlan, setIsPreviewingPlan] = useState(false);
   const [isExecutingPlan, setIsExecutingPlan] = useState(false);
+  const [isSubmittingSiteBuilderIntake, setIsSubmittingSiteBuilderIntake] = useState(false);
+  const [siteBuilderIntakeError, setSiteBuilderIntakeError] = useState<string | null>(null);
   const [launcherPosition, setLauncherPosition] = useState<LauncherPosition>(() =>
     readLauncherPosition()
   );
@@ -568,6 +656,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
         setMessage("");
       }
       setActionError(null);
+      setSiteBuilderIntakeError(null);
       setActivePlan(null);
       setActivePreview(null);
       setActiveExecution(null);
@@ -589,6 +678,13 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
               ...assistantAdminContext,
               includeResourceCatalog: true,
               planningState: normalizeAssistantPlanningState(planningState),
+              ...(activeBasicIntakeSession
+                ? {
+                    siteBuilderIntakeState: {
+                      activeSession: toSiteBuilderIntakeRequestSession(activeBasicIntakeSession),
+                    },
+                  }
+                : {}),
             },
           });
 
@@ -596,6 +692,13 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
             buildAssistantPlanningStateFromPlan(plan, {
               route: assistantAdminContext.page ?? null,
             })
+          );
+          setActivePlanSourcePrompt(sourceQuestion);
+          const nextIntakeMetadata = plan.metadata?.siteBuilderIntake ?? null;
+          setActiveBasicIntakeSession(
+            nextIntakeMetadata
+              ? createBasicSiteBuilderIntakeSession(nextIntakeMetadata, activeBasicIntakeSession)
+              : null
           );
           if (plan.responseKind !== "docs") {
             setActivePlan(plan);
@@ -650,7 +753,15 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
         setIsSending(false);
       }
     },
-    [assistantAdminContext, currentMode, isSending, message, planningState, status]
+    [
+      activeBasicIntakeSession,
+      assistantAdminContext,
+      currentMode,
+      isSending,
+      message,
+      planningState,
+      status,
+    ]
   );
 
   const handleFollowUpSelect = useCallback(
@@ -671,6 +782,74 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   const handleSendClick = useCallback(() => {
     submitMessage().catch(() => undefined);
   }, [submitMessage]);
+
+  const handleSubmitSiteBuilderIntakeStep = useCallback(
+    async (stepId: AssistantSiteBuilderIntakeStepId, values: Record<string, unknown>) => {
+      const intakeMetadata = activePlan?.metadata?.siteBuilderIntake ?? null;
+      if (!intakeMetadata || isSubmittingSiteBuilderIntake) return;
+
+      setActionError(null);
+      setSiteBuilderIntakeError(null);
+      setIsSubmittingSiteBuilderIntake(true);
+
+      try {
+        const baseSession =
+          activeBasicIntakeSession ?? createBasicSiteBuilderIntakeSession(intakeMetadata, null);
+        if (!baseSession) {
+          throw new Error("site_builder_intake_session_missing");
+        }
+        const submittedSession = mergeBasicSiteBuilderIntakeAnswer(baseSession, stepId, values);
+        const sourceQuestion = activePlanSourcePrompt ?? SITE_BUILDER_INTAKE_CONTINUE_PROMPT;
+        const plan = await planAssistantActions({
+          prompt: sourceQuestion,
+          context: {
+            ...assistantAdminContext,
+            includeResourceCatalog: true,
+            planningState: normalizeAssistantPlanningState(planningState),
+            siteBuilderIntakeState: {
+              activeSession: toSiteBuilderIntakeRequestSession(submittedSession),
+            },
+          },
+        });
+
+        setPlanningState(
+          buildAssistantPlanningStateFromPlan(plan, {
+            route: assistantAdminContext.page ?? null,
+          })
+        );
+        setActivePreview(null);
+        setActiveExecution(null);
+        setActivePlan(plan);
+        const nextIntakeMetadata = plan.metadata?.siteBuilderIntake ?? null;
+        setActiveBasicIntakeSession(
+          nextIntakeMetadata
+            ? createBasicSiteBuilderIntakeSession(nextIntakeMetadata, submittedSession)
+            : null
+        );
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: createEntryId(),
+            role: "assistant",
+            text: plan.answer,
+            sourceQuestion,
+          },
+        ]);
+      } catch (error) {
+        setSiteBuilderIntakeError(resolveSiteBuilderIntakeError(error));
+      } finally {
+        setIsSubmittingSiteBuilderIntake(false);
+      }
+    },
+    [
+      activeBasicIntakeSession,
+      activePlan,
+      activePlanSourcePrompt,
+      assistantAdminContext,
+      isSubmittingSiteBuilderIntake,
+      planningState,
+    ]
+  );
 
   const handleDryRunPlan = useCallback(async () => {
     if (!activePlan || isPreviewingPlan || isExecutingPlan) return;
@@ -716,10 +895,13 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     setMessages([]);
     setMessage("");
     setActivePlan(null);
+    setActivePlanSourcePrompt(null);
     setActivePreview(null);
     setActiveExecution(null);
+    setActiveBasicIntakeSession(null);
     setPlanningState(null);
     setActionError(null);
+    setSiteBuilderIntakeError(null);
   }, []);
 
   const composerState = useMemo(
@@ -925,6 +1107,10 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                         error={actionError}
                         isPreviewing={isPreviewingPlan}
                         isExecuting={isExecutingPlan}
+                        siteBuilderIntakeSession={activeBasicIntakeSession}
+                        siteBuilderIntakeError={siteBuilderIntakeError}
+                        isSubmittingSiteBuilderIntake={isSubmittingSiteBuilderIntake}
+                        onSubmitSiteBuilderIntakeStep={handleSubmitSiteBuilderIntakeStep}
                         onPreview={handleDryRunPlan}
                         onExecute={handleExecutePlan}
                       />

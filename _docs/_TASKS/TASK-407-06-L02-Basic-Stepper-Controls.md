@@ -6,7 +6,9 @@
 **Category:** Assistant + Basic Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-06-L01, TASK-407-03-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-06
+**Completed:** 2026-06-06
 
 ---
 
@@ -71,12 +73,15 @@ function SiteBuilderIntakeBasicStepper({ session, onAnswer }: SiteBuilderIntakeS
 
 ## Testing Requirements
 
-- UI tests for every Basic step control.
-- Tests for validation error rendering and no step advance on rejection.
-- Tests for Basic as default for broad nontechnical full-site prompts.
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
-- `git diff --check`
+- ✅ UI tests for every Basic step control.
+- ✅ Tests for validation error rendering and no step advance on rejection.
+- ✅ Tests for Basic as default for broad nontechnical full-site prompts.
+- ✅ Server route schema tests for strict `context.siteBuilderIntakeState`
+  acceptance and tampered field rejection.
+- ✅ Claude CLI read-only audit; non-blocking UX/robustness findings were fixed.
+- ✅ `bun --cwd core lint`
+- ✅ `bun --cwd core lint:types`
+- ✅ `git diff --check`
 
 ## Documentation Updates Required
 
@@ -87,3 +92,19 @@ function SiteBuilderIntakeBasicStepper({ session, onAnswer }: SiteBuilderIntakeS
 - Basic UI is structured, beginner-safe, and registry-driven.
 - User cannot choose unsupported ids through normal controls.
 - Backend remains the validation authority.
+
+## Completion Notes
+
+- Added a Basic intake stepper in the floating assistant action-plan review
+  path, driven only by `metadata.siteBuilderIntake.steps[].answerFields[]`.
+- Wired one-step-at-a-time submit through the existing `/assistant/actions/plan`
+  flow using `context.siteBuilderIntakeState.activeSession`; no new public
+  endpoint or parallel route payload was added.
+- Kept Basic answers in memory only. The request session strips derived facts
+  before transport, and restored plans without answer state render a safe restart
+  message instead of silently dropping prior answers.
+- Filtered Basic metadata so Advanced-only fields are not rendered in Basic
+  mode, and extended route validation to strictly accept known intake session
+  keys/steps/answer fields while rejecting tampered values.
+- Added friendly validation messages for client-side intake normalization errors
+  so nontechnical users do not see raw domain error codes.

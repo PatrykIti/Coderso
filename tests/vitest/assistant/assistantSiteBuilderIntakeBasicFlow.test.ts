@@ -305,6 +305,16 @@ test("buildBasicSiteBuilderNeedsInputPlan normalizes typed site-builder intake m
   expect(plan.metadata?.siteBuilderIntake?.steps.map((step) => step.id)).toEqual([
     ...BASIC_SITE_BUILDER_INTAKE_STEP_IDS,
   ]);
+  const menu = plan.metadata?.siteBuilderIntake?.steps.find((step) => step.id === "menu");
+  const hero = plan.metadata?.siteBuilderIntake?.steps.find((step) => step.id === "hero");
+  const sections = plan.metadata?.siteBuilderIntake?.steps.find(
+    (step) => step.id === "homepage-sections"
+  );
+  expect(menu?.answerFields.map((field) => field.key)).not.toContain("advancedMenuBehaviorIds");
+  expect(hero?.answerFields.map((field) => field.key)).not.toContain("advancedHeroVariantId");
+  expect(sections?.answerFields.map((field) => field.key)).not.toContain(
+    "advancedSectionVariantIds"
+  );
 });
 
 test("planAssistantActions routes broad Basic setup prompts to needs_input without actions or secret echoes", () => {

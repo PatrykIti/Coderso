@@ -41,7 +41,7 @@ not create a second full-site builder UI with a divergent plan handoff.
 | ID | Title | Status | Output |
 |---|---|---|---|
 | TASK-407-06-L01 | Site Builder Intake UI State Machine | Done | Explicit intake UI state reducer, server-session authority, stale-cache discard, and dry-run-before-execute gating. |
-| TASK-407-06-L02 | Basic Stepper Controls | To Do | Basic-only controls bound to server-normalized session state. |
+| TASK-407-06-L02 | Basic Stepper Controls | Done | Basic intake controls render from server metadata and submit one normalized answer through the existing plan route. |
 | TASK-407-06-L03 | Advanced Stepper Controls | To Do | Advanced controls, preset selection, and reference brief display. |
 | TASK-407-06-L04 | Review Summary and Execution Gating | To Do | Final review, disabled dry-run/execute states, confirmation, and plan handoff. |
 | TASK-407-06-L05 | UI Warnings Local State and Redaction | To Do | Warning/gate rendering, localStorage bounds, stale cache discard, and redaction tests. |
@@ -127,3 +127,8 @@ function canSubmitPlan(session: AssistantSiteBuilderIntakeSession) {
   Remaining leaves still need to wire Basic/Advanced controls, review rendering,
   warning presentation, and browser-local redaction behavior into the live admin
   UI.
+- 2026-06-06: TASK-407-06-L02 completed Basic stepper controls, strict route
+  schema support for intake session context, friendly validation errors, and a
+  Claude read-only UX/security audit pass. Remaining leaves still need Advanced
+  controls, final review/execution gating, warning rendering, and broader
+  browser-local redaction behavior.

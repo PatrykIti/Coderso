@@ -4,6 +4,22 @@ import {
   siteBuilderPlanStepIds,
   solutionKitIds,
 } from "../../services/kits/solutionKitTypes";
+import {
+  ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  assistantSiteBuilderAdvancedHeroVariantIds,
+  assistantSiteBuilderAdvancedMenuBehaviorIds,
+  assistantSiteBuilderAdvancedSectionVariantIds,
+  assistantSiteBuilderContentEngineIds,
+  assistantSiteBuilderDesignPresetIds,
+  assistantSiteBuilderHeroPresetIds,
+  assistantSiteBuilderIntakeModes,
+  assistantSiteBuilderIntakeStepIds,
+  assistantSiteBuilderMediaPolicyIds,
+  assistantSiteBuilderMenuPresetIds,
+  assistantSiteBuilderPageRoleIds,
+  assistantSiteBuilderReviewStateIds,
+  assistantSiteBuilderSectionRoleIds,
+} from "../../services/assistant/assistantSiteBuilderIntakeTypes";
 
 const siteKitPlanContextSchema = {
   type: "object",
@@ -57,6 +73,324 @@ const siteKitPlanContextSchema = {
       uniqueItems: true,
     },
   },
+} as const;
+
+const intakeTextSchema = (maxLength: number) =>
+  ({
+    type: "string",
+    maxLength,
+  }) as const;
+
+const intakeTextListSchema = (maxItems: number, maxLength: number) =>
+  ({
+    type: "array",
+    maxItems,
+    items: intakeTextSchema(maxLength),
+    uniqueItems: true,
+  }) as const;
+
+const intakeEnumSchema = <TValue extends string>(values: readonly TValue[]) =>
+  ({
+    type: "string",
+    enum: [...values],
+  }) as const;
+
+const nullableIntakeEnumSchema = <TValue extends string>(values: readonly TValue[]) =>
+  ({
+    anyOf: [intakeEnumSchema(values), { type: "null" }],
+  }) as const;
+
+const intakeEnumListSchema = <TValue extends string>(values: readonly TValue[], maxItems: number) =>
+  ({
+    type: "array",
+    maxItems,
+    items: intakeEnumSchema(values),
+    uniqueItems: true,
+  }) as const;
+
+const intakePageRoleLabelMapSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: Object.fromEntries(
+    assistantSiteBuilderPageRoleIds.map((roleId) => [roleId, intakeTextSchema(80)])
+  ),
+} as const;
+
+const siteBuilderIntakeAnswerSchemas = [
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "business-profile" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          siteName: intakeTextSchema(120),
+          entityName: intakeTextSchema(120),
+          topic: intakeTextSchema(160),
+          vertical: intakeTextSchema(120),
+          audience: intakeTextSchema(240),
+          locale: intakeTextSchema(16),
+          region: intakeTextSchema(80),
+          summary: intakeTextSchema(500),
+          offerSummary: intakeTextSchema(500),
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "site-goals" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          goals: intakeTextListSchema(8, 120),
+          primaryGoal: intakeTextSchema(160),
+          notes: intakeTextSchema(360),
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "site-map" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          pageRoles: intakeEnumListSchema(assistantSiteBuilderPageRoleIds, 14),
+          customLabels: intakePageRoleLabelMapSchema,
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "menu" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          menuPreset: intakeEnumSchema(assistantSiteBuilderMenuPresetIds),
+          primaryActionLabel: intakeTextSchema(80),
+          primaryActionPageRole: nullableIntakeEnumSchema(assistantSiteBuilderPageRoleIds),
+          advancedMenuBehaviorIds: intakeEnumListSchema(
+            assistantSiteBuilderAdvancedMenuBehaviorIds,
+            6
+          ),
+          advancedCtaTargetPageRole: nullableIntakeEnumSchema(assistantSiteBuilderPageRoleIds),
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "hero" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          heroPreset: intakeEnumSchema(assistantSiteBuilderHeroPresetIds),
+          headline: intakeTextSchema(160),
+          subheadline: intakeTextSchema(280),
+          primaryCallToAction: intakeTextSchema(80),
+          advancedHeroVariantId: nullableIntakeEnumSchema(
+            assistantSiteBuilderAdvancedHeroVariantIds
+          ),
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "homepage-sections" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          sectionRoles: intakeEnumListSchema(assistantSiteBuilderSectionRoleIds, 12),
+          advancedSectionVariantIds: intakeEnumListSchema(
+            assistantSiteBuilderAdvancedSectionVariantIds,
+            14
+          ),
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "subpages" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          pageRoles: intakeEnumListSchema(assistantSiteBuilderPageRoleIds, 14),
+          customLabels: intakePageRoleLabelMapSchema,
+          notes: intakeTextSchema(360),
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "media-policy" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          mediaPolicy: intakeEnumSchema(assistantSiteBuilderMediaPolicyIds),
+          notes: intakeTextSchema(360),
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "content-engine" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          contentEngines: intakeEnumListSchema(assistantSiteBuilderContentEngineIds, 10),
+          notes: intakeTextSchema(360),
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "design-preset" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          designPresetId: nullableIntakeEnumSchema(assistantSiteBuilderDesignPresetIds),
+          designBrief: intakeTextSchema(700),
+          tone: intakeTextSchema(160),
+          colorNotes: intakeTextSchema(240),
+          layoutNotes: intakeTextSchema(360),
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "reference-intake" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          referenceNotes: intakeTextSchema(700),
+          referenceLabels: intakeTextListSchema(8, 120),
+          referenceIds: intakeTextListSchema(8, 80),
+          mediaAssetIds: intakeTextListSchema(12, 80),
+          temporaryReferenceIds: intakeTextListSchema(8, 80),
+          textBrief: intakeTextSchema(700),
+        },
+      },
+    },
+  },
+  {
+    type: "object",
+    required: ["stepId", "values"],
+    additionalProperties: false,
+    properties: {
+      stepId: { const: "review" },
+      updatedAt: intakeTextSchema(64),
+      values: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          reviewState: nullableIntakeEnumSchema(assistantSiteBuilderReviewStateIds),
+          confirmed: { type: "boolean" },
+          notes: intakeTextSchema(360),
+        },
+      },
+    },
+  },
+] as const;
+
+const siteBuilderIntakeSessionSchema = {
+  type: "object",
+  required: ["version", "mode", "currentStepId", "answers"],
+  additionalProperties: false,
+  properties: {
+    version: { const: ASSISTANT_SITE_BUILDER_INTAKE_VERSION },
+    mode: intakeEnumSchema(assistantSiteBuilderIntakeModes),
+    currentStepId: {
+      type: "string",
+      enum: [...assistantSiteBuilderIntakeStepIds],
+    },
+    answers: {
+      type: "array",
+      maxItems: siteBuilderIntakeAnswerSchemas.length,
+      items: {
+        anyOf: siteBuilderIntakeAnswerSchemas,
+      },
+    },
+  },
+} as const;
+
+const siteBuilderIntakeStateSchema = {
+  anyOf: [
+    {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        requestedMode: {
+          anyOf: [intakeEnumSchema(assistantSiteBuilderIntakeModes), { type: "null" }],
+        },
+        activeSession: {
+          anyOf: [siteBuilderIntakeSessionSchema, { type: "null" }],
+        },
+      },
+    },
+    { type: "null" },
+  ],
 } as const;
 
 const runtimeSnapshotSelectedResourceSchema = {
@@ -504,6 +838,7 @@ export const assistantActionPlanRequestSchema = {
         page: { type: "string", minLength: 1, maxLength: 200 },
         locale: { type: "string", minLength: 2, maxLength: 16 },
         siteKit: siteKitPlanContextSchema,
+        siteBuilderIntakeState: siteBuilderIntakeStateSchema,
         includeResourceCatalog: { type: "boolean" },
         runtimeSnapshot: runtimeSnapshotSchema,
         activeSurface: activeSurfaceSchema,

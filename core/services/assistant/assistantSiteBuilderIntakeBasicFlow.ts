@@ -157,7 +157,9 @@ export const getBasicSiteBuilderIntakeStepMetadata = (
     optionRegistryId: definition.optionRegistryId ?? null,
     position: BASIC_SITE_BUILDER_INTAKE_STEP_IDS.indexOf(stepId) + 1,
     total: BASIC_SITE_BUILDER_INTAKE_STEP_IDS.length,
-    answerFields: definition.answerFields.map(buildAnswerFieldMetadata),
+    answerFields: definition.answerFields
+      .filter((field) => !field.modeAvailability || field.modeAvailability.includes("basic"))
+      .map(buildAnswerFieldMetadata),
   };
 };
 

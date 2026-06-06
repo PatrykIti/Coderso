@@ -8,7 +8,12 @@ import type {
   AssistantActionDryRunResponse,
   AssistantActionPlanResponse,
 } from "@/services/assistantClient";
+import type {
+  AssistantSiteBuilderIntakeSession,
+  AssistantSiteBuilderIntakeStepId,
+} from "../../../../services/assistant/assistantSiteBuilderIntakeTypes";
 import { LaunchReadinessSummary } from "./LaunchReadinessSummary";
+import { SiteBuilderIntakeBasicStepper } from "./SiteBuilderIntakeBasicStepper";
 
 type ActionPlanReviewProps = {
   plan: AssistantActionPlanResponse;
@@ -16,8 +21,15 @@ type ActionPlanReviewProps = {
   isPreviewing?: boolean;
   isExecuting?: boolean;
   error?: string | null;
+  siteBuilderIntakeSession?: AssistantSiteBuilderIntakeSession | null;
+  siteBuilderIntakeError?: string | null;
+  isSubmittingSiteBuilderIntake?: boolean;
   onPreview: () => void;
   onExecute: () => void;
+  onSubmitSiteBuilderIntakeStep?: (
+    stepId: AssistantSiteBuilderIntakeStepId,
+    values: Record<string, unknown>
+  ) => void;
 };
 
 const labelByOperation = {
@@ -133,8 +145,12 @@ export function ActionPlanReview({
   isPreviewing = false,
   isExecuting = false,
   error = null,
+  siteBuilderIntakeSession = null,
+  siteBuilderIntakeError = null,
+  isSubmittingSiteBuilderIntake = false,
   onPreview,
   onExecute,
+  onSubmitSiteBuilderIntakeStep,
 }: ActionPlanReviewProps) {
   const previewReady = Boolean(preview?.readyToExecute);
   const destructive = plan.actions.some((action) =>
@@ -151,13 +167,17 @@ export function ActionPlanReview({
   const hasExecutableActions = plan.actions.length > 0;
   const isReadOnlyPlan =
     plan.responseKind === "inspection" || (Boolean(plan.inspection) && !hasExecutableActions);
-  const showActionControls = hasExecutableActions || !isReadOnlyPlan;
   const guideLabel = isReadOnlyPlan ? "LLM Guide Inspection" : "LLM Guide Plan";
   const statusLabel = isReadOnlyPlan
     ? "Read-only"
     : plan.status === "ready"
       ? "Ready"
       : "Needs input";
+  const siteBuilderIntake = plan.metadata?.siteBuilderIntake;
+  const isSiteBuilderBasicIntake =
+    siteBuilderIntake?.mode === "basic" && Boolean(onSubmitSiteBuilderIntakeStep);
+  const showActionControls = (hasExecutableActions || !isReadOnlyPlan) && !isSiteBuilderBasicIntake;
+  const showQuestionList = plan.questions.length > 0 && !isSiteBuilderBasicIntake;
   const composition = plan.metadata?.blueprintComposition;
   const mergedCompositionResources =
     composition?.mergedResources.filter((resource) => resource.sourceCapabilityIds.length > 1) ??
@@ -232,6 +252,16 @@ export function ActionPlanReview({
 
         <LaunchReadinessSummary readiness={plan.metadata?.launchReadiness} />
 
+        {isSiteBuilderBasicIntake && siteBuilderIntake && onSubmitSiteBuilderIntakeStep ? (
+          <SiteBuilderIntakeBasicStepper
+            metadata={siteBuilderIntake}
+            session={siteBuilderIntakeSession}
+            isSubmitting={isSubmittingSiteBuilderIntake}
+            error={siteBuilderIntakeError}
+            onSubmitStep={onSubmitSiteBuilderIntakeStep}
+          />
+        ) : null}
+
         {composition ? (
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -284,7 +314,7 @@ export function ActionPlanReview({
           </div>
         ) : null}
 
-        {plan.questions.length > 0 ? (
+        {showQuestionList ? (
           <Alert>
             <AlertTitle>More input needed</AlertTitle>
             <AlertDescription>

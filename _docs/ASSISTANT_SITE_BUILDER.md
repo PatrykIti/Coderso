@@ -403,6 +403,14 @@ precedence over the Basic prompt gate. Backend-only planner state can also
 carry requested Basic/Advanced mode and active intake session state; this is
 not a route-owned `context.siteBuilderIntake` payload.
 
+The Basic admin controls render in the existing floating LLM Guide review path
+from those server-owned step fields. Each save sends one normalized answer
+through `/assistant/actions/plan` with `context.siteBuilderIntakeState.activeSession`;
+the browser strips derived facts from the request session and does not persist
+raw answers in assistant conversation localStorage. Restored plans that no
+longer have in-memory answer state show a restart message rather than silently
+continuing from incomplete data.
+
 Basic site-map defaults are advisory facts owned by
 `core/services/assistant/assistantSiteBuilderIntakeBasicDefaults.ts`. They
 provide deterministic beginner-friendly suggestions for page roles, stable

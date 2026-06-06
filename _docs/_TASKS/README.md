@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 22 tasks
+- **To Do:** 21 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2278 tasks
+- **Done:** 2279 tasks
 
 ---
 
@@ -89,7 +89,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Validate Basic, Advanced, scoped cleanup plus second-theme rebuild, follow-up refinement, and fail-closed media/reference flows through Playwright CLI and Claude/agent review. |
-| TASK-407-06-L02 | Basic Stepper Controls | High | Large | Basic-only controls bound to server-normalized session state. |
 | TASK-407-06-L03 | Advanced Stepper Controls | High | Large | Advanced controls, preset selection, and reference brief display. |
 | TASK-407-06-L04 | Review Summary and Execution Gating | High | Large | Final review, disabled dry-run/execute states, confirmation, and plan handoff. |
 | TASK-407-06-L05 | UI Warnings Local State and Redaction | High | Medium | Warning/gate rendering, localStorage bounds, stale cache discard, and redaction tests. |
@@ -117,7 +116,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | In progress (2026-06-05): Basic/Advanced intake, reviewed siteKit/content-engine decisions, custom-screen decisions, follow-up scoping, and planner/runtime contract tests are complete; remaining work is admin UI and live E2E closure. |
-| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | In progress (2026-06-06): intake state machine is complete; remaining work is Basic/Advanced controls, review gating, warning presentation, and redacted local state. |
+| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | In progress (2026-06-06): intake state machine and Basic controls are complete; remaining work is Advanced controls, review gating, warning presentation, and redacted local state. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -152,6 +151,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | High | Large | Done (2026-06-06): reviewed intake siteKit plans now have strict/idempotent planner coverage and a Bun public catalog/detail runtime proof. |
 | TASK-407-05 | SiteKit Plan and Content Engine Decisions | High | Large | Done (2026-06-06): reviewed intake facts now map to strict siteKit actions, generic content-engine/custom-screen decisions, scoped follow-up targets, and runtime contract tests. |
 | TASK-407-06-L01 | Site Builder Intake UI State Machine | High | Large | Done (2026-06-06): explicit intake reducer covers server-session authority, stale-cache discard, reviewed planning, dry-run, and execute gating while existing assistant UI flows remain covered. |
+| TASK-407-06-L02 | Basic Stepper Controls | High | Large | Done (2026-06-06): Basic intake controls render from server metadata, submit one normalized answer through the existing plan route, reject tampered fields, and keep answers out of browser persistence. |
 | TASK-405 | Assistant Curated Media Profiles | High | Large | Done (2026-06-05): backend-owned curated media profiles render licensed public images for full-service sites, enforce curated URL/source/license trust, fix mobile rich-text images, and pass live Playwright CLI E2E. |
 | TASK-404 | LLM Guide Full Service Site Generation | High | Very Large | Done (2026-06-04): full-service assistant planning, dry-run, execute, public runtime, Playwright CLI, drift loops, docs, and changelog closure completed; media import remains explicitly gated. |
 | TASK-404-01 | Full Service Site Contract and Acceptance Matrix | High | Medium | Done (2026-06-04): full-service completion contract and acceptance matrix require real public pages, catalogs, details, nav/footer, contact, SEO, and explicit media gates. |
