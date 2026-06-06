@@ -286,8 +286,8 @@ async function verifyReferenceGatePathFailsClosed(page) {
   horizontal overflow, broken images, console errors, and page errors.
 - L03 deliberately claims Advanced runtime mechanics only. The public screenshot
   still showed generic local-service copy/branding and a media placeholder; full
-  copy/media personalization remains blocking follow-up scope for TASK-407-07
-  L04/L05 rather than a completed TASK-407 claim.
+  prompt-specific copy, branding, and media relevance remain follow-up proof for
+  TASK-407-07-L05's second-theme rebuild rather than a completed TASK-407 claim.
 
 ## Validation Evidence
 

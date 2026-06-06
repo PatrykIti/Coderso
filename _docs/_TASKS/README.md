@@ -78,8 +78,8 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 14 tasks
-- **In Progress:** 6 tasks
+- **To Do:** 13 tasks
+- **In Progress:** 7 tasks
 - **Done:** 2287 tasks
 
 ---
@@ -88,7 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | High | Large | Scoped refinement plus rejected unknown/poisoned/media-reference cases. |
 | TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | High | Large | Resource-id scoped cleanup and second different-industry/theme rebuild. |
 | TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | High | Medium | Docs, coverage matrices, changelog leaf coverage, board sync, and final Claude/agent pass. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
@@ -110,6 +109,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | In progress (2026-06-05): Basic/Advanced intake, reviewed siteKit/content-engine decisions, custom-screen decisions, follow-up scoping, planner/runtime contract tests, and admin UI convergence are complete; remaining work is live E2E closure. |
 | TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | In progress (2026-06-06): running targeted validation lanes, release gates, live Playwright E2E preparation, and final closure evidence for TASK-407. |
+| TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | High | Large | In progress (2026-06-06): correcting drift by making L04 wire/prove guided follow-up resolver behavior before live scoped refinement and fail-closed E2E. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

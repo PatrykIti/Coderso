@@ -23,8 +23,12 @@ industry/theme from a fresh nontechnical prompt.
 - Assert first-run pages/resources no longer remain.
 - Run a second full-site Basic or mixed guided flow for a different
   industry/theme.
-- Verify public runtime, navigation/footer, content, media policy, desktop/mobile,
-  and console/page errors for the second site.
+- Verify the second site is prompt-specific, not just a regenerated generic
+  local-service shell: brand/site name, hero copy, service/content sections,
+  navigation labels, SEO titles/descriptions, and at least one legal/gated media
+  decision must fit the requested industry/theme.
+- Verify public runtime, navigation/footer, content, media policy,
+  desktop/mobile, and console/page errors for the second site.
 
 ## Security Contract
 
@@ -57,9 +61,12 @@ async function runScopedCleanupAndSecondThemeE2E(page) {
   const resources = await listResourcesCreatedByE2ERun();
   await deleteOnlyScopedResources(resources);
   await assertNoFirstRunResourcesRemain(resources);
-  await promptAsBeginner("zrob mi strone dla innej branzy niz poprzednio");
+  await promptAsBeginner(
+    "nie znam sie na cms, zrob mi kompletna strone dla innej branzy niz poprzednio"
+  );
   await completeGuidedSiteFlow(page);
   await assertPublicRuntimeIsDifferentIndustry();
+  await assertPromptSpecificCopyBrandingAndMediaPolicy();
 }
 ```
 
@@ -71,6 +78,10 @@ async function runScopedCleanupAndSecondThemeE2E(page) {
   cleanup failures block the second run.
 - Second run must prove different content/theme choices, not only regenerate the
   first prompt.
+- Generic fallback text such as `Local Service Business`, unrelated testimonial
+  fixtures, or unexplained media placeholders cannot satisfy the prompt-specific
+  copy/branding evidence unless the task explicitly records a blocking follow-up
+  with rationale.
 
 ## Testing Requirements
 
@@ -78,6 +89,8 @@ async function runScopedCleanupAndSecondThemeE2E(page) {
 - Assertions that cleanup is scoped and non-destructive.
 - Public runtime, mobile, navigation/footer, media policy, and console checks for
   second site.
+- Assertions that the second site's visible copy, metadata, and media policy are
+  specific to the requested industry/theme rather than generic kit defaults.
 
 ## Documentation Updates Required
 
@@ -88,4 +101,6 @@ async function runScopedCleanupAndSecondThemeE2E(page) {
 
 - First-run generated resources are removed through scoped cleanup only.
 - Second full-site run succeeds for a different industry/theme.
+- Second full-site run produces prompt-specific copy/branding/media-policy
+  evidence for that industry/theme.
 - No unrelated resources are deleted or mutated.
