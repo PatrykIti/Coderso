@@ -1,6 +1,11 @@
 import { throwAssistantSiteBuilderIntakeError } from "./assistantSiteBuilderIntakeErrors";
 import { redactAssistantText } from "./assistantRedaction";
 import { getSiteBuilderIntakeOption } from "./assistantSiteBuilderIntakeRegistry";
+import {
+  resolveSiteBuilderIntakeContentEngines,
+  type AssistantSiteBuilderContentEngineDecisionResult,
+  type AssistantSiteBuilderContentEngineDecisionSource,
+} from "./assistantSiteBuilderIntakeContentEngines";
 import type {
   AssistantSiteBuilderBasicMenuItemDefault,
   AssistantSiteBuilderBasicPageRouteDefault,
@@ -26,15 +31,20 @@ export type AssistantSiteBuilderBasicWidgetCandidate = {
 export type AssistantSiteBuilderBasicContentEngineCandidate = {
   id: AssistantSiteBuilderContentEngineId;
   label: string;
-  source: "page-role" | "section-role";
+  source: AssistantSiteBuilderContentEngineDecisionSource;
 };
 
 export type AssistantSiteBuilderBasicReviewGate = {
-  code: "widget_alias_unsupported" | "content_engine_required" | "media_library_selection_required";
-  severity: "info" | "warning";
+  code:
+    | "widget_alias_unsupported"
+    | "content_engine_required"
+    | "content_engine_unsupported"
+    | "media_library_selection_required";
+  severity: "info" | "warning" | "error";
   message: string;
   sectionRoleId?: AssistantSiteBuilderSectionRoleId;
   pageRoleId?: AssistantSiteBuilderPageRoleId;
+  contentEngineId?: string;
   mediaPolicy?: AssistantSiteBuilderMediaPolicyId;
 };
 
@@ -65,29 +75,6 @@ const sectionRoleWidgetAliases = Object.freeze({
   "content-feed": "posts-feed",
   "call-to-action": "cta",
 } satisfies Record<AssistantSiteBuilderSectionRoleId, string | null>);
-
-const pageRoleContentEngineIds: Readonly<
-  Partial<Record<AssistantSiteBuilderPageRoleId, AssistantSiteBuilderContentEngineId>>
-> = Object.freeze({
-  services: "services",
-  products: "products",
-  portfolio: "portfolio",
-  "case-studies": "case-studies",
-  blog: "blog",
-  team: "team",
-  locations: "locations",
-  faq: "faq",
-  testimonials: "testimonials",
-});
-
-const sectionRoleContentEngineIds: Readonly<
-  Partial<Record<AssistantSiteBuilderSectionRoleId, AssistantSiteBuilderContentEngineId>>
-> = Object.freeze({
-  "services-overview": "services",
-  proof: "testimonials",
-  faq: "faq",
-  "content-feed": "blog",
-});
 
 const basicReviewInputStepIds = Object.freeze([
   "business-profile",
@@ -138,9 +125,6 @@ const validateSectionRoleId = (roleId: string): AssistantSiteBuilderSectionRoleI
 
 const validateMediaPolicyId = (mediaPolicy: string): AssistantSiteBuilderMediaPolicyId =>
   getSiteBuilderIntakeOption("mediaPolicies", mediaPolicy).id as AssistantSiteBuilderMediaPolicyId;
-
-const validateContentEngineId = (engineId: string): AssistantSiteBuilderContentEngineId =>
-  getSiteBuilderIntakeOption("contentEngines", engineId).id as AssistantSiteBuilderContentEngineId;
 
 const collectMissingBasicReviewInputs = (
   facts: AssistantSiteBuilderIntakeFacts
@@ -270,51 +254,39 @@ const collectWidgetCandidatesAndGates = (
   return { widgetCandidates, gates };
 };
 
-const inferContentEngineCandidates = (input: {
-  pageRoleIds: readonly AssistantSiteBuilderPageRoleId[];
-  sectionRoleIds: readonly AssistantSiteBuilderSectionRoleId[];
-}): AssistantSiteBuilderBasicContentEngineCandidate[] => {
-  const candidates = new Map<
-    AssistantSiteBuilderContentEngineId,
-    AssistantSiteBuilderBasicContentEngineCandidate
-  >();
-
-  for (const pageRoleId of input.pageRoleIds) {
-    const id = pageRoleContentEngineIds[pageRoleId];
-    if (!id) continue;
-    candidates.set(id, {
-      id,
-      label: getSiteBuilderIntakeOption("contentEngines", id).label,
-      source: "page-role",
-    });
-  }
-
-  for (const sectionRoleId of input.sectionRoleIds) {
-    const id = sectionRoleContentEngineIds[sectionRoleId];
-    if (!id || candidates.has(id)) continue;
-    candidates.set(id, {
-      id,
-      label: getSiteBuilderIntakeOption("contentEngines", id).label,
-      source: "section-role",
-    });
-  }
-
-  return [...candidates.values()];
-};
+const mapContentEngineCandidates = (
+  result: AssistantSiteBuilderContentEngineDecisionResult
+): AssistantSiteBuilderBasicContentEngineCandidate[] =>
+  result.decisions.map((decision) => ({
+    id: decision.id,
+    label: decision.label,
+    source: decision.sources[0]?.source ?? "explicit",
+  }));
 
 const collectContentGates = (
-  contentEngineCandidates: readonly AssistantSiteBuilderBasicContentEngineCandidate[]
-): AssistantSiteBuilderBasicReviewGate[] =>
-  contentEngineCandidates.length > 0
-    ? [
-        {
-          code: "content_engine_required",
-          severity: "info",
-          message:
-            "Structured content candidates are review-only until the content-engine adapter creates schemas and pages.",
-        },
-      ]
-    : [];
+  result: AssistantSiteBuilderContentEngineDecisionResult
+): AssistantSiteBuilderBasicReviewGate[] => {
+  const gates: AssistantSiteBuilderBasicReviewGate[] = [];
+  if (result.decisions.length > 0) {
+    gates.push({
+      code: "content_engine_required",
+      severity: "info",
+      message:
+        "Structured content candidates are review-only until the content-engine adapter creates schemas and pages.",
+    });
+  }
+
+  for (const gate of result.gates) {
+    gates.push({
+      code: gate.code,
+      severity: gate.severity,
+      contentEngineId: gate.requestedEngineId,
+      message: gate.message,
+    });
+  }
+
+  return gates;
+};
 
 const collectMediaGates = (
   mediaPolicy: AssistantSiteBuilderMediaPolicyId | null
@@ -333,12 +305,6 @@ const collectMediaGates = (
 const resolveContactPath = (
   pages: readonly AssistantSiteBuilderBasicPageRouteDefault[]
 ): string | null => pages.find((page) => page.roleId === "contact")?.path ?? null;
-
-const validateExplicitContentEngines = (facts: AssistantSiteBuilderIntakeFacts) => {
-  for (const contentEngineId of facts.contentEngines ?? []) {
-    validateContentEngineId(contentEngineId);
-  }
-};
 
 const buildSummary = (input: {
   pages: readonly AssistantSiteBuilderBasicPageRouteDefault[];
@@ -380,19 +346,23 @@ export const buildBasicSiteBuilderReviewFacts = (
   facts: AssistantSiteBuilderIntakeFacts
 ): AssistantSiteBuilderBasicReviewFacts => {
   assertBasicFactsReadyForReview(facts);
-  validateExplicitContentEngines(facts);
 
   const pages = getPageRoutes(facts);
   const menuItems = getMenuItems(facts);
   const pageRoleIds = resolvePageRoles(facts);
   const sectionRoleIds = resolveSectionRoles(facts);
   const widgets = collectWidgetCandidatesAndGates(sectionRoleIds);
-  const contentEngineCandidates = inferContentEngineCandidates({ pageRoleIds, sectionRoleIds });
+  const contentEngineDecisionResult = resolveSiteBuilderIntakeContentEngines({
+    ...facts,
+    pageRoles: pageRoleIds,
+    sectionRoles: sectionRoleIds,
+  });
+  const contentEngineCandidates = mapContentEngineCandidates(contentEngineDecisionResult);
   const mediaPolicy = facts.mediaPolicy ? validateMediaPolicyId(facts.mediaPolicy) : null;
   const contactPath = resolveContactPath(pages);
   const gates = [
     ...widgets.gates,
-    ...collectContentGates(contentEngineCandidates),
+    ...collectContentGates(contentEngineDecisionResult),
     ...collectMediaGates(mediaPolicy),
   ];
 

@@ -412,13 +412,19 @@ turns completed Basic facts into review-only pages, menu items, supported
 homepage widget candidates, content-engine candidates, contact path, media
 policy, gates, and a bounded redacted summary. Widget support resolves through
 `modulePackMatrix` `assistantPageSections`; unsupported section roles become
-`widget_alias_unsupported` gates instead of invented widgets. Content-engine and
-media-library needs remain advisory gates until later adapters can create
-schemas, choose existing media-library ids, or compile `siteKit` actions. Review
-facts require Basic review readiness plus required non-review steps, Basic
-defaults, hero, and media policy; incomplete facts fail closed. `featured-items`
-stays a generic `content-list` widget candidate and does not imply a portfolio
-content engine unless the page roles include portfolio.
+`widget_alias_unsupported` gates instead of invented widgets. Content-engine
+decisions resolve through `assistantSiteBuilderIntakeContentEngines.ts` for
+explicit choices, page roles, section roles, and bounded text signals. Supported
+engines are services, products, portfolio/projects, case studies,
+posts/editorial, team, locations, FAQ, and testimonials/proof; static-only page
+roles stay static, text-only signals create scope questions, and unsupported
+event/jobs/course-like engines become gates instead of arbitrary schemas or
+plugins. Media-library needs remain advisory gates until later adapters choose
+existing media-library ids. Review facts require Basic review readiness plus
+required non-review steps, Basic defaults, hero, and media policy; incomplete
+facts fail closed. `featured-items` stays a generic `content-list` widget
+candidate and does not imply a portfolio content engine unless the page roles
+include portfolio.
 
 Answer normalization and fact derivation are service-owned:
 - `core/services/assistant/assistantSiteBuilderIntakeErrors.ts`
@@ -462,6 +468,9 @@ as page roles, section roles, media policy, content engines, design preset,
 advanced layout, reference design brief, hero/menu choices, references, gates,
 and diagnostics stay out of `context.siteKit` and remain compiler/review
 metadata for later adapters.
+`reviewFacts.contentEngineDecisions` is part of that metadata. Unsupported
+content-engine gates block reviewed action-plan handoff before a `siteKit`
+request is created.
 
 Static site-shell coverage for reviewed siteKit handoff is checked by
 `assistantSiteBuilderIntakeStaticActions.ts`. The production siteKit planner

@@ -136,9 +136,13 @@ and cannot influence paths, action ids, or route targets.
 Basic review facts live in `assistantSiteBuilderIntakeBasicReview.ts`. They map
 completed Basic facts to review-only pages, menus, supported widget candidates,
 content-engine candidates, media policy, contact path, and gates. Widget aliases
-must resolve through `modulePackMatrix` `assistantPageSections`; unsupported
-section roles and media-library selection needs stay as explicit gates until a
-later adapter compiles reviewed facts into `siteKit` actions. The helper fails
+must resolve through `modulePackMatrix` `assistantPageSections`; content-engine
+decisions resolve through `assistantSiteBuilderIntakeContentEngines.ts` and stay
+as review metadata until later custom-screen/action leaves. Supported engines
+cover services, products, portfolio/projects, case studies, posts/editorial,
+team, locations, FAQ, and testimonials/proof. Unsupported event/jobs/course-like
+engine needs become gates and block reviewed action-plan handoff instead of
+creating arbitrary schemas, plugins, routes, or public writes. The helper fails
 closed before review output when Basic review readiness, required non-review
 steps, Basic defaults, hero, or media policy are missing, and `featured-items`
 does not imply a portfolio content engine by itself.

@@ -6,7 +6,7 @@
 **Category:** Assistant + Content Engines
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-05-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-06)
 
 ---
 
@@ -53,12 +53,22 @@ gates.
 
 ```ts
 export function resolveSiteBuilderIntakeContentEngines(facts: AssistantSiteBuilderIntakeFacts) {
-  return facts.siteMap.pageRoles.map((role) => {
-    const candidate = siteBuilderIntakeEngineRegistry[role];
-    if (!candidate) return staticPageOnly(role);
-    if (!isEngineSupported(candidate, facts)) return gatedEngine(candidate, "engine_unsupported");
-    return candidate;
-  });
+  const candidates = collectExplicitPageSectionAndTextSignals(facts);
+  return {
+    schemaVersion: 1,
+    decisions: candidates.supported.map((candidate) => ({
+      id: candidate.id,
+      status: "supported",
+      sources: candidate.sources,
+      capabilities: supportedCapabilities(candidate.id),
+      actionFamilies: existingActionFamilies(candidate.id),
+      requiresCustomScreen: true,
+      requiresPublicWriteEndpoint: false,
+    })),
+    staticPageRoles: candidates.staticPageRoles,
+    questions: candidates.textOnly.map((candidate) => scopeQuestion(candidate.id)),
+    gates: candidates.unsupported.map((candidate) => unsupportedGate(candidate)),
+  };
 }
 ```
 
@@ -89,3 +99,27 @@ export function resolveSiteBuilderIntakeContentEngines(facts: AssistantSiteBuild
 - Content-engine decisions are generic, supported, and explainable.
 - Unsupported requests are gated.
 - No arbitrary schema/code/plugin generation path is introduced.
+
+## Completion Notes
+
+- Added `assistantSiteBuilderIntakeContentEngines.ts` as a pure decision helper
+  for supported services, products, portfolio/projects, case studies,
+  posts/editorial, team, locations, FAQ, and testimonials/proof engines.
+- Decisions are derived from explicit Advanced choices, page roles, section
+  roles, and bounded text signals without leaking raw user text into metadata.
+- Static-only page roles stay static, text-only engine signals create scope
+  questions, and unsupported event/jobs/course-like engine requests become
+  gates instead of arbitrary schemas or plugins.
+- Basic review now uses the shared resolver, and compile results expose
+  `reviewFacts.contentEngineDecisions` while keeping it out of strict
+  `context.siteKit`.
+- Reviewed action-plan handoff blocks when unsupported content-engine gates are
+  present.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeContentEngines.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeBasicReview.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts`
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeContentEngines.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeBasicReview.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeStaticActions.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`

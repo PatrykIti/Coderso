@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 28 tasks
+- **To Do:** 27 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2272 tasks
+- **Done:** 2273 tasks
 
 ---
 
@@ -90,7 +90,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | Build the guided stepper/review UX and harden local state, warnings, and execute gating. |
 | TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Validate Basic, Advanced, scoped cleanup plus second-theme rebuild, follow-up refinement, and fail-closed media/reference flows through Playwright CLI and Claude/agent review. |
-| TASK-407-05-L03 | Content Engine Decision Rules | High | Large | Supported service/project/product/post/proof/team/location/FAQ engine selection and gates. |
 | TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | High | Medium | Beginner editing surface decisions and unsupported custom-screen gates. |
 | TASK-407-05-L05 | Follow Up Refinement Target Resolution | High | Large | Active-resource/server-catalog target resolution and ambiguity questions. |
 | TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | High | Large | Strict action validation, dry-run/idempotency tests, and one public runtime proof. |
@@ -123,7 +122,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | In progress (2026-06-05): Basic and Advanced intake design/reference leaves are complete; remaining work maps reviewed facts to existing `siteKit`, adds admin UI, and closes live E2E. |
-| TASK-407-05 | SiteKit Plan and Content Engine Decisions | High | Large | In progress (2026-06-05): L01 maps reviewed intake facts into schema-exact `context.siteKit`; L02 validates static shell coverage through existing siteKit actions; remaining leaves cover content engines, custom screens, follow-ups, and idempotency tests. |
+| TASK-407-05 | SiteKit Plan and Content Engine Decisions | High | Large | In progress (2026-06-05): L01 maps reviewed intake facts into schema-exact `context.siteKit`; L02 validates static shell coverage; L03 resolves content-engine decisions/gates; remaining leaves cover custom screens, follow-ups, and idempotency tests. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -152,6 +151,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-407-04 | Advanced Mode Design Presets and Reference Intake | High | Large | Done (2026-06-05): backend-owned Advanced presets, layout options, reference validation/redaction, and reviewed design brief gates are complete without free-form actions or media imports. |
 | TASK-407-05-L01 | Intake Facts to SiteKit Plan Adapter | High | Large | Done (2026-06-05): reviewed intake facts compile into schema-exact `context.siteKit` with `selectedKitId`, while review-only metadata stays outside the route payload. |
 | TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | High | Large | Done (2026-06-05): normalized siteKit install previews now gate page, primary/footer menu, lead-capture form, SEO default, and same-plan locator coverage before execute. |
+| TASK-407-05-L03 | Content Engine Decision Rules | High | Large | Done (2026-06-06): generic content-engine decisions now cover supported services/products/portfolio/case-studies/blog/team/locations/FAQ/testimonials, scope questions, and unsupported-engine gates. |
 | TASK-405 | Assistant Curated Media Profiles | High | Large | Done (2026-06-05): backend-owned curated media profiles render licensed public images for full-service sites, enforce curated URL/source/license trust, fix mobile rich-text images, and pass live Playwright CLI E2E. |
 | TASK-404 | LLM Guide Full Service Site Generation | High | Very Large | Done (2026-06-04): full-service assistant planning, dry-run, execute, public runtime, Playwright CLI, drift loops, docs, and changelog closure completed; media import remains explicitly gated. |
 | TASK-404-01 | Full Service Site Contract and Acceptance Matrix | High | Medium | Done (2026-06-04): full-service completion contract and acceptance matrix require real public pages, catalogs, details, nav/footer, contact, SEO, and explicit media gates. |

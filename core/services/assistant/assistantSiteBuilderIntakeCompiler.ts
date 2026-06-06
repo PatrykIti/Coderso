@@ -1,5 +1,9 @@
 import type { AssistantSiteKitPlanInput } from "./actionPlanTypes";
 import { throwAssistantSiteBuilderIntakeError } from "./assistantSiteBuilderIntakeErrors";
+import {
+  resolveSiteBuilderIntakeContentEngines,
+  type AssistantSiteBuilderContentEngineDecisionResult,
+} from "./assistantSiteBuilderIntakeContentEngines";
 import { normalizeAssistantSiteBuilderIntakeSession } from "./assistantSiteBuilderIntakeNormalizer";
 import type {
   AssistantSiteBuilderContentEngineId,
@@ -17,10 +21,12 @@ import {
 } from "../kits/solutionKitTypes";
 
 export type AssistantSiteBuilderIntakeCompileGate = {
-  code: "intake_not_ready" | "intake_missing_shell_fact";
+  code: "intake_not_ready" | "intake_missing_shell_fact" | "content_engine_unsupported";
   message: string;
   stepId?: AssistantSiteBuilderIntakeStepId;
   field?: string;
+  contentEngineId?: string;
+  source?: string;
 };
 
 export type AssistantSiteBuilderIntakeCompileResult = {
@@ -32,6 +38,7 @@ export type AssistantSiteBuilderIntakeCompileResult = {
     heroPreset: AssistantSiteBuilderIntakeFacts["heroPreset"];
     mediaPolicy: AssistantSiteBuilderIntakeFacts["mediaPolicy"];
     contentEngines: AssistantSiteBuilderIntakeFacts["contentEngines"];
+    contentEngineDecisions: AssistantSiteBuilderContentEngineDecisionResult;
     designPresetId: AssistantSiteBuilderIntakeFacts["designPresetId"];
     advancedLayout: AssistantSiteBuilderIntakeFacts["advancedLayout"];
     referenceDesignBrief: AssistantSiteBuilderIntakeFacts["referenceDesignBrief"];
@@ -299,24 +306,36 @@ export const buildSiteKitPlanInputFromIntakeFacts = (
 export const buildSiteBuilderIntakeCompileResult = (
   facts: AssistantSiteBuilderIntakeFacts,
   options: { supportedSteps?: readonly SiteBuilderPlanStepId[] } = {}
-): AssistantSiteBuilderIntakeCompileResult => ({
-  siteKit: buildSiteKitPlanInputFromIntakeFacts(facts, options),
-  reviewFacts: {
-    pageRoles: facts.pageRoles,
-    sectionRoles: facts.sectionRoles,
-    menuPreset: facts.menuPreset,
-    heroPreset: facts.heroPreset,
-    mediaPolicy: facts.mediaPolicy,
-    contentEngines: facts.contentEngines,
-    designPresetId: facts.designPresetId,
-    advancedLayout: facts.advancedLayout,
-    referenceDesignBrief: facts.referenceDesignBrief,
-    readyForReview: facts.readyForReview === true,
-    readyForExecution: facts.readyForExecution === true,
-    redactionApplied: facts.redactionApplied === true,
-  },
-  gates: [],
-});
+): AssistantSiteBuilderIntakeCompileResult => {
+  const contentEngineDecisions = resolveSiteBuilderIntakeContentEngines(facts);
+  const contentEngineGates: AssistantSiteBuilderIntakeCompileGate[] =
+    contentEngineDecisions.gates.map((gate) => ({
+      code: gate.code,
+      message: gate.message,
+      contentEngineId: gate.requestedEngineId,
+      source: gate.source,
+    }));
+
+  return {
+    siteKit: buildSiteKitPlanInputFromIntakeFacts(facts, options),
+    reviewFacts: {
+      pageRoles: facts.pageRoles,
+      sectionRoles: facts.sectionRoles,
+      menuPreset: facts.menuPreset,
+      heroPreset: facts.heroPreset,
+      mediaPolicy: facts.mediaPolicy,
+      contentEngines: facts.contentEngines,
+      contentEngineDecisions,
+      designPresetId: facts.designPresetId,
+      advancedLayout: facts.advancedLayout,
+      referenceDesignBrief: facts.referenceDesignBrief,
+      readyForReview: facts.readyForReview === true,
+      readyForExecution: facts.readyForExecution === true,
+      redactionApplied: facts.redactionApplied === true,
+    },
+    gates: contentEngineGates,
+  };
+};
 
 export const compileIntakeToSiteKitPlanInput = (
   session: AssistantSiteBuilderIntakeSession
@@ -336,10 +355,17 @@ export const buildActionPlanRequestFromReviewedIntake = (
 ): AssistantSiteBuilderIntakeActionPlanRequest => {
   const normalized = normalizeAssistantSiteBuilderIntakeSession(session);
   const facts = normalized.facts ?? {};
+  const compileResult = buildSiteBuilderIntakeCompileResult(facts);
+  if (compileResult.gates.length > 0) {
+    throwAssistantSiteBuilderIntakeError("intake_session_invalid", {
+      reason: "content_engine_handoff_blocked",
+      gates: compileResult.gates,
+    });
+  }
   return {
     prompt: buildSiteKitPromptSummary(facts),
     context: {
-      siteKit: buildSiteKitPlanInputFromIntakeFacts(facts),
+      siteKit: compileResult.siteKit,
     },
   };
 };
