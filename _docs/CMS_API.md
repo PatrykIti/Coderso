@@ -2102,7 +2102,8 @@ Apply request payload:
 ```
 
 `plan` (optional):
-- `enabledStepIds`: execution scope selected in AI wizard review step,
+- `enabledStepIds`: execution scope selected by the reviewed LLM Guide
+  site-builder plan,
 - `settingsPatch`: planner output snapshot attached to run metadata,
 - `notes`: planner notes attached to run metadata.
 
@@ -2126,7 +2127,8 @@ Run shape (summary):
 - `options`, `summary`, `error`,
 - `createdAt`, `updatedAt`, `finishedAt`.
 
-`options.wizard` (when run started from AI wizard apply):
+`options.wizard` (legacy apply snapshot; new reviewed intake UI does not expose
+wizard rerun/clone controls):
 - `enabledStepIds`,
 - `settingsPatch`,
 - `notes`.
@@ -3462,7 +3464,9 @@ Permissions:
 - `POST /assistant/actions/dry-run` i `POST /assistant/actions/execute`
   egzekwuja per-action permissions z registry kontraktow zamiast dokladac
   jeden szerszy wspolny bundle write/read dla wszystkich action families
-- dodatkowo `solution-kits:read` dla `POST /assistant/actions/plan` i `POST /assistant/actions/dry-run`, gdy payload dotyczy `context.siteKit` albo `site-kit.*`
+- dodatkowo `solution-kits:read` dla `POST /assistant/actions/plan`, gdy
+  payload zawiera reviewed `context.siteBuilderIntakeState.activeSession`, oraz
+  dla `POST /assistant/actions/dry-run`, gdy plan zawiera `site-kit.*`
 - dodatkowo `solution-kits:write` dla `POST /assistant/actions/execute`, gdy plan zawiera `site-kit.*`
 
 Endpoints:
@@ -3473,7 +3477,7 @@ Endpoints:
 - `POST /assistant/actions/dry-run`
 - `POST /assistant/actions/execute`
 
-Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execution idzie przez `site-kit.*` actions w `/assistant/actions/*`.
+Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execution idzie przez reviewed `LLM Guide` intake i `site-kit.*` actions w `/assistant/actions/*`.
 `site-kit.*` wymaga skonfigurowanego `LLM Guide` (`llmAvailable=true`); endpoint zwraca `assistant_llm_unavailable`, gdy provider/API key nie jest gotowy.
 `TASK-170-01` dodalo contract-only registry dla przyszlych rodzin akcji (`entry.*`, `menu.*`, `seo.*`, `media.*`, `form.automation.*`, `page.widget.*`, `listing-*.*`).
 `TASK-170-03-01` promuje `entry.upsert-draft` do executable typed action.
@@ -3780,23 +3784,40 @@ shell, derives only the bounded `collectionWorkspaceHint`, then rehydrates
 `collectionWorkspace` and detail-page identity server-side before planning.
 Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active pages also require `widgets:read` for template-section inspection; active widget templates require `widgets:read`; active detail pages require `content:read` plus `widgets:read`. If the server-side resource is missing, active surface context is dropped.
 
-`context.siteKit` moze byc uzyty przez AI Site Wizard jako guided entry point do tego samego action flow:
+Reviewed site-builder intake uzywa `context.siteBuilderIntakeState.activeSession`.
+Bezposrednie `context.siteKit` nie jest publicznym/admin payloadem dla
+`POST /assistant/actions/plan` i jest odrzucane przez schema validation:
 
 ```json
 {
-  "prompt": "Prepare a site kit plan through LLM Guide.",
+  "prompt": "Create a complete website for my business.",
   "context": {
     "locale": "en",
-    "siteKit": {
-      "businessType": "automotive_workshop",
-      "goals": ["lead_generation", "online_booking"],
-      "locale": "en",
-      "selectedKitId": "automotive-workshop",
-      "enabledStepIds": ["settings", "pages", "qa"]
+    "siteBuilderIntakeState": {
+      "activeSession": {
+        "version": 1,
+        "mode": "basic",
+        "currentStepId": "review",
+        "answers": [
+          {
+            "stepId": "business-profile",
+            "values": {
+              "siteName": "Studio Forma",
+              "entityName": "Studio Forma",
+              "vertical": "architecture studio",
+              "locale": "en"
+            }
+          }
+        ]
+      }
     }
   }
 }
 ```
+
+The route session shape is intentionally stripped to
+`version/mode/currentStepId/answers`; facts, review metadata, provider text,
+secrets, signed URLs, and compiled `siteKit` input stay backend-owned.
 
 `POST /assistant/actions/plan` response (fragment)
 

@@ -141,7 +141,7 @@ afterthought.
 ### Grow
 - **Solution Kits** — install a whole vertical in one flow (automotive workshop, beauty salon,
   medical clinic, services directory, small e-commerce)
-- **AI Site Wizard** — guided `profile → goals → recommendation → review → execute`
+- **LLM Guide Site Builder** — reviewed `intake → plan → dry-run → execute`
 - **Themes & design tokens** with multiple visual profiles
 
 ### Extend

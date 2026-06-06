@@ -3404,7 +3404,7 @@ test("planAssistantActions builds inquiry form refinement plan for house project
   expect(pageAction?.input.formEmbed?.formName).toBe("House Projects Catalog Inquiry");
 });
 
-test("planAssistantActions builds site-kit actions from guided site-kit context", () => {
+test("planAssistantActions gates direct site-kit context before executable actions", () => {
   const plan = planAssistantActions({
     prompt: "prepare a starter site kit",
     context: {
@@ -3419,15 +3419,11 @@ test("planAssistantActions builds site-kit actions from guided site-kit context"
     },
   });
 
-  expect(plan.status).toBe("ready");
+  expect(plan.status).toBe("needs_input");
   expect(plan.intentFamily).toBe("site_kit");
-  expect(plan.actions.map((action) => action.type)).toEqual([
-    "site-kit.recommend",
-    "site-kit.install",
-  ]);
-  const install = plan.actions.find((action) => action.type === "site-kit.install");
-  expect(install?.input.preview.selectedKitId).toBe("automotive-workshop");
-  expect(install?.input.preview.enabledStepIds).toEqual(["settings", "pages", "qa"]);
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.actions).toEqual([]);
+  expect(plan.answer).toContain("reviewed LLM Guide site-builder intake");
 });
 
 test("planAssistantActions accepts enriched resource catalog context without DB imports", () => {

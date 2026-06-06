@@ -301,6 +301,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const hasSiteKitContext = (value: unknown) => isRecord(value) && isRecord(value.siteKit);
 
+const hasSiteBuilderIntakeContext = (value: unknown) => {
+  if (!isRecord(value) || !isRecord(value.siteBuilderIntakeState)) return false;
+  const state = value.siteBuilderIntakeState;
+  return isRecord(state.activeSession) || typeof state.requestedMode === "string";
+};
+
+const hasSiteBuilderPlanningContext = (value: unknown) =>
+  hasSiteKitContext(value) || hasSiteBuilderIntakeContext(value);
+
 const activeSurfaceKind = (value: unknown) => {
   if (!isRecord(value) || !isRecord(value.activeSurface)) return null;
   const kind = value.activeSurface.kind;
@@ -421,7 +430,7 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         context?: AssistantActionContext;
       };
       const includeResourceCatalog = body.context?.includeResourceCatalog === true;
-      if (hasSiteKitContext(body.context)) {
+      if (hasSiteBuilderPlanningContext(body.context)) {
         await requirePermission("solution-kits:read")(ctx);
       }
       const surfaceKind = activeSurfaceKind(body.context);
@@ -436,7 +445,7 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         await requirePermission("widgets:read")(ctx);
       }
       return withAssistantErrors(ctx.requestId, async () => {
-        if (hasSiteKitContext(body.context)) {
+        if (hasSiteBuilderPlanningContext(body.context)) {
           await ensureLlmGuideAvailable();
         }
         const contextWithCatalog: AssistantActionContext | undefined = includeResourceCatalog

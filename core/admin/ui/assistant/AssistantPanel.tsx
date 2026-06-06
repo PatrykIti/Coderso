@@ -50,6 +50,7 @@ import {
   readAssistantRuntimeStateCache,
   type AssistantRuntimeState,
 } from "./assistantRuntimeStateCache";
+import { ASSISTANT_PANEL_OPEN_EVENT, type AssistantPanelOpenDetail } from "./assistantPanelEvents";
 
 export {
   clearAssistantRuntimeStateCache,
@@ -1057,6 +1058,31 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     setActionError(null);
     setSiteBuilderIntakeError(null);
   }, []);
+
+  const handleAssistantPanelOpen = useCallback(
+    (event: Event) => {
+      const detail = (event as CustomEvent<AssistantPanelOpenDetail>).detail ?? {};
+      if (detail.reset) {
+        handleNewConversation();
+      }
+      if (detail.mode) {
+        setAssistantMode(detail.mode);
+      }
+      if (typeof detail.message === "string") {
+        setMessage(detail.message);
+      }
+      setOpen(true);
+    },
+    [handleNewConversation]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    window.addEventListener(ASSISTANT_PANEL_OPEN_EVENT, handleAssistantPanelOpen);
+    return () => {
+      window.removeEventListener(ASSISTANT_PANEL_OPEN_EVENT, handleAssistantPanelOpen);
+    };
+  }, [handleAssistantPanelOpen]);
 
   const composerState = useMemo(
     () =>

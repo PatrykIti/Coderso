@@ -4,6 +4,7 @@ import { planAssistantActions } from "../../../core/services/assistant/actionPla
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import { matchExistingCompositionResources } from "../../../core/services/assistant/blueprints/blueprintExistingResourceMatcher";
+import { buildFullServiceSitePlan } from "../../../core/services/assistant/blueprints/fullServiceSiteBlueprint";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { buildLeadCaptureSitePlan } from "../../../core/services/assistant/blueprints/leadCaptureBlueprint";
 import { buildProductInquiryCatalogPlan } from "../../../core/services/assistant/blueprints/productInquiryBlueprint";
@@ -26,9 +27,11 @@ import {
   previewGuidedSiteBuilderPlan,
   validateGuidedSiteBuilderRun,
 } from "../../../core/services/assistant/siteBuilderExecutor";
+import { buildGuidedSiteBuilderPlanResult } from "../../../core/services/assistant/siteBuilderPlanAdapter";
 import type {
   AssistantActionPlan,
   AssistantPlannedAction,
+  AssistantSiteKitPlanInput,
 } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantUndoManifestItem } from "../../../core/services/assistant/actionUndoManifest";
 import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
@@ -40,6 +43,60 @@ import type { ContentRouteSetting } from "../../../core/services/settings/settin
 import type { WidgetBlock } from "../../../core/widgets/types";
 
 type ExecutorDeps = NonNullable<Parameters<typeof dryRunAssistantActionPlan>[1]>;
+
+const automotiveSiteKitInput: AssistantSiteKitPlanInput = {
+  businessType: "automotive_workshop",
+  goals: ["lead_generation"],
+  locale: "en",
+  selectedKitId: "automotive-workshop",
+  enabledStepIds: ["settings", "pages", "qa"],
+};
+
+const buildExecutorSiteKitPlan = (): AssistantActionPlan => {
+  const preview = buildGuidedSiteBuilderPlanResult(automotiveSiteKitInput);
+  const resolvedInput = {
+    ...automotiveSiteKitInput,
+    selectedKitId: preview.selectedKitId,
+    enabledStepIds: [...preview.enabledStepIds],
+  };
+
+  return {
+    id: `plan-site-kit-${preview.selectedKitId}`,
+    status: "ready",
+    intentId: "site-kit-install",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: `${preview.selectedKitTitle} Site Kit`,
+    answer: `I can prepare the ${preview.selectedKitTitle} site kit.`,
+    summary: "Dry-run and execute the selected site kit through typed assistant actions.",
+    confidence: preview.plan.confidence / 100,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: `site-kit-recommend-${preview.selectedKitId}`,
+        type: "site-kit.recommend",
+        title: `Recommend ${preview.selectedKitTitle}`,
+        description: "Recommend the reviewed site kit.",
+        input: {
+          ...resolvedInput,
+          preview,
+        },
+      },
+      {
+        id: `site-kit-install-${preview.selectedKitId}`,
+        type: "site-kit.install",
+        title: `Install ${preview.selectedKitTitle}`,
+        description: "Install the reviewed site kit.",
+        input: {
+          ...resolvedInput,
+          continueOnError: true,
+          preview,
+        },
+      },
+    ],
+  };
+};
 
 const createDeps = () => {
   let contentRoutes: ContentRouteSetting[] = [];
@@ -4651,19 +4708,7 @@ test("dryRunAssistantActionPlan supports product catalog preset through the same
 });
 
 test("dryRunAssistantActionPlan previews site-kit recommend and install actions", async () => {
-  const plan = planAssistantActions({
-    prompt: "prepare a starter site kit",
-    context: {
-      locale: "en",
-      siteKit: {
-        businessType: "automotive_workshop",
-        goals: ["lead_generation"],
-        locale: "en",
-        selectedKitId: "automotive-workshop",
-        enabledStepIds: ["settings", "pages", "qa"],
-      },
-    },
-  });
+  const plan = buildExecutorSiteKitPlan();
 
   const preview = await dryRunAssistantActionPlan({ plan }, createDeps());
 
@@ -4678,19 +4723,7 @@ test("dryRunAssistantActionPlan previews site-kit recommend and install actions"
 });
 
 test("executeAssistantActionPlan delegates site-kit install to guided site-builder executor", async () => {
-  const plan = planAssistantActions({
-    prompt: "prepare a starter site kit",
-    context: {
-      locale: "en",
-      siteKit: {
-        businessType: "automotive_workshop",
-        goals: ["lead_generation"],
-        locale: "en",
-        selectedKitId: "automotive-workshop",
-        enabledStepIds: ["settings", "pages", "qa"],
-      },
-    },
-  });
+  const plan = buildExecutorSiteKitPlan();
 
   const result = await executeAssistantActionPlan(
     {
@@ -4827,17 +4860,25 @@ test("executeAssistantActionPlan creates product inquiry catalog and form", asyn
 
 test("executeAssistantActionPlan executes the full-service architecture studio plan", async () => {
   const deps = createDeps();
-  const plan = planAssistantActions({
-    prompt: [
-      "Stworz premium strone dla studia architektonicznego Studio Forma.",
-      "Potrzebuje portfolio realizacji, oferte uslug z podstronami, proces wspolpracy i kontakt z formularzem leadowym.",
-      "Realizacje maja miec katalog z kategoria, lokalizacja i rokiem.",
-    ].join(" "),
-    context: {
-      page: "/admin/advanced/widgets",
-      locale: "pl-PL",
-    },
+  const prompt = [
+    "Stworz premium strone dla studia architektonicznego Studio Forma.",
+    "Potrzebuje portfolio realizacji, oferte uslug z podstronami, proces wspolpracy i kontakt z formularzem leadowym.",
+    "Realizacje maja miec katalog z kategoria, lokalizacja i rokiem.",
+  ].join(" ");
+  const plan = buildFullServiceSitePlan({
+    prompt,
+    promptKind: "setup_request",
   });
+
+  expect(
+    planAssistantActions({
+      prompt,
+      context: {
+        page: "/admin/advanced/widgets",
+        locale: "pl-PL",
+      },
+    }).intentId
+  ).toBe("site-builder-basic-intake");
 
   expect(plan.intentId).toBe("service-business-full-site");
   expect(plan.actions).toHaveLength(49);
@@ -4968,16 +5009,13 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
 
 test("executeAssistantActionPlan keeps media readiness pending without a required media page image", async () => {
   const deps = createDeps();
-  const plan = planAssistantActions({
+  const plan = buildFullServiceSitePlan({
     prompt: [
       "Stworz premium strone dla studia architektonicznego Studio Forma.",
       "Potrzebuje portfolio realizacji, oferte uslug z podstronami, proces wspolpracy i kontakt z formularzem leadowym.",
       "Realizacje maja miec katalog z kategoria, lokalizacja i rokiem.",
     ].join(" "),
-    context: {
-      page: "/admin/advanced/widgets",
-      locale: "pl-PL",
-    },
+    promptKind: "setup_request",
   });
   const driftedPlan = structuredClone(plan) as AssistantActionPlan;
   for (const action of driftedPlan.actions) {

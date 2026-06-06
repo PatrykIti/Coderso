@@ -41,15 +41,15 @@ capabilities, and explicitly gates unsupported needs. It must not pretend that a
 single local blueprint can satisfy every website request.
 
 The new flow must extend the existing solution-kit/site-builder subsystem rather
-than creating a parallel planner. The existing backend handoff remains
-`context.siteKit` (`AssistantSiteKitPlanInput`) and the existing execution owners
-remain `previewGuidedSiteBuilderPlan`, `executeGuidedSiteBuilder`,
-`validateGuidedSiteBuilderRun`, `siteBuilderPlanStepIds`, `AiSiteWizard*`, and
-the solution-kit routes. TASK-407 adds a generic structured intake layer that
-compiles Basic/Advanced answers into the existing `siteKit` contract. If a
-temporary `context.siteBuilderIntake` payload is needed, it must be pre-execution
-metadata only, strictly validated by the intake owner, and compiled to
-`context.siteKit` before action planning.
+than creating a parallel planner. The backend still compiles reviewed intake
+facts into strict `AssistantSiteKitPlanInput` internally, and the existing
+execution owners remain `previewGuidedSiteBuilderPlan`,
+`executeGuidedSiteBuilder`, `validateGuidedSiteBuilderRun`,
+`siteBuilderPlanStepIds`, and the solution-kit routes. TASK-407 adds a generic
+structured intake layer that sends only a stripped reviewed
+`context.siteBuilderIntakeState.activeSession` through `/assistant/actions/plan`;
+direct browser/admin `context.siteKit` payloads are rejected by route validation
+and gated by the planner as defense in depth.
 
 ## Agent Review Inputs
 
@@ -98,10 +98,10 @@ metadata only, strictly validated by the intake owner, and compiled to
   `core/services/assistant/siteBuilderPlanner.ts`,
   `core/services/assistant/siteBuilderPlanAdapter.ts`, and
   `core/services/assistant/siteBuilderExecutor.ts`.
-- Existing admin UX owners:
-  `core/admin/ui/setup/AiSiteWizard.tsx`,
-  `core/admin/ui/setup/AiSiteWizardSteps.tsx`, and
-  `core/admin/ui/setup/aiSiteWizardValidation.ts`.
+- Existing reviewed admin UX owners after TASK-407-06-L06:
+  `core/admin/ui/assistant/AssistantPanel.tsx`,
+  `core/admin/ui/assistant/assistantPanelEvents.ts`, and the read-only
+  Solution Kits CTA in `core/admin/ui/kits/SolutionKitsPage.tsx`.
 - Existing admin client/route handoff:
   `core/admin/services/assistantClient.ts`,
   `core/server/validation/assistantActionSchemas.ts`,
@@ -109,7 +109,8 @@ metadata only, strictly validated by the intake owner, and compiled to
   `core/services/assistant/actionPlannerService.ts`.
 - New TASK-407 modules must not create a second full-site mutation route or a
   second full-site executor. They may add a Bun-free intake compiler, richer UI
-  state, option registries, and review metadata that normalize into `siteKit`.
+  state, option registries, and review metadata that normalize into internal
+  siteKit input from a reviewed active session.
 
 ## Security Contract
 
@@ -161,7 +162,7 @@ metadata only, strictly validated by the intake owner, and compiled to
 | TASK-407-03 | Basic Mode Structured Site Flow | Done (2026-06-05) | TASK-407-03-L01 through TASK-407-03-L04 |
 | TASK-407-04 | Advanced Mode Design Presets and Reference Intake | Done (2026-06-05) | TASK-407-04-L01 through TASK-407-04-L04 |
 | TASK-407-05 | SiteKit Plan and Content Engine Decisions | Done (2026-06-06) | TASK-407-05-L01 through TASK-407-05-L06 |
-| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | In Progress (2026-06-06) | TASK-407-06-L01 through TASK-407-06-L06 |
+| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | Done (2026-06-06) | TASK-407-06-L01 through TASK-407-06-L06 |
 | TASK-407-07 | E2E Live Validation Docs and Closure | To Do | TASK-407-07-L01 through TASK-407-07-L06 |
 
 ## Granular Execution Leaves
@@ -191,7 +192,7 @@ metadata only, strictly validated by the intake owner, and compiled to
 | TASK-407-06-L03 | Advanced Stepper Controls | Done (2026-06-06) |
 | TASK-407-06-L04 | Review Summary and Execution Gating | Done (2026-06-06) |
 | TASK-407-06-L05 | UI Warnings Local State and Redaction | Done (2026-06-06) |
-| TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | To Do |
+| TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | Done (2026-06-06) |
 | TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | To Do |
 | TASK-407-07-L02 | Basic Live Playwright E2E | To Do |
 | TASK-407-07-L03 | Advanced Live Playwright E2E | To Do |
@@ -213,7 +214,7 @@ metadata only, strictly validated by the intake owner, and compiled to
    decision layer. Blueprint-composer changes are optional adapters only when the
    existing solution-kit contract cannot express an agreed capability.
 6. Implement TASK-407-06 leaves to harden admin review UI, prompt-poisoning
-   boundaries, and reference intake.
+   boundaries, reference intake, and legacy AI site wizard convergence.
 7. Implement TASK-407-07 leaves: restart helper, run Playwright CLI live E2E for
    Basic, Advanced, and
    follow-up refinement, run a scoped cleanup plus a second from-scratch site in
@@ -226,9 +227,9 @@ metadata only, strictly validated by the intake owner, and compiled to
 |---|---|
 | Intake contracts | New Bun-free `core/services/assistant/assistantSiteBuilderIntake*.ts` files that own Basic/Advanced intake schemas, option registries, facts, redaction, and compile-to-siteKit helpers |
 | Existing siteKit contracts | `core/services/kits/solutionKitTypes.ts`, `core/services/assistant/siteBuilderPlanner.ts`, `core/services/assistant/siteBuilderPlanAdapter.ts`, `core/services/assistant/siteBuilderExecutor.ts`, `core/services/assistant/actionPlanTypes.ts` |
-| Route validation | `core/server/validation/assistantActionSchemas.ts` only if a temporary `context.siteBuilderIntake` payload is carried; final plan handoff must keep using strict `context.siteKit` |
-| Planner/composer | `core/services/assistant/actionPlannerService.ts` for choosing/receiving `context.siteKit`; `core/services/assistant/blueprints/*` only for optional composition capabilities not already expressible by solution kits |
-| Admin UI | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/ui/setup/AiSiteWizardSteps.tsx`, `core/admin/ui/setup/aiSiteWizardValidation.ts`, plus assistant/floating-panel entry points if full-site intent starts the wizard |
+| Route validation | `core/server/validation/assistantActionSchemas.ts` for stripped `context.siteBuilderIntakeState.activeSession` and reject-unknown direct `context.siteKit` coverage |
+| Planner/composer | `core/services/assistant/actionPlannerService.ts` for Basic/Advanced progression, reviewed active-session handoff, and direct `siteKit` defensive gating; `core/services/assistant/blueprints/*` only for optional composition capabilities not already expressible by solution kits |
+| Admin UI | `core/admin/ui/assistant/AssistantPanel.tsx`, `core/admin/ui/assistant/assistantPanelEvents.ts`, `core/admin/ui/kits/SolutionKitsPage.tsx`, and intake UI state helpers |
 | Reference/media policy | `core/services/media/curatedMediaProfiles.ts`, media/reference validation services if introduced |
 | Tests | `tests/vitest/assistant/*`, `tests/vitest/ui/assistant-*`, `tests/unit/assistant/*`, `tests/integration/routes/assistant.test.ts`, Playwright CLI scripts under `.tmp/` during local validation |
 | Docs/closure | `_docs/ASSISTANT_SITE_BUILDER.md`, `docs/develop/assistant.md`, task files, board, changelog |
@@ -258,8 +259,10 @@ type AssistantSiteBuilderIntakeAnswer = {
 };
 
 type AssistantActionContextWithIntake = AssistantActionContext & {
-  siteBuilderIntake?: AssistantSiteBuilderIntakeSession;
-  siteKit?: AssistantSiteKitPlanInput;
+  siteBuilderIntakeState?: {
+    requestedMode?: AssistantSiteBuilderIntakeMode | null;
+    activeSession?: AssistantSiteBuilderIntakeSession | null;
+  };
 };
 
 function normalizeAssistantSiteBuilderIntakeAnswer(
@@ -312,12 +315,13 @@ Data flow:
   broad site restructuring.
 - The assistant asks one structured step at a time; each answer is schema
   normalized and stored as bounded session state.
-- The reviewed intake session compiles into `AssistantSiteKitPlanInput` and is
-  submitted through existing `context.siteKit`; prompt text is not the source of
+- The reviewed intake session is submitted as stripped
+  `context.siteBuilderIntakeState.activeSession`; the backend compiles it into
+  internal `AssistantSiteKitPlanInput`, and prompt text is not the source of
   truth.
-- A temporary `context.siteBuilderIntake` field is allowed only for
-  server-normalized pre-execution metadata and must not bypass or replace
-  `context.siteKit`.
+- Direct client-authored `context.siteKit` is rejected at the route schema and
+  returns only a gated non-executable plan if a direct service call bypasses the
+  route.
 - Basic mode exposes fewer choices and lets the backend choose widget presets.
 - Advanced mode exposes additional design/content-model options from the same
   backend registries.
@@ -351,10 +355,10 @@ Error handling:
 - Targeted contract tests:
   - guided-intake answer normalization,
   - intake facts compiling into `AssistantSiteKitPlanInput`,
-  - `assistantActionPlanRequestSchema` still accepting strict `context.siteKit`
-    and rejecting unknown `siteKit` fields,
-  - route tests for `context.siteBuilderIntake` only if that temporary metadata
-    field is introduced,
+  - `assistantActionPlanRequestSchema` accepting stripped
+    `context.siteBuilderIntakeState.activeSession` and rejecting direct
+    `context.siteKit`,
+  - route tests proving direct `context.siteKit` is validation-error rejected,
   - mode/step transitions,
   - Basic/Advanced step visibility,
   - unknown-key rejection,

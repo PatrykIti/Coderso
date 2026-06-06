@@ -274,7 +274,7 @@ test("compileIntakeToSiteKitPlanInput does not treat generic workshops as automo
   expect(carWorkshop.preferredKitId).toBe("automotive-workshop");
 });
 
-test("buildActionPlanRequestFromReviewedIntake uses existing strict siteKit route schema", () => {
+test("buildActionPlanRequestFromReviewedIntake returns internal strict siteKit handoff", () => {
   const request = buildActionPlanRequestFromReviewedIntake(productCatalogSession);
 
   expect(request.context).toEqual({ siteKit: request.context.siteKit });
@@ -282,18 +282,17 @@ test("buildActionPlanRequestFromReviewedIntake uses existing strict siteKit rout
   expect(JSON.stringify(request.context)).not.toContain("referenceDesignBrief");
   expect(JSON.stringify(request.context)).not.toContain("advancedSectionVariantIds");
   expect(JSON.stringify(request.context)).not.toContain("actions");
-  expect(() => validate(assistantActionPlanRequestSchema, request)).not.toThrow();
+  expect(() => validate(assistantActionPlanRequestSchema, request)).toThrow("Invalid payload");
   expect(() =>
     validate(assistantActionPlanRequestSchema, {
-      ...request,
+      prompt: request.prompt,
       context: {
-        siteKit: {
-          ...request.context.siteKit,
-          mediaPolicy: "curated",
+        siteBuilderIntakeState: {
+          activeSession: productCatalogSession,
         },
       },
     })
-  ).toThrow("Invalid payload");
+  ).not.toThrow();
 });
 
 test("buildSiteBuilderIntakeCompileResult keeps review metadata outside siteKit", () => {
@@ -327,21 +326,14 @@ test("buildSiteBuilderIntakeCompileResult keeps review metadata outside siteKit"
   expect(result.gates).toEqual([]);
 });
 
-test("compiled siteKit context reaches existing action planner site-kit path", () => {
+test("compiled siteKit context is gated outside reviewed active session", () => {
   const request = buildActionPlanRequestFromReviewedIntake(productCatalogSession);
   const plan = normalizeAssistantActionPlan(planAssistantActions(request));
 
-  expect(plan.status).toBe("ready");
+  expect(plan.status).toBe("needs_input");
   expect(plan.intentFamily).toBe("site_kit");
-  expect(plan.actions.map((action) => action.type)).toEqual([
-    "site-kit.recommend",
-    "site-kit.install",
-  ]);
-  const recommendAction = plan.actions[0];
-  if (!recommendAction || recommendAction.type !== "site-kit.recommend") {
-    throw new Error("expected_site_kit_recommend_action");
-  }
-  expect(recommendAction.input.businessType).toBe("small_ecommerce");
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.actions).toEqual([]);
 });
 
 test("reviewed active intake session hands off to strict siteKit action plan", () => {

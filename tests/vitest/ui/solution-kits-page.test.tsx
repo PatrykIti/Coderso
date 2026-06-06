@@ -18,16 +18,21 @@ const createLocalStorage = () => {
   };
 };
 
-test("SolutionKitsPage renders shell and guided wizard controls", () => {
+test("SolutionKitsPage renders reviewed site builder CTA without legacy wizard controls", () => {
   const html = renderAdminUi(<SolutionKitsPage />, {
     path: "/admin/advanced/solution-kits",
   });
 
   expect(html).toContain("Solution Kits");
-  expect(html).toContain("AI Site Wizard");
-  expect(html).toContain("Business profile");
-  expect(html).toContain("Plan review");
-  expect(html).toContain("Execute");
+  expect(html).toContain("Reviewed Site Builder");
+  expect(html).toContain("Open LLM Guide");
+  expect(html).not.toContain("AI Site Wizard");
+  expect(html).not.toContain("Business profile");
+  expect(html).not.toContain("Plan review");
+  expect(html).not.toContain("Apply kit");
+  expect(html).not.toContain("Dry run");
+  expect(html).not.toContain("Rerun");
+  expect(html).not.toContain("Rollback latest");
 });
 
 test("SolutionKitsPage renders cached cards without loading placeholder", () => {

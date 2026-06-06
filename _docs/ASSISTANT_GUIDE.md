@@ -57,20 +57,23 @@ Answer contract:
 - docs-only answers preserve paragraphs and numbered steps so the chat UI can render a readable structure instead of one merged text block,
 - sources are treated as secondary evidence and are not shown by default in the user-facing chat UI.
 
-## AI Site Wizard (Solution Kits)
+## Reviewed LLM Guide Site Builder (Solution Kits)
 
 Location: `Coderso -> Solution Kits`.
 
-Wizard flow:
-1. `Business profile` - choose business type, locale, optional site name.
-2. `Goals` - select at least one business goal.
-3. `Recommendation` - generate and review deterministic kit recommendations.
-4. `Plan review` - edit execution scope (`enabledStepIds`) before apply.
-5. `Execute` - run guided `apply`/`dry_run`, then review validation checks and unresolved items.
+Current flow:
+1. Review kit cards and selected-kit details as read-only baseline guidance.
+2. Use `Open LLM Guide` to start the reviewed site-builder intake.
+3. Complete the Basic or Advanced intake steps.
+4. Confirm the final review summary and gates.
+5. Run dry-run and execute through the standard assistant action engine.
 
 ## Execution model
 
-- Planner endpoint (`POST /admin/api/assistant/actions/plan`) with `context.siteKit` returns:
+- Planner endpoint (`POST /admin/api/assistant/actions/plan`) accepts stripped
+  `context.siteBuilderIntakeState.activeSession` for reviewed site-builder work
+  and rejects direct browser/admin `context.siteKit` payloads.
+- A reviewed active session can produce:
   - typed plan output,
   - explicit action map (`step -> target -> resource`),
   - selected module sets (`required/recommended/optional`).
@@ -78,19 +81,16 @@ Wizard flow:
 - Execute endpoint (`POST /admin/api/assistant/actions/execute`) runs deterministic apply/dry-run through `site-kit.install`.
 - Validation is returned in `results[].details.siteKit.validation`; explicit run validation is represented by `site-kit.validate`.
 - Backend filters kit resource blueprint by `enabledStepIds` before install run.
-- Run metadata stores wizard snapshot in `run.options.assistantSiteBuilder`:
-  - `selectedKitId`
-  - `enabledStepIds`
-  - `actions[]`
-
-This metadata is used by UI actions:
-- `Rerun` (replays last wizard plan)
-- `Clone as draft` (restores review configuration)
+- Legacy wizard run-management actions (`Rerun`, `Clone as draft`, rollback)
+  are not part of the reviewed intake UI. Add a dedicated run-management surface
+  only through a separate task with its own permission and warning contract.
 
 ## Security contract
 
 - Visibility: internal (`/admin/api/*` only)
-- Auth: admin session + RBAC (`settings:*`, `content:*`, and `solution-kits:read|write` when `site-kit.*` actions are present)
+- Auth: admin session + RBAC (`settings:*`, `content:*`,
+  `solution-kits:read` for reviewed site-builder planning/dry-run, and
+  `solution-kits:write` when `site-kit.*` execute actions are present)
 - Mutations: CSRF protected
 - Rate limits:
   - `assistant` for `plan`, `dry-run`, and `execute`

@@ -11,6 +11,7 @@ import {
   AssistantPanel,
   clearAssistantRuntimeStateCache,
 } from "../../../core/admin/ui/assistant/AssistantPanel";
+import { openAssistantPanel } from "../../../core/admin/ui/assistant/assistantPanelEvents";
 import { clearAssistantConversationState } from "../../../core/admin/ui/assistant/assistantConversationState";
 import { AdminAssistantConfigProvider } from "../../../core/admin/ui/contexts/AdminAssistantConfigContext";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
@@ -112,6 +113,57 @@ afterEach(() => {
   clearAssistantConversationState();
   document.body.innerHTML = "";
   vi.restoreAllMocks();
+});
+
+test("AssistantPanel opens from reviewed site builder CTA event", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "llm-guide",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  mockUserSettings();
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/advanced/solution-kits">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    await React.act(async () => {
+      openAssistantPanel({
+        mode: "llm-guide",
+        message: "Create a complete website for my business.",
+        reset: true,
+      });
+      await flush();
+    });
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+
+    expect(view.container.textContent).toContain("LLM Guide");
+    expect(textarea.value).toBe("Create a complete website for my business.");
+  } finally {
+    view.cleanup();
+  }
 });
 
 test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", async () => {

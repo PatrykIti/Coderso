@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 
 import { dryRunAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
-import { buildActionPlanRequestFromReviewedIntake } from "../../../core/services/assistant/assistantSiteBuilderIntakeCompiler";
 import {
   ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
   type AssistantSiteBuilderIntakeSession,
@@ -82,8 +81,14 @@ const reviewedServicesDirectorySession = withConfirmedSiteBuilderIntakeReview({
 } satisfies AssistantSiteBuilderIntakeSession);
 
 test("reviewed intake siteKit dry-run is idempotent", async () => {
-  const request = buildActionPlanRequestFromReviewedIntake(reviewedServicesDirectorySession);
-  const plan = planAssistantActions(request);
+  const plan = planAssistantActions({
+    prompt: "Continue guided site-builder intake.",
+    context: {
+      siteBuilderIntakeState: {
+        activeSession: reviewedServicesDirectorySession,
+      },
+    },
+  });
   const first = await dryRunAssistantActionPlan({ plan });
   const second = await dryRunAssistantActionPlan({ plan });
 

@@ -517,7 +517,7 @@ test("normalizeAssistantActionPlan accepts docs response kind and rejects execut
   ).toThrow("assistant_action_plan_invalid");
 });
 
-test("normalizeAssistantActionPlan accepts site-kit action plans", () => {
+test("normalizeAssistantActionPlan accepts gated direct site-kit context plans", () => {
   const plan = planAssistantActions({
     prompt: "prepare a starter site kit",
     context: {
@@ -535,10 +535,9 @@ test("normalizeAssistantActionPlan accepts site-kit action plans", () => {
   const normalized = normalizeAssistantActionPlan(plan);
 
   expect(normalized.intentFamily).toBe("site_kit");
-  expect(normalized.actions.map((action) => action.type)).toEqual([
-    "site-kit.recommend",
-    "site-kit.install",
-  ]);
+  expect(normalized.status).toBe("needs_input");
+  expect(normalized.responseKind).toBe("gated");
+  expect(normalized.actions).toEqual([]);
 });
 
 test("normalizeAssistantActionPlan rejects unknown plan and action fields", () => {

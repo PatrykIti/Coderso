@@ -7,12 +7,17 @@ import {
   type AssistantSiteBuilderStaticCoverageGate,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeStaticActions";
 import { AssistantSiteBuilderIntakeError } from "../../../core/services/assistant/assistantSiteBuilderIntakeErrors";
+import {
+  ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  type AssistantSiteBuilderIntakeSession,
+} from "../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
 import type {
   AssistantActionPlan,
   AssistantPlannedAction,
   AssistantSiteKitPlanInput,
 } from "../../../core/services/assistant/actionPlanTypes";
 import type { GuidedSiteBuilderAction } from "../../../core/services/assistant/siteBuilderPlanAdapter";
+import { withConfirmedSiteBuilderIntakeReview } from "../../utils/assistantSiteBuilderIntake";
 
 const servicesDirectorySiteKit = {
   businessType: "services_directory",
@@ -25,6 +30,78 @@ const servicesDirectorySiteKit = {
   enabledStepIds: ["settings", "content-model", "pages", "forms", "navigation", "qa"],
 } satisfies AssistantSiteKitPlanInput;
 
+const servicesDirectorySession = withConfirmedSiteBuilderIntakeReview({
+  version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  mode: "advanced",
+  currentStepId: "review",
+  answers: [
+    {
+      stepId: "business-profile",
+      values: {
+        siteName: "Mapa Kawy",
+        topic: "local cafes and roasters with a services directory",
+        vertical: "services directory",
+        audience: "people looking for trusted cafes in Krakow",
+        locale: "pl",
+        region: "Krakow",
+        summary: "Directory of places, services, and contact requests for visitors.",
+      },
+    },
+    {
+      stepId: "site-goals",
+      values: {
+        goals: ["show services", "collect qualified leads", "publish provider listings"],
+        primaryGoal: "collect qualified leads",
+      },
+    },
+    {
+      stepId: "site-map",
+      values: {
+        pageRoles: ["home", "services", "locations", "contact"],
+      },
+    },
+    {
+      stepId: "menu",
+      values: {
+        menuPreset: "location-aware",
+        primaryActionLabel: "Send request",
+        primaryActionPageRole: "contact",
+      },
+    },
+    {
+      stepId: "homepage-sections",
+      values: {
+        sectionRoles: ["value-proposition", "services-overview", "featured-items", "lead-capture"],
+      },
+    },
+    {
+      stepId: "hero",
+      values: {
+        heroPreset: "location-led",
+        headline: "Find good coffee in Krakow",
+      },
+    },
+    {
+      stepId: "subpages",
+      values: {
+        pageRoles: ["about", "faq"],
+      },
+    },
+    {
+      stepId: "media-policy",
+      values: {
+        mediaPolicy: "placeholder",
+      },
+    },
+    {
+      stepId: "content-engine",
+      values: {
+        contentEngines: ["services", "locations", "faq"],
+      },
+    },
+  ],
+} satisfies AssistantSiteBuilderIntakeSession);
+
 type SiteKitInstallAction = Extract<AssistantPlannedAction, { type: "site-kit.install" }>;
 
 const getInstallAction = (plan: AssistantActionPlan): SiteKitInstallAction => {
@@ -35,10 +112,14 @@ const getInstallAction = (plan: AssistantActionPlan): SiteKitInstallAction => {
   return action;
 };
 
-const planSiteKitActions = (siteKit: AssistantSiteKitPlanInput = servicesDirectorySiteKit) =>
+const planReviewedSiteKitActions = () =>
   planAssistantActions({
-    prompt: "Create a complete reviewed site from the selected SiteKit.",
-    context: { siteKit },
+    prompt: "Continue guided site-builder intake.",
+    context: {
+      siteBuilderIntakeState: {
+        activeSession: servicesDirectorySession,
+      },
+    },
   });
 
 const clonePlan = (plan: AssistantActionPlan): AssistantActionPlan =>
@@ -47,7 +128,7 @@ const clonePlan = (plan: AssistantActionPlan): AssistantActionPlan =>
 const buildCoverageFromProductionPlan = (
   siteKit: AssistantSiteKitPlanInput = servicesDirectorySiteKit
 ) => {
-  const plan = planSiteKitActions(siteKit);
+  const plan = planReviewedSiteKitActions();
   return buildReviewedSiteKitStaticPlan(plan, siteKit);
 };
 
@@ -141,34 +222,24 @@ test("buildReviewedSiteKitStaticPlan output still rejects unknown install fields
   );
 });
 
-test("planAssistantActions wires static coverage gates into production siteKit planning", () => {
-  try {
-    planSiteKitActions({
-      ...servicesDirectorySiteKit,
-      enabledStepIds: ["settings", "content-model", "pages", "navigation", "qa"],
-    });
-  } catch (error) {
-    expect(error).toBeInstanceOf(AssistantSiteBuilderIntakeError);
-    const gates = (error as AssistantSiteBuilderIntakeError).details
-      .gates as AssistantSiteBuilderStaticCoverageGate[];
+test("planAssistantActions gates direct siteKit context before production static planning", () => {
+  const plan = planAssistantActions({
+    prompt: "Create a complete reviewed site from the selected SiteKit.",
+    context: {
+      siteKit: {
+        ...servicesDirectorySiteKit,
+        enabledStepIds: ["settings", "content-model", "pages", "navigation", "qa"],
+      },
+    },
+  });
 
-    expect(gates).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "static_lead_capture_missing",
-          severity: "error",
-          target: "form",
-        }),
-      ])
-    );
-    return;
-  }
-
-  throw new Error("Expected lead-capture drift gate.");
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.actions).toEqual([]);
 });
 
 test("buildReviewedSiteKitStaticPlan gates partial page menu and form preview drift", () => {
-  const validPlan = planSiteKitActions();
+  const validPlan = planReviewedSiteKitActions();
   const cases: Array<{
     name: string;
     mutate: (actions: GuidedSiteBuilderAction[]) => GuidedSiteBuilderAction[];
@@ -220,7 +291,7 @@ test("buildReviewedSiteKitStaticPlan gates partial page menu and form preview dr
 });
 
 test("buildReviewedSiteKitStaticPlan gates generated pages without SEO defaults", () => {
-  const driftedPlan = clonePlan(planSiteKitActions());
+  const driftedPlan = clonePlan(planReviewedSiteKitActions());
   const installAction = getInstallAction(driftedPlan);
   const homePageAction = installAction.input.preview.actions.find(
     (action) => action.target === "page" && action.resourceKey === "home"

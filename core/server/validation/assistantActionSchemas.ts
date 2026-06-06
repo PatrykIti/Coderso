@@ -1,10 +1,4 @@
 import {
-  siteBuilderBusinessTypes,
-  siteBuilderGoals,
-  siteBuilderPlanStepIds,
-  solutionKitIds,
-} from "../../services/kits/solutionKitTypes";
-import {
   ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
   assistantSiteBuilderAdvancedHeroVariantIds,
   assistantSiteBuilderAdvancedMenuBehaviorIds,
@@ -20,60 +14,6 @@ import {
   assistantSiteBuilderReviewStateIds,
   assistantSiteBuilderSectionRoleIds,
 } from "../../services/assistant/assistantSiteBuilderIntakeTypes";
-
-const siteKitPlanContextSchema = {
-  type: "object",
-  required: ["businessType", "goals", "locale"],
-  additionalProperties: false,
-  properties: {
-    businessType: {
-      type: "string",
-      enum: [...siteBuilderBusinessTypes],
-    },
-    goals: {
-      type: "array",
-      minItems: 1,
-      maxItems: siteBuilderGoals.length,
-      items: {
-        type: "string",
-        enum: [...siteBuilderGoals],
-      },
-      uniqueItems: true,
-    },
-    locale: {
-      type: "string",
-      minLength: 2,
-      maxLength: 16,
-      pattern: "^[a-zA-Z0-9_-]+$",
-    },
-    region: {
-      type: ["string", "null"],
-      minLength: 0,
-      maxLength: 80,
-    },
-    siteName: {
-      type: ["string", "null"],
-      minLength: 0,
-      maxLength: 120,
-    },
-    preferredKitId: {
-      anyOf: [{ type: "string", enum: [...solutionKitIds] }, { type: "null" }],
-    },
-    selectedKitId: {
-      anyOf: [{ type: "string", enum: [...solutionKitIds] }, { type: "null" }],
-    },
-    enabledStepIds: {
-      type: "array",
-      minItems: 1,
-      maxItems: siteBuilderPlanStepIds.length,
-      items: {
-        type: "string",
-        enum: [...siteBuilderPlanStepIds],
-      },
-      uniqueItems: true,
-    },
-  },
-} as const;
 
 const intakeTextSchema = (maxLength: number) =>
   ({
@@ -838,7 +778,6 @@ export const assistantActionPlanRequestSchema = {
       properties: {
         page: { type: "string", minLength: 1, maxLength: 200 },
         locale: { type: "string", minLength: 2, maxLength: 16 },
-        siteKit: siteKitPlanContextSchema,
         siteBuilderIntakeState: siteBuilderIntakeStateSchema,
         includeResourceCatalog: { type: "boolean" },
         runtimeSnapshot: runtimeSnapshotSchema,

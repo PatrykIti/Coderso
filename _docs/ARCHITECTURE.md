@@ -628,7 +628,12 @@ Warstwa domain:
 
 Warstwa API:
 - Site-kit flow uzywa tylko `/assistant/actions/*`.
-- `POST /assistant/actions/plan` z `context.siteKit` zwraca typed plan z `site-kit.recommend` + `site-kit.install`.
+- `POST /assistant/actions/plan` nie przyjmuje juz bezposredniego
+  `context.siteKit` z admin UI; route akceptuje reviewed
+  `context.siteBuilderIntakeState.activeSession`, a planner kompiluje go
+  wewnetrznie do typed planu z `site-kit.recommend` + `site-kit.install`.
+- Bezposrednie service-call `context.siteKit` jest defensive-gated jako
+  `needs_input`, bez executable actions.
 - `POST /assistant/actions/dry-run` previewuje `site-kit.*` akcje.
 - `POST /assistant/actions/execute` uruchamia `site-kit.install` przez istniejacy solution kit installer i moze wykonac `site-kit.validate`.
 - `site-kit.*` akcje wymagaja `llmAvailable=true`; nie moga przejsc jako docs-only fallback.
@@ -636,10 +641,15 @@ Warstwa API:
 - Wszystkie endpointy sa internal i CSRF-protected.
 
 Warstwa UI:
-- `core/admin/ui/setup/AiSiteWizard.tsx` jako orchestrator stanu/wykonania.
-- `core/admin/ui/setup/AiSiteWizardSteps.tsx` jako modularny renderer krokow.
-- Step `Plan review` pokazuje explainable action map (`step -> target -> resource`).
-- Step `Execute` pokazuje walidacje (`ok/warning/failed`) i `unresolvedItems`.
+- `core/admin/ui/assistant/AssistantPanel.tsx` jest jedynym aktywnym reviewed
+  site-builder UI dla Basic/Advanced intake, review, dry-run i execute.
+- `core/admin/ui/assistant/assistantPanelEvents.ts` pozwala admin CTA otworzyc
+  panel w trybie `llm-guide` z poczatkowym promptem.
+- `core/admin/ui/kits/SolutionKitsPage.tsx` jest read-only catalog + CTA
+  `Open LLM Guide`; legacy `AiSiteWizard` nie istnieje juz jako osobny plan/apply
+  surface.
+- Review pokazuje gates i action map, a Execute pokazuje walidacje
+  (`ok/warning/failed`) i unresolved items przez standardowy action engine.
 
 ## Terminologia
 
@@ -914,11 +924,14 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - wejscie: profil biznesu + cele + locale (+ opcjonalny preferred kit),
   - wyjscie: `recommendedKitId`, `confidence`, `steps[]` (`editable`, `affectsResources`), `settingsPatch`, `notes`,
   - wynik jest deterministiczny dla identycznego inputu.
-- AI wizard guided execution contract:
-  - flow: `profile -> goals -> recommendation -> review -> execute`,
-  - review pozwala ograniczyc execution do `enabledStepIds`,
-  - apply endpoint dostaje typed `plan` payload, backend filtruje `resourceBlueprint` przed install run,
-  - run metadata (`run.options.wizard`) przechowuje plan snapshot do `rerun` i `clone as draft`.
+- Reviewed LLM Guide site-builder execution contract:
+  - flow: `intake -> review -> plan -> dry-run -> execute`,
+  - reviewed active session compiles internally to strict siteKit input,
+  - dry-run/execute dostaje typed action-plan payload, backend filtruje
+    `resourceBlueprint` przed install run,
+  - legacy wizard rerun/clone/rollback controls are retired from this reviewed
+    intake UI; any future run-management surface needs a separate permission and
+    warning contract.
 - Admin navigation focus contract:
   - selected kit moze byc persistowany client-side jako active admin preference,
   - `AdminShell` wyprowadza z niego `AdvancedFeatureFlags`,

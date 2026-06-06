@@ -34,8 +34,10 @@ Only after that reviewed handoff returns a strict `site_kit` action plan can the
 normal dry-run and execute controls appear.
 
 The current reviewed intake surface lives in the floating `LLM Guide` stepper.
-The older `AiSiteWizard` remains a separate manual siteKit wizard until
-TASK-407-06-L06 reconciles or retires that divergent handoff.
+TASK-407-06-L06 retired the older `AiSiteWizard` manual siteKit wizard, so the
+admin UI no longer exposes a parallel plan/apply/rerun/clone/rollback handoff.
+Solution Kits remains a read-only catalog surface with a CTA that opens the
+reviewed `LLM Guide` site-builder intake.
 
 The floating `LLM Guide` also supports reviewed resource operations for existing
 admin resources through the same action engine. Those edits/deletes must resolve
@@ -273,7 +275,8 @@ RBAC:
   - `settings:read` + `content:read`: `plan`, `dry-run`
   - `settings:write` + `content:write` + `content:publish`: `execute`
 - additional site-kit permissions:
-  - `solution-kits:read` when planning or dry-running `site-kit.*` actions
+  - `solution-kits:read` when planning reviewed site-builder intake or
+    dry-running `site-kit.*` actions
   - `solution-kits:write` when executing `site-kit.*` actions
 - site-kit actions require `LLM Guide` availability (`llmAvailable=true`) and
   must not run as docs-only fallback
@@ -293,15 +296,24 @@ Security:
 ## Admin UI
 
 Primary UI:
-- `core/admin/ui/setup/AiSiteWizard.tsx` (state/orchestration)
-- `core/admin/ui/setup/AiSiteWizardSteps.tsx` (step rendering)
+- `core/admin/ui/assistant/AssistantPanel.tsx` renders the floating `LLM Guide`
+  stepper and review/dry-run/execute controls.
+- `core/admin/ui/assistant/assistantPanelEvents.ts` exposes the typed event used
+  by admin CTAs to open the panel in `llm-guide` mode.
+- `core/admin/ui/kits/SolutionKitsPage.tsx` keeps kit details read-only and
+  offers `Open LLM Guide` instead of a direct manual wizard.
 
-Wizard stages:
-1. Site/entity profile
-2. Goals
-3. Recommendation
-4. Plan review (step toggles + explainable action map)
-5. Execute (apply/dry-run + validation checks + unresolved list)
+The retired legacy wizard files are intentionally absent:
+- `core/admin/ui/setup/AiSiteWizard.tsx`
+- `core/admin/ui/setup/AiSiteWizardSteps.tsx`
+- `core/admin/ui/setup/aiSiteWizardValidation.ts`
+
+Reviewed stages:
+1. Intake answers in Basic or Advanced mode
+2. Review summary with gates
+3. Strict action-plan assembly from a reviewed active session
+4. Dry-run preview
+5. Execute with validation evidence
 
 ## Guided Intake Vocabulary
 
@@ -336,7 +348,7 @@ The canonical registry is intentionally generic. Page and section registries use
 roles such as services, products, portfolio, blog, team, locations, FAQ, proof,
 process, lead capture, and content feed instead of hardcoded industries. Later
 normalizers and adapters map user answers and business context onto these roles,
-then compile the reviewed result into the existing `context.siteKit` contract.
+then compile the reviewed result into the backend-owned strict siteKit input.
 
 Media intake is policy-based:
 - `curated` allows backend-owned curated media profiles with documented public
@@ -416,10 +428,12 @@ types, required flags/groups, bounds, option registry ids, and concrete option
 values for select controls, including required `business-profile.locale`.
 Basic required steps are `business-profile`, `site-goals`, `site-map`, `menu`,
 `hero`, `homepage-sections`, `media-policy`, and `review`; `subpages` stays
-visible but optional. Explicit reviewed `context.siteKit` requests keep taking
-precedence over the Basic prompt gate. Backend-only planner state can also
-carry requested Basic/Advanced mode and active intake session state; this is
-not a route-owned `context.siteBuilderIntake` payload.
+visible but optional. Direct route payloads with `context.siteKit` are rejected
+by schema, and direct service calls with `context.siteKit` return a gated
+`needs_input` plan. A reviewed `siteBuilderIntakeState.activeSession` is the
+only admin route handoff that can compile to `site-kit.*` actions. Backend-only
+planner state can also carry requested Basic/Advanced mode and active intake
+session state; this is not a route-owned `context.siteBuilderIntake` payload.
 
 The Basic admin controls render in the existing floating LLM Guide review path
 from those server-owned step fields. Each save sends one normalized answer
@@ -501,8 +515,8 @@ Review readiness is split deliberately:
 
 Reviewed intake handoff is compiled by
 `core/services/assistant/assistantSiteBuilderIntakeCompiler.ts`. The compiler
-normalizes the session, verifies explicit review confirmation, and builds the
-existing assistant action-plan request shape:
+normalizes the active session, verifies explicit review confirmation, and builds
+an internal strict siteKit handoff:
 
 ```ts
 {
@@ -513,9 +527,10 @@ existing assistant action-plan request shape:
 }
 ```
 
-No `context.siteBuilderIntake` route payload is introduced in TASK-407-02. The
-admin route continues to validate only the existing strict `context.siteKit`
-schema. The compiled `AssistantSiteKitPlanInput` is schema-exact:
+The HTTP route accepts only the stripped
+`context.siteBuilderIntakeState.activeSession` shape and no public/admin
+`context.siteKit` field. The compiled `AssistantSiteKitPlanInput` remains
+schema-exact inside the planner:
 `businessType`, `goals`, `locale`, optional `region`, `siteName`,
 `preferredKitId`, `selectedKitId`, and `enabledStepIds`. Review-only facts such
 as page roles, section roles, media policy, content engines, design preset,
@@ -550,8 +565,9 @@ or `gated` without exposing raw prompt text.
 
 Static site-shell coverage for reviewed siteKit handoff is checked by
 `assistantSiteBuilderIntakeStaticActions.ts`. The production siteKit planner
-first builds the existing `site-kit.recommend` / `site-kit.install` action path,
-then the helper inspects the install preview for deterministic page resources,
+first requires a reviewed active intake session, builds the existing
+`site-kit.recommend` / `site-kit.install` action path, then the helper inspects
+the install preview for deterministic page resources,
 primary/footer menus,
 lead-capture forms, SEO defaults for generated pages, action ids, and same-plan
 `target:resourceKey` locators. Missing coverage becomes a blocking review gate;

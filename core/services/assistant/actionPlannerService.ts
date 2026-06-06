@@ -640,7 +640,7 @@ const buildSiteKitActionPlan = (siteKit: AssistantSiteKitPlanInput): AssistantAc
       "Recommend the matching site kit, dry-run the selected steps, then execute the kit installer through typed assistant actions.",
     confidence: preview.plan.confidence / 100,
     assumptions: [
-      "The AI Site Wizard is a guided entry point into the same LLM Guide action engine.",
+      "The reviewed LLM Guide site-builder intake is the guided entry point into this action engine.",
       "Selected kit steps stay editable before execution and are applied through the solution kit installer.",
     ],
     questions: [],
@@ -990,6 +990,32 @@ const buildLocalPolicyOperationPlan = (
   return null;
 };
 
+const buildReviewedSiteBuilderIntakeRequiredPlan = (prompt: string): AssistantActionPlan =>
+  normalizeAssistantActionPlan({
+    id: "plan-site-kit-reviewed-intake-required",
+    status: "needs_input",
+    intentId: "site-kit-reviewed-intake-required",
+    responseKind: "gated",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: "Reviewed site-builder intake required",
+    answer:
+      "Use the reviewed LLM Guide site-builder intake before planning or applying a full site.",
+    summary: "Direct siteKit planning was blocked before executable action planning.",
+    confidence: 0.5,
+    assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+    questions: [
+      {
+        id: "reviewed-site-builder-intake",
+        label: "Start the reviewed site-builder intake",
+        description:
+          "Complete the guided intake, confirm the final review, run a dry-run, then execute.",
+        required: true,
+      },
+    ],
+    actions: [],
+  });
+
 const withProviderPlannerMetadata = (
   plan: AssistantActionPlan,
   input: AssistantProviderDraftPlanInput
@@ -1088,15 +1114,13 @@ const buildPreferredBlueprintSetupPlan = (input: {
 };
 
 export const planAssistantActions = (input: AssistantActionPlanInput): AssistantActionPlan => {
+  const directSiteKitRequested = Boolean(input.context?.siteKit);
   const trustedContext = sanitizeAssistantPlanningContext(input.context);
   const normalizedInput = {
     ...input,
     context: trustedContext,
   } satisfies AssistantActionPlanInput;
   const context = buildAssistantAdminContext(trustedContext);
-  if (trustedContext?.siteKit) {
-    return normalizeAssistantActionPlan(buildSiteKitActionPlan(trustedContext.siteKit));
-  }
   const activeAdvancedIntakeSession = getActiveAdvancedSiteBuilderIntakeSession(trustedContext);
   const activeBasicIntakeSession = getActiveBasicSiteBuilderIntakeSession(trustedContext);
 
@@ -1134,6 +1158,10 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
       routedClassification,
       buildBasicSiteBuilderNeedsInputPlan({ session: activeBasicIntakeSession })
     );
+  }
+
+  if (directSiteKitRequested) {
+    return buildReviewedSiteBuilderIntakeRequiredPlan(input.prompt);
   }
 
   if (shouldStartAdvancedSiteBuilderGuide(trustedContext)) {
@@ -1283,6 +1311,7 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
 export const planAssistantActionsWithProviderDraft = async (
   input: AssistantProviderDraftPlanInput
 ): Promise<AssistantActionPlan> => {
+  const directSiteKitRequested = Boolean(input.context?.siteKit);
   const trustedContext = sanitizeAssistantPlanningContext(input.context);
   const context = buildAssistantAdminContext(trustedContext);
   const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
@@ -1294,6 +1323,9 @@ export const planAssistantActionsWithProviderDraft = async (
   }
   if (shouldStartAdvancedSiteBuilderGuide(trustedContext)) {
     return planAssistantActions({ prompt: input.prompt, context: trustedContext });
+  }
+  if (directSiteKitRequested) {
+    return planAssistantActions({ prompt: input.prompt, context: input.context });
   }
   if (
     shouldStartBasicSiteBuilderGuide({

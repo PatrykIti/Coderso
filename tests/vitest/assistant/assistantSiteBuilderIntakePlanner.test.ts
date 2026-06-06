@@ -91,9 +91,17 @@ const reviewedServicesDirectorySession = withConfirmedSiteBuilderIntakeReview({
 } satisfies AssistantSiteBuilderIntakeSession);
 
 const buildReviewedPlan = (): AssistantSiteBuilderStaticPlanResult => {
-  const request = buildActionPlanRequestFromReviewedIntake(reviewedServicesDirectorySession);
-  const plan = planAssistantActions(request);
-  return buildReviewedSiteKitStaticPlan(plan, request.context.siteKit);
+  const normalized = normalizeAssistantSiteBuilderIntakeSession(reviewedServicesDirectorySession);
+  const compileResult = buildSiteBuilderIntakeCompileResult(normalized.facts ?? {});
+  const plan = planAssistantActions({
+    prompt: "Continue guided site-builder intake.",
+    context: {
+      siteBuilderIntakeState: {
+        activeSession: reviewedServicesDirectorySession,
+      },
+    },
+  });
+  return buildReviewedSiteKitStaticPlan(plan, compileResult.siteKit);
 };
 
 const samePlanLocators = (result: AssistantSiteBuilderStaticPlanResult) =>
@@ -102,7 +110,6 @@ const samePlanLocators = (result: AssistantSiteBuilderStaticPlanResult) =>
 test("reviewed intake siteKit plan is strict and idempotent", () => {
   const normalized = normalizeAssistantSiteBuilderIntakeSession(reviewedServicesDirectorySession);
   const compileResult = buildSiteBuilderIntakeCompileResult(normalized.facts ?? {});
-  const request = buildActionPlanRequestFromReviewedIntake(reviewedServicesDirectorySession);
   const first = buildReviewedPlan();
   const second = buildReviewedPlan();
   const serializedPlan = JSON.stringify(first.plan);
@@ -116,7 +123,7 @@ test("reviewed intake siteKit plan is strict and idempotent", () => {
       (candidate) => candidate.engineId
     )
   ).toEqual(["services", "locations", "faq"]);
-  expect(request.context.siteKit).toEqual({
+  expect(compileResult.siteKit).toEqual({
     businessType: "services_directory",
     goals: ["lead_generation", "catalog_showcase", "collect_qualified_leads"],
     locale: "en",
@@ -176,4 +183,15 @@ test("reviewed intake generated install payloads reject unknown fields before dr
   expect(() => normalizeAssistantActionPlan(planWithUnknownPreviewField)).toThrow(
     "assistant_action_plan_invalid"
   );
+});
+
+test("direct siteKit planner context is gated before executable actions", () => {
+  const request = buildActionPlanRequestFromReviewedIntake(reviewedServicesDirectorySession);
+  const plan = planAssistantActions(request);
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.intentFamily).toBe("site_kit");
+  expect(plan.actions).toEqual([]);
+  expect(plan.answer).toContain("reviewed LLM Guide site-builder intake");
 });

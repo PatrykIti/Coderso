@@ -6,8 +6,9 @@
 **Category:** Assistant + Admin UI + Security UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-02, TASK-407-03, TASK-407-04, TASK-407-05
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-06
+**Completed:** 2026-06-06
 
 ---
 
@@ -46,7 +47,7 @@ there is not a second full-site builder UI with a divergent plan handoff.
 | TASK-407-06-L03 | Advanced Stepper Controls | Done | Advanced server-owned progression, Basic-to-Advanced confirmation, controlled metadata-driven fields, selectable steps, and normalized-state gate tests. |
 | TASK-407-06-L04 | Review Summary and Execution Gating | Done | Floating assistant final review summary, review-hash confirmation, backend blocking-gate enforcement, and strict siteKit plan handoff. |
 | TASK-407-06-L05 | UI Warnings Local State and Redaction | Done | Prompt-poisoning-aware UI/cache redaction, conversation localStorage bounds, dirty revalidation preservation, and screenshot/cache regression tests. |
-| TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | To Do | Reconcile or retire the legacy AI site wizard so it cannot bypass the reviewed intake handoff. |
+| TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | Done | Legacy AI site wizard retired, Solution Kits now opens reviewed LLM Guide intake, and direct `context.siteKit` bypass is rejected/gated. |
 
 ## Security Contract
 
@@ -67,9 +68,10 @@ there is not a second full-site builder UI with a divergent plan handoff.
 
 | Area | Files |
 |---|---|
-| Site wizard UI | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/ui/setup/AiSiteWizardSteps.tsx`, `core/admin/ui/setup/aiSiteWizardValidation.ts` |
-| Assistant entry UI | `core/admin/ui/assistant/AssistantPanel.tsx` only if full-site intent starts/resumes the wizard |
+| Retired legacy wizard UI | Deleted `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/ui/setup/AiSiteWizardSteps.tsx`, and `core/admin/ui/setup/aiSiteWizardValidation.ts`; `core/admin/ui/kits/SolutionKitsPage.tsx` now stays read-only with `Open LLM Guide`. |
+| Assistant entry UI | `core/admin/ui/assistant/AssistantPanel.tsx` and `core/admin/ui/assistant/assistantPanelEvents.ts` own the reviewed floating intake entry. |
 | Admin client | `core/admin/services/assistantClient.ts` siteKit request/response types and intake helpers |
+| Backend planner/schema | `core/services/assistant/actionPlannerService.ts`, `core/services/assistant/adminContextService.ts`, `core/server/validation/assistantActionSchemas.ts` |
 | Tests | `tests/vitest/ui/assistant-*`, admin interaction tests |
 | Docs | assistant docs if UX behavior changes |
 
@@ -150,3 +152,10 @@ function canSubmitPlan(session: AssistantSiteBuilderIntakeSession) {
   redaction, bounded assistant conversation localStorage, screenshot-safe review
   warnings, and dirty-draft preservation for background revalidation. Remaining
   TASK-407-06 work is legacy `AiSiteWizard` reviewed-intake convergence in L06.
+- 2026-06-06: TASK-407-06-L06 retired the legacy `AiSiteWizard`
+  plan/apply/rerun/rollback/clone surface, moved Solution Kits to a read-only
+  catalog with an `Open LLM Guide` CTA, removed direct siteKit admin-client
+  helpers, rejected direct `context.siteKit` at the action-plan route, preserved
+  reviewed active-session handoff, updated docs/changelog, and completed targeted
+  Vitest/Bun plus lint/typecheck/diff validation. TASK-407-06 is closed with all
+  physical leaves done.

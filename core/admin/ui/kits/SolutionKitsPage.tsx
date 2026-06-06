@@ -1,16 +1,18 @@
+import { MessageSquareText, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getSolutionKitCached,
   type SolutionKitDefinition,
   type SolutionKitId,
 } from "@/services/solutionKitsClient";
+import { openAssistantPanel } from "@/ui/assistant/assistantPanelEvents";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
-import { AiSiteWizard } from "@/ui/setup/AiSiteWizard";
 import { getActiveSolutionKitId, setActiveSolutionKitId } from "@/services/solutionKitSelection";
 
 import { SolutionKitCard } from "./SolutionKitCard";
@@ -29,6 +31,9 @@ const formatIncludeLabel = (value: string) =>
     .filter(Boolean)
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(" ");
+
+const REVIEWED_SITE_BUILDER_PROMPT =
+  "Create a complete website for my business. Guide me through the reviewed site-builder intake.";
 
 export function SolutionKitsPage() {
   const { items, isLoading, error } = useSolutionKits();
@@ -112,12 +117,41 @@ export function SolutionKitsPage() {
           </div>
 
           <div className="space-y-4">
-            <AiSiteWizard
-              kits={items}
-              selectedKitId={effectiveSelectedId}
-              selectedKit={selectedKit}
-              onSelectKit={handleSelectKit}
-            />
+            <Card>
+              <CardHeader className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  <CardTitle className="text-base">Reviewed Site Builder</CardTitle>
+                  <Badge variant="outline" className="ml-auto text-[10px] uppercase">
+                    LLM Guide
+                  </Badge>
+                </div>
+                <CardDescription>
+                  Full-site generation runs through the reviewed intake, dry-run, and execute flow
+                  in the floating assistant.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() =>
+                    openAssistantPanel({
+                      mode: "llm-guide",
+                      message: REVIEWED_SITE_BUILDER_PROMPT,
+                      reset: true,
+                    })
+                  }
+                >
+                  <MessageSquareText className="mr-2 h-4 w-4" />
+                  Open LLM Guide
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Kit selection below stays read-only until the reviewed assistant handoff is
+                  confirmed.
+                </p>
+              </CardContent>
+            </Card>
 
             {selectedSummary ? (
               <Card>

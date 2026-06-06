@@ -86,15 +86,15 @@ detail routes, navigation/footer links, SEO basics, and desktop/mobile layout.
 TASK-407 guided site-builder intake is a service-owned layer over the same
 site-kit action path. The intake session is normalized and reviewed in
 `core/services/assistant/assistantSiteBuilderIntake*.ts`, then
-`assistantSiteBuilderIntakeCompiler.ts` builds an action-plan request with the
-existing `context.siteKit` payload. Do not add a browser- or route-owned
-`context.siteBuilderIntake` contract unless a later task explicitly requires it.
-The `/assistant/actions/plan` route continues to validate only the strict
-`AssistantSiteKitPlanInput` fields under `context.siteKit`: `businessType`,
-`goals`, `locale`, optional `region`, `siteName`, `preferredKitId`,
-`selectedKitId`, and `enabledStepIds`. Page roles, section roles, media policy,
-content-engine candidates, design/reference facts, gates, and review metadata
-remain outside that payload.
+`assistantSiteBuilderIntakeCompiler.ts` builds an internal strict
+`AssistantSiteKitPlanInput` for the planner. Browser and route payloads must not
+send `context.siteKit`; `/assistant/actions/plan` accepts the stripped
+`context.siteBuilderIntakeState.activeSession` shape instead, and schema
+validation rejects direct `siteKit` fields. Direct service calls that still carry
+`context.siteKit` are defensive-gated as `needs_input` plans with no executable
+actions. Page roles, section roles, media policy, content-engine candidates,
+design/reference facts, gates, and review metadata remain outside the compiled
+siteKit input.
 
 Reviewed static shell plans pass through
 `assistantSiteBuilderIntakeStaticActions.ts`. It keeps the existing
@@ -121,10 +121,10 @@ metadata reports the current/next step, visible steps, answered steps, missing
 required steps, readiness flags, accepted answer fields, control kinds, option
 registry ids, and concrete option values. This path is generic: it asks for
 business/site facts and maps later adapters to backend-owned roles instead of
-hardcoding one industry. Already-reviewed `context.siteKit` handoff continues
-to bypass the prompt gate; backend-only planner state can also mark requested
-Advanced mode or an active intake session without adding a route-owned
-`context.siteBuilderIntake` payload.
+hardcoding one industry. A reviewed active intake session is the only admin
+handoff that can compile to `site-kit.*`; backend-only planner state can also
+mark requested Advanced mode or an active intake session without adding a
+route-owned `context.siteBuilderIntake` payload.
 
 Basic site-map/menu/section defaults live in
 `assistantSiteBuilderIntakeBasicDefaults.ts`. They are advisory facts only:
