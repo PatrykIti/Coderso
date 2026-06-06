@@ -39,7 +39,7 @@ Claude/agent drift reviews.
 | ID | Title | Status | Output |
 |---|---|---|---|
 | TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | Done | Lint/typecheck/precommit/gates plus targeted Bun/Vitest suites for changed contracts. |
-| TASK-407-07-L02 | Basic Live Playwright E2E | To Do | Live Basic guided creation through admin UI and public runtime checks. |
+| TASK-407-07-L02 | Basic Live Playwright E2E | Done | Live Basic guided creation through admin UI and public runtime checks. |
 | TASK-407-07-L03 | Advanced Live Playwright E2E | To Do | Live Advanced creation with design/menu/hero/section/reference gates. |
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | To Do | Scoped refinement plus rejected unknown/poisoned/media-reference cases. |
 | TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | To Do | Resource-id scoped cleanup and second different-industry/theme rebuild. |

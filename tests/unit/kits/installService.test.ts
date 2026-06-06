@@ -152,6 +152,14 @@ const buildDefinition = (seed: string): SolutionKitDefinition => ({
               type: "hero",
               data: { title: `Welcome ${seed}` },
             },
+            {
+              id: `form-${seed}`,
+              type: "form-embed",
+              data: {
+                formId: `contact-${seed}`,
+                title: `Contact ${seed}`,
+              },
+            },
           ],
           settings: {
             showInNav: true,
@@ -263,41 +271,41 @@ const getTypeTaxonomyState = async (typeId: string) => {
 testIfDb(
   "applySolutionKitInstall dry-run stores run plan without creating resources",
   async () => {
-  const seed = randomUUID();
-  const definition = buildDefinition(seed);
-  registerDefinition(definition);
+    const seed = randomUUID();
+    const definition = buildDefinition(seed);
+    registerDefinition(definition);
 
-  const result = await applySolutionKitInstall({
-    kitId: definition.id,
-    dryRun: true,
-    kitDefinitionOverride: definition,
-  });
-  registerRunId(result.run.id);
+    const result = await applySolutionKitInstall({
+      kitId: definition.id,
+      dryRun: true,
+      kitDefinitionOverride: definition,
+    });
+    registerRunId(result.run.id);
 
-  expect(result.run.mode).toBe("dry_run");
-  expect(result.run.status).toBe("success");
-  expect(result.summary.planned).toBe(4);
+    expect(result.run.mode).toBe("dry_run");
+    expect(result.run.status).toBe("success");
+    expect(result.summary.planned).toBe(4);
 
-  const [storedType] = await db
-    .select()
-    .from(contentTypes)
-    .where(eq(contentTypes.slug, definition.resourceBlueprint.contentTypes[0]!.slug));
-  const [storedForm] = await db
-    .select()
-    .from(forms)
-    .where(eq(forms.slug, definition.resourceBlueprint.forms[0]!.slug));
-  const [storedPage] = await db
-    .select()
-    .from(pages)
-    .where(eq(pages.slug, definition.resourceBlueprint.pages[0]!.slug));
+    const [storedType] = await db
+      .select()
+      .from(contentTypes)
+      .where(eq(contentTypes.slug, definition.resourceBlueprint.contentTypes[0]!.slug));
+    const [storedForm] = await db
+      .select()
+      .from(forms)
+      .where(eq(forms.slug, definition.resourceBlueprint.forms[0]!.slug));
+    const [storedPage] = await db
+      .select()
+      .from(pages)
+      .where(eq(pages.slug, definition.resourceBlueprint.pages[0]!.slug));
 
-  expect(storedType).toBeUndefined();
-  expect(storedForm).toBeUndefined();
-  expect(storedPage).toBeUndefined();
+    expect(storedType).toBeUndefined();
+    expect(storedForm).toBeUndefined();
+    expect(storedPage).toBeUndefined();
 
-  const runItems = await listSolutionKitInstallItems(result.run.id);
-  expect(runItems).toHaveLength(4);
-  expect(runItems.every((item) => item.status === "planned")).toBe(true);
+    const runItems = await listSolutionKitInstallItems(result.run.id);
+    expect(runItems).toHaveLength(4);
+    expect(runItems.every((item) => item.status === "planned")).toBe(true);
   },
   dbTestTimeoutMs
 );
@@ -305,72 +313,71 @@ testIfDb(
 testIfDb(
   "applySolutionKitInstall is idempotent and does not create duplicates",
   async () => {
-  const seed = randomUUID();
-  const definition = buildDefinition(seed);
-  registerDefinition(definition);
+    const seed = randomUUID();
+    const definition = buildDefinition(seed);
+    registerDefinition(definition);
 
-  const first = await applySolutionKitInstall({
-    kitId: definition.id,
-    kitDefinitionOverride: definition,
-  });
-  registerRunId(first.run.id);
-  expect(first.run.status).toBe("success");
-  expect(first.summary.success).toBe(4);
+    const first = await applySolutionKitInstall({
+      kitId: definition.id,
+      kitDefinitionOverride: definition,
+    });
+    registerRunId(first.run.id);
+    expect(first.run.status).toBe("success");
+    expect(first.summary.success).toBe(4);
 
-  const second = await applySolutionKitInstall({
-    kitId: definition.id,
-    kitDefinitionOverride: definition,
-  });
-  registerRunId(second.run.id);
-  expect(second.run.status).toBe("success");
-  expect(second.summary.operations.noop).toBeGreaterThanOrEqual(4);
+    const second = await applySolutionKitInstall({
+      kitId: definition.id,
+      kitDefinitionOverride: definition,
+    });
+    registerRunId(second.run.id);
+    expect(second.run.status).toBe("success");
+    expect(second.summary.operations.noop).toBeGreaterThanOrEqual(4);
 
-  const typeRows = await db
-    .select({ id: contentTypes.id })
-    .from(contentTypes)
-    .where(eq(contentTypes.slug, definition.resourceBlueprint.contentTypes[0]!.slug));
-  const formRows = await db
-    .select({ id: forms.id })
-    .from(forms)
-    .where(eq(forms.slug, definition.resourceBlueprint.forms[0]!.slug));
-  const pageRows = await db
-    .select({ id: pages.id })
-    .from(pages)
-    .where(eq(pages.slug, definition.resourceBlueprint.pages[0]!.slug));
-  const menuRows = await db
-    .select({ id: menus.id })
-    .from(menus)
-    .where(eq(menus.location, definition.resourceBlueprint.menus[0]!.location!));
+    const typeRows = await db
+      .select({ id: contentTypes.id })
+      .from(contentTypes)
+      .where(eq(contentTypes.slug, definition.resourceBlueprint.contentTypes[0]!.slug));
+    const formRows = await db
+      .select({ id: forms.id })
+      .from(forms)
+      .where(eq(forms.slug, definition.resourceBlueprint.forms[0]!.slug));
+    const pageRows = await db
+      .select({ id: pages.id, currentData: pages.currentData })
+      .from(pages)
+      .where(eq(pages.slug, definition.resourceBlueprint.pages[0]!.slug));
+    const menuRows = await db
+      .select({ id: menus.id })
+      .from(menus)
+      .where(eq(menus.location, definition.resourceBlueprint.menus[0]!.location!));
 
-  expect(typeRows).toHaveLength(1);
-  expect(formRows).toHaveLength(1);
-  expect(pageRows).toHaveLength(1);
-  expect(menuRows).toHaveLength(1);
+    expect(typeRows).toHaveLength(1);
+    expect(formRows).toHaveLength(1);
+    expect(pageRows).toHaveLength(1);
+    expect(menuRows).toHaveLength(1);
 
-  const [taxonomyState, storedFields, storedSeo, storedMenuItems] = await Promise.all([
-    getTypeTaxonomyState(typeRows[0]!.id),
-    db
-      .select()
-      .from(formFields)
-      .where(eq(formFields.formId, formRows[0]!.id)),
-    db
-      .select()
-      .from(seoDocuments)
-      .where(
-        and(
-          eq(seoDocuments.targetType, "page"),
-          eq(seoDocuments.targetId, pageRows[0]!.id)
-        )
-      ),
-    db.select().from(menuItems).where(eq(menuItems.menuId, menuRows[0]!.id)),
-  ]);
+    const [taxonomyState, storedFields, storedSeo, storedMenuItems] = await Promise.all([
+      getTypeTaxonomyState(typeRows[0]!.id),
+      db.select().from(formFields).where(eq(formFields.formId, formRows[0]!.id)),
+      db
+        .select()
+        .from(seoDocuments)
+        .where(
+          and(eq(seoDocuments.targetType, "page"), eq(seoDocuments.targetId, pageRows[0]!.id))
+        ),
+      db.select().from(menuItems).where(eq(menuItems.menuId, menuRows[0]!.id)),
+    ]);
 
-  expect(taxonomyState.categories).toEqual(["Category One", "Category Two"]);
-  expect(taxonomyState.tags).toEqual(["Tag One", "Tag Two"]);
-  expect(storedFields).toHaveLength(2);
-  expect(storedSeo).toHaveLength(1);
-  expect(storedSeo[0]?.title).toBe(definition.resourceBlueprint.pages[0]?.seo?.title);
-  expect(storedMenuItems).toHaveLength(2);
+    expect(taxonomyState.categories).toEqual(["Category One", "Category Two"]);
+    expect(taxonomyState.tags).toEqual(["Tag One", "Tag Two"]);
+    expect(storedFields).toHaveLength(2);
+    const pageData = pageRows[0]!.currentData as {
+      blocks?: Array<{ id?: string; type?: string; data?: { formId?: string } }>;
+    };
+    const formEmbedBlock = (pageData.blocks ?? []).find((block) => block.type === "form-embed");
+    expect(formEmbedBlock?.data?.formId).toBe(formRows[0]!.id);
+    expect(storedSeo).toHaveLength(1);
+    expect(storedSeo[0]?.title).toBe(definition.resourceBlueprint.pages[0]?.seo?.title);
+    expect(storedMenuItems).toHaveLength(2);
   },
   dbTestTimeoutMs
 );
@@ -378,167 +385,177 @@ testIfDb(
 testIfDb(
   "rollbackSolutionKitInstall restores updated rows and deletes created rows",
   async () => {
-  const seed = randomUUID();
-  const definition = buildDefinition(seed);
-  registerDefinition(definition);
+    const seed = randomUUID();
+    const definition = buildDefinition(seed);
+    registerDefinition(definition);
 
-  const existingTypeSlug = definition.resourceBlueprint.contentTypes[0]!.slug;
-  const existingPageSlug = definition.resourceBlueprint.pages[0]!.slug;
-  const createdFormSlug = definition.resourceBlueprint.forms[0]!.slug;
-  const existingMenuLocation = definition.resourceBlueprint.menus[0]!.location!;
+    const existingTypeSlug = definition.resourceBlueprint.contentTypes[0]!.slug;
+    const existingPageSlug = definition.resourceBlueprint.pages[0]!.slug;
+    const createdFormSlug = definition.resourceBlueprint.forms[0]!.slug;
+    const existingMenuLocation = definition.resourceBlueprint.menus[0]!.location!;
 
-  const [existingType] = await db.insert(contentTypes).values({
-    name: "Legacy Service Type",
-    slug: existingTypeSlug,
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        legacy: { type: "string" },
-      },
-      required: [],
-    },
-  }).returning();
+    const [existingType] = await db
+      .insert(contentTypes)
+      .values({
+        name: "Legacy Service Type",
+        slug: existingTypeSlug,
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            legacy: { type: "string" },
+          },
+          required: [],
+        },
+      })
+      .returning();
 
-  const [legacyCategory] = await db
-    .insert(contentTaxonomies)
-    .values({
-      typeId: existingType!.id,
-      name: "Legacy Categories",
-      slug: "legacy-categories",
-      kind: "category",
-    })
-    .returning();
-  const [legacyTag] = await db
-    .insert(contentTaxonomies)
-    .values({
-      typeId: existingType!.id,
-      name: "Legacy Tags",
-      slug: "legacy-tags",
-      kind: "tag",
-    })
-    .returning();
-  await db.insert(contentTerms).values([
-    { taxonomyId: legacyCategory!.id, name: "Legacy Category", slug: "legacy-category" },
-    { taxonomyId: legacyTag!.id, name: "Legacy Tag", slug: "legacy-tag" },
-  ]);
+    const [legacyCategory] = await db
+      .insert(contentTaxonomies)
+      .values({
+        typeId: existingType!.id,
+        name: "Legacy Categories",
+        slug: "legacy-categories",
+        kind: "category",
+      })
+      .returning();
+    const [legacyTag] = await db
+      .insert(contentTaxonomies)
+      .values({
+        typeId: existingType!.id,
+        name: "Legacy Tags",
+        slug: "legacy-tags",
+        kind: "tag",
+      })
+      .returning();
+    await db.insert(contentTerms).values([
+      { taxonomyId: legacyCategory!.id, name: "Legacy Category", slug: "legacy-category" },
+      { taxonomyId: legacyTag!.id, name: "Legacy Tag", slug: "legacy-tag" },
+    ]);
 
-  const [existingPage] = await db.insert(pages).values({
-    title: "Legacy Landing",
-    slug: existingPageSlug,
-    status: "draft",
-    authorId: null,
-    currentData: { blocks: [] },
-    publishedData: null,
-  }).returning();
-  await db.insert(seoDocuments).values({
-    targetType: "page",
-    targetId: existingPage!.id,
-    slug: existingPageSlug,
-    title: "Legacy SEO",
-    description: "Legacy description",
-    robots: "noindex,nofollow",
-    status: "warning",
-    issues: [],
-  });
+    const [existingPage] = await db
+      .insert(pages)
+      .values({
+        title: "Legacy Landing",
+        slug: existingPageSlug,
+        status: "draft",
+        authorId: null,
+        currentData: { blocks: [] },
+        publishedData: null,
+      })
+      .returning();
+    await db.insert(seoDocuments).values({
+      targetType: "page",
+      targetId: existingPage!.id,
+      slug: existingPageSlug,
+      title: "Legacy SEO",
+      description: "Legacy description",
+      robots: "noindex,nofollow",
+      status: "warning",
+      issues: [],
+    });
 
-  const [existingMenu] = await db
-    .insert(menus)
-    .values({
-      name: "Legacy Menu",
-      location: existingMenuLocation,
-    })
-    .returning();
-  await db.insert(menuItems).values({
-    menuId: existingMenu!.id,
-    label: "Legacy Item",
-    href: "/legacy",
-    orderIndex: 0,
-    parentId: null,
-    settings: {},
-  });
+    const [existingMenu] = await db
+      .insert(menus)
+      .values({
+        name: "Legacy Menu",
+        location: existingMenuLocation,
+      })
+      .returning();
+    await db.insert(menuItems).values({
+      menuId: existingMenu!.id,
+      label: "Legacy Item",
+      href: "/legacy",
+      orderIndex: 0,
+      parentId: null,
+      settings: {},
+    });
 
-  const applyResult = await applySolutionKitInstall({
-    kitId: definition.id,
-    kitDefinitionOverride: definition,
-  });
-  registerRunId(applyResult.run.id);
-  expect(applyResult.run.status).toBe("success");
-  const [appliedType, appliedForm, appliedPage, appliedMenu] = await Promise.all([
-    db
+    const applyResult = await applySolutionKitInstall({
+      kitId: definition.id,
+      kitDefinitionOverride: definition,
+    });
+    registerRunId(applyResult.run.id);
+    expect(applyResult.run.status).toBe("success");
+    const [appliedType, appliedForm, appliedPage, appliedMenu] = await Promise.all([
+      db
+        .select()
+        .from(contentTypes)
+        .where(eq(contentTypes.slug, existingTypeSlug))
+        .then((rows) => rows[0]),
+      db
+        .select()
+        .from(forms)
+        .where(eq(forms.slug, createdFormSlug))
+        .then((rows) => rows[0]),
+      db
+        .select()
+        .from(pages)
+        .where(eq(pages.slug, existingPageSlug))
+        .then((rows) => rows[0]),
+      db
+        .select()
+        .from(menus)
+        .where(eq(menus.location, existingMenuLocation))
+        .then((rows) => rows[0]),
+    ]);
+    const [appliedTaxonomy, appliedFields, appliedSeo, appliedItems] = await Promise.all([
+      getTypeTaxonomyState(appliedType!.id),
+      db.select().from(formFields).where(eq(formFields.formId, appliedForm!.id)),
+      db
+        .select()
+        .from(seoDocuments)
+        .where(
+          and(eq(seoDocuments.targetType, "page"), eq(seoDocuments.targetId, appliedPage!.id))
+        ),
+      db.select().from(menuItems).where(eq(menuItems.menuId, appliedMenu!.id)),
+    ]);
+    expect(appliedTaxonomy.categories).toEqual(["Category One", "Category Two"]);
+    expect(appliedFields).toHaveLength(2);
+    expect(appliedSeo[0]?.title).toBe(`SEO Landing ${seed}`);
+    expect(appliedItems).toHaveLength(2);
+
+    const rollbackResult = await rollbackSolutionKitInstall({
+      sourceRunId: applyResult.run.id,
+    });
+    registerRunId(rollbackResult.run.id);
+    expect(rollbackResult.run.status).toBe("success");
+    expect(rollbackResult.summary.failed).toBe(0);
+
+    const [restoredType] = await db
       .select()
       .from(contentTypes)
-      .where(eq(contentTypes.slug, existingTypeSlug))
-      .then((rows) => rows[0]),
-    db.select().from(forms).where(eq(forms.slug, createdFormSlug)).then((rows) => rows[0]),
-    db.select().from(pages).where(eq(pages.slug, existingPageSlug)).then((rows) => rows[0]),
-    db
+      .where(eq(contentTypes.slug, existingTypeSlug));
+    const [restoredPage] = await db.select().from(pages).where(eq(pages.slug, existingPageSlug));
+    const [restoredMenu] = await db
       .select()
       .from(menus)
-      .where(eq(menus.location, existingMenuLocation))
-      .then((rows) => rows[0]),
-  ]);
-  const [appliedTaxonomy, appliedFields, appliedSeo, appliedItems] = await Promise.all([
-    getTypeTaxonomyState(appliedType!.id),
-    db.select().from(formFields).where(eq(formFields.formId, appliedForm!.id)),
-    db
+      .where(eq(menus.location, existingMenuLocation));
+    const [remainingForm] = await db.select().from(forms).where(eq(forms.slug, createdFormSlug));
+    const restoredTaxonomy = await getTypeTaxonomyState(restoredType!.id);
+    const restoredSeo = await db
       .select()
       .from(seoDocuments)
-      .where(and(eq(seoDocuments.targetType, "page"), eq(seoDocuments.targetId, appliedPage!.id))),
-    db.select().from(menuItems).where(eq(menuItems.menuId, appliedMenu!.id)),
-  ]);
-  expect(appliedTaxonomy.categories).toEqual(["Category One", "Category Two"]);
-  expect(appliedFields).toHaveLength(2);
-  expect(appliedSeo[0]?.title).toBe(`SEO Landing ${seed}`);
-  expect(appliedItems).toHaveLength(2);
+      .where(and(eq(seoDocuments.targetType, "page"), eq(seoDocuments.targetId, restoredPage!.id)));
+    const restoredItems = await db
+      .select()
+      .from(menuItems)
+      .where(eq(menuItems.menuId, restoredMenu!.id));
 
-  const rollbackResult = await rollbackSolutionKitInstall({
-    sourceRunId: applyResult.run.id,
-  });
-  registerRunId(rollbackResult.run.id);
-  expect(rollbackResult.run.status).toBe("success");
-  expect(rollbackResult.summary.failed).toBe(0);
-
-  const [restoredType] = await db
-    .select()
-    .from(contentTypes)
-    .where(eq(contentTypes.slug, existingTypeSlug));
-  const [restoredPage] = await db
-    .select()
-    .from(pages)
-    .where(eq(pages.slug, existingPageSlug));
-  const [restoredMenu] = await db
-    .select()
-    .from(menus)
-    .where(eq(menus.location, existingMenuLocation));
-  const [remainingForm] = await db
-    .select()
-    .from(forms)
-    .where(eq(forms.slug, createdFormSlug));
-  const restoredTaxonomy = await getTypeTaxonomyState(restoredType!.id);
-  const restoredSeo = await db
-    .select()
-    .from(seoDocuments)
-    .where(and(eq(seoDocuments.targetType, "page"), eq(seoDocuments.targetId, restoredPage!.id)));
-  const restoredItems = await db
-    .select()
-    .from(menuItems)
-    .where(eq(menuItems.menuId, restoredMenu!.id));
-
-  expect(restoredType?.name).toBe("Legacy Service Type");
-  const restoredTypeProperties = asRecord(asRecord(restoredType?.schema).properties);
-  expect(restoredTypeProperties.legacy).toBeDefined();
-  expect(restoredTaxonomy.categories).toEqual(["Legacy Category"]);
-  expect(restoredTaxonomy.tags).toEqual(["Legacy Tag"]);
-  expect(restoredPage?.title).toBe("Legacy Landing");
-  expect(restoredPage?.status).toBe("draft");
-  expect(restoredSeo).toHaveLength(1);
-  expect(restoredSeo[0]?.title).toBe("Legacy SEO");
-  expect(restoredMenu?.name).toBe("Legacy Menu");
-  expect(restoredItems).toHaveLength(1);
-  expect(restoredItems[0]?.label).toBe("Legacy Item");
-  expect(restoredItems[0]?.href).toBe("/legacy");
-  expect(remainingForm).toBeUndefined();
+    expect(restoredType?.name).toBe("Legacy Service Type");
+    const restoredTypeProperties = asRecord(asRecord(restoredType?.schema).properties);
+    expect(restoredTypeProperties.legacy).toBeDefined();
+    expect(restoredTaxonomy.categories).toEqual(["Legacy Category"]);
+    expect(restoredTaxonomy.tags).toEqual(["Legacy Tag"]);
+    expect(restoredPage?.title).toBe("Legacy Landing");
+    expect(restoredPage?.status).toBe("draft");
+    expect(restoredSeo).toHaveLength(1);
+    expect(restoredSeo[0]?.title).toBe("Legacy SEO");
+    expect(restoredMenu?.name).toBe("Legacy Menu");
+    expect(restoredItems).toHaveLength(1);
+    expect(restoredItems[0]?.label).toBe("Legacy Item");
+    expect(restoredItems[0]?.href).toBe("/legacy");
+    expect(remainingForm).toBeUndefined();
   },
   dbTestTimeoutMs
 );

@@ -65,7 +65,7 @@ const sectionRoleWidgetAliases = Object.freeze({
   "services-overview": "content-list",
   "featured-items": "content-list",
   proof: "testimonials",
-  process: null,
+  process: "process",
   benefits: null,
   comparison: null,
   pricing: null,

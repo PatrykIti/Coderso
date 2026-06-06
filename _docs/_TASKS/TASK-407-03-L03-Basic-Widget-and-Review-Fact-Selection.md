@@ -99,9 +99,10 @@ export function buildBasicReviewFacts(facts: BasicSiteBuilderFacts) {
   candidates, content-engine candidates, media policy, contact path, gates, and a
   bounded redacted summary.
 - Widget support resolves through `modulePackMatrix` `assistantPageSections`.
-  Unsupported Basic section roles such as process, benefits, comparison, and
-  pricing become `widget_alias_unsupported` review gates instead of invented
-  widgets or executable actions.
+  Unsupported Basic section roles such as benefits, comparison, and pricing
+  become `widget_alias_unsupported` review gates instead of invented widgets or
+  executable actions. TASK-407-07-L02 later promoted `process` to a supported
+  `feature-grid` assistant alias through the same matrix-owned contract.
 - Content engines are inferred from generic page and section roles as advisory
   review candidates only. The helper does not compile `siteKit`, create action
   ids, or call the provider.

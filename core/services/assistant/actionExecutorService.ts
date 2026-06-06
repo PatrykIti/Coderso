@@ -249,6 +249,12 @@ const reconcileLaunchReadinessAfterExecution = (
     results.filter((result) => result.status === "success").map((result) => result.actionId)
   );
   const successfulActions = plan.actions.filter((action) => successfulActionIds.has(action.id));
+  const successfulSiteKitInstall = results.some(
+    (result) =>
+      result.type === "site-kit.install" &&
+      result.status === "success" &&
+      result.details?.siteKit?.validation?.status === "ok"
+  );
   const successfulTypeCount = (type: AssistantPlannedAction["type"]) =>
     successfulActions.filter((action) => action.type === type).length;
   const successfulPages = new Set(
@@ -344,8 +350,9 @@ const reconcileLaunchReadinessAfterExecution = (
 
   const checks = launchReadiness.checks.map((check) => {
     if (check.status === "gated") return check;
-    const satisfied =
-      check.id === "pages"
+    const satisfied = successfulSiteKitInstall
+      ? check.id !== "media"
+      : check.id === "pages"
         ? allRequiredPagesSatisfied
         : check.id === "catalogs"
           ? allCatalogResourcesSatisfied

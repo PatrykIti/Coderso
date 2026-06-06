@@ -16,6 +16,7 @@ Each kit ships with starter resources:
 | `automotive-workshop` | `/`, `services`, `contact` | `service-request` | `service` | `primary`, `footer` |
 | `medical-clinic` | `/`, `doctors`, `contact` | `appointment-request` | `doctor` | `primary`, `footer` |
 | `beauty-salon` | `/`, `offers`, `contact` | `beauty-booking` | `offer` | `primary`, `footer` |
+| `local-service-business` | `/`, `services`, `portfolio`, `testimonials`, `faq`, `about`, `contact` | `service-inquiry` | `service-offer`, `service-project` | `primary`, `footer` |
 | `services-directory` | `/`, `directory`, `submit` | `directory-inquiry` | `provider` | `primary`, `footer` |
 | `small-ecommerce` | `/`, `catalog`, `contact` | `custom-order` | `catalog-page` | `primary`, `footer` |
 
@@ -66,6 +67,7 @@ Recommended module scope after audit:
 | `automotive-workshop` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |
 | `medical-clinic` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |
 | `beauty-salon` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |
+| `local-service-business` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `reviews` |
 | `services-directory` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `filters`, `search` |
 | `small-ecommerce` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `filters`, `commerce`, `reviews` |
 

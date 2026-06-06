@@ -274,6 +274,56 @@ test("compileIntakeToSiteKitPlanInput does not treat generic workshops as automo
   expect(carWorkshop.preferredKitId).toBe("automotive-workshop");
 });
 
+test("compileIntakeToSiteKitPlanInput maps single-business local services away from directory kits", () => {
+  const bikeService = compileIntakeToSiteKitPlanInput(
+    withBusinessProfileValues(basicCoffeeDirectorySession, {
+      siteName: "Velo Serwis Miejski",
+      topic: "Serwis rowerowy, przeglady i szybkie naprawy",
+      vertical: "serwis rowerowy",
+      summary: "Lokalna firma uslugowa z oferta uslug, realizacjami, opiniami, FAQ i kontaktem.",
+      offerSummary:
+        "Przeglady sezonowe, naprawy hamulcow i napedu oraz umawianie przegladow rowerow.",
+    })
+  );
+
+  expect(bikeService.businessType).toBe("custom");
+  expect(bikeService.preferredKitId).toBe("local-service-business");
+  expect(bikeService.selectedKitId).toBe("local-service-business");
+});
+
+test("compileIntakeToSiteKitPlanInput treats a single-business service catalog as local service", () => {
+  const serviceCatalog = compileIntakeToSiteKitPlanInput(
+    withBusinessProfileValues(basicCoffeeDirectorySession, {
+      siteName: "HydroFix",
+      topic: "firma hydrauliczna",
+      vertical: "lokalna firma uslugowa",
+      summary: "Potrzebuje strony z katalogiem uslug, realizacjami, opiniami, FAQ i kontaktem.",
+      offerSummary:
+        "Katalog uslug hydraulicznych, cennik orientacyjny, realizacje oraz formularz zapytania.",
+    })
+  );
+
+  expect(serviceCatalog.businessType).toBe("custom");
+  expect(serviceCatalog.preferredKitId).toBe("local-service-business");
+  expect(serviceCatalog.selectedKitId).toBe("local-service-business");
+});
+
+test("compileIntakeToSiteKitPlanInput still maps explicit provider catalogs to directory kit", () => {
+  const providerCatalog = compileIntakeToSiteKitPlanInput(
+    withBusinessProfileValues(basicCoffeeDirectorySession, {
+      siteName: "Katalog Fachowcow",
+      topic: "katalog uslugodawcow i wykonawcow",
+      vertical: "services marketplace",
+      summary: "Publiczny katalog firm z profilami dostawcow, wyszukiwarka i formularzem zgloszen.",
+      offerSummary: "Lista wielu wykonawcow oraz filtrowanie po miescie i kategorii.",
+    })
+  );
+
+  expect(providerCatalog.businessType).toBe("services_directory");
+  expect(providerCatalog.preferredKitId).toBe("services-directory");
+  expect(providerCatalog.selectedKitId).toBe("services-directory");
+});
+
 test("buildActionPlanRequestFromReviewedIntake returns internal strict siteKit handoff", () => {
   const request = buildActionPlanRequestFromReviewedIntake(productCatalogSession);
 

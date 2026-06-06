@@ -1,5 +1,5 @@
 ---
-title: "Solution Kit: Services Directory"
+title: "Solution Kit: Local Services Directory"
 audience: "admin"
 productArea: "solution-kits"
 language: "en"
@@ -12,8 +12,9 @@ keywords:
 
 # What Is It
 
-The Services Directory kit is a starter package for sites that need searchable
-and filterable discovery across many providers, offers, or service records.
+The Local Services Directory kit is a starter package for sites that need
+searchable and filterable discovery across many providers, offers, or service
+records.
 
 # When To Use
 

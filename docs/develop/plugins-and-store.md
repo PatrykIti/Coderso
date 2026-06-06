@@ -136,7 +136,7 @@ export default definePlugin((ctx) => {
 
 ## Solution kits & template contracts
 
-Solution kits are starter packs across five verticals (`automotive-workshop`, `medical-clinic`, `beauty-salon`, `services-directory`, `small-ecommerce`). Each seeds a content type, a form, pages, menus, and derived template seeds. The manifest type `SolutionKitManifest` lives in `core/services/kits/kitManifest.ts`.
+Solution kits are starter packs across six verticals (`automotive-workshop`, `medical-clinic`, `beauty-salon`, `local-service-business`, `services-directory`, `small-ecommerce`). Each seeds a content type, a form, pages, menus, and derived template seeds. The manifest type `SolutionKitManifest` lives in `core/services/kits/kitManifest.ts`.
 
 Install is **internal only** and two-phase via `POST /admin/api/solution-kits/:id/apply`: (1) core resources via `solutionKitsInstallService`; (2) template seeds via `templateInstaller`. Run metadata records a manifest snapshot, `templateInstallSummary`, and `templateRollbackPlan`.
 

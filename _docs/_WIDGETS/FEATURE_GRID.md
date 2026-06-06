@@ -9,6 +9,11 @@ media-first cards, CTA actions, and bounded layout/style controls.
 
 `feature-grid`
 
+## Assistant Mapping
+
+- `process`: supported via the Content pack `assistantPageSections` mapping for
+  beginner site-builder process/workflow sections.
+
 ## Variants
 
 - `cards-3`: three balanced cards with the default three-column desktop rhythm

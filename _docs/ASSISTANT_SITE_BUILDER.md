@@ -97,6 +97,13 @@ Current implemented guide blueprint:
   - `site-kit.recommend`
   - `site-kit.install`
   - `site-kit.validate`
+- reviewed single-business service intake defaults to `local-service-business`
+  unless the prompt/facts explicitly describe a searchable directory,
+  marketplace, aggregator, or provider-listing product; `services-directory`
+  remains reserved for that aggregator-like shape.
+- reviewed site-kit plans attach launch-readiness metadata derived from the
+  selected kit's static pages, content models, primary/footer menus, and SEO
+  coverage so the admin review UI can explain readiness before dry-run/execute.
 - solution-kit refinements:
   - gated until LLM Guide has server-derived installed-kit resource context
 - creates:
@@ -572,7 +579,9 @@ primary/footer menus,
 lead-capture forms, SEO defaults for generated pages, action ids, and same-plan
 `target:resourceKey` locators. Missing coverage becomes a blocking review gate;
 the existing solution-kit installer remains the only mutation owner for
-page/menu/form/SEO resources.
+page/menu/form/SEO resources. The same coverage helper also derives
+`metadata.launchReadiness` for reviewed site-kit plans so the UI can show
+pre-execute launch-readiness checks without trusting browser-authored facts.
 
 Reviewed siteKit runtime contracts are covered by
 `assistantSiteBuilderIntakePlanner.test.ts`,
@@ -596,8 +605,20 @@ Playwright E2E. The closed lane passed core lint/typecheck, `git diff --check`,
 assistant runtime/route files with 104 tests, `bun run gates:coderso` with no
 DB-gated skips, `bun run precommit`, and `bun run scan:security:strict`
 covering Semgrep, Bun audit, Trivy, and Gitleaks. This validation is a static
-and automated runtime gate only; live Basic/Advanced/follow-up Playwright E2E
-remains owned by TASK-407-07-L02 through TASK-407-07-L05.
+and automated runtime gate only.
+
+TASK-407-07-L02 ran the first live Basic Playwright E2E on 2026-06-06 through
+`playwright-cli -s=task407-basic-e2e run-code --filename .tmp/task-407-07-l02-basic-e2e.js`
+after restarting `coderso-dev-core-host`. A nontechnical Polish prompt for a
+local bicycle-service business completed Basic intake, review confirmation,
+dry-run, and execute through the real admin UI. The compiled plan selected the
+generic `local-service-business` kit, not the multi-provider
+`services-directory` kit. Public runtime checks covered `/`, `/contact`,
+`/services`, `/portfolio`, `/faq`, contact form presence, SEO description
+basics, desktop/mobile screenshots, and console/page errors. This Basic smoke
+does not claim personalized media/image coverage; Advanced, follow-up,
+fail-closed, and second-theme live Playwright E2E remain owned by
+TASK-407-07-L03 through TASK-407-07-L05.
 
 TASK-407 intake redaction is owned by
 `core/services/assistant/assistantSiteBuilderIntakeRedaction.ts`.

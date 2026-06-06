@@ -6,7 +6,8 @@
 **Category:** Assistant + Playwright E2E
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-07-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-06
 
 ---
 
@@ -86,3 +87,45 @@ async function runBasicLiveSiteBuilderIntakeE2E(page) {
 - A nontechnical Basic prompt can produce a reviewed, executed full site.
 - Public runtime output is usable on desktop and mobile.
 - Evidence is sanitized and no secrets are committed.
+
+## Completion Evidence
+
+- Restarted `coderso-dev-core-host` with admin
+  `http://coderso-b.localhost:5175/admin/` and public runtime
+  `http://coderso-b.localhost:3001/`.
+- Ran `playwright-cli -s=task407-basic-e2e run-code --filename .tmp/task-407-07-l02-basic-e2e.js`
+  after the restart with a nontechnical Polish Basic prompt for a local bicycle
+  service business.
+- The live flow completed Basic intake steps, review confirmation, dry-run, and
+  execute through the real admin UI. The compiled plan was `Local Service
+  Business Site Kit` with `site-kit.recommend` plus `site-kit.install`.
+- Dry-run returned `readyToExecute: true`; execute returned failed count `0`.
+- Public runtime checks covered `/`, `/contact`, `/services`, `/portfolio`,
+  `/faq`, desktop/mobile viewports, SEO description basics, contact form
+  presence, broken-image checks, console errors, and page errors.
+- Screenshots were written only to ignored `.tmp/` paths:
+  `.tmp/task-407-07-l02-basic-desktop.png` and
+  `.tmp/task-407-07-l02-basic-mobile.png`.
+- Scope note: this Basic smoke verifies the generic local-service site-kit,
+  reviewed execution, public pages, and contact form. It does not claim full
+  media/personalized-image coverage; broader Advanced, follow-up, and
+  second-theme checks remain in TASK-407-07-L03 through TASK-407-07-L05.
+
+## Validation
+
+- `git diff --check`
+- `set -a && source .env && set +a && bun test tests/unit/kits/solutionKitsCatalog.test.ts tests/unit/kits/installService.test.ts`
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeStaticActions.test.ts tests/vitest/assistant/siteBuilderPlanner.test.ts`
+- `playwright-cli -s=task407-basic-e2e run-code --filename .tmp/task-407-07-l02-basic-e2e.js`
+
+## Claude and Agent Evidence
+
+- Subagent pre-audit found real drift in Basic `process` widget mapping,
+  single-business service prompts selecting the directory kit, and reviewed
+  site-kit launch-readiness metadata. Each finding was verified locally and
+  fixed before the live E2E pass.
+- Claude read-only audit confirmed the direction of the dirty working-tree fix
+  and flagged an additional Polish `katalog` false-positive risk. That risk was
+  verified locally and fixed with compiler regressions so `katalog uslug` stays
+  on `local-service-business`, while explicit provider catalogs still use
+  `services-directory`.

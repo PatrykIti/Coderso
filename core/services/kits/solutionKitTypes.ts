@@ -4,6 +4,7 @@ export const solutionKitIds = [
   "automotive-workshop",
   "medical-clinic",
   "beauty-salon",
+  "local-service-business",
   "services-directory",
   "small-ecommerce",
 ] as const;

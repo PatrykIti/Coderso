@@ -1,5 +1,6 @@
 import type {
   AssistantActionPlan,
+  AssistantLaunchReadinessMetadata,
   AssistantPlannedAction,
   AssistantSiteKitPlanInput,
 } from "./actionPlanTypes";
@@ -109,6 +110,13 @@ const pageSlugToResourceKey = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed || trimmed === "/") return "home";
   return trimmed.replace(/^\/+/, "").replace(/\/+$/, "") || "home";
+};
+
+const resourceKeyToPagePath = (value: string) => (value === "home" ? "/" : `/${value}`);
+const comparePageResourceKeys = (left: string, right: string) => {
+  if (left === "home") return -1;
+  if (right === "home") return 1;
+  return left.localeCompare(right);
 };
 
 const getSeoPageSlugs = (kit: SolutionKitDefinition) =>
@@ -270,3 +278,55 @@ export const assertReviewedSiteKitStaticCoverage = (
   plan: AssistantActionPlan,
   siteKit: AssistantSiteKitPlanInput
 ) => buildReviewedSiteKitStaticPlan(plan, siteKit).coverage;
+
+export const buildReviewedSiteKitLaunchReadiness = (
+  plan: AssistantActionPlan,
+  siteKit: AssistantSiteKitPlanInput
+): AssistantLaunchReadinessMetadata => {
+  const result = buildReviewedSiteKitStaticPlan(plan, siteKit);
+  const coverage = result.coverage;
+  const requiredPages = [...coverage.pageResourceKeys]
+    .sort(comparePageResourceKeys)
+    .map(resourceKeyToPagePath);
+  const requiredCatalogs = coverage.samePlanResourceKeys
+    .filter((key) => key.startsWith("content_type:"))
+    .map((key) => key.slice("content_type:".length));
+
+  return {
+    schemaVersion: 1,
+    kind: "full-service-site",
+    requiredPages,
+    requiredCatalogs,
+    minimumPublishedEntries: {},
+    checks: [
+      {
+        id: "pages",
+        label: "Required public pages",
+        status: "pending_execute",
+        evidence: requiredPages,
+        gates: [],
+      },
+      {
+        id: "catalogs",
+        label: "Content model coverage",
+        status: "pending_execute",
+        evidence: requiredCatalogs,
+        gates: [],
+      },
+      {
+        id: "navigation-footer",
+        label: "Primary and footer navigation",
+        status: "pending_execute",
+        evidence: coverage.menuResourceKeys,
+        gates: [],
+      },
+      {
+        id: "seo",
+        label: "Generated page SEO",
+        status: "pending_execute",
+        evidence: coverage.seoPageSlugs.map(resourceKeyToPagePath),
+        gates: [],
+      },
+    ],
+  };
+};

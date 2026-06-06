@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 16 tasks
+- **To Do:** 15 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2285 tasks
+- **Done:** 2286 tasks
 
 ---
 
@@ -88,7 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-407-07-L02 | Basic Live Playwright E2E | High | Large | Live Basic guided creation through admin UI and public runtime checks. |
 | TASK-407-07-L03 | Advanced Live Playwright E2E | High | Large | Live Advanced creation with design/menu/hero/section/reference gates. |
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | High | Large | Scoped refinement plus rejected unknown/poisoned/media-reference cases. |
 | TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | High | Large | Resource-id scoped cleanup and second different-industry/theme rebuild. |
@@ -122,6 +121,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-407-07-L02 | Basic Live Playwright E2E | High | Large | Done (2026-06-06): live Basic nontechnical Polish prompt selected `local-service-business`, dry-ran and executed through admin UI, then verified public pages, contact form, desktop/mobile, SEO basics, and console/page errors. |
 | TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | High | Medium | Done (2026-06-06): Claude/subagent pre-audits passed, targeted Vitest/Bun lanes passed, full release gates passed with no DB-gated skips, precommit passed, and local strict security scanners passed. |
 | TASK-407-01 | Task Contract Drift Audit and Scope Freeze | High | Medium | Done (2026-06-05): Claude/agent drift loop aligned TASK-407 with existing siteKit/AiSiteWizard contracts and fixed siteKit plan-context projection in the admin client. |
 | TASK-407-02-L01 | Session Types and Step Registry | High | Medium | Done (2026-06-05): service-owned Basic/Advanced intake session types, canonical step ids, generic role/preset/media-policy registries, and Bun-free fail-closed registry tests. |

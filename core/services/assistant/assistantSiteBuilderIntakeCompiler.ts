@@ -88,11 +88,66 @@ const hasToken = (tokens: readonly string[], values: readonly string[]) =>
 const hasTokenPrefix = (tokens: readonly string[], prefixes: readonly string[]) =>
   tokens.some((token) => prefixes.some((prefix) => token.startsWith(prefix)));
 
+const hasNearbyTokenPrefix = (
+  tokens: readonly string[],
+  index: number,
+  prefixes: readonly string[],
+  windowSize = 3
+) => {
+  const start = Math.max(0, index - windowSize);
+  const end = Math.min(tokens.length - 1, index + windowSize);
+  for (let cursor = start; cursor <= end; cursor += 1) {
+    if (cursor === index) continue;
+    if (prefixes.some((prefix) => tokens[cursor]?.startsWith(prefix))) return true;
+  }
+  return false;
+};
+
 const hasAutomotiveContext = (text: string) => {
   const tokens = tokenizeText(text);
   return (
     hasToken(tokens, ["auto", "car", "cars", "vehicle", "vehicles"]) ||
     hasTokenPrefix(tokens, ["mechanic", "samochod", "samochód", "pojazd", "mechanik", "motoryzac"])
+  );
+};
+
+const hasPolishDirectoryCatalogContext = (tokens: readonly string[]) =>
+  tokens.some(
+    (token, index) =>
+      token.startsWith("katalog") &&
+      hasNearbyTokenPrefix(tokens, index, [
+        "biznes",
+        "dostawc",
+        "firm",
+        "kawiar",
+        "lekarz",
+        "lokal",
+        "miejsc",
+        "provider",
+        "restaur",
+        "specjalist",
+        "usługodawc",
+        "uslugodawc",
+        "wykonawc",
+      ])
+  );
+
+const hasDirectoryContext = (text: string) => {
+  const tokens = tokenizeText(text);
+  return (
+    hasToken(tokens, [
+      "aggregator",
+      "aggregatorze",
+      "directory",
+      "directories",
+      "listing",
+      "listings",
+      "marketplace",
+      "searchable",
+      "wyszukiwarka",
+    ]) ||
+    hasTokenPrefix(tokens, ["agregator", "marketplace", "porown", "porówn", "wyszuk"]) ||
+    hasPolishDirectoryCatalogContext(tokens)
   );
 };
 
@@ -141,7 +196,7 @@ export const resolveSiteKitBusinessTypeFromIntakeFacts = (
     return "beauty_salon";
   }
   if (hasRole(facts, ["products"])) return "small_ecommerce";
-  if (hasRole(facts, ["services", "locations", "team"])) return "services_directory";
+  if (hasDirectoryContext(text)) return "services_directory";
 
   return "custom";
 };
@@ -205,10 +260,18 @@ export const resolvePreferredSiteKitIdFromIntakeFacts = (
   if (businessType === "small_ecommerce") return "small-ecommerce";
   if (businessType === "services_directory") return "services-directory";
   if (hasRole(facts, ["products"])) return "small-ecommerce";
-  if (hasRole(facts, ["services", "portfolio", "case-studies", "team", "locations"])) {
+  const text = lowerText([
+    facts.topic,
+    facts.vertical,
+    facts.summary,
+    facts.offerSummary,
+    facts.primaryGoal,
+    ...(facts.goals ?? []),
+  ]);
+  if (hasDirectoryContext(text)) {
     return "services-directory";
   }
-  return "services-directory";
+  return "local-service-business";
 };
 
 export const resolveEnabledSiteKitPlanStepIdsFromIntakeFacts = (

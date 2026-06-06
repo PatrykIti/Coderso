@@ -1,13 +1,7 @@
 import { expect, test } from "bun:test";
 
-import {
-  listWidgetPackMatrix,
-  WIDGET_PACK_MATRIX,
-} from "../../../core/widgets/modulePackMatrix";
-import {
-  listModulePackStatus,
-  validateModulePackMatrix,
-} from "../../../core/widgets/registry";
+import { listWidgetPackMatrix, WIDGET_PACK_MATRIX } from "../../../core/widgets/modulePackMatrix";
+import { listModulePackStatus, validateModulePackMatrix } from "../../../core/widgets/registry";
 import type { WidgetDefinition } from "../../../core/widgets/types";
 
 const Dummy = () => null;
@@ -54,12 +48,22 @@ test("widget pack matrix has unique module IDs and minimum thresholds", () => {
   }
 });
 
+test("content pack exposes process assistant section through feature-grid", () => {
+  const contentPack = listWidgetPackMatrix().find((item) => item.module === "content");
+  const processMapping = contentPack?.assistantPageSections?.find(
+    (section) => section.alias === "process"
+  );
+
+  expect(processMapping).toMatchObject({
+    alias: "process",
+    widgetType: "feature-grid",
+  });
+});
+
 test("validateModulePackMatrix passes with strict coverage even when advisory modules are incomplete", () => {
   const widgets = buildStrictWidgets();
 
-  expect(() =>
-    validateModulePackMatrix({ widgets, strictOnly: true })
-  ).not.toThrow();
+  expect(() => validateModulePackMatrix({ widgets, strictOnly: true })).not.toThrow();
 
   const statuses = listModulePackStatus(widgets);
   const advisory = statuses.find((item) => item.module === "booking");

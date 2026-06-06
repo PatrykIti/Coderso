@@ -33,6 +33,7 @@ kits such as:
 - Automotive Workshop
 - Medical Clinic
 - Beauty Salon
+- Local Service Business
 - Local Services Directory
 - Small E-commerce
 

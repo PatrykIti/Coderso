@@ -141,7 +141,7 @@ test("buildBasicSiteBuilderReviewFacts keeps featured items generic across site 
   );
 });
 
-test("buildBasicSiteBuilderReviewFacts gates unsupported section roles instead of inventing widgets", () => {
+test("buildBasicSiteBuilderReviewFacts resolves process and gates remaining unsupported sections", () => {
   const facts = {
     ...baseFacts(),
     sectionRoles: ["process", "benefits", "comparison", "pricing"],
@@ -149,9 +149,14 @@ test("buildBasicSiteBuilderReviewFacts gates unsupported section roles instead o
 
   const review = buildBasicSiteBuilderReviewFacts(facts);
 
-  expect(review.widgetCandidates).toEqual([]);
+  expect(
+    review.widgetCandidates.map((candidate) => [
+      candidate.sectionRoleId,
+      candidate.alias,
+      candidate.widgetType,
+    ])
+  ).toEqual([["process", "process", "feature-grid"]]);
   expect(review.gates.map((gate) => [gate.code, gate.sectionRoleId])).toEqual([
-    ["widget_alias_unsupported", "process"],
     ["widget_alias_unsupported", "benefits"],
     ["widget_alias_unsupported", "comparison"],
     ["widget_alias_unsupported", "pricing"],

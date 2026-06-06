@@ -907,7 +907,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
 
 ## Coderso Solution Kits (v3 preview foundation)
 
-- `Solution Kits` dostarcza typed katalog starterowych verticali (5 kitow) i deterministiczny planner.
+- `Solution Kits` dostarcza typed katalog starterowych verticali (6 kitow) i deterministiczny planner.
 - Internal admin API (`/admin/api/*`):
   - `GET /solution-kits`,
   - `GET /solution-kits/:id`,

@@ -71,7 +71,9 @@ test("solution kit recommended modules stay aligned with known Coderso modules a
 
   for (const kit of solutionKitsCatalog) {
     for (const moduleId of kit.recommendedModules) {
-      expect(knownModules.has(moduleId as (typeof ADVANCED_MODULE_REGISTRY)[number]["id"])).toBe(true);
+      expect(knownModules.has(moduleId as (typeof ADVANCED_MODULE_REGISTRY)[number]["id"])).toBe(
+        true
+      );
     }
 
     if (kit.resourceBlueprint.contentTypes.length > 0) {
@@ -94,4 +96,29 @@ test("solution kit recommended modules stay aligned with known Coderso modules a
   expect(smallEcommerce?.recommendedModules).toContain("entries");
   expect(smallEcommerce?.recommendedModules).toContain("listings");
   expect(smallEcommerce?.recommendedModules).toContain("filters");
+});
+
+test("local service kit wires contact widgets to its public inquiry form", () => {
+  const kit = solutionKitsCatalog.find((item) => item.id === "local-service-business");
+  expect(kit).toBeDefined();
+
+  const formSlugs = new Set(kit!.resourceBlueprint.forms.map((form) => form.slug));
+  const contactPage = kit!.resourceBlueprint.pages.find((page) => page.slug === "contact");
+  const blocks =
+    (contactPage?.data as { blocks?: Array<{ type?: string; data?: unknown }> })?.blocks ?? [];
+  const formIds = blocks.flatMap((block) => {
+    const data = block.data as
+      | {
+          formId?: string;
+          form?: { submission?: { formId?: string; mode?: string } };
+        }
+      | undefined;
+    return [data?.formId, data?.form?.submission?.formId].filter(
+      (value): value is string => typeof value === "string" && value.trim().length > 0
+    );
+  });
+
+  expect(formSlugs.has("service-inquiry")).toBe(true);
+  expect(formIds).toContain("service-inquiry");
+  expect(formIds.every((formId) => formSlugs.has(formId))).toBe(true);
 });

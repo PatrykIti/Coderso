@@ -51,6 +51,12 @@ export const WIDGET_PACK_MATRIX: ModuleWidgetPackDefinition[] = [
         pagePresets: ["content:landing-home"],
         sectionPresets: ["content:proof-cta"],
       },
+      {
+        alias: "process",
+        widgetType: "feature-grid",
+        pagePresets: ["content:landing-home"],
+        sectionPresets: ["content:hero-benefits"],
+      },
     ],
   },
   {

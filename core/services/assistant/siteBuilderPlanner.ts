@@ -42,7 +42,7 @@ const rankKit = (kit: SolutionKitDefinition, input: SiteBuilderPlanInput) => {
   }
 
   if (input.preferredKitId && input.preferredKitId === kit.id) {
-    score += 1;
+    score += 10;
     reasons.push("Preferred kit selected by user.");
   }
 
@@ -163,8 +163,7 @@ export function buildSiteBuilderPlan(input: SiteBuilderPlanInput): SiteBuilderPl
       return left.kitId.localeCompare(right.kitId);
     });
 
-  const selectedId: SolutionKitId =
-    ranked[0]?.kitId ?? kits[0]?.id ?? "automotive-workshop";
+  const selectedId: SolutionKitId = ranked[0]?.kitId ?? kits[0]?.id ?? "automotive-workshop";
   const selectedKit = kits.find((kit) => kit.id === selectedId) ?? kits[0];
 
   if (!selectedKit) {

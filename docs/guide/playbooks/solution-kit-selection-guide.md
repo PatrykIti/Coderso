@@ -22,8 +22,8 @@ kit and you want to understand why.
 
 # Step By Step
 
-1. Define the real business outcome: leads, booking, directory discovery,
-   commerce, or mixed goals.
+1. Define the real business outcome: leads, booking, single-business service
+   site, directory discovery, commerce, or mixed goals.
 2. Compare the recommended modules and workflows, not just the kit label.
 3. Check whether the kit will save setup time or create cleanup work.
 4. If no kit is a close fit, choose the manual playbook instead.
@@ -31,6 +31,8 @@ kit and you want to understand why.
 # Examples
 
 - A workshop decides between lead-generation-first and booking-first rollout.
+- A local repair business chooses Local Service Business instead of Services
+  Directory because it represents one provider, not many providers.
 - A directory business confirms that listings and filters matter more than
   commerce.
 - A hybrid business chooses manual setup because no kit matches its exact blend

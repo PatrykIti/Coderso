@@ -12,7 +12,10 @@ import {
   readTrustedAssistantResourceCatalog,
   sanitizeAssistantPlanningContext,
 } from "./adminContextService";
-import { assertReviewedSiteKitStaticCoverage } from "./assistantSiteBuilderIntakeStaticActions";
+import {
+  assertReviewedSiteKitStaticCoverage,
+  buildReviewedSiteKitLaunchReadiness,
+} from "./assistantSiteBuilderIntakeStaticActions";
 import { normalizeAssistantActionPlan } from "./actionPlanSchema";
 import {
   classifyAssistantPrompt,
@@ -639,6 +642,10 @@ const buildSiteKitActionPlan = (siteKit: AssistantSiteKitPlanInput): AssistantAc
     summary:
       "Recommend the matching site kit, dry-run the selected steps, then execute the kit installer through typed assistant actions.",
     confidence: preview.plan.confidence / 100,
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+    },
     assumptions: [
       "The reviewed LLM Guide site-builder intake is the guided entry point into this action engine.",
       "Selected kit steps stay editable before execution and are applied through the solution kit installer.",
@@ -670,6 +677,12 @@ const buildSiteKitActionPlan = (siteKit: AssistantSiteKitPlanInput): AssistantAc
     ],
   };
   assertReviewedSiteKitStaticCoverage(actionPlan, resolvedInput);
+  actionPlan.metadata = {
+    ...actionPlan.metadata,
+    planner: "local",
+    providerDraftUsed: false,
+    launchReadiness: buildReviewedSiteKitLaunchReadiness(actionPlan, resolvedInput),
+  };
   return actionPlan;
 };
 

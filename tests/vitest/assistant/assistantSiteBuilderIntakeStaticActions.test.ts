@@ -160,6 +160,18 @@ test("buildReviewedSiteKitStaticPlan covers static pages navigation lead capture
     "site-kit.install",
   ]);
   expect(normalizeAssistantActionPlan(result.plan)).toEqual(result.plan);
+  expect(result.plan.metadata?.launchReadiness).toMatchObject({
+    schemaVersion: 1,
+    kind: "full-service-site",
+    requiredPages: ["/", "/directory", "/submit"],
+    requiredCatalogs: ["provider"],
+  });
+  expect(result.plan.metadata?.launchReadiness?.checks.map((check) => check.id)).toEqual([
+    "pages",
+    "catalogs",
+    "navigation-footer",
+    "seo",
+  ]);
   expect(result.gates).toEqual([]);
   expect(result.coverage).toMatchObject({
     schemaVersion: 1,

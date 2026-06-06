@@ -55,3 +55,6 @@ Note:
 - alias-specific section evidence can be exposed through the optional
   `assistantPageSections` helper seam on matrix entries, so assistant mappings
   still derive from this file instead of a separate section registry.
+- the Content pack exposes the assistant `process` page-section alias through
+  `feature-grid`, so beginner site-builder flows can render process/workflow
+  steps without inventing an unsupported timeline widget.
