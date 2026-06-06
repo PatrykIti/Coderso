@@ -12,6 +12,15 @@ It now runs through the same `LLM Guide` action engine as the floating assistant
 
 `prompt -> typed plan -> dry-run -> execute`
 
+The admin site-builder intake UI owns its local progress through
+`assistantSiteBuilderIntakeUiState.ts`. That reducer is deliberately client-only:
+it accepts server-normalized intake sessions as authoritative, restores only the
+bounded redacted browser snapshot, discards stale cache, and gates
+`review -> plan -> dry-run -> execute` transitions before the existing action
+engine receives a handoff. It does not add a parallel route payload or persist
+raw answers, provider text, provider keys, signed URLs, upload bytes, cookies, or
+auth material in browser storage.
+
 The floating `LLM Guide` also supports reviewed resource operations for existing
 admin resources through the same action engine. Those edits/deletes must resolve
 targets from active context or server-side catalogs, preview conflicts before

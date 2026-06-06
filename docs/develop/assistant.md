@@ -264,6 +264,21 @@ The provider only runs when retrieval returns snippets; a missing or failed prov
 
 Assistant Settings can ask the backend for OpenRouter model metadata through `POST /assistant/model-metadata`. The provider adapter reads OpenRouter's model list, applies published input/output limits when present, and returns conservative editable defaults when the provider does not publish those values.
 
+## Admin site-builder intake state
+
+The guided site-builder admin UI keeps local interaction state in
+`assistantSiteBuilderIntakeUiState.ts`. The reducer is a client-only companion to
+the backend intake/session contract: server-normalized sessions win over dirty
+local state, stale browser snapshots are discarded, and restored state contains
+only the bounded redacted session snapshot from
+`assistantSiteBuilderIntakeBrowserState.ts`.
+
+Planning is available only after confirmed review, dry-run only after a strict
+ready plan, and execute only after that plan has completed dry-run. The UI state
+machine does not create a new assistant route payload and must not store raw
+answers, provider text, provider keys, signed URLs, upload bytes, cookies, or
+auth state in browser storage.
+
 ## How the corpus is ingested
 
 The source-of-truth root is `docs/guide`. This is hard-coded in two services:

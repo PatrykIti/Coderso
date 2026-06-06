@@ -6,7 +6,8 @@
 **Category:** Assistant + Admin UI + Security UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-02, TASK-407-03, TASK-407-04, TASK-407-05
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-06
 
 ---
 
@@ -39,7 +40,7 @@ not create a second full-site builder UI with a divergent plan handoff.
 
 | ID | Title | Status | Output |
 |---|---|---|---|
-| TASK-407-06-L01 | Site Builder Intake UI State Machine | To Do | Intake UI state transitions without breaking existing assistant flows. |
+| TASK-407-06-L01 | Site Builder Intake UI State Machine | Done | Explicit intake UI state reducer, server-session authority, stale-cache discard, and dry-run-before-execute gating. |
 | TASK-407-06-L02 | Basic Stepper Controls | To Do | Basic-only controls bound to server-normalized session state. |
 | TASK-407-06-L03 | Advanced Stepper Controls | To Do | Advanced controls, preset selection, and reference brief display. |
 | TASK-407-06-L04 | Review Summary and Execution Gating | To Do | Final review, disabled dry-run/execute states, confirmation, and plan handoff. |
@@ -119,3 +120,10 @@ function canSubmitPlan(session: AssistantSiteBuilderIntakeSession) {
 - Basic mode is the default and does not overwhelm nontechnical users.
 - Advanced controls are available without weakening structured validation.
 - Review clearly explains what will be created and what remains gated.
+
+## Progress Notes
+
+- 2026-06-06: TASK-407-06-L01 completed the shared intake UI reducer and tests.
+  Remaining leaves still need to wire Basic/Advanced controls, review rendering,
+  warning presentation, and browser-local redaction behavior into the live admin
+  UI.

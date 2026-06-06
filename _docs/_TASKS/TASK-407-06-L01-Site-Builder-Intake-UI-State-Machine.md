@@ -6,7 +6,9 @@
 **Category:** Assistant + Admin UI State
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-02-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-06
+**Completed:** 2026-06-06
 
 ---
 
@@ -78,12 +80,13 @@ function siteBuilderIntakeReducer(
 
 ## Testing Requirements
 
-- UI reducer tests for transitions and stale cache discard.
-- Regression tests that existing assistant docs/action-plan flows still render.
-- Tests that execute/dry-run states are unreachable before server plan readiness.
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
-- `git diff --check`
+- ✅ UI reducer tests for transitions and stale cache discard.
+- ✅ Regression tests that existing assistant docs/action-plan flows still render.
+- ✅ Tests that execute/dry-run states are unreachable before server plan readiness,
+  with execute gated until a strict plan has completed dry-run.
+- ✅ `bun --cwd core lint`
+- ✅ `bun --cwd core lint:types`
+- ✅ `git diff --check`
 
 ## Documentation Updates Required
 
@@ -94,3 +97,15 @@ function siteBuilderIntakeReducer(
 - Site-builder intake UI state is explicit and test-covered.
 - Existing assistant panel flows still work.
 - Server-normalized session state is authoritative.
+
+## Completion Notes
+
+- Added `assistantSiteBuilderIntakeUiState.ts` with explicit idle, restored,
+  answering, review, planning, ready-plan, dry-run, executing, completed, reset,
+  cancel, stale-cache, and error transitions.
+- Server-normalized intake sessions overwrite dirty local reducer state; browser
+  restore keeps only the bounded redacted session snapshot.
+- Planning requires confirmed review, dry-run requires a strict ready plan, and
+  execute requires that ready plan to have completed dry-run.
+- Added focused Vitest reducer coverage and reran existing AI wizard/assistant
+  panel regressions so the older docs/action-plan surfaces remain intact.
