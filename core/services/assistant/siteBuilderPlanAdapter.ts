@@ -9,10 +9,12 @@ import {
 } from "../kits/solutionKitTypes";
 import { getSolutionKitFromCatalog } from "../kits/solutionKitsCatalog";
 import { buildSiteBuilderPlan } from "./siteBuilderPlanner";
+import type { AssistantSiteKitAdvancedRuntimeOverrides } from "./siteBuilderAdvancedRuntimeOverrides";
 
 export type GuidedSiteBuilderPlanInput = SiteBuilderPlanInput & {
   selectedKitId?: SolutionKitId | null;
   enabledStepIds?: SiteBuilderPlanStepId[];
+  advancedRuntimeOverrides?: AssistantSiteKitAdvancedRuntimeOverrides;
 };
 
 export type GuidedSiteBuilderActionTarget =
@@ -67,9 +69,7 @@ const isStepId = (value: unknown): value is SiteBuilderPlanStepId =>
 export const isSolutionKitId = (value: unknown): value is SolutionKitId =>
   typeof value === "string" && solutionKitIds.includes(value as SolutionKitId);
 
-export const normalizeGuidedSiteBuilderList = (
-  values: Array<string | null | undefined>
-) => {
+export const normalizeGuidedSiteBuilderList = (values: Array<string | null | undefined>) => {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const value of values) {
@@ -114,7 +114,9 @@ const slugToDisplay = (value: string) => {
 
 export const collectGuidedSiteBuilderTemplateKeys = (kit: SolutionKitDefinition) => {
   const fromPages = kit.resourceBlueprint.pages.map((page) => page.template ?? null);
-  const fromBlueprint = (kit.resourceBlueprint.templates ?? []).map((template) => template.key ?? null);
+  const fromBlueprint = (kit.resourceBlueprint.templates ?? []).map(
+    (template) => template.key ?? null
+  );
   return normalizeGuidedSiteBuilderList([...fromPages, ...fromBlueprint]);
 };
 

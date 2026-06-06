@@ -16,6 +16,7 @@ import {
   assertReviewedSiteKitStaticCoverage,
   buildReviewedSiteKitLaunchReadiness,
 } from "./assistantSiteBuilderIntakeStaticActions";
+import { cloneAdvancedRuntimeOverrides } from "./siteBuilderAdvancedRuntimeOverrides";
 import { normalizeAssistantActionPlan } from "./actionPlanSchema";
 import {
   classifyAssistantPrompt,
@@ -620,6 +621,9 @@ const cloneSiteKitPlanInput = (input: AssistantSiteKitPlanInput): AssistantSiteK
   preferredKitId: input.preferredKitId ?? null,
   selectedKitId: input.selectedKitId ?? null,
   enabledStepIds: input.enabledStepIds ? [...input.enabledStepIds] : undefined,
+  ...(input.advancedRuntimeOverrides
+    ? { advancedRuntimeOverrides: cloneAdvancedRuntimeOverrides(input.advancedRuntimeOverrides) }
+    : {}),
 });
 
 const buildSiteKitActionPlan = (siteKit: AssistantSiteKitPlanInput): AssistantActionPlan => {

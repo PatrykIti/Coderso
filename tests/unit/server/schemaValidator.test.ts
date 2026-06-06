@@ -187,3 +187,35 @@ test("assistant action planning request rejects tampered site-builder intake val
     expect((error as ApiError).status).toBe(400);
   }
 });
+
+test("assistant action planning request rejects tampered Advanced intake option ids", () => {
+  try {
+    validate(assistantActionPlanRequestSchema, {
+      prompt: "continue Advanced site-builder intake",
+      context: {
+        siteBuilderIntakeState: {
+          requestedMode: "advanced",
+          activeSession: {
+            version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+            mode: "advanced",
+            currentStepId: "hero",
+            answers: [
+              {
+                stepId: "hero",
+                values: {
+                  heroPreset: "offer-with-proof",
+                  advancedHeroVariantId: "fullscreen-video",
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    throw new Error("expected_validation_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe("validation_error");
+    expect((error as ApiError).status).toBe(400);
+  }
+});

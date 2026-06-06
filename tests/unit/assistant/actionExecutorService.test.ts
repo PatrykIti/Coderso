@@ -4742,6 +4742,48 @@ test("executeAssistantActionPlan delegates site-kit install to guided site-build
   expect(installResult?.details?.siteKit?.execution?.validation.status).toBe("ok");
 });
 
+test("executeAssistantActionPlan passes Advanced runtime overrides through site-kit install map", async () => {
+  const plan = buildExecutorSiteKitPlan();
+  const installAction = plan.actions.find((item) => item.type === "site-kit.install");
+  if (!installAction || installAction.type !== "site-kit.install") {
+    throw new Error("site_kit_install_action_missing");
+  }
+  const advancedRuntimeOverrides = {
+    schemaVersion: 1,
+    hero: {
+      variantId: "split",
+      widgetType: "hero",
+      widgetVariantId: "split",
+      module: "content",
+      alias: "hero",
+    },
+  } satisfies NonNullable<AssistantSiteKitPlanInput["advancedRuntimeOverrides"]>;
+  installAction.input.advancedRuntimeOverrides = advancedRuntimeOverrides;
+  let capturedInput: Parameters<typeof executeGuidedSiteBuilder>[0] | null = null;
+  const deps = createDeps();
+  const wrappedDeps = Object.assign(deps, {
+    executeSiteKit: (async (input) => {
+      capturedInput = input;
+      return deps.executeSiteKit(input);
+    }) as typeof executeGuidedSiteBuilder,
+  });
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-site-kit-install-advanced-runtime-1",
+    },
+    wrappedDeps
+  );
+
+  expect(capturedInput).not.toBeNull();
+  expect(
+    (capturedInput as unknown as Parameters<typeof executeGuidedSiteBuilder>[0])
+      .advancedRuntimeOverrides
+  ).toEqual(advancedRuntimeOverrides);
+});
+
 test("executeAssistantActionPlan refines existing house-project catalog without creating duplicate page", async () => {
   const deps = createDeps();
   const initialPlan = buildHouseProjectsCatalogPlan();

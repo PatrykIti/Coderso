@@ -66,7 +66,9 @@ const makeItem = (
   ...overrides,
 });
 
-const getCatalogKit = (id: "automotive-workshop"): SolutionKitDefinition => {
+const getCatalogKit = (
+  id: "automotive-workshop" | "local-service-business"
+): SolutionKitDefinition => {
   const kit = getSolutionKitFromCatalog(id);
   if (!kit) throw new Error("missing_test_kit");
   return kit;
@@ -234,6 +236,189 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
   expect(result.actions.some((action) => action.target === "template")).toBe(true);
 });
 
+test("executeGuidedSiteBuilder applies Advanced runtime overrides to executable kit copy", async () => {
+  const selectedKit = getCatalogKit("local-service-business");
+  const selectedManifest = selectedKit.manifest;
+  if (!selectedManifest) throw new Error("missing_test_manifest");
+  let capturedApplyInput: ApplySolutionKitInstallInput | null = null;
+
+  const originalHomeData = selectedKit.resourceBlueprint.pages.find((page) => page.slug === "")
+    ?.data as { blocks?: Array<Record<string, unknown>> } | undefined;
+
+  const executionResult = {
+    run: makeRun({ kitId: "local-service-business" }),
+    items: [makeItem()],
+    summary: {
+      total: 1,
+      success: 1,
+      failed: 0,
+      planned: 0,
+      skipped: 0,
+      operations: {
+        create: 1,
+        update: 0,
+        noop: 0,
+        delete: 0,
+        restore: 0,
+      },
+    },
+    manifest: selectedManifest,
+    templateInstall: {
+      summary: {
+        total: 0,
+        success: 0,
+        failed: 0,
+        planned: 0,
+        operations: {
+          create: 0,
+          update: 0,
+          noop: 0,
+        },
+      },
+      items: [],
+      results: [],
+      rollbackPlan: [],
+    },
+  };
+
+  await executeGuidedSiteBuilder(
+    {
+      businessType: "custom",
+      goals: ["lead_generation"],
+      locale: "en",
+      siteName: "Local Pro",
+      selectedKitId: "local-service-business",
+      enabledStepIds: ["settings", "pages", "navigation", "qa"],
+      dryRun: true,
+      advancedRuntimeOverrides: {
+        schemaVersion: 1,
+        menu: {
+          behaviorIds: ["sticky", "mobile-drawer"],
+          variantId: "with-cta",
+          sticky: true,
+          transparent: false,
+          mobileMode: "drawer",
+          ctaTargetPageRole: "contact",
+        },
+        hero: {
+          variantId: "media-left",
+          widgetType: "hero",
+          widgetVariantId: "media-left",
+          module: "content",
+          alias: "hero",
+        },
+        sectionVariants: [
+          {
+            variantId: "proof-spotlight",
+            sectionRoleId: "proof",
+            alias: "testimonials",
+            widgetType: "testimonials",
+            widgetVariantId: "spotlight",
+            module: "engagement",
+          },
+          {
+            variantId: "faq-two-column",
+            sectionRoleId: "faq",
+            alias: "faq",
+            widgetType: "faq-accordion",
+            widgetVariantId: "two-column",
+            module: "engagement",
+          },
+        ],
+      },
+    },
+    {
+      buildPlan: () => ({
+        recommendedKitId: "local-service-business",
+        confidence: 90,
+        recommendations: [],
+        steps: [
+          {
+            id: "settings",
+            type: "settings",
+            title: "Settings",
+            description: "Apply settings",
+            editable: false,
+            affectsResources: [],
+          },
+          {
+            id: "pages",
+            type: "pages",
+            title: "Pages",
+            description: "Apply pages",
+            editable: true,
+            affectsResources: ["page"],
+          },
+          {
+            id: "navigation",
+            type: "navigation",
+            title: "Navigation",
+            description: "Apply navigation",
+            editable: true,
+            affectsResources: ["menu"],
+          },
+          {
+            id: "qa",
+            type: "qa",
+            title: "QA",
+            description: "Run checks",
+            editable: false,
+            affectsResources: [],
+          },
+        ],
+        settingsPatch: { "site.locale": "en" },
+        notes: ["generated"],
+      }),
+      getKitById: (id) => (id === "local-service-business" ? selectedKit : null),
+      apply: async (input) => {
+        capturedApplyInput = input;
+        return executionResult;
+      },
+      getRun: async () => null,
+      listItems: async () => [],
+    }
+  );
+
+  const captured = capturedApplyInput as unknown as ApplySolutionKitInstallInput;
+  const executableKit = captured.kitDefinitionOverride;
+  if (!executableKit) throw new Error("missing_executable_kit");
+  const home = executableKit.resourceBlueprint.pages.find((page) => page.slug === "");
+  const homeData = home?.data as { blocks?: Array<Record<string, unknown>> } | undefined;
+  const blocks = homeData?.blocks ?? [];
+  const primaryMenu = executableKit.resourceBlueprint.menus.find(
+    (menu) => menu.location === "primary"
+  );
+
+  expect(blocks[0]).toMatchObject({
+    type: "navigation",
+    variant: "with-cta",
+    data: {
+      linksSource: "menu",
+      cta: {
+        href: "/contact",
+      },
+      behavior: {
+        sticky: true,
+        mobileMode: "drawer",
+      },
+    },
+  });
+  expect(blocks.find((block) => block.type === "hero")).toMatchObject({ variant: "media-left" });
+  expect(blocks.find((block) => block.type === "testimonials")).toMatchObject({
+    variant: "spotlight",
+  });
+  expect(blocks.find((block) => block.type === "faq-accordion")).toMatchObject({
+    variant: "two-column",
+  });
+  expect(primaryMenu?.items?.find((item) => item.key === "assistant-advanced-cta")).toMatchObject({
+    pageSlug: "contact",
+  });
+  expect(originalHomeData?.blocks?.[0]).toMatchObject({
+    type: "hero",
+  });
+  expect(originalHomeData?.blocks?.[0]).not.toHaveProperty("variant");
+});
+
 test("validateGuidedSiteBuilderRun reports unresolved checks for failed items", async () => {
   const selectedKit = getCatalogKit("automotive-workshop");
 
@@ -274,7 +459,9 @@ test("validateGuidedSiteBuilderRun reports unresolved checks for failed items", 
 
   expect(validation.status).toBe("failed");
   expect(validation.unresolvedItems).toContain("1 install item(s) failed.");
-  expect(validation.checks.some((check) => check.id === "step.forms" && check.status === "warning")).toBe(true);
+  expect(
+    validation.checks.some((check) => check.id === "step.forms" && check.status === "warning")
+  ).toBe(true);
   expect(validation.checks.some((check) => check.id === "step.qa")).toBe(true);
 });
 

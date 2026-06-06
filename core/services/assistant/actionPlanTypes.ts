@@ -28,6 +28,7 @@ import type { CustomScreenCollectionRole } from "../customScreens/customScreenSc
 import { isAssistantActionPlanStrict } from "./actionPlanSchema";
 import type { DetailPageDocument } from "../content/detailPageTypes";
 import type { CollectionWorkspaceSummary } from "../content/collectionWorkspaceService";
+import type { AssistantSiteKitAdvancedRuntimeOverrides } from "./siteBuilderAdvancedRuntimeOverrides";
 
 export type AssistantActionPlanStatus = "ready" | "needs_input";
 export type AssistantPromptKind =
@@ -56,6 +57,7 @@ export type AssistantSiteKitPlanInput = {
   preferredKitId?: SolutionKitId | null;
   selectedKitId?: SolutionKitId | null;
   enabledStepIds?: SiteBuilderPlanStepId[];
+  advancedRuntimeOverrides?: AssistantSiteKitAdvancedRuntimeOverrides;
 };
 
 export type AssistantSiteKitInstallInput = AssistantSiteKitPlanInput & {

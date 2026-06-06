@@ -92,9 +92,12 @@ send `context.siteKit`; `/assistant/actions/plan` accepts the stripped
 `context.siteBuilderIntakeState.activeSession` shape instead, and schema
 validation rejects direct `siteKit` fields. Direct service calls that still carry
 `context.siteKit` are defensive-gated as `needs_input` plans with no executable
-actions. Page roles, section roles, media policy, content-engine candidates,
-design/reference facts, gates, and review metadata remain outside the compiled
-siteKit input.
+actions. Supported registry-derived Advanced runtime choices may compile into
+optional internal `advancedRuntimeOverrides` for existing menu/Navigation,
+Hero, and section widget surfaces. Page roles, section roles, media policy,
+content-engine candidates, raw design/reference facts, gates, arbitrary URLs,
+CSS, prompt text, and review metadata remain outside the executable siteKit
+input.
 
 Reviewed static shell plans pass through
 `assistantSiteBuilderIntakeStaticActions.ts`. It keeps the existing

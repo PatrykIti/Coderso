@@ -22,11 +22,20 @@ import { normalizeDetailPageDocument } from "../content/detailPageSchema";
 import { customScreenCollectionRoleValues } from "../customScreens/customScreenSchemas";
 import { normalizeOptionalDetailPageId } from "../settings/detailPageIdContract";
 import {
+  assistantSiteBuilderAdvancedHeroVariantIds,
+  assistantSiteBuilderAdvancedMenuBehaviorIds,
+  assistantSiteBuilderAdvancedSectionVariantIds,
   assistantSiteBuilderIntakeAnswerFieldControls,
   assistantSiteBuilderIntakeModes,
   assistantSiteBuilderIntakeOptionRegistryIds,
   assistantSiteBuilderIntakeStepIds,
+  assistantSiteBuilderDesignPresetIds,
+  assistantSiteBuilderPageRoleIds,
 } from "./assistantSiteBuilderIntakeTypes";
+import {
+  resolveSiteBuilderIntakeAdvancedHeroVariant,
+  resolveSiteBuilderIntakeAdvancedSectionVariant,
+} from "./assistantSiteBuilderIntakeAdvancedOptions";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -103,6 +112,13 @@ const blueprintCompositionResourceKinds = new Set([
 const blueprintCompositionRoles = new Set(["primary", "adjunct", "gated"] as const);
 const blueprintCompositionMatchStatuses = new Set(["matched", "unresolved"] as const);
 const blueprintCompositionConflictSeverities = new Set(["warning", "error"] as const);
+const advancedMenuBehaviorIds = new Set(assistantSiteBuilderAdvancedMenuBehaviorIds);
+const advancedHeroVariantIds = new Set(assistantSiteBuilderAdvancedHeroVariantIds);
+const advancedSectionVariantIds = new Set(assistantSiteBuilderAdvancedSectionVariantIds);
+const advancedNavigationVariantIds = new Set(["simple", "with-cta", "split"] as const);
+const advancedNavigationMobileModes = new Set(["expanded", "drawer", "minimal"] as const);
+const siteBuilderDesignPresetIds = new Set(assistantSiteBuilderDesignPresetIds);
+const siteBuilderPageRoleIds = new Set(assistantSiteBuilderPageRoleIds);
 const secretLikeMetadataPattern =
   /\b[\w.-]*(token|secret|password|api[-_]?key|credential|cookie|session|csrf|authorization|bearer)[\w.-]*\b/gi;
 
@@ -1782,6 +1798,125 @@ const normalizeWidgetTemplateBlockPatchInput = (input: JsonRecord) => {
   };
 };
 
+const readAdvancedHeroDefinition = (variantId: unknown) => {
+  const resolvedId = readEnum(variantId, advancedHeroVariantIds);
+  try {
+    return resolveSiteBuilderIntakeAdvancedHeroVariant(resolvedId);
+  } catch {
+    return fail();
+  }
+};
+
+const readAdvancedSectionDefinition = (variantId: unknown) => {
+  const resolvedId = readEnum(variantId, advancedSectionVariantIds);
+  try {
+    return resolveSiteBuilderIntakeAdvancedSectionVariant(resolvedId);
+  } catch {
+    return fail();
+  }
+};
+
+const normalizeAdvancedRuntimeMenuOverride = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "behaviorIds",
+      "variantId",
+      "sticky",
+      "transparent",
+      "mobileMode",
+      "ctaTargetPageRole",
+    ])
+  );
+  return {
+    behaviorIds: readStringArray(input.behaviorIds).map((item) =>
+      readEnum(item, advancedMenuBehaviorIds)
+    ),
+    variantId: readEnum(input.variantId, advancedNavigationVariantIds),
+    sticky: readBoolean(input.sticky),
+    transparent: readBoolean(input.transparent),
+    mobileMode: readEnum(input.mobileMode, advancedNavigationMobileModes),
+    ctaTargetPageRole: readOptionalNullableEnum(input.ctaTargetPageRole, siteBuilderPageRoleIds),
+  };
+};
+
+const normalizeAdvancedRuntimeHeroOverride = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["variantId", "widgetType", "widgetVariantId", "module", "alias"]));
+  const definition = readAdvancedHeroDefinition(input.variantId);
+  if (
+    readEnum(input.widgetVariantId, advancedHeroVariantIds) !== definition.widgetVariantId ||
+    readText(input.widgetType) !== definition.widgetType ||
+    readText(input.module) !== definition.module ||
+    readText(input.alias) !== definition.alias
+  ) {
+    fail();
+  }
+  return {
+    variantId: definition.id,
+    widgetType: definition.widgetType,
+    widgetVariantId: definition.widgetVariantId,
+    module: definition.module,
+    alias: definition.alias,
+  };
+};
+
+const normalizeAdvancedRuntimeSectionOverride = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set(["variantId", "sectionRoleId", "alias", "widgetType", "widgetVariantId", "module"])
+  );
+  const definition = readAdvancedSectionDefinition(input.variantId);
+  if (
+    readText(input.sectionRoleId) !== definition.sectionRoleId ||
+    readText(input.alias) !== definition.alias ||
+    readText(input.widgetType) !== definition.widgetType ||
+    readText(input.widgetVariantId) !== definition.widgetVariantId ||
+    readText(input.module) !== definition.module
+  ) {
+    fail();
+  }
+  return {
+    variantId: definition.id,
+    sectionRoleId: definition.sectionRoleId,
+    alias: definition.alias,
+    widgetType: definition.widgetType,
+    widgetVariantId: definition.widgetVariantId,
+    module: definition.module,
+  };
+};
+
+const normalizeAdvancedRuntimeOverrides = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set(["schemaVersion", "designPresetId", "menu", "hero", "sectionVariants"])
+  );
+  if (readFiniteNumber(input.schemaVersion) !== 1) fail();
+  return {
+    schemaVersion: 1 as const,
+    ...(input.designPresetId !== undefined
+      ? {
+          designPresetId: readOptionalNullableEnum(
+            input.designPresetId,
+            siteBuilderDesignPresetIds
+          ),
+        }
+      : {}),
+    ...(input.menu !== undefined ? { menu: normalizeAdvancedRuntimeMenuOverride(input.menu) } : {}),
+    ...(input.hero !== undefined ? { hero: normalizeAdvancedRuntimeHeroOverride(input.hero) } : {}),
+    ...(input.sectionVariants !== undefined
+      ? {
+          sectionVariants: readRecordArray(input.sectionVariants).map(
+            normalizeAdvancedRuntimeSectionOverride
+          ),
+        }
+      : {}),
+  };
+};
+
 const normalizeSiteKitPlanBase = (input: JsonRecord) => ({
   businessType: readText(input.businessType),
   goals: readStringArray(input.goals),
@@ -1797,6 +1932,11 @@ const normalizeSiteKitPlanBase = (input: JsonRecord) => ({
   ...(input.enabledStepIds !== undefined
     ? { enabledStepIds: readOptionalStringArray(input.enabledStepIds) }
     : {}),
+  ...(input.advancedRuntimeOverrides !== undefined
+    ? {
+        advancedRuntimeOverrides: normalizeAdvancedRuntimeOverrides(input.advancedRuntimeOverrides),
+      }
+    : {}),
 });
 
 const siteKitPlanKeys = [
@@ -1808,6 +1948,7 @@ const siteKitPlanKeys = [
   "preferredKitId",
   "selectedKitId",
   "enabledStepIds",
+  "advancedRuntimeOverrides",
   "preview",
 ];
 

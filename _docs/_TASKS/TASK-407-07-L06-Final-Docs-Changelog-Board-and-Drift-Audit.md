@@ -26,6 +26,14 @@ evidence.
   standalone leaf changelog entries.
 - Run final read-only Claude/agent review with sanitized evidence and fix every
   blocking drift before closure.
+- Resolve or explicitly close the L03 final-audit low-severity hardening items:
+  export/import one runtime owner for Advanced navigation variant and mobile
+  mode id lists instead of keeping schema-local literal sets, and add a direct
+  widget-validator regression assertion for produced Advanced Navigation/Hero
+  section blocks. These are non-blocking for TASK-407-07-L03 because live E2E,
+  pack-matrix validation, and strict action normalization already prove the
+  shipped local-service path, but L06 must either implement them or record a
+  deliberate closure rationale.
 - Verify no secrets, auth state, screenshots with secrets, raw provider output,
   or raw uploaded bytes are committed.
 

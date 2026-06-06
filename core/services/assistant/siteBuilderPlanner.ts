@@ -111,6 +111,9 @@ const buildPlanSteps = (kit: SolutionKitDefinition): SiteBuilderPlanStep[] => [
   },
 ];
 
+const cloneValue = <T>(value: T): T =>
+  value === undefined ? value : (structuredClone(value) as T);
+
 const cloneKitDefinition = (kit: SolutionKitDefinition): SolutionKitDefinition => ({
   ...kit,
   businessTypes: [...kit.businessTypes],
@@ -118,11 +121,31 @@ const cloneKitDefinition = (kit: SolutionKitDefinition): SolutionKitDefinition =
   recommendedModules: [...kit.recommendedModules],
   features: [...kit.features],
   resourceBlueprint: {
-    contentTypes: kit.resourceBlueprint.contentTypes.map((item) => ({ ...item })),
-    forms: kit.resourceBlueprint.forms.map((item) => ({ ...item })),
-    pages: kit.resourceBlueprint.pages.map((item) => ({ ...item })),
-    menus: kit.resourceBlueprint.menus.map((item) => ({ ...item })),
-    templates: kit.resourceBlueprint.templates?.map((item) => ({ ...item })) ?? [],
+    contentTypes: kit.resourceBlueprint.contentTypes.map((item) => ({
+      ...item,
+      schema: cloneValue(item.schema),
+      taxonomy: cloneValue(item.taxonomy),
+    })),
+    forms: kit.resourceBlueprint.forms.map((item) => ({
+      ...item,
+      settings: cloneValue(item.settings),
+      fields: cloneValue(item.fields),
+    })),
+    pages: kit.resourceBlueprint.pages.map((item) => ({
+      ...item,
+      data: cloneValue(item.data),
+      seo: cloneValue(item.seo),
+    })),
+    menus: kit.resourceBlueprint.menus.map((item) => ({
+      ...item,
+      items: cloneValue(item.items),
+    })),
+    templates:
+      kit.resourceBlueprint.templates?.map((item) => ({
+        ...item,
+        blocks: cloneValue(item.blocks),
+        settings: cloneValue(item.settings),
+      })) ?? [],
   },
 });
 

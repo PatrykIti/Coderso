@@ -540,6 +540,103 @@ test("normalizeAssistantActionPlan accepts gated direct site-kit context plans",
   expect(normalized.actions).toEqual([]);
 });
 
+test("normalizeAssistantActionPlan accepts strict site-kit Advanced runtime overrides", () => {
+  const advancedRuntimeOverrides = {
+    schemaVersion: 1,
+    designPresetId: "modern",
+    menu: {
+      behaviorIds: ["sticky", "mobile-drawer"],
+      variantId: "with-cta",
+      sticky: true,
+      transparent: false,
+      mobileMode: "drawer",
+      ctaTargetPageRole: "contact",
+    },
+    hero: {
+      variantId: "split",
+      widgetType: "hero",
+      widgetVariantId: "split",
+      module: "content",
+      alias: "hero",
+    },
+    sectionVariants: [
+      {
+        variantId: "proof-spotlight",
+        sectionRoleId: "proof",
+        alias: "testimonials",
+        widgetType: "testimonials",
+        widgetVariantId: "spotlight",
+        module: "engagement",
+      },
+    ],
+  };
+  const plan = {
+    id: "plan-site-kit-advanced-runtime",
+    status: "ready",
+    intentId: "site-kit-install",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: "Advanced Site Kit",
+    answer: "Install the reviewed Advanced site kit.",
+    summary: "Dry-run and execute the selected Advanced site kit.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "site-kit-recommend-advanced",
+        type: "site-kit.recommend",
+        title: "Recommend kit",
+        description: "Recommend the selected kit.",
+        input: {
+          businessType: "custom",
+          goals: ["lead_generation"],
+          locale: "pl",
+          selectedKitId: "local-service-business",
+          enabledStepIds: ["settings", "pages", "navigation", "qa"],
+          advancedRuntimeOverrides,
+          preview: { selectedKitId: "local-service-business" },
+        },
+      },
+      {
+        id: "site-kit-install-advanced",
+        type: "site-kit.install",
+        title: "Install kit",
+        description: "Install the selected kit.",
+        input: {
+          businessType: "custom",
+          goals: ["lead_generation"],
+          locale: "pl",
+          selectedKitId: "local-service-business",
+          enabledStepIds: ["settings", "pages", "navigation", "qa"],
+          advancedRuntimeOverrides,
+          continueOnError: true,
+          preview: { selectedKitId: "local-service-business" },
+        },
+      },
+    ],
+  } as const;
+
+  const normalized = normalizeAssistantActionPlan(plan);
+  expect(normalized.actions[1]).toMatchObject({
+    type: "site-kit.install",
+    input: {
+      advancedRuntimeOverrides: {
+        menu: {
+          ctaTargetPageRole: "contact",
+        },
+        hero: {
+          widgetVariantId: "split",
+        },
+      },
+    },
+  });
+
+  const tampered = structuredClone(plan);
+  tampered.actions[1].input.advancedRuntimeOverrides.hero.widgetType = "cta-banner";
+  expect(() => normalizeAssistantActionPlan(tampered)).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan rejects unknown plan and action fields", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

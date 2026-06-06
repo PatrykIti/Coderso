@@ -5613,6 +5613,7 @@ const executeSiteKitInstallAction = async (
     preferredKitId: action.input.preferredKitId,
     selectedKitId: action.input.selectedKitId,
     enabledStepIds: action.input.enabledStepIds ? [...action.input.enabledStepIds] : undefined,
+    advancedRuntimeOverrides: action.input.advancedRuntimeOverrides,
     dryRun: action.input.dryRun,
     continueOnError: action.input.continueOnError,
     settingsPatch: action.input.settingsPatch,

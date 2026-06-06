@@ -1,4 +1,5 @@
 import type { AssistantSiteKitPlanInput } from "./actionPlanTypes";
+import { buildAdvancedRuntimeOverridesFromIntakeFacts } from "./siteBuilderAdvancedRuntimeOverrides";
 import { throwAssistantSiteBuilderIntakeError } from "./assistantSiteBuilderIntakeErrors";
 import {
   resolveSiteBuilderIntakeContentEngines,
@@ -363,6 +364,7 @@ export const buildSiteKitPlanInputFromIntakeFacts = (
   assertFactsReadyForSiteKit(facts);
   const businessType = resolveSiteKitBusinessTypeFromIntakeFacts(facts);
   const preferredKitId = resolvePreferredSiteKitIdFromIntakeFacts(facts, businessType);
+  const advancedRuntimeOverrides = buildAdvancedRuntimeOverridesFromIntakeFacts(facts);
 
   return {
     businessType,
@@ -376,6 +378,7 @@ export const buildSiteKitPlanInputFromIntakeFacts = (
       facts,
       options.supportedSteps ?? siteBuilderPlanStepIds
     ),
+    ...(advancedRuntimeOverrides ? { advancedRuntimeOverrides } : {}),
   };
 };
 

@@ -311,6 +311,67 @@ testIfDb(
 );
 
 testIfDb(
+  "applySolutionKitInstall dry-run updates existing menus with planned page links",
+  async () => {
+    const seed = randomUUID();
+    const definition = buildDefinition(seed);
+    const menu = definition.resourceBlueprint.menus[0]! as Omit<
+      (typeof definition.resourceBlueprint.menus)[number],
+      "location"
+    > & { location?: "primary" | "footer" };
+    const existingMenuName = `Existing Menu ${seed}`;
+    menu.name = existingMenuName;
+    delete menu.location;
+    registerDefinition(definition);
+
+    const [existingMenu] = await db
+      .insert(menus)
+      .values({
+        name: existingMenuName,
+        location: null,
+        status: "draft",
+        publishedAt: null,
+        createdAt: new Date(),
+      })
+      .returning();
+    expect(existingMenu).toBeDefined();
+
+    const result = await applySolutionKitInstall({
+      kitId: definition.id,
+      dryRun: true,
+      kitDefinitionOverride: definition,
+    });
+    registerRunId(result.run.id);
+
+    expect(result.run.status).toBe("success");
+    expect(result.summary.failed).toBe(0);
+
+    const runItems = await listSolutionKitInstallItems(result.run.id);
+    const menuItem = runItems.find((item) => item.resourceType === "menu");
+    expect(menuItem?.operation).toBe("update");
+    expect(menuItem?.status).toBe("planned");
+
+    const afterSnapshot = asRecord(menuItem?.afterSnapshot);
+    expect(afterSnapshot.status).toBe("published");
+    expect(typeof afterSnapshot.publishedAt).toBe("string");
+    const plannedItems = Array.isArray(afterSnapshot.items)
+      ? afterSnapshot.items.map((item) => asRecord(item))
+      : [];
+    expect(
+      plannedItems.some(
+        (item) => item.pageId === `predicted:page:${definition.resourceBlueprint.pages[0]!.slug}`
+      )
+    ).toBe(true);
+
+    const [storedMenu] = await db.select().from(menus).where(eq(menus.name, existingMenuName));
+    expect(storedMenu?.name).toBe(existingMenuName);
+    expect(storedMenu?.status).toBe("draft");
+    expect(storedMenu?.publishedAt).toBeNull();
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
   "applySolutionKitInstall is idempotent and does not create duplicates",
   async () => {
     const seed = randomUUID();
@@ -346,7 +407,7 @@ testIfDb(
       .from(pages)
       .where(eq(pages.slug, definition.resourceBlueprint.pages[0]!.slug));
     const menuRows = await db
-      .select({ id: menus.id })
+      .select({ id: menus.id, status: menus.status, publishedAt: menus.publishedAt })
       .from(menus)
       .where(eq(menus.location, definition.resourceBlueprint.menus[0]!.location!));
 
@@ -354,6 +415,8 @@ testIfDb(
     expect(formRows).toHaveLength(1);
     expect(pageRows).toHaveLength(1);
     expect(menuRows).toHaveLength(1);
+    expect(menuRows[0]?.status).toBe("published");
+    expect(menuRows[0]?.publishedAt).toBeInstanceOf(Date);
 
     const [taxonomyState, storedFields, storedSeo, storedMenuItems] = await Promise.all([
       getTypeTaxonomyState(typeRows[0]!.id),
@@ -460,6 +523,8 @@ testIfDb(
       .values({
         name: "Legacy Menu",
         location: existingMenuLocation,
+        status: "draft",
+        publishedAt: null,
       })
       .returning();
     await db.insert(menuItems).values({
@@ -513,6 +578,8 @@ testIfDb(
     expect(appliedTaxonomy.categories).toEqual(["Category One", "Category Two"]);
     expect(appliedFields).toHaveLength(2);
     expect(appliedSeo[0]?.title).toBe(`SEO Landing ${seed}`);
+    expect(appliedMenu?.status).toBe("published");
+    expect(appliedMenu?.publishedAt).toBeInstanceOf(Date);
     expect(appliedItems).toHaveLength(2);
 
     const rollbackResult = await rollbackSolutionKitInstall({
@@ -552,6 +619,8 @@ testIfDb(
     expect(restoredSeo).toHaveLength(1);
     expect(restoredSeo[0]?.title).toBe("Legacy SEO");
     expect(restoredMenu?.name).toBe("Legacy Menu");
+    expect(restoredMenu?.status).toBe("draft");
+    expect(restoredMenu?.publishedAt).toBeNull();
     expect(restoredItems).toHaveLength(1);
     expect(restoredItems[0]?.label).toBe("Legacy Item");
     expect(restoredItems[0]?.href).toBe("/legacy");

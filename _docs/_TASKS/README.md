@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 15 tasks
+- **To Do:** 14 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2286 tasks
+- **Done:** 2287 tasks
 
 ---
 
@@ -88,7 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-407-07-L03 | Advanced Live Playwright E2E | High | Large | Live Advanced creation with design/menu/hero/section/reference gates. |
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | High | Large | Scoped refinement plus rejected unknown/poisoned/media-reference cases. |
 | TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | High | Large | Resource-id scoped cleanup and second different-industry/theme rebuild. |
 | TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | High | Medium | Docs, coverage matrices, changelog leaf coverage, board sync, and final Claude/agent pass. |
@@ -121,6 +120,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-407-07-L03 | Advanced Live Playwright E2E | High | Large | Done (2026-06-06): bounded Advanced runtime overrides now survive review, dry-run, execute, and public runtime for menu/CTA/Hero/section choices; live Playwright E2E verified reference gating, public navigation menu source, mobile drawer, CTA, supported section variants, contact form, SEO basics, desktop/mobile, and console/page errors. |
 | TASK-407-07-L02 | Basic Live Playwright E2E | High | Large | Done (2026-06-06): live Basic nontechnical Polish prompt selected `local-service-business`, dry-ran and executed through admin UI, then verified public pages, contact form, desktop/mobile, SEO basics, and console/page errors. |
 | TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | High | Medium | Done (2026-06-06): Claude/subagent pre-audits passed, targeted Vitest/Bun lanes passed, full release gates passed with no DB-gated skips, precommit passed, and local strict security scanners passed. |
 | TASK-407-01 | Task Contract Drift Audit and Scope Freeze | High | Medium | Done (2026-06-05): Claude/agent drift loop aligned TASK-407 with existing siteKit/AiSiteWizard contracts and fixed siteKit plan-context projection in the admin client. |

@@ -387,7 +387,12 @@ resolve to current Hero widget variants (`centered`, `split`, `media-left`,
 `media-center`). Advanced section choices resolve to existing widget variants
 backed by `modulePackMatrix.assistantPageSections`; mismatched section roles,
 design-preset support gaps, or conflicting menu choices become review gates
-instead of invented widgets, CSS, layout code, or executor actions.
+instead of invented widgets, CSS, layout code, or arbitrary executor actions.
+After review, supported registry-derived runtime choices compile into optional
+`advancedRuntimeOverrides` on the internal `AssistantSiteKitPlanInput`: menu CTA
+role, existing Navigation widget behavior, Hero widget variant, and backed
+section widget variants. Raw `advancedLayout`, design/reference text, gates,
+diagnostics, URLs, CSS, and prompt material remain review metadata.
 
 Advanced reference intake is bounded by
 `assistantSiteBuilderIntakeReferencePolicy.ts`. Session answers may carry
@@ -539,11 +544,12 @@ The HTTP route accepts only the stripped
 `context.siteKit` field. The compiled `AssistantSiteKitPlanInput` remains
 schema-exact inside the planner:
 `businessType`, `goals`, `locale`, optional `region`, `siteName`,
-`preferredKitId`, `selectedKitId`, and `enabledStepIds`. Review-only facts such
-as page roles, section roles, media policy, content engines, design preset,
-advanced layout, reference design brief, hero/menu choices, references, gates,
-and diagnostics stay out of `context.siteKit` and remain compiler/review
-metadata for later adapters.
+`preferredKitId`, `selectedKitId`, `enabledStepIds`, and optional
+`advancedRuntimeOverrides` when reviewed Advanced choices map to existing
+runtime surfaces. Review-only facts such as page roles, section roles, media
+policy, content engines, raw design/reference facts, raw advanced layout,
+reference design brief, references, gates, diagnostics, URLs, CSS, and prompt
+text stay out of `context.siteKit` and remain compiler/review metadata.
 `reviewFacts.contentEngineDecisions` is part of that metadata. Unsupported
 content-engine gates block reviewed action-plan handoff before a `siteKit`
 request is created.

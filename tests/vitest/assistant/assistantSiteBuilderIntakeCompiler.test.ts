@@ -220,6 +220,7 @@ test("compileIntakeToSiteKitPlanInput maps reviewed Basic intake to schema-exact
   expect(siteKit).not.toHaveProperty("mediaPolicy");
   expect(siteKit).not.toHaveProperty("pageRoles");
   expect(siteKit).not.toHaveProperty("siteBuilderIntake");
+  expect(siteKit).not.toHaveProperty("advancedRuntimeOverrides");
 });
 
 test("compileIntakeToSiteKitPlanInput maps Advanced product facts without one-industry defaults", () => {
@@ -239,6 +240,36 @@ test("compileIntakeToSiteKitPlanInput maps Advanced product facts without one-in
     "sell_products",
     "collect_qualified_leads",
   ]);
+  expect(siteKit.advancedRuntimeOverrides).toMatchObject({
+    schemaVersion: 1,
+    menu: {
+      behaviorIds: ["grouped", "sticky", "mobile-drawer"],
+      variantId: "split",
+      ctaTargetPageRole: "contact",
+    },
+    hero: {
+      variantId: "split",
+      widgetType: "hero",
+      widgetVariantId: "split",
+    },
+    sectionVariants: [
+      {
+        variantId: "featured-items-cards",
+        widgetType: "content-list",
+        widgetVariantId: "cards",
+      },
+      {
+        variantId: "proof-spotlight",
+        widgetType: "testimonials",
+        widgetVariantId: "spotlight",
+      },
+      {
+        variantId: "lead-capture-standard",
+        widgetType: "form-embed",
+        widgetVariantId: "standard",
+      },
+    ],
+  });
 });
 
 test("compileIntakeToSiteKitPlanInput does not treat generic workshops as automotive", () => {
@@ -369,10 +400,21 @@ test("buildSiteBuilderIntakeCompileResult keeps review metadata outside siteKit"
       variantId: "split",
     },
   });
+  expect(result.siteKit.advancedRuntimeOverrides).toMatchObject({
+    menu: {
+      behaviorIds: ["grouped", "sticky", "mobile-drawer"],
+      variantId: "split",
+      ctaTargetPageRole: "contact",
+    },
+    hero: {
+      variantId: "split",
+    },
+  });
   expect(serializedSiteKit).not.toContain("advancedLayout");
   expect(serializedSiteKit).not.toContain("referenceDesignBrief");
   expect(serializedSiteKit).not.toContain("mediaPolicy");
   expect(serializedSiteKit).not.toContain("pageRoles");
+  expect(serializedSiteKit).toContain("advancedRuntimeOverrides");
   expect(result.gates).toEqual([]);
 });
 

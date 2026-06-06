@@ -195,7 +195,7 @@ and gated by the planner as defense in depth.
 | TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | Done (2026-06-06) |
 | TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | Done (2026-06-06) |
 | TASK-407-07-L02 | Basic Live Playwright E2E | Done (2026-06-06) |
-| TASK-407-07-L03 | Advanced Live Playwright E2E | To Do |
+| TASK-407-07-L03 | Advanced Live Playwright E2E | Done (2026-06-06) |
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | To Do |
 | TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | To Do |
 | TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | To Do |

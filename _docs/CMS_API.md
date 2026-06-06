@@ -3818,6 +3818,12 @@ Bezposrednie `context.siteKit` nie jest publicznym/admin payloadem dla
 The route session shape is intentionally stripped to
 `version/mode/currentStepId/answers`; facts, review metadata, provider text,
 secrets, signed URLs, and compiled `siteKit` input stay backend-owned.
+After a reviewed Advanced intake is compiled server-side, the internal
+`AssistantSiteKitPlanInput` may include optional `advancedRuntimeOverrides` for
+existing menu/Navigation, Hero, and section widget surfaces. Raw
+`advancedLayout`, reference design briefs, arbitrary URLs, CSS, prompt text,
+provider output, and review gates remain outside request payloads and outside
+the executable action input.
 
 `POST /assistant/actions/plan` response (fragment)
 

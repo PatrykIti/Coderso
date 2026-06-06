@@ -138,6 +138,8 @@ type MenuSnapshot = {
   id: string;
   name: string;
   location: string | null;
+  status: "draft" | "published";
+  publishedAt: string | null;
   items: MenuItemSnapshot[];
 };
 
@@ -703,6 +705,8 @@ const snapshotMenu = async (executor: QueryExecutor, row: MenuRow): Promise<Menu
   id: row.id,
   name: row.name,
   location: row.location,
+  status: row.status === "published" ? "published" : "draft",
+  publishedAt: toIsoOrNull(row.publishedAt),
   items: await listMenuItemSnapshots(executor, row.id),
 });
 
@@ -1863,6 +1867,8 @@ const executeMenuOperation = async (
           id: `predicted:${op.payload.name.toLowerCase()}`,
           name: op.payload.name,
           location: op.payload.location,
+          status: "published",
+          publishedAt: new Date().toISOString(),
           items: toMenuSnapshotFromDesired(desiredItems),
         },
         rollbackAction: { strategy: "delete_created" },
@@ -1875,6 +1881,8 @@ const executeMenuOperation = async (
       .values({
         name: op.payload.name,
         location: op.payload.location,
+        status: "published",
+        publishedAt: new Date(),
         createdAt: new Date(),
       })
       .returning();
@@ -1892,7 +1900,9 @@ const executeMenuOperation = async (
   }
 
   const beforeSnapshot = await snapshotMenu(executor, existing);
-  const desiredItems = await resolveMenuDesiredItems(executor, op.payload.items);
+  const desiredItems = await resolveMenuDesiredItems(executor, op.payload.items, {
+    allowMissingPageSlug: dryRun,
+  });
   const itemsChanged = !compareMenuItems(
     toMenuDesiredFromSnapshot(beforeSnapshot.items),
     desiredItems
@@ -1902,6 +1912,10 @@ const executeMenuOperation = async (
   if (existing.name !== op.payload.name) patch.name = op.payload.name;
   if ((existing.location ?? null) !== (op.payload.location ?? null)) {
     patch.location = op.payload.location;
+  }
+  if (existing.status !== "published" || !existing.publishedAt) {
+    patch.status = "published";
+    patch.publishedAt = existing.publishedAt ?? new Date();
   }
 
   if (Object.keys(patch).length === 0 && !itemsChanged) {
@@ -1921,6 +1935,13 @@ const executeMenuOperation = async (
         ...beforeSnapshot,
         ...(patch.name ? { name: patch.name } : {}),
         ...(typeof patch.location !== "undefined" ? { location: patch.location } : {}),
+        ...(patch.status ? { status: patch.status } : {}),
+        ...(patch.publishedAt
+          ? {
+              publishedAt:
+                patch.publishedAt instanceof Date ? patch.publishedAt.toISOString() : null,
+            }
+          : {}),
         ...(itemsChanged ? { items: toMenuSnapshotFromDesired(desiredItems) } : {}),
       },
       rollbackAction: { strategy: "restore_snapshot" },
@@ -2074,6 +2095,11 @@ const parseMenuSnapshot = (payload: JsonRecord): MenuSnapshot => ({
   name: String(payload.name ?? ""),
   location:
     payload.location === null || typeof payload.location === "string" ? payload.location : null,
+  status: payload.status === "published" ? "published" : "draft",
+  publishedAt:
+    payload.publishedAt === null || typeof payload.publishedAt === "string"
+      ? payload.publishedAt
+      : null,
   items: Array.isArray(payload.items)
     ? (payload.items as unknown[])
         .filter((value) => isRecord(value))
@@ -2408,6 +2434,7 @@ const rollbackUpdatedResource = async (
 
       const [current] = await executor.select().from(menus).where(eq(menus.id, snapshot.id));
       const beforeSnapshot = current ? await snapshotMenu(executor, current) : null;
+      const publishedAt = snapshot.publishedAt ? new Date(snapshot.publishedAt) : null;
       let restored: MenuRow | undefined;
 
       if (current) {
@@ -2416,6 +2443,8 @@ const rollbackUpdatedResource = async (
           .set({
             name: snapshot.name,
             location: snapshot.location,
+            status: snapshot.status,
+            publishedAt,
           })
           .where(eq(menus.id, snapshot.id))
           .returning();
@@ -2426,6 +2455,8 @@ const rollbackUpdatedResource = async (
             id: snapshot.id,
             name: snapshot.name,
             location: snapshot.location,
+            status: snapshot.status,
+            publishedAt,
             createdAt: new Date(),
           })
           .returning();
