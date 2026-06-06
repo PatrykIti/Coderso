@@ -80,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2238 tasks
+- **Done:** 2239 tasks
 
 ---
 
@@ -114,6 +114,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-405 | Media Upload Native File Metadata | High | Small | Done (2026-06-06): native Bun/File upload metadata is preserved and MIME normalization prevents `undefined.startsWith` media 500s. |
 | TASK-404 | Resend Email Provider and Settings UX | High | Large | Done (2026-06-05): Resend integration secret storage, provider-aware email transport/settings, admin UX, docs, tests, and closure completed. |
 | TASK-404-01 | Resend Integration Secret Contract | High | Medium | Done (2026-06-05): Resend registry, encrypted `apiKey`, redaction, and clear/disconnected state completed. |
 | TASK-404-01-L01 | Resend Connector and Secret Storage | High | Medium | Done (2026-06-05): `resend` accepts only encrypted `apiKey`; summaries remain redacted and runtime config is backend-only. |

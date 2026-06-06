@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1099.
+Ordinary new entries continue at 1100.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,11 @@ Ordinary new entries continue at 1099.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1099 for the next changelog entry.
+assistant policy coverage fix. Use 1100 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1099 | 2026-06-06 | Media upload native File metadata | Media/Admin API/Runtime Storage/QA |
 | 1098 | 2026-06-05 | TASK-404 Resend email provider | Settings/Integrations/Email/Security/Admin UI/Forms/QA/Docs |
 | 1097 | 2026-06-04 | AGENTS task workflow alignment | Docs/Process/Agent Workflow/Task Board/QA |
 | 1096 | 2026-06-04 | reCAPTCHA backend configuration and eager loading | Security/Bot Protection/Admin UI/Public Forms/Widgets/QA/Docs |

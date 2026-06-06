@@ -21,6 +21,11 @@ type MediaConfig = {
 
 const dimensionReadLimitBytes = 512 * 1024;
 
+const normalizeMimeType = (mimeType: unknown) => {
+  if (typeof mimeType !== "string") return "";
+  return mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
+};
+
 async function getConfig(): Promise<MediaConfig> {
   const settings = await getStorageSettingsInternal();
   const maxSizeBytes = settings.maxSizeBytes ?? 10 * 1024 * 1024;
@@ -32,29 +37,31 @@ async function getConfig(): Promise<MediaConfig> {
 }
 
 function isMimeAllowed(mimeType: string, allowed: string[]) {
+  const normalizedMimeType = normalizeMimeType(mimeType);
+  if (!normalizedMimeType) return false;
   if (allowed.length === 0) return true;
   return allowed.some((rule) => {
-    if (rule.endsWith("/*")) {
-      return mimeType.startsWith(rule.replace("/*", "/"));
+    const normalizedRule = normalizeMimeType(rule);
+    if (!normalizedRule) return false;
+    if (normalizedRule.endsWith("/*")) {
+      return normalizedMimeType.startsWith(normalizedRule.replace("/*", "/"));
     }
-    return rule === mimeType;
+    return normalizedRule === normalizedMimeType;
   });
 }
 
 function resolveMediaType(mimeType: string): MediaType {
-  return mimeType.startsWith("image/") ? "image" : "file";
+  return normalizeMimeType(mimeType).startsWith("image/") ? "image" : "file";
 }
 
 const toBuffer = async (file: UploadFile) => Buffer.from(await file.arrayBuffer());
 
 const createBufferedUploadFile = (file: UploadFile, buffer: Buffer): UploadFile => ({
-  ...file,
+  name: file.name,
+  type: normalizeMimeType(file.type),
   size: buffer.byteLength,
   arrayBuffer: async () =>
-    buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength
-    ) as ArrayBuffer,
+    buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer,
 });
 
 const resolveUploadTitle = (fileName: string, title?: string | null) => {
@@ -102,15 +109,11 @@ const readStreamPrefix = async (
 };
 
 const extractDimensionsForFile = (mimeType: string, buffer: Buffer) => {
-  if (!mimeType.toLowerCase().startsWith("image/")) return null;
+  if (!normalizeMimeType(mimeType).startsWith("image/")) return null;
   return readImageDimensions(buffer);
 };
 
-export async function uploadMedia(
-  file: UploadFile,
-  meta: MediaMeta,
-  userId?: string
-) {
+export async function uploadMedia(file: UploadFile, meta: MediaMeta, userId?: string) {
   const config = await getConfig();
 
   const buffer = await toBuffer(file);
@@ -169,11 +172,7 @@ export async function updateMedia(id: string, meta: MediaMeta) {
     return getMediaById(id);
   }
 
-  const [row] = await db
-    .update(media)
-    .set(patch)
-    .where(eq(media.id, id))
-    .returning();
+  const [row] = await db.update(media).set(patch).where(eq(media.id, id)).returning();
 
   return row ?? null;
 }
