@@ -78,7 +78,11 @@ export type AssistantSiteBuilderIntakeUiEvent =
       stepId: AssistantSiteBuilderIntakeStepId;
       session?: AssistantSiteBuilderIntakeSession;
     }
-  | { type: "server_session_received"; session: AssistantSiteBuilderIntakeSession }
+  | {
+      type: "server_session_received";
+      session: AssistantSiteBuilderIntakeSession;
+      source?: "submitted_answer" | "background_revalidation";
+    }
   | { type: "restore_browser_state"; state: AssistantSiteBuilderIntakeBrowserState | null }
   | { type: "stale_cache_detected" }
   | { type: "plan_requested" }
@@ -108,6 +112,19 @@ const hydrateFromServerSession = (
   sessionReadyForReview(session) || sessionReadyForExecution(session)
     ? { kind: "review", session, issue: null }
     : { kind: "answering", session, dirtyStepId: null, issue: null };
+
+const hydrateBackgroundServerSession = (
+  state: AssistantSiteBuilderIntakeUiState,
+  session: AssistantSiteBuilderIntakeSession
+): AssistantSiteBuilderIntakeUiState => {
+  if (state.kind !== "answering" || !state.dirtyStepId) return hydrateFromServerSession(session);
+  return {
+    kind: "answering",
+    session,
+    dirtyStepId: state.dirtyStepId,
+    issue: null,
+  };
+};
 
 const currentSession = (
   state: AssistantSiteBuilderIntakeUiState
@@ -167,8 +184,11 @@ export const siteBuilderIntakeUiReducer = (
   switch (event.type) {
     case "start":
     case "resume":
-    case "server_session_received":
       return hydrateFromServerSession(event.session);
+    case "server_session_received":
+      return event.source === "background_revalidation"
+        ? hydrateBackgroundServerSession(state, event.session)
+        : hydrateFromServerSession(event.session);
     case "restore_browser_state":
       return event.state
         ? { kind: "restored", snapshot: event.state.session, issue: null }

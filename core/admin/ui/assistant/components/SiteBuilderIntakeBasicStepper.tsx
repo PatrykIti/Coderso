@@ -14,6 +14,7 @@ import type {
   AssistantSiteBuilderIntakeSession,
   AssistantSiteBuilderIntakeStepId,
 } from "../../../../services/assistant/assistantSiteBuilderIntakeTypes";
+import { redactAssistantSafetyText } from "../../../../services/assistant/assistantRedaction";
 import { buildSiteBuilderIntakeReviewSummary } from "../../../../services/assistant/assistantSiteBuilderIntakeReviewSummary";
 
 type SiteBuilderIntakeMetadata = NonNullable<
@@ -174,11 +175,10 @@ const selectedOptionsForLabelMap = (
   return field.options.filter((option) => selectedIds.has(option.id));
 };
 
-const sensitiveUiTextPattern =
-  /(https?:\/\/|www\.|token|secret|password|api[-_]?key|credential|cookie|csrf|authorization|bearer)/i;
+const SITE_BUILDER_INTAKE_UI_TEXT_MAX_CHARS = 240;
 
-const redactIntakeUiText = (value: string) =>
-  sensitiveUiTextPattern.test(value) ? "[redacted]" : value;
+export const redactSiteBuilderIntakeUiText = (value: string) =>
+  redactAssistantSafetyText(value, SITE_BUILDER_INTAKE_UI_TEXT_MAX_CHARS);
 
 function SiteBuilderIntakeFieldControl({
   step,
@@ -383,13 +383,13 @@ function SiteBuilderIntakeReviewNotice({
               ) : null}
               {referenceGates.map((gate) => (
                 <li key={`gate-${gate.code}-${gate.count ?? 0}`}>
-                  {redactIntakeUiText(gate.message)}
+                  {redactSiteBuilderIntakeUiText(gate.message)}
                   {gate.count ? ` (${gate.count})` : ""}
                 </li>
               ))}
               {referenceWarnings.map((warning) => (
                 <li key={`warning-${warning.code}-${warning.count ?? 0}`}>
-                  {redactIntakeUiText(warning.message)}
+                  {redactSiteBuilderIntakeUiText(warning.message)}
                   {warning.count ? ` (${warning.count})` : ""}
                 </li>
               ))}
@@ -404,7 +404,7 @@ function SiteBuilderIntakeReviewNotice({
             <ul className="ml-5 mt-2 list-disc space-y-1">
               {layoutGates.map((gate) => (
                 <li key={`layout-${gate.code}-${gate.optionId ?? ""}-${gate.sectionRoleId ?? ""}`}>
-                  {redactIntakeUiText(gate.message)}
+                  {redactSiteBuilderIntakeUiText(gate.message)}
                 </li>
               ))}
             </ul>
@@ -446,7 +446,7 @@ function SiteBuilderIntakeFinalReviewSummary({
             <ul className="ml-5 mt-2 list-disc space-y-1">
               {blockingGates.map((gate, index) => (
                 <li key={`${gate.code}-${gate.stepId ?? "global"}-${index}`}>
-                  {redactIntakeUiText(gate.message)}
+                  {redactSiteBuilderIntakeUiText(gate.message)}
                 </li>
               ))}
             </ul>
@@ -461,7 +461,7 @@ function SiteBuilderIntakeFinalReviewSummary({
             <ul className="ml-5 mt-2 list-disc space-y-1">
               {nonBlockingGates.map((gate, index) => (
                 <li key={`${gate.code}-${gate.stepId ?? "global"}-${index}`}>
-                  {redactIntakeUiText(gate.message)}
+                  {redactSiteBuilderIntakeUiText(gate.message)}
                 </li>
               ))}
             </ul>
@@ -475,7 +475,7 @@ function SiteBuilderIntakeFinalReviewSummary({
             <p className="text-xs font-semibold uppercase text-muted-foreground">{section.label}</p>
             <ul className="mt-1 space-y-1 text-xs text-foreground">
               {section.items.slice(0, 6).map((item, index) => (
-                <li key={`${section.id}-${index}`}>{redactIntakeUiText(item)}</li>
+                <li key={`${section.id}-${index}`}>{redactSiteBuilderIntakeUiText(item)}</li>
               ))}
               {section.items.length > 6 ? (
                 <li className="text-muted-foreground">
@@ -681,9 +681,7 @@ export function SiteBuilderIntakeStepper({
         </Alert>
       ) : (
         <SiteBuilderIntakeStepForm
-          key={`${metadata.mode}:${step.id}:${metadata.answeredStepIds.join(",")}:${
-            stepAnswer?.updatedAt ?? ""
-          }`}
+          key={`${metadata.mode}:${step.id}:${stepAnswer?.updatedAt ?? ""}`}
           metadata={metadata}
           step={step}
           session={session}

@@ -14,6 +14,16 @@ const tokenPatterns = [
   /\beyJ[a-zA-Z0-9_-]+=*\.[a-zA-Z0-9_-]+=*\.[a-zA-Z0-9_-]+=*\b/g,
 ] as const;
 
+const promptPoisoningPatterns = [
+  /\bignore\s+(?:all\s+)?(?:previous|prior|above|system|developer)\s+instructions?\b/gi,
+  /\bforget\s+(?:all\s+)?(?:previous|prior|above|system|developer)\s+instructions?\b/gi,
+  /\bbypass\s+(?:all\s+)?(?:validation|review|reviews|schema|schemas|rbac|csrf)\b/gi,
+  /\bexecute\s+without\s+(?:review|reviews|validation|approval)\b/gi,
+  /\boverride\s+(?:the\s+)?(?:schema|schemas|validation|system|developer)\b/gi,
+  /\bdisable\s+(?:rbac|csrf|validation|review|reviews|guards?)\b/gi,
+  /\breveal\s+(?:the\s+)?(?:system|developer)\s+prompt\b/gi,
+] as const;
+
 const replaceTokens = (value: string) => {
   let output = value
     .replace(signedUrlPattern, "[REDACTED_URL]")
@@ -36,9 +46,17 @@ export const redactAssistantText = (value: string, maxLength = 240) => {
   return `${normalized.slice(0, Math.max(0, maxLength - 3))}...`;
 };
 
+export const redactAssistantSafetyText = (value: string, maxLength = 240) => {
+  let filtered = value;
+  for (const pattern of promptPoisoningPatterns) {
+    filtered = filtered.replace(pattern, "[FILTERED_INSTRUCTION]");
+  }
+  return redactAssistantText(filtered, maxLength);
+};
+
 const redactUnknown = (value: unknown): unknown => {
   if (typeof value === "string") {
-    return redactAssistantText(value, 200);
+    return redactAssistantSafetyText(value, 200);
   }
 
   if (Array.isArray(value)) {

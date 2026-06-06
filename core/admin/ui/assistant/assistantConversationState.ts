@@ -7,6 +7,7 @@ import type {
 } from "@/services/assistantClient";
 import type { AssistantPlanningState } from "../../../services/assistant/actionPlanTypes";
 import { isAssistantActionPlan } from "../../../services/assistant/actionPlanTypes";
+import { redactAssistantSafetyText } from "../../../services/assistant/assistantRedaction";
 import { normalizeAssistantPlanningState } from "../../../services/assistant/cmsPlanningState";
 
 export type PersistedAssistantEntry = {
@@ -32,8 +33,22 @@ const LEGACY_STORAGE_KEY = "nextless.assistant.conversation.state";
 const SCHEMA_VERSION = 1;
 const MAX_MESSAGES = 40;
 const MAX_TEXT_LENGTH = 2_000;
+export const ASSISTANT_CONVERSATION_STATE_MAX_CHARS = 32_768;
 const TTL_MS = 30 * 60 * 1000;
-const secretLikePattern = /(token|secret|password|api[-_]?key|credential|cookie|session|csrf|authorization|bearer)/i;
+const secretLikePattern =
+  /(token|secret|password|api[-_]?key|credential|cookie|session|csrf|authorization|bearer|x-amz-signature|signed[-_\s]?url)/i;
+
+const topLevelKeys = new Set([
+  "schemaVersion",
+  "savedAt",
+  "expiresAt",
+  "messages",
+  "activePlan",
+  "activePreview",
+  "activeExecution",
+  "planningState",
+  "assistantMode",
+]);
 
 type StoredConversationState = AssistantConversationSnapshot & {
   schemaVersion: 1;
@@ -41,23 +56,41 @@ type StoredConversationState = AssistantConversationSnapshot & {
   expiresAt: string;
 };
 
-const canUseStorage = () => typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+const canUseStorage = () =>
+  typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const hasOnlyKeys = (value: Record<string, unknown>, allowed: ReadonlySet<string>) =>
+  Object.keys(value).every((key) => allowed.has(key));
 
 const readText = (value: unknown, maxLength = MAX_TEXT_LENGTH) => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed || secretLikePattern.test(trimmed)) return null;
-  return trimmed.length > maxLength ? `${trimmed.slice(0, Math.max(0, maxLength - 3))}...` : trimmed;
+  return redactAssistantSafetyText(trimmed, maxLength);
 };
 
 const isSecretLikePayload = (value: unknown): boolean => {
   if (typeof value === "string") return secretLikePattern.test(value);
   if (Array.isArray(value)) return value.some(isSecretLikePayload);
   if (!isRecord(value)) return false;
-  return Object.entries(value).some(([key, nested]) => secretLikePattern.test(key) || isSecretLikePayload(nested));
+  return Object.entries(value).some(
+    ([key, nested]) => secretLikePattern.test(key) || isSecretLikePayload(nested)
+  );
+};
+
+const redactStoragePayload = (value: unknown): unknown => {
+  if (typeof value === "string") return redactAssistantSafetyText(value, MAX_TEXT_LENGTH);
+  if (Array.isArray(value)) return value.slice(0, 100).map(redactStoragePayload);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nested]) => [
+      key,
+      secretLikePattern.test(key) ? "[REDACTED]" : redactStoragePayload(nested),
+    ])
+  );
 };
 
 const normalizeAssistantMode = (value: unknown): AssistantMode | null =>
@@ -81,13 +114,15 @@ const normalizeEntry = (value: unknown): PersistedAssistantEntry | null => {
 };
 
 const normalizePlan = (value: unknown): AssistantActionPlanResponse | null => {
-  if (!isAssistantActionPlan(value) || isSecretLikePayload(value)) return null;
-  return value;
+  const redacted = redactStoragePayload(value);
+  if (!isAssistantActionPlan(redacted) || isSecretLikePayload(redacted)) return null;
+  return redacted;
 };
 
 const normalizeSafeObject = <T>(value: unknown): T | null => {
-  if (!isRecord(value) || isSecretLikePayload(value)) return null;
-  return value as T;
+  const redacted = redactStoragePayload(value);
+  if (!isRecord(redacted) || isSecretLikePayload(redacted)) return null;
+  return redacted as T;
 };
 
 export const readAssistantConversationState = (): AssistantConversationSnapshot | null => {
@@ -97,8 +132,19 @@ export const readAssistantConversationState = (): AssistantConversationSnapshot 
     const legacyRaw = window.localStorage.getItem(LEGACY_STORAGE_KEY);
     const raw = currentRaw ?? legacyRaw;
     if (!raw) return null;
+    if (raw.length > ASSISTANT_CONVERSATION_STATE_MAX_CHARS) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+      return null;
+    }
     const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed) || parsed.schemaVersion !== SCHEMA_VERSION) return null;
+    if (
+      !isRecord(parsed) ||
+      !hasOnlyKeys(parsed, topLevelKeys) ||
+      parsed.schemaVersion !== SCHEMA_VERSION
+    ) {
+      return null;
+    }
     const expiresAt = typeof parsed.expiresAt === "string" ? Date.parse(parsed.expiresAt) : NaN;
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
       window.localStorage.removeItem(STORAGE_KEY);
@@ -106,7 +152,10 @@ export const readAssistantConversationState = (): AssistantConversationSnapshot 
       return null;
     }
     const messages = Array.isArray(parsed.messages)
-      ? parsed.messages.map(normalizeEntry).filter((entry): entry is PersistedAssistantEntry => Boolean(entry)).slice(-MAX_MESSAGES)
+      ? parsed.messages
+          .map(normalizeEntry)
+          .filter((entry): entry is PersistedAssistantEntry => Boolean(entry))
+          .slice(-MAX_MESSAGES)
       : [];
     if (!currentRaw && legacyRaw) {
       window.localStorage.setItem(STORAGE_KEY, legacyRaw);
@@ -135,15 +184,21 @@ export const writeAssistantConversationState = (snapshot: AssistantConversationS
       sourceQuestion: readText(entry.sourceQuestion) ?? undefined,
       response: undefined,
     })),
-    activePlan: isSecretLikePayload(snapshot.activePlan) ? null : snapshot.activePlan,
-    activePreview: isSecretLikePayload(snapshot.activePreview) ? null : snapshot.activePreview,
-    activeExecution: isSecretLikePayload(snapshot.activeExecution) ? null : snapshot.activeExecution,
+    activePlan: normalizePlan(snapshot.activePlan),
+    activePreview: normalizeSafeObject<AssistantActionDryRunResponse>(snapshot.activePreview),
+    activeExecution: normalizeSafeObject<AssistantActionExecuteResponse>(snapshot.activeExecution),
     planningState: normalizeAssistantPlanningState(snapshot.planningState),
     assistantMode: snapshot.assistantMode,
     savedAt: new Date(nowMs).toISOString(),
     expiresAt: new Date(nowMs + TTL_MS).toISOString(),
   };
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  const serialized = JSON.stringify(payload);
+  if (serialized.length > ASSISTANT_CONVERSATION_STATE_MAX_CHARS) {
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return;
+  }
+  window.localStorage.setItem(STORAGE_KEY, serialized);
 };
 
 export const clearAssistantConversationState = () => {

@@ -204,6 +204,87 @@ test("site builder intake UI state treats server-normalized sessions as authorit
   });
 });
 
+test("site builder intake UI state preserves dirty marker during background revalidation", () => {
+  const dirty = siteBuilderIntakeUiReducer(createIdleSiteBuilderIntakeUiState(), {
+    type: "answer_step",
+    stepId: "business-profile",
+    session: baseSession(),
+  });
+
+  const background = siteBuilderIntakeUiReducer(dirty, {
+    type: "server_session_received",
+    source: "background_revalidation",
+    session: baseSession({
+      currentStepId: "business-profile",
+      answers: [{ stepId: "site-goals", values: { goals: ["collect leads"] } }],
+      facts: {
+        answeredStepIds: ["site-goals"],
+        missingRequiredStepIds: ["business-profile"],
+        missingReviewInputStepIds: ["business-profile"],
+        readyForReview: false,
+        readyForExecution: false,
+        redactionApplied: false,
+      },
+    }),
+  });
+
+  expect(background).toMatchObject({
+    kind: "answering",
+    dirtyStepId: "business-profile",
+    session: {
+      answers: [{ stepId: "site-goals" }],
+    },
+  });
+
+  const acknowledgement = siteBuilderIntakeUiReducer(background, {
+    type: "server_session_received",
+    source: "submitted_answer",
+    session: baseSession({
+      currentStepId: "site-goals",
+      answers: [{ stepId: "business-profile", values: { topic: "Directory", locale: "en" } }],
+      facts: {
+        answeredStepIds: ["business-profile"],
+        missingRequiredStepIds: ["site-goals"],
+        missingReviewInputStepIds: ["site-goals"],
+        readyForReview: false,
+        readyForExecution: false,
+        redactionApplied: false,
+      },
+    }),
+  });
+
+  expect(acknowledgement).toMatchObject({
+    kind: "answering",
+    dirtyStepId: null,
+    session: {
+      currentStepId: "site-goals",
+    },
+  });
+});
+
+test("site builder intake UI state keeps dirty answer surface when background revalidation reaches review", () => {
+  const dirty = siteBuilderIntakeUiReducer(createIdleSiteBuilderIntakeUiState(), {
+    type: "answer_step",
+    stepId: "business-profile",
+    session: baseSession(),
+  });
+
+  const backgroundReview = siteBuilderIntakeUiReducer(dirty, {
+    type: "server_session_received",
+    source: "background_revalidation",
+    session: reviewedSession(),
+  });
+
+  expect(backgroundReview).toMatchObject({
+    kind: "answering",
+    dirtyStepId: "business-profile",
+    session: {
+      currentStepId: "review",
+    },
+  });
+  expect(canPlanSiteBuilderIntake(backgroundReview)).toBe(false);
+});
+
 test("site builder intake UI state restores only bounded browser snapshots and discards stale cache", () => {
   const browserState = buildAssistantSiteBuilderIntakeBrowserState(reviewedSession(), {
     nowMs: NOW_MS,

@@ -190,7 +190,7 @@ metadata only, strictly validated by the intake owner, and compiled to
 | TASK-407-06-L02 | Basic Stepper Controls | Done (2026-06-06) |
 | TASK-407-06-L03 | Advanced Stepper Controls | Done (2026-06-06) |
 | TASK-407-06-L04 | Review Summary and Execution Gating | Done (2026-06-06) |
-| TASK-407-06-L05 | UI Warnings Local State and Redaction | To Do |
+| TASK-407-06-L05 | UI Warnings Local State and Redaction | Done (2026-06-06) |
 | TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | To Do |
 | TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | To Do |
 | TASK-407-07-L02 | Basic Live Playwright E2E | To Do |

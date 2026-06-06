@@ -268,9 +268,10 @@ Assistant Settings can ask the backend for OpenRouter model metadata through `PO
 
 The guided site-builder admin UI keeps local interaction state in
 `assistantSiteBuilderIntakeUiState.ts`. The reducer is a client-only companion to
-the backend intake/session contract: server-normalized sessions win over dirty
-local state, stale browser snapshots are discarded, and restored state contains
-only the bounded redacted session snapshot from
+the backend intake/session contract: submitted-answer acknowledgements from the
+server replace local drafts, background revalidation preserves the dirty marker
+for the current unsaved step, stale browser snapshots are discarded, and
+restored state contains only the bounded redacted session snapshot from
 `assistantSiteBuilderIntakeBrowserState.ts`.
 
 Planning is available only after confirmed review, dry-run only after a strict
@@ -278,6 +279,13 @@ ready plan, and execute only after that plan has completed dry-run. The UI state
 machine does not create a new assistant route payload and must not store raw
 answers, provider text, provider keys, signed URLs, upload bytes, cookies, or
 auth state in browser storage.
+
+The floating assistant also persists a bounded conversation cache via
+`assistantConversationState.ts`. That cache stores only sanitized transcript
+text, active plan shells, previews, executions, planning-state hints, and the
+selected assistant mode. It rejects unknown top-level keys, stale or oversized
+payloads, redacts prompt-poisoning phrases and signed URLs, and drops
+secret-like text before writing to localStorage.
 
 Basic full-site intake controls render inside the floating LLM Guide action-plan
 review path from `metadata.siteBuilderIntake.steps[].answerFields[]`. The UI

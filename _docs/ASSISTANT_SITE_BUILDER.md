@@ -14,12 +14,13 @@ It now runs through the same `LLM Guide` action engine as the floating assistant
 
 The admin site-builder intake UI owns its local progress through
 `assistantSiteBuilderIntakeUiState.ts`. That reducer is deliberately client-only:
-it accepts server-normalized intake sessions as authoritative, restores only the
-bounded redacted browser snapshot, discards stale cache, and gates
-`review -> plan -> dry-run -> execute` transitions before the existing action
-engine receives a handoff. It does not add a parallel route payload or persist
-raw answers, provider text, provider keys, signed URLs, upload bytes, cookies, or
-auth material in browser storage.
+submitted-answer acknowledgements from the server are authoritative, background
+revalidation preserves the dirty marker for the current unsaved step, stale cache
+is discarded, and restored state contains only the bounded redacted browser
+snapshot. The reducer gates `review -> plan -> dry-run -> execute` transitions
+before the existing action engine receives a handoff. It does not add a parallel
+route payload or persist raw answers, provider text, provider keys, signed URLs,
+upload bytes, cookies, or auth material in browser storage.
 
 The reviewed intake handoff is version-bound. The server derives a deterministic
 review hash from the normalized non-review answers, the UI must echo that hash
@@ -203,7 +204,9 @@ permissions, idempotency, and conflict-aware execution.
   contract; provider credentials are configured through Settings -> Integrations.
 - The floating assistant persists bounded browser-local conversation state so
   safe transcript, active plan context, and planning-state hints survive closing
-  the window and SPA route transitions.
+  the window and SPA route transitions. The cache rejects stale, oversized, or
+  unknown-key payloads, redacts prompt-poisoning phrases and signed URLs, and
+  drops secret-like text before writing to localStorage.
 
 ## Runtime Contract
 
@@ -424,7 +427,9 @@ through `/assistant/actions/plan` with `context.siteBuilderIntakeState.activeSes
 the browser strips derived facts from the request session and does not persist
 raw answers in assistant conversation localStorage. Restored plans that no
 longer have in-memory answer state show a restart message rather than silently
-continuing from incomplete data.
+continuing from incomplete data. Revalidation that updates unrelated server
+state must not wipe the current unsaved form draft; a submitted-step
+acknowledgement may replace the draft with the normalized server answer.
 
 Advanced planner progression is owned by
 `core/services/assistant/assistantSiteBuilderIntakeAdvancedFlow.ts`. It uses the
@@ -586,6 +591,12 @@ provider keys, cookies, CSRF/session values, or signed URLs. Restore accepts onl
 the current schema version, strict known keys, a bounded serialized size, and a
 fresh expiry window; invalid state is discarded and the server-normalized
 session remains the source of truth.
+
+The screenshot-facing warning/review UI uses the same safety redaction family as
+assistant diagnostics. Reference/media gates and final review items remain useful
+for the operator, but prompt-poisoning phrases, signed URLs, raw reference text,
+OCR-like secret text, tokens, cookies, and auth material are filtered before they
+can appear in rendered DOM or test snapshots.
 
 Basic prompt-poisoning guards are regression-tested before planner/action work.
 Free text in Basic profile, goals, hero, media notes, and review notes remains

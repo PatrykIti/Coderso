@@ -45,7 +45,7 @@ there is not a second full-site builder UI with a divergent plan handoff.
 | TASK-407-06-L02 | Basic Stepper Controls | Done | Basic intake controls render from server metadata and submit one normalized answer through the existing plan route. |
 | TASK-407-06-L03 | Advanced Stepper Controls | Done | Advanced server-owned progression, Basic-to-Advanced confirmation, controlled metadata-driven fields, selectable steps, and normalized-state gate tests. |
 | TASK-407-06-L04 | Review Summary and Execution Gating | Done | Floating assistant final review summary, review-hash confirmation, backend blocking-gate enforcement, and strict siteKit plan handoff. |
-| TASK-407-06-L05 | UI Warnings Local State and Redaction | To Do | Warning/gate rendering, localStorage bounds, stale cache discard, and redaction tests. |
+| TASK-407-06-L05 | UI Warnings Local State and Redaction | Done | Prompt-poisoning-aware UI/cache redaction, conversation localStorage bounds, dirty revalidation preservation, and screenshot/cache regression tests. |
 | TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | To Do | Reconcile or retire the legacy AI site wizard so it cannot bypass the reviewed intake handoff. |
 
 ## Security Contract
@@ -146,3 +146,7 @@ function canSubmitPlan(session: AssistantSiteBuilderIntakeSession) {
   validation, and Claude/subagent drift review. The audit identified the legacy
   `AiSiteWizard` surface as a remaining divergent handoff; TASK-407-06-L06 owns
   that convergence explicitly.
+- 2026-06-06: TASK-407-06-L05 completed prompt-poisoning-aware UI/cache
+  redaction, bounded assistant conversation localStorage, screenshot-safe review
+  warnings, and dirty-draft preservation for background revalidation. Remaining
+  TASK-407-06 work is legacy `AiSiteWizard` reviewed-intake convergence in L06.
