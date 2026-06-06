@@ -126,8 +126,9 @@ test("navigation reflects sticky and transparent behavior in runtime output", ()
     />
   );
 
-  expect(html).toContain("sticky top-0 z-40");
+  expect(html).toContain("sticky z-40");
   expect(html).toContain('data-navigation-widget="1"');
+  expect(html).toContain('data-navigation-sticky="true"');
   expect(html).toContain('data-mobile-mode="drawer"');
   expect(html).toContain('data-collapse-on-scroll="true"');
   expect(html).toContain('data-navigation-active-mode="pathname"');

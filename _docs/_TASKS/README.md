@@ -80,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2239 tasks
+- **Done:** 2241 tasks
 
 ---
 
@@ -114,6 +114,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-411 | Page Editor Canvas Workspace Layout | High | Medium | Done (2026-06-06): editor-region scroll, wider responsive canvas, desktop panel hide/show controls, device frame switching, and unmocked layout coverage completed. |
+| TASK-410 | Navigation Widget Runtime Behavior Parity | High | Medium | Done (2026-06-06): Navigation sticky/collapse/drawer/submenu runtime now works across admin canvas and public pages through the shared runtime bridge/script path. |
 | TASK-405 | Media Upload Native File Metadata | High | Small | Done (2026-06-06): native Bun/File upload metadata is preserved and MIME normalization prevents `undefined.startsWith` media 500s. |
 | TASK-404 | Resend Email Provider and Settings UX | High | Large | Done (2026-06-05): Resend integration secret storage, provider-aware email transport/settings, admin UX, docs, tests, and closure completed. |
 | TASK-404-01 | Resend Integration Secret Contract | High | Medium | Done (2026-06-05): Resend registry, encrypted `apiKey`, redaction, and clear/disconnected state completed. |

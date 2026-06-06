@@ -16,6 +16,11 @@ import {
   type ToggleBlockData,
 } from "../../../core/widgets/core/toggleBlock";
 import {
+  createNavigationWidget,
+  navigationDefaults,
+  type NavigationData,
+} from "../../../core/widgets/core/navigation";
+import {
   createContentListWidget,
   type ContentListData,
 } from "../../../core/widgets/core/contentList";
@@ -45,6 +50,7 @@ const StubEntryTeaserEditor: ComponentType<WidgetEditorProps<EntryTeaserData>> =
 const StubTemplateSectionEditor: ComponentType<WidgetEditorProps<TemplateSectionData>> = () => null;
 const StubTabsEditor: ComponentType<WidgetEditorProps<TabsData>> = () => null;
 const StubToggleEditor: ComponentType<WidgetEditorProps<ToggleBlockData>> = () => null;
+const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 const StubFormEmbedEditor: ComponentType<WidgetEditorProps<FormEmbedData>> = () => null;
 const StubContactEditor: ComponentType<WidgetEditorProps<ContactData>> = () => null;
 
@@ -117,6 +123,13 @@ test("renderPublicPageHtml dedupes shared runtime scripts across multiple widget
       advanced: StubToggleEditor,
     })
   );
+  registerWidget(
+    createNavigationWidget({
+      wizard: StubNavigationEditor,
+      visual: StubNavigationEditor,
+      advanced: StubNavigationEditor,
+    })
+  );
 
   const html = renderPublicPageHtml({
     title: "Shared runtime scripts",
@@ -125,13 +138,40 @@ test("renderPublicPageHtml dedupes shared runtime scripts across multiple widget
       { id: "tabs-2", type: "tabs", variant: "underline", data: tabsDefaults },
       { id: "toggle-1", type: "toggle-block", variant: "switch", data: toggleBlockDefaults },
       { id: "toggle-2", type: "toggle-block", variant: "cards", data: toggleBlockDefaults },
+      {
+        id: "navigation-1",
+        type: "navigation",
+        variant: "simple",
+        data: {
+          ...navigationDefaults,
+          behavior: {
+            ...navigationDefaults.behavior,
+            collapseOnScroll: true,
+          },
+        },
+      },
+      {
+        id: "navigation-2",
+        type: "navigation",
+        variant: "split",
+        data: {
+          ...navigationDefaults,
+          behavior: {
+            ...navigationDefaults.behavior,
+            collapseOnScroll: true,
+          },
+        },
+      },
     ],
   });
 
   expect(html.match(/data-coderso-runtime-script="tabs"/g)).toHaveLength(1);
   expect(html.match(/data-coderso-runtime-script="toggle-block"/g)).toHaveLength(1);
+  expect(html.match(/data-coderso-runtime-script="navigation"/g)).toHaveLength(1);
   expect(html).toContain('data-coderso-runtime-script="tabs"');
   expect(html).toContain('data-coderso-runtime-script="toggle-block"');
+  expect(html).toContain('data-coderso-runtime-script="navigation"');
+  expect(html.match(/data-widget-sticky-surface="navigation"/g)).toHaveLength(2);
 });
 
 test("renderPublicPageRuntimeHtml renders internal Form Embed blocks as noninteractive", async () => {
@@ -359,7 +399,8 @@ test("renderPublicPageHtml renders wrapper background video when configured", ()
 
   expect(html).toContain("<video");
   expect(html).toContain("https://cdn.example.com/background.mp4");
-  expect(html).toContain("absolute inset-0 h-full w-full object-cover");
+  expect(html).toContain("absolute inset-0 overflow-hidden");
+  expect(html).toContain("h-full w-full object-cover");
 });
 
 test("renderPublicPageHtml filters blocks by preview device visibility", () => {
