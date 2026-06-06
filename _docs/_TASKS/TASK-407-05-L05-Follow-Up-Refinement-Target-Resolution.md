@@ -6,7 +6,7 @@
 **Category:** Assistant + Follow-Up Resolver
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-05-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-06)
 
 ---
 
@@ -86,3 +86,32 @@ export function resolveSiteBuilderFollowUpTarget(input: FollowUpInput) {
 - Follow-up refinements are scoped to trusted resources.
 - Ambiguous prompts ask a target question.
 - Free text alone cannot select mutation targets.
+
+## Completion Notes
+
+- Added `assistantSiteBuilderFollowUpResolver.ts` as a pure site-builder
+  follow-up target scoping helper.
+- Prompt text is treated only as a target/change hint; actual targets resolve
+  through the active admin surface or server-derived resource catalog using the
+  existing CMS draft/target resolver path.
+- The resolver classifies trusted exact matches into scoped refinement kinds for
+  static pages, content-engine pages, listings, detail pages, custom screens,
+  and gates other non-site-builder CMS surfaces.
+- Ambiguous trusted candidates return `needs_input`; stale, spoofed, unsupported
+  resource families, and unsupported operations return `needs_input` or `gated`
+  before action assembly.
+- Agent read-only drift audit found and the implementation now blocks active
+  surface/name-hint conflicts, gates non-site-builder families such as forms,
+  and redacts secret-like candidate values before diagnostics.
+- `cmsTargetResolver.ts` now carries backend owner metadata needed for this
+  classification, including collection page links, custom-screen
+  collection/composition metadata, and listing query source ids.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderFollowUpResolver.test.ts`
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderFollowUpResolver.test.ts tests/vitest/assistant/cms-target-resolver.test.ts tests/vitest/assistant/actionPlannerService.test.ts`
+  (126 tests)
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`

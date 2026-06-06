@@ -158,6 +158,16 @@ the existing `content:read` plus `content:write` permission pair. Unsupported
 screen adapters, unsafe route drift, permission drift, plugins, runtime
 extensions, or public write endpoints become gates instead of generated actions.
 
+Guided follow-up target scoping lives in
+`assistantSiteBuilderFollowUpResolver.ts`. It treats prompt text as a hint only,
+uses `buildCmsOperationDraftFromPrompt` or a validated CMS operation draft, and
+resolves real mutation targets through active admin context or the server-derived
+resource catalog via `cmsTargetResolver.ts`. Exact trusted site-builder matches
+become scoped refinement kinds (`static-page`, `content-engine`, `listing`,
+`detail-page`, or `custom-screen`); ambiguous targets ask for input, while
+stale, spoofed, non-site-builder, unsupported, or unsupported-operation
+requests gate or ask before any action assembly.
+
 Advanced design presets live in
 `assistantSiteBuilderIntakeDesignPresets.ts`. The `designPresets` registry is a
 backend-owned set of visual directions (`modern`, `editorial`, `retro`,

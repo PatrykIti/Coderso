@@ -464,6 +464,15 @@ const candidatesForKind = (
           slug: page.slug,
           status: page.status,
           adminHref: pageHref(page.id),
+          details: page.collectionLink
+            ? {
+                collectionContentTypeId: page.collectionLink.contentTypeId,
+                collectionRole: page.collectionLink.pageRole,
+                collectionCompositionKey: page.collectionLink.compositionKey,
+                listingQueryId: page.collectionLink.listingQueryId,
+                listingTemplateId: page.collectionLink.listingTemplateId,
+              }
+            : undefined,
         })
       );
     }
@@ -556,6 +565,8 @@ const candidatesForKind = (
           adminHref: customScreenHref(screen.id),
           details: {
             contentTypeId: screen.contentTypeId,
+            collectionRole: screen.collectionRole,
+            compositionKey: screen.compositionKey,
             showInSidebar: screen.showInSidebar,
             sidebarLabel: screen.sidebarLabel,
           },
@@ -575,6 +586,8 @@ const candidatesForKind = (
             adminHref: customScreenHref(screen.id),
             details: {
               contentTypeId: screen.contentTypeId,
+              collectionRole: null,
+              compositionKey: null,
               showInSidebar: screen.showInSidebar,
               sidebarLabel: screen.sidebarLabel,
             },
@@ -647,6 +660,8 @@ const candidatesForKind = (
           status: null,
           adminHref: listingHref(query.id),
           details: {
+            contentTypeId: query.contentTypeId,
+            taxonomyId: query.taxonomyId,
             source: query.source,
             limit: query.limit,
             includeDrafts: query.includeDrafts,

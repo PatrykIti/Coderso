@@ -45,6 +45,7 @@ Rules:
 | Provider operation draft packaging and rejection | Vitest | Provider prompt package, operation-draft schema, exact policy identity, and provider action-array rejection; fake providers only |
 | Assistant review UI | Vitest | Admin React/UI behavior |
 | Guided custom-screen decisions | Vitest | Review-only beginner editing surface decisions derive from supported content engines, stay outside `context.siteKit`, and gate unsafe admin route/RBAC drift before actions |
+| Guided follow-up target scoping | Vitest | Prompt text is only a hint; targets resolve from active context or server-derived catalogs, ambiguous targets ask for input, and stale/spoofed/unsupported targets gate before actions |
 | Route permissions and route error mapping | Bun | Route contract and `ApiError` mapping |
 | Executor adapters with domain service deps | Bun | Runtime/service orchestration and idempotency behavior |
 | DB-backed idempotency and public runtime | Bun | DB/runtime behavior |

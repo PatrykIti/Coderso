@@ -484,6 +484,16 @@ routes, permissions, write methods, plugins, runtime extensions, or public write
 endpoints; backend route or permission drift becomes a blocking custom-screen
 gate before action-plan handoff.
 
+Follow-up target scoping for guided site-builder work lives in
+`assistantSiteBuilderFollowUpResolver.ts`. The user prompt becomes only a
+target/change hint; the resolver builds or accepts a strict CMS operation draft,
+then resolves the actual target through the existing active admin surface and
+server-derived resource catalog path in `cmsTargetResolver.ts`. Exact matches
+return a scoped refinement kind (`static-page`, `content-engine`, `listing`,
+`detail-page`, or `custom-screen`), ambiguous matches return `needs_input`, and
+stale, spoofed, non-site-builder, or unsupported targets return `needs_input`
+or `gated` without exposing raw prompt text.
+
 Static site-shell coverage for reviewed siteKit handoff is checked by
 `assistantSiteBuilderIntakeStaticActions.ts`. The production siteKit planner
 first builds the existing `site-kit.recommend` / `site-kit.install` action path,
