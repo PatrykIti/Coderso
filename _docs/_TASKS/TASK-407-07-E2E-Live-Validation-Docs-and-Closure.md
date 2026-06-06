@@ -6,7 +6,7 @@
 **Category:** Assistant + Playwright + Claude Audit + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-01, TASK-407-02, TASK-407-03, TASK-407-04, TASK-407-05, TASK-407-06
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
 
 ---
 
@@ -38,7 +38,7 @@ Claude/agent drift reviews.
 
 | ID | Title | Status | Output |
 |---|---|---|---|
-| TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | To Do | Lint/typecheck/precommit/gates plus targeted Bun/Vitest suites for changed contracts. |
+| TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | Done | Lint/typecheck/precommit/gates plus targeted Bun/Vitest suites for changed contracts. |
 | TASK-407-07-L02 | Basic Live Playwright E2E | To Do | Live Basic guided creation through admin UI and public runtime checks. |
 | TASK-407-07-L03 | Advanced Live Playwright E2E | To Do | Live Advanced creation with design/menu/hero/section/reference gates. |
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | To Do | Scoped refinement plus rejected unknown/poisoned/media-reference cases. |

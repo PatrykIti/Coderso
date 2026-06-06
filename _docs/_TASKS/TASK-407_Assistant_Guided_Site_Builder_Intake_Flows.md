@@ -163,7 +163,7 @@ and gated by the planner as defense in depth.
 | TASK-407-04 | Advanced Mode Design Presets and Reference Intake | Done (2026-06-05) | TASK-407-04-L01 through TASK-407-04-L04 |
 | TASK-407-05 | SiteKit Plan and Content Engine Decisions | Done (2026-06-06) | TASK-407-05-L01 through TASK-407-05-L06 |
 | TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | Done (2026-06-06) | TASK-407-06-L01 through TASK-407-06-L06 |
-| TASK-407-07 | E2E Live Validation Docs and Closure | To Do | TASK-407-07-L01 through TASK-407-07-L06 |
+| TASK-407-07 | E2E Live Validation Docs and Closure | In Progress | TASK-407-07-L01 through TASK-407-07-L06 |
 
 ## Granular Execution Leaves
 
@@ -193,7 +193,7 @@ and gated by the planner as defense in depth.
 | TASK-407-06-L04 | Review Summary and Execution Gating | Done (2026-06-06) |
 | TASK-407-06-L05 | UI Warnings Local State and Redaction | Done (2026-06-06) |
 | TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | Done (2026-06-06) |
-| TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | To Do |
+| TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | Done (2026-06-06) |
 | TASK-407-07-L02 | Basic Live Playwright E2E | To Do |
 | TASK-407-07-L03 | Advanced Live Playwright E2E | To Do |
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | To Do |

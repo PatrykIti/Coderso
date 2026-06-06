@@ -590,6 +590,15 @@ route-linked entry detail page. These tests add no new assistant endpoints; they
 exercise existing internal assistant action contracts plus public read-only
 runtime routes.
 
+TASK-407-07-L01 reran the pre-live validation lane on 2026-06-06 before manual
+Playwright E2E. The closed lane passed core lint/typecheck, `git diff --check`,
+34 targeted Vitest assistant/admin/UI files with 354 tests, 5 targeted Bun
+assistant runtime/route files with 104 tests, `bun run gates:coderso` with no
+DB-gated skips, `bun run precommit`, and `bun run scan:security:strict`
+covering Semgrep, Bun audit, Trivy, and Gitleaks. This validation is a static
+and automated runtime gate only; live Basic/Advanced/follow-up Playwright E2E
+remains owned by TASK-407-07-L02 through TASK-407-07-L05.
+
 TASK-407 intake redaction is owned by
 `core/services/assistant/assistantSiteBuilderIntakeRedaction.ts`.
 Diagnostics expose only schema version, mode/current step, answered step ids,

@@ -5,8 +5,9 @@
 **Priority:** High
 **Category:** Assistant + Validation Gates
 **Estimated Effort:** Medium
-**Dependencies:** TASK-407-06-L05
-**Status:** ⏳ To Do
+**Dependencies:** TASK-407-06-L06
+**Status:** ✅ Done
+**Completed:** 2026-06-06
 
 ---
 
@@ -69,9 +70,12 @@ function selectValidationLanes(changedFiles: string[]) {
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `git diff --check`
 - Targeted Vitest/Bun suites for all changed contracts.
 - `bun run precommit`
 - `bun run gates:coderso`
+- Local security scanner evidence or CI-only rationale when secret-handling or
+  redaction contracts are touched.
 - Additional security/performance/reliability gates when contracts change.
 
 ## Documentation Updates Required
@@ -83,3 +87,43 @@ function selectValidationLanes(changedFiles: string[]) {
 - Correct test lanes are selected and run.
 - Failures are fixed or clearly isolated as unrelated.
 - Live E2E starts only after targeted validation is green or documented.
+
+## Validation Evidence
+
+- Pre-audit:
+  - Claude CLI read-only audit on HEAD `33377b9011dae92ac65619c7981947b504e53108`
+    returned GO for L01 validation and recommended adding
+    `assistant-rate-limit.test.ts`, `git diff --check`, and explicit DB-gated
+    gate evidence.
+  - Subagent read-only audit returned GO and flagged low closure hygiene for the
+    L01 dependency and security-scan evidence; both are addressed in this
+    closeout.
+- Static validation:
+  - `git diff --check` passed.
+  - `bun --cwd core lint` passed.
+  - `bun --cwd core lint:types` passed.
+- Targeted Vitest:
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts ...`
+    passed for 34 assistant/admin/UI files and 354 tests, covering admin client,
+    action schema, planner, admin context, redaction, Basic/Advanced intake,
+    follow-up scoping, review summary, static actions, conversation state,
+    assistant panel interaction, intake browser state, intake UI, and Solution
+    Kits CTA coverage.
+- Targeted Bun:
+  - `set -a && [ -f .env ] && source .env && set +a; NODE_ENV=test bun test ...`
+    passed for 5 assistant runtime/route files and 104 tests, including dry-run,
+    executor, route, assistant rate-limit bucket, and public catalog/detail
+    runtime coverage.
+- Release gates:
+  - `set -a && [ -f .env ] && source .env && set +a; bun run gates:coderso`
+    passed functional, UX, performance, security, and reliability gates.
+  - `.tmp/coderso-release-gates.json` reported no skipped commands; DB-gated
+    public booking, solution-kit install, and store revocation checks ran.
+- Precommit:
+  - `bun run precommit` passed, including core lint/typecheck, store lint, SDK
+    typecheck, and root typecheck.
+- Security scanners:
+  - `bun run scan:security:strict` passed Semgrep SAST, Bun audit, Trivy CVE,
+    Trivy config, Trivy filesystem secret, Gitleaks history, and Gitleaks
+    worktree scans. The optional container image scan was skipped because no
+    `SECURITY_SCAN_IMAGE` was provided.

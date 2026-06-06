@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 18 tasks
-- **In Progress:** 5 tasks
-- **Done:** 2284 tasks
+- **To Do:** 16 tasks
+- **In Progress:** 6 tasks
+- **Done:** 2285 tasks
 
 ---
 
@@ -88,8 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Validate Basic, Advanced, scoped cleanup plus second-theme rebuild, follow-up refinement, and fail-closed media/reference flows through Playwright CLI and Claude/agent review. |
-| TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | High | Medium | Lint/typecheck/precommit/gates plus targeted Bun/Vitest suites for changed contracts. |
 | TASK-407-07-L02 | Basic Live Playwright E2E | High | Large | Live Basic guided creation through admin UI and public runtime checks. |
 | TASK-407-07-L03 | Advanced Live Playwright E2E | High | Large | Live Advanced creation with design/menu/hero/section/reference gates. |
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | High | Large | Scoped refinement plus rejected unknown/poisoned/media-reference cases. |
@@ -113,6 +111,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | In progress (2026-06-05): Basic/Advanced intake, reviewed siteKit/content-engine decisions, custom-screen decisions, follow-up scoping, planner/runtime contract tests, and admin UI convergence are complete; remaining work is live E2E closure. |
+| TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | In progress (2026-06-06): running targeted validation lanes, release gates, live Playwright E2E preparation, and final closure evidence for TASK-407. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -123,6 +122,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | High | Medium | Done (2026-06-06): Claude/subagent pre-audits passed, targeted Vitest/Bun lanes passed, full release gates passed with no DB-gated skips, precommit passed, and local strict security scanners passed. |
 | TASK-407-01 | Task Contract Drift Audit and Scope Freeze | High | Medium | Done (2026-06-05): Claude/agent drift loop aligned TASK-407 with existing siteKit/AiSiteWizard contracts and fixed siteKit plan-context projection in the admin client. |
 | TASK-407-02-L01 | Session Types and Step Registry | High | Medium | Done (2026-06-05): service-owned Basic/Advanced intake session types, canonical step ids, generic role/preset/media-policy registries, and Bun-free fail-closed registry tests. |
 | TASK-407-02-L02 | Answer Normalization and Fact Derivation | High | Large | Done (2026-06-05): strict per-step answer normalizers derive bounded provider-safe facts, reject unknown fields/options, redact secret-like text, and block Advanced-only steps in Basic mode. |
