@@ -174,6 +174,43 @@ test("renderPublicPageHtml dedupes shared runtime scripts across multiple widget
   expect(html.match(/data-widget-sticky-surface="navigation"/g)).toHaveLength(2);
 });
 
+test("renderPublicPageHtml offsets sticky Navigation below the preview banner", () => {
+  clearWidgets();
+  registerWidget(
+    createNavigationWidget({
+      wizard: StubNavigationEditor,
+      visual: StubNavigationEditor,
+      advanced: StubNavigationEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Navigation preview offset",
+    isPreview: true,
+    blocks: [
+      {
+        id: "navigation-preview",
+        type: "navigation",
+        variant: "simple",
+        data: {
+          ...navigationDefaults,
+          behavior: {
+            ...navigationDefaults.behavior,
+            sticky: true,
+            collapseOnScroll: true,
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain('data-preview-banner="true"');
+  expect(html).toContain('data-page-preview="true"');
+  expect(html).toMatch(/--coderso-preview-banner-offset:2rem/);
+  expect(html).toContain('data-widget-sticky-surface="navigation"');
+  expect(html).toMatch(/top:var\(--coderso-preview-banner-offset,\s*0px\)/);
+});
+
 test("renderPublicPageRuntimeHtml renders internal Form Embed blocks as noninteractive", async () => {
   clearWidgets();
   registerWidget(

@@ -170,6 +170,7 @@ Regression-test shape:
 ## Validation Evidence
 
 - `bun run test:vitest -- tests/vitest/widgets/navigationRuntimeScript.test.ts tests/vitest/widgets/navigation.test.tsx tests/vitest/site/publicRenderer.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui-integration/pageBuilder.test.tsx`
 - `set -a && source .env && set +a && bun test tests/integration/routes/pages.test.ts tests/integration/runtime/pages-runtime.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
