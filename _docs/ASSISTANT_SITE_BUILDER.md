@@ -472,6 +472,18 @@ metadata for later adapters.
 content-engine gates block reviewed action-plan handoff before a `siteKit`
 request is created.
 
+`reviewFacts.customScreenDecisions` is also metadata-only. It is resolved by
+`assistantSiteBuilderIntakeCustomScreens.ts` from supported content-engine
+decisions and declares beginner editing surfaces that later action leaves may
+turn into `custom-screen.upsert` actions. Candidates are backend-owned internal
+admin surfaces with exact `/admin/advanced/custom-screens/{screenKey}/entries`
+paths, canonical collection roles, `editor-view` create/row-click behavior, and
+the existing `content:read` plus `content:write` permission pair. User text,
+provider output, references, and Basic/Advanced answers cannot introduce custom
+routes, permissions, write methods, plugins, runtime extensions, or public write
+endpoints; backend route or permission drift becomes a blocking custom-screen
+gate before action-plan handoff.
+
 Static site-shell coverage for reviewed siteKit handoff is checked by
 `assistantSiteBuilderIntakeStaticActions.ts`. The production siteKit planner
 first builds the existing `site-kit.recommend` / `site-kit.install` action path,

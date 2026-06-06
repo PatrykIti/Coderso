@@ -6,7 +6,7 @@
 **Category:** Assistant + Custom Screens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-05-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-06)
 
 ---
 
@@ -83,3 +83,24 @@ export function resolveSiteBuilderIntakeCustomScreens(engines: SiteBuilderIntake
 - Custom-screen decisions are tied to supported engines.
 - Unsafe or unsupported admin surfaces are gated.
 - Users can see what future editing surfaces will be created before execution.
+
+## Completion Notes
+
+- Added `assistantSiteBuilderIntakeCustomScreens.ts` as a pure decision helper
+  for supported content-engine beginner editing surfaces.
+- Exposed `reviewFacts.customScreenDecisions` from the intake compiler while
+  keeping those decisions out of strict `context.siteKit`.
+- Candidates are backend-owned internal admin surfaces for the existing
+  `custom-screen.upsert` family with exact custom-screen admin paths, canonical
+  collection role metadata, `editor-view` editing behavior, and the existing
+  `content:read` plus `content:write` permission pair.
+- Unsupported custom-screen adapters, unsafe route drift, and permission/write
+  method drift become blocking gates instead of generated routes, plugins,
+  runtime extensions, or public write endpoints.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeCustomScreens.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeContentEngines.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`

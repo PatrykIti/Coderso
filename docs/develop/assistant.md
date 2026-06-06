@@ -147,6 +147,17 @@ closed before review output when Basic review readiness, required non-review
 steps, Basic defaults, hero, or media policy are missing, and `featured-items`
 does not imply a portfolio content engine by itself.
 
+Beginner editing surface decisions live in
+`assistantSiteBuilderIntakeCustomScreens.ts`. They derive custom-screen
+candidates only from supported content-engine decisions, expose them under
+`reviewFacts.customScreenDecisions`, and keep them out of `context.siteKit`.
+Each candidate is a backend-owned internal admin surface for the existing
+`custom-screen.upsert` family: exact `/admin/advanced/custom-screens/{screenKey}/entries`
+path, canonical collection role, `editor-view` create/row-click behavior, and
+the existing `content:read` plus `content:write` permission pair. Unsupported
+screen adapters, unsafe route drift, permission drift, plugins, runtime
+extensions, or public write endpoints become gates instead of generated actions.
+
 Advanced design presets live in
 `assistantSiteBuilderIntakeDesignPresets.ts`. The `designPresets` registry is a
 backend-owned set of visual directions (`modern`, `editorial`, `retro`,

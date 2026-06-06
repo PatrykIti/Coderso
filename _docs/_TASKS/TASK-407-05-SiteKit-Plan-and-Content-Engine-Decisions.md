@@ -46,7 +46,7 @@ contract cannot express an accepted capability.
 | TASK-407-05-L01 | Intake Facts to SiteKit Plan Adapter | Done (2026-06-05) | Normalized intake facts converted to existing siteKit plan input. |
 | TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | Done (2026-06-05) | Static page/menu/footer/contact/SEO coverage validated through existing siteKit actions and gates. |
 | TASK-407-05-L03 | Content Engine Decision Rules | Done (2026-06-06) | Generic content-engine decisions, scope questions, metadata, and unsupported-engine gates. |
-| TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | To Do | Beginner editing surface decisions and unsupported custom-screen gates. |
+| TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | Done (2026-06-06) | Beginner editing surface decisions and unsupported custom-screen gates. |
 | TASK-407-05-L05 | Follow Up Refinement Target Resolution | To Do | Active-resource/server-catalog target resolution and ambiguity questions. |
 | TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | To Do | Strict action validation, dry-run/idempotency tests, and one public runtime proof. |
 
@@ -150,6 +150,10 @@ function buildSiteBuilderIntakeCompileResult(
   and action assembly: supported engines are explicit, static page roles remain
   static, text-only signals ask scope questions, and unsupported engines gate
   handoff.
+- Custom-screen decisions are resolved as review metadata from supported
+  content engines: beginner editing surfaces stay backend-owned internal admin
+  paths with existing content read/write permissions, while unsafe route,
+  permission, plugin, runtime-extension, or public-write drift gates handoff.
 - Static pages, listings/detail routes, content engines, custom screens, lead
   capture, SEO, and media policy are selected from supported registries.
 - Ambiguous follow-up prompts return a scoped target question; unsupported

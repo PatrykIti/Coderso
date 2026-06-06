@@ -4,6 +4,10 @@ import {
   resolveSiteBuilderIntakeContentEngines,
   type AssistantSiteBuilderContentEngineDecisionResult,
 } from "./assistantSiteBuilderIntakeContentEngines";
+import {
+  resolveSiteBuilderIntakeCustomScreens,
+  type AssistantSiteBuilderCustomScreenDecisionResult,
+} from "./assistantSiteBuilderIntakeCustomScreens";
 import { normalizeAssistantSiteBuilderIntakeSession } from "./assistantSiteBuilderIntakeNormalizer";
 import type {
   AssistantSiteBuilderContentEngineId,
@@ -21,11 +25,18 @@ import {
 } from "../kits/solutionKitTypes";
 
 export type AssistantSiteBuilderIntakeCompileGate = {
-  code: "intake_not_ready" | "intake_missing_shell_fact" | "content_engine_unsupported";
+  code:
+    | "intake_not_ready"
+    | "intake_missing_shell_fact"
+    | "content_engine_unsupported"
+    | "custom_screen_unsupported"
+    | "custom_screen_route_invalid"
+    | "custom_screen_permission_invalid";
   message: string;
   stepId?: AssistantSiteBuilderIntakeStepId;
   field?: string;
   contentEngineId?: string;
+  customScreenEngineId?: AssistantSiteBuilderContentEngineId;
   source?: string;
 };
 
@@ -39,6 +50,7 @@ export type AssistantSiteBuilderIntakeCompileResult = {
     mediaPolicy: AssistantSiteBuilderIntakeFacts["mediaPolicy"];
     contentEngines: AssistantSiteBuilderIntakeFacts["contentEngines"];
     contentEngineDecisions: AssistantSiteBuilderContentEngineDecisionResult;
+    customScreenDecisions: AssistantSiteBuilderCustomScreenDecisionResult;
     designPresetId: AssistantSiteBuilderIntakeFacts["designPresetId"];
     advancedLayout: AssistantSiteBuilderIntakeFacts["advancedLayout"];
     referenceDesignBrief: AssistantSiteBuilderIntakeFacts["referenceDesignBrief"];
@@ -308,12 +320,20 @@ export const buildSiteBuilderIntakeCompileResult = (
   options: { supportedSteps?: readonly SiteBuilderPlanStepId[] } = {}
 ): AssistantSiteBuilderIntakeCompileResult => {
   const contentEngineDecisions = resolveSiteBuilderIntakeContentEngines(facts);
+  const customScreenDecisions = resolveSiteBuilderIntakeCustomScreens(contentEngineDecisions);
   const contentEngineGates: AssistantSiteBuilderIntakeCompileGate[] =
     contentEngineDecisions.gates.map((gate) => ({
       code: gate.code,
       message: gate.message,
       contentEngineId: gate.requestedEngineId,
       source: gate.source,
+    }));
+  const customScreenGates: AssistantSiteBuilderIntakeCompileGate[] =
+    customScreenDecisions.gates.map((gate) => ({
+      code: gate.code,
+      message: gate.message,
+      contentEngineId: gate.engineId,
+      customScreenEngineId: gate.engineId,
     }));
 
   return {
@@ -326,6 +346,7 @@ export const buildSiteBuilderIntakeCompileResult = (
       mediaPolicy: facts.mediaPolicy,
       contentEngines: facts.contentEngines,
       contentEngineDecisions,
+      customScreenDecisions,
       designPresetId: facts.designPresetId,
       advancedLayout: facts.advancedLayout,
       referenceDesignBrief: facts.referenceDesignBrief,
@@ -333,7 +354,7 @@ export const buildSiteBuilderIntakeCompileResult = (
       readyForExecution: facts.readyForExecution === true,
       redactionApplied: facts.redactionApplied === true,
     },
-    gates: contentEngineGates,
+    gates: [...contentEngineGates, ...customScreenGates],
   };
 };
 

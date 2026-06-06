@@ -1,8 +1,8 @@
 # LLM Guide Acceptance Matrix
 
 **Status:** Active
-**Last Updated:** 2026-06-04
-**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188, TASK-190, TASK-404
+**Last Updated:** 2026-06-06
+**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188, TASK-190, TASK-404, TASK-407
 
 ---
 
@@ -44,6 +44,7 @@ Rules:
 | Full Admin UI live coverage matrix | Bun integration opt-in | `tests/integration/assistant-live/*` uses `.env` provider vars plus disposable DB fixtures; coverage map lives in `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md` |
 | Provider operation draft packaging and rejection | Vitest | Provider prompt package, operation-draft schema, exact policy identity, and provider action-array rejection; fake providers only |
 | Assistant review UI | Vitest | Admin React/UI behavior |
+| Guided custom-screen decisions | Vitest | Review-only beginner editing surface decisions derive from supported content engines, stay outside `context.siteKit`, and gate unsafe admin route/RBAC drift before actions |
 | Route permissions and route error mapping | Bun | Route contract and `ApiError` mapping |
 | Executor adapters with domain service deps | Bun | Runtime/service orchestration and idempotency behavior |
 | DB-backed idempotency and public runtime | Bun | DB/runtime behavior |
