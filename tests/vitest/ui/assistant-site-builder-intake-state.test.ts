@@ -139,6 +139,34 @@ test("site builder intake UI state blocks dry-run and execute before strict plan
   });
 });
 
+test("site builder intake UI state ignores stale top-level review confirmation", () => {
+  const staleReview = siteBuilderIntakeUiReducer(createIdleSiteBuilderIntakeUiState(), {
+    type: "server_session_received",
+    session: baseSession({
+      currentStepId: "review",
+      reviewState: "confirmed",
+      facts: {
+        answeredStepIds: ["review"],
+        missingRequiredStepIds: ["review"],
+        missingReviewInputStepIds: [],
+        readyForReview: true,
+        readyForExecution: false,
+        reviewHashStale: true,
+        redactionApplied: false,
+      },
+    }),
+  });
+
+  expect(staleReview.kind).toBe("review");
+  expect(canPlanSiteBuilderIntake(staleReview)).toBe(false);
+  expect(siteBuilderIntakeUiReducer(staleReview, { type: "plan_requested" })).toMatchObject({
+    kind: "review",
+    issue: {
+      code: "state_transition_blocked",
+    },
+  });
+});
+
 test("site builder intake UI state treats server-normalized sessions as authoritative", () => {
   const dirty = siteBuilderIntakeUiReducer(createIdleSiteBuilderIntakeUiState(), {
     type: "answer_step",

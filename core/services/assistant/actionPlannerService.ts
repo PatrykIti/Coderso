@@ -80,6 +80,8 @@ import {
   shouldStartBasicSiteBuilderGuide,
 } from "./assistantSiteBuilderIntakeBasicFlow";
 import { buildAdvancedSiteBuilderNeedsInputPlan } from "./assistantSiteBuilderIntakeAdvancedFlow";
+import { buildActionPlanRequestFromReviewedIntake } from "./assistantSiteBuilderIntakeCompiler";
+import { normalizeAssistantSiteBuilderIntakeSession } from "./assistantSiteBuilderIntakeNormalizer";
 
 export {
   classifyAssistantPrompt,
@@ -1021,6 +1023,16 @@ const getActiveAdvancedSiteBuilderIntakeSession = (context: AssistantActionConte
 const shouldStartAdvancedSiteBuilderGuide = (context: AssistantActionContext | undefined) =>
   context?.siteBuilderIntakeState?.requestedMode === "advanced";
 
+const buildReviewedSiteBuilderIntakePlan = (
+  session: NonNullable<AssistantActionContext["siteBuilderIntakeState"]>["activeSession"]
+) => {
+  if (!session) return null;
+  const normalizedSession = normalizeAssistantSiteBuilderIntakeSession(session);
+  if (normalizedSession.facts?.readyForExecution !== true) return null;
+  const request = buildActionPlanRequestFromReviewedIntake(normalizedSession);
+  return normalizeAssistantActionPlan(buildSiteKitActionPlan(request.context.siteKit));
+};
+
 const buildPreferredBlueprintSetupPlan = (input: {
   prompt: string;
   context: AssistantActionContext | undefined;
@@ -1101,6 +1113,9 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
   }
 
   if (activeAdvancedIntakeSession) {
+    const reviewedPlan = buildReviewedSiteBuilderIntakePlan(activeAdvancedIntakeSession);
+    if (reviewedPlan) return reviewedPlan;
+
     return finalizeAssistantPlan(
       normalizedInput,
       context,
@@ -1110,6 +1125,9 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
   }
 
   if (activeBasicIntakeSession) {
+    const reviewedPlan = buildReviewedSiteBuilderIntakePlan(activeBasicIntakeSession);
+    if (reviewedPlan) return reviewedPlan;
+
     return finalizeAssistantPlan(
       normalizedInput,
       context,

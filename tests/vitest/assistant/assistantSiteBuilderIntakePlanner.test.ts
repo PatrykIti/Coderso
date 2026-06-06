@@ -16,8 +16,9 @@ import {
   ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
   type AssistantSiteBuilderIntakeSession,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
+import { withConfirmedSiteBuilderIntakeReview } from "../../utils/assistantSiteBuilderIntake";
 
-const reviewedServicesDirectorySession = {
+const reviewedServicesDirectorySession = withConfirmedSiteBuilderIntakeReview({
   version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
   mode: "advanced",
   currentStepId: "review",
@@ -86,14 +87,8 @@ const reviewedServicesDirectorySession = {
         contentEngines: ["services", "locations", "faq"],
       },
     },
-    {
-      stepId: "review",
-      values: {
-        confirmed: true,
-      },
-    },
   ],
-} satisfies AssistantSiteBuilderIntakeSession;
+} satisfies AssistantSiteBuilderIntakeSession);
 
 const buildReviewedPlan = (): AssistantSiteBuilderStaticPlanResult => {
   const request = buildActionPlanRequestFromReviewedIntake(reviewedServicesDirectorySession);

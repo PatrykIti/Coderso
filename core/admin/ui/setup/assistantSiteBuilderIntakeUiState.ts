@@ -100,7 +100,7 @@ const sessionReadyForReview = (session: AssistantSiteBuilderIntakeSession) =>
   session.currentStepId === "review" || session.facts?.readyForReview === true;
 
 const sessionReadyForExecution = (session: AssistantSiteBuilderIntakeSession) =>
-  session.reviewState === "confirmed" || session.facts?.readyForExecution === true;
+  session.facts?.readyForExecution === true && session.facts.reviewHashStale !== true;
 
 const hydrateFromServerSession = (
   session: AssistantSiteBuilderIntakeSession

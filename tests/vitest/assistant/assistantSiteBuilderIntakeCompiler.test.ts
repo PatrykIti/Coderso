@@ -15,165 +15,177 @@ import {
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
 import { assistantActionPlanRequestSchema } from "../../../core/server/validation/assistantActionSchemas";
 import { validate } from "../../../core/server/validation/schemaValidator";
+import { withConfirmedSiteBuilderIntakeReview } from "../../utils/assistantSiteBuilderIntake";
 
-const basicCoffeeDirectorySession: AssistantSiteBuilderIntakeSession = {
-  version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
-  mode: "basic",
-  currentStepId: "review",
-  answers: [
-    {
-      stepId: "business-profile",
-      values: {
-        siteName: "Mapa Kawy",
-        entityName: "Fundacja Mapa Kawy",
-        topic: "coffee venues and events",
-        vertical: "hospitality directory",
-        audience: "people looking for places to work, meet, and taste coffee",
-        locale: "pl",
-        region: "Krakow",
-        summary: "Create a public guide without technical wording.",
+const basicCoffeeDirectorySession: AssistantSiteBuilderIntakeSession =
+  withConfirmedSiteBuilderIntakeReview({
+    version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+    mode: "basic",
+    currentStepId: "review",
+    answers: [
+      {
+        stepId: "business-profile",
+        values: {
+          siteName: "Mapa Kawy",
+          entityName: "Fundacja Mapa Kawy",
+          topic: "coffee venues and events",
+          vertical: "hospitality directory",
+          audience: "people looking for places to work, meet, and taste coffee",
+          locale: "pl",
+          region: "Krakow",
+          summary: "Create a public guide without technical wording.",
+        },
       },
-    },
-    {
-      stepId: "site-goals",
-      values: {
-        goals: ["show places", "collect inquiries", "build trust"],
-        primaryGoal: "collect inquiries",
+      {
+        stepId: "site-goals",
+        values: {
+          goals: ["show places", "collect inquiries", "build trust"],
+          primaryGoal: "collect inquiries",
+        },
       },
-    },
-    {
-      stepId: "site-map",
-      values: {
-        pageRoles: ["home", "locations", "blog", "faq", "contact"],
+      {
+        stepId: "site-map",
+        values: {
+          pageRoles: ["home", "locations", "blog", "faq", "contact"],
+        },
       },
-    },
-    {
-      stepId: "menu",
-      values: {
-        menuPreset: "location-aware",
-        primaryActionLabel: "Ask about cooperation",
-        primaryActionPageRole: "contact",
+      {
+        stepId: "menu",
+        values: {
+          menuPreset: "location-aware",
+          primaryActionLabel: "Ask about cooperation",
+          primaryActionPageRole: "contact",
+        },
       },
-    },
-    {
-      stepId: "homepage-sections",
-      values: {
-        sectionRoles: ["value-proposition", "featured-items", "proof", "lead-capture"],
+      {
+        stepId: "homepage-sections",
+        values: {
+          sectionRoles: ["value-proposition", "featured-items", "proof", "lead-capture"],
+        },
       },
-    },
-    {
-      stepId: "hero",
-      values: {
-        heroPreset: "location-led",
-        headline: "Find a good coffee place",
-        subheadline: "A guide to venues, events, and routes.",
-        primaryCallToAction: "Browse places",
+      {
+        stepId: "hero",
+        values: {
+          heroPreset: "location-led",
+          headline: "Find a good coffee place",
+          subheadline: "A guide to venues, events, and routes.",
+          primaryCallToAction: "Browse places",
+        },
       },
-    },
-    {
-      stepId: "subpages",
-      values: {
-        pageRoles: ["about", "team"],
+      {
+        stepId: "subpages",
+        values: {
+          pageRoles: ["about", "team"],
+        },
       },
-    },
-    {
-      stepId: "media-policy",
-      values: {
-        mediaPolicy: "curated",
+      {
+        stepId: "media-policy",
+        values: {
+          mediaPolicy: "curated",
+        },
       },
-    },
-    {
-      stepId: "review",
-      values: {
-        confirmed: true,
-      },
-    },
-  ],
-};
+    ],
+  });
 
-const productCatalogSession: AssistantSiteBuilderIntakeSession = {
-  ...basicCoffeeDirectorySession,
-  mode: "advanced",
-  answers: [
-    {
-      stepId: "business-profile",
-      values: {
-        siteName: "Studio Ceramiki",
-        topic: "handmade ceramic products and workshops",
-        vertical: "commerce",
-        audience: "buyers and workshop participants",
-        locale: "en",
-        summary: "Sell products and show workshops.",
+const productCatalogSession: AssistantSiteBuilderIntakeSession =
+  withConfirmedSiteBuilderIntakeReview({
+    ...basicCoffeeDirectorySession,
+    mode: "advanced",
+    answers: [
+      {
+        stepId: "business-profile",
+        values: {
+          siteName: "Studio Ceramiki",
+          topic: "handmade ceramic products and workshops",
+          vertical: "commerce",
+          audience: "buyers and workshop participants",
+          locale: "en",
+          summary: "Sell products and show workshops.",
+        },
       },
-    },
-    {
-      stepId: "site-goals",
-      values: {
-        goals: ["sell products", "show catalog", "collect leads"],
-        primaryGoal: "sell products",
+      {
+        stepId: "site-goals",
+        values: {
+          goals: ["sell products", "show catalog", "collect leads"],
+          primaryGoal: "sell products",
+        },
       },
-    },
-    {
-      stepId: "site-map",
-      values: {
-        pageRoles: ["home", "products", "portfolio", "contact"],
+      {
+        stepId: "site-map",
+        values: {
+          pageRoles: ["home", "products", "portfolio", "contact"],
+        },
       },
-    },
-    {
-      stepId: "menu",
-      values: {
-        menuPreset: "conversion-focused",
-        primaryActionLabel: "Ask about order",
-        primaryActionPageRole: "contact",
-        advancedMenuBehaviorIds: ["grouped", "sticky", "mobile-drawer"],
-        advancedCtaTargetPageRole: "contact",
+      {
+        stepId: "menu",
+        values: {
+          menuPreset: "conversion-focused",
+          primaryActionLabel: "Ask about order",
+          primaryActionPageRole: "contact",
+          advancedMenuBehaviorIds: ["grouped", "sticky", "mobile-drawer"],
+          advancedCtaTargetPageRole: "contact",
+        },
       },
-    },
-    {
-      stepId: "homepage-sections",
-      values: {
-        sectionRoles: ["featured-items", "pricing", "proof", "lead-capture"],
-        advancedSectionVariantIds: [
-          "featured-items-cards",
-          "proof-spotlight",
-          "lead-capture-standard",
-        ],
+      {
+        stepId: "homepage-sections",
+        values: {
+          sectionRoles: ["featured-items", "proof", "lead-capture"],
+          advancedSectionVariantIds: [
+            "featured-items-cards",
+            "proof-spotlight",
+            "lead-capture-standard",
+          ],
+        },
       },
-    },
-    {
-      stepId: "hero",
-      values: {
-        heroPreset: "offer-with-proof",
-        headline: "Ceramics made for daily use",
-        advancedHeroVariantId: "split",
+      {
+        stepId: "hero",
+        values: {
+          heroPreset: "offer-with-proof",
+          headline: "Ceramics made for daily use",
+          advancedHeroVariantId: "split",
+        },
       },
-    },
-    {
-      stepId: "subpages",
-      values: {
-        pageRoles: ["about", "faq"],
+      {
+        stepId: "subpages",
+        values: {
+          pageRoles: ["about", "faq"],
+        },
       },
-    },
-    {
-      stepId: "media-policy",
-      values: {
-        mediaPolicy: "placeholder",
+      {
+        stepId: "media-policy",
+        values: {
+          mediaPolicy: "placeholder",
+        },
       },
-    },
-    {
-      stepId: "content-engine",
-      values: {
-        contentEngines: ["products", "portfolio", "faq"],
+      {
+        stepId: "content-engine",
+        values: {
+          contentEngines: ["products", "portfolio", "faq"],
+        },
       },
-    },
-    {
-      stepId: "review",
-      values: {
-        confirmed: true,
-      },
-    },
-  ],
-};
+    ],
+  });
+
+const withBusinessProfileValues = (
+  session: AssistantSiteBuilderIntakeSession,
+  values: Record<string, unknown>
+): AssistantSiteBuilderIntakeSession =>
+  withConfirmedSiteBuilderIntakeReview({
+    ...session,
+    answers: session.answers
+      .filter((answer) => answer.stepId !== "review")
+      .map((answer) =>
+        answer.stepId === "business-profile"
+          ? {
+              ...answer,
+              values: {
+                ...answer.values,
+                ...values,
+              },
+            }
+          : answer
+      ),
+  });
 
 test("compileIntakeToSiteKitPlanInput maps reviewed Basic intake to schema-exact siteKit context", () => {
   const siteKit = compileIntakeToSiteKitPlanInput(basicCoffeeDirectorySession);
@@ -230,56 +242,29 @@ test("compileIntakeToSiteKitPlanInput maps Advanced product facts without one-in
 });
 
 test("compileIntakeToSiteKitPlanInput does not treat generic workshops as automotive", () => {
-  const ceramicWorkshop = compileIntakeToSiteKitPlanInput({
-    ...productCatalogSession,
-    answers: productCatalogSession.answers.map((answer) =>
-      answer.stepId === "business-profile"
-        ? {
-            ...answer,
-            values: {
-              ...answer.values,
-              siteName: "Warsztaty Ceramiczne",
-              topic: "warsztaty ceramiczne dla rodzin",
-              vertical: "education and handmade products",
-              summary: "Rodzinne zajecia, produkty ceramiczne i zapisy na wydarzenia.",
-            },
-          }
-        : answer
-    ),
-  });
-  const homeAutomationWorkshop = compileIntakeToSiteKitPlanInput({
-    ...productCatalogSession,
-    answers: productCatalogSession.answers.map((answer) =>
-      answer.stepId === "business-profile"
-        ? {
-            ...answer,
-            values: {
-              ...answer.values,
-              siteName: "Dom Inteligentny",
-              topic: "warsztaty automatyki domowej dla rodzin",
-              vertical: "education and smart home",
-              summary: "Zajecia o automatyce domowej, czujnikach i scenariuszach smart home.",
-            },
-          }
-        : answer
-    ),
-  });
-  const carWorkshop = compileIntakeToSiteKitPlanInput({
-    ...basicCoffeeDirectorySession,
-    answers: basicCoffeeDirectorySession.answers.map((answer) =>
-      answer.stepId === "business-profile"
-        ? {
-            ...answer,
-            values: {
-              ...answer.values,
-              siteName: "Auto Punkt",
-              topic: "warsztat samochodowy i diagnostyka pojazdow",
-              vertical: "automotive service",
-            },
-          }
-        : answer
-    ),
-  });
+  const ceramicWorkshop = compileIntakeToSiteKitPlanInput(
+    withBusinessProfileValues(productCatalogSession, {
+      siteName: "Warsztaty Ceramiczne",
+      topic: "warsztaty ceramiczne dla rodzin",
+      vertical: "education and handmade products",
+      summary: "Rodzinne zajecia, produkty ceramiczne i zapisy na wydarzenia.",
+    })
+  );
+  const homeAutomationWorkshop = compileIntakeToSiteKitPlanInput(
+    withBusinessProfileValues(productCatalogSession, {
+      siteName: "Dom Inteligentny",
+      topic: "warsztaty automatyki domowej dla rodzin",
+      vertical: "education and smart home",
+      summary: "Zajecia o automatyce domowej, czujnikach i scenariuszach smart home.",
+    })
+  );
+  const carWorkshop = compileIntakeToSiteKitPlanInput(
+    withBusinessProfileValues(basicCoffeeDirectorySession, {
+      siteName: "Auto Punkt",
+      topic: "warsztat samochodowy i diagnostyka pojazdow",
+      vertical: "automotive service",
+    })
+  );
 
   expect(ceramicWorkshop.businessType).not.toBe("automotive_workshop");
   expect(ceramicWorkshop.preferredKitId).not.toBe("automotive-workshop");
@@ -357,6 +342,28 @@ test("compiled siteKit context reaches existing action planner site-kit path", (
     throw new Error("expected_site_kit_recommend_action");
   }
   expect(recommendAction.input.businessType).toBe("small_ecommerce");
+});
+
+test("reviewed active intake session hands off to strict siteKit action plan", () => {
+  const plan = normalizeAssistantActionPlan(
+    planAssistantActions({
+      prompt: "Continue guided site-builder intake.",
+      context: {
+        siteBuilderIntakeState: {
+          activeSession: productCatalogSession,
+        },
+      },
+    })
+  );
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("site_kit");
+  expect(plan.responseKind).toBe("action_plan");
+  expect(plan.metadata?.siteBuilderIntake).toBeUndefined();
+  expect(plan.actions.map((action) => action.type)).toEqual([
+    "site-kit.recommend",
+    "site-kit.install",
+  ]);
 });
 
 test("compileIntakeToSiteKitPlanInput fails closed before review confirmation", () => {

@@ -21,6 +21,21 @@ engine receives a handoff. It does not add a parallel route payload or persist
 raw answers, provider text, provider keys, signed URLs, upload bytes, cookies, or
 auth material in browser storage.
 
+The reviewed intake handoff is version-bound. The server derives a deterministic
+review hash from the normalized non-review answers, the UI must echo that hash
+when the user confirms the final review, and any later answer change marks the
+confirmation stale. The final review summary covers pages, menu/footer, hero,
+homepage sections, subpages, content engines, beginner custom screens, media
+policy, SEO defaults, lead capture, and visible gates. The backend reuses the
+same review-summary gate contract before compiling the session to `siteKit`, so
+blocking review gates cannot be bypassed by crafting a direct plan request.
+Only after that reviewed handoff returns a strict `site_kit` action plan can the
+normal dry-run and execute controls appear.
+
+The current reviewed intake surface lives in the floating `LLM Guide` stepper.
+The older `AiSiteWizard` remains a separate manual siteKit wizard until
+TASK-407-06-L06 reconciles or retires that divergent handoff.
+
 The floating `LLM Guide` also supports reviewed resource operations for existing
 admin resources through the same action engine. Those edits/deletes must resolve
 targets from active context or server-side catalogs, preview conflicts before

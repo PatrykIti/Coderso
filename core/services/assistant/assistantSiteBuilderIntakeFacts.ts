@@ -19,6 +19,7 @@ import type {
   AssistantSiteBuilderReviewStateId,
   AssistantSiteBuilderSectionRoleId,
 } from "./assistantSiteBuilderIntakeTypes";
+import { assistantSiteBuilderIntakeStepIds } from "./assistantSiteBuilderIntakeTypes";
 
 type AnswerValuesByStep = Partial<
   Record<AssistantSiteBuilderIntakeStepId, Record<string, unknown>>
@@ -27,6 +28,73 @@ type AnswerValuesByStep = Partial<
 type FactInput = {
   mode: AssistantSiteBuilderIntakeMode;
   answers: readonly AssistantSiteBuilderIntakeAnswer[];
+};
+
+type StableJsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | StableJsonValue[]
+  | { [key: string]: StableJsonValue };
+
+type ReviewHashInput = {
+  mode: AssistantSiteBuilderIntakeMode;
+  answers: readonly AssistantSiteBuilderIntakeAnswer[];
+};
+
+const reviewHashStepOrder = new Map(
+  assistantSiteBuilderIntakeStepIds.map((stepId, index) => [stepId, index])
+);
+
+const toStableJsonValue = (value: unknown): StableJsonValue => {
+  if (value === null) return null;
+  if (typeof value === "boolean" || typeof value === "number" || typeof value === "string") {
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(toStableJsonValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, nested]) => nested !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, toStableJsonValue(nested)])
+    );
+  }
+  return null;
+};
+
+const hashString = (value: string, seed: number) => {
+  let hash = seed >>> 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+};
+
+export const buildAssistantSiteBuilderIntakeReviewHash = ({
+  mode,
+  answers,
+}: ReviewHashInput): string => {
+  const canonicalAnswers = answers
+    .filter((answer) => answer.stepId !== "review")
+    .map((answer) => ({
+      stepId: answer.stepId,
+      values: toStableJsonValue(answer.values),
+    }))
+    .sort(
+      (left, right) =>
+        (reviewHashStepOrder.get(left.stepId) ?? 999) -
+        (reviewHashStepOrder.get(right.stepId) ?? 999)
+    );
+  const payload = JSON.stringify({
+    schemaVersion: 1,
+    mode,
+    answers: canonicalAnswers,
+  });
+
+  return `${hashString(payload, 0x811c9dc5)}${hashString(payload, 0x9e3779b9)}`;
 };
 
 const unique = <T extends string>(values: readonly T[]): T[] => [...new Set(values)];
@@ -127,6 +195,9 @@ export const deriveAssistantSiteBuilderIntakeFacts = ({
   const missingReviewInputStepIds = missingRequiredStepIds.filter((stepId) => stepId !== "review");
   const resolvedReviewState = getReviewState(valuesByStep, missingReviewInputStepIds);
   const confirmed = review.confirmed === true;
+  const reviewHash = buildAssistantSiteBuilderIntakeReviewHash({ mode, answers });
+  const confirmedReviewHash = asText(review.confirmedReviewHash);
+  const reviewHashMatches = confirmed && confirmedReviewHash === reviewHash;
 
   const pageRoles = unique([
     ...asTypedArray<AssistantSiteBuilderPageRoleId>(siteMap.pageRoles),
@@ -203,12 +274,18 @@ export const deriveAssistantSiteBuilderIntakeFacts = ({
     referenceTextBrief: asText(reference.textBrief),
     reviewState: resolvedReviewState,
     reviewNotes: asText(review.notes),
+    reviewHash,
+    confirmedReviewHash,
+    reviewHashStale: confirmed && !reviewHashMatches,
     answeredStepIds,
     missingRequiredStepIds,
     missingReviewInputStepIds,
     readyForReview: missingReviewInputStepIds.length === 0 && resolvedReviewState !== "blocked",
     readyForExecution:
-      missingRequiredStepIds.length === 0 && confirmed && resolvedReviewState === "confirmed",
+      missingRequiredStepIds.length === 0 &&
+      confirmed &&
+      reviewHashMatches &&
+      resolvedReviewState === "confirmed",
     redactionApplied: answers.some((answer) => hasRedactedValue(answer.values)),
     basicDefaults,
   });

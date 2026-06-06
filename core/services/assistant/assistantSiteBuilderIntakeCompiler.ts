@@ -9,6 +9,7 @@ import {
   type AssistantSiteBuilderCustomScreenDecisionResult,
 } from "./assistantSiteBuilderIntakeCustomScreens";
 import { normalizeAssistantSiteBuilderIntakeSession } from "./assistantSiteBuilderIntakeNormalizer";
+import { buildSiteBuilderIntakeReviewSummary } from "./assistantSiteBuilderIntakeReviewSummary";
 import type {
   AssistantSiteBuilderContentEngineId,
   AssistantSiteBuilderIntakeFacts,
@@ -376,6 +377,20 @@ export const buildActionPlanRequestFromReviewedIntake = (
 ): AssistantSiteBuilderIntakeActionPlanRequest => {
   const normalized = normalizeAssistantSiteBuilderIntakeSession(session);
   const facts = normalized.facts ?? {};
+  const reviewSummary = buildSiteBuilderIntakeReviewSummary(facts);
+  const blockingReviewGates = reviewSummary?.gates.filter((gate) => gate.blocking) ?? [];
+  if (!reviewSummary || reviewSummary.confirmationAllowed !== true || blockingReviewGates.length) {
+    throwAssistantSiteBuilderIntakeError("intake_session_invalid", {
+      reason: "review_summary_handoff_blocked",
+      gates: blockingReviewGates.map((gate) => ({
+        code: gate.code,
+        message: gate.message,
+        severity: gate.severity,
+        stepId: gate.stepId,
+      })),
+      reviewHashStale: facts.reviewHashStale === true,
+    });
+  }
   const compileResult = buildSiteBuilderIntakeCompileResult(facts);
   if (compileResult.gates.length > 0) {
     throwAssistantSiteBuilderIntakeError("intake_session_invalid", {

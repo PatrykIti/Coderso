@@ -161,7 +161,7 @@ metadata only, strictly validated by the intake owner, and compiled to
 | TASK-407-03 | Basic Mode Structured Site Flow | Done (2026-06-05) | TASK-407-03-L01 through TASK-407-03-L04 |
 | TASK-407-04 | Advanced Mode Design Presets and Reference Intake | Done (2026-06-05) | TASK-407-04-L01 through TASK-407-04-L04 |
 | TASK-407-05 | SiteKit Plan and Content Engine Decisions | Done (2026-06-06) | TASK-407-05-L01 through TASK-407-05-L06 |
-| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | In Progress (2026-06-06) | TASK-407-06-L01 through TASK-407-06-L05 |
+| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | In Progress (2026-06-06) | TASK-407-06-L01 through TASK-407-06-L06 |
 | TASK-407-07 | E2E Live Validation Docs and Closure | To Do | TASK-407-07-L01 through TASK-407-07-L06 |
 
 ## Granular Execution Leaves
@@ -189,8 +189,9 @@ metadata only, strictly validated by the intake owner, and compiled to
 | TASK-407-06-L01 | Site Builder Intake UI State Machine | Done (2026-06-06) |
 | TASK-407-06-L02 | Basic Stepper Controls | Done (2026-06-06) |
 | TASK-407-06-L03 | Advanced Stepper Controls | Done (2026-06-06) |
-| TASK-407-06-L04 | Review Summary and Execution Gating | To Do |
+| TASK-407-06-L04 | Review Summary and Execution Gating | Done (2026-06-06) |
 | TASK-407-06-L05 | UI Warnings Local State and Redaction | To Do |
+| TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | To Do |
 | TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | To Do |
 | TASK-407-07-L02 | Basic Live Playwright E2E | To Do |
 | TASK-407-07-L03 | Advanced Live Playwright E2E | To Do |

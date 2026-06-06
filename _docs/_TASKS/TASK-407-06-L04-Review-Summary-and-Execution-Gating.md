@@ -6,7 +6,9 @@
 **Category:** Assistant + Review UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-06-L03, TASK-407-05-L06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-06
+**Completed:** 2026-06-06
 
 ---
 
@@ -42,9 +44,10 @@ what will be created before any mutation can be submitted.
 
 | Area | Files |
 |---|---|
-| Review UI | `core/admin/ui/setup/AiSiteWizardSteps.tsx` or `SiteBuilderIntakeReviewSummary.tsx` |
-| Plan handoff | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/services/assistantClient.ts` siteKit helpers |
-| Tests | `tests/vitest/ui/assistant-site-builder-intake-review.test.tsx` |
+| Review UI | `core/admin/ui/assistant/components/SiteBuilderIntakeBasicStepper.tsx` |
+| Review contract | `core/services/assistant/assistantSiteBuilderIntakeReviewSummary.ts`, `assistantSiteBuilderIntakeFacts.ts`, `assistantSiteBuilderIntakeNormalizer.ts` |
+| Plan handoff | `core/services/assistant/actionPlannerService.ts`, `assistantSiteBuilderIntakeCompiler.ts` |
+| Tests | `tests/vitest/ui/assistant-site-builder-intake-review.test.tsx`, `tests/vitest/assistant/assistantSiteBuilderIntakeReviewSummary.test.ts` |
 
 ## Implementation Pseudocode
 
@@ -85,3 +88,42 @@ function SiteBuilderIntakeReviewSummary({ session, onConfirm, onPlan }: Props) {
 - Users see the full intake-generated plan summary before mutation.
 - Dry-run/execute cannot be reached from unreviewed or stale sessions.
 - Blocking gates are visible and enforce execution disablement.
+
+## Completion Notes
+
+- Added normalized review hash facts and strict `confirmedReviewHash`
+  validation. Any non-review answer change makes the previous confirmation stale
+  and keeps `readyForExecution` false.
+- Added a shared review summary contract for pages, menu/footer, hero,
+  homepage sections, subpages, content engines, custom screens, media policy,
+  SEO defaults, lead capture, and review gates.
+- Rendered the final summary in the floating assistant intake review step and
+  auto-submitted the current server-normalized review hash when the user
+  confirms review.
+- Enforced the same blocking review gates server-side before compiling reviewed
+  intake to `siteKit`, closing the direct-request bypass found by Claude.
+- Routed reviewed active intake sessions to the existing strict `siteKit`
+  action-plan path; unreviewed/stale sessions remain `needs_input`.
+- Added TASK-407-06-L06 for the legacy `AiSiteWizard` convergence found during
+  Claude/subagent audit so the remaining divergent surface is explicit.
+
+## Validation
+
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/assistantSiteBuilderIntake*.test.ts tests/vitest/ui/assistant-site-builder-intake-*.test.ts tests/vitest/ui/assistant-site-builder-intake-*.test.tsx`
+  - 23 files, 128 tests passed.
+- `bun test tests/unit/assistant/assistantSiteBuilderIntakeDryRun.test.ts`
+  - 1 test passed.
+- `bun test tests/integration/server/assistantHouseProjectsCatalogPublicSite.test.ts`
+  - 1 DB-backed runtime test passed.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+
+## Review Evidence
+
+- Subagent read-only audit found missing backend handoff, missing final review
+  summary, stale hash fixture drift, and parent/task legacy wizard drift.
+- Claude read-only audit found a server-side fail-open risk for review summary
+  gates. The fix moved `confirmationAllowed` enforcement into
+  `buildActionPlanRequestFromReviewedIntake` and added regression coverage for
+  `media_library_selection_required`.

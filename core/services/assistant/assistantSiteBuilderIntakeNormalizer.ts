@@ -87,7 +87,7 @@ const referenceIntakeKeys = new Set([
   "temporaryReferenceIds",
   "textBrief",
 ]);
-const reviewKeys = new Set(["reviewState", "confirmed", "notes"]);
+const reviewKeys = new Set(["reviewState", "confirmed", "confirmedReviewHash", "notes"]);
 const advancedOnlyAnswerKeysByStep: Partial<
   Record<AssistantSiteBuilderIntakeStepId, ReadonlySet<string>>
 > = {
@@ -538,6 +538,9 @@ const normalizeReviewValues: AnswerValueNormalizer = (input) => {
         "reviewState"
       ) ?? (confirmed ? "confirmed" : "ready"),
     confirmed,
+    confirmedReviewHash: normalizeTextValue(record.confirmedReviewHash, "confirmedReviewHash", {
+      maxLength: 64,
+    }),
     notes: normalizeTextValue(record.notes, "notes", { maxLength: 360 }),
   });
 };

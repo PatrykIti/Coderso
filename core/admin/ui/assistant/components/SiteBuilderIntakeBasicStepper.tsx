@@ -14,6 +14,7 @@ import type {
   AssistantSiteBuilderIntakeSession,
   AssistantSiteBuilderIntakeStepId,
 } from "../../../../services/assistant/assistantSiteBuilderIntakeTypes";
+import { buildSiteBuilderIntakeReviewSummary } from "../../../../services/assistant/assistantSiteBuilderIntakeReviewSummary";
 
 type SiteBuilderIntakeMetadata = NonNullable<
   NonNullable<AssistantActionPlanResponse["metadata"]>["siteBuilderIntake"]
@@ -99,7 +100,8 @@ const normalizeLabelMapDraft = (
 
 const buildAnswerValues = (
   step: SiteBuilderIntakeStepMetadata,
-  draft: FieldDraft
+  draft: FieldDraft,
+  session: AssistantSiteBuilderIntakeSession | null
 ): Record<string, unknown> => {
   const values: Record<string, unknown> = {};
   for (const field of step.answerFields) {
@@ -128,6 +130,9 @@ const buildAnswerValues = (
     }
     const text = textFromValue(value).trim();
     if (text || field.required) values[field.key] = text;
+  }
+  if (step.id === "review" && values.confirmed === true && session?.facts?.reviewHash) {
+    values.confirmedReviewHash = session.facts.reviewHash;
   }
   return values;
 };
@@ -410,6 +415,81 @@ function SiteBuilderIntakeReviewNotice({
   );
 }
 
+function SiteBuilderIntakeFinalReviewSummary({
+  session,
+}: {
+  session: AssistantSiteBuilderIntakeSession | null;
+}) {
+  const summary = useMemo(
+    () => buildSiteBuilderIntakeReviewSummary(session?.facts),
+    [session?.facts]
+  );
+  if (!summary) return null;
+
+  const blockingGates = summary.gates.filter((gate) => gate.blocking);
+  const nonBlockingGates = summary.gates.filter((gate) => !gate.blocking);
+
+  return (
+    <div className="space-y-3 rounded-md border bg-muted/20 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-semibold text-foreground">Final review</p>
+        {summary.reviewHash ? (
+          <Badge variant="outline">Version {summary.reviewHash.slice(0, 8)}</Badge>
+        ) : null}
+        {summary.readyForExecution ? <Badge variant="default">Confirmed</Badge> : null}
+      </div>
+
+      {blockingGates.length > 0 ? (
+        <Alert variant="destructive">
+          <AlertTitle>Resolve blocking gates before planning</AlertTitle>
+          <AlertDescription>
+            <ul className="ml-5 mt-2 list-disc space-y-1">
+              {blockingGates.map((gate, index) => (
+                <li key={`${gate.code}-${gate.stepId ?? "global"}-${index}`}>
+                  {redactIntakeUiText(gate.message)}
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {nonBlockingGates.length > 0 ? (
+        <Alert>
+          <AlertTitle>Review notes</AlertTitle>
+          <AlertDescription>
+            <ul className="ml-5 mt-2 list-disc space-y-1">
+              {nonBlockingGates.map((gate, index) => (
+                <li key={`${gate.code}-${gate.stepId ?? "global"}-${index}`}>
+                  {redactIntakeUiText(gate.message)}
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {summary.sections.map((section) => (
+          <div key={section.id} className="rounded-md border bg-background p-2.5">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">{section.label}</p>
+            <ul className="mt-1 space-y-1 text-xs text-foreground">
+              {section.items.slice(0, 6).map((item, index) => (
+                <li key={`${section.id}-${index}`}>{redactIntakeUiText(item)}</li>
+              ))}
+              {section.items.length > 6 ? (
+                <li className="text-muted-foreground">
+                  +{section.items.length - 6} more reviewed item(s)
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SiteBuilderIntakeStepForm({
   metadata,
   step,
@@ -422,13 +502,20 @@ function SiteBuilderIntakeStepForm({
 }) {
   const answerValues = useMemo(() => getStepAnswerValues(session, step.id), [session, step.id]);
   const [draft, setDraft] = useState(() => createInitialDraft(step, answerValues));
+  const reviewSummary = useMemo(
+    () => (step.id === "review" ? buildSiteBuilderIntakeReviewSummary(session?.facts) : null),
+    [session?.facts, step.id]
+  );
+  const reviewConfirmationBlocked =
+    step.id === "review" && draft.confirmed === true && reviewSummary?.confirmationAllowed !== true;
 
   return (
     <form
       className="space-y-4 rounded-lg border bg-background px-3 py-3"
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmitStep(step.id, buildAnswerValues(step, draft));
+        if (reviewConfirmationBlocked) return;
+        onSubmitStep(step.id, buildAnswerValues(step, draft, session));
       }}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -452,6 +539,8 @@ function SiteBuilderIntakeStepForm({
       </div>
 
       <div className="space-y-3">
+        {step.id === "review" ? <SiteBuilderIntakeFinalReviewSummary session={session} /> : null}
+
         {step.answerFields.map((field) => (
           <div key={field.key} className="space-y-1.5">
             {field.control !== "checkbox" ? (
@@ -485,7 +574,16 @@ function SiteBuilderIntakeStepForm({
         </Alert>
       ) : null}
 
-      <Button type="submit" disabled={isSubmitting}>
+      {reviewConfirmationBlocked ? (
+        <Alert variant="destructive">
+          <AlertTitle>Review cannot be confirmed yet</AlertTitle>
+          <AlertDescription>
+            Resolve blocking review gates before creating the executable site plan.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <Button type="submit" disabled={isSubmitting || reviewConfirmationBlocked}>
         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
         Save step
       </Button>

@@ -17,6 +17,7 @@ import {
   type AssistantSiteBuilderIntakeAnswer,
   type AssistantSiteBuilderIntakeSession,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
+import { buildConfirmedSiteBuilderIntakeReviewAnswer } from "../../utils/assistantSiteBuilderIntake";
 
 const basicAnswer = (
   stepId: AssistantSiteBuilderIntakeAnswer["stepId"],
@@ -206,14 +207,10 @@ test("resolveBasicNextStep routes complete Basic answers to review before execut
 });
 
 test("resolveBasicNextStep is execution-ready only after explicit review confirmation", () => {
+  const answers = completeBasicAnswers();
   const progression = resolveBasicNextStep(
     createBasicSession(
-      [
-        ...completeBasicAnswers(),
-        basicAnswer("review", {
-          confirmed: true,
-        }),
-      ],
+      [...answers, buildConfirmedSiteBuilderIntakeReviewAnswer("basic", answers)],
       "review"
     )
   );

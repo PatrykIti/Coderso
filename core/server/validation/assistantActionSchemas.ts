@@ -347,6 +347,7 @@ const siteBuilderIntakeAnswerSchemas = [
         properties: {
           reviewState: nullableIntakeEnumSchema(assistantSiteBuilderReviewStateIds),
           confirmed: { type: "boolean" },
+          confirmedReviewHash: intakeTextSchema(64),
           notes: intakeTextSchema(360),
         },
       },

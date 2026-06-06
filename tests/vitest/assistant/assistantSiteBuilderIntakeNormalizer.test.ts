@@ -5,8 +5,9 @@ import {
   normalizeAssistantSiteBuilderIntakeAnswer,
   normalizeAssistantSiteBuilderIntakeSession,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeNormalizer";
+import { buildConfirmedSiteBuilderIntakeReviewAnswer } from "../../utils/assistantSiteBuilderIntake";
 
-const completeBasicAnswers = [
+const completeBasicInputAnswers = [
   {
     stepId: "business-profile",
     values: {
@@ -70,13 +71,13 @@ const completeBasicAnswers = [
       notes: "Dobierz legalne zdjecia kawiarni lub neutralne placeholdery.",
     },
   },
-  {
-    stepId: "review",
-    values: {
-      confirmed: true,
-      notes: "Mozna planowac.",
-    },
-  },
+] as const;
+
+const completeBasicAnswers = [
+  ...completeBasicInputAnswers,
+  buildConfirmedSiteBuilderIntakeReviewAnswer("basic", completeBasicInputAnswers, {
+    notes: "Mozna planowac.",
+  }),
 ] as const;
 
 test("normalizeAssistantSiteBuilderIntakeSession derives generic Basic facts", () => {
@@ -111,40 +112,43 @@ test("normalizeAssistantSiteBuilderIntakeSession derives generic Basic facts", (
 });
 
 test("normalizeAssistantSiteBuilderIntakeSession derives Advanced-only facts", () => {
+  const advancedInputAnswers = [
+    ...completeBasicInputAnswers,
+    {
+      stepId: "content-engine",
+      values: {
+        contentEngines: ["locations", "blog", "faq"],
+        notes: "Lista miejsc i poradniki maja miec wlasne wpisy.",
+      },
+    },
+    {
+      stepId: "design-preset",
+      values: {
+        designPresetId: "editorial",
+        designBrief: "Czysto, editorialowo, bez landing-page przesady.",
+        tone: "spokojny i rzeczowy",
+        colorNotes: "jasne tla, ciemny tekst, jeden mocniejszy akcent",
+      },
+    },
+    {
+      stepId: "reference-intake",
+      values: {
+        referenceNotes: "Inspiracja: magazyn miejski, nie kopiowac ukladu.",
+        referenceLabels: ["editorial", "directory"],
+        referenceIds: ["media-brief-1"],
+        mediaAssetIds: ["hero-photo"],
+        temporaryReferenceIds: ["wireframe-upload"],
+        textBrief: "Jasne zdjecia, spokojny rytm sekcji i miejski katalog.",
+      },
+    },
+  ] as const;
   const normalized = normalizeAssistantSiteBuilderIntakeSession({
     version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
     mode: "advanced",
     currentStepId: "review",
     answers: [
-      ...completeBasicAnswers.slice(0, -1),
-      {
-        stepId: "content-engine",
-        values: {
-          contentEngines: ["locations", "blog", "faq"],
-          notes: "Lista miejsc i poradniki maja miec wlasne wpisy.",
-        },
-      },
-      {
-        stepId: "design-preset",
-        values: {
-          designPresetId: "editorial",
-          designBrief: "Czysto, editorialowo, bez landing-page przesady.",
-          tone: "spokojny i rzeczowy",
-          colorNotes: "jasne tla, ciemny tekst, jeden mocniejszy akcent",
-        },
-      },
-      {
-        stepId: "reference-intake",
-        values: {
-          referenceNotes: "Inspiracja: magazyn miejski, nie kopiowac ukladu.",
-          referenceLabels: ["editorial", "directory"],
-          referenceIds: ["media-brief-1"],
-          mediaAssetIds: ["hero-photo"],
-          temporaryReferenceIds: ["wireframe-upload"],
-          textBrief: "Jasne zdjecia, spokojny rytm sekcji i miejski katalog.",
-        },
-      },
-      completeBasicAnswers.at(-1),
+      ...advancedInputAnswers,
+      buildConfirmedSiteBuilderIntakeReviewAnswer("advanced", advancedInputAnswers),
     ],
   });
 
@@ -351,6 +355,39 @@ test("normalizeAssistantSiteBuilderIntakeSession requires explicit review confir
     reviewState: "confirmed",
     readyForReview: true,
     readyForExecution: false,
+  });
+});
+
+test("normalizeAssistantSiteBuilderIntakeSession invalidates stale review hashes", () => {
+  const staleReview = buildConfirmedSiteBuilderIntakeReviewAnswer(
+    "basic",
+    completeBasicInputAnswers
+  );
+  const normalized = normalizeAssistantSiteBuilderIntakeSession({
+    version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+    mode: "basic",
+    currentStepId: "review",
+    answers: [
+      ...completeBasicInputAnswers.map((answer) =>
+        answer.stepId === "business-profile"
+          ? {
+              ...answer,
+              values: {
+                ...answer.values,
+                siteName: "Mapa Kawy Po Zmianie",
+              },
+            }
+          : answer
+      ),
+      staleReview,
+    ],
+  });
+
+  expect(normalized.facts).toMatchObject({
+    reviewState: "confirmed",
+    readyForReview: true,
+    readyForExecution: false,
+    reviewHashStale: true,
   });
 });
 

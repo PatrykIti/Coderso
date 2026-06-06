@@ -18,10 +18,11 @@ must make Basic mode approachable, Advanced mode discoverable but not noisy, and
 the final review clear enough that users understand pages, menu, widgets,
 content engines, custom screens, media policy, and gates before execution.
 
-The primary surface is the existing AI site wizard under
-`core/admin/ui/setup/AiSiteWizard.tsx` and `AiSiteWizardSteps.tsx`. Floating
-assistant entry points may start or resume the same intake flow, but they must
-not create a second full-site builder UI with a divergent plan handoff.
+The original target surface was the existing AI site wizard under
+`core/admin/ui/setup/AiSiteWizard.tsx` and `AiSiteWizardSteps.tsx`. L01-L04 now
+complete the reviewed intake surface in the floating `LLM Guide` stepper and
+backend planner. TASK-407-06-L06 owns the remaining legacy wizard convergence so
+there is not a second full-site builder UI with a divergent plan handoff.
 
 ## Sub-Tasks
 
@@ -43,8 +44,9 @@ not create a second full-site builder UI with a divergent plan handoff.
 | TASK-407-06-L01 | Site Builder Intake UI State Machine | Done | Explicit intake UI state reducer, server-session authority, stale-cache discard, and dry-run-before-execute gating. |
 | TASK-407-06-L02 | Basic Stepper Controls | Done | Basic intake controls render from server metadata and submit one normalized answer through the existing plan route. |
 | TASK-407-06-L03 | Advanced Stepper Controls | Done | Advanced server-owned progression, Basic-to-Advanced confirmation, controlled metadata-driven fields, selectable steps, and normalized-state gate tests. |
-| TASK-407-06-L04 | Review Summary and Execution Gating | To Do | Final review, disabled dry-run/execute states, confirmation, and plan handoff. |
+| TASK-407-06-L04 | Review Summary and Execution Gating | Done | Floating assistant final review summary, review-hash confirmation, backend blocking-gate enforcement, and strict siteKit plan handoff. |
 | TASK-407-06-L05 | UI Warnings Local State and Redaction | To Do | Warning/gate rendering, localStorage bounds, stale cache discard, and redaction tests. |
+| TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | To Do | Reconcile or retire the legacy AI site wizard so it cannot bypass the reviewed intake handoff. |
 
 ## Security Contract
 
@@ -137,3 +139,10 @@ function canSubmitPlan(session: AssistantSiteBuilderIntakeSession) {
   selectable optional steps, real normalized layout/reference review tests,
   docs, changelog, and a Claude audit loop. Remaining leaves still need final
   review/execution gating and full warning/local-state redaction behavior.
+- 2026-06-06: TASK-407-06-L04 completed final review summary rendering in the
+  floating assistant intake, session-hash confirmation, stale-review
+  invalidation, backend review-summary gate enforcement before `siteKit`
+  compilation, strict action-plan handoff, targeted Vitest/Bun/runtime
+  validation, and Claude/subagent drift review. The audit identified the legacy
+  `AiSiteWizard` surface as a remaining divergent handoff; TASK-407-06-L06 owns
+  that convergence explicitly.

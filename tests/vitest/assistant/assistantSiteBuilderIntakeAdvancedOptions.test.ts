@@ -28,6 +28,7 @@ import {
   assistantSiteBuilderAdvancedSectionVariantIds,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
 import { listWidgetsForSurface } from "../../../core/widgets/registry";
+import { withConfirmedSiteBuilderIntakeReview } from "../../utils/assistantSiteBuilderIntake";
 import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
 
 const secretLikePattern =
@@ -198,72 +199,68 @@ test("Advanced option combinations produce explicit gates instead of invented wi
 });
 
 test("Advanced intake derives normalized facts and rejects Basic tampering", () => {
-  const normalized = normalizeAssistantSiteBuilderIntakeSession({
-    version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
-    mode: "advanced",
-    currentStepId: "review",
-    answers: [
-      {
-        stepId: "business-profile",
-        values: {
-          siteName: "Plant Studio",
-          topic: "plant shop and workshops",
-          locale: "pl",
+  const normalized = normalizeAssistantSiteBuilderIntakeSession(
+    withConfirmedSiteBuilderIntakeReview({
+      version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+      mode: "advanced",
+      currentStepId: "review",
+      answers: [
+        {
+          stepId: "business-profile",
+          values: {
+            siteName: "Plant Studio",
+            topic: "plant shop and workshops",
+            locale: "pl",
+          },
         },
-      },
-      {
-        stepId: "site-goals",
-        values: {
-          goals: ["sell products", "collect leads"],
+        {
+          stepId: "site-goals",
+          values: {
+            goals: ["sell products", "collect leads"],
+          },
         },
-      },
-      {
-        stepId: "site-map",
-        values: {
-          pageRoles: ["home", "products", "faq", "contact"],
+        {
+          stepId: "site-map",
+          values: {
+            pageRoles: ["home", "products", "faq", "contact"],
+          },
         },
-      },
-      {
-        stepId: "menu",
-        values: {
-          menuPreset: "conversion-focused",
-          primaryActionPageRole: "contact",
-          advancedMenuBehaviorIds: ["sticky", "mobile-drawer"],
-          advancedCtaTargetPageRole: "contact",
+        {
+          stepId: "menu",
+          values: {
+            menuPreset: "conversion-focused",
+            primaryActionPageRole: "contact",
+            advancedMenuBehaviorIds: ["sticky", "mobile-drawer"],
+            advancedCtaTargetPageRole: "contact",
+          },
         },
-      },
-      {
-        stepId: "homepage-sections",
-        values: {
-          sectionRoles: ["featured-items", "faq", "lead-capture"],
-          advancedSectionVariantIds: [
-            "featured-items-cards",
-            "faq-two-column",
-            "lead-capture-standard",
-          ],
+        {
+          stepId: "homepage-sections",
+          values: {
+            sectionRoles: ["featured-items", "faq", "lead-capture"],
+            advancedSectionVariantIds: [
+              "featured-items-cards",
+              "faq-two-column",
+              "lead-capture-standard",
+            ],
+          },
         },
-      },
-      {
-        stepId: "hero",
-        values: {
-          heroPreset: "offer-with-proof",
-          advancedHeroVariantId: "split",
+        {
+          stepId: "hero",
+          values: {
+            heroPreset: "offer-with-proof",
+            advancedHeroVariantId: "split",
+          },
         },
-      },
-      {
-        stepId: "media-policy",
-        values: {
-          mediaPolicy: "placeholder",
+        {
+          stepId: "media-policy",
+          values: {
+            mediaPolicy: "placeholder",
+          },
         },
-      },
-      {
-        stepId: "review",
-        values: {
-          confirmed: true,
-        },
-      },
-    ],
-  });
+      ],
+    })
+  );
 
   expect(normalized.facts?.advancedLayout).toMatchObject({
     menu: {

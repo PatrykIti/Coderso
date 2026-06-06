@@ -519,6 +519,9 @@ export type AssistantSiteBuilderIntakeFacts = {
   referenceDesignBrief?: AssistantSiteBuilderReferenceDesignBriefFacts;
   reviewState?: AssistantSiteBuilderReviewStateId;
   reviewNotes?: string | null;
+  reviewHash?: string;
+  confirmedReviewHash?: string | null;
+  reviewHashStale?: boolean;
   answeredStepIds?: readonly AssistantSiteBuilderIntakeStepId[];
   missingRequiredStepIds?: readonly AssistantSiteBuilderIntakeStepId[];
   missingReviewInputStepIds?: readonly AssistantSiteBuilderIntakeStepId[];

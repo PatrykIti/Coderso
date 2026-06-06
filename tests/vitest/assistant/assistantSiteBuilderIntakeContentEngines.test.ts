@@ -12,9 +12,11 @@ import {
 import {
   ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
   type AssistantSiteBuilderContentEngineId,
+  type AssistantSiteBuilderIntakeAnswer,
   type AssistantSiteBuilderIntakeFacts,
   type AssistantSiteBuilderIntakeSession,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
+import { buildConfirmedSiteBuilderIntakeReviewAnswer } from "../../utils/assistantSiteBuilderIntake";
 
 const readyFacts = (
   overrides: Partial<AssistantSiteBuilderIntakeFacts> = {}
@@ -174,64 +176,59 @@ test("buildSiteBuilderIntakeCompileResult exposes content-engine decisions outsi
 });
 
 test("buildActionPlanRequestFromReviewedIntake blocks unsupported engine handoff", () => {
+  const answers: AssistantSiteBuilderIntakeAnswer[] = [
+    {
+      stepId: "business-profile",
+      values: {
+        siteName: "Event Studio",
+        topic: "events calendar and local workshops",
+        locale: "en",
+      },
+    },
+    {
+      stepId: "site-goals",
+      values: {
+        goals: ["show events calendar"],
+        primaryGoal: "show events calendar",
+      },
+    },
+    {
+      stepId: "site-map",
+      values: {
+        pageRoles: ["home", "contact"],
+      },
+    },
+    {
+      stepId: "menu",
+      values: {
+        menuPreset: "simple",
+      },
+    },
+    {
+      stepId: "homepage-sections",
+      values: {
+        sectionRoles: ["value-proposition", "lead-capture"],
+      },
+    },
+    {
+      stepId: "hero",
+      values: {
+        heroPreset: "copy-first",
+        headline: "Plan local events",
+      },
+    },
+    {
+      stepId: "media-policy",
+      values: {
+        mediaPolicy: "placeholder",
+      },
+    },
+  ];
   const session: AssistantSiteBuilderIntakeSession = {
     version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
     mode: "basic",
     currentStepId: "review",
-    answers: [
-      {
-        stepId: "business-profile",
-        values: {
-          siteName: "Event Studio",
-          topic: "events calendar and local workshops",
-          locale: "en",
-        },
-      },
-      {
-        stepId: "site-goals",
-        values: {
-          goals: ["show events calendar"],
-          primaryGoal: "show events calendar",
-        },
-      },
-      {
-        stepId: "site-map",
-        values: {
-          pageRoles: ["home", "contact"],
-        },
-      },
-      {
-        stepId: "menu",
-        values: {
-          menuPreset: "simple",
-        },
-      },
-      {
-        stepId: "homepage-sections",
-        values: {
-          sectionRoles: ["value-proposition", "lead-capture"],
-        },
-      },
-      {
-        stepId: "hero",
-        values: {
-          heroPreset: "copy-first",
-          headline: "Plan local events",
-        },
-      },
-      {
-        stepId: "media-policy",
-        values: {
-          mediaPolicy: "placeholder",
-        },
-      },
-      {
-        stepId: "review",
-        values: {
-          confirmed: true,
-        },
-      },
-    ],
+    answers: [...answers, buildConfirmedSiteBuilderIntakeReviewAnswer("basic", answers)],
   };
 
   try {
@@ -239,12 +236,11 @@ test("buildActionPlanRequestFromReviewedIntake blocks unsupported engine handoff
   } catch (error) {
     expect(error).toBeInstanceOf(AssistantSiteBuilderIntakeError);
     const details = (error as AssistantSiteBuilderIntakeError).details;
-    expect(details.reason).toBe("content_engine_handoff_blocked");
+    expect(details.reason).toBe("review_summary_handoff_blocked");
     expect(details.gates).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: "content_engine_unsupported",
-          contentEngineId: "events",
         }),
       ])
     );

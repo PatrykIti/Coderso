@@ -46,6 +46,7 @@ import {
   type ContentRouteSetting,
 } from "../../../core/services/settings/settingsService";
 import { startHttpServer } from "../../../core/server/httpServer";
+import { withConfirmedSiteBuilderIntakeReview } from "../../utils/assistantSiteBuilderIntake";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -213,77 +214,77 @@ const clonePlanWithToken = (sourcePlan: AssistantActionPlan, token: string) => {
   };
 };
 
-const buildServicesIntakeSession = (token: string): AssistantSiteBuilderIntakeSession => ({
-  version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
-  mode: "advanced",
-  currentStepId: "review",
-  answers: [
-    {
-      stepId: "business-profile",
-      values: {
-        siteName: `Services Intake ${token}`,
-        topic: "local service providers with a searchable directory",
-        vertical: "services directory",
-        audience: "people comparing verified local providers",
-        locale: "pl",
-        region: "Warsaw",
-        summary: "Create a service directory site that a non-technical editor can maintain.",
+const buildServicesIntakeSession = (token: string): AssistantSiteBuilderIntakeSession =>
+  withConfirmedSiteBuilderIntakeReview({
+    version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+    mode: "advanced",
+    currentStepId: "review",
+    answers: [
+      {
+        stepId: "business-profile",
+        values: {
+          siteName: `Services Intake ${token}`,
+          topic: "local service providers with a searchable directory",
+          vertical: "services directory",
+          audience: "people comparing verified local providers",
+          locale: "pl",
+          region: "Warsaw",
+          summary: "Create a service directory site that a non-technical editor can maintain.",
+        },
       },
-    },
-    {
-      stepId: "site-goals",
-      values: {
-        goals: ["show services", "collect leads", "publish provider listings"],
-        primaryGoal: "collect leads",
+      {
+        stepId: "site-goals",
+        values: {
+          goals: ["show services", "collect leads", "publish provider listings"],
+          primaryGoal: "collect leads",
+        },
       },
-    },
-    {
-      stepId: "site-map",
-      values: {
-        pageRoles: ["home", "services", "locations", "contact"],
+      {
+        stepId: "site-map",
+        values: {
+          pageRoles: ["home", "services", "locations", "contact"],
+        },
       },
-    },
-    {
-      stepId: "menu",
-      values: {
-        menuPreset: "conversion-focused",
-        primaryActionLabel: "Zapytaj o projekt",
-        primaryActionPageRole: "contact",
+      {
+        stepId: "menu",
+        values: {
+          menuPreset: "conversion-focused",
+          primaryActionLabel: "Zapytaj o projekt",
+          primaryActionPageRole: "contact",
+        },
       },
-    },
-    {
-      stepId: "homepage-sections",
-      values: {
-        sectionRoles: ["value-proposition", "services-overview", "featured-items", "lead-capture"],
+      {
+        stepId: "homepage-sections",
+        values: {
+          sectionRoles: [
+            "value-proposition",
+            "services-overview",
+            "featured-items",
+            "lead-capture",
+          ],
+        },
       },
-    },
-    {
-      stepId: "hero",
-      values: {
-        heroPreset: "offer-with-proof",
-        headline: "Find the right local provider",
+      {
+        stepId: "hero",
+        values: {
+          heroPreset: "offer-with-proof",
+          headline: "Find the right local provider",
+        },
       },
-    },
-    {
-      stepId: "media-policy",
-      values: {
-        mediaPolicy: "placeholder",
+      {
+        stepId: "media-policy",
+        values: {
+          mediaPolicy: "placeholder",
+        },
       },
-    },
-    {
-      stepId: "content-engine",
-      values: {
-        contentEngines: ["services"],
+      {
+        stepId: "content-engine",
+        values: {
+          contentEngines: ["services"],
+        },
       },
-    },
-    {
-      stepId: "review",
-      values: {
-        confirmed: true,
-      },
-    },
-  ],
-});
+    ],
+  });
 
 const createActor = async () => {
   const [created] = await db

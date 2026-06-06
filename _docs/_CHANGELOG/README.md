@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1124.
+Ordinary new entries continue at 1125.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,11 @@ Ordinary new entries continue at 1124.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1124 for the next changelog entry.
+assistant policy coverage fix. Use 1125 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1124 | 2026-06-06 | TASK-407 review summary execution gating | Assistant/Site Builder/Admin UI/Review Gating/Validation/QA/Docs |
 | 1123 | 2026-06-06 | TASK-407 Advanced intake controls | Assistant/Site Builder/Admin UI/Advanced Intake/Validation/QA/Docs |
 | 1122 | 2026-06-06 | TASK-407 Basic intake controls | Assistant/Site Builder/Admin UI/Basic Intake/Validation/QA/Docs |
 | 1121 | 2026-06-06 | TASK-407 intake UI state machine | Assistant/Site Builder/Admin UI/State/Validation/QA/Docs |
