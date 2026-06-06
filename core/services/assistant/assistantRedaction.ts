@@ -9,6 +9,8 @@ const secretLikePairPattern =
 
 const tokenPatterns = [
   /\bsk-or-v1-[a-zA-Z0-9]{8,}\b/g,
+  /\bsk-or-[a-zA-Z0-9_-]{4,}\b/g,
+  /\bsk_or_[a-zA-Z0-9_-]{4,}\b/g,
   /\bsk-[a-zA-Z0-9_-]{8,}\b/g,
   /Bearer\s+[a-zA-Z0-9\-_.=]{8,}/gi,
   /\beyJ[a-zA-Z0-9_-]+=*\.[a-zA-Z0-9_-]+=*\.[a-zA-Z0-9_-]+=*\b/g,
@@ -52,6 +54,11 @@ export const redactAssistantSafetyText = (value: string, maxLength = 240) => {
     filtered = filtered.replace(pattern, "[FILTERED_INSTRUCTION]");
   }
   return redactAssistantText(filtered, maxLength);
+};
+
+export const redactAssistantUnsafeText = (value: string, maxLength = 240) => {
+  const redacted = redactAssistantSafetyText(value, maxLength);
+  return /\[(?:REDACTED|FILTERED_INSTRUCTION)/.test(redacted) ? "[REDACTED]" : redacted;
 };
 
 const redactUnknown = (value: unknown): unknown => {

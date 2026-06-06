@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1130.
+Ordinary new entries continue at 1131.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,11 @@ Ordinary new entries continue at 1130.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1130 for the next changelog entry.
+assistant policy coverage fix. Use 1131 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1130 | 2026-06-06 | TASK-407 follow-up live Playwright E2E | Assistant/Site Builder/Follow-Up Resolver/Playwright/Public Runtime/Security/QA/Docs |
 | 1129 | 2026-06-06 | TASK-407 Advanced live Playwright E2E | Assistant/Site Builder/Advanced Intake/Public Runtime/Solution Kits/Playwright/QA/Docs |
 | 1128 | 2026-06-06 | TASK-407 Basic live Playwright E2E | Assistant/Site Builder/Playwright/Solution Kits/Public Runtime/Forms/QA/Docs |
 | 1127 | 2026-06-06 | TASK-407 targeted validation lanes | Assistant/Site Builder/Validation/Release Gates/Security/QA/Docs |

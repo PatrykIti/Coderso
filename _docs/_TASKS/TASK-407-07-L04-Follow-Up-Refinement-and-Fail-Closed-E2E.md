@@ -6,8 +6,10 @@
 **Category:** Assistant + Follow-Up E2E + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-07-L03
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-06
+**Completed:** 2026-06-06
+**Changelog:** `_docs/_CHANGELOG/1130-2026-06-06-task-407-follow-up-live-e2e.md`
 
 ---
 
@@ -147,7 +149,7 @@ function planSiteBuilderFollowUp(prompt, context) {
 
 ## Testing Requirements
 
-- `playwright-cli -s=task407-basic-e2e run-code --filename .tmp/task-407-07-l04-follow-up-e2e.js`
+- `playwright-cli -s=task407-l04-follow-up-e2e run-code --filename .tmp/task-407-07-l04-follow-up-e2e.js`
   against:
   - admin: `http://coderso-b.localhost:5175/admin/`
   - front: `http://coderso-b.localhost:3001/`
@@ -185,3 +187,55 @@ function planSiteBuilderFollowUp(prompt, context) {
 - The assistant experience remains beginner-friendly: it explains the intended
   change, asks for missing target decisions, and does not expose implementation
   jargon as the only path forward.
+
+## Completion Notes
+
+- Wired production and provider-draft planning through the guided follow-up
+  resolver before generic CMS action mapping for scoped site-builder follow-up
+  mutations.
+- Kept free-text target names as hints only: stale, ambiguous, poisoned, and
+  unsupported follow-up prompts return `needs_input` or `gated` plans with no
+  executable actions.
+- Normalized page slugs across planner/executor update guards so trusted
+  catalog slugs such as `contact` match persisted `/contact` state.
+- Extended the same slug normalization to reviewed `page.delete` preview and
+  execute dependency guards so delete follow-ups do not fail on `contact` versus
+  `/contact` slug shape drift.
+- Refreshed published page state when a reviewed `page.update` changes a
+  published page, making public runtime assertions meaningful.
+- Limited implicit published-page refreshes to the prior published data plus the
+  reviewed assistant patch, so unrelated pending draft edits are not published
+  with a scoped update.
+- Added prompt-secret redaction for generic, docs-guidance, policy-gated, and
+  unresolved mapper inspection plans, and reused the canonical assistant
+  redaction helper for follow-up resolver candidate fields, so unsafe
+  media/reference prompts do not echo `api_key`, signatures, or token-like
+  values.
+- Corrected provider-path metadata for local planning-state fail-closed routing:
+  when the provider is not called, `providerDraftUsed` stays `false`.
+- External drift passes with subagent and Claude caught the remaining redaction,
+  provider metadata, `page.delete` slug-guard, and published-refresh
+  inconsistencies; those findings were fixed and covered by targeted regression
+  tests before closure.
+
+## Validation Evidence
+
+- `git diff --check`
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/assistantSiteBuilderFollowUpResolver.test.ts`
+  - Passed: 2 files, 131 tests.
+- `bun test tests/unit/assistant/actionExecutorService.test.ts`
+  - Passed: 76 tests.
+- `bun --cwd core lint`
+  - Passed.
+- `bun --cwd core lint:types`
+  - Passed.
+- `bun run gates:coderso`
+- Restarted `coderso-dev-core-host`, logged into
+  `http://coderso-b.localhost:5175/admin/`, and ran
+  `playwright-cli -s=task407-l04-follow-up-e2e run-code --filename .tmp/task-407-07-l04-follow-up-e2e.js`.
+- Live E2E result: beginner projects/gallery prompt returned the guided target
+  question with one trusted candidate and no actions; scoped `page.update`
+  dry-ran, executed, checked `/contact` on desktop/mobile, and restored
+  cleanly; stale, ambiguous, unsupported-family, unsupported-operation,
+  poisoned-target, unsafe-media/reference, and unknown-field cases failed
+  closed with `0` browser/page errors.

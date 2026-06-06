@@ -2402,6 +2402,12 @@ const normalizeSeoSlugForAction = (value: string | null | undefined) => {
   return value.startsWith("/") ? value : `/${value}`;
 };
 
+const normalizePageActionSlug = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  if (!trimmed) return "";
+  return normalizeSitePath(trimmed.startsWith("/") ? trimmed : `/${trimmed}`);
+};
+
 const isSamePlanLocator = (value: AssistantResourceIdInput): value is AssistantSamePlanLocator =>
   typeof value !== "string";
 
@@ -3337,6 +3343,8 @@ const buildPageUpdatePreview = async (
 ) => {
   const existing = await deps.getPage(action.input.id);
   const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const existingSlug = normalizePageActionSlug(existing?.slug);
+  const expectedSlug = normalizePageActionSlug(action.input.slug);
   const currentData = isRecord(existing?.currentData) ? existing.currentData : {};
   const nextData = existing ? applyPageUpdatePatch(currentData, action.input.patch) : null;
   const nextValue = existing
@@ -3349,7 +3357,7 @@ const buildPageUpdatePreview = async (
     : null;
   const matches =
     existing?.title === action.input.title &&
-    existing.slug === action.input.slug &&
+    existingSlug === expectedSlug &&
     (!expectedStatus || existing.status === expectedStatus);
 
   return createPreviewChange({
@@ -3390,7 +3398,9 @@ const buildPageDeletePreview = async (
   deps: ActionExecutorDeps
 ) => {
   const existing = await deps.getPage(action.input.id);
-  const matches = existing?.title === action.input.title && existing.slug === action.input.slug;
+  const existingSlug = normalizePageActionSlug(existing?.slug);
+  const expectedSlug = normalizePageActionSlug(action.input.slug);
+  const matches = existing?.title === action.input.title && existingSlug === expectedSlug;
   const expectedStatus = action.input.expectedStatus?.trim() ?? "";
   const statusMatches = !expectedStatus || existing?.status === expectedStatus;
 
@@ -5349,10 +5359,12 @@ const executePageUpdateAction = async (
 ): Promise<AssistantActionExecutionItem> => {
   const existing = await deps.getPage(action.input.id);
   const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const existingSlug = normalizePageActionSlug(existing?.slug);
+  const expectedSlug = normalizePageActionSlug(action.input.slug);
   if (
     !existing ||
     existing.title !== action.input.title ||
-    existing.slug !== action.input.slug ||
+    existingSlug !== expectedSlug ||
     (expectedStatus && existing.status !== expectedStatus)
   ) {
     throw new Error("assistant_action_dependency_missing");
@@ -5373,12 +5385,21 @@ const executePageUpdateAction = async (
   if (!updated) throw new Error("assistant_action_dependency_missing");
 
   const statusPatch = action.input.patch.status;
-  const record =
-    statusPatch === "published" && updated.status !== "published"
-      ? await deps.publishPage(updated.id, actorId, nextData)
-      : statusPatch === "draft" && updated.status === "published"
-        ? await deps.unpublishPage(updated.id)
-        : updated;
+  const shouldRefreshPublishedPage =
+    statusPatch === "published" ||
+    (!statusPatch && expectedStatus === "published" && updated.status === "published");
+  const publishedSourceData = isRecord(existing.publishedData)
+    ? existing.publishedData
+    : currentData;
+  const publishData =
+    statusPatch === "published"
+      ? nextData
+      : applyPageUpdatePatch(publishedSourceData, action.input.patch);
+  const record = shouldRefreshPublishedPage
+    ? await deps.publishPage(updated.id, actorId, publishData)
+    : statusPatch === "draft" && updated.status === "published"
+      ? await deps.unpublishPage(updated.id)
+      : updated;
   if (!record) throw new Error("assistant_action_dependency_missing");
 
   return {
@@ -5408,7 +5429,7 @@ const executePageDeleteAction = async (
   if (
     !existing ||
     existing.title !== action.input.title ||
-    existing.slug !== action.input.slug ||
+    normalizePageActionSlug(existing.slug) !== normalizePageActionSlug(action.input.slug) ||
     (expectedStatus && existing.status !== expectedStatus)
   ) {
     throw new Error("assistant_action_dependency_missing");

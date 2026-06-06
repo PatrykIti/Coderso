@@ -138,6 +138,38 @@ test("resolveSiteBuilderFollowUpTarget resolves active page follow-ups from acti
   expect(JSON.stringify(result)).not.toContain("zmien tytul");
 });
 
+test("resolveSiteBuilderFollowUpTarget accepts unnamed active page prompts from active context", () => {
+  const context = buildAssistantAdminContext({
+    page: "/admin/pages/page-home",
+    activeSurface: {
+      kind: "page",
+      page: {
+        id: "page-home",
+        title: "Home",
+        slug: "/",
+        status: "draft",
+        template: null,
+      },
+      selectedBlockId: null,
+      blocks: [],
+      warnings: [],
+    },
+  });
+
+  const result = resolveSiteBuilderFollowUpTarget({
+    prompt: "zmien tytul strony na Welcome",
+    context,
+  });
+
+  expect(result).toMatchObject({
+    status: "resolved",
+    target: {
+      id: "page-home",
+      source: "active-context",
+    },
+  });
+});
+
 test("resolveSiteBuilderFollowUpTarget asks when a named prompt conflicts with active context", () => {
   const context = contextWithCatalog(
     {
@@ -329,7 +361,7 @@ test("resolveSiteBuilderFollowUpTarget redacts secret-like candidate details", (
         contentTypeId: "ct-projects",
         status: "active",
         collectionRole: "canonical-admin-screen",
-        compositionKey: "guided-portfolio",
+        compositionKey: "sk-or-test",
         showInSidebar: true,
         sidebarLabel: "https://cdn.example.test/img.jpg?signature=abc123",
         writableBindingFields: [],
@@ -355,10 +387,12 @@ test("resolveSiteBuilderFollowUpTarget redacts secret-like candidate details", (
     status: "resolved",
     target: {
       details: {
+        compositionKey: "[REDACTED]",
         sidebarLabel: "[REDACTED]",
       },
     },
   });
+  expect(JSON.stringify(result)).not.toContain("sk-or-test");
   expect(JSON.stringify(result)).not.toContain("signature=abc123");
 });
 

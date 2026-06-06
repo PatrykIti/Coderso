@@ -575,6 +575,12 @@ return a scoped refinement kind (`static-page`, `content-engine`, `listing`,
 `detail-page`, or `custom-screen`), ambiguous matches return `needs_input`, and
 stale, spoofed, non-site-builder, or unsupported targets return `needs_input`
 or `gated` without exposing raw prompt text.
+`actionPlannerService.ts` must call this resolver before the generic CMS action
+mapper for guided follow-up mutations. `needs_input` and `gated` resolutions do
+not fall through to executable action assembly. A beginner setup-like prompt on
+an already active generated page, such as asking to add a projects/gallery
+section, is treated as an existing-site follow-up target question instead of a
+new blank setup when the server has supplied the trusted resource catalog.
 
 Static site-shell coverage for reviewed siteKit handoff is checked by
 `assistantSiteBuilderIntakeStaticActions.ts`. The production siteKit planner
@@ -625,6 +631,17 @@ basics, desktop/mobile screenshots, and console/page errors. This Basic smoke
 does not claim personalized media/image coverage; Advanced, follow-up,
 fail-closed, and second-theme live Playwright E2E remain owned by
 TASK-407-07-L03 through TASK-407-07-L05.
+
+TASK-407-07-L04 ran the live follow-up/fail-closed Playwright E2E on
+2026-06-06 through
+`playwright-cli -s=task407-l04-follow-up-e2e run-code --filename .tmp/task-407-07-l04-follow-up-e2e.js`
+after restarting `coderso-dev-core-host`. A beginner Polish prompt on the
+active generated Contact page asked for projects/home-gallery help and returned
+the guided target question with no actions. The same run planned, dry-ran,
+executed, publicly checked on desktop/mobile, and restored one scoped published
+`page.update`. It also proved stale, ambiguous, unsupported-family,
+unsupported-operation, poisoned-target, unsafe media/reference, and unknown
+context-field cases fail closed without executable actions or secret echo.
 
 TASK-407 intake redaction is owned by
 `core/services/assistant/assistantSiteBuilderIntakeRedaction.ts`.

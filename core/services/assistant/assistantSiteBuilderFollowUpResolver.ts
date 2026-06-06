@@ -10,6 +10,7 @@ import {
   resolveCmsOperationTargets,
 } from "./cmsTargetResolver";
 import type { CmsOperation, CmsOperationDraft, CmsResourceKind } from "./cmsOperationDraftSchema";
+import { redactAssistantUnsafeText } from "./assistantRedaction";
 
 export type AssistantSiteBuilderFollowUpRefinementKind =
   | "static-page"
@@ -84,8 +85,6 @@ export type AssistantSiteBuilderFollowUpResolverInput = {
 
 const secretLikePattern =
   /(token|secret|password|api[-_]?key|credential|cookie|session|csrf|signature|signed|jwt)/i;
-const secretValuePattern =
-  /(sk-[a-z0-9_-]{8,}|sk_or_[a-z0-9_-]{8,}|eyj[a-z0-9_-]{12,}|x-amz-signature=|signature=|token=)/i;
 const activeReferencePattern =
   /\b(this|current|active|aktywny|aktywna|aktywne|aktywną|aktywnym|obecny|obecna|bieżący|bieżąca|ten|te|ta|tej)\b/u;
 
@@ -107,7 +106,7 @@ const toAdminContext = (
 
 const sanitizeText = (value: string | null | undefined, fallback: string) => {
   if (!value) return fallback;
-  return secretLikePattern.test(value) || secretValuePattern.test(value) ? "[REDACTED]" : value;
+  return redactAssistantUnsafeText(value);
 };
 
 const sanitizeDetails = (
@@ -199,6 +198,14 @@ const isSupportedFollowUpResourceKind = (kind: CmsResourceKind) =>
 
 const usesExplicitActiveReference = (prompt: string) =>
   activeReferencePattern.test(prompt.toLowerCase());
+
+const usesNamedTargetQuery = (draft: CmsOperationDraft) =>
+  Boolean(
+    draft.targetQuery?.exactName ||
+    draft.targetQuery?.prefix ||
+    draft.targetQuery?.slug ||
+    draft.targetQuery?.text
+  );
 
 const activeCandidateFromContext = (
   context: AssistantAdminContext
@@ -294,7 +301,11 @@ export const resolveSiteBuilderFollowUpTarget = (
       },
     };
   }
-  if (draft.targetQuery?.active === true && !usesExplicitActiveReference(input.prompt)) {
+  if (
+    draft.targetQuery?.active === true &&
+    (usesNamedTargetQuery(draft) || Boolean(context.resourceCatalog)) &&
+    !usesExplicitActiveReference(input.prompt)
+  ) {
     const fallbackResolution = resolveCmsOperationTargets(
       { ...draft, targetQuery: undefined },
       context

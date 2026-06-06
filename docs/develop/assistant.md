@@ -170,6 +170,11 @@ become scoped refinement kinds (`static-page`, `content-engine`, `listing`,
 `detail-page`, or `custom-screen`); ambiguous targets ask for input, while
 stale, spoofed, non-site-builder, unsupported, or unsupported-operation
 requests gate or ask before any action assembly.
+The production planner wires this resolver ahead of the generic CMS action
+mapper for guided follow-up mutations, including validated provider drafts.
+Nontechnical setup-like prompts on an already active generated page are routed
+to the same target question when they are really asking to add or refine a page
+section, gallery, or project surface.
 
 Reviewed SiteKit planner/runtime contracts are tested before admin UI execution
 work continues. `assistantSiteBuilderIntakePlanner.test.ts` compiles a reviewed
