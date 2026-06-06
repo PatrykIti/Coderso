@@ -9,11 +9,12 @@ import type {
   AssistantActionPlanResponse,
 } from "@/services/assistantClient";
 import type {
+  AssistantSiteBuilderIntakeMode,
   AssistantSiteBuilderIntakeSession,
   AssistantSiteBuilderIntakeStepId,
 } from "../../../../services/assistant/assistantSiteBuilderIntakeTypes";
 import { LaunchReadinessSummary } from "./LaunchReadinessSummary";
-import { SiteBuilderIntakeBasicStepper } from "./SiteBuilderIntakeBasicStepper";
+import { SiteBuilderIntakeStepper } from "./SiteBuilderIntakeBasicStepper";
 
 type ActionPlanReviewProps = {
   plan: AssistantActionPlanResponse;
@@ -30,6 +31,8 @@ type ActionPlanReviewProps = {
     stepId: AssistantSiteBuilderIntakeStepId,
     values: Record<string, unknown>
   ) => void;
+  onSelectSiteBuilderIntakeStep?: (stepId: AssistantSiteBuilderIntakeStepId) => void;
+  onSwitchSiteBuilderIntakeMode?: (mode: AssistantSiteBuilderIntakeMode) => void;
 };
 
 const labelByOperation = {
@@ -151,6 +154,8 @@ export function ActionPlanReview({
   onPreview,
   onExecute,
   onSubmitSiteBuilderIntakeStep,
+  onSelectSiteBuilderIntakeStep,
+  onSwitchSiteBuilderIntakeMode,
 }: ActionPlanReviewProps) {
   const previewReady = Boolean(preview?.readyToExecute);
   const destructive = plan.actions.some((action) =>
@@ -174,10 +179,9 @@ export function ActionPlanReview({
       ? "Ready"
       : "Needs input";
   const siteBuilderIntake = plan.metadata?.siteBuilderIntake;
-  const isSiteBuilderBasicIntake =
-    siteBuilderIntake?.mode === "basic" && Boolean(onSubmitSiteBuilderIntakeStep);
-  const showActionControls = (hasExecutableActions || !isReadOnlyPlan) && !isSiteBuilderBasicIntake;
-  const showQuestionList = plan.questions.length > 0 && !isSiteBuilderBasicIntake;
+  const isSiteBuilderIntake = Boolean(siteBuilderIntake && onSubmitSiteBuilderIntakeStep);
+  const showActionControls = (hasExecutableActions || !isReadOnlyPlan) && !isSiteBuilderIntake;
+  const showQuestionList = plan.questions.length > 0 && !isSiteBuilderIntake;
   const composition = plan.metadata?.blueprintComposition;
   const mergedCompositionResources =
     composition?.mergedResources.filter((resource) => resource.sourceCapabilityIds.length > 1) ??
@@ -252,13 +256,15 @@ export function ActionPlanReview({
 
         <LaunchReadinessSummary readiness={plan.metadata?.launchReadiness} />
 
-        {isSiteBuilderBasicIntake && siteBuilderIntake && onSubmitSiteBuilderIntakeStep ? (
-          <SiteBuilderIntakeBasicStepper
+        {isSiteBuilderIntake && siteBuilderIntake && onSubmitSiteBuilderIntakeStep ? (
+          <SiteBuilderIntakeStepper
             metadata={siteBuilderIntake}
             session={siteBuilderIntakeSession}
             isSubmitting={isSubmittingSiteBuilderIntake}
             error={siteBuilderIntakeError}
             onSubmitStep={onSubmitSiteBuilderIntakeStep}
+            onSelectStep={onSelectSiteBuilderIntakeStep}
+            onSwitchMode={onSwitchSiteBuilderIntakeMode}
           />
         ) : null}
 

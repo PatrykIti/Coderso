@@ -6,7 +6,9 @@
 **Category:** Assistant + Advanced Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-06-L02, TASK-407-04-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-06
+**Completed:** 2026-06-06
 
 ---
 
@@ -18,12 +20,13 @@ must not become a free-form execution prompt.
 
 ## Sub-Tasks
 
-- Add mode switching from Basic to Advanced with explicit confirmation when it
+- [x] Add mode switching from Basic to Advanced with explicit confirmation when it
   exposes additional controls.
-- Render design preset, menu behavior, hero variant, section variant, CTA, and
+- [x] Render design preset, menu behavior, hero variant, section variant, CTA, and
   reference brief controls from server-owned option metadata.
-- Show reference design brief warnings and review-required state.
-- Submit Advanced answers through the same structured session contract.
+- [x] Show reachable Advanced layout gates and reference review-required state;
+  reviewed reference warning transport remains in TASK-407-06-L05.
+- [x] Submit Advanced answers through the same structured session contract.
 
 ## Security Contract
 
@@ -72,20 +75,38 @@ function SiteBuilderIntakeAdvancedStepper({ session, optionCatalog, onAnswer }: 
 
 ## Testing Requirements
 
-- UI tests for mode switch, preset controls, menu/hero/section controls, and
-  reference brief warnings.
-- Tests for unsupported/reference-gated states and no raw warning leakage.
-- Tests that Advanced uses the same session contract as Basic.
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
-- `git diff --check`
+- [x] UI tests for mode switch, preset controls, menu/hero/section controls, and
+  reference review-required state.
+- [x] Tests for unsupported/reference-gated states and no raw warning leakage.
+- [x] Tests that Advanced uses the same session contract as Basic.
+- [x] `bun --cwd core lint`
+- [x] `bun --cwd core lint:types`
+- [x] `git diff --check`
 
 ## Documentation Updates Required
 
-- `_docs/ASSISTANT_SITE_BUILDER.md` if Advanced UX behavior changes.
+- [x] `_docs/ASSISTANT_SITE_BUILDER.md` if Advanced UX behavior changes.
 
 ## Acceptance Criteria
 
-- Advanced UI exposes controlled choices only.
-- Reference briefs are reviewable and sanitized.
-- Advanced mode cannot bypass structured validation.
+- [x] Advanced UI exposes controlled choices only.
+- [x] Reference briefs are reviewable and sanitized.
+- [x] Advanced mode cannot bypass structured validation.
+
+## Completion Notes
+
+- Added `assistantSiteBuilderIntakeAdvancedFlow.ts` and shared intake field
+  metadata helpers so Advanced needs-input plans are server-owned.
+- Generalized the floating LLM Guide intake stepper for Basic and Advanced,
+  including explicit Basic-to-Advanced confirmation and selectable step chips.
+- Added real normalized-state UI tests for Advanced layout gates and reference
+  review-required presentation; full reviewed reference warning transport stays
+  with TASK-407-06-L05.
+- Validation:
+  - `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakeAdvancedFlow.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeBasicFlow.test.ts tests/vitest/ui/assistant-site-builder-intake-advanced.test.tsx tests/vitest/ui/assistant-site-builder-intake-basic.test.tsx tests/vitest/ui/assistant-panel-interaction.test.tsx`
+  - `bun test tests/unit/server/schemaValidator.test.ts`
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `./node_modules/.bin/tsc -p tsconfig.json --noEmit`
+  - `git diff --check`
+  - Claude CLI read-only audit loop, no remaining blocking or medium findings.

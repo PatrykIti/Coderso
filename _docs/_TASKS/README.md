@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 21 tasks
+- **To Do:** 20 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2279 tasks
+- **Done:** 2280 tasks
 
 ---
 
@@ -89,7 +89,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Validate Basic, Advanced, scoped cleanup plus second-theme rebuild, follow-up refinement, and fail-closed media/reference flows through Playwright CLI and Claude/agent review. |
-| TASK-407-06-L03 | Advanced Stepper Controls | High | Large | Advanced controls, preset selection, and reference brief display. |
 | TASK-407-06-L04 | Review Summary and Execution Gating | High | Large | Final review, disabled dry-run/execute states, confirmation, and plan handoff. |
 | TASK-407-06-L05 | UI Warnings Local State and Redaction | High | Medium | Warning/gate rendering, localStorage bounds, stale cache discard, and redaction tests. |
 | TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | High | Medium | Lint/typecheck/precommit/gates plus targeted Bun/Vitest suites for changed contracts. |
@@ -116,7 +115,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | In progress (2026-06-05): Basic/Advanced intake, reviewed siteKit/content-engine decisions, custom-screen decisions, follow-up scoping, and planner/runtime contract tests are complete; remaining work is admin UI and live E2E closure. |
-| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | In progress (2026-06-06): intake state machine and Basic controls are complete; remaining work is Advanced controls, review gating, warning presentation, and redacted local state. |
+| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | In progress (2026-06-06): intake state machine, Basic controls, and Advanced controls are complete; remaining work is review gating, warning presentation, and redacted local state. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -138,6 +137,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-407-03-L03 | Basic Widget and Review Fact Selection | High | Medium | Done (2026-06-05): Basic review facts map page/menu defaults, supported widget aliases, content-engine candidates, contact path, media policy, and gates without compiling `siteKit` or actions. |
 | TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | High | Medium | Done (2026-06-05): hostile Basic free text, unknown ids, unsafe labels, media URL attempts, and review shortcuts fail closed or remain bounded review facts with no provider draft/actions. |
 | TASK-407-03 | Basic Mode Structured Site Flow | High | Large | Done (2026-06-05): Basic deterministic `needs_input` progression, generic defaults, review facts, and prompt-poisoning guards are complete. |
+| TASK-407-06-L03 | Advanced Stepper Controls | High | Large | Done (2026-06-06): Advanced server-owned progression, Basic-to-Advanced confirmation, controlled metadata-driven fields, selectable steps, normalized-state gate tests, docs, changelog, and Claude audit loop completed. |
 | TASK-407-04-L01 | Advanced Design Preset Registry | High | Medium | Done (2026-06-05): backend-owned Advanced design preset ids map to supported token/section-role facts, reject unknown or unsafe arbitrary style input, and expose explicit theme-application gaps. |
 | TASK-407-04-L02 | Advanced Menu Hero and Section Options | High | Medium | Done (2026-06-05): backend-owned Advanced menu, hero, and section option registries map to existing widget capabilities, reject unsafe CTA/raw layout input, and gate unsupported combinations. |
 | TASK-407-04-L03 | Reference Input Validation and Redaction | High | Large | Done (2026-06-05): deps-injected reference policy validates readable media ids, gates untrusted temp/remote references, redacts metadata/text, and keeps candidate ids out of provider facts. |

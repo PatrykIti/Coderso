@@ -79,6 +79,7 @@ import {
   buildBasicSiteBuilderNeedsInputPlan,
   shouldStartBasicSiteBuilderGuide,
 } from "./assistantSiteBuilderIntakeBasicFlow";
+import { buildAdvancedSiteBuilderNeedsInputPlan } from "./assistantSiteBuilderIntakeAdvancedFlow";
 
 export {
   classifyAssistantPrompt,
@@ -1012,6 +1013,14 @@ const getActiveBasicSiteBuilderIntakeSession = (context: AssistantActionContext 
   return activeSession?.mode === "basic" ? activeSession : null;
 };
 
+const getActiveAdvancedSiteBuilderIntakeSession = (context: AssistantActionContext | undefined) => {
+  const activeSession = context?.siteBuilderIntakeState?.activeSession;
+  return activeSession?.mode === "advanced" ? activeSession : null;
+};
+
+const shouldStartAdvancedSiteBuilderGuide = (context: AssistantActionContext | undefined) =>
+  context?.siteBuilderIntakeState?.requestedMode === "advanced";
+
 const buildPreferredBlueprintSetupPlan = (input: {
   prompt: string;
   context: AssistantActionContext | undefined;
@@ -1076,6 +1085,7 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
   if (trustedContext?.siteKit) {
     return normalizeAssistantActionPlan(buildSiteKitActionPlan(trustedContext.siteKit));
   }
+  const activeAdvancedIntakeSession = getActiveAdvancedSiteBuilderIntakeSession(trustedContext);
   const activeBasicIntakeSession = getActiveBasicSiteBuilderIntakeSession(trustedContext);
 
   const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
@@ -1090,12 +1100,30 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
     );
   }
 
+  if (activeAdvancedIntakeSession) {
+    return finalizeAssistantPlan(
+      normalizedInput,
+      context,
+      routedClassification,
+      buildAdvancedSiteBuilderNeedsInputPlan({ session: activeAdvancedIntakeSession })
+    );
+  }
+
   if (activeBasicIntakeSession) {
     return finalizeAssistantPlan(
       normalizedInput,
       context,
       routedClassification,
       buildBasicSiteBuilderNeedsInputPlan({ session: activeBasicIntakeSession })
+    );
+  }
+
+  if (shouldStartAdvancedSiteBuilderGuide(trustedContext)) {
+    return finalizeAssistantPlan(
+      normalizedInput,
+      context,
+      routedClassification,
+      buildAdvancedSiteBuilderNeedsInputPlan({})
     );
   }
 
@@ -1240,7 +1268,13 @@ export const planAssistantActionsWithProviderDraft = async (
   const trustedContext = sanitizeAssistantPlanningContext(input.context);
   const context = buildAssistantAdminContext(trustedContext);
   const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
+  if (getActiveAdvancedSiteBuilderIntakeSession(trustedContext)) {
+    return planAssistantActions({ prompt: input.prompt, context: trustedContext });
+  }
   if (getActiveBasicSiteBuilderIntakeSession(trustedContext)) {
+    return planAssistantActions({ prompt: input.prompt, context: trustedContext });
+  }
+  if (shouldStartAdvancedSiteBuilderGuide(trustedContext)) {
     return planAssistantActions({ prompt: input.prompt, context: trustedContext });
   }
   if (

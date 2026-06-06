@@ -353,7 +353,7 @@ test("planAssistantActions continues an active Basic intake session instead of r
   });
 });
 
-test("planAssistantActions honors explicit Advanced intake state before Basic broad-prompt routing", () => {
+test("planAssistantActions routes explicit Advanced intake state before Basic broad-prompt routing", () => {
   const requestedAdvancedPlan = planAssistantActions({
     prompt: "create a website for my clinic",
     context: {
@@ -363,8 +363,11 @@ test("planAssistantActions honors explicit Advanced intake state before Basic br
     },
   });
 
-  expect(requestedAdvancedPlan.intentId).not.toBe("site-builder-basic-intake");
-  expect(requestedAdvancedPlan.metadata?.siteBuilderIntake).toBeUndefined();
+  expect(requestedAdvancedPlan.intentId).toBe("site-builder-advanced-intake");
+  expect(requestedAdvancedPlan.metadata?.siteBuilderIntake).toMatchObject({
+    mode: "advanced",
+    nextStepId: "business-profile",
+  });
 
   const activeAdvancedPlan = planAssistantActions({
     prompt: "create a website for my clinic",
@@ -380,8 +383,12 @@ test("planAssistantActions honors explicit Advanced intake state before Basic br
     },
   });
 
-  expect(activeAdvancedPlan.intentId).not.toBe("site-builder-basic-intake");
-  expect(activeAdvancedPlan.metadata?.siteBuilderIntake).toBeUndefined();
+  expect(activeAdvancedPlan.intentId).toBe("site-builder-advanced-intake");
+  expect(activeAdvancedPlan.metadata?.siteBuilderIntake).toMatchObject({
+    mode: "advanced",
+    currentStepId: "design-preset",
+    nextStepId: "business-profile",
+  });
 });
 
 test("planAssistantActionsWithProviderDraft honors Advanced and active Basic intake state", async () => {
@@ -396,8 +403,8 @@ test("planAssistantActionsWithProviderDraft honors Advanced and active Basic int
     llmAvailable: false,
   });
 
-  expect(advancedPlan.intentId).not.toBe("site-builder-basic-intake");
-  expect(advancedPlan.metadata?.siteBuilderIntake).toBeUndefined();
+  expect(advancedPlan.intentId).toBe("site-builder-advanced-intake");
+  expect(advancedPlan.metadata?.siteBuilderIntake?.mode).toBe("advanced");
 
   const basicPlan = await planAssistantActionsWithProviderDraft({
     prompt: "dalej zrob mi pelny serwis dla tej firmy",

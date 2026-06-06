@@ -288,6 +288,18 @@ drafts stay in React state only, restored plans without answer state show a
 restart message, and the backend re-normalizes the session before returning the
 next server-owned step.
 
+Advanced full-site intake controls use the same route and session contract.
+`assistantSiteBuilderIntakeAdvancedFlow.ts` emits `needs_input` metadata only
+for explicit Advanced requests or active Advanced sessions; broad confused-user
+prompts still enter Basic first. The floating LLM Guide stepper requires
+confirmation before switching from Basic to Advanced, renders only backend-owned
+options for menu behavior, CTA page role, hero variant, section variants,
+content engines, design presets, and references, and keeps optional Advanced
+steps selectable from the server-owned step list. Browser requests send only the
+stripped intake session (`version`, `mode`, `currentStepId`, `answers`), never
+derived facts, raw references, provider text, secrets, signed URLs, or upload
+bytes.
+
 ## How the corpus is ingested
 
 The source-of-truth root is `docs/guide`. This is hard-coded in two services:

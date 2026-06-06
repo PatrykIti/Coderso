@@ -36,6 +36,7 @@ import type { AssistantPlanningState } from "../../../services/assistant/actionP
 import { normalizeAssistantSiteBuilderIntakeSession } from "../../../services/assistant/assistantSiteBuilderIntakeNormalizer";
 import {
   ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  type AssistantSiteBuilderIntakeMode,
   type AssistantSiteBuilderIntakeSession,
   type AssistantSiteBuilderIntakeStepId,
 } from "../../../services/assistant/assistantSiteBuilderIntakeTypes";
@@ -151,20 +152,22 @@ const resolveSiteBuilderIntakeError = (error: unknown) => {
 const resolveSiteBuilderIntakeSessionStepId = (metadata: SiteBuilderIntakeMetadata) =>
   metadata.nextStepId ?? metadata.currentStepId;
 
-const createBasicSiteBuilderIntakeSession = (
+const createSiteBuilderIntakeSession = (
   metadata: SiteBuilderIntakeMetadata,
   previousSession: AssistantSiteBuilderIntakeSession | null
 ): AssistantSiteBuilderIntakeSession | null => {
-  if (metadata.mode !== "basic") return null;
+  const shouldCarryAnswers =
+    previousSession?.mode === metadata.mode ||
+    (previousSession?.mode === "basic" && metadata.mode === "advanced");
   return normalizeAssistantSiteBuilderIntakeSession({
     version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
-    mode: "basic",
+    mode: metadata.mode,
     currentStepId: resolveSiteBuilderIntakeSessionStepId(metadata),
-    answers: previousSession?.mode === "basic" ? previousSession.answers : [],
+    answers: shouldCarryAnswers ? previousSession.answers : [],
   });
 };
 
-const mergeBasicSiteBuilderIntakeAnswer = (
+const mergeSiteBuilderIntakeAnswer = (
   session: AssistantSiteBuilderIntakeSession,
   stepId: AssistantSiteBuilderIntakeStepId,
   values: Record<string, unknown>
@@ -180,6 +183,26 @@ const mergeBasicSiteBuilderIntakeAnswer = (
         updatedAt: new Date().toISOString(),
       },
     ],
+  });
+
+const selectSiteBuilderIntakeStep = (
+  session: AssistantSiteBuilderIntakeSession,
+  stepId: AssistantSiteBuilderIntakeStepId
+) =>
+  normalizeAssistantSiteBuilderIntakeSession({
+    ...session,
+    currentStepId: stepId,
+  });
+
+const switchSiteBuilderIntakeMode = (
+  session: AssistantSiteBuilderIntakeSession,
+  mode: AssistantSiteBuilderIntakeMode
+) =>
+  normalizeAssistantSiteBuilderIntakeSession({
+    version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+    mode,
+    currentStepId: session.currentStepId,
+    answers: session.mode === "basic" && mode === "advanced" ? session.answers : [],
   });
 
 const toSiteBuilderIntakeRequestSession = (
@@ -425,7 +448,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   const [activeExecution, setActiveExecution] = useState<AssistantActionExecuteResponse | null>(
     () => cachedConversationState?.activeExecution ?? null
   );
-  const [activeBasicIntakeSession, setActiveBasicIntakeSession] =
+  const [activeSiteBuilderIntakeSession, setActiveSiteBuilderIntakeSession] =
     useState<AssistantSiteBuilderIntakeSession | null>(null);
   const [planningState, setPlanningState] = useState<AssistantPlanningState | null>(
     () => cachedConversationState?.planningState ?? null
@@ -678,10 +701,12 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
               ...assistantAdminContext,
               includeResourceCatalog: true,
               planningState: normalizeAssistantPlanningState(planningState),
-              ...(activeBasicIntakeSession
+              ...(activeSiteBuilderIntakeSession
                 ? {
                     siteBuilderIntakeState: {
-                      activeSession: toSiteBuilderIntakeRequestSession(activeBasicIntakeSession),
+                      activeSession: toSiteBuilderIntakeRequestSession(
+                        activeSiteBuilderIntakeSession
+                      ),
                     },
                   }
                 : {}),
@@ -695,9 +720,9 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
           );
           setActivePlanSourcePrompt(sourceQuestion);
           const nextIntakeMetadata = plan.metadata?.siteBuilderIntake ?? null;
-          setActiveBasicIntakeSession(
+          setActiveSiteBuilderIntakeSession(
             nextIntakeMetadata
-              ? createBasicSiteBuilderIntakeSession(nextIntakeMetadata, activeBasicIntakeSession)
+              ? createSiteBuilderIntakeSession(nextIntakeMetadata, activeSiteBuilderIntakeSession)
               : null
           );
           if (plan.responseKind !== "docs") {
@@ -754,7 +779,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
       }
     },
     [
-      activeBasicIntakeSession,
+      activeSiteBuilderIntakeSession,
       assistantAdminContext,
       currentMode,
       isSending,
@@ -794,11 +819,11 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
 
       try {
         const baseSession =
-          activeBasicIntakeSession ?? createBasicSiteBuilderIntakeSession(intakeMetadata, null);
+          activeSiteBuilderIntakeSession ?? createSiteBuilderIntakeSession(intakeMetadata, null);
         if (!baseSession) {
           throw new Error("site_builder_intake_session_missing");
         }
-        const submittedSession = mergeBasicSiteBuilderIntakeAnswer(baseSession, stepId, values);
+        const submittedSession = mergeSiteBuilderIntakeAnswer(baseSession, stepId, values);
         const sourceQuestion = activePlanSourcePrompt ?? SITE_BUILDER_INTAKE_CONTINUE_PROMPT;
         const plan = await planAssistantActions({
           prompt: sourceQuestion,
@@ -821,9 +846,9 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
         setActiveExecution(null);
         setActivePlan(plan);
         const nextIntakeMetadata = plan.metadata?.siteBuilderIntake ?? null;
-        setActiveBasicIntakeSession(
+        setActiveSiteBuilderIntakeSession(
           nextIntakeMetadata
-            ? createBasicSiteBuilderIntakeSession(nextIntakeMetadata, submittedSession)
+            ? createSiteBuilderIntakeSession(nextIntakeMetadata, submittedSession)
             : null
         );
         setMessages((previous) => [
@@ -842,9 +867,138 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
       }
     },
     [
-      activeBasicIntakeSession,
+      activeSiteBuilderIntakeSession,
       activePlan,
       activePlanSourcePrompt,
+      assistantAdminContext,
+      isSubmittingSiteBuilderIntake,
+      planningState,
+    ]
+  );
+
+  const handleSelectSiteBuilderIntakeStep = useCallback(
+    async (stepId: AssistantSiteBuilderIntakeStepId) => {
+      const intakeMetadata = activePlan?.metadata?.siteBuilderIntake ?? null;
+      if (!intakeMetadata || isSubmittingSiteBuilderIntake) return;
+      if (!intakeMetadata.visibleStepIds.includes(stepId)) return;
+
+      setActionError(null);
+      setSiteBuilderIntakeError(null);
+      setIsSubmittingSiteBuilderIntake(true);
+
+      try {
+        const baseSession =
+          activeSiteBuilderIntakeSession ?? createSiteBuilderIntakeSession(intakeMetadata, null);
+        if (!baseSession) {
+          throw new Error("site_builder_intake_session_missing");
+        }
+        const selectedSession = selectSiteBuilderIntakeStep(baseSession, stepId);
+        const sourceQuestion = activePlanSourcePrompt ?? SITE_BUILDER_INTAKE_CONTINUE_PROMPT;
+        const plan = await planAssistantActions({
+          prompt: sourceQuestion,
+          context: {
+            ...assistantAdminContext,
+            includeResourceCatalog: true,
+            planningState: normalizeAssistantPlanningState(planningState),
+            siteBuilderIntakeState: {
+              activeSession: toSiteBuilderIntakeRequestSession(selectedSession),
+            },
+          },
+        });
+
+        setPlanningState(
+          buildAssistantPlanningStateFromPlan(plan, {
+            route: assistantAdminContext.page ?? null,
+          })
+        );
+        setActivePreview(null);
+        setActiveExecution(null);
+        setActivePlan(plan);
+        const nextIntakeMetadata = plan.metadata?.siteBuilderIntake ?? null;
+        setActiveSiteBuilderIntakeSession(
+          nextIntakeMetadata
+            ? createSiteBuilderIntakeSession(nextIntakeMetadata, selectedSession)
+            : null
+        );
+      } catch (error) {
+        setSiteBuilderIntakeError(resolveSiteBuilderIntakeError(error));
+      } finally {
+        setIsSubmittingSiteBuilderIntake(false);
+      }
+    },
+    [
+      activePlan,
+      activePlanSourcePrompt,
+      activeSiteBuilderIntakeSession,
+      assistantAdminContext,
+      isSubmittingSiteBuilderIntake,
+      planningState,
+    ]
+  );
+
+  const handleSwitchSiteBuilderIntakeMode = useCallback(
+    async (mode: AssistantSiteBuilderIntakeMode) => {
+      const intakeMetadata = activePlan?.metadata?.siteBuilderIntake ?? null;
+      if (!intakeMetadata || isSubmittingSiteBuilderIntake || intakeMetadata.mode === mode) return;
+
+      setActionError(null);
+      setSiteBuilderIntakeError(null);
+      setIsSubmittingSiteBuilderIntake(true);
+
+      try {
+        const baseSession =
+          activeSiteBuilderIntakeSession ?? createSiteBuilderIntakeSession(intakeMetadata, null);
+        if (!baseSession) {
+          throw new Error("site_builder_intake_session_missing");
+        }
+        const switchedSession = switchSiteBuilderIntakeMode(baseSession, mode);
+        const sourceQuestion = activePlanSourcePrompt ?? SITE_BUILDER_INTAKE_CONTINUE_PROMPT;
+        const plan = await planAssistantActions({
+          prompt: sourceQuestion,
+          context: {
+            ...assistantAdminContext,
+            includeResourceCatalog: true,
+            planningState: normalizeAssistantPlanningState(planningState),
+            siteBuilderIntakeState: {
+              requestedMode: mode,
+              activeSession: toSiteBuilderIntakeRequestSession(switchedSession),
+            },
+          },
+        });
+
+        setPlanningState(
+          buildAssistantPlanningStateFromPlan(plan, {
+            route: assistantAdminContext.page ?? null,
+          })
+        );
+        setActivePreview(null);
+        setActiveExecution(null);
+        setActivePlan(plan);
+        const nextIntakeMetadata = plan.metadata?.siteBuilderIntake ?? null;
+        setActiveSiteBuilderIntakeSession(
+          nextIntakeMetadata
+            ? createSiteBuilderIntakeSession(nextIntakeMetadata, switchedSession)
+            : null
+        );
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: createEntryId(),
+            role: "assistant",
+            text: plan.answer,
+            sourceQuestion,
+          },
+        ]);
+      } catch (error) {
+        setSiteBuilderIntakeError(resolveSiteBuilderIntakeError(error));
+      } finally {
+        setIsSubmittingSiteBuilderIntake(false);
+      }
+    },
+    [
+      activePlan,
+      activePlanSourcePrompt,
+      activeSiteBuilderIntakeSession,
       assistantAdminContext,
       isSubmittingSiteBuilderIntake,
       planningState,
@@ -898,7 +1052,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     setActivePlanSourcePrompt(null);
     setActivePreview(null);
     setActiveExecution(null);
-    setActiveBasicIntakeSession(null);
+    setActiveSiteBuilderIntakeSession(null);
     setPlanningState(null);
     setActionError(null);
     setSiteBuilderIntakeError(null);
@@ -1107,10 +1261,12 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                         error={actionError}
                         isPreviewing={isPreviewingPlan}
                         isExecuting={isExecutingPlan}
-                        siteBuilderIntakeSession={activeBasicIntakeSession}
+                        siteBuilderIntakeSession={activeSiteBuilderIntakeSession}
                         siteBuilderIntakeError={siteBuilderIntakeError}
                         isSubmittingSiteBuilderIntake={isSubmittingSiteBuilderIntake}
                         onSubmitSiteBuilderIntakeStep={handleSubmitSiteBuilderIntakeStep}
+                        onSelectSiteBuilderIntakeStep={handleSelectSiteBuilderIntakeStep}
+                        onSwitchSiteBuilderIntakeMode={handleSwitchSiteBuilderIntakeMode}
                         onPreview={handleDryRunPlan}
                         onExecute={handleExecutePlan}
                       />

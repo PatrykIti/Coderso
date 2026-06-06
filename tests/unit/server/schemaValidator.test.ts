@@ -121,6 +121,39 @@ test("assistant action planning request accepts strict site-builder intake state
       },
     })
   ).not.toThrow();
+
+  expect(() =>
+    validate(assistantActionPlanRequestSchema, {
+      prompt: "continue Advanced site-builder intake",
+      context: {
+        siteBuilderIntakeState: {
+          requestedMode: "advanced",
+          activeSession: {
+            version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+            mode: "advanced",
+            currentStepId: "design-preset",
+            answers: [
+              {
+                stepId: "menu",
+                values: {
+                  menuPreset: "simple",
+                  advancedMenuBehaviorIds: ["sticky", "mobile-drawer"],
+                  advancedCtaTargetPageRole: "contact",
+                },
+              },
+              {
+                stepId: "design-preset",
+                values: {
+                  designPresetId: "modern",
+                  designBrief: "Clean controlled visual direction.",
+                },
+              },
+            ],
+          },
+        },
+      },
+    })
+  ).not.toThrow();
 });
 
 test("assistant action planning request rejects tampered site-builder intake values", () => {

@@ -14,6 +14,7 @@ import {
 import { clearAssistantConversationState } from "../../../core/admin/ui/assistant/assistantConversationState";
 import { AdminAssistantConfigProvider } from "../../../core/admin/ui/contexts/AdminAssistantConfigContext";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
+import { buildAdvancedSiteBuilderNeedsInputPlan } from "../../../core/services/assistant/assistantSiteBuilderIntakeAdvancedFlow";
 import { buildBasicSiteBuilderNeedsInputPlan } from "../../../core/services/assistant/assistantSiteBuilderIntakeBasicFlow";
 import {
   ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
@@ -664,6 +665,115 @@ test("AssistantPanel submits Basic site-builder intake answers through existing 
       "facts"
     );
     expect(view.container.textContent).toContain("Site goals");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AssistantPanel switches Basic site-builder intake to Advanced through existing plan route", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "llm-guide",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  mockUserSettings();
+  const planSpy = vi
+    .spyOn(assistantClient, "planAssistantActions")
+    .mockResolvedValueOnce(buildBasicSiteBuilderNeedsInputPlan({}))
+    .mockResolvedValueOnce(
+      buildAdvancedSiteBuilderNeedsInputPlan({
+        session: {
+          version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+          mode: "advanced",
+          currentStepId: "business-profile",
+          answers: [],
+        },
+      })
+    );
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/advanced/solution-kits">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const launcher = findButton(view.container, "");
+    if (!launcher) throw new Error("missing_launcher");
+
+    await React.act(async () => {
+      launcher.click();
+      await flush();
+    });
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+
+    await React.act(async () => {
+      setTextareaValue(textarea, "zrob mi pelny serwis dla lokalnych uslugodawcow");
+      await flush();
+    });
+
+    const sendButton = findButton(view.container, "Send");
+    if (!sendButton) throw new Error("missing_send_button");
+
+    await React.act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    const switchButton = findButton(view.container, "Switch to Advanced");
+    if (!switchButton) throw new Error("missing_switch_button");
+
+    await React.act(async () => {
+      switchButton.click();
+      await flush();
+    });
+
+    const confirmButton = findButton(view.container, "Confirm Advanced");
+    if (!confirmButton) throw new Error("missing_confirm_button");
+
+    await React.act(async () => {
+      confirmButton.click();
+      await flush();
+    });
+
+    expect(planSpy).toHaveBeenCalledTimes(2);
+    const secondRequest = planSpy.mock.calls[1]?.[0];
+    expect(secondRequest).toMatchObject({
+      context: {
+        siteBuilderIntakeState: {
+          requestedMode: "advanced",
+          activeSession: {
+            version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+            mode: "advanced",
+            currentStepId: "business-profile",
+            answers: [],
+          },
+        },
+      },
+    });
+    expect(secondRequest?.context?.siteBuilderIntakeState?.activeSession).not.toHaveProperty(
+      "facts"
+    );
+    expect(view.container.textContent).toContain("Advanced");
   } finally {
     view.cleanup();
   }

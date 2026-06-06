@@ -411,6 +411,23 @@ raw answers in assistant conversation localStorage. Restored plans that no
 longer have in-memory answer state show a restart message rather than silently
 continuing from incomplete data.
 
+Advanced planner progression is owned by
+`core/services/assistant/assistantSiteBuilderIntakeAdvancedFlow.ts`. It uses the
+same session schema and `/assistant/actions/plan` route as Basic, but starts
+only from explicit backend-only planner state such as `requestedMode:
+"advanced"` or an active session with `mode: "advanced"`. Basic remains the
+default for broad nontechnical full-site prompts.
+
+Advanced admin controls reuse the same server-owned `answerFields` metadata and
+show the additional controlled menu behavior, CTA target, hero variant, section
+variant, content-engine, design-preset, and reference-intake steps. Switching
+from Basic to Advanced requires an explicit confirmation in the UI. Step chips
+are selectable so optional Advanced steps can be reviewed without inventing a
+free-form prompt surface. The request session remains stripped to
+`version/mode/currentStepId/answers`; derived facts, raw reference material,
+provider text, secrets, signed URLs, and upload bytes are not persisted or sent
+from browser cache.
+
 Basic site-map defaults are advisory facts owned by
 `core/services/assistant/assistantSiteBuilderIntakeBasicDefaults.ts`. They
 provide deterministic beginner-friendly suggestions for page roles, stable

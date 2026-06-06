@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { AssistantActionPlanResponse } from "@/services/assistantClient";
 import type {
+  AssistantSiteBuilderIntakeMode,
   AssistantSiteBuilderIntakeSession,
   AssistantSiteBuilderIntakeStepId,
 } from "../../../../services/assistant/assistantSiteBuilderIntakeTypes";
@@ -22,12 +23,14 @@ type SiteBuilderIntakeAnswerFieldMetadata = SiteBuilderIntakeStepMetadata["answe
 type FieldDraftValue = string | boolean | string[] | Record<string, string>;
 type FieldDraft = Record<string, FieldDraftValue>;
 
-type SiteBuilderIntakeBasicStepperProps = {
+type SiteBuilderIntakeStepperProps = {
   metadata: SiteBuilderIntakeMetadata;
   session: AssistantSiteBuilderIntakeSession | null;
   isSubmitting?: boolean;
   error?: string | null;
   onSubmitStep: (stepId: AssistantSiteBuilderIntakeStepId, values: Record<string, unknown>) => void;
+  onSelectStep?: (stepId: AssistantSiteBuilderIntakeStepId) => void;
+  onSwitchMode?: (mode: AssistantSiteBuilderIntakeMode) => void;
 };
 
 const textFromValue = (value: unknown) => (typeof value === "string" ? value : "");
@@ -165,6 +168,12 @@ const selectedOptionsForLabelMap = (
   const selectedIds = new Set(draft[relatedMultiSelect.key] as string[]);
   return field.options.filter((option) => selectedIds.has(option.id));
 };
+
+const sensitiveUiTextPattern =
+  /(https?:\/\/|www\.|token|secret|password|api[-_]?key|credential|cookie|csrf|authorization|bearer)/i;
+
+const redactIntakeUiText = (value: string) =>
+  sensitiveUiTextPattern.test(value) ? "[redacted]" : value;
 
 function SiteBuilderIntakeFieldControl({
   step,
@@ -329,14 +338,86 @@ function SiteBuilderIntakeFieldControl({
   );
 }
 
-function SiteBuilderIntakeBasicStepForm({
+function SiteBuilderIntakeReviewNotice({
+  step,
+  session,
+}: {
+  step: SiteBuilderIntakeStepMetadata;
+  session: AssistantSiteBuilderIntakeSession | null;
+}) {
+  const referenceBrief = session?.facts?.referenceDesignBrief;
+  const referenceWarnings = referenceBrief?.warnings ?? [];
+  const referenceGates = referenceBrief?.gates ?? [];
+  const layoutGates = session?.facts?.advancedLayout?.gates ?? [];
+  const showReferenceReviewRequired =
+    step.id === "reference-intake" &&
+    Boolean(session?.facts?.referenceNotes || session?.facts?.referenceTextBrief) &&
+    !referenceBrief;
+  const showReferenceBrief =
+    step.id === "reference-intake" &&
+    (referenceWarnings.length > 0 || referenceGates.length > 0 || showReferenceReviewRequired);
+  const showLayoutGates =
+    (step.id === "menu" || step.id === "hero" || step.id === "homepage-sections") &&
+    layoutGates.length > 0;
+
+  if (!showReferenceBrief && !showLayoutGates) return null;
+
+  return (
+    <div className="space-y-2">
+      {showReferenceBrief ? (
+        <Alert
+          variant={
+            referenceGates.some((gate) => gate.severity === "warning") ? "destructive" : undefined
+          }
+        >
+          <AlertTitle>Reference review required</AlertTitle>
+          <AlertDescription>
+            <ul className="ml-5 mt-2 list-disc space-y-1">
+              {showReferenceReviewRequired ? (
+                <li>References must be reviewed before they can influence generation.</li>
+              ) : null}
+              {referenceGates.map((gate) => (
+                <li key={`gate-${gate.code}-${gate.count ?? 0}`}>
+                  {redactIntakeUiText(gate.message)}
+                  {gate.count ? ` (${gate.count})` : ""}
+                </li>
+              ))}
+              {referenceWarnings.map((warning) => (
+                <li key={`warning-${warning.code}-${warning.count ?? 0}`}>
+                  {redactIntakeUiText(warning.message)}
+                  {warning.count ? ` (${warning.count})` : ""}
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {showLayoutGates ? (
+        <Alert>
+          <AlertTitle>Advanced layout review</AlertTitle>
+          <AlertDescription>
+            <ul className="ml-5 mt-2 list-disc space-y-1">
+              {layoutGates.map((gate) => (
+                <li key={`layout-${gate.code}-${gate.optionId ?? ""}-${gate.sectionRoleId ?? ""}`}>
+                  {redactIntakeUiText(gate.message)}
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+    </div>
+  );
+}
+
+function SiteBuilderIntakeStepForm({
   metadata,
   step,
   session,
   isSubmitting,
   error,
   onSubmitStep,
-}: SiteBuilderIntakeBasicStepperProps & {
+}: SiteBuilderIntakeStepperProps & {
   step: SiteBuilderIntakeStepMetadata;
 }) {
   const answerValues = useMemo(() => getStepAnswerValues(session, step.id), [session, step.id]);
@@ -351,7 +432,9 @@ function SiteBuilderIntakeBasicStepForm({
       }}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="secondary">Basic</Badge>
+        <Badge variant={metadata.mode === "advanced" ? "default" : "secondary"}>
+          {metadata.mode === "advanced" ? "Advanced" : "Basic"}
+        </Badge>
         <Badge variant="outline">
           Step {step.position} of {step.total}
         </Badge>
@@ -393,6 +476,8 @@ function SiteBuilderIntakeBasicStepForm({
         ))}
       </div>
 
+      <SiteBuilderIntakeReviewNotice step={step} session={session} />
+
       {error ? (
         <Alert variant="destructive">
           <AlertTitle>Step was not accepted</AlertTitle>
@@ -408,36 +493,83 @@ function SiteBuilderIntakeBasicStepForm({
   );
 }
 
-export function SiteBuilderIntakeBasicStepper({
+export function SiteBuilderIntakeStepper({
   metadata,
   session,
   isSubmitting = false,
   error = null,
   onSubmitStep,
-}: SiteBuilderIntakeBasicStepperProps) {
-  if (metadata.mode !== "basic") return null;
+  onSelectStep,
+  onSwitchMode,
+}: SiteBuilderIntakeStepperProps) {
+  const [confirmAdvanced, setConfirmAdvanced] = useState(false);
   const step = resolveVisibleStep(metadata);
   if (!step) return null;
   const stepLabels = new Map(metadata.steps.map((entry) => [entry.id, entry.label]));
   const restoredWithoutAnswers = !session && metadata.answeredStepIds.length > 0;
+  const stepAnswer = session?.answers.find((answer) => answer.stepId === step.id);
 
   return (
     <div className="space-y-3">
+      {metadata.mode === "basic" && onSwitchMode ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs text-muted-foreground">
+          {confirmAdvanced ? (
+            <>
+              <span>
+                Advanced adds controlled design, layout, content-engine, and reference choices.
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setConfirmAdvanced(false);
+                  onSwitchMode("advanced");
+                }}
+              >
+                Confirm Advanced
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setConfirmAdvanced(false)}
+              >
+                Stay Basic
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setConfirmAdvanced(true)}
+              disabled={isSubmitting || restoredWithoutAnswers}
+            >
+              Switch to Advanced
+            </Button>
+          )}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {metadata.visibleStepIds.map((stepId) => {
           const isCurrent = step.id === stepId;
           const isAnswered = metadata.answeredStepIds.includes(stepId);
           return (
-            <span
+            <button
               key={stepId}
+              type="button"
+              disabled={isSubmitting || restoredWithoutAnswers}
+              onClick={() => onSelectStep?.(stepId)}
               className={cn(
-                "rounded-full border px-2 py-1",
+                "rounded-full border px-2 py-1 transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                 isCurrent && "border-emerald-500 bg-emerald-50 text-emerald-900",
-                isAnswered && !isCurrent && "border-primary/30 bg-primary/5 text-foreground"
+                isAnswered && !isCurrent && "border-primary/30 bg-primary/5 text-foreground",
+                !isCurrent && !isAnswered && "hover:bg-muted/40"
               )}
             >
               {stepLabels.get(stepId) ?? stepId}
-            </span>
+            </button>
           );
         })}
       </div>
@@ -450,8 +582,10 @@ export function SiteBuilderIntakeBasicStepper({
           </AlertDescription>
         </Alert>
       ) : (
-        <SiteBuilderIntakeBasicStepForm
-          key={`${step.id}:${metadata.answeredStepIds.join(",")}`}
+        <SiteBuilderIntakeStepForm
+          key={`${metadata.mode}:${step.id}:${metadata.answeredStepIds.join(",")}:${
+            stepAnswer?.updatedAt ?? ""
+          }`}
           metadata={metadata}
           step={step}
           session={session}
@@ -462,4 +596,8 @@ export function SiteBuilderIntakeBasicStepper({
       )}
     </div>
   );
+}
+
+export function SiteBuilderIntakeBasicStepper(props: SiteBuilderIntakeStepperProps) {
+  return <SiteBuilderIntakeStepper {...props} />;
 }
