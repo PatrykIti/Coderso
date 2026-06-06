@@ -168,6 +168,18 @@ become scoped refinement kinds (`static-page`, `content-engine`, `listing`,
 stale, spoofed, non-site-builder, unsupported, or unsupported-operation
 requests gate or ask before any action assembly.
 
+Reviewed SiteKit planner/runtime contracts are tested before admin UI execution
+work continues. `assistantSiteBuilderIntakePlanner.test.ts` compiles a reviewed
+intake session into the existing siteKit and content-engine action paths,
+normalizes generated plans through strict schemas, proves repeated output
+stable, checks static same-plan locators, and rejects unknown install payload
+fields. `assistantSiteBuilderIntakeDryRun.test.ts` calls
+`dryRunAssistantActionPlan` for the reviewed siteKit handoff and proves repeated
+previews stable. The Bun public runtime proof in
+`assistantHouseProjectsCatalogPublicSite.test.ts` executes a scoped
+reviewed-intake content-engine fixture and renders both the public catalog page
+and route-linked entry detail page through the real HTTP server.
+
 Advanced design presets live in
 `assistantSiteBuilderIntakeDesignPresets.ts`. The `designPresets` registry is a
 backend-owned set of visual directions (`modern`, `editorial`, `retro`,

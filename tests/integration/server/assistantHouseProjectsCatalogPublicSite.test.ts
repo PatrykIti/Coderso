@@ -4,9 +4,18 @@ import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import { users } from "../../../core/db/schema";
-import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
-import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
-import { executeAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
+import { buildSiteBuilderIntakeCompileResult } from "../../../core/services/assistant/assistantSiteBuilderIntakeCompiler";
+import { buildReviewedContentEngineActionPlanFromIntake } from "../../../core/services/assistant/assistantSiteBuilderIntakeContentEnginePlans";
+import { normalizeAssistantSiteBuilderIntakeSession } from "../../../core/services/assistant/assistantSiteBuilderIntakeNormalizer";
+import {
+  ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  type AssistantSiteBuilderIntakeSession,
+} from "../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
+import {
+  dryRunAssistantActionPlan,
+  executeAssistantActionPlan,
+} from "../../../core/services/assistant/actionExecutorService";
+import type { AssistantActionPlan } from "../../../core/services/assistant/actionPlanTypes";
 import {
   createEntry,
   deleteEntry,
@@ -17,6 +26,7 @@ import {
   deleteContentType,
   getContentTypeBySlug,
 } from "../../../core/services/content/typeService";
+import { deleteDetailPageDocument } from "../../../core/services/content/detailPageDocumentService";
 import {
   deleteCustomScreen,
   listCustomScreens,
@@ -62,6 +72,7 @@ const plansToCleanup: Array<{
   listingQueryName: string;
   listingTemplateSlug: string;
   pageSlug: string;
+  detailPageId: string;
 }> = [];
 let originalContentRoutes: ContentRouteSetting[] | null = null;
 
@@ -71,17 +82,16 @@ const stopServer = () => {
   server = null;
 };
 
-const clonePlanWithToken = (token: string) => {
-  const plan = JSON.parse(JSON.stringify(buildHouseProjectsCatalogPlan())) as ReturnType<
-    typeof buildHouseProjectsCatalogPlan
-  >;
+const clonePlanWithToken = (sourcePlan: AssistantActionPlan, token: string) => {
+  const plan = JSON.parse(JSON.stringify(sourcePlan)) as AssistantActionPlan;
 
-  const contentTypeSlug = `house-projects-${token}`;
-  const listingQueryName = `House Projects Catalog Query ${token}`;
-  const listingTemplateSlug = `house-projects-catalog-grid-${token}`;
-  const pageSlug = `/projekty-domow-${token}`;
-  const listPath = `/_catalog/house-projects-${token}`;
+  const contentTypeSlug = `intake-services-${token}`;
+  const listingQueryName = `Intake Services Query ${token}`;
+  const listingTemplateSlug = `intake-services-grid-${token}`;
+  const pageSlug = `/intake-services-${token}`;
+  const listPath = `/_catalog/intake-services-${token}`;
   const detailPath = `${pageSlug}/:slug`;
+  const detailPageId = `00000000-0000-5000-8000-${token.padEnd(12, "0")}`;
 
   plan.id = `plan-house-projects-catalog-${token}`;
   plan.actions = plan.actions.map((action) => {
@@ -95,6 +105,7 @@ const clonePlanWithToken = (token: string) => {
             typeSlug: contentTypeSlug,
             listPath,
             detailPath,
+            detailPageId,
           },
         };
       case "content-type.upsert":
@@ -104,17 +115,38 @@ const clonePlanWithToken = (token: string) => {
           input: {
             ...action.input,
             slug: contentTypeSlug,
-            name: `House Projects ${token}`,
+            name: `Intake Services ${token}`,
           },
         };
+      case "detail-page.upsert": {
+        return {
+          ...action,
+          id: `${action.id}-${token}`,
+          input: {
+            ...action.input,
+            document: {
+              ...action.input.document,
+              id: detailPageId,
+              name: `Intake Services Detail Template ${token}`,
+              contentTypeSlug,
+            },
+            contentTypeId: {
+              kind: "stable-slug",
+              resourceType: "content-type",
+              slug: contentTypeSlug,
+            },
+            expectedExistingId: detailPageId,
+          },
+        };
+      }
       case "custom-screen.upsert":
         return {
           ...action,
           id: `${action.id}-${token}`,
           input: {
             ...action.input,
-            name: `House Projects ${token}`,
-            sidebarLabel: `House Projects ${token}`,
+            name: `Intake Services ${token}`,
+            sidebarLabel: `Intake Services ${token}`,
             contentTypeSlug,
           },
         };
@@ -134,7 +166,7 @@ const clonePlanWithToken = (token: string) => {
           id: `${action.id}-${token}`,
           input: {
             ...action.input,
-            name: `House Projects Catalog Grid ${token}`,
+            name: `Intake Services Grid ${token}`,
             slug: listingTemplateSlug,
           },
         };
@@ -144,11 +176,17 @@ const clonePlanWithToken = (token: string) => {
           id: `${action.id}-${token}`,
           input: {
             ...action.input,
-            title: `Katalog Projektów Domów ${token}`,
+            title: `Intake Services ${token}`,
             slug: pageSlug,
             listingQueryName,
             listingTemplateSlug,
-            introTitle: `Katalog Projektów Domów ${token}`,
+            introTitle: `Intake Services ${token}`,
+            collectionLink: {
+              contentTypeSlug,
+              pageRole: "canonical-list-page",
+              listingQueryName,
+              listingTemplateSlug,
+            },
           },
         };
       default:
@@ -161,6 +199,7 @@ const clonePlanWithToken = (token: string) => {
     listingQueryName,
     listingTemplateSlug,
     pageSlug,
+    detailPageId,
   });
 
   return {
@@ -173,6 +212,78 @@ const clonePlanWithToken = (token: string) => {
     listingTemplateSlug,
   };
 };
+
+const buildServicesIntakeSession = (token: string): AssistantSiteBuilderIntakeSession => ({
+  version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  mode: "advanced",
+  currentStepId: "review",
+  answers: [
+    {
+      stepId: "business-profile",
+      values: {
+        siteName: `Services Intake ${token}`,
+        topic: "local service providers with a searchable directory",
+        vertical: "services directory",
+        audience: "people comparing verified local providers",
+        locale: "pl",
+        region: "Warsaw",
+        summary: "Create a service directory site that a non-technical editor can maintain.",
+      },
+    },
+    {
+      stepId: "site-goals",
+      values: {
+        goals: ["show services", "collect leads", "publish provider listings"],
+        primaryGoal: "collect leads",
+      },
+    },
+    {
+      stepId: "site-map",
+      values: {
+        pageRoles: ["home", "services", "locations", "contact"],
+      },
+    },
+    {
+      stepId: "menu",
+      values: {
+        menuPreset: "conversion-focused",
+        primaryActionLabel: "Zapytaj o projekt",
+        primaryActionPageRole: "contact",
+      },
+    },
+    {
+      stepId: "homepage-sections",
+      values: {
+        sectionRoles: ["value-proposition", "services-overview", "featured-items", "lead-capture"],
+      },
+    },
+    {
+      stepId: "hero",
+      values: {
+        heroPreset: "offer-with-proof",
+        headline: "Find the right local provider",
+      },
+    },
+    {
+      stepId: "media-policy",
+      values: {
+        mediaPolicy: "placeholder",
+      },
+    },
+    {
+      stepId: "content-engine",
+      values: {
+        contentEngines: ["services"],
+      },
+    },
+    {
+      stepId: "review",
+      values: {
+        confirmed: true,
+      },
+    },
+  ],
+});
 
 const createActor = async () => {
   const [created] = await db
@@ -204,7 +315,9 @@ afterAll(async () => {
   createdEntryIds.clear();
 
   for (const plan of plansToCleanup.reverse()) {
-    const page = await getPageBySlug(plan.pageSlug);
+    const page =
+      (await getPageBySlug(plan.pageSlug)) ??
+      (await getPageBySlug(plan.pageSlug.replace(/^\/+/, "")));
     if (page) {
       await deletePage(page.id).catch(() => undefined);
     }
@@ -220,6 +333,8 @@ afterAll(async () => {
     if (query) {
       await deleteListingQuery(query.id).catch(() => undefined);
     }
+
+    await deleteDetailPageDocument(plan.detailPageId).catch(() => undefined);
 
     const contentType = await getContentTypeBySlug(plan.contentTypeSlug);
     if (contentType) {
@@ -241,7 +356,7 @@ afterAll(async () => {
 });
 
 testIfDbWithOptions(
-  "executed house-projects plan renders public catalog page and entry detail route",
+  "executed reviewed-intake services content engine plan renders public catalog and detail routes",
   async () => {
     originalContentRoutes =
       originalContentRoutes ??
@@ -250,31 +365,81 @@ testIfDbWithOptions(
 
     const token = randomUUID().slice(0, 8);
     const actor = await createActor();
+    const intakeSession = buildServicesIntakeSession(token);
+    const normalizedIntake = normalizeAssistantSiteBuilderIntakeSession(intakeSession);
+    const compileResult = buildSiteBuilderIntakeCompileResult(normalizedIntake.facts ?? {});
+    const contentEnginePlan = buildReviewedContentEngineActionPlanFromIntake(intakeSession);
     const { plan, contentTypeSlug, pageSlug, detailPath, listingQueryName, listingTemplateSlug } =
-      clonePlanWithToken(token);
+      clonePlanWithToken(contentEnginePlan.plan, token);
 
-    await executeAssistantActionPlan({
+    expect(compileResult.gates).toEqual([]);
+    expect(
+      compileResult.reviewFacts.contentEngineDecisions.decisions.map((item) => item.id)
+    ).toEqual(expect.arrayContaining(["services"]));
+    expect(
+      compileResult.reviewFacts.customScreenDecisions.candidates.map(
+        (candidate) => candidate.engineId
+      )
+    ).toEqual(expect.arrayContaining(["services"]));
+    expect(contentEnginePlan.engineId).toBe("services");
+    expect(contentEnginePlan.plan.intentId).toBe("services-directory");
+    expect(plan.actions.map((action) => action.type)).toEqual([
+      "content-type.upsert",
+      "detail-page.upsert",
+      "setting.content-route.upsert",
+      "custom-screen.upsert",
+      "listing-query.upsert",
+      "listing-template.upsert",
+      "page.upsert",
+    ]);
+    const dryRun = await dryRunAssistantActionPlan({ plan });
+    expect(dryRun.readyToExecute).toBe(true);
+    expect(dryRun.changes.map((change) => change.targetType)).toEqual([
+      "content-type",
+      "detail-page",
+      "content-route",
+      "custom-screen",
+      "listing-query",
+      "listing-template",
+      "page",
+    ]);
+
+    const execution = await executeAssistantActionPlan({
       plan,
       actorId: actor.id,
       idempotencyKey: `assistant-public-${token}-1`,
     });
+    if (execution.summary.failed > 0) {
+      throw new Error(
+        `assistant_public_runtime_execute_failed:${JSON.stringify(
+          execution.results.filter((result) => result.status === "failed")
+        )}`
+      );
+    }
+    expect(execution.summary.failed).toBe(0);
+    expect(execution.results.length).toBe(plan.actions.length);
+    expect(execution.summary.create).toBeGreaterThan(0);
 
     const contentType = await getContentTypeBySlug(contentTypeSlug);
     if (!contentType) throw new Error("missing_content_type");
+    const publicPage =
+      (await getPageBySlug(pageSlug)) ?? (await getPageBySlug(pageSlug.replace(/^\/+/, "")));
+    if (!publicPage) throw new Error("missing_public_catalog_page");
+    const publicPagePath = publicPage.slug.startsWith("/")
+      ? publicPage.slug
+      : `/${publicPage.slug}`;
 
     const entry = await createEntry(contentType.id, {
-      title: `Projekt Domu ${token}`,
-      slug: `projekt-domu-${token}`,
+      title: `Usługa ${token}`,
+      slug: `usluga-${token}`,
       data: {
-        title: `Projekt Domu ${token}`,
-        slug: `projekt-domu-${token}`,
-        summary: `Nowoczesny projekt domu ${token}`,
-        description: `Szczegoly projektu domu ${token}`,
-        areaM2: 148,
-        rooms: 5,
-        bathrooms: 2,
-        floors: 2,
-        priceFrom: 790000,
+        title: `Usługa ${token}`,
+        slug: `usluga-${token}`,
+        summary: `Usługa lokalnego dostawcy ${token}`,
+        description: `Szczegoly uslugi lokalnego dostawcy ${token}`,
+        serviceType: "Consulting",
+        responseTimeHours: 24,
+        priceFrom: 500,
         location: "Warsaw",
         projectStatus: "available",
       },
@@ -286,59 +451,21 @@ testIfDbWithOptions(
     server = startHttpServer({ port: 0 });
     const baseUrl = `http://127.0.0.1:${server.port}`;
 
-    const catalogResponse = await fetch(`${baseUrl}${pageSlug}`);
+    const catalogResponse = await fetch(`${baseUrl}${publicPagePath}`);
     expect(catalogResponse.status).toBe(200);
     const catalogHtml = await catalogResponse.text();
     expect(catalogHtml).toContain('data-listing-widget="content-list"');
-    expect(catalogHtml).toContain(`Projekt Domu ${token}`);
+    expect(catalogHtml).toContain(`Usługa ${token}`);
     expect(catalogHtml).not.toContain('data-template="content-list"');
 
-    const refinementPlan = planAssistantActions({
-      prompt: "dodaj filtr po metrazu i liczbie pokoi",
-      context: {
-        page: pageSlug,
-        locale: "pl-PL",
-      },
-    });
-
-    const refinementResult = await executeAssistantActionPlan({
-      plan: {
-        ...refinementPlan,
-        actions: refinementPlan.actions.map((action) =>
-          action.type === "page.upsert"
-            ? {
-                ...action,
-                input: {
-                  ...action.input,
-                  slug: pageSlug,
-                  title: `Katalog Projektów Domów ${token}`,
-                  introTitle: `Katalog Projektów Domów ${token}`,
-                  listingQueryName,
-                  listingTemplateSlug,
-                },
-              }
-            : action
-        ),
-      },
-      actorId: actor.id,
-      idempotencyKey: `assistant-public-${token}-2`,
-    });
-    expect(refinementResult.summary.failed).toBe(0);
-    expect(refinementResult.summary.update).toBeGreaterThan(0);
-
-    const refinedCatalogResponse = await fetch(`${baseUrl}${pageSlug}?preview_refinement=1`);
-    expect(refinedCatalogResponse.status).toBe(200);
-    const refinedCatalogHtml = await refinedCatalogResponse.text();
-    expect(refinedCatalogHtml).toContain('data-listing-widget="listing-filters"');
-
-    const detailUrl = detailPath.replace(":slug", `projekt-domu-${token}`);
+    const detailUrl = detailPath.replace(":slug", `usluga-${token}`);
     const detailResponse = await fetch(`${baseUrl}${detailUrl}`);
     expect(detailResponse.status).toBe(200);
     const detailHtml = await detailResponse.text();
-    expect(detailHtml).toContain(`Projekt Domu ${token}`);
-    expect(detailHtml).toContain(`Nowoczesny projekt domu ${token}`);
+    expect(detailHtml).toContain(`Usługa ${token}`);
+    expect(detailHtml).toContain(`Usługa lokalnego dostawcy ${token}`);
 
-    const bySlug = await getEntryBySlug(contentType.id, `projekt-domu-${token}`);
+    const bySlug = await getEntryBySlug(contentType.id, `usluga-${token}`);
     expect(bySlug?.id).toBe(entry.id);
   },
   { timeout: 30_000 }

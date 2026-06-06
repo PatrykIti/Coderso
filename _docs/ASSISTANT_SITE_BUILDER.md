@@ -504,6 +504,22 @@ lead-capture forms, SEO defaults for generated pages, action ids, and same-plan
 the existing solution-kit installer remains the only mutation owner for
 page/menu/form/SEO resources.
 
+Reviewed siteKit runtime contracts are covered by
+`assistantSiteBuilderIntakePlanner.test.ts`,
+`assistantSiteBuilderIntakeDryRun.test.ts`, and the Bun public catalog runtime
+proof in `assistantHouseProjectsCatalogPublicSite.test.ts`. The planner test
+normalizes generated siteKit and content-engine action plans through the strict
+action schema, proves repeated reviewed-intake output stable, checks static
+same-plan locators, and rejects unknown generated install fields before
+dry-run/execute. The Bun dry-run test calls `dryRunAssistantActionPlan` for the
+reviewed siteKit handoff and proves repeated previews stable. The Bun runtime
+proof uses `buildReviewedContentEngineActionPlanFromIntake` with scoped DB
+fixtures and the real HTTP server to confirm one reviewed content-engine
+scenario dry-runs, executes, and renders both the public catalog page and a
+route-linked entry detail page. These tests add no new assistant endpoints; they
+exercise existing internal assistant action contracts plus public read-only
+runtime routes.
+
 TASK-407 intake redaction is owned by
 `core/services/assistant/assistantSiteBuilderIntakeRedaction.ts`.
 Diagnostics expose only schema version, mode/current step, answered step ids,

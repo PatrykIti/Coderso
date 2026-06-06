@@ -6,7 +6,9 @@
 **Category:** Assistant + SiteKit Planner + Content Engine
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-02, TASK-407-03, TASK-407-04
-**Status:** 🚧 In Progress (2026-06-05)
+**Status:** ✅ Done
+**Started:** 2026-06-05
+**Completed:** 2026-06-06
 
 ---
 
@@ -48,7 +50,7 @@ contract cannot express an accepted capability.
 | TASK-407-05-L03 | Content Engine Decision Rules | Done (2026-06-06) | Generic content-engine decisions, scope questions, metadata, and unsupported-engine gates. |
 | TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | Done (2026-06-06) | Beginner editing surface decisions and unsupported custom-screen gates. |
 | TASK-407-05-L05 | Follow Up Refinement Target Resolution | Done (2026-06-06) | Active-resource/server-catalog target resolution and ambiguity questions. |
-| TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | To Do | Strict action validation, dry-run/idempotency tests, and one public runtime proof. |
+| TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | Done (2026-06-06) | Strict action validation, dry-run/idempotency tests, and one public runtime proof. |
 
 ## Security Contract
 
@@ -180,9 +182,32 @@ function buildSiteBuilderIntakeCompileResult(
 - `docs/develop/assistant.md`
 - `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md` if action coverage changes.
 
+## Completion Notes
+
+- Reviewed guided intake facts now compile into schema-exact existing
+  `context.siteKit` action plans while richer review facts, content-engine
+  decisions, custom-screen decisions, and gates remain outside route payloads.
+- Supported content-engine and custom-screen decisions are registry-backed and
+  generic across services, products, portfolio/case-studies, blog/editorial,
+  team, locations, FAQ, and testimonials/proof scenarios.
+- Follow-up target scoping uses active admin context or server-derived catalogs,
+  asks on ambiguity, and gates stale/spoofed/unsupported targets before action
+  assembly.
+- Strict/idempotent planner and dry-run tests plus a Bun public catalog/detail
+  runtime proof now cover the reviewed siteKit/content-engine handoff.
+
 ## Acceptance Criteria
 
 - Completed intake sessions assemble strict typed plans through existing siteKit
   and action family contracts.
 - Content engines and custom screens are chosen from supported registries.
 - Follow-up refinements are scoped, reviewable, and conflict-aware.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/assistant/assistantSiteBuilderIntakePlanner.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeStaticActions.test.ts tests/vitest/assistant/assistantSiteBuilderIntakeCompiler.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+  (180 tests)
+- `bun test tests/unit/assistant/assistantSiteBuilderIntakeDryRun.test.ts`
+  (1 Bun dry-run test)
+- `set -a && source .env && set +a && bun test tests/integration/server/assistantHouseProjectsCatalogPublicSite.test.ts`
+  (1 Bun runtime test)
