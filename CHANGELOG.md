@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.4.0] - 2026-06-07
+### Added
+- Guided Basic/Advanced assistant site-builder intake with reviewed acceptance, full-service multi-page site generation, curated licensed media profiles, content-engine/custom-screen decisions, scoped follow-up refinement, and a product-readiness umbrella for remaining generic CMS assistant work.
+
+### Changed
+- Solution Kits now open the reviewed LLM Guide intake; Assistant Settings defaults to routine controls; Navigation runtime and the page editor canvas workspace behave consistently across admin and public surfaces.
+
+### Fixed
+- Media upload preserves native `File` metadata and normalizes MIME; full-service generation idempotency, public shell links, Navigation sticky/collapse behavior, and page-editor workspace clipping/scrolling are fixed.
+
+### Removed
+- Legacy AI Site Wizard manual siteKit plan/apply/rollback surface.
+
+### Security
+- Direct browser/admin `context.siteKit` is rejected, provider output remains operation-draft-only, prompt-poisoning and browser-state redaction are hardened, curated media keeps source/license trust boundaries, and unsupported media/booking/checkout/refinement paths fail closed.
 ## [1.3.0] - 2026-06-05
 ### Added
 - Resend can now be configured as an email provider through Integrations and selected from Email Settings.
