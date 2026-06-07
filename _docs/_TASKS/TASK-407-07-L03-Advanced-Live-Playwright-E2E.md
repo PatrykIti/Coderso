@@ -52,8 +52,9 @@ choices must be explicitly visible as review/gate evidence.
 - Verify dry-run, execute, and public runtime reflect selected Advanced choices
   that are supported by the override contract without unsupported media,
   design-token, or reference claims.
-- Use a distinct vertical/site name from TASK-407-07-L02, record created
-  resource ids/slugs for TASK-407-07-L05 cleanup, and do not assume a blank DB.
+- Use a distinct vertical/site name from TASK-407-07-L02 and do not assume a
+  blank DB. TASK-407-07-L05 owns its own self-contained first install and
+  run-id scoped rollback manifest instead of reusing L02/L03 resource hints.
 
 ## Security Contract
 
@@ -285,9 +286,11 @@ async function verifyReferenceGatePathFailsClosed(page) {
   desktop/mobile screenshots, contact form presence, SEO descriptions,
   horizontal overflow, broken images, console errors, and page errors.
 - L03 deliberately claims Advanced runtime mechanics only. The public screenshot
-  still showed generic local-service copy/branding and a media placeholder; full
-  prompt-specific copy, branding, and media relevance remain follow-up proof for
-  TASK-407-07-L05's second-theme rebuild rather than a completed TASK-407 claim.
+  still showed generic local-service copy/branding and a media placeholder.
+  TASK-407-07-L05 proves run-scoped rollback plus selected industry-kit
+  differentiation for a second rebuild; it must not claim prompt-bespoke public
+  copy, arbitrary branding/theme-token application, or personalized media
+  relevance beyond the current installer contract.
 
 ## Validation Evidence
 

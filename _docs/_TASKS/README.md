@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 13 tasks
+- **To Do:** 12 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2288 tasks
+- **Done:** 2289 tasks
 
 ---
 
@@ -88,7 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | High | Large | Resource-id scoped cleanup and second different-industry/theme rebuild. |
 | TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | High | Medium | Docs, coverage matrices, changelog leaf coverage, board sync, and final Claude/agent pass. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
@@ -120,6 +119,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | High | Large | Done (2026-06-06): guided follow-up resolver wiring, scoped published page update, desktop/mobile public runtime checks, and stale/ambiguous/unsupported/poisoned/media-reference fail-closed E2E passed through Playwright CLI. |
+| TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | High | Large | Done (2026-06-07): explicit `sourceRunId` rollback cleaned the medical-clinic run, preserved unrelated resources, then a fresh beginner prompt rebuilt a beauty-salon public site with industry starter content, bounded media, desktop/mobile screenshots, and zero console/page errors. |
 | TASK-407-07-L03 | Advanced Live Playwright E2E | High | Large | Done (2026-06-06): bounded Advanced runtime overrides now survive review, dry-run, execute, and public runtime for menu/CTA/Hero/section choices; live Playwright E2E verified reference gating, public navigation menu source, mobile drawer, CTA, supported section variants, contact form, SEO basics, desktop/mobile, and console/page errors. |
 | TASK-407-07-L02 | Basic Live Playwright E2E | High | Large | Done (2026-06-06): live Basic nontechnical Polish prompt selected `local-service-business`, dry-ran and executed through admin UI, then verified public pages, contact form, desktop/mobile, SEO basics, and console/page errors. |
 | TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | High | Medium | Done (2026-06-06): Claude/subagent pre-audits passed, targeted Vitest/Bun lanes passed, full release gates passed with no DB-gated skips, precommit passed, and local strict security scanners passed. |

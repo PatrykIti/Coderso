@@ -42,7 +42,7 @@ Claude/agent drift reviews.
 | TASK-407-07-L02 | Basic Live Playwright E2E | Done | Live Basic guided creation through admin UI and public runtime checks. |
 | TASK-407-07-L03 | Advanced Live Playwright E2E | Done | Bounded Advanced runtime overrides plus live Advanced creation with design/menu/hero/section/reference gates, dry-run, execute, and public runtime checks. |
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | Done | Guided follow-up resolver wiring, scoped published page refinement, desktop/mobile runtime checks, and stale/ambiguous/unsupported/poisoned/media-reference fail-closed E2E. |
-| TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | To Do | Resource-id scoped cleanup and second different-industry/theme rebuild. |
+| TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | Done | Run-id scoped rollback cleanup, second different-industry-kit rebuild, public runtime, screenshots, and industry starter content drift fixes. |
 | TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | To Do | Docs, coverage matrices, changelog leaf coverage, board sync, and final Claude/agent pass. |
 
 ## Security Contract
@@ -52,7 +52,8 @@ Claude/agent drift reviews.
 - RBAC: Playwright user must exercise normal admin permissions; no bypass in
   app code.
 - CSRF: all POSTs go through normal admin UI/API paths.
-- Rate-limit bucket: `assistant`.
+- Rate-limit bucket: `assistant` for assistant calls; existing admin read/write
+  buckets for run-detail reads and rollback cleanup.
 - Reject unknown validation: E2E must include at least one rejected unknown or
   poisoned intake answer where feasible.
 - Anti-abuse: public form tests use existing nonce/captcha/session hardening.
@@ -73,7 +74,11 @@ Claude/agent drift reviews.
 ```ts
 async function runSiteBuilderIntakeE2E(
   mode: "basic" | "advanced",
-  options: { userPrompt?: string; expectedDifferentVertical?: boolean } = {},
+  options: {
+    userPrompt?: string;
+    expectedKitId?: string;
+    forbiddenPriorTerms?: string[];
+  } = {},
 ) {
   await openAssistant();
   await startSiteBuilderIntake({ mode, userPrompt: options.userPrompt });
@@ -93,13 +98,34 @@ async function runFollowUpRefinementE2E() {
 }
 
 async function resetGeneratedSiteAndRunSecondThemeE2E() {
-  const firstRunResources = await listResourcesCreatedByE2ERun();
-  await deleteOnlyScopedE2EResources(firstRunResources);
-  await assertNoFirstRunPagesRemain();
+  const first = await runSiteBuilderIntakeE2E("basic", {
+    userPrompt:
+      "nie znam sie na cms, chce pelna strone dla malej przychodni medycznej",
+    expectedKitId: "medical-clinic",
+  });
+  const manifest = await fetchSolutionKitRunManifest({
+    selectedKitId: first.selectedKitId,
+    sourceRunId: first.sourceRunId,
+  });
+  await rollbackSolutionKitRun({
+    selectedKitId: first.selectedKitId,
+    sourceRunId: first.sourceRunId,
+  });
+  await assertCreatedRunItemsRemovedById(manifest);
+  await assertUpdatedRunItemsRestored(manifest);
+  await clearAssistantState();
   await runSiteBuilderIntakeE2E("basic", {
     userPrompt:
-      "nie znam sie na cms, chce ladna strone dla zupelnie innej branzy",
-    expectedDifferentVertical: true,
+      "nie znam sie na cms, chce ladna strone dla salonu urody i spa",
+    expectedKitId: "beauty-salon",
+    forbiddenPriorTerms: [
+      "Velo Serwis",
+      "Zielona Pracownia",
+      "Local Service Business",
+      "Medical Clinic",
+      "doctor",
+      "clinic",
+    ],
   });
 }
 ```
@@ -109,10 +135,12 @@ async function resetGeneratedSiteAndRunSecondThemeE2E() {
 - Restart helper servers, open the admin assistant through `playwright-cli`,
   complete intake, review, siteKit plan, dry-run, execute, then verify public
   runtime.
-- The E2E harness records only resource ids/slugs created by the current run and
-  uses those identifiers for scoped cleanup before the second-theme rebuild.
+- The E2E harness records the exact `site-kit.install` apply run id, selected
+  kit id, and sanitized run-item manifest; cleanup uses only
+  `POST /admin/api/solution-kits/:id/rollback` with explicit `sourceRunId`.
 - Wrong ports, missing provider configuration, auth/RBAC/CSRF failures,
-  unscoped cleanup, console/page errors, mobile layout failures, or public
+  missing run ids, mismatched kit ids, latest-run rollback fallback, broad
+  slug/name cleanup, console/page errors, mobile layout failures, or public
   runtime regressions fail the closure.
 - Screenshots, traces, logs, and Claude/agent evidence must be sanitized before
   any task/changelog note is committed.
@@ -128,9 +156,9 @@ async function resetGeneratedSiteAndRunSecondThemeE2E() {
   - admin: `http://coderso-b.localhost:5175/admin/`
   - front: `http://coderso-b.localhost:3001/`
   - site Vite assets: `http://coderso-b.localhost:5176/site/`
-- E2E reset validation must use scoped cleanup of generated pages/content/media
-  fixtures only. It must not truncate shared tables or delete unrelated user
-  resources.
+- E2E reset validation must use explicit run-scoped solution-kit rollback with
+  `sourceRunId`; it must not use latest-run fallback, truncate shared tables,
+  delete by common slugs, or delete unrelated user resources.
 - Claude/agent final review with sanitized evidence and no blocking drift.
 
 ## Documentation Updates Required

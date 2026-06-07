@@ -643,6 +643,29 @@ executed, publicly checked on desktop/mobile, and restored one scoped published
 unsupported-operation, poisoned-target, unsafe media/reference, and unknown
 context-field cases fail closed without executable actions or secret echo.
 
+TASK-407-07-L05 ran the scoped cleanup plus second-theme live Playwright E2E on
+2026-06-07 through
+`playwright-cli -s=task407-l05-cleanup-theme-r9 run-code --filename .tmp/task-407-07-l05-scoped-cleanup-second-theme-e2e.js`
+after restarting `coderso-dev-core-host`. A beginner Polish prompt first
+selected `medical-clinic` and produced apply run
+`8de2bf41-7fef-4f17-bf29-bf68355663f1`. Cleanup used only explicit
+`sourceRunId` rollback; rollback run
+`cd6191d5-d2d1-4e28-b0c8-8a0df253493e` restored 3 updated resources, deleted 4
+created resources, reported 0 failures, and preserved an unrelated published
+`about` page. After clearing assistant browser/session state, a second beginner
+prompt selected `beauty-salon` and produced apply run
+`b6588b3e-1451-4ff6-9095-db17a22d3a55`. Public runtime checks passed for `/`,
+`/offers`, and `/contact`, including menu/footer links, contact form,
+SEO descriptions, curated media registry URLs, desktop/mobile screenshots, no
+first-run or generic widget-default copy bleed, and zero console/page errors.
+The pass also fixed industry starter content drift in the solution-kit catalog:
+medical and beauty starters now ship menu-backed navigation, footer links,
+connected forms, industry-specific hero/gallery/package or proof content,
+license-documented curated media assets, and readable image overlays instead of
+generic widget defaults. This remains selected-kit starter content; it does not
+claim arbitrary prompt-bespoke copy, brand-token theming, uploads, video
+generation, or personalized media generation.
+
 TASK-407 intake redaction is owned by
 `core/services/assistant/assistantSiteBuilderIntakeRedaction.ts`.
 Diagnostics expose only schema version, mode/current step, answered step ids,

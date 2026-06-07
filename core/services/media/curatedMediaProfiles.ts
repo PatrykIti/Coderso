@@ -1,4 +1,4 @@
-export type CuratedMediaProfileId = "architecture-studio";
+export type CuratedMediaProfileId = "architecture-studio" | "medical-clinic" | "beauty-salon";
 
 export type CuratedMediaKind = "image" | "video";
 
@@ -81,6 +81,66 @@ export const curatedMediaProfiles: CuratedMediaProfile[] = [
       "residential",
       "studio",
       "pracownia",
+    ],
+    supportedKinds: ["image"],
+  },
+  {
+    id: "medical-clinic",
+    label: "Medical clinic and appointment care",
+    industryKeywords: [
+      "clinic",
+      "medical",
+      "doctor",
+      "doctors",
+      "healthcare",
+      "appointment",
+      "przychodnia",
+      "klinika",
+      "lekarz",
+      "lekarze",
+      "medyczna",
+      "wizyta",
+    ],
+    themeKeywords: [
+      "care",
+      "patient",
+      "specialist",
+      "appointments",
+      "trust",
+      "health",
+      "opieka",
+      "pacjent",
+      "specjalista",
+    ],
+    supportedKinds: ["image"],
+  },
+  {
+    id: "beauty-salon",
+    label: "Beauty salon and spa treatments",
+    industryKeywords: [
+      "beauty",
+      "salon",
+      "spa",
+      "skincare",
+      "hair",
+      "makeup",
+      "nails",
+      "uroda",
+      "salon urody",
+      "kosmetyczka",
+      "zabiegi",
+      "paznokcie",
+    ],
+    themeKeywords: [
+      "treatments",
+      "wellness",
+      "booking",
+      "relax",
+      "packages",
+      "gallery",
+      "zabieg",
+      "rezerwacja",
+      "relaks",
     ],
     supportedKinds: ["image"],
   },
@@ -195,6 +255,72 @@ export const curatedMediaAssets = [
     {
       industry: ["interiors", "architecture"],
       theme: ["office", "portfolio", "workspace"],
+    }
+  ),
+  createUnsplashImage(
+    "medical-clinic-home-care",
+    "medical-clinic",
+    "home",
+    "photo-1576091160550-2173dba999ef",
+    "Doctor reviewing patient information in a modern clinic",
+    {
+      industry: ["medical", "clinic", "doctor", "healthcare"],
+      theme: ["patient care", "appointments", "trust"],
+    }
+  ),
+  createUnsplashImage(
+    "beauty-salon-home",
+    "beauty-salon",
+    "home",
+    "photo-1560066984-138dadb4c035",
+    "Stylist working with a client in a bright beauty salon",
+    {
+      industry: ["beauty", "salon", "hair"],
+      theme: ["booking", "treatments", "gallery"],
+    }
+  ),
+  createUnsplashImage(
+    "beauty-salon-skincare",
+    "beauty-salon",
+    "service",
+    "photo-1570172619644-dfd03ed5d881",
+    "Facial skincare treatment in a calm spa room",
+    {
+      industry: ["beauty", "skincare", "spa"],
+      theme: ["treatment", "wellness", "relax"],
+    }
+  ),
+  createUnsplashImage(
+    "beauty-salon-makeup",
+    "beauty-salon",
+    "service",
+    "photo-1522335789203-aabd1fc54bc9",
+    "Beauty products arranged for a makeup service",
+    {
+      industry: ["beauty", "makeup", "salon"],
+      theme: ["event styling", "products", "gallery"],
+    }
+  ),
+  createUnsplashImage(
+    "beauty-salon-spa-ritual",
+    "beauty-salon",
+    "service",
+    "photo-1515377905703-c4788e51af15",
+    "Client receiving a relaxing spa ritual treatment",
+    {
+      industry: ["beauty", "spa", "wellness"],
+      theme: ["relax", "ritual", "treatment"],
+    }
+  ),
+  createUnsplashImage(
+    "beauty-salon-nail-care",
+    "beauty-salon",
+    "service",
+    "photo-1604654894610-df63bc536371",
+    "Nail care and manicure station in a beauty salon",
+    {
+      industry: ["beauty", "nails", "salon"],
+      theme: ["finishing touches", "manicure", "gallery"],
     }
   ),
 ] as const;

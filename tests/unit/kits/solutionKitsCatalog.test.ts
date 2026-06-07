@@ -2,11 +2,23 @@ import { expect, test } from "bun:test";
 
 import { solutionKitsCatalog } from "../../../core/services/kits/solutionKitsCatalog";
 import { ADVANCED_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/advancedModules";
+import { isCuratedMediaUrl } from "../../../core/services/media/curatedMediaProfiles";
 
 const normalizePageSlug = (value: string) => {
   const trimmed = value.trim();
   if (trimmed.length === 0 || trimmed === "/") return "/";
   return trimmed.replace(/^\/+/, "").replace(/\/+$/, "");
+};
+
+const collectStringValues = (value: unknown): string[] => {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.flatMap((item) => collectStringValues(item));
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).flatMap((item) =>
+      collectStringValues(item)
+    );
+  }
+  return [];
 };
 
 test("solution kits catalog provides complete starter packs for each kit", () => {
@@ -121,4 +133,103 @@ test("local service kit wires contact widgets to its public inquiry form", () =>
   expect(formSlugs.has("service-inquiry")).toBe(true);
   expect(formIds).toContain("service-inquiry");
   expect(formIds.every((formId) => formSlugs.has(formId))).toBe(true);
+});
+
+test("industry starter home pages include menu-backed navigation and footer links", () => {
+  const cases = [
+    {
+      kitId: "medical-clinic",
+      expectedNavigationLinks: ["/", "/doctors", "/contact"],
+      expectedFooterLinks: ["/doctors", "/contact", "/contact#appointment-request"],
+      expectedContactFormId: "appointment-request",
+      expectedContactFormTitle: "Appointment Request",
+      expectedCuratedMediaUrlCount: 1,
+    },
+    {
+      kitId: "beauty-salon",
+      expectedNavigationLinks: ["/", "/offers", "/contact"],
+      expectedFooterLinks: ["/offers", "/contact", "/contact#beauty-booking"],
+      expectedContactFormId: "beauty-booking",
+      expectedContactFormTitle: "Beauty Booking",
+      expectedCuratedMediaUrlCount: 6,
+    },
+  ] as const;
+
+  for (const scenario of cases) {
+    const kit = solutionKitsCatalog.find((item) => item.id === scenario.kitId);
+    expect(kit).toBeDefined();
+    const formSlugs = new Set(kit!.resourceBlueprint.forms.map((form) => form.slug));
+    expect(formSlugs.has(scenario.expectedContactFormId)).toBe(true);
+
+    const imageUrls = collectStringValues(kit!.resourceBlueprint.pages)
+      .filter((value) => value.startsWith("https://images.unsplash.com/"))
+      .sort();
+    expect(imageUrls.length).toBeGreaterThanOrEqual(scenario.expectedCuratedMediaUrlCount);
+    expect(imageUrls.every((url) => isCuratedMediaUrl(url))).toBe(true);
+
+    const homePage = kit!.resourceBlueprint.pages.find(
+      (page) => page.slug.trim().length === 0 || page.slug === "/"
+    );
+    const serializedHomePage = JSON.stringify(homePage?.data ?? {});
+    const blocks =
+      (homePage?.data as { blocks?: Array<Record<string, unknown>> } | undefined)?.blocks ?? [];
+    expect(blocks.length).toBeGreaterThan(0);
+    expect(serializedHomePage).toContain(
+      scenario.kitId === "beauty-salon" ? "Beauty treatments" : "Primary care"
+    );
+    expect(serializedHomePage).not.toContain("Build your system with Coderso");
+    expect(serializedHomePage).not.toContain("Choose the plan that fits your workflow");
+    expect(serializedHomePage).not.toContain("Product overview");
+    expect(serializedHomePage).not.toContain("$19");
+
+    const navigationBlock = blocks[0];
+    expect(navigationBlock).toMatchObject({
+      type: "navigation",
+      variant: "with-cta",
+    });
+
+    const navigationData = navigationBlock.data as
+      | {
+          linksSource?: unknown;
+          items?: Array<{ href?: unknown }>;
+        }
+      | undefined;
+    expect(navigationData?.linksSource).toBe("menu");
+    const navigationHrefs =
+      navigationData?.items
+        ?.map((item) => item.href)
+        .filter((href): href is string => typeof href === "string") ?? [];
+    expect(navigationHrefs).toEqual(expect.arrayContaining([...scenario.expectedNavigationLinks]));
+
+    const footerBlock = blocks.at(-1);
+    expect(footerBlock).toMatchObject({
+      type: "footer",
+      variant: "columns-2",
+    });
+
+    const footerData = footerBlock?.data as
+      | {
+          columns?: Array<{ links?: Array<{ href?: unknown }> }>;
+        }
+      | undefined;
+    const footerHrefs =
+      footerData?.columns
+        ?.flatMap((column) => column.links ?? [])
+        .map((link) => link.href)
+        .filter((href): href is string => typeof href === "string") ?? [];
+    expect(footerHrefs).toEqual(expect.arrayContaining([...scenario.expectedFooterLinks]));
+
+    const contactPage = kit!.resourceBlueprint.pages.find((page) => page.slug === "contact");
+    const contactBlocks =
+      (contactPage?.data as { blocks?: Array<Record<string, unknown>> } | undefined)?.blocks ?? [];
+    const formEmbedBlock = contactBlocks.find((block) => block.type === "form-embed");
+    const formEmbedData = formEmbedBlock?.data as
+      | {
+          formId?: unknown;
+          title?: unknown;
+        }
+      | undefined;
+    expect(formEmbedData?.formId).toBe(scenario.expectedContactFormId);
+    expect(formEmbedData?.title).toBe(scenario.expectedContactFormTitle);
+  }
 });

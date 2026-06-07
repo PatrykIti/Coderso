@@ -107,6 +107,18 @@ lead-capture forms, SEO defaults, action ids, and same-plan
 `target:resourceKey` locators before execution. Missing coverage is a gate, not
 a parallel ad-hoc mutation path.
 
+TASK-407-07-L05 adds the live reset/rebuild proof for this path. The Playwright
+CLI harness installs a `medical-clinic` site, fetches the authoritative
+solution-kit run manifest, rolls it back with explicit `sourceRunId`, verifies
+created resources are removed by id and updated resources are restored, clears
+assistant state, then installs a different `beauty-salon` starter from a fresh
+beginner prompt. The final public runtime check covers `/`, `/offers`, and
+`/contact`, navigation/footer, the booking form, SEO basics, curated media
+registry URLs, desktop/mobile screenshots, and absence of previous-kit or
+generic widget-default copy bleed. This proves selected-kit starter reuse,
+curated starter media, and scoped rollback safety; it does not imply arbitrary
+prompt-specific theme or media generation.
+
 Intake diagnostics and provider context are separate from the route payload.
 `assistantSiteBuilderIntakeRedaction.ts` emits diagnostics with stable ids and a
 facts hash only, while `buildSiteBuilderIntakeProviderContext` packages bounded
