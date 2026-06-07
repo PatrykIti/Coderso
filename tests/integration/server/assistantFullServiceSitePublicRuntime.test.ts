@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
+import { buildFullServiceSitePlan } from "../../../core/services/assistant/blueprints/fullServiceSiteBlueprint";
 import type { AssistantPlannedAction } from "../../../core/services/assistant/actionPlanTypes";
 import {
   resolveDetailPageBlocks,
@@ -64,12 +64,8 @@ const createDetailEntry = (action: EntrySampleCreateAction): DetailPageBindingRe
 test("full-service assistant plan renders public runtime pages with valid navigation and footer links", async () => {
   ensureRuntimeWidgetsRegistered();
 
-  const plan = planAssistantActions({
+  const plan = buildFullServiceSitePlan({
     prompt: fullServicePrompt,
-    context: {
-      page: "/admin/settings/assistant",
-      locale: "pl-PL",
-    },
   });
 
   expect(plan.intentId).toBe("service-business-full-site");

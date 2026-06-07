@@ -27,6 +27,7 @@ import {
   deleteListingTemplate,
   listListingTemplates,
 } from "../../../core/services/content/listingTemplatesService";
+import { deleteDetailPageDocument } from "../../../core/services/content/detailPageDocumentService";
 import { deletePage, getPageBySlug } from "../../../core/services/pages/pageService";
 import {
   getSetting,
@@ -71,6 +72,7 @@ const plansToCleanup: Array<{
   listingQueryName: string;
   listingTemplateSlug: string;
   pageSlug: string;
+  detailPageId: string;
 }> = [];
 let originalContentRoutes: ContentRouteSetting[] | null = null;
 
@@ -86,6 +88,7 @@ const clonePlanWithToken = (token: string) => {
   const pageSlug = `/projekty-domow-${token}`;
   const listPath = `/_catalog/house-projects-${token}`;
   const detailPath = `${pageSlug}/:slug`;
+  const detailPageId = randomUUID();
 
   plan.id = `plan-house-projects-catalog-${token}`;
   plan.title = `House Projects Catalog ${token}`;
@@ -101,6 +104,27 @@ const clonePlanWithToken = (token: string) => {
             typeSlug: contentTypeSlug,
             listPath,
             detailPath,
+            detailPageId,
+          },
+        };
+      case "detail-page.upsert":
+        return {
+          ...action,
+          id: `${action.id}-${token}`,
+          input: {
+            ...action.input,
+            expectedExistingId: detailPageId,
+            document: {
+              ...action.input.document,
+              id: detailPageId,
+              name: `House Projects ${token} Detail Template`,
+              contentTypeSlug,
+            },
+            contentTypeId: {
+              kind: "stable-slug",
+              resourceType: "content-type",
+              slug: contentTypeSlug,
+            },
           },
         };
       case "content-type.upsert":
@@ -156,6 +180,14 @@ const clonePlanWithToken = (token: string) => {
             listingQueryName,
             listingTemplateSlug,
             introTitle: `Katalog Projektów Domów ${token}`,
+            collectionLink: action.input.collectionLink
+              ? {
+                  ...action.input.collectionLink,
+                  contentTypeSlug,
+                  listingQueryName,
+                  listingTemplateSlug,
+                }
+              : undefined,
           },
         };
       default:
@@ -169,6 +201,7 @@ const clonePlanWithToken = (token: string) => {
     listingQueryName,
     listingTemplateSlug,
     pageSlug,
+    detailPageId,
   });
 
   return {
@@ -216,6 +249,8 @@ afterAll(async () => {
     if (page) {
       await deletePage(page.id).catch(() => undefined);
     }
+
+    await deleteDetailPageDocument(plan.detailPageId).catch(() => undefined);
 
     const templates = await listListingTemplates();
     const template = templates.find((entry) => entry.slug === plan.listingTemplateSlug);
@@ -396,6 +431,14 @@ testIfDbWithOptions(
                   introTitle: `Katalog Projektów Domów ${token}`,
                   listingQueryName,
                   listingTemplateSlug,
+                  collectionLink: action.input.collectionLink
+                    ? {
+                        ...action.input.collectionLink,
+                        contentTypeSlug,
+                        listingQueryName,
+                        listingTemplateSlug,
+                      }
+                    : undefined,
                 },
               }
             : action
