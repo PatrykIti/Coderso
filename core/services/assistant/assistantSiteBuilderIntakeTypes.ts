@@ -5,6 +5,10 @@ import {
 import type { SiteBuilderPlanStepId } from "../kits/solutionKitTypes";
 
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
+import type {
+  NavigationMobileMode,
+  NavigationVariantId,
+} from "../../widgets/core/navigationContract";
 
 export const ASSISTANT_SITE_BUILDER_INTAKE_VERSION = 1 as const;
 
@@ -257,9 +261,9 @@ export type AssistantSiteBuilderDesignPresetFacts = {
   gapCodes: readonly string[];
 };
 
-export type AssistantSiteBuilderNavigationVariantId = "simple" | "with-cta" | "split";
+export type AssistantSiteBuilderNavigationVariantId = NavigationVariantId;
 
-export type AssistantSiteBuilderNavigationMobileMode = "expanded" | "drawer" | "minimal";
+export type AssistantSiteBuilderNavigationMobileMode = NavigationMobileMode;
 
 export type AssistantSiteBuilderAdvancedLayoutGate = {
   code:

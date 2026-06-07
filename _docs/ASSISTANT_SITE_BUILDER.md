@@ -628,9 +628,21 @@ generic `local-service-business` kit, not the multi-provider
 `services-directory` kit. Public runtime checks covered `/`, `/contact`,
 `/services`, `/portfolio`, `/faq`, contact form presence, SEO description
 basics, desktop/mobile screenshots, and console/page errors. This Basic smoke
-does not claim personalized media/image coverage; Advanced, follow-up,
-fail-closed, and second-theme live Playwright E2E remain owned by
-TASK-407-07-L03 through TASK-407-07-L05.
+does not claim personalized media/image coverage; follow-up, fail-closed, and
+second-theme live Playwright E2E remain owned by TASK-407-07-L04 and
+TASK-407-07-L05.
+
+TASK-407-07-L03 ran the live Advanced Playwright E2E on 2026-06-06 through
+`playwright-cli -s=task407-basic-e2e run-code --filename .tmp/task-407-07-l03-advanced-e2e.js`
+after restarting `coderso-dev-core-host`. A nontechnical Polish prompt entered
+Advanced mode, completed controlled design/menu/Hero/section/reference choices,
+dry-ran, executed, and checked the public runtime on `/`, `/services`,
+`/portfolio`, `/faq`, and `/contact`. The run verified menu-backed Navigation,
+mobile drawer behavior, a contact CTA target, Hero `media-left`, proof
+spotlight, FAQ two-column, CTA split, contact form presence, SEO basics,
+desktop/mobile layout, and console/page errors. Reference input stayed bounded
+to reviewed gates; the pass proves supported Advanced option preservation, not
+arbitrary prompt-bespoke media or layout generation.
 
 TASK-407-07-L04 ran the live follow-up/fail-closed Playwright E2E on
 2026-06-06 through
@@ -665,6 +677,15 @@ license-documented curated media assets, and readable image overlays instead of
 generic widget defaults. This remains selected-kit starter content; it does not
 claim arbitrary prompt-bespoke copy, brand-token theming, uploads, video
 generation, or personalized media generation.
+
+TASK-407-07-L06 closed the family on 2026-06-07 with final docs, changelog,
+board, and drift review sync. The closure pass also resolved the L03 hardening
+items by moving Advanced Navigation variant/mobile-mode ids into the Navigation
+widget contract owner and adding a direct widget-validator regression for
+produced Advanced Navigation, Hero, and section blocks. Curated media profile
+selection now requires a vertical/industry match before theme keywords can rank
+profiles, so generic prompts such as restaurant/booking do not accidentally
+select unrelated medical or beauty media.
 
 TASK-407 intake redaction is owned by
 `core/services/assistant/assistantSiteBuilderIntakeRedaction.ts`.

@@ -36,6 +36,10 @@ import {
   resolveSiteBuilderIntakeAdvancedHeroVariant,
   resolveSiteBuilderIntakeAdvancedSectionVariant,
 } from "./assistantSiteBuilderIntakeAdvancedOptions";
+import {
+  navigationMobileModeIds,
+  navigationVariantIds,
+} from "../../widgets/core/navigationContract";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -115,8 +119,8 @@ const blueprintCompositionConflictSeverities = new Set(["warning", "error"] as c
 const advancedMenuBehaviorIds = new Set(assistantSiteBuilderAdvancedMenuBehaviorIds);
 const advancedHeroVariantIds = new Set(assistantSiteBuilderAdvancedHeroVariantIds);
 const advancedSectionVariantIds = new Set(assistantSiteBuilderAdvancedSectionVariantIds);
-const advancedNavigationVariantIds = new Set(["simple", "with-cta", "split"] as const);
-const advancedNavigationMobileModes = new Set(["expanded", "drawer", "minimal"] as const);
+const advancedNavigationVariantIds = new Set(navigationVariantIds);
+const advancedNavigationMobileModes = new Set(navigationMobileModeIds);
 const siteBuilderDesignPresetIds = new Set(assistantSiteBuilderDesignPresetIds);
 const siteBuilderPageRoleIds = new Set(assistantSiteBuilderPageRoleIds);
 const secretLikeMetadataPattern =

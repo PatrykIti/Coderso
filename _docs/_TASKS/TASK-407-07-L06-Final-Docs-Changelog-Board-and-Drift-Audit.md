@@ -6,7 +6,9 @@
 **Category:** Assistant + Docs + Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-407-07-L05
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-07
+**Completed:** 2026-06-07
 
 ---
 
@@ -36,6 +38,26 @@ evidence.
   deliberate closure rationale.
 - Verify no secrets, auth state, screenshots with secrets, raw provider output,
   or raw uploaded bytes are committed.
+
+## Completion Evidence
+
+- Claude and subagent read-only pre-audits on 2026-06-07 found no open
+  parent/child blockers, but did find real L03 hardening drift around duplicated
+  Advanced Navigation option literals and missing direct widget-validator
+  coverage.
+- The closure fix moved Navigation variant/mobile-mode ids into
+  `core/widgets/core/navigationContract.ts` and imported that owner from the
+  Navigation widget, intake options, intake types, and strict action-plan
+  schema.
+- Added direct Advanced runtime override regression coverage that normalizes the
+  produced Navigation, Hero, testimonials, FAQ, and CTA blocks through
+  `normalizeWidgetBlock`.
+- Tightened curated media profile selection so theme words can rank profiles
+  only after a business industry/vertical match, preventing unrelated starter
+  media from matching broad prompts.
+- Synced assistant docs, developer docs, media spec, acceptance matrix, task
+  board, and changelog coverage for TASK-407 closure.
+- Final validation and drift-pass evidence is recorded in changelog 1132.
 
 ## Security Contract
 

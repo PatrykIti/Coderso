@@ -14,7 +14,19 @@ import {
   resolveClearableCssColorValue,
   resolveClearableStyleValue,
 } from "./clearableStyle";
+import {
+  navigationMobileModeIds,
+  navigationVariantIds,
+  type NavigationMobileMode,
+} from "./navigationContract";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
+
+export {
+  navigationMobileModeIds,
+  navigationVariantIds,
+  type NavigationMobileMode,
+  type NavigationVariantId,
+} from "./navigationContract";
 
 export type NavigationLinkTarget = "self" | "blank";
 
@@ -58,7 +70,7 @@ export type NavigationBehavior = {
   sticky?: boolean;
   transparent?: boolean;
   collapseOnScroll?: boolean;
-  mobileMode?: "expanded" | "drawer" | "minimal";
+  mobileMode?: NavigationMobileMode;
   hideCtaOnMobile?: boolean;
   activeLinkMode?: NavigationActiveLinkMode;
 };
@@ -221,7 +233,7 @@ export const navigationSchema = {
         sticky: { type: "boolean" },
         transparent: { type: "boolean" },
         collapseOnScroll: { type: "boolean" },
-        mobileMode: { enum: ["expanded", "drawer", "minimal"] },
+        mobileMode: { enum: navigationMobileModeIds },
         hideCtaOnMobile: { type: "boolean" },
         activeLinkMode: { enum: ["none", "pathname", "exact"] },
       },
@@ -433,6 +445,12 @@ export const navigationEditorContract: WidgetEditorContract = {
       ],
     },
   ],
+};
+
+const navigationVariantLabels: Record<(typeof navigationVariantIds)[number], string> = {
+  simple: "Simple",
+  "with-cta": "With CTA",
+  split: "Split",
 };
 
 const joinClasses = (...classes: Array<string | false | undefined>) =>
@@ -1562,11 +1580,7 @@ export function createNavigationWidget(editors: {
     description: "Site menu with logo and links.",
     category: "navigation",
     slots: [{ id: "right", label: "Right Actions" }],
-    variants: [
-      { id: "simple", label: "Simple" },
-      { id: "with-cta", label: "With CTA" },
-      { id: "split", label: "Split" },
-    ],
+    variants: navigationVariantIds.map((id) => ({ id, label: navigationVariantLabels[id] })),
     schema: navigationSchema,
     defaults: navigationDefaults,
     editor: editors,

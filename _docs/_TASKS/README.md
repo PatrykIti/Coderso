@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 12 tasks
-- **In Progress:** 6 tasks
-- **Done:** 2289 tasks
+- **To Do:** 11 tasks
+- **In Progress:** 4 tasks
+- **Done:** 2292 tasks
 
 ---
 
@@ -88,7 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | High | Medium | Docs, coverage matrices, changelog leaf coverage, board sync, and final Claude/agent pass. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
@@ -106,8 +105,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | In progress (2026-06-05): Basic/Advanced intake, reviewed siteKit/content-engine decisions, custom-screen decisions, follow-up scoping, planner/runtime contract tests, and admin UI convergence are complete; remaining work is live E2E closure. |
-| TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | In progress (2026-06-06): running targeted validation lanes, release gates, live Playwright E2E preparation, and final closure evidence for TASK-407. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -118,8 +115,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | Done (2026-06-07): Basic/Advanced reviewed intake, siteKit/content-engine handoff, admin UI review gates, prompt-poisoning hardening, live Playwright E2E, final drift fixes, docs, and changelog closure completed. |
+| TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Done (2026-06-07): targeted validation lanes plus Basic, Advanced, follow-up/fail-closed, scoped cleanup, second-theme live Playwright E2E, docs, board, changelog, and final drift audit completed. |
+| TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | High | Medium | Done (2026-06-07): final docs/matrix/changelog/board sync, Advanced Navigation contract owner cleanup, direct widget-validator regression, curated-media industry guard, and Claude/subagent drift pass. |
+| TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | High | Large | Done (2026-06-07): explicit `sourceRunId` rollback cleaned the medical-clinic run, preserved unrelated resources, then a fresh beginner prompt rebuilt a beauty-salon public site with industry starter content, curated media, desktop/mobile screenshots, and zero console/page errors. |
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | High | Large | Done (2026-06-06): guided follow-up resolver wiring, scoped published page update, desktop/mobile public runtime checks, and stale/ambiguous/unsupported/poisoned/media-reference fail-closed E2E passed through Playwright CLI. |
-| TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | High | Large | Done (2026-06-07): explicit `sourceRunId` rollback cleaned the medical-clinic run, preserved unrelated resources, then a fresh beginner prompt rebuilt a beauty-salon public site with industry starter content, bounded media, desktop/mobile screenshots, and zero console/page errors. |
 | TASK-407-07-L03 | Advanced Live Playwright E2E | High | Large | Done (2026-06-06): bounded Advanced runtime overrides now survive review, dry-run, execute, and public runtime for menu/CTA/Hero/section choices; live Playwright E2E verified reference gating, public navigation menu source, mobile drawer, CTA, supported section variants, contact form, SEO basics, desktop/mobile, and console/page errors. |
 | TASK-407-07-L02 | Basic Live Playwright E2E | High | Large | Done (2026-06-06): live Basic nontechnical Polish prompt selected `local-service-business`, dry-ran and executed through admin UI, then verified public pages, contact form, desktop/mobile, SEO basics, and console/page errors. |
 | TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | High | Medium | Done (2026-06-06): Claude/subagent pre-audits passed, targeted Vitest/Bun lanes passed, full release gates passed with no DB-gated skips, precommit passed, and local strict security scanners passed. |

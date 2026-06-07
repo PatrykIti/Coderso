@@ -14,6 +14,10 @@ import {
   siteBuilderIntakeAdvancedSectionVariantOptionDefinitions,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeAdvancedOptions";
 import {
+  applyAdvancedRuntimeOverridesToKit,
+  buildAdvancedRuntimeOverridesFromIntakeFacts,
+} from "../../../core/services/assistant/siteBuilderAdvancedRuntimeOverrides";
+import {
   normalizeAssistantSiteBuilderIntakeAnswer,
   normalizeAssistantSiteBuilderIntakeSession,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeNormalizer";
@@ -30,9 +34,33 @@ import {
 import { listWidgetsForSurface } from "../../../core/widgets/registry";
 import { withConfirmedSiteBuilderIntakeReview } from "../../utils/assistantSiteBuilderIntake";
 import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
+import { solutionKitsCatalog } from "../../../core/services/kits/solutionKitsCatalog";
+import { normalizeWidgetBlock } from "../../../core/widgets/validator";
+import type { WidgetBlock } from "../../../core/widgets/types";
 
 const secretLikePattern =
   /\b(password|token|secret|api[-_\s]?key|authorization|cookie|bearer|csrf|session)\b/iu;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const collectWidgetBlocks = (value: unknown): WidgetBlock[] => {
+  if (!isRecord(value)) return [];
+  const ownBlock =
+    typeof value.id === "string" && typeof value.type === "string" ? [value as WidgetBlock] : [];
+  const childBlocks = Array.isArray(value.children)
+    ? value.children.flatMap((child) => collectWidgetBlocks(child))
+    : [];
+  const slotBlocks = isRecord(value.slots)
+    ? Object.values(value.slots).flatMap((slot) =>
+        Array.isArray(slot) ? slot.flatMap((child) => collectWidgetBlocks(child)) : []
+      )
+    : [];
+  const rootBlocks = Array.isArray(value.blocks)
+    ? value.blocks.flatMap((block) => collectWidgetBlocks(block))
+    : [];
+  return [...ownBlock, ...childBlocks, ...slotBlocks, ...rootBlocks];
+};
 
 test("Advanced option registries are deterministic and backend-owned", () => {
   const menu = listSiteBuilderIntakeAdvancedMenuBehaviors();
@@ -329,4 +357,42 @@ test("Advanced option widget requirements match registered page-builder widgets"
     expect(widget?.complexity).toBe("composite");
     expect(widget?.variants.map((variant) => variant.id)).toContain(requirement.variantId);
   }
+});
+
+test("Advanced runtime overrides produce widget-validator-safe navigation hero and section blocks", () => {
+  ensureRuntimeWidgetsRegistered();
+  const layout = buildSiteBuilderIntakeAdvancedLayoutFacts({
+    menuBehaviorIds: ["grouped", "sticky", "mobile-drawer"],
+    ctaTargetPageRole: "contact",
+    heroVariantId: "media-left",
+    sectionVariantIds: ["proof-spotlight", "faq-two-column", "call-to-action-split"],
+    selectedSectionRoleIds: ["proof", "faq", "call-to-action"],
+    designSupportedSectionRoleIds: ["proof", "faq", "call-to-action"],
+  });
+  expect(layout).toBeDefined();
+  const overrides = buildAdvancedRuntimeOverridesFromIntakeFacts({ advancedLayout: layout });
+  const baseKit = solutionKitsCatalog.find((kit) => kit.id === "local-service-business");
+  expect(baseKit).toBeDefined();
+
+  const kit = applyAdvancedRuntimeOverridesToKit(structuredClone(baseKit!), overrides);
+  const homePage = kit.resourceBlueprint.pages.find((page) => page.slug.trim() === "");
+  const normalizedBlocks = collectWidgetBlocks(homePage?.data).map((block) =>
+    normalizeWidgetBlock(block)
+  );
+  const firstBlockByType = new Map(normalizedBlocks.map((block) => [block.type, block]));
+
+  expect(firstBlockByType.get("navigation")).toMatchObject({
+    variant: "split",
+    data: {
+      linksSource: "menu",
+      behavior: {
+        sticky: true,
+        mobileMode: "drawer",
+      },
+    },
+  });
+  expect(firstBlockByType.get("hero")).toMatchObject({ variant: "media-left" });
+  expect(firstBlockByType.get("testimonials")).toMatchObject({ variant: "spotlight" });
+  expect(firstBlockByType.get("faq-accordion")).toMatchObject({ variant: "two-column" });
+  expect(firstBlockByType.get("cta-banner")).toMatchObject({ variant: "split" });
 });

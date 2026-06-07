@@ -19,6 +19,7 @@ import {
   type AssistantSiteBuilderSectionRoleId,
 } from "./assistantSiteBuilderIntakeTypes";
 import { listWidgetPackMatrix } from "../../widgets/modulePackMatrix";
+import { navigationVariantIds } from "../../widgets/core/navigationContract";
 
 type AdvancedMenuBehaviorDefinition =
   AssistantSiteBuilderIntakeOptionDefinition<AssistantSiteBuilderAdvancedMenuBehaviorId> & {
@@ -64,7 +65,6 @@ type BuildAdvancedLayoutFactsInput = {
   designSupportedSectionRoleIds?: readonly AssistantSiteBuilderSectionRoleId[];
 };
 
-const navigationVariantIds = ["simple", "with-cta", "split"] as const;
 const supportedWidgetVariantIdsByType: Readonly<Record<string, readonly string[]>> = Object.freeze({
   navigation: navigationVariantIds,
   hero: assistantSiteBuilderAdvancedHeroVariantIds,

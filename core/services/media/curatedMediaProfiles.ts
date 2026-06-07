@@ -361,10 +361,16 @@ export const selectCuratedMediaProfile = (input?: {
   if (!searchText) return null;
 
   const [bestProfile] = [...curatedMediaProfiles]
-    .map((profile) => ({
-      profile,
-      score: scoreKeywords(searchText, [...profile.industryKeywords, ...profile.themeKeywords]),
-    }))
+    .map((profile) => {
+      const industryScore = scoreKeywords(searchText, profile.industryKeywords);
+      const themeScore = scoreKeywords(searchText, profile.themeKeywords);
+      return {
+        profile,
+        industryScore,
+        score: industryScore * 2 + themeScore,
+      };
+    })
+    .filter((candidate) => candidate.industryScore > 0)
     .sort((a, b) => b.score - a.score);
 
   return bestProfile && bestProfile.score > 0 ? bestProfile.profile : null;

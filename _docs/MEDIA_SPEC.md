@@ -90,6 +90,11 @@ dobierac takie URL-e tylko przez zaufany katalog/profil mediow po stronie
 backendu; prompt uzytkownika ani provider nie moga dostarczyc dowolnego URL-a do
 pola obrazka.
 
+Curated assistant media profile selection must require a business
+industry/vertical match before theme keywords can influence ranking. Broad theme
+terms such as booking, gallery, portfolio, or premium may rank already-matched
+profiles, but they must not select an unrelated industry profile by themselves.
+
 ## Assistant reference intake
 
 Advanced assistant reference intake treats media as design evidence only. It may

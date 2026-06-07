@@ -119,6 +119,15 @@ generic widget-default copy bleed. This proves selected-kit starter reuse,
 curated starter media, and scoped rollback safety; it does not imply arbitrary
 prompt-specific theme or media generation.
 
+TASK-407-07-L06 closes the guided site-builder family. The final drift pass
+resolved duplicated Advanced Navigation option literals by making the Navigation
+widget contract the single runtime owner for variant and mobile-mode ids, and
+added validator coverage for produced Advanced Navigation, Hero, and section
+blocks. Curated media profile selection now requires an industry/vertical match
+before theme keywords can influence ranking, which keeps the adapter generic
+for multiple businesses instead of matching unrelated profiles by broad words
+such as booking.
+
 Intake diagnostics and provider context are separate from the route payload.
 `assistantSiteBuilderIntakeRedaction.ts` emits diagnostics with stable ids and a
 facts hash only, while `buildSiteBuilderIntakeProviderContext` packages bounded

@@ -6,7 +6,9 @@
 **Category:** Assistant + Playwright + Claude Audit + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-407-01, TASK-407-02, TASK-407-03, TASK-407-04, TASK-407-05, TASK-407-06
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Started:** 2026-06-06
+**Completed:** 2026-06-07
 
 ---
 
@@ -43,7 +45,7 @@ Claude/agent drift reviews.
 | TASK-407-07-L03 | Advanced Live Playwright E2E | Done | Bounded Advanced runtime overrides plus live Advanced creation with design/menu/hero/section/reference gates, dry-run, execute, and public runtime checks. |
 | TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | Done | Guided follow-up resolver wiring, scoped published page refinement, desktop/mobile runtime checks, and stale/ambiguous/unsupported/poisoned/media-reference fail-closed E2E. |
 | TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | Done | Run-id scoped rollback cleanup, second different-industry-kit rebuild, public runtime, screenshots, and industry starter content drift fixes. |
-| TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | To Do | Docs, coverage matrices, changelog leaf coverage, board sync, and final Claude/agent pass. |
+| TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | Done | Docs, coverage matrices, changelog leaf coverage, board sync, final Claude/agent pass, Advanced Navigation owner cleanup, widget-validator coverage, and curated-media industry guard. |
 
 ## Security Contract
 
@@ -144,6 +146,18 @@ async function resetGeneratedSiteAndRunSecondThemeE2E() {
   runtime regressions fail the closure.
 - Screenshots, traces, logs, and Claude/agent evidence must be sanitized before
   any task/changelog note is committed.
+
+## Completion Evidence
+
+- L01 closed static validation, release gates, precommit, and security scan
+  evidence before live E2E.
+- L02 through L05 restarted `coderso-dev-core-host` and validated Basic,
+  Advanced, follow-up/fail-closed, scoped cleanup, and second-theme beginner
+  flows through `playwright-cli` against the admin and public runtime ports.
+- L06 synchronized docs, matrices, changelog, and board closure after resolving
+  the final drift-audit hardening items.
+- No `.tmp` Playwright auth state, screenshots, cookies, provider keys, raw
+  provider output, raw uploads, or secret-like evidence is committed.
 
 ## Testing Requirements
 

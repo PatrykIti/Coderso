@@ -635,6 +635,18 @@ test("normalizeAssistantActionPlan accepts strict site-kit Advanced runtime over
   const tampered = structuredClone(plan);
   tampered.actions[1].input.advancedRuntimeOverrides.hero.widgetType = "cta-banner";
   expect(() => normalizeAssistantActionPlan(tampered)).toThrow("assistant_action_plan_invalid");
+
+  const tamperedNavigationVariant = structuredClone(plan);
+  tamperedNavigationVariant.actions[1].input.advancedRuntimeOverrides.menu.variantId = "mega";
+  expect(() => normalizeAssistantActionPlan(tamperedNavigationVariant)).toThrow(
+    "assistant_action_plan_invalid"
+  );
+
+  const tamperedMobileMode = structuredClone(plan);
+  tamperedMobileMode.actions[1].input.advancedRuntimeOverrides.menu.mobileMode = "popover";
+  expect(() => normalizeAssistantActionPlan(tamperedMobileMode)).toThrow(
+    "assistant_action_plan_invalid"
+  );
 });
 
 test("normalizeAssistantActionPlan rejects unknown plan and action fields", () => {

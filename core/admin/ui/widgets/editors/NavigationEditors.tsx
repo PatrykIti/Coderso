@@ -29,6 +29,8 @@ import {
 
 import {
   navigationDefaults,
+  navigationMobileModeIds,
+  navigationVariantIds,
   type NavigationActiveLinkMode,
   type NavigationBadgeTone,
   type NavigationData,
@@ -57,23 +59,28 @@ type NavigationItem = NavigationData["items"][number];
 type NavigationChild = NonNullable<NavigationItem["children"]>[number];
 type NavigationTargetItem = NavigationItem | NavigationChild;
 
-const variantOptions = [
-  {
-    id: "simple",
+const variantOptionCopy: Record<
+  (typeof navigationVariantIds)[number],
+  { label: string; description: string }
+> = {
+  simple: {
     label: "Simple",
     description: "Logo and links with no CTA.",
   },
-  {
-    id: "with-cta",
+  "with-cta": {
     label: "With CTA",
     description: "Logo, links, and right-side CTA button.",
   },
-  {
-    id: "split",
+  split: {
     label: "Split",
     description: "Centered links with right-side actions and CTA.",
   },
-] as const;
+};
+
+const variantOptions = navigationVariantIds.map((id) => ({
+  id,
+  ...variantOptionCopy[id],
+}));
 
 const linkSourceOptions = [
   { id: "manual", label: "Manual links" },
@@ -85,11 +92,15 @@ const alignmentOptions = ["left", "center", "right"] as const;
 const maxWidthOptions = ["none", "5xl", "6xl", "7xl"] as const;
 const paddingYOptions = ["none", "2", "3", "4", "5"] as const;
 const itemGapOptions = ["none", "2", "3", "4", "6"] as const;
-const mobileModeOptions = [
-  { id: "expanded", label: "Expanded links on mobile" },
-  { id: "drawer", label: "Compact menu button on mobile" },
-  { id: "minimal", label: "Minimal header on mobile" },
-] as const;
+const mobileModeOptionLabels: Record<(typeof navigationMobileModeIds)[number], string> = {
+  expanded: "Expanded links on mobile",
+  drawer: "Compact menu button on mobile",
+  minimal: "Minimal header on mobile",
+};
+const mobileModeOptions = navigationMobileModeIds.map((id) => ({
+  id,
+  label: mobileModeOptionLabels[id],
+}));
 const borderWidthOptions = ["0", "1", "2", "3"] as const;
 const fontSizeOptions = ["none", "xs", "sm", "base", "lg"] as const;
 const fontWeightOptions = ["none", "normal", "medium", "semibold", "bold"] as const;
