@@ -96,6 +96,7 @@ export const assistantSiteBuilderAdvancedMenuBehaviorIds = [
   "single-level",
   "grouped",
   "sticky",
+  "collapse-on-scroll",
   "transparent",
   "nontransparent",
   "mobile-drawer",
@@ -284,6 +285,7 @@ export type AssistantSiteBuilderAdvancedMenuFacts = {
   variantId: AssistantSiteBuilderNavigationVariantId;
   structure: "single-level" | "grouped";
   sticky: boolean;
+  collapseOnScroll: boolean;
   transparent: boolean;
   mobileMode: AssistantSiteBuilderNavigationMobileMode;
   ctaTargetPageRole: AssistantSiteBuilderPageRoleId | null;

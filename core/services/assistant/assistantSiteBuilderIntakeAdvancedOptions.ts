@@ -25,6 +25,7 @@ type AdvancedMenuBehaviorDefinition =
   AssistantSiteBuilderIntakeOptionDefinition<AssistantSiteBuilderAdvancedMenuBehaviorId> & {
     structure?: AssistantSiteBuilderAdvancedMenuFacts["structure"];
     sticky?: boolean;
+    collapseOnScroll?: boolean;
     transparent?: boolean;
     mobileMode?: AssistantSiteBuilderNavigationMobileMode;
   };
@@ -235,6 +236,12 @@ const advancedMenuBehaviorDefinitions = freezeOptionDefinitions(
       label: "Sticky",
       description: "Use the existing navigation sticky behavior.",
       sticky: true,
+    },
+    {
+      id: "collapse-on-scroll",
+      label: "Collapse on scroll",
+      description: "Use the existing navigation collapse-on-scroll behavior.",
+      collapseOnScroll: true,
     },
     {
       id: "transparent",
@@ -638,6 +645,7 @@ const buildAdvancedMenuFacts = (input: {
     variantId,
     structure,
     sticky: behaviorSet.has("sticky"),
+    collapseOnScroll: behaviorSet.has("collapse-on-scroll"),
     transparent: behaviorSet.has("transparent") && !behaviorSet.has("nontransparent"),
     mobileMode: behaviorSet.has("mobile-drawer") ? "drawer" : "expanded",
     ctaTargetPageRole,

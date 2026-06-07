@@ -202,6 +202,7 @@ export function AdminShell({
     [adminBasePath, footerItems]
   );
   const resolvedActiveHref = activeHref ? resolveAdminHref(adminBasePath, activeHref) : activeHref;
+  const contentOwnsOverflow = contentClassName?.includes("overflow-") ?? false;
   const resolvedNavGroupState = useMemo(
     () => ({
       ...navGroupDefaults,
@@ -235,7 +236,7 @@ export function AdminShell({
           }))
         }
       />
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <TopBar
           breadcrumbs={breadcrumbs}
           search={showSearch ? (search ?? <SearchBar />) : search}
@@ -253,7 +254,15 @@ export function AdminShell({
             </Button>
           }
         />
-        <main className={cn("flex-1 overflow-y-auto px-6 py-8", contentClassName)}>{children}</main>
+        <main
+          className={cn(
+            "min-h-0 flex-1 px-6 py-8",
+            !contentOwnsOverflow && "overflow-y-auto",
+            contentClassName
+          )}
+        >
+          {children}
+        </main>
       </div>
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
         <SheetContent side="left" className="w-72 p-0">

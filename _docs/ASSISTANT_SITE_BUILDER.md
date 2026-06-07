@@ -381,8 +381,8 @@ Advanced layout options are backend-owned in
 `advancedHeroVariants`, and `advancedSectionVariants` registries expose only
 stable ids for existing Navigation, Hero, Form, Listings, Engagement, and CTA
 widget capabilities. Advanced menu choices resolve to Navigation widget facts
-such as `sticky`, `transparent`, `mobileMode`, reviewed menu structure, and a
-CTA target page role; arbitrary CTA hrefs are rejected. Advanced hero choices
+such as `sticky`, `collapseOnScroll`, `transparent`, `mobileMode`, reviewed menu
+structure, and a CTA target page role; arbitrary CTA hrefs are rejected. Advanced hero choices
 resolve to current Hero widget variants (`centered`, `split`, `media-left`,
 `media-center`). Advanced section choices resolve to existing widget variants
 backed by `modulePackMatrix.assistantPageSections`; mismatched section roles,

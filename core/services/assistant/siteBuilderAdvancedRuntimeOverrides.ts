@@ -18,6 +18,7 @@ export type AssistantSiteKitAdvancedMenuRuntimeOverride = {
   behaviorIds: AssistantSiteBuilderAdvancedMenuBehaviorId[];
   variantId: AssistantSiteBuilderNavigationVariantId;
   sticky: boolean;
+  collapseOnScroll: boolean;
   transparent: boolean;
   mobileMode: AssistantSiteBuilderNavigationMobileMode;
   ctaTargetPageRole: AssistantSiteBuilderPageRoleId | null;
@@ -225,6 +226,7 @@ const applyNavigationWidgetOverride = (
       behavior: {
         ...(isRecord(data.behavior) ? data.behavior : {}),
         sticky: menu.sticky,
+        collapseOnScroll: menu.collapseOnScroll,
         transparent: menu.transparent,
         mobileMode: menu.mobileMode,
       },
@@ -248,6 +250,7 @@ export const buildAdvancedRuntimeOverridesFromIntakeFacts = (
       behaviorIds: [...layout.menu.behaviorIds],
       variantId: layout.menu.variantId,
       sticky: layout.menu.sticky,
+      collapseOnScroll: layout.menu.collapseOnScroll,
       transparent: layout.menu.transparent,
       mobileMode: layout.menu.mobileMode,
       ctaTargetPageRole: layout.menu.ctaTargetPageRole,

@@ -545,9 +545,10 @@ test("normalizeAssistantActionPlan accepts strict site-kit Advanced runtime over
     schemaVersion: 1,
     designPresetId: "modern",
     menu: {
-      behaviorIds: ["sticky", "mobile-drawer"],
+      behaviorIds: ["sticky", "collapse-on-scroll", "mobile-drawer"],
       variantId: "with-cta",
       sticky: true,
+      collapseOnScroll: true,
       transparent: false,
       mobileMode: "drawer",
       ctaTargetPageRole: "contact",
@@ -623,6 +624,8 @@ test("normalizeAssistantActionPlan accepts strict site-kit Advanced runtime over
     input: {
       advancedRuntimeOverrides: {
         menu: {
+          behaviorIds: ["sticky", "collapse-on-scroll", "mobile-drawer"],
+          collapseOnScroll: true,
           ctaTargetPageRole: "contact",
         },
         hero: {
@@ -645,6 +648,16 @@ test("normalizeAssistantActionPlan accepts strict site-kit Advanced runtime over
   const tamperedMobileMode = structuredClone(plan);
   tamperedMobileMode.actions[1].input.advancedRuntimeOverrides.menu.mobileMode = "popover";
   expect(() => normalizeAssistantActionPlan(tamperedMobileMode)).toThrow(
+    "assistant_action_plan_invalid"
+  );
+
+  const tamperedCollapseOnScroll = structuredClone(plan);
+  (
+    tamperedCollapseOnScroll.actions[1].input.advancedRuntimeOverrides.menu as {
+      collapseOnScroll: unknown;
+    }
+  ).collapseOnScroll = "yes";
+  expect(() => normalizeAssistantActionPlan(tamperedCollapseOnScroll)).toThrow(
     "assistant_action_plan_invalid"
   );
 });

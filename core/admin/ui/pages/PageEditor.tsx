@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Eye, History, Save, Settings2 } from "lucide-react";
+import {
+  Eye,
+  History,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  Save,
+  Settings2,
+} from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -51,6 +60,7 @@ import { BlockSettings } from "./builder/BlockSettings";
 import { LibraryPanel } from "./builder/LibraryPanel";
 import { PageRevisionDrawer } from "./PageRevisionDrawer";
 import { PageSettingsDrawer, type PageSettingsValue } from "./PageSettingsDrawer";
+import { DeviceSwitcher, type DeviceId } from "./DeviceSwitcher";
 import { collectBookingFlowSummaries } from "./builder/bookingFlowContext";
 import {
   applyWidgetBlockPatch,
@@ -112,6 +122,12 @@ const pageEditorStatusBadgeClassName = (status: string) =>
   status === "published"
     ? "rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-600"
     : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800";
+
+const canvasDeviceFrameClassMap: Record<DeviceId, string> = {
+  desktop: "max-w-[1280px]",
+  tablet: "max-w-[820px]",
+  mobile: "max-w-[430px]",
+};
 
 const resolvePageId = (pathname: string) => {
   const parts = pathname.split("/").filter(Boolean);
@@ -564,6 +580,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [libraryTab, setLibraryTab] = useState<"widgets" | "templates" | "forms">("widgets");
+  const [libraryPanelOpen, setLibraryPanelOpen] = useState(true);
+  const [detailsPanelOpen, setDetailsPanelOpen] = useState(true);
+  const [canvasDevice, setCanvasDevice] = useState<DeviceId>("desktop");
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [slotInsertTarget, setSlotInsertTarget] = useState<SlotInsertTarget | null>(null);
@@ -1336,24 +1355,26 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       onClearWidgetContext={() => setSlotInsertTarget(null)}
     />
   );
+  const renderBlockSettingsPanel = () => (
+    <BlockSettings
+      block={selectedBlock}
+      widget={selectedWidget}
+      onChange={handleChangeBlock}
+      onBlockPatch={
+        selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
+      }
+      editorContext={pageEditorWidgetContext}
+      pageDefaults={pageLayout.sections.defaults}
+    />
+  );
 
   return (
     <EditorShell
       activeHref="/admin/pages"
-      leftPanel={renderLibraryPanel()}
-      rightPanel={
-        <BlockSettings
-          block={selectedBlock}
-          widget={selectedWidget}
-          onChange={handleChangeBlock}
-          onBlockPatch={
-            selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
-          }
-          editorContext={pageEditorWidgetContext}
-          pageDefaults={pageLayout.sections.defaults}
-        />
-      }
+      leftPanel={libraryPanelOpen ? renderLibraryPanel() : undefined}
+      rightPanel={detailsPanelOpen ? renderBlockSettingsPanel() : undefined}
       rightPanelClassName="p-6"
+      centerScroll={false}
       breadcrumbs={["Pages", title]}
       topbarActions={
         <div className="flex items-center gap-2">
@@ -1368,8 +1389,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         </div>
       }
     >
-      <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
+      <div className="z-10 w-full shrink-0 border-b bg-background/80 px-4 py-3 backdrop-blur">
+        <div className="flex w-full flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -1406,6 +1427,37 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             </Button>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden gap-2 lg:inline-flex"
+              onClick={() => setLibraryPanelOpen((open) => !open)}
+              aria-pressed={libraryPanelOpen}
+              aria-label={libraryPanelOpen ? "Hide component library" : "Show component library"}
+            >
+              {libraryPanelOpen ? (
+                <PanelLeftClose className="h-4 w-4" />
+              ) : (
+                <PanelLeftOpen className="h-4 w-4" />
+              )}
+              {libraryPanelOpen ? "Hide library" : "Show library"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden gap-2 lg:inline-flex"
+              onClick={() => setDetailsPanelOpen((open) => !open)}
+              aria-pressed={detailsPanelOpen}
+              aria-label={detailsPanelOpen ? "Hide appearance panel" : "Show appearance panel"}
+            >
+              {detailsPanelOpen ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" />
+              )}
+              {detailsPanelOpen ? "Hide details" : "Show details"}
+            </Button>
+            <DeviceSwitcher value={canvasDevice} onChange={setCanvasDevice} className="ml-0" />
             <Button
               variant="ghost"
               size="sm"
@@ -1444,81 +1496,92 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           </div>
         </div>
       </div>
-      <div className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8">
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTitle>Page error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-        {metaError ? (
-          <Alert variant="destructive">
-            <AlertTitle>Page settings error</AlertTitle>
-            <AlertDescription>{metaError}</AlertDescription>
-          </Alert>
-        ) : null}
-        {remoteUpdatePending ? (
-          <Alert>
-            <AlertTitle>Updated in another tab</AlertTitle>
-            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span>New changes are available. Refresh to load the latest version.</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refreshPage({ allowUnsaved: true })}
-              >
-                Refresh
-              </Button>
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        {isLoading ? (
-          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
-            Loading page...
-          </div>
-        ) : (
-          <div
-            className={joinClasses(
-              "relative w-full overflow-hidden rounded-xl border border-border/50",
-              wrapperPaddingClass
-            )}
-            style={wrapperBackgroundStyle}
-          >
-            {wrapperBackgroundVideo ? (
-              <video
-                className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-                src={wrapperBackgroundVideo}
-                autoPlay
-                loop
-                muted
-                playsInline
-                aria-hidden="true"
-              />
-            ) : null}
+      <div
+        className="min-h-0 flex-1 overflow-auto overscroll-contain"
+        data-page-editor-canvas-scroller="true"
+      >
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
+          {error ? (
+            <Alert variant="destructive">
+              <AlertTitle>Page error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          {metaError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Page settings error</AlertTitle>
+              <AlertDescription>{metaError}</AlertDescription>
+            </Alert>
+          ) : null}
+          {remoteUpdatePending ? (
+            <Alert>
+              <AlertTitle>Updated in another tab</AlertTitle>
+              <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span>New changes are available. Refresh to load the latest version.</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refreshPage({ allowUnsaved: true })}
+                >
+                  Refresh
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {isLoading ? (
+            <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+              Loading page...
+            </div>
+          ) : (
             <div
               className={joinClasses(
-                wrapperContainerClass,
-                wrapperBackgroundVideo ? "relative z-[1]" : undefined
+                "relative mx-auto w-full rounded-xl border border-border/50 bg-background shadow-sm",
+                canvasDeviceFrameClassMap[canvasDevice],
+                wrapperPaddingClass
               )}
+              data-page-editor-canvas-frame="true"
+              data-page-editor-canvas-device={canvasDevice}
+              style={wrapperBackgroundStyle}
             >
-              <BlockList
-                blocks={previewBlocks}
-                className={spacingTokenToListSpaceClassMap[pageLayout.sections.gap]}
-                pageDefaults={pageLayout.sections.defaults}
-                selectedId={selectedId}
-                highlightedId={highlightedBlockId}
-                onSelect={setSelectedId}
-                onMove={handleMove}
-                onDuplicate={handleDuplicate}
-                onDelete={handleDelete}
-                onInsert={handleInsertIntoSlot}
-                onMoveToSlot={handleMoveIntoSlot}
-                onOpenSlotInsert={handleOpenSlotInsert}
-                previewStatesByBlockId={activeWidgetPreviewStates}
-              />
+              {wrapperBackgroundVideo ? (
+                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+                  <video
+                    className="h-full w-full object-cover"
+                    src={wrapperBackgroundVideo}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    aria-hidden="true"
+                  />
+                </div>
+              ) : null}
+              <div
+                className={joinClasses(
+                  wrapperContainerClass,
+                  wrapperBackgroundVideo ? "relative z-[1]" : undefined
+                )}
+              >
+                <BlockList
+                  blocks={previewBlocks}
+                  className={spacingTokenToListSpaceClassMap[pageLayout.sections.gap]}
+                  pageDefaults={pageLayout.sections.defaults}
+                  previewDevice={canvasDevice}
+                  selectedId={selectedId}
+                  highlightedId={highlightedBlockId}
+                  onSelect={setSelectedId}
+                  onMove={handleMove}
+                  onDuplicate={handleDuplicate}
+                  onDelete={handleDelete}
+                  onInsert={handleInsertIntoSlot}
+                  onMoveToSlot={handleMoveIntoSlot}
+                  onOpenSlotInsert={handleOpenSlotInsert}
+                  previewStatesByBlockId={activeWidgetPreviewStates}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       <PageSettingsDrawer
         key={`${page?.id ?? "page-settings"}-${settingsOpen ? "open" : "closed"}`}
@@ -1587,16 +1650,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             Edit settings for the selected block.
           </SheetDescription>
           <div className="flex h-full flex-col overflow-y-auto p-6">
-            <BlockSettings
-              block={selectedBlock}
-              widget={selectedWidget}
-              onChange={handleChangeBlock}
-              onBlockPatch={
-                selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
-              }
-              editorContext={pageEditorWidgetContext}
-              pageDefaults={pageLayout.sections.defaults}
-            />
+            {renderBlockSettingsPanel()}
           </div>
         </SheetContent>
       </Sheet>

@@ -116,6 +116,9 @@ test("Advanced intake metadata includes controlled Advanced fields and option ca
       expect.objectContaining({
         id: "sticky",
       }),
+      expect.objectContaining({
+        id: "collapse-on-scroll",
+      }),
     ])
   );
   expect(hero?.answerFields.map((field) => field.key)).toContain("advancedHeroVariantId");

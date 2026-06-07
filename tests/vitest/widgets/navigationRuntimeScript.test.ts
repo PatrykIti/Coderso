@@ -5,6 +5,7 @@ import { afterEach, expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
 
 import {
+  bindNavigationRuntimeRoots,
   NavigationBlock,
   navigationDefaults,
   type NavigationData,
@@ -41,6 +42,53 @@ const setScrollY = (value: number) => {
 afterEach(() => {
   document.body.innerHTML = "";
   window.history.replaceState({}, "", "/");
+});
+
+test("navigation admin preview binder initializes drawer and collapse without inline script eval", () => {
+  document.body.innerHTML = `<div data-page-editor-canvas-scroller="true">${renderToString(
+    React.createElement(NavigationBlock, {
+      data: {
+        ...navigationDefaults,
+        items: [
+          { label: "Home", href: "/" },
+          { label: "Docs", href: "/docs" },
+        ],
+        behavior: {
+          ...navigationDefaults.behavior,
+          collapseOnScroll: true,
+          mobileMode: "drawer",
+        },
+      },
+      variant: "with-cta",
+      blockId: "nav-admin-preview",
+    })
+  )}</div>`;
+
+  const scroller = document.querySelector("[data-page-editor-canvas-scroller='true']");
+  const root = document.querySelector('nav[data-navigation-widget="1"]');
+  if (!(scroller instanceof HTMLElement) || !(root instanceof HTMLElement)) {
+    throw new Error("Missing navigation admin preview fixture");
+  }
+
+  const cleanup = bindNavigationRuntimeRoots(scroller, { scrollTarget: scroller });
+  try {
+    const trigger = root.querySelector("[data-navigation-mobile-toggle]");
+    const panel = root.querySelector("[data-navigation-mobile-panel]");
+    if (!(trigger instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) {
+      throw new Error("Missing mobile drawer parts");
+    }
+
+    trigger.click();
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(panel.hidden).toBe(false);
+    expect(panel.getAttribute("aria-hidden")).toBe("false");
+
+    scroller.scrollTop = 80;
+    scroller.dispatchEvent(new Event("scroll"));
+    expect(root.dataset.navigationCollapsed).toBe("true");
+  } finally {
+    cleanup();
+  }
 });
 
 test("navigation runtime drawer updates labels, focus, and close state", () => {

@@ -32,18 +32,21 @@ async function canConnect() {
   }
 }
 
-function buildUploadFile(
-  name: string,
-  type: string,
-  content: Buffer
-): UploadFile {
+function buildUploadFile(name: string, type: string, content: Buffer): UploadFile {
   return {
     name,
     type,
     size: content.length,
     arrayBuffer: async () =>
-      content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength) as ArrayBuffer,
+      content.buffer.slice(
+        content.byteOffset,
+        content.byteOffset + content.byteLength
+      ) as ArrayBuffer,
   };
+}
+
+function buildNativeFile(name: string, type: string, content: Buffer): UploadFile {
+  return new File([Uint8Array.from(content)], name, { type });
 }
 
 const previousEnv = {
@@ -92,13 +95,8 @@ beforeAll(async () => {
   process.env.MEDIA_ALLOWED_MIME = "text/plain";
   process.env.MEDIA_MAX_SIZE_BYTES = "1024";
 
-  existingStorageRows = await db
-    .select()
-    .from(settings)
-    .where(inArray(settings.key, storageKeys));
-  await db
-    .delete(settings)
-    .where(inArray(settings.key, storageKeys));
+  existingStorageRows = await db.select().from(settings).where(inArray(settings.key, storageKeys));
+  await db.delete(settings).where(inArray(settings.key, storageKeys));
 
   await setStorageSettings({
     driver: "local",
@@ -114,9 +112,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (hasDb) {
-    await db
-      .delete(settings)
-      .where(inArray(settings.key, storageKeys));
+    await db.delete(settings).where(inArray(settings.key, storageKeys));
     if (existingStorageRows.length > 0) {
       for (const row of existingStorageRows) {
         await db.insert(settings).values(row).onConflictDoNothing();
@@ -210,13 +206,33 @@ testIfDb("upload/update/delete media", async () => {
 });
 
 testIfDb("rejects disallowed mime", async () => {
-  const file = buildUploadFile(
-    "virus.bin",
-    "application/octet-stream",
-    Buffer.from("x")
-  );
+  const file = buildUploadFile("virus.bin", "application/octet-stream", Buffer.from("x"));
 
   await expect(uploadMedia(file, {})).rejects.toThrow("media_mime_not_allowed");
+});
+
+testIfDb("rejects native file with empty mime without internal error", async () => {
+  const file = buildNativeFile("asset.bin", "", Buffer.from("x"));
+
+  await expect(uploadMedia(file, {})).rejects.toThrow("media_mime_not_allowed");
+});
+
+testIfDb("normalizes mime parameters before policy and persistence", async () => {
+  const content = Buffer.from("hello");
+  const file = buildUploadFile("hello.txt", "text/plain;charset=utf-8", content);
+
+  const uploaded = await uploadMedia(file, {});
+  createdMediaId = uploaded.id;
+
+  expect(uploaded).toMatchObject({
+    type: "file",
+    mimeType: "text/plain",
+    originalName: "hello.txt",
+    size: content.length,
+  });
+
+  await deleteMedia(uploaded.id);
+  createdMediaId = undefined;
 });
 
 testIfDb("uploads image dimensions and falls back to original filename title", async () => {
@@ -253,6 +269,45 @@ testIfDb("uploads image dimensions and falls back to original filename title", a
   resetMediaStorageAdapterCache();
 });
 
+testIfDb("uploads native file without dropping metadata", async () => {
+  await setStorageSettings({
+    driver: "local",
+    local: { dir: tempDir },
+    publicBaseUrl: "http://localhost/media",
+    allowedMime: "image/*",
+    maxSizeBytes: 1024,
+  });
+  resetStorageSettingsCache();
+  resetMediaStorageAdapterCache();
+
+  const file = buildNativeFile("native-pixel.png", "image/png", pngOneByOne);
+  const uploaded = await uploadMedia(file, {});
+  createdMediaId = uploaded.id;
+
+  expect(uploaded).toMatchObject({
+    originalName: "native-pixel.png",
+    type: "image",
+    mimeType: "image/png",
+    size: pngOneByOne.length,
+    width: 1,
+    height: 1,
+  });
+  expect(uploaded.key.endsWith(".png")).toBe(true);
+
+  await deleteMedia(uploaded.id);
+  createdMediaId = undefined;
+
+  await setStorageSettings({
+    driver: "local",
+    local: { dir: tempDir },
+    publicBaseUrl: "http://localhost/media",
+    allowedMime: "text/plain",
+    maxSizeBytes: 1024,
+  });
+  resetStorageSettingsCache();
+  resetMediaStorageAdapterCache();
+});
+
 testIfDb("recovers missing dimensions and replaces asset without losing title", async () => {
   await setStorageSettings({
     driver: "local",
@@ -264,18 +319,14 @@ testIfDb("recovers missing dimensions and replaces asset without losing title", 
   resetStorageSettingsCache();
   resetMediaStorageAdapterCache();
 
-  const uploaded = await uploadMedia(
-    buildUploadFile("first.png", "image/png", pngOneByOne),
-    { title: "Brand mark" }
-  );
+  const uploaded = await uploadMedia(buildUploadFile("first.png", "image/png", pngOneByOne), {
+    title: "Brand mark",
+  });
   createdMediaId = uploaded.id;
   const original = await getMediaById(uploaded.id);
   createdMediaKey = original?.key;
 
-  await db
-    .update(media)
-    .set({ width: null, height: null })
-    .where(eq(media.id, uploaded.id));
+  await db.update(media).set({ width: null, height: null }).where(eq(media.id, uploaded.id));
 
   const recovered = await recoverMediaDimensions(uploaded.id);
   expect(recovered?.width).toBe(1);
@@ -283,7 +334,7 @@ testIfDb("recovers missing dimensions and replaces asset without losing title", 
 
   const replaced = await replaceMedia(
     uploaded.id,
-    buildUploadFile("second.png", "image/png", pngOneByOne)
+    buildNativeFile("second.png", "image/png", pngOneByOne)
   );
   expect(replaced.id).toBe(uploaded.id);
   expect(replaced.originalName).toBe("second.png");

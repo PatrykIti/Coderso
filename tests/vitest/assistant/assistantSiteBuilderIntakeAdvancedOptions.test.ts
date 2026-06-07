@@ -106,7 +106,7 @@ test("Advanced option registries are deterministic and backend-owned", () => {
 
 test("Advanced layout facts map selected ids to existing widget-backed review facts", () => {
   const facts = buildSiteBuilderIntakeAdvancedLayoutFacts({
-    menuBehaviorIds: ["grouped", "sticky", "mobile-drawer"],
+    menuBehaviorIds: ["grouped", "sticky", "collapse-on-scroll", "mobile-drawer"],
     ctaTargetPageRole: "contact",
     heroVariantId: "media-left",
     sectionVariantIds: ["proof-spotlight", "faq-two-column", "call-to-action-split"],
@@ -116,12 +116,13 @@ test("Advanced layout facts map selected ids to existing widget-backed review fa
 
   expect(facts).toMatchObject({
     menu: {
-      behaviorIds: ["grouped", "sticky", "mobile-drawer"],
+      behaviorIds: ["grouped", "sticky", "collapse-on-scroll", "mobile-drawer"],
       widgetType: "navigation",
       module: "navigation",
       variantId: "split",
       structure: "grouped",
       sticky: true,
+      collapseOnScroll: true,
       transparent: false,
       mobileMode: "drawer",
       ctaTargetPageRole: "contact",
@@ -258,7 +259,7 @@ test("Advanced intake derives normalized facts and rejects Basic tampering", () 
           values: {
             menuPreset: "conversion-focused",
             primaryActionPageRole: "contact",
-            advancedMenuBehaviorIds: ["sticky", "mobile-drawer"],
+            advancedMenuBehaviorIds: ["sticky", "collapse-on-scroll", "mobile-drawer"],
             advancedCtaTargetPageRole: "contact",
           },
         },
@@ -292,9 +293,10 @@ test("Advanced intake derives normalized facts and rejects Basic tampering", () 
 
   expect(normalized.facts?.advancedLayout).toMatchObject({
     menu: {
-      behaviorIds: ["sticky", "mobile-drawer"],
+      behaviorIds: ["sticky", "collapse-on-scroll", "mobile-drawer"],
       variantId: "with-cta",
       sticky: true,
+      collapseOnScroll: true,
       mobileMode: "drawer",
       ctaTargetPageRole: "contact",
     },
@@ -362,7 +364,7 @@ test("Advanced option widget requirements match registered page-builder widgets"
 test("Advanced runtime overrides produce widget-validator-safe navigation hero and section blocks", () => {
   ensureRuntimeWidgetsRegistered();
   const layout = buildSiteBuilderIntakeAdvancedLayoutFacts({
-    menuBehaviorIds: ["grouped", "sticky", "mobile-drawer"],
+    menuBehaviorIds: ["grouped", "sticky", "collapse-on-scroll", "mobile-drawer"],
     ctaTargetPageRole: "contact",
     heroVariantId: "media-left",
     sectionVariantIds: ["proof-spotlight", "faq-two-column", "call-to-action-split"],
@@ -387,6 +389,7 @@ test("Advanced runtime overrides produce widget-validator-safe navigation hero a
       linksSource: "menu",
       behavior: {
         sticky: true,
+        collapseOnScroll: true,
         mobileMode: "drawer",
       },
     },

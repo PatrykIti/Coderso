@@ -1183,8 +1183,8 @@ export function NavigationVisualEditor({
             className="rounded-md border border-dashed border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground"
             data-navigation-preview-boundary="runtime-script"
           >
-            Admin preview renders static navigation markup. Drawer, submenu, collapse-on-scroll, and
-            active-link updates are activated by the public runtime script.
+            Admin preview and published pages share the navigation runtime for drawer, submenu,
+            collapse-on-scroll, and active-link updates.
           </div>
         </div>
         {linksSource === "menu" ? (
@@ -2241,7 +2241,7 @@ export function NavigationAdvancedEditor({ value, variant }: WidgetEditorProps<N
           id="navigation-advanced-behavior-preview-boundary"
           label="Admin preview runtime"
           path="behavior.activeLinkMode"
-          value="Static markup only; drawer, submenu, collapse, and active-link updates run in public runtime."
+          value="Admin preview and published pages share the runtime bridge for drawer, submenu, collapse, and active-link updates."
         />
       </EditorSection>
     </div>

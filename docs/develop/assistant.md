@@ -224,9 +224,10 @@ after review.
 
 Advanced menu, hero, and section options live in
 `assistantSiteBuilderIntakeAdvancedOptions.ts`. They are controlled ids only:
-menu behavior maps to existing Navigation widget behavior fields and trusted
-CTA page-role targets, hero variants map to current Hero widget variants, and
-section variants map to existing widget variants backed by
+menu behavior maps to existing Navigation widget behavior fields such as
+`sticky`, `collapseOnScroll`, `transparent`, and `mobileMode` plus trusted CTA
+page-role targets, hero variants map to current Hero widget variants, and section
+variants map to existing widget variants backed by
 `modulePackMatrix.assistantPageSections`. Unknown ids, raw CTA URLs, conflicting
 menu surface choices, missing section roles, and design-preset support gaps fail
 closed or become review gates; they never add `context.siteBuilderIntake`,

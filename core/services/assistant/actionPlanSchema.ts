@@ -1828,6 +1828,7 @@ const normalizeAdvancedRuntimeMenuOverride = (value: unknown) => {
       "behaviorIds",
       "variantId",
       "sticky",
+      "collapseOnScroll",
       "transparent",
       "mobileMode",
       "ctaTargetPageRole",
@@ -1839,6 +1840,8 @@ const normalizeAdvancedRuntimeMenuOverride = (value: unknown) => {
     ),
     variantId: readEnum(input.variantId, advancedNavigationVariantIds),
     sticky: readBoolean(input.sticky),
+    collapseOnScroll:
+      input.collapseOnScroll === undefined ? false : readBoolean(input.collapseOnScroll),
     transparent: readBoolean(input.transparent),
     mobileMode: readEnum(input.mobileMode, advancedNavigationMobileModes),
     ctaTargetPageRole: readOptionalNullableEnum(input.ctaTargetPageRole, siteBuilderPageRoleIds),

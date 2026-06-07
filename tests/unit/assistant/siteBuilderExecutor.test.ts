@@ -293,9 +293,10 @@ test("executeGuidedSiteBuilder applies Advanced runtime overrides to executable 
       advancedRuntimeOverrides: {
         schemaVersion: 1,
         menu: {
-          behaviorIds: ["sticky", "mobile-drawer"],
+          behaviorIds: ["sticky", "collapse-on-scroll", "mobile-drawer"],
           variantId: "with-cta",
           sticky: true,
+          collapseOnScroll: true,
           transparent: false,
           mobileMode: "drawer",
           ctaTargetPageRole: "contact",

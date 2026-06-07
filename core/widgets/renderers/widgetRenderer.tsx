@@ -74,6 +74,16 @@ export type WidgetRendererPageDefaults = WidgetLayoutDefaults;
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
+const isStickyNavigationBlock = (block: WidgetBlock) => {
+  if (block.type !== "navigation") return false;
+  const data = block.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+  const behavior = (data as { behavior?: unknown }).behavior;
+  if (!behavior || typeof behavior !== "object" || Array.isArray(behavior)) return false;
+  const parsed = behavior as { collapseOnScroll?: unknown; sticky?: unknown };
+  return parsed.sticky === true || parsed.collapseOnScroll === true;
+};
+
 const resolveContainerToken = (
   value: unknown,
   fallback: ContainerToken,
@@ -207,6 +217,7 @@ export function WidgetRenderer({
     previewDevice,
   };
   const renderSurface = renderContext?.nestedSurface ?? "default-block";
+  const stickyNavigationSurface = isStickyNavigationBlock(normalized);
   const renderBlockWithContext = (
     child: WidgetBlock,
     nextRenderContext: WidgetRenderContext = renderContext
@@ -257,7 +268,14 @@ export function WidgetRenderer({
   }
 
   return (
-    <section className={sectionClass} style={backgroundStyle}>
+    <section
+      className={joinClasses(sectionClass, stickyNavigationSurface && "sticky z-40")}
+      style={{
+        ...backgroundStyle,
+        top: stickyNavigationSurface ? "var(--coderso-preview-banner-offset, 0px)" : undefined,
+      }}
+      data-widget-sticky-surface={stickyNavigationSurface ? "navigation" : undefined}
+    >
       <div className={wrapperClass}>{widgetNode}</div>
     </section>
   );
