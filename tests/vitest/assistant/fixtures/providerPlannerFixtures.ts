@@ -369,7 +369,7 @@ export const providerPlannerFixtures: ProviderPlannerFixture[] = [
     ),
     expected: {
       status: "needs_input",
-      intentId: "entry-create-needs-input",
+      intentId: "generic-guide-needs-input",
     },
   },
   {

@@ -1391,7 +1391,7 @@ const shouldReturnLocalPolicyPlanBeforeProvider = (plan: AssistantActionPlan) =>
   (plan.responseKind === "action_plan" && plan.actions.length > 0) ||
   (plan.responseKind === "inspection" && (plan.inspection?.candidates.length ?? 0) > 0) ||
   (plan.intentId.startsWith("site-builder-follow-up-") &&
-    (plan.responseKind === "needs_input" || plan.responseKind === "gated") &&
+    plan.responseKind === "gated" &&
     plan.actions.length === 0);
 
 const requiresProviderLlmGate = (context: AssistantActionContext | undefined) =>

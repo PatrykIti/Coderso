@@ -8,7 +8,7 @@ export type CmsOperationFixture = {
   providerDraft?: Record<string, unknown>;
   expected: {
     status: "ready" | "needs_input";
-    responseKind?: string;
+    responseKind?: "action_plan" | "inspection" | "needs_input" | "docs" | "gated";
     intentId?: string;
     actionTypes?: string[];
     candidates?: string[];
@@ -376,7 +376,7 @@ export const cmsOperationFixtures: CmsOperationFixture[] = [
     },
     expected: {
       status: "needs_input",
-      responseKind: "needs_input",
+      responseKind: "gated",
     },
   },
   {

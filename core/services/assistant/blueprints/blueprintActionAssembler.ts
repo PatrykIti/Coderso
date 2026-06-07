@@ -29,6 +29,7 @@ import {
 import { mergeBlueprintSchemas } from "./blueprintSchemaMerger";
 import { matchExistingCompositionResources } from "./blueprintExistingResourceMatcher";
 import { buildBlueprintCompositionMetadata } from "./blueprintCompositionMetadata";
+import { normalizeDetailPageDocument } from "../../content/detailPageSchema";
 
 const unique = <T>(items: T[]) => Array.from(new Set(items));
 
@@ -637,8 +638,25 @@ export const mergeBlueprintActions = (
     }
     case "page.upsert":
       return mergePageUpsert(left, right as typeof left);
-    case "detail-page.upsert":
-      return isDeepStrictEqual(left.input, (right as typeof left).input) ? left : null;
+    case "detail-page.upsert": {
+      const other = right as typeof left;
+      if (
+        !isDeepStrictEqual(left.input.contentTypeId ?? null, other.input.contentTypeId ?? null) ||
+        (left.input.expectedExistingId ?? null) !== (other.input.expectedExistingId ?? null)
+      ) {
+        return null;
+      }
+      const leftDocument = normalizeDetailPageDocument(left.input.document);
+      const rightDocument = normalizeDetailPageDocument(other.input.document);
+      if (!isDeepStrictEqual(leftDocument, rightDocument)) return null;
+      return {
+        ...left,
+        input: {
+          ...left.input,
+          document: leftDocument,
+        },
+      };
+    }
     default:
       return isDeepStrictEqual(left, right) ? left : null;
   }
