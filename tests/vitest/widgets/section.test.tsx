@@ -879,7 +879,8 @@ test("section keeps sticky navigation content outside the old clipping wrapper",
     />
   );
 
-  expect(html).toContain("sticky top-0 z-40");
+  expect(html).toContain("sticky z-40");
+  expect(html).toContain("top:var(--coderso-preview-banner-offset, 0px)");
   expect(html).toContain("absolute inset-0 overflow-hidden");
   expect(html).not.toContain("relative w-full overflow-hidden");
 });

@@ -168,9 +168,9 @@ Primary CTA jest renderowane tylko dla:
   `aria-hidden`
 - click/touch/keyboard open/close logic is root-scoped and closes siblings and
   outside clicks safely
-- admin preview renders static Navigation markup; drawer, submenu,
-  collapse-on-scroll, and active-link updates are activated by the public
-  runtime script
+- admin page-builder preview binds the same drawer, submenu, active-link, and
+  collapse-on-scroll behavior through the shared preview runtime bridge; public
+  output still activates through the shared widget runtime script
 
 ### Mobile modes
 
@@ -221,9 +221,14 @@ Primary CTA jest renderowane tylko dla:
 
 ### Collapse and sticky
 
-- `sticky` still only enables sticky positioning on the Navigation root
+- `sticky` enables sticky positioning on the Navigation root and the outer
+  widget surface so the header is not trapped by a short block wrapper
 - `collapseOnScroll` is now a real root-scoped runtime behavior:
   `data-navigation-collapsed` and a local collapsed class toggle while scrolling
+- `collapseOnScroll` also opts into sticky positioning at render time so the
+  collapse animation remains visible while the page or editor canvas scrolls
+- collapsed padding only reduces larger `paddingY` values; low padding settings
+  do not expand during collapse
 - shared Section sticky containment is no longer blocked by the old
   `SectionBlock` overflow wrapper after `TASK-318`; any future page-shell-only
   sticky blockers should be routed separately instead of back into Navigation

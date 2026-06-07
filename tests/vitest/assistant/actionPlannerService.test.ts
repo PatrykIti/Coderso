@@ -7,8 +7,14 @@ import {
   planAssistantActions,
   planAssistantActionsWithProviderDraft,
 } from "../../../core/services/assistant/actionPlannerService";
+import { mapCmsOperationToActionPlan } from "../../../core/services/assistant/cmsOperationActionMapper";
+import {
+  isCuratedMediaUrl,
+  selectCuratedMediaProfile,
+} from "../../../core/services/media/curatedMediaProfiles";
 import type {
   AssistantActionContext,
+  AssistantAdminContext,
   AssistantPlannedAction,
 } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantProvider } from "../../../core/services/assistant/providers/providerTypes";
@@ -26,6 +32,30 @@ type AssistantPageSurface = Extract<
   NonNullable<AssistantActionContext["activeSurface"]>,
   { kind: "page" }
 >;
+
+type AssistantResourceCatalog = NonNullable<AssistantActionContext["resourceCatalog"]>;
+
+const createTrustedCatalog = (
+  overrides: Partial<AssistantResourceCatalog> = {}
+): AssistantResourceCatalog => ({
+  schemaVersion: 1,
+  generatedAt: "2026-06-06T00:00:00.000Z",
+  budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+  pages: [],
+  posts: [],
+  entries: [],
+  contentTypes: [],
+  customScreens: [],
+  detailPages: [],
+  listings: { queries: [], templates: [] },
+  forms: [],
+  menus: [],
+  seoDocuments: [],
+  widgets: [],
+  media: [],
+  warnings: [],
+  ...overrides,
+});
 
 const createPageWithReferencedTemplateContext = (
   surfaceOverrides: Partial<AssistantPageSurface> = {}
@@ -145,8 +175,9 @@ test("planAssistantActions builds ready house projects catalog plan", () => {
   expect(plan.intentFamily).toBe("catalog_showcase");
   expect(plan.intentId).toBe("house-projects-catalog");
   expect(plan.actions.map((action) => action.type)).toEqual([
-    "setting.content-route.upsert",
     "content-type.upsert",
+    "detail-page.upsert",
+    "setting.content-route.upsert",
     "custom-screen.upsert",
     "listing-query.upsert",
     "listing-template.upsert",
@@ -194,6 +225,142 @@ test("planAssistantActions composes mixed product prompts through the live bluep
       .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
   ).toEqual(["/produkty", "/blog"]);
   expect(plan.metadata?.blueprintShadow).toBeUndefined();
+});
+
+test("planAssistantActions routes broad full-service architecture prompts into Basic intake", () => {
+  const plan = planAssistantActions({
+    prompt: [
+      "Stwórz premium stronę dla studia architektonicznego Studio Forma.",
+      "Potrzebuję portfolio realizacji, ofertę usług z podstronami, proces współpracy i kontakt z formularzem leadowym.",
+      "Realizacje mają mieć katalog z kategorią, lokalizacją i rokiem.",
+    ].join(" "),
+    context: {
+      page: "/admin/advanced/widgets",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("needs_input");
+  expect(plan.intentFamily).toBe("site_kit");
+  expect(plan.intentId).toBe("site-builder-basic-intake");
+  expect(plan.actions).toEqual([]);
+  expect(plan.questions[0]?.id).toBe("site-builder-intake.business-profile");
+  expect(plan.metadata?.siteBuilderIntake).toMatchObject({
+    mode: "basic",
+    nextStepId: "business-profile",
+    canExecute: false,
+  });
+});
+
+test("selectCuratedMediaProfile matches supported industries without unsafe fallback", () => {
+  expect(
+    selectCuratedMediaProfile({
+      prompt: "Strona premium dla pracowni architektury z portfolio wnetrz.",
+      intentFamily: "service_business_full_site",
+    })?.id
+  ).toBe("architecture-studio");
+
+  expect(
+    selectCuratedMediaProfile({
+      prompt: "Strona dla restauracji z menu, rezerwacjami i filmem w tle.",
+      intentFamily: "service_business_full_site",
+    })
+  ).toBeNull();
+});
+
+test("classifyAssistantPrompt does not route generic non-architecture full-site prompts to architecture blueprint", () => {
+  expect(
+    classifyAssistantPrompt(
+      "Stworz kompletny serwis dla restauracji z menu, rezerwacjami, galeria i kontaktem."
+    ).intentFamily
+  ).not.toBe("service_business_full_site");
+});
+
+test("planAssistantActions routes English full-service site prompts into Basic intake", () => {
+  const plan = planAssistantActions({
+    prompt: [
+      "Create a premium full-service architecture studio site for Studio Forma.",
+      "It must include home, services, portfolio, about, process, references, contact with lead form, primary nav, footer, SEO, public sample content, and working services and portfolio detail pages.",
+      "Use a clean premium architecture-studio UX with strong public pages, not a scaffold.",
+    ].join(" "),
+    context: {
+      page: "/admin/settings/assistant",
+      locale: "en-US",
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("needs_input");
+  expect(plan.promptKind).toBe("setup_request");
+  expect(plan.intentFamily).toBe("site_kit");
+  expect(plan.intentId).toBe("site-builder-basic-intake");
+  expect(plan.actions).toEqual([]);
+  expect(plan.metadata?.siteBuilderIntake).toMatchObject({
+    mode: "basic",
+    nextStepId: "business-profile",
+  });
+});
+
+test("planAssistantActionsWithProviderDraft routes English full-service prompts into Basic intake before provider calls", async () => {
+  const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: [
+      "Create a premium full-service architecture studio site for Studio Forma.",
+      "It must include home, services, portfolio, about, process, references, contact with lead form, primary nav, footer, SEO, public sample content, and working services and portfolio detail pages.",
+      "Use a clean premium architecture-studio UX with strong public pages, not a scaffold.",
+    ].join(" "),
+    llmAvailable: true,
+    provider: {
+      id: "openrouter",
+      complete: async (request) => {
+        requests.push(request);
+        return {
+          text: JSON.stringify({
+            operation: "inspect",
+            resourceKind: "page",
+            targetQuery: { exactName: "home" },
+            filters: null,
+            mutation: null,
+            constraints: null,
+          }),
+        };
+      },
+    },
+    providerModel: "anthropic/claude-sonnet-4",
+    context: {
+      page: "/admin/settings/assistant",
+      locale: "en-US",
+      planningState: {
+        schemaVersion: 1,
+        sourcePlanId: "plan-cms-page-inspect",
+        route: "/admin/pages",
+        resourceKind: "page",
+        operation: "inspect",
+        query: "home",
+        candidates: [
+          {
+            kind: "page",
+            id: "page-home",
+            label: "home",
+            status: "published",
+          },
+        ],
+        createdAt: "2026-06-04T10:00:00.000Z",
+        expiresAt: "2099-06-04T10:10:00.000Z",
+      },
+    },
+  });
+
+  expect(requests).toHaveLength(0);
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentFamily).toBe("site_kit");
+  expect(plan.intentId).toBe("site-builder-basic-intake");
+  expect(plan.actions).toEqual([]);
+  expect(plan.metadata?.siteBuilderIntake).toMatchObject({
+    mode: "basic",
+    nextStepId: "business-profile",
+  });
 });
 
 test("planAssistantActions composes single-adjunct prompts through the live blueprint planner path", () => {
@@ -443,6 +610,108 @@ test("planAssistantActionsWithProviderDraft keeps provider responses free of blu
   expect(plan.metadata?.providerDraftUsed).toBe(true);
   expect(plan.metadata?.providerId).toBe("fake");
   expect(plan.metadata?.blueprintShadow).toBeUndefined();
+});
+
+test("planAssistantActionsWithProviderDraft gates unsupported guided follow-up drafts before generic mapping", async () => {
+  let providerCalls = 0;
+  const provider: AssistantProvider = {
+    id: "fake",
+    complete: async () => {
+      providerCalls += 1;
+      return {
+        text: JSON.stringify({
+          operation: "update",
+          resourceKind: "form",
+          resourceKey: "form",
+          targetQuery: { exactName: "Lead Form" },
+          mutation: { fieldIntent: "name", value: "Lead Capture" },
+          constraints: { destructive: false, requiresConfirmation: false },
+        }),
+      };
+    },
+  };
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "popraw to miejsce po wygenerowaniu strony",
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/settings/assistant",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog({
+        forms: [
+          {
+            id: "form-lead",
+            name: "Lead Form",
+            slug: "lead-form",
+            status: "published",
+            submissionAccess: "public",
+            fields: [],
+          },
+        ],
+      }),
+    },
+  });
+
+  expect(providerCalls).toBe(1);
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.intentId).toBe("site-builder-follow-up-target_family_unsupported");
+  expect(plan.actions).toEqual([]);
+  expect(plan.metadata).toMatchObject({
+    planner: "provider",
+    providerDraftUsed: true,
+    providerId: "fake",
+  });
+  expect(plan.assumptions).toContain(
+    "Provider path used deterministic local policy routing or recovery."
+  );
+});
+
+test("planAssistantActionsWithProviderDraft blocks unsupported guided follow-up operations before provider drafting", async () => {
+  let providerCalls = 0;
+  const provider: AssistantProvider = {
+    id: "fake",
+    complete: async () => {
+      providerCalls += 1;
+      return {
+        text: JSON.stringify({
+          operation: "update",
+          resourceKind: "page",
+          resourceKey: "page",
+          targetQuery: { exactName: "Home" },
+          mutation: { fieldIntent: "title", value: "Hidden" },
+          constraints: { destructive: false, requiresConfirmation: false },
+        }),
+      };
+    },
+  };
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: 'archive page "Home"',
+    llmAvailable: true,
+    provider,
+    context: {
+      page: "/admin/pages",
+      locale: "en",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog({
+        pages: [{ id: "page-home", title: "Home", slug: "/", status: "published" }],
+      }),
+    },
+  });
+
+  expect(providerCalls).toBe(0);
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.intentId).toBe("site-builder-follow-up-operation_unsupported");
+  expect(plan.actions).toEqual([]);
+  expect(plan.metadata).toMatchObject({
+    planner: "provider",
+    providerDraftUsed: false,
+    providerId: "fake",
+  });
 });
 
 test("planAssistantActions does not attach blueprint shadow metadata to generic cms plans even in debug mode", () => {
@@ -1112,10 +1381,12 @@ test("planAssistantActions reuses planning state for follow-up target selection"
     },
   });
 
-  expect(plan.status).toBe("ready");
-  expect(plan.actions.map((action) => action.type)).toEqual([
-    "custom-screen.delete",
-    "custom-screen.delete",
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("site-builder-follow-up-target_ambiguous");
+  expect(plan.actions).toEqual([]);
+  expect(plan.inspection?.candidates.map((candidate) => candidate.id)).toEqual([
+    "screen-house",
+    "screen-house-archive",
   ]);
 });
 
@@ -1188,16 +1459,13 @@ test("planAssistantActions reuses all prior page candidates when follow-up has n
     },
   });
 
-  expect(plan.status).toBe("ready");
-  expect(plan.actions.map((action) => action.type)).toEqual([
-    "page.delete",
-    "page.delete",
-    "page.delete",
-  ]);
-  expect(plan.actions.map((action) => action.title)).toEqual([
-    "Delete home",
-    "Delete Katalog Projektów Domów 33151341",
-    "Delete llm-live SEO Page",
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("site-builder-follow-up-target_ambiguous");
+  expect(plan.actions).toEqual([]);
+  expect(plan.inspection?.candidates.map((candidate) => candidate.id)).toEqual([
+    "home",
+    "catalog",
+    "seo-page",
   ]);
 });
 
@@ -1380,6 +1648,431 @@ test("planAssistantActions asks for active page context before page deletion", (
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActions asks for a guided follow-up target when trusted page candidates are ambiguous", () => {
+  const plan = planAssistantActions({
+    prompt: "update page Projects title to Featured Projects",
+    context: {
+      page: "/admin/pages",
+      locale: "en",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog({
+        pages: [
+          {
+            id: "page-projects-a",
+            title: "Projects",
+            slug: "/projects",
+            status: "published",
+          },
+          {
+            id: "page-projects-b",
+            title: "Projects",
+            slug: "/work",
+            status: "draft",
+          },
+        ],
+      }),
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("needs_input");
+  expect(plan.intentId).toBe("site-builder-follow-up-target_ambiguous");
+  expect(plan.actions).toEqual([]);
+  expect(plan.questions).toEqual([
+    {
+      id: "site-builder-follow-up-target",
+      label: "Which existing page or builder resource should I change?",
+      description:
+        "Choose one of the trusted candidates or open the exact page/screen before continuing.",
+      required: true,
+    },
+  ]);
+  expect(plan.inspection).toMatchObject({
+    kind: "resource-candidates",
+    resourceKind: "page",
+    matchStatus: "ambiguous",
+    candidates: [
+      { id: "page-projects-a", label: "Projects", slug: "/projects" },
+      { id: "page-projects-b", label: "Projects", slug: "/work" },
+    ],
+  });
+});
+
+test("planAssistantActions treats beginner section or gallery setup on an active generated page as a guided follow-up", () => {
+  const plan = planAssistantActions({
+    prompt: "nie ogarniam cms, chce dodac sekcje/projekty domow albo galerie wnetrz na stronie",
+    context: {
+      page: "/admin/pages/page-projects",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog({
+        pages: [
+          {
+            id: "page-projects",
+            title: "Realizacje",
+            slug: "/realizacje",
+            status: "published",
+          },
+        ],
+      }),
+      activeSurface: {
+        kind: "page",
+        page: {
+          id: "page-projects",
+          title: "Realizacje",
+          slug: "/realizacje",
+          status: "published",
+          template: "landing",
+        },
+        selectedBlockId: null,
+        blocks: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("needs_input");
+  expect(plan.intentId).toBe("site-builder-follow-up-target_required");
+  expect(plan.promptKind).toBe("refinement_request");
+  expect(plan.actions).toEqual([]);
+  expect(plan.inspection?.candidates).toEqual([
+    {
+      kind: "page",
+      id: "page-projects",
+      label: "Realizacje",
+      slug: "/realizacje",
+      status: "published",
+      adminHref: "/admin/pages/page-projects",
+    },
+  ]);
+});
+
+test("planAssistantActionsWithProviderDraft asks for the guided follow-up target before provider inspection on an active page", async () => {
+  let providerCalls = 0;
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "nie ogarniam cms, chce dodac sekcje/projekty domow albo galerie wnetrz na stronie",
+    llmAvailable: true,
+    provider: {
+      id: "openrouter",
+      complete: async () => {
+        providerCalls += 1;
+        return {
+          text: JSON.stringify({
+            operation: "inspect",
+            resourceKind: "custom-screen",
+            targetQuery: {
+              text: "gallery interiors / interior galleries / projekty domow",
+            },
+            filters: null,
+            mutation: null,
+            constraints: null,
+          }),
+        };
+      },
+    },
+    providerModel: "anthropic/claude-sonnet-4",
+    context: {
+      page: "/admin/pages/page-projects",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog({
+        pages: [
+          {
+            id: "page-projects",
+            title: "Realizacje",
+            slug: "/realizacje",
+            status: "published",
+          },
+        ],
+      }),
+      activeSurface: {
+        kind: "page",
+        page: {
+          id: "page-projects",
+          title: "Realizacje",
+          slug: "/realizacje",
+          status: "published",
+          template: "landing",
+        },
+        selectedBlockId: null,
+        blocks: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(providerCalls).toBe(0);
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("needs_input");
+  expect(plan.intentId).toBe("site-builder-follow-up-target_required");
+  expect(plan.promptKind).toBe("refinement_request");
+  expect(plan.actions).toEqual([]);
+  expect(plan.metadata).toMatchObject({
+    planner: "provider",
+    providerDraftUsed: false,
+    providerId: "openrouter",
+  });
+  expect(plan.assumptions).toContain(
+    "Provider path used deterministic local follow-up target routing before provider drafting."
+  );
+});
+
+test("planAssistantActions redacts poisoned follow-up target text before asking for input", () => {
+  const plan = planAssistantActions({
+    prompt: 'update page "Admin Secret api_key=sk-or-test" title to Hidden',
+    context: {
+      page: "/admin/pages",
+      locale: "en",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog(),
+    },
+  });
+  const serialized = JSON.stringify(plan);
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("site-builder-follow-up-target_required");
+  expect(plan.actions).toEqual([]);
+  expect(serialized).not.toContain("Admin Secret");
+  expect(serialized).not.toContain("sk-or-test");
+  expect(serialized).toContain("[REDACTED]");
+});
+
+test("planAssistantActions redacts token-like follow-up target text without keyword hints", () => {
+  const plan = planAssistantActions({
+    prompt: 'update page "sk-or-test" title to Hidden',
+    context: {
+      page: "/admin/pages",
+      locale: "en",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog(),
+    },
+  });
+  const serialized = JSON.stringify(plan);
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.actions).toEqual([]);
+  expect(serialized).not.toContain("sk-or-test");
+  expect(serialized).toContain("[REDACTED]");
+});
+
+test("planAssistantActions redacts secret-like text in generic clarifying plans", () => {
+  const plan = planAssistantActions({
+    prompt: "stworz cos api_key=sk-or-test",
+    context: {
+      page: "/admin/pages",
+      locale: "en",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog(),
+    },
+  });
+  const serialized = JSON.stringify(plan);
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("generic-guide-needs-input");
+  expect(plan.actions).toEqual([]);
+  expect(serialized).not.toContain("api_key");
+  expect(serialized).not.toContain("sk-or-test");
+  expect(serialized).toContain("[REDACTED]");
+});
+
+test("planAssistantActions redacts secret-like text in docs guidance plans", () => {
+  const plan = planAssistantActions({
+    prompt: "jak dziala cms api_key=sk-or-test",
+    context: {
+      page: "/admin/pages",
+      locale: "en",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog(),
+    },
+  });
+  const serialized = JSON.stringify(plan);
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("docs-guidance");
+  expect(plan.actions).toEqual([]);
+  expect(serialized).not.toContain("api_key");
+  expect(serialized).not.toContain("sk-or-test");
+  expect(serialized).toContain("[REDACTED]");
+});
+
+test("mapCmsOperationToActionPlan redacts secret-like unresolved target queries", () => {
+  const context: AssistantAdminContext = {
+    route: "/admin/pages",
+    locale: "en",
+    resourceCatalog: createTrustedCatalog(),
+    runtimeSnapshot: null,
+    activeSurface: null,
+    collectionWorkspaceHint: null,
+    collectionWorkspace: null,
+    planningState: null,
+    area: "pages",
+    advancedModule: null,
+  };
+  const plan = mapCmsOperationToActionPlan({
+    prompt: "update page api_key=sk-or-test title to Hidden",
+    draft: {
+      operation: "update",
+      resourceKind: "page",
+      targetQuery: { exactName: "api_key=sk-or-test" },
+      mutation: { fieldIntent: "title", value: "Hidden" },
+      constraints: { destructive: false, requiresConfirmation: true },
+    },
+    context,
+  });
+  const serialized = JSON.stringify(plan);
+
+  expect(plan?.status).toBe("needs_input");
+  expect(plan?.actions).toEqual([]);
+  expect(plan?.inspection?.query).toBe("[REDACTED]");
+  expect(serialized).not.toContain("api_key");
+  expect(serialized).not.toContain("sk-or-test");
+});
+
+test("mapCmsOperationToActionPlan redacts custom screen delete target prefixes", () => {
+  const context: AssistantAdminContext = {
+    route: "/admin/advanced/custom-screens",
+    locale: "en",
+    resourceCatalog: createTrustedCatalog({
+      customScreens: [
+        {
+          id: "screen-secret",
+          name: "sk-or-test Workspace",
+          contentTypeId: "ct-projects",
+          status: "active",
+          collectionRole: "canonical-admin-screen",
+          compositionKey: "guided-portfolio",
+          showInSidebar: true,
+          sidebarLabel: "Workspace",
+          writableBindingFields: [],
+          bindings: [],
+        },
+      ],
+    }),
+    runtimeSnapshot: null,
+    activeSurface: null,
+    collectionWorkspaceHint: null,
+    collectionWorkspace: null,
+    planningState: null,
+    area: "advanced",
+    advancedModule: "custom-screens",
+  };
+  const plan = mapCmsOperationToActionPlan({
+    prompt: "delete custom screen sk-or-test",
+    draft: {
+      operation: "delete",
+      resourceKind: "custom-screen",
+      resourceKey: "custom-screen",
+      targetQuery: { prefix: "sk-or-test" },
+      constraints: { destructive: true, requiresConfirmation: true },
+    },
+    context,
+  });
+
+  expect(plan?.status).toBe("ready");
+  expect(plan?.actions[0]?.type).toBe("custom-screen.delete");
+  expect(plan?.actions[0]?.input).toMatchObject({
+    expectedNamePrefix: "[REDACTED]",
+  });
+});
+
+test("planAssistantActions redacts secret-like text in generic policy-gated CMS plans", () => {
+  const plan = planAssistantActions({
+    prompt: "zaktualizuj media api_key=sk-or-test i ustaw podpisany URL signature=abc123",
+    context: {
+      page: "/admin/media",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog(),
+    },
+  });
+  const serialized = JSON.stringify(plan);
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.actions).toEqual([]);
+  expect(serialized).not.toContain("api_key");
+  expect(serialized).not.toContain("sk-or-test");
+  expect(serialized).not.toContain("signature=abc123");
+  expect(serialized).toContain("[REDACTED]");
+});
+
+test("planAssistantActions redacts secret-like text in generic inspection plans", () => {
+  const plan = planAssistantActions({
+    prompt: "find page api_key=sk-or-test",
+    context: {
+      page: "/admin/pages",
+      locale: "en",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog(),
+    },
+  });
+  const serialized = JSON.stringify(plan);
+
+  expect(plan.status).toBe("ready");
+  expect(plan.responseKind).toBe("inspection");
+  expect(plan.actions).toEqual([]);
+  expect(serialized).not.toContain("api_key");
+  expect(serialized).not.toContain("sk-or-test");
+  expect(serialized).toContain("[REDACTED]");
+});
+
+test("planAssistantActions redacts secret-like text in broad destructive blocks", () => {
+  const plan = planAssistantActions({
+    prompt: "delete all pages api_key=sk-or-test",
+    context: {
+      page: "/admin/pages",
+      locale: "en",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog({
+        pages: [{ id: "page-home", title: "Home", slug: "/", status: "published" }],
+      }),
+    },
+  });
+  const serialized = JSON.stringify(plan);
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("cms-page-delete-broad-blocked");
+  expect(plan.actions).toEqual([]);
+  expect(serialized).not.toContain("api_key");
+  expect(serialized).not.toContain("sk-or-test");
+  expect(serialized).toContain("[REDACTED]");
+});
+
+test("planAssistantActionsWithProviderDraft redacts secret-like text in policy-gated provider drafts", async () => {
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "zaktualizuj media api_key=sk-or-test i ustaw podpisany URL signature=abc123",
+    llmAvailable: true,
+    provider: createFakeProvider(
+      JSON.stringify({
+        operation: "update",
+        resourceKind: "settings-surface",
+        resourceKey: "settings-api-keys",
+        targetQuery: { exactName: "API Keys" },
+        filters: null,
+        mutation: { value: "sk-or-test" },
+        constraints: { destructive: false, requiresConfirmation: true },
+      })
+    ),
+    providerModel: "anthropic/claude-sonnet-4",
+    context: {
+      page: "/admin/media",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog(),
+    },
+  });
+  const serialized = JSON.stringify(plan);
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.intentId).toBe("settings-api-keys-update-gated");
+  expect(plan.actions).toEqual([]);
+  expect(serialized).not.toContain("api_key");
+  expect(serialized).not.toContain("sk-or-test");
+  expect(serialized).not.toContain("signature=abc123");
+  expect(serialized).toContain("[REDACTED]");
+});
+
 test("planAssistantActions builds page update plan from active page context", () => {
   const plan = planAssistantActions({
     prompt: "zmien tytuł strony na 'Contact Us'",
@@ -1404,6 +2097,9 @@ test("planAssistantActions builds page update plan from active page context", ()
 
   expect(plan.status).toBe("ready");
   expect(plan.intentId).toBe("page-update");
+  expect(plan.assumptions).toContain(
+    "The follow-up target was resolved by the guided site-builder follow-up resolver before action mapping."
+  );
   expect(plan.actions[0]).toMatchObject({
     id: "page-update-page-contact",
     type: "page.update",
@@ -1414,6 +2110,67 @@ test("planAssistantActions builds page update plan from active page context", ()
       expectedStatus: "draft",
       patch: {
         title: "Contact Us",
+      },
+    },
+  });
+});
+
+test("planAssistantActionsWithProviderDraft normalizes extensionless page slugs before page update actions", async () => {
+  let providerCalls = 0;
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: 'update page "Contact" title to "Contact L04"',
+    llmAvailable: true,
+    provider: {
+      id: "openrouter",
+      complete: async () => {
+        providerCalls += 1;
+        return {
+          text: JSON.stringify({
+            operation: "inspect",
+            resourceKind: "page",
+            targetQuery: { exactName: "Contact" },
+            filters: null,
+            mutation: null,
+            constraints: null,
+          }),
+        };
+      },
+    },
+    providerModel: "anthropic/claude-sonnet-4",
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog({
+        pages: [
+          {
+            id: "page-contact",
+            title: "Contact",
+            slug: "contact",
+            status: "published",
+          },
+        ],
+      }),
+    },
+  });
+
+  expect(providerCalls).toBe(0);
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("page-update");
+  expect(plan.metadata).toMatchObject({
+    planner: "provider",
+    providerDraftUsed: false,
+    providerId: "openrouter",
+  });
+  expect(plan.actions[0]).toMatchObject({
+    type: "page.update",
+    input: {
+      id: "page-contact",
+      title: "Contact",
+      slug: "/contact",
+      expectedStatus: "published",
+      patch: {
+        title: "Contact L04",
       },
     },
   });
@@ -2215,10 +2972,41 @@ test("planAssistantActions builds listing query update plan from exact target", 
 
   expect(plan.status).toBe("ready");
   expect(plan.intentId).toBe("listing-query-update");
+  expect(plan.assumptions).toContain(
+    "The follow-up target was resolved by the guided site-builder follow-up resolver before action mapping."
+  );
   expect(plan.actions[0]).toMatchObject({
     type: "listing-query.update",
     input: { id: "query-1", name: "Products Catalog Query", patch: { limit: 24 } },
   });
+});
+
+test("planAssistantActions gates unsupported guided follow-up families before generic action assembly", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien form 'Lead Form' na 'Lead Capture'",
+    context: {
+      page: "/admin/advanced/forms",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: createTrustedCatalog({
+        forms: [
+          {
+            id: "form-lead",
+            name: "Lead Form",
+            slug: "lead-form",
+            status: "published",
+            submissionAccess: "public",
+            fields: [],
+          },
+        ],
+      }),
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.intentId).toBe("site-builder-follow-up-target_family_unsupported");
+  expect(plan.actions).toEqual([]);
 });
 
 test("planAssistantActions builds form delete plan from active form route", () => {
@@ -2713,6 +3501,7 @@ test("planAssistantActions builds product inquiry catalog for catalog plus form 
     "listing-template.upsert",
     "form.upsert",
     "page.upsert",
+    "detail-page.upsert",
     "setting.content-route.upsert",
   ]);
   expect(plan.actions.find((action) => action.type === "page.upsert")).toMatchObject({
@@ -3262,14 +4051,14 @@ test("planAssistantActions builds inquiry form refinement plan for house project
   expect(pageAction?.input.formEmbed?.formName).toBe("House Projects Catalog Inquiry");
 });
 
-test("planAssistantActions builds site-kit actions from guided site-kit context", () => {
+test("planAssistantActions gates direct site-kit context before executable actions", () => {
   const plan = planAssistantActions({
     prompt: "prepare a starter site kit",
     context: {
       locale: "en",
       siteKit: {
         businessType: "automotive_workshop",
-        goals: ["lead_generation", "online_booking"],
+        goals: ["online_booking"],
         locale: "en",
         selectedKitId: "automotive-workshop",
         enabledStepIds: ["settings", "pages", "qa"],
@@ -3277,15 +4066,11 @@ test("planAssistantActions builds site-kit actions from guided site-kit context"
     },
   });
 
-  expect(plan.status).toBe("ready");
+  expect(plan.status).toBe("needs_input");
   expect(plan.intentFamily).toBe("site_kit");
-  expect(plan.actions.map((action) => action.type)).toEqual([
-    "site-kit.recommend",
-    "site-kit.install",
-  ]);
-  const install = plan.actions.find((action) => action.type === "site-kit.install");
-  expect(install?.input.preview.selectedKitId).toBe("automotive-workshop");
-  expect(install?.input.preview.enabledStepIds).toEqual(["settings", "pages", "qa"]);
+  expect(plan.responseKind).toBe("gated");
+  expect(plan.actions).toEqual([]);
+  expect(plan.answer).toContain("reviewed LLM Guide site-builder intake");
 });
 
 test("planAssistantActions accepts enriched resource catalog context without DB imports", () => {
@@ -3630,9 +4415,21 @@ test("planAssistantActionsWithProviderDraft prefers planning state for follow-up
   });
 
   expect(providerCalls).toBe(0);
-  expect(plan.status).toBe("ready");
-  expect(plan.actions.map((action) => action.type)).toEqual(["page.delete", "page.delete"]);
-  expect(plan.actions.map((action) => action.title)).toEqual(["Delete test-page", "Delete test2"]);
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("site-builder-follow-up-target_ambiguous");
+  expect(plan.actions).toEqual([]);
+  expect(plan.metadata).toMatchObject({
+    planner: "provider",
+    providerDraftUsed: false,
+    providerId: "fake",
+  });
+  expect(plan.assumptions).toContain(
+    "Provider path used deterministic local planning-state follow-up routing before provider drafting."
+  );
+  expect(plan.inspection?.candidates.map((candidate) => candidate.id)).toEqual([
+    "page-test",
+    "page-test-2",
+  ]);
 });
 
 test("planAssistantActionsWithProviderDraft recovers explicit page create fields when provider asks for target", async () => {

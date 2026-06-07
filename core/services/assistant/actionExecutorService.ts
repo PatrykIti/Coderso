@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from "node:util";
+
 import { getSetting, setSetting, type ContentRouteSetting } from "../settings/settingsService";
 import {
   createContentType,
@@ -40,6 +42,7 @@ import {
   deleteEntry,
   getEntry,
   getEntryBySlug,
+  publishEntry,
   updateEntry,
   updateEntryMetadata,
 } from "../content/entryService";
@@ -78,9 +81,12 @@ import {
 } from "../forms/formsService";
 import { listFormActions, setFormActions } from "../forms/formActionsService";
 import {
+  createMenu,
   deleteMenuItem,
+  listMenus,
   listMenuItems,
   replaceMenuItems,
+  updateMenu,
   type MenuItemInput,
 } from "../menus/menuService";
 import { getMediaById } from "../media/mediaService";
@@ -92,6 +98,7 @@ import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
 import { normalizeWidgetBlock } from "../../widgets/validator";
 import type { WidgetBlock } from "../../widgets/types";
 import { composeBlueprintPageData } from "./blueprints/blueprintPageSectionComposer";
+import { isCuratedMediaUrl } from "../media/curatedMediaProfiles";
 import { normalizePageCollectionLink, type PageCollectionLink } from "../pages/pageCollectionLink";
 import type {
   AssistantActionDryRunResult,
@@ -108,6 +115,7 @@ import type {
   AssistantCustomScreenWidgetPatchAction,
   AssistantEntryUpsertDraftAction,
   AssistantEntryDeleteAction,
+  AssistantEntrySampleCreateAction,
   AssistantEntryUpdateAction,
   AssistantFormUpsertAction,
   AssistantFormDeleteAction,
@@ -127,6 +135,7 @@ import type {
   AssistantMenuItemDeleteAction,
   AssistantMenuItemUpdateAction,
   AssistantMenuItemUpsertAction,
+  AssistantMenuUpsertAction,
   AssistantPageWidgetPatchAction,
   AssistantPageUpdateAction,
   AssistantPageUpsertAction,
@@ -135,6 +144,8 @@ import type {
   AssistantWidgetTemplateUpdateAction,
   AssistantWidgetTemplateBlockPatchAction,
   AssistantPlannedAction,
+  AssistantResourceIdInput,
+  AssistantSamePlanLocator,
   AssistantSeoDocumentDeleteAction,
   AssistantSeoDocumentUpdateAction,
   AssistantSeoDocumentUpsertAction,
@@ -218,6 +229,159 @@ const countExecutionOperations = (items: AssistantActionExecutionItem[]) =>
       failed: 0,
     }
   );
+
+const hasCuratedMediaUrl = (value: unknown): boolean => {
+  if (isCuratedMediaUrl(value)) return true;
+  if (Array.isArray(value)) return value.some((item) => hasCuratedMediaUrl(item));
+  if (!value || typeof value !== "object") return false;
+  return Object.values(value as Record<string, unknown>).some((item) => hasCuratedMediaUrl(item));
+};
+
+const reconcileLaunchReadinessAfterExecution = (
+  plan: AssistantActionPlan,
+  results: AssistantActionExecutionItem[]
+): AssistantActionPlan => {
+  const metadata = plan.metadata;
+  const launchReadiness = metadata?.launchReadiness;
+  if (!launchReadiness) return plan;
+
+  const successfulActionIds = new Set(
+    results.filter((result) => result.status === "success").map((result) => result.actionId)
+  );
+  const successfulActions = plan.actions.filter((action) => successfulActionIds.has(action.id));
+  const successfulSiteKitInstall = results.some(
+    (result) =>
+      result.type === "site-kit.install" &&
+      result.status === "success" &&
+      result.details?.siteKit?.validation?.status === "ok"
+  );
+  const successfulTypeCount = (type: AssistantPlannedAction["type"]) =>
+    successfulActions.filter((action) => action.type === type).length;
+  const successfulPages = new Set(
+    successfulActions
+      .filter((action) => action.type === "page.upsert")
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+      .filter((slug): slug is string => Boolean(slug))
+  );
+  const successfulSampleCounts = successfulActions.reduce<Record<string, number>>((acc, action) => {
+    if (action.type !== "entry.sample.create") return acc;
+    acc[action.input.contentTypeSlug] = (acc[action.input.contentTypeSlug] ?? 0) + 1;
+    return acc;
+  }, {});
+  const successfulPageSeoCount = successfulActions.filter(
+    (action) => action.type === "seo.document.upsert" && action.input.targetType === "page"
+  ).length;
+  const successfulEntrySamplesWithSeo = successfulActions.filter(
+    (action) => action.type === "entry.sample.create" && action.input.seo
+  ).length;
+  const successfulPagesWithCuratedMedia = successfulActions.filter(
+    (action) => action.type === "page.upsert" && hasCuratedMediaUrl(action.input.blocks)
+  );
+  const successfulCuratedMediaPageSlugs = new Set(
+    successfulPagesWithCuratedMedia
+      .map((action) => (action.type === "page.upsert" ? action.input.slug : null))
+      .filter((slug): slug is string => Boolean(slug))
+  );
+  const plannedPagesWithCuratedMedia = plan.actions.filter(
+    (action) => action.type === "page.upsert" && hasCuratedMediaUrl(action.input.blocks)
+  );
+  const successfulEntrySamplesWithCuratedMedia = successfulActions.filter(
+    (action) =>
+      action.type === "entry.sample.create" && hasCuratedMediaUrl(action.input.values.coverImageUrl)
+  );
+  const successfulCuratedSampleCounts = successfulEntrySamplesWithCuratedMedia.reduce<
+    Record<string, number>
+  >((acc, action) => {
+    if (action.type !== "entry.sample.create") return acc;
+    acc[action.input.contentTypeSlug] = (acc[action.input.contentTypeSlug] ?? 0) + 1;
+    return acc;
+  }, {});
+  const plannedEntrySamplesWithCuratedMedia = plan.actions.filter(
+    (action) =>
+      action.type === "entry.sample.create" && hasCuratedMediaUrl(action.input.values.coverImageUrl)
+  );
+  const plannedCuratedSampleCounts = plannedEntrySamplesWithCuratedMedia.reduce<
+    Record<string, number>
+  >((acc, action) => {
+    if (action.type !== "entry.sample.create") return acc;
+    acc[action.input.contentTypeSlug] = (acc[action.input.contentTypeSlug] ?? 0) + 1;
+    return acc;
+  }, {});
+  const allRequiredPagesSatisfied = launchReadiness.requiredPages.every((slug) =>
+    successfulPages.has(slug)
+  );
+  const allSampleMinimumsSatisfied = Object.entries(launchReadiness.minimumPublishedEntries).every(
+    ([contentTypeSlug, minimum]) => (successfulSampleCounts[contentTypeSlug] ?? 0) >= minimum
+  );
+  const catalogCount = launchReadiness.requiredCatalogs.length;
+  const allCatalogResourcesSatisfied =
+    successfulTypeCount("content-type.upsert") >= catalogCount &&
+    successfulTypeCount("detail-page.upsert") >= catalogCount &&
+    successfulTypeCount("setting.content-route.upsert") >= catalogCount &&
+    successfulTypeCount("listing-query.upsert") >= catalogCount &&
+    successfulTypeCount("listing-template.upsert") >= catalogCount;
+  const navigationSatisfied =
+    successfulTypeCount("menu.upsert") >= 2 &&
+    successfulTypeCount("menu.item.upsert") >= launchReadiness.requiredPages.length * 2;
+  const seoSatisfied =
+    successfulPageSeoCount >= launchReadiness.requiredPages.length &&
+    successfulEntrySamplesWithSeo >=
+      Object.values(launchReadiness.minimumPublishedEntries).reduce(
+        (sum, minimum) => sum + minimum,
+        0
+      );
+  const requiredMediaPages = launchReadiness.requiredMediaPages ?? [];
+  const requiredMediaPagesSatisfied =
+    requiredMediaPages.length > 0 &&
+    requiredMediaPages.every((slug) => successfulCuratedMediaPageSlugs.has(slug));
+  const allCuratedMediaPagesSatisfied =
+    requiredMediaPagesSatisfied &&
+    plannedPagesWithCuratedMedia.every((action) => successfulActionIds.has(action.id));
+  const allCuratedMediaSamplesSatisfied =
+    Object.entries(launchReadiness.minimumPublishedEntries).every(
+      ([contentTypeSlug, minimum]) =>
+        (plannedCuratedSampleCounts[contentTypeSlug] ?? 0) >= minimum &&
+        (successfulCuratedSampleCounts[contentTypeSlug] ?? 0) >= minimum
+    ) && plannedEntrySamplesWithCuratedMedia.every((action) => successfulActionIds.has(action.id));
+  const mediaSatisfied =
+    allCuratedMediaPagesSatisfied &&
+    allCuratedMediaSamplesSatisfied &&
+    successfulPagesWithCuratedMedia.length === plannedPagesWithCuratedMedia.length;
+
+  const checks = launchReadiness.checks.map((check) => {
+    if (check.status === "gated") return check;
+    const satisfied = successfulSiteKitInstall
+      ? check.id !== "media"
+      : check.id === "pages"
+        ? allRequiredPagesSatisfied
+        : check.id === "catalogs"
+          ? allCatalogResourcesSatisfied
+          : check.id === "public-content"
+            ? allSampleMinimumsSatisfied
+            : check.id === "navigation-footer"
+              ? navigationSatisfied
+              : check.id === "seo"
+                ? seoSatisfied
+                : check.id === "media"
+                  ? mediaSatisfied
+                  : false;
+    return {
+      ...check,
+      status: satisfied ? ("satisfied" as const) : ("pending_execute" as const),
+    };
+  });
+
+  return {
+    ...plan,
+    metadata: {
+      ...metadata,
+      launchReadiness: {
+        ...launchReadiness,
+        checks,
+      },
+    },
+  };
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -391,6 +555,7 @@ const formatListingReferenceSummary = (references: ListingResourceReference[]) =
 const buildCatalogPageData = (input: {
   introTitle: string;
   introBody: string;
+  blocks?: WidgetBlock[];
   listingQueryId: string;
   listingTemplateId: string;
   ctaLabel: string;
@@ -420,6 +585,7 @@ const buildCatalogPageData = (input: {
   composeBlueprintPageData({
     introTitle: input.introTitle,
     introBody: input.introBody,
+    blocks: input.blocks,
     listingQueryId: input.listingQueryId,
     listingTemplateId: input.listingTemplateId,
     ctaLabel: input.ctaLabel,
@@ -624,8 +790,12 @@ type ActionExecutorDeps = {
   createEntry: typeof createEntry;
   deleteEntry: typeof deleteEntry;
   updateEntry: typeof updateEntry;
+  publishEntry: typeof publishEntry;
   updateEntryMetadata: typeof updateEntryMetadata;
   getEntry: typeof getEntry;
+  listMenus: typeof listMenus;
+  createMenu: typeof createMenu;
+  updateMenu: typeof updateMenu;
   deleteMenuItem: typeof deleteMenuItem;
   listMenuItems: typeof listMenuItems;
   replaceMenuItems: typeof replaceMenuItems;
@@ -709,8 +879,12 @@ const defaultDeps: ActionExecutorDeps = {
   createEntry,
   deleteEntry,
   updateEntry,
+  publishEntry,
   updateEntryMetadata,
   getEntry,
+  listMenus,
+  createMenu,
+  updateMenu,
   deleteMenuItem,
   listMenuItems,
   replaceMenuItems,
@@ -1806,6 +1980,89 @@ const buildEntryUpsertDraftPreview = async (
   });
 };
 
+const buildEntryPublicHref = async (
+  contentTypeSlug: string,
+  entrySlug: string,
+  deps: ActionExecutorDeps
+) => {
+  const routes = ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+  const route = routes.find((entry) => entry.type === contentTypeSlug && entry.enabled);
+  if (!route?.detailPath) return null;
+  return normalizeSitePath(route.detailPath.replace(":slug", entrySlug));
+};
+
+const readEntrySeoForPreview = async (entryId: string | null, deps: ActionExecutorDeps) =>
+  entryId ? await deps.getSeoDocumentByTarget("entry", entryId) : null;
+
+const buildEntrySampleCreatePreview = async (
+  action: AssistantEntrySampleCreateAction,
+  deps: ActionExecutorDeps
+) => {
+  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  const existing = contentType
+    ? await deps.getEntryBySlug(contentType.id, action.input.slug)
+    : null;
+  const existingSeo = await readEntrySeoForPreview(existing?.id ?? null, deps);
+  const existingSeoRecord = existingSeo as Record<string, unknown> | null;
+  const seoMatches =
+    action.input.seo === undefined ||
+    (Boolean(existingSeo) &&
+      Object.entries(action.input.seo).every(([key, value]) => existingSeoRecord?.[key] === value));
+  const beforeValue = existing
+    ? {
+        title: existing.title,
+        slug: existing.slug,
+        status: existing.status,
+        data: existing.data,
+        seo: existingSeo
+          ? {
+              title: existingSeo.title,
+              description: existingSeo.description,
+              canonicalUrl: existingSeo.canonicalUrl,
+              robots: existingSeo.robots,
+            }
+          : null,
+      }
+    : null;
+  const nextValue = {
+    title: action.input.title,
+    slug: action.input.slug,
+    status: action.input.status,
+    data: action.input.values,
+    seo: action.input.seo ?? null,
+  };
+  const operation =
+    existing &&
+    existing.status === "published" &&
+    existing.title === action.input.title &&
+    existing.slug === action.input.slug &&
+    isDeepStrictEqual(existing.data, action.input.values) &&
+    seoMatches
+      ? "noop"
+      : undefined;
+
+  return createPreviewChange({
+    action,
+    targetType: "entry",
+    targetKey: `${action.input.contentTypeSlug}/${action.input.slug}`,
+    operation,
+    summary: `${existing ? "Update" : "Create"} public sample entry "${action.input.title}"`,
+    warnings: contentType
+      ? ["Publishing this sample entry may make it visible on the public site."]
+      : ["The content type does not exist yet and must be created earlier in the plan."],
+    dependencies: [
+      {
+        actionId: null,
+        targetType: "content-type",
+        targetKey: action.input.contentTypeSlug,
+        optional: false,
+      },
+    ],
+    beforeValue,
+    nextValue,
+  });
+};
+
 const buildEntryDeletePreview = async (
   action: AssistantEntryDeleteAction,
   deps: ActionExecutorDeps
@@ -1940,6 +2197,43 @@ const collectMenuItemDeleteIds = (items: MenuItemRecord[], itemId: string) => {
   return deleteIds;
 };
 
+const buildMenuUpsertPreview = async (
+  action: AssistantMenuUpsertAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await findMenuByLocation(action.input.location, deps);
+  const nextValue = {
+    ...(existing ? { id: existing.id } : {}),
+    name: action.input.name,
+    location: action.input.location,
+    status: action.input.status,
+  };
+
+  return createPreviewChange({
+    action,
+    targetType: "menu",
+    targetKey: action.input.location,
+    summary: `${existing ? "Update" : "Create"} menu "${action.input.name}"`,
+    dependencies: [
+      {
+        actionId: null,
+        targetType: "permission",
+        targetKey: "menus:write",
+        optional: false,
+      },
+    ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          name: existing.name,
+          location: existing.location,
+          status: existing.status,
+        }
+      : null,
+    nextValue,
+  });
+};
+
 const buildNextMenuItem = (
   action: AssistantMenuItemUpsertAction,
   existing: MenuItemRecord | null,
@@ -1957,18 +2251,23 @@ const buildNextMenuItem = (
 
 const buildMenuItemPreview = async (
   action: AssistantMenuItemUpsertAction,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
 ) => {
-  const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
+  const locator = await buildLocatorPreviewDependency(action.input.menuId, "menu", deps, ctx);
+  const menuId = locator.resolvedId;
+  const existingItems = menuId ? flattenMenuNodes(await deps.listMenuItems(menuId)) : [];
   const existing = findMenuItemForAction(existingItems, action);
   const nextValue = buildNextMenuItem(action, existing, existingItems.length);
+  const targetKey = `${resourceIdInputKey(action.input.menuId)}/${action.input.href}`;
 
   return createPreviewChange({
     action,
     targetType: "menu-item",
-    targetKey: `${action.input.menuId}/${action.input.href}`,
+    targetKey,
     summary: `${existing ? "Update" : "Create"} menu item "${action.input.label}"`,
     dependencies: [
+      locator.dependency,
       {
         actionId: null,
         targetType: "permission",
@@ -1979,6 +2278,26 @@ const buildMenuItemPreview = async (
     beforeValue: existing,
     nextValue,
   });
+};
+
+const resolveActionResultPreviewResourceId = async (
+  locator: Extract<AssistantSamePlanLocator, { kind: "action-result" }>,
+  planned: AssistantPlannedAction | null,
+  deps: ActionExecutorDeps
+) => {
+  if (locator.resourceType === "menu" && planned?.type === "menu.upsert") {
+    return (await findMenuByLocation(planned.input.location, deps))?.id ?? null;
+  }
+  return null;
+};
+
+const resolveMenuItemExecutionOperation = (
+  preview: AssistantActionPreviewChange,
+  existing: MenuItemRecord | null,
+  nextItem: MenuItemInput
+): AssistantActionPreviewChange["operation"] => {
+  if (!existing) return preview.operation === "noop" ? "noop" : "create";
+  return isDeepStrictEqual(existing, nextItem) ? "noop" : "update";
 };
 
 const buildMenuItemDeletePreview = async (
@@ -2083,8 +2402,224 @@ const normalizeSeoSlugForAction = (value: string | null | undefined) => {
   return value.startsWith("/") ? value : `/${value}`;
 };
 
+const normalizePageActionSlug = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  if (!trimmed) return "";
+  return normalizeSitePath(trimmed.startsWith("/") ? trimmed : `/${trimmed}`);
+};
+
+const isSamePlanLocator = (value: AssistantResourceIdInput): value is AssistantSamePlanLocator =>
+  typeof value !== "string";
+
+const resourceIdInputKey = (value: AssistantResourceIdInput) => {
+  if (!isSamePlanLocator(value)) return value;
+  if (value.kind === "action-result") {
+    return `${value.resourceType}:${value.actionId}:${value.field}`;
+  }
+  if (value.kind === "stable-location") return `menu:${value.location}`;
+  if (value.resourceType === "content-type") return `content-type:${value.slug}`;
+  if (value.resourceType === "page") return `page:${value.slug}`;
+  return `entry:${value.contentTypeSlug}/${value.slug}`;
+};
+
+const findPriorPlannedStableSlugAction = (
+  locator: Extract<AssistantSamePlanLocator, { kind: "stable-slug" }>,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
+  return (
+    actions.find((action) => {
+      if (locator.resourceType === "content-type") {
+        return action.type === "content-type.upsert" && action.input.slug === locator.slug;
+      }
+      if (locator.resourceType === "page") {
+        return action.type === "page.upsert" && action.input.slug === locator.slug;
+      }
+      if (locator.resourceType !== "entry") return false;
+      return (
+        (action.type === "entry.sample.create" || action.type === "entry.upsert-draft") &&
+        action.input.contentTypeSlug === locator.contentTypeSlug &&
+        action.input.slug === locator.slug
+      );
+    }) ?? null
+  );
+};
+
+const findPriorActionResultDependency = (
+  locator: Extract<AssistantSamePlanLocator, { kind: "action-result" }>,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
+  return actions.find((action) => action.id === locator.actionId) ?? null;
+};
+
+const findPriorPlannedListingQueryAction = (
+  name: string | null | undefined,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  const normalizedName = name?.trim();
+  if (!normalizedName) return null;
+  const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
+  return (
+    actions.find(
+      (action) => action.type === "listing-query.upsert" && action.input.name === normalizedName
+    ) ?? null
+  );
+};
+
+const findPriorPlannedListingTemplateAction = (
+  slug: string | null | undefined,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  const normalizedSlug = slug?.trim();
+  if (!normalizedSlug) return null;
+  const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
+  return (
+    actions.find(
+      (action) => action.type === "listing-template.upsert" && action.input.slug === normalizedSlug
+    ) ?? null
+  );
+};
+
+const findPriorPlannedFormAction = (
+  name: string | null | undefined,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  const normalizedName = name?.trim();
+  if (!normalizedName) return null;
+  const actions = ctx.planActions?.slice(0, ctx.actionIndex ?? 0) ?? [];
+  return (
+    actions.find(
+      (action) => action.type === "form.upsert" && action.input.name === normalizedName
+    ) ?? null
+  );
+};
+
+const resolveStableSlugResourceId = async (
+  locator: Extract<AssistantSamePlanLocator, { kind: "stable-slug" }>,
+  deps: ActionExecutorDeps
+) => {
+  if (locator.resourceType === "content-type") {
+    const contentType = await deps.getContentTypeBySlug(locator.slug);
+    return contentType?.id ?? null;
+  }
+  if (locator.resourceType === "page") {
+    const page = await deps.getPageBySlug(locator.slug);
+    return page?.id ?? null;
+  }
+  if (locator.resourceType !== "entry") return null;
+  const contentType = await deps.getContentTypeBySlug(locator.contentTypeSlug);
+  if (!contentType) return null;
+  const entry = await deps.getEntryBySlug(contentType.id, locator.slug);
+  return entry?.id ?? null;
+};
+
+const findMenuByLocation = async (location: string, deps: ActionExecutorDeps) =>
+  (await deps.listMenus()).find((menu) => menu.location === location) ?? null;
+
+const resolveResourceIdInput = async (
+  targetId: AssistantResourceIdInput,
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "priorResults">
+) => {
+  if (!isSamePlanLocator(targetId)) return targetId;
+  if (targetId.kind === "stable-slug") {
+    const resolved = await resolveStableSlugResourceId(targetId, deps);
+    if (resolved) return resolved;
+    throw new Error("assistant_action_locator_unresolved");
+  }
+  if (targetId.kind === "stable-location") {
+    const resolved = await findMenuByLocation(targetId.location, deps);
+    if (resolved) return resolved.id;
+    throw new Error("assistant_action_locator_unresolved");
+  }
+  const result = ctx.priorResults?.get(targetId.actionId) ?? null;
+  if (
+    result?.status === "success" &&
+    result.targetType === targetId.resourceType &&
+    result.resourceId
+  ) {
+    return result.resourceId;
+  }
+  throw new Error("assistant_action_locator_unresolved");
+};
+
+const buildLocatorPreviewDependency = async (
+  targetId: AssistantResourceIdInput,
+  targetType: "content-type" | "page" | "entry" | "menu" | "detail-page",
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
+) => {
+  if (!isSamePlanLocator(targetId)) {
+    return {
+      resolvedId: targetId,
+      pending: false,
+      dependency: {
+        actionId: null,
+        targetType,
+        targetKey: targetId,
+        optional: false,
+      },
+    };
+  }
+
+  if (targetId.kind === "stable-slug") {
+    if (targetId.resourceType !== targetType) {
+      return {
+        resolvedId: null,
+        pending: false,
+        dependency: {
+          actionId: null,
+          targetType: targetId.resourceType,
+          targetKey: resourceIdInputKey(targetId),
+          optional: false,
+        },
+      };
+    }
+    const resolvedId = await resolveStableSlugResourceId(targetId, deps);
+    const planned = resolvedId ? null : findPriorPlannedStableSlugAction(targetId, ctx);
+    return {
+      resolvedId,
+      pending: Boolean(planned),
+      dependency: {
+        actionId: planned?.id ?? null,
+        targetType: targetId.resourceType,
+        targetKey: resourceIdInputKey(targetId),
+        optional: false,
+      },
+    };
+  }
+
+  if (targetId.kind === "stable-location") {
+    const resolved = await findMenuByLocation(targetId.location, deps);
+    return {
+      resolvedId: resolved?.id ?? null,
+      pending: false,
+      dependency: {
+        actionId: null,
+        targetType: targetId.resourceType,
+        targetKey: resourceIdInputKey(targetId),
+        optional: false,
+      },
+    };
+  }
+
+  const planned = findPriorActionResultDependency(targetId, ctx);
+  const resolvedId = await resolveActionResultPreviewResourceId(targetId, planned, deps);
+  return {
+    resolvedId,
+    pending: Boolean(planned && targetId.resourceType === targetType && !resolvedId),
+    dependency: {
+      actionId: targetId.actionId,
+      targetType: targetId.resourceType,
+      targetKey: resourceIdInputKey(targetId),
+      optional: false,
+    },
+  };
+};
+
 const loadSeoActionTarget = async (
-  action: AssistantSeoDocumentUpsertAction,
+  action: AssistantSeoDocumentUpsertAction & { input: { targetId: string } },
   deps: ActionExecutorDeps
 ) => {
   if (action.input.targetType === "page") {
@@ -2108,7 +2643,7 @@ const loadSeoActionTarget = async (
 };
 
 const buildSeoNextValue = (
-  action: AssistantSeoDocumentUpsertAction,
+  action: AssistantSeoDocumentUpsertAction & { input: { targetId: string } },
   existing: Awaited<ReturnType<typeof getSeoDocumentByTarget>>,
   target: { title: string; slug: string | null }
 ) => ({
@@ -2136,43 +2671,55 @@ const buildSeoNextValue = (
 
 const buildSeoDocumentPreview = async (
   action: AssistantSeoDocumentUpsertAction,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex">
 ) => {
-  const target = await loadSeoActionTarget(action, deps);
-  const existing = target
-    ? await deps.getSeoDocumentByTarget(action.input.targetType, action.input.targetId)
+  const locator = await buildLocatorPreviewDependency(
+    action.input.targetId,
+    action.input.targetType,
+    deps,
+    ctx
+  );
+  const resolvedAction = locator.resolvedId
+    ? {
+        ...action,
+        input: {
+          ...action.input,
+          targetId: locator.resolvedId,
+        },
+      }
     : null;
-  const nextValue = target
-    ? buildSeoNextValue(action, existing, target)
-    : {
-        targetType: action.input.targetType,
-        targetId: action.input.targetId,
-        ...action.input.seo,
-      };
+  const target = resolvedAction ? await loadSeoActionTarget(resolvedAction, deps) : null;
+  const existing = target
+    ? await deps.getSeoDocumentByTarget(action.input.targetType, target.id)
+    : null;
+  const nextValue =
+    target && resolvedAction
+      ? buildSeoNextValue(resolvedAction, existing, target)
+      : {
+          targetType: action.input.targetType,
+          targetId: resourceIdInputKey(action.input.targetId),
+          ...action.input.seo,
+        };
+  const targetKey = `${action.input.targetType}/${resourceIdInputKey(action.input.targetId)}`;
 
   return createPreviewChange({
     action,
     targetType: "seo-document",
-    targetKey: `${action.input.targetType}/${action.input.targetId}`,
-    summary: `${existing ? "Update" : "Create"} SEO document for ${action.input.targetType} ${action.input.targetId}`,
-    warnings: target ? [] : ["The SEO target does not exist."],
-    dependencies: [
-      {
-        actionId: null,
-        targetType: action.input.targetType,
-        targetKey: action.input.targetId,
-        optional: false,
-      },
-    ],
-    conflicts: target
-      ? []
-      : [
-          {
-            code: "assistant_action_dependency_missing",
-            severity: "error",
-            message: "SEO target is required before the document can be updated.",
-          },
-        ],
+    targetKey,
+    summary: `${existing ? "Update" : "Create"} SEO document for ${targetKey}`,
+    warnings: target || locator.pending ? [] : ["The SEO target does not exist."],
+    dependencies: [locator.dependency],
+    conflicts:
+      target || locator.pending
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: "SEO target is required before the document can be updated.",
+            },
+          ],
     beforeValue: existing
       ? {
           targetType: existing.targetType,
@@ -2358,7 +2905,8 @@ const buildMediaReferencePreview = async (
   });
 };
 
-const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionExecutorDeps) => {
+const buildPagePreview = async (action: AssistantPageUpsertAction, ctx: ActionHandlerContext) => {
+  const deps = ctx.deps;
   const existing = await deps.getPageBySlug(action.input.slug);
   const simplePageMode =
     Boolean(action.input.blocks) ||
@@ -2381,6 +2929,9 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
   const listingQueryByName = requestedListingQueryName
     ? (listingQueries.find((entry) => entry.name === requestedListingQueryName) ?? null)
     : null;
+  const plannedListingQuery = listingQueryByName
+    ? null
+    : findPriorPlannedListingQueryAction(requestedListingQueryName, ctx);
   if (
     requestedListingQueryId &&
     listingQueryByName &&
@@ -2398,6 +2949,9 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
   const listingTemplateBySlug = requestedListingTemplateSlug
     ? (listingTemplates.find((entry) => entry.slug === requestedListingTemplateSlug) ?? null)
     : null;
+  const plannedListingTemplate = listingTemplateBySlug
+    ? null
+    : findPriorPlannedListingTemplateAction(requestedListingTemplateSlug, ctx);
   if (
     requestedListingTemplateId &&
     listingTemplateBySlug &&
@@ -2419,8 +2973,48 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
         : null) ??
       null)
     : null;
+  const plannedForm = form
+    ? null
+    : findPriorPlannedFormAction(action.input.formEmbed?.formName, ctx);
+  const dependencies: AssistantActionPreviewChange["dependencies"] = [
+    ...(requestedListingQueryName
+      ? [
+          {
+            actionId: plannedListingQuery?.id ?? null,
+            targetType: "listing-query",
+            targetKey: requestedListingQueryName,
+            optional: false,
+          },
+        ]
+      : []),
+    ...(requestedListingTemplateSlug
+      ? [
+          {
+            actionId: plannedListingTemplate?.id ?? null,
+            targetType: "listing-template",
+            targetKey: requestedListingTemplateSlug,
+            optional: false,
+          },
+        ]
+      : []),
+    ...(action.input.formEmbed
+      ? [
+          {
+            actionId: plannedForm?.id ?? null,
+            targetType: "form",
+            targetKey: action.input.formEmbed.formName,
+            optional: false,
+          },
+        ]
+      : []),
+  ];
+  const hasPendingDependencies = Boolean(
+    plannedListingQuery || plannedListingTemplate || plannedForm
+  );
   const dependencyConflicts =
-    (!simplePageMode && (!listingQuery || !listingTemplate)) || (action.input.formEmbed && !form)
+    (!simplePageMode &&
+      ((!listingQuery && !plannedListingQuery) || (!listingTemplate && !plannedListingTemplate))) ||
+    (action.input.formEmbed && !form && !plannedForm)
       ? [
           {
             code: "assistant_action_dependency_missing" as const,
@@ -2431,7 +3025,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
         ]
       : [];
   let resolvedCollectionLink = existingCollectionLink;
-  if (dependencyConflicts.length === 0) {
+  if (dependencyConflicts.length === 0 && !hasPendingDependencies) {
     try {
       resolvedCollectionLink = await resolveAssistantPageCollectionLink({
         action,
@@ -2552,6 +3146,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, deps: ActionE
     targetKey: action.input.slug,
     summary: `${existing ? "Update" : "Create"} catalog page ${action.input.slug}`,
     conflicts: dependencyConflicts,
+    dependencies,
     beforeValue: existing
       ? {
           title: existing.title,
@@ -2584,15 +3179,77 @@ const summarizeDetailPageDocument = (document: DetailPageDocument) => ({
     document.status === "published" ? "published-detail-template" : "draft-detail-template",
 });
 
+const resolveDetailPageActionDocument = async (
+  action: AssistantDetailPageUpsertAction,
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "priorResults">
+) => {
+  if (action.input.contentTypeId === undefined) return action.input.document;
+  const contentTypeId = await resolveResourceIdInput(action.input.contentTypeId, deps, ctx);
+  return {
+    ...action.input.document,
+    contentTypeId,
+  };
+};
+
 const buildDetailPagePreview = async (
   action: AssistantDetailPageUpsertAction,
-  deps: ActionExecutorDeps
+  ctx: ActionHandlerContext
 ) => {
   const targetKey = action.input.document.id;
+  const contentTypeDependency =
+    action.input.contentTypeId === undefined
+      ? null
+      : await buildLocatorPreviewDependency(
+          action.input.contentTypeId,
+          "content-type",
+          ctx.deps,
+          ctx
+        );
+
+  if (contentTypeDependency?.pending) {
+    const existing = await ctx.deps.getDetailPageDocument(action.input.document.id);
+    return createPreviewChange({
+      action,
+      targetType: "detail-page",
+      targetKey,
+      summary: `${existing ? "Update" : "Create"} detail template ${action.input.document.name}`,
+      dependencies: [contentTypeDependency.dependency],
+      beforeValue: existing ? summarizeDetailPageDocument(existing.currentDocument) : null,
+      nextValue: summarizeDetailPageDocument(action.input.document),
+    });
+  }
+
+  if (contentTypeDependency && !contentTypeDependency.resolvedId) {
+    return createPreviewChange({
+      action,
+      targetType: "detail-page",
+      targetKey,
+      summary: `Create/update detail template ${action.input.document.name}`,
+      dependencies: [contentTypeDependency.dependency],
+      conflicts: [
+        {
+          code: "assistant_action_locator_unresolved",
+          severity: "error",
+          message: "The detail template content type locator could not be resolved.",
+        },
+      ],
+      beforeValue: null,
+      nextValue: summarizeDetailPageDocument(action.input.document),
+    });
+  }
+
+  const document =
+    contentTypeDependency?.resolvedId !== undefined && contentTypeDependency.resolvedId !== null
+      ? {
+          ...action.input.document,
+          contentTypeId: contentTypeDependency.resolvedId,
+        }
+      : action.input.document;
 
   try {
-    const prepared = await deps.prepareDetailPageDocumentUpsert({
-      document: action.input.document,
+    const prepared = await ctx.deps.prepareDetailPageDocumentUpsert({
+      document,
       expectedExistingId: action.input.expectedExistingId,
     });
 
@@ -2686,6 +3343,8 @@ const buildPageUpdatePreview = async (
 ) => {
   const existing = await deps.getPage(action.input.id);
   const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const existingSlug = normalizePageActionSlug(existing?.slug);
+  const expectedSlug = normalizePageActionSlug(action.input.slug);
   const currentData = isRecord(existing?.currentData) ? existing.currentData : {};
   const nextData = existing ? applyPageUpdatePatch(currentData, action.input.patch) : null;
   const nextValue = existing
@@ -2698,7 +3357,7 @@ const buildPageUpdatePreview = async (
     : null;
   const matches =
     existing?.title === action.input.title &&
-    existing.slug === action.input.slug &&
+    existingSlug === expectedSlug &&
     (!expectedStatus || existing.status === expectedStatus);
 
   return createPreviewChange({
@@ -2739,7 +3398,9 @@ const buildPageDeletePreview = async (
   deps: ActionExecutorDeps
 ) => {
   const existing = await deps.getPage(action.input.id);
-  const matches = existing?.title === action.input.title && existing.slug === action.input.slug;
+  const existingSlug = normalizePageActionSlug(existing?.slug);
+  const expectedSlug = normalizePageActionSlug(action.input.slug);
+  const matches = existing?.title === action.input.title && existingSlug === expectedSlug;
   const expectedStatus = action.input.expectedStatus?.trim() ?? "";
   const statusMatches = !expectedStatus || existing?.status === expectedStatus;
 
@@ -3031,6 +3692,9 @@ const buildSiteKitValidatePreview = async (action: AssistantSiteKitValidateActio
 type ActionHandlerContext = {
   deps: ActionExecutorDeps;
   actorId: string;
+  planActions?: AssistantPlannedAction[];
+  actionIndex?: number;
+  priorResults?: Map<string, AssistantActionExecutionItem>;
 };
 
 type AssistantActionHandler = {
@@ -4014,6 +4678,67 @@ const executeEntryUpsertDraftAction = async (
   };
 };
 
+const executeEntrySampleCreateAction = async (
+  action: AssistantEntrySampleCreateAction,
+  preview: AssistantActionPreviewChange,
+  actorId: string,
+  deps: ActionExecutorDeps
+) => {
+  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  if (!contentType) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const existing = await deps.getEntryBySlug(contentType.id, action.input.slug);
+  const needsEntryUpdate =
+    !existing ||
+    existing.title !== action.input.title ||
+    existing.slug !== action.input.slug ||
+    !isDeepStrictEqual(existing.data, action.input.values);
+
+  const upserted =
+    preview.operation === "create"
+      ? await deps.createEntry(contentType.id, {
+          title: action.input.title,
+          slug: action.input.slug,
+          data: action.input.values,
+          authorId: actorId,
+        })
+      : preview.operation === "update" && existing && needsEntryUpdate
+        ? await deps.updateEntry(existing.id, {
+            title: action.input.title,
+            slug: action.input.slug,
+            data: action.input.values,
+          })
+        : existing;
+  if (!upserted) throw new Error("assistant_action_dependency_missing");
+
+  if (action.input.seo && preview.operation !== "noop") {
+    await deps.updateEntryMetadata(upserted.id, { seo: action.input.seo }, actorId);
+  }
+
+  const record =
+    preview.operation === "noop" ? upserted : await deps.publishEntry(upserted.id, actorId);
+  if (!record) throw new Error("assistant_action_dependency_missing");
+  const publicHref = await buildEntryPublicHref(action.input.contentTypeSlug, record.slug, deps);
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "entry",
+    targetKey: `${action.input.contentTypeSlug}/${action.input.slug}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record.id,
+    adminHref: `/admin/advanced/entries/${encodeURIComponent(action.input.contentTypeSlug)}/${encodeURIComponent(record.id)}`,
+    publicHref,
+    message:
+      preview.operation === "noop"
+        ? "Public sample entry already matched the planned data."
+        : "Public sample entry is published.",
+  };
+};
+
 const executeEntryDeleteAction = async (
   action: AssistantEntryDeleteAction,
   preview: AssistantActionPreviewChange,
@@ -4113,23 +4838,59 @@ const executeEntryUpdateAction = async (
   };
 };
 
+const executeMenuUpsertAction = async (
+  action: AssistantMenuUpsertAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await findMenuByLocation(action.input.location, deps);
+  const record =
+    preview.operation === "create"
+      ? await deps.createMenu(action.input)
+      : preview.operation === "update" && existing
+        ? await deps.updateMenu(existing.id, action.input)
+        : existing;
+  if (!record) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "menu",
+    targetKey: action.input.location,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record.id,
+    adminHref: `/admin/menus/${encodeURIComponent(record.id)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Menu already matched the planned location."
+        : `Menu "${record.name}" is ready.`,
+  };
+};
+
 const executeMenuItemAction = async (
   action: AssistantMenuItemUpsertAction,
   preview: AssistantActionPreviewChange,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "priorResults">
 ) => {
-  const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
+  const menuId = await resolveResourceIdInput(action.input.menuId, deps, ctx);
+  const existingItems = flattenMenuNodes(await deps.listMenuItems(menuId));
   const existing = findMenuItemForAction(existingItems, action);
   const nextItem = buildNextMenuItem(action, existing, existingItems.length);
+  const operation = resolveMenuItemExecutionOperation(preview, existing, nextItem);
   const nextItems =
-    preview.operation === "create"
+    operation === "create"
       ? [...existingItems, nextItem]
-      : existingItems.map((item) => (existing && item.id === existing.id ? nextItem : item));
+      : operation === "update"
+        ? existingItems.map((item) => (existing && item.id === existing.id ? nextItem : item))
+        : existingItems;
 
   const tree =
-    preview.operation === "noop"
-      ? await deps.listMenuItems(action.input.menuId)
-      : await deps.replaceMenuItems(action.input.menuId, nextItems);
+    operation === "noop"
+      ? await deps.listMenuItems(menuId)
+      : await deps.replaceMenuItems(menuId, nextItems);
   const saved =
     flattenMenuNodes(tree).find((item) => item.href === action.input.href) ?? existing ?? null;
 
@@ -4137,14 +4898,14 @@ const executeMenuItemAction = async (
     actionId: action.id,
     type: action.type,
     targetType: "menu-item",
-    targetKey: `${action.input.menuId}/${action.input.href}`,
-    operation: preview.operation,
+    targetKey: `${menuId}/${action.input.href}`,
+    operation,
     status: "success" as const,
     resourceId: saved?.id ?? null,
-    adminHref: `/admin/menus/${encodeURIComponent(action.input.menuId)}`,
+    adminHref: `/admin/menus/${encodeURIComponent(menuId)}`,
     publicHref: action.input.href,
     message:
-      preview.operation === "noop"
+      operation === "noop"
         ? "Menu item already matched the planned navigation link."
         : "Menu item is ready in navigation.",
   };
@@ -4236,25 +4997,31 @@ const executeMenuItemUpdateAction = async (
 const executeSeoDocumentAction = async (
   action: AssistantSeoDocumentUpsertAction,
   preview: AssistantActionPreviewChange,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "priorResults">
 ) => {
-  const target = await loadSeoActionTarget(action, deps);
+  const resolvedTargetId = await resolveResourceIdInput(action.input.targetId, deps, ctx);
+  const resolvedAction = {
+    ...action,
+    input: {
+      ...action.input,
+      targetId: resolvedTargetId,
+    },
+  };
+  const target = await loadSeoActionTarget(resolvedAction, deps);
   if (!target) {
     throw new Error("assistant_action_dependency_missing");
   }
 
-  const existing = await deps.getSeoDocumentByTarget(
-    action.input.targetType,
-    action.input.targetId
-  );
-  const nextValue = buildSeoNextValue(action, existing, target);
+  const existing = await deps.getSeoDocumentByTarget(action.input.targetType, resolvedTargetId);
+  const nextValue = buildSeoNextValue(resolvedAction, existing, target);
   const record = preview.operation === "noop" ? existing : await deps.upsertSeoDocument(nextValue);
 
   return {
     actionId: action.id,
     type: action.type,
     targetType: "seo-document",
-    targetKey: `${action.input.targetType}/${action.input.targetId}`,
+    targetKey: `${action.input.targetType}/${resolvedTargetId}`,
     operation: preview.operation,
     status: "success" as const,
     resourceId: record?.id ?? null,
@@ -4395,17 +5162,17 @@ const executePageAction = async (
   const listingQueries = await deps.listListingQueries();
   const listingTemplates = await deps.listListingTemplates();
   const forms = action.input.formEmbed ? await deps.listForms() : [];
-  const simplePageMode =
-    Boolean(action.input.blocks) ||
-    !action.input.listingQueryName ||
-    !action.input.listingTemplateSlug;
-
   const requestedListingQueryName =
     action.input.listingQueryName ?? action.input.collectionLink?.listingQueryName ?? null;
   const requestedListingTemplateSlug =
     action.input.listingTemplateSlug ?? action.input.collectionLink?.listingTemplateSlug ?? null;
   const requestedListingQueryId = action.input.collectionLink?.listingQueryId ?? null;
   const requestedListingTemplateId = action.input.collectionLink?.listingTemplateId ?? null;
+  const simplePageMode =
+    !requestedListingQueryName &&
+    !requestedListingTemplateSlug &&
+    !requestedListingQueryId &&
+    !requestedListingTemplateId;
   const listingQueryById = requestedListingQueryId
     ? (listingQueries.find((entry) => entry.id === requestedListingQueryId) ?? null)
     : null;
@@ -4486,6 +5253,7 @@ const executePageAction = async (
     : buildCatalogPageData({
         introTitle: action.input.introTitle,
         introBody: action.input.introBody,
+        blocks: action.input.blocks,
         listingQueryId: listingQuery!.id,
         listingTemplateId: listingTemplate!.id,
         ctaLabel: action.input.ctaLabel ?? "Read more",
@@ -4540,10 +5308,11 @@ const executePageAction = async (
 const executeDetailPageAction = async (
   action: AssistantDetailPageUpsertAction,
   preview: AssistantActionPreviewChange,
-  deps: ActionExecutorDeps
+  ctx: ActionHandlerContext
 ): Promise<AssistantActionExecutionItem> => {
-  const prepared = await deps.prepareDetailPageDocumentUpsert({
-    document: action.input.document,
+  const document = await resolveDetailPageActionDocument(action, ctx.deps, ctx);
+  const prepared = await ctx.deps.prepareDetailPageDocumentUpsert({
+    document,
     expectedExistingId: action.input.expectedExistingId,
   });
   const targetKey = `${prepared.contentType.slug}/${prepared.document.id}`;
@@ -4552,7 +5321,7 @@ const executeDetailPageAction = async (
     preview.operation === "noop"
       ? prepared.existing
       : (
-          await deps.upsertDetailPageDocument({
+          await ctx.deps.upsertDetailPageDocument({
             document: prepared.document,
             expectedExistingId: action.input.expectedExistingId,
           })
@@ -4590,10 +5359,12 @@ const executePageUpdateAction = async (
 ): Promise<AssistantActionExecutionItem> => {
   const existing = await deps.getPage(action.input.id);
   const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const existingSlug = normalizePageActionSlug(existing?.slug);
+  const expectedSlug = normalizePageActionSlug(action.input.slug);
   if (
     !existing ||
     existing.title !== action.input.title ||
-    existing.slug !== action.input.slug ||
+    existingSlug !== expectedSlug ||
     (expectedStatus && existing.status !== expectedStatus)
   ) {
     throw new Error("assistant_action_dependency_missing");
@@ -4614,12 +5385,21 @@ const executePageUpdateAction = async (
   if (!updated) throw new Error("assistant_action_dependency_missing");
 
   const statusPatch = action.input.patch.status;
-  const record =
-    statusPatch === "published" && updated.status !== "published"
-      ? await deps.publishPage(updated.id, actorId, nextData)
-      : statusPatch === "draft" && updated.status === "published"
-        ? await deps.unpublishPage(updated.id)
-        : updated;
+  const shouldRefreshPublishedPage =
+    statusPatch === "published" ||
+    (!statusPatch && expectedStatus === "published" && updated.status === "published");
+  const publishedSourceData = isRecord(existing.publishedData)
+    ? existing.publishedData
+    : currentData;
+  const publishData =
+    statusPatch === "published"
+      ? nextData
+      : applyPageUpdatePatch(publishedSourceData, action.input.patch);
+  const record = shouldRefreshPublishedPage
+    ? await deps.publishPage(updated.id, actorId, publishData)
+    : statusPatch === "draft" && updated.status === "published"
+      ? await deps.unpublishPage(updated.id)
+      : updated;
   if (!record) throw new Error("assistant_action_dependency_missing");
 
   return {
@@ -4649,7 +5429,7 @@ const executePageDeleteAction = async (
   if (
     !existing ||
     existing.title !== action.input.title ||
-    existing.slug !== action.input.slug ||
+    normalizePageActionSlug(existing.slug) !== normalizePageActionSlug(action.input.slug) ||
     (expectedStatus && existing.status !== expectedStatus)
   ) {
     throw new Error("assistant_action_dependency_missing");
@@ -4854,6 +5634,7 @@ const executeSiteKitInstallAction = async (
     preferredKitId: action.input.preferredKitId,
     selectedKitId: action.input.selectedKitId,
     enabledStepIds: action.input.enabledStepIds ? [...action.input.enabledStepIds] : undefined,
+    advancedRuntimeOverrides: action.input.advancedRuntimeOverrides,
     dryRun: action.input.dryRun,
     continueOnError: action.input.continueOnError,
     settingsPatch: action.input.settingsPatch,
@@ -5122,6 +5903,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeEntryUpsertDraftAction(action, preview, ctx.actorId, ctx.deps)
         : unexpectedAction(),
   },
+  "entry.sample.create": {
+    preview: (action, ctx) =>
+      action.type === "entry.sample.create"
+        ? buildEntrySampleCreatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "entry.sample.create"
+        ? executeEntrySampleCreateAction(action, preview, ctx.actorId, ctx.deps)
+        : unexpectedAction(),
+  },
   "entry.delete": {
     preview: (action, ctx) =>
       action.type === "entry.delete"
@@ -5142,14 +5933,22 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeEntryUpdateAction(action, preview, ctx.actorId, ctx.deps)
         : unexpectedAction(),
   },
+  "menu.upsert": {
+    preview: (action, ctx) =>
+      action.type === "menu.upsert" ? buildMenuUpsertPreview(action, ctx.deps) : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "menu.upsert"
+        ? executeMenuUpsertAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
   "menu.item.upsert": {
     preview: (action, ctx) =>
       action.type === "menu.item.upsert"
-        ? buildMenuItemPreview(action, ctx.deps)
+        ? buildMenuItemPreview(action, ctx.deps, ctx)
         : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "menu.item.upsert"
-        ? executeMenuItemAction(action, preview, ctx.deps)
+        ? executeMenuItemAction(action, preview, ctx.deps, ctx)
         : unexpectedAction(),
   },
   "menu.item.delete": {
@@ -5175,11 +5974,11 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   "seo.document.upsert": {
     preview: (action, ctx) =>
       action.type === "seo.document.upsert"
-        ? buildSeoDocumentPreview(action, ctx.deps)
+        ? buildSeoDocumentPreview(action, ctx.deps, ctx)
         : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "seo.document.upsert"
-        ? executeSeoDocumentAction(action, preview, ctx.deps)
+        ? executeSeoDocumentAction(action, preview, ctx.deps, ctx)
         : unexpectedAction(),
   },
   "seo.document.delete": {
@@ -5214,7 +6013,7 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   },
   "page.upsert": {
     preview: (action, ctx) =>
-      action.type === "page.upsert" ? buildPagePreview(action, ctx.deps) : unexpectedAction(),
+      action.type === "page.upsert" ? buildPagePreview(action, ctx) : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "page.upsert"
         ? executePageAction(action, preview, ctx.actorId, ctx.deps)
@@ -5223,11 +6022,11 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
   "detail-page.upsert": {
     preview: (action, ctx) =>
       action.type === "detail-page.upsert"
-        ? buildDetailPagePreview(action, ctx.deps)
+        ? buildDetailPagePreview(action, ctx)
         : unexpectedAction(),
     execute: (action, preview, ctx) =>
       action.type === "detail-page.upsert"
-        ? executeDetailPageAction(action, preview, ctx.deps)
+        ? executeDetailPageAction(action, preview, ctx)
         : unexpectedAction(),
   },
   "page.update": {
@@ -5310,28 +6109,39 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
 
 const buildPreviewForAction = async (
   action: AssistantPlannedAction,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  planActions: AssistantPlannedAction[] = [],
+  actionIndex = 0
 ): Promise<AssistantActionPreviewChange> =>
   getAssistantActionHandler(actionHandlers, action.type).preview(action, {
     deps,
     actorId: "",
+    planActions,
+    actionIndex,
   });
+
+const hasBlockingPreviewConflicts = (changes: AssistantActionPreviewChange[]) =>
+  changes.some((change) => change.conflicts.some((conflict) => conflict.severity === "error"));
 
 export const dryRunAssistantActionPlan = async (
   input: { plan: AssistantActionPlan },
   deps: ActionExecutorDeps = defaultDeps
 ): Promise<AssistantActionDryRunResult> => {
   const plan = assertAssistantActionPlan(input.plan);
-  const changes = await Promise.all(
-    plan.actions.map((action) => buildPreviewForAction(action, deps))
-  );
+  const changes: AssistantActionPreviewChange[] = [];
+  for (const [index, action] of plan.actions.entries()) {
+    changes.push(await buildPreviewForAction(action, deps, plan.actions, index));
+  }
 
   return {
     plan,
     changes,
     warnings: changes.flatMap((change) => change.warnings),
     readyToExecute:
-      plan.status === "ready" && plan.questions.length === 0 && plan.actions.length > 0,
+      plan.status === "ready" &&
+      plan.questions.length === 0 &&
+      plan.actions.length > 0 &&
+      !hasBlockingPreviewConflicts(changes),
   };
 };
 
@@ -5339,11 +6149,15 @@ const executeAction = async (
   action: AssistantPlannedAction,
   preview: AssistantActionPreviewChange,
   actorId: string,
-  deps: ActionExecutorDeps
+  deps: ActionExecutorDeps,
+  ctx: Pick<ActionHandlerContext, "planActions" | "actionIndex" | "priorResults">
 ): Promise<AssistantActionExecutionItem> =>
   getAssistantActionHandler(actionHandlers, action.type).execute(action, preview, {
     deps,
     actorId,
+    planActions: ctx.planActions,
+    actionIndex: ctx.actionIndex,
+    priorResults: ctx.priorResults,
   });
 
 export const executeAssistantActionPlan = async (
@@ -5391,16 +6205,22 @@ export const executeAssistantActionPlan = async (
   }
 
   const results: AssistantActionExecutionItem[] = [];
-  for (const change of preview.changes) {
+  const priorResults = new Map<string, AssistantActionExecutionItem>();
+  for (const [index, change] of preview.changes.entries()) {
     const action = plan.actions.find((entry) => entry.id === change.actionId);
     if (!action) {
       throw new Error("assistant_action_plan_invalid");
     }
     try {
-      const result = await executeAction(action, change, input.actorId, deps);
+      const result = await executeAction(action, change, input.actorId, deps, {
+        planActions: plan.actions,
+        actionIndex: index,
+        priorResults,
+      });
       results.push(result);
+      priorResults.set(action.id, result);
     } catch (error) {
-      results.push({
+      const result: AssistantActionExecutionItem = {
         actionId: action.id,
         type: action.type,
         targetType: change.targetType,
@@ -5412,7 +6232,9 @@ export const executeAssistantActionPlan = async (
         publicHref: null,
         message: error instanceof Error ? error.message : "Assistant action failed.",
         errorCode: error instanceof Error ? error.message : "assistant_action_failed",
-      });
+      };
+      results.push(result);
+      priorResults.set(action.id, result);
     }
   }
 
@@ -5438,8 +6260,9 @@ export const executeAssistantActionPlan = async (
     },
   });
 
+  const executedPlan = reconcileLaunchReadinessAfterExecution(plan, results);
   const result: AssistantActionExecuteResult = {
-    plan,
+    plan: executedPlan,
     preview,
     results,
     idempotency,

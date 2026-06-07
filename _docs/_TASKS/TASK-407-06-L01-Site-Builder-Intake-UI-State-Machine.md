@@ -1,0 +1,111 @@
+# TASK-407-06-L01: Site Builder Intake UI State Machine
+# FileName: TASK-407-06-L01-Site-Builder-Intake-UI-State-Machine.md
+
+**Parent Subtask:** TASK-407-06
+**Priority:** High
+**Category:** Assistant + Admin UI State
+**Estimated Effort:** Large
+**Dependencies:** TASK-407-02-L04
+**Status:** ✅ Done
+**Started:** 2026-06-06
+**Completed:** 2026-06-06
+
+---
+
+## Overview
+
+Add the admin UI state machine for site-builder intake sessions without
+breaking the existing AI site wizard, docs, inspection, chat, or action-plan
+flows.
+
+## Sub-Tasks
+
+- Add intake session UI state types and reducer/actions.
+- Add transitions for start, resume, answer step, server-normalized rehydrate,
+  review-ready, planning, dry-run, execute, cancel, and reset.
+- Preserve existing assistant panel entry points and conversation behavior.
+- Ensure server-normalized session state wins over stale client state.
+
+## Security Contract
+
+- Endpoint visibility: no public endpoint; UI talks to existing internal admin
+  assistant routes.
+- Auth model: existing admin session.
+- RBAC: UI may display availability but backend remains enforcement point.
+- CSRF: existing client POST flow must continue to send CSRF protection.
+- Rate-limit bucket: `assistant` on backend.
+- Reject unknown validation: UI state may construct structured payloads, but
+  backend service/route schemas remain authoritative.
+- Anti-abuse: UI state cannot skip review, dry-run, execute confirmation, media
+  gates, or server validation.
+- Secret handling: UI state must not store provider keys, cookies, auth state,
+  raw file bytes, signed URLs, or secret-like prompt/reference text.
+
+## Files To Change
+
+| Area | Files |
+|---|---|
+| UI state | `core/admin/ui/setup/AiSiteWizard.tsx`, `core/admin/ui/setup/AiSiteWizardSteps.tsx`, new intake state hook/reducer files |
+| Client types | assistant client/context types if needed |
+| Tests | `tests/vitest/ui/assistant-site-builder-intake-state.test.tsx` |
+
+## Implementation Pseudocode
+
+```tsx
+type SiteBuilderIntakeUiState =
+  | { kind: "idle" }
+  | { kind: "answering"; session: AssistantSiteBuilderIntakeSession }
+  | { kind: "review"; session: AssistantSiteBuilderIntakeSession }
+  | { kind: "planning"; session: AssistantSiteBuilderIntakeSession }
+  | { kind: "readyPlan"; planId: string; siteKit: AssistantSiteKitPlanInput; session: AssistantSiteBuilderIntakeSession };
+
+function siteBuilderIntakeReducer(
+  state: SiteBuilderIntakeUiState,
+  event: SiteBuilderIntakeUiEvent
+): SiteBuilderIntakeUiState {
+  if (event.type === "server_session_received") return hydrateFromServer(event.session);
+  if (event.type === "stale_cache_detected") return { kind: "idle" };
+  return transitionSiteBuilderIntakeState(state, event);
+}
+```
+
+## Data Flow and Error Handling
+
+- UI events update local reducer state, then server responses rehydrate the
+  canonical normalized session.
+- Network errors, stale cached sessions, schema-version mismatches, and rejected
+  answers produce visible non-executing states.
+- Existing assistant flows remain reachable and must not be converted to intake
+  mode unless full-site intent is detected or user chooses it.
+
+## Testing Requirements
+
+- ✅ UI reducer tests for transitions and stale cache discard.
+- ✅ Regression tests that existing assistant docs/action-plan flows still render.
+- ✅ Tests that execute/dry-run states are unreachable before server plan readiness,
+  with execute gated until a strict plan has completed dry-run.
+- ✅ `bun --cwd core lint`
+- ✅ `bun --cwd core lint:types`
+- ✅ `git diff --check`
+
+## Documentation Updates Required
+
+- `docs/develop/assistant.md` if UI flow architecture changes.
+
+## Acceptance Criteria
+
+- Site-builder intake UI state is explicit and test-covered.
+- Existing assistant panel flows still work.
+- Server-normalized session state is authoritative.
+
+## Completion Notes
+
+- Added `assistantSiteBuilderIntakeUiState.ts` with explicit idle, restored,
+  answering, review, planning, ready-plan, dry-run, executing, completed, reset,
+  cancel, stale-cache, and error transitions.
+- Server-normalized intake sessions overwrite dirty local reducer state; browser
+  restore keeps only the bounded redacted session snapshot.
+- Planning requires confirmed review, dry-run requires a strict ready plan, and
+  execute requires that ready plan to have completed dry-run.
+- Added focused Vitest reducer coverage and reran existing AI wizard/assistant
+  panel regressions so the older docs/action-plan surfaces remain intact.

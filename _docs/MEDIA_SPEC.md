@@ -81,6 +81,39 @@ Multi:
 
 `media.accept` i `media.maxItems` sa konfigurowane w schema meta (`xFieldConfig`).
 
+Pola oznaczone `xFieldType: "media"` zawsze przechowuja ID assetu z biblioteki
+mediow. Zewnetrzne URL-e, nawet z backendowego profilu kuratorowanych mediow,
+nie moga byc zapisywane w takich polach. Jesli blueprint potrzebuje
+bezpiecznego publicznego obrazu bez uploadu, musi uzyc osobnego pola tekstowego,
+np. `coverImageUrl`, i udokumentowac zrodlo/licencje obok niego. Asystent moze
+dobierac takie URL-e tylko przez zaufany katalog/profil mediow po stronie
+backendu; prompt uzytkownika ani provider nie moga dostarczyc dowolnego URL-a do
+pola obrazka.
+
+Curated assistant media profile selection must require a business
+industry/vertical match before theme keywords can influence ranking. Broad theme
+terms such as booking, gallery, portfolio, or premium may rank already-matched
+profiles, but they must not select an unrelated industry profile by themselves.
+
+## Assistant reference intake
+
+Advanced assistant reference intake treats media as design evidence only. It may
+use existing media-library ids after backend permission/read checks, and
+temporary reference ids only after scan/type/size validation. Arbitrary remote
+media URLs are unsupported unless a backend-owned trusted adapter is introduced
+for that source.
+
+Before reference evidence can influence assistant facts or provider context,
+the backend redacts filenames, EXIF/metadata, OCR/extracted text, alt text,
+signed URLs, cookies, tokens, and secret-like values. Provider prompts and
+diagnostics receive only bounded text facts, digests, and `rawIncluded:false`;
+raw bytes, signed URLs, raw metadata, and raw reference ids must not be stored
+in browser state or sent to a provider.
+
+Reference design briefs may use sanitized media evidence only as reviewed visual
+hints. They do not import remote media, create media-library assets, or carry
+raw file bytes/text into provider prompts or action execution.
+
 ## Admin UI behavior (v1)
 
 - Upload dropzone + manual browse.

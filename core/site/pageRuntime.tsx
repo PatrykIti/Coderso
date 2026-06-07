@@ -138,20 +138,19 @@ export function DefaultRuntimePageShell({
   };
 
   return (
-    <div
-      className={joinClasses("relative overflow-hidden", wrapperPaddingClass)}
-      style={wrapperBackgroundStyle}
-    >
+    <div className={joinClasses("relative", wrapperPaddingClass)} style={wrapperBackgroundStyle}>
       {wrapperBackgroundVideo ? (
-        <video
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-          src={wrapperBackgroundVideo}
-          autoPlay
-          loop
-          muted
-          playsInline
-          aria-hidden="true"
-        />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <video
+            className="h-full w-full object-cover"
+            src={wrapperBackgroundVideo}
+            autoPlay
+            loop
+            muted
+            playsInline
+            aria-hidden="true"
+          />
+        </div>
       ) : null}
       <div
         className={joinClasses(

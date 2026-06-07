@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
 
 import { renderToString } from "react-dom/server";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { createTemplateCache } from "../themes/cache";
 import { createWidgetRuntimeScriptRegistry } from "../widgets/runtimeScripts";
@@ -118,8 +118,13 @@ const renderDocument = (
   return `<!doctype html><html lang="en"><head>${head}</head><body>${bodyHtml}${bodyScriptsHtml}</body></html>`;
 };
 
+const previewBannerOffset = "2rem";
+
 const PreviewBanner = () => (
-  <div className="sticky top-0 z-50 w-full bg-amber-500/90 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-black">
+  <div
+    className="sticky top-0 z-50 w-full bg-amber-500/90 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-black"
+    data-preview-banner="true"
+  >
     Preview mode
   </div>
 );
@@ -136,6 +141,12 @@ const PageRuntimeRoot = ({
   <div
     className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]"
     data-template={`page-${templateKey}`}
+    data-page-preview={isPreview ? "true" : undefined}
+    style={
+      isPreview
+        ? ({ "--coderso-preview-banner-offset": previewBannerOffset } as CSSProperties)
+        : undefined
+    }
   >
     {isPreview ? <PreviewBanner /> : null}
     {children}

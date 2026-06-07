@@ -13,6 +13,8 @@ test("PageEditorPage renders key panels", () => {
   expect(html).toContain("Find components");
   expect(html).toContain("Templates");
   expect(html).toContain("Preview");
+  expect(html).toContain("Hide library");
+  expect(html).toContain('data-page-editor-canvas-scroller="true"');
   expect(html).not.toContain("Runtime preview device");
   expect(html).toContain("History");
   expect(html).toMatch(/data-slot="tabs"[^>]*class="[^"]*min-h-0[^"]*overflow-hidden[^"]*"/);

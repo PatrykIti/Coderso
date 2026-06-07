@@ -41,7 +41,16 @@ export type AssistantProviderResponse = {
   providerRequestId?: string;
 };
 
+export type AssistantProviderModelMetadata = {
+  model: string;
+  maxInputTokens: number;
+  maxOutputTokens: number;
+  supportedParameters: string[];
+  source: "provider" | "default";
+};
+
 export type AssistantProvider = {
   id: string;
   complete: (request: AssistantProviderRequest) => Promise<AssistantProviderResponse>;
+  getModelMetadata?: () => Promise<AssistantProviderModelMetadata>;
 };

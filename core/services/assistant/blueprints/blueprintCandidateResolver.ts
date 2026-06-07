@@ -130,6 +130,24 @@ export const resolveBlueprintCandidates = (input: {
     }
   }
 
+  const servicesDirectory = getBlueprintCapabilityRegistration("services-directory");
+  if (
+    servicesDirectory &&
+    signals.wantsServicesDirectory &&
+    servicesDirectory.capability.id !== primaryRegistration?.capability.id
+  ) {
+    addCandidate(
+      candidates,
+      createCandidate(
+        servicesDirectory,
+        primaryRegistration ? "adjunct" : "primary",
+        servicesDirectory.capability.merge.priority + (primaryRegistration ? 11 : 20),
+        ["module:services-directory"],
+        ["Prompt asks for an offer or services directory flow."]
+      )
+    );
+  }
+
   const editorialHub = getBlueprintCapabilityRegistration("editorial-content-hub");
   if (
     editorialHub &&

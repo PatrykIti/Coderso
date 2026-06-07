@@ -11,6 +11,7 @@ import type {
   AssistantPromptKind,
 } from "./actionPlanTypes";
 import { assertTrustedAssistantMediaReferences } from "./assistantMediaTrust";
+import { getCuratedMediaAssetByUrl } from "../media/curatedMediaProfiles";
 import { assistantActionTypes } from "./actionRegistry";
 import {
   normalizeFormActionInput,
@@ -20,6 +21,25 @@ import {
 import { normalizeDetailPageDocument } from "../content/detailPageSchema";
 import { customScreenCollectionRoleValues } from "../customScreens/customScreenSchemas";
 import { normalizeOptionalDetailPageId } from "../settings/detailPageIdContract";
+import {
+  assistantSiteBuilderAdvancedHeroVariantIds,
+  assistantSiteBuilderAdvancedMenuBehaviorIds,
+  assistantSiteBuilderAdvancedSectionVariantIds,
+  assistantSiteBuilderIntakeAnswerFieldControls,
+  assistantSiteBuilderIntakeModes,
+  assistantSiteBuilderIntakeOptionRegistryIds,
+  assistantSiteBuilderIntakeStepIds,
+  assistantSiteBuilderDesignPresetIds,
+  assistantSiteBuilderPageRoleIds,
+} from "./assistantSiteBuilderIntakeTypes";
+import {
+  resolveSiteBuilderIntakeAdvancedHeroVariant,
+  resolveSiteBuilderIntakeAdvancedSectionVariant,
+} from "./assistantSiteBuilderIntakeAdvancedOptions";
+import {
+  navigationMobileModeIds,
+  navigationVariantIds,
+} from "../../widgets/core/navigationContract";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -53,6 +73,7 @@ const intentFamilies = new Set<AssistantIntentFamily>([
   "product_catalog",
   "portfolio_projects",
   "services_directory",
+  "service_business_full_site",
   "lead_capture_site",
   "booking_service",
   "editorial_content_hub",
@@ -95,6 +116,13 @@ const blueprintCompositionResourceKinds = new Set([
 const blueprintCompositionRoles = new Set(["primary", "adjunct", "gated"] as const);
 const blueprintCompositionMatchStatuses = new Set(["matched", "unresolved"] as const);
 const blueprintCompositionConflictSeverities = new Set(["warning", "error"] as const);
+const advancedMenuBehaviorIds = new Set(assistantSiteBuilderAdvancedMenuBehaviorIds);
+const advancedHeroVariantIds = new Set(assistantSiteBuilderAdvancedHeroVariantIds);
+const advancedSectionVariantIds = new Set(assistantSiteBuilderAdvancedSectionVariantIds);
+const advancedNavigationVariantIds = new Set(navigationVariantIds);
+const advancedNavigationMobileModes = new Set(navigationMobileModeIds);
+const siteBuilderDesignPresetIds = new Set(assistantSiteBuilderDesignPresetIds);
+const siteBuilderPageRoleIds = new Set(assistantSiteBuilderPageRoleIds);
 const secretLikeMetadataPattern =
   /\b[\w.-]*(token|secret|password|api[-_]?key|credential|cookie|session|csrf|authorization|bearer)[\w.-]*\b/gi;
 
@@ -106,6 +134,45 @@ const fail = (): never => {
 };
 
 const assertRecord = (value: unknown): JsonRecord => (isRecord(value) ? value : fail());
+
+const assertTrustedMediaReferences = (
+  value: unknown,
+  options?: Parameters<typeof assertTrustedAssistantMediaReferences>[2]
+) => {
+  try {
+    assertTrustedAssistantMediaReferences(value, [], options);
+  } catch (error) {
+    if (error instanceof Error && error.message === "assistant_media_reference_untrusted") fail();
+    throw error;
+  }
+};
+
+const readOptionalCuratedMetadata = (values: JsonRecord, key: string) => {
+  const value = values[key];
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") return fail();
+  const trimmed = value.trim();
+  if (!trimmed) fail();
+  return trimmed;
+};
+
+const assertTrustedCuratedMediaMetadata = (values: JsonRecord) => {
+  const coverImageUrl = readOptionalCuratedMetadata(values, "coverImageUrl");
+  const sourceUrl = readOptionalCuratedMetadata(values, "coverImageSourceUrl");
+  const licenseUrl = readOptionalCuratedMetadata(values, "coverImageLicenseUrl");
+  const sourceName = readOptionalCuratedMetadata(values, "coverImageSourceName");
+  const licenseName = readOptionalCuratedMetadata(values, "coverImageLicenseName");
+  const asset = coverImageUrl ? getCuratedMediaAssetByUrl(coverImageUrl) : null;
+  if (!asset) {
+    if (sourceUrl || licenseUrl || sourceName || licenseName) return fail();
+    return;
+  }
+  if (!sourceUrl || !licenseUrl || !sourceName || !licenseName) return fail();
+  if (sourceUrl && sourceUrl !== asset.sourceUrl) fail();
+  if (licenseUrl && licenseUrl !== asset.licenseUrl) fail();
+  if (sourceName && sourceName !== asset.sourceName) fail();
+  if (licenseName && licenseName !== asset.licenseName) fail();
+};
 
 const assertKeys = (value: JsonRecord, allowed: Set<string>) => {
   for (const key of Object.keys(value)) {
@@ -323,6 +390,193 @@ const normalizeBlueprintCompositionMetadata = (value: unknown) => {
   };
 };
 
+const launchReadinessStatuses = new Set(["satisfied", "pending_execute", "gated"] as const);
+const siteBuilderIntakeModes = new Set(assistantSiteBuilderIntakeModes);
+const siteBuilderIntakeStepIds = new Set(assistantSiteBuilderIntakeStepIds);
+const siteBuilderIntakeOptionRegistryIds = new Set(assistantSiteBuilderIntakeOptionRegistryIds);
+const siteBuilderIntakeAnswerFieldControls = new Set(assistantSiteBuilderIntakeAnswerFieldControls);
+const siteBuilderIntakeStatuses = new Set(["needs_input", "ready_for_execution"] as const);
+
+const readNullableSiteBuilderIntakeStepId = (value: unknown) => {
+  if (value === null) return null;
+  return readEnum(value, siteBuilderIntakeStepIds);
+};
+
+const readNullableSiteBuilderIntakeOptionRegistryId = (value: unknown) => {
+  if (value === null) return null;
+  return readEnum(value, siteBuilderIntakeOptionRegistryIds);
+};
+
+const readNullableMetadataText = (value: unknown) => {
+  if (value === null) return null;
+  return readMetadataText(value);
+};
+
+const readNullableFiniteNumber = (value: unknown) => {
+  if (value === null) return null;
+  return readFiniteNumber(value);
+};
+
+const normalizeSiteBuilderIntakeAnswerOptionMetadata = (value: unknown) => {
+  const option = assertRecord(value);
+  assertKeys(option, new Set(["id", "label", "description"]));
+  return {
+    id: readMetadataText(option.id),
+    label: readMetadataText(option.label),
+    description: readMetadataText(option.description),
+  };
+};
+
+const normalizeSiteBuilderIntakeAnswerFieldMetadata = (value: unknown) => {
+  const field = assertRecord(value);
+  assertKeys(
+    field,
+    new Set([
+      "key",
+      "label",
+      "description",
+      "control",
+      "required",
+      "requiredGroupId",
+      "maxLength",
+      "maxItems",
+      "optionRegistryId",
+      "options",
+    ])
+  );
+  return {
+    key: readMetadataText(field.key),
+    label: readMetadataText(field.label),
+    description: readMetadataText(field.description),
+    control: readEnum(field.control, siteBuilderIntakeAnswerFieldControls),
+    required: readBoolean(field.required),
+    requiredGroupId: readNullableMetadataText(field.requiredGroupId),
+    maxLength: readNullableFiniteNumber(field.maxLength),
+    maxItems: readNullableFiniteNumber(field.maxItems),
+    optionRegistryId: readNullableSiteBuilderIntakeOptionRegistryId(field.optionRegistryId),
+    options: readRecordArray(field.options).map(normalizeSiteBuilderIntakeAnswerOptionMetadata),
+  };
+};
+
+const normalizeSiteBuilderIntakeStepMetadata = (value: unknown) => {
+  const step = assertRecord(value);
+  assertKeys(
+    step,
+    new Set([
+      "id",
+      "label",
+      "description",
+      "required",
+      "optionRegistryId",
+      "position",
+      "total",
+      "answerFields",
+    ])
+  );
+  return {
+    id: readEnum(step.id, siteBuilderIntakeStepIds),
+    label: readMetadataText(step.label),
+    description: readMetadataText(step.description),
+    required: readBoolean(step.required),
+    optionRegistryId: readNullableSiteBuilderIntakeOptionRegistryId(step.optionRegistryId),
+    position: readFiniteNumber(step.position),
+    total: readFiniteNumber(step.total),
+    answerFields: readRecordArray(step.answerFields).map(
+      normalizeSiteBuilderIntakeAnswerFieldMetadata
+    ),
+  };
+};
+
+const normalizeSiteBuilderIntakeMetadata = (
+  value: unknown
+): AssistantActionPlanMetadata["siteBuilderIntake"] => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "schemaVersion",
+      "mode",
+      "status",
+      "currentStepId",
+      "nextStepId",
+      "visibleStepIds",
+      "answeredStepIds",
+      "missingRequiredStepIds",
+      "canReview",
+      "canExecute",
+      "steps",
+    ])
+  );
+  if (readFiniteNumber(input.schemaVersion) !== 1) fail();
+  return {
+    schemaVersion: 1,
+    mode: readEnum(input.mode, siteBuilderIntakeModes),
+    status: readEnum(input.status, siteBuilderIntakeStatuses),
+    currentStepId: readEnum(input.currentStepId, siteBuilderIntakeStepIds),
+    nextStepId: readNullableSiteBuilderIntakeStepId(input.nextStepId),
+    visibleStepIds: readStringArray(input.visibleStepIds).map((stepId) =>
+      readEnum(stepId, siteBuilderIntakeStepIds)
+    ),
+    answeredStepIds: readStringArray(input.answeredStepIds).map((stepId) =>
+      readEnum(stepId, siteBuilderIntakeStepIds)
+    ),
+    missingRequiredStepIds: readStringArray(input.missingRequiredStepIds).map((stepId) =>
+      readEnum(stepId, siteBuilderIntakeStepIds)
+    ),
+    canReview: readBoolean(input.canReview),
+    canExecute: readBoolean(input.canExecute),
+    steps: readRecordArray(input.steps).map(normalizeSiteBuilderIntakeStepMetadata),
+  };
+};
+
+const normalizeLaunchReadinessMetadata = (
+  value: unknown
+): AssistantActionPlanMetadata["launchReadiness"] => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "schemaVersion",
+      "kind",
+      "requiredPages",
+      "requiredCatalogs",
+      "requiredMediaPages",
+      "minimumPublishedEntries",
+      "checks",
+    ])
+  );
+  if (readFiniteNumber(input.schemaVersion) !== 1) fail();
+  const minimumsInput = assertRecord(input.minimumPublishedEntries);
+  const minimumPublishedEntries = Object.fromEntries(
+    Object.entries(minimumsInput).map(([key, minimum]) => [
+      redactMetadataText(readText(key)),
+      readFiniteNumber(minimum),
+    ])
+  );
+  const checks = readRecordArray(input.checks).map((check) => {
+    assertKeys(check, new Set(["id", "label", "status", "evidence", "gates"]));
+    return {
+      id: readMetadataText(check.id),
+      label: readMetadataText(check.label),
+      status: readEnum(check.status, launchReadinessStatuses),
+      evidence: readMetadataStringArray(check.evidence),
+      gates: readMetadataStringArray(check.gates),
+    };
+  });
+
+  return {
+    schemaVersion: 1 as const,
+    kind: readEnum(input.kind, new Set(["full-service-site"] as const)),
+    requiredPages: readMetadataStringArray(input.requiredPages),
+    requiredCatalogs: readMetadataStringArray(input.requiredCatalogs),
+    ...(input.requiredMediaPages !== undefined
+      ? { requiredMediaPages: readMetadataStringArray(input.requiredMediaPages) }
+      : {}),
+    minimumPublishedEntries,
+    checks,
+  };
+};
+
 const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | undefined => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
@@ -333,6 +587,8 @@ const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | un
       "providerDraftUsed",
       "providerId",
       "blueprintComposition",
+      "launchReadiness",
+      "siteBuilderIntake",
       "blueprintShadow",
     ])
   );
@@ -390,6 +646,12 @@ const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | un
     ...(input.providerId !== undefined ? { providerId: readOptionalText(input.providerId) } : {}),
     ...(input.blueprintComposition !== undefined
       ? { blueprintComposition: normalizeBlueprintCompositionMetadata(input.blueprintComposition) }
+      : {}),
+    ...(input.launchReadiness !== undefined
+      ? { launchReadiness: normalizeLaunchReadinessMetadata(input.launchReadiness) }
+      : {}),
+    ...(input.siteBuilderIntake !== undefined
+      ? { siteBuilderIntake: normalizeSiteBuilderIntakeMetadata(input.siteBuilderIntake) }
       : {}),
     ...(blueprintShadow !== undefined ? { blueprintShadow } : {}),
   };
@@ -802,11 +1064,29 @@ const normalizeFormUpdateInput = (input: JsonRecord) => {
 
 const normalizeEntryUpsertDraftInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["contentTypeSlug", "title", "slug", "values"]));
+  const values = assertRecord(input.values);
+  assertTrustedMediaReferences(values, { allowCuratedTextUrlFields: true });
+  assertTrustedCuratedMediaMetadata(values);
   return {
     contentTypeSlug: readText(input.contentTypeSlug),
     title: readText(input.title),
     slug: readText(input.slug),
-    values: assertRecord(input.values),
+    values,
+  };
+};
+
+const normalizeEntrySampleCreateInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["contentTypeSlug", "title", "slug", "status", "values", "seo"]));
+  const values = assertRecord(input.values);
+  assertTrustedMediaReferences(values, { allowCuratedTextUrlFields: true });
+  assertTrustedCuratedMediaMetadata(values);
+  return {
+    contentTypeSlug: readText(input.contentTypeSlug),
+    title: readText(input.title),
+    slug: readText(input.slug),
+    status: readEnum(input.status, new Set(["published"])),
+    values,
+    ...(input.seo !== undefined ? { seo: normalizeSeoPayload(input.seo) } : {}),
   };
 };
 
@@ -835,13 +1115,18 @@ const normalizeEntryDeleteInput = (input: JsonRecord) => {
 const normalizeEntryUpdatePatch = (value: unknown) => {
   const input = assertRecord(value);
   assertKeys(input, new Set(["title", "slug", "status", "values", "seo"]));
+  const values = input.values !== undefined ? assertRecord(input.values) : undefined;
+  if (values !== undefined) {
+    assertTrustedMediaReferences(values, { allowCuratedTextUrlFields: true });
+    assertTrustedCuratedMediaMetadata(values);
+  }
   return {
     ...(input.title !== undefined ? { title: readText(input.title) } : {}),
     ...(input.slug !== undefined ? { slug: readText(input.slug) } : {}),
     ...(input.status !== undefined
       ? { status: readEnum(input.status, new Set(["draft", "published", "archived"])) }
       : {}),
-    ...(input.values !== undefined ? { values: assertRecord(input.values) } : {}),
+    ...(values !== undefined ? { values } : {}),
     ...(input.seo !== undefined ? { seo: normalizeSeoPayload(input.seo) } : {}),
   };
 };
@@ -895,7 +1180,7 @@ const readOptionalSafeRelativeHref = (value: unknown) => {
 const normalizeMenuItemUpsertInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["menuId", "label", "href", "parentId", "orderIndex", "settings"]));
   return {
-    menuId: readText(input.menuId),
+    menuId: normalizeResourceIdInput(input.menuId),
     label: readText(input.label),
     href: readSafeRelativeHref(input.href),
     ...(input.parentId !== undefined ? { parentId: readOptionalText(input.parentId) } : {}),
@@ -903,6 +1188,15 @@ const normalizeMenuItemUpsertInput = (input: JsonRecord) => {
       ? { orderIndex: readOptionalFiniteNumber(input.orderIndex) }
       : {}),
     ...(input.settings !== undefined ? { settings: assertRecord(input.settings) } : {}),
+  };
+};
+
+const normalizeMenuUpsertInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["name", "location", "status"]));
+  return {
+    name: readText(input.name),
+    location: readText(input.location),
+    status: readEnum(input.status, new Set(["draft", "published"])),
   };
 };
 
@@ -969,11 +1263,65 @@ const normalizeSeoPayload = (value: unknown) => {
   };
 };
 
+const normalizeSamePlanLocator = (value: unknown) => {
+  const input = assertRecord(value);
+  const kind = readEnum(input.kind, new Set(["action-result", "stable-slug", "stable-location"]));
+  const resourceType = readEnum(
+    input.resourceType,
+    new Set(["content-type", "page", "entry", "menu", "detail-page"])
+  );
+  if (kind === "action-result") {
+    assertKeys(input, new Set(["kind", "actionId", "resourceType", "field"]));
+    return {
+      kind,
+      actionId: readText(input.actionId),
+      resourceType,
+      field: readEnum(input.field, new Set(["id"])),
+    };
+  }
+  if (kind === "stable-location") {
+    if (resourceType !== "menu") fail();
+    assertKeys(input, new Set(["kind", "resourceType", "location"]));
+    return {
+      kind,
+      resourceType,
+      location: readText(input.location),
+    };
+  }
+  if (resourceType === "content-type") {
+    assertKeys(input, new Set(["kind", "resourceType", "slug"]));
+    return {
+      kind,
+      resourceType,
+      slug: readText(input.slug),
+    };
+  }
+  if (resourceType === "page") {
+    assertKeys(input, new Set(["kind", "resourceType", "slug"]));
+    return {
+      kind,
+      resourceType,
+      slug: readSafeRelativeHref(input.slug),
+    };
+  }
+  if (resourceType !== "entry") fail();
+  assertKeys(input, new Set(["kind", "resourceType", "contentTypeSlug", "slug"]));
+  return {
+    kind,
+    resourceType,
+    contentTypeSlug: readText(input.contentTypeSlug),
+    slug: readText(input.slug),
+  };
+};
+
+const normalizeResourceIdInput = (value: unknown) =>
+  typeof value === "string" ? readText(value) : normalizeSamePlanLocator(value);
+
 const normalizeSeoDocumentUpsertInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["targetType", "targetId", "seo"]));
   return {
     targetType: readEnum(input.targetType, new Set(["page", "entry"])),
-    targetId: readText(input.targetId),
+    targetId: normalizeResourceIdInput(input.targetId),
     seo: normalizeSeoPayload(input.seo),
   };
 };
@@ -1041,15 +1389,18 @@ const normalizeListingTemplateCardPatchInput = (input: JsonRecord) => {
 const normalizePageWidgetPatchBlock = (value: unknown) => {
   const input = assertRecord(value);
   assertKeys(input, new Set(["id", "type", "variant", "data", "layout", "visibility", "editor"]));
-  try {
-    assertTrustedAssistantMediaReferences(input.data);
-    if (input.layout !== undefined) assertTrustedAssistantMediaReferences(input.layout);
-    if (input.visibility !== undefined) assertTrustedAssistantMediaReferences(input.visibility);
-    if (input.editor !== undefined) assertTrustedAssistantMediaReferences(input.editor);
-  } catch (error) {
-    if (error instanceof Error && error.message === "assistant_media_reference_untrusted") fail();
-    throw error;
+  assertTrustedMediaReferences(input.data, {
+    allowCuratedBlockSrc: true,
+    allowCuratedTextUrlFields: true,
+  });
+  if (input.layout !== undefined) {
+    assertTrustedMediaReferences(input.layout, {
+      allowCuratedBlockSrc: true,
+      allowCuratedTextUrlFields: true,
+    });
   }
+  if (input.visibility !== undefined) assertTrustedMediaReferences(input.visibility);
+  if (input.editor !== undefined) assertTrustedMediaReferences(input.editor);
   return {
     id: readText(input.id),
     type: readText(input.type),
@@ -1287,9 +1638,12 @@ const normalizePageInput = (input: JsonRecord) => {
 };
 
 const normalizeDetailPageUpsertInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["document", "expectedExistingId"]));
+  assertKeys(input, new Set(["document", "contentTypeId", "expectedExistingId"]));
   return {
     document: normalizeDetailPageDocument(input.document),
+    ...(input.contentTypeId !== undefined
+      ? { contentTypeId: normalizeResourceIdInput(input.contentTypeId) }
+      : {}),
     ...(input.expectedExistingId !== undefined
       ? { expectedExistingId: readOptionalText(input.expectedExistingId) }
       : {}),
@@ -1448,6 +1802,128 @@ const normalizeWidgetTemplateBlockPatchInput = (input: JsonRecord) => {
   };
 };
 
+const readAdvancedHeroDefinition = (variantId: unknown) => {
+  const resolvedId = readEnum(variantId, advancedHeroVariantIds);
+  try {
+    return resolveSiteBuilderIntakeAdvancedHeroVariant(resolvedId);
+  } catch {
+    return fail();
+  }
+};
+
+const readAdvancedSectionDefinition = (variantId: unknown) => {
+  const resolvedId = readEnum(variantId, advancedSectionVariantIds);
+  try {
+    return resolveSiteBuilderIntakeAdvancedSectionVariant(resolvedId);
+  } catch {
+    return fail();
+  }
+};
+
+const normalizeAdvancedRuntimeMenuOverride = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "behaviorIds",
+      "variantId",
+      "sticky",
+      "collapseOnScroll",
+      "transparent",
+      "mobileMode",
+      "ctaTargetPageRole",
+    ])
+  );
+  return {
+    behaviorIds: readStringArray(input.behaviorIds).map((item) =>
+      readEnum(item, advancedMenuBehaviorIds)
+    ),
+    variantId: readEnum(input.variantId, advancedNavigationVariantIds),
+    sticky: readBoolean(input.sticky),
+    collapseOnScroll:
+      input.collapseOnScroll === undefined ? false : readBoolean(input.collapseOnScroll),
+    transparent: readBoolean(input.transparent),
+    mobileMode: readEnum(input.mobileMode, advancedNavigationMobileModes),
+    ctaTargetPageRole: readOptionalNullableEnum(input.ctaTargetPageRole, siteBuilderPageRoleIds),
+  };
+};
+
+const normalizeAdvancedRuntimeHeroOverride = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["variantId", "widgetType", "widgetVariantId", "module", "alias"]));
+  const definition = readAdvancedHeroDefinition(input.variantId);
+  if (
+    readEnum(input.widgetVariantId, advancedHeroVariantIds) !== definition.widgetVariantId ||
+    readText(input.widgetType) !== definition.widgetType ||
+    readText(input.module) !== definition.module ||
+    readText(input.alias) !== definition.alias
+  ) {
+    fail();
+  }
+  return {
+    variantId: definition.id,
+    widgetType: definition.widgetType,
+    widgetVariantId: definition.widgetVariantId,
+    module: definition.module,
+    alias: definition.alias,
+  };
+};
+
+const normalizeAdvancedRuntimeSectionOverride = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set(["variantId", "sectionRoleId", "alias", "widgetType", "widgetVariantId", "module"])
+  );
+  const definition = readAdvancedSectionDefinition(input.variantId);
+  if (
+    readText(input.sectionRoleId) !== definition.sectionRoleId ||
+    readText(input.alias) !== definition.alias ||
+    readText(input.widgetType) !== definition.widgetType ||
+    readText(input.widgetVariantId) !== definition.widgetVariantId ||
+    readText(input.module) !== definition.module
+  ) {
+    fail();
+  }
+  return {
+    variantId: definition.id,
+    sectionRoleId: definition.sectionRoleId,
+    alias: definition.alias,
+    widgetType: definition.widgetType,
+    widgetVariantId: definition.widgetVariantId,
+    module: definition.module,
+  };
+};
+
+const normalizeAdvancedRuntimeOverrides = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set(["schemaVersion", "designPresetId", "menu", "hero", "sectionVariants"])
+  );
+  if (readFiniteNumber(input.schemaVersion) !== 1) fail();
+  return {
+    schemaVersion: 1 as const,
+    ...(input.designPresetId !== undefined
+      ? {
+          designPresetId: readOptionalNullableEnum(
+            input.designPresetId,
+            siteBuilderDesignPresetIds
+          ),
+        }
+      : {}),
+    ...(input.menu !== undefined ? { menu: normalizeAdvancedRuntimeMenuOverride(input.menu) } : {}),
+    ...(input.hero !== undefined ? { hero: normalizeAdvancedRuntimeHeroOverride(input.hero) } : {}),
+    ...(input.sectionVariants !== undefined
+      ? {
+          sectionVariants: readRecordArray(input.sectionVariants).map(
+            normalizeAdvancedRuntimeSectionOverride
+          ),
+        }
+      : {}),
+  };
+};
+
 const normalizeSiteKitPlanBase = (input: JsonRecord) => ({
   businessType: readText(input.businessType),
   goals: readStringArray(input.goals),
@@ -1463,6 +1939,11 @@ const normalizeSiteKitPlanBase = (input: JsonRecord) => ({
   ...(input.enabledStepIds !== undefined
     ? { enabledStepIds: readOptionalStringArray(input.enabledStepIds) }
     : {}),
+  ...(input.advancedRuntimeOverrides !== undefined
+    ? {
+        advancedRuntimeOverrides: normalizeAdvancedRuntimeOverrides(input.advancedRuntimeOverrides),
+      }
+    : {}),
 });
 
 const siteKitPlanKeys = [
@@ -1474,6 +1955,7 @@ const siteKitPlanKeys = [
   "preferredKitId",
   "selectedKitId",
   "enabledStepIds",
+  "advancedRuntimeOverrides",
   "preview",
 ];
 
@@ -1547,10 +2029,14 @@ const normalizeActionInput = (type: AssistantPlannedAction["type"], input: unkno
       return normalizeFormUpdateInput(record);
     case "entry.upsert-draft":
       return normalizeEntryUpsertDraftInput(record);
+    case "entry.sample.create":
+      return normalizeEntrySampleCreateInput(record);
     case "entry.delete":
       return normalizeEntryDeleteInput(record);
     case "entry.update":
       return normalizeEntryUpdateInput(record);
+    case "menu.upsert":
+      return normalizeMenuUpsertInput(record);
     case "menu.item.upsert":
       return normalizeMenuItemUpsertInput(record);
     case "menu.item.delete":

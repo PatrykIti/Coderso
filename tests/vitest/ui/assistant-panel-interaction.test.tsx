@@ -11,9 +11,16 @@ import {
   AssistantPanel,
   clearAssistantRuntimeStateCache,
 } from "../../../core/admin/ui/assistant/AssistantPanel";
+import { openAssistantPanel } from "../../../core/admin/ui/assistant/assistantPanelEvents";
 import { clearAssistantConversationState } from "../../../core/admin/ui/assistant/assistantConversationState";
 import { AdminAssistantConfigProvider } from "../../../core/admin/ui/contexts/AdminAssistantConfigContext";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
+import { buildAdvancedSiteBuilderNeedsInputPlan } from "../../../core/services/assistant/assistantSiteBuilderIntakeAdvancedFlow";
+import { buildBasicSiteBuilderNeedsInputPlan } from "../../../core/services/assistant/assistantSiteBuilderIntakeBasicFlow";
+import {
+  ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  type AssistantSiteBuilderIntakeSession,
+} from "../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -54,6 +61,22 @@ const setTextareaValue = (element: HTMLTextAreaElement, value: string) => {
   element.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
+const setInputValue = (element: HTMLInputElement, value: string) => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  descriptor?.set?.call(element, value);
+  element.dispatchEvent(new Event("input", { bubbles: true }));
+};
+
+const basicIntakeSession = (
+  answers: AssistantSiteBuilderIntakeSession["answers"],
+  currentStepId: AssistantSiteBuilderIntakeSession["currentStepId"]
+): AssistantSiteBuilderIntakeSession => ({
+  version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  mode: "basic",
+  currentStepId,
+  answers,
+});
+
 const makeUserSettings = (overrides: Partial<UserSettings> = {}): UserSettings => {
   const settings: UserSettings = {
     "pages.openAfterCreate": true,
@@ -90,6 +113,57 @@ afterEach(() => {
   clearAssistantConversationState();
   document.body.innerHTML = "";
   vi.restoreAllMocks();
+});
+
+test("AssistantPanel opens from reviewed site builder CTA event", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "llm-guide",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  mockUserSettings();
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/advanced/solution-kits">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    await React.act(async () => {
+      openAssistantPanel({
+        mode: "llm-guide",
+        message: "Create a complete website for my business.",
+        reset: true,
+      });
+      await flush();
+    });
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+
+    expect(view.container.textContent).toContain("LLM Guide");
+    expect(textarea.value).toBe("Create a complete website for my business.");
+  } finally {
+    view.cleanup();
+  }
 });
 
 test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", async () => {
@@ -523,6 +597,412 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
     );
     expect(view.container.textContent).toContain("CMS resource matches");
     expect(view.container.textContent).toContain("House Projects");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AssistantPanel submits Basic site-builder intake answers through existing plan route", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "llm-guide",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  mockUserSettings();
+  const firstPlan = buildBasicSiteBuilderNeedsInputPlan({});
+  const submittedAnswer: AssistantSiteBuilderIntakeSession["answers"][number] = {
+    stepId: "business-profile",
+    values: {
+      siteName: "Provider Finder",
+      locale: "en",
+      summary: "A directory for trusted local professionals.",
+    },
+  };
+  const secondPlan = buildBasicSiteBuilderNeedsInputPlan({
+    session: basicIntakeSession([submittedAnswer], "site-goals"),
+  });
+  const planSpy = vi
+    .spyOn(assistantClient, "planAssistantActions")
+    .mockResolvedValueOnce(firstPlan)
+    .mockResolvedValueOnce(secondPlan);
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/advanced/solution-kits">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const launcher = findButton(view.container, "");
+    if (!launcher) throw new Error("missing_launcher");
+
+    await React.act(async () => {
+      launcher.click();
+      await flush();
+    });
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+
+    await React.act(async () => {
+      setTextareaValue(textarea, "zrob mi pelny serwis dla lokalnych uslugodawcow");
+      await flush();
+    });
+
+    const sendButton = findButton(view.container, "Send");
+    if (!sendButton) throw new Error("missing_send_button");
+
+    await React.act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    expect(view.container.textContent).toContain("Site profile");
+    expect(view.container.textContent).toContain("Save step");
+
+    const siteName = view.container.querySelector("#site-builder-intake-business-profile-siteName");
+    const locale = view.container.querySelector("#site-builder-intake-business-profile-locale");
+    const summary = view.container.querySelector("#site-builder-intake-business-profile-summary");
+    if (!(siteName instanceof HTMLInputElement)) throw new Error("missing_site_name");
+    if (!(locale instanceof HTMLInputElement)) throw new Error("missing_locale");
+    if (!(summary instanceof HTMLTextAreaElement)) throw new Error("missing_summary");
+
+    await React.act(async () => {
+      setInputValue(siteName, "Provider Finder");
+      setInputValue(locale, "en");
+      setTextareaValue(summary, "A directory for trusted local professionals.");
+      await flush();
+    });
+
+    const saveButton = findButton(view.container, "Save step");
+    if (!saveButton) throw new Error("missing_save_button");
+
+    await React.act(async () => {
+      saveButton.click();
+      await flush();
+    });
+
+    expect(planSpy).toHaveBeenCalledTimes(2);
+    const secondRequest = planSpy.mock.calls[1]?.[0];
+    expect(secondRequest).toMatchObject({
+      context: {
+        siteBuilderIntakeState: {
+          activeSession: {
+            version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+            mode: "basic",
+            currentStepId: "business-profile",
+            answers: [submittedAnswer],
+          },
+        },
+      },
+    });
+    expect(secondRequest?.context?.siteBuilderIntakeState?.activeSession).not.toHaveProperty(
+      "facts"
+    );
+    expect(view.container.textContent).toContain("Site goals");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AssistantPanel switches Basic site-builder intake to Advanced through existing plan route", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "llm-guide",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  mockUserSettings();
+  const planSpy = vi
+    .spyOn(assistantClient, "planAssistantActions")
+    .mockResolvedValueOnce(buildBasicSiteBuilderNeedsInputPlan({}))
+    .mockResolvedValueOnce(
+      buildAdvancedSiteBuilderNeedsInputPlan({
+        session: {
+          version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+          mode: "advanced",
+          currentStepId: "business-profile",
+          answers: [],
+        },
+      })
+    );
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/advanced/solution-kits">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const launcher = findButton(view.container, "");
+    if (!launcher) throw new Error("missing_launcher");
+
+    await React.act(async () => {
+      launcher.click();
+      await flush();
+    });
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+
+    await React.act(async () => {
+      setTextareaValue(textarea, "zrob mi pelny serwis dla lokalnych uslugodawcow");
+      await flush();
+    });
+
+    const sendButton = findButton(view.container, "Send");
+    if (!sendButton) throw new Error("missing_send_button");
+
+    await React.act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    const switchButton = findButton(view.container, "Switch to Advanced");
+    if (!switchButton) throw new Error("missing_switch_button");
+
+    await React.act(async () => {
+      switchButton.click();
+      await flush();
+    });
+
+    const confirmButton = findButton(view.container, "Confirm Advanced");
+    if (!confirmButton) throw new Error("missing_confirm_button");
+
+    await React.act(async () => {
+      confirmButton.click();
+      await flush();
+    });
+
+    expect(planSpy).toHaveBeenCalledTimes(2);
+    const secondRequest = planSpy.mock.calls[1]?.[0];
+    expect(secondRequest).toMatchObject({
+      context: {
+        siteBuilderIntakeState: {
+          requestedMode: "advanced",
+          activeSession: {
+            version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+            mode: "advanced",
+            currentStepId: "business-profile",
+            answers: [],
+          },
+        },
+      },
+    });
+    expect(secondRequest?.context?.siteBuilderIntakeState?.activeSession).not.toHaveProperty(
+      "facts"
+    );
+    expect(view.container.textContent).toContain("Advanced");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AssistantPanel renders friendly Basic intake validation errors", async () => {
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "llm-guide",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: true,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 12,
+    chunkCount: 44,
+  });
+  mockUserSettings();
+  const planSpy = vi
+    .spyOn(assistantClient, "planAssistantActions")
+    .mockResolvedValue(buildBasicSiteBuilderNeedsInputPlan({}));
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/advanced/solution-kits">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const launcher = findButton(view.container, "");
+    if (!launcher) throw new Error("missing_launcher");
+
+    await React.act(async () => {
+      launcher.click();
+      await flush();
+    });
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+
+    await React.act(async () => {
+      setTextareaValue(textarea, "zrob mi pelny serwis dla lokalnych uslugodawcow");
+      await flush();
+    });
+
+    const sendButton = findButton(view.container, "Send");
+    if (!sendButton) throw new Error("missing_send_button");
+
+    await React.act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    const saveButton = findButton(view.container, "Save step");
+    if (!saveButton) throw new Error("missing_save_button");
+
+    await React.act(async () => {
+      saveButton.click();
+      await flush();
+    });
+
+    expect(planSpy).toHaveBeenCalledTimes(1);
+    expect(view.container.textContent).toContain("Step was not accepted");
+    expect(view.container.textContent).toContain(
+      "Fill the required fields before saving this step."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AssistantPanel starts LLM Guide when docs are not ready but LLM is available", async () => {
+  window.localStorage.setItem(
+    "coderso.assistant.conversation.state",
+    JSON.stringify({
+      schemaVersion: 1,
+      messages: [],
+      activePlan: null,
+      activePreview: null,
+      activeExecution: null,
+      planningState: null,
+      assistantMode: "docs-only",
+      savedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    })
+  );
+
+  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+    enabled: true,
+    defaultMode: "docs-only",
+    retrievalBackend: "db",
+    llmAvailable: true,
+    indexReady: false,
+    indexBuilding: false,
+    indexError: null,
+    lastReindexAt: null,
+    docCount: 0,
+    chunkCount: 0,
+  });
+  mockUserSettings({ "assistant.mode": "docs-only" });
+  const chatSpy = vi.spyOn(assistantClient, "sendAssistantMessage");
+  const planSpy = vi.spyOn(assistantClient, "planAssistantActions").mockResolvedValue({
+    id: "plan-full-service",
+    status: "ready",
+    intentId: "full-service",
+    title: "Full Service Website",
+    answer: "I can prepare a complete service website structure.",
+    summary: "Create a complete service website plan.",
+    confidence: 0.88,
+    assumptions: [],
+    questions: [],
+    actions: [],
+  });
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/settings/assistant">
+      <AdminAssistantConfigProvider
+        value={{
+          enabled: true,
+          launcherAvatarEnabled: false,
+          launcherAvatarAsset: null,
+        }}
+      >
+        <AssistantPanel />
+      </AdminAssistantConfigProvider>
+    </AdminRouterProvider>
+  );
+
+  try {
+    const launcher = findButton(view.container, "");
+    if (!launcher) throw new Error("missing_launcher");
+
+    await React.act(async () => {
+      launcher.click();
+      await flush();
+    });
+
+    expect(view.container.textContent).not.toContain("Assistant docs are not ready yet");
+
+    const textarea = view.container.querySelector("textarea");
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      throw new Error("missing_textarea");
+    }
+    expect(textarea.disabled).toBe(false);
+    expect(textarea.getAttribute("placeholder")).toContain("LLM Guide");
+
+    await React.act(async () => {
+      setTextareaValue(textarea, "utworz kompletny serwis dla pracowni architektury");
+      await flush();
+    });
+
+    const sendButton = findButton(view.container, "Send");
+    if (!sendButton) throw new Error("missing_send_button");
+
+    await React.act(async () => {
+      sendButton.click();
+      await flush();
+    });
+
+    expect(planSpy).toHaveBeenCalledTimes(1);
+    expect(chatSpy).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain("complete service website structure");
+    expect(
+      JSON.parse(window.localStorage.getItem("coderso.assistant.conversation.state") ?? "{}")
+        .assistantMode
+    ).toBe("llm-guide");
   } finally {
     view.cleanup();
   }

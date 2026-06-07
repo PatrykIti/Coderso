@@ -9,7 +9,7 @@ keywords:
   - site builder
   - llm guide
   - setup
-  - ai site wizard
+  - reviewed site builder
 ---
 
 # Basic
@@ -18,7 +18,7 @@ Solution Kits are packaged starting points for common business shapes. In the
 current UI, they combine:
 - selectable kit cards,
 - recommended module guidance,
-- an `AI Site Wizard`,
+- an `Open LLM Guide` entry point for reviewed site-builder intake,
 - a selected-kit details panel with manifest and checklist information.
 
 This surface is for choosing the right baseline before you start building in
@@ -33,6 +33,7 @@ kits such as:
 - Automotive Workshop
 - Medical Clinic
 - Beauty Salon
+- Local Service Business
 - Local Services Directory
 - Small E-commerce
 
@@ -44,7 +45,7 @@ Each kit card exposes:
 
 Once a kit is selected, the right side of the screen adds two more important
 surfaces:
-- `AI Site Wizard`
+- `Open LLM Guide`
 - `Selected kit details`
 
 Together they help you decide:
@@ -53,8 +54,8 @@ Together they help you decide:
 - what content/resources are included,
 - what still needs to be done after installation.
 
-The AI Site Wizard uses the LLM Guide action flow for reviewed setup work:
-recommendation, typed plan, dry-run, then execute. It is not an unrestricted
+The reviewed LLM Guide site-builder intake owns setup work: structured answers,
+review summary, typed plan, dry-run, then execute. It is not an unrestricted
 site generator and does not run arbitrary mutations outside the supported typed
 actions.
 
@@ -67,21 +68,8 @@ actions.
    - recommended modules,
    - highlights.
 4. Select the kit that is closest to the real business model.
-5. Move to the `AI Site Wizard`.
-6. Follow the wizard steps in order:
-   - `Business profile`
-   - `Goals`
-   - `Recommendation`
-   - `Plan review`
-   - `Execute`
-7. In the currently visible first step, fill:
-   - `Business type`
-   - `Locale`
-   - optional `Site name`
-8. Use `Back` and `Next` to move through the wizard only after the current step
-   is coherent.
-9. Review `Selected kit details` before treating the choice as final.
-10. In the details panel, check:
+5. Review `Selected kit details` before treating the choice as final.
+6. In the details panel, check:
    - business fit,
    - manifest vertical,
    - includes,
@@ -89,14 +77,17 @@ actions.
    - recommended modules,
    - optional modules when present,
    - post-install checklist.
-11. Treat the post-install checklist as real work that still needs to happen
+7. Use `Open LLM Guide` when you want the assistant to build a reviewed site
+   plan from your business/site answers.
+8. In LLM Guide, complete the intake and final review before dry-run/execute.
+9. Treat the post-install checklist as real work that still needs to happen
    after the kit is selected or executed.
 
 Use this safe selection order when you want fewer setup mistakes:
 1. Compare kit cards.
 2. Select the closest match.
-3. Walk through the wizard.
-4. Review details panel carefully.
+3. Review details panel carefully.
+4. Open LLM Guide for reviewed site-builder intake.
 5. Treat the kit as a baseline, not a finished product.
 
 # Advanced
@@ -106,8 +97,9 @@ Use this safe selection order when you want fewer setup mistakes:
   labels alone.
 - The details panel is not decorative. It exposes manifest and checklist data
   that should influence whether the kit is truly a fit.
-- The AI Site Wizard is useful for structure and decision support, but it does
-  not remove the need for later content, schema, template, and settings work.
+- The reviewed LLM Guide site-builder intake is useful for structure and
+  decision support, but it does not remove the need for later content, schema,
+  template, and settings work.
 - Kit execution remains a reviewed setup action. Booking resources,
   checkout/payment setup, and solution-kit refinements that depend on installed
   kit resource context stay gated until those contracts are implemented.
@@ -122,7 +114,7 @@ Use this safe selection order when you want fewer setup mistakes:
   compare recommended modules and post-install checklist before deciding.
 - The kit looks attractive but feels wrong operationally:
   business fit and included modules matter more than surface labels.
-- The wizard is not enough to guarantee the final site:
+- The reviewed intake is not enough to guarantee the final site:
   that is expected. Treat the kit as a starting baseline.
 - The team expects zero follow-up after kit selection:
   use the post-install checklist to reset that assumption.

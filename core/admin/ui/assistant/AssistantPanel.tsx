@@ -19,7 +19,6 @@ import {
   type AssistantChatResponse,
   type AssistantStatusResponse,
 } from "@/services/assistantClient";
-import { getUserSettings } from "@/services/userSettingsClient";
 import { useAdminAssistantConfig } from "@/ui/contexts/AdminAssistantConfigContext";
 import { cn } from "@/lib/utils";
 
@@ -34,15 +33,24 @@ import {
   normalizeAssistantPlanningState,
 } from "../../../services/assistant/cmsPlanningState";
 import type { AssistantPlanningState } from "../../../services/assistant/actionPlanTypes";
+import { normalizeAssistantSiteBuilderIntakeSession } from "../../../services/assistant/assistantSiteBuilderIntakeNormalizer";
+import {
+  ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  type AssistantSiteBuilderIntakeMode,
+  type AssistantSiteBuilderIntakeSession,
+  type AssistantSiteBuilderIntakeStepId,
+} from "../../../services/assistant/assistantSiteBuilderIntakeTypes";
 import {
   readAssistantConversationState,
   writeAssistantConversationState,
+  type AssistantConversationSnapshot,
 } from "./assistantConversationState";
 import {
   loadAssistantRuntimeStateCached,
   readAssistantRuntimeStateCache,
   type AssistantRuntimeState,
 } from "./assistantRuntimeStateCache";
+import { ASSISTANT_PANEL_OPEN_EVENT, type AssistantPanelOpenDetail } from "./assistantPanelEvents";
 
 export {
   clearAssistantRuntimeStateCache,
@@ -57,6 +65,10 @@ type AssistantEntry = {
   response?: AssistantChatResponse;
   error?: string;
 };
+
+type SiteBuilderIntakeMetadata = NonNullable<
+  NonNullable<AssistantActionPlanResponse["metadata"]>["siteBuilderIntake"]
+>;
 
 type LauncherPosition = {
   x: number;
@@ -74,6 +86,16 @@ type ConversationWindowPosition = {
 export type AssistantPanelViewState = "loading" | "error" | "disabled" | "ready";
 
 export type AssistantConversationState = "empty" | "messages" | "docs-not-ready";
+export type AssistantComposerState = {
+  disabled: boolean;
+  reason:
+    | "empty_message"
+    | "sending"
+    | "status_missing"
+    | "docs_not_ready"
+    | "llm_unavailable"
+    | null;
+};
 
 const ASSISTANT_LAUNCHER_POSITION_KEY = "coderso.assistant.launcher.position";
 const LEGACY_ASSISTANT_LAUNCHER_POSITION_KEY = "nextless.assistant.launcher.position";
@@ -86,6 +108,8 @@ const ASSISTANT_CONVERSATION_GAP_PX = 12;
 
 const createEntryId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
+const SITE_BUILDER_INTAKE_CONTINUE_PROMPT = "Continue guided site-builder intake.";
+
 const buildFollowUpQuestion = (baseQuestion: string, option: AssistantFollowUpOption) => {
   const normalizedBase = baseQuestion.trim();
   if (!normalizedBase) return option.promptHint;
@@ -97,6 +121,99 @@ const resolveApiError = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 };
+
+const siteBuilderIntakeErrorMessages: Record<string, string> = {
+  intake_answer_required: "Fill the required fields before saving this step.",
+  intake_text_invalid: "Use plain text within the allowed length for this step.",
+  intake_answer_invalid: "Choose one of the available options before saving this step.",
+  intake_option_invalid: "Choose one of the available options before saving this step.",
+  intake_step_invalid: "This step changed on the server. Review the current step and try again.",
+  intake_session_invalid:
+    "This guided setup state is stale. Start a new guided setup and try again.",
+  intake_answer_unknown_key: "This step contains unsupported fields. Refresh and try again.",
+  intake_answer_duplicate:
+    "This guided setup has duplicate answers. Start a new guided setup and try again.",
+};
+
+const resolveSiteBuilderIntakeError = (error: unknown) => {
+  const code =
+    error && typeof error === "object" && typeof (error as { code?: unknown }).code === "string"
+      ? (error as { code: string }).code
+      : error instanceof Error
+        ? error.message
+        : null;
+  if (code && siteBuilderIntakeErrorMessages[code]) {
+    return siteBuilderIntakeErrorMessages[code];
+  }
+  if (isApiClientError(error)) return error.message;
+  if (error instanceof Error && error.message) return error.message;
+  return "Site-builder intake step was rejected.";
+};
+
+const resolveSiteBuilderIntakeSessionStepId = (metadata: SiteBuilderIntakeMetadata) =>
+  metadata.nextStepId ?? metadata.currentStepId;
+
+const createSiteBuilderIntakeSession = (
+  metadata: SiteBuilderIntakeMetadata,
+  previousSession: AssistantSiteBuilderIntakeSession | null
+): AssistantSiteBuilderIntakeSession | null => {
+  const shouldCarryAnswers =
+    previousSession?.mode === metadata.mode ||
+    (previousSession?.mode === "basic" && metadata.mode === "advanced");
+  return normalizeAssistantSiteBuilderIntakeSession({
+    version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+    mode: metadata.mode,
+    currentStepId: resolveSiteBuilderIntakeSessionStepId(metadata),
+    answers: shouldCarryAnswers ? previousSession.answers : [],
+  });
+};
+
+const mergeSiteBuilderIntakeAnswer = (
+  session: AssistantSiteBuilderIntakeSession,
+  stepId: AssistantSiteBuilderIntakeStepId,
+  values: Record<string, unknown>
+) =>
+  normalizeAssistantSiteBuilderIntakeSession({
+    ...session,
+    currentStepId: stepId,
+    answers: [
+      ...session.answers.filter((answer) => answer.stepId !== stepId),
+      {
+        stepId,
+        values,
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+  });
+
+const selectSiteBuilderIntakeStep = (
+  session: AssistantSiteBuilderIntakeSession,
+  stepId: AssistantSiteBuilderIntakeStepId
+) =>
+  normalizeAssistantSiteBuilderIntakeSession({
+    ...session,
+    currentStepId: stepId,
+  });
+
+const switchSiteBuilderIntakeMode = (
+  session: AssistantSiteBuilderIntakeSession,
+  mode: AssistantSiteBuilderIntakeMode
+) =>
+  normalizeAssistantSiteBuilderIntakeSession({
+    version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+    mode,
+    currentStepId: session.currentStepId,
+    answers: session.mode === "basic" && mode === "advanced" ? session.answers : [],
+  });
+
+const toSiteBuilderIntakeRequestSession = (
+  session: AssistantSiteBuilderIntakeSession
+): AssistantSiteBuilderIntakeSession => ({
+  version: session.version,
+  mode: session.mode,
+  currentStepId: session.currentStepId,
+  answers: session.answers,
+});
 
 const getViewportSize = () => {
   if (typeof window === "undefined") {
@@ -239,10 +356,58 @@ export const resolveAssistantPanelViewState = (input: {
 export const resolveAssistantConversationState = (input: {
   messageCount: number;
   indexReady: boolean;
+  mode?: AssistantMode;
 }): AssistantConversationState => {
   if (input.messageCount > 0) return "messages";
-  if (!input.indexReady) return "docs-not-ready";
+  if (input.mode !== "llm-guide" && !input.indexReady) return "docs-not-ready";
   return "empty";
+};
+
+export const resolveAssistantComposerState = (input: {
+  message: string;
+  isSending: boolean;
+  status: AssistantStatusResponse | null;
+  mode: AssistantMode;
+}): AssistantComposerState => {
+  if (input.isSending) return { disabled: true, reason: "sending" };
+  if (!input.status) return { disabled: true, reason: "status_missing" };
+  if (!input.message.trim()) return { disabled: true, reason: "empty_message" };
+  if (input.mode === "llm-guide") {
+    return input.status.llmAvailable
+      ? { disabled: false, reason: null }
+      : { disabled: true, reason: "llm_unavailable" };
+  }
+  return input.status.indexReady
+    ? { disabled: false, reason: null }
+    : { disabled: true, reason: "docs_not_ready" };
+};
+
+export const hasRestorableAssistantConversation = (
+  snapshot: AssistantConversationSnapshot | null
+) =>
+  Boolean(
+    snapshot &&
+    (snapshot.messages.length > 0 ||
+      snapshot.activePlan ||
+      snapshot.activePreview ||
+      snapshot.activeExecution ||
+      snapshot.planningState)
+  );
+
+export const resolveAssistantCurrentMode = (input: {
+  status: AssistantStatusResponse | null;
+  preferredMode: AssistantMode | null;
+  hasConversation: boolean;
+}): AssistantMode => {
+  const mode = input.preferredMode ?? input.status?.defaultMode ?? "docs-only";
+  if (!input.status || (input.hasConversation && input.preferredMode)) return mode;
+  if (mode === "docs-only" && !input.status.indexReady && input.status.llmAvailable) {
+    return "llm-guide";
+  }
+  if (mode === "llm-guide" && !input.status.llmAvailable && input.status.indexReady) {
+    return "docs-only";
+  }
+  return mode;
 };
 
 type AssistantPanelProps = {
@@ -257,6 +422,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   } = useAdminAssistantConfig();
   const cachedRuntimeState = readAssistantRuntimeStateCache(Date.now());
   const cachedConversationState = readAssistantConversationState();
+  const shouldRestoreConversationMode = hasRestorableAssistantConversation(cachedConversationState);
   const [open, setOpen] = useState(false);
   const [isReady, setIsReady] = useState(() => cachedRuntimeState !== null);
   const [isLoadingRuntime, setIsLoadingRuntime] = useState(false);
@@ -270,23 +436,28 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   const [isSending, setIsSending] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [assistantMode, setAssistantMode] = useState<AssistantMode | null>(
-    () => cachedConversationState?.assistantMode ?? null
+  const [assistantMode, setAssistantMode] = useState<AssistantMode | null>(() =>
+    shouldRestoreConversationMode ? (cachedConversationState?.assistantMode ?? null) : null
   );
   const [activePlan, setActivePlan] = useState<AssistantActionPlanResponse | null>(
     () => cachedConversationState?.activePlan ?? null
   );
+  const [activePlanSourcePrompt, setActivePlanSourcePrompt] = useState<string | null>(null);
   const [activePreview, setActivePreview] = useState<AssistantActionDryRunResponse | null>(
     () => cachedConversationState?.activePreview ?? null
   );
   const [activeExecution, setActiveExecution] = useState<AssistantActionExecuteResponse | null>(
     () => cachedConversationState?.activeExecution ?? null
   );
+  const [activeSiteBuilderIntakeSession, setActiveSiteBuilderIntakeSession] =
+    useState<AssistantSiteBuilderIntakeSession | null>(null);
   const [planningState, setPlanningState] = useState<AssistantPlanningState | null>(
     () => cachedConversationState?.planningState ?? null
   );
   const [isPreviewingPlan, setIsPreviewingPlan] = useState(false);
   const [isExecutingPlan, setIsExecutingPlan] = useState(false);
+  const [isSubmittingSiteBuilderIntake, setIsSubmittingSiteBuilderIntake] = useState(false);
+  const [siteBuilderIntakeError, setSiteBuilderIntakeError] = useState<string | null>(null);
   const [launcherPosition, setLauncherPosition] = useState<LauncherPosition>(() =>
     readLauncherPosition()
   );
@@ -340,35 +511,6 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     }
     loadRuntimeState().catch(() => undefined);
   }, [isLoadingRuntime, isReady, loadRuntimeState, open]);
-
-  useEffect(() => {
-    if (!open || !status) return;
-    let active = true;
-    getUserSettings()
-      .then((settings) => {
-        if (!active) return;
-        setAssistantMode(settings["assistant.mode"] ?? status.defaultMode ?? "docs-only");
-      })
-      .catch(() => {
-        if (!active) return;
-        setAssistantMode(status.defaultMode ?? "docs-only");
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [open, status]);
-
-  useEffect(() => {
-    writeAssistantConversationState({
-      messages,
-      activePlan,
-      activePreview,
-      activeExecution,
-      planningState,
-      assistantMode,
-    });
-  }, [activeExecution, activePlan, activePreview, assistantMode, messages, planningState]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -496,6 +638,33 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     [conversationWidth]
   );
 
+  const hasRestoredConversation =
+    messages.length > 0 ||
+    Boolean(activePlan) ||
+    Boolean(activePreview) ||
+    Boolean(activeExecution) ||
+    Boolean(planningState);
+  const currentMode = useMemo(
+    () =>
+      resolveAssistantCurrentMode({
+        status,
+        preferredMode: assistantMode,
+        hasConversation: hasRestoredConversation,
+      }),
+    [assistantMode, hasRestoredConversation, status]
+  );
+
+  useEffect(() => {
+    writeAssistantConversationState({
+      messages,
+      activePlan,
+      activePreview,
+      activeExecution,
+      planningState,
+      assistantMode: currentMode,
+    });
+  }, [activeExecution, activePlan, activePreview, currentMode, messages, planningState]);
+
   const submitMessage = useCallback(
     async (input?: {
       message: string;
@@ -505,12 +674,13 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     }) => {
       const outgoingMessage = (input?.message ?? message).trim();
       if (!outgoingMessage || isSending || !status) return;
-      const currentMode = assistantMode ?? status.defaultMode;
 
+      setAssistantMode(currentMode);
       if (!input?.message) {
         setMessage("");
       }
       setActionError(null);
+      setSiteBuilderIntakeError(null);
       setActivePlan(null);
       setActivePreview(null);
       setActiveExecution(null);
@@ -532,6 +702,15 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
               ...assistantAdminContext,
               includeResourceCatalog: true,
               planningState: normalizeAssistantPlanningState(planningState),
+              ...(activeSiteBuilderIntakeSession
+                ? {
+                    siteBuilderIntakeState: {
+                      activeSession: toSiteBuilderIntakeRequestSession(
+                        activeSiteBuilderIntakeSession
+                      ),
+                    },
+                  }
+                : {}),
             },
           });
 
@@ -539,6 +718,13 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
             buildAssistantPlanningStateFromPlan(plan, {
               route: assistantAdminContext.page ?? null,
             })
+          );
+          setActivePlanSourcePrompt(sourceQuestion);
+          const nextIntakeMetadata = plan.metadata?.siteBuilderIntake ?? null;
+          setActiveSiteBuilderIntakeSession(
+            nextIntakeMetadata
+              ? createSiteBuilderIntakeSession(nextIntakeMetadata, activeSiteBuilderIntakeSession)
+              : null
           );
           if (plan.responseKind !== "docs") {
             setActivePlan(plan);
@@ -593,7 +779,15 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
         setIsSending(false);
       }
     },
-    [assistantAdminContext, assistantMode, isSending, message, planningState, status]
+    [
+      activeSiteBuilderIntakeSession,
+      assistantAdminContext,
+      currentMode,
+      isSending,
+      message,
+      planningState,
+      status,
+    ]
   );
 
   const handleFollowUpSelect = useCallback(
@@ -614,6 +808,203 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
   const handleSendClick = useCallback(() => {
     submitMessage().catch(() => undefined);
   }, [submitMessage]);
+
+  const handleSubmitSiteBuilderIntakeStep = useCallback(
+    async (stepId: AssistantSiteBuilderIntakeStepId, values: Record<string, unknown>) => {
+      const intakeMetadata = activePlan?.metadata?.siteBuilderIntake ?? null;
+      if (!intakeMetadata || isSubmittingSiteBuilderIntake) return;
+
+      setActionError(null);
+      setSiteBuilderIntakeError(null);
+      setIsSubmittingSiteBuilderIntake(true);
+
+      try {
+        const baseSession =
+          activeSiteBuilderIntakeSession ?? createSiteBuilderIntakeSession(intakeMetadata, null);
+        if (!baseSession) {
+          throw new Error("site_builder_intake_session_missing");
+        }
+        const submittedSession = mergeSiteBuilderIntakeAnswer(baseSession, stepId, values);
+        const sourceQuestion = activePlanSourcePrompt ?? SITE_BUILDER_INTAKE_CONTINUE_PROMPT;
+        const plan = await planAssistantActions({
+          prompt: sourceQuestion,
+          context: {
+            ...assistantAdminContext,
+            includeResourceCatalog: true,
+            planningState: normalizeAssistantPlanningState(planningState),
+            siteBuilderIntakeState: {
+              activeSession: toSiteBuilderIntakeRequestSession(submittedSession),
+            },
+          },
+        });
+
+        setPlanningState(
+          buildAssistantPlanningStateFromPlan(plan, {
+            route: assistantAdminContext.page ?? null,
+          })
+        );
+        setActivePreview(null);
+        setActiveExecution(null);
+        setActivePlan(plan);
+        const nextIntakeMetadata = plan.metadata?.siteBuilderIntake ?? null;
+        setActiveSiteBuilderIntakeSession(
+          nextIntakeMetadata
+            ? createSiteBuilderIntakeSession(nextIntakeMetadata, submittedSession)
+            : null
+        );
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: createEntryId(),
+            role: "assistant",
+            text: plan.answer,
+            sourceQuestion,
+          },
+        ]);
+      } catch (error) {
+        setSiteBuilderIntakeError(resolveSiteBuilderIntakeError(error));
+      } finally {
+        setIsSubmittingSiteBuilderIntake(false);
+      }
+    },
+    [
+      activeSiteBuilderIntakeSession,
+      activePlan,
+      activePlanSourcePrompt,
+      assistantAdminContext,
+      isSubmittingSiteBuilderIntake,
+      planningState,
+    ]
+  );
+
+  const handleSelectSiteBuilderIntakeStep = useCallback(
+    async (stepId: AssistantSiteBuilderIntakeStepId) => {
+      const intakeMetadata = activePlan?.metadata?.siteBuilderIntake ?? null;
+      if (!intakeMetadata || isSubmittingSiteBuilderIntake) return;
+      if (!intakeMetadata.visibleStepIds.includes(stepId)) return;
+
+      setActionError(null);
+      setSiteBuilderIntakeError(null);
+      setIsSubmittingSiteBuilderIntake(true);
+
+      try {
+        const baseSession =
+          activeSiteBuilderIntakeSession ?? createSiteBuilderIntakeSession(intakeMetadata, null);
+        if (!baseSession) {
+          throw new Error("site_builder_intake_session_missing");
+        }
+        const selectedSession = selectSiteBuilderIntakeStep(baseSession, stepId);
+        const sourceQuestion = activePlanSourcePrompt ?? SITE_BUILDER_INTAKE_CONTINUE_PROMPT;
+        const plan = await planAssistantActions({
+          prompt: sourceQuestion,
+          context: {
+            ...assistantAdminContext,
+            includeResourceCatalog: true,
+            planningState: normalizeAssistantPlanningState(planningState),
+            siteBuilderIntakeState: {
+              activeSession: toSiteBuilderIntakeRequestSession(selectedSession),
+            },
+          },
+        });
+
+        setPlanningState(
+          buildAssistantPlanningStateFromPlan(plan, {
+            route: assistantAdminContext.page ?? null,
+          })
+        );
+        setActivePreview(null);
+        setActiveExecution(null);
+        setActivePlan(plan);
+        const nextIntakeMetadata = plan.metadata?.siteBuilderIntake ?? null;
+        setActiveSiteBuilderIntakeSession(
+          nextIntakeMetadata
+            ? createSiteBuilderIntakeSession(nextIntakeMetadata, selectedSession)
+            : null
+        );
+      } catch (error) {
+        setSiteBuilderIntakeError(resolveSiteBuilderIntakeError(error));
+      } finally {
+        setIsSubmittingSiteBuilderIntake(false);
+      }
+    },
+    [
+      activePlan,
+      activePlanSourcePrompt,
+      activeSiteBuilderIntakeSession,
+      assistantAdminContext,
+      isSubmittingSiteBuilderIntake,
+      planningState,
+    ]
+  );
+
+  const handleSwitchSiteBuilderIntakeMode = useCallback(
+    async (mode: AssistantSiteBuilderIntakeMode) => {
+      const intakeMetadata = activePlan?.metadata?.siteBuilderIntake ?? null;
+      if (!intakeMetadata || isSubmittingSiteBuilderIntake || intakeMetadata.mode === mode) return;
+
+      setActionError(null);
+      setSiteBuilderIntakeError(null);
+      setIsSubmittingSiteBuilderIntake(true);
+
+      try {
+        const baseSession =
+          activeSiteBuilderIntakeSession ?? createSiteBuilderIntakeSession(intakeMetadata, null);
+        if (!baseSession) {
+          throw new Error("site_builder_intake_session_missing");
+        }
+        const switchedSession = switchSiteBuilderIntakeMode(baseSession, mode);
+        const sourceQuestion = activePlanSourcePrompt ?? SITE_BUILDER_INTAKE_CONTINUE_PROMPT;
+        const plan = await planAssistantActions({
+          prompt: sourceQuestion,
+          context: {
+            ...assistantAdminContext,
+            includeResourceCatalog: true,
+            planningState: normalizeAssistantPlanningState(planningState),
+            siteBuilderIntakeState: {
+              requestedMode: mode,
+              activeSession: toSiteBuilderIntakeRequestSession(switchedSession),
+            },
+          },
+        });
+
+        setPlanningState(
+          buildAssistantPlanningStateFromPlan(plan, {
+            route: assistantAdminContext.page ?? null,
+          })
+        );
+        setActivePreview(null);
+        setActiveExecution(null);
+        setActivePlan(plan);
+        const nextIntakeMetadata = plan.metadata?.siteBuilderIntake ?? null;
+        setActiveSiteBuilderIntakeSession(
+          nextIntakeMetadata
+            ? createSiteBuilderIntakeSession(nextIntakeMetadata, switchedSession)
+            : null
+        );
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: createEntryId(),
+            role: "assistant",
+            text: plan.answer,
+            sourceQuestion,
+          },
+        ]);
+      } catch (error) {
+        setSiteBuilderIntakeError(resolveSiteBuilderIntakeError(error));
+      } finally {
+        setIsSubmittingSiteBuilderIntake(false);
+      }
+    },
+    [
+      activePlan,
+      activePlanSourcePrompt,
+      activeSiteBuilderIntakeSession,
+      assistantAdminContext,
+      isSubmittingSiteBuilderIntake,
+      planningState,
+    ]
+  );
 
   const handleDryRunPlan = useCallback(async () => {
     if (!activePlan || isPreviewingPlan || isExecutingPlan) return;
@@ -659,16 +1050,51 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     setMessages([]);
     setMessage("");
     setActivePlan(null);
+    setActivePlanSourcePrompt(null);
     setActivePreview(null);
     setActiveExecution(null);
+    setActiveSiteBuilderIntakeSession(null);
     setPlanningState(null);
     setActionError(null);
+    setSiteBuilderIntakeError(null);
   }, []);
 
-  const canSend = useMemo(
-    () => Boolean(message.trim()) && !isSending && Boolean(status?.indexReady),
-    [isSending, message, status?.indexReady]
+  const handleAssistantPanelOpen = useCallback(
+    (event: Event) => {
+      const detail = (event as CustomEvent<AssistantPanelOpenDetail>).detail ?? {};
+      if (detail.reset) {
+        handleNewConversation();
+      }
+      if (detail.mode) {
+        setAssistantMode(detail.mode);
+      }
+      if (typeof detail.message === "string") {
+        setMessage(detail.message);
+      }
+      setOpen(true);
+    },
+    [handleNewConversation]
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    window.addEventListener(ASSISTANT_PANEL_OPEN_EVENT, handleAssistantPanelOpen);
+    return () => {
+      window.removeEventListener(ASSISTANT_PANEL_OPEN_EVENT, handleAssistantPanelOpen);
+    };
+  }, [handleAssistantPanelOpen]);
+
+  const composerState = useMemo(
+    () =>
+      resolveAssistantComposerState({
+        message,
+        isSending,
+        status,
+        mode: currentMode,
+      }),
+    [currentMode, isSending, message, status]
+  );
+  const canSend = !composerState.disabled;
 
   const conversationWindowPosition = useMemo(() => {
     const { width, height } = getViewportSize();
@@ -680,9 +1106,6 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
     });
   }, [conversationWidth, launcherPosition]);
 
-  const currentMode = assistantMode ?? status?.defaultMode ?? "docs-only";
-  const hasRestoredConversation =
-    messages.length > 0 || Boolean(activePlan) || Boolean(activeExecution);
   const resolvedViewState = useMemo(
     () =>
       resolveAssistantPanelViewState({
@@ -697,8 +1120,9 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
       resolveAssistantConversationState({
         messageCount: messages.length,
         indexReady: status ? Boolean(status.indexReady) : hasRestoredConversation,
+        mode: currentMode,
       }),
-    [hasRestoredConversation, messages.length, status]
+    [currentMode, hasRestoredConversation, messages.length, status]
   );
 
   if (!launcherEnabled) {
@@ -863,6 +1287,12 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                         error={actionError}
                         isPreviewing={isPreviewingPlan}
                         isExecuting={isExecutingPlan}
+                        siteBuilderIntakeSession={activeSiteBuilderIntakeSession}
+                        siteBuilderIntakeError={siteBuilderIntakeError}
+                        isSubmittingSiteBuilderIntake={isSubmittingSiteBuilderIntake}
+                        onSubmitSiteBuilderIntakeStep={handleSubmitSiteBuilderIntakeStep}
+                        onSelectSiteBuilderIntakeStep={handleSelectSiteBuilderIntakeStep}
+                        onSwitchSiteBuilderIntakeMode={handleSwitchSiteBuilderIntakeMode}
                         onPreview={handleDryRunPlan}
                         onExecute={handleExecutePlan}
                       />
@@ -873,6 +1303,16 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                 </div>
 
                 <div className="shrink-0 space-y-2 border-t pt-3">
+                  {composerState.reason === "llm_unavailable" ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      LLM Guide needs an enabled provider and model before messages can be sent.
+                    </div>
+                  ) : null}
+                  {composerState.reason === "docs_not_ready" ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      Docs Assistant needs the DB documentation index before messages can be sent.
+                    </div>
+                  ) : null}
                   <Textarea
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
@@ -882,7 +1322,11 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                         : "Ask where to find a feature in documentation..."
                     }
                     rows={4}
-                    disabled={isSending || !status?.indexReady}
+                    disabled={
+                      isSending ||
+                      composerState.reason === "docs_not_ready" ||
+                      composerState.reason === "llm_unavailable"
+                    }
                   />
                   <div className="flex items-center justify-between gap-3">
                     <Button

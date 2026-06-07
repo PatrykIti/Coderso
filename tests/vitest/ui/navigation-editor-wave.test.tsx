@@ -1421,7 +1421,7 @@ test("NavigationVisualEditor surfaces runtime boundaries, cleared-link feedback,
 
     expect(normalizeText(linksSection?.textContent)).toContain(
       normalizeText(
-        "Admin preview renders static navigation markup. Drawer, submenu, collapse-on-scroll, and active-link updates are activated by the public runtime script."
+        "Admin preview and published pages share the navigation runtime for drawer, submenu, collapse-on-scroll, and active-link updates."
       )
     );
 

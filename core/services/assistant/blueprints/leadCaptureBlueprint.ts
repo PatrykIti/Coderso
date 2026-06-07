@@ -65,8 +65,7 @@ const buildLeadCaptureActions = (): AssistantPlannedAction[] => [
       slug: leadCapturePageSlug,
       status: "published",
       introTitle: "Porozmawiajmy o Twoim projekcie",
-      introBody:
-        "Opisz, czego potrzebujesz, a przygotujemy kolejne kroki i wrócimy z odpowiedzią.",
+      introBody: "Opisz, czego potrzebujesz, a przygotujemy kolejne kroki i wrócimy z odpowiedzią.",
       blocks: [
         {
           id: "lead-capture-intro",
@@ -78,17 +77,17 @@ const buildLeadCaptureActions = (): AssistantPlannedAction[] => [
               title: "Opowiedz nam o swoim projekcie",
             },
             body: {
+              html: "",
               blocks: [
                 {
                   id: "lead-capture-intro-copy",
                   heading: "Szybki start",
-                  content:
-                    "Uzupełnij formularz, a zespół wróci z informacją, jak możemy pomóc.",
+                  content: "Uzupełnij formularz, a zespół wróci z informacją, jak możemy pomóc.",
                 },
               ],
             },
             options: {
-              outputMode: "blocks-fallback",
+              outputMode: "blocks",
               maxWidth: "lg",
             },
           },

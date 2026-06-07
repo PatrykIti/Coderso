@@ -18,22 +18,12 @@ import { clearSeoCache } from "./seoClient";
 import { clearWidgetTemplatesCache } from "./widgetTemplatesClient";
 import { clearWidgetCatalogCache } from "./widgetsClient";
 import type {
-  SiteBuilderPlanInput,
-  SiteBuilderPlanOutput,
-  SiteBuilderPlanStepId,
-  SolutionKitId,
-  SolutionKitInstallItemRecord,
-  SolutionKitInstallRunRecord,
-  SolutionKitInstallSummary,
-} from "./solutionKitsClient";
-import type {
   AssistantActionContext,
   AssistantActionDryRunResult,
   AssistantActionExecuteResult,
   AssistantActionExecutionItem,
   AssistantActionPlan,
   AssistantPlannedAction,
-  AssistantSiteKitInstallAction,
 } from "../../services/assistant/actionPlanTypes";
 
 export type AssistantMode = "docs-only" | "llm-guide";
@@ -129,6 +119,19 @@ export type AssistantReindexResponse = {
   actorId: string | null;
 };
 
+export type AssistantModelMetadataRequest = {
+  provider: "none" | "openai" | "openrouter";
+  model: string;
+};
+
+export type AssistantModelMetadataResponse = {
+  model: string;
+  maxInputTokens: number;
+  maxOutputTokens: number;
+  supportedParameters: string[];
+  source: "provider" | "default";
+};
+
 export type AssistantActionPlanRequest = {
   prompt: string;
   context?: AssistantActionContext;
@@ -144,76 +147,6 @@ export type AssistantActionExecuteRequest = {
   idempotencyKey: string;
 };
 export type AssistantActionExecuteResponse = AssistantActionExecuteResult;
-
-export type GuidedSiteBuilderActionTarget =
-  | "settings"
-  | "content_type"
-  | "form"
-  | "page"
-  | "menu"
-  | "template"
-  | "qa";
-
-export type GuidedSiteBuilderAction = {
-  id: string;
-  stepId: SiteBuilderPlanStepId;
-  title: string;
-  description: string;
-  target: GuidedSiteBuilderActionTarget;
-  resourceKey: string;
-  required: boolean;
-};
-
-export type GuidedSiteBuilderPlanRequest = SiteBuilderPlanInput & {
-  selectedKitId?: SolutionKitId | null;
-  enabledStepIds?: SiteBuilderPlanStepId[];
-};
-
-export type GuidedSiteBuilderPlanResponse = {
-  plan: SiteBuilderPlanOutput;
-  selectedKitId: SolutionKitId;
-  selectedKitTitle: string;
-  enabledStepIds: SiteBuilderPlanStepId[];
-  actions: GuidedSiteBuilderAction[];
-  modules: {
-    required: string[];
-    optional: string[];
-    recommended: string[];
-  };
-};
-
-export type GuidedSiteBuilderValidationStatus = "ok" | "warning" | "failed";
-
-export type GuidedSiteBuilderValidationCheck = {
-  id: string;
-  label: string;
-  status: GuidedSiteBuilderValidationStatus;
-  details: string;
-};
-
-export type GuidedSiteBuilderValidationResult = {
-  runId: string;
-  status: GuidedSiteBuilderValidationStatus;
-  unresolvedItems: string[];
-  checks: GuidedSiteBuilderValidationCheck[];
-};
-
-export type GuidedSiteBuilderExecuteRequest = GuidedSiteBuilderPlanRequest & {
-  dryRun?: boolean;
-  continueOnError?: boolean;
-  notes?: string[];
-  settingsPatch?: Record<string, unknown>;
-  idempotencyKey?: string;
-};
-
-export type GuidedSiteBuilderExecuteResponse = GuidedSiteBuilderPlanResponse & {
-  execution: {
-    run: SolutionKitInstallRunRecord;
-    items: SolutionKitInstallItemRecord[];
-    summary: SolutionKitInstallSummary;
-  };
-  validation: GuidedSiteBuilderValidationResult;
-};
 
 const ASSISTANT_STATUS_TTL_MS = 10_000;
 
@@ -257,6 +190,18 @@ export async function reindexAssistantDocs() {
   );
   assistantStatusReadCache.invalidate();
   return result;
+}
+
+export async function getAssistantModelMetadata(payload: AssistantModelMetadataRequest) {
+  return apiRequest<AssistantModelMetadataResponse>(
+    "/assistant/model-metadata",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
 }
 
 export async function planAssistantActions(payload: AssistantActionPlanRequest) {
@@ -334,6 +279,15 @@ const readActionId = <TType extends AssistantPlannedAction["type"]>(
 const resourceId = (item: AssistantActionExecutionItem, fallback?: string | null) =>
   readText(item.resourceId) ?? readText(fallback);
 
+const resourceIdInputText = (value: unknown) =>
+  typeof value === "string" ? readText(value) : null;
+
+const firstTargetKeySegment = (item: AssistantActionExecutionItem) => {
+  const targetKey = readText(item.targetKey);
+  if (!targetKey) return null;
+  return readText(targetKey.split("/")[0]);
+};
+
 const clearAndEmitDetail = (
   key: string,
   cacheAction: "invalidate" | "update",
@@ -363,13 +317,16 @@ const notifyAssistantExecutionCacheEvent = (input: {
     }
 
     case "entry.upsert-draft":
+    case "entry.sample.create":
     case "entry.delete":
     case "entry.update": {
       const plannedUpsert = readActionId(action, "entry.upsert-draft");
+      const plannedSample = readActionId(action, "entry.sample.create");
       const plannedDelete = readActionId(action, "entry.delete");
       const plannedUpdate = readActionId(action, "entry.update");
       const typeSlug =
         plannedUpsert?.input.contentTypeSlug ??
+        plannedSample?.input.contentTypeSlug ??
         plannedDelete?.input.contentTypeSlug ??
         plannedUpdate?.input.contentTypeSlug ??
         null;
@@ -505,19 +462,26 @@ const notifyAssistantExecutionCacheEvent = (input: {
       return;
     }
 
+    case "menu.upsert":
     case "menu.item.upsert":
     case "menu.item.delete":
     case "menu.item.update": {
+      const plannedMenu = readActionId(action, "menu.upsert");
       const plannedUpsert = readActionId(action, "menu.item.upsert");
       const plannedDelete = readActionId(action, "menu.item.delete");
       const plannedUpdate = readActionId(action, "menu.item.update");
-      const menuId =
-        plannedUpsert?.input.menuId ?? plannedDelete?.input.menuId ?? plannedUpdate?.input.menuId;
-      if (!menuId) return;
+      const itemMenuId =
+        resourceIdInputText(plannedUpsert?.input.menuId) ??
+        readText(plannedDelete?.input.menuId) ??
+        readText(plannedUpdate?.input.menuId) ??
+        firstTargetKeySegment(item);
+      const menuId = plannedMenu ? resourceId(item, plannedMenu.input.location) : itemMenuId;
       clearMenusCache();
-      clearLocalCache(cacheKeys.menuDetail(menuId));
       emit(cacheKeys.menusList, cacheAction);
-      emit(cacheKeys.menuDetail(menuId), cacheAction);
+      if (typeof menuId === "string") {
+        clearLocalCache(cacheKeys.menuDetail(menuId));
+        emit(cacheKeys.menuDetail(menuId), cacheAction);
+      }
       return;
     }
 
@@ -541,90 +505,3 @@ const notifyAssistantExecutionCacheEvent = (input: {
       return;
   }
 };
-
-const buildSiteKitPrompt = (payload: GuidedSiteBuilderPlanRequest) => {
-  const goals = payload.goals.join(", ");
-  return [
-    "Prepare a site kit plan through LLM Guide.",
-    `Business type: ${payload.businessType}.`,
-    `Goals: ${goals}.`,
-    `Locale: ${payload.locale}.`,
-    payload.siteName ? `Site name: ${payload.siteName}.` : null,
-    payload.selectedKitId ? `Selected kit: ${payload.selectedKitId}.` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-};
-
-const createSiteKitPlanPayload = (payload: GuidedSiteBuilderPlanRequest) => ({
-  prompt: buildSiteKitPrompt(payload),
-  context: {
-    locale: payload.locale,
-    siteKit: payload,
-  },
-});
-
-const findSiteKitInstallAction = (
-  plan: AssistantActionPlan
-): AssistantSiteKitInstallAction | null =>
-  plan.actions.find(
-    (action): action is AssistantSiteKitInstallAction => action.type === "site-kit.install"
-  ) ?? null;
-
-const readSiteKitPlan = (plan: AssistantActionPlan): GuidedSiteBuilderPlanResponse => {
-  const action = findSiteKitInstallAction(plan);
-  if (!action) {
-    throw new Error("assistant_site_kit_plan_missing");
-  }
-  return action.input.preview;
-};
-
-const createSiteKitExecutionPlan = (
-  plan: AssistantActionPlan,
-  payload: GuidedSiteBuilderExecuteRequest
-): AssistantActionPlan => ({
-  ...plan,
-  actions: plan.actions.map((action) => {
-    if (action.type !== "site-kit.install") return action;
-    return {
-      ...action,
-      input: {
-        ...action.input,
-        dryRun: payload.dryRun,
-        continueOnError: payload.continueOnError,
-        settingsPatch: payload.settingsPatch,
-        notes: payload.notes,
-      },
-    };
-  }),
-});
-
-const createSiteKitIdempotencyKey = () => {
-  const random =
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `site-kit-${random}`;
-};
-
-export async function planAssistantSiteKitActions(payload: GuidedSiteBuilderPlanRequest) {
-  const plan = await planAssistantActions(createSiteKitPlanPayload(payload));
-  return readSiteKitPlan(plan);
-}
-
-export async function executeAssistantSiteKitActions(
-  payload: GuidedSiteBuilderExecuteRequest
-): Promise<GuidedSiteBuilderExecuteResponse> {
-  const plan = await planAssistantActions(createSiteKitPlanPayload(payload));
-  const executionPlan = createSiteKitExecutionPlan(plan, payload);
-  const result = await executeAssistantActions({
-    plan: executionPlan,
-    idempotencyKey: payload.idempotencyKey ?? createSiteKitIdempotencyKey(),
-  });
-  const execution = result.results.find((item) => item.type === "site-kit.install")?.details
-    ?.siteKit?.execution;
-  if (!execution) {
-    throw new Error("assistant_site_kit_execution_missing");
-  }
-  return execution as unknown as GuidedSiteBuilderExecuteResponse;
-}

@@ -31,6 +31,7 @@ const capabilityKeys = new Set([
 
 const provideKinds = new Set([
   "catalog",
+  "full-service-site",
   "lead-capture",
   "product-inquiry",
   "editorial-content-hub",
@@ -252,7 +253,14 @@ const normalizeResource = (value: JsonRecord): BlueprintResourceContribution => 
         })();
   if (kind === "media" && metadata === undefined) fail();
   const executable = readBoolean(value.executable);
-  if (kind === "detail-page" && (executable || actionTypes.length > 0)) {
+  const owner = readText(value.owner);
+  if (
+    kind === "detail-page" &&
+    executable &&
+    (actionTypes.length !== 1 ||
+      actionTypes[0] !== "detail-page.upsert" ||
+      owner !== "detail-page.upsert")
+  ) {
     fail();
   }
   return {
@@ -262,7 +270,7 @@ const normalizeResource = (value: JsonRecord): BlueprintResourceContribution => 
     executable,
     actionTypes,
     stableTarget: readText(value.stableTarget),
-    owner: readText(value.owner),
+    owner,
     ...(metadata !== undefined ? { metadata } : {}),
   };
 };
@@ -327,13 +335,6 @@ export const normalizeBlueprintCapability = (value: unknown): BlueprintCapabilit
   if (defaults && scanForSecretLikeKeys(defaults)) fail();
   assertNoDuplicateKeys(resources.map((item) => item.key));
   assertNoDuplicateKeys(provides.map((item) => item.key));
-  if (
-    resources.some((item) => item.kind === "detail-page") &&
-    !gated.some((item) => item.kind === "detail-page")
-  ) {
-    fail();
-  }
-
   return {
     id: readStableId(input.id),
     version: readFiniteNumber(input.version) === 1 ? 1 : fail(),

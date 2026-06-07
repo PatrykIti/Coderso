@@ -47,6 +47,7 @@ test("assembleComposedBlueprintPlan keeps the existing product inquiry action sh
     "listing-template.upsert",
     "form.upsert",
     "page.upsert",
+    "detail-page.upsert",
     "setting.content-route.upsert",
   ]);
   expect(plan?.actions.find((action) => action.type === "page.upsert")).toMatchObject({

@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { ApiError } from "../../../core/server/errorHandler";
 import { registerAssistantRoutes } from "../../../core/server/routes/assistantRoutes";
 import { validate as validateSchema } from "../../../core/server/validation/schemaValidator";
+import { ASSISTANT_SITE_BUILDER_INTAKE_VERSION } from "../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 
 type RouteContext = {
@@ -48,6 +49,7 @@ test("registerAssistantRoutes wires endpoints", () => {
     expect.arrayContaining([
       "GET /assistant/status",
       "POST /assistant/reindex",
+      "POST /assistant/model-metadata",
       "POST /assistant/chat",
       "POST /assistant/actions/plan",
       "POST /assistant/actions/dry-run",
@@ -63,8 +65,47 @@ test("registerAssistantRoutes wires endpoints", () => {
     "settings:write",
     "settings:read",
     "settings:read",
+    "settings:read",
     "content:read",
   ]);
+});
+
+test("model metadata route validates payload and calls service", async () => {
+  const { router, routes } = makeRouter();
+  let validateCalls = 0;
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => {
+      validateCalls += 1;
+    },
+    service: {
+      getModelMetadata: async () => ({
+        model: "openai/gpt-5.4-nano",
+        maxInputTokens: 128000,
+        maxOutputTokens: 8192,
+        supportedParameters: ["max_tokens"],
+        source: "provider",
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/model-metadata");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const result = await handler?.({
+    params: {},
+    query: {},
+    body: { provider: "openrouter", model: "openai/gpt-5.4-nano" },
+    requestId: "req-model-metadata",
+    user: { id: "user-1" },
+  });
+
+  expect(validateCalls).toBe(1);
+  expect(result).toMatchObject({
+    model: "openai/gpt-5.4-nano",
+    maxInputTokens: 128000,
+    maxOutputTokens: 8192,
+  });
 });
 
 test("chat route calls service and returns payload", async () => {
@@ -724,26 +765,100 @@ test("assistant action plan route rejects browser supplied collection workspace 
   }
 });
 
-test("assistant action plan route blocks site-kit planning when LLM Guide is unavailable", async () => {
+test("assistant action plan route accepts reviewed intake session context", async () => {
+  const { router, routes } = makeRouter();
+  let capturedPrompt: string | null = null;
+  let statusCalls = 0;
+  const requestedPermissions: string[] = [];
+
+  registerAssistantRoutes(router, {
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
+    validate: validateSchema,
+    service: {
+      getStatus: async () => {
+        statusCalls += 1;
+        return {
+          enabled: true,
+          defaultMode: "llm-guide",
+          retrievalBackend: "db",
+          llmAvailable: true,
+          indexReady: true,
+          indexBuilding: false,
+          indexError: null,
+          lastReindexAt: null,
+          docCount: 12,
+          chunkCount: 44,
+        };
+      },
+      planActions: async (input) => {
+        capturedPrompt = input.prompt;
+        return {
+          id: "plan-site-builder-needs-input",
+          status: "needs_input",
+          intentId: "site-builder-needs-input",
+          responseKind: "needs_input",
+          promptKind: "setup_request",
+          intentFamily: "site_kit",
+          title: "Continue reviewed site-builder intake",
+          answer: "Continue the reviewed intake.",
+          summary: "Reviewed intake route context accepted.",
+          confidence: 0.5,
+          assumptions: [],
+          questions: [
+            {
+              id: "continue-intake",
+              label: "Continue intake",
+              description: "Continue the reviewed site-builder intake.",
+              required: true,
+            },
+          ],
+          actions: [],
+        };
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const result = await handler?.({
+    params: {},
+    query: {},
+    body: {
+      prompt: "Continue guided site-builder intake.",
+      context: {
+        siteBuilderIntakeState: {
+          activeSession: {
+            version: ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+            mode: "basic",
+            currentStepId: "business-profile",
+            answers: [],
+          },
+        },
+      },
+    },
+    requestId: "req-reviewed-intake",
+    user: { id: "user-1" },
+  });
+
+  expect(capturedPrompt).toBe("Continue guided site-builder intake.");
+  expect(statusCalls).toBe(1);
+  expect(requestedPermissions).toContain("solution-kits:read");
+  expect(result).toMatchObject({
+    status: "needs_input",
+    intentFamily: "site_kit",
+    actions: [],
+  });
+});
+
+test("assistant action plan route rejects direct site-kit context payloads", async () => {
   const { router, routes } = makeRouter();
 
   registerAssistantRoutes(router, {
     requirePermission: () => async () => undefined,
-    validate: () => undefined,
-    service: {
-      getStatus: async () => ({
-        enabled: true,
-        defaultMode: "docs-only",
-        retrievalBackend: "db",
-        llmAvailable: false,
-        indexReady: true,
-        indexBuilding: false,
-        indexError: null,
-        lastReindexAt: null,
-        docCount: 12,
-        chunkCount: 44,
-      }),
-    },
+    validate: validateSchema,
   });
 
   const route = routes.find((item) => item.path === "/assistant/actions/plan");
@@ -771,12 +886,8 @@ test("assistant action plan route blocks site-kit planning when LLM Guide is una
   } catch (error) {
     expect(error).toBeInstanceOf(ApiError);
     const apiError = error as ApiError;
-    expect(apiError.code).toBe("assistant_llm_unavailable");
-    expect(apiError.status).toBe(409);
-    expect(apiError.message).toBe(
-      "LLM Guide must be configured before catalog-backed planning or site-kit actions"
-    );
-    expect(apiError.details).toEqual({ requestId: "req-site-kit-unavailable" });
+    expect(apiError.code).toBe("validation_error");
+    expect(apiError.status).toBe(400);
   }
 });
 

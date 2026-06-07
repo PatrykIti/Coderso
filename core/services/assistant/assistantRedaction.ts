@@ -1,15 +1,35 @@
 const sensitiveKeyPattern =
-  /(password|token|secret|authorization|cookie|apikey|api_key|bearer|signed.*url)/i;
+  /(password|token|secret|authorization|cookie|apikey|api_key|bearer|csrf|credential|session|signed.*url|x-amz-signature)/i;
+
+const signedUrlPattern =
+  /\bhttps?:\/\/\S*[?&](?:x-amz-signature|awsaccesskeyid|signature|expires|token|sig|se|sp|sv)=\S*/gi;
+
+const secretLikePairPattern =
+  /\b(password|token|secret|api[-_\s]?key|authorization|cookie|bearer|csrf|credential|session)\b\s*[:=]\s*[^\s,;]+/gi;
 
 const tokenPatterns = [
   /\bsk-or-v1-[a-zA-Z0-9]{8,}\b/g,
+  /\bsk-or-[a-zA-Z0-9_-]{4,}\b/g,
+  /\bsk_or_[a-zA-Z0-9_-]{4,}\b/g,
   /\bsk-[a-zA-Z0-9_-]{8,}\b/g,
   /Bearer\s+[a-zA-Z0-9\-_.=]{8,}/gi,
   /\beyJ[a-zA-Z0-9_-]+=*\.[a-zA-Z0-9_-]+=*\.[a-zA-Z0-9_-]+=*\b/g,
 ] as const;
 
+const promptPoisoningPatterns = [
+  /\bignore\s+(?:all\s+)?(?:previous|prior|above|system|developer)\s+instructions?\b/gi,
+  /\bforget\s+(?:all\s+)?(?:previous|prior|above|system|developer)\s+instructions?\b/gi,
+  /\bbypass\s+(?:all\s+)?(?:validation|review|reviews|schema|schemas|rbac|csrf)\b/gi,
+  /\bexecute\s+without\s+(?:review|reviews|validation|approval)\b/gi,
+  /\boverride\s+(?:the\s+)?(?:schema|schemas|validation|system|developer)\b/gi,
+  /\bdisable\s+(?:rbac|csrf|validation|review|reviews|guards?)\b/gi,
+  /\breveal\s+(?:the\s+)?(?:system|developer)\s+prompt\b/gi,
+] as const;
+
 const replaceTokens = (value: string) => {
-  let output = value;
+  let output = value
+    .replace(signedUrlPattern, "[REDACTED_URL]")
+    .replace(secretLikePairPattern, "$1: [REDACTED]");
   for (const pattern of tokenPatterns) {
     output = output.replace(pattern, "[REDACTED]");
   }
@@ -17,7 +37,10 @@ const replaceTokens = (value: string) => {
 };
 
 const normalizeText = (value: string) =>
-  value.replace(/\p{Cc}+/gu, " ").replace(/\s+/g, " ").trim();
+  value
+    .replace(/\p{Cc}+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 export const redactAssistantText = (value: string, maxLength = 240) => {
   const normalized = normalizeText(replaceTokens(value));
@@ -25,9 +48,22 @@ export const redactAssistantText = (value: string, maxLength = 240) => {
   return `${normalized.slice(0, Math.max(0, maxLength - 3))}...`;
 };
 
+export const redactAssistantSafetyText = (value: string, maxLength = 240) => {
+  let filtered = value;
+  for (const pattern of promptPoisoningPatterns) {
+    filtered = filtered.replace(pattern, "[FILTERED_INSTRUCTION]");
+  }
+  return redactAssistantText(filtered, maxLength);
+};
+
+export const redactAssistantUnsafeText = (value: string, maxLength = 240) => {
+  const redacted = redactAssistantSafetyText(value, maxLength);
+  return /\[(?:REDACTED|FILTERED_INSTRUCTION)/.test(redacted) ? "[REDACTED]" : redacted;
+};
+
 const redactUnknown = (value: unknown): unknown => {
   if (typeof value === "string") {
-    return redactAssistantText(value, 200);
+    return redactAssistantSafetyText(value, 200);
   }
 
   if (Array.isArray(value)) {

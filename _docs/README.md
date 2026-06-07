@@ -3,7 +3,7 @@
 - `ARCHITECTURE.md` - architecture and system rules
 - `CMS_SPEC.md` - CMS scope and overview
 - `CMS_API.md` - admin API endpoints
-- `ASSISTANT_GUIDE.md` - assistant and AI site wizard flows
+- `ASSISTANT_GUIDE.md` - assistant and reviewed LLM Guide site-builder flows
 - `ASSISTANT_SITE_BUILDER.md` - guided site builder contract (`plan -> actions -> execute -> validate`)
 - `BLUEPRINT_COMPOSER.md` - TASK-190 capability authoring, composition, fixtures, and diagnostics guide
 - `CODERSO_RELEASE_GATES.md` - mandatory Coderso release gates and CI automation contract

@@ -6,7 +6,9 @@ import {
 } from "../../../core/services/assistant/actionPlanSchema";
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
+import { buildFullServiceSitePlan } from "../../../core/services/assistant/blueprints/fullServiceSiteBlueprint";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
+import { buildBasicSiteBuilderNeedsInputPlan } from "../../../core/services/assistant/assistantSiteBuilderIntakeBasicFlow";
 
 test("normalizeAssistantActionPlan accepts current catalog family plans", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
@@ -18,13 +20,47 @@ test("normalizeAssistantActionPlan accepts current catalog family plans", () => 
 
   expect(normalized.intentId).toBe("product-catalog");
   expect(normalized.actions.map((action) => action.type)).toEqual([
-    "setting.content-route.upsert",
     "content-type.upsert",
+    "detail-page.upsert",
+    "setting.content-route.upsert",
     "custom-screen.upsert",
     "listing-query.upsert",
     "listing-template.upsert",
     "page.upsert",
   ]);
+});
+
+test("normalizeAssistantActionPlan accepts curated media profile entry values", () => {
+  const plan = buildFullServiceSitePlan({ promptKind: "setup_request" });
+
+  const normalized = normalizeAssistantActionPlan(plan);
+
+  expect(normalized.intentId).toBe("service-business-full-site");
+  expect(
+    normalized.actions
+      .filter((action) => action.type === "entry.sample.create")
+      .every(
+        (action) =>
+          action.type === "entry.sample.create" &&
+          typeof action.input.values.coverImageUrl === "string" &&
+          action.input.values.coverImageUrl.startsWith("https://images.unsplash.com/")
+      )
+  ).toBe(true);
+});
+
+test("buildFullServiceSitePlan does not fall back to unrelated curated media profiles", () => {
+  const plan = buildFullServiceSitePlan({
+    prompt: "Stworz kompletny serwis dla restauracji z menu, rezerwacjami i filmem w tle.",
+    promptKind: "setup_request",
+  });
+
+  const normalized = normalizeAssistantActionPlan(plan);
+
+  expect(JSON.stringify(normalized.actions)).not.toContain("https://images.unsplash.com/");
+  expect(normalized.metadata?.launchReadiness?.requiredMediaPages).toBeUndefined();
+  expect(normalized.metadata?.launchReadiness?.checks.some((check) => check.id === "media")).toBe(
+    false
+  );
 });
 
 test("normalizeAssistantActionPlan accepts content route actions with explicit detailPageId semantics", () => {
@@ -242,6 +278,43 @@ test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
   ).toThrow("assistant_action_plan_invalid");
 });
 
+test("normalizeAssistantActionPlan rejects unknown site-builder intake metadata registries", () => {
+  const validPlan = buildBasicSiteBuilderNeedsInputPlan({});
+
+  const invalidStepRegistryPlan = JSON.parse(JSON.stringify(validPlan)) as Record<string, unknown>;
+  const invalidStepMetadata = invalidStepRegistryPlan.metadata as Record<string, unknown>;
+  const invalidStepIntake = invalidStepMetadata.siteBuilderIntake as Record<string, unknown>;
+  const invalidStepSteps = invalidStepIntake.steps as Record<string, unknown>[];
+  const firstStep = invalidStepSteps[0];
+  if (!firstStep) throw new Error("site_builder_intake_step_missing");
+  invalidStepSteps[0] = {
+    ...firstStep,
+    optionRegistryId: "externalMedia",
+  };
+
+  expect(() => normalizeAssistantActionPlan(invalidStepRegistryPlan)).toThrow(
+    "assistant_action_plan_invalid"
+  );
+
+  const invalidFieldRegistryPlan = JSON.parse(JSON.stringify(validPlan)) as Record<string, unknown>;
+  const invalidFieldMetadata = invalidFieldRegistryPlan.metadata as Record<string, unknown>;
+  const invalidFieldIntake = invalidFieldMetadata.siteBuilderIntake as Record<string, unknown>;
+  const invalidFieldSteps = invalidFieldIntake.steps as Record<string, unknown>[];
+  const siteMapStep = invalidFieldSteps.find((step) => step.id === "site-map");
+  if (!siteMapStep) throw new Error("site_map_step_missing");
+  const answerFields = siteMapStep.answerFields as Record<string, unknown>[];
+  const firstAnswerField = answerFields[0];
+  if (!firstAnswerField) throw new Error("site_map_answer_field_missing");
+  answerFields[0] = {
+    ...firstAnswerField,
+    optionRegistryId: "remoteImages",
+  };
+
+  expect(() => normalizeAssistantActionPlan(invalidFieldRegistryPlan)).toThrow(
+    "assistant_action_plan_invalid"
+  );
+});
+
 test("normalizeAssistantActionPlan accepts strict blueprint composition metadata", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -444,7 +517,7 @@ test("normalizeAssistantActionPlan accepts docs response kind and rejects execut
   ).toThrow("assistant_action_plan_invalid");
 });
 
-test("normalizeAssistantActionPlan accepts site-kit action plans", () => {
+test("normalizeAssistantActionPlan accepts gated direct site-kit context plans", () => {
   const plan = planAssistantActions({
     prompt: "prepare a starter site kit",
     context: {
@@ -454,7 +527,7 @@ test("normalizeAssistantActionPlan accepts site-kit action plans", () => {
         goals: ["lead_generation"],
         locale: "en",
         selectedKitId: "automotive-workshop",
-        enabledStepIds: ["settings", "pages", "qa"],
+        enabledStepIds: ["settings", "pages", "forms", "qa"],
       },
     },
   });
@@ -462,10 +535,131 @@ test("normalizeAssistantActionPlan accepts site-kit action plans", () => {
   const normalized = normalizeAssistantActionPlan(plan);
 
   expect(normalized.intentFamily).toBe("site_kit");
-  expect(normalized.actions.map((action) => action.type)).toEqual([
-    "site-kit.recommend",
-    "site-kit.install",
-  ]);
+  expect(normalized.status).toBe("needs_input");
+  expect(normalized.responseKind).toBe("gated");
+  expect(normalized.actions).toEqual([]);
+});
+
+test("normalizeAssistantActionPlan accepts strict site-kit Advanced runtime overrides", () => {
+  const advancedRuntimeOverrides = {
+    schemaVersion: 1,
+    designPresetId: "modern",
+    menu: {
+      behaviorIds: ["sticky", "collapse-on-scroll", "mobile-drawer"],
+      variantId: "with-cta",
+      sticky: true,
+      collapseOnScroll: true,
+      transparent: false,
+      mobileMode: "drawer",
+      ctaTargetPageRole: "contact",
+    },
+    hero: {
+      variantId: "split",
+      widgetType: "hero",
+      widgetVariantId: "split",
+      module: "content",
+      alias: "hero",
+    },
+    sectionVariants: [
+      {
+        variantId: "proof-spotlight",
+        sectionRoleId: "proof",
+        alias: "testimonials",
+        widgetType: "testimonials",
+        widgetVariantId: "spotlight",
+        module: "engagement",
+      },
+    ],
+  };
+  const plan = {
+    id: "plan-site-kit-advanced-runtime",
+    status: "ready",
+    intentId: "site-kit-install",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: "Advanced Site Kit",
+    answer: "Install the reviewed Advanced site kit.",
+    summary: "Dry-run and execute the selected Advanced site kit.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "site-kit-recommend-advanced",
+        type: "site-kit.recommend",
+        title: "Recommend kit",
+        description: "Recommend the selected kit.",
+        input: {
+          businessType: "custom",
+          goals: ["lead_generation"],
+          locale: "pl",
+          selectedKitId: "local-service-business",
+          enabledStepIds: ["settings", "pages", "navigation", "qa"],
+          advancedRuntimeOverrides,
+          preview: { selectedKitId: "local-service-business" },
+        },
+      },
+      {
+        id: "site-kit-install-advanced",
+        type: "site-kit.install",
+        title: "Install kit",
+        description: "Install the selected kit.",
+        input: {
+          businessType: "custom",
+          goals: ["lead_generation"],
+          locale: "pl",
+          selectedKitId: "local-service-business",
+          enabledStepIds: ["settings", "pages", "navigation", "qa"],
+          advancedRuntimeOverrides,
+          continueOnError: true,
+          preview: { selectedKitId: "local-service-business" },
+        },
+      },
+    ],
+  } as const;
+
+  const normalized = normalizeAssistantActionPlan(plan);
+  expect(normalized.actions[1]).toMatchObject({
+    type: "site-kit.install",
+    input: {
+      advancedRuntimeOverrides: {
+        menu: {
+          behaviorIds: ["sticky", "collapse-on-scroll", "mobile-drawer"],
+          collapseOnScroll: true,
+          ctaTargetPageRole: "contact",
+        },
+        hero: {
+          widgetVariantId: "split",
+        },
+      },
+    },
+  });
+
+  const tampered = structuredClone(plan);
+  tampered.actions[1].input.advancedRuntimeOverrides.hero.widgetType = "cta-banner";
+  expect(() => normalizeAssistantActionPlan(tampered)).toThrow("assistant_action_plan_invalid");
+
+  const tamperedNavigationVariant = structuredClone(plan);
+  tamperedNavigationVariant.actions[1].input.advancedRuntimeOverrides.menu.variantId = "mega";
+  expect(() => normalizeAssistantActionPlan(tamperedNavigationVariant)).toThrow(
+    "assistant_action_plan_invalid"
+  );
+
+  const tamperedMobileMode = structuredClone(plan);
+  tamperedMobileMode.actions[1].input.advancedRuntimeOverrides.menu.mobileMode = "popover";
+  expect(() => normalizeAssistantActionPlan(tamperedMobileMode)).toThrow(
+    "assistant_action_plan_invalid"
+  );
+
+  const tamperedCollapseOnScroll = structuredClone(plan);
+  (
+    tamperedCollapseOnScroll.actions[1].input.advancedRuntimeOverrides.menu as {
+      collapseOnScroll: unknown;
+    }
+  ).collapseOnScroll = "yes";
+  expect(() => normalizeAssistantActionPlan(tamperedCollapseOnScroll)).toThrow(
+    "assistant_action_plan_invalid"
+  );
 });
 
 test("normalizeAssistantActionPlan rejects unknown plan and action fields", () => {
@@ -488,6 +682,32 @@ test("normalizeAssistantActionPlan rejects unknown plan and action fields", () =
         {
           ...plan.actions[0],
           debug: true,
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "seo-products",
+          type: "seo.document.upsert",
+          title: "Update product SEO",
+          description: "Add SEO metadata to products page.",
+          input: {
+            targetType: "page",
+            targetId: {
+              kind: "stable-slug",
+              resourceType: "page",
+              slug: "/products",
+              debug: true,
+            },
+            seo: {
+              title: "Products",
+            },
+          },
         },
       ],
     })
@@ -561,6 +781,48 @@ test("normalizeAssistantActionPlan accepts entry upsert draft actions", () => {
   expect(normalized.actions[0]?.type).toBe("entry.upsert-draft");
 });
 
+test("normalizeAssistantActionPlan accepts public sample entry actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "entry-sample-service",
+        type: "entry.sample.create",
+        title: "Publish service sample",
+        description: "Create a published sample service entry.",
+        input: {
+          contentTypeSlug: "services-directory",
+          title: "Projekt koncepcyjny",
+          slug: "projekt-koncepcyjny",
+          status: "published",
+          values: {
+            title: "Projekt koncepcyjny",
+          },
+          seo: {
+            title: "Projekt koncepcyjny | Studio Forma",
+            description: "Poznaj zakres projektu koncepcyjnego dla inwestorow.",
+            canonicalUrl: "/uslugi/projekt-koncepcyjny",
+            robots: "index,follow",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "entry.sample.create",
+    input: {
+      status: "published",
+      slug: "projekt-koncepcyjny",
+    },
+  });
+});
+
 test("normalizeAssistantActionPlan accepts safe menu item upsert actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -571,12 +833,28 @@ test("normalizeAssistantActionPlan accepts safe menu item upsert actions", () =>
     ...plan,
     actions: [
       {
+        id: "menu-primary",
+        type: "menu.upsert",
+        title: "Create primary menu",
+        description: "Create the primary navigation menu.",
+        input: {
+          name: "Primary navigation",
+          location: "primary",
+          status: "published",
+        },
+      },
+      {
         id: "menu-products",
         type: "menu.item.upsert",
         title: "Add products to menu",
         description: "Add products catalog link.",
         input: {
-          menuId: "menu-primary",
+          menuId: {
+            kind: "action-result",
+            actionId: "menu-primary",
+            resourceType: "menu",
+            field: "id",
+          },
           label: "Products",
           href: "/products",
           orderIndex: 1,
@@ -588,7 +866,17 @@ test("normalizeAssistantActionPlan accepts safe menu item upsert actions", () =>
     ],
   });
 
-  expect(normalized.actions[0]?.type).toBe("menu.item.upsert");
+  expect(normalized.actions[0]?.type).toBe("menu.upsert");
+  expect(normalized.actions[1]).toMatchObject({
+    type: "menu.item.upsert",
+    input: {
+      menuId: {
+        kind: "action-result",
+        actionId: "menu-primary",
+        resourceType: "menu",
+      },
+    },
+  });
 });
 
 test("normalizeAssistantActionPlan accepts seo document upsert actions", () => {
@@ -620,6 +908,77 @@ test("normalizeAssistantActionPlan accepts seo document upsert actions", () => {
   });
 
   expect(normalized.actions[0]?.type).toBe("seo.document.upsert");
+});
+
+test("normalizeAssistantActionPlan accepts seo target locators", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "seo-home",
+        type: "seo.document.upsert",
+        title: "Update home SEO",
+        description: "Add SEO metadata to the home page.",
+        input: {
+          targetType: "page",
+          targetId: {
+            kind: "stable-slug",
+            resourceType: "page",
+            slug: "/",
+          },
+          seo: {
+            title: "Studio Forma",
+            description: "Architektura w pelnym procesie.",
+            canonicalUrl: "/",
+            robots: "index,follow",
+          },
+        },
+      },
+      {
+        id: "seo-service",
+        type: "seo.document.upsert",
+        title: "Update service SEO",
+        description: "Add SEO metadata to a sample service.",
+        input: {
+          targetType: "entry",
+          targetId: {
+            kind: "action-result",
+            actionId: "entry-sample-service",
+            resourceType: "entry",
+            field: "id",
+          },
+          seo: {
+            title: "Projekt koncepcyjny | Studio Forma",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "seo.document.upsert",
+    input: {
+      targetId: {
+        kind: "stable-slug",
+        resourceType: "page",
+        slug: "/",
+      },
+    },
+  });
+  expect(normalized.actions[1]).toMatchObject({
+    type: "seo.document.upsert",
+    input: {
+      targetId: {
+        kind: "action-result",
+        actionId: "entry-sample-service",
+      },
+    },
+  });
 });
 
 test("normalizeAssistantActionPlan accepts menu and seo delete actions", () => {
@@ -1202,6 +1561,86 @@ test("normalizeAssistantActionPlan accepts detail-page upsert documents", () => 
         id: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
         contentTypeSlug: "products",
         status: "published",
+      },
+    },
+  });
+});
+
+test("normalizeAssistantActionPlan accepts detail-page content type locators", () => {
+  const normalized = normalizeAssistantActionPlan({
+    id: "plan-detail-page-upsert-locator",
+    status: "ready",
+    intentId: "detail-page-upsert-locator",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can create the detail template.",
+    summary: "Create a products detail template.",
+    confidence: 0.91,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          contentTypeId: {
+            kind: "stable-slug",
+            resourceType: "content-type",
+            slug: "products",
+          },
+          document: {
+            schemaVersion: 1,
+            id: "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            name: "Products detail template",
+            contentTypeId: "4fd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            contentTypeSlug: "products",
+            status: "published",
+            titlePattern: "{{ title }}",
+            settings: {
+              template: "detail",
+              layout: {
+                wrapper: {
+                  container: "default",
+                  padding: { top: "md", bottom: "lg" },
+                  background: {
+                    color: "#ffffff",
+                    image: null,
+                    media: {
+                      type: "none",
+                      source: "external",
+                      src: null,
+                    },
+                  },
+                },
+                sections: {
+                  gap: "lg",
+                  defaults: {
+                    container: "default",
+                    padding: { top: "xl", bottom: "xl" },
+                    margin: { top: "none", bottom: "none" },
+                  },
+                },
+                applyDefaultsToNewBlocks: false,
+              },
+            },
+            blocks: [],
+            bindings: [],
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "detail-page.upsert",
+    input: {
+      contentTypeId: {
+        kind: "stable-slug",
+        resourceType: "content-type",
+        slug: "products",
       },
     },
   });
@@ -1962,6 +2401,156 @@ test("normalizeAssistantActionPlan rejects raw media URLs inside page upsert blo
   }
 });
 
+test("normalizeAssistantActionPlan rejects raw media URLs inside entry media fields", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  for (const key of ["coverImageUrl", "heroImage", "gallery"]) {
+    const values =
+      key === "gallery"
+        ? { title: "Unsafe entry", gallery: ["https://example.com/gallery.jpg"] }
+        : { title: "Unsafe entry", [key]: "https://example.com/cover.jpg" };
+    expect(() =>
+      normalizeAssistantActionPlan({
+        ...plan,
+        actions: [
+          {
+            id: `entry-unsafe-${key}`,
+            type: "entry.sample.create",
+            title: "Create unsafe sample",
+            description: "Attempt to render a remote media URL from provider output.",
+            input: {
+              contentTypeSlug: "portfolio-projects",
+              title: "Unsafe entry",
+              slug: "unsafe-entry",
+              status: "published",
+              values,
+            },
+          },
+        ],
+      })
+    ).toThrow("assistant_action_plan_invalid");
+  }
+});
+
+test("normalizeAssistantActionPlan rejects curated URLs inside media asset id fields", () => {
+  const fullServicePlan = buildFullServiceSitePlan({ promptKind: "setup_request" });
+  const curatedUrl = fullServicePlan.actions.find((action) => action.type === "entry.sample.create")
+    ?.input.values.coverImageUrl;
+  if (typeof curatedUrl !== "string") {
+    throw new Error("expected_curated_cover_url");
+  }
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  for (const key of ["heroImage", "gallery"]) {
+    const values =
+      key === "gallery"
+        ? { title: "Unsafe entry", gallery: [curatedUrl] }
+        : { title: "Unsafe entry", [key]: curatedUrl };
+    expect(() =>
+      normalizeAssistantActionPlan({
+        ...plan,
+        actions: [
+          {
+            id: `entry-curated-unsafe-${key}`,
+            type: "entry.sample.create",
+            title: "Create unsafe curated sample",
+            description: "Attempt to store a curated URL inside a media asset id field.",
+            input: {
+              contentTypeSlug: "portfolio-projects",
+              title: "Unsafe entry",
+              slug: "unsafe-entry",
+              status: "published",
+              values,
+            },
+          },
+        ],
+      })
+    ).toThrow("assistant_action_plan_invalid");
+  }
+});
+
+test("normalizeAssistantActionPlan rejects untrusted curated media metadata urls", () => {
+  const fullServicePlan = buildFullServiceSitePlan({ promptKind: "setup_request" });
+  const sample = fullServicePlan.actions.find((action) => action.type === "entry.sample.create");
+  if (!sample || sample.type !== "entry.sample.create") {
+    throw new Error("expected_curated_sample");
+  }
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "entry-unsafe-curated-source",
+          type: "entry.sample.create",
+          title: "Create unsafe curated source",
+          description: "Attempt to attach an arbitrary source URL to curated media.",
+          input: {
+            contentTypeSlug: "portfolio-projects",
+            title: "Unsafe source",
+            slug: "unsafe-source",
+            status: "published",
+            values: {
+              title: "Unsafe source",
+              coverImageUrl: sample.input.values.coverImageUrl,
+              coverImageSourceName: sample.input.values.coverImageSourceName,
+              coverImageSourceUrl: "https://example.com/source",
+              coverImageLicenseName: sample.input.values.coverImageLicenseName,
+              coverImageLicenseUrl: sample.input.values.coverImageLicenseUrl,
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan requires source and license metadata for curated cover urls", () => {
+  const fullServicePlan = buildFullServiceSitePlan({ promptKind: "setup_request" });
+  const sample = fullServicePlan.actions.find((action) => action.type === "entry.sample.create");
+  if (!sample || sample.type !== "entry.sample.create") {
+    throw new Error("expected_curated_sample");
+  }
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "entry-missing-curated-source",
+          type: "entry.sample.create",
+          title: "Create incomplete curated source",
+          description: "Attempt to attach curated media without source metadata.",
+          input: {
+            contentTypeSlug: "portfolio-projects",
+            title: "Incomplete source",
+            slug: "incomplete-source",
+            status: "published",
+            values: {
+              title: "Incomplete source",
+              coverImageUrl: sample.input.values.coverImageUrl,
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan keeps non-media URL fields available to widget contracts", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -2134,7 +2723,7 @@ test("normalizeAssistantActionPlan rejects unsafe menu hrefs", () => {
   ).toThrow("assistant_action_plan_invalid");
 });
 
-test("normalizeAssistantActionPlan rejects remaining contract-only actions until adapters land", () => {
+test("normalizeAssistantActionPlan rejects malformed sample entry actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
     intentFamily: "product_catalog",
@@ -2151,7 +2740,61 @@ test("normalizeAssistantActionPlan rejects remaining contract-only actions until
           description: "Draft sample product entry.",
           input: {
             contentTypeSlug: "products",
-            samples: [],
+            title: "Sample",
+            slug: "sample",
+            status: "draft",
+            values: {
+              title: "Sample",
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "entry-products",
+          type: "entry.sample.create",
+          title: "Create product entry",
+          description: "Published sample product entry.",
+          input: {
+            contentTypeSlug: "products",
+            title: "Sample",
+            slug: "sample",
+            status: "published",
+            values: {
+              title: "Sample",
+            },
+            debug: true,
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects remaining contract-only actions until adapters land", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "entry-products",
+          type: "entry.bulk-draft.create",
+          title: "Create product entries",
+          description: "Draft sample product entries.",
+          input: {
+            contentTypeSlug: "products",
+            entries: [],
           },
         },
       ],

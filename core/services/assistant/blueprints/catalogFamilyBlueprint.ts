@@ -1,4 +1,5 @@
 import type { WidgetBlock } from "../../../widgets/types";
+import type { DetailPageDocument } from "../../content/detailPageTypes";
 import type { ListingFacetConfig } from "../../search/filterContract";
 import type {
   AssistantActionPlan,
@@ -18,6 +19,15 @@ type CatalogScreenFieldValue = {
   helper: string;
   tone: "default" | "strong" | "muted";
   field: string;
+};
+
+const detailPageContentTypePlaceholderId = "00000000-0000-5000-8000-000000000001";
+
+const catalogDetailPageIds: Record<string, string> = {
+  "house-projects-catalog": "5f9c2ed6-4df0-55ef-8c8f-7ab7f6b7f301",
+  "product-catalog": "5f9c2ed6-4df0-55ef-8c8f-7ab7f6b7f302",
+  "portfolio-projects": "5f9c2ed6-4df0-55ef-8c8f-7ab7f6b7f303",
+  "services-directory": "5f9c2ed6-4df0-55ef-8c8f-7ab7f6b7f304",
 };
 
 export type CatalogFamilyPreset = {
@@ -40,6 +50,8 @@ export type CatalogFamilyPreset = {
   ctaLabel: string;
   contentSchema: Record<string, unknown>;
   listingTemplateConfig: Record<string, unknown>;
+  coverImageUrlField?: string;
+  coverImageAltField?: string;
   screen: {
     eyebrow: string;
     subtitle: string;
@@ -61,6 +73,12 @@ export type CatalogFamilyPreset = {
     defaultSearchPlaceholder: string;
     availableFacets: ListingFacetConfig[];
   };
+};
+
+export const getCatalogFamilyDetailPageId = (preset: Pick<CatalogFamilyPreset, "key">) => {
+  const id = catalogDetailPageIds[preset.key];
+  if (!id) throw new Error("assistant_catalog_detail_page_id_missing");
+  return id;
 };
 
 const toAdminSurfaceField = (
@@ -155,6 +173,130 @@ const buildScreenBindings = (preset: CatalogFamilyPreset) =>
     ],
   });
 
+const buildDetailPageLayout = (): DetailPageDocument["settings"]["layout"] => ({
+  wrapper: {
+    container: "default",
+    padding: { top: "md", bottom: "lg" },
+    background: {
+      color: "#ffffff",
+      image: null,
+      media: {
+        type: "none",
+        source: "external",
+        src: null,
+      },
+    },
+  },
+  sections: {
+    gap: "lg",
+    defaults: {
+      container: "default",
+      padding: { top: "xl", bottom: "xl" },
+      margin: { top: "none", bottom: "none" },
+    },
+  },
+  applyDefaultsToNewBlocks: false,
+});
+
+const buildDetailPageDocument = (preset: CatalogFamilyPreset): DetailPageDocument => {
+  const heroId = `${preset.key}-detail-hero`;
+  const hasCoverImage = Boolean(preset.coverImageUrlField);
+  return {
+    schemaVersion: 1,
+    id: getCatalogFamilyDetailPageId(preset),
+    name: `${preset.contentTypeName} Detail Template`,
+    contentTypeId: detailPageContentTypePlaceholderId,
+    contentTypeSlug: preset.contentTypeSlug,
+    status: "published",
+    titlePattern: "{{ title }}",
+    seo: {
+      titlePattern: "{{ title }}",
+      descriptionField: "summary",
+      imageField: preset.coverImageUrlField ?? "heroImage",
+    },
+    settings: {
+      template: "detail",
+      layout: buildDetailPageLayout(),
+    },
+    blocks: [
+      {
+        id: heroId,
+        type: "hero",
+        variant: hasCoverImage ? "split" : "centered",
+        data: {
+          headline: preset.contentTypeName,
+          body: preset.introBody,
+          ...(hasCoverImage
+            ? {
+                media: {
+                  type: "image",
+                  source: "external",
+                  src: "",
+                  alt: "",
+                  ratio: "16:9",
+                },
+              }
+            : {}),
+        },
+      },
+    ],
+    bindings: [
+      {
+        id: `${preset.key}-detail-title`,
+        blockId: heroId,
+        propPath: "headline",
+        source: {
+          kind: "entry-field",
+          field: "title",
+        },
+        transform: "text",
+        required: true,
+      },
+      {
+        id: `${preset.key}-detail-summary`,
+        blockId: heroId,
+        propPath: "body",
+        source: {
+          kind: "entry-field",
+          field: "summary",
+        },
+        transform: "text",
+        required: true,
+      },
+      ...(preset.coverImageUrlField
+        ? [
+            {
+              id: `${preset.key}-detail-cover-image`,
+              blockId: heroId,
+              propPath: "media.src",
+              source: {
+                kind: "entry-field" as const,
+                field: preset.coverImageUrlField,
+              },
+              transform: "text" as const,
+              required: false,
+            },
+          ]
+        : []),
+      ...(preset.coverImageAltField
+        ? [
+            {
+              id: `${preset.key}-detail-cover-image-alt`,
+              blockId: heroId,
+              propPath: "media.alt",
+              source: {
+                kind: "entry-field" as const,
+                field: preset.coverImageAltField,
+              },
+              transform: "text" as const,
+              required: false,
+            },
+          ]
+        : []),
+    ],
+  };
+};
+
 export const buildCatalogFamilyPlan = (
   preset: CatalogFamilyPreset,
   options?: {
@@ -162,7 +304,34 @@ export const buildCatalogFamilyPlan = (
     intentFamily?: AssistantIntentFamily;
   }
 ): AssistantActionPlan => {
+  const detailPageDocument = buildDetailPageDocument(preset);
   const actions: AssistantPlannedAction[] = [
+    {
+      id: `content-type-${preset.key}`,
+      type: "content-type.upsert",
+      title: `Create the ${preset.contentTypeName.toLowerCase()} content model`,
+      description: "Provision structured fields for summaries, media, specs, pricing, and status.",
+      input: {
+        slug: preset.contentTypeSlug,
+        name: preset.contentTypeName,
+        schema: preset.contentSchema,
+      },
+    },
+    {
+      id: `detail-page-${preset.key}`,
+      type: "detail-page.upsert",
+      title: `Create the ${preset.contentTypeName.toLowerCase()} detail template`,
+      description: "Create a route-linked public detail template for individual catalog entries.",
+      input: {
+        document: detailPageDocument,
+        contentTypeId: {
+          kind: "stable-slug",
+          resourceType: "content-type",
+          slug: preset.contentTypeSlug,
+        },
+        expectedExistingId: detailPageDocument.id,
+      },
+    },
     {
       id: `content-route-${preset.key}`,
       type: "setting.content-route.upsert",
@@ -173,17 +342,7 @@ export const buildCatalogFamilyPlan = (
         listPath: preset.catalogHiddenListPath,
         detailPath: preset.detailPath,
         enabled: true,
-      },
-    },
-    {
-      id: `content-type-${preset.key}`,
-      type: "content-type.upsert",
-      title: `Create the ${preset.contentTypeName.toLowerCase()} content model`,
-      description: "Provision structured fields for summaries, media, specs, pricing, and status.",
-      input: {
-        slug: preset.contentTypeSlug,
-        name: preset.contentTypeName,
-        schema: preset.contentSchema,
+        detailPageId: detailPageDocument.id,
       },
     },
     {
@@ -213,24 +372,24 @@ export const buildCatalogFamilyPlan = (
         name: preset.listingQueryName,
         description: `Published ${preset.contentTypeName.toLowerCase()} used by the public catalog page.`,
         contentTypeSlug: preset.contentTypeSlug,
-        fields: [
-          "id",
-          "title",
-          "slug",
-          "status",
-          "updatedAt",
-          "data.summary",
-          "data.heroImage",
-          ...Array.from(
-            new Set(
-              [
-                ...preset.screen.leftFields.map((field) => `data.${field.field}`),
-                ...preset.screen.rightFields.map((field) => `data.${field.field}`),
-              ].filter((field) => field !== "data.projectStatus")
-            )
-          ),
-          "data.projectStatus",
-        ],
+        fields: Array.from(
+          new Set([
+            "id",
+            "title",
+            "slug",
+            "status",
+            "updatedAt",
+            "data.summary",
+            "data.heroImage",
+            ...(preset.coverImageUrlField ? [`data.${preset.coverImageUrlField}`] : []),
+            ...(preset.coverImageAltField ? [`data.${preset.coverImageAltField}`] : []),
+            ...[
+              ...preset.screen.leftFields.map((field) => `data.${field.field}`),
+              ...preset.screen.rightFields.map((field) => `data.${field.field}`),
+            ].filter((field) => field !== "data.projectStatus"),
+            "data.projectStatus",
+          ])
+        ),
         includeDrafts: false,
         limit: 24,
         sort: [{ field: "title", dir: "asc" }],

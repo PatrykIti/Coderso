@@ -28,8 +28,10 @@ test("assistantActionTypes lists every supported action type once", () => {
     "form.archive",
     "form.update",
     "entry.upsert-draft",
+    "entry.sample.create",
     "entry.delete",
     "entry.update",
+    "menu.upsert",
     "menu.item.upsert",
     "menu.item.delete",
     "menu.item.update",
@@ -83,6 +85,7 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
 
   expect(isAssistantActionType("site-kit.install")).toBe(true);
   expect(isAssistantActionType("entry.upsert-draft")).toBe(true);
+  expect(isAssistantActionType("entry.sample.create")).toBe(true);
   expect(isAssistantActionType("entry.delete")).toBe(true);
   expect(isAssistantActionType("content-type.delete")).toBe(true);
   expect(isAssistantActionType("custom-screen.delete")).toBe(true);
@@ -104,6 +107,7 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("form.archive")).toBe(true);
   expect(isAssistantActionType("form.update")).toBe(true);
   expect(isAssistantActionType("entry.update")).toBe(true);
+  expect(isAssistantActionType("menu.upsert")).toBe(true);
   expect(isAssistantActionType("menu.item.update")).toBe(true);
   expect(isAssistantActionType("page.widget.patch")).toBe(true);
   expect(isAssistantActionType("form.automation.upsert")).toBe(true);
@@ -112,7 +116,6 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("detail-page.upsert")).toBe(true);
   expect(isAssistantActionType("widget-template.update")).toBe(true);
   expect(isAssistantActionType("widget-template.block.patch")).toBe(true);
-  expect(isAssistantActionType("entry.sample.create")).toBe(false);
   expect(isAssistantActionType("database.drop")).toBe(false);
   expect(getAssistantActionHandler(registry, "site-kit.install").label).toBe("site-kit.install");
 });

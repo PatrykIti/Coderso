@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1099.
+Ordinary new entries continue at 1136.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,12 +29,49 @@ Ordinary new entries continue at 1099.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1099 for the next changelog entry.
+assistant policy coverage fix. Use 1136 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
-| 1098 | 2026-06-05 | TASK-404 Resend email provider | Settings/Integrations/Email/Security/Admin UI/Forms/QA/Docs |
-| 1097 | 2026-06-04 | AGENTS task workflow alignment | Docs/Process/Agent Workflow/Task Board/QA |
+| 1135 | 2026-06-06 | Navigation runtime and page editor canvas | CMS Widgets/Navigation/Admin UI/Page Builder/Runtime/QA/Docs |
+| 1134 | 2026-06-06 | Media upload native File metadata | Media/Admin API/Runtime Storage/QA |
+| 1133 | 2026-06-07 | TASK-410 assistant widget capability sync docs | Assistant/Widgets/Docs/Process/QA |
+| 1132 | 2026-06-07 | TASK-407 guided site-builder closure | Assistant/Site Builder/Navigation/Media/Docs/Task Board/QA/Drift Audit |
+| 1131 | 2026-06-07 | TASK-407 scoped cleanup and second-theme live E2E | Assistant/Site Builder/Solution Kits/Rollback/Public Runtime/Playwright/QA/Docs |
+| 1130 | 2026-06-06 | TASK-407 follow-up live Playwright E2E | Assistant/Site Builder/Follow-Up Resolver/Playwright/Public Runtime/Security/QA/Docs |
+| 1129 | 2026-06-06 | TASK-407 Advanced live Playwright E2E | Assistant/Site Builder/Advanced Intake/Public Runtime/Solution Kits/Playwright/QA/Docs |
+| 1128 | 2026-06-06 | TASK-407 Basic live Playwright E2E | Assistant/Site Builder/Playwright/Solution Kits/Public Runtime/Forms/QA/Docs |
+| 1127 | 2026-06-06 | TASK-407 targeted validation lanes | Assistant/Site Builder/Validation/Release Gates/Security/QA/Docs |
+| 1126 | 2026-06-06 | TASK-407 legacy AI site wizard convergence | Assistant/Site Builder/Admin UI/API/Planner/Validation/QA/Docs |
+| 1125 | 2026-06-06 | TASK-407 UI warning local-state redaction | Assistant/Site Builder/Admin UI/Redaction/Local State/Validation/QA/Docs |
+| 1124 | 2026-06-06 | TASK-407 review summary execution gating | Assistant/Site Builder/Admin UI/Review Gating/Validation/QA/Docs |
+| 1123 | 2026-06-06 | TASK-407 Advanced intake controls | Assistant/Site Builder/Admin UI/Advanced Intake/Validation/QA/Docs |
+| 1122 | 2026-06-06 | TASK-407 Basic intake controls | Assistant/Site Builder/Admin UI/Basic Intake/Validation/QA/Docs |
+| 1121 | 2026-06-06 | TASK-407 intake UI state machine | Assistant/Site Builder/Admin UI/State/Validation/QA/Docs |
+| 1120 | 2026-06-06 | TASK-407 siteKit runtime contracts | Assistant/Site Builder/SiteKit/Runtime/Validation/QA/Docs |
+| 1119 | 2026-06-06 | TASK-407 follow-up target scoping | Assistant/Site Builder/Follow-Up Resolver/Validation/QA/Docs |
+| 1118 | 2026-06-06 | TASK-407 custom-screen decision rules | Assistant/Site Builder/Custom Screens/Validation/QA/Docs |
+| 1117 | 2026-06-06 | TASK-407 content-engine decision rules | Assistant/Site Builder/Content Engines/Validation/QA/Docs |
+| 1116 | 2026-06-05 | TASK-407 static siteKit action coverage gates | Assistant/Site Builder/SiteKit/Static Shell/Validation/QA/Docs |
+| 1115 | 2026-06-05 | TASK-407 siteKit intake adapter | Assistant/Site Builder/SiteKit/Compiler/Planner Handoff/QA/Docs |
+| 1114 | 2026-06-05 | TASK-407 reference design brief review gate | Assistant/Site Builder/Advanced References/Review Gate/Provider Context/QA/Docs |
+| 1113 | 2026-06-05 | TASK-407 reference intake validation policy | Assistant/Site Builder/Advanced References/Media Safety/Redaction/QA/Docs |
+| 1112 | 2026-06-05 | TASK-407 Advanced layout option registries | Assistant/Site Builder/Advanced Layout/Widget Mapping/Validation/QA/Docs |
+| 1111 | 2026-06-05 | TASK-409 Resend email provider | Settings/Integrations/Email/Security/Admin UI/Forms/QA/Docs |
+| 1110 | 2026-06-04 | AGENTS task workflow alignment | Docs/Process/Agent Workflow/Task Board/QA |
+| 1109 | 2026-06-05 | TASK-407 Advanced design preset registry | Assistant/Site Builder/Advanced Design/Validation/QA/Docs |
+| 1108 | 2026-06-05 | TASK-407 Basic prompt-poisoning guards | Assistant/Site Builder/Basic Security/Validation/QA/Docs |
+| 1107 | 2026-06-05 | TASK-407 Basic review facts | Assistant/Site Builder/Basic Review/Widget Mapping/Validation/QA/Docs |
+| 1106 | 2026-06-05 | TASK-407 Basic site-map defaults | Assistant/Site Builder/Basic Defaults/Validation/QA/Docs |
+| 1105 | 2026-06-05 | TASK-407 Basic intake progression | Assistant/Site Builder/Basic Intake/Planning/QA/Docs |
+| 1104 | 2026-06-05 | TASK-407 site-builder intake redaction and browser state | Assistant/Site Builder/Redaction/Provider Context/Admin State/QA/Docs |
+| 1103 | 2026-06-05 | TASK-407 site-builder intake siteKit handoff | Assistant/Site Builder/SiteKit/Validation/QA/Docs |
+| 1102 | 2026-06-05 | TASK-407 site-builder intake normalization | Assistant/Site Builder/Validation/Facts/Security/QA/Docs |
+| 1101 | 2026-06-05 | TASK-407 site-builder intake registry | Assistant/Site Builder/Domain Contract/QA/Docs |
+| 1100 | 2026-06-05 | TASK-407 site-builder intake audit and siteKit context hardening | Assistant/Site Builder/Admin Client/Planning/QA |
+| 1099 | 2026-06-05 | Assistant curated media profiles | Assistant/Site Builder/Media/Public Runtime/QA/Docs |
+| 1098 | 2026-06-04 | TASK-404 full-service assistant site generation | Assistant/LLM Guide/Site Builder/Runtime/QA/Docs |
+| 1097 | 2026-06-04 | TASK-403 assistant docs and LLM Guide UX repair | Assistant/Admin UI/Docker/OpenRouter/Docs/QA |
 | 1096 | 2026-06-04 | reCAPTCHA backend configuration and eager loading | Security/Bot Protection/Admin UI/Public Forms/Widgets/QA/Docs |
 | 1095 | 2026-06-04 | DB runtime test idle timeout | Runtime Testing/Bun Server/Media/QA/Docs |
 | 1094 | 2026-06-04 | Docker startup migrations | Docker/Runtime/Database/Release/Testing/Docs |

@@ -42,7 +42,7 @@ const rankKit = (kit: SolutionKitDefinition, input: SiteBuilderPlanInput) => {
   }
 
   if (input.preferredKitId && input.preferredKitId === kit.id) {
-    score += 1;
+    score += 10;
     reasons.push("Preferred kit selected by user.");
   }
 
@@ -111,6 +111,9 @@ const buildPlanSteps = (kit: SolutionKitDefinition): SiteBuilderPlanStep[] => [
   },
 ];
 
+const cloneValue = <T>(value: T): T =>
+  value === undefined ? value : (structuredClone(value) as T);
+
 const cloneKitDefinition = (kit: SolutionKitDefinition): SolutionKitDefinition => ({
   ...kit,
   businessTypes: [...kit.businessTypes],
@@ -118,11 +121,31 @@ const cloneKitDefinition = (kit: SolutionKitDefinition): SolutionKitDefinition =
   recommendedModules: [...kit.recommendedModules],
   features: [...kit.features],
   resourceBlueprint: {
-    contentTypes: kit.resourceBlueprint.contentTypes.map((item) => ({ ...item })),
-    forms: kit.resourceBlueprint.forms.map((item) => ({ ...item })),
-    pages: kit.resourceBlueprint.pages.map((item) => ({ ...item })),
-    menus: kit.resourceBlueprint.menus.map((item) => ({ ...item })),
-    templates: kit.resourceBlueprint.templates?.map((item) => ({ ...item })) ?? [],
+    contentTypes: kit.resourceBlueprint.contentTypes.map((item) => ({
+      ...item,
+      schema: cloneValue(item.schema),
+      taxonomy: cloneValue(item.taxonomy),
+    })),
+    forms: kit.resourceBlueprint.forms.map((item) => ({
+      ...item,
+      settings: cloneValue(item.settings),
+      fields: cloneValue(item.fields),
+    })),
+    pages: kit.resourceBlueprint.pages.map((item) => ({
+      ...item,
+      data: cloneValue(item.data),
+      seo: cloneValue(item.seo),
+    })),
+    menus: kit.resourceBlueprint.menus.map((item) => ({
+      ...item,
+      items: cloneValue(item.items),
+    })),
+    templates:
+      kit.resourceBlueprint.templates?.map((item) => ({
+        ...item,
+        blocks: cloneValue(item.blocks),
+        settings: cloneValue(item.settings),
+      })) ?? [],
   },
 });
 
@@ -163,8 +186,7 @@ export function buildSiteBuilderPlan(input: SiteBuilderPlanInput): SiteBuilderPl
       return left.kitId.localeCompare(right.kitId);
     });
 
-  const selectedId: SolutionKitId =
-    ranked[0]?.kitId ?? kits[0]?.id ?? "automotive-workshop";
+  const selectedId: SolutionKitId = ranked[0]?.kitId ?? kits[0]?.id ?? "automotive-workshop";
   const selectedKit = kits.find((kit) => kit.id === selectedId) ?? kits[0];
 
   if (!selectedKit) {

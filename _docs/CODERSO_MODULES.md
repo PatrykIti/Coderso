@@ -110,11 +110,11 @@ const sections = buildDefaultNavSections({
   - deterministic kit catalog with five starter verticals,
   - planner engine (`/solution-kits/plan`) with transparent steps and settings patch preview,
   - Advanced navigation/module activation for `Solution Kits` (`Beta`) with internal RBAC route surface.
-- 054-13-05 done: AI Site Wizard guided flow delivered:
-  - `AiSiteWizard` multi-step UX (`profile -> goals -> recommendation -> review -> execute`),
-  - review-stage execution step editing (`enabledStepIds`) before apply,
-  - execute timeline with apply/dry-run/rerun/rollback/clone-as-draft actions,
-  - typed apply plan payload persisted in `run.options.wizard`.
+- 054-13-05 done: AI Site Wizard guided flow delivered, later converged by
+  TASK-407-06-L06 into the reviewed floating `LLM Guide` site-builder intake:
+  - legacy standalone `AiSiteWizard` plan/apply/rerun/rollback/clone UI retired,
+  - reviewed active intake session is now the only admin handoff to `site-kit.*`,
+  - Solution Kits remains a read-only catalog surface with an `Open LLM Guide` CTA.
 - 054-13-06 done: Solution Kits content packs and installers delivered:
   - expanded per-kit packs (content type schema+taxonomy, forms with fields, pages with SEO defaults, menus with items),
   - installer sync for nested resources (`content_terms`, `form_fields`, `seo_documents`, `menu_items`),
@@ -146,7 +146,7 @@ const sections = buildDefaultNavSections({
 - 054-30 done: Solution Kits module audit and sidebar gating delivered:
   - active solution kit can now focus the `Advanced` sidebar through derived feature flags,
   - kit module lists were audited against actual blueprint capabilities,
-  - `Solution Kits` details and AI wizard now explain required/recommended/optional module scope more clearly.
+  - `Solution Kits` details and reviewed LLM Guide entry now explain required/recommended/optional module scope more clearly.
 - 054-15 done: Plugin contract and package manifest delivered:
   - strict `CodersoPluginManifest` contract with target version aliases and normalized provides/dependencies,
   - runtime manifest validator + contribution registrar + dependency fail-fast checks,

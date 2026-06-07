@@ -57,7 +57,7 @@ const pageData = (title: string) => ({
       id: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-hero`,
       type: "hero",
       data: {
-        title,
+        headline: title,
         body: `${title} body`,
       },
     },

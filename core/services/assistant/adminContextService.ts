@@ -430,7 +430,12 @@ export const sanitizeAssistantPlanningContext = (
 ): AssistantActionContext | undefined => {
   if (!input) return undefined;
   const trustedResourceCatalog = readTrustedAssistantResourceCatalog(input);
-  const { resourceCatalog: _resourceCatalog, collectionWorkspaceHint: _hint, ...rest } = input;
+  const {
+    resourceCatalog: _resourceCatalog,
+    collectionWorkspaceHint: _hint,
+    siteKit: _siteKit,
+    ...rest
+  } = input;
   return {
     ...rest,
     ...(trustedResourceCatalog !== undefined ? { resourceCatalog: trustedResourceCatalog } : {}),

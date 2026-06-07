@@ -258,13 +258,14 @@ przez `setup.completed=true`.
   - pages/menus nie wymuszaja mount-force refetch przy istniejacym cache,
   - closure validated przez `lint + lint:types + bun test` i perf/security gates.
 
-## Assistant Doc Navigator (Phase A + A2)
+## Assistant Docs Assistant (Phase A + A2)
 
 Aktualny fundament asystenta (bez LLM) sklada sie z warstw:
-- `core/services/assistant/docsIngestService.ts` (ingest `docs/` -> DB + ingest runs)
+- `core/services/assistant/docsIngestService.ts` (ingest `docs/guide` -> DB + ingest runs)
 - `core/services/assistant/docsDbRetriever.ts` (DB-backed ranking/search)
 - `core/services/assistant/docsAnswerComposer.ts` (content-first deterministic answer templates)
 - `core/services/assistant/assistantService.ts` (DB-only assistant runtime)
+- `core/server/startupAssistantDocs.ts` (Docker/startup docs seed helper)
 
 Przeplyw runtime:
 1. `assistantService` czyta official assistant corpus status z DB ingest tables.
@@ -287,14 +288,18 @@ Przeplyw runtime:
 15. Response moze zawierac `followUpOptions[]`, ktore prowadza usera do kolejnego poziomu szczegolowosci lub trybu pomocniczego w tej samej tematyce.
 
 Przeplyw reindex:
-1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs/guide`.
-2. Wyniki ingest trafiaja do `assistant_docs`, `assistant_doc_chunks`, `assistant_doc_ingest_runs`.
-3. Reindex wykonuje tez cleanup osieroconych rekordow `assistant_docs`, gdy plik
+1. Docker startup uruchamia `runStartupAssistantDocsReindex` po migracjach i przed importem `prod`.
+2. Helper liczy fingerprint plikow markdown w `docs/guide` i porownuje go z markerem `assistant.docs.startupReindexState` dla aktualnego `CODERSO_IMAGE_VERSION` / `CORE_VERSION` / `APP_VERSION`.
+3. Gdy image/docs fingerprint jest juz oznaczony jako zakonczony, startup pomija ingest.
+4. `POST /assistant/reindex` nadal uruchamia ingest z fixed source root `docs/guide` jako support/admin recovery path.
+5. Wyniki ingest trafiaja do `assistant_docs`, `assistant_doc_chunks`, `assistant_doc_ingest_runs`.
+6. Reindex wykonuje tez cleanup osieroconych rekordow `assistant_docs`, gdy plik
    zostal usuniety z aktualnego source root i nie powinien juz pozostawac w DB-only corpus.
 
 Zasady runtime:
 - Official assistant corpus korzysta z root `docs/guide/` jako source-of-truth.
 - Seed do DB jest warunkiem gotowosci official assistant corpus.
+- Startup seed jest wlaczony domyslnie i moze byc wylaczony przez `CODERSO_ASSISTANT_DOCS_REINDEX_ON_START=false`; alternatywny root wspiera `CODERSO_ASSISTANT_DOCS_SOURCE_ROOT`.
 - Przy braku trafienia system zwraca `missing_answer` (bez halucynacji).
 
 ## Assistant LLM Guide mode + Admin UI integration (Phase B)
@@ -333,12 +338,14 @@ Warstwa Admin UI:
 - Konfiguracja globalna pozostaje w `core/admin/ui/settings/AssistantSettingsPage.tsx`; okno rozmowy nie renderuje globalnych ustawien assistant runtime.
 - `core/admin/services/assistantClient.ts` obsluguje:
   - `/assistant/status`, `/assistant/chat`, `/assistant/reindex`,
+  - `/assistant/model-metadata`,
   - `/assistant/actions/plan`, `/assistant/actions/dry-run`, `/assistant/actions/execute`.
 - Globalne ustawienia launchera (`assistant.launcher.avatarEnabled`, `assistant.launcher.avatarAsset`) sa trzymane w `settings`.
 - Legacy per-user klucze assistant UI moga nadal istniec w `user_settings`, ale nie steruja juz widocznoscia floating launchera.
 - `AssistantPanel` wspiera teraz dwa user-facing flow:
   - `Docs Assistant` dla docs-only navigation/Q&A,
   - `LLM Guide` dla setup-planning prompts prowadzacych do typed plan + dry-run + execute review.
+- Composer readiness jest mode-aware: `Docs Assistant` wymaga gotowego DB docs indexu, a `LLM Guide` wymaga dostepnego providera; brak docs indexu nie blokuje juz samego wpisywania promptu w LLM Guide.
 
 ## Assistant Action Engine (Initial LLM Guide Slice)
 
@@ -621,7 +628,12 @@ Warstwa domain:
 
 Warstwa API:
 - Site-kit flow uzywa tylko `/assistant/actions/*`.
-- `POST /assistant/actions/plan` z `context.siteKit` zwraca typed plan z `site-kit.recommend` + `site-kit.install`.
+- `POST /assistant/actions/plan` nie przyjmuje juz bezposredniego
+  `context.siteKit` z admin UI; route akceptuje reviewed
+  `context.siteBuilderIntakeState.activeSession`, a planner kompiluje go
+  wewnetrznie do typed planu z `site-kit.recommend` + `site-kit.install`.
+- Bezposrednie service-call `context.siteKit` jest defensive-gated jako
+  `needs_input`, bez executable actions.
 - `POST /assistant/actions/dry-run` previewuje `site-kit.*` akcje.
 - `POST /assistant/actions/execute` uruchamia `site-kit.install` przez istniejacy solution kit installer i moze wykonac `site-kit.validate`.
 - `site-kit.*` akcje wymagaja `llmAvailable=true`; nie moga przejsc jako docs-only fallback.
@@ -629,10 +641,15 @@ Warstwa API:
 - Wszystkie endpointy sa internal i CSRF-protected.
 
 Warstwa UI:
-- `core/admin/ui/setup/AiSiteWizard.tsx` jako orchestrator stanu/wykonania.
-- `core/admin/ui/setup/AiSiteWizardSteps.tsx` jako modularny renderer krokow.
-- Step `Plan review` pokazuje explainable action map (`step -> target -> resource`).
-- Step `Execute` pokazuje walidacje (`ok/warning/failed`) i `unresolvedItems`.
+- `core/admin/ui/assistant/AssistantPanel.tsx` jest jedynym aktywnym reviewed
+  site-builder UI dla Basic/Advanced intake, review, dry-run i execute.
+- `core/admin/ui/assistant/assistantPanelEvents.ts` pozwala admin CTA otworzyc
+  panel w trybie `llm-guide` z poczatkowym promptem.
+- `core/admin/ui/kits/SolutionKitsPage.tsx` jest read-only catalog + CTA
+  `Open LLM Guide`; legacy `AiSiteWizard` nie istnieje juz jako osobny plan/apply
+  surface.
+- Review pokazuje gates i action map, a Execute pokazuje walidacje
+  (`ok/warning/failed`) i unresolved items przez standardowy action engine.
 
 ## Terminologia
 
@@ -890,7 +907,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
 
 ## Coderso Solution Kits (v3 preview foundation)
 
-- `Solution Kits` dostarcza typed katalog starterowych verticali (5 kitow) i deterministiczny planner.
+- `Solution Kits` dostarcza typed katalog starterowych verticali (6 kitow) i deterministiczny planner.
 - Internal admin API (`/admin/api/*`):
   - `GET /solution-kits`,
   - `GET /solution-kits/:id`,
@@ -907,11 +924,14 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - wejscie: profil biznesu + cele + locale (+ opcjonalny preferred kit),
   - wyjscie: `recommendedKitId`, `confidence`, `steps[]` (`editable`, `affectsResources`), `settingsPatch`, `notes`,
   - wynik jest deterministiczny dla identycznego inputu.
-- AI wizard guided execution contract:
-  - flow: `profile -> goals -> recommendation -> review -> execute`,
-  - review pozwala ograniczyc execution do `enabledStepIds`,
-  - apply endpoint dostaje typed `plan` payload, backend filtruje `resourceBlueprint` przed install run,
-  - run metadata (`run.options.wizard`) przechowuje plan snapshot do `rerun` i `clone as draft`.
+- Reviewed LLM Guide site-builder execution contract:
+  - flow: `intake -> review -> plan -> dry-run -> execute`,
+  - reviewed active session compiles internally to strict siteKit input,
+  - dry-run/execute dostaje typed action-plan payload, backend filtruje
+    `resourceBlueprint` przed install run,
+  - legacy wizard rerun/clone/rollback controls are retired from this reviewed
+    intake UI; any future run-management surface needs a separate permission and
+    warning contract.
 - Admin navigation focus contract:
   - selected kit moze byc persistowany client-side jako active admin preference,
   - `AdminShell` wyprowadza z niego `AdvancedFeatureFlags`,

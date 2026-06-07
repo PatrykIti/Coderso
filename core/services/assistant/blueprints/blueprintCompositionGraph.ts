@@ -57,9 +57,9 @@ export const buildBlueprintCompositionGraph = (input: {
             throw new Error("assistant_blueprint_registry_missing");
           }
           const planIntentFamily =
-            input.intentFamily === "unknown"
-              ? (registration.primaryIntentFamilies[0] ?? "unknown")
-              : input.intentFamily;
+            registration.primaryIntentFamilies[0] ??
+            node.capability.family ??
+            (input.intentFamily === "unknown" ? "unknown" : input.intentFamily);
           const plan = registration.buildPlan({
             promptKind: input.promptKind,
             intentFamily: planIntentFamily,

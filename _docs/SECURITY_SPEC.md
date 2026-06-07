@@ -413,7 +413,9 @@ Rotacja klucza:
 - RBAC:
   - `plan` / `dry-run`: `settings:read` + `content:read`
   - `execute`: `settings:write` + `content:write` + `content:publish`
-  - `site-kit.*` actions additionally require `solution-kits:read` for planning/dry-run and `solution-kits:write` for execution
+  - reviewed site-builder intake planning and `site-kit.*` dry-run additionally
+    require `solution-kits:read`; `site-kit.*` execution additionally requires
+    `solution-kits:write`
   - `site-kit.*` actions require `llmAvailable=true`; they must not run as docs-only fallback
 - CSRF:
   - wszystkie action endpoints wymagaja `X-CSRF-Token`

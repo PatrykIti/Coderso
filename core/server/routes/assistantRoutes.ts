@@ -5,7 +5,11 @@ import {
   reindexAssistantDocs,
   type AssistantChatInput,
 } from "../../services/assistant/assistantService";
-import { assistantChatSchema, assistantReindexSchema } from "../validation/assistantSchemas";
+import {
+  assistantChatSchema,
+  assistantModelMetadataSchema,
+  assistantReindexSchema,
+} from "../validation/assistantSchemas";
 import {
   assistantActionDryRunRequestSchema,
   assistantActionExecuteRequestSchema,
@@ -30,6 +34,8 @@ import {
   isAssistantKnownActionContractType,
 } from "../../services/assistant/actionFamilyContracts";
 import { getUserPermissions } from "../../services/auth/roleService";
+import { resolveAssistantModelMetadata } from "../../services/assistant/providers";
+import type { AssistantLlmProvider } from "../../services/settings/settingsService";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -50,6 +56,7 @@ type AssistantRouteService = {
   getStatus: typeof getAssistantStatus;
   reindex: typeof reindexAssistantDocs;
   chat: typeof answerAssistantQuestion;
+  getModelMetadata: typeof resolveAssistantModelMetadata;
   planActions: (
     input: AssistantActionPlanInput
   ) => AssistantActionPlan | Promise<AssistantActionPlan>;
@@ -92,6 +99,7 @@ const defaultService: AssistantRouteService = {
   getStatus: getAssistantStatus,
   reindex: reindexAssistantDocs,
   chat: answerAssistantQuestion,
+  getModelMetadata: resolveAssistantModelMetadata,
   planActions: async (input) => {
     const provider = await resolveProviderForActionPlanning();
     return planAssistantActionsWithProviderDraft({
@@ -293,6 +301,15 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const hasSiteKitContext = (value: unknown) => isRecord(value) && isRecord(value.siteKit);
 
+const hasSiteBuilderIntakeContext = (value: unknown) => {
+  if (!isRecord(value) || !isRecord(value.siteBuilderIntakeState)) return false;
+  const state = value.siteBuilderIntakeState;
+  return isRecord(state.activeSession) || typeof state.requestedMode === "string";
+};
+
+const hasSiteBuilderPlanningContext = (value: unknown) =>
+  hasSiteKitContext(value) || hasSiteBuilderIntakeContext(value);
+
 const activeSurfaceKind = (value: unknown) => {
   if (!isRecord(value) || !isRecord(value.activeSurface)) return null;
   const kind = value.activeSurface.kind;
@@ -373,6 +390,20 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
     });
   });
 
+  router.post("/assistant/model-metadata", requirePermission("settings:read"), async (ctx) => {
+    validate(assistantModelMetadataSchema, ctx.body ?? {});
+    const body = ctx.body as {
+      provider: AssistantLlmProvider;
+      model: string;
+    };
+    return withAssistantErrors(ctx.requestId, async () =>
+      service.getModelMetadata({
+        provider: body.provider,
+        model: body.model,
+      })
+    );
+  });
+
   router.post("/assistant/chat", requirePermission("settings:read"), async (ctx) => {
     validate(assistantChatSchema, ctx.body ?? {});
     const body = ctx.body as AssistantChatInput;
@@ -399,7 +430,7 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         context?: AssistantActionContext;
       };
       const includeResourceCatalog = body.context?.includeResourceCatalog === true;
-      if (hasSiteKitContext(body.context)) {
+      if (hasSiteBuilderPlanningContext(body.context)) {
         await requirePermission("solution-kits:read")(ctx);
       }
       const surfaceKind = activeSurfaceKind(body.context);
@@ -414,7 +445,7 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         await requirePermission("widgets:read")(ctx);
       }
       return withAssistantErrors(ctx.requestId, async () => {
-        if (hasSiteKitContext(body.context)) {
+        if (hasSiteBuilderPlanningContext(body.context)) {
           await ensureLlmGuideAvailable();
         }
         const contextWithCatalog: AssistantActionContext | undefined = includeResourceCatalog

@@ -1,6 +1,9 @@
 import { expect, test } from "vitest";
 
-import { createOpenRouterProvider } from "../../../core/services/assistant/providers/openRouterProvider";
+import {
+  createOpenRouterProvider,
+  parseOpenRouterModelMetadata,
+} from "../../../core/services/assistant/providers/openRouterProvider";
 
 test("createOpenRouterProvider maps request and response", async () => {
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -71,6 +74,95 @@ test("createOpenRouterProvider maps request and response", async () => {
   expect(requestBody.messages[1]?.content).toContain(
     "docs/guide/coderso/widget-template-editor.md"
   );
+});
+
+test("parseOpenRouterModelMetadata reads context and output limits from models API", () => {
+  const metadata = parseOpenRouterModelMetadata(
+    {
+      data: [
+        {
+          id: "anthropic/claude-sonnet-4.5",
+          context_length: 200000,
+          supported_parameters: ["tools", "max_tokens", "response_format"],
+          top_provider: {
+            context_length: 180000,
+            max_completion_tokens: 64000,
+          },
+        },
+      ],
+    },
+    "anthropic/claude-sonnet-4.5"
+  );
+
+  expect(metadata).toEqual({
+    model: "anthropic/claude-sonnet-4.5",
+    maxInputTokens: 180000,
+    maxOutputTokens: 64000,
+    supportedParameters: ["max_tokens", "response_format", "tools"],
+    source: "provider",
+  });
+});
+
+test("parseOpenRouterModelMetadata returns safe low defaults when limits are missing", () => {
+  const metadata = parseOpenRouterModelMetadata(
+    {
+      data: [
+        {
+          id: "unknown/provider-model",
+          supported_parameters: ["max_tokens"],
+          top_provider: null,
+        },
+      ],
+    },
+    "unknown/provider-model"
+  );
+
+  expect(metadata).toEqual({
+    model: "unknown/provider-model",
+    maxInputTokens: 4096,
+    maxOutputTokens: 1024,
+    supportedParameters: [],
+    source: "default",
+  });
+});
+
+test("createOpenRouterProvider fetches model metadata with backend API key", async () => {
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const fetchMock: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return new Response(
+      JSON.stringify({
+        data: [
+          {
+            id: "openai/gpt-5.4-nano",
+            context_length: 128000,
+            supported_parameters: ["max_tokens"],
+            top_provider: {
+              context_length: 128000,
+              max_completion_tokens: 8192,
+            },
+          },
+        ],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  };
+
+  const provider = createOpenRouterProvider({
+    apiKey: "sk-or-v1-test",
+    model: "openai/gpt-5.4-nano",
+    fetchImpl: fetchMock,
+    retryCount: 0,
+  });
+
+  await expect(provider.getModelMetadata?.()).resolves.toMatchObject({
+    maxInputTokens: 128000,
+    maxOutputTokens: 8192,
+    source: "provider",
+  });
+
+  expect(String(calls[0]?.input)).toContain("/models");
+  expect(new Headers(calls[0]?.init?.headers).get("Authorization")).toBe("Bearer sk-or-v1-test");
 });
 
 test("createOpenRouterProvider sends raw user message for planning calls without snippets", async () => {

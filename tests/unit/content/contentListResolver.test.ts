@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import {
+  mapListingRowsToContentListItems,
   mapEntriesToContentListItems,
   resolveContentListRuntimeData,
   resolveContentListRuntimeNavigationMeta,
@@ -97,6 +98,119 @@ test("mapEntriesToContentListItems still resolves media ids after helper extract
 
   expect(item?.imageSrc).toBe("/media/card.jpg");
   expect(item?.imageAlt).toBe("Card alt");
+});
+
+test("mapListingRowsToContentListItems resolves curated cover image urls from listing bindings", async () => {
+  const [item] = await mapListingRowsToContentListItems(
+    [
+      {
+        id: "entry-1",
+        title: "Portfolio entry",
+        slug: "portfolio-entry",
+        data: {
+          summary: "Entry summary",
+          coverImageUrl:
+            "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&w=1400&q=80",
+          coverImageAlt: "Apartment interior with built-in storage",
+        },
+      },
+    ],
+    {
+      detailPathPattern: "/portfolio/:slug",
+      showImage: true,
+      template: {
+        id: "template-1",
+        name: "Portfolio Grid",
+        slug: "portfolio-grid",
+        description: null,
+        layout: "grid",
+        config: {
+          fields: [
+            {
+              key: "image",
+              source: "data.coverImageUrl",
+              label: "Image",
+              fallback: null,
+              format: "text",
+              conditions: [],
+            },
+          ],
+          itemActions: [],
+          emptyState: {
+            title: "No entries",
+            description: null,
+            ctaLabel: null,
+            ctaHref: null,
+          },
+          style: {
+            columns: 3,
+            gap: "md",
+            cardVariant: "default",
+          },
+        },
+        createdAt: new Date("2026-02-21T10:00:00.000Z"),
+        updatedAt: new Date("2026-02-21T10:00:00.000Z"),
+      },
+    }
+  );
+
+  expect(item?.imageSrc).toBe(
+    "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&w=1400&q=80"
+  );
+  expect(item?.imageAlt).toBe("Apartment interior with built-in storage");
+});
+
+test("mapListingRowsToContentListItems falls back to curated cover image urls without a template image field", async () => {
+  const [item] = await mapListingRowsToContentListItems(
+    [
+      {
+        id: "entry-1",
+        title: "Portfolio entry",
+        slug: "portfolio-entry",
+        data: {
+          summary: "Entry summary",
+          coverImageUrl:
+            "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&w=1400&q=80",
+          coverImageAlt: "Apartment interior with built-in storage",
+        },
+      },
+    ],
+    {
+      detailPathPattern: "/portfolio/:slug",
+      showImage: true,
+      template: null,
+    }
+  );
+
+  expect(item?.imageSrc).toBe(
+    "https://images.unsplash.com/photo-1604014237800-1c9102c219da?auto=format&fit=crop&w=1400&q=80"
+  );
+  expect(item?.imageAlt).toBe("Apartment interior with built-in storage");
+});
+
+test("mapListingRowsToContentListItems ignores untrusted cover image urls", async () => {
+  const [item] = await mapListingRowsToContentListItems(
+    [
+      {
+        id: "entry-1",
+        title: "Portfolio entry",
+        slug: "portfolio-entry",
+        data: {
+          summary: "Entry summary",
+          coverImageUrl: "https://example.com/untrusted.jpg",
+          coverImageAlt: "Untrusted external image",
+        },
+      },
+    ],
+    {
+      detailPathPattern: "/portfolio/:slug",
+      showImage: true,
+      template: null,
+    }
+  );
+
+  expect(item?.imageSrc).toBeUndefined();
+  expect(item?.imageAlt).toBeUndefined();
 });
 
 test("resolveContentListRuntimeNavigationMeta preserves query state for shared listing pages", () => {

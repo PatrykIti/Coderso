@@ -26,6 +26,25 @@ const editorialKeywords = [
   "aktualności",
 ];
 
+const servicesDirectoryKeywords = [
+  "oferta",
+  "usluga",
+  "uslugi",
+  "usługi",
+  "uslug",
+  "usług",
+  "services",
+  "service",
+  "projekt domu",
+  "projekt wnetrz",
+  "projekt wnętrz",
+  "nadzor autorski",
+  "nadzór autorski",
+  "projekt koncepcyjny",
+  "obiekty komercyjne",
+  "commercial",
+];
+
 const bookingKeywords = ["booking", "appointment", "calendar", "rezerwacja", "rezerwacje"];
 
 const checkoutKeywords = [
@@ -185,6 +204,7 @@ export const extractBlueprintPromptSignals = (input: {
       (includesAny(normalizedPrompt, ["product", "produkt", "products", "produkty"]) &&
         includesAny(normalizedPrompt, ["inquiry", "zapyt", "quote", "kontakt"])),
     wantsEditorialHub: includesAny(normalizedPrompt, editorialKeywords),
+    wantsServicesDirectory: includesAny(normalizedPrompt, servicesDirectoryKeywords),
     wantsBooking: includesAny(normalizedPrompt, bookingKeywords),
     wantsCheckout: includesAny(normalizedPrompt, checkoutKeywords),
     wantsMedia: includesAny(normalizedPrompt, mediaKeywords),

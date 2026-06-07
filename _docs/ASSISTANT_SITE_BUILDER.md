@@ -12,6 +12,33 @@ It now runs through the same `LLM Guide` action engine as the floating assistant
 
 `prompt -> typed plan -> dry-run -> execute`
 
+The admin site-builder intake UI owns its local progress through
+`assistantSiteBuilderIntakeUiState.ts`. That reducer is deliberately client-only:
+submitted-answer acknowledgements from the server are authoritative, background
+revalidation preserves the dirty marker for the current unsaved step, stale cache
+is discarded, and restored state contains only the bounded redacted browser
+snapshot. The reducer gates `review -> plan -> dry-run -> execute` transitions
+before the existing action engine receives a handoff. It does not add a parallel
+route payload or persist raw answers, provider text, provider keys, signed URLs,
+upload bytes, cookies, or auth material in browser storage.
+
+The reviewed intake handoff is version-bound. The server derives a deterministic
+review hash from the normalized non-review answers, the UI must echo that hash
+when the user confirms the final review, and any later answer change marks the
+confirmation stale. The final review summary covers pages, menu/footer, hero,
+homepage sections, subpages, content engines, beginner custom screens, media
+policy, SEO defaults, lead capture, and visible gates. The backend reuses the
+same review-summary gate contract before compiling the session to `siteKit`, so
+blocking review gates cannot be bypassed by crafting a direct plan request.
+Only after that reviewed handoff returns a strict `site_kit` action plan can the
+normal dry-run and execute controls appear.
+
+The current reviewed intake surface lives in the floating `LLM Guide` stepper.
+TASK-407-06-L06 retired the older `AiSiteWizard` manual siteKit wizard, so the
+admin UI no longer exposes a parallel plan/apply/rerun/clone/rollback handoff.
+Solution Kits remains a read-only catalog surface with a CTA that opens the
+reviewed `LLM Guide` site-builder intake.
+
 The floating `LLM Guide` also supports reviewed resource operations for existing
 admin resources through the same action engine. Those edits/deletes must resolve
 targets from active context or server-side catalogs, preview conflicts before
@@ -57,10 +84,26 @@ Current implemented guide blueprint:
   - public hub page
   - posts-feed widget
   - no post mutations
+- full-service architecture studio site pack:
+  - seven public pages: `/`, `/uslugi`, `/portfolio`, `/o-nas`, `/proces`,
+    `/referencje`, `/kontakt`
+  - services and portfolio catalogs with route-linked detail templates
+  - six published sample entries
+  - primary and footer navigation
+  - lead-capture form and page SEO
+  - launch readiness metadata with curated media profile references; arbitrary
+    media upload/import remains gated
 - site-kit guide actions:
   - `site-kit.recommend`
   - `site-kit.install`
   - `site-kit.validate`
+- reviewed single-business service intake defaults to `local-service-business`
+  unless the prompt/facts explicitly describe a searchable directory,
+  marketplace, aggregator, or provider-listing product; `services-directory`
+  remains reserved for that aggregator-like shape.
+- reviewed site-kit plans attach launch-readiness metadata derived from the
+  selected kit's static pages, content models, primary/footer menus, and SEO
+  coverage so the admin review UI can explain readiness before dry-run/execute.
 - solution-kit refinements:
   - gated until LLM Guide has server-derived installed-kit resource context
 - creates:
@@ -75,10 +118,20 @@ Current implemented guide blueprint:
   - mixed setup prompts can now be analyzed into primary + adjunct capability candidates inside the foundation layer
   - composed graph/assembler helpers still reuse the current strict typed action families; no parallel blueprint executor was introduced
   - supported mixed-capability and primary-plus-gated setup prompts now route through the composed planner path; single-pack setup/refinement still uses the existing legacy pack builders outside this bounded mixed-setup cutover
+  - architecture-studio/service prompts that mention portfolio, offer/services,
+    and contact now route to a composed scaffold of `portfolio-projects`,
+    `services-directory`, and `lead-capture-site` instead of collapsing to the
+    house-projects catalog; each composed fragment builds from its own intent
+    family so adjunct catalogs do not inherit the primary catalog preset
   - compatible `content-type.upsert` fragments now merge server-side through `blueprintSchemaMerger.ts` plus the existing content schema validator, so additive field/enum extensions stay in one strict action instead of surfacing as duplicate-resource drift
   - compatible listing facet/card fragments now merge through schema-backed listing owners, and the assembler widens `listing-query.upsert.fields` automatically so merged filters/card bindings keep the runtime projection fields they need
   - assistant-facing page section aliases and merge slots now resolve through a deterministic library over the current page-builder widget registry and alias-specific `modulePackMatrix` helper mappings; unsupported aliases stay gated instead of inventing a second section catalog
-  - page section seed data still normalizes through the widget owner, but raw media URLs stay gated until the assistant has trusted media-library ids rather than arbitrary external/upload payloads
+  - page section seed data still normalizes through the widget owner; arbitrary
+    raw media URLs stay gated until the assistant has trusted media-library ids
+    rather than provider/user external-upload payloads. Site-builder blueprints
+    may use the shared backend-owned curated media profile adapter to attach
+    license-documented public media URLs in explicit non-media fields and page
+    blocks. The architecture-studio set is only the first profile.
   - blueprint graph conflicts now include media missing/ambiguous/upload/delete
     gates plus manifest permission gaps, so media and privileged boundaries
     return `needs_input`/`gated` before executable action assembly instead of
@@ -115,6 +168,19 @@ Current capability limits:
 - `docs-only` answers are read-only and never return executable action plans.
 - `LLM Guide` can plan, dry-run, and execute only the strict typed actions
   listed in `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`.
+- Full-service architecture-studio prompts route to the
+  `service-business-full-site` capability and emit a reviewed 49-action plan
+  for pages, catalogs, route-linked detail templates, published samples,
+  primary/footer navigation, lead capture, SEO, and launch readiness. E2E
+  acceptance still must verify public runtime pages, listings, detail routes,
+  SEO basics, and mobile/desktop layout after execution.
+- Raw media upload/import/generation is not part of full-service execution yet.
+  Site-builder plans can satisfy media readiness only through backend-owned
+  curated media profiles with license-documented URLs stored in explicit string
+  fields and page blocks. `xFieldType: "media"` fields such as `heroImage` and
+  `gallery` remain media-library asset IDs. The profile contract can describe
+  future media kinds, but current executable readiness covers curated images
+  only; video remains gated until its renderer and validation contract ship.
 - Booking resources, checkout/payment setup, webhook automation, nested page
   widget patches, and installed solution-kit refinements remain gated until
   their adapters, permissions, and hardening are explicit.
@@ -147,7 +213,9 @@ permissions, idempotency, and conflict-aware execution.
   contract; provider credentials are configured through Settings -> Integrations.
 - The floating assistant persists bounded browser-local conversation state so
   safe transcript, active plan context, and planning-state hints survive closing
-  the window and SPA route transitions.
+  the window and SPA route transitions. The cache rejects stale, oversized, or
+  unknown-key payloads, redacts prompt-poisoning phrases and signed URLs, and
+  drops secret-like text before writing to localStorage.
 
 ## Runtime Contract
 
@@ -214,7 +282,8 @@ RBAC:
   - `settings:read` + `content:read`: `plan`, `dry-run`
   - `settings:write` + `content:write` + `content:publish`: `execute`
 - additional site-kit permissions:
-  - `solution-kits:read` when planning or dry-running `site-kit.*` actions
+  - `solution-kits:read` when planning reviewed site-builder intake or
+    dry-running `site-kit.*` actions
   - `solution-kits:write` when executing `site-kit.*` actions
 - site-kit actions require `LLM Guide` availability (`llmAvailable=true`) and
   must not run as docs-only fallback
@@ -234,15 +303,436 @@ Security:
 ## Admin UI
 
 Primary UI:
-- `core/admin/ui/setup/AiSiteWizard.tsx` (state/orchestration)
-- `core/admin/ui/setup/AiSiteWizardSteps.tsx` (step rendering)
+- `core/admin/ui/assistant/AssistantPanel.tsx` renders the floating `LLM Guide`
+  stepper and review/dry-run/execute controls.
+- `core/admin/ui/assistant/assistantPanelEvents.ts` exposes the typed event used
+  by admin CTAs to open the panel in `llm-guide` mode.
+- `core/admin/ui/kits/SolutionKitsPage.tsx` keeps kit details read-only and
+  offers `Open LLM Guide` instead of a direct manual wizard.
 
-Wizard stages:
-1. Business profile
-2. Goals
-3. Recommendation
-4. Plan review (step toggles + explainable action map)
-5. Execute (apply/dry-run + validation checks + unresolved list)
+The retired legacy wizard files are intentionally absent:
+- `core/admin/ui/setup/AiSiteWizard.tsx`
+- `core/admin/ui/setup/AiSiteWizardSteps.tsx`
+- `core/admin/ui/setup/aiSiteWizardValidation.ts`
+
+Reviewed stages:
+1. Intake answers in Basic or Advanced mode
+2. Review summary with gates
+3. Strict action-plan assembly from a reviewed active session
+4. Dry-run preview
+5. Execute with validation evidence
+
+## Guided Intake Vocabulary
+
+TASK-407 adds a shared service-owned intake vocabulary before UI-specific Basic
+or Advanced flows are rendered. The source of truth is:
+
+- `core/services/assistant/assistantSiteBuilderIntakeTypes.ts`
+- `core/services/assistant/assistantSiteBuilderIntakeRegistry.ts`
+
+Modes:
+- `basic` is the guided default for non-technical users. It can ask simple
+  questions and choose safe defaults for page roles, sections, menu, hero, and
+  media policy.
+- `advanced` uses the same session contract but exposes additional controlled
+  choices for content-engine, design-preset, and reference-intake decisions.
+
+Canonical step ids:
+- `business-profile`
+- `site-goals`
+- `site-map`
+- `menu`
+- `hero`
+- `homepage-sections`
+- `subpages`
+- `media-policy`
+- `content-engine`
+- `design-preset`
+- `reference-intake`
+- `review`
+
+The canonical registry is intentionally generic. Page and section registries use
+roles such as services, products, portfolio, blog, team, locations, FAQ, proof,
+process, lead capture, and content feed instead of hardcoded industries. Later
+normalizers and adapters map user answers and business context onto these roles,
+then compile the reviewed result into the backend-owned strict siteKit input.
+
+Media intake is policy-based:
+- `curated` allows backend-owned curated media profiles with documented public
+  image licenses.
+- `library` uses only existing media-library assets.
+- `placeholder` creates reviewable media slots without external media.
+
+Advanced design presets are also backend-owned. The `designPresets` option
+registry exposes `modern`, `editorial`, `retro`, `minimal`, `bold`, `luxury`,
+and `utilitarian`; each maps to supported tone, contrast, density, typography,
+image-treatment, spacing, corner-radius, accent, and section-role facts in
+`assistantSiteBuilderIntakeDesignPresets.ts`. Advanced `design-preset` answers
+may choose only one registry id plus bounded plain-language notes; notes are
+accepted only when tied to a selected backend preset. Unknown ids, remote URLs,
+HTML/CSS/script fragments, admin/action ids, and executable style directives
+fail closed before review. Preset facts include review-only `themeTokenHints`
+that pass the existing `DesignTokenOverrides` key contract, but current preset
+facts intentionally carry the `theme-application-pending` gap until later leaves
+apply those hints through the reviewed SiteKit/action adapter.
+
+Advanced layout options are backend-owned in
+`assistantSiteBuilderIntakeAdvancedOptions.ts`. The `advancedMenuBehaviors`,
+`advancedHeroVariants`, and `advancedSectionVariants` registries expose only
+stable ids for existing Navigation, Hero, Form, Listings, Engagement, and CTA
+widget capabilities. Advanced menu choices resolve to Navigation widget facts
+such as `sticky`, `collapseOnScroll`, `transparent`, `mobileMode`, reviewed menu
+structure, and a CTA target page role; arbitrary CTA hrefs are rejected. Advanced hero choices
+resolve to current Hero widget variants (`centered`, `split`, `media-left`,
+`media-center`). Advanced section choices resolve to existing widget variants
+backed by `modulePackMatrix.assistantPageSections`; mismatched section roles,
+design-preset support gaps, or conflicting menu choices become review gates
+instead of invented widgets, CSS, layout code, or arbitrary executor actions.
+After review, supported registry-derived runtime choices compile into optional
+`advancedRuntimeOverrides` on the internal `AssistantSiteKitPlanInput`: menu CTA
+role, existing Navigation widget behavior, Hero widget variant, and backed
+section widget variants. Raw `advancedLayout`, design/reference text, gates,
+diagnostics, URLs, CSS, and prompt material remain review metadata.
+
+When a widget or CMS capability changes, the assistant must be resynchronized
+through the typed owner rather than prompt inference. Backward-compatible widget
+defaults can be absorbed when existing generated blocks still pass
+`normalizeWidgetBlock`, but new variants, modes, layout behavior, CTA/media
+settings, content engines, custom screens, or solution-kit starter capabilities
+require explicit backend-owned registry/mapping updates, strict action-schema
+coverage, and targeted regressions. Shared ids used by runtime, admin editors,
+and assistant schemas must have one owner; Navigation variant/mobile-mode ids in
+`navigationContract.ts` are the reference pattern. User-facing workflow/docs
+changes must also update `docs/guide` and reindex the assistant corpus before
+the product assistant can answer from those docs. Developer details and the full
+checklist live in `docs/develop/assistant.md#keeping-assistant-capabilities-in-sync`.
+
+Advanced reference intake is bounded by
+`assistantSiteBuilderIntakeReferencePolicy.ts`. Session answers may carry
+plain-language `referenceNotes`, `textBrief`, existing `mediaAssetIds`, and
+temporary reference ids; arbitrary `remoteUrls` are not accepted as session
+answers and are converted to explicit gates only inside the backend reference
+policy. Candidate media/temp ids stay answer-local until they are validated by
+`normalizeSafeReferenceInput` with injected deps; they are not promoted into
+provider facts by the synchronous session normalizer. Existing media-library
+ids must be resolved through injected readable media deps before use. Temporary
+references influence design evidence only when they are scanned, supported by
+type, size-bounded, and converted to safe digests. Filenames, EXIF/metadata, OCR
+text, alt text, extracted text, signed URLs, cookies, and token-like values are
+redacted before facts or provider context. Provider context never includes raw
+reference material, bytes, raw metadata, signed URLs, or raw reference ids; it
+exposes only redacted text-reference presence, a stable digest, and
+`rawIncluded:false`.
+
+Reviewed reference design briefs are owned by
+`assistantSiteBuilderIntakeReferenceBrief.ts`. A sanitized `SafeReferenceInput`
+can produce only enumerated color, layout, density, typography, and
+image-treatment hints plus redacted warning/gate metadata. The brief source is
+represented by a digest-only fingerprint that excludes raw reference ids,
+filenames, OCR/extracted text, metadata, and URLs. Reference brief facts are not
+merged into `AssistantSiteBuilderIntakeFacts` until
+`mergeReviewedReferenceDesignBrief` receives explicit confirmation; otherwise a
+`reference_review_required` gate is returned. Provider context receives only the
+reviewed enum ids, warning/gate codes, source digest, and `rawIncluded:false`;
+reference briefs never emit executable actions, media imports, CSS, RBAC/CSRF
+changes, or review-bypass instructions.
+
+Unknown mode, step, option-registry, or option ids must fail closed through the
+service-owned registry helpers before route validation, provider planning, or
+execution.
+
+Basic planner progression is owned by
+`core/services/assistant/assistantSiteBuilderIntakeBasicFlow.ts`. Broad
+full-site setup prompts such as "website for ..." or "strona dla ..." enter
+Basic mode as a typed `needs_input` plan before provider drafting or executable
+action assembly. The response carries `metadata.siteBuilderIntake` with the
+schema version, mode, status, current/next step ids, visible step ids, answered
+step ids, missing required step ids, readiness flags, and per-step labels plus
+registry-owned `answerFields`. Answer fields include accepted keys, control
+types, required flags/groups, bounds, option registry ids, and concrete option
+values for select controls, including required `business-profile.locale`.
+Basic required steps are `business-profile`, `site-goals`, `site-map`, `menu`,
+`hero`, `homepage-sections`, `media-policy`, and `review`; `subpages` stays
+visible but optional. Direct route payloads with `context.siteKit` are rejected
+by schema, and direct service calls with `context.siteKit` return a gated
+`needs_input` plan. A reviewed `siteBuilderIntakeState.activeSession` is the
+only admin route handoff that can compile to `site-kit.*` actions. Backend-only
+planner state can also carry requested Basic/Advanced mode and active intake
+session state; this is not a route-owned `context.siteBuilderIntake` payload.
+
+The Basic admin controls render in the existing floating LLM Guide review path
+from those server-owned step fields. Each save sends one normalized answer
+through `/assistant/actions/plan` with `context.siteBuilderIntakeState.activeSession`;
+the browser strips derived facts from the request session and does not persist
+raw answers in assistant conversation localStorage. Restored plans that no
+longer have in-memory answer state show a restart message rather than silently
+continuing from incomplete data. Revalidation that updates unrelated server
+state must not wipe the current unsaved form draft; a submitted-step
+acknowledgement may replace the draft with the normalized server answer.
+
+Advanced planner progression is owned by
+`core/services/assistant/assistantSiteBuilderIntakeAdvancedFlow.ts`. It uses the
+same session schema and `/assistant/actions/plan` route as Basic, but starts
+only from explicit backend-only planner state such as `requestedMode:
+"advanced"` or an active session with `mode: "advanced"`. Basic remains the
+default for broad nontechnical full-site prompts.
+
+Advanced admin controls reuse the same server-owned `answerFields` metadata and
+show the additional controlled menu behavior, CTA target, hero variant, section
+variant, content-engine, design-preset, and reference-intake steps. Switching
+from Basic to Advanced requires an explicit confirmation in the UI. Step chips
+are selectable so optional Advanced steps can be reviewed without inventing a
+free-form prompt surface. The request session remains stripped to
+`version/mode/currentStepId/answers`; derived facts, raw reference material,
+provider text, secrets, signed URLs, and upload bytes are not persisted or sent
+from browser cache.
+
+Basic site-map defaults are advisory facts owned by
+`core/services/assistant/assistantSiteBuilderIntakeBasicDefaults.ts`. They
+provide deterministic beginner-friendly suggestions for page roles, stable
+role-derived routes, simple/grouped menu items, and homepage section roles while
+the required Basic answers still come from normalized user input. Default page
+roles are generic (`home`, `services`, `portfolio`, `testimonials`, `about`,
+`faq`, `contact`) and section suggestions are keyed by broad goals such as
+booking, sales, portfolio/work, content, and trust rather than specific
+industries. Custom labels are accepted only as bounded display hints keyed by
+page role; they cannot change paths, action ids, or route targets and unsafe
+URL/script/admin/action-like or secret-like strings fail closed.
+
+Basic review facts are owned by
+`core/services/assistant/assistantSiteBuilderIntakeBasicReview.ts`. The helper
+turns completed Basic facts into review-only pages, menu items, supported
+homepage widget candidates, content-engine candidates, contact path, media
+policy, gates, and a bounded redacted summary. Widget support resolves through
+`modulePackMatrix` `assistantPageSections`; unsupported section roles become
+`widget_alias_unsupported` gates instead of invented widgets. Content-engine
+decisions resolve through `assistantSiteBuilderIntakeContentEngines.ts` for
+explicit choices, page roles, section roles, and bounded text signals. Supported
+engines are services, products, portfolio/projects, case studies,
+posts/editorial, team, locations, FAQ, and testimonials/proof; static-only page
+roles stay static, text-only signals create scope questions, and unsupported
+event/jobs/course-like engines become gates instead of arbitrary schemas or
+plugins. Media-library needs remain advisory gates until later adapters choose
+existing media-library ids. Review facts require Basic review readiness plus
+required non-review steps, Basic defaults, hero, and media policy; incomplete
+facts fail closed. `featured-items` stays a generic `content-list` widget
+candidate and does not imply a portfolio content engine unless the page roles
+include portfolio.
+
+Answer normalization and fact derivation are service-owned:
+- `core/services/assistant/assistantSiteBuilderIntakeErrors.ts`
+- `core/services/assistant/assistantSiteBuilderIntakeNormalizer.ts`
+- `core/services/assistant/assistantSiteBuilderIntakeFacts.ts`
+
+The UI can submit structured answers, but it cannot author trusted facts. A
+normalized session derives facts from answers every time, ignores client-supplied
+`facts` as a source of truth, and rejects unknown answer keys before planner or
+provider handoff. User text is bounded content data only: prompt-injection-like
+phrases can remain as sanitized copy context, while secret-like values and
+provider tokens are redacted from normalized answers and derived facts.
+
+Review readiness is split deliberately:
+- `readyForReview` means required non-review answers are present and the user
+  can inspect the generated summary.
+- `readyForExecution` additionally requires the review answer to include
+  `confirmed: true`; a client-supplied `reviewState: "confirmed"` alone is not
+  enough.
+
+Reviewed intake handoff is compiled by
+`core/services/assistant/assistantSiteBuilderIntakeCompiler.ts`. The compiler
+normalizes the active session, verifies explicit review confirmation, and builds
+an internal strict siteKit handoff:
+
+```ts
+{
+  prompt: "...",
+  context: {
+    siteKit: AssistantSiteKitPlanInput
+  }
+}
+```
+
+The HTTP route accepts only the stripped
+`context.siteBuilderIntakeState.activeSession` shape and no public/admin
+`context.siteKit` field. The compiled `AssistantSiteKitPlanInput` remains
+schema-exact inside the planner:
+`businessType`, `goals`, `locale`, optional `region`, `siteName`,
+`preferredKitId`, `selectedKitId`, `enabledStepIds`, and optional
+`advancedRuntimeOverrides` when reviewed Advanced choices map to existing
+runtime surfaces. Review-only facts such as page roles, section roles, media
+policy, content engines, raw design/reference facts, raw advanced layout,
+reference design brief, references, gates, diagnostics, URLs, CSS, and prompt
+text stay out of `context.siteKit` and remain compiler/review metadata.
+`reviewFacts.contentEngineDecisions` is part of that metadata. Unsupported
+content-engine gates block reviewed action-plan handoff before a `siteKit`
+request is created.
+
+`reviewFacts.customScreenDecisions` is also metadata-only. It is resolved by
+`assistantSiteBuilderIntakeCustomScreens.ts` from supported content-engine
+decisions and declares beginner editing surfaces that later action leaves may
+turn into `custom-screen.upsert` actions. Candidates are backend-owned internal
+admin surfaces with exact `/admin/advanced/custom-screens/{screenKey}/entries`
+paths, canonical collection roles, `editor-view` create/row-click behavior, and
+the existing `content:read` plus `content:write` permission pair. User text,
+provider output, references, and Basic/Advanced answers cannot introduce custom
+routes, permissions, write methods, plugins, runtime extensions, or public write
+endpoints; backend route or permission drift becomes a blocking custom-screen
+gate before action-plan handoff.
+
+Follow-up target scoping for guided site-builder work lives in
+`assistantSiteBuilderFollowUpResolver.ts`. The user prompt becomes only a
+target/change hint; the resolver builds or accepts a strict CMS operation draft,
+then resolves the actual target through the existing active admin surface and
+server-derived resource catalog path in `cmsTargetResolver.ts`. Exact matches
+return a scoped refinement kind (`static-page`, `content-engine`, `listing`,
+`detail-page`, or `custom-screen`), ambiguous matches return `needs_input`, and
+stale, spoofed, non-site-builder, or unsupported targets return `needs_input`
+or `gated` without exposing raw prompt text.
+`actionPlannerService.ts` must call this resolver before the generic CMS action
+mapper for guided follow-up mutations. `needs_input` and `gated` resolutions do
+not fall through to executable action assembly. A beginner setup-like prompt on
+an already active generated page, such as asking to add a projects/gallery
+section, is treated as an existing-site follow-up target question instead of a
+new blank setup when the server has supplied the trusted resource catalog.
+
+Static site-shell coverage for reviewed siteKit handoff is checked by
+`assistantSiteBuilderIntakeStaticActions.ts`. The production siteKit planner
+first requires a reviewed active intake session, builds the existing
+`site-kit.recommend` / `site-kit.install` action path, then the helper inspects
+the install preview for deterministic page resources,
+primary/footer menus,
+lead-capture forms, SEO defaults for generated pages, action ids, and same-plan
+`target:resourceKey` locators. Missing coverage becomes a blocking review gate;
+the existing solution-kit installer remains the only mutation owner for
+page/menu/form/SEO resources. The same coverage helper also derives
+`metadata.launchReadiness` for reviewed site-kit plans so the UI can show
+pre-execute launch-readiness checks without trusting browser-authored facts.
+
+Reviewed siteKit runtime contracts are covered by
+`assistantSiteBuilderIntakePlanner.test.ts`,
+`assistantSiteBuilderIntakeDryRun.test.ts`, and the Bun public catalog runtime
+proof in `assistantHouseProjectsCatalogPublicSite.test.ts`. The planner test
+normalizes generated siteKit and content-engine action plans through the strict
+action schema, proves repeated reviewed-intake output stable, checks static
+same-plan locators, and rejects unknown generated install fields before
+dry-run/execute. The Bun dry-run test calls `dryRunAssistantActionPlan` for the
+reviewed siteKit handoff and proves repeated previews stable. The Bun runtime
+proof uses `buildReviewedContentEngineActionPlanFromIntake` with scoped DB
+fixtures and the real HTTP server to confirm one reviewed content-engine
+scenario dry-runs, executes, and renders both the public catalog page and a
+route-linked entry detail page. These tests add no new assistant endpoints; they
+exercise existing internal assistant action contracts plus public read-only
+runtime routes.
+
+TASK-407-07-L01 reran the pre-live validation lane on 2026-06-06 before manual
+Playwright E2E. The closed lane passed core lint/typecheck, `git diff --check`,
+34 targeted Vitest assistant/admin/UI files with 354 tests, 5 targeted Bun
+assistant runtime/route files with 104 tests, `bun run gates:coderso` with no
+DB-gated skips, `bun run precommit`, and `bun run scan:security:strict`
+covering Semgrep, Bun audit, Trivy, and Gitleaks. This validation is a static
+and automated runtime gate only.
+
+TASK-407-07-L02 ran the first live Basic Playwright E2E on 2026-06-06 through
+`playwright-cli -s=task407-basic-e2e run-code --filename .tmp/task-407-07-l02-basic-e2e.js`
+after restarting `coderso-dev-core-host`. A nontechnical Polish prompt for a
+local bicycle-service business completed Basic intake, review confirmation,
+dry-run, and execute through the real admin UI. The compiled plan selected the
+generic `local-service-business` kit, not the multi-provider
+`services-directory` kit. Public runtime checks covered `/`, `/contact`,
+`/services`, `/portfolio`, `/faq`, contact form presence, SEO description
+basics, desktop/mobile screenshots, and console/page errors. This Basic smoke
+does not claim personalized media/image coverage; follow-up, fail-closed, and
+second-theme live Playwright E2E remain owned by TASK-407-07-L04 and
+TASK-407-07-L05.
+
+TASK-407-07-L03 ran the live Advanced Playwright E2E on 2026-06-06 through
+`playwright-cli -s=task407-basic-e2e run-code --filename .tmp/task-407-07-l03-advanced-e2e.js`
+after restarting `coderso-dev-core-host`. A nontechnical Polish prompt entered
+Advanced mode, completed controlled design/menu/Hero/section/reference choices,
+dry-ran, executed, and checked the public runtime on `/`, `/services`,
+`/portfolio`, `/faq`, and `/contact`. The run verified menu-backed Navigation,
+mobile drawer behavior, a contact CTA target, Hero `media-left`, proof
+spotlight, FAQ two-column, CTA split, contact form presence, SEO basics,
+desktop/mobile layout, and console/page errors. Reference input stayed bounded
+to reviewed gates; the pass proves supported Advanced option preservation, not
+arbitrary prompt-bespoke media or layout generation.
+
+TASK-407-07-L04 ran the live follow-up/fail-closed Playwright E2E on
+2026-06-06 through
+`playwright-cli -s=task407-l04-follow-up-e2e run-code --filename .tmp/task-407-07-l04-follow-up-e2e.js`
+after restarting `coderso-dev-core-host`. A beginner Polish prompt on the
+active generated Contact page asked for projects/home-gallery help and returned
+the guided target question with no actions. The same run planned, dry-ran,
+executed, publicly checked on desktop/mobile, and restored one scoped published
+`page.update`. It also proved stale, ambiguous, unsupported-family,
+unsupported-operation, poisoned-target, unsafe media/reference, and unknown
+context-field cases fail closed without executable actions or secret echo.
+
+TASK-407-07-L05 ran the scoped cleanup plus second-theme live Playwright E2E on
+2026-06-07 through
+`playwright-cli -s=task407-l05-cleanup-theme-r9 run-code --filename .tmp/task-407-07-l05-scoped-cleanup-second-theme-e2e.js`
+after restarting `coderso-dev-core-host`. A beginner Polish prompt first
+selected `medical-clinic` and produced apply run
+`8de2bf41-7fef-4f17-bf29-bf68355663f1`. Cleanup used only explicit
+`sourceRunId` rollback; rollback run
+`cd6191d5-d2d1-4e28-b0c8-8a0df253493e` restored 3 updated resources, deleted 4
+created resources, reported 0 failures, and preserved an unrelated published
+`about` page. After clearing assistant browser/session state, a second beginner
+prompt selected `beauty-salon` and produced apply run
+`b6588b3e-1451-4ff6-9095-db17a22d3a55`. Public runtime checks passed for `/`,
+`/offers`, and `/contact`, including menu/footer links, contact form,
+SEO descriptions, curated media registry URLs, desktop/mobile screenshots, no
+first-run or generic widget-default copy bleed, and zero console/page errors.
+The pass also fixed industry starter content drift in the solution-kit catalog:
+medical and beauty starters now ship menu-backed navigation, footer links,
+connected forms, industry-specific hero/gallery/package or proof content,
+license-documented curated media assets, and readable image overlays instead of
+generic widget defaults. This remains selected-kit starter content; it does not
+claim arbitrary prompt-bespoke copy, brand-token theming, uploads, video
+generation, or personalized media generation.
+
+TASK-407-07-L06 closed the family on 2026-06-07 with final docs, changelog,
+board, and drift review sync. The closure pass also resolved the L03 hardening
+items by moving Advanced Navigation variant/mobile-mode ids into the Navigation
+widget contract owner and adding a direct widget-validator regression for
+produced Advanced Navigation, Hero, and section blocks. Curated media profile
+selection now requires a vertical/industry match before theme keywords can rank
+profiles, so generic prompts such as restaurant/booking do not accidentally
+select unrelated medical or beauty media.
+
+TASK-407 intake redaction is owned by
+`core/services/assistant/assistantSiteBuilderIntakeRedaction.ts`.
+Diagnostics expose only schema version, mode/current step, answered step ids,
+readiness booleans, warning codes, and a deterministic facts hash. Provider
+planning may receive `siteBuilderIntakeFacts` only through
+`buildSiteBuilderIntakeProviderContext`; that package is provider-only,
+advisory, non-executable, raw-reference-free, and explicitly denies schema/RBAC,
+media-gate, or confirmation overrides. It does not create a
+`context.siteBuilderIntake` route contract.
+
+Browser-local intake restore is a separate bounded snapshot contract in
+`core/admin/ui/setup/assistantSiteBuilderIntakeBrowserState.ts`. It stores no
+answers, raw facts, plans, actions, files, run-option patches, references,
+provider keys, cookies, CSRF/session values, or signed URLs. Restore accepts only
+the current schema version, strict known keys, a bounded serialized size, and a
+fresh expiry window; invalid state is discarded and the server-normalized
+session remains the source of truth.
+
+The screenshot-facing warning/review UI uses the same safety redaction family as
+assistant diagnostics. Reference/media gates and final review items remain useful
+for the operator, but prompt-poisoning phrases, signed URLs, raw reference text,
+OCR-like secret text, tokens, cookies, and auth material are filtered before they
+can appear in rendered DOM or test snapshots.
+
+Basic prompt-poisoning guards are regression-tested before planner/action work.
+Free text in Basic profile, goals, hero, media notes, and review notes remains
+bounded content data; it cannot change mode, step ids, widget aliases, action
+families, media URL policy, route paths, RBAC/CSRF/schema rules, or execution
+state. Hostile unknown keys, unsupported ids, unsafe custom labels, arbitrary
+media URL policy attempts, and Basic/Advanced step-boundary violations fail
+closed through intake-domain errors. Broad confused-user prompts still enter
+Basic `needs_input` and bypass provider drafting until the guided facts are
+reviewed.
 
 ## Auditability
 

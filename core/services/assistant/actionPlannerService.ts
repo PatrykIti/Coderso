@@ -12,6 +12,11 @@ import {
   readTrustedAssistantResourceCatalog,
   sanitizeAssistantPlanningContext,
 } from "./adminContextService";
+import {
+  assertReviewedSiteKitStaticCoverage,
+  buildReviewedSiteKitLaunchReadiness,
+} from "./assistantSiteBuilderIntakeStaticActions";
+import { cloneAdvancedRuntimeOverrides } from "./siteBuilderAdvancedRuntimeOverrides";
 import { normalizeAssistantActionPlan } from "./actionPlanSchema";
 import {
   classifyAssistantPrompt,
@@ -41,6 +46,7 @@ import { resolveBlueprintCandidates } from "./blueprints/blueprintCandidateResol
 import { buildBlueprintCompositionGraph } from "./blueprints/blueprintCompositionGraph";
 import { attachBlueprintShadowMetadata } from "./blueprints/blueprintComposerShadow";
 import { buildEditorialContentHubPlan } from "./blueprints/editorialContentHubBlueprint";
+import { buildFullServiceSitePlan } from "./blueprints/fullServiceSiteBlueprint";
 import { buildLeadCaptureSitePlan } from "./blueprints/leadCaptureBlueprint";
 import {
   buildProductCheckoutNeedsInputPlan,
@@ -61,6 +67,10 @@ import {
 } from "./cmsTargetResolver";
 import { mapCmsOperationToActionPlan } from "./cmsOperationActionMapper";
 import {
+  resolveSiteBuilderFollowUpTarget,
+  type AssistantSiteBuilderFollowUpResolution,
+} from "./assistantSiteBuilderFollowUpResolver";
+import {
   type CmsOperationDraft,
   buildCmsOperationDraftJsonSchema,
   normalizeCmsOperationDraft,
@@ -73,6 +83,14 @@ import {
 } from "./operationPolicy/resolverPolicy";
 import { chooseProviderResponseContract, resolveModelCapabilityProfile } from "./modelCapabilities";
 import { buildCmsOperationDraftFromPlanningState } from "./cmsPlanningState";
+import {
+  buildBasicSiteBuilderNeedsInputPlan,
+  shouldStartBasicSiteBuilderGuide,
+} from "./assistantSiteBuilderIntakeBasicFlow";
+import { buildAdvancedSiteBuilderNeedsInputPlan } from "./assistantSiteBuilderIntakeAdvancedFlow";
+import { buildActionPlanRequestFromReviewedIntake } from "./assistantSiteBuilderIntakeCompiler";
+import { normalizeAssistantSiteBuilderIntakeSession } from "./assistantSiteBuilderIntakeNormalizer";
+import { redactAssistantUnsafeText } from "./assistantRedaction";
 
 export {
   classifyAssistantPrompt,
@@ -110,6 +128,20 @@ const checkoutKeywords = [
   "platnosci",
   "płatności",
 ];
+const existingPageFollowUpKeywords = [
+  "sekcj",
+  "section",
+  "galer",
+  "gallery",
+  "projekty",
+  "projects",
+  "portfolio",
+  "wnetrz",
+  "wnętrz",
+  "na stronie",
+  "on page",
+  "this page",
+];
 
 const buildReadyPlanForIntentFamily = (
   intentFamily: AssistantIntentFamily,
@@ -134,6 +166,11 @@ const buildReadyPlanForIntentFamily = (
       return buildCatalogFamilyPlan(PORTFOLIO_PROJECTS_PRESET, options);
     case "services_directory":
       return buildCatalogFamilyPlan(SERVICES_DIRECTORY_PRESET, options);
+    case "service_business_full_site":
+      return buildFullServiceSitePlan({
+        prompt: options.normalizedPrompt,
+        promptKind: options.promptKind,
+      });
     case "lead_capture_site":
       return buildLeadCaptureSitePlan({ promptKind: options.promptKind });
     case "booking_service":
@@ -440,7 +477,7 @@ const buildClarifyingPlan = (
     ].join("\n"),
     summary: "The prompt does not yet map cleanly to a safe typed setup plan.",
     confidence: 0.35,
-    assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+    assumptions: [`Original prompt: ${describePlannerPrompt(prompt)}`],
     questions,
     actions: [],
   };
@@ -472,19 +509,22 @@ const buildDocsGuidancePlan = (
     confidence: 0.62,
     assumptions: [
       "LLM Guide did not plan a mutation for this prompt.",
-      `Original prompt: ${prompt.trim() || "empty prompt"}`,
+      `Original prompt: ${describePlannerPrompt(prompt)}`,
     ],
     questions: [],
     actions: [],
   };
 };
 
-const describeCmsTargetQuery = (draft: CmsOperationDraft) =>
-  draft.targetQuery?.exactName ??
-  draft.targetQuery?.prefix ??
-  draft.targetQuery?.slug ??
-  draft.targetQuery?.text ??
-  null;
+const describeCmsTargetQuery = (draft: CmsOperationDraft) => {
+  const query =
+    draft.targetQuery?.exactName ??
+    draft.targetQuery?.prefix ??
+    draft.targetQuery?.slug ??
+    draft.targetQuery?.text ??
+    null;
+  return query ? redactAssistantUnsafeText(query) : null;
+};
 
 const toInspectionCandidates = (candidates: CmsResolvedTargetCandidate[]) =>
   candidates.slice(0, 10).map((candidate) => ({
@@ -496,6 +536,12 @@ const toInspectionCandidates = (candidates: CmsResolvedTargetCandidate[]) =>
     adminHref: candidate.adminHref,
   }));
 
+const describePlannerPrompt = (prompt: string) => {
+  const trimmed = prompt.trim();
+  if (!trimmed) return "empty prompt";
+  return redactAssistantUnsafeText(trimmed);
+};
+
 const buildGenericCmsInspectionPlan = (
   prompt: string,
   draft: CmsOperationDraft,
@@ -504,7 +550,7 @@ const buildGenericCmsInspectionPlan = (
   if (draft.operation !== "inspect" && draft.operation !== "find") return null;
   const resolution = resolveCmsOperationTargets(draft, context);
   const candidates = toInspectionCandidates(resolution.candidates);
-  const query = describeCmsTargetQuery(draft);
+  const safeQuery = describeCmsTargetQuery(draft);
   const matchStatus =
     resolution.status === "unsupported"
       ? "unsupported"
@@ -536,14 +582,14 @@ const buildGenericCmsInspectionPlan = (
       operation: draft.operation,
       resourceKind: draft.resourceKind,
       matchStatus,
-      query,
+      query: safeQuery,
       candidates,
       truncated: resolution.candidates.length > candidates.length,
     },
     title: "CMS resource inspection",
     answer: [
-      query
-        ? `I searched ${draft.resourceKind} resources for "${query}".`
+      safeQuery
+        ? `I searched ${draft.resourceKind} resources for "${safeQuery}".`
         : `I searched visible ${draft.resourceKind} resources.`,
       "",
       candidateLines,
@@ -557,7 +603,7 @@ const buildGenericCmsInspectionPlan = (
     assumptions: [
       "Inspection uses trusted active context and server-side resource catalog summaries.",
       "No changes are planned for this read-only response.",
-      `Original prompt: ${prompt.trim() || "empty prompt"}`,
+      `Original prompt: ${describePlannerPrompt(prompt)}`,
     ],
     questions: [],
     actions: [],
@@ -573,6 +619,251 @@ const buildGenericCmsInspectionOperationPlan = (
   return buildGenericCmsInspectionPlan(prompt, draft, context);
 };
 
+type GenericCmsOperationPlanOptions = {
+  siteBuilderFollowUp?: boolean;
+  destructiveFollowUp?: boolean;
+};
+
+const sanitizeFollowUpText = (value: string | null) =>
+  value ? redactAssistantUnsafeText(value) : value;
+
+const sanitizeFollowUpAssumption = (assumption: string) => {
+  const sanitized = redactAssistantUnsafeText(assumption);
+  if (sanitized === "[REDACTED]" && /^Original prompt:/i.test(assumption)) {
+    return "Original prompt: [REDACTED]";
+  }
+  return sanitized;
+};
+
+const siteBuilderFollowUpUpdateResourceKinds = new Set([
+  "page",
+  "content-type",
+  "entry",
+  "listing-query",
+  "listing-template",
+  "detail-page",
+  "custom-screen",
+  "form",
+  "media",
+  "plugin-store",
+]);
+
+const siteBuilderFollowUpArchiveResourceKinds = new Set([
+  "page",
+  "content-type",
+  "entry",
+  "listing-query",
+  "listing-template",
+  "detail-page",
+  "custom-screen",
+]);
+
+const siteBuilderFollowUpDeleteResourceKinds = new Set([
+  "page",
+  "content-type",
+  "entry",
+  "listing-query",
+  "listing-template",
+  "detail-page",
+  "custom-screen",
+]);
+
+const isSiteBuilderFollowUpMutationDraft = (draft: CmsOperationDraft) =>
+  (draft.operation === "update" &&
+    siteBuilderFollowUpUpdateResourceKinds.has(draft.resourceKind)) ||
+  (draft.operation === "archive" &&
+    siteBuilderFollowUpArchiveResourceKinds.has(draft.resourceKind));
+
+const isSiteBuilderFollowUpDestructiveDraft = (draft: CmsOperationDraft) =>
+  draft.operation === "delete" && siteBuilderFollowUpDeleteResourceKinds.has(draft.resourceKind);
+
+const shouldAutoEnableSiteBuilderFollowUpForLocalDraft = (draft: CmsOperationDraft) =>
+  isSiteBuilderFollowUpMutationDraft(draft) &&
+  draft.resourceKind !== "media" &&
+  draft.resourceKind !== "plugin-store";
+
+const shouldUseSiteBuilderFollowUpResolver = (
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  options: GenericCmsOperationPlanOptions | undefined
+) =>
+  options?.siteBuilderFollowUp === true &&
+  Boolean(context.resourceCatalog || context.activeSurface);
+
+const describeFollowUpDraftQuery = (draft: CmsOperationDraft | null) =>
+  sanitizeFollowUpText(
+    draft?.targetQuery?.exactName ??
+      draft?.targetQuery?.prefix ??
+      draft?.targetQuery?.slug ??
+      draft?.targetQuery?.text ??
+      null
+  );
+
+const toFollowUpInspectionCandidates = (resolution: AssistantSiteBuilderFollowUpResolution) =>
+  resolution.candidates.slice(0, 10).map((candidate) => ({
+    kind: candidate.kind,
+    id: candidate.id,
+    label: candidate.label,
+    slug: candidate.slug,
+    status: candidate.status,
+    adminHref: candidate.adminHref,
+  }));
+
+const buildSiteBuilderFollowUpNeedsInputPlan = (
+  prompt: string,
+  draft: CmsOperationDraft | null,
+  resolution: Extract<AssistantSiteBuilderFollowUpResolution, { status: "needs_input" }>
+): AssistantActionPlan => {
+  const code = resolution.question.code;
+  const resourceKind =
+    resolution.request?.resourceKind ??
+    draft?.resourceKind ??
+    resolution.candidates[0]?.kind ??
+    "page";
+  const matchStatus = code === "target_ambiguous" ? "ambiguous" : "no_match";
+  return {
+    id: `plan-site-builder-follow-up-${resourceKind}-${code}`,
+    status: "needs_input",
+    intentId: `site-builder-follow-up-${code}`,
+    responseKind: "needs_input",
+    promptKind: "refinement_request",
+    intentFamily: "site_kit",
+    inspection: {
+      kind: "resource-candidates",
+      operation: "find",
+      resourceKind,
+      matchStatus,
+      query: describeFollowUpDraftQuery(draft),
+      candidates: toFollowUpInspectionCandidates(resolution),
+      truncated: resolution.candidates.length > 10,
+    },
+    title: "Site change needs an exact target",
+    answer: [
+      "I can help with this site change, but I need the exact existing CMS target first.",
+      "",
+      redactAssistantUnsafeText(resolution.question.message, 360),
+    ].join("\n"),
+    summary: "The follow-up target was not precise enough for a reviewed action plan.",
+    confidence: 0.58,
+    assumptions: [
+      "Free text is treated only as a hint; mutation targets must come from active admin context or the trusted server resource catalog.",
+      `Original prompt: ${describePlannerPrompt(prompt)}`,
+    ],
+    questions: [
+      {
+        id: "site-builder-follow-up-target",
+        label: "Which existing page or builder resource should I change?",
+        description:
+          "Choose one of the trusted candidates or open the exact page/screen before continuing.",
+        required: true,
+      },
+    ],
+    actions: [],
+  };
+};
+
+const buildSiteBuilderFollowUpGatedPlan = (
+  prompt: string,
+  draft: CmsOperationDraft,
+  resolution: Extract<AssistantSiteBuilderFollowUpResolution, { status: "gated" }>
+): AssistantActionPlan => {
+  const code = resolution.gate.code;
+  return {
+    id: `plan-site-builder-follow-up-${draft.resourceKind}-${code}`,
+    status: "needs_input",
+    intentId: `site-builder-follow-up-${code}`,
+    responseKind: "gated",
+    promptKind: "refinement_request",
+    intentFamily: "site_kit",
+    title: "Site change is gated",
+    answer: [
+      redactAssistantUnsafeText(resolution.gate.message, 360),
+      "",
+      "No executable action was planned.",
+    ].join("\n"),
+    summary: "The follow-up was blocked before CMS action assembly.",
+    confidence: 0.66,
+    assumptions: [
+      "Guided site-builder follow-ups only mutate supported generated site resources after target scoping succeeds.",
+      `Original prompt: ${describePlannerPrompt(prompt)}`,
+    ],
+    questions: [
+      {
+        id: "site-builder-follow-up-supported-target",
+        label: "Should this be handled by a different CMS flow?",
+        description:
+          "Use the matching resource editor or add a typed follow-up action before executing this request.",
+        required: true,
+      },
+    ],
+    actions: [],
+  };
+};
+
+const buildResolvedSiteBuilderFollowUpPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  draft: CmsOperationDraft
+): AssistantActionPlan | null => {
+  const resolution = resolveSiteBuilderFollowUpTarget({ prompt, context, draft });
+  if (resolution.status === "needs_input") {
+    return buildSiteBuilderFollowUpNeedsInputPlan(prompt, draft, resolution);
+  }
+  if (resolution.status === "gated") {
+    return buildSiteBuilderFollowUpGatedPlan(prompt, draft, resolution);
+  }
+  const plan = mapCmsOperationToActionPlan({ prompt, draft, context });
+  if (!plan) {
+    return buildSiteBuilderFollowUpGatedPlan(prompt, draft, {
+      status: "gated",
+      schemaVersion: 1,
+      request: resolution.request,
+      target: resolution.target,
+      candidates: resolution.candidates,
+      question: null,
+      gate: {
+        code: "operation_unsupported",
+        message: "The requested operation is not supported for this resource family.",
+      },
+    });
+  }
+  return {
+    ...plan,
+    assumptions: [
+      "The follow-up target was resolved by the guided site-builder follow-up resolver before action mapping.",
+      ...plan.assumptions.map(sanitizeFollowUpAssumption),
+    ],
+  };
+};
+
+const buildDraftlessSiteBuilderFollowUpPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  options?: GenericCmsOperationPlanOptions
+): AssistantActionPlan | null => {
+  if (!shouldUseSiteBuilderFollowUpResolver(context, options) || !context.activeSurface)
+    return null;
+  const resolution = resolveSiteBuilderFollowUpTarget({ prompt, context, draft: null });
+  return resolution.status === "needs_input"
+    ? buildSiteBuilderFollowUpNeedsInputPlan(prompt, null, resolution)
+    : null;
+};
+
+const buildSiteBuilderFollowUpOperationPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  draft: CmsOperationDraft,
+  options?: GenericCmsOperationPlanOptions
+): AssistantActionPlan | null => {
+  if (
+    !shouldUseSiteBuilderFollowUpResolver(context, options) ||
+    (!isSiteBuilderFollowUpMutationDraft(draft) &&
+      !(options?.destructiveFollowUp === true && isSiteBuilderFollowUpDestructiveDraft(draft)))
+  ) {
+    return null;
+  }
+  return buildResolvedSiteBuilderFollowUpPlan(prompt, context, draft);
+};
+
 const buildGenericCmsPlanningStateFollowUpPlan = (
   prompt: string,
   context: ReturnType<typeof buildAssistantAdminContext>
@@ -581,16 +872,24 @@ const buildGenericCmsPlanningStateFollowUpPlan = (
   if (!draft) return null;
   const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
   if (inspectionPlan) return inspectionPlan;
+  const followUpPlan = buildSiteBuilderFollowUpOperationPlan(prompt, context, draft, {
+    siteBuilderFollowUp: true,
+    destructiveFollowUp: true,
+  });
+  if (followUpPlan) return followUpPlan;
   return mapCmsOperationToActionPlan({ prompt, draft, context });
 };
 
 const buildGenericCmsOperationPlanFromDraft = (
   prompt: string,
   context: ReturnType<typeof buildAssistantAdminContext>,
-  draft: CmsOperationDraft
+  draft: CmsOperationDraft,
+  options?: GenericCmsOperationPlanOptions
 ): AssistantActionPlan | null => {
   const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
   if (inspectionPlan) return inspectionPlan;
+  const followUpPlan = buildSiteBuilderFollowUpOperationPlan(prompt, context, draft, options);
+  if (followUpPlan) return followUpPlan;
   return mapCmsOperationToActionPlan({ prompt, draft, context });
 };
 
@@ -603,6 +902,9 @@ const cloneSiteKitPlanInput = (input: AssistantSiteKitPlanInput): AssistantSiteK
   preferredKitId: input.preferredKitId ?? null,
   selectedKitId: input.selectedKitId ?? null,
   enabledStepIds: input.enabledStepIds ? [...input.enabledStepIds] : undefined,
+  ...(input.advancedRuntimeOverrides
+    ? { advancedRuntimeOverrides: cloneAdvancedRuntimeOverrides(input.advancedRuntimeOverrides) }
+    : {}),
 });
 
 const buildSiteKitActionPlan = (siteKit: AssistantSiteKitPlanInput): AssistantActionPlan => {
@@ -614,7 +916,7 @@ const buildSiteKitActionPlan = (siteKit: AssistantSiteKitPlanInput): AssistantAc
     enabledStepIds: [...preview.enabledStepIds],
   };
 
-  return {
+  const actionPlan: AssistantActionPlan = {
     id: `plan-site-kit-${preview.selectedKitId}`,
     status: "ready",
     intentId: "site-kit-install",
@@ -625,8 +927,12 @@ const buildSiteKitActionPlan = (siteKit: AssistantSiteKitPlanInput): AssistantAc
     summary:
       "Recommend the matching site kit, dry-run the selected steps, then execute the kit installer through typed assistant actions.",
     confidence: preview.plan.confidence / 100,
+    metadata: {
+      planner: "local",
+      providerDraftUsed: false,
+    },
     assumptions: [
-      "The AI Site Wizard is a guided entry point into the same LLM Guide action engine.",
+      "The reviewed LLM Guide site-builder intake is the guided entry point into this action engine.",
       "Selected kit steps stay editable before execution and are applied through the solution kit installer.",
     ],
     questions: [],
@@ -655,6 +961,14 @@ const buildSiteKitActionPlan = (siteKit: AssistantSiteKitPlanInput): AssistantAc
       },
     ],
   };
+  assertReviewedSiteKitStaticCoverage(actionPlan, resolvedInput);
+  actionPlan.metadata = {
+    ...actionPlan.metadata,
+    planner: "local",
+    providerDraftUsed: false,
+    launchReadiness: buildReviewedSiteKitLaunchReadiness(actionPlan, resolvedInput),
+  };
+  return actionPlan;
 };
 
 export type AssistantActionPlanInput = {
@@ -718,6 +1032,16 @@ const buildRoutedClassification = (
   return { ...classification, intentFamily };
 };
 
+const shouldTreatUnknownSetupAsExistingSiteFollowUp = (
+  classification: ReturnType<typeof buildRoutedClassification>,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) =>
+  (classification.promptKind === "setup_request" ||
+    classification.promptKind === "refinement_request") &&
+  classification.intentFamily === "unknown" &&
+  Boolean(context.activeSurface && context.resourceCatalog) &&
+  includesAny(classification.normalizedPrompt, existingPageFollowUpKeywords);
+
 const providerPlannerSystemPrompt = buildProviderPlannerSystemPrompt(assistantOperationPolicy);
 
 const parseProviderDraftJson = (value: string) => {
@@ -750,12 +1074,17 @@ const tryPlanProviderCmsOperationDraft = (
 ) => {
   const trustedContext = sanitizeAssistantPlanningContext(input.context);
   const context = buildAssistantAdminContext(trustedContext);
+  const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
   try {
     const operationDraft = applyPromptImpliedDraftHintsWithPolicy(
       input.prompt,
       normalizeCmsOperationDraftWithPolicy(draft, assistantOperationPolicy)
     );
-    const plan = buildGenericCmsOperationPlanFromDraft(input.prompt, context, operationDraft);
+    const plan = buildGenericCmsOperationPlanFromDraft(input.prompt, context, operationDraft, {
+      siteBuilderFollowUp:
+        routedClassification.promptKind === "refinement_request" ||
+        isSiteBuilderFollowUpMutationDraft(operationDraft),
+    });
     if (!plan) return null;
     return normalizeAssistantActionPlan({
       ...plan,
@@ -857,7 +1186,10 @@ const applyPromptImpliedDraftHintsWithPolicy = (
 const buildProviderLocalRecoveryPlan = (input: AssistantProviderDraftPlanInput) => {
   const trustedContext = sanitizeAssistantPlanningContext(input.context);
   const context = buildAssistantAdminContext(trustedContext);
-  const policyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
+  const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
+  const policyPlan = buildLocalPolicyOperationPlan(input.prompt, context, {
+    siteBuilderFollowUp: routedClassification.promptKind === "refinement_request",
+  });
   const plan = policyPlan
     ? policyPlan
     : planAssistantActions({
@@ -885,7 +1217,8 @@ const buildProviderLocalRecoveryPlan = (input: AssistantProviderDraftPlanInput) 
 
 const buildLocalPolicyOperationPlan = (
   prompt: string,
-  context: ReturnType<typeof buildAssistantAdminContext>
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  options?: GenericCmsOperationPlanOptions
 ): AssistantActionPlan | null => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
   const readOnlyPrompt = includesAny(normalizedPrompt, [
@@ -914,6 +1247,11 @@ const buildLocalPolicyOperationPlan = (
           },
         })
       : policyAdjustedDraft;
+  const followUpOptions: GenericCmsOperationPlanOptions = {
+    siteBuilderFollowUp:
+      options?.siteBuilderFollowUp === true ||
+      shouldAutoEnableSiteBuilderFollowUpForLocalDraft(draft),
+  };
   const hasExplicitTarget = Boolean(
     draft.targetQuery?.exactName ||
     draft.targetQuery?.slug ||
@@ -945,7 +1283,7 @@ const buildLocalPolicyOperationPlan = (
         "I cannot plan a broad destructive CMS operation without exact trusted targets and explicit expected counts.",
       summary: "Broad destructive prompt was blocked before action planning.",
       confidence: 0.48,
-      assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+      assumptions: [`Original prompt: ${describePlannerPrompt(prompt)}`],
       questions: [
         {
           id: "cms-destructive-targets",
@@ -958,11 +1296,27 @@ const buildLocalPolicyOperationPlan = (
       actions: [],
     };
   }
-  if (!hasExplicitTarget) return null;
+  if (!hasExplicitTarget) {
+    const followUpPlan = buildSiteBuilderFollowUpOperationPlan(
+      prompt,
+      context,
+      draft,
+      followUpOptions
+    );
+    if (followUpPlan) return followUpPlan;
+    return null;
+  }
   const inspectionPlan = buildGenericCmsInspectionPlan(prompt, draft, context);
   if (inspectionPlan && (inspectionPlan.inspection?.candidates.length ?? 0) > 0) {
     return inspectionPlan;
   }
+  const followUpPlan = buildSiteBuilderFollowUpOperationPlan(
+    prompt,
+    context,
+    draft,
+    followUpOptions
+  );
+  if (followUpPlan) return followUpPlan;
   const mutationPlan = mapCmsOperationToActionPlan({ prompt, draft, context });
   if (
     mutationPlan?.responseKind === "action_plan" ||
@@ -973,6 +1327,32 @@ const buildLocalPolicyOperationPlan = (
   }
   return null;
 };
+
+const buildReviewedSiteBuilderIntakeRequiredPlan = (prompt: string): AssistantActionPlan =>
+  normalizeAssistantActionPlan({
+    id: "plan-site-kit-reviewed-intake-required",
+    status: "needs_input",
+    intentId: "site-kit-reviewed-intake-required",
+    responseKind: "gated",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: "Reviewed site-builder intake required",
+    answer:
+      "Use the reviewed LLM Guide site-builder intake before planning or applying a full site.",
+    summary: "Direct siteKit planning was blocked before executable action planning.",
+    confidence: 0.5,
+    assumptions: [`Original prompt: ${describePlannerPrompt(prompt)}`],
+    questions: [
+      {
+        id: "reviewed-site-builder-intake",
+        label: "Start the reviewed site-builder intake",
+        description:
+          "Complete the guided intake, confirm the final review, run a dry-run, then execute.",
+        required: true,
+      },
+    ],
+    actions: [],
+  });
 
 const withProviderPlannerMetadata = (
   plan: AssistantActionPlan,
@@ -991,8 +1371,54 @@ const withProviderPlannerMetadata = (
     ],
   });
 
+const withProviderLocalPolicyMetadata = (
+  plan: AssistantActionPlan,
+  input: AssistantProviderDraftPlanInput,
+  assumption: string
+) =>
+  normalizeAssistantActionPlan({
+    ...plan,
+    metadata: {
+      ...plan.metadata,
+      planner: "provider",
+      providerDraftUsed: false,
+      providerId: input.provider?.id ?? null,
+    },
+    assumptions: [...plan.assumptions, assumption],
+  });
+
+const shouldReturnLocalPolicyPlanBeforeProvider = (plan: AssistantActionPlan) =>
+  (plan.responseKind === "action_plan" && plan.actions.length > 0) ||
+  (plan.responseKind === "inspection" && (plan.inspection?.candidates.length ?? 0) > 0) ||
+  (plan.intentId.startsWith("site-builder-follow-up-") &&
+    plan.responseKind === "gated" &&
+    plan.actions.length === 0);
+
 const requiresProviderLlmGate = (context: AssistantActionContext | undefined) =>
   context?.includeResourceCatalog === true || Boolean(context?.siteKit);
+
+const getActiveBasicSiteBuilderIntakeSession = (context: AssistantActionContext | undefined) => {
+  const activeSession = context?.siteBuilderIntakeState?.activeSession;
+  return activeSession?.mode === "basic" ? activeSession : null;
+};
+
+const getActiveAdvancedSiteBuilderIntakeSession = (context: AssistantActionContext | undefined) => {
+  const activeSession = context?.siteBuilderIntakeState?.activeSession;
+  return activeSession?.mode === "advanced" ? activeSession : null;
+};
+
+const shouldStartAdvancedSiteBuilderGuide = (context: AssistantActionContext | undefined) =>
+  context?.siteBuilderIntakeState?.requestedMode === "advanced";
+
+const buildReviewedSiteBuilderIntakePlan = (
+  session: NonNullable<AssistantActionContext["siteBuilderIntakeState"]>["activeSession"]
+) => {
+  if (!session) return null;
+  const normalizedSession = normalizeAssistantSiteBuilderIntakeSession(session);
+  if (normalizedSession.facts?.readyForExecution !== true) return null;
+  const request = buildActionPlanRequestFromReviewedIntake(normalizedSession);
+  return normalizeAssistantActionPlan(buildSiteKitActionPlan(request.context.siteKit));
+};
 
 const buildPreferredBlueprintSetupPlan = (input: {
   prompt: string;
@@ -1049,15 +1475,15 @@ const buildPreferredBlueprintSetupPlan = (input: {
 };
 
 export const planAssistantActions = (input: AssistantActionPlanInput): AssistantActionPlan => {
+  const directSiteKitRequested = Boolean(input.context?.siteKit);
   const trustedContext = sanitizeAssistantPlanningContext(input.context);
   const normalizedInput = {
     ...input,
     context: trustedContext,
   } satisfies AssistantActionPlanInput;
   const context = buildAssistantAdminContext(trustedContext);
-  if (trustedContext?.siteKit) {
-    return normalizeAssistantActionPlan(buildSiteKitActionPlan(trustedContext.siteKit));
-  }
+  const activeAdvancedIntakeSession = getActiveAdvancedSiteBuilderIntakeSession(trustedContext);
+  const activeBasicIntakeSession = getActiveBasicSiteBuilderIntakeSession(trustedContext);
 
   const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
   const intentFamily = routedClassification.intentFamily;
@@ -1069,6 +1495,96 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
       routedClassification,
       buildClarifyingPlan(input.prompt, context, routedClassification)
     );
+  }
+
+  if (activeAdvancedIntakeSession) {
+    const reviewedPlan = buildReviewedSiteBuilderIntakePlan(activeAdvancedIntakeSession);
+    if (reviewedPlan) return reviewedPlan;
+
+    return finalizeAssistantPlan(
+      normalizedInput,
+      context,
+      routedClassification,
+      buildAdvancedSiteBuilderNeedsInputPlan({ session: activeAdvancedIntakeSession })
+    );
+  }
+
+  if (activeBasicIntakeSession) {
+    const reviewedPlan = buildReviewedSiteBuilderIntakePlan(activeBasicIntakeSession);
+    if (reviewedPlan) return reviewedPlan;
+
+    return finalizeAssistantPlan(
+      normalizedInput,
+      context,
+      routedClassification,
+      buildBasicSiteBuilderNeedsInputPlan({ session: activeBasicIntakeSession })
+    );
+  }
+
+  if (directSiteKitRequested) {
+    return buildReviewedSiteBuilderIntakeRequiredPlan(input.prompt);
+  }
+
+  if (shouldStartAdvancedSiteBuilderGuide(trustedContext)) {
+    return finalizeAssistantPlan(
+      normalizedInput,
+      context,
+      routedClassification,
+      buildAdvancedSiteBuilderNeedsInputPlan({})
+    );
+  }
+
+  if (
+    shouldStartBasicSiteBuilderGuide({
+      prompt: input.prompt,
+      context: trustedContext,
+    })
+  ) {
+    return finalizeAssistantPlan(
+      normalizedInput,
+      context,
+      routedClassification,
+      buildBasicSiteBuilderNeedsInputPlan({})
+    );
+  }
+
+  if (
+    intentFamily === "service_business_full_site" &&
+    classification.promptKind !== "docs_question"
+  ) {
+    const setupClassification = {
+      ...routedClassification,
+      promptKind: "setup_request" as const,
+    };
+    const readyPlan = buildReadyPlanForIntentFamily(intentFamily, {
+      promptKind: setupClassification.promptKind,
+      intentFamily,
+      normalizedPrompt: classification.normalizedPrompt,
+    });
+    if (readyPlan)
+      return finalizeAssistantPlan(normalizedInput, context, setupClassification, readyPlan);
+  }
+
+  const siteBuilderFollowUpOptions: GenericCmsOperationPlanOptions = {
+    siteBuilderFollowUp: classification.promptKind === "refinement_request",
+  };
+
+  if (shouldTreatUnknownSetupAsExistingSiteFollowUp(classification, context)) {
+    const setupFollowUpPlan = buildDraftlessSiteBuilderFollowUpPlan(input.prompt, context, {
+      siteBuilderFollowUp: true,
+    });
+    if (setupFollowUpPlan) {
+      return finalizeAssistantPlan(
+        normalizedInput,
+        context,
+        {
+          ...routedClassification,
+          promptKind: "refinement_request",
+          intentFamily: "site_kit",
+        },
+        setupFollowUpPlan
+      );
+    }
   }
 
   if (classification.promptKind !== "setup_request") {
@@ -1096,7 +1612,11 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
       draft?.resourceKind === "form" &&
       draft.operation === "create";
     if (!preferBlueprintRefinement) {
-      const genericMutationPlan = buildLocalPolicyOperationPlan(input.prompt, context);
+      const genericMutationPlan = buildLocalPolicyOperationPlan(
+        input.prompt,
+        context,
+        siteBuilderFollowUpOptions
+      );
       if (genericMutationPlan) {
         return finalizeAssistantPlan(
           normalizedInput,
@@ -1105,6 +1625,19 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
           genericMutationPlan
         );
       }
+    }
+    const draftlessFollowUpPlan = buildDraftlessSiteBuilderFollowUpPlan(
+      input.prompt,
+      context,
+      siteBuilderFollowUpOptions
+    );
+    if (draftlessFollowUpPlan) {
+      return finalizeAssistantPlan(
+        normalizedInput,
+        context,
+        routedClassification,
+        draftlessFollowUpPlan
+      );
     }
   }
   if (classification.promptKind === "docs_question") {
@@ -1115,11 +1648,21 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
       buildDocsGuidancePlan(input.prompt, context)
     );
   }
-  const setupPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
-  if (setupPolicyPlan)
-    return finalizeAssistantPlan(normalizedInput, context, routedClassification, setupPolicyPlan);
-
   if (classification.promptKind === "setup_request" && intentFamily !== "unknown") {
+    if (intentFamily === "service_business_full_site") {
+      const readyPlan = buildReadyPlanForIntentFamily(intentFamily, {
+        promptKind: classification.promptKind,
+        intentFamily,
+        normalizedPrompt: classification.normalizedPrompt,
+      });
+      if (readyPlan)
+        return finalizeAssistantPlan(normalizedInput, context, routedClassification, readyPlan);
+    }
+
+    const setupPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
+    if (setupPolicyPlan)
+      return finalizeAssistantPlan(normalizedInput, context, routedClassification, setupPolicyPlan);
+
     const composedPlan = buildBlueprintComposerSetupPlan({
       prompt: input.prompt,
       context: {
@@ -1168,11 +1711,38 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
 export const planAssistantActionsWithProviderDraft = async (
   input: AssistantProviderDraftPlanInput
 ): Promise<AssistantActionPlan> => {
+  const directSiteKitRequested = Boolean(input.context?.siteKit);
   const trustedContext = sanitizeAssistantPlanningContext(input.context);
   const context = buildAssistantAdminContext(trustedContext);
   const routedClassification = buildRoutedClassification(input.prompt, context, trustedContext);
+  if (getActiveAdvancedSiteBuilderIntakeSession(trustedContext)) {
+    return planAssistantActions({ prompt: input.prompt, context: trustedContext });
+  }
+  if (getActiveBasicSiteBuilderIntakeSession(trustedContext)) {
+    return planAssistantActions({ prompt: input.prompt, context: trustedContext });
+  }
+  if (shouldStartAdvancedSiteBuilderGuide(trustedContext)) {
+    return planAssistantActions({ prompt: input.prompt, context: trustedContext });
+  }
+  if (directSiteKitRequested) {
+    return planAssistantActions({ prompt: input.prompt, context: input.context });
+  }
+  if (
+    shouldStartBasicSiteBuilderGuide({
+      prompt: input.prompt,
+      context: trustedContext,
+    })
+  ) {
+    return planAssistantActions({ prompt: input.prompt, context: trustedContext });
+  }
   if (requiresProviderLlmGate(trustedContext) && (!input.llmAvailable || !input.provider)) {
     throw new Error("assistant_llm_unavailable");
+  }
+  if (
+    routedClassification.intentFamily === "service_business_full_site" &&
+    routedClassification.promptKind !== "docs_question"
+  ) {
+    return planAssistantActions({ ...input, context: trustedContext });
   }
   const preferredBlueprintSetupPlan = buildPreferredBlueprintSetupPlan({
     prompt: input.prompt,
@@ -1182,33 +1752,53 @@ export const planAssistantActionsWithProviderDraft = async (
     return preferredBlueprintSetupPlan;
   }
 
+  if (shouldTreatUnknownSetupAsExistingSiteFollowUp(routedClassification, context)) {
+    const followUpPlan = buildDraftlessSiteBuilderFollowUpPlan(input.prompt, context, {
+      siteBuilderFollowUp: true,
+    });
+    if (followUpPlan) {
+      return finalizeAssistantPlan(
+        { ...input, context: trustedContext },
+        context,
+        {
+          ...routedClassification,
+          promptKind: "refinement_request",
+          intentFamily: "site_kit",
+        },
+        withProviderLocalPolicyMetadata(
+          followUpPlan,
+          input,
+          "Provider path used deterministic local follow-up target routing before provider drafting."
+        )
+      );
+    }
+  }
+
   const planningStatePlan = buildGenericCmsPlanningStateFollowUpPlan(input.prompt, context);
   if (planningStatePlan) {
     return finalizeAssistantPlan(
       { ...input, context: trustedContext },
       context,
       routedClassification,
-      withProviderPlannerMetadata(planningStatePlan, input)
+      withProviderLocalPolicyMetadata(
+        planningStatePlan,
+        input,
+        "Provider path used deterministic local planning-state follow-up routing before provider drafting."
+      )
     );
   }
   if (isBroadDestructivePromptWithPolicy(input.prompt)) {
     return planAssistantActions({ ...input, context: trustedContext });
   }
-  const localPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context);
-  if (
-    localPolicyPlan &&
-    ((localPolicyPlan.responseKind === "action_plan" && localPolicyPlan.actions.length > 0) ||
-      (localPolicyPlan.responseKind === "inspection" &&
-        (localPolicyPlan.inspection?.candidates.length ?? 0) > 0))
-  ) {
-    const plan = normalizeAssistantActionPlan({
-      ...localPolicyPlan,
-      metadata: {
-        planner: "provider",
-        providerDraftUsed: false,
-        providerId: input.provider?.id ?? null,
-      },
-    });
+  const localPolicyPlan = buildLocalPolicyOperationPlan(input.prompt, context, {
+    siteBuilderFollowUp: routedClassification.promptKind === "refinement_request",
+  });
+  if (localPolicyPlan && shouldReturnLocalPolicyPlanBeforeProvider(localPolicyPlan)) {
+    const plan = withProviderLocalPolicyMetadata(
+      localPolicyPlan,
+      input,
+      "Provider path used deterministic local policy routing before provider drafting."
+    );
     return finalizeAssistantPlan(input, context, routedClassification, plan);
   }
 

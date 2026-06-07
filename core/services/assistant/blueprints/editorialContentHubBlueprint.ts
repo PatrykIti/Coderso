@@ -1,8 +1,5 @@
 import { normalizeAssistantActionPlan } from "../actionPlanSchema";
-import type {
-  AssistantActionPlan,
-  AssistantPromptKind,
-} from "../actionPlanTypes";
+import type { AssistantActionPlan, AssistantPromptKind } from "../actionPlanTypes";
 import type { AssistantBusinessBlueprintPack } from "./businessBlueprintTypes";
 
 export const buildEditorialContentHubPlan = (options?: {
@@ -17,8 +14,7 @@ export const buildEditorialContentHubPlan = (options?: {
     title: "Editorial Content Hub",
     answer:
       "I can create an editorial hub page that highlights existing published posts without creating or mutating posts.",
-    summary:
-      "Create a public content hub page with intro copy and a posts feed widget.",
+    summary: "Create a public content hub page with intro copy and a posts feed widget.",
     confidence: 0.82,
     assumptions: [
       "This pack creates a page that reads existing posts; it does not create or edit post records.",
@@ -36,8 +32,7 @@ export const buildEditorialContentHubPlan = (options?: {
           slug: "/blog",
           status: "published",
           introTitle: "Aktualności i poradniki",
-          introBody:
-            "Przeglądaj najnowsze wpisy, poradniki i aktualności w jednym miejscu.",
+          introBody: "Przeglądaj najnowsze wpisy, poradniki i aktualności w jednym miejscu.",
           blocks: [
             {
               id: "editorial-hub-intro",
@@ -49,6 +44,7 @@ export const buildEditorialContentHubPlan = (options?: {
                   title: "Wiedza i aktualności",
                 },
                 body: {
+                  html: "",
                   blocks: [
                     {
                       id: "editorial-hub-intro-copy",
@@ -59,7 +55,7 @@ export const buildEditorialContentHubPlan = (options?: {
                   ],
                 },
                 options: {
-                  outputMode: "blocks-fallback",
+                  outputMode: "blocks",
                   maxWidth: "lg",
                 },
               },

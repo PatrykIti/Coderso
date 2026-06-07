@@ -14,6 +14,7 @@ COPY packages/sdk/package.json packages/sdk/package.json
 RUN bun install --frozen-lockfile
 
 COPY core core
+COPY docs docs
 COPY packages packages
 COPY themes themes
 

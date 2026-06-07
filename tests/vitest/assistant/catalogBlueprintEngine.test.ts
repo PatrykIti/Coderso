@@ -39,22 +39,28 @@ test("buildCatalogFamilyPlan produces product catalog plan from preset", () => {
   expect(plan.intentId).toBe("product-catalog");
   expect(plan.intentFamily).toBe("product_catalog");
   expect(plan.actions.map((action) => action.type)).toEqual([
-    "setting.content-route.upsert",
     "content-type.upsert",
+    "detail-page.upsert",
+    "setting.content-route.upsert",
     "custom-screen.upsert",
     "listing-query.upsert",
     "listing-template.upsert",
     "page.upsert",
   ]);
-  expect(
-    plan.actions.find((action) => action.type === "content-type.upsert")?.input
-  ).toMatchObject({
-    slug: "products",
-    name: "Products",
+  expect(plan.actions.find((action) => action.type === "content-type.upsert")?.input).toMatchObject(
+    {
+      slug: "products",
+      name: "Products",
+    }
+  );
+  expect(plan.actions.find((action) => action.type === "detail-page.upsert")?.input).toMatchObject({
+    document: {
+      contentTypeSlug: "products",
+      name: "Products Detail Template",
+      status: "published",
+    },
   });
-  expect(
-    plan.actions.find((action) => action.type === "page.upsert")?.input
-  ).toMatchObject({
+  expect(plan.actions.find((action) => action.type === "page.upsert")?.input).toMatchObject({
     slug: "/produkty",
     listingTemplateSlug: "product-catalog-grid",
   });
@@ -69,12 +75,12 @@ test("buildCatalogFamilyPlan produces portfolio projects plan from preset", () =
   expect(plan.intentId).toBe("portfolio-projects");
   expect(plan.intentFamily).toBe("portfolio_projects");
   expect(plan.title).toContain("Portfolio");
-  expect(
-    plan.actions.find((action) => action.type === "content-type.upsert")?.input
-  ).toMatchObject({
-    slug: "portfolio-projects",
-    name: "Portfolio Projects",
-  });
+  expect(plan.actions.find((action) => action.type === "content-type.upsert")?.input).toMatchObject(
+    {
+      slug: "portfolio-projects",
+      name: "Portfolio Projects",
+    }
+  );
   expect(
     plan.actions.find((action) => action.type === "custom-screen.upsert")?.input
   ).toMatchObject({
@@ -107,13 +113,7 @@ test("business blueprint packs expose shared catalog contract", () => {
     id: "product-catalog",
     intentFamily: "product_catalog",
     status: "ready",
-    surfaces: [
-      "content-type",
-      "custom-screen",
-      "listing-query",
-      "listing-template",
-      "page",
-    ],
+    surfaces: ["content-type", "custom-screen", "listing-query", "listing-template", "page"],
     actionTypes: [
       "setting.content-route.upsert",
       "content-type.upsert",
@@ -191,8 +191,9 @@ test("product inquiry blueprint adds inquiry form without checkout", () => {
 
   expect(plan.intentId).toBe("product-inquiry-catalog");
   expect(plan.actions.map((action) => action.type)).toEqual([
-    "setting.content-route.upsert",
     "content-type.upsert",
+    "detail-page.upsert",
+    "setting.content-route.upsert",
     "custom-screen.upsert",
     "listing-query.upsert",
     "listing-template.upsert",

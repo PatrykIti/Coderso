@@ -1001,26 +1001,32 @@ export function normalizeRichTextBlocks(
 }
 
 const resolveRichTextImageClassName = (block: RichTextSectionImageBlock) => {
-  const widthClass =
-    block.width === "full"
-      ? "w-full"
-      : block.width === "wide"
-        ? "max-w-4xl w-full"
-        : "max-w-2xl w-full";
   const alignClass =
     block.align === "left" ? "mr-auto ml-0" : block.align === "right" ? "ml-auto mr-0" : "mx-auto";
   return joinClasses(
     "overflow-hidden rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-bg)]/60",
-    widthClass,
+    "w-full",
     alignClass
   );
+};
+
+const resolveRichTextImageStyle = (block: RichTextSectionImageBlock) => {
+  const margin =
+    block.align === "left"
+      ? "margin-left:0;margin-right:auto;"
+      : block.align === "right"
+        ? "margin-left:auto;margin-right:0;"
+        : "margin-left:auto;margin-right:auto;";
+  if (block.width === "full") return `max-width:100%;width:100%;${margin}`;
+  if (block.width === "wide") return `max-width:min(100%,56rem);width:100%;${margin}`;
+  return `max-width:min(100%,42rem);width:100%;${margin}`;
 };
 
 const renderRichTextImageBlockAsHtml = (block: RichTextSectionImageBlock) => {
   const src = normalizeRichTextPublicMediaSrc(block.src);
   if (!src) return "";
 
-  const imageHtml = `<img src="${escapeHtml(src)}" alt="${escapeHtml(block.decorative ? "" : (block.alt ?? ""))}" loading="lazy" class="h-auto w-full object-cover" />`;
+  const imageHtml = `<img src="${escapeHtml(src)}" alt="${escapeHtml(block.decorative ? "" : (block.alt ?? ""))}" loading="lazy" class="h-auto w-full object-cover" style="display:block;width:100%;max-width:100%;height:auto;" />`;
   const linkAttrs = resolveWidgetLinkAttrs(block.href, {
     allowRelative: true,
     allowHttp: true,
@@ -1032,7 +1038,7 @@ const renderRichTextImageBlockAsHtml = (block: RichTextSectionImageBlock) => {
   const caption = block.caption?.trim();
 
   return [
-    `<figure class="${resolveRichTextImageClassName(block)}">`,
+    `<figure class="${resolveRichTextImageClassName(block)}" style="${resolveRichTextImageStyle(block)}">`,
     wrappedImage,
     caption
       ? `<figcaption class="border-t border-[var(--color-border)]/60 px-4 py-3 text-sm text-[var(--color-text)]/75">${escapeHtml(caption)}</figcaption>`

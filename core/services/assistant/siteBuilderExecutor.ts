@@ -10,6 +10,7 @@ import {
   listSolutionKitInstallItems,
 } from "../kits/solutionKitsService";
 import { filterKitDefinitionByPlan } from "./siteBuilderPlanner";
+import { applyAdvancedRuntimeOverridesToKit } from "./siteBuilderAdvancedRuntimeOverrides";
 import type {
   SolutionKitInstallItemRecord,
   SolutionKitInstallRunRecord,
@@ -263,9 +264,10 @@ const buildValidation = (input: {
   }
 
   if (enabled.has("qa")) {
-    const detail = unresolvedItems.length > 0
-      ? "QA detected unresolved items. Review checklist before publish."
-      : "QA checks passed without unresolved items.";
+    const detail =
+      unresolvedItems.length > 0
+        ? "QA detected unresolved items. Review checklist before publish."
+        : "QA checks passed without unresolved items.";
     checks.push({
       id: "step.qa",
       label: "QA step",
@@ -285,17 +287,11 @@ const buildValidation = (input: {
 const readEnabledStepsFromRunOptions = (value: unknown): SiteBuilderPlanStepId[] => {
   if (!isRecord(value)) return [...siteBuilderPlanStepIds];
 
-  const assistant = isRecord(value.assistantSiteBuilder)
-    ? value.assistantSiteBuilder
-    : null;
+  const assistant = isRecord(value.assistantSiteBuilder) ? value.assistantSiteBuilder : null;
   const wizard = isRecord(value.wizard) ? value.wizard : null;
 
-  const fromAssistant = Array.isArray(assistant?.enabledStepIds)
-    ? assistant?.enabledStepIds
-    : [];
-  const fromWizard = Array.isArray(wizard?.enabledStepIds)
-    ? wizard?.enabledStepIds
-    : [];
+  const fromAssistant = Array.isArray(assistant?.enabledStepIds) ? assistant?.enabledStepIds : [];
+  const fromWizard = Array.isArray(wizard?.enabledStepIds) ? wizard?.enabledStepIds : [];
 
   const normalized = [...new Set([...fromAssistant, ...fromWizard].filter(isStepId))];
   return normalized.length > 0 ? normalized : [...siteBuilderPlanStepIds];
@@ -336,17 +332,24 @@ export const executeGuidedSiteBuilder = async (
   };
 
   const filtered = filterKitDefinitionByPlan(selectedKit, planPayload);
+  const executableKit = applyAdvancedRuntimeOverridesToKit(
+    filtered,
+    input.advancedRuntimeOverrides
+  );
 
   const execution = await deps.apply({
     kitId: selectedKit.id,
     actorId: input.actorId ?? null,
     dryRun: input.dryRun,
     continueOnError: input.continueOnError,
-    kitDefinitionOverride: filtered,
+    kitDefinitionOverride: executableKit,
     runOptions: {
       assistantSiteBuilder: {
         selectedKitId: selectedKit.id,
         enabledStepIds: preview.enabledStepIds,
+        ...(input.advancedRuntimeOverrides
+          ? { advancedRuntimeOverrides: input.advancedRuntimeOverrides }
+          : {}),
         actions: preview.actions.map((action) => ({
           id: action.id,
           stepId: action.stepId,

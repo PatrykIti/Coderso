@@ -32,7 +32,7 @@ test("buildBlueprintCompositionDiagnostics serializes selected capabilities and 
       gated: [],
     },
     actionAssembly: {
-      totalActions: 8,
+      totalActions: 9,
       actionTypes: [
         "content-type.upsert",
         "custom-screen.upsert",
@@ -41,10 +41,12 @@ test("buildBlueprintCompositionDiagnostics serializes selected capabilities and 
         "form.upsert",
         "page.upsert",
         "page.upsert",
+        "detail-page.upsert",
         "setting.content-route.upsert",
       ],
       actionTypeCounts: expect.arrayContaining([
         { type: "page.upsert", count: 2 },
+        { type: "detail-page.upsert", count: 1 },
         { type: "form.upsert", count: 1 },
       ]),
     },

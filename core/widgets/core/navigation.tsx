@@ -1,6 +1,7 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
+import { renderSharedWidgetRuntimeScript } from "../runtimeScripts";
 import type {
   DeviceTarget,
   WidgetBlock,
@@ -14,7 +15,19 @@ import {
   resolveClearableCssColorValue,
   resolveClearableStyleValue,
 } from "./clearableStyle";
+import {
+  navigationMobileModeIds,
+  navigationVariantIds,
+  type NavigationMobileMode,
+} from "./navigationContract";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
+
+export {
+  navigationMobileModeIds,
+  navigationVariantIds,
+  type NavigationMobileMode,
+  type NavigationVariantId,
+} from "./navigationContract";
 
 export type NavigationLinkTarget = "self" | "blank";
 
@@ -58,7 +71,7 @@ export type NavigationBehavior = {
   sticky?: boolean;
   transparent?: boolean;
   collapseOnScroll?: boolean;
-  mobileMode?: "expanded" | "drawer" | "minimal";
+  mobileMode?: NavigationMobileMode;
   hideCtaOnMobile?: boolean;
   activeLinkMode?: NavigationActiveLinkMode;
 };
@@ -221,7 +234,7 @@ export const navigationSchema = {
         sticky: { type: "boolean" },
         transparent: { type: "boolean" },
         collapseOnScroll: { type: "boolean" },
-        mobileMode: { enum: ["expanded", "drawer", "minimal"] },
+        mobileMode: { enum: navigationMobileModeIds },
         hideCtaOnMobile: { type: "boolean" },
         activeLinkMode: { enum: ["none", "pathname", "exact"] },
       },
@@ -435,6 +448,12 @@ export const navigationEditorContract: WidgetEditorContract = {
   ],
 };
 
+const navigationVariantLabels: Record<(typeof navigationVariantIds)[number], string> = {
+  simple: "Simple",
+  "with-cta": "With CTA",
+  split: "Split",
+};
+
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
@@ -572,6 +591,393 @@ const surfaceMotionClassMap = {
   standard:
     "transition-[opacity,transform,max-height] duration-200 ease-out motion-reduce:transition-none",
 } as const;
+
+const navigationRootSelector = '[data-navigation-widget="1"]';
+const navigationLinkSelector = '[data-navigation-link="1"]';
+const navigationSubmenuToggleSelector = '[data-navigation-submenu-toggle="1"]';
+const navigationMobileToggleSelector = "[data-navigation-mobile-toggle]";
+const navigationMobilePanelSelector = "[data-navigation-mobile-panel]";
+const navigationFocusableSelector =
+  'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])';
+const navigationDrawerAnimationMs = 180;
+
+type NavigationScrollTarget = Window | HTMLElement;
+
+type NavigationRuntimeBindOptions = {
+  scrollTarget?: NavigationScrollTarget | null;
+};
+
+const findNavigationRoots = (container: ParentNode): HTMLElement[] => {
+  if (typeof HTMLElement === "undefined") return [];
+  const roots: HTMLElement[] = [];
+  if (container instanceof HTMLElement && container.matches(navigationRootSelector)) {
+    roots.push(container);
+  }
+  roots.push(
+    ...Array.from(container.querySelectorAll(navigationRootSelector)).filter(
+      (node): node is HTMLElement => node instanceof HTMLElement
+    )
+  );
+  return roots;
+};
+
+const getNavigationOwnerDocument = (root: HTMLElement) => root.ownerDocument ?? document;
+
+const getNavigationWindow = (root: HTMLElement) =>
+  getNavigationOwnerDocument(root).defaultView ?? window;
+
+const getNavigationScrollY = (target: NavigationScrollTarget) =>
+  target instanceof Window ? target.scrollY : target.scrollTop;
+
+const getNavigationFocusableElements = (container: HTMLElement): HTMLElement[] => {
+  if (typeof HTMLElement === "undefined") return [];
+  return Array.from(container.querySelectorAll(navigationFocusableSelector)).filter(
+    (candidate): candidate is HTMLElement => {
+      if (!(candidate instanceof HTMLElement)) return false;
+      if (candidate.hidden) return false;
+      if (candidate.getAttribute("aria-hidden") === "true") return false;
+      return candidate.offsetParent !== null || candidate === container.ownerDocument.activeElement;
+    }
+  );
+};
+
+const parseNavigationRuntimeUrl = (root: HTMLElement, href: string | null) => {
+  if (!href || href.startsWith("#")) return null;
+  try {
+    const ownerWindow = getNavigationWindow(root);
+    return new URL(href, ownerWindow.location.origin);
+  } catch {
+    return null;
+  }
+};
+
+const resolveNavigationMatchingPath = (
+  root: HTMLElement,
+  href: string | null,
+  mode: string | undefined
+) => {
+  const parsed = parseNavigationRuntimeUrl(root, href);
+  const ownerWindow = getNavigationWindow(root);
+  if (!parsed || parsed.origin !== ownerWindow.location.origin) return null;
+  const currentPath = ownerWindow.location.pathname.replace(/\/$/, "") || "/";
+  const targetPath = parsed.pathname.replace(/\/$/, "") || "/";
+  if (mode === "exact") return currentPath === targetPath ? targetPath : null;
+  if (mode === "pathname") {
+    return targetPath === "/"
+      ? currentPath === "/"
+        ? targetPath
+        : null
+      : currentPath === targetPath || currentPath.startsWith(`${targetPath}/`)
+        ? targetPath
+        : null;
+  }
+  return null;
+};
+
+export function updateNavigationActiveLinks(root: HTMLElement): void {
+  const mode = root.dataset.navigationActiveMode;
+  const anchors = Array.from(root.querySelectorAll(navigationLinkSelector));
+  const matches: Array<{ anchor: HTMLAnchorElement; path: string }> = [];
+  for (const candidate of anchors) {
+    if (!(candidate instanceof HTMLAnchorElement)) continue;
+    candidate.dataset.navigationActive = "false";
+    candidate.removeAttribute("aria-current");
+    if (!mode || mode === "none") continue;
+    const matchedPath = resolveNavigationMatchingPath(root, candidate.getAttribute("href"), mode);
+    if (!matchedPath) continue;
+    matches.push({ anchor: candidate, path: matchedPath });
+  }
+
+  if (matches.length === 0) return;
+
+  const bestLength = matches.reduce((longest, match) => Math.max(longest, match.path.length), 0);
+  for (const match of matches) {
+    if (match.path.length !== bestLength) continue;
+    match.anchor.dataset.navigationActive = "true";
+    match.anchor.setAttribute("aria-current", "page");
+  }
+}
+
+const resolveNavigationSubmenuPanel = (toggle: HTMLButtonElement): HTMLElement | null => {
+  const controls = toggle.getAttribute("aria-controls");
+  if (!controls) return null;
+  const panel = getNavigationOwnerDocument(toggle).getElementById(controls);
+  return panel instanceof HTMLElement ? panel : null;
+};
+
+const syncNavigationSubmenuPosition = (toggle: HTMLButtonElement, panel: HTMLElement): void => {
+  const configured = panel.dataset.navigationDirection || "bottom";
+  if (configured === "top" || configured === "bottom") {
+    panel.dataset.navigationPosition = configured;
+    return;
+  }
+  const ownerWindow = getNavigationWindow(toggle);
+  const rect = panel.getBoundingClientRect();
+  const shouldOpenUp =
+    rect.bottom > ownerWindow.innerHeight - 24 && rect.top > ownerWindow.innerHeight / 2;
+  panel.dataset.navigationPosition = shouldOpenUp ? "top" : "bottom";
+};
+
+const closeNavigationSiblingSubmenus = (
+  root: HTMLElement,
+  exceptToggle: HTMLButtonElement
+): void => {
+  for (const candidate of Array.from(root.querySelectorAll(navigationSubmenuToggleSelector))) {
+    if (!(candidate instanceof HTMLButtonElement) || candidate === exceptToggle) continue;
+    const panel = resolveNavigationSubmenuPanel(candidate);
+    if (!panel) continue;
+    candidate.dataset.state = "closed";
+    candidate.setAttribute("aria-expanded", "false");
+    panel.dataset.state = "closed";
+    panel.setAttribute("aria-hidden", "true");
+    panel.setAttribute("hidden", "");
+  }
+};
+
+export function setNavigationSubmenuState(toggle: HTMLButtonElement, open: boolean): void {
+  const root = toggle.closest(navigationRootSelector);
+  if (!(root instanceof HTMLElement)) return;
+  const panel = resolveNavigationSubmenuPanel(toggle);
+  if (!panel) return;
+  if (open) {
+    closeNavigationSiblingSubmenus(root, toggle);
+    panel.removeAttribute("hidden");
+    syncNavigationSubmenuPosition(toggle, panel);
+  } else {
+    panel.setAttribute("hidden", "");
+  }
+  toggle.dataset.state = open ? "open" : "closed";
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  panel.dataset.state = open ? "open" : "closed";
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+export function closeNavigationSubmenus(root: HTMLElement): void {
+  for (const candidate of Array.from(root.querySelectorAll(navigationSubmenuToggleSelector))) {
+    if (!(candidate instanceof HTMLButtonElement)) continue;
+    setNavigationSubmenuState(candidate, false);
+  }
+}
+
+const resolveNavigationDrawer = (root: HTMLElement) => {
+  const trigger = root.querySelector(navigationMobileToggleSelector);
+  const panel = root.querySelector(navigationMobilePanelSelector);
+  if (!(trigger instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) return null;
+  return { trigger, panel };
+};
+
+const syncNavigationToggleDecorations = (trigger: HTMLButtonElement, open: boolean): void => {
+  trigger.dataset.state = open ? "open" : "closed";
+  trigger.setAttribute("aria-expanded", open ? "true" : "false");
+  trigger.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
+  for (const icon of Array.from(trigger.querySelectorAll("[data-navigation-mobile-icon]"))) {
+    if (!(icon instanceof HTMLElement)) continue;
+    const iconState = icon.dataset.navigationMobileIcon;
+    icon.hidden = open ? iconState !== "close" : iconState !== "menu";
+  }
+  const label = trigger.querySelector("[data-navigation-mobile-label]");
+  if (label instanceof HTMLElement) {
+    label.textContent = open ? "Close" : "Menu";
+  }
+};
+
+const clearNavigationPanelCloseTimer = (panel: HTMLElement): void => {
+  const timerId = panel.dataset.navigationCloseTimer;
+  if (!timerId) return;
+  getNavigationWindow(panel).clearTimeout(Number(timerId));
+  delete panel.dataset.navigationCloseTimer;
+};
+
+const setNavigationPanelOpenState = (panel: HTMLElement, open: boolean): void => {
+  clearNavigationPanelCloseTimer(panel);
+  panel.dataset.state = open ? "open" : "closed";
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+  if ("inert" in panel) {
+    panel.inert = !open;
+  }
+  if (open) {
+    panel.hidden = false;
+    getNavigationWindow(panel).requestAnimationFrame(() => {
+      panel.dataset.state = "open";
+    });
+  } else {
+    const timer = getNavigationWindow(panel).setTimeout(() => {
+      panel.hidden = true;
+    }, navigationDrawerAnimationMs);
+    panel.dataset.navigationCloseTimer = String(timer);
+  }
+};
+
+const focusFirstNavigationDrawerTarget = (panel: HTMLElement, trigger: HTMLButtonElement): void => {
+  const focusable = getNavigationFocusableElements(panel)[0];
+  if (focusable instanceof HTMLElement) {
+    focusable.focus();
+    return;
+  }
+  if (!panel.hasAttribute("tabindex")) {
+    panel.setAttribute("tabindex", "-1");
+  }
+  panel.focus();
+  trigger.blur();
+};
+
+export function setNavigationDrawerState(
+  root: HTMLElement,
+  open: boolean,
+  focusTriggerOnClose = true
+): void {
+  const drawer = resolveNavigationDrawer(root);
+  if (!drawer) return;
+  const { trigger, panel } = drawer;
+  syncNavigationToggleDecorations(trigger, open);
+  setNavigationPanelOpenState(panel, open);
+  if (open) {
+    focusFirstNavigationDrawerTarget(panel, trigger);
+    closeNavigationSubmenus(root);
+  } else if (focusTriggerOnClose) {
+    trigger.focus();
+  }
+}
+
+export function updateNavigationCollapseState(
+  roots: HTMLElement[],
+  scrollTarget: NavigationScrollTarget
+): void {
+  const currentY = getNavigationScrollY(scrollTarget);
+  for (const root of roots) {
+    if (root.dataset.collapseOnScroll !== "true") continue;
+    const previousY = Number(root.dataset.navigationLastScrollY || "0");
+    const collapsed = currentY > 24 && currentY > previousY;
+    root.dataset.navigationCollapsed = collapsed ? "true" : "false";
+    root.classList.toggle("is-navigation-collapsed", collapsed);
+    root.dataset.navigationLastScrollY = String(currentY);
+  }
+}
+
+export function initializeNavigationRuntimeRoot(
+  root: HTMLElement,
+  scrollTarget: NavigationScrollTarget
+): void {
+  const drawer = resolveNavigationDrawer(root);
+  if (drawer) {
+    syncNavigationToggleDecorations(drawer.trigger, false);
+    drawer.panel.hidden = true;
+    drawer.panel.dataset.state = "closed";
+    drawer.panel.setAttribute("aria-hidden", "true");
+    if ("inert" in drawer.panel) {
+      drawer.panel.inert = true;
+    }
+  }
+  closeNavigationSubmenus(root);
+  updateNavigationActiveLinks(root);
+  root.dataset.navigationLastScrollY = String(getNavigationScrollY(scrollTarget));
+  if (root.dataset.collapseOnScroll === "true") {
+    root.dataset.navigationCollapsed = "false";
+  }
+}
+
+export function bindNavigationRuntimeRoots(
+  container: ParentNode,
+  options: NavigationRuntimeBindOptions = {}
+): () => void {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return () => undefined;
+  }
+
+  const roots = findNavigationRoots(container);
+  const scrollTarget = options.scrollTarget ?? window;
+  if (!roots.length) return () => undefined;
+
+  roots.forEach((root) => initializeNavigationRuntimeRoot(root, scrollTarget));
+  updateNavigationCollapseState(roots, scrollTarget);
+
+  const ownerDocument = roots[0]?.ownerDocument ?? document;
+  const ownerWindow = ownerDocument.defaultView ?? window;
+
+  const handleClick = (event: Event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const drawerTrigger = target.closest(navigationMobileToggleSelector);
+    if (drawerTrigger instanceof HTMLButtonElement) {
+      const root = drawerTrigger.closest(navigationRootSelector);
+      if (!(root instanceof HTMLElement) || !roots.includes(root)) return;
+      const nextOpen = drawerTrigger.getAttribute("aria-expanded") !== "true";
+      setNavigationDrawerState(root, nextOpen, true);
+      return;
+    }
+
+    const submenuTrigger = target.closest(navigationSubmenuToggleSelector);
+    if (submenuTrigger instanceof HTMLButtonElement) {
+      const root = submenuTrigger.closest(navigationRootSelector);
+      if (!(root instanceof HTMLElement) || !roots.includes(root)) return;
+      const nextOpen = submenuTrigger.getAttribute("aria-expanded") !== "true";
+      setNavigationSubmenuState(submenuTrigger, nextOpen);
+      return;
+    }
+
+    for (const root of roots) {
+      if (root.contains(target)) continue;
+      setNavigationDrawerState(root, false, false);
+      closeNavigationSubmenus(root);
+    }
+  };
+
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      for (const root of roots) {
+        const drawer = resolveNavigationDrawer(root);
+        const drawerOpen = drawer?.trigger.getAttribute("aria-expanded") === "true";
+        if (drawerOpen) {
+          event.preventDefault();
+          setNavigationDrawerState(root, false, true);
+        }
+        for (const toggle of Array.from(root.querySelectorAll(navigationSubmenuToggleSelector))) {
+          if (!(toggle instanceof HTMLButtonElement)) continue;
+          if (toggle.getAttribute("aria-expanded") !== "true") continue;
+          event.preventDefault();
+          setNavigationSubmenuState(toggle, false);
+          toggle.focus();
+        }
+      }
+      return;
+    }
+
+    if (event.key !== "Tab") return;
+    for (const root of roots) {
+      const drawer = resolveNavigationDrawer(root);
+      if (!drawer) continue;
+      if (drawer.trigger.getAttribute("aria-expanded") !== "true") continue;
+      const focusables = [drawer.trigger, ...getNavigationFocusableElements(drawer.panel)];
+      const currentIndex = focusables.indexOf(ownerDocument.activeElement as HTMLElement);
+      if (currentIndex === -1 || focusables.length === 0) continue;
+      if (event.shiftKey && currentIndex === 0) {
+        event.preventDefault();
+        focusables[focusables.length - 1]?.focus();
+      } else if (!event.shiftKey && currentIndex === focusables.length - 1) {
+        event.preventDefault();
+        focusables[0]?.focus();
+      }
+    }
+  };
+
+  const handleScroll = () => updateNavigationCollapseState(roots, scrollTarget);
+  const handleLocationChange = () => roots.forEach((root) => updateNavigationActiveLinks(root));
+
+  ownerDocument.addEventListener("click", handleClick);
+  ownerDocument.addEventListener("keydown", handleKeydown);
+  scrollTarget.addEventListener("scroll", handleScroll, { passive: true });
+  ownerWindow.addEventListener("popstate", handleLocationChange);
+  ownerWindow.addEventListener("hashchange", handleLocationChange);
+
+  return () => {
+    ownerDocument.removeEventListener("click", handleClick);
+    ownerDocument.removeEventListener("keydown", handleKeydown);
+    scrollTarget.removeEventListener("scroll", handleScroll);
+    ownerWindow.removeEventListener("popstate", handleLocationChange);
+    ownerWindow.removeEventListener("hashchange", handleLocationChange);
+  };
+}
 
 const navigationRuntimeClientScript = `
 (() => {
@@ -1163,6 +1569,7 @@ export function NavigationBlock({
   const layout = normalized.layout ?? {};
   const style = normalized.style ?? {};
   const behavior = normalized.behavior ?? {};
+  const stickyEnabled = Boolean(behavior.sticky || behavior.collapseOnScroll);
   const mobileMode = behavior.mobileMode ?? "expanded";
   const isDrawerMode = mobileMode === "drawer";
   const isMinimalMode = mobileMode === "minimal";
@@ -1203,6 +1610,7 @@ export function NavigationBlock({
         style.linkColor ??
         style.textColor ??
         "var(--color-text)",
+      top: stickyEnabled ? "var(--coderso-preview-banner-offset, 0px)" : undefined,
     }) ?? {};
 
   const logoStyle: CSSProperties = {
@@ -1226,11 +1634,12 @@ export function NavigationBlock({
   const navClass = joinClasses(
     "w-full px-6",
     paddingYClassMap[layout.paddingY ?? "4"] ?? "py-4",
-    behavior.sticky && "sticky top-0 z-40",
+    stickyEnabled && "sticky z-40",
     shadowClassMap[style.shadow ?? "none"],
     backdropBlurClassMap[style.backdropBlur ?? "none"],
     rootMotionClassMap[style.motion ?? "subtle"],
-    "data-[navigation-collapsed=true]:py-2 data-[navigation-collapsed=true]:shadow-md"
+    ["3", "4", "5"].includes(layout.paddingY ?? "4") && "data-[navigation-collapsed=true]:py-2",
+    "data-[navigation-collapsed=true]:shadow-md"
   );
 
   const logoHref = normalized.logo.href ?? "/";
@@ -1391,6 +1800,7 @@ export function NavigationBlock({
     <nav
       className={navClass}
       data-navigation-widget="1"
+      data-navigation-sticky={stickyEnabled ? "true" : undefined}
       data-navigation-collapsed="false"
       data-collapse-on-scroll={behavior.collapseOnScroll ? "true" : undefined}
       data-mobile-mode={mobileMode}
@@ -1544,9 +1954,12 @@ export function NavigationBlock({
       {(showMobileToggle ||
         hasInteractiveSubmenus ||
         behavior.collapseOnScroll ||
-        behavior.activeLinkMode !== "none") && (
-        <script dangerouslySetInnerHTML={{ __html: navigationRuntimeClientScript }} />
-      )}
+        behavior.activeLinkMode !== "none") &&
+        renderSharedWidgetRuntimeScript({
+          renderContext,
+          id: "navigation",
+          source: navigationRuntimeClientScript,
+        })}
     </nav>
   );
 }
@@ -1562,11 +1975,7 @@ export function createNavigationWidget(editors: {
     description: "Site menu with logo and links.",
     category: "navigation",
     slots: [{ id: "right", label: "Right Actions" }],
-    variants: [
-      { id: "simple", label: "Simple" },
-      { id: "with-cta", label: "With CTA" },
-      { id: "split", label: "Split" },
-    ],
+    variants: navigationVariantIds.map((id) => ({ id, label: navigationVariantLabels[id] })),
     schema: navigationSchema,
     defaults: navigationDefaults,
     editor: editors,

@@ -8,6 +8,7 @@ import type {
 
 export type BlueprintProvideKind =
   | "catalog"
+  | "full-service-site"
   | "lead-capture"
   | "product-inquiry"
   | "editorial-content-hub"
@@ -134,6 +135,7 @@ export type BlueprintCapability = {
 };
 
 export type BlueprintCapabilityPlanBuilder = (options?: {
+  prompt?: string;
   promptKind?: AssistantPromptKind;
   intentFamily?: AssistantIntentFamily;
 }) => AssistantActionPlan;

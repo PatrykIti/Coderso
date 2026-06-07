@@ -4,6 +4,13 @@ import type {
   SiteBuilderPlanStepId,
   SolutionKitId,
 } from "../kits/solutionKitTypes";
+import type {
+  AssistantSiteBuilderIntakeAnswerFieldControl,
+  AssistantSiteBuilderIntakeMode,
+  AssistantSiteBuilderIntakeOptionRegistryId,
+  AssistantSiteBuilderIntakeSession,
+  AssistantSiteBuilderIntakeStepId,
+} from "./assistantSiteBuilderIntakeTypes";
 import type { WidgetBlock } from "../../widgets/types";
 import type { NormalizedFormAction } from "../forms/formActionsContract";
 import type {
@@ -21,6 +28,7 @@ import type { CustomScreenCollectionRole } from "../customScreens/customScreenSc
 import { isAssistantActionPlanStrict } from "./actionPlanSchema";
 import type { DetailPageDocument } from "../content/detailPageTypes";
 import type { CollectionWorkspaceSummary } from "../content/collectionWorkspaceService";
+import type { AssistantSiteKitAdvancedRuntimeOverrides } from "./siteBuilderAdvancedRuntimeOverrides";
 
 export type AssistantActionPlanStatus = "ready" | "needs_input";
 export type AssistantPromptKind =
@@ -33,6 +41,7 @@ export type AssistantIntentFamily =
   | "product_catalog"
   | "portfolio_projects"
   | "services_directory"
+  | "service_business_full_site"
   | "lead_capture_site"
   | "booking_service"
   | "editorial_content_hub"
@@ -48,6 +57,7 @@ export type AssistantSiteKitPlanInput = {
   preferredKitId?: SolutionKitId | null;
   selectedKitId?: SolutionKitId | null;
   enabledStepIds?: SiteBuilderPlanStepId[];
+  advancedRuntimeOverrides?: AssistantSiteKitAdvancedRuntimeOverrides;
 };
 
 export type AssistantSiteKitInstallInput = AssistantSiteKitPlanInput & {
@@ -76,6 +86,10 @@ export type AssistantActionContext = {
   page?: string;
   locale?: string;
   siteKit?: AssistantSiteKitPlanInput;
+  siteBuilderIntakeState?: {
+    requestedMode?: AssistantSiteBuilderIntakeMode | null;
+    activeSession?: AssistantSiteBuilderIntakeSession | null;
+  } | null;
   includeResourceCatalog?: boolean;
   resourceCatalog?: AssistantResourceCatalogSnapshot;
   runtimeSnapshot?: AssistantActionRuntimeSnapshot;
@@ -556,6 +570,28 @@ export type AssistantEntryUpsertDraftAction = {
   };
 };
 
+export type AssistantSeoDraft = {
+  title?: string | null;
+  description?: string | null;
+  canonicalUrl?: string | null;
+  robots?: string | null;
+};
+
+export type AssistantEntrySampleCreateAction = {
+  id: string;
+  type: "entry.sample.create";
+  title: string;
+  description: string;
+  input: {
+    contentTypeSlug: string;
+    title: string;
+    slug: string;
+    status: "published";
+    values: Record<string, unknown>;
+    seo?: AssistantSeoDraft;
+  };
+};
+
 export type AssistantEntryDeleteAction = {
   id: string;
   type: "entry.delete";
@@ -602,7 +638,7 @@ export type AssistantMenuItemUpsertAction = {
   title: string;
   description: string;
   input: {
-    menuId: string;
+    menuId: AssistantResourceIdInput;
     label: string;
     href: string;
     parentId?: string | null;
@@ -645,6 +681,49 @@ export type AssistantMenuItemUpdateAction = {
   };
 };
 
+export type AssistantSamePlanLocator =
+  | {
+      kind: "action-result";
+      actionId: string;
+      resourceType: "content-type" | "page" | "entry" | "menu" | "detail-page";
+      field: "id";
+    }
+  | {
+      kind: "stable-slug";
+      resourceType: "content-type";
+      slug: string;
+    }
+  | {
+      kind: "stable-slug";
+      resourceType: "page";
+      slug: string;
+    }
+  | {
+      kind: "stable-slug";
+      resourceType: "entry";
+      contentTypeSlug: string;
+      slug: string;
+    }
+  | {
+      kind: "stable-location";
+      resourceType: "menu";
+      location: string;
+    };
+
+export type AssistantResourceIdInput = string | AssistantSamePlanLocator;
+
+export type AssistantMenuUpsertAction = {
+  id: string;
+  type: "menu.upsert";
+  title: string;
+  description: string;
+  input: {
+    name: string;
+    location: string;
+    status: "draft" | "published";
+  };
+};
+
 export type AssistantSeoDocumentUpsertAction = {
   id: string;
   type: "seo.document.upsert";
@@ -652,7 +731,7 @@ export type AssistantSeoDocumentUpsertAction = {
   description: string;
   input: {
     targetType: "page" | "entry";
-    targetId: string;
+    targetId: AssistantResourceIdInput;
     seo: {
       slug?: string | null;
       title?: string | null;
@@ -822,6 +901,7 @@ export type AssistantDetailPageUpsertAction = {
   description: string;
   input: {
     document: DetailPageDocument;
+    contentTypeId?: AssistantResourceIdInput;
     expectedExistingId?: string | null;
   };
 };
@@ -965,8 +1045,10 @@ export type AssistantPlannedAction =
   | AssistantFormArchiveAction
   | AssistantFormUpdateAction
   | AssistantEntryUpsertDraftAction
+  | AssistantEntrySampleCreateAction
   | AssistantEntryDeleteAction
   | AssistantEntryUpdateAction
+  | AssistantMenuUpsertAction
   | AssistantMenuItemUpsertAction
   | AssistantMenuItemDeleteAction
   | AssistantMenuItemUpdateAction
@@ -1096,11 +1178,77 @@ export type AssistantBlueprintCompositionMetadata = {
   };
 };
 
+export type AssistantLaunchReadinessCheckStatus = "satisfied" | "pending_execute" | "gated";
+
+export type AssistantLaunchReadinessCheckMetadata = {
+  id: string;
+  label: string;
+  status: AssistantLaunchReadinessCheckStatus;
+  evidence: string[];
+  gates: string[];
+};
+
+export type AssistantLaunchReadinessMetadata = {
+  schemaVersion: 1;
+  kind: "full-service-site";
+  requiredPages: string[];
+  requiredCatalogs: string[];
+  requiredMediaPages?: string[];
+  minimumPublishedEntries: Record<string, number>;
+  checks: AssistantLaunchReadinessCheckMetadata[];
+};
+
+export type AssistantSiteBuilderIntakeStepMetadata = {
+  id: AssistantSiteBuilderIntakeStepId;
+  label: string;
+  description: string;
+  required: boolean;
+  optionRegistryId: AssistantSiteBuilderIntakeOptionRegistryId | null;
+  position: number;
+  total: number;
+  answerFields: AssistantSiteBuilderIntakeAnswerFieldMetadata[];
+};
+
+export type AssistantSiteBuilderIntakeAnswerOptionMetadata = {
+  id: string;
+  label: string;
+  description: string;
+};
+
+export type AssistantSiteBuilderIntakeAnswerFieldMetadata = {
+  key: string;
+  label: string;
+  description: string;
+  control: AssistantSiteBuilderIntakeAnswerFieldControl;
+  required: boolean;
+  requiredGroupId: string | null;
+  maxLength: number | null;
+  maxItems: number | null;
+  optionRegistryId: AssistantSiteBuilderIntakeOptionRegistryId | null;
+  options: AssistantSiteBuilderIntakeAnswerOptionMetadata[];
+};
+
+export type AssistantSiteBuilderIntakePlanMetadata = {
+  schemaVersion: 1;
+  mode: AssistantSiteBuilderIntakeMode;
+  status: "needs_input" | "ready_for_execution";
+  currentStepId: AssistantSiteBuilderIntakeStepId;
+  nextStepId: AssistantSiteBuilderIntakeStepId | null;
+  visibleStepIds: AssistantSiteBuilderIntakeStepId[];
+  answeredStepIds: AssistantSiteBuilderIntakeStepId[];
+  missingRequiredStepIds: AssistantSiteBuilderIntakeStepId[];
+  canReview: boolean;
+  canExecute: boolean;
+  steps: AssistantSiteBuilderIntakeStepMetadata[];
+};
+
 export type AssistantActionPlanMetadata = {
   planner: "local" | "provider" | "fallback";
   providerDraftUsed: boolean;
   providerId?: string | null;
   blueprintComposition?: AssistantBlueprintCompositionMetadata;
+  launchReadiness?: AssistantLaunchReadinessMetadata;
+  siteBuilderIntake?: AssistantSiteBuilderIntakePlanMetadata;
   blueprintShadow?: {
     schemaVersion: 1;
     currentIntentId: string;

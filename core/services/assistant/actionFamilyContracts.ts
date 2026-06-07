@@ -8,7 +8,6 @@ import type {
 import { assistantActionTypes, isAssistantActionType } from "./actionRegistry";
 
 export const assistantContractOnlyActionTypes = [
-  "entry.sample.create",
   "entry.bulk-draft.create",
   "entry.field.patch",
   "menu.structure.patch",
@@ -361,6 +360,22 @@ export const assistantActionFamilyContracts = [
       notes: ["Draft-only entry upsert; publishing requires a separate explicit action."],
     }
   ),
+  executableContract(
+    "entry.sample.create",
+    "entry",
+    "core/services/content/entryService.ts",
+    ["contentTypeSlug", "title", "slug", "status", "values"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write", "content:publish"],
+      },
+      notes: [
+        "Bounded public sample entry upsert; publish lifecycle stays owned by the content entry service.",
+      ],
+    }
+  ),
   executableContract("entry.delete", "entry", "core/services/content/entryService.ts", ["id"], {
     permissions: {
       plan: ["content:read"],
@@ -383,6 +398,20 @@ export const assistantActionFamilyContracts = [
       notes: [
         "Updates one exact entry through content services and preserves unrelated data fields.",
       ],
+    }
+  ),
+  executableContract(
+    "menu.upsert",
+    "menu",
+    "core/services/menus/menuService.ts",
+    ["name", "location", "status"],
+    {
+      permissions: {
+        plan: ["menus:read"],
+        dryRun: ["menus:read"],
+        execute: ["menus:write"],
+      },
+      notes: ["Creates or updates one named menu by stable theme location."],
     }
   ),
   executableContract(
@@ -680,20 +709,6 @@ export const assistantActionFamilyContracts = [
     {
       executionBoundary: "existing-site-kit-adapter",
       permissions: siteKitPermissions,
-    }
-  ),
-  plannedContract(
-    "entry.sample.create",
-    "entry",
-    "core/services/content/entryService.ts",
-    ["contentTypeSlug", "samples"],
-    {
-      plan: ["content:read"],
-      dryRun: ["content:read"],
-      execute: ["content:write"],
-    },
-    {
-      notes: ["Bounded sample draft creation for schema-known fields only."],
     }
   ),
   plannedContract(

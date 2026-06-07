@@ -71,7 +71,8 @@ const GATES: GateDefinition[] = [
           "run",
           "test:vitest",
           "--",
-          "tests/vitest/ui/ai-site-wizard.test.tsx",
+          "tests/vitest/ui/solution-kits-page.test.tsx",
+          "tests/vitest/ui/assistant-panel-interaction.test.tsx",
           "tests/vitest/ui/widget-library.test.tsx",
           "tests/vitest/ui/page-editor.test.tsx",
           "tests/vitest/ui/settings-shell.test.tsx",
@@ -99,29 +100,15 @@ const GATES: GateDefinition[] = [
       },
       {
         title: "Rate-limit contracts",
-        cmd: [
-          "bun",
-          "test",
-          "tests/unit/security/rateLimit.test.ts",
-        ],
+        cmd: ["bun", "test", "tests/unit/security/rateLimit.test.ts"],
       },
       {
         title: "Form nonce contracts",
-        cmd: [
-          "bun",
-          "run",
-          "test:vitest",
-          "--",
-          "tests/vitest/forms/submissionNonce.test.ts",
-        ],
+        cmd: ["bun", "run", "test:vitest", "--", "tests/vitest/forms/submissionNonce.test.ts"],
       },
       {
         title: "Public booking API DB security smoke",
-        cmd: [
-          "bun",
-          "test",
-          "tests/unit/server/publicBookingApi.test.ts",
-        ],
+        cmd: ["bun", "test", "tests/unit/server/publicBookingApi.test.ts"],
         requiresDatabaseUrl: true,
       },
     ],
@@ -141,11 +128,7 @@ const GATES: GateDefinition[] = [
       },
       {
         title: "Store revocation DB reliability",
-        cmd: [
-          "bun",
-          "test",
-          "tests/integration/store/revocations.test.ts",
-        ],
+        cmd: ["bun", "test", "tests/integration/store/revocations.test.ts"],
         requiresDatabaseUrl: true,
       },
     ],

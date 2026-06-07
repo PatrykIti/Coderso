@@ -4,10 +4,7 @@ import type {
   AssistantPlannedAction,
 } from "./actionPlanTypes";
 import type { CmsOperationDraft } from "./cmsOperationDraftSchema";
-import {
-  type CmsResolvedTargetCandidate,
-  resolveCmsOperationTargets,
-} from "./cmsTargetResolver";
+import { type CmsResolvedTargetCandidate, resolveCmsOperationTargets } from "./cmsTargetResolver";
 import {
   findPolicyActionForDraft,
   getActionMappingResourcePolicy,
@@ -20,6 +17,7 @@ import {
   canMapExpectedCountMultiWithPolicy,
   canMapFilteredAllWithPolicy,
 } from "./operationPolicy/safetyPolicy";
+import { redactAssistantUnsafeText } from "./assistantRedaction";
 
 const readString = (value: unknown) =>
   typeof value === "string" && value.trim() ? value.trim() : null;
@@ -33,12 +31,21 @@ const readDetailString = (target: CmsResolvedTargetCandidate, key: string) =>
 const readDetailNumber = (target: CmsResolvedTargetCandidate, key: string) =>
   readNumber(target.details?.[key]);
 
-const describeCmsTargetQuery = (draft: CmsOperationDraft) =>
-  draft.targetQuery?.exactName ??
-  draft.targetQuery?.prefix ??
-  draft.targetQuery?.slug ??
-  draft.targetQuery?.text ??
-  null;
+const describeOriginalPrompt = (prompt: string) => {
+  const trimmed = prompt.trim();
+  if (!trimmed) return "empty prompt";
+  return redactAssistantUnsafeText(trimmed);
+};
+
+const describeCmsTargetQuery = (draft: CmsOperationDraft) => {
+  const query =
+    draft.targetQuery?.exactName ??
+    draft.targetQuery?.prefix ??
+    draft.targetQuery?.slug ??
+    draft.targetQuery?.text ??
+    null;
+  return query ? redactAssistantUnsafeText(query) : null;
+};
 
 const toInspectionCandidates = (candidates: CmsResolvedTargetCandidate[]) =>
   candidates.slice(0, 10).map((candidate) => ({
@@ -79,12 +86,13 @@ const buildNeedsInputPlan = (
   ].join("\n"),
   summary: "The CMS operation target is not precise enough for a reviewed action plan.",
   confidence: 0.45,
-  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  assumptions: [`Original prompt: ${describeOriginalPrompt(prompt)}`],
   questions: [
     {
       id: "cms-operation-target",
       label: "Which exact CMS resource should I use?",
-      description: "Choose one exact candidate, provide a stricter name, or add the expected count.",
+      description:
+        "Choose one exact candidate, provide a stricter name, or add the expected count.",
       required: true,
     },
   ],
@@ -104,16 +112,12 @@ const buildPolicyBlockedPlan = (
   promptKind: "refinement_request",
   intentFamily: "unknown",
   title: mode === "gated" ? "CMS operation is gated by policy" : "CMS operation is read-only",
-  answer: [
-    reason,
-    "",
-    "No executable action was planned.",
-  ].join("\n"),
+  answer: [reason, "", "No executable action was planned."].join("\n"),
   summary: reason,
   confidence: 0.68,
   assumptions: [
     "The operation policy is the source of truth for this resource/action.",
-    `Original prompt: ${prompt.trim() || "empty prompt"}`,
+    `Original prompt: ${describeOriginalPrompt(prompt)}`,
   ],
   questions: [
     {
@@ -159,6 +163,9 @@ const normalizePageSlug = (value: string) => {
   return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 };
 
+const normalizeTargetPageSlug = (target: CmsResolvedTargetCandidate) =>
+  target.slug ? normalizePageSlug(target.slug) : null;
+
 const readMutationValue = (draft: CmsOperationDraft) => draft.mutation?.value;
 
 const readMutationText = (draft: CmsOperationDraft) => {
@@ -176,8 +183,7 @@ const readMutationBoolean = (draft: CmsOperationDraft) => {
   return typeof value === "boolean" ? value : null;
 };
 
-const fieldIntent = (draft: CmsOperationDraft) =>
-  resolvePolicyFieldIntent(draft);
+const fieldIntent = (draft: CmsOperationDraft) => resolvePolicyFieldIntent(draft);
 
 const buildPageUpdatePatch = (
   draft: CmsOperationDraft
@@ -233,7 +239,9 @@ const buildFormUpdatePatch = (
     return { status: value };
   }
   if (
-    (field === "access" || field === "submissionaccess" || policyPatchPathStartsWith(policyField, "submissionAccess")) &&
+    (field === "access" ||
+      field === "submissionaccess" ||
+      policyPatchPathStartsWith(policyField, "submissionAccess")) &&
     (value === "public" || value === "internal")
   ) {
     return { submissionAccess: value };
@@ -251,7 +259,9 @@ const buildListingQueryUpdatePatch = (draft: CmsOperationDraft) => {
     return { limit: number };
   }
   if (
-    (field === "includedrafts" || field === "drafts" || policyPatchPathStartsWith(policyField, "includeDrafts")) &&
+    (field === "includedrafts" ||
+      field === "drafts" ||
+      policyPatchPathStartsWith(policyField, "includeDrafts")) &&
     bool !== null
   ) {
     return { includeDrafts: bool };
@@ -299,7 +309,12 @@ const buildMenuItemUpdatePatch = (draft: CmsOperationDraft) => {
   if (!value) return null;
   const field = fieldIntent(draft);
   const policyField = findPolicyFieldForDraft(draft);
-  if (field === "href" || field === "url" || field === "slug" || policyPatchPathStartsWith(policyField, "href")) {
+  if (
+    field === "href" ||
+    field === "url" ||
+    field === "slug" ||
+    policyPatchPathStartsWith(policyField, "href")
+  ) {
     return { href: value };
   }
   if (field === "parentid" || policyPatchPathStartsWith(policyField, "parentId")) {
@@ -313,7 +328,11 @@ const buildSeoUpdatePatch = (draft: CmsOperationDraft) => {
   if (!value) return null;
   const field = fieldIntent(draft);
   const policyField = findPolicyFieldForDraft(draft);
-  if (field === "description" || field === "opis" || policyField?.action?.patchPath?.at(-1) === "description") {
+  if (
+    field === "description" ||
+    field === "opis" ||
+    policyField?.action?.patchPath?.at(-1) === "description"
+  ) {
     return { description: value };
   }
   if (policyField?.action?.patchPath?.at(-1) === "canonicalUrl") return { canonicalUrl: value };
@@ -446,11 +465,8 @@ const readOptionalBooleanField = (
   fallback: boolean
 ) => (typeof record[key] === "boolean" ? record[key] : fallback);
 
-const readOptionalNumberField = (
-  record: Record<string, unknown>,
-  key: string,
-  fallback: number
-) => (typeof record[key] === "number" && Number.isFinite(record[key]) ? record[key] : fallback);
+const readOptionalNumberField = (record: Record<string, unknown>, key: string, fallback: number) =>
+  typeof record[key] === "number" && Number.isFinite(record[key]) ? record[key] : fallback;
 
 const readStringArrayField = (record: Record<string, unknown>, key: string, fallback: string[]) => {
   const value = record[key];
@@ -481,8 +497,11 @@ const readRecordArrayField = (
 };
 
 const slugForActionId = (value: string, fallback: number) =>
-  value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
-  `item-${fallback + 1}`;
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || `item-${fallback + 1}`;
 
 const readCreateStatus = <TAllowed extends string>(
   record: Record<string, unknown>,
@@ -519,7 +538,17 @@ const buildCreateActionForItem = (
 ): AssistantPlannedAction | null => {
   if (draft.resourceKind === "page") {
     if (!isPolicyActionExecutable(draft, "page.upsert")) return null;
-    if (!hasOnlyKeys(item, ["title", "slug", "status", "introTitle", "introBody", "ctaLabel", "blocks"])) {
+    if (
+      !hasOnlyKeys(item, [
+        "title",
+        "slug",
+        "status",
+        "introTitle",
+        "introBody",
+        "ctaLabel",
+        "blocks",
+      ])
+    ) {
       return null;
     }
     const title = readRequiredTextField(item, "title");
@@ -547,8 +576,10 @@ const buildCreateActionForItem = (
           : {}),
         ...(blocks.length > 0
           ? {
-              blocks:
-                blocks as Extract<AssistantPlannedAction, { type: "page.upsert" }>["input"]["blocks"],
+              blocks: blocks as Extract<
+                AssistantPlannedAction,
+                { type: "page.upsert" }
+              >["input"]["blocks"],
             }
           : {}),
       },
@@ -557,15 +588,36 @@ const buildCreateActionForItem = (
 
   if (draft.resourceKind === "form") {
     if (!isPolicyActionExecutable(draft, "form.upsert")) return null;
-    if (!hasOnlyKeys(item, ["name", "slug", "status", "description", "successMessage", "submissionAccess", "fields"])) {
+    if (
+      !hasOnlyKeys(item, [
+        "name",
+        "slug",
+        "status",
+        "description",
+        "successMessage",
+        "submissionAccess",
+        "fields",
+      ])
+    ) {
       return null;
     }
     const name = readRequiredTextField(item, "name");
     const slug = readRequiredTextField(item, "slug");
-    const status = readCreateStatus(item, "status", ["draft", "published", "archived"] as const, "draft");
-    const submissionAccess = readCreateStatus(item, "submissionAccess", ["public", "internal"] as const, "internal");
+    const status = readCreateStatus(
+      item,
+      "status",
+      ["draft", "published", "archived"] as const,
+      "draft"
+    );
+    const submissionAccess = readCreateStatus(
+      item,
+      "submissionAccess",
+      ["public", "internal"] as const,
+      "internal"
+    );
     const fields = readRecordArrayField(item, "fields", []);
-    if (!name || !slug || status === null || submissionAccess === null || fields === null) return null;
+    if (!name || !slug || status === null || submissionAccess === null || fields === null)
+      return null;
     return {
       id: actionId("form.upsert", slugForActionId(slug, index)),
       type: "form.upsert",
@@ -618,7 +670,17 @@ const buildCreateActionForItem = (
 
   if (draft.resourceKind === "custom-screen") {
     if (!isPolicyActionExecutable(draft, "custom-screen.upsert")) return null;
-    if (!hasOnlyKeys(item, ["name", "contentTypeSlug", "status", "showInSidebar", "sidebarLabel", "blocks", "bindings"])) {
+    if (
+      !hasOnlyKeys(item, [
+        "name",
+        "contentTypeSlug",
+        "status",
+        "showInSidebar",
+        "sidebarLabel",
+        "blocks",
+        "bindings",
+      ])
+    ) {
       return null;
     }
     const name = readRequiredTextField(item, "name");
@@ -648,7 +710,17 @@ const buildCreateActionForItem = (
 
   if (draft.resourceKind === "listing-query") {
     if (!isPolicyActionExecutable(draft, "listing-query.upsert")) return null;
-    if (!hasOnlyKeys(item, ["name", "description", "contentTypeSlug", "fields", "includeDrafts", "limit", "sort"])) {
+    if (
+      !hasOnlyKeys(item, [
+        "name",
+        "description",
+        "contentTypeSlug",
+        "fields",
+        "includeDrafts",
+        "limit",
+        "sort",
+      ])
+    ) {
       return null;
     }
     const name = readRequiredTextField(item, "name");
@@ -678,14 +750,20 @@ const buildCreateActionForItem = (
     if (!hasOnlyKeys(item, ["name", "slug", "description", "layout", "config"])) return null;
     const name = readRequiredTextField(item, "name");
     const slug = readRequiredTextField(item, "slug");
-    const layout = readCreateStatus(item, "layout", ["grid", "list", "table", "calendar", "map"] as const, "grid");
+    const layout = readCreateStatus(
+      item,
+      "layout",
+      ["grid", "list", "table", "calendar", "map"] as const,
+      "grid"
+    );
     const config = readRecordField(item, "config", {});
     if (!name || !slug || layout === null || config === null) return null;
     return {
       id: actionId("listing-template.upsert", slugForActionId(slug, index)),
       type: "listing-template.upsert",
       title: `Create ${name}`,
-      description: "Create an explicitly provided listing template through the reviewed action flow.",
+      description:
+        "Create an explicitly provided listing template through the reviewed action flow.",
       input: {
         name,
         slug,
@@ -698,7 +776,8 @@ const buildCreateActionForItem = (
 
   if (draft.resourceKind === "menu-item") {
     if (!isPolicyActionExecutable(draft, "menu.item.upsert")) return null;
-    if (!hasOnlyKeys(item, ["menuId", "label", "href", "parentId", "orderIndex", "settings"])) return null;
+    if (!hasOnlyKeys(item, ["menuId", "label", "href", "parentId", "orderIndex", "settings"]))
+      return null;
     const menuId = readRequiredTextField(item, "menuId");
     const label = readRequiredTextField(item, "label");
     const href = readRequiredTextField(item, "href");
@@ -810,6 +889,8 @@ const buildActionForExactTarget = (
 ): AssistantPlannedAction | null => {
   if (draft.resourceKind === "page" && draft.operation === "delete") {
     if (!isPolicyActionExecutable(draft, "page.delete")) return null;
+    const pageSlug = normalizeTargetPageSlug(target);
+    if (!pageSlug) return null;
     return {
       id: actionId("page.delete", target.id),
       type: "page.delete",
@@ -818,12 +899,14 @@ const buildActionForExactTarget = (
       input: {
         id: target.id,
         title: target.label,
-        slug: target.slug ?? "",
+        slug: pageSlug,
         expectedStatus: target.status,
       },
     };
   }
   if (draft.resourceKind === "page" && draft.operation === "update") {
+    const pageSlug = normalizeTargetPageSlug(target);
+    if (!pageSlug) return null;
     const policyField = findPolicyFieldForDraft(draft);
     if (policyField?.action?.type === "page.widget.patch") {
       if (!isPolicyActionExecutable(draft, "page.widget.patch")) return null;
@@ -835,7 +918,7 @@ const buildActionForExactTarget = (
         title: `Patch ${target.label}`,
         description: "Patch selected page widget block data.",
         input: {
-          pageSlug: target.slug ?? "",
+          pageSlug,
           operation: "patch-data",
           blockId: patch.blockId,
           expectedBlockType: patch.expectedBlockType,
@@ -855,7 +938,7 @@ const buildActionForExactTarget = (
       input: {
         id: target.id,
         title: target.label,
-        slug: target.slug ?? "",
+        slug: pageSlug,
         expectedStatus: target.status,
         patch,
       },
@@ -926,7 +1009,9 @@ const buildActionForExactTarget = (
       input: {
         id: target.id,
         name: target.label,
-        expectedNamePrefix: draft.targetQuery?.prefix ?? null,
+        expectedNamePrefix: draft.targetQuery?.prefix
+          ? redactAssistantUnsafeText(draft.targetQuery.prefix)
+          : null,
       },
     };
   }
@@ -970,8 +1055,16 @@ const buildActionForExactTarget = (
       },
     };
   }
-  if (draft.resourceKind === "form" && (draft.operation === "delete" || draft.operation === "archive")) {
-    if (!isPolicyActionExecutable(draft, draft.operation === "archive" ? "form.archive" : "form.delete")) {
+  if (
+    draft.resourceKind === "form" &&
+    (draft.operation === "delete" || draft.operation === "archive")
+  ) {
+    if (
+      !isPolicyActionExecutable(
+        draft,
+        draft.operation === "archive" ? "form.archive" : "form.delete"
+      )
+    ) {
       return null;
     }
     if (!target.slug) return null;
@@ -1221,9 +1314,7 @@ export const mapCmsOperationToActionPlan = (input: {
     return null;
   }
   const resolution = resolveCmsOperationTargets(input.draft, input.context);
-  if (
-    canMapExpectedCountMultiWithPolicy(input.draft, resolution)
-  ) {
+  if (canMapExpectedCountMultiWithPolicy(input.draft, resolution)) {
     const verb = operationVerb(input.draft.operation);
     const actions = resolution.candidates
       .map((target) => buildActionForExactTarget(input.draft, target))
@@ -1249,9 +1340,7 @@ export const mapCmsOperationToActionPlan = (input: {
       };
     }
   }
-  if (
-    canMapFilteredAllWithPolicy(input.prompt, input.draft, resolution)
-  ) {
+  if (canMapFilteredAllWithPolicy(input.prompt, input.draft, resolution)) {
     const verb = operationVerb(input.draft.operation);
     const actions = resolution.candidates
       .map((target) => buildActionForExactTarget(input.draft, target))

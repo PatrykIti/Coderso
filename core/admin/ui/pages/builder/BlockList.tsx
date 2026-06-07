@@ -8,7 +8,7 @@ import { WidgetRenderer } from "../../../../widgets/renderers/widgetRenderer";
 import type { WidgetRendererPageDefaults } from "../../../../widgets/renderers/widgetRenderer";
 import { applySectionRegionLabels, type SectionData } from "../../../../widgets/core/section";
 import { resolveWidgetSlotTargets } from "../../../../widgets/slots";
-import type { WidgetPreviewState } from "../../../../widgets/types";
+import type { DeviceTarget, WidgetPreviewState } from "../../../../widgets/types";
 import type { Block, WidgetDefinition } from "./types";
 import { getWidgetRegistry } from "./widgetRegistry";
 import type { BlockPath } from "./blockUtils";
@@ -34,6 +34,7 @@ export type BlockListProps = {
     allowedTypes?: string[];
   }) => void;
   previewStatesByBlockId?: Record<string, WidgetPreviewState | undefined>;
+  previewDevice?: DeviceTarget;
   path?: BlockPath;
   depth?: number;
   widgetRegistry?: WidgetDefinition[];
@@ -53,6 +54,7 @@ export function BlockList({
   onMoveToSlot,
   onOpenSlotInsert,
   previewStatesByBlockId,
+  previewDevice,
   path,
   depth,
   widgetRegistry: providedWidgetRegistry,
@@ -247,6 +249,7 @@ export function BlockList({
                 <WidgetRenderer
                   block={previewBlock}
                   pageDefaults={pageDefaults}
+                  previewDevice={previewDevice}
                   renderContext={{ mode: "editor-preview", previewState }}
                 />
               </AdminWidgetPreviewRuntimeBridge>
@@ -303,6 +306,7 @@ export function BlockList({
                           onMoveToSlot={onMoveToSlot}
                           onOpenSlotInsert={onOpenSlotInsert}
                           previewStatesByBlockId={previewStatesByBlockId}
+                          previewDevice={previewDevice}
                           path={[...listPath, { index, slotId: slot.slotId }]}
                           depth={level + 1}
                           widgetRegistry={widgetRegistry}

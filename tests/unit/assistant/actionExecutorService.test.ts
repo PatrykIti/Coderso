@@ -4,6 +4,7 @@ import { planAssistantActions } from "../../../core/services/assistant/actionPla
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import { matchExistingCompositionResources } from "../../../core/services/assistant/blueprints/blueprintExistingResourceMatcher";
+import { buildFullServiceSitePlan } from "../../../core/services/assistant/blueprints/fullServiceSiteBlueprint";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { buildLeadCaptureSitePlan } from "../../../core/services/assistant/blueprints/leadCaptureBlueprint";
 import { buildProductInquiryCatalogPlan } from "../../../core/services/assistant/blueprints/productInquiryBlueprint";
@@ -26,9 +27,11 @@ import {
   previewGuidedSiteBuilderPlan,
   validateGuidedSiteBuilderRun,
 } from "../../../core/services/assistant/siteBuilderExecutor";
+import { buildGuidedSiteBuilderPlanResult } from "../../../core/services/assistant/siteBuilderPlanAdapter";
 import type {
   AssistantActionPlan,
   AssistantPlannedAction,
+  AssistantSiteKitPlanInput,
 } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantUndoManifestItem } from "../../../core/services/assistant/actionUndoManifest";
 import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
@@ -40,6 +43,60 @@ import type { ContentRouteSetting } from "../../../core/services/settings/settin
 import type { WidgetBlock } from "../../../core/widgets/types";
 
 type ExecutorDeps = NonNullable<Parameters<typeof dryRunAssistantActionPlan>[1]>;
+
+const automotiveSiteKitInput: AssistantSiteKitPlanInput = {
+  businessType: "automotive_workshop",
+  goals: ["lead_generation"],
+  locale: "en",
+  selectedKitId: "automotive-workshop",
+  enabledStepIds: ["settings", "pages", "qa"],
+};
+
+const buildExecutorSiteKitPlan = (): AssistantActionPlan => {
+  const preview = buildGuidedSiteBuilderPlanResult(automotiveSiteKitInput);
+  const resolvedInput = {
+    ...automotiveSiteKitInput,
+    selectedKitId: preview.selectedKitId,
+    enabledStepIds: [...preview.enabledStepIds],
+  };
+
+  return {
+    id: `plan-site-kit-${preview.selectedKitId}`,
+    status: "ready",
+    intentId: "site-kit-install",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: `${preview.selectedKitTitle} Site Kit`,
+    answer: `I can prepare the ${preview.selectedKitTitle} site kit.`,
+    summary: "Dry-run and execute the selected site kit through typed assistant actions.",
+    confidence: preview.plan.confidence / 100,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: `site-kit-recommend-${preview.selectedKitId}`,
+        type: "site-kit.recommend",
+        title: `Recommend ${preview.selectedKitTitle}`,
+        description: "Recommend the reviewed site kit.",
+        input: {
+          ...resolvedInput,
+          preview,
+        },
+      },
+      {
+        id: `site-kit-install-${preview.selectedKitId}`,
+        type: "site-kit.install",
+        title: `Install ${preview.selectedKitTitle}`,
+        description: "Install the reviewed site kit.",
+        input: {
+          ...resolvedInput,
+          continueOnError: true,
+          preview,
+        },
+      },
+    ],
+  };
+};
 
 const createDeps = () => {
   let contentRoutes: ContentRouteSetting[] = [];
@@ -124,6 +181,14 @@ const createDeps = () => {
     status: "draft" | "published";
     data: Record<string, unknown>;
     authorId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
+  const menus: Array<{
+    id: string;
+    name: string;
+    location: string | null;
+    status: "draft" | "published";
     createdAt: Date;
     updatedAt: Date;
   }> = [];
@@ -503,11 +568,11 @@ const createDeps = () => {
       if (input.data !== undefined) existing.currentData = input.data;
       return existing;
     },
-    publishPage: async (id: string) => {
+    publishPage: async (id: string, _actorId?: string, data?: Record<string, unknown>) => {
       const existing = pages.find((entry) => entry.id === id) ?? null;
       if (!existing) return null;
       existing.status = "published";
-      existing.publishedData = existing.currentData;
+      existing.publishedData = data ?? existing.currentData;
       return existing as unknown as Awaited<
         ReturnType<(typeof import("../../../core/services/pages/pageService"))["publishPage"]>
       >;
@@ -690,6 +755,15 @@ const createDeps = () => {
         ReturnType<(typeof import("../../../core/services/content/entryService"))["updateEntry"]>
       >;
     },
+    publishEntry: async (id: string) => {
+      const existing = entries.find((entry) => entry.id === id) ?? null;
+      if (!existing) return null;
+      existing.status = "published";
+      existing.updatedAt = new Date("2026-04-10T12:02:00.000Z");
+      return existing as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/content/entryService"))["publishEntry"]>
+      >;
+    },
     updateEntryMetadata: async (
       id: string,
       input: {
@@ -743,6 +817,44 @@ const createDeps = () => {
         ReturnType<
           (typeof import("../../../core/services/content/entryService"))["updateEntryMetadata"]
         >
+      >;
+    },
+    listMenus: async () => menus,
+    createMenu: async (input: {
+      name: string;
+      location?: string | null;
+      status?: "draft" | "published";
+    }) => {
+      const now = new Date("2026-04-10T12:00:00.000Z");
+      const record = {
+        id: `menu-${menus.length + 1}`,
+        name: input.name,
+        location: input.location ?? null,
+        status: input.status ?? "draft",
+        createdAt: now,
+        updatedAt: now,
+      };
+      menus.push(record);
+      return record as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/menus/menuService"))["createMenu"]>
+      >;
+    },
+    updateMenu: async (
+      id: string,
+      input: {
+        name?: string;
+        location?: string | null;
+        status?: "draft" | "published";
+      }
+    ) => {
+      const existing = menus.find((entry) => entry.id === id) ?? null;
+      if (!existing) return null;
+      if (input.name !== undefined) existing.name = input.name;
+      if (input.location !== undefined) existing.location = input.location;
+      if (input.status !== undefined) existing.status = input.status;
+      existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
+      return existing as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/menus/menuService"))["updateMenu"]>
       >;
     },
     listMenuItems: async (menuId: string) =>
@@ -976,6 +1088,7 @@ const createDeps = () => {
       formSubmissionCounts,
       formActions,
       entries,
+      menus,
       menuItemsByMenu,
       seoDocuments,
       mediaAssets,
@@ -992,8 +1105,18 @@ test("dryRunAssistantActionPlan previews create operations for house projects ca
   const preview = await dryRunAssistantActionPlan({ plan }, createDeps());
 
   expect(preview.readyToExecute).toBe(true);
-  expect(preview.changes).toHaveLength(6);
+  expect(preview.changes).toHaveLength(7);
   expect(preview.changes.every((change) => change.operation === "create")).toBe(true);
+  expect(preview.changes.find((change) => change.targetType === "detail-page")).toMatchObject({
+    dependencies: [
+      {
+        actionId: "content-type-house-projects-catalog",
+        targetType: "content-type",
+        targetKey: "content-type:house-projects",
+        optional: false,
+      },
+    ],
+  });
   expect(preview.warnings.some((warning) => warning.includes("system list route"))).toBe(true);
 });
 
@@ -1063,6 +1186,88 @@ test("executeAssistantActionPlan creates and reuses draft entry actions", async 
   expect(executed.summary.create).toBe(1);
   expect(executed.results[0]?.adminHref).toBe("/admin/advanced/entries/products/entry-1");
   expect(deps.__state.entries[0]?.authorId).toBe("user-1");
+
+  const replayPreview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(replayPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan creates published sample entries idempotently", async () => {
+  const deps = createDeps();
+  await deps.createContentType({
+    name: "Services",
+    slug: "services-directory",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        summary: { type: "string" },
+      },
+    },
+  });
+  deps.__state.contentRoutes.push({
+    type: "services-directory",
+    listPath: "/uslugi",
+    detailPath: "/uslugi/:slug",
+    enabled: true,
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-entry-sample",
+    status: "ready",
+    intentId: "entry-sample",
+    promptKind: "setup_request",
+    intentFamily: "services_directory",
+    title: "Create sample entry",
+    answer: "I can create a public sample entry.",
+    summary: "Create one published service entry.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "entry-service-sample",
+        type: "entry.sample.create",
+        title: "Publish service sample",
+        description: "Create a published service sample.",
+        input: {
+          contentTypeSlug: "services-directory",
+          title: "Projekt koncepcyjny",
+          slug: "projekt-koncepcyjny",
+          status: "published",
+          values: {
+            title: "Projekt koncepcyjny",
+            summary: "Zakres koncepcji architektonicznej.",
+          },
+          seo: {
+            title: "Projekt koncepcyjny | Studio Forma",
+            description: "Poznaj zakres projektu koncepcyjnego.",
+            canonicalUrl: "/uslugi/projekt-koncepcyjny",
+            robots: "index,follow",
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes[0]?.operation).toBe("create");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-entry-sample-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.create).toBe(1);
+  expect(executed.results[0]?.publicHref).toBe("/uslugi/projekt-koncepcyjny");
+  expect(deps.__state.entries).toHaveLength(1);
+  expect(deps.__state.entries[0]?.status).toBe("published");
+  expect(deps.__state.seoDocuments[0]?.targetId).toBe("entry-1");
+  expect(deps.__state.seoDocuments[0]?.robots).toBe("index,follow");
 
   const replayPreview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(replayPreview.changes[0]?.operation).toBe("noop");
@@ -1699,18 +1904,19 @@ test("executeAssistantActionPlan rejects same-name custom screens owned by other
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-custom-screen-upsert-conflicting-metadata",
-    },
-    deps
-  );
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-custom-screen-upsert-conflicting-metadata",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.customScreens).toHaveLength(1);
   expect(deps.__state.customScreens[0]?.id).toBe(existing.id);
   expect(deps.__state.customScreens[0]?.collectionRole).toBe("secondary-admin-screen");
@@ -1787,18 +1993,19 @@ test("executeAssistantActionPlan rejects ambiguous legacy custom screen name reu
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-custom-screen-upsert-ambiguous-legacy",
-    },
-    deps
-  );
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-custom-screen-upsert-ambiguous-legacy",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.customScreens).toHaveLength(2);
   expect(deps.__state.customScreens.every((entry) => entry.collectionRole === null)).toBe(true);
 });
@@ -1878,7 +2085,7 @@ test("executeAssistantActionPlan deletes pages through explicit delete actions",
   const deps = createDeps();
   const page = await deps.createPage({
     title: "Contact",
-    slug: "/contact",
+    slug: "contact",
     data: { blocks: [] },
     authorId: "user-1",
   });
@@ -2004,6 +2211,212 @@ test("executeAssistantActionPlan updates page metadata and preserves page blocks
   expect((deps.__state.pages[0]?.currentData.settings as { showInNav?: boolean })?.showInNav).toBe(
     false
   );
+});
+
+test("executeAssistantActionPlan accepts normalized page slug matches for update guards", async () => {
+  const deps = createDeps();
+  const page = await deps.createPage({
+    title: "Contact",
+    slug: "contact",
+    data: {
+      blocks: [{ id: "hero", type: "hero", data: { title: "Hello" } }],
+      settings: {
+        template: "landing",
+        showInNav: true,
+      },
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-update-contact-page-normalized-slug",
+    status: "ready",
+    intentId: "page-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update Contact",
+    answer: "I can update the selected page.",
+    summary: "Update active page metadata.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-update-contact-normalized-slug",
+        type: "page.update",
+        title: "Update Contact",
+        description: "Update selected page.",
+        input: {
+          id: page.id,
+          title: "Contact",
+          slug: "/contact",
+          expectedStatus: "draft",
+          patch: {
+            title: "Contact L04",
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes[0]?.conflicts).toEqual([]);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-page-update-normalized-slug-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(1);
+  expect(deps.__state.pages[0]?.title).toBe("Contact L04");
+});
+
+test("executeAssistantActionPlan refreshes published page state when updating a published page", async () => {
+  const deps = createDeps();
+  const page = await deps.createPage({
+    title: "Contact",
+    slug: "contact",
+    data: {
+      blocks: [{ id: "hero", type: "hero", data: { title: "Old public title" } }],
+      settings: { showInNav: true },
+    },
+  });
+  await deps.publishPage(page.id, "user-1", page.currentData);
+
+  const plan: AssistantActionPlan = {
+    id: "plan-update-published-contact-page",
+    status: "ready",
+    intentId: "page-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update Contact",
+    answer: "I can update the selected page.",
+    summary: "Update active page metadata.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-update-published-contact",
+        type: "page.update",
+        title: "Update Contact",
+        description: "Update selected page.",
+        input: {
+          id: page.id,
+          title: "Contact",
+          slug: "/contact",
+          expectedStatus: "published",
+          patch: {
+            title: "Contact L04",
+            settings: {
+              showInNav: false,
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-page-update-published-refresh-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(1);
+  expect(deps.__state.pages[0]?.title).toBe("Contact L04");
+  expect(deps.__state.pages[0]?.publishedData).toEqual(deps.__state.pages[0]?.currentData);
+  expect(
+    (deps.__state.pages[0]?.publishedData?.settings as { showInNav?: boolean })?.showInNav
+  ).toBe(false);
+});
+
+test("executeAssistantActionPlan does not publish unrelated pending draft page data", async () => {
+  const deps = createDeps();
+  const page = await deps.createPage({
+    title: "Contact",
+    slug: "contact",
+    data: {
+      blocks: [{ id: "public-hero", type: "hero", data: { title: "Published" } }],
+      settings: { showInNav: true },
+    },
+  });
+  await deps.publishPage(page.id, "user-1", page.currentData);
+  await deps.updatePage(page.id, {
+    data: {
+      blocks: [{ id: "draft-hero", type: "hero", data: { title: "Pending draft" } }],
+      settings: { showInNav: true, draftOnly: true },
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-update-published-contact-page-draft-safe",
+    status: "ready",
+    intentId: "page-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update Contact",
+    answer: "I can update the selected page.",
+    summary: "Update active page metadata.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-update-published-contact-draft-safe",
+        type: "page.update",
+        title: "Update Contact",
+        description: "Update selected page.",
+        input: {
+          id: page.id,
+          title: "Contact",
+          slug: "/contact",
+          expectedStatus: "published",
+          patch: {
+            settings: {
+              showInNav: false,
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-page-update-published-draft-safe-1",
+    },
+    deps
+  );
+
+  const currentData = deps.__state.pages[0]?.currentData as {
+    blocks?: Array<{ id?: string }>;
+    settings?: { showInNav?: boolean; draftOnly?: boolean };
+  };
+  const publishedData = deps.__state.pages[0]?.publishedData as {
+    blocks?: Array<{ id?: string }>;
+    settings?: { showInNav?: boolean; draftOnly?: boolean };
+  };
+
+  expect(currentData.blocks?.[0]?.id).toBe("draft-hero");
+  expect(currentData.settings?.draftOnly).toBe(true);
+  expect(currentData.settings?.showInNav).toBe(false);
+  expect(publishedData.blocks?.[0]?.id).toBe("public-hero");
+  expect(publishedData.settings?.draftOnly).toBeUndefined();
+  expect(publishedData.settings?.showInNav).toBe(false);
 });
 
 test("executeAssistantActionPlan publishes page updates through page service", async () => {
@@ -2436,18 +2849,19 @@ test("executeAssistantActionPlan blocks listing deletes when page references rem
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.warnings[0]).toContain("referenced by 1 page");
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-listing-delete-blocked-1",
-    },
-    deps
-  );
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-listing-delete-blocked-1",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.listingQueries).toHaveLength(1);
 });
 
@@ -2611,18 +3025,19 @@ test("listing query upsert blocks ambiguous name matches", async () => {
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-listing-query-upsert-ambiguous",
-    },
-    deps
-  );
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-listing-query-upsert-ambiguous",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.listingQueries).toHaveLength(2);
   expect(
     deps.__state.listingQueries.every((query) => query.description === "Product listing")
@@ -2727,18 +3142,19 @@ test("executeAssistantActionPlan blocks form hard delete when submissions exist"
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.warnings[0]).toContain("2 submissions");
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-form-delete-blocked-1",
-    },
-    deps
-  );
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-form-delete-blocked-1",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
   expect(deps.__state.forms).toHaveLength(1);
 });
 
@@ -2893,6 +3309,12 @@ test("executeAssistantActionPlan upserts menu items without duplicates", async (
   expect(preview.changes[0]?.dependencies).toEqual([
     {
       actionId: null,
+      targetType: "menu",
+      targetKey: "menu-primary",
+      optional: false,
+    },
+    {
+      actionId: null,
       targetType: "permission",
       targetKey: "menus:write",
       optional: false,
@@ -2945,6 +3367,92 @@ test("executeAssistantActionPlan upserts menu items without duplicates", async (
 
   const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan creates menus and resolves menu item locators", async () => {
+  const deps = createDeps();
+  const plan: AssistantActionPlan = {
+    id: "plan-menu-locator",
+    status: "ready",
+    intentId: "menu-locator",
+    promptKind: "setup_request",
+    intentFamily: "unknown",
+    title: "Create navigation menu",
+    answer: "I can create navigation and links.",
+    summary: "Create primary menu and one link.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "menu-primary",
+        type: "menu.upsert",
+        title: "Create primary menu",
+        description: "Create the primary navigation menu.",
+        input: {
+          name: "Primary navigation",
+          location: "primary",
+          status: "published",
+        },
+      },
+      {
+        id: "menu-primary-home",
+        type: "menu.item.upsert",
+        title: "Add home link",
+        description: "Add the home link to primary navigation.",
+        input: {
+          menuId: {
+            kind: "action-result",
+            actionId: "menu-primary",
+            resourceType: "menu",
+            field: "id",
+          },
+          label: "Start",
+          href: "/",
+          orderIndex: 0,
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes[1]?.dependencies[0]).toEqual({
+    actionId: "menu-primary",
+    targetType: "menu",
+    targetKey: "menu:menu-primary:id",
+    optional: false,
+  });
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-menu-locator-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.create).toBe(2);
+  expect(deps.__state.menus[0]?.location).toBe("primary");
+  expect(deps.__state.menuItemsByMenu.get("menu-1")?.[0]?.href).toBe("/");
+
+  const rerunPreview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(rerunPreview.readyToExecute).toBe(true);
+  expect(rerunPreview.changes.map((change) => change.operation)).toEqual(["noop", "noop"]);
+
+  const rerun = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-menu-locator-2",
+    },
+    deps
+  );
+
+  expect(rerun.summary.failed).toBe(0);
+  expect(rerun.summary.noop).toBe(2);
+  expect(deps.__state.menuItemsByMenu.get("menu-1")).toHaveLength(1);
 });
 
 test("executeAssistantActionPlan updates menu items and preserves unrelated tree", async () => {
@@ -3116,6 +3624,97 @@ test("executeAssistantActionPlan upserts seo documents for known targets", async
 
   const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan resolves same-plan seo action-result locators", async () => {
+  const deps = createDeps();
+  await deps.createContentType({
+    name: "Services",
+    slug: "services-directory",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+      },
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-seo-locator",
+    status: "ready",
+    intentId: "seo-locator",
+    promptKind: "setup_request",
+    intentFamily: "services_directory",
+    title: "Create sample entry and SEO",
+    answer: "I can create a sample entry and SEO.",
+    summary: "Create sample entry then SEO by locator.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "entry-service-sample",
+        type: "entry.sample.create",
+        title: "Publish service sample",
+        description: "Create a published service sample.",
+        input: {
+          contentTypeSlug: "services-directory",
+          title: "Projekt koncepcyjny",
+          slug: "projekt-koncepcyjny",
+          status: "published",
+          values: {
+            title: "Projekt koncepcyjny",
+          },
+        },
+      },
+      {
+        id: "seo-service-sample",
+        type: "seo.document.upsert",
+        title: "Update service SEO",
+        description: "Create SEO metadata for the sample service.",
+        input: {
+          targetType: "entry",
+          targetId: {
+            kind: "action-result",
+            actionId: "entry-service-sample",
+            resourceType: "entry",
+            field: "id",
+          },
+          seo: {
+            title: "Projekt koncepcyjny | Studio Forma",
+            description: "Poznaj zakres projektu koncepcyjnego.",
+            canonicalUrl: "/uslugi/projekt-koncepcyjny",
+            robots: "index,follow",
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes[1]?.dependencies).toEqual([
+    {
+      actionId: "entry-service-sample",
+      targetType: "entry",
+      targetKey: "entry:entry-service-sample:id",
+      optional: false,
+    },
+  ]);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-seo-locator-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.create).toBe(2);
+  expect(deps.__state.seoDocuments[0]?.targetType).toBe("entry");
+  expect(deps.__state.seoDocuments[0]?.targetId).toBe("entry-1");
+  expect(deps.__state.seoDocuments[0]?.title).toBe("Projekt koncepcyjny | Studio Forma");
 });
 
 test("executeAssistantActionPlan deletes menu items while preserving unrelated items", async () => {
@@ -4150,9 +4749,14 @@ test("executeAssistantActionPlan creates resources and reuses idempotency key", 
   );
 
   expect(first.summary.failed).toBe(0);
-  expect(first.summary.create).toBe(6);
+  expect(first.summary.create).toBe(7);
   expect(first.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
   expect(first.results.some((item) => item.publicHref === "/projekty-domow")).toBe(true);
+  expect(deps.__state.detailPages).toHaveLength(1);
+  expect(
+    (((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])[0]
+      ?.detailPageId
+  ).toBe(deps.__state.detailPages[0]?.id);
   expect(second.summary).toEqual(first.summary);
   expect(second.results).toEqual(first.results);
   expect(second.idempotency).toEqual({ replayed: true, scope: "actor_plan_hash" });
@@ -4303,25 +4907,14 @@ test("dryRunAssistantActionPlan supports product catalog preset through the same
   const preview = await dryRunAssistantActionPlan({ plan }, createDeps());
 
   expect(preview.readyToExecute).toBe(true);
-  expect(preview.changes).toHaveLength(6);
+  expect(preview.changes).toHaveLength(7);
+  expect(preview.changes.some((change) => change.targetType === "detail-page")).toBe(true);
   expect(preview.changes.some((change) => change.targetKey === "products")).toBe(true);
   expect(preview.changes.some((change) => change.targetKey === "/produkty")).toBe(true);
 });
 
 test("dryRunAssistantActionPlan previews site-kit recommend and install actions", async () => {
-  const plan = planAssistantActions({
-    prompt: "prepare a starter site kit",
-    context: {
-      locale: "en",
-      siteKit: {
-        businessType: "automotive_workshop",
-        goals: ["lead_generation"],
-        locale: "en",
-        selectedKitId: "automotive-workshop",
-        enabledStepIds: ["settings", "pages", "qa"],
-      },
-    },
-  });
+  const plan = buildExecutorSiteKitPlan();
 
   const preview = await dryRunAssistantActionPlan({ plan }, createDeps());
 
@@ -4336,19 +4929,7 @@ test("dryRunAssistantActionPlan previews site-kit recommend and install actions"
 });
 
 test("executeAssistantActionPlan delegates site-kit install to guided site-builder executor", async () => {
-  const plan = planAssistantActions({
-    prompt: "prepare a starter site kit",
-    context: {
-      locale: "en",
-      siteKit: {
-        businessType: "automotive_workshop",
-        goals: ["lead_generation"],
-        locale: "en",
-        selectedKitId: "automotive-workshop",
-        enabledStepIds: ["settings", "pages", "qa"],
-      },
-    },
-  });
+  const plan = buildExecutorSiteKitPlan();
 
   const result = await executeAssistantActionPlan(
     {
@@ -4365,6 +4946,48 @@ test("executeAssistantActionPlan delegates site-kit install to guided site-build
   expect(result.summary.noop).toBe(1);
   expect(installResult?.resourceId).toBe("run-site-kit-1");
   expect(installResult?.details?.siteKit?.execution?.validation.status).toBe("ok");
+});
+
+test("executeAssistantActionPlan passes Advanced runtime overrides through site-kit install map", async () => {
+  const plan = buildExecutorSiteKitPlan();
+  const installAction = plan.actions.find((item) => item.type === "site-kit.install");
+  if (!installAction || installAction.type !== "site-kit.install") {
+    throw new Error("site_kit_install_action_missing");
+  }
+  const advancedRuntimeOverrides = {
+    schemaVersion: 1,
+    hero: {
+      variantId: "split",
+      widgetType: "hero",
+      widgetVariantId: "split",
+      module: "content",
+      alias: "hero",
+    },
+  } satisfies NonNullable<AssistantSiteKitPlanInput["advancedRuntimeOverrides"]>;
+  installAction.input.advancedRuntimeOverrides = advancedRuntimeOverrides;
+  let capturedInput: Parameters<typeof executeGuidedSiteBuilder>[0] | null = null;
+  const deps = createDeps();
+  const wrappedDeps = Object.assign(deps, {
+    executeSiteKit: (async (input) => {
+      capturedInput = input;
+      return deps.executeSiteKit(input);
+    }) as typeof executeGuidedSiteBuilder,
+  });
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-site-kit-install-advanced-runtime-1",
+    },
+    wrappedDeps
+  );
+
+  expect(capturedInput).not.toBeNull();
+  expect(
+    (capturedInput as unknown as Parameters<typeof executeGuidedSiteBuilder>[0])
+      .advancedRuntimeOverrides
+  ).toEqual(advancedRuntimeOverrides);
 });
 
 test("executeAssistantActionPlan refines existing house-project catalog without creating duplicate page", async () => {
@@ -4481,6 +5104,199 @@ test("executeAssistantActionPlan creates product inquiry catalog and form", asyn
       }
     )?.collectionLink?.contentTypeId
   ).toBe(deps.__state.contentTypes[0]?.id);
+});
+
+test("executeAssistantActionPlan executes the full-service architecture studio plan", async () => {
+  const deps = createDeps();
+  const prompt = [
+    "Stworz premium strone dla studia architektonicznego Studio Forma.",
+    "Potrzebuje portfolio realizacji, oferte uslug z podstronami, proces wspolpracy i kontakt z formularzem leadowym.",
+    "Realizacje maja miec katalog z kategoria, lokalizacja i rokiem.",
+  ].join(" ");
+  const plan = buildFullServiceSitePlan({
+    prompt,
+    promptKind: "setup_request",
+  });
+
+  expect(
+    planAssistantActions({
+      prompt,
+      context: {
+        page: "/admin/advanced/widgets",
+        locale: "pl-PL",
+      },
+    }).intentId
+  ).toBe("site-builder-basic-intake");
+
+  expect(plan.intentId).toBe("service-business-full-site");
+  expect(plan.actions).toHaveLength(49);
+  expect(plan.metadata?.launchReadiness?.checks.map((check) => check.status)).toEqual([
+    "pending_execute",
+    "pending_execute",
+    "pending_execute",
+    "pending_execute",
+    "pending_execute",
+    "pending_execute",
+  ]);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-full-service-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(0);
+  expect(executed.plan.metadata?.launchReadiness?.checks).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: "pages", status: "satisfied" }),
+      expect.objectContaining({ id: "catalogs", status: "satisfied" }),
+      expect.objectContaining({ id: "public-content", status: "satisfied" }),
+      expect.objectContaining({ id: "navigation-footer", status: "satisfied" }),
+      expect.objectContaining({ id: "seo", status: "satisfied" }),
+      expect.objectContaining({ id: "media", status: "satisfied" }),
+    ])
+  );
+  expect(deps.__state.pages.map((page) => page.slug).sort()).toEqual([
+    "/",
+    "/kontakt",
+    "/o-nas",
+    "/portfolio",
+    "/proces",
+    "/referencje",
+    "/uslugi",
+  ]);
+  const allowedPageSlugs = new Set(deps.__state.pages.map((page) => page.slug));
+  for (const page of deps.__state.pages) {
+    const publishedData = page.publishedData as { blocks?: unknown[] } | null;
+    expect(page.status).toBe("published");
+    expect(Array.isArray(publishedData?.blocks)).toBe(true);
+    expect(publishedData?.blocks?.length).toBeGreaterThan(0);
+    expect(publishedData?.blocks?.[0]).toMatchObject({ type: "navigation" });
+    expect(publishedData?.blocks?.at(-1)).toMatchObject({ type: "footer" });
+    const footerBlock = publishedData?.blocks?.find(
+      (block): block is { type?: string; data?: unknown } =>
+        Boolean(block) &&
+        typeof block === "object" &&
+        (block as { type?: string }).type === "footer"
+    );
+    const footerData = footerBlock?.data as
+      | {
+          columns?: Array<{ links?: Array<{ href?: string }> }>;
+          legal?: { enabled?: boolean };
+        }
+      | undefined;
+    expect(footerData?.legal?.enabled).toBe(false);
+    const footerHrefs =
+      footerData?.columns?.flatMap((column) =>
+        (column.links ?? [])
+          .map((link) => link.href)
+          .filter((href): href is string => Boolean(href))
+      ) ?? [];
+    expect(footerHrefs).not.toEqual(
+      expect.arrayContaining(["/polityka-prywatnosci", "/regulamin"])
+    );
+    expect(footerHrefs.every((href) => allowedPageSlugs.has(href))).toBe(true);
+  }
+  const homePage = deps.__state.pages.find((page) => page.slug === "/");
+  const homeBlocks = homePage?.publishedData as
+    | { blocks?: Array<{ type?: string; data?: { titleBlock?: { title?: string } } }> }
+    | null
+    | undefined;
+  expect(
+    homeBlocks?.blocks?.some(
+      (block) =>
+        block.type === "rich-text-section" && block.data?.titleBlock?.title === "Studio Forma"
+    )
+  ).toBe(true);
+  const servicesPage = deps.__state.pages.find((page) => page.slug === "/uslugi");
+  const servicesBlocks = servicesPage?.publishedData as
+    | { blocks?: Array<{ type?: string }> }
+    | null
+    | undefined;
+  expect(servicesBlocks?.blocks?.map((block) => block.type)).toEqual([
+    "navigation",
+    "content-list",
+    "footer",
+  ]);
+  expect(deps.__state.entries.filter((entry) => entry.status === "published")).toHaveLength(6);
+  for (const entry of deps.__state.entries) {
+    expect(entry.data.coverImageUrl).toEqual(
+      expect.stringContaining("https://images.unsplash.com/")
+    );
+    expect(entry.data.coverImageAlt).toEqual(expect.any(String));
+    expect(entry.data.coverImageLicenseUrl).toBe("https://unsplash.com/license");
+    expect(Object.prototype.hasOwnProperty.call(entry.data, "heroImage")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(entry.data, "gallery")).toBe(false);
+  }
+  expect(deps.__state.detailPages).toHaveLength(2);
+  expect(
+    deps.__state.detailPages.every(
+      (detailPage) =>
+        detailPage.currentDocument.seo?.imageField === "coverImageUrl" &&
+        detailPage.currentDocument.blocks.some(
+          (block) =>
+            block.type === "hero" &&
+            block.variant === "split" &&
+            (block.data?.media as { type?: string } | undefined)?.type === "image"
+        )
+    )
+  ).toBe(true);
+  const contentRoutes =
+    ((await deps.getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
+  expect(contentRoutes.map((route) => route.detailPageId).sort()).toEqual(
+    deps.__state.detailPages.map((detailPage) => detailPage.id).sort()
+  );
+  expect(deps.__state.menus.map((menu) => menu.location).sort()).toEqual(["footer", "primary"]);
+  expect(deps.__state.menuItemsByMenu.get("menu-1")).toHaveLength(7);
+  expect(deps.__state.menuItemsByMenu.get("menu-2")).toHaveLength(7);
+  expect(deps.__state.seoDocuments.filter((entry) => entry.targetType === "page")).toHaveLength(7);
+});
+
+test("executeAssistantActionPlan keeps media readiness pending without a required media page image", async () => {
+  const deps = createDeps();
+  const plan = buildFullServiceSitePlan({
+    prompt: [
+      "Stworz premium strone dla studia architektonicznego Studio Forma.",
+      "Potrzebuje portfolio realizacji, oferte uslug z podstronami, proces wspolpracy i kontakt z formularzem leadowym.",
+      "Realizacje maja miec katalog z kategoria, lokalizacja i rokiem.",
+    ].join(" "),
+    promptKind: "setup_request",
+  });
+  const driftedPlan = structuredClone(plan) as AssistantActionPlan;
+  for (const action of driftedPlan.actions) {
+    if (action.type !== "page.upsert" || action.input.slug !== "/o-nas") continue;
+    for (const block of action.input.blocks ?? []) {
+      if (block.type !== "rich-text-section") continue;
+      const data = block.data as {
+        body?: { blocks?: Array<Record<string, unknown>> };
+      };
+      data.body = {
+        ...data.body,
+        blocks: (data.body?.blocks ?? []).filter((bodyBlock) => bodyBlock.kind !== "image"),
+      };
+    }
+  }
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan: driftedPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-full-service-media-drift",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(0);
+  expect(executed.plan.metadata?.launchReadiness?.checks).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: "pages", status: "satisfied" }),
+      expect.objectContaining({ id: "public-content", status: "satisfied" }),
+      expect.objectContaining({ id: "media", status: "pending_execute" }),
+    ])
+  );
 });
 
 test("executeAssistantActionPlan resolves supporting page collection links from content type slugs", async () => {
@@ -4865,6 +5681,7 @@ test("dryRunAssistantActionPlan flags conflicting supporting page collection-lin
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
 
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 });
 
 test("executeAssistantActionPlan rejects conflicting collection-link content type and listing locators", async () => {
@@ -4946,17 +5763,20 @@ test("executeAssistantActionPlan rejects conflicting collection-link content typ
     ],
   };
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-supporting-page-collection-link-conflict",
-    },
-    deps
-  );
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_conflict");
+  expect(preview.readyToExecute).toBe(false);
 
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-supporting-page-collection-link-conflict",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 });
 
 test("executeAssistantActionPlan rejects stale supporting page collection-link listing ids", async () => {
@@ -5031,18 +5851,18 @@ test("executeAssistantActionPlan rejects stale supporting page collection-link l
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("assistant_action_dependency_missing");
+  expect(preview.readyToExecute).toBe(false);
 
-  const executed = await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-supporting-page-collection-link-stale-id",
-    },
-    deps
-  );
-
-  expect(executed.summary.failed).toBe(1);
-  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_missing");
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-supporting-page-collection-link-stale-id",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 });
 
 test("dryRunAssistantActionPlan flags detail-page upserts whose content type does not exist", async () => {
@@ -5122,6 +5942,17 @@ test("dryRunAssistantActionPlan flags detail-page upserts whose content type doe
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
 
   expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_invalid");
+  expect(preview.readyToExecute).toBe(false);
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-detail-page-missing-content-type",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 });
 
 test("dryRunAssistantActionPlan flags detail-page expectedExistingId mismatches", async () => {
@@ -5602,73 +6433,78 @@ test("executeAssistantActionPlan fails detail-page upserts that reuse an id acro
     publishedAt: null,
   });
 
-  const result = await executeAssistantActionPlan(
-    {
-      plan: {
-        id: "plan-detail-page-content-type-mismatch",
-        status: "ready",
-        intentId: "detail-page-content-type-mismatch",
-        promptKind: "setup_request",
-        intentFamily: "product_catalog",
-        title: "Create detail template",
-        answer: "I can create the detail template.",
-        summary: "Create a products detail template with a conflicting id.",
-        confidence: 0.91,
-        assumptions: [],
-        questions: [],
-        actions: [
-          {
-            id: "detail-page-products",
-            type: "detail-page.upsert",
-            title: "Create products detail template",
-            description: "Create a products detail template.",
-            input: {
-              document: {
-                schemaVersion: 1,
-                id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-                name: "Products detail template",
-                contentTypeId: productType.id,
-                contentTypeSlug: productType.slug,
-                status: "draft",
-                titlePattern: "{{ title }}",
-                settings: {
-                  template: "detail",
-                  layout: {
-                    wrapper: {
-                      container: "default",
-                      padding: { top: "md", bottom: "lg" },
-                      background: {
-                        color: "#ffffff",
-                        image: null,
-                        media: { type: "none", source: "external", src: null },
-                      },
-                    },
-                    sections: {
-                      gap: "lg",
-                      defaults: {
-                        container: "default",
-                        padding: { top: "xl", bottom: "xl" },
-                        margin: { top: "none", bottom: "none" },
-                      },
-                    },
-                    applyDefaultsToNewBlocks: false,
+  const plan: AssistantActionPlan = {
+    id: "plan-detail-page-content-type-mismatch",
+    status: "ready",
+    intentId: "detail-page-content-type-mismatch",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can create the detail template.",
+    summary: "Create a products detail template with a conflicting id.",
+    confidence: 0.91,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          document: {
+            schemaVersion: 1,
+            id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            name: "Products detail template",
+            contentTypeId: productType.id,
+            contentTypeSlug: productType.slug,
+            status: "draft",
+            titlePattern: "{{ title }}",
+            settings: {
+              template: "detail",
+              layout: {
+                wrapper: {
+                  container: "default",
+                  padding: { top: "md", bottom: "lg" },
+                  background: {
+                    color: "#ffffff",
+                    image: null,
+                    media: { type: "none", source: "external", src: null },
                   },
                 },
-                blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
-                bindings: [],
+                sections: {
+                  gap: "lg",
+                  defaults: {
+                    container: "default",
+                    padding: { top: "xl", bottom: "xl" },
+                    margin: { top: "none", bottom: "none" },
+                  },
+                },
+                applyDefaultsToNewBlocks: false,
               },
             },
+            blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
+            bindings: [],
           },
-        ],
+        },
       },
-      actorId: "user-1",
-      idempotencyKey: "assistant-detail-page-content-type-mismatch",
-    },
-    deps
-  );
+    ],
+  };
 
-  expect(result.summary.failed).toBe(1);
-  expect(result.results[0]?.errorCode).toBe("detail_page_content_type_mismatch");
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(false);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_content_type_mismatch");
+
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-detail-page-content-type-mismatch",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 });
 
 test("executeAssistantActionPlan fails detail-page upserts with stale expectedExistingId", async () => {
@@ -5688,74 +6524,79 @@ test("executeAssistantActionPlan fails detail-page upserts with stale expectedEx
     updatedAt: new Date("2026-04-10T12:00:00.000Z"),
   });
 
-  const result = await executeAssistantActionPlan(
-    {
-      plan: {
-        id: "plan-detail-page-execute-conflict",
-        status: "ready",
-        intentId: "detail-page-execute-conflict",
-        promptKind: "setup_request",
-        intentFamily: "product_catalog",
-        title: "Create detail template",
-        answer: "I can create the detail template.",
-        summary: "Create a detail template with a stale expectedExistingId.",
-        confidence: 0.91,
-        assumptions: [],
-        questions: [],
-        actions: [
-          {
-            id: "detail-page-products",
-            type: "detail-page.upsert",
-            title: "Create products detail template",
-            description: "Create a products detail template.",
-            input: {
-              expectedExistingId: "94d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-              document: {
-                schemaVersion: 1,
-                id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-                name: "Products detail template",
-                contentTypeId: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-                contentTypeSlug: "products",
-                status: "draft",
-                titlePattern: "{{ title }}",
-                settings: {
-                  template: "detail",
-                  layout: {
-                    wrapper: {
-                      container: "default",
-                      padding: { top: "md", bottom: "lg" },
-                      background: {
-                        color: "#ffffff",
-                        image: null,
-                        media: { type: "none", source: "external", src: null },
-                      },
-                    },
-                    sections: {
-                      gap: "lg",
-                      defaults: {
-                        container: "default",
-                        padding: { top: "xl", bottom: "xl" },
-                        margin: { top: "none", bottom: "none" },
-                      },
-                    },
-                    applyDefaultsToNewBlocks: false,
+  const plan: AssistantActionPlan = {
+    id: "plan-detail-page-execute-conflict",
+    status: "ready",
+    intentId: "detail-page-execute-conflict",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can create the detail template.",
+    summary: "Create a detail template with a stale expectedExistingId.",
+    confidence: 0.91,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          expectedExistingId: "94d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+          document: {
+            schemaVersion: 1,
+            id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            name: "Products detail template",
+            contentTypeId: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+            contentTypeSlug: "products",
+            status: "draft",
+            titlePattern: "{{ title }}",
+            settings: {
+              template: "detail",
+              layout: {
+                wrapper: {
+                  container: "default",
+                  padding: { top: "md", bottom: "lg" },
+                  background: {
+                    color: "#ffffff",
+                    image: null,
+                    media: { type: "none", source: "external", src: null },
                   },
                 },
-                blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
-                bindings: [],
+                sections: {
+                  gap: "lg",
+                  defaults: {
+                    container: "default",
+                    padding: { top: "xl", bottom: "xl" },
+                    margin: { top: "none", bottom: "none" },
+                  },
+                },
+                applyDefaultsToNewBlocks: false,
               },
             },
+            blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
+            bindings: [],
           },
-        ],
+        },
       },
-      actorId: "user-1",
-      idempotencyKey: "assistant-detail-page-execute-conflict",
-    },
-    deps
-  );
+    ],
+  };
 
-  expect(result.summary.failed).toBe(1);
-  expect(result.results[0]?.errorCode).toBe("detail_page_conflict");
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(false);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_conflict");
+
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-detail-page-execute-conflict",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
 });
 
 test("executeAssistantActionPlan resolves renamed listing resources from existing page state", async () => {

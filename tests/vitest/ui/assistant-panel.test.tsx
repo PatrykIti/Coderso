@@ -282,6 +282,31 @@ test("ActionPlanReview renders planned guide actions", () => {
               ],
             },
           },
+          launchReadiness: {
+            schemaVersion: 1,
+            kind: "full-service-site",
+            requiredPages: ["/", "/products"],
+            requiredCatalogs: ["products"],
+            minimumPublishedEntries: {
+              products: 3,
+            },
+            checks: [
+              {
+                id: "pages",
+                label: "Required public pages",
+                status: "pending_execute",
+                evidence: ["/", "/products"],
+                gates: [],
+              },
+              {
+                id: "media",
+                label: "Trusted media handling",
+                status: "gated",
+                evidence: ["sample content avoids raw media fields"],
+                gates: ["media_upload_gated"],
+              },
+            ],
+          },
         },
         assumptions: ["Use existing Coderso surfaces."],
         questions: [],
@@ -349,6 +374,11 @@ test("ActionPlanReview renders planned guide actions", () => {
   expect(html).toContain("LLM Guide Plan");
   expect(html).toContain("House Projects Catalog");
   expect(html).toContain("Provider draft");
+  expect(html).toContain("Launch readiness");
+  expect(html).toContain("Required public pages");
+  expect(html).toContain("Pending execute");
+  expect(html).toContain("Trusted media handling");
+  expect(html).toContain("media_upload_gated");
   expect(html).toContain("Composition diagnostics");
   expect(html).toContain("Primary");
   expect(html).toContain("product catalog");
@@ -508,6 +538,28 @@ test("ActionExecutionResult renders resource links and summary", () => {
           answer: "Plan ready",
           summary: "Plan summary",
           confidence: 0.9,
+          metadata: {
+            planner: "local",
+            providerDraftUsed: false,
+            launchReadiness: {
+              schemaVersion: 1,
+              kind: "full-service-site",
+              requiredPages: ["/", "/projekty-domow"],
+              requiredCatalogs: ["house-projects"],
+              minimumPublishedEntries: {
+                "house-projects": 3,
+              },
+              checks: [
+                {
+                  id: "pages",
+                  label: "Required public pages",
+                  status: "satisfied",
+                  evidence: ["/", "/projekty-domow"],
+                  gates: [],
+                },
+              ],
+            },
+          },
           assumptions: [],
           questions: [],
           actions: [],
@@ -556,6 +608,9 @@ test("ActionExecutionResult renders resource links and summary", () => {
   expect(html).toContain("Action results");
   expect(html).toContain("Page widget");
   expect(html).toContain("Page widget block is updated.");
+  expect(html).toContain("Launch readiness");
+  expect(html).toContain("Required public pages");
+  expect(html).toContain("Satisfied");
   expect(html).toContain("Open in admin");
   expect(html).toContain("Open public page");
 });

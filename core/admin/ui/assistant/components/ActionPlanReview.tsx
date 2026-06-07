@@ -8,6 +8,13 @@ import type {
   AssistantActionDryRunResponse,
   AssistantActionPlanResponse,
 } from "@/services/assistantClient";
+import type {
+  AssistantSiteBuilderIntakeMode,
+  AssistantSiteBuilderIntakeSession,
+  AssistantSiteBuilderIntakeStepId,
+} from "../../../../services/assistant/assistantSiteBuilderIntakeTypes";
+import { LaunchReadinessSummary } from "./LaunchReadinessSummary";
+import { SiteBuilderIntakeStepper } from "./SiteBuilderIntakeBasicStepper";
 
 type ActionPlanReviewProps = {
   plan: AssistantActionPlanResponse;
@@ -15,8 +22,17 @@ type ActionPlanReviewProps = {
   isPreviewing?: boolean;
   isExecuting?: boolean;
   error?: string | null;
+  siteBuilderIntakeSession?: AssistantSiteBuilderIntakeSession | null;
+  siteBuilderIntakeError?: string | null;
+  isSubmittingSiteBuilderIntake?: boolean;
   onPreview: () => void;
   onExecute: () => void;
+  onSubmitSiteBuilderIntakeStep?: (
+    stepId: AssistantSiteBuilderIntakeStepId,
+    values: Record<string, unknown>
+  ) => void;
+  onSelectSiteBuilderIntakeStep?: (stepId: AssistantSiteBuilderIntakeStepId) => void;
+  onSwitchSiteBuilderIntakeMode?: (mode: AssistantSiteBuilderIntakeMode) => void;
 };
 
 const labelByOperation = {
@@ -132,8 +148,14 @@ export function ActionPlanReview({
   isPreviewing = false,
   isExecuting = false,
   error = null,
+  siteBuilderIntakeSession = null,
+  siteBuilderIntakeError = null,
+  isSubmittingSiteBuilderIntake = false,
   onPreview,
   onExecute,
+  onSubmitSiteBuilderIntakeStep,
+  onSelectSiteBuilderIntakeStep,
+  onSwitchSiteBuilderIntakeMode,
 }: ActionPlanReviewProps) {
   const previewReady = Boolean(preview?.readyToExecute);
   const destructive = plan.actions.some((action) =>
@@ -142,19 +164,24 @@ export function ActionPlanReview({
       preview?.changes.find((change) => change.actionId === action.id)
     )
   );
-  const blocked = preview?.changes.some((change) =>
-    change.conflicts?.some((conflict) => conflict.severity === "error")
+  const blocked = Boolean(
+    preview?.changes.some((change) =>
+      change.conflicts?.some((conflict) => conflict.severity === "error")
+    )
   );
   const hasExecutableActions = plan.actions.length > 0;
   const isReadOnlyPlan =
     plan.responseKind === "inspection" || (Boolean(plan.inspection) && !hasExecutableActions);
-  const showActionControls = hasExecutableActions || !isReadOnlyPlan;
   const guideLabel = isReadOnlyPlan ? "LLM Guide Inspection" : "LLM Guide Plan";
   const statusLabel = isReadOnlyPlan
     ? "Read-only"
     : plan.status === "ready"
       ? "Ready"
       : "Needs input";
+  const siteBuilderIntake = plan.metadata?.siteBuilderIntake;
+  const isSiteBuilderIntake = Boolean(siteBuilderIntake && onSubmitSiteBuilderIntakeStep);
+  const showActionControls = (hasExecutableActions || !isReadOnlyPlan) && !isSiteBuilderIntake;
+  const showQuestionList = plan.questions.length > 0 && !isSiteBuilderIntake;
   const composition = plan.metadata?.blueprintComposition;
   const mergedCompositionResources =
     composition?.mergedResources.filter((resource) => resource.sourceCapabilityIds.length > 1) ??
@@ -206,8 +233,8 @@ export function ActionPlanReview({
             <AlertTitle>Preview warnings</AlertTitle>
             <AlertDescription>
               <ul className="ml-5 mt-2 list-disc space-y-1">
-                {preview.warnings.map((warning) => (
-                  <li key={warning}>{redactUiText(warning)}</li>
+                {preview.warnings.map((warning, index) => (
+                  <li key={`${index}-${warning}`}>{redactUiText(warning)}</li>
                 ))}
               </ul>
             </AlertDescription>
@@ -220,11 +247,25 @@ export function ActionPlanReview({
               Assumptions
             </p>
             <ul className="ml-5 list-disc space-y-1 text-sm text-foreground">
-              {plan.assumptions.map((item) => (
-                <li key={item}>{redactUiText(item)}</li>
+              {plan.assumptions.map((item, index) => (
+                <li key={`${index}-${item}`}>{redactUiText(item)}</li>
               ))}
             </ul>
           </div>
+        ) : null}
+
+        <LaunchReadinessSummary readiness={plan.metadata?.launchReadiness} />
+
+        {isSiteBuilderIntake && siteBuilderIntake && onSubmitSiteBuilderIntakeStep ? (
+          <SiteBuilderIntakeStepper
+            metadata={siteBuilderIntake}
+            session={siteBuilderIntakeSession}
+            isSubmitting={isSubmittingSiteBuilderIntake}
+            error={siteBuilderIntakeError}
+            onSubmitStep={onSubmitSiteBuilderIntakeStep}
+            onSelectStep={onSelectSiteBuilderIntakeStep}
+            onSwitchMode={onSwitchSiteBuilderIntakeMode}
+          />
         ) : null}
 
         {composition ? (
@@ -279,7 +320,7 @@ export function ActionPlanReview({
           </div>
         ) : null}
 
-        {plan.questions.length > 0 ? (
+        {showQuestionList ? (
           <Alert>
             <AlertTitle>More input needed</AlertTitle>
             <AlertDescription>
@@ -376,16 +417,18 @@ export function ActionPlanReview({
                       ) : null}
                       {previewChange?.warnings.length ? (
                         <ul className="ml-5 mt-2 list-disc space-y-1 text-xs text-muted-foreground">
-                          {previewChange.warnings.map((warning) => (
-                            <li key={warning}>{redactUiText(warning)}</li>
+                          {previewChange.warnings.map((warning, index) => (
+                            <li key={`${previewChange.actionId}-${index}-${warning}`}>
+                              {redactUiText(warning)}
+                            </li>
                           ))}
                         </ul>
                       ) : null}
                       {previewChange?.conflicts?.length ? (
                         <div className="mt-2 space-y-1 text-xs">
-                          {previewChange.conflicts.map((conflict) => (
+                          {previewChange.conflicts.map((conflict, index) => (
                             <p
-                              key={`${conflict.code}-${conflict.message}`}
+                              key={`${previewChange.actionId}-${index}-${conflict.code}-${conflict.message}`}
                               className={
                                 conflict.severity === "error"
                                   ? "text-destructive"
@@ -442,7 +485,9 @@ export function ActionPlanReview({
             <Button
               type="button"
               onClick={onExecute}
-              disabled={!previewReady || isExecuting || isPreviewing || !hasExecutableActions}
+              disabled={
+                !previewReady || blocked || isExecuting || isPreviewing || !hasExecutableActions
+              }
             >
               {isExecuting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

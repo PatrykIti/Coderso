@@ -140,8 +140,8 @@ afterthought.
 
 ### Grow
 - **Solution Kits** — install a whole vertical in one flow (automotive workshop, beauty salon,
-  medical clinic, services directory, small e-commerce)
-- **AI Site Wizard** — guided `profile → goals → recommendation → review → execute`
+  medical clinic, local service business, services directory, small e-commerce)
+- **LLM Guide Site Builder** — reviewed `intake → plan → dry-run → execute`
 - **Themes & design tokens** with multiple visual profiles
 
 ### Extend
@@ -244,7 +244,7 @@ Coderso keeps three clearly separated documentation homes:
 - [Getting started & admin orientation](docs/guide/getting-started/)
 - [Admin screens reference](docs/guide/screens/) — dashboard, media, pages, menus, SEO, users, security, and more
 - [Coderso modules](docs/guide/coderso/) — Engine, Forms, Listings, Booking, Commerce, Posts, Custom Screens…
-- [Solution Kits](docs/guide/solution-kits/) — automotive workshop, beauty salon, medical clinic, services directory, small e-commerce
+- [Solution Kits](docs/guide/solution-kits/) — automotive workshop, beauty salon, medical clinic, local service business, services directory, small e-commerce
 - [Playbooks](docs/guide/playbooks/) — lead generation, booking, commerce, content-first, and custom builds
 
 ### For developers — [`docs/develop/`](docs/develop/)

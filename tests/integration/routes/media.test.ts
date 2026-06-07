@@ -1,8 +1,5 @@
 import { expect, test } from "bun:test";
-import {
-  mapMediaError,
-  registerMediaRoutes,
-} from "../../../core/server/routes/mediaRoutes";
+import { mapMediaError, registerMediaRoutes } from "../../../core/server/routes/mediaRoutes";
 
 type Route = { method: string; path: string };
 
@@ -44,6 +41,8 @@ test("registerMediaRoutes wires endpoints", () => {
 });
 
 test("mapMediaError maps service errors at route boundary", () => {
+  expect(mapMediaError(new Error("media_file_invalid"))?.status).toBe(400);
+  expect(mapMediaError(new Error("media_mime_not_allowed"))?.status).toBe(400);
   expect(mapMediaError(new Error("media_not_found"))?.status).toBe(404);
   expect(mapMediaError(new Error("media_file_too_large"))?.status).toBe(413);
   expect(mapMediaError(new Error("media_storage_unavailable"))?.status).toBe(503);

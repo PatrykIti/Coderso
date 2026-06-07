@@ -17,10 +17,7 @@ import {
   solutionKitInstallRuns,
 } from "../../db/schema";
 import { logAudit } from "../audit/auditService";
-import {
-  normalizeContentTypeName,
-  normalizeContentTypeSlug,
-} from "../content/typeService";
+import { normalizeContentTypeName, normalizeContentTypeSlug } from "../content/typeService";
 import { getSolutionKitFromCatalog } from "./solutionKitsCatalog";
 import type {
   SolutionKitContentTypeBlueprint,
@@ -38,22 +35,9 @@ type JsonRecord = Record<string, unknown>;
 
 export type SolutionKitInstallMode = "dry_run" | "apply" | "rollback";
 export type SolutionKitInstallStatus = "running" | "success" | "failed";
-export type SolutionKitInstallItemStatus =
-  | "planned"
-  | "success"
-  | "failed"
-  | "skipped";
-export type SolutionKitInstallItemOperation =
-  | "create"
-  | "update"
-  | "noop"
-  | "delete"
-  | "restore";
-export type SolutionKitInstallResourceType =
-  | "content_type"
-  | "form"
-  | "page"
-  | "menu";
+export type SolutionKitInstallItemStatus = "planned" | "success" | "failed" | "skipped";
+export type SolutionKitInstallItemOperation = "create" | "update" | "noop" | "delete" | "restore";
+export type SolutionKitInstallResourceType = "content_type" | "form" | "page" | "menu";
 
 type SolutionKitInstallRunRow = typeof solutionKitInstallRuns.$inferSelect;
 type SolutionKitInstallItemRow = typeof solutionKitInstallItems.$inferSelect;
@@ -154,6 +138,8 @@ type MenuSnapshot = {
   id: string;
   name: string;
   location: string | null;
+  status: "draft" | "published";
+  publishedAt: string | null;
   items: MenuItemSnapshot[];
 };
 
@@ -299,8 +285,7 @@ export type SolutionKitInstallResult = {
 const isRecord = (value: unknown): value is JsonRecord =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-const asRecord = (value: unknown): JsonRecord =>
-  isRecord(value) ? (value as JsonRecord) : {};
+const asRecord = (value: unknown): JsonRecord => (isRecord(value) ? (value as JsonRecord) : {});
 
 const toIsoOrNull = (value: Date | null) => (value ? value.toISOString() : null);
 
@@ -319,8 +304,7 @@ const normalizePageSlug = (value: unknown) => {
   return withoutTrail.length > 0 ? withoutTrail : "/";
 };
 
-const pageSlugCandidates = (slug: string) =>
-  slug === "/" ? ["/", ""] : [slug, `/${slug}`];
+const pageSlugCandidates = (slug: string) => (slug === "/" ? ["/", ""] : [slug, `/${slug}`]);
 
 const defaultContentTypeSchema = (): JsonRecord => ({
   type: "object",
@@ -387,9 +371,7 @@ const normalizeFormFieldsBlueprint = (
       id: typeof field.id === "string" ? normalizeString(field.id) : null,
       type: normalizeString(field.type) ?? "text",
       label: normalizeString(field.label) ?? `Field ${index + 1}`,
-      name:
-        normalizeString(field.name) ??
-        `field_${index + 1}`,
+      name: normalizeString(field.name) ?? `field_${index + 1}`,
       required: Boolean(field.required),
       orderIndex:
         typeof field.orderIndex === "number" && Number.isFinite(field.orderIndex)
@@ -401,16 +383,14 @@ const normalizeFormFieldsBlueprint = (
 };
 
 const normalizeFormBlueprint = (value: SolutionKitFormBlueprint) => {
-  const status: "draft" | "published" =
-    value.status === "published" ? "published" : "draft";
+  const status: "draft" | "published" = value.status === "published" ? "published" : "draft";
   const submissionAccess: "public" | "internal" =
     value.submissionAccess === "internal" ? "internal" : "public";
   return {
     slug: normalizeString(value.slug),
     name: normalizeString(value.name),
     status,
-    description:
-      typeof value.description === "string" ? normalizeString(value.description) : null,
+    description: typeof value.description === "string" ? normalizeString(value.description) : null,
     successMessage:
       typeof value.successMessage === "string" ? normalizeString(value.successMessage) : null,
     successRedirectUrl:
@@ -441,8 +421,7 @@ const normalizeSeoDefaults = (value: SolutionKitSeoDefaults | undefined | null) 
 };
 
 const normalizePageBlueprint = (value: SolutionKitPageBlueprint) => {
-  const status: "draft" | "published" =
-    value.status === "published" ? "published" : "draft";
+  const status: "draft" | "published" = value.status === "published" ? "published" : "draft";
   return {
     slug: normalizePageSlug(value.slug),
     title: normalizeString(value.title),
@@ -452,24 +431,108 @@ const normalizePageBlueprint = (value: SolutionKitPageBlueprint) => {
   };
 };
 
+const collectFormIdReferences = (value: unknown, refs: Set<string>) => {
+  if (Array.isArray(value)) {
+    for (const item of value) collectFormIdReferences(item, refs);
+    return;
+  }
+
+  if (!isRecord(value)) return;
+
+  for (const [key, nested] of Object.entries(value)) {
+    if (key === "formId" && typeof nested === "string") {
+      const formId = normalizeString(nested);
+      if (formId) refs.add(formId);
+    }
+    collectFormIdReferences(nested, refs);
+  }
+};
+
+const replaceFormIdReferences = (value: unknown, replacements: Map<string, string>): unknown => {
+  if (Array.isArray(value)) {
+    let changed = false;
+    const next = value.map((item) => {
+      const replaced = replaceFormIdReferences(item, replacements);
+      if (replaced !== item) changed = true;
+      return replaced;
+    });
+    return changed ? next : value;
+  }
+
+  if (!isRecord(value)) return value;
+
+  let changed = false;
+  const next: JsonRecord = {};
+  for (const [key, nested] of Object.entries(value)) {
+    if (key === "formId" && typeof nested === "string") {
+      const normalized = normalizeString(nested);
+      const replacement = normalized ? replacements.get(normalized) : undefined;
+      next[key] = replacement ?? nested;
+      if (next[key] !== nested) changed = true;
+      continue;
+    }
+
+    const replaced = replaceFormIdReferences(nested, replacements);
+    next[key] = replaced;
+    if (replaced !== nested) changed = true;
+  }
+
+  return changed ? next : value;
+};
+
+const isUuidLike = (value: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+const resolvePageFormReferences = async (
+  executor: QueryExecutor,
+  currentData: JsonRecord
+): Promise<JsonRecord> => {
+  const refs = new Set<string>();
+  collectFormIdReferences(currentData, refs);
+  const candidates = [...refs];
+  if (candidates.length === 0) return currentData;
+
+  const idCandidates = candidates.filter(isUuidLike);
+  const formRowsById =
+    idCandidates.length > 0
+      ? await executor
+          .select({ id: forms.id, slug: forms.slug })
+          .from(forms)
+          .where(inArray(forms.id, idCandidates))
+      : [];
+  const knownIds = new Set(formRowsById.map((row) => row.id));
+  const slugCandidates = candidates.filter((candidate) => !knownIds.has(candidate));
+  if (slugCandidates.length === 0) return currentData;
+
+  const formRowsBySlug = await executor
+    .select({ id: forms.id, slug: forms.slug })
+    .from(forms)
+    .where(inArray(forms.slug, slugCandidates));
+  if (formRowsBySlug.length === 0) return currentData;
+
+  const replacements = new Map(formRowsBySlug.map((row) => [row.slug, row.id]));
+  const replaced = replaceFormIdReferences(currentData, replacements);
+  return isRecord(replaced) ? replaced : currentData;
+};
+
 const normalizeMenuItemsBlueprint = (value: SolutionKitMenuBlueprint["items"]) => {
-  if (!Array.isArray(value) || value.length === 0) return [] as Array<{
-    key: string;
-    label: string;
-    href: string | null;
-    pageSlug: string | null;
-    parentKey: string | null;
-    orderIndex: number;
-    settings: JsonRecord;
-  }>;
+  if (!Array.isArray(value) || value.length === 0)
+    return [] as Array<{
+      key: string;
+      label: string;
+      href: string | null;
+      pageSlug: string | null;
+      parentKey: string | null;
+      orderIndex: number;
+      settings: JsonRecord;
+    }>;
 
   return value
     .map((item, index) => {
       const key = normalizeString(item?.key);
       const label = normalizeString(item?.label);
       const href = typeof item?.href === "string" ? normalizeString(item.href) : null;
-      const pageSlug =
-        typeof item?.pageSlug === "string" ? normalizePageSlug(item.pageSlug) : null;
+      const pageSlug = typeof item?.pageSlug === "string" ? normalizePageSlug(item.pageSlug) : null;
       const parentKey =
         typeof item?.parentKey === "string" ? normalizeString(item.parentKey) : null;
       const orderIndex =
@@ -506,7 +569,10 @@ const snapshotSeo = (row: SeoDocumentRow): SeoSnapshot => ({
   robots: row.robots ?? null,
 });
 
-const getSeoForPage = async (executor: QueryExecutor, pageId: string): Promise<SeoSnapshot | null> => {
+const getSeoForPage = async (
+  executor: QueryExecutor,
+  pageId: string
+): Promise<SeoSnapshot | null> => {
   const [row] = await executor
     .select()
     .from(seoDocuments)
@@ -610,10 +676,7 @@ const snapshotContentType = async (
   taxonomy: await listTaxonomyState(executor, row.id),
 });
 
-const snapshotForm = async (
-  executor: QueryExecutor,
-  row: FormRow
-): Promise<FormSnapshot> => ({
+const snapshotForm = async (executor: QueryExecutor, row: FormRow): Promise<FormSnapshot> => ({
   id: row.id,
   name: row.name,
   slug: row.slug,
@@ -626,10 +689,7 @@ const snapshotForm = async (
   fields: await listFormFieldSnapshots(executor, row.id),
 });
 
-const snapshotPage = async (
-  executor: QueryExecutor,
-  row: PageRow
-): Promise<PageSnapshot> => ({
+const snapshotPage = async (executor: QueryExecutor, row: PageRow): Promise<PageSnapshot> => ({
   id: row.id,
   title: row.title,
   slug: row.slug,
@@ -641,13 +701,12 @@ const snapshotPage = async (
   seo: await getSeoForPage(executor, row.id),
 });
 
-const snapshotMenu = async (
-  executor: QueryExecutor,
-  row: MenuRow
-): Promise<MenuSnapshot> => ({
+const snapshotMenu = async (executor: QueryExecutor, row: MenuRow): Promise<MenuSnapshot> => ({
   id: row.id,
   name: row.name,
   location: row.location,
+  status: row.status === "published" ? "published" : "draft",
+  publishedAt: toIsoOrNull(row.publishedAt),
   items: await listMenuItemSnapshots(executor, row.id),
 });
 
@@ -754,10 +813,8 @@ const compareMenuItems = (left: MenuItemDesired[], right: MenuItemDesired[]) => 
   });
 };
 
-const getTaxonomyByKind = (
-  rows: ContentTaxonomyRow[],
-  kind: "category" | "tag"
-) => rows.find((row) => row.kind === kind);
+const getTaxonomyByKind = (rows: ContentTaxonomyRow[], kind: "category" | "tag") =>
+  rows.find((row) => row.kind === kind);
 
 const ensureTaxonomyRow = async (
   executor: QueryExecutor,
@@ -802,9 +859,7 @@ const syncTaxonomyTermsForKind = async (
 
   if (input.desired.length === 0) {
     if (currentTaxonomy) {
-      await executor
-        .delete(contentTaxonomies)
-        .where(eq(contentTaxonomies.id, currentTaxonomy.id));
+      await executor.delete(contentTaxonomies).where(eq(contentTaxonomies.id, currentTaxonomy.id));
     }
     return;
   }
@@ -841,15 +896,13 @@ const syncTaxonomyTermsForKind = async (
       continue;
     }
 
-    await executor
-      .insert(contentTerms)
-      .values({
-        taxonomyId: taxonomy.id,
-        name: desiredTerm.name,
-        slug,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+    await executor.insert(contentTerms).values({
+      taxonomyId: taxonomy.id,
+      name: desiredTerm.name,
+      slug,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   }
 
   for (const stale of bySlug.values()) {
@@ -1057,7 +1110,7 @@ const resolveMenuDesiredItems = async (
     label: item.label,
     href: item.href,
     pageId: item.pageId,
-    parentId: item.parentKey ? idByKey.get(item.parentKey) ?? null : null,
+    parentId: item.parentKey ? (idByKey.get(item.parentKey) ?? null) : null,
     orderIndex: item.orderIndex,
     settings: item.settings,
   }));
@@ -1129,15 +1182,9 @@ const normalizeItemRow = (row: SolutionKitInstallItemRow): SolutionKitInstallIte
   resourceKey: row.resourceKey,
   operation: row.operation as SolutionKitInstallItemOperation,
   status: row.status as SolutionKitInstallItemStatus,
-  beforeSnapshot: isRecord(row.beforeSnapshot)
-    ? (row.beforeSnapshot as JsonRecord)
-    : null,
-  afterSnapshot: isRecord(row.afterSnapshot)
-    ? (row.afterSnapshot as JsonRecord)
-    : null,
-  rollbackAction: isRecord(row.rollbackAction)
-    ? (row.rollbackAction as JsonRecord)
-    : null,
+  beforeSnapshot: isRecord(row.beforeSnapshot) ? (row.beforeSnapshot as JsonRecord) : null,
+  afterSnapshot: isRecord(row.afterSnapshot) ? (row.afterSnapshot as JsonRecord) : null,
+  rollbackAction: isRecord(row.rollbackAction) ? (row.rollbackAction as JsonRecord) : null,
   error: row.error,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
@@ -1172,10 +1219,7 @@ const buildSummary = (
   return summary;
 };
 
-const resolveKitDefinition = (
-  kitId: SolutionKitId,
-  override?: SolutionKitDefinition
-) => {
+const resolveKitDefinition = (kitId: SolutionKitId, override?: SolutionKitDefinition) => {
   if (override) return override;
   const kit = getSolutionKitFromCatalog(kitId);
   if (!kit) throw new Error("solution_kit_not_found");
@@ -1209,17 +1253,20 @@ const createInstallRun = async (input: {
   return normalizeRunRow(row);
 };
 
-const appendInstallItem = async (runId: string, input: {
-  position: number;
-  resourceType: SolutionKitInstallResourceType;
-  resourceKey: string;
-  operation: SolutionKitInstallItemOperation;
-  status: SolutionKitInstallItemStatus;
-  beforeSnapshot?: JsonRecord | null;
-  afterSnapshot?: JsonRecord | null;
-  rollbackAction?: JsonRecord | null;
-  error?: string | null;
-}) => {
+const appendInstallItem = async (
+  runId: string,
+  input: {
+    position: number;
+    resourceType: SolutionKitInstallResourceType;
+    resourceKey: string;
+    operation: SolutionKitInstallItemOperation;
+    status: SolutionKitInstallItemStatus;
+    beforeSnapshot?: JsonRecord | null;
+    afterSnapshot?: JsonRecord | null;
+    rollbackAction?: JsonRecord | null;
+    error?: string | null;
+  }
+) => {
   const [row] = await db
     .insert(solutionKitInstallItems)
     .values({
@@ -1654,11 +1701,9 @@ const executePageOperation = async (
   op: Extract<InstallPlanOperation, { resourceType: "page" }>,
   dryRun: boolean
 ): Promise<InstallOperationResult> => {
+  const currentData = await resolvePageFormReferences(executor, op.payload.currentData);
   const candidates = pageSlugCandidates(op.payload.slug);
-  const rows = await executor
-    .select()
-    .from(pages)
-    .where(inArray(pages.slug, candidates));
+  const rows = await executor.select().from(pages).where(inArray(pages.slug, candidates));
   const existing =
     rows.find((item) => item.slug === op.payload.slug) ??
     rows.find((item) => item.slug === "/") ??
@@ -1675,9 +1720,8 @@ const executePageOperation = async (
           slug: op.payload.slug,
           status: op.payload.status,
           authorId: null,
-          currentData: op.payload.currentData,
-          publishedData:
-            op.payload.status === "published" ? op.payload.currentData : null,
+          currentData,
+          publishedData: op.payload.status === "published" ? currentData : null,
           publishedAt: op.payload.status === "published" ? new Date().toISOString() : null,
           seo: normalizeSeoDefaults(op.payload.seo),
         },
@@ -1693,9 +1737,8 @@ const executePageOperation = async (
         slug: op.payload.slug,
         status: op.payload.status,
         authorId: null,
-        currentData: op.payload.currentData,
-        publishedData:
-          op.payload.status === "published" ? op.payload.currentData : null,
+        currentData,
+        publishedData: op.payload.status === "published" ? currentData : null,
         publishedAt: op.payload.status === "published" ? now : null,
         createdAt: now,
         updatedAt: now,
@@ -1724,15 +1767,18 @@ const executePageOperation = async (
   const now = new Date();
 
   if (existing.title !== op.payload.title) patch.title = op.payload.title;
-  if (!isDeepStrictEqual(asRecord(existing.currentData), op.payload.currentData)) {
-    patch.currentData = op.payload.currentData;
+  if (!isDeepStrictEqual(asRecord(existing.currentData), currentData)) {
+    patch.currentData = currentData;
   }
   if (op.payload.status === "published" && existing.status !== "published") {
     patch.status = "published";
-    patch.publishedData = op.payload.currentData;
+    patch.publishedData = currentData;
     patch.publishedAt = existing.publishedAt ?? now;
-  } else if (op.payload.status === "published" && !isDeepStrictEqual(asRecord(existing.publishedData), op.payload.currentData)) {
-    patch.publishedData = op.payload.currentData;
+  } else if (
+    op.payload.status === "published" &&
+    !isDeepStrictEqual(asRecord(existing.publishedData), currentData)
+  ) {
+    patch.publishedData = currentData;
   }
   const seoChanged = !compareSeo(beforeSnapshot.seo, op.payload.seo);
 
@@ -1753,15 +1799,11 @@ const executePageOperation = async (
         ...beforeSnapshot,
         ...(patch.title ? { title: patch.title } : {}),
         ...(patch.status ? { status: patch.status } : {}),
-        ...(patch.publishedData
-          ? { publishedData: asRecord(patch.publishedData) }
-          : {}),
+        ...(patch.publishedData ? { publishedData: asRecord(patch.publishedData) } : {}),
         ...(patch.publishedAt
           ? {
               publishedAt:
-                patch.publishedAt instanceof Date
-                  ? patch.publishedAt.toISOString()
-              : null,
+                patch.publishedAt instanceof Date ? patch.publishedAt.toISOString() : null,
             }
           : {}),
         ...(seoChanged ? { seo: normalizeSeoDefaults(op.payload.seo) } : {}),
@@ -1808,15 +1850,9 @@ const executeMenuOperation = async (
 ): Promise<InstallOperationResult> => {
   let existing: MenuRow | undefined;
   if (op.payload.location) {
-    [existing] = await executor
-      .select()
-      .from(menus)
-      .where(eq(menus.location, op.payload.location));
+    [existing] = await executor.select().from(menus).where(eq(menus.location, op.payload.location));
   } else {
-    [existing] = await executor
-      .select()
-      .from(menus)
-      .where(eq(menus.name, op.payload.name));
+    [existing] = await executor.select().from(menus).where(eq(menus.name, op.payload.name));
   }
 
   if (!existing) {
@@ -1831,6 +1867,8 @@ const executeMenuOperation = async (
           id: `predicted:${op.payload.name.toLowerCase()}`,
           name: op.payload.name,
           location: op.payload.location,
+          status: "published",
+          publishedAt: new Date().toISOString(),
           items: toMenuSnapshotFromDesired(desiredItems),
         },
         rollbackAction: { strategy: "delete_created" },
@@ -1843,6 +1881,8 @@ const executeMenuOperation = async (
       .values({
         name: op.payload.name,
         location: op.payload.location,
+        status: "published",
+        publishedAt: new Date(),
         createdAt: new Date(),
       })
       .returning();
@@ -1860,7 +1900,9 @@ const executeMenuOperation = async (
   }
 
   const beforeSnapshot = await snapshotMenu(executor, existing);
-  const desiredItems = await resolveMenuDesiredItems(executor, op.payload.items);
+  const desiredItems = await resolveMenuDesiredItems(executor, op.payload.items, {
+    allowMissingPageSlug: dryRun,
+  });
   const itemsChanged = !compareMenuItems(
     toMenuDesiredFromSnapshot(beforeSnapshot.items),
     desiredItems
@@ -1870,6 +1912,10 @@ const executeMenuOperation = async (
   if (existing.name !== op.payload.name) patch.name = op.payload.name;
   if ((existing.location ?? null) !== (op.payload.location ?? null)) {
     patch.location = op.payload.location;
+  }
+  if (existing.status !== "published" || !existing.publishedAt) {
+    patch.status = "published";
+    patch.publishedAt = existing.publishedAt ?? new Date();
   }
 
   if (Object.keys(patch).length === 0 && !itemsChanged) {
@@ -1888,8 +1934,13 @@ const executeMenuOperation = async (
       afterSnapshot: {
         ...beforeSnapshot,
         ...(patch.name ? { name: patch.name } : {}),
-        ...(typeof patch.location !== "undefined"
-          ? { location: patch.location }
+        ...(typeof patch.location !== "undefined" ? { location: patch.location } : {}),
+        ...(patch.status ? { status: patch.status } : {}),
+        ...(patch.publishedAt
+          ? {
+              publishedAt:
+                patch.publishedAt instanceof Date ? patch.publishedAt.toISOString() : null,
+            }
           : {}),
         ...(itemsChanged ? { items: toMenuSnapshotFromDesired(desiredItems) } : {}),
       },
@@ -1991,8 +2042,7 @@ const parseFormSnapshot = (payload: JsonRecord): FormSnapshot => ({
       ? payload.successMessage
       : null,
   successRedirectUrl:
-    payload.successRedirectUrl === null ||
-    typeof payload.successRedirectUrl === "string"
+    payload.successRedirectUrl === null || typeof payload.successRedirectUrl === "string"
       ? payload.successRedirectUrl
       : null,
   submissionAccess: String(payload.submissionAccess ?? "public"),
@@ -2030,13 +2080,9 @@ const parsePageSnapshot = (payload: JsonRecord): PageSnapshot => ({
   slug: String(payload.slug ?? ""),
   status: String(payload.status ?? "draft"),
   authorId:
-    payload.authorId === null || typeof payload.authorId === "string"
-      ? payload.authorId
-      : null,
+    payload.authorId === null || typeof payload.authorId === "string" ? payload.authorId : null,
   currentData: asRecord(payload.currentData),
-  publishedData: isRecord(payload.publishedData)
-    ? (payload.publishedData as JsonRecord)
-    : null,
+  publishedData: isRecord(payload.publishedData) ? (payload.publishedData as JsonRecord) : null,
   publishedAt:
     payload.publishedAt === null || typeof payload.publishedAt === "string"
       ? payload.publishedAt
@@ -2048,8 +2094,11 @@ const parseMenuSnapshot = (payload: JsonRecord): MenuSnapshot => ({
   id: String(payload.id ?? ""),
   name: String(payload.name ?? ""),
   location:
-    payload.location === null || typeof payload.location === "string"
-      ? payload.location
+    payload.location === null || typeof payload.location === "string" ? payload.location : null,
+  status: payload.status === "published" ? "published" : "draft",
+  publishedAt:
+    payload.publishedAt === null || typeof payload.publishedAt === "string"
+      ? payload.publishedAt
       : null,
   items: Array.isArray(payload.items)
     ? (payload.items as unknown[])
@@ -2058,14 +2107,9 @@ const parseMenuSnapshot = (payload: JsonRecord): MenuSnapshot => ({
           id: String(value.id ?? ""),
           label: String(value.label ?? ""),
           href: value.href === null || typeof value.href === "string" ? value.href : null,
-          pageId:
-            value.pageId === null || typeof value.pageId === "string"
-              ? value.pageId
-              : null,
+          pageId: value.pageId === null || typeof value.pageId === "string" ? value.pageId : null,
           parentId:
-            value.parentId === null || typeof value.parentId === "string"
-              ? value.parentId
-              : null,
+            value.parentId === null || typeof value.parentId === "string" ? value.parentId : null,
           orderIndex:
             typeof value.orderIndex === "number" && Number.isFinite(value.orderIndex)
               ? Math.round(value.orderIndex)
@@ -2390,6 +2434,7 @@ const rollbackUpdatedResource = async (
 
       const [current] = await executor.select().from(menus).where(eq(menus.id, snapshot.id));
       const beforeSnapshot = current ? await snapshotMenu(executor, current) : null;
+      const publishedAt = snapshot.publishedAt ? new Date(snapshot.publishedAt) : null;
       let restored: MenuRow | undefined;
 
       if (current) {
@@ -2398,6 +2443,8 @@ const rollbackUpdatedResource = async (
           .set({
             name: snapshot.name,
             location: snapshot.location,
+            status: snapshot.status,
+            publishedAt,
           })
           .where(eq(menus.id, snapshot.id))
           .returning();
@@ -2408,6 +2455,8 @@ const rollbackUpdatedResource = async (
             id: snapshot.id,
             name: snapshot.name,
             location: snapshot.location,
+            status: snapshot.status,
+            publishedAt,
             createdAt: new Date(),
           })
           .returning();
@@ -2556,8 +2605,7 @@ export async function applySolutionKitInstall(
       items.push(item);
     } catch (error) {
       failureCount += 1;
-      const message =
-        error instanceof Error ? error.message : "solution_kit_operation_failed";
+      const message = error instanceof Error ? error.message : "solution_kit_operation_failed";
       const item = await appendInstallItem(run.id, {
         position: operation.position,
         resourceType: operation.resourceType,

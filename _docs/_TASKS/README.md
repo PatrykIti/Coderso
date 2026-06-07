@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 10 tasks
+- **To Do:** 12 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2238 tasks
+- **Done:** 2296 tasks
 
 ---
 
@@ -88,6 +88,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | Umbrella for remaining product gaps before the assistant behaves as a generic WordPress-competitor CMS co-pilot for nontechnical users across industries. |
+| TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -114,22 +116,80 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-404 | Resend Email Provider and Settings UX | High | Large | Done (2026-06-05): Resend integration secret storage, provider-aware email transport/settings, admin UX, docs, tests, and closure completed. |
-| TASK-404-01 | Resend Integration Secret Contract | High | Medium | Done (2026-06-05): Resend registry, encrypted `apiKey`, redaction, and clear/disconnected state completed. |
-| TASK-404-01-L01 | Resend Connector and Secret Storage | High | Medium | Done (2026-06-05): `resend` accepts only encrypted `apiKey`; summaries remain redacted and runtime config is backend-only. |
-| TASK-404-01-L02 | Secret Redaction and Key Clear State | High | Medium | Done (2026-06-05): `re_...` audit redaction and `apiKey: null` disconnected behavior completed. |
-| TASK-404-02 | Email Provider Backend Contract | High | Large | Done (2026-06-05): `smtp | resend` provider resolution, transport, logs, and form automation path completed. |
-| TASK-404-02-L01 | Provider Settings and Normalization | High | Medium | Done (2026-06-05): legacy SMTP default and non-destructive provider switching completed. |
-| TASK-404-02-L02 | Provider Transport and Delivery Logs | High | Large | Done (2026-06-05): fixed Resend egress, bounded headers, sanitized errors, and provider-aware delivery logs completed. |
-| TASK-404-02-L03 | Form Automation Provider Resolution | High | Medium | Done (2026-06-05): form email actions now use provider-aware `sendSystemEmail` through a pure injected sender. |
-| TASK-404-03 | Admin API and Client Contract | High | Medium | Done (2026-06-05): strict provider schemas, route error mapping, and admin DTOs completed. |
-| TASK-404-03-L01 | Email Settings Routes and Error Mapping | High | Medium | Done (2026-06-05): provider-aware Email Settings schema, permission order, and `mapEmailSettingsError` coverage completed. |
-| TASK-404-03-L02 | Integrations Routes and Admin DTOs | High | Medium | Done (2026-06-05): Resend DTO redaction and unknown-key rejection coverage completed. |
-| TASK-404-04 | Admin UX Validation and Closure | High | Large | Done (2026-06-05): provider selector, Resend integration UX, docs, changelog, and validation completed. |
-| TASK-404-04-L01 | Email Settings Provider UX | High | Large | Done (2026-06-05): Resend mode hides SMTP fields, preserves SMTP settings, links to Integrations, and labels logs by provider. |
-| TASK-404-04-L02 | Integrations Provider UX | High | Medium | Done (2026-06-05): Resend card/drawer supports update and clear flows without rendering secret values. |
-| TASK-404-04-L03 | Validation Docs Changelog and Board Closure | High | Medium | Done (2026-06-05): source-of-truth docs, changelog, board, targeted tests, lint, and typecheck completed. |
-| TASK-403 | Agent Task Workflow Rule Alignment | Medium | Medium | Done (2026-06-04): AGENTS task workflow rules, task board format, Coderso task example, and changelog numbering were aligned. |
+| TASK-413 | Page Editor Canvas Workspace Layout | High | Medium | Done (2026-06-06): editor-region scroll, wider responsive canvas, desktop panel hide/show controls, device frame switching, and unmocked layout coverage completed. |
+| TASK-412 | Navigation Widget Runtime Behavior Parity | High | Medium | Done (2026-06-06): Navigation sticky/collapse/drawer/submenu runtime now works across admin canvas and public pages through the shared runtime bridge/script path. |
+| TASK-411 | Media Upload Native File Metadata | High | Small | Done (2026-06-06): native Bun/File upload metadata is preserved and MIME normalization prevents `undefined.startsWith` media 500s. |
+| TASK-410 | Assistant Widget Capability Sync Docs | Medium | Small | Done (2026-06-07): documented how widget/CMS capability changes must update assistant registries, mappings, docs corpus, and tests to avoid drift. |
+| TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | Done (2026-06-07): Basic/Advanced reviewed intake, siteKit/content-engine handoff, admin UI review gates, prompt-poisoning hardening, live Playwright E2E, final drift fixes, docs, and changelog closure completed. |
+| TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Done (2026-06-07): targeted validation lanes plus Basic, Advanced, follow-up/fail-closed, scoped cleanup, second-theme live Playwright E2E, docs, board, changelog, and final drift audit completed. |
+| TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | High | Medium | Done (2026-06-07): final docs/matrix/changelog/board sync, Advanced Navigation contract owner cleanup, direct widget-validator regression, curated-media industry guard, and Claude/subagent drift pass. |
+| TASK-407-07-L05 | Scoped Cleanup and Second Theme Rebuild E2E | High | Large | Done (2026-06-07): explicit `sourceRunId` rollback cleaned the medical-clinic run, preserved unrelated resources, then a fresh beginner prompt rebuilt a beauty-salon public site with industry starter content, curated media, desktop/mobile screenshots, and zero console/page errors. |
+| TASK-407-07-L04 | Follow Up Refinement and Fail Closed E2E | High | Large | Done (2026-06-06): guided follow-up resolver wiring, scoped published page update, desktop/mobile public runtime checks, and stale/ambiguous/unsupported/poisoned/media-reference fail-closed E2E passed through Playwright CLI. |
+| TASK-407-07-L03 | Advanced Live Playwright E2E | High | Large | Done (2026-06-06): bounded Advanced runtime overrides now survive review, dry-run, execute, and public runtime for menu/CTA/Hero/section choices; live Playwright E2E verified reference gating, public navigation menu source, mobile drawer, CTA, supported section variants, contact form, SEO basics, desktop/mobile, and console/page errors. |
+| TASK-407-07-L02 | Basic Live Playwright E2E | High | Large | Done (2026-06-06): live Basic nontechnical Polish prompt selected `local-service-business`, dry-ran and executed through admin UI, then verified public pages, contact form, desktop/mobile, SEO basics, and console/page errors. |
+| TASK-407-07-L01 | Targeted Validation Lanes and Release Gates | High | Medium | Done (2026-06-06): Claude/subagent pre-audits passed, targeted Vitest/Bun lanes passed, full release gates passed with no DB-gated skips, precommit passed, and local strict security scanners passed. |
+| TASK-407-01 | Task Contract Drift Audit and Scope Freeze | High | Medium | Done (2026-06-05): Claude/agent drift loop aligned TASK-407 with existing siteKit/AiSiteWizard contracts and fixed siteKit plan-context projection in the admin client. |
+| TASK-407-02-L01 | Session Types and Step Registry | High | Medium | Done (2026-06-05): service-owned Basic/Advanced intake session types, canonical step ids, generic role/preset/media-policy registries, and Bun-free fail-closed registry tests. |
+| TASK-407-02-L02 | Answer Normalization and Fact Derivation | High | Large | Done (2026-06-05): strict per-step answer normalizers derive bounded provider-safe facts, reject unknown fields/options, redact secret-like text, and block Advanced-only steps in Basic mode. |
+| TASK-407-02-L03 | Assistant Context and Route Validation Handoff | High | Medium | Done (2026-06-05): reviewed intake sessions compile into schema-exact `context.siteKit`, reuse the existing route schema, and reach the current site-kit planner path without adding route-owned intake payloads. |
+| TASK-407-02-L04 | Guide Redaction and Browser State Contract | High | Medium | Done (2026-06-05): intake diagnostics use hashes/stable ids, provider context receives bounded advisory facts only, and browser-state restore is versioned, size-limited, stale-discarding, and secret-free. |
+| TASK-407-02 | Guided Intake Mode and Session Contract | High | Large | Done (2026-06-05): shared Basic/Advanced intake contract, strict normalization, fact derivation, siteKit handoff, redacted provider/diagnostic packaging, and browser-state contract completed. |
+| TASK-407-03-L01 | Basic Step Definitions and Progression | High | Medium | Done (2026-06-05): broad full-site prompts now enter typed Basic `needs_input` progression with registry-derived step order and no premature actions/provider draft. |
+| TASK-407-03-L02 | Basic Site Map and Section Role Defaults | High | Medium | Done (2026-06-05): Basic advisory site-map/menu/section defaults are generic, role/goal-based, label-safe, and do not bypass required intake steps. |
+| TASK-407-03-L03 | Basic Widget and Review Fact Selection | High | Medium | Done (2026-06-05): Basic review facts map page/menu defaults, supported widget aliases, content-engine candidates, contact path, media policy, and gates without compiling `siteKit` or actions. |
+| TASK-407-03-L04 | Basic Prompt Poisoning Regression Guards | High | Medium | Done (2026-06-05): hostile Basic free text, unknown ids, unsafe labels, media URL attempts, and review shortcuts fail closed or remain bounded review facts with no provider draft/actions. |
+| TASK-407-03 | Basic Mode Structured Site Flow | High | Large | Done (2026-06-05): Basic deterministic `needs_input` progression, generic defaults, review facts, and prompt-poisoning guards are complete. |
+| TASK-407-06-L03 | Advanced Stepper Controls | High | Large | Done (2026-06-06): Advanced server-owned progression, Basic-to-Advanced confirmation, controlled metadata-driven fields, selectable steps, normalized-state gate tests, docs, changelog, and Claude audit loop completed. |
+| TASK-407-04-L01 | Advanced Design Preset Registry | High | Medium | Done (2026-06-05): backend-owned Advanced design preset ids map to supported token/section-role facts, reject unknown or unsafe arbitrary style input, and expose explicit theme-application gaps. |
+| TASK-407-04-L02 | Advanced Menu Hero and Section Options | High | Medium | Done (2026-06-05): backend-owned Advanced menu, hero, and section option registries map to existing widget capabilities, reject unsafe CTA/raw layout input, and gate unsupported combinations. |
+| TASK-407-04-L03 | Reference Input Validation and Redaction | High | Large | Done (2026-06-05): deps-injected reference policy validates readable media ids, gates untrusted temp/remote references, redacts metadata/text, and keeps candidate ids out of provider facts. |
+| TASK-407-04-L04 | Reference Design Brief and Review Gate | High | Medium | Done (2026-06-05): sanitized references become reviewed enum-only design hints with redacted warning/gate codes before provider/planner influence. |
+| TASK-407-04 | Advanced Mode Design Presets and Reference Intake | High | Large | Done (2026-06-05): backend-owned Advanced presets, layout options, reference validation/redaction, and reviewed design brief gates are complete without free-form actions or media imports. |
+| TASK-407-05-L01 | Intake Facts to SiteKit Plan Adapter | High | Large | Done (2026-06-05): reviewed intake facts compile into schema-exact `context.siteKit` with `selectedKitId`, while review-only metadata stays outside the route payload. |
+| TASK-407-05-L02 | Static Pages Navigation Lead Capture and SEO Actions | High | Large | Done (2026-06-05): normalized siteKit install previews now gate page, primary/footer menu, lead-capture form, SEO default, and same-plan locator coverage before execute. |
+| TASK-407-05-L03 | Content Engine Decision Rules | High | Large | Done (2026-06-06): generic content-engine decisions now cover supported services/products/portfolio/case-studies/blog/team/locations/FAQ/testimonials, scope questions, and unsupported-engine gates. |
+| TASK-407-05-L04 | Custom Screen and Beginner Editing Surface Decisions | High | Medium | Done (2026-06-06): custom-screen decisions now derive backend-owned beginner editing surfaces from supported content engines and gate unsafe route/permission drift. |
+| TASK-407-05-L05 | Follow Up Refinement Target Resolution | High | Large | Done (2026-06-06): follow-up targets now resolve from active admin context or server-derived catalogs, ask on ambiguity, and gate stale/spoofed/unsupported targets. |
+| TASK-407-05-L06 | Dry Run Idempotency and Runtime Contract Tests | High | Large | Done (2026-06-06): reviewed intake siteKit plans now have strict/idempotent planner coverage and a Bun public catalog/detail runtime proof. |
+| TASK-407-05 | SiteKit Plan and Content Engine Decisions | High | Large | Done (2026-06-06): reviewed intake facts now map to strict siteKit actions, generic content-engine/custom-screen decisions, scoped follow-up targets, and runtime contract tests. |
+| TASK-407-06-L01 | Site Builder Intake UI State Machine | High | Large | Done (2026-06-06): explicit intake reducer covers server-session authority, stale-cache discard, reviewed planning, dry-run, and execute gating while existing assistant UI flows remain covered. |
+| TASK-407-06-L02 | Basic Stepper Controls | High | Large | Done (2026-06-06): Basic intake controls render from server metadata, submit one normalized answer through the existing plan route, reject tampered fields, and keep answers out of browser persistence. |
+| TASK-407-06-L04 | Review Summary and Execution Gating | High | Large | Done (2026-06-06): final review summary, review-hash confirmation, stale invalidation, backend blocking-gate enforcement, strict siteKit action-plan handoff, and targeted validation completed. |
+| TASK-407-06-L05 | UI Warnings Local State and Redaction | High | Medium | Done (2026-06-06): prompt-poisoning-aware UI/cache redaction, conversation localStorage bounds, dirty revalidation preservation, and screenshot/cache regression tests. |
+| TASK-407-06-L06 | Legacy AI Site Wizard Reviewed Intake Convergence | High | Large | Done (2026-06-06): legacy AI site wizard retired, Solution Kits now opens reviewed LLM Guide intake, direct `context.siteKit` is rejected/gated, and targeted route/planner/admin/UI validation passed. |
+| TASK-407-06 | Admin UI Review and Prompt-Poisoning Hardening | High | Large | Done (2026-06-06): intake state machine, Basic/Advanced controls, final review handoff, warning/local-state redaction, and legacy AI site wizard convergence completed. |
+| TASK-405 | Assistant Curated Media Profiles | High | Large | Done (2026-06-05): backend-owned curated media profiles render licensed public images for full-service sites, enforce curated URL/source/license trust, fix mobile rich-text images, and pass live Playwright CLI E2E. |
+| TASK-404 | LLM Guide Full Service Site Generation | High | Very Large | Done (2026-06-04): full-service assistant planning, dry-run, execute, public runtime, Playwright CLI, drift loops, docs, and changelog closure completed; media import remains explicitly gated. |
+| TASK-404-01 | Full Service Site Contract and Acceptance Matrix | High | Medium | Done (2026-06-04): full-service completion contract and acceptance matrix require real public pages, catalogs, details, nav/footer, contact, SEO, and explicit media gates. |
+| TASK-404-02 | Same-Plan Resource Locators and Dependency Graph | High | Large | Done (2026-06-04): same-plan locators and dependency preview support executable full-service resources without false blocking conflicts. |
+| TASK-404-03 | Full Service Page and Section Composer | High | Large | Done (2026-06-04): `service-business-full-site` registers deterministic pages, catalog/detail flows, navigation/footer shell blocks, and launch readiness metadata. |
+| TASK-404-04 | Public Sample Content Navigation Footer and Lead Form Actions | High | Large | Done (2026-06-04): published service/portfolio samples, menu/footer links, and lead form execution render in the public full-service site. |
+| TASK-404-05 | SEO Media and Launch Readiness Validation | High | Large | Done (2026-06-04): execute reconciles launch readiness; page/entry SEO are planned and media remains a clear trusted-asset gate. |
+| TASK-404-06 | Full Service E2E Live Review Docs and Closure | High | Large | Done (2026-06-04): helper restart plus Playwright CLI validated admin plan/dry-run/execute, public pages/details/nav/contact/mobile, and zero console/page errors. |
+| TASK-404-07 | Assistant Current Implementation Drift Audit and Repair Loop | High | Large | Done (2026-06-04): implementation drift loop fixed empty pages, menu rerun idempotency, missing public shell links, and provider-path inspection fallback. |
+| TASK-404-08 | TASK-404 Task Drift Audit and Repair Loop | High | Medium | Done (2026-06-04): task-plan drift loop synchronized TASK-404 parent/leaves, board statistics, closure evidence, and changelog coverage. |
+| TASK-403 | Assistant Docs Only LLM Guide and Settings UX Audit | High | Large | Done (2026-06-04): parent task closed by TASK-403-01 through TASK-403-05; mode-aware LLM Guide composer, architecture-studio typed scaffold E2E, OpenRouter metadata, Assistant Settings Advanced UX, Docker startup docs indexing, docs refresh, Playwright/Claude review, and live OpenRouter validation completed. |
+| TASK-403-01 | Assistant Docs Only Corpus and Answer Quality | High | Medium | Done (2026-06-04): guide corpus copy for Assistant Settings, Integrations, getting started, and admin orientation was refreshed while deterministic docs-only answer tests stayed green. |
+| TASK-403-02 | LLM Guide Composer Availability and OpenRouter Live Verification | High | Medium | Done (2026-06-04): floating assistant composer gating is mode-aware and OpenRouter live smoke/CMS matrix validation passed. |
+| TASK-403-03 | Assistant Settings UX and OpenRouter Model Metadata | High | Large | Done (2026-06-04): Assistant Settings now defaults to routine controls, keeps Advanced collapsed, routes secrets to Integrations, and reads OpenRouter model metadata. |
+| TASK-403-04 | Docker Startup Assistant Docs Reindex Helper | High | Medium | Done (2026-06-04): Docker startup runs idempotent assistant docs indexing after migrations with advisory-lock protection and docs copied into the image. |
+| TASK-403-05 | Assistant Docs QA Docs Changelog and Closure | High | Medium | Done (2026-06-04): docs, task board, changelog, Playwright full-service scaffold E2E, Claude limitation review, lint/typecheck, targeted tests, live OpenRouter lanes, and release gates were recorded. |
+| TASK-409 | Resend Email Provider and Settings UX | High | Large | Done (2026-06-05): Resend integration secret storage, provider-aware email transport/settings, admin UX, docs, tests, and closure completed. |
+| TASK-409-01 | Resend Integration Secret Contract | High | Medium | Done (2026-06-05): Resend registry, encrypted `apiKey`, redaction, and clear/disconnected state completed. |
+| TASK-409-01-L01 | Resend Connector and Secret Storage | High | Medium | Done (2026-06-05): `resend` accepts only encrypted `apiKey`; summaries remain redacted and runtime config is backend-only. |
+| TASK-409-01-L02 | Secret Redaction and Key Clear State | High | Medium | Done (2026-06-05): `re_...` audit redaction and `apiKey: null` disconnected behavior completed. |
+| TASK-409-02 | Email Provider Backend Contract | High | Large | Done (2026-06-05): `smtp | resend` provider resolution, transport, logs, and form automation path completed. |
+| TASK-409-02-L01 | Provider Settings and Normalization | High | Medium | Done (2026-06-05): legacy SMTP default and non-destructive provider switching completed. |
+| TASK-409-02-L02 | Provider Transport and Delivery Logs | High | Large | Done (2026-06-05): fixed Resend egress, bounded headers, sanitized errors, and provider-aware delivery logs completed. |
+| TASK-409-02-L03 | Form Automation Provider Resolution | High | Medium | Done (2026-06-05): form email actions now use provider-aware `sendSystemEmail` through a pure injected sender. |
+| TASK-409-03 | Admin API and Client Contract | High | Medium | Done (2026-06-05): strict provider schemas, route error mapping, and admin DTOs completed. |
+| TASK-409-03-L01 | Email Settings Routes and Error Mapping | High | Medium | Done (2026-06-05): provider-aware Email Settings schema, permission order, and `mapEmailSettingsError` coverage completed. |
+| TASK-409-03-L02 | Integrations Routes and Admin DTOs | High | Medium | Done (2026-06-05): Resend DTO redaction and unknown-key rejection coverage completed. |
+| TASK-409-04 | Admin UX Validation and Closure | High | Large | Done (2026-06-05): provider selector, Resend integration UX, docs, changelog, and validation completed. |
+| TASK-409-04-L01 | Email Settings Provider UX | High | Large | Done (2026-06-05): Resend mode hides SMTP fields, preserves SMTP settings, links to Integrations, and labels logs by provider. |
+| TASK-409-04-L02 | Integrations Provider UX | High | Medium | Done (2026-06-05): Resend card/drawer supports update and clear flows without rendering secret values. |
+| TASK-409-04-L03 | Validation Docs Changelog and Board Closure | High | Medium | Done (2026-06-05): source-of-truth docs, changelog, board, targeted tests, lint, and typecheck completed. |
+| TASK-408 | Agent Task Workflow Rule Alignment | Medium | Medium | Done (2026-06-04): AGENTS task workflow rules, task board format, Coderso task example, and changelog numbering were aligned. |
 | TASK-402 | reCAPTCHA Runtime Configuration and Eager Client Loading | High | Medium | Done (2026-06-04): backend-owned bot-protection settings and eager v3 client loading for auth and public form runtimes. |
 | TASK-401 | DB Runtime Test Idle Timeout | Medium | Small | Done (2026-06-04): DB-backed media runtime tests now opt into a 30-second Bun.serve idle timeout to avoid socket resets under full-lane load. |
 | TASK-400 | Docker Startup Migrations | High | Medium | Done (2026-06-04): Docker runtime entrypoint now runs Drizzle migrations behind a Postgres advisory lock before starting the core HTTP server. |
