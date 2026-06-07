@@ -600,6 +600,8 @@ const navigationMobilePanelSelector = "[data-navigation-mobile-panel]";
 const navigationFocusableSelector =
   'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])';
 const navigationDrawerAnimationMs = 180;
+const navigationCollapseThreshold = 24;
+const navigationCollapseJitter = 16;
 
 type NavigationScrollTarget = Window | HTMLElement;
 
@@ -628,6 +630,37 @@ const getNavigationWindow = (root: HTMLElement) =>
 
 const getNavigationScrollY = (target: NavigationScrollTarget) =>
   target instanceof Window ? target.scrollY : target.scrollTop;
+
+const parseNavigationScrollY = (value: string | undefined, fallback: number) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const isNavigationCollapsed = (root: HTMLElement) => root.dataset.navigationCollapsed === "true";
+
+function resolveNavigationCollapsedState(
+  currentY: number,
+  previousY: number,
+  wasCollapsed: boolean
+): boolean {
+  const delta = currentY - previousY;
+  if (currentY <= navigationCollapseThreshold) return false;
+  if (delta > navigationCollapseJitter) return true;
+  if (delta < -navigationCollapseJitter) return false;
+  return wasCollapsed;
+}
+
+function syncNavigationCollapsedState(root: HTMLElement, collapsed: boolean): void {
+  root.dataset.navigationCollapsed = collapsed ? "true" : "false";
+  root.classList.toggle("is-navigation-collapsed", collapsed);
+}
+
+function shouldStoreNavigationScrollY(currentY: number, previousY: number): boolean {
+  return (
+    currentY <= navigationCollapseThreshold ||
+    Math.abs(currentY - previousY) > navigationCollapseJitter
+  );
+}
 
 const getNavigationFocusableElements = (container: HTMLElement): HTMLElement[] => {
   if (typeof HTMLElement === "undefined") return [];
@@ -846,11 +879,16 @@ export function updateNavigationCollapseState(
   const currentY = getNavigationScrollY(scrollTarget);
   for (const root of roots) {
     if (root.dataset.collapseOnScroll !== "true") continue;
-    const previousY = Number(root.dataset.navigationLastScrollY || "0");
-    const collapsed = currentY > 24 && currentY > previousY;
-    root.dataset.navigationCollapsed = collapsed ? "true" : "false";
-    root.classList.toggle("is-navigation-collapsed", collapsed);
-    root.dataset.navigationLastScrollY = String(currentY);
+    const previousY = parseNavigationScrollY(root.dataset.navigationLastScrollY, currentY);
+    const collapsed = resolveNavigationCollapsedState(
+      currentY,
+      previousY,
+      isNavigationCollapsed(root)
+    );
+    syncNavigationCollapsedState(root, collapsed);
+    if (shouldStoreNavigationScrollY(currentY, previousY)) {
+      root.dataset.navigationLastScrollY = String(currentY);
+    }
   }
 }
 
@@ -870,10 +908,16 @@ export function initializeNavigationRuntimeRoot(
   }
   closeNavigationSubmenus(root);
   updateNavigationActiveLinks(root);
-  root.dataset.navigationLastScrollY = String(getNavigationScrollY(scrollTarget));
+  const currentY = getNavigationScrollY(scrollTarget);
   if (root.dataset.collapseOnScroll === "true") {
-    root.dataset.navigationCollapsed = "false";
+    const previousY = parseNavigationScrollY(root.dataset.navigationLastScrollY, 0);
+    const collapsed =
+      root.dataset.navigationLastScrollY === undefined
+        ? currentY > navigationCollapseThreshold || isNavigationCollapsed(root)
+        : resolveNavigationCollapsedState(currentY, previousY, isNavigationCollapsed(root));
+    syncNavigationCollapsedState(root, collapsed);
   }
+  root.dataset.navigationLastScrollY = String(currentY);
 }
 
 export function bindNavigationRuntimeRoots(
@@ -986,6 +1030,8 @@ const navigationRuntimeClientScript = `
   window.__nextlessNavigationBound = true;
 
   const DRAWER_ANIMATION_MS = 180;
+  const COLLAPSE_THRESHOLD = 24;
+  const COLLAPSE_JITTER = 16;
   const focusableSelector = 'a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
   const getRoots = () =>
@@ -1000,6 +1046,27 @@ const navigationRuntimeClientScript = `
       if (candidate.getAttribute("aria-hidden") === "true") return false;
       return candidate.offsetParent !== null || candidate === document.activeElement;
     });
+
+  const parseScrollY = (value, fallback) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const resolveCollapsedState = (currentY, previousY, wasCollapsed) => {
+    const delta = currentY - previousY;
+    if (currentY <= COLLAPSE_THRESHOLD) return false;
+    if (delta > COLLAPSE_JITTER) return true;
+    if (delta < -COLLAPSE_JITTER) return false;
+    return wasCollapsed;
+  };
+
+  const syncCollapsedState = (root, collapsed) => {
+    root.dataset.navigationCollapsed = collapsed ? "true" : "false";
+    root.classList.toggle("is-navigation-collapsed", collapsed);
+  };
+
+  const shouldStoreScrollY = (currentY, previousY) =>
+    currentY <= COLLAPSE_THRESHOLD || Math.abs(currentY - previousY) > COLLAPSE_JITTER;
 
   const parseUrl = (href) => {
     if (!href || href.startsWith("#")) return null;
@@ -1192,11 +1259,16 @@ const navigationRuntimeClientScript = `
     for (const root of getRoots()) {
       if (!(root instanceof HTMLElement)) continue;
       if (root.dataset.collapseOnScroll !== "true") continue;
-      const previousY = Number(root.dataset.navigationLastScrollY || "0");
-      const collapsed = currentY > 24 && currentY > previousY;
-      root.dataset.navigationCollapsed = collapsed ? "true" : "false";
-      root.classList.toggle("is-navigation-collapsed", collapsed);
-      root.dataset.navigationLastScrollY = String(currentY);
+      const previousY = parseScrollY(root.dataset.navigationLastScrollY, currentY);
+      const collapsed = resolveCollapsedState(
+        currentY,
+        previousY,
+        root.dataset.navigationCollapsed === "true"
+      );
+      syncCollapsedState(root, collapsed);
+      if (shouldStoreScrollY(currentY, previousY)) {
+        root.dataset.navigationLastScrollY = String(currentY);
+      }
     }
   };
 
@@ -1299,10 +1371,20 @@ const navigationRuntimeClientScript = `
     }
     closeAllSubmenus(root);
     updateActiveLinks(root);
-    root.dataset.navigationLastScrollY = String(window.scrollY);
     if (root.dataset.collapseOnScroll === "true") {
-      root.dataset.navigationCollapsed = "false";
+      const currentY = window.scrollY;
+      const previousY = parseScrollY(root.dataset.navigationLastScrollY, 0);
+      const collapsed =
+        root.dataset.navigationLastScrollY === undefined
+          ? currentY > COLLAPSE_THRESHOLD || root.dataset.navigationCollapsed === "true"
+          : resolveCollapsedState(
+              currentY,
+              previousY,
+              root.dataset.navigationCollapsed === "true"
+            );
+      syncCollapsedState(root, collapsed);
     }
+    root.dataset.navigationLastScrollY = String(window.scrollY);
   }
 
   updateCollapseState();
@@ -1570,6 +1652,9 @@ export function NavigationBlock({
   const style = normalized.style ?? {};
   const behavior = normalized.behavior ?? {};
   const stickyEnabled = Boolean(behavior.sticky || behavior.collapseOnScroll);
+  const outerSurfaceOwnsSticky =
+    stickyEnabled && renderContext?.stickySurfaceOwner === "widget-renderer";
+  const navOwnsSticky = stickyEnabled && !outerSurfaceOwnsSticky;
   const mobileMode = behavior.mobileMode ?? "expanded";
   const isDrawerMode = mobileMode === "drawer";
   const isMinimalMode = mobileMode === "minimal";
@@ -1610,7 +1695,7 @@ export function NavigationBlock({
         style.linkColor ??
         style.textColor ??
         "var(--color-text)",
-      top: stickyEnabled ? "var(--coderso-preview-banner-offset, 0px)" : undefined,
+      top: navOwnsSticky ? "var(--coderso-preview-banner-offset, 0px)" : undefined,
     }) ?? {};
 
   const logoStyle: CSSProperties = {
@@ -1634,7 +1719,7 @@ export function NavigationBlock({
   const navClass = joinClasses(
     "w-full px-6",
     paddingYClassMap[layout.paddingY ?? "4"] ?? "py-4",
-    stickyEnabled && "sticky z-40",
+    navOwnsSticky && "sticky z-40",
     shadowClassMap[style.shadow ?? "none"],
     backdropBlurClassMap[style.backdropBlur ?? "none"],
     rootMotionClassMap[style.motion ?? "subtle"],

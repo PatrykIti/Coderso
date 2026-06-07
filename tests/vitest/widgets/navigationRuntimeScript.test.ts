@@ -41,6 +41,7 @@ const setScrollY = (value: number) => {
 
 afterEach(() => {
   document.body.innerHTML = "";
+  setScrollY(0);
   window.history.replaceState({}, "", "/");
 });
 
@@ -86,6 +87,18 @@ test("navigation admin preview binder initializes drawer and collapse without in
     scroller.scrollTop = 80;
     scroller.dispatchEvent(new Event("scroll"));
     expect(root.dataset.navigationCollapsed).toBe("true");
+
+    scroller.dispatchEvent(new Event("scroll"));
+    expect(root.dataset.navigationCollapsed).toBe("true");
+
+    scroller.scrollTop = 82;
+    scroller.dispatchEvent(new Event("scroll"));
+    expect(root.dataset.navigationCollapsed).toBe("true");
+
+    cleanup();
+    const reboundCleanup = bindNavigationRuntimeRoots(scroller, { scrollTarget: scroller });
+    expect(root.dataset.navigationCollapsed).toBe("true");
+    reboundCleanup();
   } finally {
     cleanup();
   }
@@ -217,9 +230,39 @@ test("navigation runtime updates active links and collapse state safely", () => 
   window.dispatchEvent(new Event("scroll"));
   expect(root.dataset.navigationCollapsed).toBe("true");
 
+  window.dispatchEvent(new Event("scroll"));
+  expect(root.dataset.navigationCollapsed).toBe("true");
+
+  setScrollY(62);
+  window.dispatchEvent(new Event("scroll"));
+  expect(root.dataset.navigationCollapsed).toBe("true");
+
+  setScrollY(40);
+  window.dispatchEvent(new Event("scroll"));
+  expect(root.dataset.navigationCollapsed).toBe("false");
+
+  setScrollY(60);
+  window.dispatchEvent(new Event("scroll"));
+  expect(root.dataset.navigationCollapsed).toBe("true");
+
   setScrollY(10);
   window.dispatchEvent(new Event("scroll"));
   expect(root.dataset.navigationCollapsed).toBe("false");
+});
+
+test("navigation runtime initializes collapsed when binding below an already scrolled viewport", () => {
+  setScrollY(96);
+  const root = installNavigationRuntime({
+    ...navigationDefaults,
+    behavior: {
+      ...navigationDefaults.behavior,
+      collapseOnScroll: true,
+      mobileMode: "expanded",
+    },
+  });
+
+  expect(root.dataset.navigationCollapsed).toBe("true");
+  expect(root.dataset.navigationLastScrollY).toBe("96");
 });
 
 test("navigation runtime keeps pathname and exact active-link state bounded to one semantic current link", () => {

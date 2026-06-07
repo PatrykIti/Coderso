@@ -227,8 +227,13 @@ Primary CTA jest renderowane tylko dla:
   `data-navigation-collapsed` and a local collapsed class toggle while scrolling
 - `collapseOnScroll` also opts into sticky positioning at render time so the
   collapse animation remains visible while the page or editor canvas scrolls
+- collapse state is direction-aware and idempotent: downward scroll past the
+  threshold collapses, meaningful upward scroll or returning near the top
+  expands, and duplicate/no-delta scroll events preserve the current state
 - collapsed padding only reduces larger `paddingY` values; low padding settings
   do not expand during collapse
+- normal page rendering uses the outer widget surface as the sticky owner, while
+  standalone `NavigationBlock` renders keep inner sticky fallback behavior
 - shared Section sticky containment is no longer blocked by the old
   `SectionBlock` overflow wrapper after `TASK-318`; any future page-shell-only
   sticky blockers should be routed separately instead of back into Navigation

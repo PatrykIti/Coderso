@@ -80,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 12 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2296 tasks
+- **Done:** 2297 tasks
 
 ---
 
@@ -116,6 +116,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-415 | Navigation Sticky Collapse Runtime Regressions | High | Medium | Done (2026-06-07): collapse-on-scroll now survives duplicate/no-delta scroll events and runtime rebinds, normal page rendering delegates sticky ownership to the outer widget surface, and Navigation regression coverage was added. |
 | TASK-413 | Page Editor Canvas Workspace Layout | High | Medium | Done (2026-06-06): editor-region scroll, wider responsive canvas, desktop panel hide/show controls, device frame switching, and unmocked layout coverage completed. |
 | TASK-412 | Navigation Widget Runtime Behavior Parity | High | Medium | Done (2026-06-06): Navigation sticky/collapse/drawer/submenu runtime now works across admin canvas and public pages through the shared runtime bridge/script path. |
 | TASK-411 | Media Upload Native File Metadata | High | Small | Done (2026-06-06): native Bun/File upload metadata is preserved and MIME normalization prevents `undefined.startsWith` media 500s. |

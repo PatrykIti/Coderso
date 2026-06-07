@@ -217,7 +217,11 @@ export function WidgetRenderer({
     previewDevice,
   };
   const renderSurface = renderContext?.nestedSurface ?? "default-block";
-  const stickyNavigationSurface = isStickyNavigationBlock(normalized);
+  const stickyNavigationSurface =
+    renderSurface !== "row-flow-item" && isStickyNavigationBlock(normalized);
+  const widgetRenderContext: WidgetRenderContext = stickyNavigationSurface
+    ? { ...renderContext, stickySurfaceOwner: "widget-renderer" }
+    : renderContext;
   const renderBlockWithContext = (
     child: WidgetBlock,
     nextRenderContext: WidgetRenderContext = renderContext
@@ -242,7 +246,7 @@ export function WidgetRenderer({
         previewDevice={previewDevice}
         pageDefaults={pageDefaults}
         blockId={normalized.id}
-        renderContext={renderContext}
+        renderContext={widgetRenderContext}
         renderBlock={renderBlockWithContext}
       />
       {!hasSlotDefinitions && legacyChildren.length ? (

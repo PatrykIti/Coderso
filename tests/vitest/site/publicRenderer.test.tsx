@@ -172,6 +172,7 @@ test("renderPublicPageHtml dedupes shared runtime scripts across multiple widget
   expect(html).toContain('data-coderso-runtime-script="toggle-block"');
   expect(html).toContain('data-coderso-runtime-script="navigation"');
   expect(html.match(/data-widget-sticky-surface="navigation"/g)).toHaveLength(2);
+  expect(html.match(/<nav class="[^"]*sticky z-40/g)).toBeNull();
 });
 
 test("renderPublicPageHtml offsets sticky Navigation below the preview banner", () => {
