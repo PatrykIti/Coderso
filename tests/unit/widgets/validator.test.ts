@@ -1770,7 +1770,6 @@ test("normalizeWidgetBlock accepts Timeline header, link, and container tokens w
         title: "Launch path",
         description: "Shared milestones",
       },
-      mode: "chronology",
       steps: [
         {
           id: "timeline-step-1",
@@ -1778,7 +1777,7 @@ test("normalizeWidgetBlock accepts Timeline header, link, and container tokens w
           status: "current",
           markerIcon: "rocket",
           markerIconColor: "#ffffff",
-          markerBackgroundColor: "#0f172a",
+          dotTone: "success",
           cta: { label: "Read details", href: "/timeline/discover" },
           link: { href: "/timeline/discover", label: "Open discovery" },
         },
@@ -1790,36 +1789,14 @@ test("normalizeWidgetBlock accepts Timeline header, link, and container tokens w
         {
           id: "timeline-step-3",
           title: "Ship",
-          date: "2026-05-22",
-          dateLabel: "May 22, 2026",
+          oppositeContent: "May 22, 2026",
+          oppositeDate: "2026-05-22",
         },
       ],
-      layout: {
-        orientation: "vertical",
-        align: "start",
-        spacing: "lg",
-        labelPosition: "bottom",
-        padding: "lg",
-        sectionSpacing: "md",
-        maxWidth: "7xl",
-      },
-      guides: {
-        enabled: true,
-        style: "dashed",
-      },
-      style: {
-        lineStyle: "dashed",
-        thickness: "3",
-        markerSize: "lg",
-        markerDisplay: "icon",
-        lineColor: "#cbd5e1",
-        markerColor: "#1d4ed8",
-        titleColor: "#0f172a",
-        descriptionColor: "#334155",
-        titleSize: "lg",
-        descriptionSize: "sm",
-        titleWeight: "bold",
-      },
+      dot: { variant: "outlined", tone: "primary", size: "lg" },
+      connector: { show: true, style: "dashed", thickness: "3" },
+      typography: { titleSize: "lg", descriptionSize: "sm", titleWeight: "bold" },
+      spacing: { gap: "lg", padding: "lg", sectionSpacing: "md", maxWidth: "7xl" },
       background: {
         color: "#f8fafc",
       },
@@ -1835,17 +1812,21 @@ test("normalizeWidgetBlock accepts Timeline header, link, and container tokens w
     title: "Launch path",
     description: "Shared milestones",
   });
-  expect(data.layout).toEqual(
+  expect(data.spacing).toEqual(
     expect.objectContaining({
-      orientation: "vertical",
       padding: "lg",
       sectionSpacing: "md",
       maxWidth: "7xl",
     })
   );
-  expect(data.style).toEqual(
+  expect(data.dot).toEqual(
     expect.objectContaining({
-      markerDisplay: "icon",
+      variant: "outlined",
+      size: "lg",
+    })
+  );
+  expect(data.typography).toEqual(
+    expect.objectContaining({
       titleWeight: "bold",
     })
   );

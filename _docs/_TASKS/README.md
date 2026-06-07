@@ -80,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 12 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2297 tasks
+- **Done:** 2302 tasks
 
 ---
 
@@ -116,6 +116,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-416 | Timeline MUI-Aligned Preset Gallery Rewrite | High | Large | Done (2026-06-07): clean-break rewrite to a six-preset gallery (presets are variants, `data.mode` removed) with MUI axis position, opposite content, filled/outlined dots, and token-mapped semantic tones; Visual options gated per preset via one capability table; 779 widget/pageBuilder Vitest tests green. |
+| TASK-416-01 | Timeline Widget Contract And Render Rewrite | High | Large | Done (2026-06-07): types, capability table, schema, defaults, normalize, two layout primitives, dot tones/opposite content, and the new editor contract in `timeline.tsx`. |
+| TASK-416-02 | Timeline Editor Rewrite And Preset Gating | High | Large | Done (2026-06-07): wizard preset gallery, capability-gated Visual sections, axis/dot/opposite controls, advanced diagnostics. |
+| TASK-416-03 | Timeline Tests Rewrite And Fixtures | High | Medium | Done (2026-06-07): rewrote `timeline.test.tsx` and the editor wave; fixed renderer/validator/visualPanel/template-editor/styleNoneTokens fixtures. |
+| TASK-416-04 | Timeline Docs, Registration, And Closure | High | Medium | Done (2026-06-07): `TIMELINE.md`/`WIDGETS.md` rewrite, changelog 1137, validation lanes; playwright-cli smoke pending manual run. |
 | TASK-415 | Navigation Sticky Collapse Runtime Regressions | High | Medium | Done (2026-06-07): collapse-on-scroll now survives duplicate/no-delta scroll events and runtime rebinds, normal page rendering delegates sticky ownership to the outer widget surface, and Navigation regression coverage was added. |
 | TASK-413 | Page Editor Canvas Workspace Layout | High | Medium | Done (2026-06-06): editor-region scroll, wider responsive canvas, desktop panel hide/show controls, device frame switching, and unmocked layout coverage completed. |
 | TASK-412 | Navigation Widget Runtime Behavior Parity | High | Medium | Done (2026-06-06): Navigation sticky/collapse/drawer/submenu runtime now works across admin canvas and public pages through the shared runtime bridge/script path. |
