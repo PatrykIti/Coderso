@@ -80,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 11 tasks
 - **In Progress:** 4 tasks
-- **Done:** 2292 tasks
+- **Done:** 2293 tasks
 
 ---
 
@@ -115,6 +115,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-410 | Assistant Widget Capability Sync Docs | Medium | Small | Done (2026-06-07): documented how widget/CMS capability changes must update assistant registries, mappings, docs corpus, and tests to avoid drift. |
 | TASK-407 | Assistant Guided Site Builder Intake Flows | High | Very Large | Done (2026-06-07): Basic/Advanced reviewed intake, siteKit/content-engine handoff, admin UI review gates, prompt-poisoning hardening, live Playwright E2E, final drift fixes, docs, and changelog closure completed. |
 | TASK-407-07 | E2E Live Validation Docs and Closure | High | Large | Done (2026-06-07): targeted validation lanes plus Basic, Advanced, follow-up/fail-closed, scoped cleanup, second-theme live Playwright E2E, docs, board, changelog, and final drift audit completed. |
 | TASK-407-07-L06 | Final Docs Changelog Board and Drift Audit | High | Medium | Done (2026-06-07): final docs/matrix/changelog/board sync, Advanced Navigation contract owner cleanup, direct widget-validator regression, curated-media industry guard, and Claude/subagent drift pass. |

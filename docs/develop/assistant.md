@@ -337,6 +337,60 @@ stripped intake session (`version`, `mode`, `currentStepId`, `answers`), never
 derived facts, raw references, provider text, secrets, signed URLs, or upload
 bytes.
 
+## Keeping assistant capabilities in sync
+
+The assistant does not infer new CMS or widget behavior from prompt text. A new
+capability becomes assistant-safe only when it is exposed through the same typed
+contracts used by the runtime, admin UI, planner, and tests. When a widget,
+solution kit, content-engine capability, or admin workflow changes, use this
+checklist before claiming that the assistant can guide users through it.
+
+| Change type | Required assistant sync |
+| --- | --- |
+| Backward-compatible widget field/default | Update the widget schema, defaults, and `normalize<Name>Data`; if existing assistant output still normalizes through `normalizeWidgetBlock`, no assistant option change is required. |
+| New widget variant or mode | Add the id to the widget-owned contract (`variants`, schema enum, or a shared contract module when multiple layers consume it). If the assistant may offer it, add a backend-owned option/registry entry and regression tests proving strict action normalization rejects unknown ids. |
+| New layout behavior or CTA/media setting | Add a bounded assistant mapping from reviewed intake facts to existing widget fields. The mapping must use ids/page roles/media policy from registries, not arbitrary prompt text, CSS, raw URLs, or provider output. |
+| New widget type available to beginner site generation | Register the widget, metadata, docs, and module-pack coverage first. Then add assistant page-section aliases or solution-kit usage only when `normalizeWidgetBlock` accepts the produced block and the module pack remains valid. |
+| New solution-kit starter or industry profile | Add starter content, menu/footer/form/SEO coverage, curated media profile entries when media is used, and installer/rollback regression coverage. Prompt-specific copy, uploads, video, and arbitrary remote media remain gated unless a typed adapter lands. |
+| New content engine or custom screen decision | Extend the service-owned decision registry and compiler tests before the UI exposes it. Unsupported engines must return `needs_input` or `gated` with no executable actions. |
+| User-facing admin workflow/docs change | Update `docs/guide` and reindex the assistant corpus after deployment or through `POST /assistant/reindex`; developer-only `_docs` and `docs/develop` changes are not retrieved by the product assistant. |
+
+Do not duplicate option ids in assistant code, admin editors, and widget runtime
+schemas. Create or reuse a single owner when more than one layer needs the same
+ids. `navigationContract.ts` is the current pattern: the Navigation widget,
+strict action schema, intake types/options, and admin Navigation editor all read
+the same variant and mobile-mode ids. Labels and descriptions can remain local
+to the UI, but key them by the shared id type so TypeScript catches drift.
+
+The assistant may automatically benefit from a widget change only when all of
+these are true:
+
+1. Existing generated blocks still validate through `normalizeWidgetBlock`.
+2. Existing assistant mappings do not need new option ids or new action payload
+   fields.
+3. The public renderer remains backward-compatible for saved blocks and
+   solution-kit starter pages.
+4. The change is not something the assistant must explain to end users from the
+   docs corpus.
+
+If any condition is false, update the assistant contract deliberately:
+
+1. Extend the backend-owned registry or normalizer that owns the new option.
+2. Map reviewed facts to typed `siteKit` or CMS action input; never pass raw
+   prompt/reference/provider text into executable payloads.
+3. Keep route/action schemas strict and reject unknown fields/options.
+4. Update admin UI controls from server-owned metadata or shared contract ids.
+5. Update solution-kit starter data when generated pages need the capability.
+6. Update `docs/guide` and reindex when users should ask the assistant about the
+   new behavior.
+7. Add targeted tests for the domain/service contract, strict action schema,
+   widget normalization/rendering, admin UI metadata when touched, and a live
+   Playwright lane when the user-facing assistant flow changes.
+
+If a changed CMS capability is not yet assistant-safe, document it as gated and
+make the assistant ask for clarification or return a non-executable gate instead
+of inventing actions.
+
 ## How the corpus is ingested
 
 The source-of-truth root is `docs/guide`. This is hard-coded in two services:

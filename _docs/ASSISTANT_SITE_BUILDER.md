@@ -394,6 +394,19 @@ role, existing Navigation widget behavior, Hero widget variant, and backed
 section widget variants. Raw `advancedLayout`, design/reference text, gates,
 diagnostics, URLs, CSS, and prompt material remain review metadata.
 
+When a widget or CMS capability changes, the assistant must be resynchronized
+through the typed owner rather than prompt inference. Backward-compatible widget
+defaults can be absorbed when existing generated blocks still pass
+`normalizeWidgetBlock`, but new variants, modes, layout behavior, CTA/media
+settings, content engines, custom screens, or solution-kit starter capabilities
+require explicit backend-owned registry/mapping updates, strict action-schema
+coverage, and targeted regressions. Shared ids used by runtime, admin editors,
+and assistant schemas must have one owner; Navigation variant/mobile-mode ids in
+`navigationContract.ts` are the reference pattern. User-facing workflow/docs
+changes must also update `docs/guide` and reindex the assistant corpus before
+the product assistant can answer from those docs. Developer details and the full
+checklist live in `docs/develop/assistant.md#keeping-assistant-capabilities-in-sync`.
+
 Advanced reference intake is bounded by
 `assistantSiteBuilderIntakeReferencePolicy.ts`. Session answers may carry
 plain-language `referenceNotes`, `textBrief`, existing `mediaAssetIds`, and

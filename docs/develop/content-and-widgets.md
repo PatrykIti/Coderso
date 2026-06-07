@@ -147,6 +147,7 @@ Follow this order — it matches the contract and keeps the registry and tests h
 11. **If it joins a module pack,** register it in `modulePackMatrix.ts` so `validateModulePackMatrix` coverage holds; composites must be `complexity: "composite"`.
 12. **Add a per-widget doc** at `_docs/_WIDGETS/<NAME>.md` (linked from `WIDGETS.md`).
 13. **Add tests** at `tests/vitest/widgets/<name>.test.tsx`: defaults render, inherit/spacing fallback, schema acceptance, contract section ids/order, Advanced read-only paths — and make sure the contract smoke test passes.
+14. **Check assistant compatibility.** If the assistant can propose, configure, or generate this widget/variant, update the backend-owned assistant option registry or solution-kit mapping, keep shared ids in one owner, and add strict-schema plus `normalizeWidgetBlock` regressions. If the change is user-facing docs knowledge, update `docs/guide` and reindex the corpus. See [assistant.md](./assistant.md#keeping-assistant-capabilities-in-sync).
 
 Because widgets are core source, changes ship through CI (`vite build` → `dist/client` + `dist/server`) and a redeploy — they are **not** runtime-installable the way plugins are. See [./runtime-model.md](./runtime-model.md) for what's live vs. build-time.
 
