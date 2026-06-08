@@ -1,5 +1,23 @@
 import type { CSSProperties, ComponentType, ReactNode } from "react";
-import { icons as lucideIconsRecord, type LucideProps } from "lucide-react";
+import {
+  Calendar,
+  Check,
+  Circle,
+  CircleDot,
+  Clock,
+  Flag,
+  Heart,
+  Lightbulb,
+  MapPin,
+  Package,
+  Rocket,
+  Sparkles,
+  Star,
+  Target,
+  Trophy,
+  Zap,
+  type LucideProps,
+} from "lucide-react";
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
@@ -183,37 +201,57 @@ export const timelineVariantIds: readonly TimelineVariantId[] = [
   "compact",
 ];
 
-const toKebabIconName = (value: string) =>
-  value
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
-    .toLowerCase();
+// Quick-pick icons are statically imported (tree-shaken) so the common set renders
+// synchronously without pulling the full lucide library into the admin initial bundle.
+export const timelineQuickIconComponents: Record<string, ComponentType<LucideProps>> = {
+  check: Check,
+  circle: Circle,
+  "circle-dot": CircleDot,
+  star: Star,
+  rocket: Rocket,
+  flag: Flag,
+  calendar: Calendar,
+  clock: Clock,
+  "map-pin": MapPin,
+  sparkles: Sparkles,
+  zap: Zap,
+  trophy: Trophy,
+  heart: Heart,
+  lightbulb: Lightbulb,
+  package: Package,
+  target: Target,
+};
 
-// Full lucide set keyed by kebab-case name, SSR-renderable to <svg>. Keys are
-// derived directly from the icon record so every icon resolves with no lossy
-// reverse mapping.
-export const lucideKebabIconComponents: Record<
-  string,
-  ComponentType<LucideProps>
-> = Object.fromEntries(
-  Object.entries(lucideIconsRecord).map(([pascalName, component]) => [
-    toKebabIconName(pascalName),
-    component as ComponentType<LucideProps>,
-  ])
-);
+// The full lucide set lives in a dynamically-imported module so it is code-split out
+// of the admin initial static graph. resolveLucideIcon returns quick icons
+// synchronously and full icons once loaded; unknown/unloaded names fall back to a dot.
+let fullIconComponents: Record<string, ComponentType<LucideProps>> | null = null;
+let fullTimelineIconsPromise: Promise<{
+  components: Record<string, ComponentType<LucideProps>>;
+  names: string[];
+}> | null = null;
 
-// All selectable icon names (kebab-case) for the editor's full icon browser.
-export const lucideIconNames: string[] = Object.keys(lucideKebabIconComponents).sort();
+export function loadFullTimelineIcons() {
+  if (!fullTimelineIconsPromise) {
+    fullTimelineIconsPromise = import("./timelineLucideIcons").then((module) => {
+      fullIconComponents = module.lucideKebabIconComponents;
+      return { components: module.lucideKebabIconComponents, names: module.lucideIconNames };
+    });
+  }
+  return fullTimelineIconsPromise;
+}
 
 export function resolveLucideIcon(
   name: string | undefined
 ): ComponentType<LucideProps> | undefined {
   if (!name || name === "none") return undefined;
-  return lucideKebabIconComponents[name];
+  return timelineQuickIconComponents[name] ?? fullIconComponents?.[name];
 }
 
-export function isLucideIconName(name: unknown): name is string {
-  return typeof name === "string" && name !== "none" && Boolean(lucideKebabIconComponents[name]);
+// Preload the full set off the initial graph: eagerly on the server (so SSR resolves
+// arbitrary icons), lazily in the browser (the admin editor triggers it on demand).
+if (typeof window === "undefined") {
+  void loadFullTimelineIcons();
 }
 
 // Semantic dot tones mapped to theme tokens. The front theme has no native
@@ -449,13 +487,21 @@ const enumOr = <T extends string>(value: unknown, options: readonly T[], fallbac
 const resolveTrimmedOptionalString = (value: unknown) =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 
+// Accept any kebab-case icon name (validated by shape, not by membership, so the full
+// lucide set need not be loaded to persist a choice). Unknown names render as a plain
+// dot via resolveLucideIcon's fallback.
+const timelineIconNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const resolveTimelineDotIconValue = (value: unknown): TimelineDotIcon | undefined => {
   if (value === "none") return "none";
-  return isLucideIconName(value) ? value : undefined;
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.length > 0 && trimmed.length <= 64 && timelineIconNamePattern.test(trimmed)
+    ? trimmed
+    : undefined;
 };
 
 const resolveRenderableDotIcon = (value: TimelineDotIcon | undefined): string | undefined =>
-  value && value !== "none" && resolveLucideIcon(value) ? value : undefined;
+  value && value !== "none" ? value : undefined;
 
 const createStepId = (index: number) => `step-${index + 1}`;
 

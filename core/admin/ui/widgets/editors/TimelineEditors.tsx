@@ -1,4 +1,5 @@
-import { type DragEvent, type ReactNode, useState } from "react";
+import { type ComponentType, type DragEvent, type ReactNode, useEffect, useState } from "react";
+import type { LucideProps } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,13 +24,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 import {
-  lucideIconNames,
-  lucideKebabIconComponents,
+  loadFullTimelineIcons,
   normalizeTimelineData,
   normalizeTimelineStepCount,
   normalizeTimelineSteps,
   resolveTimelineCapability,
   timelineDotQuickIconNames,
+  timelineQuickIconComponents,
   timelineStepMax,
   timelineStepMin,
   timelineVariantCapabilities,
@@ -550,18 +551,23 @@ function ColorField({
   );
 }
 
+type IconComponentMap = Record<string, ComponentType<LucideProps>>;
+type TimelineIconLibrary = { components: IconComponentMap; names: string[] };
+
 function IconSwatch({
   name,
+  components,
   active,
   onClick,
   dataAttr,
 }: {
   name: string;
+  components: IconComponentMap;
   active: boolean;
   onClick: () => void;
   dataAttr: Record<string, string>;
 }) {
-  const Icon = lucideKebabIconComponents[name];
+  const Icon = components[name];
   return (
     <button
       type="button"
@@ -590,18 +596,20 @@ function IconSwatch({
 
 function IconBrowserDialog({
   value,
+  iconLibrary,
   onSelect,
 }: {
   value: string;
+  iconLibrary: TimelineIconLibrary | null;
   onSelect: (next: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const names = iconLibrary?.names ?? [];
+  const components = iconLibrary?.components;
   const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, "-");
   const matches = (
-    normalizedQuery
-      ? lucideIconNames.filter((name) => name.includes(normalizedQuery))
-      : lucideIconNames
+    normalizedQuery ? names.filter((name) => name.includes(normalizedQuery)) : names
   ).slice(0, 240);
 
   return (
@@ -623,48 +631,54 @@ function IconBrowserDialog({
         <DialogHeader>
           <DialogTitle>Choose an icon</DialogTitle>
         </DialogHeader>
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={`Search ${lucideIconNames.length.toLocaleString()} icons...`}
-          aria-label="Search icons"
-        />
-        <ScrollArea className="h-72 rounded-md border">
-          <div className="grid grid-cols-6 gap-1.5 p-2">
-            {matches.map((name) => {
-              const Icon = lucideKebabIconComponents[name];
-              if (!Icon) return null;
-              return (
-                <button
-                  key={name}
-                  type="button"
-                  aria-label={humanizeIconName(name)}
-                  title={humanizeIconName(name)}
-                  data-timeline-dot-icon-pick={name}
-                  onClick={() => {
-                    onSelect(name);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "inline-flex h-9 w-9 items-center justify-center rounded-md border transition",
-                    value === name
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-background text-foreground hover:border-primary/50"
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                </button>
-              );
-            })}
-          </div>
-          {matches.length === 0 ? (
-            <p className="px-2 pb-3 text-xs text-muted-foreground">No icons match “{query}”.</p>
-          ) : matches.length === 240 ? (
-            <p className="px-2 pb-3 text-xs text-muted-foreground">
-              Showing the first 240 matches — refine your search to narrow it down.
-            </p>
-          ) : null}
-        </ScrollArea>
+        {!components ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Loading icons…</p>
+        ) : (
+          <>
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={`Search ${names.length.toLocaleString()} icons...`}
+              aria-label="Search icons"
+            />
+            <ScrollArea className="h-72 rounded-md border">
+              <div className="grid grid-cols-6 gap-1.5 p-2">
+                {matches.map((name) => {
+                  const Icon = components[name];
+                  if (!Icon) return null;
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-label={humanizeIconName(name)}
+                      title={humanizeIconName(name)}
+                      data-timeline-dot-icon-pick={name}
+                      onClick={() => {
+                        onSelect(name);
+                        setOpen(false);
+                      }}
+                      className={cn(
+                        "inline-flex h-9 w-9 items-center justify-center rounded-md border transition",
+                        value === name
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background text-foreground hover:border-primary/50"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+              {matches.length === 0 ? (
+                <p className="px-2 pb-3 text-xs text-muted-foreground">No icons match “{query}”.</p>
+              ) : matches.length === 240 ? (
+                <p className="px-2 pb-3 text-xs text-muted-foreground">
+                  Showing the first 240 matches — refine your search to narrow it down.
+                </p>
+              ) : null}
+            </ScrollArea>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -676,6 +690,7 @@ function IconPicker({
   path,
   value,
   onChange,
+  iconLibrary,
   description,
 }: {
   id: string;
@@ -683,11 +698,13 @@ function IconPicker({
   path: string;
   value: TimelineDotIcon | undefined;
   onChange: (next: TimelineDotIcon) => void;
+  iconLibrary: TimelineIconLibrary | null;
   description?: ReactNode;
 }) {
   const current = value ?? "none";
   const quickNames = timelineDotQuickIconNames as readonly string[];
   const showsCurrent = current !== "none" && !quickNames.includes(current);
+  const currentComponents = iconLibrary?.components ?? timelineQuickIconComponents;
   return (
     <WidgetControlRow id={id} label={label} path={path}>
       {() => (
@@ -695,6 +712,7 @@ function IconPicker({
           <div className="flex flex-wrap gap-1.5">
             <IconSwatch
               name="none"
+              components={timelineQuickIconComponents}
               active={current === "none"}
               onClick={() => onChange("none")}
               dataAttr={{ "data-timeline-dot-icon-option": "none" }}
@@ -703,6 +721,7 @@ function IconPicker({
               <IconSwatch
                 key={name}
                 name={name}
+                components={timelineQuickIconComponents}
                 active={current === name}
                 onClick={() => onChange(name)}
                 dataAttr={{ "data-timeline-dot-icon-option": name }}
@@ -711,12 +730,13 @@ function IconPicker({
             {showsCurrent ? (
               <IconSwatch
                 name={current}
+                components={currentComponents}
                 active
                 onClick={() => onChange(current)}
                 dataAttr={{ "data-timeline-dot-icon-current": current }}
               />
             ) : null}
-            <IconBrowserDialog value={current} onSelect={onChange} />
+            <IconBrowserDialog value={current} iconLibrary={iconLibrary} onSelect={onChange} />
           </div>
           {description ? <div className="text-xs text-muted-foreground">{description}</div> : null}
         </div>
@@ -823,6 +843,18 @@ export function TimelineVisualEditor({
   const steps = getNormalizedSteps(value);
   const capability = resolveTimelineCapability(variant);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  // Load the full lucide library on demand (code-split out of the admin initial
+  // bundle) so the dot icon browser and arbitrary-icon previews resolve.
+  const [iconLibrary, setIconLibrary] = useState<TimelineIconLibrary | null>(null);
+  useEffect(() => {
+    let active = true;
+    void loadFullTimelineIcons().then((library) => {
+      if (active) setIconLibrary(library);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const showAxisPosition =
     capability.visibleFields.has("axisPosition") && capability.allowedAxisPositions.length > 1;
@@ -1057,6 +1089,7 @@ export function TimelineVisualEditor({
                     path="steps.markerIcon"
                     value={step.markerIcon}
                     onChange={(next) => updateStep(value, onChange, index, { markerIcon: next })}
+                    iconLibrary={iconLibrary}
                     description="Plain dot inherits the global dot icon for this step."
                   />
                   <SelectControl
@@ -1210,6 +1243,7 @@ export function TimelineVisualEditor({
             path="dot.icon"
             value={value.dot?.icon}
             onChange={(next) => updateDot(value, onChange, { icon: next })}
+            iconLibrary={iconLibrary}
             description="Applies to every step unless a step sets its own icon."
           />
         </FieldGroup>

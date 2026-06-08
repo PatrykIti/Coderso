@@ -9,7 +9,11 @@ import {
   TimelineVisualEditor,
   TimelineWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/TimelineEditors";
-import { timelineDefaults, type TimelineData } from "../../../core/widgets/core/timeline";
+import {
+  loadFullTimelineIcons,
+  timelineDefaults,
+  type TimelineData,
+} from "../../../core/widgets/core/timeline";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -359,7 +363,7 @@ test("dot icon picker offers lucide options and updates the data", () => {
   cleanup();
 });
 
-test("dot icon browser exposes the full lucide library beyond the quick picks", () => {
+test("dot icon browser exposes the full lucide library beyond the quick picks", async () => {
   const onData = vi.fn();
   const { container, cleanup } = mount(
     <VisualHarness initialVariant="vertical-right" onData={onData} />
@@ -370,7 +374,13 @@ test("dot icon browser exposes the full lucide library beyond the quick picks", 
   );
   expect(dotIconControl?.querySelector('[data-timeline-dot-icon-browse="true"]')).toBeTruthy();
 
-  // An icon outside the 16 quick picks is selectable from the full browser.
+  // The full lucide set is code-split and loaded lazily; wait for it and flush the
+  // editor's state update, then an icon outside the 16 quick picks is selectable.
+  await React.act(async () => {
+    await loadFullTimelineIcons();
+    await Promise.resolve();
+  });
+
   const pick = dotIconControl?.querySelector('[data-timeline-dot-icon-pick="activity"]');
   expect(pick).toBeTruthy();
   clickElement(pick);
