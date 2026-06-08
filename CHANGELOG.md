@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.5.0] - 2026-06-08
+### Added
+- Six MUI-aligned timeline presets as block variants (vertical-right, vertical-left, alternating, alternating-opposite, cards, compact) with an interactive preset gallery in the Wizard.
+- Timeline axis position (left/right/alternate/alternate-reverse), per-step opposite content rendered as a semantic `<time>`, filled/outlined dot variants, and semantic dot tones (primary/secondary/success/error/warning/info/grey) mapped to theme tokens, with per-step overrides.
+- Full lucide icon picker for timeline dots: 16 quick picks plus a searchable dialog over the entire lucide library, rendered SSR as `<svg>`, for a global dot icon and per-step markers.
+- LLM Guide can add fields (text, richtext, number, boolean, select, media) to an existing content type from a natural-language prompt and a pasted field list (`content-type.field.add`), preserving the rest of the schema.
+- Generic markdown-brief catalog setup (industry-neutral content type + admin screen + listing + public page + detail route).
+- Model-capacity-aware assistant prompt budgeting (large pastes accepted up to the model token budget; HTTP 413 when too large); long prompts/messages scroll inside the assistant panel.
+- `WidgetRenderContext.stickySurfaceOwner` hint so the renderer can signal that the outer surface owns sticky positioning.
+
+### Changed
+- Timeline editor reorganized into stacked, preset-gated `FieldGroup` sections (single-column for the narrow panel); render collapsed to shared vertical/horizontal/cards layout primitives used by canvas, admin preview, and public front; editor contract v2; renamed `data-timeline-*` diagnostic attributes; token-ownership docs updated (`timeline.spacing.*` / `timeline.typography.*`).
+- Navigation collapse-on-scroll is now direction-aware and idempotent (24px threshold / 16px jitter); rebind/initialization preserves collapsed state; normal rendered Navigation delegates sticky (and the preview-banner offset) to the outer widget surface.
+- Assistant prompt/message transport limits raised from 2,000 chars to a high cap bounded by the model token budget; provider-facing planning context strips full content-type schemas and sanitizes secret-like field names; beginner-style questions classified as documentation answers; generic catalog blueprint made field-agnostic.
+
+### Fixed
+- Timeline Visual editor options that were silently ignored in the page-builder canvas now always reflect (editor visibility, normalize, and render share one capability table).
+- Navigation no longer re-expands on duplicate/no-delta scroll; admin preview and public runtime collapse behavior kept aligned; ambiguous double sticky ownership eliminated.
+- `sanitizeAssistantMessage` collapses a single tab to a space while preserving newlines; generic field-add against a resolved content type no longer returns a generic unsupported response; removed industry-specific wording from generic execution messages.
+
+### Removed
+- Timeline `data.mode` driver, legacy variant set (milestones), and `layout`/`style`/`guides` field groups; the hardcoded `emerald` status color.
+- **Clean break:** v1 timeline payloads are not migrated — existing author-created timeline blocks must be re-added (no code seeds timeline blocks, so the impact is author-created pages only).
+
+### Security
+- Reduced data sent to external LLM providers: full content-type schemas are stripped from provider context (kept server-side for dry-run/execute), and secret-like/empty field names are sanitized from provider-facing catalog schemas.
+- `content-type.field.add` is additive-only and admin-authenticated, with strict reject-unknown validation, ≤120-field bound, two-layer secret-like field-name rejection, trusted-catalog-only target resolution, and server-side schema merge that preserves unrelated fields.
+- Reviewer caveat: prompt-poisoning *marker* stripping is no longer applied to the provider **input** prompt (`providerPlanningContext.ts`); provider-injection defense now relies on the operation-draft-only output contract and output-side redaction. Token/secret redaction still applies.
 ## [1.4.0] - 2026-06-07
 ### Added
 - Guided Basic/Advanced assistant site-builder intake with reviewed acceptance, full-service multi-page site generation, curated licensed media profiles, content-engine/custom-screen decisions, scoped follow-up refinement, and a product-readiness umbrella for remaining generic CMS assistant work.
