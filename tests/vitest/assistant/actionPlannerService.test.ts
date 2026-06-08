@@ -28,6 +28,39 @@ const createFakeProvider = (text: string): AssistantProvider => ({
   complete: async () => ({ text }),
 });
 
+const carCatalogMarkdownPrompt = `Nie jestem techniczny. Chce stworzyc na stronie katalog samochodow, zeby klienci mogli przegladac auta, filtrowac po cenie, marce i roczniku oraz wysylac zapytanie o konkretny samochod.
+
+Wytyczne z pliku markdown:
+
+# Katalog samochodow
+
+Katalog ma sluzyc do prezentacji aut dostepnych w komisie. Nie chce sklepu ani platnosci online, tylko strone listy aut, szczegoly auta i formularz zapytania.
+
+## Pola auta
+
+- title
+- slug
+- brand
+- model
+- year
+- price
+- mileage_km
+- fuel_type
+- transmission
+- body_type
+- color
+- engine_capacity_cm3
+- power_hp
+- short_description
+- full_description
+- featured_image
+- gallery[]
+- vin
+- availability_status
+- meta_title
+- meta_description
+`;
+
 type AssistantPageSurface = Extract<
   NonNullable<AssistantActionContext["activeSurface"]>,
   { kind: "page" }
@@ -302,6 +335,114 @@ test("planAssistantActions routes English full-service site prompts into Basic i
   });
 });
 
+test("planAssistantActions builds a generic catalog from nontechnical markdown field briefs", () => {
+  const plan = planAssistantActions({
+    prompt: carCatalogMarkdownPrompt,
+    context: {
+      page: "/admin/settings/assistant",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.responseKind).toBe("action_plan");
+  expect(plan.intentId).toBe("generic-catalog-samochodow");
+  expect(plan.actions.map((action) => action.type)).toEqual([
+    "content-type.upsert",
+    "detail-page.upsert",
+    "setting.content-route.upsert",
+    "custom-screen.upsert",
+    "listing-query.upsert",
+    "listing-template.upsert",
+    "page.upsert",
+  ]);
+
+  const contentTypeAction = plan.actions.find((action) => action.type === "content-type.upsert");
+  expect(contentTypeAction?.input).toMatchObject({
+    slug: "samochodow",
+    name: "Samochodow",
+  });
+  expect(contentTypeAction?.input.schema).toMatchObject({
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      brand: { type: "string" },
+      model: { type: "string" },
+      year: { type: "integer" },
+      price: { type: "number" },
+      mileage_km: { type: "integer" },
+      short_description: { type: "string", xFieldType: "richtext" },
+      featured_image: { type: "string", xFieldType: "media" },
+      gallery: { type: "array", xFieldType: "media" },
+      availability_status: { type: "string" },
+    },
+  });
+
+  const listingQueryAction = plan.actions.find((action) => action.type === "listing-query.upsert");
+  expect(listingQueryAction?.input).toMatchObject({
+    contentTypeSlug: "samochodow",
+    fields: expect.arrayContaining([
+      "data.short_description",
+      "data.featured_image",
+      "data.availability_status",
+      "data.brand",
+      "data.price",
+    ]),
+  });
+  const pageAction = plan.actions.find((action) => action.type === "page.upsert");
+  expect(pageAction?.input).toMatchObject({
+    slug: "/samochodow",
+    collectionLink: {
+      contentTypeSlug: "samochodow",
+      pageRole: "canonical-list-page",
+    },
+  });
+});
+
+test("planAssistantActionsWithProviderDraft keeps markdown catalog setup local before provider calls", async () => {
+  let providerCalls = 0;
+  const longPrompt = `${carCatalogMarkdownPrompt}\n\n${"Dodatkowy opis uzytkownika. ".repeat(400)}`;
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: longPrompt,
+    llmAvailable: true,
+    provider: {
+      id: "openrouter",
+      complete: async () => {
+        providerCalls += 1;
+        return {
+          text: JSON.stringify({
+            operation: "inspect",
+            resourceKind: "page",
+            targetQuery: { exactName: "samochodow" },
+            filters: null,
+            mutation: null,
+            constraints: null,
+          }),
+        };
+      },
+    },
+    providerModel: "openai/gpt-5.4-nano",
+    limits: {
+      maxInputTokens: 400_000,
+      maxOutputTokens: 1_500,
+      timeoutMs: 25_000,
+    },
+    context: {
+      page: "/admin/settings/assistant",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(providerCalls).toBe(0);
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("generic-catalog-samochodow");
+  expect(plan.metadata).toMatchObject({
+    planner: "local",
+    providerDraftUsed: false,
+  });
+});
+
 test("planAssistantActionsWithProviderDraft routes English full-service prompts into Basic intake before provider calls", async () => {
   const requests: Array<Parameters<AssistantProvider["complete"]>[0]> = [];
   const plan = await planAssistantActionsWithProviderDraft({
@@ -558,6 +699,71 @@ test("planAssistantActionsWithProviderDraft preserves provider metadata and requ
     kind: "json_schema",
     name: "cms_operation_draft",
   });
+});
+
+test("planAssistantActionsWithProviderDraft rejects prompts that exceed provider package input budget", async () => {
+  let providerCalls = 0;
+
+  await expect(
+    planAssistantActionsWithProviderDraft({
+      prompt: "czy widzisz strone Pysiek Mysiek w Pages?",
+      llmAvailable: true,
+      provider: {
+        id: "openai",
+        complete: async () => {
+          providerCalls += 1;
+          return {
+            text: JSON.stringify({
+              operation: "inspect",
+              resourceKind: "page",
+              surfaceHint: "Pages",
+              targetQuery: { exactName: "Pysiek Mysiek" },
+              filters: null,
+              mutation: null,
+              constraints: null,
+            }),
+          };
+        },
+      },
+      providerModel: "gpt-4o-mini",
+      limits: {
+        maxInputTokens: 128,
+        maxOutputTokens: 64,
+        timeoutMs: 1_000,
+      },
+      context: {
+        page: "/admin/pages",
+        locale: "pl-PL",
+        resourceCatalog: {
+          schemaVersion: 1,
+          generatedAt: "2026-04-19T10:00:00.000Z",
+          budget: { maxItemsPerGroup: 50, maxFieldsPerResource: 24, truncated: false },
+          pages: [
+            { id: "page-home", title: "home", slug: "/", status: "published" },
+            {
+              id: "page-pysiek",
+              title: "Pysiek Mysiek",
+              slug: "/pysiek-mysiek",
+              status: "draft",
+            },
+          ],
+          posts: [],
+          entries: [],
+          contentTypes: [],
+          customScreens: [],
+          listings: { queries: [], templates: [] },
+          forms: [],
+          menus: [],
+          seoDocuments: [],
+          widgets: [],
+          media: [],
+          warnings: [],
+        },
+      },
+    })
+  ).rejects.toThrow("assistant_prompt_too_large");
+
+  expect(providerCalls).toBe(0);
 });
 
 test("planAssistantActionsWithProviderDraft keeps provider responses free of blueprint shadow metadata when the debug flag is off", async () => {
@@ -2747,6 +2953,142 @@ test("planAssistantActions blocks content type delete when entries exist", () =>
   expect(plan.intentId).toBe("content-type-delete-needs-input");
   expect(plan.summary).toContain("not precise enough");
   expect(plan.actions).toEqual([]);
+});
+
+const createContentTypeFieldAddContext = (): AssistantActionContext => ({
+  page: "/admin/advanced/engine",
+  locale: "pl-PL",
+  includeResourceCatalog: true,
+  resourceCatalog: createTrustedCatalog({
+    contentTypes: [
+      {
+        id: "ct-products",
+        slug: "products",
+        name: "Products",
+        entryCount: 0,
+        fields: [
+          {
+            name: "title",
+            type: "string",
+            required: false,
+            label: "Title",
+            orderIndex: null,
+          },
+        ],
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            title: { type: "string", title: "Title" },
+          },
+        },
+      },
+      {
+        id: "ct-orders",
+        slug: "orders",
+        name: "Orders",
+        entryCount: 3,
+        fields: [],
+      },
+    ],
+  }),
+  runtimeSnapshot: {
+    schemaVersion: 2,
+    route: "/admin/advanced/engine",
+    activeHref: "/admin/advanced/engine",
+    area: "advanced",
+    advancedModule: "engine",
+    selectedResource: {
+      kind: "content-type",
+      id: "ct-products",
+    },
+    visibleActions: [],
+    permissionHints: {
+      known: false,
+      requiredForVisibleActions: [],
+      reason: "frontend_user_has_no_permissions",
+    },
+  },
+});
+
+const contentTypeFieldAddPrompt = `dodaj mi pola do Content Type o nazwie 'Products'.. pola ktore podaje nizej
+
+# Project
+
+title
+slug
+project_code
+short_description
+full_description
+usable_area_m2
+featured_image
+tags[]
+rooms[]
+  - room_name
+  - room_area_m2
+project_pdf`;
+
+test("planAssistantActions plans generic content type field additions before site-builder follow-up routing", () => {
+  const plan = planAssistantActions({
+    prompt: contentTypeFieldAddPrompt,
+    context: createContentTypeFieldAddContext(),
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.responseKind).toBe("action_plan");
+  expect(plan.intentId).toBe("content-type-field-add");
+  expect(plan.actions).toHaveLength(1);
+  const action = plan.actions[0];
+  if (!action || action.type !== "content-type.field.add") {
+    throw new Error("missing_content_type_field_add_action");
+  }
+  expect(action.input.slug).toBe("products");
+  expect(action.input.fields).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ name: "project_code", type: "text" }),
+      expect.objectContaining({ name: "short_description", type: "richtext" }),
+      expect.objectContaining({ name: "full_description", type: "richtext" }),
+      expect.objectContaining({ name: "usable_area_m2", type: "number" }),
+      expect.objectContaining({ name: "featured_image", type: "media" }),
+      expect.objectContaining({ name: "project_pdf", type: "media" }),
+    ])
+  );
+  expect(action.input.fields.some((field) => field.name === "title")).toBe(false);
+  expect(action.input.fields.some((field) => field.name === "tags")).toBe(false);
+  expect(action.description).toContain("Unsupported nested or array fields were not planned");
+});
+
+test("planAssistantActionsWithProviderDraft keeps content type field additions on deterministic local policy path", async () => {
+  let providerCalls = 0;
+  const provider: AssistantProvider = {
+    id: "fake",
+    complete: async () => {
+      providerCalls += 1;
+      return {
+        text: JSON.stringify({
+          operation: "inspect",
+          resourceKind: "content-type",
+        }),
+      };
+    },
+  };
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: contentTypeFieldAddPrompt,
+    llmAvailable: true,
+    provider,
+    context: createContentTypeFieldAddContext(),
+  });
+
+  expect(providerCalls).toBe(0);
+  expect(plan.status).toBe("ready");
+  expect(plan.responseKind).toBe("action_plan");
+  expect(plan.actions[0]?.type).toBe("content-type.field.add");
+  expect(plan.metadata).toMatchObject({
+    planner: "provider",
+    providerDraftUsed: false,
+    providerId: "fake",
+  });
 });
 
 test("planAssistantActions builds listing query delete plan from active listing route", () => {

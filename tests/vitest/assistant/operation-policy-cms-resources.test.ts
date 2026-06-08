@@ -153,8 +153,9 @@ test("assistantOperationPolicy covers content entries screens widgets and media"
   }
 
   expect(Object.values(contentType.actions).map((action) => action.type)).toEqual(
-    expect.arrayContaining(["content-type.upsert", "content-type.delete"])
+    expect.arrayContaining(["content-type.upsert", "content-type.field.add", "content-type.delete"])
   );
+  expect(getFieldPolicy(contentType, "pola")?.action?.type).toBe("content-type.field.add");
   expect(getFieldPolicy(entry, "media")?.action?.type).toBe("media.reference.attach");
   expect(getFilterPolicy(screen, "status")?.values?.active).toContain("opublikowane");
   expect(Object.values(screen.actions).map((action) => action.type)).toEqual(

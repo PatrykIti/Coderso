@@ -30,7 +30,7 @@ export type CmsResolvedTargetCandidate = {
   slug: string | null;
   status: string | null;
   adminHref: string | null;
-  details?: Record<string, string | number | boolean | null>;
+  details?: Record<string, unknown>;
 };
 
 export type CmsTargetResolution =
@@ -608,6 +608,7 @@ const candidatesForKind = (
           adminHref: `/admin/advanced/engine/${encodeURIComponent(contentType.id)}`,
           details: {
             entryCount: contentType.entryCount,
+            schema: contentType.schema ?? null,
           },
         })
       );

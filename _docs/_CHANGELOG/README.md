@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1136.
+Ordinary new entries continue at 1137.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,11 @@ Ordinary new entries continue at 1136.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1136 for the next changelog entry.
+assistant policy coverage fix. Use 1137 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1136 | 2026-06-07 | TASK-414 generic content-type field refinement | Assistant/CMS Content Types/Admin UI/OpenRouter/QA/Docs |
 | 1135 | 2026-06-06 | Navigation runtime and page editor canvas | CMS Widgets/Navigation/Admin UI/Page Builder/Runtime/QA/Docs |
 | 1134 | 2026-06-06 | Media upload native File metadata | Media/Admin API/Runtime Storage/QA |
 | 1133 | 2026-06-07 | TASK-410 assistant widget capability sync docs | Assistant/Widgets/Docs/Process/QA |

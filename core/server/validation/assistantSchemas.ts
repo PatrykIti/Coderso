@@ -1,9 +1,11 @@
+import { ASSISTANT_TRANSPORT_MAX_CHARS } from "../../services/assistant/promptLimits";
+
 export const assistantChatSchema = {
   type: "object",
   required: ["message"],
   additionalProperties: false,
   properties: {
-    message: { type: "string", minLength: 1, maxLength: 2000 },
+    message: { type: "string", minLength: 1, maxLength: ASSISTANT_TRANSPORT_MAX_CHARS },
     mode: { type: "string", enum: ["docs-only", "llm-guide", "llm-rag"] },
     detailLevel: {
       type: "string",

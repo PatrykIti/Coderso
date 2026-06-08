@@ -35,6 +35,7 @@ const unique = <T>(items: T[]) => Array.from(new Set(items));
 
 const actionOrder: Record<AssistantPlannedAction["type"], number> = {
   "content-type.upsert": 20,
+  "content-type.field.add": 25,
   "content-type.delete": 90,
   "custom-screen.upsert": 30,
   "custom-screen.delete": 90,

@@ -11,6 +11,7 @@ import {
   type CreateContentTypeInput,
   type UpdateContentTypeInput,
 } from "../content/typeService";
+import { mergeContentTypeSchemaFields } from "../content/contentTypeSchemaFields";
 import {
   createCustomScreen,
   deleteCustomScreen,
@@ -107,6 +108,7 @@ import type {
   AssistantActionPlan,
   AssistantActionPreviewChange,
   AssistantContentRouteUpsertAction,
+  AssistantContentTypeFieldAddAction,
   AssistantContentTypeUpsertAction,
   AssistantContentTypeDeleteAction,
   AssistantCustomScreenUpsertAction,
@@ -1028,6 +1030,67 @@ const buildContentTypePreview = async (
         }
       : null,
     nextValue: action.input,
+  });
+};
+
+const buildContentTypeFieldAddPreview = async (
+  action: AssistantContentTypeFieldAddAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getContentTypeBySlug(action.input.slug);
+  const matches = existing?.id === action.input.id && existing.name === action.input.name;
+  let nextSchema: Record<string, unknown> | null = null;
+  const conflicts: AssistantActionPreviewChange["conflicts"] = [];
+  if (!existing || !matches) {
+    conflicts.push({
+      code: "assistant_action_dependency_missing",
+      severity: "error",
+      message: existing
+        ? "Content type no longer matches the planned field-add target."
+        : "Content type was not found.",
+    });
+  } else {
+    try {
+      nextSchema = mergeContentTypeSchemaFields(
+        existing.schema as Record<string, unknown>,
+        action.input.fields
+      );
+    } catch (error) {
+      conflicts.push({
+        code: "assistant_action_dependency_conflict",
+        severity: "error",
+        message:
+          error instanceof Error && error.message === "content_type_field_conflict"
+            ? "One or more planned fields already exist on this content type."
+            : "Planned fields cannot be merged into the current content type schema.",
+      });
+    }
+  }
+
+  return createPreviewChange({
+    action,
+    targetType: "content-type",
+    targetKey: action.input.slug,
+    operation: "update",
+    summary: `Add ${action.input.fields.length} field(s) to content type "${action.input.name}"`,
+    conflicts,
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          name: existing.name,
+          slug: existing.slug,
+          schema: existing.schema,
+        }
+      : null,
+    nextValue:
+      existing && nextSchema
+        ? {
+            id: existing.id,
+            name: existing.name,
+            slug: existing.slug,
+            schema: nextSchema,
+          }
+        : null,
   });
 };
 
@@ -3759,7 +3822,7 @@ const executeContentRouteAction = async (
     message:
       preview.operation === "noop"
         ? "Public detail route already matched the desired contract."
-        : "Public detail route updated for house projects.",
+        : "Public detail route updated.",
   };
 };
 
@@ -3793,7 +3856,44 @@ const executeContentTypeAction = async (
     message:
       preview.operation === "noop"
         ? "Content type already matched the planned schema."
-        : "Content type is ready for house project entries.",
+        : "Content type is ready.",
+  };
+};
+
+const executeContentTypeFieldAddAction = async (
+  action: AssistantContentTypeFieldAddAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getContentTypeBySlug(action.input.slug);
+  if (!existing || existing.id !== action.input.id || existing.name !== action.input.name) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const nextSchema = mergeContentTypeSchemaFields(
+    existing.schema as Record<string, unknown>,
+    action.input.fields
+  );
+  const record =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateContentType(existing.id, {
+          schema: nextSchema,
+        });
+  if (!record) throw new Error("assistant_action_dependency_missing");
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "content-type",
+    targetKey: action.input.slug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record.id,
+    adminHref: `/admin/advanced/engine/${encodeURIComponent(record.id)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Content type already had the planned fields."
+        : "Content type fields were updated.",
   };
 };
 
@@ -5707,6 +5807,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "content-type.upsert"
         ? executeContentTypeAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "content-type.field.add": {
+    preview: (action, ctx) =>
+      action.type === "content-type.field.add"
+        ? buildContentTypeFieldAddPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "content-type.field.add"
+        ? executeContentTypeFieldAddAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "content-type.delete": {
