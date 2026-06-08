@@ -328,7 +328,7 @@ export const sanitizeAssistantMessage = (message: string, options: { maxLength?:
     .split("")
     .map((char) => replaceUnsafeControlChar(char))
     .join("")
-    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+/g, " ")
     .trim();
 
   if (!normalized) {
