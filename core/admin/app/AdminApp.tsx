@@ -8,7 +8,7 @@ import {
   updateSettings,
   type GeneralSettingsPayload,
 } from "@/services/settingsClient";
-import { invalidateAssistantStatusCache } from "@/services/assistantClient";
+import { invalidateAssistantStatusCache } from "@/services/assistantStatusClient";
 import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,

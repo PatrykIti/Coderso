@@ -3,8 +3,7 @@ import {
   listContentTypesCached,
 } from "@/services/contentTypesClient";
 import { getDetailPageCached } from "@/services/detailPagesClient";
-import { getEntryCached, listAllEntriesCached, listEntriesCached } from "@/services/entriesClient";
-import { getCustomScreenCached, listCustomScreensCached } from "@/services/customScreensClient";
+import { listAllEntriesCached, listEntriesCached } from "@/services/entriesClient";
 import { listMenusCached } from "@/services/menusClient";
 import { listMediaCached } from "@/services/mediaClient";
 import { listPagesCached } from "@/services/pagesClient";
@@ -86,6 +85,8 @@ type CollectionWorkspacePrefetchTarget = {
 type DetailTemplatePrefetchTarget = CollectionWorkspacePrefetchTarget & {
   detailPageId: string;
 };
+
+const loadCustomScreensPrefetch = () => import("@/utils/adminPrefetchCustomScreens");
 
 const defaultSchedule = (callback: () => void) => {
   if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -195,23 +196,8 @@ export const createAdminPrefetcher = (entries: AdminPrefetchEntry[], options?: P
 };
 
 export async function prefetchCustomScreenWorkspace(path: string) {
-  const target = resolveCustomScreenWorkspacePrefetchTarget(path);
-  if (!target) return false;
-
-  await listCustomScreensCached(prefetchWarmupOptions);
-  const screen = await getCustomScreenCached(target.screenId).catch(() => null);
-  if (!screen) return true;
-
-  const contentTypes = await listContentTypesCached(prefetchWarmupOptions);
-  const contentType = contentTypes.find((item) => item.id === screen.contentTypeId);
-  if (!contentType) return true;
-
-  await listEntriesCached(contentType.slug, prefetchWarmupOptions);
-  if (target.entryId && target.entryId !== "new") {
-    await getEntryCached(contentType.slug, target.entryId).catch(() => null);
-  }
-
-  return true;
+  const { prefetchCustomScreenWorkspaceData } = await loadCustomScreensPrefetch();
+  return prefetchCustomScreenWorkspaceData(path, prefetchWarmupOptions);
 }
 
 export const resolveCollectionWorkspacePrefetchTarget = (
@@ -355,14 +341,12 @@ const defaultEntries: AdminPrefetchEntry[] = [
         ? `/advanced/custom-screens/${target.screenId}/entries/${target.entryId}`
         : `/advanced/custom-screens/${target.screenId}/entries`;
     },
-    run: ({ path }) => {
+    run: async ({ path }) => {
       if (resolveCustomScreenWorkspacePrefetchTarget(path)) {
         return prefetchCustomScreenWorkspace(path);
       }
-      return Promise.all([
-        listCustomScreensCached(prefetchWarmupOptions),
-        listContentTypesCached(prefetchWarmupOptions),
-      ]);
+      const { prefetchCustomScreenListData } = await loadCustomScreensPrefetch();
+      return prefetchCustomScreenListData(prefetchWarmupOptions);
     },
   },
   {

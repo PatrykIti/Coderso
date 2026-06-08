@@ -21,8 +21,7 @@ import {
   Users,
   Blocks,
 } from "lucide-react";
-import type { CustomScreenRecord } from "@/services/customScreensClient";
-import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
+import type { CustomScreenShortcutRecord } from "@/services/customScreenShortcutsClient";
 
 import { buildAdvancedNavItems, type AdvancedFeatureFlags } from "@/ui/navigation/advancedModules";
 
@@ -131,22 +130,27 @@ export const buildDefaultNavSections = (
 
 export const defaultNavSections: NavSection[] = buildDefaultNavSections();
 
-export const buildCustomScreenShortcutNavItems = (screens: CustomScreenRecord[]): NavItem[] =>
+const supportsDedicatedCustomScreenEditor = (screen: CustomScreenShortcutRecord) => {
+  if (typeof screen.capabilities?.supportsDedicatedEditor === "boolean") {
+    return screen.capabilities.supportsDedicatedEditor;
+  }
+  const hasBlocks = Array.isArray(screen.blocks) && screen.blocks.length > 0;
+  const hasWritableBinding =
+    Array.isArray(screen.bindings) &&
+    screen.bindings.some((binding) => binding.mode === "write" || binding.mode === "readwrite");
+  return hasBlocks && hasWritableBinding;
+};
+
+export const buildCustomScreenShortcutNavItems = (
+  screens: CustomScreenShortcutRecord[]
+): NavItem[] =>
   screens
-    .filter((screen) => {
-      const capabilities =
-        screen.capabilities ??
-        resolveCustomScreenCapabilities({
-          definition: screen.definition,
-          blocks: screen.blocks,
-          bindings: screen.bindings,
-        });
-      return (
+    .filter(
+      (screen) =>
         screen.status === "active" &&
         screen.showInSidebar === true &&
-        capabilities.supportsDedicatedEditor === true
-      );
-    })
+        supportsDedicatedCustomScreenEditor(screen)
+    )
     .map((screen) => ({
       label: screen.sidebarLabel?.trim() || screen.name,
       href: `/admin/advanced/custom-screens/${encodeURIComponent(screen.id)}/entries`,

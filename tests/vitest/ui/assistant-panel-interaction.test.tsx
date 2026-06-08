@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import * as assistantClient from "../../../core/admin/services/assistantClient";
+import * as assistantStatusClient from "../../../core/admin/services/assistantStatusClient";
 import * as userSettingsClient from "../../../core/admin/services/userSettingsClient";
 import type { UserSettings } from "../../../core/admin/services/userSettingsClient";
 import {
@@ -116,7 +117,7 @@ afterEach(() => {
 });
 
 test("AssistantPanel opens from reviewed site builder CTA event", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
@@ -167,7 +168,7 @@ test("AssistantPanel opens from reviewed site builder CTA event", async () => {
 });
 
 test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
@@ -395,7 +396,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
 });
 
 test("AssistantPanel renders needs-input guide plan without enabling execution", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
@@ -480,7 +481,7 @@ test("AssistantPanel renders needs-input guide plan without enabling execution",
 });
 
 test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
@@ -603,7 +604,7 @@ test("AssistantPanel routes CMS inspection prompts through LLM Guide actions", a
 });
 
 test("AssistantPanel submits Basic site-builder intake answers through existing plan route", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
@@ -723,7 +724,7 @@ test("AssistantPanel submits Basic site-builder intake answers through existing 
 });
 
 test("AssistantPanel switches Basic site-builder intake to Advanced through existing plan route", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
@@ -832,7 +833,7 @@ test("AssistantPanel switches Basic site-builder intake to Advanced through exis
 });
 
 test("AssistantPanel renders friendly Basic intake validation errors", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
@@ -924,7 +925,7 @@ test("AssistantPanel starts LLM Guide when docs are not ready but LLM is availab
     })
   );
 
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "docs-only",
     retrievalBackend: "db",
@@ -1009,7 +1010,7 @@ test("AssistantPanel starts LLM Guide when docs are not ready but LLM is availab
 });
 
 test("AssistantPanel keeps docs-only mode on assistant chat route", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "docs-only",
     retrievalBackend: "db",
@@ -1089,7 +1090,7 @@ test("AssistantPanel keeps docs-only mode on assistant chat route", async () => 
 });
 
 test("AssistantPanel renders LLM Guide docs response without action review", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
@@ -1172,7 +1173,7 @@ test("AssistantPanel renders LLM Guide docs response without action review", asy
 });
 
 test("AssistantPanel sends prior inspection candidates as planning state", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
@@ -1306,7 +1307,7 @@ test("AssistantPanel sends prior inspection candidates as planning state", async
 });
 
 test("AssistantPanel starts a new empty conversation from footer action", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
@@ -1390,7 +1391,7 @@ test("AssistantPanel starts a new empty conversation from footer action", async 
 });
 
 test("AssistantPanel restores conversation after close and SPA remount", async () => {
-  vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
+  vi.spyOn(assistantStatusClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
     defaultMode: "llm-guide",
     retrievalBackend: "db",
