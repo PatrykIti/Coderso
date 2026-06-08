@@ -394,7 +394,7 @@ test("VisualPanel uses timeline editor variant controls", () => {
   const block: Block = {
     id: "timeline-1",
     type: "timeline",
-    variant: "milestones",
+    variant: "vertical-right",
     data: timelineDefaults,
     editor: {
       mode: "visual",
@@ -407,7 +407,7 @@ test("VisualPanel uses timeline editor variant controls", () => {
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
-  expect(html).toContain("Variant and timeline structure");
+  expect(html).toContain("Preset and structure");
 });
 
 test("VisualPanel uses compare timeline editor variant controls", () => {

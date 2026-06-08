@@ -6,23 +6,26 @@ import {
 } from "../../../core/services/assistant/actionPlanHeuristics";
 import type { AssistantAdminContext } from "../../../core/services/assistant/actionPlanTypes";
 
-const createContext = (
-  input: Partial<AssistantAdminContext>
-): AssistantAdminContext =>
+const createContext = (input: Partial<AssistantAdminContext>): AssistantAdminContext =>
   ({
-  route: null,
-  locale: null,
-  resourceCatalog: null,
-  runtimeSnapshot: null,
-  activeSurface: null,
-  planningState: null,
-  area: "other",
-  advancedModule: null,
-  ...input,
-}) as AssistantAdminContext;
+    route: null,
+    locale: null,
+    resourceCatalog: null,
+    runtimeSnapshot: null,
+    activeSurface: null,
+    planningState: null,
+    area: "other",
+    advancedModule: null,
+    ...input,
+  }) as AssistantAdminContext;
 
 test("classifyAssistantPrompt keeps docs-only questions non-mutating", () => {
   expect(classifyAssistantPrompt("gdzie zmienie kolory hero widgetu?")).toMatchObject({
+    promptKind: "docs_question",
+    intentFamily: "unknown",
+  });
+
+  expect(classifyAssistantPrompt("Nie ogarniam, do czego jest Engine?")).toMatchObject({
     promptKind: "docs_question",
     intentFamily: "unknown",
   });

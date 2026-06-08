@@ -3,6 +3,7 @@ import type { AssistantExecutableActionType, AssistantPlannedAction } from "./ac
 export const assistantActionTypes = [
   "setting.content-route.upsert",
   "content-type.upsert",
+  "content-type.field.add",
   "content-type.delete",
   "custom-screen.upsert",
   "custom-screen.delete",

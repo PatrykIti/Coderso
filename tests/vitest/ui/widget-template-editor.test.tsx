@@ -267,7 +267,7 @@ test("widget template block settings render timeline visual sections", () => {
       block={{
         id: "timeline-1",
         type: "timeline",
-        variant: "milestones",
+        variant: "vertical-right",
         data: timelineDefaults,
         editor: {
           mode: "visual",
@@ -278,10 +278,10 @@ test("widget template block settings render timeline visual sections", () => {
     />
   );
 
-  expect(html).toContain("Variant and timeline structure");
+  expect(html).toContain("Preset and structure");
   expect(html).toContain("Steps content and order");
-  expect(html).toContain("Guides and axis line");
-  expect(html).toContain("Typography and spacing");
+  expect(html).toContain("Dots and connector");
+  expect(html).toContain("Typography, spacing and background");
 });
 
 test("widget template block settings render compare timeline visual sections", () => {

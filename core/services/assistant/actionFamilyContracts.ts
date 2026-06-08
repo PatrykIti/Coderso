@@ -153,6 +153,22 @@ export const assistantActionFamilyContracts = [
     "schema",
   ]),
   executableContract(
+    "content-type.field.add",
+    "content",
+    "core/services/content/contentTypeSchemaFields.ts",
+    ["id", "slug", "name", "fields"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: [
+        "Adds supported scalar/media fields to one existing content type, rejects duplicates, and preserves unrelated schema fields.",
+      ],
+    }
+  ),
+  executableContract(
     "content-type.delete",
     "content",
     "core/services/content/typeService.ts",

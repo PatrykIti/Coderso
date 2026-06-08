@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Last Updated:** 2026-06-07
-**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188, TASK-190, TASK-404, TASK-407
+**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06, TASK-174, TASK-174-05, TASK-174-07, TASK-178, TASK-178-01, TASK-178-02, TASK-178-03, TASK-178-03-01, TASK-178-03-02, TASK-178-03-03, TASK-178-03-04, TASK-178-05, TASK-178-07-01, TASK-178-07-02, TASK-180, TASK-184, TASK-188, TASK-190, TASK-404, TASK-407, TASK-414, TASK-414-01
 
 ---
 
@@ -40,6 +40,8 @@ Rules:
 | Assistant operation policy metadata | Vitest | Policy schema, lookup, route matrix, gated/read-only state, and redaction metadata coverage |
 | Provider guidance from operation policy | Vitest | Provider registry/guidance and CMS operation draft JSON schema enums are derived from `assistantOperationPolicy` |
 | OpenRouter live planner smoke | Bun integration opt-in | Uses only `TEST_OPENROUTER_API_KEY` and `TEST_OPENROUTER_MODEL`; skipped when missing |
+| Generic Content Type field refinement | Vitest + Bun + Playwright CLI | `content-type.field.add` planning stays local/policy-derived, provider context strips schemas, executor merges server-side schemas, and long pasted prompts remain scrollable and accepted under model/settings budgets that reserve provider package overhead |
+| Generic markdown catalog setup | Vitest + Bun smoke | Nontechnical catalog prompts with pasted markdown field lists derive an industry-neutral catalog preset and return reviewed content type, admin screen, listing, public page, and detail-route actions without fixed vertical hard-coding |
 | Model capability structured output strategy | Vitest + Bun live smoke | Provider/model family resolves generic `cms_operation_draft` response contract for OpenRouter and OpenAI adapters |
 | Full Admin UI live coverage matrix | Bun integration opt-in | `tests/integration/assistant-live/*` uses `.env` provider vars plus disposable DB fixtures; coverage map lives in `_docs/LLM_GUIDE_LIVE_COVERAGE_MATRIX.md` |
 | Provider operation draft packaging and rejection | Vitest | Provider prompt package, operation-draft schema, exact policy identity, and provider action-array rejection; fake providers only |
@@ -58,6 +60,7 @@ Rules:
 | Action Type | Plan Schema | Dry Run | Execute | Route Permissions | Notes |
 |---|---|---|---|---|---|
 | `content-type.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write` | Existing catalog action |
+| `content-type.field.add` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Adds supported fields to exact existing content types; full schema merge remains server-side and unsupported nested/object arrays are gated |
 | `content-type.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes exact zero-entry content types after review |
 | `custom-screen.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write` | Existing catalog action |
 | `custom-screen.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes catalog-resolved custom screens after review |
@@ -114,6 +117,7 @@ Rules:
 | House Projects Catalog | Executable | Vitest planner/catalog blueprint | Bun executor + DB idempotency | Bun public runtime test | Baseline full-stack pack |
 | Product Catalog | Executable | Vitest planner/catalog blueprint + local detail-page fixture | Bun executor | Detail-page composer runtime fixture | No checkout |
 | Product Inquiry Catalog | Executable | Vitest planner/catalog blueprint | Bun executor | No dedicated public runtime test yet | Adds public inquiry form |
+| Markdown-Brief Catalog | Executable | Vitest planner/catalog blueprint + `.env` OpenRouter smoke | Catalog-family executor path | Pending dedicated public runtime fixture | Uses explicit pasted field lists to derive an industry-neutral catalog preset; nested repeaters remain gated |
 | Portfolio Case Study | Executable | Vitest planner/catalog blueprint + local detail-page fixture | Catalog-family executor path | Detail-page composer runtime fixture | Adds result/testimonial fields |
 | Services Directory | Executable | Vitest planner/catalog blueprint + local detail-page fixture | Catalog-family executor path | Detail-page composer runtime fixture | Existing generic catalog pack; booking remains gated |
 | Lead Capture Site | Executable | Vitest planner/blueprint | Bun executor | No dedicated public runtime test yet | Form runtime hardening remains existing Forms contract |
@@ -151,6 +155,7 @@ Rules:
 These are intentional follow-up capabilities, not current production claims:
 - Webhook form automation through `form.automation.upsert`.
 - Nested/slot page widget patches.
+- Nested object-array Content Type fields from free-text prompts, such as arbitrary repeater/object schemas.
 - `menu.structure.patch`.
 - `entry.bulk-draft.create` and `entry.field.patch`.
 - Booking resource/schedule/reservation assistant actions.

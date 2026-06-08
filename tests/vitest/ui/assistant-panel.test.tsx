@@ -230,6 +230,23 @@ test("AssistantMessage renders follow-up options for progressive depth flow", ()
   expect(html).toContain("Step-by-step");
 });
 
+test("AssistantMessage constrains long pasted message bubbles with internal scrolling", () => {
+  const longText = Array.from(
+    { length: 80 },
+    (_, index) => `Long pasted prompt line ${index + 1}`
+  ).join("\n");
+
+  const userHtml = renderAdminUi(<AssistantMessage role="user" text={longText} />);
+  const assistantHtml = renderAdminUi(<AssistantMessage role="assistant" text={longText} />);
+
+  expect(userHtml).toContain("max-h-80");
+  expect(userHtml).toContain("overflow-y-auto");
+  expect(userHtml).toContain("overscroll-contain");
+  expect(assistantHtml).toContain("max-h-96");
+  expect(assistantHtml).toContain("overflow-y-auto");
+  expect(assistantHtml).toContain("overscroll-contain");
+});
+
 test("ActionPlanReview renders planned guide actions", () => {
   const html = renderAdminUi(
     <ActionPlanReview

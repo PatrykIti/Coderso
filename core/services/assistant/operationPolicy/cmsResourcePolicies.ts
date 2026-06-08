@@ -474,7 +474,7 @@ export const contentTypePolicy: AssistantResourcePolicy = {
       field: "schema",
       aliases: ["schema", "fields", "pola"],
       valueType: "record",
-      action: { type: "content-type.upsert", patchPath: ["schema"] },
+      action: { type: "content-type.field.add", patchPath: ["fields"] },
     },
   },
   actions: {
@@ -482,6 +482,12 @@ export const contentTypePolicy: AssistantResourcePolicy = {
       operation: "create",
       type: "content-type.upsert",
       target: "explicit",
+      mode: "executable",
+    },
+    addFields: {
+      operation: "update",
+      type: "content-type.field.add",
+      target: "single",
       mode: "executable",
     },
     delete: {

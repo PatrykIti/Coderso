@@ -1,8 +1,11 @@
-import { createReadThroughCache } from "@/utils/readThroughCache";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { clearLocalCache } from "@/utils/storageCache";
 import { apiRequest } from "./apiClient";
 import { cacheKeys } from "./cachePolicy";
+import {
+  getAssistantStatus as getAssistantStatusInternal,
+  invalidateAssistantStatusCache as invalidateAssistantStatusCacheInternal,
+} from "./assistantStatusClient";
 import {
   clearContentTypeCollectionWorkspaceCache,
   clearContentTypesCache,
@@ -36,19 +39,7 @@ export type AssistantGuideMode =
   | "security";
 
 export type AssistantRetrievalBackend = "db";
-
-export type AssistantStatusResponse = {
-  enabled: boolean;
-  defaultMode: AssistantMode;
-  retrievalBackend: AssistantRetrievalBackend;
-  llmAvailable: boolean;
-  indexReady: boolean;
-  indexBuilding: boolean;
-  indexError: string | null;
-  lastReindexAt: string | null;
-  docCount: number;
-  chunkCount: number;
-};
+export type { AssistantStatusResponse } from "./assistantStatusClient";
 
 export type AssistantChatContext = {
   page?: string;
@@ -148,22 +139,12 @@ export type AssistantActionExecuteRequest = {
 };
 export type AssistantActionExecuteResponse = AssistantActionExecuteResult;
 
-const ASSISTANT_STATUS_TTL_MS = 10_000;
-
-const assistantStatusReadCache = createReadThroughCache<AssistantStatusResponse>({
-  ttlMs: ASSISTANT_STATUS_TTL_MS,
-  load: () =>
-    apiRequest<AssistantStatusResponse>("/assistant/status", {
-      method: "GET",
-    }),
-});
-
 export async function getAssistantStatus(options?: { force?: boolean }) {
-  return assistantStatusReadCache.get({ force: options?.force });
+  return getAssistantStatusInternal(options);
 }
 
 export const invalidateAssistantStatusCache = () => {
-  assistantStatusReadCache.invalidate();
+  invalidateAssistantStatusCacheInternal();
 };
 
 export async function sendAssistantMessage(payload: AssistantChatRequest) {
@@ -188,7 +169,7 @@ export async function reindexAssistantDocs() {
     },
     { withCsrf: true }
   );
-  assistantStatusReadCache.invalidate();
+  invalidateAssistantStatusCacheInternal();
   return result;
 }
 
@@ -307,9 +288,11 @@ const notifyAssistantExecutionCacheEvent = (input: {
 
   switch (item.type) {
     case "content-type.upsert":
+    case "content-type.field.add":
     case "content-type.delete": {
       const plannedDelete = readActionId(action, "content-type.delete");
-      const id = resourceId(item, plannedDelete?.input.id);
+      const plannedFieldAdd = readActionId(action, "content-type.field.add");
+      const id = resourceId(item, plannedDelete?.input.id ?? plannedFieldAdd?.input.id);
       clearContentTypesCache();
       emit(cacheKeys.contentTypesList, cacheAction);
       if (id) clearAndEmitDetail(cacheKeys.contentTypeDetail(id), cacheAction, emit);

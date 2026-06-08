@@ -141,6 +141,74 @@ test("normalizeAssistantActionPlan accepts content route actions with explicit d
   ).toThrow("assistant_action_plan_invalid");
 });
 
+test("normalizeAssistantActionPlan accepts strict content-type field-add actions", () => {
+  const normalized = normalizeAssistantActionPlan({
+    id: "plan-content-type-field-add",
+    status: "ready",
+    intentId: "content-type-field-add",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Add fields",
+    answer: "I can add supported fields.",
+    summary: "Add fields to one content model.",
+    confidence: 0.85,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "content-type-field-add-products",
+        type: "content-type.field.add",
+        title: "Add product fields",
+        description: "Add fields to Products.",
+        input: {
+          id: "ct-products",
+          slug: "products",
+          name: "Products",
+          fields: [
+            { name: "price_amount", label: "Price Amount", type: "number" },
+            {
+              name: "gallery_images",
+              label: "Gallery Images",
+              type: "media",
+              multiple: true,
+              mediaAccept: ["image/*"],
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]).toMatchObject({
+    type: "content-type.field.add",
+    input: {
+      fields: [
+        expect.objectContaining({ name: "price_amount", type: "number" }),
+        expect.objectContaining({ name: "gallery_images", type: "media", multiple: true }),
+      ],
+    },
+  });
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...normalized,
+      actions: [
+        {
+          id: "bad-field-add",
+          type: "content-type.field.add",
+          title: "Bad field",
+          description: "Reject unknown nested keys.",
+          input: {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            fields: [{ name: "api_token", type: "text", extra: true }],
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

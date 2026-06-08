@@ -1,4 +1,4 @@
-import { getAssistantStatus, type AssistantStatusResponse } from "@/services/assistantClient";
+import { getAssistantStatus, type AssistantStatusResponse } from "@/services/assistantStatusClient";
 
 const ASSISTANT_RUNTIME_CACHE_TTL_MS = 60_000;
 

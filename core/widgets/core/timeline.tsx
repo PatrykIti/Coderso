@@ -1,23 +1,55 @@
 import type { CSSProperties, ComponentType, ReactNode } from "react";
+import {
+  Calendar,
+  Check,
+  Circle,
+  CircleDot,
+  Clock,
+  Flag,
+  Heart,
+  Lightbulb,
+  MapPin,
+  Package,
+  Rocket,
+  Sparkles,
+  Star,
+  Target,
+  Trophy,
+  Zap,
+  type LucideProps,
+} from "lucide-react";
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
-import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { compactObject, compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
-export type TimelineVariantId = "milestones" | "cards" | "compact";
-export type TimelineMode = "process" | "axis" | "chronology" | "alternating";
-export type TimelineOrientation = "horizontal" | "vertical";
-export type TimelineAlign = "start" | "center" | "end";
-export type TimelineLabelPosition = "top" | "bottom";
-export type TimelineSpacing = "none" | "sm" | "md" | "lg" | "xl";
-export type TimelineGuideStyle = "solid" | "dashed";
-export type TimelineLineStyle = "solid" | "dashed";
-export type TimelineMarkerSize = "sm" | "md" | "lg";
+// Presets are the block variants (one source of truth, no separate mode field).
+export type TimelineVariantId =
+  | "vertical-right"
+  | "vertical-left"
+  | "alternating"
+  | "alternating-opposite"
+  | "cards"
+  | "compact";
+export type TimelineAxisPosition = "left" | "right" | "alternate" | "alternate-reverse";
+export type TimelineDotVariant = "filled" | "outlined";
+export type TimelineDotTone =
+  | "primary"
+  | "secondary"
+  | "success"
+  | "error"
+  | "warning"
+  | "info"
+  | "grey";
+export type TimelineDotSize = "sm" | "md" | "lg";
+// Any lucide icon name (kebab-case), or "none" for a plain dot.
+export type TimelineDotIcon = string;
+export type TimelineConnectorStyle = "solid" | "dashed";
 export type TimelineThickness = "1" | "2" | "3" | "4";
 export type TimelineTitleSize = "none" | "sm" | "base" | "lg" | "xl";
 export type TimelineDescriptionSize = "none" | "xs" | "sm" | "base" | "lg";
 export type TimelineTitleWeight = "normal" | "medium" | "semibold" | "bold";
 export type TimelineStatus = "upcoming" | "current" | "complete";
-export type TimelineMarkerDisplay = "dot" | "number" | "icon";
+export type TimelineSpacing = "none" | "sm" | "md" | "lg" | "xl";
 export type TimelinePadding = "sm" | "md" | "lg";
 export type TimelineSectionSpacing = "none" | "sm" | "md" | "lg";
 export type TimelineMaxWidth = "none" | "4xl" | "5xl" | "6xl" | "7xl" | "full";
@@ -36,14 +68,16 @@ export type TimelineStep = {
   id?: string;
   title: string;
   description?: string;
-  icon?: string;
-  accent?: string;
-  date?: string;
-  dateLabel?: string;
+  // MUI TimelineOppositeContent: editorial text and an optional machine-readable date.
+  oppositeContent?: string;
+  oppositeDate?: string;
   status?: TimelineStatus;
-  markerIcon?: string;
+  // Per-step lucide icon rendered inside the dot (overrides the global dot icon).
+  markerIcon?: TimelineDotIcon;
   markerIconColor?: string;
-  markerBackgroundColor?: string;
+  // Per-step overrides for the MUI dot variant/tone.
+  dotVariant?: TimelineDotVariant;
+  dotTone?: TimelineDotTone;
   cta?: TimelineStepCta;
   link?: TimelineStepLink;
 };
@@ -53,41 +87,289 @@ export type TimelineData = {
     title?: string;
     description?: string;
   };
-  mode?: TimelineMode;
   steps: TimelineStep[];
-  layout?: {
-    orientation?: TimelineOrientation;
-    align?: TimelineAlign;
-    spacing?: TimelineSpacing;
-    labelPosition?: TimelineLabelPosition;
+  axis?: {
+    position?: TimelineAxisPosition;
+  };
+  dot?: {
+    variant?: TimelineDotVariant;
+    tone?: TimelineDotTone;
+    size?: TimelineDotSize;
+    icon?: TimelineDotIcon;
+  };
+  connector?: {
+    show?: boolean;
+    style?: TimelineConnectorStyle;
+    thickness?: TimelineThickness;
+  };
+  typography?: {
+    titleSize?: TimelineTitleSize;
+    titleWeight?: TimelineTitleWeight;
+    descriptionSize?: TimelineDescriptionSize;
+  };
+  spacing?: {
+    gap?: TimelineSpacing;
     padding?: TimelinePadding;
     sectionSpacing?: TimelineSectionSpacing;
     maxWidth?: TimelineMaxWidth;
-  };
-  guides?: {
-    enabled?: boolean;
-    style?: TimelineGuideStyle;
-  };
-  style?: {
-    lineStyle?: TimelineLineStyle;
-    thickness?: TimelineThickness;
-    markerSize?: TimelineMarkerSize;
-    markerDisplay?: TimelineMarkerDisplay;
-    lineColor?: string;
-    markerColor?: string;
-    titleColor?: string;
-    descriptionColor?: string;
-    titleSize?: TimelineTitleSize;
-    descriptionSize?: TimelineDescriptionSize;
-    titleWeight?: TimelineTitleWeight;
   };
   background?: {
     color?: string;
   };
 };
 
+// Editor-visible field groups, gated per preset by the capability table.
+export type TimelineFieldKey =
+  | "axisPosition"
+  | "oppositeContent"
+  | "dotVariant"
+  | "dotTone"
+  | "dotSize"
+  | "dotIcon"
+  | "connector"
+  | "stepStatus"
+  | "stepCta"
+  | "stepLink"
+  | "typography"
+  | "spacing"
+  | "background"
+  | "header";
+
+export type TimelineVariantCapability = {
+  id: TimelineVariantId;
+  label: string;
+  description: string;
+  orientation: "vertical" | "horizontal";
+  surface: "plain" | "cards";
+  visibleFields: ReadonlySet<TimelineFieldKey>;
+  allowedAxisPositions: readonly TimelineAxisPosition[];
+  fixedAxisPosition?: TimelineAxisPosition;
+  steps: { min: number; max: number; recommended: number };
+};
+
 export const timelineStepMin = 3;
 export const timelineStepMax = 8;
+
+const timelineAxisPositionOptions = ["left", "right", "alternate", "alternate-reverse"] as const;
+const timelineDotVariantOptions = ["filled", "outlined"] as const;
+const timelineDotToneOptions = [
+  "primary",
+  "secondary",
+  "success",
+  "error",
+  "warning",
+  "info",
+  "grey",
+] as const;
+const timelineDotSizeOptions = ["sm", "md", "lg"] as const;
+// Curated quick-pick icons surfaced directly in the editor grid (all valid lucide names).
+export const timelineDotQuickIconNames = [
+  "check",
+  "circle",
+  "circle-dot",
+  "star",
+  "rocket",
+  "flag",
+  "calendar",
+  "clock",
+  "map-pin",
+  "sparkles",
+  "zap",
+  "trophy",
+  "heart",
+  "lightbulb",
+  "package",
+  "target",
+] as const;
+const timelineConnectorStyleOptions = ["solid", "dashed"] as const;
+const timelineThicknessOptions = ["1", "2", "3", "4"] as const;
+const timelineTitleSizeOptions = ["none", "sm", "base", "lg", "xl"] as const;
+const timelineDescriptionSizeOptions = ["none", "xs", "sm", "base", "lg"] as const;
+const timelineTitleWeightOptions = ["normal", "medium", "semibold", "bold"] as const;
+const timelineStatusOptions = ["upcoming", "current", "complete"] as const;
+const timelineSpacingOptions = ["none", "sm", "md", "lg", "xl"] as const;
+const timelinePaddingOptions = ["sm", "md", "lg"] as const;
+const timelineSectionSpacingOptions = ["none", "sm", "md", "lg"] as const;
+const timelineMaxWidthOptions = ["none", "4xl", "5xl", "6xl", "7xl", "full"] as const;
+
+export const timelineVariantIds: readonly TimelineVariantId[] = [
+  "vertical-right",
+  "vertical-left",
+  "alternating",
+  "alternating-opposite",
+  "cards",
+  "compact",
+];
+
+// Quick-pick icons are statically imported (tree-shaken) so the common set renders
+// synchronously without pulling the full lucide library into the admin initial bundle.
+export const timelineQuickIconComponents: Record<string, ComponentType<LucideProps>> = {
+  check: Check,
+  circle: Circle,
+  "circle-dot": CircleDot,
+  star: Star,
+  rocket: Rocket,
+  flag: Flag,
+  calendar: Calendar,
+  clock: Clock,
+  "map-pin": MapPin,
+  sparkles: Sparkles,
+  zap: Zap,
+  trophy: Trophy,
+  heart: Heart,
+  lightbulb: Lightbulb,
+  package: Package,
+  target: Target,
+};
+
+// The full lucide set lives in a dynamically-imported module so it is code-split out
+// of the admin initial static graph. resolveLucideIcon returns quick icons
+// synchronously and full icons once loaded; unknown/unloaded names fall back to a dot.
+let fullIconComponents: Record<string, ComponentType<LucideProps>> | null = null;
+let fullTimelineIconsPromise: Promise<{
+  components: Record<string, ComponentType<LucideProps>>;
+  names: string[];
+}> | null = null;
+
+export function loadFullTimelineIcons() {
+  if (!fullTimelineIconsPromise) {
+    fullTimelineIconsPromise = import("./timelineLucideIcons").then((module) => {
+      fullIconComponents = module.lucideKebabIconComponents;
+      return { components: module.lucideKebabIconComponents, names: module.lucideIconNames };
+    });
+  }
+  return fullTimelineIconsPromise;
+}
+
+export function resolveLucideIcon(
+  name: string | undefined
+): ComponentType<LucideProps> | undefined {
+  if (!name || name === "none") return undefined;
+  return timelineQuickIconComponents[name] ?? fullIconComponents?.[name];
+}
+
+// Preload the full set off the initial graph: eagerly on the server (so SSR resolves
+// arbitrary icons), lazily in the browser (the admin editor triggers it on demand).
+if (typeof window === "undefined") {
+  void loadFullTimelineIcons();
+}
+
+// Semantic dot tones mapped to theme tokens. The front theme has no native
+// success/warning/info tokens, so they alias the closest available token.
+export const dotToneToken: Record<TimelineDotTone, string> = {
+  primary: "var(--color-primary)",
+  secondary: "var(--color-secondary)",
+  success: "var(--color-primary)",
+  error: "var(--color-destructive, var(--color-text))",
+  warning: "var(--color-accent)",
+  info: "var(--color-secondary)",
+  grey: "var(--color-border)",
+};
+
+// Single source of truth: editor option visibility, render decisions, and
+// normalize coercion all read from this table so "shown ⇒ rendered" holds.
+const sharedStepFields: TimelineFieldKey[] = [
+  "dotVariant",
+  "dotTone",
+  "dotSize",
+  "dotIcon",
+  "stepStatus",
+  "stepCta",
+  "stepLink",
+  "typography",
+  "spacing",
+  "background",
+  "header",
+];
+
+export const timelineVariantCapabilities: Record<TimelineVariantId, TimelineVariantCapability> = {
+  "vertical-right": {
+    id: "vertical-right",
+    label: "Vertical — content right",
+    description: "Single column with the axis on the left and content on the right.",
+    orientation: "vertical",
+    surface: "plain",
+    visibleFields: new Set<TimelineFieldKey>([...sharedStepFields, "connector"]),
+    allowedAxisPositions: [],
+    fixedAxisPosition: "right",
+    steps: { min: timelineStepMin, max: timelineStepMax, recommended: 4 },
+  },
+  "vertical-left": {
+    id: "vertical-left",
+    label: "Vertical — content left",
+    description: "Single column with the axis on the right and content on the left.",
+    orientation: "vertical",
+    surface: "plain",
+    visibleFields: new Set<TimelineFieldKey>([...sharedStepFields, "connector"]),
+    allowedAxisPositions: [],
+    fixedAxisPosition: "left",
+    steps: { min: timelineStepMin, max: timelineStepMax, recommended: 4 },
+  },
+  alternating: {
+    id: "alternating",
+    label: "Alternating",
+    description: "Zigzag layout with a centered axis and content alternating sides.",
+    orientation: "vertical",
+    surface: "plain",
+    visibleFields: new Set<TimelineFieldKey>([...sharedStepFields, "connector", "axisPosition"]),
+    allowedAxisPositions: ["alternate", "alternate-reverse"],
+    steps: { min: timelineStepMin, max: timelineStepMax, recommended: 5 },
+  },
+  "alternating-opposite": {
+    id: "alternating-opposite",
+    label: "Alternating + opposite content",
+    description: "Zigzag layout with secondary content on the opposite side of the axis.",
+    orientation: "vertical",
+    surface: "plain",
+    visibleFields: new Set<TimelineFieldKey>([
+      ...sharedStepFields,
+      "connector",
+      "axisPosition",
+      "oppositeContent",
+    ]),
+    allowedAxisPositions: ["alternate", "alternate-reverse"],
+    steps: { min: timelineStepMin, max: timelineStepMax, recommended: 5 },
+  },
+  cards: {
+    id: "cards",
+    label: "Cards",
+    description: "Standalone cards in a responsive grid with a dot per card.",
+    orientation: "vertical",
+    surface: "cards",
+    visibleFields: new Set<TimelineFieldKey>(sharedStepFields),
+    allowedAxisPositions: [],
+    steps: { min: timelineStepMin, max: timelineStepMax, recommended: 6 },
+  },
+  compact: {
+    id: "compact",
+    label: "Compact / horizontal",
+    description: "Minimal horizontal process strip for short, sequential steps.",
+    orientation: "horizontal",
+    surface: "plain",
+    visibleFields: new Set<TimelineFieldKey>([
+      "dotVariant",
+      "dotTone",
+      "dotSize",
+      "dotIcon",
+      "connector",
+      "stepStatus",
+      "stepCta",
+      "typography",
+      "spacing",
+      "background",
+      "header",
+    ]),
+    allowedAxisPositions: [],
+    steps: { min: timelineStepMin, max: timelineStepMax, recommended: 4 },
+  },
+};
+
+export function resolveTimelineCapability(variant: string): TimelineVariantCapability {
+  return (
+    timelineVariantCapabilities[variant as TimelineVariantId] ??
+    timelineVariantCapabilities["vertical-right"]
+  );
+}
 
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
@@ -98,93 +380,91 @@ const widgetHrefOptions = {
   allowHttp: true,
 } as const;
 
-const timelineOrientationOptions = ["horizontal", "vertical"] as const;
-const timelineAlignOptions = ["start", "center", "end"] as const;
-const timelineLabelPositionOptions = ["top", "bottom"] as const;
-const timelineSpacingOptions = ["none", "sm", "md", "lg", "xl"] as const;
-const timelineGuideStyleOptions = ["solid", "dashed"] as const;
-const timelineLineStyleOptions = ["solid", "dashed"] as const;
-const timelineMarkerSizeOptions = ["sm", "md", "lg"] as const;
-const timelineThicknessOptions = ["1", "2", "3", "4"] as const;
-const timelineTitleSizeOptions = ["none", "sm", "base", "lg", "xl"] as const;
-const timelineDescriptionSizeOptions = ["none", "xs", "sm", "base", "lg"] as const;
-const timelineStatusOptions = ["upcoming", "current", "complete"] as const;
-const timelinePaddingOptions = ["sm", "md", "lg"] as const;
-const timelineSectionSpacingOptions = ["none", "sm", "md", "lg"] as const;
-const timelineMaxWidthOptions = ["none", "4xl", "5xl", "6xl", "7xl", "full"] as const;
-const timelineTitleWeightOptions = ["normal", "medium", "semibold", "bold"] as const;
-const timelineMarkerDisplayOptions = ["dot", "number", "icon"] as const;
-
-const spacingClassMap = {
+const gapClassMap: Record<TimelineSpacing, string> = {
   none: "gap-0",
   sm: "gap-3",
   md: "gap-5",
   lg: "gap-7",
   xl: "gap-9",
-} as const;
+};
 
-const paddingClassMap = {
+const compactConnectorWidthMap: Record<TimelineSpacing, string> = {
+  none: "0.75rem",
+  sm: "1rem",
+  md: "1.5rem",
+  lg: "2rem",
+  xl: "2.5rem",
+};
+
+const paddingClassMap: Record<TimelinePadding, string> = {
   sm: "px-4 py-6",
   md: "px-4 py-8",
   lg: "px-6 py-10",
-} as const;
+};
 
-const sectionSpacingClassMap = {
+const sectionSpacingClassMap: Record<TimelineSectionSpacing, string> = {
   none: "my-0",
   sm: "my-4",
   md: "my-8",
   lg: "my-12",
-} as const;
+};
 
-const maxWidthClassMap = {
+const maxWidthClassMap: Record<TimelineMaxWidth, string> = {
   none: "max-w-none",
   "4xl": "max-w-4xl",
   "5xl": "max-w-5xl",
   "6xl": "max-w-6xl",
   "7xl": "max-w-7xl",
   full: "max-w-full",
-} as const;
+};
 
-const markerDotSizeClassMap = {
+const dotPlainSizeMap: Record<TimelineDotSize, string> = {
   sm: "h-2.5 w-2.5",
   md: "h-3.5 w-3.5",
   lg: "h-5 w-5",
-} as const;
+};
 
-const markerFilledSizeClassMap = {
+const dotIconWrapperSizeMap: Record<TimelineDotSize, string> = {
   sm: "h-6 w-6",
   md: "h-8 w-8",
   lg: "h-10 w-10",
-} as const;
+};
 
-const markerContentSizeClassMap = {
-  sm: "text-[10px]",
-  md: "text-xs",
-  lg: "text-sm",
-} as const;
+const dotIconSvgSizeMap: Record<TimelineDotSize, string> = {
+  sm: "h-3.5 w-3.5",
+  md: "h-4 w-4",
+  lg: "h-5 w-5",
+};
 
-const titleSizeClassMap = {
+const titleSizeClassMap: Record<TimelineTitleSize, string> = {
   none: "",
   sm: "text-sm",
   base: "text-base",
   lg: "text-lg",
   xl: "text-xl",
-} as const;
+};
 
-const descriptionSizeClassMap = {
+const descriptionSizeClassMap: Record<TimelineDescriptionSize, string | undefined> = {
   none: undefined,
   xs: "text-xs",
   sm: "text-sm",
   base: "text-base",
   lg: "text-lg",
-} as const;
+};
 
-const titleWeightClassMap = {
+const titleWeightClassMap: Record<TimelineTitleWeight, string> = {
   normal: "font-normal",
   medium: "font-medium",
   semibold: "font-semibold",
   bold: "font-bold",
-} as const;
+};
+
+const thicknessValueMap: Record<TimelineThickness, string> = {
+  "1": "1px",
+  "2": "2px",
+  "3": "3px",
+  "4": "4px",
+};
 
 const timelineStatusLabelMap: Record<TimelineStatus, string> = {
   upcoming: "Upcoming",
@@ -193,62 +473,35 @@ const timelineStatusLabelMap: Record<TimelineStatus, string> = {
 };
 
 const timelineStatusClassMap: Record<TimelineStatus, string> = {
-  upcoming: "border-border/70 bg-muted/50 text-[var(--color-text)]/75",
+  upcoming: "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)]/70",
   current: "border-transparent bg-[var(--color-primary)]/15 text-[var(--color-primary)]",
-  complete: "border-transparent bg-emerald-500/15 text-emerald-700",
+  complete: "border-transparent bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
 };
-
-const textAlignClassMap = {
-  start: "text-left",
-  center: "text-center",
-  end: "text-right",
-} as const;
-
-const itemAlignClassMap = {
-  start: "items-start",
-  center: "items-center",
-  end: "items-end",
-} as const;
-
-const justifyClassMap = {
-  start: "justify-start",
-  center: "justify-center",
-  end: "justify-end",
-} as const;
-
-const thicknessValueMap = {
-  "1": "1px",
-  "2": "2px",
-  "3": "3px",
-  "4": "4px",
-} as const;
-
-const connectorWidthMap = {
-  none: "1rem",
-  sm: "2rem",
-  md: "3rem",
-  lg: "4rem",
-  xl: "5rem",
-} as const;
-
-const compactConnectorWidthMap = {
-  none: "0.75rem",
-  sm: "1rem",
-  md: "1.5rem",
-  lg: "2rem",
-  xl: "2.5rem",
-} as const;
 
 const isEnumValue = <T extends string>(value: unknown, options: readonly T[]): value is T =>
   typeof value === "string" && options.includes(value as T);
 
+const enumOr = <T extends string>(value: unknown, options: readonly T[], fallback: T): T =>
+  isEnumValue(value, options) ? value : fallback;
+
 const resolveTrimmedOptionalString = (value: unknown) =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 
-const resolveTimelineIcon = (value: unknown) => {
-  const trimmed = resolveTrimmedOptionalString(value);
-  return trimmed ? trimmed.slice(0, 16) : undefined;
+// Accept any kebab-case icon name (validated by shape, not by membership, so the full
+// lucide set need not be loaded to persist a choice). Unknown names render as a plain
+// dot via resolveLucideIcon's fallback.
+const timelineIconNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const resolveTimelineDotIconValue = (value: unknown): TimelineDotIcon | undefined => {
+  if (value === "none") return "none";
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.length > 0 && trimmed.length <= 64 && timelineIconNamePattern.test(trimmed)
+    ? trimmed
+    : undefined;
 };
+
+const resolveRenderableDotIcon = (value: TimelineDotIcon | undefined): string | undefined =>
+  value && value !== "none" ? value : undefined;
 
 const createStepId = (index: number) => `step-${index + 1}`;
 
@@ -291,9 +544,6 @@ export const timelineSchema = {
         description: { type: "string" },
       },
     },
-    mode: {
-      enum: ["process", "axis", "chronology", "alternating"],
-    },
     steps: {
       type: "array",
       minItems: timelineStepMin,
@@ -306,14 +556,13 @@ export const timelineSchema = {
           id: { type: "string" },
           title: { type: "string" },
           description: { type: "string" },
-          icon: { type: "string" },
-          accent: { type: "string" },
-          date: { type: "string" },
-          dateLabel: { type: "string" },
+          oppositeContent: { type: "string" },
+          oppositeDate: { type: "string" },
           status: { enum: [...timelineStatusOptions] },
           markerIcon: { type: "string" },
           markerIconColor: { type: "string" },
-          markerBackgroundColor: { type: "string" },
+          dotVariant: { enum: [...timelineDotVariantOptions] },
+          dotTone: { enum: [...timelineDotToneOptions] },
           cta: {
             type: "object",
             additionalProperties: false,
@@ -334,42 +583,49 @@ export const timelineSchema = {
         },
       },
     },
-    layout: {
+    axis: {
       type: "object",
       additionalProperties: false,
       properties: {
-        orientation: { enum: [...timelineOrientationOptions] },
-        align: { enum: [...timelineAlignOptions] },
-        spacing: { enum: [...timelineSpacingOptions] },
-        labelPosition: { enum: [...timelineLabelPositionOptions] },
+        position: { enum: [...timelineAxisPositionOptions] },
+      },
+    },
+    dot: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        variant: { enum: [...timelineDotVariantOptions] },
+        tone: { enum: [...timelineDotToneOptions] },
+        size: { enum: [...timelineDotSizeOptions] },
+        icon: { type: "string" },
+      },
+    },
+    connector: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        show: { type: "boolean" },
+        style: { enum: [...timelineConnectorStyleOptions] },
+        thickness: { enum: [...timelineThicknessOptions] },
+      },
+    },
+    typography: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        titleSize: { enum: [...timelineTitleSizeOptions] },
+        titleWeight: { enum: [...timelineTitleWeightOptions] },
+        descriptionSize: { enum: [...timelineDescriptionSizeOptions] },
+      },
+    },
+    spacing: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        gap: { enum: [...timelineSpacingOptions] },
         padding: { enum: [...timelinePaddingOptions] },
         sectionSpacing: { enum: [...timelineSectionSpacingOptions] },
         maxWidth: { enum: [...timelineMaxWidthOptions] },
-      },
-    },
-    guides: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        enabled: { type: "boolean" },
-        style: { enum: [...timelineGuideStyleOptions] },
-      },
-    },
-    style: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        lineStyle: { enum: [...timelineLineStyleOptions] },
-        thickness: { enum: [...timelineThicknessOptions] },
-        markerSize: { enum: [...timelineMarkerSizeOptions] },
-        markerDisplay: { enum: [...timelineMarkerDisplayOptions] },
-        lineColor: { type: "string" },
-        markerColor: { type: "string" },
-        titleColor: { type: "string" },
-        descriptionColor: { type: "string" },
-        titleSize: { enum: [...timelineTitleSizeOptions] },
-        descriptionSize: { enum: [...timelineDescriptionSizeOptions] },
-        titleWeight: { enum: [...timelineTitleWeightOptions] },
       },
     },
     background: {
@@ -402,7 +658,7 @@ export function normalizeTimelineSteps(
   const usedIds = new Set<string>();
 
   for (let index = 0; index < targetCount; index += 1) {
-    const base = source[index] ?? {};
+    const base = source[index] ?? ({} as TimelineStep);
     let id =
       typeof base.id === "string" && base.id.trim().length > 0
         ? base.id.trim()
@@ -425,14 +681,15 @@ export function normalizeTimelineSteps(
       id,
       title,
       description: resolveTrimmedOptionalString(base.description),
-      icon: resolveTimelineIcon(base.icon),
-      accent: resolveTrimmedOptionalString(base.accent),
-      date: resolveTrimmedOptionalString(base.date),
-      dateLabel: resolveTrimmedOptionalString(base.dateLabel),
+      oppositeContent: resolveTrimmedOptionalString(base.oppositeContent),
+      oppositeDate: resolveTrimmedOptionalString(base.oppositeDate),
       status: isEnumValue(base.status, timelineStatusOptions) ? base.status : undefined,
-      markerIcon: resolveTimelineIcon(base.markerIcon),
+      markerIcon: resolveTimelineDotIconValue(base.markerIcon),
       markerIconColor: resolveTrimmedOptionalString(base.markerIconColor),
-      markerBackgroundColor: resolveTrimmedOptionalString(base.markerBackgroundColor),
+      dotVariant: isEnumValue(base.dotVariant, timelineDotVariantOptions)
+        ? base.dotVariant
+        : undefined,
+      dotTone: isEnumValue(base.dotTone, timelineDotToneOptions) ? base.dotTone : undefined,
       cta: normalizeTimelineStepCta(base.cta),
       link: normalizeTimelineStepLink(base.link),
     });
@@ -442,353 +699,112 @@ export function normalizeTimelineSteps(
 }
 
 export const timelineDefaults: TimelineData = {
-  mode: "axis",
   steps: normalizeTimelineSteps([
     { id: "step-1", title: "Discovery", description: "Define goals and context." },
     { id: "step-2", title: "Planning", description: "Align scope and milestones." },
     { id: "step-3", title: "Build", description: "Deliver and iterate." },
   ]),
-  layout: {
-    orientation: "horizontal",
-    align: "center",
-    spacing: "md",
-    labelPosition: "top",
-    padding: "md",
-    sectionSpacing: "none",
-    maxWidth: "6xl",
-  },
-  guides: { enabled: true, style: "dashed" },
-  style: {
-    lineStyle: "solid",
-    thickness: "2",
-    markerSize: "md",
-    markerDisplay: "dot",
-    titleSize: "base",
-    descriptionSize: "xs",
-    titleWeight: "semibold",
-  },
+  axis: { position: "right" },
+  dot: { variant: "filled", tone: "primary", size: "md", icon: "none" },
+  connector: { show: true, style: "solid", thickness: "2" },
+  typography: { titleSize: "base", titleWeight: "semibold", descriptionSize: "sm" },
+  spacing: { gap: "md", padding: "md", sectionSpacing: "none", maxWidth: "5xl" },
   background: { color: "transparent" },
 };
 
-export const timelineEditorContract: WidgetEditorContract = {
-  version: 2,
-  sections: [
-    {
-      mode: "wizard",
-      id: "timeline.wizard.starter-steps",
-      title: "Starter steps",
-      role: "setup",
-      writablePaths: [],
-      readOnlyPaths: [
-        "variant",
-        "header.title",
-        "header.description",
-        "steps.count",
-        "steps.title",
-        "steps.description",
-      ],
-    },
-    {
-      mode: "visual",
-      id: "timeline.mode-layout",
-      title: "Variant and timeline structure",
-      role: "visual",
-      writablePaths: [
-        "variant",
-        "mode",
-        "steps.count",
-        "layout.orientation",
-        "layout.align",
-        "layout.labelPosition",
-      ],
-    },
-    {
-      mode: "visual",
-      id: "timeline.items-dates",
-      title: "Steps content and order",
-      role: "content",
-      writablePaths: [
-        "steps.title",
-        "steps.description",
-        "steps.date",
-        "steps.dateLabel",
-        "steps.status",
-        "steps.icon",
-        "steps.cta.label",
-        "steps.cta.href",
-        "steps.link.label",
-        "steps.link.href",
-      ],
-    },
-    {
-      mode: "visual",
-      id: "timeline.axis-markers",
-      title: "Guides and axis line",
-      role: "visual",
-      writablePaths: ["guides.enabled", "guides.style", "style.lineStyle", "style.thickness"],
-    },
-    {
-      mode: "visual",
-      id: "timeline.markers-accents",
-      title: "Markers and accents",
-      role: "visual",
-      writablePaths: [
-        "style.markerSize",
-        "style.markerDisplay",
-        "style.markerColor",
-        "steps.accent",
-        "steps.markerIcon",
-        "steps.markerBackgroundColor",
-        "steps.markerIconColor",
-      ],
-    },
-    {
-      mode: "visual",
-      id: "timeline.colors",
-      title: "Colors and background",
-      role: "visual",
-      writablePaths: [
-        "style.lineColor",
-        "style.titleColor",
-        "style.descriptionColor",
-        "background.color",
-      ],
-    },
-    {
-      mode: "visual",
-      id: "timeline.typography-spacing",
-      title: "Typography and spacing",
-      role: "visual",
-      writablePaths: [
-        "header.title",
-        "header.description",
-        "style.titleSize",
-        "style.descriptionSize",
-        "style.titleWeight",
-        "layout.spacing",
-        "layout.padding",
-        "layout.sectionSpacing",
-        "layout.maxWidth",
-      ],
-    },
-    {
-      mode: "advanced",
-      id: "timeline.runtime-summary",
-      title: "Runtime summary",
-      role: "diagnostics",
-      writablePaths: [],
-      readOnlyPaths: ["variant", "mode", "steps"],
-    },
-    {
-      mode: "advanced",
-      id: "timeline.layout-diagnostics",
-      title: "Layout diagnostics",
-      role: "diagnostics",
-      writablePaths: [],
-      readOnlyPaths: ["layout", "guides", "style", "background"],
-    },
-    {
-      mode: "advanced",
-      id: "timeline.data-normalization",
-      title: "Data normalization",
-      role: "summary",
-      writablePaths: [],
-      readOnlyPaths: ["editorContract", "steps"],
-    },
-  ],
-};
-
-export const resolveTimelineVariant = (variant: string): TimelineVariantId => {
-  if (variant === "cards" || variant === "compact") return variant;
-  return "milestones";
-};
-
-export const resolveTimelineMode = (mode: TimelineData["mode"], variant: string): TimelineMode => {
-  if (mode === "process" || mode === "axis" || mode === "chronology" || mode === "alternating") {
-    return mode;
+function coerceAxisPosition(
+  value: unknown,
+  capability: TimelineVariantCapability
+): TimelineAxisPosition {
+  if (capability.fixedAxisPosition) return capability.fixedAxisPosition;
+  const allowed = capability.allowedAxisPositions;
+  if (allowed.length === 0) return "left";
+  if (isEnumValue(value, timelineAxisPositionOptions) && allowed.includes(value)) {
+    return value;
   }
-  const resolvedVariant = resolveTimelineVariant(variant);
-  if (resolvedVariant === "cards") return "chronology";
-  if (resolvedVariant === "compact") return "process";
-  return "axis";
-};
+  return allowed[0]!;
+}
 
-export function normalizeTimelineData(data: TimelineData, variant = "milestones"): TimelineData {
-  const normalizedSteps = normalizeTimelineSteps(data.steps);
-  const layoutDefaults = timelineDefaults.layout ?? {};
-  const styleDefaults = timelineDefaults.style ?? {};
-  const guidesDefaults = timelineDefaults.guides ?? {};
+export function normalizeTimelineData(
+  data: TimelineData,
+  variant = "vertical-right"
+): TimelineData {
+  const capability = resolveTimelineCapability(variant);
+  const steps = normalizeTimelineSteps(data.steps);
+  const dotDefaults = timelineDefaults.dot!;
+  const connectorDefaults = timelineDefaults.connector!;
+  const typographyDefaults = timelineDefaults.typography!;
+  const spacingDefaults = timelineDefaults.spacing!;
 
   return {
     header: compactObject({
       title: resolveTrimmedOptionalString(data.header?.title),
       description: resolveTrimmedOptionalString(data.header?.description),
     }) as TimelineData["header"],
-    mode: resolveTimelineMode(data.mode, variant),
-    steps: normalizedSteps,
-    layout: {
-      orientation: isEnumValue(data.layout?.orientation, timelineOrientationOptions)
-        ? data.layout?.orientation
-        : layoutDefaults.orientation,
-      align: isEnumValue(data.layout?.align, timelineAlignOptions)
-        ? data.layout?.align
-        : layoutDefaults.align,
-      spacing: isEnumValue(data.layout?.spacing, timelineSpacingOptions)
-        ? data.layout?.spacing
-        : layoutDefaults.spacing,
-      labelPosition: isEnumValue(data.layout?.labelPosition, timelineLabelPositionOptions)
-        ? data.layout?.labelPosition
-        : layoutDefaults.labelPosition,
-      padding: isEnumValue(data.layout?.padding, timelinePaddingOptions)
-        ? data.layout?.padding
-        : layoutDefaults.padding,
-      sectionSpacing: isEnumValue(data.layout?.sectionSpacing, timelineSectionSpacingOptions)
-        ? data.layout?.sectionSpacing
-        : layoutDefaults.sectionSpacing,
-      maxWidth: isEnumValue(data.layout?.maxWidth, timelineMaxWidthOptions)
-        ? data.layout?.maxWidth
-        : layoutDefaults.maxWidth,
+    steps,
+    axis: { position: coerceAxisPosition(data.axis?.position, capability) },
+    dot: {
+      variant: enumOr(data.dot?.variant, timelineDotVariantOptions, dotDefaults.variant!),
+      tone: enumOr(data.dot?.tone, timelineDotToneOptions, dotDefaults.tone!),
+      size: enumOr(data.dot?.size, timelineDotSizeOptions, dotDefaults.size!),
+      icon: resolveTimelineDotIconValue(data.dot?.icon) ?? dotDefaults.icon!,
     },
-    guides: {
-      enabled:
-        typeof data.guides?.enabled === "boolean" ? data.guides.enabled : guidesDefaults.enabled,
-      style: isEnumValue(data.guides?.style, timelineGuideStyleOptions)
-        ? data.guides?.style
-        : guidesDefaults.style,
+    connector: {
+      show:
+        typeof data.connector?.show === "boolean" ? data.connector.show : connectorDefaults.show!,
+      style: enumOr(data.connector?.style, timelineConnectorStyleOptions, connectorDefaults.style!),
+      thickness: enumOr(
+        data.connector?.thickness,
+        timelineThicknessOptions,
+        connectorDefaults.thickness!
+      ),
     },
-    style: {
-      lineStyle: isEnumValue(data.style?.lineStyle, timelineLineStyleOptions)
-        ? data.style?.lineStyle
-        : styleDefaults.lineStyle,
-      thickness: isEnumValue(data.style?.thickness, timelineThicknessOptions)
-        ? data.style?.thickness
-        : styleDefaults.thickness,
-      markerSize: isEnumValue(data.style?.markerSize, timelineMarkerSizeOptions)
-        ? data.style?.markerSize
-        : styleDefaults.markerSize,
-      markerDisplay: isEnumValue(data.style?.markerDisplay, timelineMarkerDisplayOptions)
-        ? data.style?.markerDisplay
-        : styleDefaults.markerDisplay,
-      lineColor: resolveTrimmedOptionalString(data.style?.lineColor),
-      markerColor: resolveTrimmedOptionalString(data.style?.markerColor),
-      titleColor: resolveTrimmedOptionalString(data.style?.titleColor),
-      descriptionColor: resolveTrimmedOptionalString(data.style?.descriptionColor),
-      titleSize: isEnumValue(data.style?.titleSize, timelineTitleSizeOptions)
-        ? data.style?.titleSize
-        : styleDefaults.titleSize,
-      descriptionSize: isEnumValue(data.style?.descriptionSize, timelineDescriptionSizeOptions)
-        ? data.style?.descriptionSize
-        : styleDefaults.descriptionSize,
-      titleWeight: isEnumValue(data.style?.titleWeight, timelineTitleWeightOptions)
-        ? data.style?.titleWeight
-        : styleDefaults.titleWeight,
+    typography: {
+      titleSize: enumOr(
+        data.typography?.titleSize,
+        timelineTitleSizeOptions,
+        typographyDefaults.titleSize!
+      ),
+      titleWeight: enumOr(
+        data.typography?.titleWeight,
+        timelineTitleWeightOptions,
+        typographyDefaults.titleWeight!
+      ),
+      descriptionSize: enumOr(
+        data.typography?.descriptionSize,
+        timelineDescriptionSizeOptions,
+        typographyDefaults.descriptionSize!
+      ),
+    },
+    spacing: {
+      gap: enumOr(data.spacing?.gap, timelineSpacingOptions, spacingDefaults.gap!),
+      padding: enumOr(data.spacing?.padding, timelinePaddingOptions, spacingDefaults.padding!),
+      sectionSpacing: enumOr(
+        data.spacing?.sectionSpacing,
+        timelineSectionSpacingOptions,
+        spacingDefaults.sectionSpacing!
+      ),
+      maxWidth: enumOr(data.spacing?.maxWidth, timelineMaxWidthOptions, spacingDefaults.maxWidth!),
     },
     background:
       data.background !== undefined
-        ? compactObject({
-            color: resolveTrimmedOptionalString(data.background?.color) ?? data.background?.color,
-          })
+        ? (compactObject({
+            color: resolveClearableCssColorValue(data.background?.color) ?? data.background?.color,
+          }) ?? {})
         : timelineDefaults.background,
   };
 }
 
-export const resolveTimelineLayout = (
-  layout: TimelineData["layout"]
-): Required<NonNullable<TimelineData["layout"]>> => ({
-  orientation: isEnumValue(layout?.orientation, timelineOrientationOptions)
-    ? layout.orientation
-    : "horizontal",
-  align: isEnumValue(layout?.align, timelineAlignOptions) ? layout.align : "center",
-  spacing: isEnumValue(layout?.spacing, timelineSpacingOptions) ? layout.spacing : "md",
-  labelPosition: isEnumValue(layout?.labelPosition, timelineLabelPositionOptions)
-    ? layout.labelPosition
-    : "top",
-  padding: isEnumValue(layout?.padding, timelinePaddingOptions) ? layout.padding : "md",
-  sectionSpacing: isEnumValue(layout?.sectionSpacing, timelineSectionSpacingOptions)
-    ? layout.sectionSpacing
-    : "none",
-  maxWidth: isEnumValue(layout?.maxWidth, timelineMaxWidthOptions) ? layout.maxWidth : "6xl",
-});
+type ResolvedTimelineDot = Required<NonNullable<TimelineData["dot"]>>;
+type ResolvedTimelineConnector = Required<NonNullable<TimelineData["connector"]>>;
+type ResolvedTimelineTypography = Required<NonNullable<TimelineData["typography"]>>;
+type ResolvedTimelineSpacing = Required<NonNullable<TimelineData["spacing"]>>;
 
-export function resolveTimelineMaxWidthDiagnostics(
-  layout: TimelineData["layout"],
-  stepCount: number
-): {
-  requested: TimelineMaxWidth;
-  effective: TimelineMaxWidth;
-  narrowed: boolean;
-} {
-  const requested = resolveTimelineLayout(layout).maxWidth;
-  const effective = stepCount <= 3 && requested === "6xl" ? "5xl" : requested;
-
-  return {
-    requested,
-    effective,
-    narrowed: requested !== effective,
-  };
-}
-
-export const resolveTimelineGuides = (
-  guides: TimelineData["guides"]
-): Required<NonNullable<TimelineData["guides"]>> => ({
-  enabled: typeof guides?.enabled === "boolean" ? guides.enabled : true,
-  style: isEnumValue(guides?.style, timelineGuideStyleOptions) ? guides.style : "dashed",
-});
-
-export const resolveTimelineStyle = (
-  style: TimelineData["style"]
-): Required<
-  Pick<
-    NonNullable<TimelineData["style"]>,
-    "lineStyle" | "thickness" | "markerSize" | "markerDisplay" | "titleWeight"
-  >
-> &
-  Pick<
-    NonNullable<TimelineData["style"]>,
-    | "lineColor"
-    | "markerColor"
-    | "titleColor"
-    | "descriptionColor"
-    | "titleSize"
-    | "descriptionSize"
-  > => ({
-  lineStyle: isEnumValue(style?.lineStyle, timelineLineStyleOptions) ? style.lineStyle : "solid",
-  thickness: isEnumValue(style?.thickness, timelineThicknessOptions) ? style.thickness : "2",
-  markerSize: isEnumValue(style?.markerSize, timelineMarkerSizeOptions) ? style.markerSize : "md",
-  markerDisplay: isEnumValue(style?.markerDisplay, timelineMarkerDisplayOptions)
-    ? style.markerDisplay
-    : "dot",
-  lineColor: resolveTrimmedOptionalString(style?.lineColor),
-  markerColor: resolveTrimmedOptionalString(style?.markerColor),
-  titleColor: resolveTrimmedOptionalString(style?.titleColor),
-  descriptionColor: resolveTrimmedOptionalString(style?.descriptionColor),
-  titleSize: isEnumValue(style?.titleSize, timelineTitleSizeOptions) ? style.titleSize : "base",
-  descriptionSize: isEnumValue(style?.descriptionSize, timelineDescriptionSizeOptions)
-    ? style.descriptionSize
-    : "xs",
-  titleWeight: isEnumValue(style?.titleWeight, timelineTitleWeightOptions)
-    ? style.titleWeight
-    : "semibold",
-});
-
-export function resolveTimelineStepMarkerDisplay(
-  step: Pick<TimelineStep, "markerIcon" | "icon">,
-  markerDisplay: TimelineMarkerDisplay
-): TimelineMarkerDisplay {
-  if (markerDisplay === "icon" && !resolveTimelineIcon(step.markerIcon ?? step.icon)) {
-    return "dot";
-  }
-
-  return markerDisplay;
-}
-
-export function countTimelineIconMarkerFallbacks(
-  steps: Array<Pick<TimelineStep, "markerIcon" | "icon">>,
-  markerDisplay: TimelineMarkerDisplay
-) {
-  if (markerDisplay !== "icon") return 0;
-  return steps.filter((step) => resolveTimelineStepMarkerDisplay(step, markerDisplay) === "dot")
-    .length;
+function resolveContentSide(position: TimelineAxisPosition, index: number): "left" | "right" {
+  if (position === "left") return "left";
+  if (position === "right") return "right";
+  if (position === "alternate") return index % 2 === 0 ? "right" : "left";
+  return index % 2 === 0 ? "left" : "right";
 }
 
 type ResolvedTimelineLink = {
@@ -809,141 +825,163 @@ function resolveStepLink(step: TimelineStep): ResolvedTimelineLink | undefined {
   };
 }
 
-function renderDateNode(step: TimelineStep) {
-  if (step.date) {
-    return <time dateTime={step.date}>{step.dateLabel ?? step.date}</time>;
+function TimelineStepSurface({
+  step,
+  className,
+  children,
+}: {
+  step: TimelineStep;
+  className: string;
+  children: ReactNode;
+}) {
+  const link = resolveStepLink(step);
+  if (!link) return <div className={className}>{children}</div>;
+  return (
+    <a
+      className={joinClasses(
+        className,
+        "transition-colors hover:border-[var(--color-primary)]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/40"
+      )}
+      href={link.href}
+      rel={link.rel}
+      aria-label={link.ariaLabel}
+    >
+      {children}
+    </a>
+  );
+}
+
+function renderOppositeNode(step: TimelineStep) {
+  if (step.oppositeDate) {
+    return <time dateTime={step.oppositeDate}>{step.oppositeContent ?? step.oppositeDate}</time>;
   }
-  if (step.dateLabel) {
-    return <span>{step.dateLabel}</span>;
+  if (step.oppositeContent) {
+    return <span>{step.oppositeContent}</span>;
   }
   return null;
 }
 
-function renderMarker(
-  step: TimelineStep,
-  index: number,
-  style: ReturnType<typeof resolveTimelineStyle>,
-  lineThickness: string
-) {
-  const markerAccent =
-    step.markerBackgroundColor ?? step.accent ?? style.markerColor ?? "var(--color-primary)";
-  const markerDisplay = resolveTimelineStepMarkerDisplay(step, style.markerDisplay);
+function renderTimelineDot(step: TimelineStep, dot: ResolvedTimelineDot) {
+  const tone = step.dotTone ?? dot.tone;
+  const variant = step.dotVariant ?? dot.variant;
+  const color = dotToneToken[tone];
+  const iconName = resolveRenderableDotIcon(step.markerIcon) ?? resolveRenderableDotIcon(dot.icon);
+  const IconComponent = iconName ? resolveLucideIcon(iconName) : undefined;
+  const display = IconComponent ? "icon" : "dot";
+  const wrapperSizeClass = IconComponent
+    ? dotIconWrapperSizeMap[dot.size]
+    : dotPlainSizeMap[dot.size];
+  const iconColor =
+    variant === "filled"
+      ? (step.markerIconColor ?? "var(--color-bg)")
+      : (step.markerIconColor ?? color);
 
-  if (markerDisplay === "dot") {
-    return (
-      <span
-        data-timeline-marker-effective-display="dot"
-        data-timeline-marker-requested-display={style.markerDisplay}
-        className={joinClasses(
-          "inline-flex shrink-0 rounded-full border",
-          markerDotSizeClassMap[style.markerSize]
-        )}
-        style={{
-          backgroundColor: markerAccent,
-          borderColor: markerAccent,
-          borderWidth: lineThickness,
-          borderStyle: style.lineStyle,
-        }}
-      />
-    );
-  }
-
-  const markerText =
-    markerDisplay === "number" ? String(index + 1) : (step.markerIcon ?? step.icon ?? "");
-  const markerIconColor = step.markerIconColor ?? "var(--color-background)";
+  const style: CSSProperties = {
+    backgroundColor: variant === "filled" ? color : "transparent",
+    borderColor: color,
+    borderStyle: "solid",
+    borderWidth: variant === "outlined" ? "2px" : "1px",
+    color: iconColor,
+  };
 
   return (
     <span
-      data-timeline-marker-effective-display={markerDisplay}
-      data-timeline-marker-requested-display={style.markerDisplay}
+      aria-hidden="true"
+      data-timeline-dot-variant={variant}
+      data-timeline-dot-tone={tone}
+      data-timeline-dot-icon={iconName ?? "none"}
+      data-timeline-marker-effective-display={display}
       className={joinClasses(
-        "inline-flex shrink-0 items-center justify-center rounded-full border font-semibold leading-none",
-        markerFilledSizeClassMap[style.markerSize],
-        markerContentSizeClassMap[style.markerSize]
+        "inline-flex shrink-0 items-center justify-center rounded-full",
+        wrapperSizeClass
       )}
-      style={{
-        backgroundColor: markerAccent,
-        borderColor: markerAccent,
-        borderWidth: lineThickness,
-        borderStyle: style.lineStyle,
-        color: markerIconColor,
-      }}
+      style={style}
     >
-      <span aria-hidden="true">{markerText}</span>
+      {IconComponent ? (
+        <IconComponent aria-hidden="true" className={dotIconSvgSizeMap[dot.size]} />
+      ) : null}
     </span>
+  );
+}
+
+function renderVerticalConnector(connector: ResolvedTimelineConnector) {
+  return (
+    <span
+      aria-hidden="true"
+      className="mt-1 w-0 flex-1"
+      style={{
+        minHeight: "1.5rem",
+        borderLeftWidth: thicknessValueMap[connector.thickness],
+        borderLeftStyle: connector.style,
+        borderColor: "var(--color-border)",
+      }}
+    />
+  );
+}
+
+function renderHorizontalConnector(connector: ResolvedTimelineConnector, width: string) {
+  return (
+    <span
+      aria-hidden="true"
+      className="mx-1 block"
+      style={{
+        width,
+        borderTopWidth: thicknessValueMap[connector.thickness],
+        borderTopStyle: connector.style,
+        borderColor: "var(--color-border)",
+      }}
+    />
   );
 }
 
 function renderStepText({
   step,
   align,
-  titleColor,
-  descriptionColor,
-  titleSize,
-  descriptionSize,
-  titleWeight,
+  typography,
   compact = false,
-  showDateMeta = true,
 }: {
   step: TimelineStep;
-  align: TimelineAlign;
-  titleColor: string;
-  descriptionColor: string;
-  titleSize: TimelineTitleSize;
-  descriptionSize: TimelineDescriptionSize;
-  titleWeight: TimelineTitleWeight;
+  align: "start" | "end";
+  typography: ResolvedTimelineTypography;
   compact?: boolean;
-  showDateMeta?: boolean;
 }) {
-  const titleSizeClass =
-    titleSize === "none"
+  const alignClass = align === "end" ? "text-right" : "text-left";
+  const titleSizeClass = compact
+    ? "text-sm"
+    : typography.titleSize === "none"
       ? undefined
-      : compact
-        ? "text-sm"
-        : (titleSizeClassMap[titleSize] ?? "text-base");
-  const titleWeightClass = titleWeightClassMap[titleWeight] ?? "font-semibold";
+      : titleSizeClassMap[typography.titleSize];
+  const titleWeightClass = titleWeightClassMap[typography.titleWeight];
   const descriptionSizeClass =
-    descriptionSize === "none"
+    typography.descriptionSize === "none"
       ? undefined
-      : (descriptionSizeClassMap[descriptionSize] ?? "text-xs");
+      : descriptionSizeClassMap[typography.descriptionSize];
 
   return (
-    <div className={joinClasses("space-y-1", textAlignClassMap[align] ?? "text-center")}>
-      {step.status || (showDateMeta && (step.date || step.dateLabel)) ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {step.status ? (
-            <span
-              className={joinClasses(
-                "inline-flex items-center rounded-full border px-2 py-0.5 font-medium",
-                timelineStatusClassMap[step.status]
-              )}
-              data-timeline-status={step.status}
-            >
-              {timelineStatusLabelMap[step.status]}
-            </span>
-          ) : null}
-          {showDateMeta ? renderDateNode(step) : null}
+    <div className={joinClasses("space-y-1", alignClass)}>
+      {step.status ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span
+            className={joinClasses(
+              "inline-flex items-center rounded-full border px-2 py-0.5 font-medium",
+              timelineStatusClassMap[step.status]
+            )}
+            data-timeline-status={step.status}
+          >
+            {timelineStatusLabelMap[step.status]}
+          </span>
         </div>
       ) : null}
-      {titleSizeClass || step.icon ? (
-        <div className="flex items-center gap-2">
-          {step.icon ? (
-            <span className="text-sm leading-none" aria-hidden="true">
-              {step.icon}
-            </span>
-          ) : null}
-          {titleSizeClass ? (
-            <span
-              className={joinClasses(titleSizeClass, titleWeightClass)}
-              style={compactStyle({ color: titleColor })}
-            >
-              {step.title}
-            </span>
-          ) : null}
-        </div>
+      {titleSizeClass ? (
+        <span
+          className={joinClasses("block", titleSizeClass, titleWeightClass)}
+          style={{ color: "var(--color-text)" }}
+        >
+          {step.title}
+        </span>
       ) : null}
       {!compact && step.description ? (
-        <p className={descriptionSizeClass} style={compactStyle({ color: descriptionColor })}>
+        <p className={descriptionSizeClass} style={{ color: "var(--color-text)" }}>
           {step.description}
         </p>
       ) : null}
@@ -968,201 +1006,27 @@ function renderStepText({
   );
 }
 
-function TimelineStepSurface({
-  step,
-  className,
-  children,
-}: {
-  step: TimelineStep;
-  className: string;
-  children: ReactNode;
-}) {
-  const link = resolveStepLink(step);
-  if (!link) return <div className={className}>{children}</div>;
-  return (
-    <a
-      className={joinClasses(
-        className,
-        "transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-      )}
-      href={link.href}
-      rel={link.rel}
-      aria-label={link.ariaLabel}
-    >
-      {children}
-    </a>
-  );
-}
-
-function TimelineMilestonesLayout({
+function TimelineSingleSideLayout({
   steps,
-  layout,
-  guides,
-  style,
+  position,
+  dot,
+  connector,
+  typography,
+  gap,
   listLabel,
 }: {
   steps: TimelineStep[];
-  layout: Required<NonNullable<TimelineData["layout"]>>;
-  guides: Required<NonNullable<TimelineData["guides"]>>;
-  style: ReturnType<typeof resolveTimelineStyle>;
+  position: TimelineAxisPosition;
+  dot: ResolvedTimelineDot;
+  connector: ResolvedTimelineConnector;
+  typography: ResolvedTimelineTypography;
+  gap: TimelineSpacing;
   listLabel: string;
 }) {
-  const lineColor = style.lineColor ?? "var(--color-border)";
-  const titleColor = style.titleColor ?? "var(--color-text)";
-  const descriptionColor = style.descriptionColor ?? "var(--color-text)";
-  const lineThickness = thicknessValueMap[style.thickness] ?? "2px";
-  const connectorWidth = connectorWidthMap[layout.spacing] ?? "3rem";
-  const connectorStyle = {
-    backgroundColor: lineColor,
-    borderStyle: guides.style,
-  } satisfies CSSProperties;
-
-  if (layout.orientation === "vertical") {
-    return (
-      <ol
-        aria-label={listLabel}
-        className={joinClasses("flex flex-col", spacingClassMap[layout.spacing] ?? "gap-5")}
-      >
-        {steps.map((step, index) => {
-          const textNode = renderStepText({
-            step,
-            align: layout.align,
-            titleColor,
-            descriptionColor,
-            titleSize: style.titleSize ?? "base",
-            descriptionSize: style.descriptionSize ?? "xs",
-            titleWeight: style.titleWeight,
-          });
-
-          return (
-            <li
-              key={step.id ?? `${step.title}-${index}`}
-              aria-current={step.status === "current" ? "step" : undefined}
-              data-timeline-step={step.id ?? index}
-            >
-              <TimelineStepSurface
-                step={step}
-                className={joinClasses(
-                  "flex w-full gap-4 rounded-xl p-1",
-                  layout.labelPosition === "top" ? "flex-row-reverse" : "flex-row"
-                )}
-              >
-                <div className={joinClasses("min-w-0 flex-1", itemAlignClassMap[layout.align])}>
-                  {textNode}
-                </div>
-                <div className="flex flex-col items-center">
-                  {renderMarker(step, index, style, lineThickness)}
-                  {guides.enabled && index < steps.length - 1 ? (
-                    <span
-                      className="mt-1 h-8"
-                      style={{
-                        ...connectorStyle,
-                        width: lineThickness,
-                      }}
-                    />
-                  ) : null}
-                </div>
-              </TimelineStepSurface>
-            </li>
-          );
-        })}
-      </ol>
-    );
-  }
+  const side: "left" | "right" = position === "left" ? "left" : "right";
 
   return (
-    <div className="overflow-x-auto pb-1">
-      <ol
-        aria-label={listLabel}
-        className={joinClasses(
-          "flex min-w-full flex-nowrap",
-          justifyClassMap[layout.align] ?? "justify-center"
-        )}
-      >
-        {steps.map((step, index) => {
-          const textNode = renderStepText({
-            step,
-            align: layout.align,
-            titleColor,
-            descriptionColor,
-            titleSize: style.titleSize ?? "base",
-            descriptionSize: style.descriptionSize ?? "xs",
-            titleWeight: style.titleWeight,
-          });
-
-          return (
-            <li
-              key={step.id ?? `${step.title}-${index}`}
-              className={joinClasses("min-w-[11rem]", itemAlignClassMap[layout.align])}
-              style={{ marginRight: index < steps.length - 1 ? connectorWidth : undefined }}
-              aria-current={step.status === "current" ? "step" : undefined}
-              data-timeline-step={step.id ?? index}
-            >
-              <TimelineStepSurface step={step} className="block rounded-xl p-1">
-                {layout.labelPosition === "top" ? textNode : null}
-                <div
-                  className={joinClasses(
-                    "my-2 flex items-center",
-                    layout.align === "end"
-                      ? "justify-end"
-                      : layout.align === "center"
-                        ? "justify-center"
-                        : "justify-start"
-                  )}
-                >
-                  {renderMarker(step, index, style, lineThickness)}
-                  {guides.enabled && index < steps.length - 1 ? (
-                    <span
-                      className="ml-2 block min-w-4 flex-1"
-                      style={{
-                        ...connectorStyle,
-                        width: connectorWidth,
-                        height: lineThickness,
-                      }}
-                    />
-                  ) : null}
-                </div>
-                {layout.labelPosition === "bottom" ? textNode : null}
-              </TimelineStepSurface>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
-  );
-}
-
-function TimelineCardsLayout({
-  steps,
-  layout,
-  guides,
-  style,
-  listLabel,
-}: {
-  steps: TimelineStep[];
-  layout: Required<NonNullable<TimelineData["layout"]>>;
-  guides: Required<NonNullable<TimelineData["guides"]>>;
-  style: ReturnType<typeof resolveTimelineStyle>;
-  listLabel: string;
-}) {
-  const lineColor = style.lineColor ?? "var(--color-border)";
-  const titleColor = style.titleColor ?? "var(--color-text)";
-  const descriptionColor = style.descriptionColor ?? "var(--color-text)";
-  const lineThickness = thicknessValueMap[style.thickness] ?? "2px";
-
-  return (
-    <ol
-      aria-label={listLabel}
-      className={joinClasses(
-        "grid w-full",
-        spacingClassMap[layout.spacing] ?? "gap-5",
-        layout.orientation === "vertical"
-          ? "grid-cols-1"
-          : steps.length > 3
-            ? "grid-cols-1 md:grid-cols-2"
-            : "grid-cols-1 md:grid-cols-3"
-      )}
-    >
+    <ol aria-label={listLabel} className={joinClasses("flex flex-col", gapClassMap[gap])}>
       {steps.map((step, index) => (
         <li
           key={step.id ?? `${step.title}-${index}`}
@@ -1171,99 +1035,22 @@ function TimelineCardsLayout({
         >
           <TimelineStepSurface
             step={step}
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4"
-          >
-            <div className="flex items-start gap-3">
-              {renderMarker(step, index, style, lineThickness)}
-              <div className="min-w-0 flex-1">
-                {renderStepText({
-                  step,
-                  align: layout.align,
-                  titleColor,
-                  descriptionColor,
-                  titleSize: style.titleSize ?? "base",
-                  descriptionSize: style.descriptionSize ?? "xs",
-                  titleWeight: style.titleWeight,
-                })}
-              </div>
-            </div>
-            {guides.enabled ? (
-              <div
-                className="mt-3"
-                style={{
-                  borderTopStyle: style.lineStyle,
-                  borderTopWidth: lineThickness,
-                  borderTopColor: lineColor,
-                }}
-              />
-            ) : null}
-          </TimelineStepSurface>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function TimelineChronologyLayout({
-  steps,
-  layout,
-  guides,
-  style,
-  listLabel,
-}: {
-  steps: TimelineStep[];
-  layout: Required<NonNullable<TimelineData["layout"]>>;
-  guides: Required<NonNullable<TimelineData["guides"]>>;
-  style: ReturnType<typeof resolveTimelineStyle>;
-  listLabel: string;
-}) {
-  const lineColor = style.lineColor ?? "var(--color-border)";
-  const titleColor = style.titleColor ?? "var(--color-text)";
-  const descriptionColor = style.descriptionColor ?? "var(--color-text)";
-  const lineThickness = thicknessValueMap[style.thickness] ?? "2px";
-
-  return (
-    <ol
-      aria-label={listLabel}
-      className={joinClasses("flex flex-col", spacingClassMap[layout.spacing] ?? "gap-5")}
-    >
-      {steps.map((step, index) => (
-        <li
-          key={step.id ?? `${step.title}-${index}`}
-          className="grid gap-3 md:grid-cols-[minmax(0,clamp(8rem,24vw,14rem))_minmax(0,1fr)]"
-          aria-current={step.status === "current" ? "step" : undefined}
-          data-timeline-step={step.id ?? index}
-        >
-          <div className="break-words text-xs text-muted-foreground">
-            {renderDateNode(step) ?? "Timeline step"}
-          </div>
-          <TimelineStepSurface
-            step={step}
-            className="flex gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4"
+            className={joinClasses(
+              "flex gap-4 rounded-xl p-1",
+              side === "left" ? "flex-row-reverse" : "flex-row"
+            )}
           >
             <div className="flex flex-col items-center">
-              {renderMarker(step, index, style, lineThickness)}
-              {guides.enabled && index < steps.length - 1 ? (
-                <span
-                  className="mt-1 h-full min-h-8"
-                  style={{
-                    width: lineThickness,
-                    backgroundColor: lineColor,
-                    borderStyle: guides.style,
-                  }}
-                />
-              ) : null}
+              {renderTimelineDot(step, dot)}
+              {connector.show && index < steps.length - 1
+                ? renderVerticalConnector(connector)
+                : null}
             </div>
             <div className="min-w-0 flex-1">
               {renderStepText({
                 step,
-                align: layout.align,
-                titleColor,
-                descriptionColor,
-                titleSize: style.titleSize ?? "base",
-                descriptionSize: style.descriptionSize ?? "xs",
-                titleWeight: style.titleWeight,
-                showDateMeta: false,
+                align: side === "left" ? "end" : "start",
+                typography,
               })}
             </div>
           </TimelineStepSurface>
@@ -1275,79 +1062,68 @@ function TimelineChronologyLayout({
 
 function TimelineAlternatingLayout({
   steps,
-  layout,
-  guides,
-  style,
+  position,
+  dot,
+  connector,
+  typography,
+  gap,
   listLabel,
+  showOpposite,
 }: {
   steps: TimelineStep[];
-  layout: Required<NonNullable<TimelineData["layout"]>>;
-  guides: Required<NonNullable<TimelineData["guides"]>>;
-  style: ReturnType<typeof resolveTimelineStyle>;
+  position: TimelineAxisPosition;
+  dot: ResolvedTimelineDot;
+  connector: ResolvedTimelineConnector;
+  typography: ResolvedTimelineTypography;
+  gap: TimelineSpacing;
   listLabel: string;
+  showOpposite: boolean;
 }) {
-  const lineColor = style.lineColor ?? "var(--color-border)";
-  const titleColor = style.titleColor ?? "var(--color-text)";
-  const descriptionColor = style.descriptionColor ?? "var(--color-text)";
-  const lineThickness = thicknessValueMap[style.thickness] ?? "2px";
-
   return (
-    <ol
-      aria-label={listLabel}
-      className={joinClasses("flex flex-col", spacingClassMap[layout.spacing] ?? "gap-5")}
-    >
+    <ol aria-label={listLabel} className={joinClasses("flex flex-col", gapClassMap[gap])}>
       {steps.map((step, index) => {
-        const reverse = index % 2 === 1;
-
+        const side = resolveContentSide(position, index);
         return (
           <li
             key={step.id ?? `${step.title}-${index}`}
-            className="grid items-start gap-4 md:grid-cols-[1fr_auto_1fr]"
+            className="grid grid-cols-[auto_1fr] items-start gap-4 md:grid-cols-[1fr_auto_1fr]"
             aria-current={step.status === "current" ? "step" : undefined}
             data-timeline-step={step.id ?? index}
           >
             <TimelineStepSurface
               step={step}
               className={joinClasses(
-                "rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4",
-                reverse ? "md:col-start-3 md:text-left" : "md:col-start-1 md:text-right"
+                "col-start-2 rounded-xl p-1",
+                side === "right" ? "md:col-start-3 md:text-left" : "md:col-start-1 md:text-right"
               )}
             >
-              <div className="mb-3 text-xs text-muted-foreground md:hidden">
-                {renderDateNode(step)}
-              </div>
+              {showOpposite && (step.oppositeContent || step.oppositeDate) ? (
+                <div className="mb-2 text-xs text-[var(--color-text)]/70 md:hidden">
+                  {renderOppositeNode(step)}
+                </div>
+              ) : null}
               {renderStepText({
                 step,
-                align: reverse ? "start" : "end",
-                titleColor,
-                descriptionColor,
-                titleSize: style.titleSize ?? "base",
-                descriptionSize: style.descriptionSize ?? "xs",
-                titleWeight: style.titleWeight,
-                showDateMeta: false,
+                align: side === "right" ? "start" : "end",
+                typography,
               })}
             </TimelineStepSurface>
-            <div className="flex flex-col items-center md:col-start-2">
-              {renderMarker(step, index, style, lineThickness)}
-              {guides.enabled && index < steps.length - 1 ? (
-                <span
-                  className="mt-1 h-full min-h-10"
-                  style={{
-                    width: lineThickness,
-                    backgroundColor: lineColor,
-                    borderStyle: guides.style,
-                  }}
-                />
-              ) : null}
+            <div className="col-start-1 row-start-1 flex flex-col items-center md:col-start-2 md:row-start-auto">
+              {renderTimelineDot(step, dot)}
+              {connector.show && index < steps.length - 1
+                ? renderVerticalConnector(connector)
+                : null}
             </div>
-            <div
-              className={joinClasses(
-                "hidden break-words text-xs text-muted-foreground md:block",
-                reverse ? "md:col-start-1 md:text-right" : "md:col-start-3 md:text-left"
-              )}
-            >
-              {renderDateNode(step)}
-            </div>
+            {showOpposite ? (
+              <div
+                className={joinClasses(
+                  "hidden text-xs text-[var(--color-text)]/70 md:block",
+                  side === "right" ? "md:col-start-1 md:text-right" : "md:col-start-3 md:text-left"
+                )}
+              >
+                {renderOppositeNode(step)}
+              </div>
+            ) : null}
           </li>
         );
       })}
@@ -1355,187 +1131,186 @@ function TimelineAlternatingLayout({
   );
 }
 
-function TimelineCompactLayout({
+function TimelineCardsLayout({
   steps,
-  layout,
-  guides,
-  style,
+  dot,
+  typography,
+  gap,
   listLabel,
 }: {
   steps: TimelineStep[];
-  layout: Required<NonNullable<TimelineData["layout"]>>;
-  guides: Required<NonNullable<TimelineData["guides"]>>;
-  style: ReturnType<typeof resolveTimelineStyle>;
+  dot: ResolvedTimelineDot;
+  typography: ResolvedTimelineTypography;
+  gap: TimelineSpacing;
   listLabel: string;
 }) {
-  const lineColor = style.lineColor ?? "var(--color-border)";
-  const titleColor = style.titleColor ?? "var(--color-text)";
-  const descriptionColor = style.descriptionColor ?? "var(--color-text)";
-  const lineThickness = thicknessValueMap[style.thickness] ?? "2px";
-  const connectorWidth = compactConnectorWidthMap[layout.spacing] ?? "1.5rem";
-
-  const list = (
+  return (
     <ol
       aria-label={listLabel}
-      className={joinClasses(
-        "flex",
-        layout.orientation === "vertical" ? "flex-col" : "w-max min-w-full flex-nowrap",
-        spacingClassMap[layout.spacing] ?? "gap-5",
-        layout.orientation === "horizontal"
-          ? (justifyClassMap[layout.align] ?? "justify-center")
-          : undefined
-      )}
+      className={joinClasses("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3", gapClassMap[gap])}
     >
       {steps.map((step, index) => (
         <li
           key={step.id ?? `${step.title}-${index}`}
-          className={joinClasses(
-            "flex items-center",
-            layout.orientation === "vertical" ? "gap-3" : "gap-2"
-          )}
           aria-current={step.status === "current" ? "step" : undefined}
           data-timeline-step={step.id ?? index}
         >
-          <TimelineStepSurface step={step} className="flex items-center gap-2 rounded-xl p-1">
-            {renderMarker(step, index, style, lineThickness)}
-            {renderStepText({
-              step,
-              align: layout.align,
-              titleColor,
-              descriptionColor,
-              titleSize: style.titleSize ?? "base",
-              descriptionSize: style.descriptionSize ?? "xs",
-              titleWeight: style.titleWeight,
-              compact: true,
-            })}
+          <TimelineStepSurface
+            step={step}
+            className="block rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4"
+          >
+            <div className="flex items-start gap-3">
+              {renderTimelineDot(step, dot)}
+              <div className="min-w-0 flex-1">
+                {renderStepText({ step, align: "start", typography })}
+              </div>
+            </div>
           </TimelineStepSurface>
-          {guides.enabled && layout.orientation === "horizontal" && index < steps.length - 1 ? (
-            <span
-              className="mx-1 block"
-              style={{
-                width: connectorWidth,
-                height: lineThickness,
-                backgroundColor: lineColor,
-                borderStyle: guides.style,
-              }}
-            />
-          ) : null}
         </li>
       ))}
     </ol>
   );
+}
 
-  if (layout.orientation === "horizontal") {
-    return <div className="overflow-x-auto pb-1">{list}</div>;
-  }
-
-  return list;
+function TimelineCompactLayout({
+  steps,
+  dot,
+  connector,
+  typography,
+  gap,
+  listLabel,
+}: {
+  steps: TimelineStep[];
+  dot: ResolvedTimelineDot;
+  connector: ResolvedTimelineConnector;
+  typography: ResolvedTimelineTypography;
+  gap: TimelineSpacing;
+  listLabel: string;
+}) {
+  const connectorWidth = compactConnectorWidthMap[gap];
+  return (
+    <div className="overflow-x-auto pb-1">
+      <ol
+        aria-label={listLabel}
+        className={joinClasses("flex w-max min-w-full flex-nowrap items-center", gapClassMap[gap])}
+      >
+        {steps.map((step, index) => (
+          <li
+            key={step.id ?? `${step.title}-${index}`}
+            className="flex items-center gap-2"
+            aria-current={step.status === "current" ? "step" : undefined}
+            data-timeline-step={step.id ?? index}
+          >
+            <TimelineStepSurface step={step} className="flex items-center gap-2 rounded-xl p-1">
+              {renderTimelineDot(step, dot)}
+              {renderStepText({ step, align: "start", typography, compact: true })}
+            </TimelineStepSurface>
+            {connector.show && index < steps.length - 1
+              ? renderHorizontalConnector(connector, connectorWidth)
+              : null}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
 }
 
 export function TimelineBlock({ data, variant }: { data: TimelineData; variant: string }) {
-  const resolvedVariant = resolveTimelineVariant(variant);
-  const normalizedData = normalizeTimelineData(data, variant);
-  const steps = normalizedData.steps;
-  const mode = resolveTimelineMode(normalizedData.mode, variant);
-  const layout = resolveTimelineLayout(normalizedData.layout);
-  const guides = resolveTimelineGuides(normalizedData.guides);
-  const style = resolveTimelineStyle(normalizedData.style);
+  const capability = resolveTimelineCapability(variant);
+  const normalized = normalizeTimelineData(data, capability.id);
+  const steps = normalized.steps;
+  const dot = normalized.dot as ResolvedTimelineDot;
+  const connector = normalized.connector as ResolvedTimelineConnector;
+  const typography = normalized.typography as ResolvedTimelineTypography;
+  const spacing = normalized.spacing as ResolvedTimelineSpacing;
+  const position = normalized.axis?.position ?? "right";
+
   const backgroundStyle = compactStyle({
-    backgroundColor: resolveClearableStyleValue(normalizedData.background?.color),
+    backgroundColor: resolveClearableCssColorValue(normalized.background?.color),
   });
-  const sectionTitle = normalizedData.header?.title?.trim();
-  const sectionDescription = normalizedData.header?.description?.trim();
+
+  const sectionTitle = normalized.header?.title?.trim();
+  const sectionDescription = normalized.header?.description?.trim();
   const sectionHeadingId = resolveHeadingId(sectionTitle);
   const listLabel = sectionTitle ? `${sectionTitle} steps` : "Timeline steps";
-  const maxWidthDiagnostics = resolveTimelineMaxWidthDiagnostics(
-    normalizedData.layout,
-    steps.length
-  );
-  const markerIconFallbackCount = countTimelineIconMarkerFallbacks(steps, style.markerDisplay);
 
   return (
     <section
       className={joinClasses(
-        paddingClassMap[layout.padding] ?? "px-4 py-8",
-        sectionSpacingClassMap[layout.sectionSpacing] ?? "my-0"
+        paddingClassMap[spacing.padding],
+        sectionSpacingClassMap[spacing.sectionSpacing]
       )}
       style={backgroundStyle}
       aria-labelledby={sectionHeadingId}
       aria-label={sectionHeadingId ? undefined : "Timeline"}
     >
-      <div
-        className={joinClasses(
-          "mx-auto w-full space-y-4",
-          maxWidthClassMap[maxWidthDiagnostics.effective] ?? "max-w-6xl"
-        )}
-      >
+      <div className={joinClasses("mx-auto w-full space-y-4", maxWidthClassMap[spacing.maxWidth])}>
         <div
-          data-timeline-variant={resolvedVariant}
-          data-timeline-mode={mode}
-          data-timeline-orientation={layout.orientation}
-          data-timeline-label-position={layout.labelPosition}
-          data-timeline-padding={layout.padding}
-          data-timeline-section-spacing={layout.sectionSpacing}
-          data-timeline-max-width={layout.maxWidth}
-          data-timeline-effective-max-width={maxWidthDiagnostics.effective}
-          data-timeline-max-width-narrowed={maxWidthDiagnostics.narrowed ? "true" : "false"}
-          data-timeline-marker-display={style.markerDisplay}
-          data-timeline-marker-icon-fallback-count={markerIconFallbackCount}
-          data-timeline-description-size={style.descriptionSize ?? "xs"}
-          data-timeline-title-weight={style.titleWeight}
+          data-timeline-variant={capability.id}
+          data-timeline-orientation={capability.orientation}
+          data-timeline-surface={capability.surface}
+          data-timeline-axis-position={position}
+          data-timeline-dot-variant={dot.variant}
+          data-timeline-dot-tone={dot.tone}
+          data-timeline-dot-size={dot.size}
+          data-timeline-dot-icon={dot.icon}
         >
           {sectionTitle || sectionDescription ? (
             <div className="space-y-2">
               {sectionTitle ? (
-                <h2 id={sectionHeadingId} className="text-2xl font-semibold text-foreground">
+                <h2
+                  id={sectionHeadingId}
+                  className="text-2xl font-semibold"
+                  style={{ color: "var(--color-text)" }}
+                >
                   {sectionTitle}
                 </h2>
               ) : null}
               {sectionDescription ? (
-                <p className="max-w-3xl text-sm text-foreground/80">{sectionDescription}</p>
+                <p className="max-w-3xl text-sm" style={{ color: "var(--color-text)" }}>
+                  {sectionDescription}
+                </p>
               ) : null}
             </div>
           ) : null}
 
-          {mode === "chronology" ? (
-            <TimelineChronologyLayout
-              steps={steps}
-              layout={layout}
-              guides={guides}
-              style={style}
-              listLabel={listLabel}
-            />
-          ) : mode === "alternating" ? (
-            <TimelineAlternatingLayout
-              steps={steps}
-              layout={layout}
-              guides={guides}
-              style={style}
-              listLabel={listLabel}
-            />
-          ) : mode === "process" || resolvedVariant === "compact" ? (
-            <TimelineCompactLayout
-              steps={steps}
-              layout={layout}
-              guides={guides}
-              style={style}
-              listLabel={listLabel}
-            />
-          ) : resolvedVariant === "cards" ? (
+          {capability.surface === "cards" ? (
             <TimelineCardsLayout
               steps={steps}
-              layout={layout}
-              guides={guides}
-              style={style}
+              dot={dot}
+              typography={typography}
+              gap={spacing.gap}
+              listLabel={listLabel}
+            />
+          ) : capability.orientation === "horizontal" ? (
+            <TimelineCompactLayout
+              steps={steps}
+              dot={dot}
+              connector={connector}
+              typography={typography}
+              gap={spacing.gap}
+              listLabel={listLabel}
+            />
+          ) : capability.fixedAxisPosition ? (
+            <TimelineSingleSideLayout
+              steps={steps}
+              position={position}
+              dot={dot}
+              connector={connector}
+              typography={typography}
+              gap={spacing.gap}
               listLabel={listLabel}
             />
           ) : (
-            <TimelineMilestonesLayout
+            <TimelineAlternatingLayout
               steps={steps}
-              layout={layout}
-              guides={guides}
-              style={style}
+              position={position}
+              dot={dot}
+              connector={connector}
+              typography={typography}
+              gap={spacing.gap}
               listLabel={listLabel}
+              showOpposite={capability.visibleFields.has("oppositeContent")}
             />
           )}
         </div>
@@ -1543,6 +1318,125 @@ export function TimelineBlock({ data, variant }: { data: TimelineData; variant: 
     </section>
   );
 }
+
+export const timelineEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "timeline.setup.gallery",
+      title: "Choose a timeline preset",
+      role: "setup",
+      writablePaths: ["variant"],
+      readOnlyPaths: [
+        "header.title",
+        "header.description",
+        "steps.count",
+        "steps.title",
+        "steps.description",
+      ],
+      allowedDuplicateWritablePaths: [
+        {
+          path: "variant",
+          reason: "Preset gallery is the one-shot wizard setup and stays re-selectable in Visual.",
+          expiresWithTask: "TASK-416",
+        },
+      ],
+    },
+    {
+      mode: "visual",
+      id: "timeline.visual.preset-structure",
+      title: "Preset and structure",
+      role: "visual",
+      writablePaths: ["variant", "axis.position", "steps.count"],
+      allowedDuplicateWritablePaths: [
+        {
+          path: "variant",
+          reason: "Preset gallery is the one-shot wizard setup and stays re-selectable in Visual.",
+          expiresWithTask: "TASK-416",
+        },
+      ],
+    },
+    {
+      mode: "visual",
+      id: "timeline.visual.step-content",
+      title: "Steps content and order",
+      role: "content",
+      writablePaths: [
+        "steps.title",
+        "steps.description",
+        "steps.oppositeContent",
+        "steps.oppositeDate",
+        "steps.status",
+        "steps.markerIcon",
+        "steps.markerIconColor",
+        "steps.dotVariant",
+        "steps.dotTone",
+        "steps.cta.label",
+        "steps.cta.href",
+        "steps.link.label",
+        "steps.link.href",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "timeline.visual.dots-connector",
+      title: "Dots and connector",
+      role: "visual",
+      writablePaths: [
+        "dot.variant",
+        "dot.tone",
+        "dot.size",
+        "dot.icon",
+        "connector.show",
+        "connector.style",
+        "connector.thickness",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "timeline.visual.appearance",
+      title: "Typography, spacing and background",
+      role: "visual",
+      writablePaths: [
+        "header.title",
+        "header.description",
+        "typography.titleSize",
+        "typography.titleWeight",
+        "typography.descriptionSize",
+        "spacing.gap",
+        "spacing.padding",
+        "spacing.sectionSpacing",
+        "spacing.maxWidth",
+        "background.color",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "timeline.advanced.runtime",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "axis.position", "steps"],
+    },
+    {
+      mode: "advanced",
+      id: "timeline.advanced.appearance",
+      title: "Appearance diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["dot", "connector", "typography", "spacing", "background"],
+    },
+    {
+      mode: "advanced",
+      id: "timeline.advanced.normalization",
+      title: "Data normalization",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["editorContract", "steps"],
+    },
+  ],
+};
 
 export function createTimelineWidget(editors: {
   wizard: ComponentType<WidgetEditorProps<TimelineData>>;
@@ -1552,25 +1446,18 @@ export function createTimelineWidget(editors: {
   return {
     type: "timeline",
     title: "Timeline",
-    description: "Timeline of steps or milestones.",
+    description: "Timeline of steps, milestones, or dated events.",
     category: "content",
-    variants: [
-      {
-        id: "milestones",
-        label: "Milestones",
-        description: "Markers with labels along a process line.",
-      },
-      {
-        id: "cards",
-        label: "Cards",
-        description: "Step cards with stronger separation.",
-      },
-      {
-        id: "compact",
-        label: "Compact",
-        description: "Minimal line with concise labels.",
-      },
-    ],
+    presets: timelineVariantIds.map((id) => ({
+      id,
+      label: timelineVariantCapabilities[id].label,
+      description: timelineVariantCapabilities[id].description,
+    })),
+    variants: timelineVariantIds.map((id) => ({
+      id,
+      label: timelineVariantCapabilities[id].label,
+      description: timelineVariantCapabilities[id].description,
+    })),
     schema: timelineSchema,
     defaults: timelineDefaults,
     editor: editors,

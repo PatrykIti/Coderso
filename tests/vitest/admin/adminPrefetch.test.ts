@@ -359,6 +359,8 @@ test("default custom screens prefetch warms screens and content type labels", as
         activeHref: "/admin/pages",
       });
       await flushAsync();
+      await vi.dynamicImportSettled();
+      await flushAsync();
 
       expect(listCustomScreensCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);
       expect(listContentTypesCached).toHaveBeenCalledWith(module.prefetchWarmupOptions);

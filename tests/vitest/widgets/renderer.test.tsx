@@ -853,17 +853,8 @@ test("renderer outputs timeline semantics and container metadata", () => {
             title: "Product roadmap",
             description: "Key milestones for launch",
           },
-          layout: {
-            ...timelineDefaults.layout,
-            orientation: "vertical",
-            labelPosition: "bottom",
-            padding: "lg",
-            maxWidth: "7xl",
-          },
-          style: {
-            ...timelineDefaults.style,
-            markerDisplay: "icon",
-          },
+          dot: { variant: "outlined", tone: "primary", size: "lg" },
+          spacing: { ...timelineDefaults.spacing, padding: "lg", maxWidth: "7xl" },
           steps: normalizeTimelineSteps([
             {
               id: "timeline-step-1",
@@ -888,10 +879,8 @@ test("renderer outputs timeline semantics and container metadata", () => {
 
   expect(html).toContain('data-timeline-variant="cards"');
   expect(html).toContain('data-timeline-orientation="vertical"');
-  expect(html).toContain('data-timeline-label-position="bottom"');
-  expect(html).toContain('data-timeline-padding="lg"');
-  expect(html).toContain('data-timeline-max-width="7xl"');
-  expect(html).toContain('data-timeline-marker-display="icon"');
+  expect(html).toContain('data-timeline-surface="cards"');
+  expect(html).toContain('data-timeline-dot-variant="outlined"');
   expect(html).toContain('aria-label="Product roadmap steps"');
   expect(html).toContain('aria-current="step"');
   expect(html).toContain('aria-hidden="true"');

@@ -63,12 +63,7 @@ import {
   TestimonialsBlock,
   testimonialsDefaults,
 } from "../../../core/widgets/core/testimonials";
-import {
-  resolveTimelineLayout,
-  resolveTimelineStyle,
-  TimelineBlock,
-  timelineDefaults,
-} from "../../../core/widgets/core/timeline";
+import { TimelineBlock, timelineDefaults } from "../../../core/widgets/core/timeline";
 
 test("layout widgets preserve none as zero spacing", () => {
   const stack = normalizeStackData(
@@ -438,29 +433,19 @@ test("hero, navigation, footer, and timelines accept none as visual off tokens",
   expect(footerHtml).toContain("py-0");
   expect(footerHtml).toContain("gap-0");
 
-  expect(resolveTimelineLayout({ spacing: "none" }).spacing).toBe("none");
-  expect(
-    resolveTimelineStyle({
-      titleSize: "none",
-      descriptionSize: "none",
-    })
-  ).toMatchObject({
-    titleSize: "none",
-    descriptionSize: "none",
-  });
   expect(
     renderToString(
       <TimelineBlock
         data={{
           ...timelineDefaults,
-          layout: { ...timelineDefaults.layout, orientation: "vertical", spacing: "none" },
-          style: {
-            ...timelineDefaults.style,
+          spacing: { ...timelineDefaults.spacing, gap: "none" },
+          typography: {
+            ...timelineDefaults.typography,
             titleSize: "none",
             descriptionSize: "none",
           },
         }}
-        variant="milestones"
+        variant="vertical-right"
       />
     )
   ).toContain("gap-0");

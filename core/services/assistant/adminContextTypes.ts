@@ -18,6 +18,7 @@ export type AssistantContentTypeSummary = {
   name: string;
   entryCount: number | null;
   fields: AssistantResourceFieldSummary[];
+  schema?: Record<string, unknown> | null;
 };
 
 export type AssistantPageCollectionLinkSummary = {

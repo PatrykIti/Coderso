@@ -1,218 +1,167 @@
-# Timeline Widget (v1)
+# Timeline Widget (v2)
 
 ## Purpose
 
-Timeline for process steps, milestones, dated events, and alternating story
-flows.
+Timeline for process steps, milestones, and dated events, modeled on the
+[MUI React Timeline](https://mui.com/material-ui/react-timeline/) capability set:
+axis position, opposite content, filled/outlined dots, and semantic dot tones.
 
 ## Widget ID
 
 `timeline`
 
-## Variants (legacy compatibility surface)
+## Presets (block variants)
 
-- `milestones`: markers with labels around the axis
-- `cards`: steps rendered as cards
-- `compact`: minimal marker-plus-label process strip
+Presets are the block `variant`s — a single source of truth, with no separate
+`mode` field. The Visual editor option list is gated per preset by the exported
+`timelineVariantCapabilities` table, so every control that is shown maps to a field
+the active preset actually renders.
 
-Legacy variants remain supported, but current behavior is driven by
-`data.mode`:
-- `process`
-- `axis`
-- `chronology`
-- `alternating`
+| Preset | Orientation | Axis | Opposite content |
+|--------|-------------|------|------------------|
+| `vertical-right` | vertical | content on the right (axis left) | no |
+| `vertical-left` | vertical | content on the left (axis right) | no |
+| `alternating` | vertical | zigzag (`alternate` / `alternate-reverse`) | no |
+| `alternating-opposite` | vertical | zigzag | yes |
+| `cards` | vertical | none (card grid) | no |
+| `compact` | horizontal | none (process strip) | no |
 
-## Editor Modes (current after TASK-291)
+The axis-position control only appears for `alternating` and
+`alternating-opposite` (allowed values `alternate` / `alternate-reverse`); the
+vertical presets bake their side in, and `cards` / `compact` have no axis position.
 
-### Wizard
-- read-only starter story summary
-- current timeline style summary
-- read-only header title and description summary
-- read-only `3-8` starter step count summary
-- read-only per-step title and description preview
+## Editor Modes
 
-Wizard intentionally does not expose timeline mode, layout, guides, status,
-icons, marker accents, dates, link destinations, or variant changes. Visual
-owns those daily editing controls.
+### Wizard (single-shot setup)
+- Preset gallery (six cards) as the primary choice.
+- Read-only summary of header, step count, and per-step titles/descriptions.
+- Section id: `timeline.setup.gallery`. Writable path: `variant`.
 
-### Visual
-Primary day-to-day editing mode with section-based IA:
-1. Variant and timeline structure
-2. Steps content and order
-3. Guides and axis line
-4. Markers and accents
-5. Colors and background
-6. Typography and spacing
+### Visual (daily editing, preset-aware)
+Sections, each gated by `timelineVariantCapabilities[variant].visibleFields`:
+1. `timeline.visual.preset-structure` — preset gallery, axis position (gated),
+   step count.
+2. `timeline.visual.step-content` — per-step grouped fields (Content / Dot / Links):
+   title, description, opposite content (gated), status; a lucide dot icon-grid
+   picker, per-step dot tone/variant overrides, and dot icon color; CTA and
+   whole-step link, with add/remove/drag-reorder.
+3. `timeline.visual.dots-connector` — global dot variant/tone/size, the default dot
+   icon (lucide icon-grid picker), and the connector (show/style/thickness, gated
+   where the preset has no connector).
+4. `timeline.visual.appearance` — header, typography, spacing, max width, and the
+   clearable section background color.
 
-Timeline owns variant selection in Visual via
-`editorCapabilities.visualOwnsVariantSelection = true`.
-Mode preview cards and the `Timeline mode` select both use the same mode update
-contract: selecting a mode updates `data.mode` and applies that mode's preferred
-legacy variant (`process -> compact`, `axis -> milestones`, `chronology` and
-`alternating -> cards`).
-When `data.mode = "process"`, compact rendering owns the effective layout.
-Saved non-compact legacy variants remain stored but are marked inactive in
-Visual until the author chooses Axis, Chronology, or Alternating.
+Controls are grouped into labeled `FieldGroup` blocks and stacked one per row for
+readability.
 
-Each step can now own:
-- optional `date` and `dateLabel`
-- optional `status` (`upcoming`, `current`, `complete`) or no status
-- optional title-side `icon`
-- optional per-step `accent` override
-- optional `markerIcon`, `markerBackgroundColor`, and `markerIconColor`
-- optional CTA (`label`, `href`)
-- optional whole-step link (`link.href`, `link.label`)
+### Advanced (read-only diagnostics)
+- `timeline.advanced.runtime` — preset, orientation, axis position, step count.
+- `timeline.advanced.appearance` — resolved dot/connector/typography/spacing/
+  background plus per-step override counts.
+- `timeline.advanced.normalization` — normalization scope, safe-link coverage, and
+  editor ownership summary.
 
-CTA and whole-step destinations are authored through the shared page-first
-destination picker. Saved custom/hash/external destinations remain
-backward-compatible as replace-or-clear state instead of raw URL text inputs.
+`editorCapabilities.visualOwnsVariantSelection = true`; the wizard and Visual share
+the `variant` writable path via an explicit `allowedDuplicateWritablePaths`
+allowance tagged to `TASK-416`.
 
-Visual also owns:
-- mode preview cards and mode-to-variant guidance
-- shared metadata for all mutating Visual controls, including real input/select
-  fields, destination pickers, variant/mode cards, and step action buttons
-- date-format feedback for `YYYY-MM-DD`
-- grouped marker/accent controls
-- drag reorder with button fallback preserved
-- section header, title weight, padding, outer spacing, and max-width controls
-- title-hidden warning inside Typography when `style.titleSize = "none"`
+## Semantic dot tones
 
-### Advanced
-Read-only diagnostics:
-- runtime summary for variant, mode, and configured step count
-- read-only layout, guide, style, and background summaries
-- read-only normalization and ownership summary
+`dot.tone` (global) and `steps[].dotTone` (per-step override) accept
+`primary`, `secondary`, `success`, `error`, `warning`, `info`, `grey` and resolve
+through a single token map. The front theme has no native success/warning/info
+tokens, so they alias existing tokens:
 
-Advanced intentionally excludes duplicated day-to-day content or style editing
-and no longer exposes mutating support actions in the daily tab flow.
+| Tone | Token |
+|------|-------|
+| primary | `var(--color-primary)` |
+| secondary / info | `var(--color-secondary)` |
+| success | `var(--color-primary)` (aliased) |
+| warning | `var(--color-accent)` (aliased) |
+| error | `var(--color-destructive, var(--color-text))` |
+| grey | `var(--color-border)` |
+
+There are no hardcoded color palettes in the renderer; the legacy `emerald` status
+color was removed.
+
+## Dot icons
+
+Dots can render **any lucide icon** (kebab-case name) instead of a plain dot, set
+globally via `dot.icon` and overridden per step via `steps[].markerIcon`. `none`
+renders a plain dot; a step icon of `none` inherits the global `dot.icon`. Icons
+render as SSR `<svg>` (lucide), with `markerIconColor` controlling the glyph color.
+
+The editor exposes a visual icon-grid picker: ~16 curated quick picks
+(`data-timeline-dot-icon-option`) plus a **`+` button** that opens a searchable
+dialog over the full lucide library (`data-timeline-dot-icon-browse` /
+`data-timeline-dot-icon-pick`). Names are resolved through a kebab→component map
+built from lucide's `icons` record, so unknown names normalize away safely.
 
 ## Runtime Behavior Notes
 
-- Steps normalize to `3-8` entries with stable unique IDs (`step-1`,
-  `step-2`, ...).
-- Renderer supports process, axis, chronology, and alternating modes while
-  keeping legacy variants as compatibility input.
-- Section/list/current-step semantics are explicit: the section uses a readable
-  label or `aria-labelledby`, the step list has an accessible name, and the
-  active step renders `aria-current="step"`.
-- Decorative step icons and marker icons are hidden from assistive technology
-  unless the step has an explicit safe link label.
-- Dates render through semantic `<time>` when `date` exists, and date/dateLabel
-  metadata can now stay visible in horizontal axis/milestone layouts instead of
-  forcing `chronology` mode.
-- `style.markerDisplay` supports `dot`, `number`, and `icon`.
-- `style.markerDisplay = "icon"` is a requested display mode. A step without
-  `markerIcon` or title-side `icon` renders a dot marker and exposes per-marker
-  `data-timeline-marker-effective-display="dot"` plus a root
-  `data-timeline-marker-icon-fallback-count` diagnostic.
-- `style.descriptionSize = "none"` does not hide descriptions. It keeps the
-  description text visible and clears the explicit size class so surrounding
-  typography can inherit.
-- `layout.maxWidth = "6xl"` intentionally narrows to an effective `5xl` class
-  when the timeline has three or fewer steps. Runtime keeps the saved
-  `data-timeline-max-width="6xl"` and also exposes
-  `data-timeline-effective-max-width` and `data-timeline-max-width-narrowed`.
-- Whole-step links are sanitized through the shared safe-href contract and are
-  suppressed whenever a step CTA is present, so nested anchors are never
-  rendered.
-- Compact/process layouts render saved step CTAs as compact inline links instead
-  of dropping them silently.
-- Horizontal milestones use overflow-safe axis rendering and connector widths
-  derived from spacing tokens instead of a fixed `4rem` connector.
-- Motion remains intentionally static. Timeline does not persist motion fields
-  or runtime animation classes in the current contract.
+- Steps normalize to `3-8` entries with unique stable IDs (`step-1`, ...).
+- Dots render `filled` (solid tone) or `outlined` (tone border, transparent fill);
+  a step with `markerIcon` renders that icon inside the dot. Per-step
+  `dotTone`/`dotVariant` override the global `dot.*`.
+- `axis.position` is coerced to the active preset's allowed set during normalize, so
+  the page-builder canvas, admin preview, and public front render identically
+  (all go through `WidgetRenderer → TimelineBlock`).
+- Opposite content renders only for `alternating-opposite`; `oppositeDate` is emitted
+  as a semantic `<time dateTime>` next to (or above, on mobile) the dot.
+- Accessibility: the section uses a readable label or `aria-labelledby`, the step
+  list has an accessible name, the active step renders `aria-current="step"`, and
+  decorative icons/dots are `aria-hidden`.
+- CTA and whole-step destinations are sanitized through the shared safe-href
+  contract; a whole-step link is suppressed whenever a step CTA is present so nested
+  anchors never render.
+- The compact preset uses overflow-safe horizontal rendering.
 
-## Shared Owners and Explicit Deferrals
+## Render Diagnostics Attributes
 
-- Shared atomic block update behavior is owned by `TASK-256-01`; Timeline only
-  consumes that shared fix.
-- Shared contrast advisories are owned by `TASK-299`; Timeline consumes the
-  shared editor guidance rather than shipping a local checker.
-- Per-step `labelPosition` remains intentionally deferred. Use the global
-  `layout.labelPosition` token instead, because per-step placement would not
-  stay deterministic across axis, chronology, alternating, and compact layouts.
-- Motion remains a no-code/static decision for Timeline. The widget does not
-  currently expose CSS-only reveal presets or scroll-trigger runtime behavior.
+`data-timeline-variant`, `data-timeline-orientation`, `data-timeline-surface`,
+`data-timeline-axis-position`, `data-timeline-dot-variant`, `data-timeline-dot-tone`,
+`data-timeline-dot-size`, per-step `data-timeline-step`, and per-dot
+`data-timeline-marker-effective-display`.
 
 ## Clear Controls
 
-- `background.color` is clearable; clear removes the section background color
-  override.
-- Line, marker, title, and description colors can be cleared back to inherited
-  theme/default behavior.
-- Per-step accent, marker background, and marker icon colors now expose the
-  same clear/default affordance pattern instead of being one-off exceptions.
+- `background.color` is clearable (clears the section background override).
+- Per-step `markerIconColor` is clearable back to inherited behavior.
 
 ## Data Model (summary)
 
 ```json
 {
-  "variant": "milestones",
-  "mode": "axis",
-  "header": {
-    "title": "Roadmap",
-    "description": "Quarterly milestones and launch steps."
-  },
+  "header": { "title": "Roadmap", "description": "Quarterly milestones." },
   "steps": [
     {
       "id": "step-1",
       "title": "Discovery",
       "description": "Define goals and context.",
-      "icon": "compass",
-      "accent": "#1d4ed8",
-      "date": "2026-05-11",
-      "dateLabel": "May 11, 2026",
+      "oppositeContent": "Q1 2026",
+      "oppositeDate": "2026-01-15",
       "status": "current",
       "markerIcon": "rocket",
-      "markerBackgroundColor": "#0f172a",
       "markerIconColor": "#ffffff",
-      "cta": {
-        "label": "View details",
-        "href": "/timeline/discovery"
-      },
-      "link": {
-        "label": "Open discovery",
-        "href": "/timeline/discovery"
-      }
+      "dotVariant": "filled",
+      "dotTone": "primary",
+      "cta": { "label": "View details", "href": "/timeline/discovery" },
+      "link": { "label": "Open discovery", "href": "/timeline/discovery" }
     }
   ],
-  "layout": {
-    "orientation": "horizontal",
-    "align": "center",
-    "spacing": "md",
-    "labelPosition": "top",
-    "padding": "md",
-    "sectionSpacing": "none",
-    "maxWidth": "6xl"
-  },
-  "guides": {
-    "enabled": true,
-    "style": "dashed"
-  },
-  "style": {
-    "lineStyle": "solid",
-    "thickness": "2",
-    "markerSize": "md",
-    "markerDisplay": "dot",
-    "lineColor": "#e2e8f0",
-    "markerColor": "#1d4ed8",
-    "titleColor": "#0f172a",
-    "descriptionColor": "#334155",
-    "titleSize": "base",
-    "titleWeight": "semibold",
-    "descriptionSize": "xs"
-  },
-  "background": {
-    "color": "#f8fafc"
-  }
+  "axis": { "position": "right" },
+  "dot": { "variant": "filled", "tone": "primary", "size": "md", "icon": "none" },
+  "connector": { "show": true, "style": "solid", "thickness": "2" },
+  "typography": { "titleSize": "base", "titleWeight": "semibold", "descriptionSize": "sm" },
+  "spacing": { "gap": "md", "padding": "md", "sectionSpacing": "none", "maxWidth": "5xl" },
+  "background": { "color": "transparent" }
 }
 ```
 
-## TASK-336-18 Editor Contract
+## TASK-416 Editor Contract
 
 - Exports `timelineEditorContract` with `version: 2`.
-- Contract target: Wizard is a read-only starter summary; Visual owns variant,
-  steps, orientation, guides, layout, markers, colors, and background;
-  Advanced is read-only runtime diagnostics.
-- Current TASK-336-19 cleanup is implemented for Timeline's Wizard/Visual/
-  Advanced ownership split.
+- Wizard picks the preset; Visual owns content, dots, axis, connector, and
+  appearance; Advanced is read-only diagnostics.
+- This contract is a clean break from the v1 `mode`/`layout`/`guides`/`style`
+  shape; legacy timeline blocks must be re-added.

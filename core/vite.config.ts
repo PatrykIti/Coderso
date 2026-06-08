@@ -49,5 +49,29 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: path.resolve(__dirname, "./dist/client"),
     emptyOutDir: true,
+    rolldownOptions: {
+      output: {
+        // Keep the admin entry chunk small and under the bundle budget by extracting
+        // shared code into preloaded chunks (Rolldown dedupes shared modules across
+        // groups, unlike rollupOptions.manualChunks which duplicated them).
+        codeSplitting: {
+          groups: [
+            {
+              name(id: string) {
+                if (id.includes("/node_modules/")) {
+                  // lucide-react is excluded so its full icon set stays in the
+                  // dynamically imported timelineLucideIcons chunk (see timeline.tsx),
+                  // not merged into an eager vendor chunk. Split the rest per package.
+                  if (id.includes("/node_modules/lucide-react/")) return null;
+                  const match = id.match(/\/node_modules\/(@[^/]+\/[^/]+|[^/]+)/);
+                  return match ? `vendor-${match[1].replace(/[@/]/g, "-")}` : null;
+                }
+                return null;
+              },
+            },
+          ],
+        },
+      },
+    },
   },
 }));

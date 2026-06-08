@@ -19,6 +19,10 @@ import {
   type FormActionType,
 } from "../forms/formActionsContract";
 import { normalizeDetailPageDocument } from "../content/detailPageSchema";
+import {
+  contentTypeFieldAddTypes,
+  normalizeContentTypeFieldAddSpec,
+} from "../content/contentTypeSchemaFields";
 import { customScreenCollectionRoleValues } from "../customScreens/customScreenSchemas";
 import { normalizeOptionalDetailPageId } from "../settings/detailPageIdContract";
 import {
@@ -97,6 +101,7 @@ const safeFormAutomationActionTypes = new Set<FormActionType>([
 ]);
 
 const actionTypes = new Set<AssistantExecutableActionType>(assistantActionTypes);
+const contentTypeFieldTypes = new Set(contentTypeFieldAddTypes);
 const blueprintCompositionResourceKinds = new Set([
   "content-type",
   "content-route",
@@ -727,6 +732,53 @@ const normalizeContentTypeInput = (input: JsonRecord) => {
     slug: readText(input.slug),
     name: readText(input.name),
     schema: assertRecord(input.schema),
+  };
+};
+
+const normalizeContentTypeFieldAddSpecInput = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "name",
+      "label",
+      "type",
+      "required",
+      "multiple",
+      "options",
+      "mediaAccept",
+      "maxItems",
+      "numberFormat",
+    ])
+  );
+  if (input.type !== undefined) readEnum(input.type, contentTypeFieldTypes);
+  if (input.options !== undefined) {
+    for (const option of readRecordArray(input.options)) {
+      assertKeys(option, new Set(["label", "value"]));
+      readText(option.label);
+      readText(option.value);
+    }
+  }
+  if (input.mediaAccept !== undefined) readStringArray(input.mediaAccept);
+  try {
+    return normalizeContentTypeFieldAddSpec(input);
+  } catch {
+    fail();
+  }
+};
+
+const normalizeContentTypeFieldAddInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "slug", "fields", "expectedEntryCount"]));
+  const fields = readRecordArray(input.fields).map(normalizeContentTypeFieldAddSpecInput);
+  if (!fields.length || fields.length > 120) fail();
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+    slug: readText(input.slug),
+    fields,
+    ...(input.expectedEntryCount !== undefined
+      ? { expectedEntryCount: readOptionalFiniteNumber(input.expectedEntryCount) }
+      : {}),
   };
 };
 
@@ -1998,6 +2050,8 @@ const normalizeActionInput = (type: AssistantPlannedAction["type"], input: unkno
       return normalizeContentRouteInput(record);
     case "content-type.upsert":
       return normalizeContentTypeInput(record);
+    case "content-type.field.add":
+      return normalizeContentTypeFieldAddInput(record);
     case "content-type.delete":
       return normalizeContentTypeDeleteInput(record);
     case "custom-screen.upsert":

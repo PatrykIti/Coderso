@@ -6,7 +6,8 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-407
 **Related Tasks:** TASK-404, TASK-405, TASK-406, TASK-410, TASK-412
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-07
 
 ---
 
@@ -147,6 +148,7 @@ Candidate child task families. Promote these to physical
 and pseudocode where needed:
 
 - [ ] Generic themed media coverage and video-kind contract.
+- [x] TASK-414-01: Generic content-type field refinement and long-prompt assistant UX.
 - [ ] Safe brand-token and theme-profile application from Advanced intake.
 - [ ] Booking capability adapter for reviewed appointment/service sites.
 - [ ] Commerce and checkout capability adapter for reviewed shop sites.

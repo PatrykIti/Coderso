@@ -1,6 +1,9 @@
 import type { DocsAnswerSource, DocsSearchHit } from "./docsTypes";
 import type { AssistantActionContext, AssistantAdminRuntimeSnapshot } from "./actionPlanTypes";
-import type { AssistantResourceCatalogSnapshot } from "./adminContextTypes";
+import type {
+  AssistantContentTypeSummary,
+  AssistantResourceCatalogSnapshot,
+} from "./adminContextTypes";
 import {
   buildAssistantAdminContext,
   sanitizeAssistantPlanningContext,
@@ -40,6 +43,7 @@ export type AssistantProviderPlanningPromptInput = {
   context?: AssistantActionContext;
   evidence?: AssistantProviderPlanningEvidence[];
   siteBuilderIntakeFacts?: AssistantSiteBuilderIntakeFacts | null;
+  maxPromptChars?: number;
   maxDocs?: number;
   maxCharsPerDoc?: number;
   maxResourceItemsPerGroup?: number;
@@ -75,7 +79,7 @@ export type AssistantProviderPlanningPromptPackage = {
     pages: NonNullable<AssistantResourceCatalogSnapshot["pages"]>;
     posts: NonNullable<AssistantResourceCatalogSnapshot["posts"]>;
     entries: NonNullable<AssistantResourceCatalogSnapshot["entries"]>;
-    contentTypes: AssistantResourceCatalogSnapshot["contentTypes"];
+    contentTypes: Array<Omit<AssistantContentTypeSummary, "schema">>;
     customScreens: AssistantResourceCatalogSnapshot["customScreens"];
     detailPages: NonNullable<AssistantResourceCatalogSnapshot["detailPages"]>;
     listings: AssistantResourceCatalogSnapshot["listings"];
@@ -117,6 +121,7 @@ export type AssistantProviderPlanningPromptPackage = {
 const DEFAULT_MAX_DOCS = 5;
 const DEFAULT_MAX_CHARS_PER_DOC = 1_200;
 const DEFAULT_MAX_RESOURCE_ITEMS_PER_GROUP = 20;
+const DEFAULT_MAX_PROMPT_CHARS = 8_000;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -176,6 +181,16 @@ const clampItems = <T>(items: T[], max: number, warning: string, warnings: strin
   return items.slice(0, max);
 };
 
+const stripContentTypeSchema = (
+  items: AssistantResourceCatalogSnapshot["contentTypes"],
+  maxItemsPerGroup: number,
+  warnings: string[]
+): Array<Omit<AssistantContentTypeSummary, "schema">> =>
+  clampItems(items, maxItemsPerGroup, "content_types_truncated", warnings).map((item) => {
+    const { schema: _schema, ...safe } = item;
+    return safe;
+  });
+
 const buildResources = (
   catalog: AssistantResourceCatalogSnapshot | null,
   maxItemsPerGroup: number,
@@ -188,12 +203,7 @@ const buildResources = (
     pages: clampItems(catalog.pages ?? [], maxItemsPerGroup, "pages_truncated", warnings),
     posts: clampItems(catalog.posts ?? [], maxItemsPerGroup, "posts_truncated", warnings),
     entries: clampItems(catalog.entries ?? [], maxItemsPerGroup, "entries_truncated", warnings),
-    contentTypes: clampItems(
-      catalog.contentTypes,
-      maxItemsPerGroup,
-      "content_types_truncated",
-      warnings
-    ),
+    contentTypes: stripContentTypeSchema(catalog.contentTypes, maxItemsPerGroup, warnings),
     customScreens: clampItems(
       catalog.customScreens,
       maxItemsPerGroup,
@@ -287,10 +297,12 @@ export const buildProviderPlanningPromptPackage = (
     input.maxResourceItemsPerGroup,
     DEFAULT_MAX_RESOURCE_ITEMS_PER_GROUP
   );
+  const maxPromptChars = clampPositiveInteger(input.maxPromptChars, DEFAULT_MAX_PROMPT_CHARS);
+  if (input.prompt.length > maxPromptChars) warnings.push("prompt_truncated");
 
   const promptPackage: AssistantProviderPlanningPromptPackage = {
     schemaVersion: 1,
-    prompt: redactAssistantText(input.prompt, 2_000),
+    prompt: redactAssistantText(input.prompt, maxPromptChars),
     locale: context.locale,
     route: context.route,
     runtime: buildRuntime(context.runtimeSnapshot),
@@ -310,5 +322,9 @@ export const buildProviderPlanningPromptPackage = (
     warnings,
   };
 
-  return redactAssistantMetadata(promptPackage) as AssistantProviderPlanningPromptPackage;
+  const redacted = redactAssistantMetadata(promptPackage) as AssistantProviderPlanningPromptPackage;
+  return {
+    ...redacted,
+    prompt: promptPackage.prompt,
+  };
 };

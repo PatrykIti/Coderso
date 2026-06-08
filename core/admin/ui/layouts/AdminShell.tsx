@@ -20,10 +20,10 @@ import type { AdminBreadcrumbInput } from "@/ui/shared/AdminBreadcrumbs";
 import { mapNavItems, mapNavSections, resolveAdminHref } from "@/utils/adminPaths";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import {
-  getCachedCustomScreens,
-  listCustomScreensCached,
-  type CustomScreenRecord,
-} from "@/services/customScreensClient";
+  getCachedCustomScreenShortcuts,
+  listCustomScreenShortcutsCached,
+  type CustomScreenShortcutRecord,
+} from "@/services/customScreenShortcutsClient";
 import {
   getActiveSolutionKitId,
   subscribeActiveSolutionKitId,
@@ -107,8 +107,8 @@ export function AdminShell({
   const canAccess = useAdminCan();
   const canReadCustomScreens = canAccess("content:read");
   const canReadSolutionKits = canAccess("solution-kits:read");
-  const [customScreens, setCustomScreens] = useState<CustomScreenRecord[]>(() =>
-    canReadCustomScreens ? (getCachedCustomScreens() ?? []) : []
+  const [customScreens, setCustomScreens] = useState<CustomScreenShortcutRecord[]>(() =>
+    canReadCustomScreens ? (getCachedCustomScreenShortcuts() ?? []) : []
   );
   const [solutionKits, setSolutionKits] = useState<SolutionKitSummary[]>(() =>
     canReadSolutionKits ? (getCachedSolutionKits() ?? []) : []
@@ -154,7 +154,7 @@ export function AdminShell({
 
   useEffect(() => {
     if (!canLoadCustomScreens) return;
-    listCustomScreensCached()
+    listCustomScreenShortcutsCached()
       .then((items) => setCustomScreens(items))
       .catch(() => undefined);
   }, [canLoadCustomScreens]);
@@ -170,7 +170,7 @@ export function AdminShell({
     if (!canLoadCustomScreens) return undefined;
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.customScreensList) return;
-      listCustomScreensCached({ force: true })
+      listCustomScreenShortcutsCached({ force: true })
         .then((items) => setCustomScreens(items))
         .catch(() => undefined);
     });

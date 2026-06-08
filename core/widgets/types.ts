@@ -67,6 +67,7 @@ export type WidgetRenderContext = {
   previewState?: WidgetPreviewState | null;
   runtimeScripts?: WidgetRuntimeScriptRegistry;
   nestedSurface?: NestedRenderSurface;
+  stickySurfaceOwner?: "widget-renderer";
 };
 
 export type WidgetEditorSlotTarget = {

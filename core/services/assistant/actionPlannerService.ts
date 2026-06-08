@@ -54,6 +54,7 @@ import {
 } from "./blueprints/productInquiryBlueprint";
 import { buildHouseProjectsCatalogPlan } from "./blueprints/houseProjectsCatalogBlueprint";
 import { buildCatalogFamilyPlan } from "./blueprints/catalogFamilyBlueprint";
+import { buildGenericMarkdownCatalogPlan } from "./blueprints/genericMarkdownCatalogBlueprint";
 import {
   CATALOG_FAMILY_PRESETS,
   PORTFOLIO_PROJECTS_PRESET,
@@ -66,6 +67,7 @@ import {
   resolveCmsOperationTargets,
 } from "./cmsTargetResolver";
 import { mapCmsOperationToActionPlan } from "./cmsOperationActionMapper";
+import { inferContentTypeFieldAdditions } from "./contentTypeFieldInference";
 import {
   resolveSiteBuilderFollowUpTarget,
   type AssistantSiteBuilderFollowUpResolution,
@@ -91,6 +93,11 @@ import { buildAdvancedSiteBuilderNeedsInputPlan } from "./assistantSiteBuilderIn
 import { buildActionPlanRequestFromReviewedIntake } from "./assistantSiteBuilderIntakeCompiler";
 import { normalizeAssistantSiteBuilderIntakeSession } from "./assistantSiteBuilderIntakeNormalizer";
 import { redactAssistantUnsafeText } from "./assistantRedaction";
+import {
+  ASSISTANT_TRANSPORT_MAX_CHARS,
+  assertAssistantPromptWithinPackageBudget,
+  deriveAssistantPromptCharLimitAfterOverhead,
+} from "./promptLimits";
 
 export {
   classifyAssistantPrompt,
@@ -1063,10 +1070,21 @@ const parseProviderDraftJson = (value: string) => {
 const buildProviderRequestLimits = (
   limits: AssistantProviderDraftPlanInput["limits"] | undefined
 ) => ({
-  maxInputTokens: Math.max(1, Math.floor(limits?.maxInputTokens ?? 4_000)),
+  maxInputTokens: Math.max(1, Math.floor(limits?.maxInputTokens ?? 128_000)),
   maxOutputTokens: Math.max(1, Math.floor(limits?.maxOutputTokens ?? 1_500)),
   timeoutMs: Math.max(1_000, Math.floor(limits?.timeoutMs ?? 15_000)),
 });
+
+const estimateProviderPlanningRequestOverheadChars = (
+  promptPackage: ReturnType<typeof buildProviderPlanningPromptPackage>,
+  responseContract: ReturnType<typeof chooseProviderResponseContract>
+) => {
+  const requestChars =
+    providerPlannerSystemPrompt.length +
+    JSON.stringify(promptPackage).length +
+    JSON.stringify(responseContract.responseContract).length;
+  return Math.max(0, requestChars - promptPackage.prompt.length);
+};
 
 const tryPlanProviderCmsOperationDraft = (
   input: AssistantProviderDraftPlanInput,
@@ -1215,12 +1233,130 @@ const buildProviderLocalRecoveryPlan = (input: AssistantProviderDraftPlanInput) 
   });
 };
 
+const extractNamedContentTypeTarget = (prompt: string) => {
+  const quoted = prompt.match(
+    /(?:o\s+nazwie|named|name|nazwa|nazwie)\s*[:=]?\s*['"“”]([^'"“”]+)['"“”]/iu
+  );
+  const quotedValue = quoted?.[1]?.trim();
+  if (quotedValue) return quotedValue;
+
+  const unquoted = prompt.match(
+    /(?:o\s+nazwie|named|name|nazwa|nazwie)\s+([A-Za-z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ][A-Za-z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ _-]{0,120}?)(?=\s*(?:\.{2,}|[.,;:\r\n]|$))/u
+  );
+  return unquoted?.[1]?.trim() ?? null;
+};
+
+const findContentTypeMentionInPromptHeader = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const header = normalizeAssistantPlannerPrompt(prompt.split(/\r?\n/u).slice(0, 4).join(" "));
+  if (!header) return null;
+  const matches = (context.resourceCatalog?.contentTypes ?? []).filter((contentType) => {
+    const values = [contentType.name, contentType.slug]
+      .map((value) => normalizeAssistantPlannerPrompt(value ?? ""))
+      .filter(Boolean);
+    return values.some((value) => header.includes(value));
+  });
+  return matches.length === 1 ? matches[0] : null;
+};
+
+const buildContentTypeFieldAddTargetQuery = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  rawDraft: CmsOperationDraft | null
+): NonNullable<CmsOperationDraft["targetQuery"]> | null => {
+  const explicitTarget =
+    rawDraft?.targetQuery?.exactName ??
+    rawDraft?.targetQuery?.prefix ??
+    rawDraft?.targetQuery?.slug ??
+    rawDraft?.targetQuery?.text ??
+    null;
+  if (explicitTarget) {
+    if (rawDraft?.targetQuery?.prefix) return { prefix: rawDraft.targetQuery.prefix };
+    if (rawDraft?.targetQuery?.slug) return { slug: rawDraft.targetQuery.slug };
+    return { exactName: explicitTarget };
+  }
+
+  const namedTarget = extractNamedContentTypeTarget(prompt);
+  if (namedTarget) return { exactName: namedTarget };
+
+  const mutationTarget =
+    typeof rawDraft?.mutation?.value === "string" && rawDraft.mutation.value.trim()
+      ? rawDraft.mutation.value.trim()
+      : null;
+  if (mutationTarget) {
+    const normalizedMutationTarget = normalizeAssistantPlannerPrompt(mutationTarget);
+    const matches = (context.resourceCatalog?.contentTypes ?? []).filter((contentType) =>
+      [contentType.name, contentType.slug]
+        .map((value) => normalizeAssistantPlannerPrompt(value ?? ""))
+        .filter(Boolean)
+        .some((value) => value === normalizedMutationTarget)
+    );
+    if (matches.length === 1) return { exactName: matches[0]!.name };
+  }
+
+  const headerMatch = findContentTypeMentionInPromptHeader(prompt, context);
+  if (headerMatch) return { exactName: headerMatch.name };
+
+  const selected = context.runtimeSnapshot?.selectedResource;
+  if (selected?.kind === "content-type") return { active: true };
+
+  return null;
+};
+
+const buildContentTypeFieldAddLocalPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+): AssistantActionPlan | null => {
+  const inferred = inferContentTypeFieldAdditions(prompt);
+  if (inferred.fields.length === 0) return null;
+
+  const rawDraft = buildCmsOperationDraftFromPrompt(prompt, context);
+  const selectedKind = context.runtimeSnapshot?.selectedResource?.kind;
+  const isContentTypeRequest =
+    rawDraft?.resourceKind === "content-type" ||
+    selectedKind === "content-type" ||
+    (context.advancedModule === "engine" &&
+      includesAny(normalizeAssistantPlannerPrompt(prompt), [
+        "content type",
+        "content types",
+        "content model",
+        "model",
+        "engine",
+        "typ tresci",
+        "typ treści",
+      ]));
+  if (!isContentTypeRequest) return null;
+
+  const targetQuery = buildContentTypeFieldAddTargetQuery(prompt, context, rawDraft);
+  if (!targetQuery) return null;
+
+  return mapCmsOperationToActionPlan({
+    prompt,
+    context,
+    draft: normalizeCmsOperationDraft({
+      operation: "update",
+      resourceKind: "content-type",
+      resourceKey: "content-type",
+      targetQuery,
+      mutation: { fieldIntent: "schema" },
+      constraints: {
+        destructive: false,
+        requiresConfirmation: false,
+      },
+    }),
+  });
+};
+
 const buildLocalPolicyOperationPlan = (
   prompt: string,
   context: ReturnType<typeof buildAssistantAdminContext>,
   options?: GenericCmsOperationPlanOptions
 ): AssistantActionPlan | null => {
   const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
+  const contentTypeFieldAddPlan = buildContentTypeFieldAddLocalPlan(prompt, context);
+  if (contentTypeFieldAddPlan) return contentTypeFieldAddPlan;
   const readOnlyPrompt = includesAny(normalizedPrompt, [
     "pokaz",
     "pokaż",
@@ -1432,6 +1568,33 @@ const buildPreferredBlueprintSetupPlan = (input: {
     routedClassification.intentFamily === "unknown"
   ) {
     return null;
+  }
+
+  const genericMarkdownCatalogPlan = buildGenericMarkdownCatalogPlan(input.prompt, {
+    promptKind: routedClassification.promptKind,
+    intentFamily: routedClassification.intentFamily,
+  });
+  if (genericMarkdownCatalogPlan) {
+    return finalizeAssistantPlan(
+      {
+        prompt: input.prompt,
+        context: trustedContext,
+      },
+      context,
+      routedClassification,
+      normalizeAssistantActionPlan({
+        ...genericMarkdownCatalogPlan,
+        metadata: {
+          ...genericMarkdownCatalogPlan.metadata,
+          planner: "local",
+          providerDraftUsed: false,
+        },
+        assumptions: [
+          ...genericMarkdownCatalogPlan.assumptions,
+          "Explicit markdown catalog fields use the generic catalog planner before preset blueprints.",
+        ],
+      })
+    );
   }
 
   const composedPlan = buildBlueprintComposerSetupPlan({
@@ -1663,6 +1826,19 @@ export const planAssistantActions = (input: AssistantActionPlanInput): Assistant
     if (setupPolicyPlan)
       return finalizeAssistantPlan(normalizedInput, context, routedClassification, setupPolicyPlan);
 
+    const genericMarkdownCatalogPlan = buildGenericMarkdownCatalogPlan(input.prompt, {
+      promptKind: classification.promptKind,
+      intentFamily,
+    });
+    if (genericMarkdownCatalogPlan) {
+      return finalizeAssistantPlan(
+        normalizedInput,
+        context,
+        routedClassification,
+        genericMarkdownCatalogPlan
+      );
+    }
+
     const composedPlan = buildBlueprintComposerSetupPlan({
       prompt: input.prompt,
       context: {
@@ -1807,26 +1983,48 @@ export const planAssistantActionsWithProviderDraft = async (
   }
 
   try {
+    const responseContract = chooseProviderResponseContract(
+      resolveModelCapabilityProfile({
+        provider: input.provider.id,
+        model: input.providerModel ?? "",
+      }),
+      {
+        name: "cms_operation_draft",
+        schema: buildCmsOperationDraftJsonSchema(assistantOperationPolicy),
+        strict: true,
+      }
+    );
+    const budgetProbePackage = buildProviderPlanningPromptPackage({
+      prompt: input.prompt,
+      context: trustedContext,
+      evidence: input.evidence,
+      maxPromptChars: ASSISTANT_TRANSPORT_MAX_CHARS,
+    });
+    const providerRequestOverheadChars = estimateProviderPlanningRequestOverheadChars(
+      budgetProbePackage,
+      responseContract
+    );
+    assertAssistantPromptWithinPackageBudget(
+      input.prompt,
+      input.limits?.maxInputTokens,
+      providerRequestOverheadChars,
+      128_000
+    );
     const promptPackage = buildProviderPlanningPromptPackage({
       prompt: input.prompt,
       context: trustedContext,
       evidence: input.evidence,
+      maxPromptChars: deriveAssistantPromptCharLimitAfterOverhead(
+        input.limits?.maxInputTokens,
+        providerRequestOverheadChars,
+        128_000
+      ),
     });
     const response = await input.provider.complete({
       systemPrompt: providerPlannerSystemPrompt,
       userMessage: JSON.stringify(promptPackage),
       snippets: [],
-      ...chooseProviderResponseContract(
-        resolveModelCapabilityProfile({
-          provider: input.provider.id,
-          model: input.providerModel ?? "",
-        }),
-        {
-          name: "cms_operation_draft",
-          schema: buildCmsOperationDraftJsonSchema(assistantOperationPolicy),
-          strict: true,
-        }
-      ),
+      ...responseContract,
       limits: buildProviderRequestLimits(input.limits),
     });
     const draft = parseProviderDraftJson(response.text);
@@ -1895,7 +2093,10 @@ export const planAssistantActionsWithProviderDraft = async (
       );
     }
     return planAssistantActions({ ...input, context: trustedContext });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "assistant_prompt_too_large") {
+      throw error;
+    }
     return planAssistantActions({ ...input, context: trustedContext });
   }
 };

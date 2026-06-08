@@ -65,6 +65,20 @@ POST /assistant/actions/execute
 
 Planner responses are tagged so the UI can render without parsing prompt text: `docs`, `inspection`, `action_plan`, `needs_input`, or `gated`.
 
+Generic CMS refinements stay in this typed action path. For existing content
+types, `content-type.field.add` can add supported scalar/select/media fields
+from a resolved target and a field list while preserving the rest of the schema.
+Nested object arrays and repeater-style fields are gated until the CMS field
+contract, editor, and runtime validation support them end to end.
+
+For new catalog setup, nontechnical markdown briefs can become reviewed typed
+plans when the prompt clearly asks for a catalog and provides an explicit field
+list. The planner derives an industry-neutral catalog preset from the pasted
+fields and returns the existing catalog action set: content type, custom admin
+screen, listing query/template, public catalog page, and detail route. Do not
+add branch-specific catalog shortcuts for single industries; extend the generic
+field inference or typed catalog contract instead.
+
 Current setup blueprints are deterministic typed plans. Architecture-studio
 prompts that ask for a complete service site route to
 `service-business-full-site`, which creates the required public pages, services
@@ -293,6 +307,12 @@ The provider is treated as untrusted. The backend reconstructs any executable pl
 The provider only runs when retrieval returns snippets; a missing or failed provider falls back to `docs-only`. Per-user and optional global limits are enforced by `assistantQuota.ts`, and `assistantMetrics.ts` / `assistantRedaction.ts` record request, error, fallback, no-hit, and latency signals without leaking secrets.
 
 Assistant Settings can ask the backend for OpenRouter model metadata through `POST /assistant/model-metadata`. The provider adapter reads OpenRouter's model list, applies published input/output limits when present, and returns conservative editable defaults when the provider does not publish those values.
+LLM Guide action planning also uses provider-reported metadata when available:
+the HTTP route keeps only a high transport abuse cap, while provider prompt
+packaging derives its effective character budget from the model input-token
+capacity. Trusted full content-type schemas stay server-side for dry-run and
+execute merges; provider-facing resource context includes only bounded field
+summaries.
 
 ## Admin site-builder intake state
 

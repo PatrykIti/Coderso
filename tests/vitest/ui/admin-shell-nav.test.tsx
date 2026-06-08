@@ -21,6 +21,11 @@ vi.mock("@/services/customScreensClient", () => ({
   listCustomScreensCached: adminShellServiceMocks.listCustomScreensCached,
 }));
 
+vi.mock("@/services/customScreenShortcutsClient", () => ({
+  getCachedCustomScreenShortcuts: adminShellServiceMocks.getCachedCustomScreens,
+  listCustomScreenShortcutsCached: adminShellServiceMocks.listCustomScreensCached,
+}));
+
 vi.mock("@/services/solutionKitsClient", () => ({
   getCachedSolutionKits: adminShellServiceMocks.getCachedSolutionKits,
   listSolutionKitsCached: adminShellServiceMocks.listSolutionKitsCached,

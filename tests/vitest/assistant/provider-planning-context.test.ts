@@ -25,6 +25,13 @@ const resourceCatalog = {
       slug: "products",
       name: "Products",
       entryCount: 4,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          title: { type: "string", title: "Title" },
+        },
+      },
       fields: [
         {
           name: "title",
@@ -270,6 +277,7 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   expect(prompt.resources?.posts).toHaveLength(1);
   expect(prompt.resources?.entries).toHaveLength(1);
   expect(prompt.resources?.contentTypes).toHaveLength(1);
+  expect(prompt.resources?.contentTypes[0]).not.toHaveProperty("schema");
   expect(prompt.resources?.detailPages).toHaveLength(1);
   expect(prompt.resources?.forms).toHaveLength(1);
   expect(prompt.resources?.menus).toHaveLength(1);
@@ -287,6 +295,23 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
     "doc_content_truncated",
     "content_types_truncated",
   ]);
+});
+
+test("buildProviderPlanningPromptPackage sizes prompt truncation from caller budget", () => {
+  const longPrompt = "x".repeat(10_000);
+  const truncated = buildProviderPlanningPromptPackage({
+    prompt: longPrompt,
+    maxPromptChars: 2_000,
+  });
+  const untruncated = buildProviderPlanningPromptPackage({
+    prompt: longPrompt,
+    maxPromptChars: 12_000,
+  });
+
+  expect(truncated.prompt.length).toBeLessThan(longPrompt.length);
+  expect(truncated.warnings).toContain("prompt_truncated");
+  expect(untruncated.prompt).toHaveLength(longPrompt.length);
+  expect(untruncated.warnings).not.toContain("prompt_truncated");
 });
 
 test("buildProviderPlanningPromptPackage returns null resources when no catalog is available", () => {
