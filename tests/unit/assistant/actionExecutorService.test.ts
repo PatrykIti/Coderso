@@ -1394,6 +1394,86 @@ test("executeAssistantActionPlan deletes content types when dependency count is 
   expect(await deps.getContentTypeBySlug("products")).toBeNull();
 });
 
+test("executeAssistantActionPlan adds fields to existing content types", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["title"],
+      properties: {
+        title: { type: "string", title: "Title" },
+      },
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-content-type-field-add",
+    status: "ready",
+    intentId: "content-type-field-add",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Add content type fields",
+    answer: "I can add supported fields.",
+    summary: "Add fields to an existing content model.",
+    confidence: 0.88,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "content-type-field-add-products",
+        type: "content-type.field.add",
+        title: "Add fields to Products",
+        description: "Add fields while preserving existing schema.",
+        input: {
+          id: contentType.id,
+          name: "Products",
+          slug: "products",
+          fields: [
+            { name: "price_amount", label: "Price Amount", type: "number" },
+            {
+              name: "gallery_images",
+              label: "Gallery Images",
+              type: "media",
+              multiple: true,
+              mediaAccept: ["image/*"],
+            },
+          ],
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "actor-1",
+      idempotencyKey: "assistant-content-type-field-add-1",
+    },
+    deps
+  );
+
+  expect(executed.results[0]?.message).toBe("Content type fields were updated.");
+  const updated = await deps.getContentTypeBySlug("products");
+  expect(updated?.schema).toMatchObject({
+    properties: {
+      title: { type: "string", title: "Title" },
+      price_amount: { type: "number", title: "Price Amount", xFieldType: "number" },
+      gallery_images: {
+        type: "array",
+        items: { type: "string" },
+        xFieldType: "media",
+        xFieldConfig: { media: { multiple: true, accept: ["image/*"] } },
+      },
+    },
+  });
+});
+
 test("executeAssistantActionPlan deletes custom screens through explicit delete actions", async () => {
   const deps = createDeps();
   const contentType = await deps.createContentType({

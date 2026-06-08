@@ -171,6 +171,31 @@ const readSchemaFields = (
   );
 };
 
+const sanitizeCatalogSchema = (
+  schema: unknown,
+  warnings: string[],
+  group: string
+): Record<string, unknown> | null => {
+  if (!isRecord(schema)) return null;
+  const properties = isRecord(schema.properties) ? schema.properties : {};
+  const sanitizedProperties: Record<string, unknown> = {};
+  for (const [fieldName, definition] of Object.entries(properties)) {
+    if (!fieldName.trim() || isSecretLike(fieldName)) {
+      warnings.push(`${group}_field_redacted`);
+      continue;
+    }
+    sanitizedProperties[fieldName] = definition;
+  }
+  const required = readStringArray(schema.required).filter((fieldName) =>
+    Object.prototype.hasOwnProperty.call(sanitizedProperties, fieldName)
+  );
+  return {
+    ...schema,
+    properties: sanitizedProperties,
+    ...(required.length ? { required } : {}),
+  };
+};
+
 const normalizeContentType = (
   value: Record<string, unknown>,
   budget: AssistantResourceCatalogBudget,
@@ -187,6 +212,7 @@ const normalizeContentType = (
     name,
     entryCount: readNumber(value.entryCount),
     fields: readSchemaFields(value.schema, budget, warnings, `content_type_${slug}`),
+    schema: sanitizeCatalogSchema(value.schema, warnings, `content_type_${slug}`),
   };
 };
 

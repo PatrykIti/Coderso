@@ -28,6 +28,7 @@ import type { CustomScreenCollectionRole } from "../customScreens/customScreenSc
 import { isAssistantActionPlanStrict } from "./actionPlanSchema";
 import type { DetailPageDocument } from "../content/detailPageTypes";
 import type { CollectionWorkspaceSummary } from "../content/collectionWorkspaceService";
+import type { ContentTypeFieldAddSpec } from "../content/contentTypeSchemaFields";
 import type { AssistantSiteKitAdvancedRuntimeOverrides } from "./siteBuilderAdvancedRuntimeOverrides";
 
 export type AssistantActionPlanStatus = "ready" | "needs_input";
@@ -313,6 +314,20 @@ export type AssistantContentTypeUpsertAction = {
     slug: string;
     name: string;
     schema: Record<string, unknown>;
+  };
+};
+
+export type AssistantContentTypeFieldAddAction = {
+  id: string;
+  type: "content-type.field.add";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    slug: string;
+    name: string;
+    fields: ContentTypeFieldAddSpec[];
+    expectedEntryCount?: number | null;
   };
 };
 
@@ -1029,6 +1044,7 @@ export type AssistantSiteKitValidateAction = {
 export type AssistantPlannedAction =
   | AssistantContentRouteUpsertAction
   | AssistantContentTypeUpsertAction
+  | AssistantContentTypeFieldAddAction
   | AssistantContentTypeDeleteAction
   | AssistantCustomScreenUpsertAction
   | AssistantCustomScreenDeleteAction

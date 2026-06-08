@@ -307,9 +307,11 @@ const notifyAssistantExecutionCacheEvent = (input: {
 
   switch (item.type) {
     case "content-type.upsert":
+    case "content-type.field.add":
     case "content-type.delete": {
       const plannedDelete = readActionId(action, "content-type.delete");
-      const id = resourceId(item, plannedDelete?.input.id);
+      const plannedFieldAdd = readActionId(action, "content-type.field.add");
+      const id = resourceId(item, plannedDelete?.input.id ?? plannedFieldAdd?.input.id);
       clearContentTypesCache();
       emit(cacheKeys.contentTypesList, cacheAction);
       if (id) clearAndEmitDetail(cacheKeys.contentTypeDetail(id), cacheAction, emit);

@@ -122,7 +122,9 @@ const sanitizeDetails = (
       sanitized[key] = sanitizeText(value, "[REDACTED]");
       continue;
     }
-    sanitized[key] = value;
+    if (typeof value === "number" || typeof value === "boolean" || value === null) {
+      sanitized[key] = value;
+    }
   }
   return sanitized;
 };

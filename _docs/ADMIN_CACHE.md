@@ -282,7 +282,7 @@ Clients update caches and broadcast events on:
   mutations. Detail keys are derived from the strict planned action or the
   sanitized execution `resourceId`, never provider text.
 - Assistant execution cache event coverage:
-  - `content-type.*` -> `contentTypes:list`, touched `contentTypes:detail:<id>`
+  - `content-type.upsert`, `content-type.field.add`, `content-type.delete` -> `contentTypes:list`, touched `contentTypes:detail:<id>`
   - `entry.*` -> `entries:list:all`, `entries:list:<typeSlug>`, touched `entries:detail:<typeSlug>:<id>`
   - `custom-screen.*` -> `customScreens:list`, touched `customScreens:detail:<id>`
   - `page.*` -> `pages:list`, touched `pages:detail:<id>`

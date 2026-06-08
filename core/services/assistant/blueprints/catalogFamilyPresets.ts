@@ -497,7 +497,7 @@ const servicesDirectorySchema = {
   },
 } as const;
 
-const createListingTemplateConfig = (input: {
+export const createListingTemplateConfig = (input: {
   emptyTitle: string;
   emptyDescription: string;
   summaryLabel: string;
@@ -505,8 +505,10 @@ const createListingTemplateConfig = (input: {
   secondaryNumericLabel: string;
   statusLabel: string;
   locationLabel: string;
+  summaryField?: string;
   numericField: string;
   secondaryNumericField: string;
+  statusField?: string;
   locationField?: string;
   imageUrlField?: string;
 }) => ({
@@ -525,7 +527,7 @@ const createListingTemplateConfig = (input: {
       : []),
     {
       key: "summary",
-      source: "data.summary",
+      source: `data.${input.summaryField ?? "summary"}`,
       label: input.summaryLabel,
       fallback: null,
       format: "text",
@@ -549,7 +551,7 @@ const createListingTemplateConfig = (input: {
     },
     {
       key: "status",
-      source: "data.projectStatus",
+      source: `data.${input.statusField ?? "projectStatus"}`,
       label: input.statusLabel,
       fallback: null,
       format: "badge",

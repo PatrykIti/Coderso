@@ -36,6 +36,7 @@ import {
 import { getUserPermissions } from "../../services/auth/roleService";
 import { resolveAssistantModelMetadata } from "../../services/assistant/providers";
 import type { AssistantLlmProvider } from "../../services/settings/settingsService";
+import { assertAssistantPromptWithinBudget } from "../../services/assistant/promptLimits";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -85,14 +86,20 @@ const resolveProviderForActionPlanning = async () => {
   const { getSetting } = await import("../../services/settings/settingsService");
   const { resolveAssistantProvider } = await import("../../services/assistant/providers");
   const enabled = (await getSetting("assistant.llm.enabled")) === true;
-  if (!enabled) return null;
+  if (!enabled) return { provider: null, providerId: "none" as const, model: "" };
   const provider = await readOptionalStringSetting("assistant.llm.provider", "none");
   const model = await readOptionalStringSetting(
     "assistant.llm.model",
     "google/gemma-3n-e2b-it:free"
   );
-  if (provider !== "openai" && provider !== "openrouter") return null;
-  return resolveAssistantProvider({ provider, model });
+  if (provider !== "openai" && provider !== "openrouter") {
+    return { provider: null, providerId: "none" as const, model };
+  }
+  return {
+    provider: await resolveAssistantProvider({ provider, model }),
+    providerId: provider,
+    model,
+  };
 };
 
 const defaultService: AssistantRouteService = {
@@ -101,19 +108,34 @@ const defaultService: AssistantRouteService = {
   chat: answerAssistantQuestion,
   getModelMetadata: resolveAssistantModelMetadata,
   planActions: async (input) => {
-    const provider = await resolveProviderForActionPlanning();
+    const planningLlm = await resolveProviderForActionPlanning();
+    const [configuredMaxInputTokens, configuredMaxOutputTokens, timeoutMs, modelMetadata] =
+      await Promise.all([
+        readOptionalNumberSetting("assistant.llm.maxInputTokens", 8192),
+        readOptionalNumberSetting("assistant.llm.maxOutputTokens", 2048),
+        readOptionalNumberSetting("assistant.llm.timeoutMs", 20000),
+        planningLlm.providerId === "openai" || planningLlm.providerId === "openrouter"
+          ? resolveAssistantModelMetadata({
+              provider: planningLlm.providerId,
+              model: planningLlm.model,
+            })
+          : Promise.resolve(null),
+      ]);
+    const providerMaxInputTokens =
+      modelMetadata?.source === "provider" ? modelMetadata.maxInputTokens : 0;
+    const providerMaxOutputTokens =
+      modelMetadata?.source === "provider" ? modelMetadata.maxOutputTokens : 0;
+    const maxInputTokens = Math.max(configuredMaxInputTokens, providerMaxInputTokens);
+    assertAssistantPromptWithinBudget(input.prompt, maxInputTokens);
     return planAssistantActionsWithProviderDraft({
       ...input,
-      provider,
-      providerModel: await readOptionalStringSetting(
-        "assistant.llm.model",
-        "google/gemma-3n-e2b-it:free"
-      ),
-      llmAvailable: Boolean(provider),
+      provider: planningLlm.provider,
+      providerModel: planningLlm.model,
+      llmAvailable: Boolean(planningLlm.provider),
       limits: {
-        maxInputTokens: await readOptionalNumberSetting("assistant.llm.maxInputTokens", 8192),
-        maxOutputTokens: await readOptionalNumberSetting("assistant.llm.maxOutputTokens", 2048),
-        timeoutMs: await readOptionalNumberSetting("assistant.llm.timeoutMs", 20000),
+        maxInputTokens,
+        maxOutputTokens: Math.max(configuredMaxOutputTokens, providerMaxOutputTokens),
+        timeoutMs,
       },
     });
   },
@@ -186,6 +208,12 @@ const mapAssistantError = (error: unknown) => {
         code: "assistant_budget_exceeded",
         message: "Assistant token budget exceeded",
         status: 429,
+      };
+    case "assistant_prompt_too_large":
+      return {
+        code: "assistant_prompt_too_large",
+        message: "Assistant prompt is too large for the configured model budget",
+        status: 413,
       };
     case "assistant_llm_unavailable":
       return {

@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 12 tasks
-- **In Progress:** 4 tasks
-- **Done:** 2302 tasks
+- **To Do:** 11 tasks
+- **In Progress:** 5 tasks
+- **Done:** 2303 tasks
 
 ---
 
@@ -88,7 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | Umbrella for remaining product gaps before the assistant behaves as a generic WordPress-competitor CMS co-pilot for nontechnical users across industries. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
@@ -106,6 +105,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -122,6 +122,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-416-03 | Timeline Tests Rewrite And Fixtures | High | Medium | Done (2026-06-07): rewrote `timeline.test.tsx` and the editor wave; fixed renderer/validator/visualPanel/template-editor/styleNoneTokens fixtures. |
 | TASK-416-04 | Timeline Docs, Registration, And Closure | High | Medium | Done (2026-06-07): `TIMELINE.md`/`WIDGETS.md` rewrite, changelog 1137, validation lanes; playwright-cli smoke pending manual run. |
 | TASK-415 | Navigation Sticky Collapse Runtime Regressions | High | Medium | Done (2026-06-07): collapse-on-scroll now survives duplicate/no-delta scroll events and runtime rebinds, normal page rendering delegates sticky ownership to the outer widget surface, and Navigation regression coverage was added. |
+| TASK-414-01 | Generic Content Type Refinement and Long Prompt UX | High | Large | Done (2026-06-07): generic `content-type.field.add`, markdown-brief catalog setup, model-aware long prompt 413 handling, real OpenRouter prompt regression, and assistant long-paste scroll smoke completed without industry-specific hard-coding. |
 | TASK-413 | Page Editor Canvas Workspace Layout | High | Medium | Done (2026-06-06): editor-region scroll, wider responsive canvas, desktop panel hide/show controls, device frame switching, and unmocked layout coverage completed. |
 | TASK-412 | Navigation Widget Runtime Behavior Parity | High | Medium | Done (2026-06-06): Navigation sticky/collapse/drawer/submenu runtime now works across admin canvas and public pages through the shared runtime bridge/script path. |
 | TASK-411 | Media Upload Native File Metadata | High | Small | Done (2026-06-06): native Bun/File upload metadata is preserved and MIME normalization prevents `undefined.startsWith` media 500s. |

@@ -93,3 +93,36 @@ test("assistant chat route maps assistant_budget_exceeded to 429 ApiError", asyn
     expect(apiError.status).toBe(429);
   }
 });
+
+test("assistant action plan route maps assistant_prompt_too_large to 413 ApiError", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      planActions: async () => {
+        throw new Error("assistant_prompt_too_large");
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: { prompt: "x" },
+      requestId: "req-prompt-large-1",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_prompt_too_large");
+    expect(apiError.status).toBe(413);
+  }
+});

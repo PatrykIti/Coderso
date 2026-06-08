@@ -64,6 +64,7 @@ const destructiveActionTypes = new Set([
 const actionTypeLabels: Record<string, string> = {
   "setting.content-route.upsert": "Content route",
   "content-type.upsert": "Content model",
+  "content-type.field.add": "Content model",
   "content-type.delete": "Content model",
   "custom-screen.upsert": "Custom screen",
   "custom-screen.delete": "Custom screen",

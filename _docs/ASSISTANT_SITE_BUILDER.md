@@ -50,6 +50,17 @@ The same flow now has a generic CMS operation foundation:
 
 Read-only inspection plans can list bounded CMS candidates, such as matching pages
 or custom screens, without exposing dry-run or execute controls.
+Existing content-type field refinement is also generic: prompts that resolve to
+one content type and provide a field list can assemble `content-type.field.add`.
+That action only adds supported scalar/select/media fields, preserves the
+existing schema, rejects duplicate or secret-like names, and gates nested object
+arrays/repeater-style fields until the CMS field contract supports them.
+New catalog setup can also start from a nontechnical markdown brief when the
+prompt clearly asks for a catalog and includes an explicit field list. The
+planner derives an industry-neutral catalog preset from those fields, then
+returns the normal reviewed actions for a content type, admin screen, listing
+query/template, public catalog page, and detail route instead of falling back to
+the fixed product preset.
 In `LLM Guide` mode the floating assistant sends prompts to `/assistant/actions/plan`
 by default; `docs-only` remains the documentation chat path.
 Planner responses can be tagged as `docs`, `inspection`, `action_plan`,
@@ -198,6 +209,11 @@ permissions, idempotency, and conflict-aware execution.
 - Provider output is operation-draft-only. Provider-supplied `actions[]`, ids,
   and executor payloads are rejected or ignored; the backend must reconstruct any
   executable plan locally from policy and trusted context.
+- Provider prompt input is sized from configured/model-reported input-token
+  capacity, with only a high transport abuse cap at the route boundary. Server
+  planning context can keep full trusted content-type schemas for dry-run/merge,
+  but provider-facing resource packages strip those schemas to bounded field
+  summaries.
 - Provider prompt guidance, provider-facing resource registry metadata, and the
   strict CMS operation draft JSON schema are generated from
   `assistantOperationPolicy`; gated/redacted surfaces are described from policy

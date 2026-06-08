@@ -30,6 +30,21 @@ const catalogDetailPageIds: Record<string, string> = {
   "services-directory": "5f9c2ed6-4df0-55ef-8c8f-7ab7f6b7f304",
 };
 
+const hashCatalogKey = (value: string) => {
+  let hash = 0x811c9dc5;
+  for (const char of value) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+};
+
+const buildDynamicCatalogDetailPageId = (key: string) => {
+  const left = hashCatalogKey(key);
+  const right = hashCatalogKey(`${key}:detail`);
+  return `5f9c2ed6-4df0-55ef-8c8f-${left}${right.slice(0, 4)}`;
+};
+
 export type CatalogFamilyPreset = {
   key: string;
   intentId: string;
@@ -50,6 +65,8 @@ export type CatalogFamilyPreset = {
   ctaLabel: string;
   contentSchema: Record<string, unknown>;
   listingTemplateConfig: Record<string, unknown>;
+  summaryField?: string;
+  statusField?: string;
   coverImageUrlField?: string;
   coverImageAltField?: string;
   screen: {
@@ -77,8 +94,7 @@ export type CatalogFamilyPreset = {
 
 export const getCatalogFamilyDetailPageId = (preset: Pick<CatalogFamilyPreset, "key">) => {
   const id = catalogDetailPageIds[preset.key];
-  if (!id) throw new Error("assistant_catalog_detail_page_id_missing");
-  return id;
+  return id ?? buildDynamicCatalogDetailPageId(preset.key);
 };
 
 const toAdminSurfaceField = (
@@ -146,14 +162,14 @@ const buildScreenBindings = (preset: CatalogFamilyPreset) =>
         id: `binding-${preset.key}-header-subtitle`,
         widgetId: `${preset.key}-header`,
         propPath: "subtitle",
-        field: "summary",
+        field: preset.summaryField ?? "summary",
         mode: "read",
       },
       {
         id: `binding-${preset.key}-header-badge`,
         widgetId: `${preset.key}-header`,
         propPath: "badge",
-        field: "projectStatus",
+        field: preset.statusField ?? "projectStatus",
         mode: "read",
       },
       ...preset.screen.leftFields.map((field) => ({
@@ -201,6 +217,7 @@ const buildDetailPageLayout = (): DetailPageDocument["settings"]["layout"] => ({
 const buildDetailPageDocument = (preset: CatalogFamilyPreset): DetailPageDocument => {
   const heroId = `${preset.key}-detail-hero`;
   const hasCoverImage = Boolean(preset.coverImageUrlField);
+  const summaryField = preset.summaryField ?? "summary";
   return {
     schemaVersion: 1,
     id: getCatalogFamilyDetailPageId(preset),
@@ -211,7 +228,7 @@ const buildDetailPageDocument = (preset: CatalogFamilyPreset): DetailPageDocumen
     titlePattern: "{{ title }}",
     seo: {
       titlePattern: "{{ title }}",
-      descriptionField: "summary",
+      descriptionField: summaryField,
       imageField: preset.coverImageUrlField ?? "heroImage",
     },
     settings: {
@@ -258,7 +275,7 @@ const buildDetailPageDocument = (preset: CatalogFamilyPreset): DetailPageDocumen
         propPath: "body",
         source: {
           kind: "entry-field",
-          field: "summary",
+          field: summaryField,
         },
         transform: "text",
         required: true,
@@ -379,15 +396,15 @@ export const buildCatalogFamilyPlan = (
             "slug",
             "status",
             "updatedAt",
-            "data.summary",
-            "data.heroImage",
+            `data.${preset.summaryField ?? "summary"}`,
+            `data.${preset.coverImageUrlField ?? "heroImage"}`,
             ...(preset.coverImageUrlField ? [`data.${preset.coverImageUrlField}`] : []),
             ...(preset.coverImageAltField ? [`data.${preset.coverImageAltField}`] : []),
             ...[
               ...preset.screen.leftFields.map((field) => `data.${field.field}`),
               ...preset.screen.rightFields.map((field) => `data.${field.field}`),
-            ].filter((field) => field !== "data.projectStatus"),
-            "data.projectStatus",
+            ].filter((field) => field !== `data.${preset.statusField ?? "projectStatus"}`),
+            `data.${preset.statusField ?? "projectStatus"}`,
           ])
         ),
         includeDrafts: false,

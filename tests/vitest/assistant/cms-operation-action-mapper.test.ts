@@ -43,6 +43,13 @@ const context = buildAssistantAdminContext({
         name: "Products",
         entryCount: 0,
         fields: [],
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            title: { type: "string", title: "Title" },
+          },
+        },
       },
       {
         id: "ct-product-archive",
@@ -578,6 +585,55 @@ test("mapCmsOperationToActionPlan blocks counted updates when the patch is inval
 
   expect(plan?.status).toBe("needs_input");
   expect(plan?.actions).toEqual([]);
+});
+
+test("mapCmsOperationToActionPlan maps content-type field additions from a generic field list", () => {
+  const plan = mapCmsOperationToActionPlan({
+    prompt: `Add these fields to the Content Type named Products
+title
+project_code
+full_description
+usable_area_m2
+featured_image
+exterior_gallery[]
+tags[]
+rooms[]
+  - room_name
+  - room_area_m2
+project_pdf`,
+    draft: normalizeCmsOperationDraft({
+      operation: "update",
+      resourceKind: "content-type",
+      targetQuery: { exactName: "Products" },
+      mutation: { fieldIntent: "schema" },
+    }),
+    context,
+  });
+
+  expect(plan?.status).toBe("ready");
+  expect(plan?.actions).toHaveLength(1);
+  const action = plan?.actions[0];
+  if (!action || action.type !== "content-type.field.add") {
+    throw new Error("missing_content_type_field_add_action");
+  }
+  expect(action.input).toMatchObject({
+    id: "ct-products",
+    slug: "products",
+    name: "Products",
+  });
+  expect(action.input.fields).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ name: "project_code", type: "text" }),
+      expect.objectContaining({ name: "full_description", type: "richtext" }),
+      expect.objectContaining({ name: "usable_area_m2", type: "number" }),
+      expect.objectContaining({ name: "featured_image", type: "media" }),
+      expect.objectContaining({ name: "exterior_gallery", type: "media", multiple: true }),
+      expect.objectContaining({ name: "project_pdf", type: "media" }),
+    ])
+  );
+  expect(action.input.fields.some((field) => field.name === "tags")).toBe(false);
+  expect(action.description).toContain("Unsupported nested or array fields were not planned");
+  expect(() => normalizeAssistantActionPlan(plan!)).not.toThrow();
 });
 
 test("mapCmsOperationToActionPlan maps explicit multi-create items to existing typed actions", () => {

@@ -12,6 +12,7 @@ test("assistantActionTypes lists every supported action type once", () => {
   expect(assistantActionTypes).toEqual([
     "setting.content-route.upsert",
     "content-type.upsert",
+    "content-type.field.add",
     "content-type.delete",
     "custom-screen.upsert",
     "custom-screen.delete",
@@ -87,6 +88,7 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("entry.upsert-draft")).toBe(true);
   expect(isAssistantActionType("entry.sample.create")).toBe(true);
   expect(isAssistantActionType("entry.delete")).toBe(true);
+  expect(isAssistantActionType("content-type.field.add")).toBe(true);
   expect(isAssistantActionType("content-type.delete")).toBe(true);
   expect(isAssistantActionType("custom-screen.delete")).toBe(true);
   expect(isAssistantActionType("custom-screen.update")).toBe(true);

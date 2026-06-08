@@ -14,6 +14,7 @@ import {
   assistantSiteBuilderReviewStateIds,
   assistantSiteBuilderSectionRoleIds,
 } from "../../services/assistant/assistantSiteBuilderIntakeTypes";
+import { ASSISTANT_TRANSPORT_MAX_CHARS } from "../../services/assistant/promptLimits";
 
 const intakeTextSchema = (maxLength: number) =>
   ({
@@ -770,7 +771,7 @@ export const assistantActionPlanRequestSchema = {
     prompt: {
       type: "string",
       minLength: 1,
-      maxLength: 2000,
+      maxLength: ASSISTANT_TRANSPORT_MAX_CHARS,
     },
     context: {
       type: "object",

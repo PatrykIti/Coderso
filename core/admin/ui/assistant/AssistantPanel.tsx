@@ -1316,6 +1316,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                   <Textarea
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
+                    className="max-h-56 min-h-24 resize-y overflow-y-auto"
                     placeholder={
                       currentMode === "llm-guide"
                         ? "Describe the setup or admin surface you want LLM Guide to create..."

@@ -97,6 +97,14 @@ export const normalizeResolverText = (value: string) =>
 const includesAny = (value: string, candidates: string[]) =>
   candidates.some((candidate) => value.includes(normalizeResolverText(candidate)));
 
+const readCandidatePrimitive = (value: unknown) =>
+  typeof value === "string" ||
+  typeof value === "number" ||
+  typeof value === "boolean" ||
+  value === null
+    ? value
+    : undefined;
+
 const wordLikeContains = (normalizedPrompt: string, alias: string) => {
   const normalizedAlias = normalizeResolverText(alias);
   if (!normalizedAlias) return false;
@@ -291,9 +299,9 @@ const getCandidateFieldValue = (
   if (field === "slug") return candidate.slug;
   if (field === "label" || field === "name" || field === "title") return candidate.label;
   if (field === "visibility" || field === "submissionAccess") {
-    return candidate.details?.submissionAccess;
+    return readCandidatePrimitive(candidate.details?.submissionAccess);
   }
-  return candidate.details?.[field];
+  return readCandidatePrimitive(candidate.details?.[field]);
 };
 
 export const matchesFiltersWithPolicy = (
@@ -357,9 +365,9 @@ export const matchesCandidateWithPolicy = (
 const detailPageTrustedTargetValues = (candidate: CmsResolvedTargetCandidate) =>
   [
     candidate.id,
-    candidate.details?.contentTypeId,
-    candidate.details?.contentTypeSlug,
-    candidate.details?.linkedRouteType,
+    readCandidatePrimitive(candidate.details?.contentTypeId),
+    readCandidatePrimitive(candidate.details?.contentTypeSlug),
+    readCandidatePrimitive(candidate.details?.linkedRouteType),
     candidate.slug,
   ]
     .map((value) => normalizeValue(value))

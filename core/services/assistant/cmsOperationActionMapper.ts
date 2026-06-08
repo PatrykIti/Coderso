@@ -18,6 +18,7 @@ import {
   canMapFilteredAllWithPolicy,
 } from "./operationPolicy/safetyPolicy";
 import { redactAssistantUnsafeText } from "./assistantRedaction";
+import { inferContentTypeFieldAdditions } from "./contentTypeFieldInference";
 
 const readString = (value: unknown) =>
   typeof value === "string" && value.trim() ? value.trim() : null;
@@ -354,6 +355,11 @@ const secretKeyPattern = /(token|secret|password|api[-_]?key|credential|cookie|s
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const readDetailRecord = (target: CmsResolvedTargetCandidate, key: string) => {
+  const value = target.details?.[key];
+  return isRecord(value) ? value : null;
+};
 
 const containsSecretLikeKey = (value: unknown): boolean => {
   if (Array.isArray(value)) return value.some(containsSecretLikeKey);
@@ -883,9 +889,19 @@ const buildCreateActionPlan = (input: {
   };
 };
 
+const describeUnsupportedContentFields = (
+  gates: ReturnType<typeof inferContentTypeFieldAdditions>["gates"]
+) => {
+  const names = gates.slice(0, 8).map((gate) => gate.name);
+  if (!names.length) return "";
+  const suffix = gates.length > names.length ? ` and ${gates.length - names.length} more` : "";
+  return ` Unsupported nested or array fields were not planned: ${names.join(", ")}${suffix}.`;
+};
+
 const buildActionForExactTarget = (
   draft: CmsOperationDraft,
-  target: CmsResolvedTargetCandidate
+  target: CmsResolvedTargetCandidate,
+  prompt: string
 ): AssistantPlannedAction | null => {
   if (draft.resourceKind === "page" && draft.operation === "delete") {
     if (!isPolicyActionExecutable(draft, "page.delete")) return null;
@@ -979,6 +995,32 @@ const buildActionForExactTarget = (
         id: target.id,
         contentTypeSlug: readDetailString(target, "contentTypeSlug"),
         patch,
+      },
+    };
+  }
+  if (draft.resourceKind === "content-type" && draft.operation === "update") {
+    if (!isPolicyActionExecutable(draft, "content-type.field.add")) return null;
+    if (!target.slug) return null;
+    const schema = readDetailRecord(target, "schema");
+    if (!schema) return null;
+    const existingProperties = isRecord(schema.properties) ? schema.properties : {};
+    const inferred = inferContentTypeFieldAdditions(prompt);
+    const fields = inferred.fields.filter(
+      (field) => !Object.prototype.hasOwnProperty.call(existingProperties, field.name)
+    );
+    if (!fields.length) return null;
+    const unsupported = describeUnsupportedContentFields(inferred.gates);
+    return {
+      id: actionId("content-type.field.add", target.id),
+      type: "content-type.field.add",
+      title: `Add fields to ${target.label}`,
+      description: `Add supported fields to the selected content type while preserving existing schema.${unsupported}`,
+      input: {
+        id: target.id,
+        name: target.label,
+        slug: target.slug,
+        fields,
+        expectedEntryCount: readDetailNumber(target, "entryCount") ?? null,
       },
     };
   }
@@ -1317,7 +1359,7 @@ export const mapCmsOperationToActionPlan = (input: {
   if (canMapExpectedCountMultiWithPolicy(input.draft, resolution)) {
     const verb = operationVerb(input.draft.operation);
     const actions = resolution.candidates
-      .map((target) => buildActionForExactTarget(input.draft, target))
+      .map((target) => buildActionForExactTarget(input.draft, target, input.prompt))
       .filter((action): action is AssistantPlannedAction => Boolean(action));
     if (actions.length === resolution.candidates.length) {
       return {
@@ -1343,7 +1385,7 @@ export const mapCmsOperationToActionPlan = (input: {
   if (canMapFilteredAllWithPolicy(input.prompt, input.draft, resolution)) {
     const verb = operationVerb(input.draft.operation);
     const actions = resolution.candidates
-      .map((target) => buildActionForExactTarget(input.draft, target))
+      .map((target) => buildActionForExactTarget(input.draft, target, input.prompt))
       .filter((action): action is AssistantPlannedAction => Boolean(action));
     if (actions.length === resolution.candidates.length) {
       return {
@@ -1370,7 +1412,7 @@ export const mapCmsOperationToActionPlan = (input: {
     return buildNeedsInputPlan(input.prompt, input.draft, resolution.reason, resolution.candidates);
   }
   const target = resolution.candidates[0];
-  const action = buildActionForExactTarget(input.draft, target);
+  const action = buildActionForExactTarget(input.draft, target, input.prompt);
   if (!action) {
     return buildNeedsInputPlan(
       input.prompt,

@@ -10,6 +10,7 @@ import { searchAssistantDocsDb } from "./docsDbRetriever";
 import { recordAssistantMetric } from "./assistantMetrics";
 import { enforceAssistantQuota } from "./assistantQuota";
 import { redactAssistantMetadata, redactAssistantText } from "./assistantRedaction";
+import { deriveAssistantPromptCharLimit } from "./promptLimits";
 import { resolveAssistantProvider } from "./providers";
 import type { AssistantProviderResponse } from "./providers/providerTypes";
 import type {
@@ -21,7 +22,6 @@ import type {
   DocsSearchHit,
 } from "./docsTypes";
 
-const ASSISTANT_MESSAGE_MAX_LENGTH = 2000;
 const BLOCKED_MARKERS = [
   "<system>",
   "</system>",
@@ -41,6 +41,12 @@ const DEFAULT_ASSISTANT_QUOTA_GLOBAL_REQUESTS_PER_MINUTE = 0;
 const DEFAULT_ASSISTANT_QUOTA_GLOBAL_REQUESTS_PER_DAY = 0;
 const DEFAULT_ASSISTANT_QUOTA_LLM_TOKENS_PER_DAY = 0;
 const DEFAULT_ASSISTANT_QUOTA_GLOBAL_LLM_TOKENS_PER_DAY = 0;
+
+const replaceUnsafeControlChar = (char: string) => {
+  const code = char.charCodeAt(0);
+  if (char === "\n" || char === "\t") return char;
+  return (code >= 0 && code <= 31) || code === 127 ? " " : char;
+};
 
 const ASSISTANT_LLM_SYSTEM_PROMPT = [
   "You are Coderso Assistant running in strict RAG mode.",
@@ -316,16 +322,19 @@ const readRuntimeSettings = async (
   };
 };
 
-export const sanitizeAssistantMessage = (message: string) => {
+export const sanitizeAssistantMessage = (message: string, options: { maxLength?: number } = {}) => {
   const normalized = message
-    .replace(/\p{Cc}+/gu, " ")
-    .replace(/\s+/g, " ")
+    .replace(/\r\n?/g, "\n")
+    .split("")
+    .map((char) => replaceUnsafeControlChar(char))
+    .join("")
+    .replace(/[ \t]{2,}/g, " ")
     .trim();
 
   if (!normalized) {
     throw new Error("assistant_message_invalid");
   }
-  if (normalized.length > ASSISTANT_MESSAGE_MAX_LENGTH) {
+  if (normalized.length > (options.maxLength ?? deriveAssistantPromptCharLimit(8_192))) {
     throw new Error("assistant_message_invalid");
   }
 
@@ -519,7 +528,9 @@ export const answerAssistantQuestion = async (
       throw new Error("assistant_disabled");
     }
 
-    const normalizedMessage = sanitizeAssistantMessage(input.message);
+    const normalizedMessage = sanitizeAssistantMessage(input.message, {
+      maxLength: deriveAssistantPromptCharLimit(settings.llmMaxInputTokens),
+    });
     const requestedMode = normalizeMode(input.mode, settings.defaultMode);
     const mode = resolveMode(requestedMode, settings);
     const detailLevel =
