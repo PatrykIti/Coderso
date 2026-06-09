@@ -18,6 +18,10 @@ import {
 } from "../../db/schema";
 import { logAudit } from "../audit/auditService";
 import { normalizeContentTypeName, normalizeContentTypeSlug } from "../content/typeService";
+import {
+  createDefaultPageDocumentV2,
+  normalizePageDocumentV2ForWrite,
+} from "../pages/pageDocumentV2";
 import { getSolutionKitFromCatalog } from "./solutionKitsCatalog";
 import type {
   SolutionKitContentTypeBlueprint,
@@ -328,12 +332,12 @@ const defaultFormSettings = (): JsonRecord => ({
   },
 });
 
-const defaultPageData = (): JsonRecord => ({
-  blocks: [],
-  settings: {
-    showInNav: true,
-  },
-});
+const toJsonRecord = (value: unknown): JsonRecord => value as JsonRecord;
+
+const normalizeKitPageData = (value: unknown): JsonRecord =>
+  toJsonRecord(normalizePageDocumentV2ForWrite(value));
+
+const defaultPageData = (): JsonRecord => toJsonRecord(createDefaultPageDocumentV2());
 
 const normalizeTaxonomyTerms = (items?: SolutionKitTaxonomyTerm[]) => {
   if (!Array.isArray(items) || items.length === 0) return [] as SolutionKitTaxonomyTerm[];
@@ -422,11 +426,12 @@ const normalizeSeoDefaults = (value: SolutionKitSeoDefaults | undefined | null) 
 
 const normalizePageBlueprint = (value: SolutionKitPageBlueprint) => {
   const status: "draft" | "published" = value.status === "published" ? "published" : "draft";
+  const sourceData = isRecord(value.data) ? asRecord(value.data) : defaultPageData();
   return {
     slug: normalizePageSlug(value.slug),
     title: normalizeString(value.title),
     status,
-    currentData: isRecord(value.data) ? asRecord(value.data) : defaultPageData(),
+    currentData: normalizeKitPageData(sourceData),
     seo: normalizeSeoDefaults(value.seo),
   };
 };

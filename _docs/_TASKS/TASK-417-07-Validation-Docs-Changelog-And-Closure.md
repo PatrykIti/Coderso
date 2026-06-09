@@ -6,7 +6,7 @@
 **Category:** QA / Documentation / Release Gates
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-01, TASK-417-02, TASK-417-03, TASK-417-04, TASK-417-05, TASK-417-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -36,8 +36,9 @@ The parent task cannot close while any physical descendant remains open.
 
 ## Sub-Tasks
 
-- [ ] TASK-417-07-L01: Targeted validation lanes and gates.
-- [ ] TASK-417-07-L02: Docs, changelog, board, and final drift.
+- [x] TASK-417-07-L01: Targeted validation lanes and gates.
+- [x] TASK-417-07-L02: Docs, changelog, board, and final drift.
+- [x] TASK-417-07-L03: Live server and Playwright smokes.
 
 ---
 
@@ -46,6 +47,8 @@ The parent task cannot close while any physical descendant remains open.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - All targeted Vitest/Bun suites from child tasks.
+- Incremental live smoke tests with `coderso-dev-core-host` and
+  `playwright-cli` whenever a runtime/admin slice is testable.
 - `bun run gates:coderso`
 - Final read-only drift passes after validation and docs are updated.
 

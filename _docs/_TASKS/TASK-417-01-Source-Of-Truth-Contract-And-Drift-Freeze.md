@@ -6,7 +6,7 @@
 **Category:** Pages / Architecture / Documentation
 **Estimated Effort:** Large
 **Dependencies:** TASK-417
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -35,8 +35,8 @@ task-contract correction.
 
 ## Sub-Tasks
 
-- [ ] TASK-417-01-L01: Page model v2 normative docs.
-- [ ] TASK-417-01-L02: Task contract drift audit loop.
+- [x] TASK-417-01-L01: Page model v2 normative docs.
+- [x] TASK-417-01-L02: Task contract drift audit loop.
 
 ---
 

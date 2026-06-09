@@ -6,7 +6,7 @@
 **Category:** Pages / API / Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-417-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -33,12 +33,12 @@ centralized Pages error mapping coverage for changed route behavior.
 
 ## Sub-Tasks
 
-- [ ] Update `core/server/validation/pageSchemas.ts` to reference Pages v2
+- [x] Update `core/server/validation/pageSchemas.ts` to reference Pages v2
   document schemas.
-- [ ] Reject v1 `blocks[]` Page payloads at the route schema boundary.
-- [ ] Add `mapPageError` or equivalent centralized mapping for known page
+- [x] Reject v1 `blocks[]` Page payloads at the route schema boundary.
+- [x] Add `mapPageError` or equivalent centralized mapping for known page
   domain errors.
-- [ ] Add registration, auth/RBAC, validation, and error-mapping coverage.
+- [x] Add registration, auth/RBAC, validation, and error-mapping coverage.
 
 ---
 
@@ -47,17 +47,26 @@ centralized Pages error mapping coverage for changed route behavior.
 ```ts
 export const pageDataSchema = pageDocumentV2JsonSchema;
 
-export function mapPageError(error: unknown): never {
+export function mapPageError(error: unknown): ApiError | null {
   if (isPageDomainError(error, "page_not_found")) {
-    throw new ApiError(404, "page_not_found", "Page not found.");
+    return new ApiError("page_not_found", "Page not found.", 404);
   }
   if (isPageDomainError(error, "page_document_invalid")) {
-    throw new ApiError(400, "page_document_invalid", "Page document is invalid.");
+    return new ApiError("page_document_invalid", "Page document is invalid.", 400);
   }
   if (isPageDomainError(error, "page_document_unknown_field")) {
-    throw new ApiError(400, "page_document_unknown_field", "Page document contains an unknown field.");
+    return new ApiError("page_document_unknown_field", "Page document contains an unknown field.", 400);
   }
-  throw error;
+  if (isPageDomainError(error, "revision_not_found")) {
+    return new ApiError("revision_not_found", "Page revision was not found.", 404);
+  }
+  if (isPageDomainError(error, "revision_delete_forbidden")) {
+    return new ApiError("revision_delete_forbidden", "Page revision cannot be deleted.", 409);
+  }
+  if (isPageDomainError(error, "page_revision_autosave_failed")) {
+    return new ApiError("page_revision_autosave_failed", "Page autosave revision could not be saved.", 500);
+  }
+  return null;
 }
 
 router.patch("/pages/:id", requirePermission("content:write"), async (ctx) => {
@@ -65,7 +74,9 @@ router.patch("/pages/:id", requirePermission("content:write"), async (ctx) => {
   try {
     return await updatePage(ctx.params.id, body);
   } catch (error) {
-    mapPageError(error);
+    const mapped = mapPageError(error);
+    if (mapped) throw mapped;
+    throw error;
   }
 });
 ```
@@ -81,6 +92,11 @@ Error handling:
 - v1 `blocks[]` payloads fail validation.
 - unknown root, section, block, or props fields fail validation.
 - `page_document_unknown_field` maps to HTTP 400 at the route boundary.
+- `page_not_found` maps to HTTP 404 instead of leaking as a generic 500.
+- `revision_not_found` maps to HTTP 404 and `revision_delete_forbidden` maps
+  to HTTP 409 for existing revision routes.
+- `page_revision_autosave_failed` maps to a stable HTTP 500 API code instead
+  of falling through to generic `internal_error`.
 - known service errors map to stable API error codes.
 
 Regression-test shape:

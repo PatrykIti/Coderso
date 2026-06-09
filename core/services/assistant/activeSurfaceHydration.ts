@@ -29,11 +29,6 @@ export type AssistantActiveSurfaceHydrationDeps = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-const readPageBlocks = (currentData: unknown) => {
-  if (!isRecord(currentData)) return [];
-  return Array.isArray(currentData.blocks) ? currentData.blocks : [];
-};
-
 const readDetailPageBlocks = (currentDocument: unknown) => {
   if (!isRecord(currentDocument)) return [];
   return Array.isArray(currentDocument.blocks) ? currentDocument.blocks : [];
@@ -158,11 +153,6 @@ export async function hydrateAssistantActiveSurfaceContext(
   if (activeSurface.kind === "page") {
     const page = await deps.getPage(activeSurface.page.id);
     if (!page) return { ...contextWithWorkspace, activeSurface: null };
-    const templateReferences = mergeAssistantTemplateSectionReferences([
-      ...extractAssistantTemplateSectionReferences(activeSurface.blocks),
-      ...extractAssistantTemplateSectionReferences(readPageBlocks(page.currentData)),
-    ]);
-    const referencedTemplates = await hydrateReferencedTemplates(templateReferences, deps);
     return {
       ...contextWithWorkspace,
       activeSurface: {
@@ -174,11 +164,6 @@ export async function hydrateAssistantActiveSurfaceContext(
           status: page.status,
           template: activeSurface.page.template,
         },
-        templateReferences,
-        referencedTemplates: referencedTemplates.templates,
-        warnings: [...new Set([...activeSurface.warnings, ...referencedTemplates.warnings])].sort(
-          (left, right) => left.localeCompare(right)
-        ),
       },
     };
   }

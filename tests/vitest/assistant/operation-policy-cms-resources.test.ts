@@ -77,7 +77,10 @@ test("assistantOperationPolicy covers page actions aliases filters and fields", 
     patchPath: ["title"],
   });
   expect(Object.values(page.actions).map((action) => action.type)).toEqual(
-    expect.arrayContaining(["page.upsert", "page.update", "page.delete", "page.widget.patch"])
+    expect.arrayContaining(["page.upsert", "page.update", "page.delete"])
+  );
+  expect(Object.values(page.actions).map((action) => action.type)).not.toContain(
+    "page.widget.patch"
   );
   expect(page.destructive).toMatchObject({
     requireReview: true,

@@ -508,11 +508,29 @@ const activeSurfaceBlockSchema = {
   },
 } as const;
 
+const activeSurfacePageSectionSchema = {
+  type: "object",
+  required: ["id", "type", "name", "path", "blockCount", "blocks"],
+  additionalProperties: false,
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 120 },
+    type: { type: "string", minLength: 1, maxLength: 120 },
+    name: { type: "string", minLength: 1, maxLength: 160 },
+    path: { type: "string", minLength: 1, maxLength: 240 },
+    blockCount: { type: "integer", minimum: 0, maximum: 999 },
+    blocks: {
+      type: "array",
+      maxItems: 40,
+      items: activeSurfaceBlockSchema,
+    },
+  },
+} as const;
+
 const activeSurfaceSchema = {
   anyOf: [
     {
       type: "object",
-      required: ["kind", "page", "selectedBlockId", "blocks", "warnings"],
+      required: ["kind", "page", "selectedSectionId", "selectedBlockId", "sections", "warnings"],
       additionalProperties: false,
       properties: {
         kind: { enum: ["page"] },
@@ -530,13 +548,16 @@ const activeSurfaceSchema = {
             },
           },
         },
+        selectedSectionId: {
+          anyOf: [{ type: "string", minLength: 1, maxLength: 120 }, { type: "null" }],
+        },
         selectedBlockId: {
           anyOf: [{ type: "string", minLength: 1, maxLength: 120 }, { type: "null" }],
         },
-        blocks: {
+        sections: {
           type: "array",
-          maxItems: 80,
-          items: activeSurfaceBlockSchema,
+          maxItems: 40,
+          items: activeSurfacePageSectionSchema,
         },
         warnings: {
           type: "array",

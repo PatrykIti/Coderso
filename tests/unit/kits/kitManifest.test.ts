@@ -4,6 +4,11 @@ import {
   buildSolutionKitManifest,
   normalizeSolutionKitManifest,
 } from "../../../core/services/kits/kitManifest";
+import {
+  PAGE_DOCUMENT_SCHEMA_VERSION,
+  createPageBlockV2,
+  createPageSectionV2,
+} from "../../../core/services/pages/pageDocumentV2";
 
 const source = {
   id: "custom-kit",
@@ -18,10 +23,26 @@ const source = {
         status: "published" as const,
         template: "service-home",
         data: {
-          blocks: [
-            { id: "a", type: "hero", data: {} },
-            { id: "b", type: "hero", data: {} },
-            { id: "c", type: "contact", data: {} },
+          schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
+          sections: [
+            createPageSectionV2("hero", {
+              id: "sec-a",
+              blocks: [
+                createPageBlockV2("heading", {
+                  id: "a",
+                  props: { text: "Hero", level: "h1", align: "left" },
+                }),
+              ],
+            }),
+            createPageSectionV2("lead-form", {
+              id: "sec-c",
+              blocks: [
+                createPageBlockV2("form", {
+                  id: "c",
+                  props: { formId: "lead-form", title: "Lead form" },
+                }),
+              ],
+            }),
           ],
           settings: {
             template: "service-home",
@@ -52,7 +73,7 @@ test("buildSolutionKitManifest creates deterministic includes and checklist", ()
   expect(manifest.requiredModules).toEqual(["forms", "widgets"]);
   expect(manifest.optionalModules).toEqual(["booking"]);
   expect(manifest.includes.templates).toEqual(["service-home"]);
-  expect(manifest.includes.widgets).toEqual(["contact", "hero"]);
+  expect(manifest.includes.widgets).toEqual(["form", "heading", "hero", "lead-form"]);
   expect(manifest.includes.entries).toEqual(["manual-entry"]);
   expect(manifest.postInstallTasks?.length).toBeGreaterThan(0);
 });

@@ -6,7 +6,7 @@
 **Category:** Pages / Migration Policy
 **Estimated Effort:** Medium
 **Dependencies:** TASK-417-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -35,12 +35,12 @@ rendered. Fresh admin/API writes reject legacy/versionless payloads with
 
 ## Sub-Tasks
 
-- [ ] Add one owner helper for legacy reset diagnostics.
-- [ ] Use it in services, runtime, revisions, duplicate, and restore paths.
-- [ ] Ensure v1 `blocks[]` cannot be submitted as fresh admin write payload.
-- [ ] Keep reset diagnostics out-of-band and never persist them in
+- [x] Add one owner helper for legacy reset diagnostics.
+- [x] Use it in services, runtime, revisions, duplicate, and restore paths.
+- [x] Ensure v1 `blocks[]` cannot be submitted as fresh admin write payload.
+- [x] Keep reset diagnostics out-of-band and never persist them in
   `currentData`, `publishedData`, revision snapshots, or public HTML.
-- [ ] Add tests that existing rows become empty v2 documents without invoking a
+- [x] Add tests that existing rows become empty v2 documents without invoking a
   v1 renderer.
 
 ---
@@ -71,6 +71,9 @@ Expected data flow:
 - Runtime normalizes legacy stored data to empty v2.
 - Admin editor loads empty v2 for old rows.
 - Fresh write validation rejects v1 `blocks[]`.
+- No-payload publish, revision snapshot creation, autosave snapshot creation,
+  duplicate, restore, public render, and preview all use this stored-read
+  adapter for existing row/snapshot data.
 - Diagnostics are logged or surfaced only as non-persisted metadata.
 - All callers destructure `{ document, diagnostics }`; callers never treat the
   wrapper result as a Page document.
@@ -87,6 +90,9 @@ Regression-test shape:
 - Bun tests seed `currentData`/`publishedData` with v1 `blocks[]`, then assert
   service reads, preview, public render, duplicate, and restore produce v2 empty
   documents.
+- Regression tests include autosave and no-payload publish from legacy
+  `currentData` to prevent `page_document_invalid` from being thrown on stored
+  reads.
 
 ---
 

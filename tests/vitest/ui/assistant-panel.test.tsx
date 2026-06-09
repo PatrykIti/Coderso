@@ -601,15 +601,15 @@ test("ActionExecutionResult renders resource links and summary", () => {
         results: [
           {
             actionId: "page-house-projects-catalog",
-            type: "page.widget.patch",
+            type: "page.update",
             targetType: "page",
-            targetKey: "/projekty-domow/assistant-spacer",
+            targetKey: "/projekty-domow",
             operation: "update",
             status: "success",
             resourceId: "page-1",
             adminHref: "/admin/pages/page-1",
             publicHref: "/projekty-domow",
-            message: "Page widget block is updated.",
+            message: "Page metadata is updated.",
           },
         ],
         summary: {
@@ -623,8 +623,9 @@ test("ActionExecutionResult renders resource links and summary", () => {
   );
 
   expect(html).toContain("Action results");
-  expect(html).toContain("Page widget");
-  expect(html).toContain("Page widget block is updated.");
+  expect(html).toContain("Page");
+  expect(html).toContain("update");
+  expect(html).toContain("Page metadata is updated.");
   expect(html).toContain("Launch readiness");
   expect(html).toContain("Required public pages");
   expect(html).toContain("Satisfied");

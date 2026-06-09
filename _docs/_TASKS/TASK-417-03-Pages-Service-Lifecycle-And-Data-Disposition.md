@@ -6,7 +6,7 @@
 **Category:** Pages / Services / Persistence
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -14,9 +14,11 @@
 
 Cut Pages service persistence, autosave, publish, revisions, duplicate, and
 navigation semantics to the v2 document model. Stored versionless/v1 Page rows
-are intentionally reset to empty v2 documents when read, restored, duplicated,
-or rendered because this CMS has no production users yet. Fresh admin/API writes
-reject legacy/versionless payloads with `page_document_invalid`.
+are intentionally reset to empty v2 documents when read by admin, snapshotted
+for revisions/autosave, published without a fresh payload, restored, duplicated,
+rendered publicly, or previewed because this CMS has no production users yet.
+Fresh admin/API writes reject legacy/versionless payloads with
+`page_document_invalid`.
 
 ---
 
@@ -37,8 +39,8 @@ reject legacy/versionless payloads with `page_document_invalid`.
 
 ## Sub-Tasks
 
-- [ ] TASK-417-03-L01: Create, update, autosave, publish, and revisions v2.
-- [ ] TASK-417-03-L02: Existing Page rows clean-slate reset.
+- [x] TASK-417-03-L01: Create, update, autosave, publish, and revisions v2.
+- [x] TASK-417-03-L02: Existing Page rows clean-slate reset.
 
 ---
 

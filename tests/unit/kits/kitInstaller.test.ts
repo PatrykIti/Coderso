@@ -3,19 +3,17 @@ import { expect, test } from "bun:test";
 import { getSolutionKitFromCatalog } from "../../../core/services/kits/solutionKitsCatalog";
 import { buildTemplateSeedsForKit } from "../../../core/services/kits/kitTemplateSeeds";
 
-test("buildTemplateSeedsForKit derives unique seeds from page templates", () => {
+test("buildTemplateSeedsForKit skips page-derived seeds for Pages v2 documents", () => {
   const kit = getSolutionKitFromCatalog("automotive-workshop");
   expect(kit).not.toBeNull();
   if (!kit) return;
 
   const seeds = buildTemplateSeedsForKit(kit);
 
-  expect(seeds.length).toBeGreaterThan(0);
-  expect(new Set(seeds.map((item) => item.key.toLowerCase())).size).toBe(seeds.length);
-  expect(seeds.some((item) => item.key === "service-home")).toBe(true);
+  expect(seeds).toEqual([]);
 });
 
-test("buildTemplateSeedsForKit lets explicit template blueprint override page-derived seed", () => {
+test("buildTemplateSeedsForKit uses explicit template blueprints for widget templates", () => {
   const base = getSolutionKitFromCatalog("automotive-workshop");
   expect(base).not.toBeNull();
   if (!base) return;

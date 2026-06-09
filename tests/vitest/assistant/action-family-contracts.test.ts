@@ -131,9 +131,6 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(
     getAssistantActionFamilyContract("listing-template.card.patch").strictInput.notes.join(" ")
   ).toContain("preserve unrelated");
-  expect(
-    getAssistantActionFamilyContract("page.widget.patch").strictInput.notes.join(" ")
-  ).toContain("top-level");
   const pageUpsertContract = getAssistantActionFamilyContract("page.upsert");
   expect(pageUpsertContract.strictInput.required).toEqual([
     "title",
@@ -143,6 +140,7 @@ test("menu seo media and surface expansion contracts declare domain permissions"
     "introBody",
   ]);
   expect(pageUpsertContract.strictInput.notes.join(" ")).toContain("collectionLink");
+  expect(pageUpsertContract.strictInput.notes.join(" ")).toContain("sections");
   const detailPageContract = getAssistantActionFamilyContract("detail-page.upsert");
   expect(detailPageContract.status).toBe("executable");
   expect(detailPageContract.family).toBe("detail-page");

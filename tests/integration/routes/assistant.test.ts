@@ -513,7 +513,7 @@ test("assistant action plan route preserves locally composed mixed setup plans a
   });
 });
 
-test("assistant action plan route requires widget read permission for active page template inspection", async () => {
+test("assistant action plan route does not require widget read permission for active page sections", async () => {
   const { router, routes } = makeRouter();
   const requestedPermissions: string[] = [];
 
@@ -522,7 +522,7 @@ test("assistant action plan route requires widget read permission for active pag
       requestedPermissions.push(permission);
       return async () => undefined;
     },
-    validate: () => undefined,
+    validate: validateSchema,
     service: {
       hydrateActiveSurface: async (context) => context,
       planActions: async () => buildHouseProjectsCatalogPlan(),
@@ -535,7 +535,7 @@ test("assistant action plan route requires widget read permission for active pag
     params: {},
     query: {},
     body: {
-      prompt: "sprawdz template section na tej stronie",
+      prompt: "sprawdz sekcje na tej stronie",
       context: {
         page: "/admin/pages/page-1",
         activeSurface: {
@@ -547,17 +547,27 @@ test("assistant action plan route requires widget read permission for active pag
             status: "draft",
             template: "landing",
           },
-          selectedBlockId: "template-ref",
-          blocks: [
+          selectedSectionId: "section-hero",
+          selectedBlockId: "heading-1",
+          sections: [
             {
-              id: "template-ref",
-              type: "template-section",
-              label: "Contact CTA",
-              path: "0",
-              childCount: 0,
-              slotKeys: [],
-              templateId: "template-1",
-              templateName: "Contact CTA",
+              id: "section-hero",
+              type: "hero",
+              name: "Hero",
+              path: "sections.0",
+              blockCount: 1,
+              blocks: [
+                {
+                  id: "heading-1",
+                  type: "heading",
+                  label: "Contact CTA",
+                  path: "sections.0.blocks.0",
+                  childCount: 0,
+                  slotKeys: [],
+                  templateId: null,
+                  templateName: null,
+                },
+              ],
             },
           ],
           warnings: [],
@@ -569,7 +579,7 @@ test("assistant action plan route requires widget read permission for active pag
   });
 
   expect(requestedPermissions).toContain("content:read");
-  expect(requestedPermissions).toContain("widgets:read");
+  expect(requestedPermissions).not.toContain("widgets:read");
 });
 
 test("assistant action plan route hydrates collection workspace hints with explicit detail page permissions", async () => {

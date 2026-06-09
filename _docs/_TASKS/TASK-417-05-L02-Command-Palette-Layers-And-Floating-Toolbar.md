@@ -6,7 +6,7 @@
 **Category:** Admin UI / Pages
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-05-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -33,11 +33,11 @@ layout, content, style, spacing, background, responsive, and visibility.
 
 ## Sub-Tasks
 
-- [ ] Replace left library and right settings panels for Pages.
-- [ ] Add command palette with section and atomic-block insertion.
-- [ ] Add layers overlay with section/block navigation and visibility toggle.
-- [ ] Add floating toolbar with one active subpanel at a time.
-- [ ] Keep keyboard affordances: `Ctrl+K`/`Cmd+K`, `Esc`, duplicate/delete
+- [x] Replace left library and right settings panels for Pages.
+- [x] Add command palette with section and atomic-block insertion.
+- [x] Add layers overlay with section/block navigation and visibility toggle.
+- [x] Add floating toolbar with one active subpanel at a time.
+- [x] Keep keyboard affordances: `Ctrl+K`/`Cmd+K`, `Esc`, duplicate/delete
   where supported.
 
 ---

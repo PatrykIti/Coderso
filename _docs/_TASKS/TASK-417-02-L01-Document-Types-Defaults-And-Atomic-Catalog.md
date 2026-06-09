@@ -6,7 +6,7 @@
 **Category:** Pages / Domain
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -33,20 +33,20 @@ database, settings, or server adapters.
 
 ## Sub-Tasks
 
-- [ ] Create the Pages v2 domain module at
+- [x] Create the Pages v2 domain module at
   `core/services/pages/pageDocumentV2.ts`.
-- [ ] Define `PageDocumentV2`, `PageSectionV2`, `PageBlockV2`, breakpoints,
+- [x] Define `PageDocumentV2`, `PageSectionV2`, `PageBlockV2`, breakpoints,
   layout/style/spacing/visibility contracts, and atomic block props.
-- [ ] Define the initial Pages v2 section catalog:
+- [x] Define the initial Pages v2 section catalog:
   `hero`, `content`, `feature-grid`, `media-split`, `gallery`, `collection`,
   `lead-form`, `faq`, `testimonials`, `cta`, `embed`, `custom`.
-- [ ] Define allowed variant ids per section type and default section
+- [x] Define allowed variant ids per section type and default section
   composition for every section type.
-- [ ] Define defaults for an empty document, new section, and every atomic block.
-- [ ] Cover the initial atomic block catalog:
+- [x] Define defaults for an empty document, new section, and every atomic block.
+- [x] Cover the initial atomic block catalog:
   `heading`, `text`, `button`, `image`, `video`, `gallery`, `form`, `list`,
   `card`, `collection`, `embed`, `divider`, `spacer`.
-- [ ] Define block-level responsive override storage. Section overrides live
+- [x] Define block-level responsive override storage. Section overrides live
   under `section.responsive[bp].layout/style/spacing/visibility`, while block
   overrides live under `section.responsive[bp].blocks[blockId].props/style`.
 

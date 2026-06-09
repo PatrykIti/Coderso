@@ -6,15 +6,16 @@
 **Category:** Pages / Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-02-L02, TASK-417-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
 ## Overview
 
-Add the Pages v2 React SSR renderer for sections and atomic blocks and update
-Pages template props so Page templates consume the v2 document, not widget
-`blocks[]`.
+Add the Pages v2 React SSR renderer for sections and atomic blocks and introduce
+a separate Pages v2 template boundary. The legacy `PageTemplateProps.blocks`
+and `page-landing.tsx` path remain available for non-Page widget surfaces until
+a future template migration task replaces them.
 
 ---
 
@@ -33,13 +34,16 @@ Pages template props so Page templates consume the v2 document, not widget
 
 ## Sub-Tasks
 
-- [ ] Add `PageTemplatePropsV2` with `document: PageDocumentV2`.
-- [ ] Introduce the v2 Page renderer boundary in `core/site/renderPublicPage.tsx`
+- [x] Add `PageTemplatePropsV2` with `document: PageDocumentV2`.
+- [x] Add a separate v2 template resolver/family, for example
+  `page-v2-${key}.tsx` and `page-v2.tsx`, so v2 Pages do not repurpose the
+  legacy `page-${key}.tsx` widget-block template contract.
+- [x] Introduce the v2 Page renderer boundary in `core/site/renderPublicPage.tsx`
   without removing widget rendering paths used by non-Page surfaces.
-- [ ] Render sections with layout/style/spacing/visibility and responsive
+- [x] Render sections with layout/style/spacing/visibility and responsive
   cascade applied for preview device.
-- [ ] Render every atomic block safely.
-- [ ] Preserve SEO/meta/document shell behavior.
+- [x] Render every atomic block safely.
+- [x] Preserve SEO/meta/document shell behavior.
 
 ---
 
@@ -53,6 +57,17 @@ export type PageTemplatePropsV2 = {
   isPreview?: boolean;
   previewDevice?: PageBreakpoint;
 };
+
+export async function renderPublicPageRuntimeHtmlV2(options: PageV2RenderOptions) {
+  const templatePath = await resolvePageTemplatePathV2({
+    themeName: options.themeName,
+    templateKey: options.templateKey,
+  });
+  const Template = templatePath ? await loadTemplateComponentV2(templatePath) : null;
+  return renderDocumentWithPageShellV2(
+    Template ? <Template {...options} /> : <DefaultRuntimePageShellV2 {...options} />
+  );
+}
 
 export function DefaultRuntimePageShellV2(props: PageTemplatePropsV2) {
   const breakpoint = toPageBreakpoint(props.previewDevice ?? "desktop");
@@ -73,7 +88,10 @@ export function DefaultRuntimePageShellV2(props: PageTemplatePropsV2) {
 Expected data flow:
 
 - Public Page render calls receive a normalized v2 document.
-- Template loaders pass `document` to Page templates.
+- v2 template loaders pass `document` to v2 Page templates only.
+- Existing `renderPublicPageRuntimeHtml` and legacy `PageTemplateProps.blocks`
+  remain scoped to detail pages, widget-template preview, and other non-Page
+  widget surfaces.
 - `toPageBreakpoint` adapts the existing runtime `DeviceTarget` vocabulary so
   preview device handling does not fork into two unrelated models.
 - Non-Page widget template/detail rendering remains outside this prop contract.
@@ -90,6 +108,8 @@ Regression-test shape:
 - Bun/SSR tests assert sections and all atomic blocks render, responsive device
   output changes only overridden fields, and no `WidgetRenderer` is used for
   Pages.
+- Tests assert legacy `page-landing.tsx`/`PageTemplateProps.blocks` still render
+  non-Page widget surfaces while Pages use the v2 template family.
 
 ---
 

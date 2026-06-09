@@ -6,7 +6,7 @@
 **Category:** Admin UI / Pages
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-417-02, TASK-417-03, TASK-417-04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -36,9 +36,9 @@ override editing.
 
 ## Sub-Tasks
 
-- [ ] TASK-417-05-L01: Editor state reducer and canvas selection.
-- [ ] TASK-417-05-L02: Command palette, layers, and floating toolbar.
-- [ ] TASK-417-05-L03: Responsive overrides, save, preview, and history.
+- [x] TASK-417-05-L01: Editor state reducer and canvas selection.
+- [x] TASK-417-05-L02: Command palette, layers, and floating toolbar.
+- [x] TASK-417-05-L03: Responsive overrides, save, preview, and history.
 
 ---
 

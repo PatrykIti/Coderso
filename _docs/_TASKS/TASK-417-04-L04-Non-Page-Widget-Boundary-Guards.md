@@ -6,7 +6,7 @@
 **Category:** Widgets / Runtime Boundaries
 **Estimated Effort:** Medium
 **Dependencies:** TASK-417-04-L01, TASK-417-04-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -44,13 +44,16 @@ v2 rewrite must not silently mutate shared widget contracts.
 
 ## Sub-Tasks
 
-- [ ] Split shared runtime helpers if needed so Page templates use v2 and
+- [x] Split shared runtime helpers if needed so Page templates use v2 and
   detail/widget surfaces keep widget props.
-- [ ] Name and guard `core/site/renderPublicPage.tsx` shared helpers and the
+- [x] Leave legacy `page-${key}.tsx`, `page-landing.tsx`, `PageTemplateProps`,
+  and `DefaultRuntimePageShell` scoped to non-Page widget documents; Pages v2
+  must use `PageTemplatePropsV2` and a separate v2 template family.
+- [x] Name and guard `core/site/renderPublicPage.tsx` shared helpers and the
   `renderWidgetTemplatePreviewHtml` caller in `core/server/publicSite.tsx`.
-- [ ] Add regression tests for detail pages, custom screens, widget templates,
+- [x] Add regression tests for detail pages, custom screens, widget templates,
   and template preview.
-- [ ] Verify widget module pack and widget registry behavior are unchanged.
+- [x] Verify widget module pack and widget registry behavior are unchanged.
 
 ---
 
@@ -71,6 +74,9 @@ Expected data flow:
 - Pages call the v2 renderer.
 - Detail pages, widget templates, and custom-screen previews keep widget
   renderer paths.
+- Detail pages and widget-template preview may continue resolving legacy
+  `page-${key}.tsx` templates, but Page documents may not call that legacy
+  widget-block template path.
 - Shared document shell/SEO/CSS helpers are reused where safe.
 - `renderPublicPageRuntimeHtmlV2` must not replace the widget-template preview
   renderer unless that path is explicitly adapted and covered.

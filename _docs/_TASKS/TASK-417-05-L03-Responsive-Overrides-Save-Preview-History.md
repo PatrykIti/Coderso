@@ -6,7 +6,7 @@
 **Category:** Admin UI / Pages
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-05-L01, TASK-417-05-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -32,12 +32,12 @@ publish, settings, autosave, revisions, and history on top of the v2 document.
 
 ## Sub-Tasks
 
-- [ ] Wire breakpoint switcher to canvas width and edit context.
-- [ ] Save non-desktop edits as sparse responsive overrides.
-- [ ] Add reset-inheritance actions.
-- [ ] Preserve Page Settings, autosave, revisions, restore, discard, preview,
+- [x] Wire breakpoint switcher to canvas width and edit context.
+- [x] Save non-desktop edits as sparse responsive overrides.
+- [x] Add reset-inheritance actions.
+- [x] Preserve Page Settings, autosave, revisions, restore, discard, preview,
   publish, toasts, and session-expired handling.
-- [ ] Update PageEditor's active assistant surface publisher to sections.
+- [x] Update PageEditor's active assistant surface publisher to sections.
   TASK-417-06-L01 owns assistant-side schema/consumer changes.
 
 ---

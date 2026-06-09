@@ -9,6 +9,10 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Page editor
   - UI: `core/admin/ui/pages/PageEditor.tsx`
   - Cached APIs: `getPageCached`, `getCachedPageDetail`
+  - Data shape: cached page detail `currentData`/`publishedData` are
+    `PageDocumentV2` documents with `schemaVersion: 2` and `sections[]`.
+    Legacy/versionless Page rows are normalized to an empty v2 document by the
+    service before they reach the admin cache.
 
 ## Posts
 - Posts list

@@ -6,7 +6,7 @@
 **Category:** Assistant / Pages
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-02, TASK-417-03, TASK-417-04, TASK-417-05
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -41,8 +41,8 @@ rerun a read-only drift pass focused on `actionPlanSchema.ts`,
 
 ## Sub-Tasks
 
-- [ ] TASK-417-06-L01: Active surface and action schemas sections.
-- [ ] TASK-417-06-L02: Blueprint emitters, executor, and policy cutover.
+- [x] TASK-417-06-L01: Active surface and action schemas sections.
+- [x] TASK-417-06-L02: Blueprint emitters, executor, and policy cutover.
 
 ---
 

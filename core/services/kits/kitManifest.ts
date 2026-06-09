@@ -53,18 +53,27 @@ const toVertical = (source: SolutionKitManifestSource) => {
   return first.replace(/_/g, "-");
 };
 
-const asBlocks = (data: unknown) => {
+const asPageSurfaceParts = (data: unknown) => {
   if (!isRecord(data)) return [] as Array<Record<string, unknown>>;
+  const sections = data.sections;
+  if (Array.isArray(sections)) {
+    return sections.flatMap((section) => {
+      if (!isRecord(section)) return [];
+      const blocks = Array.isArray(section.blocks) ? section.blocks.filter(isRecord) : [];
+      return [section, ...blocks];
+    });
+  }
   const blocks = data.blocks;
-  if (!Array.isArray(blocks)) return [];
-  return blocks.filter((item): item is Record<string, unknown> => isRecord(item));
+  if (Array.isArray(blocks))
+    return blocks.filter((item): item is Record<string, unknown> => isRecord(item));
+  return [];
 };
 
 const collectWidgetIncludes = (blueprint: SolutionKitResourceBlueprint) =>
   normalizeList(
     blueprint.pages.flatMap((page) =>
-      asBlocks(page.data).map((block) =>
-        typeof block.type === "string" ? block.type : null
+      asPageSurfaceParts(page.data).map((part) =>
+        typeof part.type === "string" ? part.type : null
       )
     )
   );
@@ -124,9 +133,7 @@ const normalizeIncludes = (input: Partial<SolutionKitManifestIncludes> | null | 
   menus: normalizeList(input?.menus ?? []),
 });
 
-export const normalizeSolutionKitManifest = (
-  input: SolutionKitManifest
-): SolutionKitManifest => {
+export const normalizeSolutionKitManifest = (input: SolutionKitManifest): SolutionKitManifest => {
   const manifest: SolutionKitManifest = {
     id: typeof input.id === "string" ? input.id.trim() : "",
     title: typeof input.title === "string" ? input.title.trim() : "",
@@ -143,12 +150,14 @@ export const normalizeSolutionKitManifest = (
 
   return {
     ...manifest,
-    optionalModules: manifest.optionalModules && manifest.optionalModules.length > 0
-      ? manifest.optionalModules
-      : [],
-    postInstallTasks: manifest.postInstallTasks && manifest.postInstallTasks.length > 0
-      ? manifest.postInstallTasks
-      : [],
+    optionalModules:
+      manifest.optionalModules && manifest.optionalModules.length > 0
+        ? manifest.optionalModules
+        : [],
+    postInstallTasks:
+      manifest.postInstallTasks && manifest.postInstallTasks.length > 0
+        ? manifest.postInstallTasks
+        : [],
   };
 };
 
@@ -161,9 +170,7 @@ export const buildSolutionKitManifest = (
     widgets: collectWidgetIncludes(source.resourceBlueprint),
     templates: collectTemplateIncludes(source.resourceBlueprint),
     forms: normalizeList(source.resourceBlueprint.forms.map((item) => item.slug)),
-    menus: normalizeList(
-      source.resourceBlueprint.menus.map((item) => item.location ?? item.name)
-    ),
+    menus: normalizeList(source.resourceBlueprint.menus.map((item) => item.location ?? item.name)),
   };
 
   const manifestOverrides = isRecord(source.manifest) ? source.manifest : {};
@@ -176,14 +183,8 @@ export const buildSolutionKitManifest = (
       ...generatedIncludes.contentTypes,
       ...(overrideIncludes.contentTypes ?? []),
     ]),
-    entries: normalizeList([
-      ...generatedIncludes.entries,
-      ...(overrideIncludes.entries ?? []),
-    ]),
-    widgets: normalizeList([
-      ...generatedIncludes.widgets,
-      ...(overrideIncludes.widgets ?? []),
-    ]),
+    entries: normalizeList([...generatedIncludes.entries, ...(overrideIncludes.entries ?? [])]),
+    widgets: normalizeList([...generatedIncludes.widgets, ...(overrideIncludes.widgets ?? [])]),
     templates: normalizeList([
       ...generatedIncludes.templates,
       ...(overrideIncludes.templates ?? []),

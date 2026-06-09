@@ -552,7 +552,7 @@ const buildCreateActionForItem = (
         "introTitle",
         "introBody",
         "ctaLabel",
-        "blocks",
+        "sections",
       ])
     ) {
       return null;
@@ -562,8 +562,8 @@ const buildCreateActionForItem = (
     const introTitle = readRequiredTextField(item, "introTitle") ?? title;
     const introBody = readRequiredTextField(item, "introBody");
     const status = readCreateStatus(item, "status", ["draft", "published"] as const, "draft");
-    const blocks = readRecordArrayField(item, "blocks", []);
-    if (!title || !slug || !introTitle || !introBody || status === null || blocks === null) {
+    const sections = readRecordArrayField(item, "sections", []);
+    if (!title || !slug || !introTitle || !introBody || status === null || sections === null) {
       return null;
     }
     return {
@@ -580,12 +580,12 @@ const buildCreateActionForItem = (
         ...(readOptionalTextField(item, "ctaLabel")
           ? { ctaLabel: readOptionalTextField(item, "ctaLabel") ?? undefined }
           : {}),
-        ...(blocks.length > 0
+        ...(sections.length > 0
           ? {
-              blocks: blocks as Extract<
+              sections: sections as Extract<
                 AssistantPlannedAction,
                 { type: "page.upsert" }
-              >["input"]["blocks"],
+              >["input"]["sections"],
             }
           : {}),
       },
@@ -923,26 +923,6 @@ const buildActionForExactTarget = (
   if (draft.resourceKind === "page" && draft.operation === "update") {
     const pageSlug = normalizeTargetPageSlug(target);
     if (!pageSlug) return null;
-    const policyField = findPolicyFieldForDraft(draft);
-    if (policyField?.action?.type === "page.widget.patch") {
-      if (!isPolicyActionExecutable(draft, "page.widget.patch")) return null;
-      const patch = readBlockPatch(draft);
-      if (!patch) return null;
-      return {
-        id: actionId("page.widget.patch", patch.blockId),
-        type: "page.widget.patch",
-        title: `Patch ${target.label}`,
-        description: "Patch selected page widget block data.",
-        input: {
-          pageSlug,
-          operation: "patch-data",
-          blockId: patch.blockId,
-          expectedBlockType: patch.expectedBlockType,
-          dataPath: patch.dataPath,
-          value: patch.value,
-        },
-      };
-    }
     if (!isPolicyActionExecutable(draft, "page.update")) return null;
     const patch = buildPageUpdatePatch(draft);
     if (!patch) return null;

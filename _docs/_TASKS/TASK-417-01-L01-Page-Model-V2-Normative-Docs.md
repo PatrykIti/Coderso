@@ -6,7 +6,7 @@
 **Category:** Pages / Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-417-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -15,8 +15,10 @@
 Promote the Pages v2 model from the UX redesign spec into the normative product
 docs before implementation. The docs must state that Pages use
 `schemaVersion: 2` and root `sections[]`; stored legacy `blocks[]` Pages reset
-to an empty v2 document on read/render/restore/duplicate, while fresh legacy
-admin/API writes are rejected because this is an intentional clean-slate cutover.
+to an empty v2 document on admin read, revision snapshot, autosave snapshot,
+no-payload publish, restore, duplicate, public render, and preview paths, while
+fresh legacy admin/API writes are rejected because this is an intentional
+clean-slate cutover.
 
 ---
 
@@ -34,15 +36,15 @@ admin/API writes are rejected because this is an intentional clean-slate cutover
 
 ## Sub-Tasks
 
-- [ ] Retitle `_docs/PAGE_MODEL.md` from v1-only to Pages v2.
-- [ ] Document root fields, sections, atomic blocks, responsive overrides,
+- [x] Retitle `_docs/PAGE_MODEL.md` from v1-only to Pages v2.
+- [x] Document root fields, sections, atomic blocks, responsive overrides,
   publication sanitization, and legacy reset policy.
-- [ ] State that `title` remains owned by the Page row/API payload and is not a
+- [x] State that `title` remains owned by the Page row/API payload and is not a
   field inside `data`.
-- [ ] Update `_docs/CMS_SPEC.md`, `_docs/CMS_API.md`, `_docs/PREVIEW_SPEC.md`,
+- [x] Update `_docs/CMS_SPEC.md`, `_docs/CMS_API.md`, `_docs/PREVIEW_SPEC.md`,
   `_docs/ASSISTANT_SITE_BUILDER.md`, and `docs/develop/content-and-widgets.md`
   to point to the v2 contract.
-- [ ] Keep the redesign HTML/spec positioned as UX reference material.
+- [x] Keep the redesign HTML/spec positioned as UX reference material.
 
 ---
 

@@ -453,15 +453,24 @@ Runtime admin context:
   - selected resource hint,
   - route-derived visible action hints,
   - advisory permission hints wymagane dla widocznych akcji.
-- `PageEditor` publishes bounded active page surface context for assistant planning: page identity, selected block id, block id/type/path summaries, slot keys, template-section references, and unsaved-change warnings.
+- `PageEditor` publishes bounded active page surface context for assistant planning:
+  page identity, selected section id, atomic section/block summaries, and
+  unsaved-change warnings. Page data is `schemaVersion: 2` with `sections[]`;
+  widget template references are not hydrated from Page data.
 - `WidgetTemplateEditorPage` publishes bounded active widget template surface context: template identity, selected block id, block id/type/path summaries, slot keys, template-section references, and template settings summary.
 - Custom screen builder, records list, and record editor surfaces publish bounded active custom screen context: screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, and writable field names.
 - Writable field names are derived only from widget-aware write-capable targets
   (for example `screen-field-value.value`), so legacy fallback widgets and
   read-only screen props do not advertise false editor capability.
 - The assistant plan route rehydrates active surface identity server-side before planning: pages through `pageService`, widget templates through `widgetTemplateService`, and custom screens through `customScreenService`; missing resources clear the active surface instead of trusting stale browser context.
-- Active page hydration also extracts and dedupes `template-section` references from the advisory surface and persisted page canvas data, then loads referenced widget template summaries through `widgetTemplateService` with bounded nested block/config keys and secret-like redaction. Page template inspection requires `widgets:read` in addition to active page `content:read`.
-- When a page edit points at a template-backed block and both page-instance and reusable-template targets are plausible, the planner returns `needs_input` instead of mutating. Explicit page-instance prompts route to `page.widget.patch`; explicit reusable-template prompts can route to `widget-template.block.patch` only when the hydrated template summary resolves exactly one supported nested block/field.
+- Active page hydration revalidates only page identity through `pageService`; Pages
+  no longer hydrate widget-template refs from page canvas data. Reusable template
+  inspection remains scoped to active widget-template/custom-screen surfaces where
+  the persisted data actually owns `WidgetBlock[]`.
+- Page mutations route through `page.upsert` with `sections[]` or metadata-only
+  `page.update`. `page.widget.patch` is retired for Pages; reusable-template
+  prompts can route to `widget-template.block.patch` only from a hydrated reusable
+  template surface.
 - Snapshot nie jest autoryzacja; execute/dry-run dalej polegaja na route/domain permission checks.
 - Snapshot nie zawiera user PII, roli, sesji, raw permissions ani tokenow.
 
@@ -522,7 +531,11 @@ Declared capability boundary:
   page lookup or custom-screen prefix lookup; those plans render candidates but do not
   expose dry-run/execute controls.
 - Obecny executable business set obejmuje house-projects catalog, catalog-family packs, lead capture site, product inquiry catalog, portfolio case study, editorial content hub oraz `site-kit.recommend/install/validate`.
-- Booking resource setup, checkout/payment, webhook form automation, nested page widget patches, `menu.structure.patch`, bulk/sample entry creation, field patching i solution-kit refinements bez server-derived installed-kit context pozostaja gated follow-up capabilities.
+- Booking resource setup, checkout/payment, webhook form automation,
+  fine-grained existing Page section/block patch actions beyond `page.upsert` /
+  `page.update`, `menu.structure.patch`, bulk/sample entry creation, field
+  patching i solution-kit refinements bez server-derived installed-kit context
+  pozostaja gated follow-up capabilities.
 - Guide nie wspiera arbitralnego code execution ani autonomicznych mutacji poza review/confirm flow.
 
 Action family contract registry:
@@ -545,8 +558,10 @@ Action family contract registry:
 - `form.delete` deletes exact zero-submission forms; `form.archive` preserves forms with submissions by setting status to `archived` without exposing submission payloads.
 - `menu.item.delete` deletes exact menu items through the menu tree service while preserving unrelated menu items.
 - `seo.document.delete` deletes exact SEO documents without deleting the owning page or entry target.
-- `page.update` edits active page title/slug/draft-published status and page-owned settings while preserving unrelated page data and blocks.
-- `page.widget.patch` supports selected block `patch-data` for existing data paths and preserves unrelated blocks/slots.
+- `page.update` edits active page title/slug/draft-published status and page-owned
+  settings while preserving unrelated Page v2 sections.
+- `page.upsert` creates/updates Page v2 documents with `sections[]`; fresh
+  widget-style `blocks[]` payloads are rejected for Pages.
 - `widget-template.update` edits reusable template metadata/settings; `widget-template.block.patch` patches selected reusable template block data paths and preserves unrelated blocks/settings.
 - `custom-screen.update` edits custom screen metadata/sidebar/canonical collection-link metadata/binding mode; `custom-screen.widget.patch` patches selected custom screen widget block data paths while preserving unrelated blocks/bindings.
 - `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update`, and `seo.document.update` cover remaining domain resource edits through existing domain services and preserve unrelated fields/config/tree items.
@@ -555,7 +570,8 @@ Action family contract registry:
 - `media.reference.attach` is executable for `entry` targets and uses existing media/entry services to attach existing media ids without accepting upload bytes.
 - `listing-query.filters.patch` is executable and updates `query.filters` on existing listing queries while preserving unrelated query configuration.
 - `listing-template.card.patch` is executable and updates `config.card` on existing listing templates while preserving unrelated template config.
-- `page.widget.patch` is executable for top-level `upsert-block` operations and uses runtime widget validation before updating page current data.
+- `page.widget.patch` is retired for Pages after TASK-417; shared widget-block
+  patch helpers remain scoped to widget templates and custom screens.
 - `form.automation.upsert` is executable for safe non-webhook form actions and uses existing form action services; webhook automation remains out of scope until secret handling is explicit.
 - Generic CMS operation mapping supports counted multi-target delete/archive/update plans when the trusted resolver returns the exact expected count and every target maps to an existing strict typed action. Explicit multi-create plans are allowed only from locally validated `mutation.patch.items[]` definitions that become existing typed upsert/create actions; vague or mismatched bulk prompts return `needs_input`.
 - After assistant action execution, the admin client invalidates known cache families from successful non-noop execution results across pages, entries, content types, custom screens, forms, listings, widget templates, menus, and SEO. Cache keys are derived from strict action inputs or sanitized `resourceId`, not provider text.

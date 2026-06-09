@@ -93,7 +93,7 @@ Current implemented guide blueprint:
   - testimonial field
 - editorial content hub pack:
   - public hub page
-  - posts-feed widget
+  - Page v2 collection section for published posts
   - no post mutations
 - full-service architecture studio site pack:
   - seven public pages: `/`, `/uslugi`, `/portfolio`, `/o-nas`, `/proces`,
@@ -136,13 +136,15 @@ Current implemented guide blueprint:
     family so adjunct catalogs do not inherit the primary catalog preset
   - compatible `content-type.upsert` fragments now merge server-side through `blueprintSchemaMerger.ts` plus the existing content schema validator, so additive field/enum extensions stay in one strict action instead of surfacing as duplicate-resource drift
   - compatible listing facet/card fragments now merge through schema-backed listing owners, and the assembler widens `listing-query.upsert.fields` automatically so merged filters/card bindings keep the runtime projection fields they need
-  - assistant-facing page section aliases and merge slots now resolve through a deterministic library over the current page-builder widget registry and alias-specific `modulePackMatrix` helper mappings; unsupported aliases stay gated instead of inventing a second section catalog
-  - page section seed data still normalizes through the widget owner; arbitrary
+  - assistant-facing Page sections now emit the Page v2 section/atomic block
+    contract owned by `pageDocumentV2.ts`; unsupported aliases stay gated
+    instead of inventing a second section catalog
+  - Page section seed data normalizes through the Page v2 owner; arbitrary
     raw media URLs stay gated until the assistant has trusted media-library ids
     rather than provider/user external-upload payloads. Site-builder blueprints
     may use the shared backend-owned curated media profile adapter to attach
-    license-documented public media URLs in explicit non-media fields and page
-    blocks. The architecture-studio set is only the first profile.
+    license-documented public media URLs in explicit non-media fields and Page
+    atom blocks. The architecture-studio set is only the first profile.
   - blueprint graph conflicts now include media missing/ambiguous/upload/delete
     gates plus manifest permission gaps, so media and privileged boundaries
     return `needs_input`/`gated` before executable action assembly instead of
@@ -188,7 +190,7 @@ Current capability limits:
 - Raw media upload/import/generation is not part of full-service execution yet.
   Site-builder plans can satisfy media readiness only through backend-owned
   curated media profiles with license-documented URLs stored in explicit string
-  fields and page blocks. `xFieldType: "media"` fields such as `heroImage` and
+  fields and Page atom blocks. `xFieldType: "media"` fields such as `heroImage` and
   `gallery` remain media-library asset IDs. The profile contract can describe
   future media kinds, but current executable readiness covers curated images
   only; video remains gated until its renderer and validation contract ship.

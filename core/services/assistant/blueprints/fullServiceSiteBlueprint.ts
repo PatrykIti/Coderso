@@ -4,7 +4,11 @@ import type {
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "../actionPlanTypes";
-import type { RichTextSectionData } from "../../../widgets/core/richTextSection";
+import {
+  createPageBlockV2,
+  createPageSectionV2,
+  type PageSectionV2,
+} from "../../pages/pageDocumentV2";
 import { buildCatalogFamilyPlan } from "./catalogFamilyBlueprint";
 import { PORTFOLIO_PROJECTS_PRESET, SERVICES_DIRECTORY_PRESET } from "./catalogFamilyPresets";
 import {
@@ -74,8 +78,8 @@ const pageMap = [
 ] as const;
 
 type FullServicePage = (typeof pageMap)[number];
-type PageUpsertBlocks = NonNullable<
-  Extract<AssistantPlannedAction, { type: "page.upsert" }>["input"]["blocks"]
+type PageUpsertSections = NonNullable<
+  Extract<AssistantPlannedAction, { type: "page.upsert" }>["input"]["sections"]
 >;
 type PageUpsertAction = Extract<AssistantPlannedAction, { type: "page.upsert" }>;
 
@@ -84,121 +88,81 @@ const navigationItems = pageMap.map((page) => ({
   href: page.slug,
 }));
 
-const buildNavigationBlock = (): PageUpsertBlocks[number] => ({
-  id: "full-service-primary-navigation",
-  type: "navigation",
-  variant: "with-cta",
-  data: {
-    logo: {
-      type: "text",
-      value: "Studio Forma",
-      href: "/",
-      source: "external",
-    },
-    items: navigationItems,
-    linksSource: "menu",
-    cta: {
-      label: "Kontakt",
-      href: "/kontakt",
-    },
-    behavior: {
-      sticky: true,
-      transparent: false,
-      collapseOnScroll: false,
-      mobileMode: "drawer",
-      hideCtaOnMobile: false,
-      activeLinkMode: "exact",
-    },
-    layout: {
-      alignment: "right",
-      maxWidth: "6xl",
-      paddingY: "4",
-      itemGap: "4",
-    },
-    style: {
-      surfaceColor: "var(--color-bg)",
-      borderColor: "var(--color-border)",
-      linkUnderline: "none",
-      shadow: "sm",
-      backdropBlur: "sm",
-      ctaBackgroundColor: "var(--color-primary)",
-      ctaTextColor: "var(--color-bg)",
-      ctaBorderColor: "transparent",
-    },
-  },
-});
-
-const buildFooterBlock = (): PageUpsertBlocks[number] => ({
-  id: "full-service-footer",
-  type: "footer",
-  variant: "columns-3",
-  data: {
-    brand: {
-      logoText: "Studio Forma",
-      tagline: "Architektura, wnetrza i proces inwestycyjny prowadzone w jednym miejscu.",
-    },
-    columns: [
-      {
-        title: "Studio",
-        links: navigationItems.slice(0, 4),
-      },
-      {
-        title: "Oferta",
-        links: [
-          { label: "Uslugi", href: "/uslugi" },
-          { label: "Portfolio", href: "/portfolio" },
-          { label: "Proces", href: "/proces" },
-        ],
-      },
-      {
-        title: "Kontakt",
-        links: [
-          { label: "Kontakt i wycena", href: "/kontakt" },
-          { label: "Referencje", href: "/referencje" },
-        ],
-      },
+const buildNavigationSection = (): PageSectionV2 =>
+  createPageSectionV2("navigation", {
+    id: "full-service-primary-navigation",
+    name: "Primary navigation",
+    variant: "compact",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "full-service-primary-navigation-brand",
+        props: { text: "Studio Forma", level: "h3", align: "left" },
+      }),
+      createPageBlockV2("list", {
+        id: "full-service-primary-navigation-links",
+        props: { items: navigationItems, ordered: false },
+      }),
+      createPageBlockV2("button", {
+        id: "full-service-primary-navigation-cta",
+        props: {
+          label: "Kontakt",
+          href: "/kontakt",
+          target: "self",
+          variant: "primary",
+          size: "md",
+        },
+      }),
     ],
-    legal: {
-      enabled: false,
-      copyright: "(c) 2026 Studio Forma",
-      privacyLabel: "",
-      termsLabel: "",
-    },
-    socialEnabled: false,
-    layout: {
-      align: "left",
-      legalAlign: "right",
-      maxWidth: "6xl",
-      columnGap: "6",
-      columnBreakpoint: "md",
-      sectionPaddingY: "10",
-    },
-    style: {
-      surfaceColor: "var(--color-surface)",
-      textColor: "var(--color-text)",
-      linkColor: "var(--color-text)",
-      linkHoverColor: "var(--color-primary)",
-      borderColor: "var(--color-border)",
-    },
-  },
-});
+  });
 
-const withSiteShellBlocks = (action: AssistantPlannedAction): AssistantPlannedAction => {
+const buildFooterSection = (): PageSectionV2 =>
+  createPageSectionV2("cta", {
+    id: "full-service-footer",
+    name: "Footer",
+    variant: "compact",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "full-service-footer-brand",
+        props: { text: "Studio Forma", level: "h3", align: "left" },
+      }),
+      createPageBlockV2("text", {
+        id: "full-service-footer-copy",
+        props: {
+          text: "Architektura, wnetrza i proces inwestycyjny prowadzone w jednym miejscu.",
+          format: "plain",
+          align: "left",
+        },
+      }),
+      createPageBlockV2("list", {
+        id: "full-service-footer-links",
+        props: {
+          items: navigationItems.filter((item) =>
+            ["/uslugi", "/portfolio", "/proces", "/kontakt", "/referencje"].includes(item.href)
+          ),
+          ordered: false,
+        },
+      }),
+    ],
+  });
+
+const withSiteShellSections = (action: AssistantPlannedAction): AssistantPlannedAction => {
   if (action.type !== "page.upsert") return action;
-  const blocks = action.input.blocks ?? [];
-  const hasNavigation = blocks.some((block) => block.type === "navigation");
-  const hasFooter = blocks.some((block) => block.type === "footer");
-  const nextBlocks: PageUpsertBlocks = [
-    ...(hasNavigation ? [] : [buildNavigationBlock()]),
-    ...blocks,
-    ...(hasFooter ? [] : [buildFooterBlock()]),
+  const sections = action.input.sections ?? [];
+  const hasNavigation = sections.some(
+    (section) => section.id === "full-service-primary-navigation"
+  );
+  const hasFooter = sections.some((section) => section.id === "full-service-footer");
+  const nextSections: PageUpsertSections = [
+    ...(hasNavigation ? [] : [buildNavigationSection()]),
+    ...sections,
+    ...(hasFooter ? [] : [buildFooterSection()]),
   ];
 
   return {
     ...action,
     input: {
       ...action.input,
-      blocks: nextBlocks,
+      sections: nextSections,
     },
   } satisfies PageUpsertAction;
 };
@@ -260,10 +224,10 @@ const toCuratedCoverImageValues = (image: CuratedMediaAsset) => ({
   coverImageLicenseUrl: image.licenseUrl,
 });
 
-const buildSupportingPageBlocks = (
+const buildSupportingPageSections = (
   page: FullServicePage,
   mediaProfile: CuratedMediaProfile | null
-): PageUpsertBlocks => {
+): PageUpsertSections => {
   const details =
     page.role === "home" ||
     page.role === "about" ||
@@ -273,47 +237,34 @@ const buildSupportingPageBlocks = (
       : null;
   if (!details) return [];
   const image = pickCuratedProfileImage(mediaProfile, details.mediaRole);
-  const blocks: NonNullable<RichTextSectionData["body"]>["blocks"] = [
-    {
-      id: `full-service-${page.role}-copy`,
-      kind: "text",
-      heading: details.heading,
-      content: `${page.body} ${details.content}`,
-    },
-  ];
-
-  if (image) {
-    blocks.push({
-      id: `full-service-${page.role}-image`,
-      kind: "image",
-      src: image.src,
-      alt: image.alt,
-      caption: `${image.sourceName} media reference, ${image.licenseName}`,
-      width: "wide",
-      align: "center",
-    });
-  }
 
   return [
-    {
+    createPageSectionV2("content", {
       id: `full-service-${page.role}-intro`,
-      type: "rich-text-section",
-      variant: "single-column",
-      data: {
-        titleBlock: {
-          eyebrow: details.eyebrow,
-          title: page.title,
-        },
-        body: {
-          html: "",
-          blocks,
-        },
-        options: {
-          outputMode: "blocks",
-          maxWidth: "lg",
-        },
-      },
-    },
+      name: details.eyebrow,
+      blocks: [
+        createPageBlockV2("heading", {
+          id: `full-service-${page.role}-heading`,
+          props: { text: details.heading, level: "h2", align: "left" },
+        }),
+        createPageBlockV2("text", {
+          id: `full-service-${page.role}-copy`,
+          props: { text: `${page.body} ${details.content}`, format: "plain", align: "left" },
+        }),
+        ...(image
+          ? [
+              createPageBlockV2("image", {
+                id: `full-service-${page.role}-image`,
+                props: {
+                  src: image.src,
+                  alt: image.alt,
+                  caption: `${image.sourceName} media reference, ${image.licenseName}`,
+                },
+              }),
+            ]
+          : []),
+      ],
+    }),
   ];
 };
 
@@ -333,10 +284,10 @@ const supportingPageActions = (
         status: "published" as const,
         introTitle: page.title,
         introBody: page.body,
-        blocks: buildSupportingPageBlocks(page, mediaProfile),
+        sections: buildSupportingPageSections(page, mediaProfile),
       },
     }))
-    .map(withSiteShellBlocks);
+    .map(withSiteShellSections);
 
 const leadCaptureActions = () => {
   const leadPlan = buildLeadCaptureSitePlan({ promptKind: "setup_request" });
@@ -670,9 +621,9 @@ export const buildFullServiceSitePlan = (options?: {
     ],
     questions: [],
     actions: [
-      ...portfolio.actions.map(withSiteShellBlocks),
-      ...services.actions.map(withSiteShellBlocks),
-      ...leadCaptureActions().map(withSiteShellBlocks),
+      ...portfolio.actions.map(withSiteShellSections),
+      ...services.actions.map(withSiteShellSections),
+      ...leadCaptureActions().map(withSiteShellSections),
       ...supportingPageActions(mediaProfile),
       ...serviceSamples(mediaProfile),
       ...portfolioSamples(mediaProfile),

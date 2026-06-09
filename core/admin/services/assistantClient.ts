@@ -342,8 +342,7 @@ const notifyAssistantExecutionCacheEvent = (input: {
 
     case "page.upsert":
     case "page.delete":
-    case "page.update":
-    case "page.widget.patch": {
+    case "page.update": {
       const plannedDelete = readActionId(action, "page.delete");
       const plannedUpdate = readActionId(action, "page.update");
       const id = resourceId(item, plannedDelete?.input.id ?? plannedUpdate?.input.id);

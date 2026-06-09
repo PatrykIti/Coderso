@@ -35,31 +35,27 @@ import { listWidgetsForSurface } from "../../../core/widgets/registry";
 import { withConfirmedSiteBuilderIntakeReview } from "../../utils/assistantSiteBuilderIntake";
 import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
 import { solutionKitsCatalog } from "../../../core/services/kits/solutionKitsCatalog";
-import { normalizeWidgetBlock } from "../../../core/widgets/validator";
-import type { WidgetBlock } from "../../../core/widgets/types";
+import { PAGE_DOCUMENT_SCHEMA_VERSION } from "../../../core/services/pages/pageDocumentV2";
 
 const secretLikePattern =
   /\b(password|token|secret|api[-_\s]?key|authorization|cookie|bearer|csrf|session)\b/iu;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+type TestPageBlock = {
+  type?: string;
+  props?: Record<string, unknown>;
+};
 
-const collectWidgetBlocks = (value: unknown): WidgetBlock[] => {
-  if (!isRecord(value)) return [];
-  const ownBlock =
-    typeof value.id === "string" && typeof value.type === "string" ? [value as WidgetBlock] : [];
-  const childBlocks = Array.isArray(value.children)
-    ? value.children.flatMap((child) => collectWidgetBlocks(child))
-    : [];
-  const slotBlocks = isRecord(value.slots)
-    ? Object.values(value.slots).flatMap((slot) =>
-        Array.isArray(slot) ? slot.flatMap((child) => collectWidgetBlocks(child)) : []
-      )
-    : [];
-  const rootBlocks = Array.isArray(value.blocks)
-    ? value.blocks.flatMap((block) => collectWidgetBlocks(block))
-    : [];
-  return [...ownBlock, ...childBlocks, ...slotBlocks, ...rootBlocks];
+type TestPageSection = {
+  type?: string;
+  variant?: string;
+  blocks?: TestPageBlock[];
+};
+
+const readPageSections = (value: unknown) => {
+  const document = value as { schemaVersion?: unknown; sections?: TestPageSection[] } | undefined;
+  expect(document?.schemaVersion).toBe(PAGE_DOCUMENT_SCHEMA_VERSION);
+  expect(document).not.toHaveProperty("blocks");
+  return Array.isArray(document?.sections) ? document.sections : [];
 };
 
 test("Advanced option registries are deterministic and backend-owned", () => {
@@ -361,8 +357,7 @@ test("Advanced option widget requirements match registered page-builder widgets"
   }
 });
 
-test("Advanced runtime overrides produce widget-validator-safe navigation hero and section blocks", () => {
-  ensureRuntimeWidgetsRegistered();
+test("Advanced runtime overrides produce Pages v2 navigation, hero, and section variants", () => {
   const layout = buildSiteBuilderIntakeAdvancedLayoutFacts({
     menuBehaviorIds: ["grouped", "sticky", "collapse-on-scroll", "mobile-drawer"],
     ctaTargetPageRole: "contact",
@@ -378,24 +373,21 @@ test("Advanced runtime overrides produce widget-validator-safe navigation hero a
 
   const kit = applyAdvancedRuntimeOverridesToKit(structuredClone(baseKit!), overrides);
   const homePage = kit.resourceBlueprint.pages.find((page) => page.slug.trim() === "");
-  const normalizedBlocks = collectWidgetBlocks(homePage?.data).map((block) =>
-    normalizeWidgetBlock(block)
-  );
-  const firstBlockByType = new Map(normalizedBlocks.map((block) => [block.type, block]));
+  const sections = readPageSections(homePage?.data);
+  const firstSectionByType = new Map(sections.map((section) => [section.type, section]));
+  const navigationSection = firstSectionByType.get("navigation");
+  const navigationList = navigationSection?.blocks?.find((block) => block.type === "list");
+  const navigationCta = navigationSection?.blocks?.find((block) => block.type === "button");
 
-  expect(firstBlockByType.get("navigation")).toMatchObject({
+  expect(navigationSection).toMatchObject({
     variant: "split",
-    data: {
-      linksSource: "menu",
-      behavior: {
-        sticky: true,
-        collapseOnScroll: true,
-        mobileMode: "drawer",
-      },
-    },
   });
-  expect(firstBlockByType.get("hero")).toMatchObject({ variant: "media-left" });
-  expect(firstBlockByType.get("testimonials")).toMatchObject({ variant: "spotlight" });
-  expect(firstBlockByType.get("faq-accordion")).toMatchObject({ variant: "two-column" });
-  expect(firstBlockByType.get("cta-banner")).toMatchObject({ variant: "split" });
+  expect(navigationList?.props?.items).toEqual(
+    expect.arrayContaining([expect.objectContaining({ href: "/contact" })])
+  );
+  expect(navigationCta?.props).toMatchObject({ href: "/contact" });
+  expect(firstSectionByType.get("hero")).toMatchObject({ variant: "split" });
+  expect(firstSectionByType.get("testimonials")).toMatchObject({ variant: "cards" });
+  expect(firstSectionByType.get("faq")).toMatchObject({ variant: "grid" });
+  expect(firstSectionByType.get("cta")).toMatchObject({ variant: "split" });
 });

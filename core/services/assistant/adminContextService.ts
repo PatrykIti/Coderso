@@ -1,5 +1,6 @@
 import type {
   AssistantActionContext,
+  AssistantActivePageSectionSummary,
   AssistantActiveSurfaceBlockSummary,
   AssistantActiveSurfaceContext,
   AssistantAdminContext,
@@ -229,6 +230,34 @@ const normalizeSurfaceBlock = (value: unknown): AssistantActiveSurfaceBlockSumma
   };
 };
 
+const normalizePageSurfaceSection = (value: unknown): AssistantActivePageSectionSummary | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const id = normalizeText(record.id, 120);
+  const type = normalizeText(record.type, 120);
+  const name = normalizeText(record.name, 160);
+  const path = normalizeText(record.path, 240) ?? id;
+  if (!id || !type || !name || !path) return null;
+  const blocks = Array.isArray(record.blocks)
+    ? record.blocks
+        .map(normalizeSurfaceBlock)
+        .filter((block): block is AssistantActiveSurfaceBlockSummary => Boolean(block))
+        .slice(0, 40)
+    : [];
+  const blockCount =
+    typeof record.blockCount === "number" && Number.isFinite(record.blockCount)
+      ? Math.max(0, Math.min(999, Math.floor(record.blockCount)))
+      : blocks.length;
+  return {
+    id,
+    type,
+    name,
+    path,
+    blockCount,
+    blocks,
+  };
+};
+
 const normalizeCustomScreenBindingSummary = (
   value: unknown
 ): AssistantCustomScreenBindingSummary | null => {
@@ -265,13 +294,6 @@ const normalizeActiveSurface = (
   value: AssistantActionContext["activeSurface"] | undefined
 ): AssistantActiveSurfaceContext | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const blocks = Array.isArray(value.blocks)
-    ? value.blocks
-        .map(normalizeSurfaceBlock)
-        .filter((block): block is AssistantActiveSurfaceBlockSummary => Boolean(block))
-        .slice(0, 80)
-    : [];
-
   if (value.kind === "page") {
     const page = value.page;
     if (!page || typeof page !== "object" || Array.isArray(page)) return null;
@@ -280,6 +302,12 @@ const normalizeActiveSurface = (
     const slug = normalizeText(page.slug, 240);
     const status = normalizeText(page.status, 80);
     if (!id || !title || !slug || !status) return null;
+    const sections = Array.isArray(value.sections)
+      ? value.sections
+          .map(normalizePageSurfaceSection)
+          .filter((section): section is AssistantActivePageSectionSummary => Boolean(section))
+          .slice(0, 40)
+      : [];
     return {
       kind: "page",
       page: {
@@ -289,16 +317,19 @@ const normalizeActiveSurface = (
         status,
         template: normalizeText(page.template, 160),
       },
+      selectedSectionId: normalizeText(value.selectedSectionId, 120),
       selectedBlockId: normalizeText(value.selectedBlockId, 120),
-      blocks,
-      templateReferences: mergeAssistantTemplateSectionReferences([
-        ...extractAssistantTemplateSectionReferences(blocks),
-        ...(Array.isArray(value.templateReferences) ? value.templateReferences : []),
-      ]),
-      referencedTemplates: normalizeAssistantReferencedWidgetTemplates(value.referencedTemplates),
+      sections,
       warnings: normalizeStringArray(value.warnings, 20, 160),
     };
   }
+
+  const blocks = Array.isArray(value.blocks)
+    ? value.blocks
+        .map(normalizeSurfaceBlock)
+        .filter((block): block is AssistantActiveSurfaceBlockSummary => Boolean(block))
+        .slice(0, 80)
+    : [];
 
   if (value.kind === "widget-template") {
     const template = value.template;

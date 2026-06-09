@@ -6,7 +6,7 @@
 **Category:** Process / QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-417-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -35,10 +35,10 @@ approved and the task changes multiple architecture boundaries.
 
 ## Sub-Tasks
 
-- [ ] Run Claude and subagent read-only audits against the task tree and docs.
-- [ ] Fix any real high/medium/low drift in task files before implementation.
-- [ ] Rerun audits after task contract changes.
-- [ ] Record audit summaries in TASK-417 and close this leaf only after no
+- [x] Run Claude and subagent read-only audits against the task tree and docs.
+- [x] Fix any real high/medium/low drift in task files before implementation.
+- [x] Rerun audits after task contract changes.
+- [x] Record audit summaries in TASK-417 and close this leaf only after no
   unresolved drift remains or follow-up tasks explicitly own it.
 
 ---

@@ -6,7 +6,7 @@
 **Category:** Pages / Preview / Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-417-02-L03, TASK-417-04-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -41,11 +41,11 @@ creates a bounded preview token and optional probe metadata; the public
 
 ## Sub-Tasks
 
-- [ ] Keep `POST /admin/api/pages/:id/preview` route validation and permission
+- [x] Keep `POST /admin/api/pages/:id/preview` route validation and permission
   coverage after Page payload cutover.
-- [ ] Prove preview token creation does not require or accept arbitrary URLs.
-- [ ] Prove probe diagnostics redact token and device values.
-- [ ] Prove preview consumes v2 `currentData` and public pages keep
+- [x] Prove preview token creation does not require or accept arbitrary URLs.
+- [x] Prove probe diagnostics redact token and device values.
+- [x] Prove preview consumes v2 `currentData` and public pages keep
   `publishedData`.
 
 ---

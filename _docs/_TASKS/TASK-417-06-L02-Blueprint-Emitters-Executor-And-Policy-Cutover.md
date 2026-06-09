@@ -6,7 +6,7 @@
 **Category:** Assistant / Execution
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-06-L01, TASK-417-03-L01, TASK-417-04-L01, TASK-417-04-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -35,12 +35,15 @@ sections and render successfully in the public runtime.
 
 ## Sub-Tasks
 
-- [ ] Rewrite Page blueprint section composers to emit v2 Page sections.
-- [ ] Update `page.upsert` executor to persist v2 data through Pages services.
-- [ ] Remove/gate Page-specific widget patch execution.
-- [ ] Update action diff, undo manifest, conflict resolver, target resolver, and
+- [x] Rewrite Page blueprint section composers to emit v2 Page sections.
+- [x] Update `page.upsert` executor to persist v2 data through Pages services.
+- [x] Remove/gate Page-specific widget patch execution.
+- [x] Rewrite existing "page section" blueprint helpers that currently emit
+  `WidgetBlock[]`; the term "section" must mean Pages v2 `PageSectionV2` after
+  this leaf.
+- [x] Update action diff, undo manifest, conflict resolver, target resolver, and
   follow-up resolver for sections.
-- [ ] Prove assistant-generated Pages render in the v2 public runtime.
+- [x] Prove assistant-generated Pages render in the v2 public runtime.
 
 ---
 

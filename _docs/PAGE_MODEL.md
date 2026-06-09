@@ -1,296 +1,244 @@
-# Page Builder Data Model (v1)
+# Page Builder Data Model (v2)
 
 Specyfikacja JSON dla `pages.current_data` i `pages.published_data`.
-Model musi byc stabilny i wersjonowany.
+TASK-417 robi czysty break: Pages nie sa juz dokumentem widgetowym. Strony
+uzywaja `schemaVersion: 2`, sekcji i atomowych blokow.
 
 ## Root document
 
 ```json
 {
-  "schemaVersion": 1,
-  "title": "Home",
+  "schemaVersion": 2,
+  "breakpoints": ["desktop", "tablet", "mobile"],
   "seo": {
-    "title": "string",
-    "description": "string",
-    "noIndex": false
+    "title": "Home",
+    "description": "Short public description",
+    "image": null
+  },
+  "settings": {
+    "template": "page-v2",
+    "showInNav": true,
+    "revisionRetention": 10,
+    "collectionLink": null
+  },
+  "sections": []
+}
+```
+
+Required root fields for writes:
+- `schemaVersion: 2`
+- `sections[]`
+
+Fresh Page writes reject unknown root fields and reject legacy/versionless
+`blocks[]` payloads. Stored legacy Page rows are non-destructively reset to an
+empty v2 document on read/render/preview/revision paths; old rows are not
+rendered through the widget runtime.
+
+## Sections
+
+Sections are the layout owner. They group atomic blocks and own responsive
+layout, spacing, style, and visibility.
+
+```json
+{
+  "id": "sec_hero",
+  "type": "hero",
+  "name": "Hero",
+  "variant": "centered",
+  "layout": {
+    "columns": 1,
+    "align": "stretch",
+    "justify": "start",
+    "maxWidth": 1080
+  },
+  "style": {
+    "background": "#ffffff",
+    "backgroundType": "color",
+    "backgroundImage": null,
+    "accent": "#0d9488",
+    "radius": 0,
+    "shadow": "none"
+  },
+  "spacing": {
+    "paddingTop": 64,
+    "paddingBottom": 64,
+    "paddingLeft": 40,
+    "paddingRight": 40,
+    "gap": 24
+  },
+  "visibility": {
+    "visible": true,
+    "authOnly": false,
+    "anchor": null,
+    "startsAt": null,
+    "endsAt": null
+  },
+  "responsive": {
+    "mobile": {
+      "layout": { "columns": 1 }
+    }
   },
   "blocks": []
 }
 ```
 
-## Public SEO precedence (v1)
+Core section types:
+- `template`
+- `navigation`
+- `hero`
+- `content`
+- `feature-grid`
+- `media-split`
+- `timeline`
+- `gallery`
+- `collection`
+- `comparison`
+- `filters`
+- `lead-form`
+- `faq`
+- `testimonials`
+- `cta`
+- `embed`
+- `custom`
 
-For published, non-preview page requests, public HTML resolves SEO metadata in
-this order:
+Section variants are intentionally small: `default`, `split`, `centered`,
+`full-width`, `cards`, `grid`, `horizontal`, and `compact`.
 
-1. `seo_documents` row managed by SEO Manager for the page target.
-2. Published root `pages.published_data.seo` fields.
-3. Page row title for `<title>` fallback.
+## Atomic Blocks
 
-SEO Manager values can override public `<title>`, meta description, canonical
-URL, and robots directives. Runtime preview keeps using `pages.current_data` and
-does not read `seo_documents`, so draft preview data cannot leak into public
-published responses.
-
-For composed content detail pages, explicit detail-page SEO title patterns and
-description/image field mappings keep precedence. Entry `seo_documents` values
-fill remaining entry metadata such as canonical URL and robots directives.
-Successful SEO Manager writes clear the server-side public HTML cache so cached
-public pages cannot keep serving stale SEO metadata.
-
-## Page-level settings.layout (v1)
-
-`page.data.settings.layout` controls wrapper-level layout for runtime preview and
-published rendering.
+Blocks are small content atoms. They are not the old specialized widget surface
+and they do not own page-level layout.
 
 ```json
 {
-  "settings": {
-    "template": "landing",
-    "showInNav": true,
-    "revisionRetention": 10,
-    "layout": {
-      "wrapper": {
-        "container": "full",
-        "maxWidth": "5xl",
-        "padding": { "top": "none", "bottom": "none" },
-        "background": {
-          "color": "transparent",
-          "image": null,
-          "media": {
-            "type": "none",
-            "source": "external",
-            "src": null
-          }
-        }
-      },
-      "sections": {
-        "gap": "none",
-        "defaults": {
-          "container": "default",
-          "padding": { "top": "xl", "bottom": "xl" },
-          "margin": { "top": "none", "bottom": "none" }
-        }
-      },
-      "applyDefaultsToNewBlocks": false
+  "id": "blk_heading",
+  "type": "heading",
+  "props": {
+    "text": "Build faster",
+    "level": "h1",
+    "align": "center"
+  },
+  "style": {
+    "width": "auto"
+  },
+  "visibility": {
+    "visible": true
+  },
+  "responsive": {
+    "mobile": {
+      "props": { "align": "left" }
     }
   }
 }
 ```
 
-Notes:
-- `layout.container`, `layout.padding.*`, and `layout.margin.*` may use
-  `"inherit"` to keep the page section default. The builder must present these
-  as inherited values with their effective defaults, not as saved overrides.
-- `visibility.devices: []` means the block is hidden on all devices and is not
-  rendered in public SSR or preview-device output. Omitted `visibility.devices`
-  keeps the default desktop/tablet/mobile visibility.
-- `layout.wrapper.background.media` supports `none | image | video` with
-  `source: library | external`.
-- For backwards compatibility, legacy `background.image` is normalized into
-  `background.media` when possible.
-- `applyDefaultsToNewBlocks` affects editor insertion behavior (new blocks), not
-  published rendering.
+Core block types:
+- `heading`
+- `text`
+- `button`
+- `image`
+- `video`
+- `gallery`
+- `form`
+- `list`
+- `card`
+- `collection`
+- `embed`
+- `divider`
+- `spacer`
+- `statistic`
+- `icon`
+- `quote`
 
-## settings.template (v1)
+Each block type has a strict allowlist of props. Unknown props are rejected on
+fresh writes. Examples:
+- `button`: `label`, `href`, `target`, `variant`, `size`
+- `image`: `assetId`, `src`, `alt`, `caption`, `fit`
+- `collection`: `contentTypeId`, `queryId`, `limit`, `templateId`
+- `form`: `formId`, `title`
+- `list`: `items`, `ordered`
 
-`page.data.settings.template` controls which **page template** is used in runtime rendering (public + runtime preview).
+`list.items[]` may be plain strings or simple `{ "label": "...", "href": "..." }`
+objects for navigation/footer links.
 
-Template resolution uses the same resolver order as other theme templates:
-1. Theme: `themes/<theme>/templates/page-<key>.tsx` then `themes/<theme>/templates/page.tsx`
-2. Plugins: `plugins/views/page-<key>.tsx` then `plugins/views/page.tsx`
-3. Core: `core/templates/page-<key>.tsx` then `core/templates/page.tsx`
+## Responsive Cascade
 
-Key normalization rules:
-- trim + lowercase
-- replace non-alphanumeric sequences with `-`
-- strip leading/trailing `-`
-- fallback to `landing` when empty/invalid
+The owner normalizer keeps `desktop`, `tablet`, and `mobile` breakpoints stable.
+Responsive overrides are partial and are resolved at render time by applying:
 
-## settings.showInNav (v1)
+1. base section/block values,
+2. tablet override when previewing/rendering tablet,
+3. mobile override when previewing/rendering mobile.
 
-`page.data.settings.showInNav` controls whether a page participates in the runtime pages index used by the Navigation widget when `linksSource = "pages"`.
+Desktop never needs an override to express the base state.
 
-Runtime semantics:
-- published pages only
-- missing `showInNav` is treated as `true` (backwards compatibility)
-- stable sort: `title` then `slug`
+## Settings
 
-## settings.revisionRetention (v1)
+`settings.template` resolves the Page v2 shell. Unknown/empty values normalize
+to `page-v2`.
 
-`page.data.settings.revisionRetention` controls how many publish revisions are kept per page.
+`settings.showInNav` controls whether published pages are eligible for runtime
+navigation lists. Missing values normalize to `true`.
 
-Defaults and limits:
+`settings.revisionRetention` controls publish revision retention:
 - default: 10
 - min: 1
 - max: 100
 
-Runtime semantics:
-- applied on publish
-- oldest revisions are pruned when the limit is exceeded
+`settings.collectionLink` is optional owner metadata used by assistant/catalog
+flows to avoid duplicate canonical/supporting pages:
 
-## Page revisions and settings autosave (v1)
+```json
+{
+  "contentTypeId": "content-type-id",
+  "pageRole": "canonical-list-page",
+  "compositionKey": null,
+  "listingQueryId": "query-id",
+  "listingTemplateId": "template-id"
+}
+```
 
-`page_revisions` stores two kinds of snapshots:
-- `publish` - created on publish and governed by `settings.revisionRetention`
-- `autosave` - latest unsaved Page Settings snapshot, overwritten per page
+## Public Runtime
 
-Stored snapshot contract:
+Pages v2 render through `core/site/pageRuntimeV2.tsx`, not through
+`WidgetRenderer`. Public and preview Pages use `renderPublicPageV2RuntimeHtml`.
+
+Non-Page surfaces keep their widget contracts:
+- widget templates,
+- custom screens,
+- detail pages,
+- post/content block runtimes.
+
+## Revisions And Autosave
+
+`page_revisions` stores:
+- `publish` snapshots, governed by `settings.revisionRetention`;
+- one latest `autosave` snapshot for Page Settings/draft recovery.
+
+Snapshots store normalized v2 Page documents:
 
 ```json
 {
   "title": "Home draft",
   "slug": "/home-draft",
   "data": {
-    "schemaVersion": 1,
-    "blocks": [],
+    "schemaVersion": 2,
+    "sections": [],
     "settings": {
-      "template": "landing",
+      "template": "page-v2",
       "showInNav": false
     }
   }
 }
 ```
 
-Semantics:
-- autosave is created when the Page Settings drawer closes with unsaved changes
-- only one autosave is kept per page
-- restore applies `title`, `slug`, and `current_data`
-- discard is allowed only for autosave snapshots
-- legacy publish revisions without `title/slug` still restore `current_data`
+Restore applies `title`, `slug`, and normalized `current_data`. Autosave
+revisions may be discarded; publish revisions may be restored but not discarded
+through the autosave delete route.
 
-## Block structure
+## Assistant Contract
 
-```json
-{
-  "id": "uuid",
-  "type": "hero",
-  "variant": "centered",
-  "data": {},
-  "layout": {
-    "container": "default",
-    "padding": { "top": "xl", "bottom": "xl" },
-    "margin": { "top": "none", "bottom": "none" },
-    "background": { "color": "white", "image": null }
-  },
-  "visibility": {
-    "devices": ["desktop", "mobile"],
-    "enabled": true
-  },
-  "editor": {
-    "mode": "visual",
-    "wizardCompleted": true
-  },
-  "slots": {
-    "default": []
-  },
-  "children": []
-}
-```
-
-Notes:
-- `editor` jest tylko dla `current_data` (nie kopiujemy do published).
-- `variant` jest opcjonalny, ale rekomendowany dla widgetow.
-- `slots` to preferowany model zagniezdzania (nazwane miejsca w contanerze).
-- `slots` wspiera:
-  - sloty stale (`content`, `right`, `bottom`)
-  - sloty repeatable z instancjami (`column:1`, `column:2`, ...).
-- `children` jest legacy — jesli wystepuje bez `slots`, mapujemy do `slots.default`.
-- Przyklad: `hero` uzywa slotu `content` na dodatkowe bloki pod CTA.
-
-Repeatable slot contract:
-- definicja widgetu ustawia `slots[].kind = "repeatable"`.
-- `minItems` i `maxItems` reguluja liczbe instancji slotu.
-- normalizacja migruje legacy `slots.<id>` do pierwszej instancji
-  i zapewnia minimalna liczbe instancji.
-
----
-
-## Template section block (v1)
-
-Template sections render widget templates inside page content flow.
-
-```json
-{
-  "id": "b-template",
-  "type": "template-section",
-  "variant": "default",
-  "data": {
-    "templateId": "11111111-1111-4111-8111-111111111111",
-    "templateName": "Hero Cluster",
-    "resolved": {
-      "blocks": [],
-      "error": "template_missing"
-    }
-  }
-}
-```
-
-Notes:
-- `data.resolved` is runtime-only; it is injected during preview/public rendering.
-- `data.templateId` is empty or a widget template UUID; malformed IDs are
-  rejected on writes and legacy malformed values render as safe missing-template
-  placeholders.
-- `error` values: `template_missing | template_unpublished | template_loop`.
-
-
----
-
-## Layout tokens (v1)
-
-Dozwolone wartosci:
-- container: `default | narrow | full`
-- spacing: `none | xs | sm | md | lg | xl | 2xl`
-
----
-
-## Example: Hero block
-
-```json
-{
-  "id": "b1",
-  "type": "hero",
-  "variant": "split",
-  "data": {
-    "headline": "Budujemy szybciej",
-    "subhead": "Oszczedzaj czas",
-    "primaryCta": { "label": "Umow konsultacje", "href": "/kontakt" },
-    "media": { "type": "image", "src": "/img/hero.jpg", "alt": "Dom" },
-    "style": {
-      "headlineSize": "4xl",
-      "textColor": "#0f172a",
-      "borderColor": "#d1d5db",
-      "borderWidth": "1",
-      "primaryButtonBg": "#2563eb",
-      "primaryButtonText": "#ffffff"
-    }
-  },
-  "layout": {
-    "container": "default",
-    "padding": { "top": "xl", "bottom": "xl" },
-    "background": { "color": "white" }
-  }
-}
-```
-
----
-
-## Example: Compare timeline block
-
-```json
-{
-  "id": "b2",
-  "type": "compare-timeline",
-  "variant": "dual-track-highlight",
-  "data": {
-    "axis": { "steps": [{ "label": "Projekt" }, { "label": "Fundament" }] },
-    "tracks": [
-      { "id": "a", "label": "Tradycyjna budowa", "markers": [0, 1] },
-      { "id": "b", "label": "Z nami", "markers": [0, 1],
-        "segments": [{ "from": 0, "to": 1, "label": "Prefabrykacja" }] }
-    ],
-    "guides": { "enabled": true, "style": "dashed" },
-    "style": { "highlightColor": "amber" }
-  }
-}
-```
+Assistant Page actions emit or update `sections[]`. `page.widget.patch` is
+retired for Pages and is rejected by the strict action plan schema. Reusable
+widget-template edits still use widget-template actions, and custom-screen
+widget edits still use custom-screen actions.

@@ -3,7 +3,11 @@ import path from "node:path";
 
 import type { DeviceTarget, WidgetBlock } from "../widgets/types";
 import { ensureRuntimeWidgetsRegistered } from "../widgets/runtime";
-import { renderPublicPageHtml, renderPublicPageRuntimeHtml } from "../site/renderPublicPage";
+import {
+  renderPublicPageHtml,
+  renderPublicPageRuntimeHtml,
+  renderPublicPageV2RuntimeHtml,
+} from "../site/renderPublicPage";
 import { renderPublicEntryDetailHtml, renderPublicEntryListHtml } from "../site/renderPublicEntry";
 import {
   blocksAllowSiteHtmlCache,
@@ -49,7 +53,6 @@ import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import { resolvePublicRedirect } from "../services/redirects/redirectService";
 import type { ContentSchema } from "../services/content/validation";
-import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
 import { getWidgetTemplateLayoutSettings } from "../services/widgets/widgetTemplateSettings";
 import { resolveDevAssetUrl, resolveSiteDevServerUrl } from "./utils/styleUrl";
 import { normalizeContentListData, type ContentListData } from "../widgets/core/contentList";
@@ -204,13 +207,6 @@ const resolvePublicStyles = async () => {
 const resolvePublicThemeName = async () => {
   const profile = await getActiveThemeProfile();
   return profile?.themeName ?? "default";
-};
-
-const toBlocks = (data?: Record<string, unknown> | null): WidgetBlock[] => {
-  if (!data || typeof data !== "object") return [];
-  const blocks = (data as { blocks?: unknown }).blocks;
-  if (!Array.isArray(blocks)) return [];
-  return blocks as WidgetBlock[];
 };
 
 const ensureRecord = (value: unknown): Record<string, unknown> => {
@@ -771,15 +767,11 @@ const renderPublicPageHtmlInternal = async (
     runtimeSearchParams?: URLSearchParams;
   }
 ): Promise<PublicHtmlRenderResult> => {
-  ensureRuntimeWidgetsRegistered();
-
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
   const sourceData = options?.preview ? page.currentData : page.publishedData;
   const sourceRecord = ensureRecord(sourceData);
   const settingsRecord = ensureRecord(sourceRecord.settings);
   const seoRecord = ensureRecord(sourceRecord.seo);
-  const themeName = options?.themeName ?? (await resolvePublicThemeName());
   const fallbackSeo = {
     title: toPublicSeoText(seoRecord.title) ?? page.title ?? "Page",
     description: toPublicSeoText(seoRecord.description),
@@ -795,31 +787,22 @@ const renderPublicPageHtmlInternal = async (
         fallback: fallbackSeo,
       });
   const imageUrl = resolveDetailPageImageUrl(seoRecord.imageUrl ?? seoRecord.socialImage);
-  const blocks = await hydrateRuntimeBlocks(toBlocks(sourceData), {
-    preview: options?.preview ?? false,
-    contentRoutes,
-    runtimeSearchParams: options?.runtimeSearchParams,
-    runtimeCache: {},
-  });
-
   return {
-    html: await renderPublicPageRuntimeHtml({
+    html: renderPublicPageV2RuntimeHtml({
       title: resolvedSeo.title ?? page.title ?? "Page",
-      blocks,
+      document: sourceData,
       cssHref,
       inlineCss,
       isPreview: options?.preview ?? false,
       previewDevice: options?.previewDevice,
-      layoutSettings: getPageLayoutSettingsFromData(sourceData),
       devModuleScripts,
       metaDescription: resolvedSeo.description,
       canonicalUrl: resolvedSeo.canonicalUrl,
       robots: resolvedSeo.robots,
       imageUrl,
-      themeName,
       templateKey: settingsRecord.template,
     }),
-    cacheable: blocksAllowSiteHtmlCache(blocks),
+    cacheable: true,
   };
 };
 

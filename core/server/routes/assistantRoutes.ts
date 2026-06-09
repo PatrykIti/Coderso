@@ -468,7 +468,10 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
       if (surfaceKind === "custom-screen") {
         await requirePermission("content:read")(ctx);
       }
-      if (surfaceKind === "page" || surfaceKind === "detail-page") {
+      if (surfaceKind === "page") {
+        await requirePermission("content:read")(ctx);
+      }
+      if (surfaceKind === "detail-page") {
         await requirePermission("content:read")(ctx);
         await requirePermission("widgets:read")(ctx);
       }

@@ -12,7 +12,13 @@ import {
   normalizePageTemplateKey,
   resolvePageTemplatePath,
 } from "../services/pages/pageTemplateService";
+import {
+  normalizeStoredPageDocumentV2ForRead,
+  type PageBreakpoint,
+  type PageDocumentV2,
+} from "../services/pages/pageDocumentV2";
 import { DefaultRuntimePageShell, type PageTemplateProps } from "./pageRuntime";
+import { DefaultRuntimePageShellV2, type PageTemplatePropsV2 } from "./pageRuntimeV2";
 
 export type PublicPageRenderOptions = {
   title: string;
@@ -34,6 +40,15 @@ export type PublicPageRuntimeRenderOptions = PublicPageRenderOptions & {
   templateKey?: unknown;
 };
 
+export type PublicPageV2RuntimeRenderOptions = Omit<
+  PublicPageRenderOptions,
+  "blocks" | "layoutSettings"
+> & {
+  document: PageDocumentV2 | unknown;
+  templateKey?: unknown;
+  previewDevice?: PageBreakpoint;
+};
+
 type TemplateComponent<Props> = (props: Props) => ReactNode;
 
 const loadTemplateComponent = async <Props extends PageTemplateProps>(templatePath: string) => {
@@ -46,6 +61,15 @@ const loadTemplateComponent = async <Props extends PageTemplateProps>(templatePa
     console.warn(`Failed to load template ${templatePath}`, error);
   }
   return null;
+};
+
+const normalizePageV2TemplateKey = (value: unknown) => {
+  if (typeof value !== "string") return "default";
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-");
+  return normalized.length > 0 ? normalized : "default";
 };
 
 const renderDocument = (
@@ -269,5 +293,52 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     devModuleScripts,
     isPreview,
     () => runtimeScripts.renderScripts()
+  );
+}
+
+export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRenderOptions) {
+  const {
+    title,
+    document: rawDocument,
+    cssHref,
+    inlineCss,
+    devModuleScripts,
+    isPreview,
+    previewDevice,
+    metaDescription,
+    canonicalUrl,
+    robots,
+    templateKey,
+  } = options;
+
+  const document = normalizeStoredPageDocumentV2ForRead(rawDocument);
+  const normalizedTemplateKey = normalizePageV2TemplateKey(
+    templateKey ?? document.settings.template
+  );
+  const templateProps: PageTemplatePropsV2 = {
+    title,
+    templateKey: normalizedTemplateKey,
+    document,
+    isPreview,
+    previewDevice: previewDevice ?? "desktop",
+  };
+
+  const body = (
+    <PageRuntimeRoot templateKey={`v2-${templateProps.templateKey}`} isPreview={isPreview}>
+      <DefaultRuntimePageShellV2 {...templateProps} />
+    </PageRuntimeRoot>
+  );
+
+  return renderDocument(
+    title,
+    body,
+    cssHref,
+    inlineCss,
+    metaDescription,
+    canonicalUrl,
+    robots,
+    options.imageUrl,
+    devModuleScripts,
+    isPreview
   );
 }

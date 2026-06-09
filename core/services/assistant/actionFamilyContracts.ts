@@ -563,22 +563,6 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
-    "page.widget.patch",
-    "page",
-    "core/services/pages/pageService.ts",
-    ["pageSlug", "operation", "block"],
-    {
-      permissions: {
-        plan: ["content:read"],
-        dryRun: ["content:read"],
-        execute: ["content:write"],
-      },
-      notes: [
-        "Supports top-level upsert-block and selected block data patches while preserving unrelated page blocks.",
-      ],
-    }
-  ),
-  executableContract(
     "form.automation.upsert",
     "form",
     "core/services/forms/formActionsService.ts",
@@ -601,7 +585,7 @@ export const assistantActionFamilyContracts = [
     ["title", "slug", "status", "introTitle", "introBody"],
     {
       notes: [
-        "Optional collectionLink, listing query/template locators, blocks, filters, and form embeds are normalized by the strict assistant page schema and persisted through the page owner seam.",
+        "Optional collectionLink, listing query/template locators, sections, filters, and form embeds are normalized by the strict assistant page schema and persisted through the Pages v2 owner contract.",
       ],
     }
   ),

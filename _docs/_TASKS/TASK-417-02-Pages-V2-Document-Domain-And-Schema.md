@@ -6,7 +6,7 @@
 **Category:** Pages / Domain / Validation
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -34,9 +34,9 @@ normalization, responsive cascade merge, and machine-readable errors.
 
 ## Sub-Tasks
 
-- [ ] TASK-417-02-L01: Document types, defaults, and atomic catalog.
-- [ ] TASK-417-02-L02: Normalization, responsive cascade, and legacy reset.
-- [ ] TASK-417-02-L03: Admin API validation and Page error mapping.
+- [x] TASK-417-02-L01: Document types, defaults, and atomic catalog.
+- [x] TASK-417-02-L02: Normalization, responsive cascade, and legacy reset.
+- [x] TASK-417-02-L03: Admin API validation and Page error mapping.
 
 ---
 

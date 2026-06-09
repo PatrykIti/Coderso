@@ -203,7 +203,11 @@ export function PageListPage() {
         title: payload.title,
         slug: payload.slug,
         template: payload.template,
-        data: { blocks: [], settings: { template: payload.template } },
+        data: {
+          schemaVersion: 2,
+          sections: [],
+          settings: { template: payload.template ?? "page-v2", showInNav: true },
+        },
       });
       pageListToasts.success("create", { targetLabel: page.title });
       if (payload.openAfterCreate) {

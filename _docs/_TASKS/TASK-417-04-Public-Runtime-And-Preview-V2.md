@@ -6,7 +6,7 @@
 **Category:** Pages / Runtime / Preview
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-02, TASK-417-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -37,10 +37,10 @@ cascade consistently.
 
 ## Sub-Tasks
 
-- [ ] TASK-417-04-L01: Pages v2 renderer and template props.
-- [ ] TASK-417-04-L02: Public site, preview, and cache parity.
-- [ ] TASK-417-04-L03: Admin preview token issuer and SSRF guards.
-- [ ] TASK-417-04-L04: Non-Page widget boundary guards.
+- [x] TASK-417-04-L01: Pages v2 renderer and template props.
+- [x] TASK-417-04-L02: Public site, preview, and cache parity.
+- [x] TASK-417-04-L03: Admin preview token issuer and SSRF guards.
+- [x] TASK-417-04-L04: Non-Page widget boundary guards.
 
 ---
 

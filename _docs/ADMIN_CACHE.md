@@ -89,6 +89,11 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `adminThemeProfiles:list`
 - `settings:redacted`
 
+Page detail cache payloads use the Pages v2 document contract:
+`currentData`/`publishedData` are `schemaVersion: 2` documents with
+`sections[]`; the old Page `blocks[]` shape is rejected for fresh writes and
+legacy stored rows are normalized before admin caching.
+
 ## Prefetch
 - Sidebar navigation can trigger optional prefetch on hover/focus.
 - Prefetch only hits cached list endpoints (safe, no editor state).

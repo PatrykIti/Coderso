@@ -106,7 +106,7 @@ const deps = {
   },
 };
 
-test("hydrateAssistantActiveSurfaceContext rehydrates page identity and preserves block summary", async () => {
+test("hydrateAssistantActiveSurfaceContext rehydrates page identity and preserves section summary", async () => {
   const context = await hydrateAssistantActiveSurfaceContext(
     {
       page: "/admin/pages/page-1",
@@ -119,17 +119,27 @@ test("hydrateAssistantActiveSurfaceContext rehydrates page identity and preserve
           status: "draft",
           template: "landing",
         },
-        selectedBlockId: "hero-1",
-        blocks: [
+        selectedSectionId: "sec-hero",
+        selectedBlockId: null,
+        sections: [
           {
-            id: "hero-1",
+            id: "sec-hero",
             type: "hero",
-            label: "Hero",
-            path: "0",
-            childCount: 0,
-            slotKeys: [],
-            templateId: null,
-            templateName: null,
+            name: "Hero",
+            path: "sections.0",
+            blockCount: 1,
+            blocks: [
+              {
+                id: "hero-1",
+                type: "heading",
+                label: "Hero",
+                path: "sections.0.blocks.0",
+                childCount: 0,
+                slotKeys: [],
+                templateId: null,
+                templateName: null,
+              },
+            ],
           },
         ],
         warnings: [],
@@ -147,7 +157,15 @@ test("hydrateAssistantActiveSurfaceContext rehydrates page identity and preserve
       status: "published",
       template: "landing",
     },
-    blocks: [{ id: "hero-1", type: "hero" }],
+    selectedSectionId: "sec-hero",
+    selectedBlockId: null,
+    sections: [
+      {
+        id: "sec-hero",
+        type: "hero",
+        blocks: [{ id: "hero-1", type: "heading" }],
+      },
+    ],
   });
 });
 

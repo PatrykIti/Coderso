@@ -6,7 +6,7 @@
 **Category:** Admin UI / Pages
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-02-L02, TASK-417-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -34,11 +34,11 @@ and canvas device context.
 
 ## Sub-Tasks
 
-- [ ] Introduce `PageEditorV2State` and reducer actions.
-- [ ] Load/normalize `currentData` as v2.
-- [ ] Implement canvas section/block selection, move, duplicate, delete, and
+- [x] Introduce `PageEditorV2State` and reducer actions.
+- [x] Load/normalize `currentData` as v2.
+- [x] Implement canvas section/block selection, move, duplicate, delete, and
   insert operations.
-- [ ] Preserve cache hydration and remote-update dirty-state behavior.
+- [x] Preserve cache hydration and remote-update dirty-state behavior.
 
 ---
 

@@ -3,6 +3,18 @@ import { expect, test } from "bun:test";
 import { solutionKitsCatalog } from "../../../core/services/kits/solutionKitsCatalog";
 import { ADVANCED_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/advancedModules";
 import { isCuratedMediaUrl } from "../../../core/services/media/curatedMediaProfiles";
+import { PAGE_DOCUMENT_SCHEMA_VERSION } from "../../../core/services/pages/pageDocumentV2";
+
+type TestPageBlock = {
+  type?: string;
+  props?: Record<string, unknown>;
+};
+
+type TestPageSection = {
+  type?: string;
+  name?: string;
+  blocks?: TestPageBlock[];
+};
 
 const normalizePageSlug = (value: string) => {
   const trimmed = value.trim();
@@ -19,6 +31,25 @@ const collectStringValues = (value: unknown): string[] => {
     );
   }
   return [];
+};
+
+const readPageSections = (value: unknown) => {
+  const data = value as { schemaVersion?: unknown; sections?: TestPageSection[] } | undefined;
+  expect(data?.schemaVersion).toBe(PAGE_DOCUMENT_SCHEMA_VERSION);
+  expect(data).not.toHaveProperty("blocks");
+  return Array.isArray(data?.sections) ? data.sections : [];
+};
+
+const readPageBlocks = (value: unknown) =>
+  readPageSections(value).flatMap((section) => section.blocks ?? []);
+
+const collectListHrefs = (block: TestPageBlock | undefined) => {
+  const items = Array.isArray(block?.props?.items) ? block.props.items : [];
+  return items
+    .map((item) =>
+      typeof item === "object" && item !== null ? (item as { href?: unknown }).href : null
+    )
+    .filter((href): href is string => typeof href === "string");
 };
 
 test("solution kits catalog provides complete starter packs for each kit", () => {
@@ -40,6 +71,7 @@ test("solution kits catalog provides complete starter packs for each kit", () =>
 
     for (const page of kit.resourceBlueprint.pages) {
       expect(page.data).toBeDefined();
+      expect(readPageSections(page.data).length).toBeGreaterThan(0);
       expect(page.seo).toBeDefined();
     }
   }
@@ -110,25 +142,16 @@ test("solution kit recommended modules stay aligned with known Coderso modules a
   expect(smallEcommerce?.recommendedModules).toContain("filters");
 });
 
-test("local service kit wires contact widgets to its public inquiry form", () => {
+test("local service kit wires contact sections to its public inquiry form", () => {
   const kit = solutionKitsCatalog.find((item) => item.id === "local-service-business");
   expect(kit).toBeDefined();
 
   const formSlugs = new Set(kit!.resourceBlueprint.forms.map((form) => form.slug));
   const contactPage = kit!.resourceBlueprint.pages.find((page) => page.slug === "contact");
-  const blocks =
-    (contactPage?.data as { blocks?: Array<{ type?: string; data?: unknown }> })?.blocks ?? [];
-  const formIds = blocks.flatMap((block) => {
-    const data = block.data as
-      | {
-          formId?: string;
-          form?: { submission?: { formId?: string; mode?: string } };
-        }
-      | undefined;
-    return [data?.formId, data?.form?.submission?.formId].filter(
-      (value): value is string => typeof value === "string" && value.trim().length > 0
-    );
-  });
+  const formIds = readPageBlocks(contactPage?.data)
+    .filter((block) => block.type === "form")
+    .map((block) => block.props?.formId)
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
 
   expect(formSlugs.has("service-inquiry")).toBe(true);
   expect(formIds).toContain("service-inquiry");
@@ -171,8 +194,9 @@ test("industry starter home pages include menu-backed navigation and footer link
       (page) => page.slug.trim().length === 0 || page.slug === "/"
     );
     const serializedHomePage = JSON.stringify(homePage?.data ?? {});
-    const blocks =
-      (homePage?.data as { blocks?: Array<Record<string, unknown>> } | undefined)?.blocks ?? [];
+    const sections = readPageSections(homePage?.data);
+    const blocks = readPageBlocks(homePage?.data);
+    expect(sections.length).toBeGreaterThan(0);
     expect(blocks.length).toBeGreaterThan(0);
     expect(serializedHomePage).toContain(
       scenario.kitId === "beauty-salon" ? "Beauty treatments" : "Primary care"
@@ -182,54 +206,31 @@ test("industry starter home pages include menu-backed navigation and footer link
     expect(serializedHomePage).not.toContain("Product overview");
     expect(serializedHomePage).not.toContain("$19");
 
-    const navigationBlock = blocks[0];
-    expect(navigationBlock).toMatchObject({
+    const navigationSection = sections.find(
+      (section) => section.type === "navigation" && section.name === "Navigation"
+    );
+    const navigationBlock = navigationSection?.blocks?.find((block) => block.type === "list");
+    expect(navigationSection).toMatchObject({
       type: "navigation",
-      variant: "with-cta",
+      name: "Navigation",
     });
-
-    const navigationData = navigationBlock.data as
-      | {
-          linksSource?: unknown;
-          items?: Array<{ href?: unknown }>;
-        }
-      | undefined;
-    expect(navigationData?.linksSource).toBe("menu");
-    const navigationHrefs =
-      navigationData?.items
-        ?.map((item) => item.href)
-        .filter((href): href is string => typeof href === "string") ?? [];
+    const navigationHrefs = collectListHrefs(navigationBlock);
     expect(navigationHrefs).toEqual(expect.arrayContaining([...scenario.expectedNavigationLinks]));
 
-    const footerBlock = blocks.at(-1);
-    expect(footerBlock).toMatchObject({
-      type: "footer",
-      variant: "columns-2",
+    const footerSection = sections.find(
+      (section) => section.type === "navigation" && section.name === "Footer"
+    );
+    const footerBlock = footerSection?.blocks?.find((block) => block.type === "list");
+    expect(footerSection).toMatchObject({
+      type: "navigation",
+      name: "Footer",
     });
-
-    const footerData = footerBlock?.data as
-      | {
-          columns?: Array<{ links?: Array<{ href?: unknown }> }>;
-        }
-      | undefined;
-    const footerHrefs =
-      footerData?.columns
-        ?.flatMap((column) => column.links ?? [])
-        .map((link) => link.href)
-        .filter((href): href is string => typeof href === "string") ?? [];
+    const footerHrefs = collectListHrefs(footerBlock);
     expect(footerHrefs).toEqual(expect.arrayContaining([...scenario.expectedFooterLinks]));
 
     const contactPage = kit!.resourceBlueprint.pages.find((page) => page.slug === "contact");
-    const contactBlocks =
-      (contactPage?.data as { blocks?: Array<Record<string, unknown>> } | undefined)?.blocks ?? [];
-    const formEmbedBlock = contactBlocks.find((block) => block.type === "form-embed");
-    const formEmbedData = formEmbedBlock?.data as
-      | {
-          formId?: unknown;
-          title?: unknown;
-        }
-      | undefined;
-    expect(formEmbedData?.formId).toBe(scenario.expectedContactFormId);
-    expect(formEmbedData?.title).toBe(scenario.expectedContactFormTitle);
+    const formBlock = readPageBlocks(contactPage?.data).find((block) => block.type === "form");
+    expect(formBlock?.props?.formId).toBe(scenario.expectedContactFormId);
+    expect(formBlock?.props?.title).toBe(scenario.expectedContactFormTitle);
   }
 });

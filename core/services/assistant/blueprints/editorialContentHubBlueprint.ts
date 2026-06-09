@@ -1,5 +1,6 @@
 import { normalizeAssistantActionPlan } from "../actionPlanSchema";
 import type { AssistantActionPlan, AssistantPromptKind } from "../actionPlanTypes";
+import { createPageBlockV2, createPageSectionV2 } from "../../pages/pageDocumentV2";
 import type { AssistantBusinessBlueprintPack } from "./businessBlueprintTypes";
 
 export const buildEditorialContentHubPlan = (options?: {
@@ -33,61 +34,47 @@ export const buildEditorialContentHubPlan = (options?: {
           status: "published",
           introTitle: "Aktualności i poradniki",
           introBody: "Przeglądaj najnowsze wpisy, poradniki i aktualności w jednym miejscu.",
-          blocks: [
-            {
+          sections: [
+            createPageSectionV2("content", {
               id: "editorial-hub-intro",
-              type: "rich-text-section",
-              variant: "single-column",
-              data: {
-                titleBlock: {
-                  eyebrow: "Blog",
-                  title: "Wiedza i aktualności",
-                },
-                body: {
-                  html: "",
-                  blocks: [
-                    {
-                      id: "editorial-hub-intro-copy",
-                      heading: "Najnowsze treści",
-                      content:
-                        "Ta strona zbiera opublikowane wpisy i ułatwia czytelnikom przejście do szczegółów.",
-                    },
-                  ],
-                },
-                options: {
-                  outputMode: "blocks",
-                  maxWidth: "lg",
-                },
-              },
-            },
-            {
+              name: "Intro",
+              blocks: [
+                createPageBlockV2("heading", {
+                  id: "editorial-hub-intro-heading",
+                  props: { text: "Wiedza i aktualnosci", level: "h2", align: "left" },
+                }),
+                createPageBlockV2("text", {
+                  id: "editorial-hub-intro-copy",
+                  props: {
+                    text: "Ta strona zbiera opublikowane wpisy i ulatwia czytelnikom przejscie do szczegolow.",
+                    format: "plain",
+                    align: "left",
+                  },
+                }),
+              ],
+            }),
+            createPageSectionV2("collection", {
               id: "editorial-hub-posts-feed",
-              type: "posts-feed",
+              name: "Posts feed",
               variant: "cards",
-              data: {
-                source: {
-                  mode: "latest",
-                  limit: 9,
-                  sort: "published-desc",
-                },
-                fields: {
-                  showExcerpt: true,
-                  showAuthor: true,
-                  showDate: true,
-                  showCta: true,
-                },
-                emptyState: {
-                  title: "No posts yet",
-                  description: "Publish posts to populate this hub.",
-                },
-                style: {
-                  columns: "3",
-                  gap: "md",
-                  cardStyle: "outlined",
-                  ctaLabel: "Read more",
-                },
-              },
-            },
+              blocks: [
+                createPageBlockV2("collection", {
+                  id: "editorial-hub-posts-feed-block",
+                  props: {
+                    source: {
+                      mode: "latest",
+                      limit: 9,
+                      sort: "published-desc",
+                    },
+                    columns: "3",
+                    cardStyle: "outlined",
+                    ctaLabel: "Read more",
+                    emptyTitle: "No posts yet",
+                    emptyDescription: "Publish posts to populate this hub.",
+                  },
+                }),
+              ],
+            }),
           ],
         },
       },

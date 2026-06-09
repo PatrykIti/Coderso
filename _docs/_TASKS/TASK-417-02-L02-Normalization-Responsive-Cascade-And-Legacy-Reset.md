@@ -6,7 +6,7 @@
 **Category:** Pages / Domain
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -33,15 +33,15 @@ to an empty v2 document.
 
 ## Sub-Tasks
 
-- [ ] Add `normalizePageDocumentV2`.
-- [ ] Add `normalizePageDocumentV2ForWrite` that throws on non-v2, v1, or
+- [x] Add `normalizePageDocumentV2`.
+- [x] Add `normalizePageDocumentV2ForWrite` that throws on non-v2, v1, or
   malformed payloads.
-- [ ] Add `normalizeStoredPageDocumentV2ForRead` that resets only clearly
+- [x] Add `normalizeStoredPageDocumentV2ForRead` that resets only clearly
   legacy/versionless stored rows.
-- [ ] Add `resolvePageDocumentForBreakpoint`.
-- [ ] Add `clearResponsiveOverride`.
-- [ ] Add `toPublishedPageDocumentV2` to remove editor-only metadata.
-- [ ] Add out-of-band legacy/versionless reset diagnostics.
+- [x] Add `resolvePageDocumentForBreakpoint`.
+- [x] Add `clearResponsiveOverride`.
+- [x] Add `toPublishedPageDocumentV2` to remove editor-only metadata.
+- [x] Add out-of-band legacy/versionless reset diagnostics.
 
 ---
 

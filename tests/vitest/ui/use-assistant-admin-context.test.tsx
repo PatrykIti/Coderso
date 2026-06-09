@@ -60,8 +60,15 @@ const readContextFromHtml = (html: string) => {
       };
       sampleEntryId?: string | null;
       selectedEntryId?: string | null;
+      selectedSectionId?: string | null;
       selectedBlockId: string | null;
-      blocks: Array<{ id: string; type: string; templateId: string | null }>;
+      sections?: Array<{
+        id: string;
+        type: string;
+        name: string;
+        blocks: Array<{ id: string; type: string; templateId: string | null }>;
+      }>;
+      blocks?: Array<{ id: string; type: string; templateId: string | null }>;
       bindings?: Array<{ widgetId: string; field: string; propPath: string; mode: string }>;
       writableBindingFields?: string[];
       settings?: {
@@ -182,27 +189,37 @@ test("useAssistantAdminContext includes matching active page surface context", (
       status: "draft",
       template: "landing",
     },
-    selectedBlockId: "hero-1",
-    blocks: [
+    selectedSectionId: "sec-hero",
+    selectedBlockId: null,
+    sections: [
       {
-        id: "hero-1",
+        id: "sec-hero",
         type: "hero",
-        label: "Contact hero",
-        path: "0",
-        childCount: 0,
-        slotKeys: [],
-        templateId: null,
-        templateName: null,
-      },
-      {
-        id: "template-1",
-        type: "template-section",
-        label: null,
-        path: "1",
-        childCount: 0,
-        slotKeys: [],
-        templateId: "tpl-1",
-        templateName: "Contact CTA",
+        name: "Hero",
+        path: "sections.0",
+        blockCount: 2,
+        blocks: [
+          {
+            id: "hero-1",
+            type: "heading",
+            label: "Contact hero",
+            path: "sections.0.blocks.0",
+            childCount: 0,
+            slotKeys: [],
+            templateId: null,
+            templateName: null,
+          },
+          {
+            id: "button-1",
+            type: "button",
+            label: "Contact CTA",
+            path: "sections.0.blocks.1",
+            childCount: 0,
+            slotKeys: [],
+            templateId: null,
+            templateName: null,
+          },
+        ],
       },
     ],
     warnings: ["page_has_unsaved_changes"],
@@ -224,10 +241,17 @@ test("useAssistantAdminContext includes matching active page surface context", (
         slug: "/contact",
         template: "landing",
       },
-      selectedBlockId: "hero-1",
-      blocks: [
-        { id: "hero-1", type: "hero", templateId: null },
-        { id: "template-1", type: "template-section", templateId: "tpl-1" },
+      selectedSectionId: "sec-hero",
+      selectedBlockId: null,
+      sections: [
+        {
+          id: "sec-hero",
+          type: "hero",
+          blocks: [
+            { id: "hero-1", type: "heading", templateId: null },
+            { id: "button-1", type: "button", templateId: null },
+          ],
+        },
       ],
       warnings: ["page_has_unsaved_changes"],
     });
@@ -246,8 +270,9 @@ test("useAssistantAdminContext drops active page surface for a different route",
       status: "draft",
       template: null,
     },
+    selectedSectionId: null,
     selectedBlockId: null,
-    blocks: [],
+    sections: [],
     warnings: [],
   });
 

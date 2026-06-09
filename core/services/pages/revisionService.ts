@@ -4,6 +4,7 @@ import { db } from "../../db/client";
 import { pageRevisions, pages, users } from "../../db/schema";
 import { areRevisionSnapshotsEqual } from "../content/revisionSnapshot";
 import { resolveEmailValue } from "../security/piiEmail";
+import { normalizeStoredPageDocumentV2ForRead } from "./pageDocumentV2";
 
 export type RevisionData = Record<string, unknown>;
 export type PageRevisionKind = "publish" | "autosave";
@@ -58,37 +59,40 @@ const normalizeText = (value: unknown) => {
 const normalizeRevisionKind = (value: unknown): PageRevisionKind =>
   value === "autosave" ? "autosave" : "publish";
 
-export function normalizePageRevisionSnapshot(
-  value: unknown
-): PageRevisionSnapshot {
+const normalizeRevisionData = (value: unknown): RevisionData =>
+  normalizeStoredPageDocumentV2ForRead(value) as unknown as RevisionData;
+
+export function normalizePageRevisionSnapshot(value: unknown): PageRevisionSnapshot {
   if (isRecord(value) && isRecord(value.data)) {
     return {
       title: normalizeText(value.title),
       slug: normalizeText(value.slug),
-      data: value.data as RevisionData,
+      data: normalizeRevisionData(value.data),
     };
   }
 
   return {
     title: null,
     slug: null,
-    data: isRecord(value) ? (value as RevisionData) : {},
+    data: normalizeRevisionData(value),
   };
 }
 
 const mapRevisionRow = (
-  row: {
-    id: string;
-    pageId: string;
-    version: number;
-    kind: string;
-    data: unknown;
-    createdAt: Date;
-    createdBy: string | null;
-    authorName: string | null;
-    authorEmail: string | null;
-    authorEmailEncrypted: unknown;
-  } | typeof pageRevisions.$inferSelect
+  row:
+    | {
+        id: string;
+        pageId: string;
+        version: number;
+        kind: string;
+        data: unknown;
+        createdAt: Date;
+        createdBy: string | null;
+        authorName: string | null;
+        authorEmail: string | null;
+        authorEmailEncrypted: unknown;
+      }
+    | typeof pageRevisions.$inferSelect
 ): PageRevisionRecord => {
   const snapshot = normalizePageRevisionSnapshot(row.data);
   const record = row as {
@@ -216,12 +220,7 @@ export async function createOrReplaceAutosaveRevisionTx(
   const existingAutosaves = await tx
     .select()
     .from(pageRevisions)
-    .where(
-      and(
-        eq(pageRevisions.pageId, pageId),
-        eq(pageRevisions.kind, "autosave")
-      )
-    )
+    .where(and(eq(pageRevisions.pageId, pageId), eq(pageRevisions.kind, "autosave")))
     .orderBy(desc(pageRevisions.version));
 
   const latest = existingAutosaves[0];
@@ -230,9 +229,7 @@ export async function createOrReplaceAutosaveRevisionTx(
     if (areRevisionSnapshotsEqual(latestSnapshot, normalizedSnapshot)) {
       const staleAutosaveIds = existingAutosaves.slice(1).map((row) => row.id);
       if (staleAutosaveIds.length > 0) {
-        await tx
-          .delete(pageRevisions)
-          .where(inArray(pageRevisions.id, staleAutosaveIds));
+        await tx.delete(pageRevisions).where(inArray(pageRevisions.id, staleAutosaveIds));
       }
 
       return {
@@ -265,9 +262,7 @@ export async function createOrReplaceAutosaveRevisionTx(
 
   const staleAutosaveIds = existingAutosaves.map((row) => row.id);
   if (staleAutosaveIds.length > 0) {
-    await tx
-      .delete(pageRevisions)
-      .where(inArray(pageRevisions.id, staleAutosaveIds));
+    await tx.delete(pageRevisions).where(inArray(pageRevisions.id, staleAutosaveIds));
   }
 
   return {
@@ -285,42 +280,31 @@ export async function pruneRevisions(pageId: string, keep: number) {
   return pruneRevisionsTx(db, pageId, keep);
 }
 
-export async function pruneRevisionsTx(
-  tx: DbClient,
-  pageId: string,
-  keep: number
-) {
+export async function pruneRevisionsTx(tx: DbClient, pageId: string, keep: number) {
   if (!Number.isFinite(keep) || keep < 1) return;
 
   const excess = await tx
     .select({ id: pageRevisions.id })
     .from(pageRevisions)
-    .where(
-      and(
-        eq(pageRevisions.pageId, pageId),
-        eq(pageRevisions.kind, "publish")
-      )
-    )
+    .where(and(eq(pageRevisions.pageId, pageId), eq(pageRevisions.kind, "publish")))
     .orderBy(desc(pageRevisions.version))
     .offset(keep);
 
   if (excess.length === 0) return;
 
-  await tx
-    .delete(pageRevisions)
-    .where(inArray(pageRevisions.id, excess.map((row) => row.id)));
+  await tx.delete(pageRevisions).where(
+    inArray(
+      pageRevisions.id,
+      excess.map((row) => row.id)
+    )
+  );
 }
 
 export async function discardAutosaveRevision(pageId: string, revisionId: string) {
   const [revision] = await db
     .select()
     .from(pageRevisions)
-    .where(
-      and(
-        eq(pageRevisions.pageId, pageId),
-        eq(pageRevisions.id, revisionId)
-      )
-    );
+    .where(and(eq(pageRevisions.pageId, pageId), eq(pageRevisions.id, revisionId)));
 
   if (!revision) throw new Error("revision_not_found");
   if (normalizeRevisionKind(revision.kind) !== "autosave") {
@@ -358,12 +342,7 @@ export async function restoreRevision(
     })
     .from(pageRevisions)
     .leftJoin(users, eq(pageRevisions.createdBy, users.id))
-    .where(
-      and(
-        eq(pageRevisions.pageId, pageId),
-        eq(pageRevisions.id, revisionId)
-      )
-    );
+    .where(and(eq(pageRevisions.pageId, pageId), eq(pageRevisions.id, revisionId)));
 
   if (!revision) throw new Error("revision_not_found");
 

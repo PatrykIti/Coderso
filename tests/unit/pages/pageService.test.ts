@@ -8,11 +8,63 @@ import {
   deletePage,
   duplicatePage,
   getPageBySlug,
+  listPublishedPagesForNavigation,
   publishPage,
   unpublishPage,
   updatePage,
 } from "../../../core/services/pages/pageService";
 import { listRevisions } from "../../../core/services/pages/revisionService";
+
+const buildPageData = (settings: Record<string, unknown> = {}) => ({
+  schemaVersion: 2,
+  breakpoints: ["desktop", "tablet", "mobile"],
+  seo: {},
+  settings: {
+    template: "page-v2",
+    showInNav: true,
+    ...settings,
+  },
+  sections: [
+    {
+      id: "sec_hero",
+      type: "hero",
+      name: "Hero",
+      variant: "split",
+      layout: { columns: 2, align: "center", justify: "between", maxWidth: 1080 },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "sm",
+      },
+      spacing: {
+        paddingTop: 72,
+        paddingBottom: 72,
+        paddingLeft: 40,
+        paddingRight: 40,
+        gap: 32,
+      },
+      visibility: {
+        visible: true,
+        authOnly: false,
+        anchor: "hero",
+        startsAt: null,
+        endsAt: null,
+      },
+      responsive: {},
+      blocks: [
+        {
+          id: "blk_heading",
+          type: "heading",
+          props: { text: "Home", level: "h1", align: "left" },
+          visibility: { visible: true },
+        },
+      ],
+    },
+  ],
+});
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -66,27 +118,21 @@ testIfDb("create/update/publish/unpublish page", async () => {
   const page = await createPage({
     title: "Home",
     slug,
-    data: {
-      schemaVersion: 1,
-      blocks: [
-        {
-          id: "b1",
-          type: "hero",
-          editor: { mode: "visual", wizardCompleted: true },
-        },
-      ],
-      settings: {
-        collectionLink: {
-          contentTypeId: "content-type-1",
-          pageRole: "canonical-list-page",
-          listingQueryId: "query-1",
-          listingTemplateId: "template-1",
-        },
+    data: buildPageData({
+      collectionLink: {
+        contentTypeId: "content-type-1",
+        pageRole: "canonical-list-page",
+        listingQueryId: "query-1",
+        listingTemplateId: "template-1",
       },
-    },
+    }),
   });
 
   createdPageId = page.id;
+  expect(page.currentData).toMatchObject({
+    schemaVersion: 2,
+    sections: [expect.objectContaining({ id: "sec_hero", type: "hero" })],
+  });
   expect(
     (page.currentData as { settings?: { collectionLink?: Record<string, unknown> } }).settings
       ?.collectionLink
@@ -99,18 +145,14 @@ testIfDb("create/update/publish/unpublish page", async () => {
 
   const updated = await updatePage(page.id, {
     title: "Home Updated",
-    data: {
-      schemaVersion: 1,
-      blocks: [],
-      settings: {
-        collectionLink: {
-          contentTypeId: "content-type-1",
-          pageRole: "canonical-list-page",
-          listingQueryId: "query-2",
-          listingTemplateId: "template-2",
-        },
+    data: buildPageData({
+      collectionLink: {
+        contentTypeId: "content-type-1",
+        pageRole: "canonical-list-page",
+        listingQueryId: "query-2",
+        listingTemplateId: "template-2",
       },
-    },
+    }),
   });
   expect(updated?.title).toBe("Home Updated");
   expect(
@@ -127,27 +169,18 @@ testIfDb("create/update/publish/unpublish page", async () => {
   });
 
   const published = await publishPage(page.id, createdUserId, {
-    schemaVersion: 1,
-    blocks: [
-      {
-        id: "b2",
-        type: "compare-timeline",
-        editor: { mode: "visual", wizardCompleted: true },
-      },
-    ],
-    settings: {
+    ...buildPageData({
       collectionLink: {
         contentTypeId: "content-type-1",
         pageRole: "canonical-list-page",
         listingQueryId: "query-2",
         listingTemplateId: "template-2",
       },
-    },
+    }),
   });
   expect(published?.status).toBe("published");
-  expect(
-    (published?.publishedData as { blocks?: Array<Record<string, unknown>> })?.blocks?.[0]?.editor
-  ).toBeUndefined();
+  expect(published?.publishedData).toMatchObject({ schemaVersion: 2 });
+  expect(JSON.stringify(published?.publishedData)).not.toContain("editor");
   expect(
     (
       published?.publishedData as {
@@ -180,6 +213,40 @@ testIfDb("create/update/publish/unpublish page", async () => {
   createdUserId = undefined;
 });
 
+testIfDb(
+  "navigation summaries reset legacy published page rows before reading showInNav",
+  async () => {
+    const slug = `legacy-nav-${randomUUID()}`;
+    const page = await createPage({
+      title: "Legacy Nav",
+      slug,
+      data: buildPageData(),
+    });
+    createdPageId = page.id;
+    await db
+      .update(pages)
+      .set({
+        status: "published",
+        publishedData: {
+          blocks: [],
+          settings: {
+            showInNav: false,
+          },
+        },
+      })
+      .where(eq(pages.id, page.id));
+
+    const summaries = await listPublishedPagesForNavigation();
+    const summary = summaries.find((entry) => entry.id === page.id);
+
+    expect(summary).toMatchObject({
+      id: page.id,
+      slug: `/${slug}`,
+      showInNav: true,
+    });
+  }
+);
+
 testIfDb("publish respects revision retention", async () => {
   const email = `editor-${randomUUID()}@example.com`;
   const [user] = await db
@@ -193,18 +260,10 @@ testIfDb("publish respects revision retention", async () => {
   const page = await createPage({
     title: "Retention",
     slug,
-    data: {
-      schemaVersion: 1,
-      blocks: [],
-      settings: { revisionRetention: 2 },
-    },
+    data: buildPageData({ revisionRetention: 2 }),
   });
 
-  const payload = {
-    schemaVersion: 1,
-    blocks: [],
-    settings: { revisionRetention: 2 },
-  };
+  const payload = buildPageData({ revisionRetention: 2 });
 
   await publishPage(page.id, userId!, payload);
   await publishPage(page.id, userId!, payload);
@@ -222,7 +281,7 @@ testIfDb("delete page removes it", async () => {
   const page = await createPage({
     title: "Delete Me",
     slug: `delete-${randomUUID()}`,
-    data: { schemaVersion: 1, blocks: [] },
+    data: buildPageData(),
   });
 
   const deleted = await deletePage(page.id);
@@ -238,12 +297,12 @@ testIfDb("getPageBySlug resolves normalized and legacy slug variants", async () 
   const plainPage = await createPage({
     title: "Plain Lookup",
     slug: plainSlug,
-    data: { schemaVersion: 1, blocks: [] },
+    data: buildPageData(),
   });
   const legacyPage = await createPage({
     title: "Legacy Lookup",
     slug: legacySlug,
-    data: { schemaVersion: 1, blocks: [] },
+    data: buildPageData(),
   });
 
   try {

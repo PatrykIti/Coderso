@@ -19,16 +19,15 @@ const slugToTitle = (value: string) =>
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(" ");
 
-const blocksFromPage = (page: SolutionKitPageBlueprint): WidgetBlock[] => {
-  if (!isRecord(page.data)) return [];
-  const blocks = page.data.blocks;
-  if (!Array.isArray(blocks)) return [];
-  return blocks.filter((item) => isRecord(item)) as WidgetBlock[];
-};
-
 const templateSeedFromPage = (page: SolutionKitPageBlueprint): TemplateInstallSeed | null => {
+  if (isRecord(page.data) && page.data.schemaVersion === 2) return null;
   const key = typeof page.template === "string" ? page.template.trim() : "";
   if (!key) return null;
+  const blocks =
+    isRecord(page.data) && Array.isArray(page.data.blocks)
+      ? (page.data.blocks.filter((item) => isRecord(item)) as WidgetBlock[])
+      : [];
+  if (blocks.length === 0) return null;
 
   return {
     key,
@@ -36,20 +35,20 @@ const templateSeedFromPage = (page: SolutionKitPageBlueprint): TemplateInstallSe
     description: `Starter kit template generated from page: ${page.title}.`,
     category: "Layout",
     status: page.status,
-    blocks: blocksFromPage(page),
+    blocks,
   };
 };
 
-const templateSeedFromBlueprint = (template: SolutionKitTemplateBlueprint): TemplateInstallSeed => ({
+const templateSeedFromBlueprint = (
+  template: SolutionKitTemplateBlueprint
+): TemplateInstallSeed => ({
   key: template.key,
   name: template.name ?? slugToTitle(template.key),
   description: template.description ?? null,
   category: template.category ?? "Layout",
   status: template.status ?? "draft",
   blocks: Array.isArray(template.blocks) ? (template.blocks as WidgetBlock[]) : [],
-  settings: isRecord(template.settings)
-    ? (template.settings as WidgetTemplateSettings)
-    : undefined,
+  settings: isRecord(template.settings) ? (template.settings as WidgetTemplateSettings) : undefined,
 });
 
 export const buildTemplateSeedsForKit = (definition: SolutionKitDefinition) => {

@@ -4,27 +4,15 @@ import { eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import {
-  bookingResources,
-  bookingServiceResources,
-  bookingServices,
   contentEntries,
   contentTypes,
-  formFields,
-  forms,
   pageRevisions,
   pages,
   previewTokens,
   seoDocuments,
   users,
-  widgetTemplates,
 } from "../../../core/db/schema";
 import { createContentType } from "../../../core/services/content/typeService";
-import { createForm, setFormFields } from "../../../core/services/forms/formsService";
-import {
-  createBookingResource,
-  createBookingService,
-  setBookingServiceResources,
-} from "../../../core/services/booking/bookingService";
 import { createPage, publishPage, updatePage } from "../../../core/services/pages/pageService";
 import { createPreviewToken } from "../../../core/services/pages/previewService";
 import { upsertSeoDocument } from "../../../core/services/seo/seoService";
@@ -37,8 +25,6 @@ import {
 import { clearSiteCache, getSiteCacheStats } from "../../../core/site/cache/siteCache";
 import { handlePublicRequest } from "../../../core/server/publicSite";
 import { resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit";
-import { contactDefaults } from "../../../core/widgets/core/contact";
-import { newsletterDefaults } from "../../../core/widgets/core/newsletter";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -62,10 +48,6 @@ const trackedPageIds = new Set<string>();
 const trackedUserIds = new Set<string>();
 const trackedContentEntryIds = new Set<string>();
 const trackedContentTypeIds = new Set<string>();
-const trackedFormIds = new Set<string>();
-const trackedBookingResourceIds = new Set<string>();
-const trackedBookingServiceIds = new Set<string>();
-const trackedWidgetTemplateIds = new Set<string>();
 const settingSnapshots = new Map<string, { exists: boolean; value: unknown }>();
 
 const trackPage = (id: string | undefined | null) => {
@@ -82,22 +64,6 @@ const trackContentEntry = (id: string | undefined | null) => {
 
 const trackContentType = (id: string | undefined | null) => {
   if (id) trackedContentTypeIds.add(id);
-};
-
-const trackForm = (id: string | undefined | null) => {
-  if (id) trackedFormIds.add(id);
-};
-
-const trackBookingResource = (id: string | undefined | null) => {
-  if (id) trackedBookingResourceIds.add(id);
-};
-
-const trackBookingService = (id: string | undefined | null) => {
-  if (id) trackedBookingServiceIds.add(id);
-};
-
-const trackWidgetTemplate = (id: string | undefined | null) => {
-  if (id) trackedWidgetTemplateIds.add(id);
 };
 
 const rememberSetting = async (key: string) => {
@@ -130,10 +96,6 @@ const cleanupTrackedRows = async () => {
   const userIds = [...trackedUserIds];
   const contentEntryIds = [...trackedContentEntryIds];
   const contentTypeIds = [...trackedContentTypeIds];
-  const formIds = [...trackedFormIds];
-  const bookingResourceIds = [...trackedBookingResourceIds];
-  const bookingServiceIds = [...trackedBookingServiceIds];
-  const widgetTemplateIds = [...trackedWidgetTemplateIds];
 
   if (pageIds.length > 0) {
     await db.delete(seoDocuments).where(inArray(seoDocuments.targetId, pageIds));
@@ -151,38 +113,14 @@ const cleanupTrackedRows = async () => {
     await db.delete(contentTypes).where(inArray(contentTypes.id, contentTypeIds));
   }
 
-  if (formIds.length > 0) {
-    await db.delete(formFields).where(inArray(formFields.formId, formIds));
-    await db.delete(forms).where(inArray(forms.id, formIds));
-  }
-
-  if (bookingServiceIds.length > 0) {
-    await db
-      .delete(bookingServiceResources)
-      .where(inArray(bookingServiceResources.serviceId, bookingServiceIds));
-    await db.delete(bookingServices).where(inArray(bookingServices.id, bookingServiceIds));
-  }
-
-  if (bookingResourceIds.length > 0) {
-    await db.delete(bookingResources).where(inArray(bookingResources.id, bookingResourceIds));
-  }
-
   if (userIds.length > 0) {
     await db.delete(users).where(inArray(users.id, userIds));
-  }
-
-  if (widgetTemplateIds.length > 0) {
-    await db.delete(widgetTemplates).where(inArray(widgetTemplates.id, widgetTemplateIds));
   }
 
   trackedPageIds.clear();
   trackedUserIds.clear();
   trackedContentEntryIds.clear();
   trackedContentTypeIds.clear();
-  trackedFormIds.clear();
-  trackedBookingResourceIds.clear();
-  trackedBookingServiceIds.clear();
-  trackedWidgetTemplateIds.clear();
 };
 
 afterEach(async () => {
@@ -194,20 +132,58 @@ afterEach(async () => {
 });
 
 const pageData = (headline: string) => ({
-  blocks: [
+  schemaVersion: 2,
+  breakpoints: ["desktop", "tablet", "mobile"],
+  sections: [
     {
-      id: `hero-${headline.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      id: `sec-${headline.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       type: "hero",
+      name: "Hero",
       variant: "centered",
-      data: {
-        headline,
-        subhead: `${headline} subhead`,
-        body: `${headline} body`,
+      layout: { columns: 1, align: "center", justify: "center", maxWidth: 1080 },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
       },
+      spacing: {
+        paddingTop: 72,
+        paddingBottom: 72,
+        paddingLeft: 40,
+        paddingRight: 40,
+        gap: 24,
+      },
+      visibility: {
+        visible: true,
+        authOnly: false,
+        anchor: "hero",
+        startsAt: null,
+        endsAt: null,
+      },
+      responsive: {
+        mobile: { spacing: { paddingLeft: 20, paddingRight: 20 } },
+      },
+      blocks: [
+        {
+          id: `heading-${headline.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+          type: "heading",
+          props: { text: headline, level: "h1", align: "center" },
+          visibility: { visible: true },
+        },
+        {
+          id: `text-${headline.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+          type: "text",
+          props: { text: `${headline} body`, format: "plain", align: "center" },
+          visibility: { visible: true },
+        },
+      ],
     },
   ],
   settings: {
-    template: "landing",
+    template: "page-v2",
     showInNav: true,
   },
   seo: {
@@ -292,11 +268,6 @@ const requestPublicPath = (path: string) =>
         "x-forwarded-for": `127.0.0.${Math.floor(Math.random() * 200) + 1}`,
       },
     })
-  );
-
-const extractNonceValues = (html: string, fieldName: "__nl_form_nonce" | "__nl_booking_nonce") =>
-  [...html.matchAll(new RegExp(`name="${fieldName}" value="([^"]+)"`, "g"))].map(
-    (match) => match[1] ?? ""
   );
 
 testIfDbWithOptions(
@@ -446,7 +417,7 @@ testIfDb("public root renders the configured homepage by page id", async () => {
 });
 
 testIfDbWithOptions(
-  "public page runtime renders malformed legacy Template Section ids as safe placeholders",
+  "public page runtime resets published legacy widget rows to an empty v2 document",
   async () => {
     resetRateLimitBuckets();
     await setTestSetting("site.cacheTtlSeconds", 0);
@@ -455,15 +426,15 @@ testIfDbWithOptions(
     const actor = await createActor();
     const badTemplateId = "missing-template-31-05";
     const token = randomUUID().slice(0, 8);
-    const slug = `/template-section-invalid-runtime-${token}`;
+    const slug = `/legacy-reset-runtime-${token}`;
     await insertPublishedLegacyPage({
-      title: `Template Section Invalid Runtime ${token}`,
+      title: `Legacy Reset Runtime ${token}`,
       slug,
       authorId: actor.id,
       data: {
         blocks: [
           {
-            id: "template-section-invalid-runtime",
+            id: "legacy-template-section-runtime",
             type: "template-section",
             variant: "default",
             data: {
@@ -477,7 +448,7 @@ testIfDbWithOptions(
           showInNav: true,
         },
         seo: {
-          description: `Template section invalid runtime ${token}`,
+          description: `Legacy reset runtime ${token}`,
         },
       },
     });
@@ -486,152 +457,10 @@ testIfDbWithOptions(
     expect(response.status).toBe(200);
     const html = await response.text();
 
-    expect(html).toContain('data-template-section-resolution="template_missing"');
-    expect(html).toContain("Template not found. Pick another template.");
+    expect(html).toContain('data-page-v2="true"');
+    expect(html).toContain("This page has no content yet.");
+    expect(html).not.toContain("data-template-section-resolution");
     expect(html).not.toContain(badTemplateId);
-  },
-  { timeout: dbRuntimeTimeout }
-);
-
-testIfDbWithOptions(
-  "public page runtime hydrates legacy child Template Section ids without throwing",
-  async () => {
-    resetRateLimitBuckets();
-    await setTestSetting("site.cacheTtlSeconds", 0);
-    await setTestSetting("site.contentRoutes", []);
-
-    const actor = await createActor();
-    const parentTemplateId = randomUUID();
-    const badTemplateId = "missing-template-31-05";
-    const [template] = await db
-      .insert(widgetTemplates)
-      .values({
-        id: parentTemplateId,
-        name: `Legacy Parent Template ${randomUUID().slice(0, 8)}`,
-        category: "Content",
-        status: "published",
-        blocks: [
-          {
-            id: "legacy-child-template-section-invalid",
-            type: "template-section",
-            variant: "default",
-            data: {
-              templateId: badTemplateId,
-              templateName: badTemplateId,
-            },
-          },
-        ],
-        settings: {},
-      })
-      .returning();
-    trackWidgetTemplate(template?.id);
-
-    const token = randomUUID().slice(0, 8);
-    const slug = `/template-section-child-invalid-runtime-${token}`;
-    await insertPublishedLegacyPage({
-      title: `Template Section Child Invalid Runtime ${token}`,
-      slug,
-      authorId: actor.id,
-      data: {
-        blocks: [
-          {
-            id: "template-section-parent-runtime",
-            type: "template-section",
-            variant: "default",
-            data: {
-              templateId: parentTemplateId,
-              templateName: "Legacy parent",
-            },
-          },
-        ],
-        settings: {
-          template: "landing",
-          showInNav: true,
-        },
-        seo: {
-          description: `Template section child invalid runtime ${token}`,
-        },
-      },
-    });
-
-    const response = await requestPublicPath(slug);
-    expect(response.status).toBe(200);
-    const html = await response.text();
-
-    expect(html).toContain('data-template-section-resolution="ready"');
-    expect(html).toContain('data-template-section-resolution="template_missing"');
-    expect(html).not.toContain(badTemplateId);
-  },
-  { timeout: dbRuntimeTimeout }
-);
-
-testIfDbWithOptions(
-  "public page runtime propagates Template Section self-reference loops to the parent marker",
-  async () => {
-    resetRateLimitBuckets();
-    await setTestSetting("site.cacheTtlSeconds", 0);
-    await setTestSetting("site.contentRoutes", []);
-
-    const actor = await createActor();
-    const templateId = randomUUID();
-    const [template] = await db
-      .insert(widgetTemplates)
-      .values({
-        id: templateId,
-        name: `Loop Template ${randomUUID().slice(0, 8)}`,
-        category: "Content",
-        status: "published",
-        blocks: [
-          {
-            id: "template-section-self-reference",
-            type: "template-section",
-            variant: "default",
-            data: {
-              templateId,
-              templateName: "Loop child",
-            },
-          },
-        ],
-        settings: {},
-      })
-      .returning();
-    trackWidgetTemplate(template?.id);
-
-    const token = randomUUID().slice(0, 8);
-    const slug = `/template-section-loop-runtime-${token}`;
-    await insertPublishedLegacyPage({
-      title: `Template Section Loop Runtime ${token}`,
-      slug,
-      authorId: actor.id,
-      data: {
-        blocks: [
-          {
-            id: "template-section-loop-parent",
-            type: "template-section",
-            variant: "default",
-            data: {
-              templateId,
-              templateName: "Loop parent",
-            },
-          },
-        ],
-        settings: {
-          template: "landing",
-          showInNav: true,
-        },
-        seo: {
-          description: `Template section loop runtime ${token}`,
-        },
-      },
-    });
-
-    const response = await requestPublicPath(slug);
-    expect(response.status).toBe(200);
-    const html = await response.text();
-
-    expect(html).toContain('data-template-section-resolution="template_loop"');
-    expect(html).toContain("Template loop detected. Remove nested template sections.");
-    expect(html).not.toContain('data-template-section-state="ready"');
   },
   { timeout: dbRuntimeTimeout }
 );
@@ -668,279 +497,6 @@ testIfDb(
     const brokenResponse = await requestPublicPath(publishedWithoutData.slug);
     expect(brokenResponse.status).toBe(404);
   }
-);
-
-testIfDbWithOptions(
-  "public page runtime hydrates Contact bindings through the shared Forms runtime",
-  async () => {
-    resetRateLimitBuckets();
-    await setTestSetting("site.cacheTtlSeconds", 0);
-    await setTestSetting("site.contentRoutes", []);
-
-    const previousNonceSecret = process.env.FORM_SUBMIT_NONCE_SECRET;
-    process.env.FORM_SUBMIT_NONCE_SECRET = previousNonceSecret || "contact-runtime-secret";
-    try {
-      const actor = await createActor();
-      const form = await createForm({
-        name: `Contact Runtime ${randomUUID()}`,
-        status: "published",
-        submissionAccess: "public",
-      });
-      trackForm(form?.id);
-      if (!form?.id) throw new Error("missing_test_form");
-
-      await setFormFields(form.id, [
-        { type: "text", label: "Full name", name: "full_name", required: true },
-        { type: "email", label: "Reply email", name: "reply_email", required: true },
-        { type: "textarea", label: "Message", name: "message_body", required: true },
-      ]);
-
-      const token = randomUUID().slice(0, 8);
-      const slug = `/contact-runtime-${token}`;
-      const data = {
-        blocks: [
-          {
-            id: "contact-runtime",
-            type: "contact",
-            variant: "form-left",
-            data: {
-              ...contactDefaults,
-              form: {
-                ...contactDefaults.form,
-                fields: ["name", "email", "message"],
-                submission: {
-                  ...contactDefaults.form?.submission,
-                  mode: "forms-runtime",
-                  formId: form.id,
-                  fieldMap: {
-                    name: "full_name",
-                    email: "reply_email",
-                    phone: "",
-                    message: "message_body",
-                  },
-                },
-              },
-            },
-          },
-        ],
-        settings: {
-          template: "landing",
-          showInNav: true,
-        },
-        seo: {
-          description: `Contact runtime ${token}`,
-        },
-      };
-
-      const page = await createPage({
-        title: `Contact Runtime ${token}`,
-        slug,
-        authorId: actor.id,
-        data,
-      });
-      trackPage(page?.id);
-      if (!page?.id) throw new Error("missing_test_page");
-
-      await publishPage(page.id, actor.id, data);
-
-      const response = await requestPublicPath(slug);
-      expect(response.status).toBe(200);
-      const html = await response.text();
-
-      expect(html).toContain(`action="/forms/${form.id}/submissions"`);
-      expect(html).toContain('data-nextless-form-runtime="1"');
-      expect(html).toContain('data-form-id="' + form.id + '"');
-      expect(html).toContain('name="full_name"');
-      expect(html).toContain('name="reply_email"');
-      expect(html).toContain('name="message_body"');
-      expect(html).toContain('name="__nl_form_nonce"');
-      expect(html).not.toContain("This contact form is not connected yet.");
-    } finally {
-      process.env.FORM_SUBMIT_NONCE_SECRET = previousNonceSecret;
-    }
-  },
-  { timeout: dbRuntimeTimeout }
-);
-
-testIfDbWithOptions(
-  "public page runtime bypasses HTML cache when hydrated blocks include submission nonces",
-  async () => {
-    resetRateLimitBuckets();
-    await setTestSetting("site.cacheTtlSeconds", 60);
-    await setTestSetting("site.contentRoutes", []);
-
-    const previousNonceSecret = process.env.FORM_SUBMIT_NONCE_SECRET;
-    process.env.FORM_SUBMIT_NONCE_SECRET = previousNonceSecret || "contact-runtime-secret";
-
-    try {
-      const actor = await createActor();
-      const form = await createForm({
-        name: `Public Form ${randomUUID()}`,
-        status: "published",
-        submissionAccess: "public",
-      });
-      trackForm(form?.id);
-      if (!form?.id) throw new Error("missing_test_form");
-
-      const newsletterForm = await createForm({
-        name: `Newsletter Runtime ${randomUUID()}`,
-        status: "published",
-        submissionAccess: "public",
-      });
-      trackForm(newsletterForm?.id);
-      if (!newsletterForm?.id) throw new Error("missing_test_newsletter_form");
-
-      await setFormFields(form.id, [
-        { type: "text", label: "Full name", name: "full_name", required: true },
-        { type: "email", label: "Reply email", name: "reply_email", required: true },
-        { type: "textarea", label: "Message", name: "message_body", required: true },
-      ]);
-
-      await setFormFields(newsletterForm.id, [
-        { type: "text", label: "First name", name: "full_name", required: true },
-        { type: "email", label: "Reply email", name: "reply_email", required: true },
-        { type: "checkbox", label: "Consent", name: "consent", required: false },
-      ]);
-
-      const bookingResource = await createBookingResource({
-        name: `Runtime Resource ${randomUUID().slice(0, 8)}`,
-        timezone: "UTC",
-        status: "active",
-      });
-      trackBookingResource(bookingResource?.id);
-      if (!bookingResource?.id) throw new Error("missing_booking_resource");
-
-      const bookingService = await createBookingService({
-        name: `Runtime Service ${randomUUID().slice(0, 8)}`,
-        status: "active",
-        durationMinutes: 30,
-        settings: {
-          submissionAccess: "public",
-        },
-      });
-      trackBookingService(bookingService?.id);
-      if (!bookingService?.id) throw new Error("missing_booking_service");
-
-      await setBookingServiceResources(bookingService.id, [{ resourceId: bookingResource.id }]);
-
-      const token = randomUUID().slice(0, 8);
-      const slug = `/nonce-cache-runtime-${token}`;
-      const data = {
-        blocks: [
-          {
-            id: "form-embed-runtime",
-            type: "form-embed",
-            data: {
-              formId: form.id,
-              title: "Form Embed Runtime",
-            },
-          },
-          {
-            id: "contact-runtime",
-            type: "contact",
-            variant: "form-left",
-            data: {
-              ...contactDefaults,
-              form: {
-                ...contactDefaults.form,
-                fields: ["name", "email", "message"],
-                submission: {
-                  ...contactDefaults.form?.submission,
-                  mode: "forms-runtime",
-                  formId: form.id,
-                  fieldMap: {
-                    name: "full_name",
-                    email: "reply_email",
-                    phone: "",
-                    message: "message_body",
-                  },
-                },
-              },
-            },
-          },
-          {
-            id: "appointment-form-runtime",
-            type: "appointment-form",
-            data: {
-              flowId: "booking-flow",
-            },
-          },
-          {
-            id: "newsletter-runtime",
-            type: "newsletter",
-            variant: "inline",
-            data: {
-              ...newsletterDefaults,
-              form: {
-                ...newsletterDefaults.form,
-                emailFieldName: "reply_email",
-                firstName: {
-                  ...newsletterDefaults.form?.firstName,
-                  enabled: true,
-                  fieldName: "full_name",
-                  required: true,
-                },
-              },
-              submission: {
-                ...newsletterDefaults.submission,
-                mode: "forms-runtime",
-                formId: newsletterForm.id,
-                analyticsEvent: "newsletter_submit",
-              },
-            },
-          },
-        ],
-        settings: {
-          template: "landing",
-          showInNav: true,
-        },
-        seo: {
-          description: `Nonce cache runtime ${token}`,
-        },
-      };
-
-      const page = await createPage({
-        title: `Nonce Cache Runtime ${token}`,
-        slug,
-        authorId: actor.id,
-        data,
-      });
-      trackPage(page?.id);
-      if (!page?.id) throw new Error("missing_test_page");
-
-      await publishPage(page.id, actor.id, data);
-
-      const firstResponse = await requestPublicPath(slug);
-      expect(firstResponse.status).toBe(200);
-      const firstHtml = await firstResponse.text();
-      const firstFormNonces = extractNonceValues(firstHtml, "__nl_form_nonce");
-      const firstBookingNonces = extractNonceValues(firstHtml, "__nl_booking_nonce");
-
-      expect(firstFormNonces.length).toBeGreaterThanOrEqual(2);
-      expect(firstBookingNonces).toHaveLength(1);
-      expect(getSiteCacheStats().size).toBe(0);
-      expect(firstHtml).toContain('data-newsletter-submission-mode="forms-runtime"');
-      expect(firstHtml).toContain('name="full_name"');
-      expect(firstHtml).toContain('name="reply_email"');
-
-      await new Promise((resolve) => setTimeout(resolve, 5));
-
-      const secondResponse = await requestPublicPath(slug);
-      expect(secondResponse.status).toBe(200);
-      const secondHtml = await secondResponse.text();
-      const secondFormNonces = extractNonceValues(secondHtml, "__nl_form_nonce");
-      const secondBookingNonces = extractNonceValues(secondHtml, "__nl_booking_nonce");
-
-      expect(secondFormNonces).toHaveLength(firstFormNonces.length);
-      expect(secondBookingNonces).toHaveLength(1);
-      expect(secondFormNonces).not.toEqual(firstFormNonces);
-      expect(secondBookingNonces).not.toEqual(firstBookingNonces);
-      expect(getSiteCacheStats().size).toBe(0);
-    } finally {
-      process.env.FORM_SUBMIT_NONCE_SECRET = previousNonceSecret;
-    }
-  },
-  { timeout: dbRuntimeTimeout }
 );
 
 testIfDb(
@@ -1060,143 +616,24 @@ testIfDb(
 );
 
 testIfDbWithOptions(
-  "content list public runtime honors block-scoped pagination params for load-more and view-all",
+  "public page v2 runtime caches static atomic section HTML",
   async () => {
     resetRateLimitBuckets();
-    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.cacheTtlSeconds", 60);
+    await setTestSetting("site.contentRoutes", []);
 
-    const actor = await createActor();
-    const token = randomUUID().slice(0, 8);
-    const contentType = await createContentType({
-      name: `Runtime Articles ${token}`,
-      slug: `runtime-articles-${token}`,
-      schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          title: { type: "string" },
-        },
-      },
-    });
-    trackContentType(contentType.id);
+    const fixture = await createPublishedPageWithDraft();
+    const firstResponse = await requestPublicPath(fixture.slug);
+    expect(firstResponse.status).toBe(200);
+    const firstHtml = await firstResponse.text();
+    expect(firstHtml).toContain('data-page-v2="true"');
+    expect(firstHtml).toContain(fixture.publishedHeadline);
+    expect(getSiteCacheStats().size).toBe(1);
 
-    const contentRows = await db
-      .insert(contentEntries)
-      .values([
-        {
-          typeId: contentType.id,
-          title: `Runtime article A ${token}`,
-          slug: `runtime-article-a-${token}`,
-          status: "published",
-          data: { title: "Runtime article A" },
-          publishedAt: new Date("2026-05-19T12:00:00.000Z"),
-          updatedAt: new Date("2026-05-19T12:00:00.000Z"),
-        },
-        {
-          typeId: contentType.id,
-          title: `Runtime article B ${token}`,
-          slug: `runtime-article-b-${token}`,
-          status: "published",
-          data: { title: "Runtime article B" },
-          publishedAt: new Date("2026-05-18T12:00:00.000Z"),
-          updatedAt: new Date("2026-05-18T12:00:00.000Z"),
-        },
-        {
-          typeId: contentType.id,
-          title: `Runtime article C ${token}`,
-          slug: `runtime-article-c-${token}`,
-          status: "published",
-          data: { title: "Runtime article C" },
-          publishedAt: new Date("2026-05-17T12:00:00.000Z"),
-          updatedAt: new Date("2026-05-17T12:00:00.000Z"),
-        },
-      ])
-      .returning();
-    contentRows.forEach((row) => trackContentEntry(row.id));
-
-    const routeBase = `/runtime-articles-${token}`;
-    await setTestSetting("site.contentRoutes", [
-      {
-        type: contentType.slug,
-        listPath: routeBase,
-        detailPath: `${routeBase}/:slug`,
-        enabled: true,
-      } satisfies ContentRouteSetting,
-    ]);
-
-    const pageSlug = `/content-list-runtime-${token}`;
-    const contentListPageData = (mode: "load-more" | "view-all") => ({
-      blocks: [
-        {
-          id: "content-list-1",
-          type: "content-list",
-          variant: "cards",
-          data: {
-            source: {
-              contentTypeId: contentType.id,
-              statusScope: "published",
-              limit: 3,
-              sort: "published-desc",
-            },
-            pagination: {
-              mode,
-              pageSize: 1,
-            },
-            fields: {
-              showExcerpt: false,
-              showMeta: false,
-              showCta: true,
-            },
-            emptyState: {
-              title: "No articles found",
-              description: "Publish your first article.",
-            },
-            style: {
-              columns: "2",
-              gap: "md",
-              cardStyle: "outlined",
-              ctaLabel: "Read article",
-              backgroundColor: "var(--color-bg)",
-              borderColor: "var(--color-border)",
-              textColor: "var(--color-text)",
-            },
-          },
-        },
-      ],
-      settings: {
-        template: "landing",
-        showInNav: false,
-      },
-    });
-
-    const page = await createPage({
-      title: `Content List Runtime ${token}`,
-      slug: pageSlug,
-      authorId: actor.id,
-      data: contentListPageData("load-more"),
-    });
-    trackPage(page.id);
-    await publishPage(page.id, actor.id, contentListPageData("load-more"));
-
-    const loadMoreResponse = await requestPublicPath(`${pageSlug}?cl.content-list-1.page=2`);
-    expect(loadMoreResponse.status).toBe(200);
-    const loadMoreHtml = await loadMoreResponse.text();
-    expect(loadMoreHtml).toContain('data-content-list-items="2"');
-    expect(loadMoreHtml).toContain(`Runtime article A ${token}`);
-    expect(loadMoreHtml).toContain(`Runtime article B ${token}`);
-    expect(loadMoreHtml).toContain('href="?cl.content-list-1.page=3"');
-    expect(loadMoreHtml).toContain("Load more");
-
-    await publishPage(page.id, actor.id, contentListPageData("view-all"));
-
-    const viewAllResponse = await requestPublicPath(`${pageSlug}?cl.content-list-1.page=2`);
-    expect(viewAllResponse.status).toBe(200);
-    const viewAllHtml = await viewAllResponse.text();
-    expect(viewAllHtml).toContain('data-content-list-items="1"');
-    expect(viewAllHtml).toContain(`Runtime article A ${token}`);
-    expect(viewAllHtml).not.toContain(`Runtime article B ${token}`);
-    expect(viewAllHtml).not.toContain("Load more");
-    expect(viewAllHtml).not.toContain('href="?cl.content-list-1.page=3"');
+    const secondResponse = await requestPublicPath(fixture.slug);
+    expect(secondResponse.status).toBe(200);
+    expect(await secondResponse.text()).toBe(firstHtml);
+    expect(getSiteCacheStats().size).toBe(1);
   },
   { timeout: dbRuntimeTimeout }
 );

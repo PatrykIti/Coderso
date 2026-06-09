@@ -6,7 +6,7 @@
 **Category:** Assistant / Schemas
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-02-L02, TASK-417-05-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -34,10 +34,13 @@ legacy `blocks[]` payloads.
 
 ## Sub-Tasks
 
-- [ ] Update active Page surface context to section/block summaries.
-- [ ] Update assistant action types and JSON schemas for Page v2 payloads.
-- [ ] Retire or re-scope `page.widget.patch` away from Pages.
-- [ ] Update dry-run/action review UI labels and summaries.
+- [x] Update active Page surface context to section/block summaries.
+- [x] Update assistant action types and JSON schemas for Page v2 payloads.
+- [x] Retire or re-scope `page.widget.patch` away from Pages.
+- [x] Preserve shared widget patch utilities and tests for widget-template,
+  custom-screen, and detail-page surfaces; only the Page action contract is
+  retired/re-scoped.
+- [x] Update dry-run/action review UI labels and summaries.
 
 ---
 
@@ -76,6 +79,8 @@ Error handling:
 
 - Unknown section/block ids from provider output are rejected or gated.
 - Legacy Page `blocks[]` action payloads fail normalization.
+- `page.widget.patch` no longer mutates Page documents; provider output must use
+  Page v2 section/block actions or fail closed.
 - Non-Page widget-template/detail-page active surfaces keep their block-based
   contracts.
 
@@ -83,6 +88,8 @@ Regression-test shape:
 
 - Vitest assistant schema tests cover v2 Page action acceptance, v1 Page action
   rejection, active surface summaries, and non-Page widget surface preservation.
+- Existing `page-widget-patch` tests are rewritten or re-scoped so shared patch
+  helpers remain covered for non-Page widget surfaces.
 
 ---
 

@@ -92,7 +92,6 @@ const actionTypeLabels: Record<string, string> = {
   "media.reference.attach": "Media reference",
   "listing-query.filters.patch": "Listing filters",
   "listing-template.card.patch": "Listing card",
-  "page.widget.patch": "Page widget",
   "form.automation.upsert": "Form automation",
   "page.upsert": "Page",
   "detail-page.upsert": "Detail Template",

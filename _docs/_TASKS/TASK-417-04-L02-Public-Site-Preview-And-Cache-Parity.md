@@ -6,7 +6,7 @@
 **Category:** Pages / Runtime / Preview
 **Estimated Effort:** Large
 **Dependencies:** TASK-417-04-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -35,17 +35,17 @@ preview token security model.
 
 ## Sub-Tasks
 
-- [ ] Update `core/server/publicSite.tsx` Page orchestration to read v2
+- [x] Update `core/server/publicSite.tsx` Page orchestration to read v2
   documents.
-- [ ] Update `core/site/renderPublicPage.tsx` so Page runtime rendering uses
+- [x] Update `core/site/renderPublicPage.tsx` so Page runtime rendering uses
   v2 document props while widget runtime rendering remains available for
   non-Page callers.
-- [ ] Guard the existing `renderWidgetTemplatePreviewHtml` path in
+- [x] Guard the existing `renderWidgetTemplatePreviewHtml` path in
   `core/server/publicSite.tsx`.
-- [ ] Keep preview using `currentData` and public rendering using
+- [x] Keep preview using `currentData` and public rendering using
   `publishedData`.
-- [ ] Preserve cache invalidation and `cacheable` decisions.
-- [ ] Cover homepage and 404 render paths.
+- [x] Preserve cache invalidation and `cacheable` decisions.
+- [x] Cover homepage and 404 render paths.
 
 ---
 
