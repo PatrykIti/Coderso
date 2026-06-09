@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 11 tasks
+- **To Do:** 40 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2330 tasks
 
@@ -88,6 +88,35 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-418 | Page Editor V2 Authoring Nesting And Runtime Remediation | High | Very Large | Follow-up to TASK-417 covering Page editor block selection, toolbar controls, WYSIWYG canvas, bounded nesting, runtime parity, assistant/templates alignment, validation, and drift closure. |
+| TASK-418-01 | Audit Contract And Task Drift Freeze | High | Medium | Create the Page Editor v2 gap report and rerun fresh read-only drift audits before code edits. |
+| TASK-418-01-L01 | Page Editor V2 Gap Audit Report | High | Medium | Write `_docs/PAGE_EDITOR_V2_GAP_AUDIT.md` with Claude/subagent findings, file references, severity, and remediation mapping. |
+| TASK-418-01-L02 | Final Preimplementation Drift Audit Loop | High | Medium | Rerun Claude/subagent read-only drift checks after task files exist and fold confirmed findings back into the contract. |
+| TASK-418-02 | Immediate Editor Correctness And Selection | High | Large | Fix selected block state, type-safe patching, autosave/save feedback, and first-class block actions. |
+| TASK-418-02-L01 | Type Safe Block Patching And Autosave Errors | High | Medium | Replace first-block/generic content patching with allowlist-bound block helpers and visible autosave errors. |
+| TASK-418-02-L02 | Block Selection Model And Layers Tree | High | Large | Add section/block selection targets, block paths, layers tree selection, and assistant selected-block context. |
+| TASK-418-02-L03 | Block Insert Reorder Duplicate And Delete Actions | High | Medium | Make insertion target-aware and add selected-block move, duplicate, and delete operations. |
+| TASK-418-03 | Control Registry And Floating Toolbar Parity | High | Very Large | Replace hard-coded toolbar panels with registry-driven universal and per-type controls. |
+| TASK-418-03-L01 | Universal Section And Block Control Registry | High | Large | Add schema-owned control definitions for layout, content, style, spacing, background, responsive, and visibility panels. |
+| TASK-418-03-L02 | Per Type Atomic Block Controls | High | Large | Add small editable control sets for every insertable block type or mark unsupported types not insertable. |
+| TASK-418-03-L03 | Responsive Override Indicators And Reset UX | High | Medium | Add inherited/overridden field state, target badges, and per-field reset for tablet/mobile overrides. |
+| TASK-418-03-L04 | Floating Toolbar Interactions And Keyboard Shortcuts | High | Medium | Complete toolbar labels/tooltips, draggable/collapsible behavior, one subpanel, `Ctrl/Cmd+K`, `Esc`, and safe shortcuts. |
+| TASK-418-04 | Canvas Preview And WYSIWYG Parity | High | Large | Make admin canvas visibly honor section/block layout, style, spacing, background, visibility, and responsive state. |
+| TASK-418-04-L01 | Shared Admin Preview Renderer And Style Helpers | High | Large | Share pure render/style helpers between admin canvas and public runtime without crossing admin/runtime boundaries. |
+| TASK-418-04-L02 | Section Layout Style Spacing Visibility Feedback | High | Medium | Apply section columns, align, justify, max width, background, radius, shadow, padding, gap, and visibility to canvas. |
+| TASK-418-04-L03 | Block Style Visual Feedback And Empty States | High | Medium | Apply block style, selection, hidden states, placeholders, and type-specific previews on canvas. |
+| TASK-418-05 | Nested Container And Slot Architecture | High | Very Large | Add controlled nesting through container-capable blocks and named slots while keeping sections top-level. |
+| TASK-418-05-L01 | Recursive Page Block Contract And Normalizer | High | Large | Extend `PageBlockV2` with bounded slots, strict recursive normalization, max depth, and duplicate-id/cycle guards. |
+| TASK-418-05-L02 | Container Blocks Inserter And Layers Editing | High | Large | Add slot-aware insertion, movement, selection, and layers editing for container blocks. |
+| TASK-418-05-L03 | Recursive Runtime Renderer And Responsive Cascade | High | Large | Render nested slots publicly and resolve responsive overrides recursively. |
+| TASK-418-06 | Runtime Assistant And Template Parity | High | Large | Align Page editor inserter, public runtime, assistant emitters, solution kits, and Page templates on one capability contract. |
+| TASK-418-06-L01 | Public Runtime Real Renderers For Insertable Blocks | High | Large | Replace placeholder output for insertable blocks or hide unsupported types from inserter/assistant catalogs. |
+| TASK-418-06-L02 | Assistant Surface Schema And Blueprint Alignment | High | Large | Add selected block paths, nested summaries, and capability-gated Page actions to assistant flows. |
+| TASK-418-06-L03 | Page Templates And Non Page Widget Boundaries | High | Medium | Freeze Page Template v2 boundaries and keep non-Page widget-template/custom-screen/detail-page contracts separate. |
+| TASK-418-07 | Validation Docs Changelog And Live Smoke Closure | High | Large | Close TASK-418 with targeted tests, live server Playwright, docs, changelog, board sync, and final drift audit. |
+| TASK-418-07-L01 | Targeted Lint Type Tests And Gates | High | Medium | Run and record lint, typecheck, targeted Vitest/Bun suites, and release gates. |
+| TASK-418-07-L02 | Real Admin And Front Playwright Smoke | High | Medium | Use `coderso-dev-core-host` and `playwright-cli` to verify admin edit/save/publish and public frontend parity. |
+| TASK-418-07-L03 | Docs Changelog Board And Final Drift Closure | High | Medium | Update docs, changelog, task statuses, board stats, and rerun final read-only drift audit before closing. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
