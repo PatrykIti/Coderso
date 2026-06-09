@@ -78,8 +78,8 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 11 tasks
-- **In Progress:** 5 tasks
+- **To Do:** 36 tasks
+- **In Progress:** 6 tasks
 - **Done:** 2303 tasks
 
 ---
@@ -88,6 +88,31 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-417-01 | Source Of Truth Contract And Drift Freeze | High | Large | Freeze Pages v2 docs and task contract before implementation. |
+| TASK-417-01-L01 | Page Model V2 Normative Docs | High | Medium | Promote schemaVersion 2 sections + atomic blocks into source-of-truth docs and document legacy reset policy. |
+| TASK-417-01-L02 | Task Contract Drift Audit Loop | High | Medium | Rerun read-only Claude/subagent drift passes until the TASK-417 contract is stable. |
+| TASK-417-02 | Pages V2 Document Domain And Schema | High | Large | Bun-free Pages v2 owner for types, schemas, defaults, normalizers, responsive cascade, and error mapping. |
+| TASK-417-02-L01 | Document Types Defaults And Atomic Catalog | High | Large | Define PageDocumentV2, sections, atomic block catalog, ids, and defaults. |
+| TASK-417-02-L02 | Normalization Responsive Cascade And Legacy Reset | High | Large | Normalize v2 data, resolve responsive overrides, strip editor data, and reset legacy/versionless Pages. |
+| TASK-417-02-L03 | Admin API Validation And Page Error Mapping | High | Medium | Replace Pages schemas with v2 sections, reject v1 blocks, and add centralized page error mapping coverage. |
+| TASK-417-03 | Pages Service Lifecycle And Data Disposition | High | Large | Cut create/update/autosave/publish/revisions/duplicate/navigation to v2 and clean-slate legacy rows. |
+| TASK-417-03-L01 | Create Update Autosave Publish And Revisions V2 | High | Large | Persist normalized v2 data through page services and preserve cache/audit/revision behavior. |
+| TASK-417-03-L02 | Existing Page Rows Clean Slate Reset | High | Medium | Reset stored versionless/v1 Page rows on read/render/restore/duplicate; reject fresh legacy writes. |
+| TASK-417-04 | Public Runtime And Preview V2 | High | Large | Render Pages v2 sections publicly and in preview while keeping widget runtime for non-Page surfaces. |
+| TASK-417-04-L01 | Pages V2 Renderer And Template Props | High | Large | Add section/atomic renderer and v2 Page template props. |
+| TASK-417-04-L02 | Public Site Preview And Cache Parity | High | Large | Wire public site, preview, homepage/404, cacheability, and SEO to v2 Page documents. |
+| TASK-417-04-L03 | Admin Preview Token Issuer And SSRF Guards | High | Medium | Own Pages preview token issuance, TTL clamp, hashed tokens, SSRF bounds, and probe redaction. |
+| TASK-417-04-L04 | Non Page Widget Boundary Guards | High | Medium | Prove detail pages, custom screens, and widget templates keep WidgetBlock contracts. |
+| TASK-417-05 | Admin Pages Editor V2 Canvas | High | Very Large | Replace left/right widget editor with canvas-first sections, command palette, layers, toolbar, and responsive editing. |
+| TASK-417-05-L01 | Editor State Reducer And Canvas Selection | High | Large | Add v2 reducer, section/block selection, insert/move/duplicate/delete, dirty-state and cache hydration. |
+| TASK-417-05-L02 | Command Palette Layers And Floating Toolbar | High | Large | Build command palette, layers overlay, inline insertion, and contextual toolbar subpanels. |
+| TASK-417-05-L03 | Responsive Overrides Save Preview History | High | Large | Wire breakpoint overrides, reset inheritance, settings, save, preview, publish, and revisions. |
+| TASK-417-06 | Assistant Pages V2 Cutover | High | Large | Cut assistant active surfaces, schemas, blueprints, executor, and policy to sections. |
+| TASK-417-06-L01 | Active Surface And Action Schemas Sections | High | Large | Replace Page active-surface/action schemas from selected blocks to sections and atomic blocks. |
+| TASK-417-06-L02 | Blueprint Emitters Executor And Policy Cutover | High | Large | Emit, dry-run, execute, diff, and resolve assistant Page actions as v2 documents. |
+| TASK-417-07 | Validation Docs Changelog And Closure | High | Large | Close the family with targeted lanes, gates, docs, changelog, board sync, and final drift. |
+| TASK-417-07-L01 | Targeted Validation Lanes And Gates | High | Medium | Run lint, typecheck, targeted Vitest/Bun suites, DB-backed lanes, and gates. |
+| TASK-417-07-L02 | Docs Changelog Board And Final Drift | High | Medium | Synchronize docs/changelog/board and rerun final read-only drift passes before parent closure. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
@@ -105,6 +130,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-417 | Pages Sections Atomic Blocks Rewrite | High | Very Large | In progress: task contract and drift-free implementation plan for clean-break Pages schemaVersion 2 sections + atomic blocks replacement. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
