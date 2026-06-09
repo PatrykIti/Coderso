@@ -53,7 +53,9 @@ function renderPageSection(section, context) {
 Expected data flow:
 
 - Section template registry defines supported variants per section type.
-- Control registry uses the same registry to expose valid variant choices.
+- Control registry uses the same registry to expose valid variant choices; the
+  generic host is introduced in TASK-418-03-L01, while the concrete
+  type/variant registry is owned here.
 - Runtime, preview, and admin canvas render through the same section template.
 
 Error handling:

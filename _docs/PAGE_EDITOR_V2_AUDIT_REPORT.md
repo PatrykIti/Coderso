@@ -23,7 +23,7 @@
 7. [Zgodność z referencyjnym `pages-editor-new-approach/`](#7-zgodność-z-referencyjnym-pages-editor-new-approach)
 8. [Jak rozbudować bloki/sekcje (projekt docelowy)](#8-jak-rozbudować-blokisekcje-projekt-docelowy)
 9. [Matryce kontrolek (per blok, per sekcja)](#9-matryce-kontrolek-per-blok-per-sekcja)
-10. [Rodziny zadań do wykonania (TASK-418)](#10-rodziny-zadań-do-wykonania-task-418)
+10. [Rodzina zadań do wykonania (TASK-418)](#page-editor-v2-task-418-family)
 11. [Załącznik: mapa plików i indeks severity](#11-załącznik-mapa-plików-i-indeks-severity)
 
 ---
@@ -68,7 +68,7 @@ Najważniejsze (potwierdzone na żywo w działającej aplikacji):
 Dobra wiadomość: **fundament jest zdrowy**. Model i renderer publiczny są na tyle
 solidne, że całość da się doprowadzić do wizji **bez przepisywania od zera** —
 przez 1 wspólny renderer, rozszerzenie stylu per‑blok i dokończenie edytora.
-Plan: [§10 TASK-418](#10-rodziny-zadań-do-wykonania-task-418).
+Plan: [§10 TASK-418](#page-editor-v2-task-418-family).
 
 **Liczby audytu:** 7 obszarów, **62 zweryfikowane luki** (z odwołaniami
 `plik:linia`): 18 × `high`, 17 × `medium`, 27 × `low`.
@@ -110,6 +110,8 @@ Wizja (Twoje wytyczne), wg której oceniam:
    odstępy, wyrównanie), poprawnie renderowaną na **canvasie + preview + froncie**.
 4. Kompozycyjność ponad specjalizacją.
 
+<a id="page-editor-v2-nesting-decision"></a>
+
 ### 3.1 Decyzja TASK-418: zagnieżdżanie bloków przez layout atoms
 
 To jedyny punkt, gdzie pierwotny spec i nowa wizja produktu się rozjechały.
@@ -127,16 +129,17 @@ zagnieżdżanie przez małe atomowe bloki układu, bez powrotu do tłustych widg
 **To nie są sprzeczności.** Spec odrzucił *jeden tłusty komponent*, a nie
 *kompozycję z małych prymitywów*. Rozwiązanie (standardowe w Webflow/Builder.io):
 dodać **atomowe bloki‑układy** (`container`, `columns`, `group`), których jedynym
-„contentem" jest lista dzieci albo nazwane sloty (`slots`). Każdy blok pozostaje
+„contentem" są nazwane sloty (`slots`). Każdy blok pozostaje
 atomowy (jedna odpowiedzialność), a dowolne układy powstają przez
 **kompozycję**, nie przez puchnący config. TASK-418 ma zapisać tę decyzję w
 `PAGE_MODEL.md`. Projekt: [§8.B](#8b-model-zagnieżdżania--minimalna-zmiana-schematu).
 
-> **Decyzja:** przyjąć podejście „atomowe bloki‑układy" (1–2 poziomy
-> zagnieżdżenia, ograniczona głębokość). Daje dowolne układy bez god‑componentu i
-> jest zgodne z duchem specu. TASK-418 kanonicznie używa nazwanego modelu
-> `slots` dla kontenerów; ewentualne pliki TASK-419 z otwartą decyzją są stale i
-> muszą zostać superseded albo scalone do TASK-418 przed commitem.
+> **Decyzja:** przyjąć podejście „atomowe bloki‑układy" z bounded tree depth:
+> top-level block w sekcji ma depth 1, a `PAGE_BLOCK_MAX_TREE_DEPTH = 4`.
+> Daje dowolne układy bez god‑componentu i jest zgodne z duchem specu. TASK-418
+> kanonicznie używa nazwanego modelu `slots` dla kontenerów; ewentualne pliki
+> TASK-419 z otwartą decyzją są stale i muszą zostać superseded albo scalone do
+> TASK-418 przed commitem.
 
 ---
 
@@ -218,6 +221,8 @@ tekst nagłówka. Nie ma żadnego pola na `src`/`alt`. Blok `image` jest więc
 **trwale nieedytowalny** i na zawsze zostanie placeholderem.
 
 ![Canvas edytora z pływającym paskiem i jednym polem „Primary text"](./_assets/page-editor-v2-audit/01-editor-canvas-floating-toolbar.png)
+
+<a id="page-editor-v2-non-desktop-content-base-overwrite"></a>
 
 ### 5.3 Edycja contentu na nie‑desktopie nadpisuje bazę (HIGH)
 
@@ -418,7 +423,7 @@ Proponowany kształt (`core/render/`):
 
 ```
 core/render/
-  resolveDocument.ts    // rozwiązanie breakpointu (desktop ⊕ delty), rekursja po children
+  resolveDocument.ts    // rozwiązanie breakpointu (desktop ⊕ delty), rekursja po slots
   styleFromControls.ts  // JEDYNE źródło: controls -> {className, style, cssVars}
   tokens.ts             // mapowanie na _docs/DESIGN_TOKENS.md (token ref -> var(--...))
   blocks/registry.ts    // rejestr rendererów per block.type
@@ -455,31 +460,36 @@ Migracja: `renderPublicPage.tsx:328` i gałąź preview wołają `PageRenderer`;
 
 ### 8.B Model zagnieżdżania — minimalna zmiana schematu
 
-(Decyzja z [§3.1](#31-️-decyzja-do-podjęcia-zagnieżdżanie-bloków-vs-obecny-spec).)
-Zmiana **addytywna i mała**:
+(Decyzja z [§3.1](#page-editor-v2-nesting-decision).)
+Zmiana **addytywna i mała**. TASK-418 kanonicznie używa nazwanego modelu
+`slots`, a nie równoległego pola `children`:
 
 ```ts
 // pageBlockTypes — DODAJ: 'container' | 'columns' | 'group'
 // PageBlockV2 — DODAJ jedno opcjonalne pole:
-children?: PageBlockV2[];   // wypełniane TYLKO dla container/columns/group
+slots?: Partial<Record<PageBlockSlotKey, PageBlockV2[]>>;
+
+type PageBlockSlotKey = "children" | "header" | "body" | "footer" | `column:${number}`;
 ```
 
 Reguły utrzymujące atomowość i desktop‑bazę:
 
-- `children` **dozwolone tylko** dla bloków‑układów (normalizer odrzuca `children`
-  na liściach) → liście pozostają atomowe.
+- `slots` **dozwolone tylko** dla bloków‑układów (normalizer odrzuca `slots`
+  na liściach i odrzuca nieznane klucze slotów) → liście pozostają atomowe.
 - Bloki‑układy **nie mają propsów treści**: `columns {count 1..4, gap,
   distribution}`, `group {direction, wrap, gap}`, `container {}` (styl robi
-  resztę). Jedyny ładunek strukturalny to `children`.
-- **Ograniczona głębokość** (rekom. `maxDepth=4`) egzekwowana w normalizerze.
-- W `columns` każde **dziecko = jedna kolumna** (kolejność dokumentu) →
+  resztę). Jedyny ładunek strukturalny to `slots`.
+- **Ograniczona głębokość**: `PAGE_BLOCK_MAX_TREE_DEPTH = 4`, liczona od
+  top-level blocka w sekcji jako depth 1, egzekwowana w normalizerze.
+- W `columns` każdy `column:N` to osobna kolumna (stabilna kolejność kluczy) →
   rozmieszczenie per‑blok wyrażane strukturalnie (rozwiązuje „nie da się dać
   full‑width hero nad rzędem 2 kart w jednej sekcji").
 - Sekcja **zachowuje** `layout.columns` dla prostych przypadków (back‑compat);
   złożone układy: blok `columns` w 1‑kolumnowej sekcji.
-- JSON schema staje się **rekurencyjna** (`$ref` bloku dla `children`,
-  `additionalItems:false`) — realne ograniczenie, nie `additionalProperties:true`.
-- `resolveDocument` **rekuruje po `children`** i scala `block.responsive[bp]` na
+- JSON schema staje się **rekurencyjna** (`$ref` bloku dla wartości `slots`,
+  limity długości slotu i lista dozwolonych kluczy) — realne ograniczenie, nie
+  `additionalProperties:true`.
+- `resolveDocument` **rekuruje po `slots`** i scala `block.responsive[bp]` na
   każdym poziomie (desktop baza) — to **jednocześnie** naprawia martwą
   responsywność per‑blok i czyni zagnieżdżenia responsywnymi.
 
@@ -515,7 +525,7 @@ updateBlock(blockId, group, patch, breakpoint):
   else:                        write patch -> block.responsive[breakpoint][group]  // delta
 ```
 
-To naprawia bug nadpisywania bazy ([§5.3](#53-edycja-contentu-na-nie-desktopie-nadpisuje-bazę-high)).
+To naprawia bug nadpisywania bazy ([§5.3](#page-editor-v2-non-desktop-content-base-overwrite)).
 
 - **Emisja multi‑breakpoint na froncie:** `PageRenderer` emituje markup
   desktop‑resolved **+ bloki `@media`** wyprowadzone z delt `responsive`
@@ -566,8 +576,8 @@ ekstrasy per typ.
 | `collection` | tak | `contentTypeId`, `queryId`, `limit`, `templateId`, `layout` | **bind** przez `resolveCollection` |
 | `form` | tak | `formId`, `title`, `submitLabel` | **bind** przez `resolveForm` |
 | `embed` | tak | `html`, `url`, `provider` | **sanityzowany** html/iframe |
-| `container` *(nowy)* | tak | — (`children`) | wrapper, rekursja dzieci |
-| `columns` *(nowy)* | tak | `count` (1–4), `gap`, `distribution` | dziecko = kolumna; jawne `grid-template-columns` per bp |
+| `container` *(nowy)* | tak | — (`slots.children`) | wrapper, rekursja slotów |
+| `columns` *(nowy)* | tak | `count` (1–4), `gap`, `distribution` | `slots.column:N` = kolumna; jawne `grid-template-columns` per bp |
 | `group` *(nowy)* | tak | `direction` (row/column), `wrap`, `gap` | flex, rekursja |
 
 ### 9.2 Sekcje (kluczowe typy)
@@ -603,52 +613,61 @@ edytora.)
 
 ---
 
-## 10. Rodziny zadań do wykonania (TASK-418)
+<a id="page-editor-v2-task-418-family"></a>
 
-Zgodnie z konwencjami `AGENTS.md` (numeracja, child/leaf, `dependsOn`,
-acceptance). Parent:
+## 10. Rodzina zadań do wykonania (TASK-418)
 
-> **TASK-418 — Pages V2 Atomic-Block Fidelity And Single-Renderer Convergence**
-> Cel: doprowadzić Pages v2 od ~50–60% szkieletu do wizji — atomowe bloki (w
-   > top-level `sections[]` oraz kontrolowanym nestingiem przez layout atoms
-   > (`slots`, patrz §3.1)), każdy z realnym zestawem kontrolek (kolory/typografia/
-> odstępy/wyrównanie), renderowane przez **JEDEN wspólny renderer** tak, by
-> canvas == preview == frontend; pełna responsywność desktop‑baza + delty na
-> poziomie sekcji **i** bloku; likwidacja placeholderów i martwych pól;
-> dokończenie UX ze specu referencyjnego. Kolejność: model → resolver → wspólny
-> renderer → canvas → inspektor → kontrolki/tokeny → placeholdery → responsywność
-> UX → asystent → walidacja.
+Po scaleniu najważniejszych punktów z równoległego TASK-419 kanonicznym planem
+jest fizyczna rodzina:
 
-Drzewo (dependency‑ordered):
+> **TASK-418 — Page Editor V2 Authoring Nesting And Runtime Remediation**
+> Parent: `_docs/_TASKS/TASK-418_Page_Editor_V2_Authoring_Nesting_And_Runtime_Remediation.md`
+> Raport/audyt: `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`
+
+Ewentualne pliki `TASK-419*` z tym samym zakresem są kontekstem dirty-worktree i
+muszą zostać superseded albo jawnie scalone do TASK-418 przed commitem
+implementacyjnym. Nie są drugim aktywnym planem.
+
+Drzewo TASK-418, dependency-ordered:
 
 | ID | Tytuł | Zależy od | Kluczowe acceptance |
 |---|---|---|---|
-| **418-01** | Per‑Block Style + Block‑Responsive Model Substrate | 417-02 | `PageBlockStyleV2` niesie bounded kolor/tło/typografia/odstępy/align; normalizer+schema akceptują dokładnie te klucze; jedna kanoniczna lokalizacja `block.responsive`; tightening `additionalProperties:true`; decyzja §3.1 zamrożona: kontenery używają bounded `slots` |
-| **418-02** | Section + Block Responsive Resolution (wszystkie powierzchnie) | 418-01 | `resolvePageSectionForBreakpoint` stosuje delty per‑blok (props/style/visibility); test: override bloku zmienia wynik na bp i nie na desktopie; kolumny z **resolved** layout, nie z `md:` |
-| **418-03** | Single Shared Section/Block Renderer (canvas==preview==frontend) | 418-02 | jeden moduł = jedyne źródło markupu; branch po type+variant; h3‑h6 różne; card image/href; rich‑text sanityzowany (test XSS); SSR‑test wszystkich typów |
-| **418-04** | Admin Canvas przez wspólny renderer (kasacja stubów) | 418-03 | canvas renderuje przez wspólny moduł; parytet test canvas==front; usunięcie `BlockPreview`/`SectionCanvas` + martwych makiet; wspólna stała szerokości breakpointów |
-| **418-05** | Per‑Block Selection + Typed Block Inspector | 418-04 | klik zaznacza blok; bloki 2..N edytowalne; `level/href/variant/src/alt/items` z UI; **edycja na tablet/mobile pisze `block.responsive[device]`, nie bazę** (regression test) |
-| **418-06** | Section Control‑Matrix: Variant, Background panel, Swatches, Visibility logic, Tokens | 418-05 | variant zmienialny + renderer go stosuje; panel Background (typ/źródło/shadow); accent/bg = swatche z DESIGN_TOKENS; justify, vertical‑align, authOnly, zakres dat edytowalne |
-| **418-07** | Real renderery + data‑binding dla placeholderów | 418-06 | brak placeholder‑boxów; gallery/icon realne; collection/form/embed bindują dane (lub usunięte z palety); nav/footer jako realny chrome; SSR‑testy |
-| **418-07-L01** | Collection/Form/Embed Runtime Data‑Binding (leaf) | 418-06 | resolver read‑only, scoped do published/authorized; **Security Contract**; authOnly nie wycieka anonimom; bezpieczny fallback przy błędzie |
-| **418-07-L02** | Presentational Blocks + Section‑Type Layouts (leaf) | 418-06 | gallery/icon + układy navigation/filters/timeline/comparison/testimonials; identycznie na 3 powierzchniach |
-| **418-08** | Cascade Editing UX: markery override, restore inheritance, context pill | 418-05 | żółta plakietka na override; podświetlone pola; „↺ restore" per pole (sekcja+blok); pigułka kontekstu bp; toggle hide‑on‑screen/pionowy |
-| **418-09** | Reference‑Spec Interactions: klawiatura, paleta, inline „+", warstwy, drag | 418-05 | ⌘K/Esc; nawigacja klawiaturą w palecie (Arrow/Enter); paleta z `pageSectionTypes/pageBlockTypes`; inline „+" z indeksem; pusta‑sekcja CTA otwiera paletę; przeciągalny pasek; Layers scroll‑to + oko |
-| **418-10** | Assistant: delty responsywne + pełny słownik | 418-07 | blueprinty/kity emitują override (min. mobile/tablet `columns:1`); nie emitują nierenderowanych typów; test pełnej strony bez placeholderów |
-| **418-11** | Walidacja, pokrycie renderu, docs, changelog, zamknięcie | 418-10 | DB‑free SSR/component testy wspólnego renderera (realny markup, warianty, styl per‑blok, sanityzacja, h3‑h6); testy override (sekcja+blok) zmieniają HTML; `visibility:false`/authOnly bez markupu; parytet canvas==front; lanes `AGENTS.md`; docs+changelog+board |
+| **TASK-418-01** | Audit Contract And Task Drift Freeze | TASK-417 | Utrzymać raport `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`, zapisać decyzję bounded `slots`, zebrać Claude/subagent findings, zamrozić brak aktywnego TASK-419 duplicate. |
+| **TASK-418-01-L01** | Page Editor V2 Gap Audit Report | TASK-418-01 | Raport ma wskazywać konkretne pliki/linie, severity, mapowanie remediation i aktualny plik raportu. |
+| **TASK-418-01-L02** | Final Preimplementation Drift Audit Loop | TASK-418-01-L01 | Po zmianach task contractu rerun read-only drift audit i fold confirmed findings przed implementacją. |
+| **TASK-418-02** | Immediate Editor Correctness And Selection | TASK-418-01 | Naprawić selected block state, typed patching, autosave/save feedback i pierwszoklasowe akcje bloków. |
+| **TASK-418-02-L01** | Type Safe Block Patching And Autosave Errors | TASK-418-01 | Allowlist-bound block helpers, widoczne błędy autosave, brak loose `content` patching. |
+| **TASK-418-02-L02** | Block Selection Model And Layers Tree | TASK-418-02-L01 | Selection target obejmuje sekcje, bloki i ścieżki slotów; layers i assistant dostają ten sam kontekst. |
+| **TASK-418-02-L03** | Block Insert Reorder Duplicate And Delete Actions | TASK-418-02-L02 | Insert/move/duplicate/delete działają na selected target i zachowują stabilne id/path. |
+| **TASK-418-02-L04** | Block Style And Responsive Model Substrate | TASK-418-01 | `PageBlockStyleV2`, `block.responsive`, strict schema i resolver są jednym substratem dla późniejszych kontrolek. |
+| **TASK-418-03** | Control Registry And Floating Toolbar Parity | TASK-418-02 | Toolbar i inspector są generowane z registry, nie z rozproszonych martwych kontrolek. |
+| **TASK-418-03-L01** | Universal Section And Block Control Registry | TASK-418-02 | Universal controls mają schema-owned paths, responsive metadata i walidację ścieżek. |
+| **TASK-418-03-L02** | Per Type Atomic Block Controls | TASK-418-03-L01 | Każdy insertable block ma małe dedykowane kontrolki atomowe zamiast tłustego widget configu. |
+| **TASK-418-03-L03** | Responsive Override Indicators And Reset UX | TASK-418-03-L01 | UI pokazuje override, inheritance i reset per pole dla section oraz block. |
+| **TASK-418-03-L04** | Floating Toolbar Interactions And Keyboard Shortcuts | TASK-418-03-L01, TASK-418-03-L02, TASK-418-03-L03 | Toolbar, palette, keyboard i inline add działają bez konfliktów z selection. |
+| **TASK-418-04** | Canvas Preview And WYSIWYG Parity | TASK-418-02, TASK-418-03 | Canvas, preview i frontend korzystają z tego samego renderer/style helpers z różnicą tylko w editor chrome. |
+| **TASK-418-04-L01** | Shared Admin Preview Renderer And Style Helpers | TASK-418-03 | Jeden renderer i style helper są wspólne dla admin preview/canvas/front. |
+| **TASK-418-04-L02** | Section Layout Style Spacing Visibility Feedback | TASK-418-04-L01 | Layout/style/spacing/visibility z sekcji realnie widać na canvasie i froncie. |
+| **TASK-418-04-L03** | Block Style Visual Feedback And Empty States | TASK-418-04-L01, TASK-418-03-L02 | Block style, empty states i editor chrome nie rozjeżdżają markupu. |
+| **TASK-418-04-L04** | Section Type Variant Layout Templates | TASK-418-04-L01, TASK-418-02-L04 | `section.type`/`variant` branchują przez template registry, a controls używają tych samych wariantów. |
+| **TASK-418-05** | Nested Container And Slot Architecture | TASK-418-02, TASK-418-03, TASK-418-04 | Bounded container/slot blocks dają elastyczne strony bez powrotu do tłustych widgetów. |
+| **TASK-418-05-L01** | Recursive Page Block Contract And Normalizer | TASK-418-03 | `slots` są strict, depth-limited, capability-bound i reject unknown fields. |
+| **TASK-418-05-L02** | Container Blocks Inserter And Layers Editing | TASK-418-05-L01, TASK-418-02-L02, TASK-418-02-L03 | Inserter, move i layers rozumieją named slots oraz block paths. |
+| **TASK-418-05-L03** | Recursive Runtime Renderer And Responsive Cascade | TASK-418-05-L01 | Runtime renderuje slots rekurencyjnie i rozwiązuje responsive cascade na każdym poziomie. |
+| **TASK-418-06** | Runtime Assistant And Template Parity | TASK-418-03, TASK-418-04, TASK-418-05 | PageEditor, assistant, kits, templates i frontend emitują tylko renderowalne typy/props. |
+| **TASK-418-06-L01** | Public Runtime Real Renderers For Insertable Blocks | TASK-418-03-L02, TASK-418-04-L04 | Insertable/emittable block types mają real renderer albo są ukryte/gated. |
+| **TASK-418-06-L02** | Assistant Surface Schema And Blueprint Alignment | TASK-418-02-L02, TASK-418-03, TASK-418-05-L01, TASK-418-06-L01 | Assistant zna pełny słownik atomowych bloków, responsive deltas i nested paths. |
+| **TASK-418-06-L03** | Page Templates And Non Page Widget Boundaries | TASK-418-05, TASK-418-06-L01 | Template editor przechodzi na Page Templates/Pages v2 contract; stara sekcja widgets nie jest drugim kontraktem. |
+| **TASK-418-06-L04** | Collection Form Embed Runtime Data Binding Security | TASK-418-06-L01, TASK-418-02-L04 | Collection/form/embed mają read-only public binding, sanitizer i route/security contracts. |
+| **TASK-418-07** | Validation Docs Changelog And Live Smoke Closure | TASK-418-02, TASK-418-03, TASK-418-04, TASK-418-05, TASK-418-06 | Każdy obszar ma lane testów, docs, changelog, board i live smoke zgodnie z `AGENTS.md`. |
+| **TASK-418-07-L01** | Targeted Lint Type Tests And Gates | TASK-418-02, TASK-418-03, TASK-418-04, TASK-418-05, TASK-418-06 | `bun --cwd core lint`, `lint:types`, targeted tests/gates per touched contract. |
+| **TASK-418-07-L02** | Real Admin And Front Playwright Smoke | TASK-418-07-L01 | `coderso-dev-core-host` + `playwright-cli` smoke admin UI i frontend po każdym testowalnym obszarze. |
+| **TASK-418-07-L03** | Docs Changelog Board And Final Drift Closure | TASK-418-07-L01, TASK-418-07-L02 | Parent/children statuses, board stats, changelog, docs i final read-only drift pass bez unresolved drift. |
 
-**Kolejność / równoległość:** 01→02→03→04→05 to łańcuch (każda warstwa to
-substrat następnej). 06, 08, 09 zależą tylko od 05 → mogą iść równolegle. 07
-(+L01/L02) po 06. 10 po 07. 11 na końcu. Dwie zasady‑strażnicy: nesting jest
-dozwolony tylko jako bounded layout atoms/slots po wprowadzeniu substratu i
-resolvera; „dryf katalogu" to **uzgodnienie dokumentacji** (dopisek do
-TASK‑417‑02‑L01 wskazujący `PAGE_MODEL.md` jako kanon), nie zmiana kodu.
-
-> Pliki zadań do utworzenia: `_docs/_TASKS/TASK-418_*.md` + childy/leaves wg
-> wzorca `TASK-418-NN-*.md` / `TASK-418-NN-LNN-*.md`. Każdy leaf wykonawczy musi
-> zawierać pseudokod zmian, kształt helpera, przepływ danych, obsługę błędów i
-> kształt testu regresji (AGENTS.md). Zadania dotykające route'ów (418‑07‑L01
-> data‑fetch) muszą mieć sekcję **Security Contract**.
+**Kolejność / równoległość:** 01 zamraża kontrakt i audyt; 02 dostarcza
+substrat edycji i model bloków; 03 buduje registry/kontrolki; 04 scala renderer
+i canvas; 05 dokłada bounded nesting przez `slots`; 06 wyrównuje runtime,
+assistant i templates; 07 zamyka walidację, live smoke i drift closure.
 
 ---
 

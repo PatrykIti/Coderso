@@ -21,7 +21,7 @@ flat documents must remain valid and normalize without destructive rewrites.
 ## Implementation Pseudocode
 
 ```ts
-const PAGE_BLOCK_MAX_DEPTH = 3;
+const PAGE_BLOCK_MAX_TREE_DEPTH = 4; // top-level section block is depth 1
 
 type PageBlockSlotKey = "children" | "header" | "body" | "footer" | `column:${number}`;
 
@@ -35,8 +35,8 @@ type PageBlockV2 = {
   slots?: Partial<Record<PageBlockSlotKey, PageBlockV2[]>>;
 };
 
-function normalizeBlock(value, mode, path, depth = 0) {
-  if (depth > PAGE_BLOCK_MAX_DEPTH) throw new PageDocumentError("page_document_invalid", path);
+function normalizeBlock(value, mode, path, depth = 1) {
+  if (depth > PAGE_BLOCK_MAX_TREE_DEPTH) throw new PageDocumentError("page_document_invalid", path);
   const block = normalizeFlatBlockFields(value, mode, path);
   const capabilities = pageBlockCapabilities[block.type];
   const slots = normalizeSlots(value.slots, capabilities.slots, mode, path, depth + 1);
@@ -47,6 +47,8 @@ function normalizeBlock(value, mode, path, depth = 0) {
 Expected data flow:
 
 - Domain owner defines slot-capable block types and allowed slot keys.
+- Domain owner defines `PAGE_BLOCK_MAX_TREE_DEPTH = 4`, counted with top-level
+  section blocks as depth 1.
 - Normalizer recursively validates blocks, props, styles, visibility, and
   responsive overrides.
 - Published sanitizer strips unsafe/unpublished-only metadata recursively.

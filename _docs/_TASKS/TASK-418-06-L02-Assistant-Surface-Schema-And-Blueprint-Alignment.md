@@ -32,7 +32,7 @@ function buildPageActiveSurface(document, selection) {
     selectedBlockPath: selection.kind === "block" ? selection.blockPath : null,
     sections: summarizeSectionsWithNestedBlocks(document.sections, {
       includeCapabilities: true,
-      maxDepth: PAGE_BLOCK_MAX_DEPTH
+      maxDepth: PAGE_BLOCK_MAX_TREE_DEPTH
     })
   };
 }

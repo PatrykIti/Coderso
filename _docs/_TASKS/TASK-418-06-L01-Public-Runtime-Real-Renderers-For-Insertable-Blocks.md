@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Pages / Runtime
 **Estimated Effort:** Large
-**Dependencies:** TASK-418-03-L02, TASK-418-04
+**Dependencies:** TASK-418-03-L02, TASK-418-04-L04
 **Status:** ⏳ To Do
 
 ---
@@ -17,7 +17,9 @@ assistant and solution kits has honest public runtime rendering. If a block or
 section layout cannot be rendered yet, it must be marked not
 insertable/emittable until complete. Data-bound public renderers for
 `collection`, `form`, and `embed` are security-sensitive and are owned by
-TASK-418-06-L04.
+TASK-418-06-L04. Section type/variant layout rendering is owned by
+TASK-418-04-L04; this leaf consumes that registry and focuses on public runtime
+parity for insertable block capabilities.
 
 ---
 
@@ -49,22 +51,13 @@ function renderAtomicBlock(block) {
     default: return renderExistingAtomicBlock(block);
   }
 }
-
-function renderSectionByTypeAndVariant(section) {
-  switch (`${section.type}:${section.variant}`) {
-    case "hero:split": return <HeroSplitSection section={section} />;
-    case "hero:centered": return <HeroCenteredSection section={section} />;
-    case "feature-grid:cards": return <FeatureGridCardsSection section={section} />;
-    default: return <GenericSection section={section} />;
-  }
-}
 ```
 
 Expected data flow:
 
 - Capability metadata controls inserter and assistant emission.
-- Runtime implements real renderers for insertable block types and section
-  type/variant layout templates.
+- Runtime implements real renderers for insertable block types and consumes the
+  section type/variant template registry from TASK-418-04-L04.
 - Placeholder-only block types or section variants are hidden or marked
   unsupported.
 
@@ -80,8 +73,9 @@ Regression-test shape:
 - `gallery` and `icon` no longer render generic placeholder boxes when
   insertable; `collection`, `form`, and `embed` are gated on TASK-418-06-L04
   before becoming insertable/emittable.
-- `section.type` and `section.variant` affect markup/layout and emit
-  `data-page-section` plus `data-page-variant`.
+- Section type/variant integration consumes the TASK-418-04-L04 registry and
+  preserves `data-page-section` plus `data-page-variant`; detailed variant
+  markup coverage stays in TASK-418-04-L04.
 - Unsupported blocks are absent from editor inserter and assistant catalogs.
 
 ---

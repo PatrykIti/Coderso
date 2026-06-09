@@ -90,7 +90,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-418 | Page Editor V2 Authoring Nesting And Runtime Remediation | High | Very Large | Follow-up to TASK-417 covering Page editor block selection, toolbar controls, WYSIWYG canvas, bounded nesting, runtime parity, assistant/templates alignment, validation, and drift closure. |
 | TASK-418-01 | Audit Contract And Task Drift Freeze | High | Medium | Create the Page Editor v2 gap report and rerun fresh read-only drift audits before code edits. |
-| TASK-418-01-L01 | Page Editor V2 Gap Audit Report | High | Medium | Write `_docs/PAGE_EDITOR_V2_GAP_AUDIT.md` with Claude/subagent findings, file references, severity, and remediation mapping. |
+| TASK-418-01-L01 | Page Editor V2 Gap Audit Report | High | Medium | Maintain `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md` with Claude/subagent findings, file references, severity, and remediation mapping. |
 | TASK-418-01-L02 | Final Preimplementation Drift Audit Loop | High | Medium | Rerun Claude/subagent read-only drift checks after task files exist and fold confirmed findings back into the contract. |
 | TASK-418-02 | Immediate Editor Correctness And Selection | High | Large | Fix selected block state, type-safe patching, autosave/save feedback, and first-class block actions. |
 | TASK-418-02-L01 | Type Safe Block Patching And Autosave Errors | High | Medium | Replace first-block/generic content patching with allowlist-bound block helpers and visible autosave errors. |
