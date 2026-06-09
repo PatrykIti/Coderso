@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 40 tasks
+- **To Do:** 43 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2330 tasks
 
@@ -96,6 +96,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-418-02-L01 | Type Safe Block Patching And Autosave Errors | High | Medium | Replace first-block/generic content patching with allowlist-bound block helpers and visible autosave errors. |
 | TASK-418-02-L02 | Block Selection Model And Layers Tree | High | Large | Add section/block selection targets, block paths, layers tree selection, and assistant selected-block context. |
 | TASK-418-02-L03 | Block Insert Reorder Duplicate And Delete Actions | High | Medium | Make insertion target-aware and add selected-block move, duplicate, and delete operations. |
+| TASK-418-02-L04 | Block Style And Responsive Model Substrate | High | Large | Expand block style and resolve block-level responsive overrides before controls/renderers depend on them. |
 | TASK-418-03 | Control Registry And Floating Toolbar Parity | High | Very Large | Replace hard-coded toolbar panels with registry-driven universal and per-type controls. |
 | TASK-418-03-L01 | Universal Section And Block Control Registry | High | Large | Add schema-owned control definitions for layout, content, style, spacing, background, responsive, and visibility panels. |
 | TASK-418-03-L02 | Per Type Atomic Block Controls | High | Large | Add small editable control sets for every insertable block type or mark unsupported types not insertable. |
@@ -105,6 +106,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-418-04-L01 | Shared Admin Preview Renderer And Style Helpers | High | Large | Share pure render/style helpers between admin canvas and public runtime without crossing admin/runtime boundaries. |
 | TASK-418-04-L02 | Section Layout Style Spacing Visibility Feedback | High | Medium | Apply section columns, align, justify, max width, background, radius, shadow, padding, gap, and visibility to canvas. |
 | TASK-418-04-L03 | Block Style Visual Feedback And Empty States | High | Medium | Apply block style, selection, hidden states, placeholders, and type-specific previews on canvas. |
+| TASK-418-04-L04 | Section Type Variant Layout Templates | High | Large | Make `section.type` and `section.variant` drive shared renderer templates and type-scoped variant controls. |
 | TASK-418-05 | Nested Container And Slot Architecture | High | Very Large | Add controlled nesting through container-capable blocks and named slots while keeping sections top-level. |
 | TASK-418-05-L01 | Recursive Page Block Contract And Normalizer | High | Large | Extend `PageBlockV2` with bounded slots, strict recursive normalization, max depth, and duplicate-id/cycle guards. |
 | TASK-418-05-L02 | Container Blocks Inserter And Layers Editing | High | Large | Add slot-aware insertion, movement, selection, and layers editing for container blocks. |
@@ -113,6 +115,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-418-06-L01 | Public Runtime Real Renderers For Insertable Blocks | High | Large | Replace placeholder output for insertable blocks or hide unsupported types from inserter/assistant catalogs. |
 | TASK-418-06-L02 | Assistant Surface Schema And Blueprint Alignment | High | Large | Add selected block paths, nested summaries, and capability-gated Page actions to assistant flows. |
 | TASK-418-06-L03 | Page Templates And Non Page Widget Boundaries | High | Medium | Freeze Page Template v2 boundaries and keep non-Page widget-template/custom-screen/detail-page contracts separate. |
+| TASK-418-06-L04 | Collection Form Embed Runtime Data Binding Security | High | Large | Add scoped public read binding and sanitizer/no-leak security for collection, form, and embed Page blocks. |
 | TASK-418-07 | Validation Docs Changelog And Live Smoke Closure | High | Large | Close TASK-418 with targeted tests, live server Playwright, docs, changelog, board sync, and final drift audit. |
 | TASK-418-07-L01 | Targeted Lint Type Tests And Gates | High | Medium | Run and record lint, typecheck, targeted Vitest/Bun suites, and release gates. |
 | TASK-418-07-L02 | Real Admin And Front Playwright Smoke | High | Medium | Use `coderso-dev-core-host` and `playwright-cli` to verify admin edit/save/publish and public frontend parity. |

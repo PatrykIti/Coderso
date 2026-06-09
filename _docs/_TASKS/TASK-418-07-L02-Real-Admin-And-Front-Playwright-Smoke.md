@@ -29,16 +29,25 @@ async function runTask418PlaywrightSmoke() {
   await insertSection("hero");
   await insertBlock("heading");
   await insertBlock("button");
+  await insertBlock("image");
+  await insertBlock("gallery");
   await editSelectedBlock({ label: "See services", href: "/services" });
   await insertContainerWithNestedBlocks();
   await editStyles({ background: "#ffffff", opacity: 0.9, radius: 16 });
+  await editSectionVariant("hero", "split");
+  await editMobileBlockOverride({ align: "center", width: "full" });
   await savePreviewPublish(page);
   await assertPublicRuntime(page.slug, {
     noConsoleErrors: true,
     noPageErrors: true,
     nestedBlocksVisible: true,
-    stylesVisible: true
+    stylesVisible: true,
+    noPlaceholderBlocks: true,
+    sectionVariantMarkupVisible: true,
+    mobileOverrideVisible: true,
+    canvasMatchesFrontend: true
   });
+  await createAssistantGeneratedPageAndAssertNoPlaceholders();
   stop(server);
 }
 ```
@@ -48,8 +57,10 @@ Expected data flow:
 - Load `.env` credentials.
 - Start `coderso-dev-core-host`.
 - Use `playwright-cli` for admin create/edit/save/preview/publish.
-- Verify public runtime DOM, screenshots or pixel checks where useful, and
-  browser console/page errors.
+- Verify public runtime DOM, screenshots or pixel checks where useful,
+  no-placeholder output, section type/variant markup, block responsive mobile
+  behavior, assistant-generated pages, canvas==frontend parity, and browser
+  console/page errors.
 
 Error handling:
 
@@ -62,6 +73,8 @@ Regression-test shape:
 
 - Real admin canvas selection and toolbar controls work.
 - Public frontend reflects the saved/published document.
+- Insertable blocks do not degrade to generic placeholders.
+- Mobile block overrides and section variants are visible on the public page.
 
 ---
 

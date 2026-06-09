@@ -74,16 +74,40 @@ Regression-test shape:
 - **RBAC:** existing Pages write permissions.
 - **CSRF:** existing admin write CSRF behavior.
 - **Rate-limit bucket:** existing admin bucket.
-- **Validation:** block patches must be allowlist-bound and normalized through
-  the Pages v2 owner before persistence.
+- **Validation:** block patches must be allowlist-bound, strict
+  reject-unknown-safe, and normalized through the Pages v2 owner before
+  persistence.
 - **Anti-abuse controls:** no public write endpoint; error feedback must be
   bounded and must not leak raw server internals.
+
+---
+
+## Breakpoint-Aware Block Patching (Merged From TASK-419 Audit)
+
+The allowlist-bound block patch helper MUST be breakpoint-aware to avoid a
+verified silent data-corruption bug: today `updateFirstBlockProps`
+(`core/admin/ui/pages/PageEditor.tsx:426-436`) has **no `device` branch** and
+always writes `blocks[0].props`, while the section helper `updateSectionGroup`
+(`:398-424`) correctly branches `device === "desktop"` (base) vs
+`section.responsive[device]` (override). Result: switching the `DeviceSwitcher`
+to tablet/mobile and editing block content **overwrites the desktop base**
+instead of creating a per-breakpoint override — contradicting the spec §8
+cascade contract.
+
+The replacement `updateBlock(blockId, group, patch)` helper must mirror the
+section helper: on `desktop` write `block[group]`; on tablet/mobile write
+`block.responsive[device][group]` (`group ∈ {props, style, visibility}`), the
+override channel the model already defines (`PageBlockResponsiveOverrideV2`,
+`core/services/pages/pageDocumentV2.ts:134-138`). Desktop base must never be
+mutated by a non-desktop edit.
 
 ---
 
 ## Testing Requirements
 
 - Vitest PageEditor test for heading edit without invalid `label`.
+- Vitest regression test: editing a block on tablet/mobile writes
+  `block.responsive[device]` and leaves the desktop base block unchanged.
 - Vitest PageEditor test for button edit with valid `label`/`href`.
 - Vitest client/UI test for autosave error feedback.
 - `bun --cwd core lint`
@@ -93,4 +117,4 @@ Regression-test shape:
 
 ## Documentation Updates Required
 
-- `_docs/PAGE_EDITOR_V2_GAP_AUDIT.md` closeout note.
+- `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md` closeout note.

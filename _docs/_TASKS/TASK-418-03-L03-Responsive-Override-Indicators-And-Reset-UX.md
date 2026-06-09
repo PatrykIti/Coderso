@@ -74,7 +74,8 @@ Regression-test shape:
 - **RBAC:** existing Pages permissions.
 - **CSRF:** existing admin write CSRF behavior.
 - **Rate-limit bucket:** existing admin bucket.
-- **Validation:** sparse overrides must normalize through `pageDocumentV2`.
+- **Validation:** sparse overrides must normalize through `pageDocumentV2` and
+  preserve strict reject-unknown server validation for persisted payloads.
 - **Anti-abuse controls:** no public write endpoint; no privileged payloads in
   browser storage.
 

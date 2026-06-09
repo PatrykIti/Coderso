@@ -40,6 +40,7 @@ trust the editor.
 - [ ] TASK-418-04-L01: Shared admin preview renderer and style helpers.
 - [ ] TASK-418-04-L02: Section layout style spacing visibility feedback.
 - [ ] TASK-418-04-L03: Block style visual feedback and empty states.
+- [ ] TASK-418-04-L04: Section type variant layout templates.
 
 ---
 

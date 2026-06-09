@@ -38,6 +38,7 @@ actions are not available as first-class canvas operations.
 - [ ] TASK-418-02-L01: Type-safe block patching and autosave errors.
 - [ ] TASK-418-02-L02: Block selection model and layers tree.
 - [ ] TASK-418-02-L03: Block insert, reorder, duplicate, and delete actions.
+- [ ] TASK-418-02-L04: Block style and responsive model substrate.
 
 ---
 
@@ -53,6 +54,6 @@ actions are not available as first-class canvas operations.
 
 ## Documentation Updates Required
 
-- `_docs/PAGE_EDITOR_V2_GAP_AUDIT.md`
+- `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`
 - `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md` if behavior
   intentionally differs from the reference.

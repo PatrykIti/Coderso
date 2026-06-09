@@ -12,10 +12,12 @@
 
 ## Overview
 
-Reduce drift between `PageEditor` canvas preview and `pageRuntimeV2` by sharing
-style/class helpers and, where safe, renderer primitives. The admin canvas may
-keep editor chrome, but content rendering and style resolution should follow the
-same normalized contract as public runtime.
+Eliminate renderer drift between `PageEditor` canvas preview, runtime preview,
+and public frontend. TASK-418 must introduce one shared section/block renderer
+for normalized Pages v2 documents. The admin canvas may wrap that renderer with
+editor chrome, selection rings, and insertion affordances, but it must not keep
+a second content renderer such as the current `SectionCanvas`/`BlockPreview`
+path.
 
 ---
 
@@ -41,12 +43,22 @@ export function renderPageBlockContent(block, mode) {
     default: return <SupportedBlockRenderer block={block} mode={mode} />;
   }
 }
+
+export function renderPageSectionContent(section, mode) {
+  const variantRenderer = getSectionVariantRenderer(section.type, section.variant);
+  return variantRenderer({
+    section,
+    mode,
+    renderBlock: (block) => renderPageBlockContent(block, mode)
+  });
+}
 ```
 
 Expected data flow:
 
-- Runtime and admin preview import shared pure helpers.
-- Admin canvas wraps rendered sections/blocks with selection chrome.
+- Runtime, preview, and admin canvas import the shared pure renderer.
+- Admin canvas wraps rendered sections/blocks with selection chrome instead of
+  reimplementing content markup.
 - Public runtime remains Bun-compatible and does not import admin-only modules.
 
 Error handling:
@@ -57,7 +69,8 @@ Error handling:
 
 Regression-test shape:
 
-- Admin canvas and public runtime use the same section style helper.
+- Admin canvas and public runtime render the same section/block markup for the
+  same normalized document, excluding editor-only chrome.
 - Helper imports do not pull admin UI into runtime or Bun adapters into Vitest.
 
 ---

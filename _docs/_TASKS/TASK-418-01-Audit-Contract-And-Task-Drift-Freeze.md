@@ -50,5 +50,5 @@ that the task files exist.
 
 ## Documentation Updates Required
 
-- `_docs/PAGE_EDITOR_V2_GAP_AUDIT.md`
+- `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`
 - `_docs/_TASKS/README.md`

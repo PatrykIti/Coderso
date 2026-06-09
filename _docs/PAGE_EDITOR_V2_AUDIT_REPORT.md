@@ -110,32 +110,33 @@ Wizja (Twoje wytyczne), wg której oceniam:
    odstępy, wyrównanie), poprawnie renderowaną na **canvasie + preview + froncie**.
 4. Kompozycyjność ponad specjalizacją.
 
-### 3.1 ⚠️ Decyzja do podjęcia: zagnieżdżanie bloków vs. obecny spec
+### 3.1 Decyzja TASK-418: zagnieżdżanie bloków przez layout atoms
 
-To jedyny punkt, gdzie Twoja wizja i istniejący spec się **rozjeżdżają** —
-trzeba to świadomie rozstrzygnąć:
+To jedyny punkt, gdzie pierwotny spec i nowa wizja produktu się rozjechały.
+Decyzja dla TASK-418 jest teraz zamrożona: Pages v2 dostaje kontrolowane
+zagnieżdżanie przez małe atomowe bloki układu, bez powrotu do tłustych widgetów.
 
 - **Obecny spec referencyjny** (`coderso-editor-spec.md` §13–§14) **świadomie
   odrzucił** model „jednego wszechmocnego widgetu" i wybrał **płaskie drzewo
   `sekcja → blocks[]`** (jeden poziom), z kolumnami jako właściwością **sekcji**
   (`layout.columns` 1–4). Implementacja wiernie to realizuje. W tym sensie „brak
   zagnieżdżania" **nie jest bugiem** — to celowa decyzja architektoniczna.
-- **Twoja wizja** mówi wprost o „zagnieżdżaniu bloków między sobą i tworzeniu
-  dowolnych układów".
+- **Nowa decyzja TASK-418** mówi wprost o „zagnieżdżaniu bloków między sobą i
+  tworzeniu dowolnych układów", ale tylko przez bounded layout atoms.
 
 **To nie są sprzeczności.** Spec odrzucił *jeden tłusty komponent*, a nie
 *kompozycję z małych prymitywów*. Rozwiązanie (standardowe w Webflow/Builder.io):
 dodać **atomowe bloki‑układy** (`container`, `columns`, `group`), których jedynym
-„contentem" jest **lista dzieci** (`children[]`). Każdy blok pozostaje atomowy
-(jedna odpowiedzialność), a dowolne układy powstają przez **kompozycję**, nie
-przez puchnący config. To **nowa decyzja produktowa** rozszerzająca spec §15 i
-musi zostać zapisana w `PAGE_MODEL.md`. Projekt: [§8.B](#8b-model-zagnieżdżania--minimalna-zmiana-schematu).
+„contentem" jest lista dzieci albo nazwane sloty (`slots`). Każdy blok pozostaje
+atomowy (jedna odpowiedzialność), a dowolne układy powstają przez
+**kompozycję**, nie przez puchnący config. TASK-418 ma zapisać tę decyzję w
+`PAGE_MODEL.md`. Projekt: [§8.B](#8b-model-zagnieżdżania--minimalna-zmiana-schematu).
 
-> **Rekomendacja:** przyjąć podejście „atomowe bloki‑układy" (1–2 poziomy
+> **Decyzja:** przyjąć podejście „atomowe bloki‑układy" (1–2 poziomy
 > zagnieżdżenia, ograniczona głębokość). Daje dowolne układy bez god‑componentu i
-> jest zgodne z duchem specu. Jeśli zdecydujesz inaczej (zostać przy płaskim
-> modelu + kolumny tylko na sekcji), to też jest spójne — wtedy TASK‑418‑01/03
-> trzeba odchudzić o `children`.
+> jest zgodne z duchem specu. TASK-418 kanonicznie używa nazwanego modelu
+> `slots` dla kontenerów; ewentualne pliki TASK-419 z otwartą decyzją są stale i
+> muszą zostać superseded albo scalone do TASK-418 przed commitem.
 
 ---
 
@@ -609,8 +610,8 @@ acceptance). Parent:
 
 > **TASK-418 — Pages V2 Atomic-Block Fidelity And Single-Renderer Convergence**
 > Cel: doprowadzić Pages v2 od ~50–60% szkieletu do wizji — atomowe bloki (w
-> intencjonalnie płaskim modelu `section>blocks[]`; **zagnieżdżanie = świadoma
-> decyzja, patrz §3.1**), każdy z realnym zestawem kontrolek (kolory/typografia/
+   > top-level `sections[]` oraz kontrolowanym nestingiem przez layout atoms
+   > (`slots`, patrz §3.1)), każdy z realnym zestawem kontrolek (kolory/typografia/
 > odstępy/wyrównanie), renderowane przez **JEDEN wspólny renderer** tak, by
 > canvas == preview == frontend; pełna responsywność desktop‑baza + delty na
 > poziomie sekcji **i** bloku; likwidacja placeholderów i martwych pól;
@@ -622,7 +623,7 @@ Drzewo (dependency‑ordered):
 
 | ID | Tytuł | Zależy od | Kluczowe acceptance |
 |---|---|---|---|
-| **418-01** | Per‑Block Style + Block‑Responsive Model Substrate | 417-02 | `PageBlockStyleV2` niesie bounded kolor/tło/typografia/odstępy/align; normalizer+schema akceptują dokładnie te klucze; jedna kanoniczna lokalizacja `block.responsive`; tightening `additionalProperties:true`; **bez** nestingu/container (chyba że decyzja §3.1 = tak → tu dodać `children`) |
+| **418-01** | Per‑Block Style + Block‑Responsive Model Substrate | 417-02 | `PageBlockStyleV2` niesie bounded kolor/tło/typografia/odstępy/align; normalizer+schema akceptują dokładnie te klucze; jedna kanoniczna lokalizacja `block.responsive`; tightening `additionalProperties:true`; decyzja §3.1 zamrożona: kontenery używają bounded `slots` |
 | **418-02** | Section + Block Responsive Resolution (wszystkie powierzchnie) | 418-01 | `resolvePageSectionForBreakpoint` stosuje delty per‑blok (props/style/visibility); test: override bloku zmienia wynik na bp i nie na desktopie; kolumny z **resolved** layout, nie z `md:` |
 | **418-03** | Single Shared Section/Block Renderer (canvas==preview==frontend) | 418-02 | jeden moduł = jedyne źródło markupu; branch po type+variant; h3‑h6 różne; card image/href; rich‑text sanityzowany (test XSS); SSR‑test wszystkich typów |
 | **418-04** | Admin Canvas przez wspólny renderer (kasacja stubów) | 418-03 | canvas renderuje przez wspólny moduł; parytet test canvas==front; usunięcie `BlockPreview`/`SectionCanvas` + martwych makiet; wspólna stała szerokości breakpointów |
@@ -638,10 +639,10 @@ Drzewo (dependency‑ordered):
 
 **Kolejność / równoległość:** 01→02→03→04→05 to łańcuch (każda warstwa to
 substrat następnej). 06, 08, 09 zależą tylko od 05 → mogą iść równolegle. 07
-(+L01/L02) po 06. 10 po 07. 11 na końcu. Dwie zasady‑strażnicy: **brak zadań
-nestingowych** dopóki §3.1 nie zdecyduje inaczej; „dryf katalogu" to
-**uzgodnienie dokumentacji** (dopisek do TASK‑417‑02‑L01 wskazujący `PAGE_MODEL.md`
-jako kanon), nie zmiana kodu.
+(+L01/L02) po 06. 10 po 07. 11 na końcu. Dwie zasady‑strażnicy: nesting jest
+dozwolony tylko jako bounded layout atoms/slots po wprowadzeniu substratu i
+resolvera; „dryf katalogu" to **uzgodnienie dokumentacji** (dopisek do
+TASK‑417‑02‑L01 wskazujący `PAGE_MODEL.md` jako kanon), nie zmiana kodu.
 
 > Pliki zadań do utworzenia: `_docs/_TASKS/TASK-418_*.md` + childy/leaves wg
 > wzorca `TASK-418-NN-*.md` / `TASK-418-NN-LNN-*.md`. Każdy leaf wykonawczy musi

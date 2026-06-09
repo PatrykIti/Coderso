@@ -88,4 +88,4 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - TASK-418 task files if drift is found.
-- `_docs/PAGE_EDITOR_V2_GAP_AUDIT.md` if new findings are confirmed.
+- `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md` if new findings are confirmed.

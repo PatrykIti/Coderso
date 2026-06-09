@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Pages / Admin UI / Runtime / Assistant / Templates
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-417, `_docs/PAGE_MODEL.md`, `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md`
+**Dependencies:** TASK-417, `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`, `_docs/PAGE_MODEL.md`, `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md`
 **Status:** ⏳ To Do
 
 ---
@@ -24,7 +24,10 @@ The accepted architecture for this family is:
 - Pages remain `schemaVersion: 2` documents with top-level `sections[]`.
 - Sections remain top-level page bands; do not implement arbitrary
   section-in-section nesting.
-- Flexible composition is added through bounded container/slot blocks.
+- Flexible composition is added through bounded container/slot blocks. This
+  task family is the product decision that accepts controlled nesting; any
+  parallel TASK-419 files with the same scope must be superseded or folded into
+  TASK-418 before implementation.
 - Widget pages are not restored for Pages. Legacy widget-template,
   custom-screen, and detail-page widget surfaces remain separate until their
   own follow-up task changes them.
@@ -44,7 +47,11 @@ not complete for insertable blocks, assistant/template emitters can drift from
 runtime support, and nesting requires a deliberate recursive contract.
 
 Because this task file is created after those audits, implementation must rerun
-a fresh read-only drift pass before any production code changes.
+a fresh read-only drift pass before any production code changes. A refinement
+pass after commit `00bdce7` found contract drift around audit filename,
+TASK-419 duplication, dependency order, single-renderer strength, section
+type/variant ownership, and Playwright coverage; the fixes are folded into this
+TASK-418 contract.
 
 ---
 
@@ -88,14 +95,17 @@ a fresh read-only drift pass before any production code changes.
 
 1. Write the dedicated audit report and rerun read-only drift checks against the
    finalized task family.
-2. Fix immediate editor correctness: selected block state, type-safe block
+2. Implement the block style and block-responsive model substrate before UI work
+   depends on those fields.
+3. Fix immediate editor correctness: selected block state, type-safe block
    patching, autosave/save error visibility, and block actions.
-3. Add a shared control registry and rebuild toolbar panels from that registry.
-4. Make the admin canvas visually honor the same style/layout/visibility rules
-   that public runtime uses.
-5. Add bounded container/slot blocks and recursive normalization/rendering.
-6. Bring runtime, assistant emitters, and Page template contracts into parity.
-7. Run targeted validation, real server Playwright smokes, docs/changelog
+4. Add a shared control registry and rebuild toolbar panels from that registry.
+5. Replace divergent canvas/runtime markup with one shared section/block renderer
+   consumed by admin canvas, preview, and public frontend.
+6. Add bounded container/slot blocks and recursive normalization/rendering.
+7. Bring section type/variant layout templates, block renderers, assistant
+   emitters, and Page template contracts into parity.
+8. Run targeted validation, real server Playwright smokes, docs/changelog
    closeout, and final read-only drift audit.
 
 ---
@@ -117,7 +127,7 @@ a fresh read-only drift pass before any production code changes.
 
 ## Documentation Updates Required
 
-- `_docs/PAGE_EDITOR_V2_GAP_AUDIT.md`
+- `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`
 - `_docs/PAGE_MODEL.md`
 - `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md`
 - `_docs/CMS_SPEC.md`

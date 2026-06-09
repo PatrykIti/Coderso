@@ -54,7 +54,7 @@ Done when every physical child is Done, Superseded, or Cancelled.
 
 ## Documentation Updates Required
 
-- `_docs/PAGE_EDITOR_V2_GAP_AUDIT.md`
+- `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`
 - `_docs/PAGE_MODEL.md`
 - `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`

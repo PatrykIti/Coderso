@@ -14,8 +14,10 @@
 
 Align assistant Page active surfaces, action schemas, blueprint emitters,
 solution-kit plan emitters, executor, dry-run diff, and policy gates with the
-same Page block control/runtime capabilities. Assistant must not emit rich props
-or block types that the Pages owner drops or runtime cannot render.
+same Page block control/runtime capabilities. Assistant must emit responsive
+deltas through the Page v2 cascade, use the full supported Page vocabulary, and
+must not emit rich props or block/section types that the Pages owner drops or
+runtime cannot render.
 
 ---
 
@@ -38,6 +40,8 @@ function buildPageActiveSurface(document, selection) {
 function normalizeAssistantPageAction(action) {
   const document = normalizePageDocumentWrite(action.document);
   assertAllEmittedBlocksRuntimeReady(document, pageBlockCapabilities);
+  assertResponsiveDeltasAreSparse(document);
+  assertSectionAndBlockVocabularyIsSupported(document);
   return { ...action, document };
 }
 ```
@@ -47,6 +51,8 @@ Expected data flow:
 - Active surface summarizes selected section/block and nested slots.
 - Assistant schemas use the same block prop allowlists/capabilities as editor.
 - Blueprint emitters produce only runtime-ready Page blocks.
+- Blueprint emitters produce sparse mobile/tablet deltas where layout requires
+  responsive changes instead of copying whole documents.
 - Executor normalizes through `pageDocumentV2` before persistence.
 
 Error handling:
@@ -59,6 +65,8 @@ Error handling:
 Regression-test shape:
 
 - Assistant cannot emit unsupported Page block props.
+- Assistant emits supported section/block vocabulary and sparse responsive
+  deltas.
 - Collection/form/gallery emitted by blueprints render publicly or are gated.
 - Selected nested block path is preserved in active surface and patch mapping.
 

@@ -39,6 +39,7 @@ render it honestly.
 - [ ] TASK-418-06-L01: Public runtime real renderers for insertable blocks.
 - [ ] TASK-418-06-L02: Assistant surface schema and blueprint alignment.
 - [ ] TASK-418-06-L03: Page templates and non-Page widget boundaries.
+- [ ] TASK-418-06-L04: Collection form embed runtime data binding security.
 
 ---
 

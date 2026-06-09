@@ -12,34 +12,26 @@
 
 ## Overview
 
-Create `_docs/PAGE_EDITOR_V2_GAP_AUDIT.md` as the source audit report for the
-current Pages v2 editor drift. The report must preserve the Claude xhigh and
-subagent evidence in concise form and include concrete file/line references for
-every material problem that TASK-418 will remediate.
+Own `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md` as the source audit report for the
+current Pages v2 editor drift. The report already exists; this leaf updates it
+when refinement finds confirmed drift and makes sure every material problem maps
+to a TASK-418 remediation leaf.
 
 ---
 
 ## Implementation Pseudocode
 
 ```ts
-function writePageEditorV2GapAudit() {
-  const report = {
-    auditedHead: "a9b95209",
-    dirtyStatus: "clean before TASK-418 task docs",
-    sources: ["local inspection", "Claude xhigh", "subagent UI audit", "subagent runtime audit"],
-    findings: groupBySeverity([
-      "no selected block model",
-      "content panel patches first block",
-      "generic patch can write invalid props",
-      "toolbar misses spec panels and controls",
-      "admin canvas is not WYSIWYG",
-      "runtime placeholder blocks",
-      "flat model prevents nesting",
-      "assistant/templates can emit unsupported props"
-    ]),
-    recommendedTaskFamily: "TASK-418"
-  };
-  saveMarkdown("_docs/PAGE_EDITOR_V2_GAP_AUDIT.md", report);
+function refinePageEditorV2AuditReport() {
+  const report = readMarkdown("_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md");
+  const findings = verifyFindingsAgainstLocalFiles(report);
+  const taskMap = mapFindingsToTask418Leaves(findings);
+  assertNoDuplicateActiveTaskFamily(["TASK-418"], ["TASK-419"]);
+  saveMarkdown("_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md", {
+    ...report,
+    taskMap,
+    nestingDecision: "bounded container/slot blocks accepted for TASK-418"
+  });
 }
 ```
 
@@ -47,8 +39,10 @@ Expected data flow:
 
 - Read `PageEditor.tsx`, `pageDocumentV2.ts`, `pageRuntimeV2.tsx`,
   `_docs/PAGE_MODEL.md`, and the UI redesign spec.
-- Convert audit findings into severity-ranked report sections.
+- Preserve audit findings as severity-ranked report sections.
 - Link each finding to the owning remediation leaf.
+- Mark any parallel TASK-419 plan as superseded/duplicate unless it is explicitly
+  converted into a follow-up with board synchronization.
 
 Error handling:
 
@@ -59,7 +53,8 @@ Error handling:
 Regression-test shape:
 
 - Documentation-only leaf. Validate with `rg` that every report finding points
-  to at least one TASK-418 leaf.
+  to at least one TASK-418 leaf and no second active task family owns the same
+  remediation scope.
 
 ---
 
@@ -79,11 +74,12 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- `rg "TASK-418" _docs/PAGE_EDITOR_V2_GAP_AUDIT.md`
-- `rg "Critical|High|Medium" _docs/PAGE_EDITOR_V2_GAP_AUDIT.md`
+- `rg "TASK-418" _docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`
+- `rg "Critical|High|Medium" _docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`
+- Confirm no stale alternate audit-report path remains in TASK-418 docs.
 
 ---
 
 ## Documentation Updates Required
 
-- `_docs/PAGE_EDITOR_V2_GAP_AUDIT.md`
+- `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`

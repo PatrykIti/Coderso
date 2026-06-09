@@ -81,7 +81,8 @@ Regression-test shape:
 - **RBAC:** existing Pages write permissions.
 - **CSRF:** existing admin write CSRF behavior.
 - **Rate-limit bucket:** existing admin bucket.
-- **Validation:** controls must write only allowlisted props for that block type.
+- **Validation:** controls must write only allowlisted props for that block type
+  and must preserve strict reject-unknown server validation.
 - **Anti-abuse controls:** media/embed/html-like controls must preserve existing
   sanitizer and trusted-source policies; no secrets in browser state.
 
