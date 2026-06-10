@@ -1422,3 +1422,21 @@ dokumentacji); itd.
 *Koniec raportu. Pełne, zweryfikowane luki z cytatami `plik:linia` (62 pozycje),
 drzewo TASK‑418 z acceptance oraz projekt rozszerzeń A–E są podstawą do
 utworzenia plików `_docs/_TASKS/TASK-418*`.*
+
+---
+
+## 12. Follow‑up po TASK‑418 (audyt na żywo, 2026‑06‑10)
+
+Po domknięciu TASK‑418 przeprowadzono **drugi audyt na żywo, per sekcja/blok** (workflow
+11‑agentowy, `playwright-cli`, limit sesji 100, serwer `coderso-dev-core-host`). Pełny raport i pliki cząstkowe:
+
+- **Raport zbiorczy:** [`_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md`](./AUDIT/_FOLLOWUP_REPORT_2026-06-10.md)
+- **Per sekcja/blok (28 plików):** `_docs/AUDIT/<typ>-2026-06-10.md` + `_cross-{gating,responsive,parity,canvas-inline-typography}-2026-06-10.md`
+
+**Skrót.** ✅ Naprawione: canvas WYSIWYG (§5.1), parytet canvas==front (§6), katalog 11+14 (§5.7),
+edycja per‑blok + realne renderery bloków (§5.2/§5.4), kaskada sekcji desktop‑baza (§5.3), skróty/interakcje,
+zagnieżdżanie przez `container`/`group`. ❌ Otwarte: **drift kontrolek — wszystko natywne, 0 dedykowanych
+widgetów** (TASK‑421, główny zarzut właściciela); **edycja in‑place na canvasie — brak** (priorytet);
+**kontrolki czcionki w „T" — brak**; **responsywność nie dociera na publiczny front** (render spłaszcza do
+desktopu, brak `@media` — NOWE high); **blok `columns` nie persistuje** (NOWE high); warianty spacing‑only
+= no‑op; preview `/preview` 404. Plan remediacji: §7 raportu follow‑up.
