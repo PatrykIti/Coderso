@@ -54,6 +54,27 @@ Model:
   context, not a second Pages-only insert dialog.
 - Completing the widget wizard moves the operator into layout/styling refinement
   with explicit transition copy.
+- Pages v2 keep sections as top-level bands. Flexible composition inside a
+  section uses bounded Page layout blocks (`container`, `columns`, `group`) with
+  named `slots`, max depth 4, and max 24 children per slot. Other slot-owner
+  block families require explicit contract extensions before they can be
+  inserted or rendered.
+- Public and preview Pages v2 rendering recurses through those layout-block
+  slots and resolves responsive overrides for nested children. Assistant Page
+  active surfaces now expose bounded server-revalidated nested block paths and
+  capability summaries, so layout blocks can be emitted through the assistant
+  Page vocabulary.
+- Page template inputs are explicitly Page v2 documents:
+  `pageTemplateBoundary` resolves `kind: "page-v2"` with
+  `documentContract: "page-v2-section-block-contract"`. Widget-template,
+  custom-screen, and detail-page surfaces remain on the legacy
+  `WidgetBlock[]` contract and must not receive Page v2 `sections[]`.
+- Page block runtime parity is capability-gated. Current runtime-real editor
+  blocks include the atomic content blocks plus `container`, `columns`, and
+  `group`; `gallery` has a real static public renderer for emitted kit data but
+  remains hidden from author insertion until controls ship. `collection`, `form`,
+  and `embed` stay fail-closed and inert publicly until the scoped binding and
+  sanitizer work in TASK-418-06-L04.
 
 Przechowywanie:
 - Biezacy stan strony trzymany w `pages.current_data` (JSONB).
@@ -66,6 +87,12 @@ Przechowywanie:
 - Public rendering i runtime preview korzystaja z tego samego pipeline.
 - `page.data.settings.template` wybiera page template przez resolver theme -> plugin -> core (fallback `landing`).
 - Navigation widget moze zrodlo `linksSource = "pages"` i filtruje po `settings.showInNav` (fallback do manual przy zbyt malej liczbie linkow).
+- Pages v2 public/runtime preview output uses the shared renderer for sections,
+  atomic blocks, nested layout slots, static galleries, and explicit inert states
+  for data-bound blocks that are still waiting on security-reviewed binding.
+- Advanced Widgets remains the reusable widget-template editor. TASK-420 tracks
+  the deferred Page Templates surface migration so Page v2 documents are not
+  mixed into existing widget-template rows during TASK-418.
 
 ---
 

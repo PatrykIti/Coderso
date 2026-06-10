@@ -44,7 +44,11 @@ import {
   navigationMobileModeIds,
   navigationVariantIds,
 } from "../../widgets/core/navigationContract";
-import { normalizePageDocumentV2ForWrite } from "../pages/pageDocumentV2";
+import { normalizePageDocumentV2ForWrite, type PageBlockV2 } from "../pages/pageDocumentV2";
+import {
+  isAssistantPageBlockOutputAllowed,
+  isAssistantPageSectionOutputAllowed,
+} from "./pageActiveSurfaceSummary";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -1598,7 +1602,7 @@ const normalizePageSectionsInput = (value: unknown) => {
     allowCuratedTextUrlFields: true,
   });
   try {
-    return normalizePageDocumentV2ForWrite({
+    const normalized = normalizePageDocumentV2ForWrite({
       schemaVersion: 2,
       breakpoints: ["desktop", "tablet", "mobile"],
       seo: {},
@@ -1608,6 +1612,17 @@ const normalizePageSectionsInput = (value: unknown) => {
       },
       sections,
     }).sections;
+    for (const section of normalized) {
+      if (!isAssistantPageSectionOutputAllowed(section.type)) fail();
+      const visitBlock = (block: PageBlockV2) => {
+        if (!isAssistantPageBlockOutputAllowed(block.type)) fail();
+        for (const children of Object.values(block.slots ?? {})) {
+          for (const child of children ?? []) visitBlock(child);
+        }
+      };
+      for (const block of section.blocks) visitBlock(block);
+    }
+    return normalized;
   } catch {
     fail();
   }

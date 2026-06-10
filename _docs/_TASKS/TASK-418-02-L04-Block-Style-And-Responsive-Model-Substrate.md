@@ -6,7 +6,8 @@
 **Category:** Pages / Domain Contract / Responsive
 **Estimated Effort:** Large
 **Dependencies:** TASK-418-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-09
 
 ---
 
@@ -61,6 +62,11 @@ Expected data flow:
 
 - `pageDocumentV2` owns the expanded style type, defaults, clamps, and strict
   normalization.
+- `pageDocumentV2` also owns the initial `pageBlockCapabilities` scaffold and
+  keeps block prop/style/responsive metadata in one schema-first contract.
+- `pageDocumentV2JsonSchema` must reject the same unknown block
+  `props`/`style`/`responsive` fields that the write normalizer rejects; do not
+  leave these nested nodes as broad `additionalProperties: true` objects.
 - Responsive resolution applies section overrides first and block overrides
   recursively after nesting lands.
 - Admin canvas, preview, public runtime, assistant validation, and control
@@ -77,6 +83,8 @@ Regression-test shape:
 
 - Expanded block style normalizes with explicit defaults and rejects unknown
   keys.
+- AJV/schema tests reject unknown block `props`, `style`, and responsive override
+  fields in parity with the imperative normalizer.
 - `block.responsive.mobile.props/style/visibility` changes the mobile resolved
   block and does not change desktop.
 - Section resolution applies block overrides for every block in order.
@@ -113,3 +121,26 @@ Regression-test shape:
 
 - `_docs/PAGE_MODEL.md`
 - `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`
+
+---
+
+## Closeout
+
+- Expanded `PageBlockStyleV2` with bounded color/background/opacity/radius/
+  shadow/border/spacing fields.
+- Exported `pageBlockPropKeys`, `pageBlockCapabilities`, and
+  `resolvePageBlockForBreakpoint` from `pageDocumentV2`.
+- Tightened `pageDocumentV2JsonSchema` so block props/style/responsive and
+  section responsive objects reject unknown fields in parity with write
+  normalization.
+- Changed block responsive props to sparse deltas and applied block overrides in
+  `resolvePageDocumentForBreakpoint`.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/pages/page-document-v2.test.ts`
+  - Passed: 13 tests.
+- `bun --cwd core lint:types`
+  - Passed.
+- `bun --cwd core lint`
+  - Passed.

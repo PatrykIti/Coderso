@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1140.
+Ordinary new entries continue at 1159.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,29 @@ Ordinary new entries continue at 1140.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1140 for the next changelog entry.
+assistant policy coverage fix. Use 1159 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1158 | 2026-06-10 | TASK-418 Page template boundary freeze | Pages/Templates/Widgets/Runtime/QA/Docs/Drift Audit |
+| 1157 | 2026-06-10 | TASK-418 assistant Page surface parity | Assistant/Pages/Active Surface/Schema/Blueprints/QA/Docs/Drift Audit |
+| 1156 | 2026-06-10 | TASK-418 public runtime block parity | Pages/Runtime/Capabilities/Solution Kits/QA/Docs/Drift Audit |
+| 1155 | 2026-06-10 | TASK-418 recursive layout runtime rendering | Pages/Runtime/Admin Preview/Responsive/QA/Docs/Drift Audit |
+| 1154 | 2026-06-10 | TASK-418 container block inserter and Layers | Pages/Admin UI/Nested Blocks/Controls/QA/Docs/Drift Audit |
+| 1153 | 2026-06-10 | TASK-418 recursive Page block slots | Pages/Domain Contract/Validation/Docs/Drift Audit |
+| 1152 | 2026-06-10 | TASK-418 section template variants | Pages/Runtime/Admin UI/Templates/Controls/QA/Docs |
+| 1151 | 2026-06-10 | TASK-418 block canvas feedback | Pages/Admin UI/Canvas/Renderer/Responsive/QA/Docs |
+| 1150 | 2026-06-09 | TASK-418 section canvas feedback | Pages/Admin UI/Canvas/Responsive/Controls/QA/Docs |
+| 1149 | 2026-06-09 | TASK-418 shared Pages v2 renderer | Pages/Runtime/Admin UI/Renderer/QA/Docs |
+| 1148 | 2026-06-09 | TASK-418 floating toolbar shortcuts | Pages/Admin UI/Toolbar/Shortcuts/Command Palette/QA/Docs |
+| 1147 | 2026-06-09 | TASK-418 responsive override reset UX | Pages/Admin UI/Responsive/Controls/QA/Docs |
+| 1146 | 2026-06-09 | TASK-418 per-type page block controls | Pages/Domain Contract/Admin UI/Controls/Responsive/QA/Docs |
+| 1145 | 2026-06-09 | TASK-418 universal page control registry | Pages/Domain Contract/Admin UI/Controls/QA/Docs |
+| 1144 | 2026-06-09 | TASK-418 immediate editor correctness | Pages/Admin UI/Selection/Block Actions/Responsive/Autosave/QA/Docs |
+| 1143 | 2026-06-09 | TASK-418 block selection layers | Pages/Admin UI/Assistant/Selection/QA/Docs |
+| 1142 | 2026-06-09 | TASK-418 type-safe block patching | Pages/Admin UI/Responsive/Autosave/QA/Docs |
+| 1141 | 2026-06-09 | TASK-418 block style responsive substrate | Pages/Domain Contract/Responsive/Validation/QA/Docs |
+| 1140 | 2026-06-09 | TASK-418 audit freeze | Pages/Task Contract/QA/Docs/Drift Audit |
 | 1139 | 2026-06-09 | TASK-417 Pages v2 sections editor | Pages/Admin UI/Runtime/Assistant/QA/Docs |
 | 1138 | 2026-06-07 | TASK-414 generic content-type field refinement | Assistant/CMS Content Types/Admin UI/OpenRouter/QA/Docs |
 | 1137 | 2026-06-07 | Timeline MUI-aligned preset gallery rewrite | CMS Widgets/Timeline/Page Builder/Admin UI/QA/Docs |

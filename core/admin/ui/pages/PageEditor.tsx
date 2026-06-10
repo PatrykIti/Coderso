@@ -1,16 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactNode,
+} from "react";
 import {
   ArrowDown,
   ArrowUp,
   Brush,
   Copy,
   Eye,
+  GripVertical,
   History,
   Layers,
   LayoutPanelTop,
   ListPlus,
+  Maximize2,
+  Minimize2,
   MonitorSmartphone,
+  PaintBucket,
   PanelTop,
   Plus,
   Save,
@@ -19,6 +27,7 @@ import {
   Trash2,
   Type,
   X,
+  type LucideIcon,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -43,26 +52,68 @@ import {
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { createAdminActionToastAdapter } from "@/ui/shared/actionToasts";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import {
   clearActiveAssistantSurfaceContext,
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
+  clearBlockResponsiveOverride,
   clearResponsiveOverride,
+  PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
+  PAGE_BLOCK_MAX_TREE_DEPTH,
   createPageBlockV2,
   createPageDocumentId,
   createPageSectionV2,
   normalizeStoredPageDocumentV2ForRead,
+  pageBlockCapabilities,
+  pageBlockPropKeys,
+  pageBlockTypes,
+  pageSectionCapabilities,
+  pageSectionTypes,
   resolvePageSectionForBreakpoint,
   type PageBlockType,
   type PageBlockV2,
   type PageBreakpoint,
   type PageDocumentV2,
+  type PageSectionVariant,
   type PageSectionType,
   type PageSectionV2,
 } from "../../../services/pages/pageDocumentV2";
+import {
+  getPageSectionVariantControl,
+  isPageSectionVariantOption,
+  getPageEditorControlsForTarget,
+  pageUniversalSectionControls,
+  type PageEditorControlDefinition,
+} from "../../../services/pages/pageEditorControlRegistry";
+import {
+  deletePageBlockAtPath,
+  duplicatePageBlockAtPath,
+  duplicatePageBlockTreeWithNewIds,
+  getDefaultPageBlockInsertTarget,
+  getPageBlockAtPath,
+  getPageBlockEditorSlotKeys,
+  getPageBlockInsertTargetStatus,
+  getPageBlockListAtPath,
+  getPageBlockSiblingMoveTarget,
+  insertPageBlockAtTarget,
+  isPageBlockPathDescendant,
+  isSamePageBlockPath,
+  movePageBlockToTarget,
+  serializePageBlockPath,
+  updatePageBlockAtPath,
+  type PageBlockInsertTarget,
+  type PageBlockPath,
+} from "../../../services/pages/pageBlockPaths";
+import { getPageSectionFallbackVariant } from "../../../services/pages/pageSectionTemplates";
+import { joinPageRenderClasses, PageSectionContent } from "../../../services/pages/pageRendererV2";
 import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
+import {
+  resolveAssistantPageSelection,
+  summarizePageSectionsForAssistant,
+} from "../../../services/assistant/pageActiveSurfaceSummary";
 import { DeviceSwitcher } from "./DeviceSwitcher";
 
 export type PageEditorProps = {
@@ -70,7 +121,14 @@ export type PageEditorProps = {
   initialPage?: PageDetail | null;
 };
 
-type ToolbarPanel = "layout" | "content" | "style" | "spacing" | "responsive" | "visibility";
+type ToolbarPanel =
+  | "layout"
+  | "content"
+  | "style"
+  | "spacing"
+  | "background"
+  | "responsive"
+  | "visibility";
 
 type SectionOption = {
   type: PageSectionType;
@@ -83,6 +141,25 @@ type BlockOption = {
   label: string;
   description: string;
 };
+
+type ToolbarPanelOption = {
+  panel: ToolbarPanel;
+  label: string;
+  Icon: LucideIcon;
+};
+
+type ToolbarDeleteTarget =
+  | {
+      kind: "section";
+      sectionId: string;
+      label: string;
+    }
+  | {
+      kind: "block";
+      sectionId: string;
+      blockPath: PageBlockPath;
+      label: string;
+    };
 
 const pageEditorActionToasts = createAdminActionToastAdapter({
   actions: {
@@ -97,26 +174,64 @@ const pageEditorActionToasts = createAdminActionToastAdapter({
   },
 });
 
-const sectionOptions: SectionOption[] = [
-  { type: "hero", label: "Hero", description: "Headline, copy, and primary action." },
-  { type: "content", label: "Content", description: "Simple text-led section." },
-  { type: "feature-grid", label: "Feature grid", description: "Cards or repeated highlights." },
-  { type: "media-split", label: "Media split", description: "Copy next to image or video." },
-  { type: "gallery", label: "Gallery", description: "Visual collection section." },
-  { type: "lead-form", label: "Lead form", description: "Form-focused conversion section." },
-  { type: "faq", label: "FAQ", description: "Question and answer content." },
-  { type: "cta", label: "CTA", description: "Focused call to action." },
-];
+const sectionOptionCopy: Record<PageSectionType, Omit<SectionOption, "type">> = {
+  template: { label: "Template", description: "Template boundary section." },
+  navigation: { label: "Navigation", description: "Runtime navigation boundary." },
+  hero: { label: "Hero", description: "Headline, copy, and primary action." },
+  content: { label: "Content", description: "Simple text-led section." },
+  "feature-grid": { label: "Feature grid", description: "Cards or repeated highlights." },
+  "media-split": { label: "Media split", description: "Copy next to image or video." },
+  timeline: { label: "Timeline", description: "Ordered story or milestone section." },
+  gallery: { label: "Gallery", description: "Visual collection section." },
+  collection: { label: "Collection", description: "Data-bound listing boundary." },
+  comparison: { label: "Comparison", description: "Compare options or service tiers." },
+  filters: { label: "Filters", description: "Listing filter boundary." },
+  "lead-form": { label: "Lead form", description: "Form-focused conversion boundary." },
+  faq: { label: "FAQ", description: "Question and answer content." },
+  testimonials: { label: "Testimonials", description: "Quotes or social proof." },
+  cta: { label: "CTA", description: "Focused call to action." },
+  embed: { label: "Embed", description: "Trusted embed boundary." },
+  custom: { label: "Custom", description: "Flexible generic section." },
+};
 
-const blockOptions: BlockOption[] = [
-  { type: "heading", label: "Heading", description: "Section title or subheading." },
-  { type: "text", label: "Text", description: "Paragraph copy." },
-  { type: "button", label: "Button", description: "Clickable call to action." },
-  { type: "image", label: "Image", description: "Image from media or URL." },
-  { type: "list", label: "List", description: "Bulleted or numbered points." },
-  { type: "card", label: "Card", description: "Compact title and body block." },
-  { type: "divider", label: "Divider", description: "Visual separator." },
-  { type: "spacer", label: "Spacer", description: "Vertical rhythm control." },
+const sectionOptions: SectionOption[] = pageSectionTypes.flatMap((type) =>
+  pageSectionCapabilities[type].insertable ? [{ type, ...sectionOptionCopy[type] }] : []
+);
+
+const blockOptionCopy: Record<PageBlockType, Omit<BlockOption, "type">> = {
+  heading: { label: "Heading", description: "Section title or subheading." },
+  text: { label: "Text", description: "Paragraph copy." },
+  button: { label: "Button", description: "Clickable call to action." },
+  image: { label: "Image", description: "Image from media or URL." },
+  video: { label: "Video", description: "Embedded video from media or URL." },
+  gallery: { label: "Gallery", description: "Visual collection block." },
+  form: { label: "Form", description: "Configured form embed." },
+  list: { label: "List", description: "Bulleted or numbered points." },
+  card: { label: "Card", description: "Compact title and body block." },
+  collection: { label: "Collection", description: "Data-bound listing block." },
+  embed: { label: "Embed", description: "Trusted external embed." },
+  divider: { label: "Divider", description: "Visual separator." },
+  spacer: { label: "Spacer", description: "Vertical rhythm control." },
+  statistic: { label: "Statistic", description: "Metric value with label and caption." },
+  icon: { label: "Icon", description: "Small symbolic block." },
+  quote: { label: "Quote", description: "Pull quote with optional citation." },
+  container: { label: "Container", description: "Nested layout container." },
+  columns: { label: "Columns", description: "Nested column layout." },
+  group: { label: "Group", description: "Nested grouped layout." },
+};
+
+const blockOptions: BlockOption[] = pageBlockTypes.flatMap((type) =>
+  pageBlockCapabilities[type].editorInsertable ? [{ type, ...blockOptionCopy[type] }] : []
+);
+
+const toolbarPanelOptions: ToolbarPanelOption[] = [
+  { panel: "layout", label: "Layout", Icon: LayoutPanelTop },
+  { panel: "content", label: "Content", Icon: Type },
+  { panel: "style", label: "Style", Icon: Brush },
+  { panel: "background", label: "Background", Icon: PaintBucket },
+  { panel: "spacing", label: "Spacing", Icon: ListPlus },
+  { panel: "responsive", label: "Responsive", Icon: MonitorSmartphone },
+  { panel: "visibility", label: "Visibility", Icon: Eye },
 ];
 
 const canvasDeviceFrameClassMap: Record<PageBreakpoint, string> = {
@@ -145,6 +260,248 @@ const readText = (value: unknown, fallback = "") => {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : fallback;
 };
+
+const primaryContentPropByBlockType: Partial<Record<PageBlockType, string>> = {
+  heading: "text",
+  text: "text",
+  button: "label",
+  image: "alt",
+  video: "title",
+  card: "title",
+  form: "title",
+  statistic: "value",
+  icon: "label",
+  quote: "text",
+};
+
+const filterBlockPropsPatch = (type: PageBlockType, patch: Record<string, unknown>) => {
+  const allowed = pageBlockPropKeys[type];
+  return Object.fromEntries(
+    Object.entries(patch).filter(([key, value]) => value !== undefined && allowed.includes(key))
+  );
+};
+
+const getPrimaryBlockContent = (block: PageBlockV2 | undefined) => {
+  if (!block) return "";
+  const prop = primaryContentPropByBlockType[block.type];
+  return prop ? readText(block.props[prop]) : "";
+};
+
+const getBlockDisplayLabel = (block: PageBlockV2) =>
+  getPrimaryBlockContent(block) ||
+  readText(block.props.title) ||
+  readText(block.props.alt) ||
+  block.type.replace(/-/g, " ");
+
+type BlockControlGroup = "props" | "style" | "visibility";
+type SectionControlGroup = "layout" | "style" | "spacing" | "visibility";
+
+const blockControlGroups: readonly BlockControlGroup[] = ["props", "style", "visibility"];
+const sectionControlGroups: readonly SectionControlGroup[] = [
+  "layout",
+  "style",
+  "spacing",
+  "visibility",
+];
+
+const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const isBlockControlGroup = (value: string | undefined): value is BlockControlGroup =>
+  blockControlGroups.includes(value as BlockControlGroup);
+
+const isSectionControlGroup = (value: string | undefined): value is SectionControlGroup =>
+  sectionControlGroups.includes(value as SectionControlGroup);
+
+const readPathValue = (source: unknown, path: readonly string[]): unknown =>
+  path.reduce<unknown>((current, key) => {
+    if (!isPlainRecord(current)) return undefined;
+    return current[key];
+  }, source);
+
+const setNestedPathValue = (
+  source: unknown,
+  path: readonly string[],
+  value: unknown
+): Record<string, unknown> => {
+  const current = isPlainRecord(source) ? source : {};
+  const [key, ...rest] = path;
+  if (!key) return { ...current };
+  if (rest.length === 0) return { ...current, [key]: value };
+  return {
+    ...current,
+    [key]: setNestedPathValue(current[key], rest, value),
+  };
+};
+
+const patchBlockPropsForDevice = (
+  block: PageBlockV2,
+  device: PageBreakpoint,
+  patch: Record<string, unknown>
+): PageBlockV2 => {
+  const knownPatch = filterBlockPropsPatch(block.type, patch);
+  if (Object.keys(knownPatch).length === 0) return block;
+  if (device === "desktop") {
+    return { ...block, props: { ...block.props, ...knownPatch } };
+  }
+  return {
+    ...block,
+    responsive: {
+      ...block.responsive,
+      [device]: {
+        ...(block.responsive?.[device] ?? {}),
+        props: {
+          ...(block.responsive?.[device]?.props ?? {}),
+          ...knownPatch,
+        },
+      },
+    },
+  };
+};
+
+const patchBlockControlForDevice = (
+  block: PageBlockV2,
+  device: PageBreakpoint,
+  control: PageEditorControlDefinition,
+  value: unknown
+): PageBlockV2 => {
+  const [group, ...path] = control.overridePath;
+  if (!isBlockControlGroup(group) || path.length === 0) return block;
+  if (group === "props") {
+    const [key] = path;
+    return key ? patchBlockPropsForDevice(block, device, { [key]: value }) : block;
+  }
+
+  if (device === "desktop") {
+    return {
+      ...block,
+      [group]: setNestedPathValue(block[group], path, value),
+    };
+  }
+
+  const breakpoint = block.responsive?.[device] ?? {};
+  return {
+    ...block,
+    responsive: {
+      ...block.responsive,
+      [device]: {
+        ...breakpoint,
+        [group]: setNestedPathValue(breakpoint[group], path, value),
+      },
+    },
+  };
+};
+
+const patchSectionControlForDevice = (
+  section: PageSectionV2,
+  device: PageBreakpoint,
+  control: PageEditorControlDefinition,
+  value: unknown
+): PageSectionV2 => {
+  const [group, ...path] = control.overridePath;
+  if (!isSectionControlGroup(group) || path.length === 0) return section;
+
+  if (device === "desktop") {
+    return {
+      ...section,
+      [group]: setNestedPathValue(section[group], path, value),
+    };
+  }
+
+  const breakpoint = section.responsive[device] ?? {};
+  return {
+    ...section,
+    responsive: {
+      ...section.responsive,
+      [device]: {
+        ...breakpoint,
+        [group]: setNestedPathValue(breakpoint[group], path, value),
+      },
+    },
+  };
+};
+
+const listItemsFromFieldValue = (value: string) =>
+  value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const fieldValueFromControlValue = (
+  control: PageEditorControlDefinition,
+  value: unknown
+): string => {
+  if (control.input === "switch") return value === true ? "yes" : "no";
+  if (control.input === "number") return typeof value === "number" ? String(value) : "";
+  if (control.input === "select" || control.input === "segmented") {
+    return typeof value === "string" ? value : (control.options?.[0] ?? "");
+  }
+  if (control.path[0] === "props" && control.path[1] === "items") {
+    if (!Array.isArray(value)) return "";
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (isPlainRecord(item) && typeof item.label === "string") return item.label;
+        return "";
+      })
+      .filter(Boolean)
+      .join(", ");
+  }
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return "";
+};
+
+const coerceControlFieldValue = (control: PageEditorControlDefinition, value: string): unknown => {
+  if (control.input === "switch") return value === "yes";
+  if (control.input === "number") {
+    const parsed = Number(value);
+    const fallback = control.clamp?.min ?? 0;
+    const next = Number.isFinite(parsed) ? parsed : fallback;
+    if (!control.clamp) return next;
+    return Math.min(control.clamp.max, Math.max(control.clamp.min, next));
+  }
+  if (control.path[0] === "props" && control.path[1] === "items") {
+    return listItemsFromFieldValue(value);
+  }
+  return value;
+};
+
+const hasPathValue = (source: unknown, path: readonly string[]) =>
+  path.reduce<unknown>((current, key) => {
+    if (!isPlainRecord(current) || !(key in current)) return undefined;
+    return current[key];
+  }, source) !== undefined;
+
+const hasResponsiveOverride = (
+  breakpoint: PageBreakpoint,
+  source: unknown,
+  path: readonly string[]
+) => breakpoint !== "desktop" && hasPathValue(source, path);
+
+const hasAnyResponsiveOverride = (breakpoint: PageBreakpoint, source: unknown) =>
+  breakpoint !== "desktop" && isPlainRecord(source) && Object.keys(source).length > 0;
+
+const clampToolbarOffset = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, value));
+
+const isEditableShortcutTarget = (target: EventTarget | null) => {
+  if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) return false;
+  const tagName = target.tagName.toLowerCase();
+  return (
+    target.isContentEditable ||
+    Boolean(target.closest("[contenteditable='true']")) ||
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select"
+  );
+};
+
+const readSectionBreakpointOverride = (section: PageSectionV2, breakpoint: PageBreakpoint) =>
+  breakpoint === "desktop" ? undefined : section.responsive[breakpoint];
+
+const readBlockBreakpointOverride = (block: PageBlockV2 | undefined, breakpoint: PageBreakpoint) =>
+  breakpoint === "desktop" ? undefined : block?.responsive?.[breakpoint];
 
 const resolvePageEditorMutationError = (action: "saveDraft" | "publish", error: unknown) => {
   if (isSessionExpiredApiError(error)) {
@@ -205,7 +562,10 @@ const createStarterSection = (type: PageSectionType) => {
             props: { text: "Add focused content blocks here.", format: "plain", align: "left" },
           }),
         ];
-  return createPageSectionV2(type, { blocks });
+  return createPageSectionV2(type, {
+    variant: getPageSectionFallbackVariant(type),
+    blocks,
+  });
 };
 
 const duplicateSectionWithIds = (section: PageSectionV2): PageSectionV2 => ({
@@ -218,94 +578,304 @@ const duplicateSectionWithIds = (section: PageSectionV2): PageSectionV2 => ({
   }).sections[0]!,
   id: createPageDocumentId("sec"),
   name: `${section.name} copy`,
-  blocks: section.blocks.map((block) => ({ ...block, id: createPageDocumentId("blk") })),
+  blocks: section.blocks.map(duplicatePageBlockTreeWithNewIds),
 });
 
-const summarizeSectionsForAssistant = (sections: PageSectionV2[]) =>
-  sections.map((section, sectionIndex) => ({
-    id: section.id,
-    type: section.type,
-    name: section.name,
-    path: `sections.${sectionIndex}`,
-    blockCount: section.blocks.length,
-    blocks: section.blocks.map((block, blockIndex) => ({
-      id: block.id,
-      type: block.type,
-      label: readText(block.props.text) || readText(block.props.label) || null,
-      path: `sections.${sectionIndex}.blocks.${blockIndex}`,
-      childCount: 0,
-      slotKeys: [],
-      templateId: null,
-      templateName: null,
-    })),
-  }));
+const HiddenBlockGhost = ({ block }: { block: PageBlockV2 }) => (
+  <div
+    className="flex min-h-14 items-center justify-between gap-3 rounded border border-dashed border-muted-foreground/40 bg-muted/70 px-3 py-2 text-xs text-muted-foreground"
+    data-page-editor-hidden-block-ghost="true"
+  >
+    <span className="shrink-0 font-semibold uppercase">Hidden {block.type}</span>
+    <span className="min-w-0 truncate">{getBlockDisplayLabel(block)}</span>
+  </div>
+);
 
 const SectionCanvas = ({
   section,
+  baseSection,
   selected,
+  selectedBlockPath,
+  device,
   onSelect,
+  onSelectBlock,
+  onAddBlock,
 }: {
   section: PageSectionV2;
+  baseSection: PageSectionV2;
   selected: boolean;
+  selectedBlockPath: PageBlockPath | null;
+  device: PageBreakpoint;
   onSelect: () => void;
-}) => (
-  <section
-    className={`group relative rounded border bg-white p-6 shadow-sm transition ${
-      selected
-        ? "border-primary ring-2 ring-primary/20"
-        : "border-transparent hover:border-primary/40"
-    }`}
-    data-page-editor-section={section.type}
-    onClick={(event) => {
-      event.stopPropagation();
-      onSelect();
-    }}
-  >
-    <div className="absolute -top-3 left-4 hidden rounded bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground group-hover:block group-focus-within:block">
-      {section.name} · {section.variant}
-    </div>
-    <div className="grid gap-3">
-      {section.blocks.length === 0 ? (
-        <div className="rounded border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Add the first block
-        </div>
-      ) : (
-        section.blocks.map((block) => (
-          <div
-            key={block.id}
-            className="rounded border border-dashed border-transparent p-2 hover:border-primary/30"
-            data-page-editor-block={block.type}
-          >
-            <BlockPreview block={block} />
-          </div>
-        ))
-      )}
-    </div>
-  </section>
-);
-
-const BlockPreview = ({ block }: { block: PageBlockV2 }) => {
-  if (block.type === "heading") {
-    return <h2 className="text-3xl font-semibold">{readText(block.props.text, "Heading")}</h2>;
-  }
-  if (block.type === "button") {
-    return (
-      <span className="inline-flex rounded bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-        {readText(block.props.label, "Button")}
-      </span>
-    );
-  }
-  if (block.type === "image") {
-    return (
-      <div className="rounded bg-muted p-8 text-center text-sm text-muted-foreground">Image</div>
-    );
-  }
+  onSelectBlock: (blockPath: PageBlockPath) => void;
+  onAddBlock: () => void;
+}) => {
+  const sectionHasOverride = hasAnyResponsiveOverride(
+    device,
+    readSectionBreakpointOverride(baseSection, device)
+  );
+  const visibilityBadges = [
+    !section.visibility.visible ? "Hidden" : null,
+    section.visibility.authOnly ? "Auth only" : null,
+    section.visibility.startsAt ? `Starts ${section.visibility.startsAt}` : null,
+    section.visibility.endsAt ? `Ends ${section.visibility.endsAt}` : null,
+  ].filter((badge): badge is string => Boolean(badge));
   return (
-    <p className="text-sm leading-6 text-muted-foreground">
-      {readText(block.props.text, block.type)}
-    </p>
+    <section
+      className={`group relative transition ${
+        selected
+          ? "outline outline-2 outline-offset-2 outline-primary"
+          : "hover:outline hover:outline-1 hover:outline-offset-2 hover:outline-primary/40"
+      } ${section.visibility.visible ? "" : "opacity-65"}`}
+      data-page-editor-section={section.type}
+      data-section-id={section.id}
+      data-page-editor-responsive-target={sectionHasOverride ? "override" : "inherited"}
+      data-page-editor-visibility={section.visibility.visible ? "visible" : "hidden"}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect();
+      }}
+    >
+      <div className="absolute -top-3 left-4 hidden rounded bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground group-hover:block group-focus-within:block">
+        {section.name} · {section.variant}
+      </div>
+      {sectionHasOverride ? (
+        <span className="absolute right-3 top-3 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
+          {device} override
+        </span>
+      ) : null}
+      {visibilityBadges.length > 0 ? (
+        <div className="absolute right-3 top-9 z-10 flex max-w-[70%] flex-wrap justify-end gap-1">
+          {visibilityBadges.map((badge) => (
+            <span
+              key={badge}
+              className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground"
+              data-page-editor-visibility-badge={badge}
+            >
+              {badge}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <PageSectionContent
+        section={section}
+        layoutMode="canvas-device"
+        includeHiddenBlocks
+        emptyContent={
+          <button
+            type="button"
+            className="rounded border border-dashed p-6 text-center text-sm text-muted-foreground hover:border-primary/40 hover:text-primary"
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect();
+              onAddBlock();
+            }}
+          >
+            Add the first block
+          </button>
+        }
+        renderBlockFrame={({
+          block,
+          content,
+          renderProps: blockRenderProps,
+          blockPath,
+          depth,
+          slotKey,
+        }) => {
+          const baseBlock = getPageBlockAtPath(baseSection, blockPath) ?? undefined;
+          const blockHasOverride = hasAnyResponsiveOverride(
+            device,
+            readBlockBreakpointOverride(baseBlock, device)
+          );
+          const blockSelected = isSamePageBlockPath(blockPath, selectedBlockPath);
+          return (
+            <div
+              className={joinPageRenderClasses(
+                "relative transition outline outline-1 outline-offset-2",
+                blockRenderProps.className,
+                blockSelected
+                  ? "outline-primary ring-2 ring-primary/20"
+                  : "outline-transparent hover:outline-primary/30",
+                block.visibility.visible ? undefined : "opacity-70"
+              )}
+              style={blockRenderProps.style}
+              {...blockRenderProps.dataAttributes}
+              data-page-editor-block={block.type}
+              data-page-editor-block-id={block.id}
+              data-page-editor-block-path={serializePageBlockPath(blockPath)}
+              data-page-editor-block-depth={depth}
+              data-page-editor-block-slot-key={slotKey}
+              data-page-editor-responsive-target={blockHasOverride ? "override" : "inherited"}
+              data-page-editor-visibility={block.visibility.visible ? "visible" : "hidden"}
+              data-selected={blockSelected ? "true" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onSelectBlock(blockPath);
+              }}
+            >
+              {blockHasOverride ? (
+                <span className="absolute right-2 top-2 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
+                  {device}
+                </span>
+              ) : null}
+              {block.visibility.visible ? content : <HiddenBlockGhost block={block} />}
+            </div>
+          );
+        }}
+      />
+    </section>
   );
 };
+
+const createLayerBlockPath = (
+  ownerPath: PageBlockPath | null,
+  slotKey: PageBlockPath[number]["slotKey"],
+  index: number
+): PageBlockPath =>
+  ownerPath
+    ? ([...ownerPath, { slotKey, index }] as PageBlockPath)
+    : ([{ index }] as PageBlockPath);
+
+const formatSlotLabel = (slotKey: string) =>
+  slotKey.startsWith("column:")
+    ? `Column ${slotKey.replace("column:", "")}`
+    : slotKey.replace(/-/g, " ").replace(/^./, (character) => character.toUpperCase());
+
+const LayerBlockRows = ({
+  section,
+  blocks,
+  ownerPath,
+  slotKey,
+  selectedBlockPath,
+  device,
+  onSelectBlock,
+  onAddToTarget,
+  onMoveToTarget,
+}: {
+  section: PageSectionV2;
+  blocks: readonly PageBlockV2[];
+  ownerPath: PageBlockPath | null;
+  slotKey?: PageBlockPath[number]["slotKey"];
+  selectedBlockPath: PageBlockPath | null;
+  device: PageBreakpoint;
+  onSelectBlock: (blockPath: PageBlockPath) => void;
+  onAddToTarget: (target: PageBlockInsertTarget) => void;
+  onMoveToTarget: (target: PageBlockInsertTarget) => void;
+}) => (
+  <div className="space-y-1">
+    {blocks.map((block, index) => {
+      const blockPath = createLayerBlockPath(ownerPath, slotKey, index);
+      const serializedPath = serializePageBlockPath(blockPath);
+      const slotKeys = getPageBlockEditorSlotKeys(block);
+      const blockSelected = isSamePageBlockPath(blockPath, selectedBlockPath);
+      return (
+        <div key={block.id} className="space-y-1">
+          <button
+            type="button"
+            className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs ${
+              blockSelected ? "bg-primary/10 text-primary" : "hover:bg-muted"
+            }`}
+            data-page-editor-layer-block-id={block.id}
+            data-page-editor-layer-block-path={serializedPath}
+            data-page-editor-responsive-target={
+              hasAnyResponsiveOverride(device, readBlockBreakpointOverride(block, device))
+                ? "override"
+                : "inherited"
+            }
+            onClick={() => onSelectBlock(blockPath)}
+          >
+            <span className="truncate">{getBlockDisplayLabel(block)}</span>
+            <span className="ml-2 shrink-0 uppercase text-muted-foreground">
+              {hasAnyResponsiveOverride(device, readBlockBreakpointOverride(block, device))
+                ? `${device} `
+                : ""}
+              {block.type}
+            </span>
+          </button>
+          {slotKeys.length > 0 ? (
+            <div className="space-y-1 border-l pl-3">
+              {slotKeys.map((childSlotKey) => {
+                const children = block.slots?.[childSlotKey] ?? [];
+                const target: PageBlockInsertTarget = {
+                  listPath: { ownerPath: blockPath, slotKey: childSlotKey },
+                  index: children.length,
+                };
+                const listResult = getPageBlockListAtPath(section, target.listPath);
+                const canAdd =
+                  listResult.status === "ok" &&
+                  blockPath.length + 1 <= PAGE_BLOCK_MAX_TREE_DEPTH &&
+                  listResult.blocks.length < PAGE_BLOCK_MAX_CHILDREN_PER_SLOT;
+                const selectedBlockForMove = selectedBlockPath
+                  ? getPageBlockAtPath(section, selectedBlockPath)
+                  : null;
+                const canMove =
+                  selectedBlockPath !== null &&
+                  selectedBlockForMove !== null &&
+                  canAdd &&
+                  getPageBlockInsertTargetStatus(section, target, selectedBlockForMove) === "ok" &&
+                  !isSamePageBlockPath(selectedBlockPath, blockPath) &&
+                  !(selectedBlockPath && isPageBlockPathDescendant(blockPath, selectedBlockPath));
+                const slotLabel = formatSlotLabel(childSlotKey);
+                return (
+                  <div
+                    key={`${serializedPath}:${childSlotKey}`}
+                    className="space-y-1"
+                    data-page-editor-layer-slot-key={childSlotKey}
+                    data-page-editor-layer-slot-owner-path={serializedPath}
+                  >
+                    <div className="flex items-center justify-between gap-2 rounded bg-muted/60 px-2 py-1 text-[11px] uppercase text-muted-foreground">
+                      <span>{slotLabel}</span>
+                      <span className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="xs"
+                          title={`Add block to ${slotLabel}`}
+                          aria-label={`Add block to ${slotLabel}`}
+                          disabled={!canAdd}
+                          onClick={() => onAddToTarget(target)}
+                        >
+                          Add
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="xs"
+                          title={`Move selected block to ${slotLabel}`}
+                          aria-label={`Move selected block to ${slotLabel}`}
+                          disabled={!canMove}
+                          onClick={() => onMoveToTarget(target)}
+                        >
+                          Move here
+                        </Button>
+                      </span>
+                    </div>
+                    {children.length > 0 ? (
+                      <LayerBlockRows
+                        section={section}
+                        blocks={children}
+                        ownerPath={blockPath}
+                        slotKey={childSlotKey}
+                        selectedBlockPath={selectedBlockPath}
+                        device={device}
+                        onSelectBlock={onSelectBlock}
+                        onAddToTarget={onAddToTarget}
+                        onMoveToTarget={onMoveToTarget}
+                      />
+                    ) : (
+                      <p className="px-2 py-1 text-[11px] text-muted-foreground">Empty</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      );
+    })}
+  </div>
+);
 
 export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorProps) {
   const [pageId] = useState<string | null>(() => {
@@ -325,16 +895,28 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     () => pageDocument.sections[0]?.id ?? null
   );
+  const [selectedBlockPath, setSelectedBlockPath] = useState<PageBlockPath | null>(null);
   const [device, setDevice] = useState<PageBreakpoint>("desktop");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(!initialPageDetail && Boolean(pageId));
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autosaveError, setAutosaveError] = useState<string | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
+  const [commandActiveIndex, setCommandActiveIndex] = useState(0);
+  const [pendingBlockInsertTarget, setPendingBlockInsertTarget] =
+    useState<PageBlockInsertTarget | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<ToolbarPanel>("content");
+  const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
+  const [toolbarDragging, setToolbarDragging] = useState(false);
+  const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
+  const toolbarDragRef = useRef({ startX: 0, startY: 0, baseX: 0, baseY: 0 });
+  const [deleteSelectionTarget, setDeleteSelectionTarget] = useState<ToolbarDeleteTarget | null>(
+    null
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTitle, setSettingsTitle] = useState(initialPageDetail?.title ?? "Homepage");
   const [settingsSlug, setSettingsSlug] = useState(initialPageDetail?.slug ?? "/");
@@ -359,6 +941,24 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const resolvedSelectedSection = selectedSection
     ? resolvePageSectionForBreakpoint(selectedSection, device)
     : null;
+  const selectedBlock =
+    selectedBlockPath && selectedSection
+      ? getPageBlockAtPath(selectedSection, selectedBlockPath)
+      : null;
+  const selectedBlockId = selectedBlock?.id ?? null;
+  const resolvedSelectedBlock =
+    selectedBlockPath && resolvedSelectedSection
+      ? (getPageBlockAtPath(resolvedSelectedSection, selectedBlockPath) ?? selectedBlock)
+      : null;
+  const toolbarBlockTarget = selectedBlockPath
+    ? resolvedSelectedBlock
+    : (resolvedSelectedSection?.blocks[0] ?? null);
+  const toolbarSelectionLabel = resolvedSelectedBlock
+    ? getBlockDisplayLabel(resolvedSelectedBlock)
+    : (selectedSection?.name ?? "Page selection");
+  const toolbarSelectionMeta = resolvedSelectedBlock
+    ? resolvedSelectedBlock.type
+    : (selectedSection?.variant ?? "section");
 
   const filteredSections = useMemo(() => {
     const query = commandQuery.trim().toLowerCase();
@@ -376,10 +976,35 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         )
       : blockOptions;
   }, [commandQuery]);
+  const commandResultCount = filteredSections.length + filteredBlocks.length;
+
+  const openCommandPalette = useCallback(() => {
+    setPendingBlockInsertTarget(null);
+    setCommandOpen(true);
+    setCommandQuery("");
+    setCommandActiveIndex(0);
+  }, []);
+
+  const openCommandPaletteForTarget = useCallback((target: PageBlockInsertTarget) => {
+    setPendingBlockInsertTarget(target);
+    setCommandOpen(true);
+    setCommandQuery("");
+    setCommandActiveIndex(0);
+  }, []);
 
   const setDocumentDraft = useCallback((updater: (current: PageDocumentV2) => PageDocumentV2) => {
     setPageDocument((current) => updater(cloneDocument(current)));
     setHasUnsavedChanges(true);
+  }, []);
+
+  const selectSection = useCallback((sectionId: string | null) => {
+    setSelectedSectionId(sectionId);
+    setSelectedBlockPath(null);
+  }, []);
+
+  const selectBlock = useCallback((sectionId: string, blockPath: PageBlockPath) => {
+    setSelectedSectionId(sectionId);
+    setSelectedBlockPath(blockPath);
   }, []);
 
   const updateSelectedSection = useCallback(
@@ -423,41 +1048,157 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     [device, updateSelectedSection]
   );
 
-  const updateFirstBlockProps = useCallback(
-    (patch: Record<string, unknown>) => {
-      updateSelectedSection((section) => ({
-        ...section,
-        blocks: section.blocks.map((block, index) =>
-          index === 0 ? { ...block, props: { ...block.props, ...patch } } : block
-        ),
-      }));
+  const updateSelectedBlockControl = useCallback(
+    (control: PageEditorControlDefinition, value: unknown) => {
+      updateSelectedSection((section) => {
+        if (selectedBlockPath) {
+          return updatePageBlockAtPath(section, selectedBlockPath, (block) =>
+            patchBlockControlForDevice(block, device, control, value)
+          ).section;
+        }
+        return {
+          ...section,
+          blocks: section.blocks.map((block, index) =>
+            index === 0 ? patchBlockControlForDevice(block, device, control, value) : block
+          ),
+        };
+      });
+    },
+    [device, selectedBlockPath, updateSelectedSection]
+  );
+
+  const updateSelectedSectionControl = useCallback(
+    (control: PageEditorControlDefinition, value: unknown) => {
+      updateSelectedSection((section) =>
+        patchSectionControlForDevice(section, device, control, value)
+      );
+    },
+    [device, updateSelectedSection]
+  );
+
+  const updateSelectedSectionVariant = useCallback(
+    (variant: PageSectionVariant) => {
+      updateSelectedSection((section) =>
+        isPageSectionVariantOption(section.type, variant) ? { ...section, variant } : section
+      );
     },
     [updateSelectedSection]
+  );
+
+  const clearSelectedBlockOverride = useCallback(
+    (path: readonly string[]) => {
+      if (device === "desktop") return;
+      updateSelectedSection((section) => {
+        if (selectedBlockPath) {
+          return updatePageBlockAtPath(section, selectedBlockPath, (block) =>
+            clearBlockResponsiveOverride(block, device, path)
+          ).section;
+        }
+        return {
+          ...section,
+          blocks: section.blocks.map((block, index) =>
+            index === 0 ? clearBlockResponsiveOverride(block, device, path) : block
+          ),
+        };
+      });
+    },
+    [device, selectedBlockPath, updateSelectedSection]
   );
 
   const addSection = useCallback(
     (type: PageSectionType) => {
       const section = createStarterSection(type);
       setDocumentDraft((current) => ({ ...current, sections: [...current.sections, section] }));
-      setSelectedSectionId(section.id);
+      selectSection(section.id);
       setCommandOpen(false);
       setCommandQuery("");
+      setCommandActiveIndex(0);
+      setPendingBlockInsertTarget(null);
     },
-    [setDocumentDraft]
+    [selectSection, setDocumentDraft]
   );
 
   const addBlock = useCallback(
     (type: PageBlockType) => {
+      const block = createPageBlockV2(type);
       if (!selectedSectionId) {
-        addSection("content");
+        const section = createPageSectionV2("content", { blocks: [block] });
+        setDocumentDraft((current) => ({ ...current, sections: [...current.sections, section] }));
+        selectBlock(section.id, [{ index: 0 }]);
+        setCommandOpen(false);
+        setCommandQuery("");
+        setCommandActiveIndex(0);
+        setPendingBlockInsertTarget(null);
         return;
       }
-      const block = createPageBlockV2(type);
-      updateSelectedSection((section) => ({ ...section, blocks: [...section.blocks, block] }));
+      if (!selectedSection) return;
+      const target =
+        pendingBlockInsertTarget ??
+        getDefaultPageBlockInsertTarget(selectedSection, selectedBlockPath);
+      const result = insertPageBlockAtTarget(selectedSection, target, block);
+      if (result.status !== "ok" || !result.path) return;
+      setDocumentDraft((current) => {
+        const sections = current.sections.map((section) =>
+          section.id === selectedSectionId ? result.section : section
+        );
+        return { ...current, sections };
+      });
+      selectBlock(selectedSectionId, result.path);
       setCommandOpen(false);
       setCommandQuery("");
+      setCommandActiveIndex(0);
+      setPendingBlockInsertTarget(null);
     },
-    [addSection, selectedSectionId, updateSelectedSection]
+    [
+      pendingBlockInsertTarget,
+      selectBlock,
+      selectedBlockPath,
+      selectedSection,
+      selectedSectionId,
+      setDocumentDraft,
+    ]
+  );
+
+  const runCommandResult = useCallback(
+    (index: number) => {
+      if (index < filteredSections.length) {
+        const sectionOption = filteredSections[index];
+        if (sectionOption) addSection(sectionOption.type);
+        return;
+      }
+      const blockOption = filteredBlocks[index - filteredSections.length];
+      if (blockOption) addBlock(blockOption.type);
+    },
+    [addBlock, addSection, filteredBlocks, filteredSections]
+  );
+
+  const handleCommandQueryChange = useCallback((value: string) => {
+    setCommandQuery(value);
+    setCommandActiveIndex(0);
+  }, []);
+
+  const handleCommandKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setCommandActiveIndex((index) =>
+          commandResultCount > 0 ? (index + 1) % commandResultCount : 0
+        );
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setCommandActiveIndex((index) =>
+          commandResultCount > 0 ? (index - 1 + commandResultCount) % commandResultCount : 0
+        );
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runCommandResult(commandActiveIndex);
+      }
+    },
+    [commandActiveIndex, commandResultCount, runCommandResult]
   );
 
   const moveSelectedSection = useCallback(
@@ -477,6 +1218,40 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     [selectedSectionId, setDocumentDraft]
   );
 
+  const moveSelectedBlock = useCallback(
+    (direction: -1 | 1) => {
+      if (!selectedSectionId || !selectedSection || !selectedBlockPath) return;
+      const target = getPageBlockSiblingMoveTarget(selectedBlockPath, direction);
+      if (!target) return;
+      const result = movePageBlockToTarget(selectedSection, selectedBlockPath, target);
+      if (result.status !== "ok" || !result.path) return;
+      setDocumentDraft((current) => ({
+        ...current,
+        sections: current.sections.map((section) =>
+          section.id === selectedSectionId ? result.section : section
+        ),
+      }));
+      selectBlock(selectedSectionId, result.path);
+    },
+    [selectBlock, selectedBlockPath, selectedSection, selectedSectionId, setDocumentDraft]
+  );
+
+  const moveSelectedBlockToTarget = useCallback(
+    (target: PageBlockInsertTarget) => {
+      if (!selectedSectionId || !selectedSection || !selectedBlockPath) return;
+      const result = movePageBlockToTarget(selectedSection, selectedBlockPath, target);
+      if (result.status !== "ok" || !result.path) return;
+      setDocumentDraft((current) => ({
+        ...current,
+        sections: current.sections.map((section) =>
+          section.id === selectedSectionId ? result.section : section
+        ),
+      }));
+      selectBlock(selectedSectionId, result.path);
+    },
+    [selectBlock, selectedBlockPath, selectedSection, selectedSectionId, setDocumentDraft]
+  );
+
   const duplicateSelectedSection = useCallback(() => {
     if (!selectedSection) return;
     const duplicate = duplicateSectionWithIds(selectedSection);
@@ -486,17 +1261,204 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       sections.splice(index + 1, 0, duplicate);
       return { ...current, sections };
     });
-    setSelectedSectionId(duplicate.id);
-  }, [selectedSection, setDocumentDraft]);
+    selectSection(duplicate.id);
+  }, [selectSection, selectedSection, setDocumentDraft]);
 
-  const deleteSelectedSection = useCallback(() => {
-    if (!selectedSectionId) return;
-    setDocumentDraft((current) => {
-      const sections = current.sections.filter((section) => section.id !== selectedSectionId);
-      return { ...current, sections };
+  const duplicateSelectedBlock = useCallback(() => {
+    if (!selectedSectionId || !selectedSection || !selectedBlockPath) return;
+    const result = duplicatePageBlockAtPath(selectedSection, selectedBlockPath);
+    if (result.status !== "ok" || !result.path) return;
+    setDocumentDraft((current) => ({
+      ...current,
+      sections: current.sections.map((section) =>
+        section.id === selectedSectionId ? result.section : section
+      ),
+    }));
+    selectBlock(selectedSectionId, result.path);
+  }, [selectBlock, selectedBlockPath, selectedSection, selectedSectionId, setDocumentDraft]);
+
+  const deleteSectionById = useCallback(
+    (sectionId: string) => {
+      setDocumentDraft((current) => {
+        const sections = current.sections.filter((section) => section.id !== sectionId);
+        return { ...current, sections };
+      });
+      selectSection(null);
+    },
+    [selectSection, setDocumentDraft]
+  );
+
+  const deleteBlockByPath = useCallback(
+    (sectionId: string, blockPath: PageBlockPath) => {
+      const section = pageDocument.sections.find((entry) => entry.id === sectionId);
+      if (!section) return;
+      const result = deletePageBlockAtPath(section, blockPath);
+      if (result.status !== "ok") return;
+      setDocumentDraft((current) => ({
+        ...current,
+        sections: current.sections.map((entry) =>
+          entry.id === sectionId ? result.section : entry
+        ),
+      }));
+      if (result.fallbackPath) {
+        selectBlock(sectionId, result.fallbackPath);
+      } else {
+        selectSection(sectionId);
+      }
+    },
+    [pageDocument.sections, selectBlock, selectSection, setDocumentDraft]
+  );
+
+  const requestDeleteSelection = useCallback(() => {
+    if (selectedSectionId && selectedBlockPath && selectedBlock) {
+      setDeleteSelectionTarget({
+        kind: "block",
+        sectionId: selectedSectionId,
+        blockPath: selectedBlockPath,
+        label: getBlockDisplayLabel(selectedBlock),
+      });
+      return;
+    }
+    if (!selectedSectionId || !selectedSection) return;
+    setDeleteSelectionTarget({
+      kind: "section",
+      sectionId: selectedSectionId,
+      label: selectedSection.name,
     });
-    setSelectedSectionId(null);
-  }, [selectedSectionId, setDocumentDraft]);
+  }, [selectedBlock, selectedBlockPath, selectedSection, selectedSectionId]);
+
+  const confirmDeleteSelection = useCallback(() => {
+    if (!deleteSelectionTarget) return;
+    if (deleteSelectionTarget.kind === "block") {
+      deleteBlockByPath(deleteSelectionTarget.sectionId, deleteSelectionTarget.blockPath);
+    } else {
+      deleteSectionById(deleteSelectionTarget.sectionId);
+    }
+    setDeleteSelectionTarget(null);
+  }, [deleteBlockByPath, deleteSectionById, deleteSelectionTarget]);
+
+  const startToolbarDrag = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      toolbarDragRef.current = {
+        startX: event.clientX,
+        startY: event.clientY,
+        baseX: toolbarOffset.x,
+        baseY: toolbarOffset.y,
+      };
+      setToolbarDragging(true);
+    },
+    [toolbarOffset]
+  );
+
+  useEffect(() => {
+    if (!toolbarDragging || typeof window === "undefined") return undefined;
+    const handlePointerMove = (event: PointerEvent) => {
+      const drag = toolbarDragRef.current;
+      setToolbarOffset({
+        x: clampToolbarOffset(drag.baseX + event.clientX - drag.startX, -360, 360),
+        y: clampToolbarOffset(drag.baseY + event.clientY - drag.startY, -260, 260),
+      });
+    };
+    const handlePointerUp = () => setToolbarDragging(false);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [toolbarDragging]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const editableTarget = isEditableShortcutTarget(event.target);
+      if (event.key === "Escape") {
+        if (editableTarget && !commandOpen) return;
+        if (deleteSelectionTarget) {
+          event.preventDefault();
+          setDeleteSelectionTarget(null);
+          return;
+        }
+        if (commandOpen) {
+          event.preventDefault();
+          setCommandOpen(false);
+          setPendingBlockInsertTarget(null);
+          return;
+        }
+        if (layersOpen) {
+          event.preventDefault();
+          setLayersOpen(false);
+          return;
+        }
+        if (settingsOpen) {
+          event.preventDefault();
+          setSettingsOpen(false);
+          return;
+        }
+        if (revisionsOpen) {
+          event.preventDefault();
+          setRevisionsOpen(false);
+          return;
+        }
+        if (previewOpen) {
+          event.preventDefault();
+          setPreviewOpen(false);
+          return;
+        }
+        if (selectedSectionId) {
+          event.preventDefault();
+          selectSection(null);
+        }
+        return;
+      }
+      if (editableTarget) return;
+      const key = event.key.toLowerCase();
+      const hasModifier = event.metaKey || event.ctrlKey;
+      if (hasModifier && key === "k") {
+        event.preventDefault();
+        openCommandPalette();
+        return;
+      }
+      const hasBlockingOverlay =
+        commandOpen ||
+        settingsOpen ||
+        revisionsOpen ||
+        previewOpen ||
+        Boolean(deleteSelectionTarget);
+      if (hasBlockingOverlay) return;
+      if (hasModifier && key === "d" && selectedSection) {
+        event.preventDefault();
+        if (selectedBlock) {
+          duplicateSelectedBlock();
+        } else {
+          duplicateSelectedSection();
+        }
+        return;
+      }
+      if ((event.key === "Delete" || event.key === "Backspace") && selectedSection) {
+        event.preventDefault();
+        requestDeleteSelection();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [
+    commandOpen,
+    deleteSelectionTarget,
+    duplicateSelectedBlock,
+    duplicateSelectedSection,
+    layersOpen,
+    openCommandPalette,
+    previewOpen,
+    requestDeleteSelection,
+    revisionsOpen,
+    selectSection,
+    selectedBlock,
+    selectedSection,
+    selectedSectionId,
+    settingsOpen,
+  ]);
 
   useEffect(() => {
     if (!pageId || initialPageDetail) return;
@@ -510,7 +1472,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         setPage(loaded);
         const document = normalizePageData(loaded?.currentData);
         setPageDocument(document);
-        setSelectedSectionId(document.sections[0]?.id ?? null);
+        selectSection(document.sections[0]?.id ?? null);
         setSettingsTitle(loaded?.title ?? "Homepage");
         setSettingsSlug(loaded?.slug ?? "/");
         setShowInNav(document.settings.showInNav);
@@ -527,12 +1489,18 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     return () => {
       cancelled = true;
     };
-  }, [initialPageDetail, pageId]);
+  }, [initialPageDetail, pageId, selectSection]);
 
   useEffect(() => {
     if (!page) return;
+    const sections = summarizePageSectionsForAssistant(pageDocument.sections);
+    const selection = resolveAssistantPageSelection(sections, {
+      selectedSectionId,
+      selectedBlockId: selectedBlock ? selectedBlock.id : null,
+    });
     setActiveAssistantSurfaceContext({
       kind: "page",
+      schemaVersion: 2,
       page: {
         id: page.id,
         title: page.title,
@@ -540,13 +1508,14 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         status: page.status,
         template: pageDocument.settings.template,
       },
-      selectedSectionId,
-      selectedBlockId: null,
-      sections: summarizeSectionsForAssistant(pageDocument.sections),
+      selectedSectionId: selection.selectedSectionId,
+      selectedBlockId: selection.selectedBlockId,
+      selectedBlockPath: selection.selectedBlockPath,
+      sections,
       warnings: hasUnsavedChanges ? ["page_has_unsaved_changes"] : [],
     });
     return () => clearActiveAssistantSurfaceContext();
-  }, [hasUnsavedChanges, page, pageDocument, selectedSectionId]);
+  }, [hasUnsavedChanges, page, pageDocument, selectedBlock, selectedSectionId]);
 
   useEffect(() => {
     if (!pageId) return undefined;
@@ -555,15 +1524,23 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       if (hasUnsavedChanges) return;
       const cached = getCachedPageDetail(pageId);
       if (!cached) return;
+      const cachedDocument = normalizePageData(cached.currentData);
       setPage(cached);
-      setPageDocument(normalizePageData(cached.currentData));
+      setPageDocument(cachedDocument);
+      selectSection(cachedDocument.sections[0]?.id ?? null);
     });
-  }, [hasUnsavedChanges, pageId]);
+  }, [hasUnsavedChanges, pageId, selectSection]);
 
   useEffect(() => {
     if (!page || !hasUnsavedChanges) return undefined;
     const timeoutId = window.setTimeout(() => {
-      void autosavePage(page.id, { data: pageDocument });
+      void autosavePage(page.id, { data: pageDocument })
+        .then(() => setAutosaveError(null))
+        .catch((autosaveErrorValue: unknown) => {
+          setAutosaveError(
+            resolveInlineError(autosaveErrorValue, "Autosave failed. Try saving manually.")
+          );
+        });
     }, 1500);
     return () => window.clearTimeout(timeoutId);
   }, [hasUnsavedChanges, page, pageDocument]);
@@ -574,6 +1551,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setPage(updated);
     setPageDocument(normalizePageData(updated.currentData));
     setHasUnsavedChanges(false);
+    setAutosaveError(null);
     return updated;
   }, [page, pageDocument]);
 
@@ -657,8 +1635,10 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     try {
       const result = await restorePageRevision(page.id, revisionId);
       if (result.page) {
+        const restoredDocument = normalizePageData(result.page.currentData);
         setPage(result.page);
-        setPageDocument(normalizePageData(result.page.currentData));
+        setPageDocument(restoredDocument);
+        selectSection(restoredDocument.sections[0]?.id ?? null);
         setHasUnsavedChanges(false);
       }
       setRevisions(await listPageRevisions(page.id));
@@ -781,6 +1761,13 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           </Alert>
         ) : null}
 
+        {autosaveError ? (
+          <Alert variant="destructive" className="m-4">
+            <AlertTitle>Autosave paused</AlertTitle>
+            <AlertDescription>{autosaveError}</AlertDescription>
+          </Alert>
+        ) : null}
+
         <div className="flex items-center justify-center border-b bg-background/80 px-4 py-2 text-[11px] font-semibold uppercase text-muted-foreground">
           {device === "desktop" ? "Desktop · 1080px · base view" : `${device} · override context`}
         </div>
@@ -788,7 +1775,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         <div
           className="min-h-0 flex-1 overflow-auto overscroll-contain p-6"
           data-page-editor-canvas-scroller="true"
-          onClick={() => setSelectedSectionId(null)}
+          onClick={() => selectSection(null)}
         >
           <div
             className={`mx-auto min-h-full w-full rounded bg-white p-4 shadow-sm transition-all ${canvasDeviceFrameClassMap[device]}`}
@@ -800,7 +1787,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             ) : pageDocument.sections.length === 0 ? (
               <div className="p-16 text-center">
                 <p className="text-sm text-muted-foreground">This page has no sections yet.</p>
-                <Button type="button" className="mt-4" onClick={() => setCommandOpen(true)}>
+                <Button type="button" className="mt-4" onClick={openCommandPalette}>
                   <Plus className="h-4 w-4" />
                   Add section
                 </Button>
@@ -808,12 +1795,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             ) : (
               <div className="space-y-4">
                 <div className="flex justify-center">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCommandOpen(true)}
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={openCommandPalette}>
                     <Plus className="h-4 w-4" />
                     Add section
                   </Button>
@@ -822,8 +1804,13 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                   <SectionCanvas
                     key={section.id}
                     section={resolvePageSectionForBreakpoint(section, device)}
+                    baseSection={section}
                     selected={section.id === selectedSectionId}
-                    onSelect={() => setSelectedSectionId(section.id)}
+                    selectedBlockPath={section.id === selectedSectionId ? selectedBlockPath : null}
+                    device={device}
+                    onSelect={() => selectSection(section.id)}
+                    onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
+                    onAddBlock={openCommandPalette}
                   />
                 ))}
               </div>
@@ -846,151 +1833,272 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             </div>
             <div className="space-y-1">
               {pageDocument.sections.map((section) => (
-                <button
-                  key={section.id}
-                  type="button"
-                  className={`flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm ${
-                    section.id === selectedSectionId
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-muted"
-                  }`}
-                  onClick={() => setSelectedSectionId(section.id)}
-                >
-                  <span>{section.name}</span>
-                  <span className="text-xs uppercase text-muted-foreground">{section.type}</span>
-                </button>
+                <div key={section.id} className="space-y-1">
+                  <button
+                    type="button"
+                    className={`flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm ${
+                      section.id === selectedSectionId && !selectedBlockId
+                        ? "bg-primary/10 text-primary"
+                        : "hover:bg-muted"
+                    }`}
+                    data-page-editor-layer-section-id={section.id}
+                    data-page-editor-responsive-target={
+                      hasAnyResponsiveOverride(
+                        device,
+                        readSectionBreakpointOverride(section, device)
+                      )
+                        ? "override"
+                        : "inherited"
+                    }
+                    onClick={() => selectSection(section.id)}
+                  >
+                    <span>{section.name}</span>
+                    <span className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
+                      {hasAnyResponsiveOverride(
+                        device,
+                        readSectionBreakpointOverride(section, device)
+                      )
+                        ? `${device} override`
+                        : null}
+                      {section.type}
+                    </span>
+                  </button>
+                  <div className="space-y-1 pl-4">
+                    <LayerBlockRows
+                      section={section}
+                      blocks={section.blocks}
+                      ownerPath={null}
+                      selectedBlockPath={
+                        section.id === selectedSectionId ? selectedBlockPath : null
+                      }
+                      device={device}
+                      onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
+                      onAddToTarget={openCommandPaletteForTarget}
+                      onMoveToTarget={moveSelectedBlockToTarget}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         ) : null}
 
         {selectedSection && resolvedSelectedSection ? (
-          <div className="absolute bottom-6 left-1/2 z-30 w-[min(760px,calc(100%-2rem))] -translate-x-1/2 rounded-xl bg-slate-950 p-2 text-white shadow-2xl">
+          <div
+            className="absolute bottom-6 left-1/2 z-30 w-[min(760px,calc(100%-2rem))] rounded-xl bg-slate-950 p-2 text-white shadow-2xl"
+            style={{
+              transform: `translateX(calc(-50% + ${toolbarOffset.x}px)) translateY(${toolbarOffset.y}px)`,
+            }}
+            aria-label={`${toolbarSelectionLabel} tools`}
+            data-page-editor-floating-toolbar="true"
+            data-page-editor-toolbar-collapsed={toolbarCollapsed ? "true" : "false"}
+            data-page-editor-toolbar-dragging={toolbarDragging ? "true" : "false"}
+          >
             <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                title="Drag toolbar"
+                aria-label="Drag toolbar"
+                onPointerDown={startToolbarDrag}
+              >
+                <GripVertical className="h-4 w-4" />
+              </Button>
               <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
                 <PanelTop className="h-4 w-4 text-slate-400" />
-                <span className="truncate text-sm font-semibold">{selectedSection.name}</span>
+                <span className="truncate text-sm font-semibold">{toolbarSelectionLabel}</span>
                 <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase">
-                  {selectedSection.variant}
+                  {toolbarSelectionMeta}
                 </span>
               </div>
-              {[
-                ["layout", LayoutPanelTop],
-                ["content", Type],
-                ["style", Brush],
-                ["spacing", ListPlus],
-                ["responsive", MonitorSmartphone],
-                ["visibility", Eye],
-              ].map(([panel, Icon]) => (
-                <Button
-                  key={panel as string}
-                  type="button"
-                  variant={activePanel === panel ? "secondary" : "ghost"}
-                  size="icon-sm"
-                  title={String(panel)}
-                  onClick={() => setActivePanel(panel as ToolbarPanel)}
-                >
-                  <Icon className="h-4 w-4" />
-                </Button>
-              ))}
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                title="Move up"
-                onClick={() => moveSelectedSection(-1)}
+                title={toolbarCollapsed ? "Expand toolbar" : "Collapse toolbar"}
+                aria-label={toolbarCollapsed ? "Expand toolbar" : "Collapse toolbar"}
+                onClick={() => setToolbarCollapsed((collapsed) => !collapsed)}
               >
-                <ArrowUp className="h-4 w-4" />
+                {toolbarCollapsed ? (
+                  <Maximize2 className="h-4 w-4" />
+                ) : (
+                  <Minimize2 className="h-4 w-4" />
+                )}
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                title="Move down"
-                onClick={() => moveSelectedSection(1)}
-              >
-                <ArrowDown className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                title="Duplicate"
-                onClick={duplicateSelectedSection}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                title="Delete"
-                onClick={deleteSelectedSection}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {!toolbarCollapsed
+                ? toolbarPanelOptions.map(({ panel, label, Icon }) => (
+                    <Button
+                      key={panel}
+                      type="button"
+                      variant={activePanel === panel ? "secondary" : "ghost"}
+                      size="icon-sm"
+                      title={`${label} panel`}
+                      aria-label={`${label} panel`}
+                      onClick={() => setActivePanel(panel)}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </Button>
+                  ))
+                : null}
+              {!toolbarCollapsed ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    title={selectedBlock ? "Move block up" : "Move section up"}
+                    aria-label={selectedBlock ? "Move block up" : "Move section up"}
+                    onClick={() =>
+                      selectedBlock ? moveSelectedBlock(-1) : moveSelectedSection(-1)
+                    }
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    title={selectedBlock ? "Move block down" : "Move section down"}
+                    aria-label={selectedBlock ? "Move block down" : "Move section down"}
+                    onClick={() => (selectedBlock ? moveSelectedBlock(1) : moveSelectedSection(1))}
+                  >
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    title={selectedBlock ? "Duplicate block" : "Duplicate section"}
+                    aria-label={selectedBlock ? "Duplicate block" : "Duplicate section"}
+                    onClick={selectedBlock ? duplicateSelectedBlock : duplicateSelectedSection}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    title={selectedBlock ? "Delete block" : "Delete section"}
+                    aria-label={selectedBlock ? "Delete block" : "Delete section"}
+                    onClick={requestDeleteSelection}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : null}
             </div>
-            <ToolbarSubpanel
-              panel={activePanel}
-              device={device}
-              section={resolvedSelectedSection}
-              onLayout={(patch) => updateSectionGroup("layout", patch)}
-              onStyle={(patch) => updateSectionGroup("style", patch)}
-              onSpacing={(patch) => updateSectionGroup("spacing", patch)}
-              onVisibility={(patch) => updateSectionGroup("visibility", patch)}
-              onContent={updateFirstBlockProps}
-              onClearOverride={(path) => {
-                if (device === "desktop") return;
-                updateSelectedSection((section) => clearResponsiveOverride(section, device, path));
-              }}
-              onAddBlock={() => setCommandOpen(true)}
-            />
+            {!toolbarCollapsed ? (
+              <ToolbarSubpanel
+                panel={activePanel}
+                device={device}
+                section={resolvedSelectedSection}
+                baseSection={selectedSection}
+                block={toolbarBlockTarget}
+                baseBlock={selectedBlockId ? selectedBlock : (selectedSection.blocks[0] ?? null)}
+                hasBlockSelection={Boolean(selectedBlockId)}
+                onSectionControlChange={updateSelectedSectionControl}
+                onSectionVariantChange={updateSelectedSectionVariant}
+                onSectionStyle={(patch) => updateSectionGroup("style", patch)}
+                onSectionVisibility={(patch) => updateSectionGroup("visibility", patch)}
+                onBlockControlChange={updateSelectedBlockControl}
+                onClearOverride={(path) => {
+                  if (device === "desktop") return;
+                  updateSelectedSection((section) =>
+                    clearResponsiveOverride(section, device, path)
+                  );
+                }}
+                onClearBlockOverride={clearSelectedBlockOverride}
+                onAddBlock={openCommandPalette}
+              />
+            ) : null}
           </div>
         ) : null}
 
         {commandOpen ? (
-          <div className="absolute inset-0 z-40 flex items-start justify-center bg-background/50 p-8 backdrop-blur-sm">
+          <div
+            className="absolute inset-0 z-40 flex items-start justify-center bg-background/50 p-8 backdrop-blur-sm"
+            role="dialog"
+            aria-label="Command palette"
+          >
             <div className="w-full max-w-xl rounded-xl border bg-background p-4 shadow-2xl">
               <div className="flex items-center gap-2 rounded border px-3 py-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <input
                   className="w-full bg-transparent text-sm outline-none"
                   value={commandQuery}
-                  onChange={(event) => setCommandQuery(event.target.value)}
+                  onChange={(event) => handleCommandQueryChange(event.target.value)}
+                  onKeyDown={handleCommandKeyDown}
                   placeholder="Search sections and blocks"
+                  aria-label="Search sections and blocks"
+                  aria-controls="page-editor-command-results"
                   autoFocus
                 />
               </div>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div id="page-editor-command-results" className="mt-4 grid gap-4 md:grid-cols-2">
                 <CommandGroup title="Sections">
-                  {filteredSections.map((option) => (
+                  {filteredSections.map((option, index) => (
                     <CommandButton
                       key={option.type}
                       label={option.label}
                       description={option.description}
+                      active={commandActiveIndex === index}
                       onClick={() => addSection(option.type)}
                     />
                   ))}
                 </CommandGroup>
                 <CommandGroup title="Blocks">
-                  {filteredBlocks.map((option) => (
-                    <CommandButton
-                      key={option.type}
-                      label={option.label}
-                      description={option.description}
-                      onClick={() => addBlock(option.type)}
-                    />
-                  ))}
+                  {filteredBlocks.map((option, index) => {
+                    const resultIndex = filteredSections.length + index;
+                    return (
+                      <CommandButton
+                        key={option.type}
+                        label={option.label}
+                        description={option.description}
+                        active={commandActiveIndex === resultIndex}
+                        onClick={() => addBlock(option.type)}
+                      />
+                    );
+                  })}
                 </CommandGroup>
               </div>
               <div className="mt-4 flex justify-end">
-                <Button type="button" variant="ghost" onClick={() => setCommandOpen(false)}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setCommandOpen(false);
+                    setCommandActiveIndex(0);
+                    setPendingBlockInsertTarget(null);
+                  }}
+                >
                   Close
                 </Button>
               </div>
             </div>
           </div>
         ) : null}
+
+        <ConfirmActionDialog
+          open={Boolean(deleteSelectionTarget)}
+          onOpenChange={(open) => {
+            if (!open) setDeleteSelectionTarget(null);
+          }}
+          title={
+            deleteSelectionTarget?.kind === "block"
+              ? "Delete selected block"
+              : "Delete selected section"
+          }
+          description={
+            deleteSelectionTarget?.kind === "block"
+              ? "This removes the selected block from the page draft."
+              : "This removes the selected section and its blocks from the page draft."
+          }
+          targetLabel={deleteSelectionTarget?.label}
+          confirmLabel={deleteSelectionTarget?.kind === "block" ? "Delete block" : "Delete section"}
+          tone="destructive"
+          onConfirm={confirmDeleteSelection}
+        />
 
         <SettingsSheet
           open={settingsOpen}
@@ -1047,15 +2155,21 @@ const CommandGroup = ({ title, children }: { title: string; children: ReactNode 
 const CommandButton = ({
   label,
   description,
+  active,
   onClick,
 }: {
   label: string;
   description: string;
+  active?: boolean;
   onClick: () => void;
 }) => (
   <button
     type="button"
-    className="w-full rounded border p-3 text-left hover:bg-muted"
+    className={`w-full rounded border p-3 text-left hover:bg-muted ${
+      active ? "border-primary bg-primary/10" : ""
+    }`}
+    aria-current={active ? "true" : undefined}
+    data-page-editor-command-active={active ? "true" : "false"}
     onClick={onClick}
   >
     <span className="block text-sm font-semibold">{label}</span>
@@ -1067,159 +2181,459 @@ const ToolbarSubpanel = ({
   panel,
   device,
   section,
-  onLayout,
-  onStyle,
-  onSpacing,
-  onVisibility,
-  onContent,
+  baseSection,
+  block,
+  baseBlock,
+  hasBlockSelection,
+  onSectionControlChange,
+  onSectionVariantChange,
+  onSectionStyle,
+  onSectionVisibility,
+  onBlockControlChange,
   onClearOverride,
+  onClearBlockOverride,
   onAddBlock,
 }: {
   panel: ToolbarPanel;
   device: PageBreakpoint;
   section: PageSectionV2;
-  onLayout: (patch: Partial<PageSectionV2["layout"]>) => void;
-  onStyle: (patch: Partial<PageSectionV2["style"]>) => void;
-  onSpacing: (patch: Partial<PageSectionV2["spacing"]>) => void;
-  onVisibility: (patch: Partial<PageSectionV2["visibility"]>) => void;
-  onContent: (patch: Record<string, unknown>) => void;
+  baseSection: PageSectionV2;
+  block: PageBlockV2 | null;
+  baseBlock: PageBlockV2 | null;
+  hasBlockSelection: boolean;
+  onSectionControlChange: (control: PageEditorControlDefinition, value: unknown) => void;
+  onSectionVariantChange: (variant: PageSectionVariant) => void;
+  onSectionStyle: (patch: Partial<PageSectionV2["style"]>) => void;
+  onSectionVisibility: (patch: Partial<PageSectionV2["visibility"]>) => void;
+  onBlockControlChange: (control: PageEditorControlDefinition, value: unknown) => void;
   onClearOverride: (path: readonly string[]) => void;
+  onClearBlockOverride: (path: readonly string[]) => void;
   onAddBlock: () => void;
-}) => (
-  <div className="mt-2 rounded-lg bg-white p-3 text-slate-950">
-    {panel === "layout" ? (
-      <div className="grid gap-3 sm:grid-cols-3">
-        <NumberField
-          label="Columns"
-          value={section.layout.columns}
-          min={1}
-          max={4}
-          onChange={(columns) => onLayout({ columns })}
-        />
-        <NumberField
-          label="Max width"
-          value={section.layout.maxWidth}
-          min={320}
-          max={1920}
-          onChange={(maxWidth) => onLayout({ maxWidth })}
-        />
-        <SelectField
-          label="Align"
-          value={section.layout.align}
-          options={["start", "center", "end", "stretch"]}
-          onChange={(align) => onLayout({ align: align as PageSectionV2["layout"]["align"] })}
-        />
-      </div>
-    ) : null}
-    {panel === "content" ? (
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-        <TextField
-          label="Primary text"
-          value={readText(section.blocks[0]?.props.text ?? section.blocks[0]?.props.label)}
-          onChange={(text) => onContent({ text, label: text })}
-        />
-        <div className="flex items-end">
-          <Button type="button" variant="outline" onClick={onAddBlock}>
-            <Plus className="h-4 w-4" />
-            Add block
-          </Button>
+}) => {
+  const primaryBlock = block ?? (hasBlockSelection ? undefined : section.blocks[0]);
+  const primaryBaseBlock = baseBlock ?? (hasBlockSelection ? undefined : baseSection.blocks[0]);
+  const blockPanelControls = primaryBlock
+    ? getPageEditorControlsForTarget({ kind: "block", type: primaryBlock.type }).filter(
+        (control) => control.panel === panel
+      )
+    : [];
+  const sectionPanelControls = pageUniversalSectionControls.filter(
+    (control) => control.panel === panel
+  );
+  const sectionVariantControl =
+    panel === "layout" ? getPageSectionVariantControl(section.type) : null;
+  const shouldRenderBlockControls =
+    Boolean(primaryBlock) && (panel === "content" || (hasBlockSelection && panel !== "responsive"));
+  const sectionOverride = readSectionBreakpointOverride(baseSection, device);
+  const hasTargetOverride =
+    hasAnyResponsiveOverride(device, sectionOverride) ||
+    hasAnyResponsiveOverride(device, readBlockBreakpointOverride(primaryBaseBlock, device));
+  return (
+    <div
+      className="mt-2 rounded-lg bg-white p-3 text-slate-950"
+      data-page-editor-toolbar-panel={panel}
+      role="region"
+      aria-label={`${panel} toolbar panel`}
+    >
+      {shouldRenderBlockControls ? (
+        <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
+          {primaryBlock
+            ? blockPanelControls.map((control) => (
+                <RegistryControlField
+                  key={control.id}
+                  block={primaryBlock}
+                  baseBlock={primaryBaseBlock}
+                  device={device}
+                  control={control}
+                  onChange={onBlockControlChange}
+                  onReset={onClearBlockOverride}
+                />
+              ))
+            : null}
+          {panel === "content" ? (
+            <div className="flex items-end">
+              <Button type="button" variant="outline" onClick={onAddBlock}>
+                <Plus className="h-4 w-4" />
+                Add block
+              </Button>
+            </div>
+          ) : null}
         </div>
-      </div>
-    ) : null}
-    {panel === "style" ? (
-      <div className="grid gap-3 sm:grid-cols-3">
-        <TextField
-          label="Background"
-          value={section.style.background}
-          onChange={(background) => onStyle({ background })}
-        />
-        <TextField
-          label="Accent"
-          value={section.style.accent}
-          onChange={(accent) => onStyle({ accent })}
-        />
-        <NumberField
-          label="Radius"
-          value={section.style.radius}
-          min={0}
-          max={64}
-          onChange={(radius) => onStyle({ radius })}
-        />
-      </div>
-    ) : null}
-    {panel === "spacing" ? (
-      <div className="grid gap-3 sm:grid-cols-5">
-        <NumberField
-          label="Top"
-          value={section.spacing.paddingTop}
-          min={0}
-          max={240}
-          onChange={(paddingTop) => onSpacing({ paddingTop })}
-        />
-        <NumberField
-          label="Bottom"
-          value={section.spacing.paddingBottom}
-          min={0}
-          max={240}
-          onChange={(paddingBottom) => onSpacing({ paddingBottom })}
-        />
-        <NumberField
-          label="Left"
-          value={section.spacing.paddingLeft}
-          min={0}
-          max={160}
-          onChange={(paddingLeft) => onSpacing({ paddingLeft })}
-        />
-        <NumberField
-          label="Right"
-          value={section.spacing.paddingRight}
-          min={0}
-          max={160}
-          onChange={(paddingRight) => onSpacing({ paddingRight })}
-        />
-        <NumberField
-          label="Gap"
-          value={section.spacing.gap}
-          min={0}
-          max={120}
-          onChange={(gap) => onSpacing({ gap })}
-        />
-      </div>
-    ) : null}
-    {panel === "responsive" ? (
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {device === "desktop"
-            ? "Desktop is the base cascade."
-            : `${device} edits create overrides.`}
-        </p>
-        {device !== "desktop" ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onClearOverride(["layout", "columns"])}
+      ) : null}
+      {!shouldRenderBlockControls &&
+      (panel === "layout" ||
+        panel === "style" ||
+        panel === "background" ||
+        panel === "spacing" ||
+        panel === "visibility") ? (
+        <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
+          {sectionPanelControls.map((control) => (
+            <SectionRegistryControlField
+              key={control.id}
+              section={section}
+              baseSection={baseSection}
+              device={device}
+              control={control}
+              onChange={onSectionControlChange}
+              onReset={onClearOverride}
+            />
+          ))}
+          {sectionVariantControl ? (
+            <SectionVariantControlField
+              section={section}
+              control={sectionVariantControl}
+              onChange={onSectionVariantChange}
+            />
+          ) : null}
+          {panel === "background" ? (
+            <SupplementalSectionField
+              label="Background image"
+              value={section.style.backgroundImage ?? ""}
+              device={device}
+              override={hasResponsiveOverride(device, sectionOverride, [
+                "style",
+                "backgroundImage",
+              ])}
+              onReset={() => onClearOverride(["style", "backgroundImage"])}
+              onChange={(backgroundImage) =>
+                onSectionStyle({ backgroundImage: backgroundImage.trim() || null })
+              }
+            />
+          ) : null}
+          {panel === "visibility" ? (
+            <>
+              <SupplementalSectionField
+                label="Anchor"
+                value={section.visibility.anchor ?? ""}
+                device={device}
+                override={hasResponsiveOverride(device, sectionOverride, ["visibility", "anchor"])}
+                onReset={() => onClearOverride(["visibility", "anchor"])}
+                onChange={(anchor) => onSectionVisibility({ anchor: anchor.trim() || null })}
+              />
+              <SupplementalSectionField
+                label="Starts at"
+                value={section.visibility.startsAt ?? ""}
+                device={device}
+                override={hasResponsiveOverride(device, sectionOverride, [
+                  "visibility",
+                  "startsAt",
+                ])}
+                onReset={() => onClearOverride(["visibility", "startsAt"])}
+                onChange={(startsAt) => onSectionVisibility({ startsAt: startsAt.trim() || null })}
+              />
+              <SupplementalSectionField
+                label="Ends at"
+                value={section.visibility.endsAt ?? ""}
+                device={device}
+                override={hasResponsiveOverride(device, sectionOverride, ["visibility", "endsAt"])}
+                onReset={() => onClearOverride(["visibility", "endsAt"])}
+                onChange={(endsAt) => onSectionVisibility({ endsAt: endsAt.trim() || null })}
+              />
+            </>
+          ) : null}
+        </div>
+      ) : null}
+      {!shouldRenderBlockControls && panel === "content" ? (
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <p className="flex items-center text-sm text-muted-foreground">
+            {primaryBlock ? getBlockDisplayLabel(primaryBlock) : "No block selected"}
+          </p>
+          <div className="flex items-end">
+            <Button type="button" variant="outline" onClick={onAddBlock}>
+              <Plus className="h-4 w-4" />
+              Add block
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      {panel === "responsive" ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            {device === "desktop"
+              ? "Desktop is the base cascade."
+              : `${device} edits create overrides.`}
+          </p>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+              hasTargetOverride ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+            }`}
+            data-page-editor-responsive-target-state={hasTargetOverride ? "override" : "inherited"}
           >
-            Clear columns override
-          </Button>
-        ) : null}
-      </div>
-    ) : null}
-    {panel === "visibility" ? (
-      <div className="grid gap-3 sm:grid-cols-2">
+            {device === "desktop" ? "base" : hasTargetOverride ? "override" : "inherited"}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const SectionRegistryControlField = ({
+  section,
+  baseSection,
+  device,
+  control,
+  onChange,
+  onReset,
+}: {
+  section: PageSectionV2;
+  baseSection: PageSectionV2;
+  device: PageBreakpoint;
+  control: PageEditorControlDefinition;
+  onChange: (control: PageEditorControlDefinition, value: unknown) => void;
+  onReset: (path: readonly string[]) => void;
+}) => {
+  const value = readPathValue(section, control.path);
+  const fieldValue = fieldValueFromControlValue(control, value);
+  const override = hasResponsiveOverride(
+    device,
+    readSectionBreakpointOverride(baseSection, device),
+    control.overridePath
+  );
+  const handleChange = (nextValue: string) => {
+    onChange(control, coerceControlFieldValue(control, nextValue));
+  };
+
+  if (control.input === "number") {
+    const parsed = Number(fieldValue);
+    return (
+      <ResponsiveControlShell
+        device={device}
+        override={override}
+        onReset={() => onReset(control.overridePath)}
+      >
+        <NumberField
+          label={control.label}
+          value={Number.isFinite(parsed) ? parsed : (control.clamp?.min ?? 0)}
+          min={control.clamp?.min ?? 0}
+          max={control.clamp?.max ?? 10_000}
+          onChange={(nextValue) =>
+            onChange(control, coerceControlFieldValue(control, String(nextValue)))
+          }
+        />
+      </ResponsiveControlShell>
+    );
+  }
+
+  if (control.input === "select" || control.input === "segmented") {
+    return (
+      <ResponsiveControlShell
+        device={device}
+        override={override}
+        onReset={() => onReset(control.overridePath)}
+      >
         <SelectField
-          label="Visible"
-          value={section.visibility.visible ? "yes" : "no"}
+          label={control.label}
+          value={fieldValue}
+          options={control.options ?? []}
+          onChange={handleChange}
+        />
+      </ResponsiveControlShell>
+    );
+  }
+
+  if (control.input === "switch") {
+    return (
+      <ResponsiveControlShell
+        device={device}
+        override={override}
+        onReset={() => onReset(control.overridePath)}
+      >
+        <SelectField
+          label={control.label}
+          value={fieldValue}
           options={["yes", "no"]}
-          onChange={(value) => onVisibility({ visible: value === "yes" })}
+          onChange={handleChange}
         />
-        <TextField
-          label="Anchor"
-          value={section.visibility.anchor ?? ""}
-          onChange={(anchor) => onVisibility({ anchor })}
-        />
+      </ResponsiveControlShell>
+    );
+  }
+
+  return (
+    <ResponsiveControlShell
+      device={device}
+      override={override}
+      onReset={() => onReset(control.overridePath)}
+    >
+      <TextField label={control.label} value={fieldValue} onChange={handleChange} />
+    </ResponsiveControlShell>
+  );
+};
+
+const SectionVariantControlField = ({
+  section,
+  control,
+  onChange,
+}: {
+  section: PageSectionV2;
+  control: PageEditorControlDefinition;
+  onChange: (variant: PageSectionVariant) => void;
+}) => {
+  const options = control.options ?? [];
+  const fallback = options[0] ?? "default";
+  const value = options.includes(section.variant) ? section.variant : fallback;
+  return (
+    <div className="grid gap-1" data-page-editor-section-variant-control="base">
+      <SelectField
+        label={control.label}
+        value={value}
+        options={options}
+        onChange={(nextValue) => {
+          if (isPageSectionVariantOption(section.type, nextValue)) {
+            onChange(nextValue);
+          }
+        }}
+      />
+      <div className="flex min-h-6 items-center justify-between gap-2">
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+          Base
+        </span>
       </div>
-    ) : null}
+    </div>
+  );
+};
+
+const SupplementalSectionField = ({
+  label,
+  value,
+  device,
+  override,
+  onReset,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  device: PageBreakpoint;
+  override: boolean;
+  onReset: () => void;
+  onChange: (value: string) => void;
+}) => (
+  <ResponsiveControlShell device={device} override={override} onReset={onReset}>
+    <TextField label={label} value={value} onChange={onChange} />
+  </ResponsiveControlShell>
+);
+
+const RegistryControlField = ({
+  block,
+  baseBlock,
+  device,
+  control,
+  onChange,
+  onReset,
+}: {
+  block: PageBlockV2;
+  baseBlock: PageBlockV2 | undefined;
+  device: PageBreakpoint;
+  control: PageEditorControlDefinition;
+  onChange: (control: PageEditorControlDefinition, value: unknown) => void;
+  onReset: (path: readonly string[]) => void;
+}) => {
+  const value = readPathValue(block, control.path);
+  const fieldValue = fieldValueFromControlValue(control, value);
+  const override = hasResponsiveOverride(
+    device,
+    readBlockBreakpointOverride(baseBlock, device),
+    control.overridePath
+  );
+  const handleChange = (nextValue: string) => {
+    onChange(control, coerceControlFieldValue(control, nextValue));
+  };
+
+  if (control.input === "number") {
+    const parsed = Number(fieldValue);
+    return (
+      <ResponsiveControlShell
+        device={device}
+        override={override}
+        onReset={() => onReset(control.overridePath)}
+      >
+        <NumberField
+          label={control.label}
+          value={Number.isFinite(parsed) ? parsed : (control.clamp?.min ?? 0)}
+          min={control.clamp?.min ?? 0}
+          max={control.clamp?.max ?? 10_000}
+          onChange={(nextValue) =>
+            onChange(control, coerceControlFieldValue(control, String(nextValue)))
+          }
+        />
+      </ResponsiveControlShell>
+    );
+  }
+
+  if (control.input === "select" || control.input === "segmented") {
+    return (
+      <ResponsiveControlShell
+        device={device}
+        override={override}
+        onReset={() => onReset(control.overridePath)}
+      >
+        <SelectField
+          label={control.label}
+          value={fieldValue}
+          options={control.options ?? []}
+          onChange={handleChange}
+        />
+      </ResponsiveControlShell>
+    );
+  }
+
+  if (control.input === "switch") {
+    return (
+      <ResponsiveControlShell
+        device={device}
+        override={override}
+        onReset={() => onReset(control.overridePath)}
+      >
+        <SelectField
+          label={control.label}
+          value={fieldValue}
+          options={["yes", "no"]}
+          onChange={handleChange}
+        />
+      </ResponsiveControlShell>
+    );
+  }
+
+  return (
+    <ResponsiveControlShell
+      device={device}
+      override={override}
+      onReset={() => onReset(control.overridePath)}
+    >
+      <TextField label={control.label} value={fieldValue} onChange={handleChange} />
+    </ResponsiveControlShell>
+  );
+};
+
+const ResponsiveControlShell = ({
+  device,
+  override,
+  onReset,
+  children,
+}: {
+  device: PageBreakpoint;
+  override: boolean;
+  onReset: () => void;
+  children: ReactNode;
+}) => (
+  <div
+    className="grid gap-1"
+    data-page-editor-responsive-field={override ? "override" : "inherited"}
+  >
+    {children}
+    <div className="flex min-h-6 items-center justify-between gap-2">
+      <span
+        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+          override ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+        }`}
+      >
+        {device === "desktop" ? "Base" : override ? "Override" : "Inherited"}
+      </span>
+      {device !== "desktop" && override ? (
+        <Button type="button" variant="ghost" size="sm" onClick={onReset}>
+          Reset
+        </Button>
+      ) : null}
+    </div>
   </div>
 );
 
@@ -1276,7 +2690,7 @@ const SelectField = ({
 }: {
   label: string;
   value: string;
-  options: string[];
+  options: readonly string[];
   onChange: (value: string) => void;
 }) => (
   <label className="grid gap-1 text-xs font-semibold uppercase text-muted-foreground">

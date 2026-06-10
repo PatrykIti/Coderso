@@ -5,8 +5,9 @@
 **Priority:** High
 **Category:** Admin UI / Pages / Validation
 **Estimated Effort:** Medium
-**Dependencies:** TASK-418-01
-**Status:** ⏳ To Do
+**Dependencies:** TASK-418-01, TASK-418-02-L04
+**Status:** ✅ Done
+**Completed:** 2026-06-09
 
 ---
 
@@ -15,6 +16,9 @@
 Replace generic first-block content patching with block-type-aware helpers that
 cannot write props rejected by the Pages v2 normalizer. Surface autosave errors
 with bounded UI feedback instead of silently failing in the background.
+This leaf depends on the block style/responsive substrate so breakpoint-aware
+patching writes to a schema-owned base/override channel instead of inventing a
+temporary UI-only shape.
 
 ---
 
@@ -24,14 +28,14 @@ with bounded UI feedback instead of silently failing in the background.
 type PageEditorSelection =
   | { kind: "none" }
   | { kind: "section"; sectionId: string }
-  | { kind: "block"; sectionId: string; blockPath: BlockPath };
+  | { kind: "block"; sectionId: string; blockId: string };
 
 function patchSelectedBlockProps(document, selection, patch) {
   const block = getSelectedBlock(document, selection);
   if (!block) return document;
   const allowed = getAllowedBlockPropKeys(block.type);
   const nextProps = pickKnownKeys({ ...block.props, ...patch }, allowed);
-  return replaceBlockAtPath(document, selection.blockPath, {
+  return replaceBlockById(document, selection.sectionId, selection.blockId, {
     ...block,
     props: normalizeBlockPropsForEditor(block.type, nextProps)
   });
@@ -118,3 +122,23 @@ mutated by a non-desktop edit.
 ## Documentation Updates Required
 
 - `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md` closeout note.
+
+---
+
+## Closeout
+
+- Replaced generic content patching with block-type-aware primary content patch
+  helpers that filter through `pageBlockPropKeys`.
+- Added breakpoint-aware block prop writes: desktop edits update base props;
+  tablet/mobile edits write sparse `block.responsive[device].props` deltas.
+- Added button URL editing through the same allowlist-bound patch path.
+- Surfaced autosave failures as a bounded inline "Autosave paused" alert.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
+  - Passed: 8 tests.
+- `bun --cwd core lint:types`
+  - Passed.
+- `bun --cwd core lint`
+  - Passed.

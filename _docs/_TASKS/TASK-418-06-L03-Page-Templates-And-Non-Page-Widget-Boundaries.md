@@ -6,7 +6,9 @@
 **Category:** Pages / Templates / Widget Boundaries
 **Estimated Effort:** Medium
 **Dependencies:** TASK-418-05, TASK-418-06-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-10
+**Completed:** 2026-06-10
 
 ---
 
@@ -56,8 +58,12 @@ Expected data flow:
 
 Error handling:
 
-- Boundary tests fail if Page v2 blocks are sent to widget-template runtime or
-  legacy widget blocks are sent to Page v2 runtime.
+- Boundary tests fail if fresh/cross-surface Page v2 blocks are sent to
+  widget-template runtime or legacy widget blocks are sent to Page v2 template
+  inputs.
+- Stored legacy Page rows keep the existing compatibility behavior from
+  `_docs/PAGE_MODEL.md`: read/render paths non-destructively reset them to an
+  empty v2 document instead of hydrating old widget-template blocks.
 - Follow-up scope is documented when migration is intentionally deferred.
 
 Regression-test shape:
@@ -98,3 +104,37 @@ Regression-test shape:
 
 - `_docs/PAGE_MODEL.md`
 - Follow-up task under `_docs/_TASKS/` if Page Templates migration is deferred.
+
+---
+
+## Completion Notes
+
+- Added `core/services/pages/pageTemplateBoundary.ts` as the Pages-owned helper
+  for Page v2 template input and non-Page legacy widget surface contracts.
+- `renderPublicPageV2RuntimeHtml` now resolves Page v2 template input through
+  that helper while preserving the existing stored legacy Page row reset path.
+- Added boundary tests for Page v2 template input, fresh legacy `blocks[]`
+  rejection, non-Page `WidgetBlock[]` surfaces, and Page v2 documents rejected
+  at widget-template/custom-screen/detail-page boundaries.
+- Created follow-up `TASK-420` with physical child tasks for any future Advanced
+  Widgets to Page Templates surface migration, so TASK-418 does not silently
+  expand into a product/editor replacement.
+- Local pre-implementation audit found and corrected one task-contract
+  ambiguity: fresh cross-surface boundary failures are required, but stored
+  legacy Page rows keep the documented non-destructive read/render reset
+  behavior.
+- Claude read-only drift audit ran with `--permission-mode plan --effort xhigh
+  --tools Read,Grep,Bash` and a 1500-second command timeout. The first pass
+  found a stale changelog next-number pointer and noted that legacy-surface
+  runtime guard wiring is TASK-420 scope; the pointer was fixed and guard wiring
+  was added to TASK-420-02/TASK-420-03 acceptance. The second pass reported no
+  unresolved drift.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/pages/page-template-boundary.test.ts tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/page-document-v2.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/runtime/pages-runtime.test.ts tests/integration/routes/widgetTemplatePreview.test.ts tests/integration/runtime/detail-page-runtime-lite.test.ts`
+- `bun run test:vitest -- tests/vitest/pages/page-template-boundary.test.ts tests/vitest/ui/custom-screens-page.test.tsx tests/vitest/ui/detail-template-editor.test.tsx tests/vitest/ui/useWidgetTemplates.test.tsx`
+- `bun --cwd core lint:types`
+- `bun --cwd core lint`
+- `git diff --check`

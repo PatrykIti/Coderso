@@ -5,7 +5,8 @@
 **Category:** Pages / Admin UI / Runtime / Assistant / Templates
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-417, `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`, `_docs/PAGE_MODEL.md`, `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md`
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-09
 
 ---
 
@@ -81,11 +82,11 @@ TASK-418 contract.
 
 ## Sub-Tasks
 
-- [ ] TASK-418-01: Audit contract and task drift freeze.
-- [ ] TASK-418-02: Immediate editor correctness and selection.
-- [ ] TASK-418-03: Control registry and floating toolbar parity.
-- [ ] TASK-418-04: Canvas preview and WYSIWYG parity.
-- [ ] TASK-418-05: Nested container and slot architecture.
+- [x] TASK-418-01: Audit contract and task drift freeze.
+- [x] TASK-418-02: Immediate editor correctness and selection.
+- [x] TASK-418-03: Control registry and floating toolbar parity.
+- [x] TASK-418-04: Canvas preview and WYSIWYG parity.
+- [x] TASK-418-05: Nested container and slot architecture.
 - [ ] TASK-418-06: Runtime, assistant, and template parity.
 - [ ] TASK-418-07: Validation, docs, changelog, and live smoke closure.
 
@@ -125,6 +126,29 @@ TASK-418 contract.
 
 ---
 
+## Registry Follow-Up Boundary
+
+`TASK-418-03` established the shared control registry and block-control toolbar
+wiring. `TASK-418-04-L02` must finish section-toolbar adoption for remaining
+registry-owned section fields such as `justify`, `shadow`, and `authOnly` while
+making section visual feedback honest in the canvas.
+
+## Current Progress
+
+`TASK-418-04` is complete: shared renderer extraction, section/block canvas
+feedback, hidden-state parity, and section type/variant templates are done.
+`TASK-418-05` is complete: bounded layout slots, admin nested authoring, and
+recursive public/preview rendering with nested responsive cascade are in place.
+Work continues with `TASK-418-06`: public runtime block parity and assistant
+surface/schema parity are done, including static gallery rendering, explicit
+inert data-bound states, server-revalidated nested assistant paths, and
+capability-gated assistant Page output. Page template boundaries are frozen:
+Page templates now resolve through a Page v2 contract helper, while non-Page
+widget-template/custom-screen/detail-page surfaces remain legacy `WidgetBlock[]`.
+Public data-bound/security-sensitive block contracts remain open.
+
+---
+
 ## Documentation Updates Required
 
 - `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`
@@ -134,6 +158,7 @@ TASK-418 contract.
 - `_docs/CMS_API.md` if admin/assistant route payloads change.
 - `_docs/PREVIEW_SPEC.md` if preview/runtime behavior changes.
 - `_docs/ASSISTANT_SITE_BUILDER.md`
+- `_docs/SECURITY_SPEC.md` if embed/form public security policy changes.
 - Widget/template docs only if TASK-418 intentionally changes their boundary.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` plus `_docs/_CHANGELOG/README.md`

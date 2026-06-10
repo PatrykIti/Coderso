@@ -37,9 +37,12 @@ export const pageBlockTypes = [
   "statistic",
   "icon",
   "quote",
+  "container",
+  "columns",
+  "group",
 ] as const;
 
-const pageSectionVariants = [
+export const pageSectionVariants = [
   "default",
   "split",
   "centered",
@@ -49,16 +52,31 @@ const pageSectionVariants = [
   "horizontal",
   "compact",
 ] as const;
-const pageSectionAlignments = ["start", "center", "end", "stretch"] as const;
-const pageSectionJustify = ["start", "center", "end", "between"] as const;
-const pageShadowTokens = ["none", "sm", "md", "lg"] as const;
-const pageBackgroundTypes = ["none", "color", "gradient", "image", "video"] as const;
-const pageButtonTargets = ["self", "blank"] as const;
-const pageButtonVariants = ["primary", "secondary", "ghost", "link"] as const;
-const pageButtonSizes = ["sm", "md", "lg"] as const;
-const pageTextFormats = ["plain", "rich"] as const;
-const pageTextAlignments = ["left", "center", "right"] as const;
-const pageHeadingLevels = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
+export const pageSectionAlignments = ["start", "center", "end", "stretch"] as const;
+export const pageSectionJustify = ["start", "center", "end", "between"] as const;
+export const pageShadowTokens = ["none", "sm", "md", "lg"] as const;
+export const pageBackgroundTypes = ["none", "color", "gradient", "image", "video"] as const;
+export const pageButtonTargets = ["self", "blank"] as const;
+export const pageButtonVariants = ["primary", "secondary", "ghost", "link"] as const;
+export const pageButtonSizes = ["sm", "md", "lg"] as const;
+export const pageTextFormats = ["plain", "rich"] as const;
+export const pageTextAlignments = ["left", "center", "right"] as const;
+export const pageHeadingLevels = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
+export const pageBlockWidths = ["auto", "full"] as const;
+export const pageImageFits = ["cover", "contain"] as const;
+export const pageGalleryLayouts = ["grid", "carousel", "masonry"] as const;
+export const pageDividerTones = ["neutral", "muted", "accent"] as const;
+export const pageColumnDistributions = ["equal", "auto"] as const;
+export const pageGroupDirections = ["row", "column"] as const;
+export const pageBlockSlotKeys = [
+  "children",
+  "column:1",
+  "column:2",
+  "column:3",
+  "column:4",
+] as const;
+export const PAGE_BLOCK_MAX_TREE_DEPTH = 4 as const;
+export const PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24 as const;
 
 export type PageBreakpoint = (typeof pageBreakpoints)[number];
 export type PageSectionType = (typeof pageSectionTypes)[number];
@@ -68,6 +86,10 @@ export type PageSectionAlignment = (typeof pageSectionAlignments)[number];
 export type PageSectionJustify = (typeof pageSectionJustify)[number];
 export type PageShadowToken = (typeof pageShadowTokens)[number];
 export type PageBackgroundType = (typeof pageBackgroundTypes)[number];
+export type PageBlockWidth = (typeof pageBlockWidths)[number];
+export type PageColumnDistribution = (typeof pageColumnDistributions)[number];
+export type PageGroupDirection = (typeof pageGroupDirections)[number];
+export type PageBlockSlotKey = (typeof pageBlockSlotKeys)[number];
 
 export type PageDocumentSeoV2 = {
   title?: string;
@@ -122,9 +144,25 @@ export type PageSectionVisibilityV2 = {
   endsAt?: string | null;
 };
 
+export type PageBoxSpacingV2 = {
+  top?: number;
+  right?: number;
+  bottom?: number;
+  left?: number;
+};
+
 export type PageBlockStyleV2 = {
   align?: "left" | "center" | "right";
-  width?: "auto" | "full";
+  width?: PageBlockWidth;
+  textColor?: string | null;
+  background?: string | null;
+  backgroundType?: PageBackgroundType;
+  opacity?: number;
+  radius?: number;
+  shadow?: PageShadowToken;
+  borderColor?: string | null;
+  padding?: PageBoxSpacingV2;
+  margin?: PageBoxSpacingV2;
 };
 
 export type PageBlockVisibilityV2 = {
@@ -144,6 +182,7 @@ export type PageBlockV2 = {
   style?: PageBlockStyleV2;
   visibility: PageBlockVisibilityV2;
   responsive?: Partial<Record<Exclude<PageBreakpoint, "desktop">, PageBlockResponsiveOverrideV2>>;
+  slots?: Partial<Record<PageBlockSlotKey, PageBlockV2[]>>;
 };
 
 export type PageSectionResponsiveOverrideV2 = {
@@ -191,7 +230,26 @@ export class PageDocumentError extends Error {
 type NormalizeMode = "stored-read" | "write";
 type RecordValue = Record<string, unknown>;
 type MobileBreakpoint = Exclude<PageBreakpoint, "desktop">;
+type BlockNormalizationContext = {
+  mode: NormalizeMode;
+  blockIds: Set<string>;
+  visiting: WeakSet<object>;
+};
 
+const pageBoxSpacingKeys = ["top", "right", "bottom", "left"] as const;
+const pageBlockStyleKeys = [
+  "align",
+  "width",
+  "textColor",
+  "background",
+  "backgroundType",
+  "opacity",
+  "radius",
+  "shadow",
+  "borderColor",
+  "padding",
+  "margin",
+] as const;
 const mobileBreakpoints: MobileBreakpoint[] = ["tablet", "mobile"];
 const defaultBreakpoints: PageBreakpoint[] = ["desktop", "tablet", "mobile"];
 
@@ -232,7 +290,13 @@ const defaultBlockVisibility: PageBlockVisibilityV2 = {
   visible: true,
 };
 
-const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
+const pageLayoutBlockSlots: Partial<Record<PageBlockType, readonly PageBlockSlotKey[]>> = {
+  container: ["children"],
+  columns: ["column:1", "column:2", "column:3", "column:4"],
+  group: ["children"],
+};
+
+export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   heading: ["text", "level", "align"],
   text: ["text", "format", "align"],
   button: ["label", "href", "target", "variant", "size"],
@@ -249,6 +313,153 @@ const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   statistic: ["value", "label", "caption"],
   icon: ["name", "label"],
   quote: ["text", "cite"],
+  container: [],
+  columns: ["count", "gap", "distribution"],
+  group: ["direction", "wrap", "gap"],
+};
+
+export type PageBlockRuntimeRendererState = "real" | "placeholder" | "unsupported";
+export type PageBlockPublicDataBinding = "none" | "scoped-read-only";
+
+export type PageBlockCapabilitiesV2 = {
+  editorInsertable: boolean;
+  insertable: boolean;
+  assistantEmittable: boolean;
+  runtimeRenderer: PageBlockRuntimeRendererState;
+  slots: readonly PageBlockSlotKey[];
+  publicDataBinding: PageBlockPublicDataBinding;
+  reason?: string;
+};
+
+export type PageSectionCapabilitiesV2 = {
+  insertable: boolean;
+  assistantEmittable: boolean;
+  reason?: string;
+};
+
+const insertableSectionTypes = new Set<PageSectionType>([
+  "hero",
+  "content",
+  "feature-grid",
+  "media-split",
+  "timeline",
+  "gallery",
+  "comparison",
+  "faq",
+  "testimonials",
+  "cta",
+  "custom",
+]);
+
+const pageSectionCapabilityReasons: Partial<Record<PageSectionType, string>> = {
+  template: "template-section-boundary",
+  navigation: "runtime-navigation-boundary",
+  collection: "data-binding-runtime-pending",
+  filters: "listing-runtime-pending",
+  "lead-form": "form-runtime-security-pending",
+  embed: "embed-sanitizer-runtime-pending",
+};
+
+export const pageSectionCapabilities = pageSectionTypes.reduce(
+  (capabilities, type) => {
+    const insertable = insertableSectionTypes.has(type);
+    capabilities[type] = {
+      insertable,
+      assistantEmittable: insertable,
+      ...(insertable ? {} : { reason: pageSectionCapabilityReasons[type] ?? "unsupported" }),
+    };
+    return capabilities;
+  },
+  {} as Record<PageSectionType, PageSectionCapabilitiesV2>
+);
+
+const realRuntimeBlockTypes = new Set<PageBlockType>([
+  "heading",
+  "text",
+  "button",
+  "image",
+  "video",
+  "gallery",
+  "list",
+  "card",
+  "divider",
+  "spacer",
+  "statistic",
+  "quote",
+  "container",
+  "columns",
+  "group",
+]);
+const dataBoundBlockTypes = new Set<PageBlockType>(["collection", "form", "embed"]);
+const layoutBlockTypes = new Set<PageBlockType>(["container", "columns", "group"]);
+const editorInsertableBlockTypes = new Set<PageBlockType>([
+  "heading",
+  "text",
+  "button",
+  "image",
+  "video",
+  "list",
+  "card",
+  "divider",
+  "spacer",
+  "statistic",
+  "quote",
+  "container",
+  "columns",
+  "group",
+]);
+const insertableBlockTypes = editorInsertableBlockTypes;
+const assistantEmittableBlockTypes = new Set<PageBlockType>([
+  "heading",
+  "text",
+  "button",
+  "image",
+  "video",
+  "list",
+  "card",
+  "divider",
+  "spacer",
+  "statistic",
+  "quote",
+  "container",
+  "columns",
+  "group",
+]);
+const pageBlockCapabilityReasons: Partial<Record<PageBlockType, string>> = {
+  gallery: "gallery-editor-controls-pending",
+  form: "form-runtime-security-pending",
+  collection: "collection-runtime-data-binding-pending",
+  embed: "embed-sanitizer-runtime-pending",
+  icon: "icon-runtime-renderer-pending",
+};
+
+export const pageBlockCapabilities = pageBlockTypes.reduce(
+  (capabilities, type) => {
+    const runtimeRenderer: PageBlockRuntimeRendererState = realRuntimeBlockTypes.has(type)
+      ? "real"
+      : "placeholder";
+    const insertable = insertableBlockTypes.has(type);
+    capabilities[type] = {
+      editorInsertable: editorInsertableBlockTypes.has(type),
+      insertable,
+      assistantEmittable: assistantEmittableBlockTypes.has(type),
+      runtimeRenderer,
+      slots: pageLayoutBlockSlots[type] ?? [],
+      publicDataBinding: dataBoundBlockTypes.has(type) ? "scoped-read-only" : "none",
+      ...(insertable ? {} : { reason: pageBlockCapabilityReasons[type] ?? "unsupported" }),
+    };
+    return capabilities;
+  },
+  {} as Record<PageBlockType, PageBlockCapabilitiesV2>
+);
+
+export const getPageBlockActiveSlotKeys = (block: PageBlockV2): readonly PageBlockSlotKey[] => {
+  const slots = pageBlockCapabilities[block.type].slots;
+  if (!layoutBlockTypes.has(block.type)) return [];
+  if (block.type !== "columns") return slots;
+  const rawCount = typeof block.props.count === "number" ? block.props.count : 2;
+  const count = Math.max(1, Math.min(4, Math.trunc(rawCount)));
+  return slots.slice(0, count);
 };
 
 const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown>> = {
@@ -268,12 +479,260 @@ const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown>> = {
   statistic: { value: "0", label: "Metric", caption: "" },
   icon: { name: "sparkles", label: "" },
   quote: { text: "", cite: "" },
+  container: {},
+  columns: { count: 2, gap: 24, distribution: "equal" },
+  group: { direction: "column", wrap: false, gap: 16 },
+};
+
+const numericSchema = (minimum: number, maximum: number): RecordValue => ({
+  type: "number",
+  minimum,
+  maximum,
+});
+
+const stringSchema: RecordValue = { type: "string" };
+const nullableStringSchema: RecordValue = { type: ["string", "null"] };
+const booleanSchema: RecordValue = { type: "boolean" };
+const arraySchema: RecordValue = { type: "array" };
+
+const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordValue => {
+  if (type === "heading" && key === "level")
+    return { type: "string", enum: [...pageHeadingLevels] };
+  if ((type === "heading" || type === "text") && key === "align") {
+    return { type: "string", enum: [...pageTextAlignments] };
+  }
+  if (type === "text" && key === "format") return { type: "string", enum: [...pageTextFormats] };
+  if (type === "button" && key === "target")
+    return { type: "string", enum: [...pageButtonTargets] };
+  if (type === "button" && key === "variant") {
+    return { type: "string", enum: [...pageButtonVariants] };
+  }
+  if (type === "button" && key === "size") return { type: "string", enum: [...pageButtonSizes] };
+  if (type === "image" && key === "fit") return { type: "string", enum: [...pageImageFits] };
+  if (type === "gallery" && key === "layout")
+    return { type: "string", enum: [...pageGalleryLayouts] };
+  if (type === "divider" && key === "tone") return { type: "string", enum: [...pageDividerTones] };
+  if (type === "columns" && key === "distribution") {
+    return { type: "string", enum: [...pageColumnDistributions] };
+  }
+  if (type === "group" && key === "direction") {
+    return { type: "string", enum: [...pageGroupDirections] };
+  }
+  if (key === "limit") return numericSchema(1, 50);
+  if (key === "thickness") return numericSchema(1, 16);
+  if (key === "count") return numericSchema(1, 4);
+  if (type === "columns" && key === "gap") return numericSchema(0, 120);
+  if (type === "group" && key === "gap") return numericSchema(0, 120);
+  if (key === "size") return numericSchema(0, 240);
+  if (key === "ordered" || key === "autoplay" || key === "muted" || key === "wrap") {
+    return booleanSchema;
+  }
+  if (key === "items") return arraySchema;
+  if (
+    [
+      "assetId",
+      "src",
+      "image",
+      "href",
+      "formId",
+      "contentTypeId",
+      "queryId",
+      "templateId",
+    ].includes(key)
+  ) {
+    return nullableStringSchema;
+  }
+  return stringSchema;
+};
+
+const pageBoxSpacingJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: Object.fromEntries(pageBoxSpacingKeys.map((key) => [key, numericSchema(0, 160)])),
+};
+
+const pageBlockStyleJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    align: { type: "string", enum: [...pageTextAlignments] },
+    width: { type: "string", enum: [...pageBlockWidths] },
+    textColor: { type: ["string", "null"] },
+    background: { type: ["string", "null"] },
+    backgroundType: { type: "string", enum: [...pageBackgroundTypes] },
+    opacity: numericSchema(0, 1),
+    radius: numericSchema(0, 64),
+    shadow: { type: "string", enum: [...pageShadowTokens] },
+    borderColor: { type: ["string", "null"] },
+    padding: pageBoxSpacingJsonSchema,
+    margin: pageBoxSpacingJsonSchema,
+  },
+};
+
+const pageBlockVisibilityJsonSchema: RecordValue = {
+  type: "object",
+  required: ["visible"],
+  additionalProperties: false,
+  properties: { visible: { type: "boolean" } },
+};
+
+const blockPropsJsonSchemaForType = (type: PageBlockType): RecordValue => ({
+  type: "object",
+  additionalProperties: false,
+  properties: Object.fromEntries(
+    pageBlockPropKeys[type].map((key) => [key, blockPropJsonSchemaForType(type, key)])
+  ),
+});
+
+const blockResponsiveJsonSchemaForType = (type: PageBlockType): RecordValue => {
+  const overrideSchema: RecordValue = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      props: blockPropsJsonSchemaForType(type),
+      style: pageBlockStyleJsonSchema,
+      visibility: {
+        type: "object",
+        additionalProperties: false,
+        properties: { visible: { type: "boolean" } },
+      },
+    },
+  };
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: Object.fromEntries(
+      mobileBreakpoints.map((breakpoint) => [breakpoint, overrideSchema])
+    ),
+  };
+};
+
+const blockDepthJsonSchemaRef = (depth: number): RecordValue => ({
+  $ref: `#/$defs/pageBlockDepth${depth}`,
+});
+
+const blockJsonSchemaForType = (type: PageBlockType, depth: number): RecordValue => {
+  const allowedSlots = pageBlockCapabilities[type].slots;
+  const properties: RecordValue = {
+    id: { type: "string", minLength: 1 },
+    type: { const: type },
+    props: blockPropsJsonSchemaForType(type),
+    style: pageBlockStyleJsonSchema,
+    visibility: pageBlockVisibilityJsonSchema,
+    responsive: blockResponsiveJsonSchemaForType(type),
+  };
+
+  if (allowedSlots.length > 0 && depth < PAGE_BLOCK_MAX_TREE_DEPTH) {
+    properties.slots = blockSlotsJsonSchemaForType(type, depth);
+  }
+
+  return {
+    type: "object",
+    required: ["id", "type", "props", "visibility"],
+    additionalProperties: false,
+    properties,
+  };
+};
+
+const blockSlotsJsonSchemaForType = (type: PageBlockType, depth: number): RecordValue => ({
+  type: "object",
+  additionalProperties: false,
+  properties: Object.fromEntries(
+    pageBlockCapabilities[type].slots.map((slotKey) => [
+      slotKey,
+      {
+        type: "array",
+        maxItems: PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
+        items: blockDepthJsonSchemaRef(depth + 1),
+      },
+    ])
+  ),
+});
+
+const blockJsonSchemaForDepth = (depth: number): RecordValue => ({
+  oneOf: pageBlockTypes.map((type) => blockJsonSchemaForType(type, depth)),
+});
+
+const pageBlockDepthJsonSchemas: RecordValue = Object.fromEntries(
+  Array.from({ length: PAGE_BLOCK_MAX_TREE_DEPTH }, (_, index) => {
+    const depth = index + 1;
+    return [`pageBlockDepth${depth}`, blockJsonSchemaForDepth(depth)];
+  })
+);
+
+const partialSectionLayoutJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    columns: numericSchema(1, 4),
+    align: { type: "string", enum: [...pageSectionAlignments] },
+    justify: { type: "string", enum: [...pageSectionJustify] },
+    maxWidth: numericSchema(320, 1920),
+  },
+};
+
+const partialSectionStyleJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    background: { type: "string" },
+    backgroundType: { type: "string", enum: [...pageBackgroundTypes] },
+    backgroundImage: { type: ["string", "null"] },
+    accent: { type: "string" },
+    radius: numericSchema(0, 64),
+    shadow: { type: "string", enum: [...pageShadowTokens] },
+  },
+};
+
+const partialSectionSpacingJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    paddingTop: numericSchema(0, 240),
+    paddingBottom: numericSchema(0, 240),
+    paddingLeft: numericSchema(0, 160),
+    paddingRight: numericSchema(0, 160),
+    gap: numericSchema(0, 120),
+  },
+};
+
+const partialSectionVisibilityJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    visible: { type: "boolean" },
+    authOnly: { type: "boolean" },
+    anchor: { type: ["string", "null"] },
+    startsAt: { type: ["string", "null"] },
+    endsAt: { type: ["string", "null"] },
+  },
+};
+
+const sectionResponsiveJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: Object.fromEntries(
+    mobileBreakpoints.map((breakpoint) => [
+      breakpoint,
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          layout: partialSectionLayoutJsonSchema,
+          style: partialSectionStyleJsonSchema,
+          spacing: partialSectionSpacingJsonSchema,
+          visibility: partialSectionVisibilityJsonSchema,
+        },
+      },
+    ])
+  ),
 };
 
 export const pageDocumentV2JsonSchema: RecordValue = {
   type: "object",
   required: ["schemaVersion", "sections"],
   additionalProperties: false,
+  $defs: pageBlockDepthJsonSchemas,
   properties: {
     schemaVersion: { const: PAGE_DOCUMENT_SCHEMA_VERSION },
     breakpoints: {
@@ -382,27 +841,10 @@ export const pageDocumentV2JsonSchema: RecordValue = {
               endsAt: { type: ["string", "null"] },
             },
           },
-          responsive: { type: "object", additionalProperties: true },
+          responsive: sectionResponsiveJsonSchema,
           blocks: {
             type: "array",
-            items: {
-              type: "object",
-              required: ["id", "type", "props", "visibility"],
-              additionalProperties: false,
-              properties: {
-                id: { type: "string", minLength: 1 },
-                type: { type: "string", enum: [...pageBlockTypes] },
-                props: { type: "object", additionalProperties: true },
-                style: { type: "object", additionalProperties: true },
-                visibility: {
-                  type: "object",
-                  required: ["visible"],
-                  additionalProperties: false,
-                  properties: { visible: { type: "boolean" } },
-                },
-                responsive: { type: "object", additionalProperties: true },
-              },
-            },
+            items: blockDepthJsonSchemaRef(1),
           },
         },
       },
@@ -747,19 +1189,64 @@ const normalizeBlockStyle = (
 ): PageBlockStyleV2 | undefined => {
   if (value === undefined && partial) return undefined;
   const input = requireRecord(value ?? {}, path, mode);
-  assertKnownKeys(input, ["align", "width"], path, mode);
+  assertKnownKeys(input, pageBlockStyleKeys, path, mode);
   const result: PageBlockStyleV2 = {};
   if (input.align !== undefined) {
     result.align = normalizeEnum(input.align, pageTextAlignments, "left", `${path}.align`, mode);
   }
   if (input.width !== undefined) {
-    result.width = normalizeEnum(
-      input.width,
-      ["auto", "full"] as const,
-      "auto",
-      `${path}.width`,
+    result.width = normalizeEnum(input.width, pageBlockWidths, "auto", `${path}.width`, mode);
+  }
+  if (input.textColor !== undefined) {
+    result.textColor = readOptionalText(input.textColor) ?? null;
+  }
+  if (input.background !== undefined) {
+    result.background = readOptionalText(input.background) ?? null;
+  }
+  if (input.backgroundType !== undefined) {
+    result.backgroundType = normalizeEnum(
+      input.backgroundType,
+      pageBackgroundTypes,
+      "none",
+      `${path}.backgroundType`,
       mode
     );
+  }
+  if (input.opacity !== undefined) {
+    result.opacity = readNumber(input.opacity, 1, 0, 1);
+  }
+  if (input.radius !== undefined) {
+    result.radius = readNumber(input.radius, 0, 0, 64);
+  }
+  if (input.shadow !== undefined) {
+    result.shadow = normalizeEnum(input.shadow, pageShadowTokens, "none", `${path}.shadow`, mode);
+  }
+  if (input.borderColor !== undefined) {
+    result.borderColor = readOptionalText(input.borderColor) ?? null;
+  }
+  if (input.padding !== undefined) {
+    const padding = normalizeBlockBoxSpacing(input.padding, mode, `${path}.padding`);
+    if (padding) result.padding = padding;
+  }
+  if (input.margin !== undefined) {
+    const margin = normalizeBlockBoxSpacing(input.margin, mode, `${path}.margin`);
+    if (margin) result.margin = margin;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+};
+
+const normalizeBlockBoxSpacing = (
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): PageBoxSpacingV2 | undefined => {
+  const input = requireRecord(value ?? {}, path, mode);
+  assertKnownKeys(input, pageBoxSpacingKeys, path, mode);
+  const result: PageBoxSpacingV2 = {};
+  for (const key of pageBoxSpacingKeys) {
+    if (input[key] !== undefined) {
+      result[key] = readNumber(input[key], 0, 0, 160);
+    }
   }
   return Object.keys(result).length > 0 ? result : undefined;
 };
@@ -785,12 +1272,13 @@ const normalizeBlockProps = (
   type: PageBlockType,
   value: unknown,
   mode: NormalizeMode,
-  path: string
+  path: string,
+  partial = false
 ): Record<string, unknown> => {
   const input = requireRecord(value ?? {}, path, mode);
   assertKnownKeys(input, pageBlockPropKeys[type], path, mode);
   const defaults = pageBlockDefaultProps[type];
-  const result: Record<string, unknown> = { ...defaults };
+  const result: Record<string, unknown> = partial ? {} : { ...defaults };
 
   for (const key of pageBlockPropKeys[type]) {
     if (input[key] !== undefined)
@@ -825,8 +1313,31 @@ const normalizeBlockProp = (
   if (type === "button" && key === "size") {
     return normalizeEnum(value, pageButtonSizes, "md", path, mode);
   }
+  if (type === "image" && key === "fit") {
+    return normalizeEnum(value, pageImageFits, "cover", path, mode);
+  }
+  if (type === "gallery" && key === "layout") {
+    return normalizeEnum(value, pageGalleryLayouts, "grid", path, mode);
+  }
+  if (type === "divider" && key === "tone") {
+    return normalizeEnum(value, pageDividerTones, "neutral", path, mode);
+  }
+  if (type === "columns" && key === "distribution") {
+    return normalizeEnum(value, pageColumnDistributions, "equal", path, mode);
+  }
+  if (type === "group" && key === "direction") {
+    return normalizeEnum(value, pageGroupDirections, "column", path, mode);
+  }
   if (key === "limit") return readNumber(value, 6, 1, 50);
-  if (key === "ordered" || key === "autoplay" || key === "muted") return Boolean(value);
+  if (key === "thickness") return readNumber(value, 1, 1, 16);
+  if (type === "columns" && key === "count") return readNumber(value, 2, 1, 4);
+  if ((type === "columns" || type === "group") && key === "gap") {
+    return readNumber(value, type === "columns" ? 24 : 16, 0, 120);
+  }
+  if (type === "spacer" && key === "size") return readNumber(value, 32, 0, 240);
+  if (key === "ordered" || key === "autoplay" || key === "muted" || key === "wrap") {
+    return Boolean(value);
+  }
   if (key === "items") return Array.isArray(value) ? cloneRecord(value) : [];
   if (value === undefined) return undefined;
   if (value === null) return null;
@@ -854,7 +1365,7 @@ const normalizeBlockResponsive = (
     const props =
       overrideInput.props === undefined
         ? undefined
-        : normalizeBlockProps(type, overrideInput.props, mode, `${path}.${breakpoint}.props`);
+        : normalizeBlockProps(type, overrideInput.props, mode, `${path}.${breakpoint}.props`, true);
     const style = normalizeBlockStyle(
       overrideInput.style,
       mode,
@@ -881,30 +1392,172 @@ const normalizeBlockResponsive = (
   return Object.keys(result).length > 0 ? result : undefined;
 };
 
+const ensureUniqueBlockId = (
+  id: string,
+  path: string,
+  context: BlockNormalizationContext
+): string => {
+  if (!context.blockIds.has(id)) {
+    context.blockIds.add(id);
+    return id;
+  }
+  if (context.mode === "write") {
+    throw new PageDocumentError(
+      "page_document_invalid",
+      `Duplicate page block id: ${id}.`,
+      `${path}.id`
+    );
+  }
+
+  let suffix = 2;
+  let candidate = `${id}_${suffix}`;
+  while (context.blockIds.has(candidate)) {
+    suffix += 1;
+    candidate = `${id}_${suffix}`;
+  }
+  context.blockIds.add(candidate);
+  return candidate;
+};
+
+const normalizeBlockSlots = (
+  value: unknown,
+  type: PageBlockType,
+  mode: NormalizeMode,
+  path: string,
+  depth: number,
+  context: BlockNormalizationContext
+): PageBlockV2["slots"] => {
+  if (value === undefined) return undefined;
+  const allowedSlots = pageBlockCapabilities[type].slots;
+  if (allowedSlots.length === 0) {
+    if (mode === "write") {
+      throw new PageDocumentError(
+        "page_document_invalid",
+        `Block type ${type} does not support slots.`,
+        path
+      );
+    }
+    return undefined;
+  }
+  if (depth >= PAGE_BLOCK_MAX_TREE_DEPTH) {
+    if (mode === "write") {
+      throw new PageDocumentError(
+        "page_document_invalid",
+        "Page block slots exceed the maximum nesting depth.",
+        path
+      );
+    }
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    if (mode === "write") {
+      throw new PageDocumentError("page_document_invalid", `Expected object at ${path}.`, path);
+    }
+    return undefined;
+  }
+
+  assertKnownKeys(value, allowedSlots, path, mode);
+  const result: NonNullable<PageBlockV2["slots"]> = {};
+
+  for (const slotKey of allowedSlots) {
+    const slotValue = value[slotKey];
+    if (slotValue === undefined) continue;
+    if (!Array.isArray(slotValue)) {
+      if (mode === "write") {
+        throw new PageDocumentError(
+          "page_document_invalid",
+          `Expected array at ${path}.${slotKey}.`,
+          `${path}.${slotKey}`
+        );
+      }
+      continue;
+    }
+    if (slotValue.length > PAGE_BLOCK_MAX_CHILDREN_PER_SLOT && mode === "write") {
+      throw new PageDocumentError(
+        "page_document_invalid",
+        `Page block slot ${path}.${slotKey} exceeds ${PAGE_BLOCK_MAX_CHILDREN_PER_SLOT} children.`,
+        `${path}.${slotKey}`
+      );
+    }
+
+    const normalizedChildren: PageBlockV2[] = [];
+    const children = slotValue.slice(0, PAGE_BLOCK_MAX_CHILDREN_PER_SLOT);
+    children.forEach((child, childIndex) => {
+      const normalized = normalizeBlock(
+        child,
+        `${path}.${slotKey}.${childIndex}`,
+        childIndex,
+        mode,
+        depth + 1,
+        context
+      );
+      if (normalized) normalizedChildren.push(normalized);
+    });
+    result[slotKey] = normalizedChildren;
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
+};
+
 const normalizeBlock = (
   value: unknown,
-  sectionIndex: number,
+  path: string,
   blockIndex: number,
-  mode: NormalizeMode
-): PageBlockV2 => {
-  const path = `sections.${sectionIndex}.blocks.${blockIndex}`;
+  mode: NormalizeMode,
+  depth: number,
+  context: BlockNormalizationContext
+): PageBlockV2 | null => {
+  if (depth > PAGE_BLOCK_MAX_TREE_DEPTH) {
+    if (mode === "write") {
+      throw new PageDocumentError(
+        "page_document_invalid",
+        "Page block tree exceeds the maximum nesting depth.",
+        path
+      );
+    }
+    return null;
+  }
   const input = requireRecord(value, path, mode);
-  assertKnownKeys(input, ["id", "type", "props", "style", "visibility", "responsive"], path, mode);
-  const type = normalizeEnum(input.type, pageBlockTypes, "text", `${path}.type`, mode);
-  const style = normalizeBlockStyle(input.style, mode, `${path}.style`);
-  const responsive = normalizeBlockResponsive(input.responsive, type, mode, `${path}.responsive`);
-  return {
-    id: normalizeId(input.id, "blk", blockIndex, mode),
-    type,
-    props: normalizeBlockProps(type, input.props, mode, `${path}.props`),
-    ...(style ? { style } : {}),
-    visibility: normalizeBlockVisibility(
-      input.visibility,
-      mode,
-      `${path}.visibility`
-    ) as PageBlockVisibilityV2,
-    ...(responsive ? { responsive } : {}),
-  };
+  if (context.visiting.has(input)) {
+    if (mode === "write") {
+      throw new PageDocumentError(
+        "page_document_invalid",
+        "Page block tree contains a cycle.",
+        path
+      );
+    }
+    return null;
+  }
+
+  context.visiting.add(input);
+  try {
+    assertKnownKeys(
+      input,
+      ["id", "type", "props", "style", "visibility", "responsive", "slots"],
+      path,
+      mode
+    );
+    const type = normalizeEnum(input.type, pageBlockTypes, "text", `${path}.type`, mode);
+    const id = ensureUniqueBlockId(normalizeId(input.id, "blk", blockIndex, mode), path, context);
+    const style = normalizeBlockStyle(input.style, mode, `${path}.style`);
+    const responsive = normalizeBlockResponsive(input.responsive, type, mode, `${path}.responsive`);
+    const slots = normalizeBlockSlots(input.slots, type, mode, `${path}.slots`, depth, context);
+    return {
+      id,
+      type,
+      props: normalizeBlockProps(type, input.props, mode, `${path}.props`),
+      ...(style ? { style } : {}),
+      visibility: normalizeBlockVisibility(
+        input.visibility,
+        mode,
+        `${path}.visibility`
+      ) as PageBlockVisibilityV2,
+      ...(responsive ? { responsive } : {}),
+      ...(slots ? { slots } : {}),
+    };
+  } finally {
+    context.visiting.delete(input);
+  }
 };
 
 const normalizeSectionResponsive = (
@@ -964,7 +1617,12 @@ const normalizeSectionResponsive = (
   return result;
 };
 
-const normalizeSection = (value: unknown, index: number, mode: NormalizeMode): PageSectionV2 => {
+const normalizeSection = (
+  value: unknown,
+  index: number,
+  mode: NormalizeMode,
+  blockContext: BlockNormalizationContext
+): PageSectionV2 => {
   const path = `sections.${index}`;
   const input = requireRecord(value, path, mode);
   assertKnownKeys(
@@ -985,9 +1643,17 @@ const normalizeSection = (value: unknown, index: number, mode: NormalizeMode): P
     mode
   );
   const type = normalizeEnum(input.type, pageSectionTypes, "custom", `${path}.type`, mode);
-  const blocks = requireArray(input.blocks, `${path}.blocks`, mode).map((block, blockIndex) =>
-    normalizeBlock(block, index, blockIndex, mode)
-  );
+  const blocks = requireArray(input.blocks, `${path}.blocks`, mode).flatMap((block, blockIndex) => {
+    const normalized = normalizeBlock(
+      block,
+      `${path}.blocks.${blockIndex}`,
+      blockIndex,
+      mode,
+      1,
+      blockContext
+    );
+    return normalized ? [normalized] : [];
+  });
 
   return {
     id: normalizeId(input.id, "sec", index, mode),
@@ -1043,8 +1709,16 @@ export function createPageBlockV2(type: PageBlockType, input?: Partial<PageBlock
     style: input?.style,
     visibility: input?.visibility ?? defaultBlockVisibility,
     responsive: input?.responsive,
+    slots: input?.slots,
   };
-  return normalizeBlock(payload, 0, 0, "stored-read");
+  const block = normalizeBlock(payload, "block", 0, "stored-read", 1, {
+    mode: "stored-read",
+    blockIds: new Set(),
+    visiting: new WeakSet(),
+  });
+  if (!block)
+    throw new PageDocumentError("page_document_invalid", "Page block is invalid.", "block");
+  return block;
 }
 
 export function createPageSectionV2(
@@ -1063,7 +1737,11 @@ export function createPageSectionV2(
     responsive: input?.responsive ?? {},
     blocks: input?.blocks ?? [],
   };
-  return normalizeSection(payload, 0, "stored-read");
+  return normalizeSection(payload, 0, "stored-read", {
+    mode: "stored-read",
+    blockIds: new Set(),
+    visiting: new WeakSet(),
+  });
 }
 
 export function isPageDocumentError(
@@ -1127,8 +1805,13 @@ export function normalizePageDocumentV2(
     return createDefaultPageDocumentV2();
   }
 
+  const blockContext: BlockNormalizationContext = {
+    mode,
+    blockIds: new Set(),
+    visiting: new WeakSet(),
+  };
   const sections = requireArray(input.sections, "sections", mode).map((section, index) =>
-    normalizeSection(section, index, mode)
+    normalizeSection(section, index, mode, blockContext)
   );
 
   return {
@@ -1144,17 +1827,62 @@ export function resolvePageSectionForBreakpoint(
   section: PageSectionV2,
   breakpoint: PageBreakpoint
 ): PageSectionV2 {
-  if (breakpoint === "desktop") return cloneRecord(section);
+  const base = cloneRecord(section);
+  if (breakpoint === "desktop") {
+    return {
+      ...base,
+      blocks: base.blocks.map((block) => resolvePageBlockForBreakpoint(block, breakpoint)),
+    };
+  }
   const override = section.responsive[breakpoint];
-  if (!override) return cloneRecord(section);
+  if (!override) {
+    return {
+      ...base,
+      blocks: base.blocks.map((block) => resolvePageBlockForBreakpoint(block, breakpoint)),
+    };
+  }
 
   return {
-    ...cloneRecord(section),
+    ...base,
     layout: { ...section.layout, ...(override.layout ?? {}) },
     style: { ...section.style, ...(override.style ?? {}) },
     spacing: { ...section.spacing, ...(override.spacing ?? {}) },
     visibility: { ...section.visibility, ...(override.visibility ?? {}) },
+    blocks: base.blocks.map((block) => resolvePageBlockForBreakpoint(block, breakpoint)),
   };
+}
+
+export function resolvePageBlockForBreakpoint(
+  block: PageBlockV2,
+  breakpoint: PageBreakpoint
+): PageBlockV2 {
+  const base = cloneRecord(block);
+  const resolveSlots = (slots: PageBlockV2["slots"]): PageBlockV2["slots"] | undefined => {
+    if (!slots) return undefined;
+    return Object.fromEntries(
+      Object.entries(slots).map(([slotKey, children]) => [
+        slotKey,
+        (children ?? []).map((child) => resolvePageBlockForBreakpoint(child, breakpoint)),
+      ])
+    ) as PageBlockV2["slots"];
+  };
+  const resolvedSlots = resolveSlots(base.slots);
+  if (breakpoint === "desktop") {
+    return resolvedSlots ? { ...base, slots: resolvedSlots } : base;
+  }
+  const override = block.responsive?.[breakpoint];
+  if (!override) return resolvedSlots ? { ...base, slots: resolvedSlots } : base;
+
+  const style = { ...(base.style ?? {}), ...(override.style ?? {}) };
+  const resolved: PageBlockV2 = {
+    ...base,
+    props: { ...base.props, ...(override.props ?? {}) },
+    visibility: { ...base.visibility, ...(override.visibility ?? {}) },
+    ...(resolvedSlots ? { slots: resolvedSlots } : {}),
+  };
+  if (Object.keys(style).length > 0) resolved.style = style;
+  else delete resolved.style;
+  return resolved;
 }
 
 export function resolvePageDocumentForBreakpoint(
@@ -1182,6 +1910,24 @@ export function clearResponsiveOverride(
   if (isEmptyRecord(override)) {
     const { [breakpoint]: _removed, ...rest } = next.responsive;
     next.responsive = rest;
+  }
+  return next;
+}
+
+export function clearBlockResponsiveOverride(
+  block: PageBlockV2,
+  breakpoint: MobileBreakpoint,
+  path: readonly string[]
+): PageBlockV2 {
+  if (path.length === 0) return cloneRecord(block);
+  const next = cloneRecord(block);
+  const override = next.responsive?.[breakpoint];
+  if (!override) return next;
+  removeNestedPath(override as RecordValue, path);
+  if (isEmptyRecord(override)) {
+    const { [breakpoint]: _removed, ...rest } = next.responsive ?? {};
+    if (Object.keys(rest).length > 0) next.responsive = rest;
+    else delete next.responsive;
   }
   return next;
 }

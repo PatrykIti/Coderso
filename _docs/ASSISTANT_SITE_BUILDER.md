@@ -139,6 +139,15 @@ Current implemented guide blueprint:
   - assistant-facing Page sections now emit the Page v2 section/atomic block
     contract owned by `pageDocumentV2.ts`; unsupported aliases stay gated
     instead of inventing a second section catalog
+  - active Page surfaces now carry server-revalidated `schemaVersion: 2`
+    section/block summaries with nested block paths and Page capability
+    metadata; stale selected section/block/path context is cleared during
+    planning hydration before provider or local blueprint logic can target it
+  - `page.upsert.sections[]` is normalized through `pageDocumentV2` and then
+    checked against the assistant Page vocabulary. Layout blocks
+    (`container`, `columns`, `group`) are assistant-emittable; `gallery` remains
+    accepted only as existing static output; `collection`, `form`, and `embed`
+    remain explicit L04-deferred inert output exceptions.
   - Page section seed data normalizes through the Page v2 owner; arbitrary
     raw media URLs stay gated until the assistant has trusted media-library ids
     rather than provider/user external-upload payloads. Site-builder blueprints

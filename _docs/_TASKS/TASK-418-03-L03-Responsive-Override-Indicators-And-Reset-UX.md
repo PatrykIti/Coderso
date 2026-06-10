@@ -5,8 +5,14 @@
 **Priority:** High
 **Category:** Admin UI / Pages / Responsive
 **Estimated Effort:** Medium
-**Dependencies:** TASK-418-03-L01
-**Status:** ⏳ To Do
+**Dependencies:** TASK-418-03-L01, TASK-418-03-L02
+**Status:** ✅ Done
+**Started:** 2026-06-09
+**Completed:** 2026-06-09
+**Pre-Implementation Audits:** Read-only subagents
+`019eae83-3fcc-7d71-8836-1ea175c0497f`,
+`019eae86-c1bd-7811-8124-808488b99f9f`, and
+`019eae89-29ab-7653-9633-4c438853ede0`.
 
 ---
 
@@ -94,3 +100,22 @@ Regression-test shape:
 
 - `_docs/PAGE_MODEL.md`
 - `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md`
+
+---
+
+## Completion Notes
+
+- Section and block controls now show `Base`, `Inherited`, or `Override` state.
+- Tablet/mobile overrides can be reset per field without removing unrelated
+  override values.
+- Canvas and layers show responsive override badges for section and block
+  targets at the current breakpoint.
+- `clearBlockResponsiveOverride` mirrors section reset pruning for sparse block
+  override objects.
+- Final drift audit `019eae91-254a-7c73-b0d5-e712fc1610b9` found and the
+  implementation fixed a low pruning mismatch where the last block override
+  reset could leave an empty `responsive` object.
+- Validation passed:
+  - `bun run test:vitest -- tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx`
+  - `bun --cwd core lint:types`
+  - `bun --cwd core lint`

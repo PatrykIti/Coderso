@@ -12,11 +12,8 @@ import {
   normalizePageTemplateKey,
   resolvePageTemplatePath,
 } from "../services/pages/pageTemplateService";
-import {
-  normalizeStoredPageDocumentV2ForRead,
-  type PageBreakpoint,
-  type PageDocumentV2,
-} from "../services/pages/pageDocumentV2";
+import { type PageBreakpoint, type PageDocumentV2 } from "../services/pages/pageDocumentV2";
+import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import { DefaultRuntimePageShell, type PageTemplateProps } from "./pageRuntime";
 import { DefaultRuntimePageShellV2, type PageTemplatePropsV2 } from "./pageRuntimeV2";
 
@@ -311,7 +308,10 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     templateKey,
   } = options;
 
-  const document = normalizeStoredPageDocumentV2ForRead(rawDocument);
+  const templateInput = resolvePageTemplateInput(rawDocument, {
+    renderMode: isPreview ? "preview-page" : "public-page",
+  });
+  const { document } = templateInput;
   const normalizedTemplateKey = normalizePageV2TemplateKey(
     templateKey ?? document.settings.template
   );

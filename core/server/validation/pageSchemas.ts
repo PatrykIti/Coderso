@@ -1,8 +1,12 @@
 import { pageDocumentV2JsonSchema } from "../../services/pages/pageDocumentV2";
 
 export const pageDataSchema = pageDocumentV2JsonSchema;
+const pageDataSchemaDefs = {
+  $defs: pageDocumentV2JsonSchema.$defs,
+};
 
 export const pageCreateSchema = {
+  ...pageDataSchemaDefs,
   type: "object",
   required: ["title", "slug", "data"],
   additionalProperties: false,
@@ -15,6 +19,7 @@ export const pageCreateSchema = {
 };
 
 export const pageUpdateSchema = {
+  ...pageDataSchemaDefs,
   type: "object",
   additionalProperties: false,
   properties: {
@@ -25,6 +30,7 @@ export const pageUpdateSchema = {
 };
 
 export const pageAutosaveSchema = {
+  ...pageDataSchemaDefs,
   type: "object",
   minProperties: 1,
   additionalProperties: false,
@@ -45,6 +51,7 @@ export const pagePreviewSchema = {
 };
 
 export const pagePublishSchema = {
+  ...pageDataSchemaDefs,
   type: "object",
   additionalProperties: false,
   properties: {

@@ -141,6 +141,7 @@ test("buildAssistantAdminContext normalizes active page surface context", () => 
       },
       selectedSectionId: "section-hero",
       selectedBlockId: "hero-1",
+      selectedBlockPath: "sections.0.blocks.0",
       sections: [
         {
           id: "section-hero",
@@ -158,6 +159,15 @@ test("buildAssistantAdminContext normalizes active page surface context", () => 
               slotKeys: [],
               templateId: null,
               templateName: null,
+              capabilities: {
+                editorInsertable: true,
+                insertable: true,
+                assistantEmittable: true,
+                runtimeRenderer: "real",
+                publicDataBinding: "none",
+                slots: [],
+                reason: null,
+              },
             },
             {
               id: "template-1",
@@ -186,6 +196,7 @@ test("buildAssistantAdminContext normalizes active page surface context", () => 
     },
     selectedSectionId: "section-hero",
     selectedBlockId: "hero-1",
+    selectedBlockPath: "sections.0.blocks.0",
     sections: [
       {
         id: "section-hero",
@@ -198,6 +209,10 @@ test("buildAssistantAdminContext normalizes active page surface context", () => 
             id: "hero-1",
             type: "heading",
             label: null,
+            capabilities: {
+              assistantEmittable: true,
+              runtimeRenderer: "real",
+            },
           },
           {
             id: "template-1",

@@ -753,6 +753,10 @@ Katalog zawiera podstawowe metadata:
 - Podglad template renderuje bloki przez runtime `WidgetRenderer` (server-side).
 - Podglad jest read-only i pokazuje ostatnia zapisana wersje template.
 - Wynik zwracany jako HTML do iframe w edytorze template.
+- Widget templates remain a legacy `WidgetBlock[]` surface. They must not store
+  Page v2 `sections[]` or Page v2 block documents in `widget_template.blocks`.
+  TASK-420 owns any future Page Templates surface migration or replacement of
+  the Advanced Widgets template editor.
 
 ---
 

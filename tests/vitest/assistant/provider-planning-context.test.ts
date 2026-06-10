@@ -553,6 +553,7 @@ test("buildProviderPlanningPromptPackage includes page section target context", 
         },
         selectedSectionId: "section-1",
         selectedBlockId: "template-section-1",
+        selectedBlockPath: "sections.0.blocks.0",
         sections: [
           {
             id: "section-1",
@@ -583,6 +584,7 @@ test("buildProviderPlanningPromptPackage includes page section target context", 
     kind: "page",
     selectedSectionId: "section-1",
     selectedBlockId: "template-section-1",
+    selectedBlockPath: "sections.0.blocks.0",
     sections: [
       {
         id: "section-1",

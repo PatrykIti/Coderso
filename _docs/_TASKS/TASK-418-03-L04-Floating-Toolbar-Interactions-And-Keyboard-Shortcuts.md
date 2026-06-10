@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-418-03-L01, TASK-418-03-L02, TASK-418-03-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-09
+**Completed:** 2026-06-09
 
 ---
 
@@ -91,3 +93,34 @@ Regression-test shape:
 
 - `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md` if shortcut
   behavior changes.
+
+---
+
+## Closeout
+
+- Floating toolbar now exposes selection-aware labels, icon titles/ARIA labels,
+  one active subpanel marker, collapsible state, and draggable offset state.
+- `Ctrl/Cmd+K`, `Esc`, duplicate, and delete shortcuts are guarded against
+  input/select/textarea/contenteditable targets; `Esc` closes overlays before
+  clearing selection.
+- Delete uses the shared destructive confirmation dialog before mutating the
+  draft, for both toolbar and keyboard paths.
+- Command Palette supports keyboard result movement with arrow keys and Enter
+  insertion while keeping filtered section/block groups.
+- Pre-implementation read-only subagent audit
+  `019eae99-5020-7a82-9c83-7ee90594618f` reported no High, Medium, or Low
+  task drift before source edits.
+- Final read-only drift pass `019eaeaa-8513-79f1-8b1a-ce51743c2c10`
+  found one real medium issue: `Esc` was not guarded for normal editable fields.
+  The shortcut handler now ignores `Esc` from editable targets unless the
+  Command Palette is open, and the UI suite covers that regression.
+- Follow-up read-only drift pass `019eaeb0-63b0-76a3-816b-b49e671e8181`
+  found one low validation gap for Command Palette `Enter` insertion coverage.
+  The UI suite now dispatches `Enter` on the active command result and asserts
+  the selected section is inserted.
+
+## Validation
+
+- `bun run test:vitest -- tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx` (40 tests)
+- `bun --cwd core lint:types`
+- `bun --cwd core lint`

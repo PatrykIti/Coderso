@@ -13,6 +13,11 @@ import {
   users,
 } from "../../../core/db/schema";
 import { createContentType } from "../../../core/services/content/typeService";
+import {
+  pageBlockCapabilities,
+  pageBlockTypes,
+  type PageBlockType,
+} from "../../../core/services/pages/pageDocumentV2";
 import { createPage, publishPage, updatePage } from "../../../core/services/pages/pageService";
 import { createPreviewToken } from "../../../core/services/pages/previewService";
 import { upsertSeoDocument } from "../../../core/services/seo/seoService";
@@ -171,6 +176,19 @@ const pageData = (headline: string) => ({
           id: `heading-${headline.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
           type: "heading",
           props: { text: headline, level: "h1", align: "center" },
+          style: {
+            width: "full",
+            align: "center",
+            textColor: "#123456",
+            background: "#fef3c7",
+            backgroundType: "color",
+            opacity: 0.9,
+            radius: 12,
+            shadow: "sm",
+            borderColor: "#cbd5e1",
+            padding: { top: 8, right: 12, bottom: 8, left: 12 },
+            margin: { bottom: 6 },
+          },
           visibility: { visible: true },
         },
         {
@@ -178,6 +196,12 @@ const pageData = (headline: string) => ({
           type: "text",
           props: { text: `${headline} body`, format: "plain", align: "center" },
           visibility: { visible: true },
+        },
+        {
+          id: `hidden-${headline.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+          type: "text",
+          props: { text: `${headline} hidden body`, format: "plain", align: "left" },
+          visibility: { visible: false },
         },
       ],
     },
@@ -188,6 +212,334 @@ const pageData = (headline: string) => ({
   },
   seo: {
     description: `${headline} meta description`,
+  },
+});
+
+const nestedPageData = (token: string, label: "published" | "draft") => {
+  const titleLabel = label === "published" ? "Published" : "Draft";
+  return {
+    schemaVersion: 2,
+    breakpoints: ["desktop", "tablet", "mobile"],
+    sections: [
+      {
+        id: `sec-nested-${label}-${token}`,
+        type: "content",
+        name: "Nested Runtime",
+        variant: "default",
+        layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+        style: {
+          background: "#ffffff",
+          backgroundType: "color",
+          backgroundImage: null,
+          accent: "#0d9488",
+          radius: 0,
+          shadow: "none",
+        },
+        spacing: {
+          paddingTop: 48,
+          paddingBottom: 48,
+          paddingLeft: 32,
+          paddingRight: 32,
+          gap: 24,
+        },
+        visibility: {
+          visible: true,
+          authOnly: false,
+          anchor: "nested-runtime",
+          startsAt: null,
+          endsAt: null,
+        },
+        responsive: {},
+        blocks: [
+          {
+            id: `columns-${label}-${token}`,
+            type: "columns",
+            props: { count: 2, gap: 24, distribution: "equal" },
+            style: { width: "full", align: "center" },
+            visibility: { visible: true },
+            slots: {
+              "column:1": [
+                {
+                  id: `nested-heading-${label}-${token}`,
+                  type: "heading",
+                  props: {
+                    text: `${titleLabel} nested desktop ${token}`,
+                    level: "h2",
+                    align: "left",
+                  },
+                  visibility: { visible: true },
+                  responsive: {
+                    mobile: {
+                      props: { text: `${titleLabel} nested mobile ${token}` },
+                    },
+                  },
+                },
+              ],
+              "column:2": [
+                {
+                  id: `nested-hidden-${label}-${token}`,
+                  type: "text",
+                  props: {
+                    text: `${titleLabel} hidden nested ${token}`,
+                    format: "plain",
+                    align: "left",
+                  },
+                  visibility: { visible: false },
+                },
+              ],
+              "column:3": [
+                {
+                  id: `nested-dormant-${label}-${token}`,
+                  type: "heading",
+                  props: {
+                    text: `${titleLabel} dormant nested ${token}`,
+                    level: "h2",
+                    align: "left",
+                  },
+                  visibility: { visible: true },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+    settings: {
+      template: "page-v2",
+      showInNav: true,
+    },
+    seo: {
+      description: `${titleLabel} nested runtime ${token}`,
+    },
+  };
+};
+
+const insertablePageBlockTypes = pageBlockTypes.filter(
+  (type): type is PageBlockType => pageBlockCapabilities[type].insertable
+);
+
+const runtimeParityPageData = (token: string) => ({
+  schemaVersion: 2,
+  breakpoints: ["desktop", "tablet", "mobile"],
+  sections: [
+    {
+      id: `sec-runtime-parity-${token}`,
+      type: "content",
+      name: "Runtime Parity",
+      variant: "default",
+      layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+      spacing: {
+        paddingTop: 48,
+        paddingBottom: 48,
+        paddingLeft: 32,
+        paddingRight: 32,
+        gap: 24,
+      },
+      visibility: {
+        visible: true,
+        authOnly: false,
+        anchor: "runtime-parity",
+        startsAt: null,
+        endsAt: null,
+      },
+      responsive: {},
+      blocks: [
+        {
+          id: `parity-heading-${token}`,
+          type: "heading",
+          props: { text: `Runtime parity heading ${token}`, level: "h2", align: "left" },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-text-${token}`,
+          type: "text",
+          props: { text: `Runtime parity copy ${token}`, format: "plain", align: "left" },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-button-${token}`,
+          type: "button",
+          props: { label: `Runtime CTA ${token}`, href: "/contact", target: "self" },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-image-${token}`,
+          type: "image",
+          props: {
+            src: `https://cdn.example.test/runtime-image-${token}.jpg`,
+            alt: "Runtime image",
+            caption: `Runtime image caption ${token}`,
+            fit: "cover",
+          },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-video-${token}`,
+          type: "video",
+          props: {
+            src: `https://cdn.example.test/runtime-video-${token}.mp4`,
+            title: "Runtime video",
+            autoplay: false,
+            muted: true,
+          },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-list-${token}`,
+          type: "list",
+          props: {
+            items: [
+              `Runtime list item ${token}`,
+              { label: "Runtime linked item", href: "/linked" },
+            ],
+            ordered: false,
+          },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-card-${token}`,
+          type: "card",
+          props: { title: `Runtime card ${token}`, text: "Card body", image: null, href: null },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-divider-${token}`,
+          type: "divider",
+          props: { tone: "neutral", thickness: 2 },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-spacer-${token}`,
+          type: "spacer",
+          props: { size: 16 },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-statistic-${token}`,
+          type: "statistic",
+          props: { value: "42", label: `Runtime metric ${token}`, caption: "Measured" },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-quote-${token}`,
+          type: "quote",
+          props: { text: `Runtime quote ${token}`, cite: "Coderso" },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-container-${token}`,
+          type: "container",
+          props: {},
+          visibility: { visible: true },
+          slots: {
+            children: [
+              {
+                id: `parity-container-text-${token}`,
+                type: "text",
+                props: {
+                  text: `Container child ${token}`,
+                  format: "plain",
+                  align: "left",
+                },
+                visibility: { visible: true },
+              },
+            ],
+          },
+        },
+        {
+          id: `parity-columns-${token}`,
+          type: "columns",
+          props: { count: 2, gap: 24, distribution: "equal" },
+          visibility: { visible: true },
+          slots: {
+            "column:1": [
+              {
+                id: `parity-column-heading-${token}`,
+                type: "heading",
+                props: { text: `Column child ${token}`, level: "h3", align: "left" },
+                visibility: { visible: true },
+              },
+            ],
+            "column:2": [
+              {
+                id: `parity-column-text-${token}`,
+                type: "text",
+                props: { text: `Second column ${token}`, format: "plain", align: "left" },
+                visibility: { visible: true },
+              },
+            ],
+          },
+        },
+        {
+          id: `parity-group-${token}`,
+          type: "group",
+          props: { direction: "row", wrap: true, gap: 12 },
+          visibility: { visible: true },
+          slots: {
+            children: [
+              {
+                id: `parity-group-button-${token}`,
+                type: "button",
+                props: { label: `Group button ${token}`, href: "/group", target: "self" },
+                visibility: { visible: true },
+              },
+            ],
+          },
+        },
+        {
+          id: `parity-gallery-${token}`,
+          type: "gallery",
+          props: {
+            layout: "grid",
+            items: [
+              {
+                src: `https://cdn.example.test/runtime-gallery-${token}.jpg`,
+                alt: "Runtime gallery",
+                caption: `Runtime gallery caption ${token}`,
+              },
+            ],
+          },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-collection-${token}`,
+          type: "collection",
+          props: { contentTypeId: "ct-private", queryId: "query-private", limit: 6 },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-form-${token}`,
+          type: "form",
+          props: { formId: "form-private", title: "Runtime form" },
+          visibility: { visible: true },
+        },
+        {
+          id: `parity-embed-${token}`,
+          type: "embed",
+          props: {
+            html: "<script>alert('runtime')</script>",
+            url: "javascript:alert('runtime')",
+            provider: "custom",
+          },
+          visibility: { visible: true },
+        },
+      ],
+    },
+  ],
+  settings: {
+    template: "page-v2",
+    showInNav: true,
+  },
+  seo: {
+    description: `Runtime parity ${token}`,
   },
 });
 
@@ -286,6 +638,20 @@ testIfDbWithOptions(
     expect(publicHtml).toContain(fixture.publishedHeadline);
     expect(publicHtml).not.toContain(fixture.draftHeadline);
     expect(publicHtml).not.toContain("Preview mode");
+    expect(publicHtml).toContain('data-page-section="hero"');
+    expect(publicHtml).toContain('data-page-variant="centered"');
+    expect(publicHtml).toContain('data-page-section-template="hero"');
+    expect(publicHtml).toContain("page-section-template-hero-centered");
+    expect(publicHtml).toContain('data-page-block="heading"');
+    expect(publicHtml).toContain(`data-block-id="heading-published-runtime-${fixture.token}"`);
+    expect(publicHtml).toContain("--coderso-block-text:#123456");
+    expect(publicHtml).toContain("background-color:#fef3c7");
+    expect(publicHtml).not.toContain(`${fixture.publishedHeadline} hidden body`);
+    expect(publicHtml).not.toContain(`data-block-id="hidden-published-runtime-${fixture.token}"`);
+    expect(publicHtml).toContain(`data-section-id="sec-published-runtime-${fixture.token}"`);
+    expect(publicHtml).toMatch(
+      /style="[^"]*--coderso-section-accent:#0d9488[^"]*padding:72px 40px 72px 40px[^"]*max-width:1080px/
+    );
 
     const { token } = await createPreviewToken({
       targetType: "page",
@@ -300,6 +666,120 @@ testIfDbWithOptions(
     expect(previewHtml).toContain(fixture.draftHeadline);
     expect(previewHtml).not.toContain(fixture.publishedHeadline);
     expect(previewHtml).toContain("Preview mode");
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "public and preview page runtime render nested layout slots recursively",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+    await setTestSetting("site.previewEnabled", true);
+
+    const actor = await createActor();
+    const token = randomUUID().slice(0, 8);
+    const slug = `/runtime-nested-${token}`;
+    const created = await createPage({
+      title: `Nested Runtime ${token}`,
+      slug,
+      authorId: actor.id,
+      data: nestedPageData(token, "draft"),
+    });
+    trackPage(created?.id);
+    if (!created?.id) throw new Error("missing_nested_page");
+
+    await publishPage(created.id, actor.id, nestedPageData(token, "published"));
+    await updatePage(created.id, {
+      data: nestedPageData(token, "draft"),
+    });
+
+    const publicResponse = await requestPublicPath(slug);
+    expect(publicResponse.status).toBe(200);
+    const publicHtml = await publicResponse.text();
+    expect(publicHtml).toContain(`Published nested desktop ${token}`);
+    expect(publicHtml).not.toContain(`Published nested mobile ${token}`);
+    expect(publicHtml).not.toContain(`Draft nested desktop ${token}`);
+    expect(publicHtml).not.toContain(`Published hidden nested ${token}`);
+    expect(publicHtml).not.toContain(`Published dormant nested ${token}`);
+    expect(publicHtml).toContain(`data-block-id="columns-published-${token}"`);
+    expect(publicHtml).toContain('data-page-layout-block="columns"');
+    expect(publicHtml).toContain('data-page-block-slot="column:1"');
+    expect(publicHtml).toContain('data-page-block-slot="column:2"');
+    expect(publicHtml).not.toContain('data-page-block-slot="column:3"');
+
+    const { token: previewToken } = await createPreviewToken({
+      targetType: "page",
+      targetId: created.id,
+      ttlMinutes: 5,
+    });
+    const previewResponse = await requestPublicPath(
+      `/preview?type=page&token=${encodeURIComponent(previewToken)}&device=mobile`
+    );
+    expect(previewResponse.status).toBe(200);
+    const previewHtml = await previewResponse.text();
+    expect(previewHtml).toContain(`Draft nested mobile ${token}`);
+    expect(previewHtml).not.toContain(`Draft nested desktop ${token}`);
+    expect(previewHtml).not.toContain(`Published nested desktop ${token}`);
+    expect(previewHtml).not.toContain(`Draft hidden nested ${token}`);
+    expect(previewHtml).not.toContain(`Draft dormant nested ${token}`);
+    expect(previewHtml).toContain("Preview mode");
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "public page runtime renders every insertable block plus emitted gallery and inert data-bound states",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const actor = await createActor();
+    const token = randomUUID().slice(0, 8);
+    const slug = `/runtime-parity-${token}`;
+    const created = await createPage({
+      title: `Runtime Parity ${token}`,
+      slug,
+      authorId: actor.id,
+      data: runtimeParityPageData(token),
+    });
+    trackPage(created?.id);
+    if (!created?.id) throw new Error("missing_runtime_parity_page");
+
+    await publishPage(created.id, actor.id, runtimeParityPageData(token));
+
+    const response = await requestPublicPath(slug);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    for (const type of insertablePageBlockTypes) {
+      expect(html).toContain(`data-page-block="${type}"`);
+    }
+    expect(html).toContain(`Runtime parity heading ${token}`);
+    expect(html).toContain(`Runtime CTA ${token}`);
+    expect(html).toContain(`https://cdn.example.test/runtime-image-${token}.jpg`);
+    expect(html).toContain(`https://cdn.example.test/runtime-video-${token}.mp4`);
+    expect(html).toContain(`Runtime list item ${token}`);
+    expect(html).toContain(`Runtime card ${token}`);
+    expect(html).toContain(`Runtime metric ${token}`);
+    expect(html).toContain(`Runtime quote ${token}`);
+    expect(html).toContain(`Container child ${token}`);
+    expect(html).toContain(`Column child ${token}`);
+    expect(html).toContain(`Group button ${token}`);
+    expect(html).toContain('data-page-gallery="true"');
+    expect(html).toContain(`Runtime gallery caption ${token}`);
+    expect(html).toContain(`https://cdn.example.test/runtime-gallery-${token}.jpg`);
+    expect(html).toContain('data-page-block-inert="collection"');
+    expect(html).toContain('data-page-block-inert="form"');
+    expect(html).toContain('data-page-block-inert="embed"');
+    expect(html).toContain("Runtime form is not available yet.");
+    expect(html).not.toContain("ct-private");
+    expect(html).not.toContain("query-private");
+    expect(html).not.toContain("form-private");
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("javascript:alert");
   },
   { timeout: dbRuntimeTimeout }
 );

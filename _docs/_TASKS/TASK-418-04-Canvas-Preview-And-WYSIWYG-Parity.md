@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-418-02, TASK-418-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-09
+**Completed:** 2026-06-10
 
 ---
 
@@ -37,10 +39,10 @@ trust the editor.
 
 ## Sub-Tasks
 
-- [ ] TASK-418-04-L01: Shared admin preview renderer and style helpers.
-- [ ] TASK-418-04-L02: Section layout style spacing visibility feedback.
-- [ ] TASK-418-04-L03: Block style visual feedback and empty states.
-- [ ] TASK-418-04-L04: Section type variant layout templates.
+- [x] TASK-418-04-L01: Shared admin preview renderer and style helpers.
+- [x] TASK-418-04-L02: Section layout style spacing visibility feedback.
+- [x] TASK-418-04-L03: Block style visual feedback and empty states.
+- [x] TASK-418-04-L04: Section type variant layout templates.
 
 ---
 
@@ -58,3 +60,27 @@ trust the editor.
 
 - `_docs/PAGE_MODEL.md` if style contracts change.
 - `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md`
+
+---
+
+## Progress Notes
+
+- 2026-06-09: L01 shared renderer extraction is complete. Public runtime and
+  admin canvas now consume `core/services/pages/pageRendererV2.tsx`; remaining
+  leaves own visible section/block style feedback and section variant templates.
+- 2026-06-09: L02 started to wire registry-owned section controls and make
+  section layout/style/spacing/visibility feedback visible in the admin canvas.
+- 2026-06-09: L02 completed section registry controls, supplemental visibility/
+  background fields, canvas-device column classes, and hidden section ghost
+  state. Remaining leaves cover block style feedback and section variants.
+- 2026-06-10: L03 started to make block style controls, selection, hidden
+  states, and empty placeholders visibly affect the admin canvas.
+- 2026-06-10: L03 completed shared block render props, public hidden-block
+  omission, admin hidden-block ghost chrome, and canvas-visible block style
+  feedback. Remaining work in this parent is section type/variant templates.
+- 2026-06-10: L04 started to make supported section type/variant pairs drive
+  shared renderer templates and type-scoped variant controls.
+- 2026-06-10: L04 completed the section template matrix, shared renderer
+  variant templates, type-scoped base-only variant controls, and
+  capability-derived section insertion. TASK-418-04 is closed with all leaves
+  done.

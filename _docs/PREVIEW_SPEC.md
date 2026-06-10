@@ -9,6 +9,9 @@ public rendering.
 - Wbudowany w edytor.
 - Edytowalny.
 - Stylowany tokenami Admin UI.
+- Pages v2 canvas preview uses the shared recursive renderer for nested layout
+  blocks and receives block-path/depth/slot metadata for editor chrome. This
+  metadata is admin-only and does not change public preview token semantics.
 - Selected widget settings now also render a shared read-only live preview row
   through the real `WidgetRenderer` contract in `editor-preview` mode. The row
   can consume transient `previewState.dataPatch` data without mutating saved

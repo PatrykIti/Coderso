@@ -53,6 +53,8 @@ Error handling:
 Regression-test shape:
 
 - This leaf owns evidence collection rather than a production behavior.
+- This leaf also owns verification that obsolete editor mockup files/tests are
+  removed or no longer imported after the shared renderer lands.
 
 ---
 
@@ -77,6 +79,10 @@ Regression-test shape:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Targeted Vitest suites for Pages domain/admin UI/assistant.
+- AJV/schema parity tests for strict nested Page document validation, including
+  block props/style/responsive and recursive slots.
+- Direct renderer tests for every insertable block type and per-block responsive
+  cascade, in addition to route-level runtime assertions.
 - Targeted Bun suites for Pages runtime/routes/preview/assistant executor.
 - `bun run gates:coderso`
 

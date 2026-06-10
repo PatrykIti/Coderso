@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 43 tasks
-- **In Progress:** 5 tasks
-- **Done:** 2330 tasks
+- **To Do:** 20 tasks
+- **In Progress:** 7 tasks
+- **Done:** 2355 tasks
 
 ---
 
@@ -88,38 +88,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-418 | Page Editor V2 Authoring Nesting And Runtime Remediation | High | Very Large | Follow-up to TASK-417 covering Page editor block selection, toolbar controls, WYSIWYG canvas, bounded nesting, runtime parity, assistant/templates alignment, validation, and drift closure. |
-| TASK-418-01 | Audit Contract And Task Drift Freeze | High | Medium | Create the Page Editor v2 gap report and rerun fresh read-only drift audits before code edits. |
-| TASK-418-01-L01 | Page Editor V2 Gap Audit Report | High | Medium | Maintain `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md` with Claude/subagent findings, file references, severity, and remediation mapping. |
-| TASK-418-01-L02 | Final Preimplementation Drift Audit Loop | High | Medium | Rerun Claude/subagent read-only drift checks after task files exist and fold confirmed findings back into the contract. |
-| TASK-418-02 | Immediate Editor Correctness And Selection | High | Large | Fix selected block state, type-safe patching, autosave/save feedback, and first-class block actions. |
-| TASK-418-02-L01 | Type Safe Block Patching And Autosave Errors | High | Medium | Replace first-block/generic content patching with allowlist-bound block helpers and visible autosave errors. |
-| TASK-418-02-L02 | Block Selection Model And Layers Tree | High | Large | Add section/block selection targets, block paths, layers tree selection, and assistant selected-block context. |
-| TASK-418-02-L03 | Block Insert Reorder Duplicate And Delete Actions | High | Medium | Make insertion target-aware and add selected-block move, duplicate, and delete operations. |
-| TASK-418-02-L04 | Block Style And Responsive Model Substrate | High | Large | Expand block style and resolve block-level responsive overrides before controls/renderers depend on them. |
-| TASK-418-03 | Control Registry And Floating Toolbar Parity | High | Very Large | Replace hard-coded toolbar panels with registry-driven universal and per-type controls. |
-| TASK-418-03-L01 | Universal Section And Block Control Registry | High | Large | Add schema-owned control definitions for layout, content, style, spacing, background, responsive, and visibility panels. |
-| TASK-418-03-L02 | Per Type Atomic Block Controls | High | Large | Add small editable control sets for every insertable block type or mark unsupported types not insertable. |
-| TASK-418-03-L03 | Responsive Override Indicators And Reset UX | High | Medium | Add inherited/overridden field state, target badges, and per-field reset for tablet/mobile overrides. |
-| TASK-418-03-L04 | Floating Toolbar Interactions And Keyboard Shortcuts | High | Medium | Complete toolbar labels/tooltips, draggable/collapsible behavior, one subpanel, `Ctrl/Cmd+K`, `Esc`, and safe shortcuts. |
-| TASK-418-04 | Canvas Preview And WYSIWYG Parity | High | Large | Make admin canvas visibly honor section/block layout, style, spacing, background, visibility, and responsive state. |
-| TASK-418-04-L01 | Shared Admin Preview Renderer And Style Helpers | High | Large | Share pure render/style helpers between admin canvas and public runtime without crossing admin/runtime boundaries. |
-| TASK-418-04-L02 | Section Layout Style Spacing Visibility Feedback | High | Medium | Apply section columns, align, justify, max width, background, radius, shadow, padding, gap, and visibility to canvas. |
-| TASK-418-04-L03 | Block Style Visual Feedback And Empty States | High | Medium | Apply block style, selection, hidden states, placeholders, and type-specific previews on canvas. |
-| TASK-418-04-L04 | Section Type Variant Layout Templates | High | Large | Make `section.type` and `section.variant` drive shared renderer templates and type-scoped variant controls. |
-| TASK-418-05 | Nested Container And Slot Architecture | High | Very Large | Add controlled nesting through container-capable blocks and named slots while keeping sections top-level. |
-| TASK-418-05-L01 | Recursive Page Block Contract And Normalizer | High | Large | Extend `PageBlockV2` with bounded slots, strict recursive normalization, max depth, and duplicate-id/cycle guards. |
-| TASK-418-05-L02 | Container Blocks Inserter And Layers Editing | High | Large | Add slot-aware insertion, movement, selection, and layers editing for container blocks. |
-| TASK-418-05-L03 | Recursive Runtime Renderer And Responsive Cascade | High | Large | Render nested slots publicly and resolve responsive overrides recursively. |
-| TASK-418-06 | Runtime Assistant And Template Parity | High | Large | Align Page editor inserter, public runtime, assistant emitters, solution kits, and Page templates on one capability contract. |
-| TASK-418-06-L01 | Public Runtime Real Renderers For Insertable Blocks | High | Large | Replace placeholder output for insertable blocks or hide unsupported types from inserter/assistant catalogs. |
-| TASK-418-06-L02 | Assistant Surface Schema And Blueprint Alignment | High | Large | Add selected block paths, nested summaries, and capability-gated Page actions to assistant flows. |
-| TASK-418-06-L03 | Page Templates And Non Page Widget Boundaries | High | Medium | Freeze Page Template v2 boundaries and keep non-Page widget-template/custom-screen/detail-page contracts separate. |
 | TASK-418-06-L04 | Collection Form Embed Runtime Data Binding Security | High | Large | Add scoped public read binding and sanitizer/no-leak security for collection, form, and embed Page blocks. |
 | TASK-418-07 | Validation Docs Changelog And Live Smoke Closure | High | Large | Close TASK-418 with targeted tests, live server Playwright, docs, changelog, board sync, and final drift audit. |
 | TASK-418-07-L01 | Targeted Lint Type Tests And Gates | High | Medium | Run and record lint, typecheck, targeted Vitest/Bun suites, and release gates. |
 | TASK-418-07-L02 | Real Admin And Front Playwright Smoke | High | Medium | Use `coderso-dev-core-host` and `playwright-cli` to verify admin edit/save/publish and public frontend parity. |
 | TASK-418-07-L03 | Docs Changelog Board And Final Drift Closure | High | Medium | Update docs, changelog, task statuses, board stats, and rerun final read-only drift audit before closing. |
+| TASK-420 | Page Templates Surface Migration | Medium | Large | Follow-up from TASK-418-06-L03: evaluate/implement a dedicated Page Templates surface without mixing Page v2 documents into legacy widget-template rows; requires Claude xhigh drift audits and `coderso-dev-core-host` + `playwright-cli` browser validation when implemented. |
+| TASK-420-01 | Audit Reusable Template IA And Usage | Medium | Medium | Audit reusable template IA, current widget-template usage, and Page Templates product need before any migration. |
+| TASK-420-02 | Page Template Storage Preview And Migration Contract | Medium | Large | Design strict Page-template storage, preview, migration, and rollback contracts before implementation. |
+| TASK-420-03 | Implement Page Templates Admin Migration Closure | Medium | Large | Implement the selected Page Templates admin migration with server/helper Playwright smoke, cache, docs, and closure validation. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
@@ -137,6 +114,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-418 | Page Editor V2 Authoring Nesting And Runtime Remediation | High | Very Large | In progress: audit/freeze, immediate editor correctness, control registry, canvas/WYSIWYG parity, and nested container runtime are done; implementation continues through TASK-418-06 runtime/assistant/template parity. |
+| TASK-418-06 | Runtime Assistant And Template Parity | High | Large | In progress: public runtime, assistant surface/schema parity, and template boundary freeze are done; collection/form/embed binding remains. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -148,6 +127,31 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-418-06-L01 | Public Runtime Real Renderers For Insertable Blocks | High | Large | Done (2026-06-10): gallery now renders real static public markup, exposed Page block capabilities require real renderers, and collection/form/embed render explicit inert public states until L04. |
+| TASK-418-06-L02 | Assistant Surface Schema And Blueprint Alignment | High | Large | Done (2026-06-10): Page active surfaces now include server-revalidated nested paths/capabilities, assistant Page schemas gate emitted vocabulary, and layout blocks are assistant-emittable. |
+| TASK-418-06-L03 | Page Templates And Non Page Widget Boundaries | High | Medium | Done (2026-06-10): Page template input resolves through a Page v2 boundary helper, non-Page widget surfaces remain legacy `WidgetBlock[]`, and TASK-420 tracks any future migration. |
+| TASK-418-05 | Nested Container And Slot Architecture | High | Very Large | Done (2026-06-10): bounded layout slots, admin nested authoring, recursive runtime rendering, and nested responsive cascade are complete for `container`, `columns`, and `group`. |
+| TASK-418-05-L03 | Recursive Runtime Renderer And Responsive Cascade | High | Large | Done (2026-06-10): layout blocks now render recursively in public/preview output, nested responsive overrides resolve, and canvas chrome receives recursive frame metadata. |
+| TASK-418-05-L02 | Container Blocks Inserter And Layers Editing | High | Large | Done (2026-06-10): staged `editorInsertable` layout blocks, slot-aware Layers, block-path editing, bounded moves, nested duplicate/delete, and section-copy id regeneration are complete. |
+| TASK-418-05-L01 | Recursive Page Block Contract And Normalizer | High | Large | Done (2026-06-10): `PageBlockV2` now supports bounded layout-block slots with strict recursive normalization, finite schema parity, and route-schema coverage. |
+| TASK-418-04 | Canvas Preview And WYSIWYG Parity | High | Large | Done (2026-06-10): shared renderer extraction, section/block canvas feedback, hidden-state parity, and section type/variant templates are complete. |
+| TASK-418-04-L04 | Section Type Variant Layout Templates | High | Large | Done (2026-06-10): `pageSectionTemplates` now drives shared renderer templates, type-scoped base-only variant controls, and capability-derived section insertion. |
+| TASK-418-04-L03 | Block Style Visual Feedback And Empty States | High | Medium | Done (2026-06-10): shared block render props now apply block style, public runtime omits hidden block frames, and admin canvas renders selectable hidden block ghosts. |
+| TASK-418-04-L02 | Section Layout Style Spacing Visibility Feedback | High | Medium | Done (2026-06-09): section controls now render from the universal registry, supplemental anchor/media/date fields are preserved, canvas-device columns are viewport-independent, and hidden sections show admin ghost state. |
+| TASK-418-04-L01 | Shared Admin Preview Renderer And Style Helpers | High | Large | Done (2026-06-09): `pageRendererV2` now owns shared Pages v2 render/style helpers for public runtime and admin canvas content; disconnected mockup components/tests were retired. |
+| TASK-418-03 | Control Registry And Floating Toolbar Parity | High | Very Large | Done (2026-06-09): universal/per-type controls, responsive override UX, toolbar labels/tooltips, collapsible/drag state, guarded shortcuts, and confirmation-backed delete are complete. |
+| TASK-418-03-L04 | Floating Toolbar Interactions And Keyboard Shortcuts | High | Medium | Done (2026-06-09): toolbar labels/tooltips, one-panel/collapse/drag state, `Ctrl/Cmd+K`, `Esc`, duplicate/delete shortcuts, and destructive delete confirmation are complete. |
+| TASK-418-03-L03 | Responsive Override Indicators And Reset UX | High | Medium | Done (2026-06-09): PageEditor now shows inherited/override state, per-field reset, and responsive target badges for section and block controls. |
+| TASK-418-03-L02 | Per Type Atomic Block Controls | High | Large | Done (2026-06-09): Page owner metadata, per-type block controls, registry-driven selected-block toolbar editing, capability-derived block inserter, and targeted Vitest coverage are complete. |
+| TASK-418-03-L01 | Universal Section And Block Control Registry | High | Large | Done (2026-06-09): Page owner exports option/capability metadata and `pageEditorControlRegistry` defines universal section/block controls with array paths and capability gating. |
+| TASK-418-02 | Immediate Editor Correctness And Selection | High | Large | Done (2026-06-09): PageEditor now has strict block style/responsive substrate, type-safe selected-block patching, visible autosave errors, block selection/layers, and selected-block actions. |
+| TASK-418-02-L03 | Block Insert Reorder Duplicate And Delete Actions | High | Medium | Done (2026-06-09): command palette inserts target the active section/block/no-selection context, and selected blocks can move, duplicate, and delete safely. |
+| TASK-418-02-L02 | Block Selection Model And Layers Tree | High | Large | Done (2026-06-09): PageEditor now supports top-level block selection from canvas/layers, selected-block content patching, toolbar block labels, and assistant selected-block id context. |
+| TASK-418-02-L01 | Type Safe Block Patching And Autosave Errors | High | Medium | Done (2026-06-09): PageEditor content edits are block-type-aware, allowlist-bound, breakpoint-aware, and autosave failures surface bounded inline feedback. |
+| TASK-418-02-L04 | Block Style And Responsive Model Substrate | High | Large | Done (2026-06-09): `pageDocumentV2` now owns expanded block style, capability metadata, strict schema parity, sparse block responsive deltas, and block breakpoint resolution. |
+| TASK-418-01 | Audit Contract And Task Drift Freeze | High | Medium | Done (2026-06-09): TASK-418 report, task graph corrections, Claude/subagent read-only drift passes, board, and changelog were synchronized before production edits. |
+| TASK-418-01-L01 | Page Editor V2 Gap Audit Report | High | Medium | Done (2026-06-09): `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md` now maps Page editor v2 drift to TASK-418 remediation leaves and records bounded slots plus no active TASK-419 duplicate. |
+| TASK-418-01-L02 | Final Preimplementation Drift Audit Loop | High | Medium | Done (2026-06-09): repeated Claude/subagent read-only audits found no unresolved material drift after confirmed corrections were folded into the contract. |
 | TASK-417 | Pages Sections Atomic Blocks Rewrite | High | Very Large | Done (2026-06-09): Pages moved to clean-break `schemaVersion: 2` documents with sections + atomic blocks, canvas-first admin editing, v2 public runtime, assistant cutover, docs, Playwright smoke, and targeted validation. |
 | TASK-417-01 | Source Of Truth Contract And Drift Freeze | High | Large | Done (2026-06-09): v2 scope, clean-break legacy reset policy, source docs, and pre-implementation audit findings were frozen before code edits. |
 | TASK-417-01-L01 | Page Model V2 Normative Docs | High | Medium | Done (2026-06-09): `_docs/PAGE_MODEL.md` and related docs now define Pages v2 sections, atomic blocks, responsive overrides, and legacy reset policy. |

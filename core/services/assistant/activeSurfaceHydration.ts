@@ -10,12 +10,17 @@ import type {
   AssistantActionContext,
   AssistantCollectionWorkspaceSummary,
 } from "./actionPlanTypes";
+import { normalizeStoredPageDocumentV2ForRead } from "../pages/pageDocumentV2";
 import {
   extractAssistantTemplateSectionReferences,
   mergeAssistantTemplateSectionReferences,
   normalizeAssistantReferencedWidgetTemplates,
 } from "./adminContextCatalogNormalizer";
 import type { AssistantTemplateSectionReferenceSummary } from "./adminContextTypes";
+import {
+  resolveAssistantPageSelection,
+  summarizePageSectionsForAssistant,
+} from "./pageActiveSurfaceSummary";
 
 export type AssistantActiveSurfaceHydrationDeps = {
   getPage: typeof getPage;
@@ -153,17 +158,31 @@ export async function hydrateAssistantActiveSurfaceContext(
   if (activeSurface.kind === "page") {
     const page = await deps.getPage(activeSurface.page.id);
     if (!page) return { ...contextWithWorkspace, activeSurface: null };
+    const document = normalizeStoredPageDocumentV2ForRead(
+      isRecord(page) ? page.currentData : undefined
+    );
+    const sections = summarizePageSectionsForAssistant(document.sections);
+    const selection = resolveAssistantPageSelection(sections, {
+      selectedSectionId: activeSurface.selectedSectionId,
+      selectedBlockId: activeSurface.selectedBlockId,
+      selectedBlockPath: activeSurface.selectedBlockPath,
+    });
     return {
       ...contextWithWorkspace,
       activeSurface: {
         ...activeSurface,
+        schemaVersion: 2,
         page: {
           id: page.id,
           title: page.title,
           slug: page.slug,
           status: page.status,
-          template: activeSurface.page.template,
+          template: document.settings.template,
         },
+        selectedSectionId: selection.selectedSectionId,
+        selectedBlockId: selection.selectedBlockId,
+        selectedBlockPath: selection.selectedBlockPath,
+        sections,
       },
     };
   }

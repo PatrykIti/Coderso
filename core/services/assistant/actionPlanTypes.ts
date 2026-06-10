@@ -12,7 +12,11 @@ import type {
   AssistantSiteBuilderIntakeStepId,
 } from "./assistantSiteBuilderIntakeTypes";
 import type { NormalizedFormAction } from "../forms/formActionsContract";
-import type { PageSectionV2 } from "../pages/pageDocumentV2";
+import type {
+  PageBlockPublicDataBinding,
+  PageBlockRuntimeRendererState,
+  PageSectionV2,
+} from "../pages/pageDocumentV2";
 import type {
   GuidedSiteBuilderExecuteResult,
   GuidedSiteBuilderPlanResult,
@@ -163,6 +167,24 @@ export type AssistantActiveSurfaceBlockSummary = {
   slotKeys: string[];
   templateId: string | null;
   templateName: string | null;
+  capabilities?: AssistantActiveSurfaceBlockCapabilities;
+  children?: AssistantActiveSurfaceBlockSummary[];
+};
+
+export type AssistantActiveSurfaceBlockCapabilities = {
+  editorInsertable: boolean;
+  insertable: boolean;
+  assistantEmittable: boolean;
+  runtimeRenderer: PageBlockRuntimeRendererState;
+  publicDataBinding: PageBlockPublicDataBinding;
+  slots: string[];
+  reason: string | null;
+};
+
+export type AssistantActiveSurfaceSectionCapabilities = {
+  insertable: boolean;
+  assistantEmittable: boolean;
+  reason: string | null;
 };
 
 export type AssistantActivePageSectionSummary = {
@@ -172,10 +194,12 @@ export type AssistantActivePageSectionSummary = {
   path: string;
   blockCount: number;
   blocks: AssistantActiveSurfaceBlockSummary[];
+  capabilities?: AssistantActiveSurfaceSectionCapabilities;
 };
 
 export type AssistantActivePageSurfaceContext = {
   kind: "page";
+  schemaVersion?: 2;
   page: {
     id: string;
     title: string;
@@ -185,6 +209,7 @@ export type AssistantActivePageSurfaceContext = {
   };
   selectedSectionId: string | null;
   selectedBlockId: string | null;
+  selectedBlockPath?: string | null;
   sections: AssistantActivePageSectionSummary[];
   warnings: string[];
 };

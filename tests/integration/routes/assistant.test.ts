@@ -540,6 +540,7 @@ test("assistant action plan route does not require widget read permission for ac
         page: "/admin/pages/page-1",
         activeSurface: {
           kind: "page",
+          schemaVersion: 2,
           page: {
             id: "page-1",
             title: "Contact",
@@ -549,6 +550,7 @@ test("assistant action plan route does not require widget read permission for ac
           },
           selectedSectionId: "section-hero",
           selectedBlockId: "heading-1",
+          selectedBlockPath: "sections.0.blocks.0",
           sections: [
             {
               id: "section-hero",
@@ -566,8 +568,23 @@ test("assistant action plan route does not require widget read permission for ac
                   slotKeys: [],
                   templateId: null,
                   templateName: null,
+                  capabilities: {
+                    editorInsertable: true,
+                    insertable: true,
+                    assistantEmittable: true,
+                    runtimeRenderer: "real",
+                    publicDataBinding: "none",
+                    slots: [],
+                    reason: null,
+                  },
+                  children: [],
                 },
               ],
+              capabilities: {
+                insertable: true,
+                assistantEmittable: true,
+                reason: null,
+              },
             },
           ],
           warnings: [],

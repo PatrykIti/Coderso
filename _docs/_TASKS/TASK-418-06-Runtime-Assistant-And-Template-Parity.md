@@ -6,7 +6,8 @@
 **Category:** Pages / Runtime / Assistant / Templates
 **Estimated Effort:** Large
 **Dependencies:** TASK-418-03, TASK-418-04, TASK-418-05
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-10
 
 ---
 
@@ -15,7 +16,10 @@
 Align all Page emitters and consumers with the same Pages v2 contract. A block
 type or prop must not be insertable/emitted by PageEditor, assistant, solution
 kits, or page templates unless the normalizer preserves it and the runtime can
-render it honestly.
+render it honestly. Security-sensitive `collection`, `form`, and `embed`
+outputs may remain before TASK-418-06-L04 only when public runtime rendering is
+explicitly fail-closed and inert; L04 owns the later scoped binding and
+capability flips.
 
 ---
 
@@ -36,9 +40,18 @@ render it honestly.
 
 ## Sub-Tasks
 
-- [ ] TASK-418-06-L01: Public runtime real renderers for insertable blocks.
-- [ ] TASK-418-06-L02: Assistant surface schema and blueprint alignment.
-- [ ] TASK-418-06-L03: Page templates and non-Page widget boundaries.
+- [x] TASK-418-06-L01: Public runtime real renderers for insertable blocks.
+  Done (2026-06-10): gallery now renders real static public markup, exposed
+  block capabilities require real renderers, and collection/form/embed render
+  explicit inert states until L04.
+- [x] TASK-418-06-L02: Assistant surface schema and blueprint alignment.
+  Done (2026-06-10): Page active surfaces now carry server-revalidated nested
+  paths and capabilities, assistant Page schemas gate section/block output by
+  owner capabilities, and layout blocks are assistant-emittable.
+- [x] TASK-418-06-L03: Page templates and non-Page widget boundaries.
+  Done (2026-06-10): Page template input now resolves through a Page v2
+  boundary helper, non-Page widget surfaces remain on `WidgetBlock[]`, and
+  TASK-420 tracks any future Page Templates surface migration.
 - [ ] TASK-418-06-L04: Collection form embed runtime data binding security.
 
 ---
@@ -49,6 +62,12 @@ render it honestly.
 - Vitest assistant schema/policy/blueprint tests for Pages v2 block props and
   nested paths.
 - Boundary tests for widget-template, detail-page, and custom-screen surfaces.
+- Sequence public capability gating so `collection`, `form`, and `embed` are not
+  removed from assistant/solution-kit outputs before TASK-418-06-L04 provides a
+  real scoped public binding or an explicitly fail-closed inert binding that
+  preserves existing blueprint behavior.
+- Non-data-bound emitted blocks, including solution-kit `gallery`, must become
+  runtime-real or be removed/gated before this parent can close.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

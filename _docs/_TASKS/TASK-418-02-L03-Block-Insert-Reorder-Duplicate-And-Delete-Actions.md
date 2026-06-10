@@ -6,16 +6,18 @@
 **Category:** Admin UI / Pages
 **Estimated Effort:** Medium
 **Dependencies:** TASK-418-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-09
 
 ---
 
 ## Overview
 
 Make block actions first-class editor operations: insert into the intended
-section or container slot, reorder, duplicate, and delete selected blocks. The
-current add-block flow loses the chosen type when no section is selected and
-does not support block-level actions.
+top-level section, reorder, duplicate, and delete selected blocks. The current
+add-block flow loses the chosen type when no section is selected and does not
+support block-level actions. Nested container-slot insertion remains deferred to
+`TASK-418-05-L02`/`TASK-418-06-L02` after recursive block paths exist.
 
 ---
 
@@ -25,7 +27,7 @@ does not support block-level actions.
 function insertBlockAtTarget(document, selection, blockType, position) {
   const block = createPageBlockV2(blockType);
   if (selection.kind === "block") {
-    return insertSiblingBlock(document, selection.sectionId, selection.blockPath, block, position);
+    return insertSiblingBlock(document, selection.sectionId, selection.blockId, block, position);
   }
   if (selection.kind === "section") {
     return appendBlockToSection(document, selection.sectionId, block);
@@ -36,11 +38,11 @@ function insertBlockAtTarget(document, selection, blockType, position) {
 
 function duplicateSelectedBlock(document, selection) {
   const block = getSelectedBlock(document, selection);
-  return block ? insertSiblingBlock(document, selection.sectionId, selection.blockPath, cloneBlock(block), "after") : document;
+  return block ? insertSiblingBlock(document, selection.sectionId, selection.blockId, cloneBlock(block), "after") : document;
 }
 
 function deleteSelectedBlock(document, selection) {
-  return removeBlockAtPath(document, selection.sectionId, selection.blockPath);
+  return removeBlockById(document, selection.sectionId, selection.blockId);
 }
 ```
 
@@ -91,3 +93,27 @@ Regression-test shape:
 
 - `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md` if action UX
   intentionally diverges from reference.
+
+---
+
+## Closeout
+
+- Command palette block insertions now use the active top-level target:
+  selected block means insert after that block, selected section means append,
+  and no selection creates a content section containing the requested block.
+- Empty section canvas CTA opens the block inserter for that section.
+- Selected block toolbar actions move, duplicate, and delete only the selected
+  block; delete selects the nearest surviving block or falls back to the parent
+  section when the section becomes empty.
+- Section actions remain available when no valid block is selected.
+- Nested container-slot insertion remains deferred to `TASK-418-05-L02` and
+  `TASK-418-06-L02`.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
+  - Passed: 12 tests.
+- `bun --cwd core lint:types`
+  - Passed.
+- `bun --cwd core lint`
+  - Passed.

@@ -453,20 +453,31 @@ Runtime admin context:
   - selected resource hint,
   - route-derived visible action hints,
   - advisory permission hints wymagane dla widocznych akcji.
-- `PageEditor` publishes bounded active page surface context for assistant planning:
-  page identity, selected section id, atomic section/block summaries, and
-  unsaved-change warnings. Page data is `schemaVersion: 2` with `sections[]`;
-  widget template references are not hydrated from Page data.
+- `PageEditor` publishes bounded active page surface context for assistant
+  planning: page identity, selected section id, optional selected block id,
+  selected block path, nested section/block summaries, Page capability metadata,
+  and unsaved-change warnings. Page data is `schemaVersion: 2` with
+  `sections[]`; widget template references are not hydrated from Page data.
+- `core/services/pages/pageTemplateBoundary.ts` owns the template-surface
+  document contract split: Pages resolve as
+  `page-v2-section-block-contract`, while widget-template, custom-screen, and
+  detail-page surfaces remain `legacy-widget-block-contract`.
 - `WidgetTemplateEditorPage` publishes bounded active widget template surface context: template identity, selected block id, block id/type/path summaries, slot keys, template-section references, and template settings summary.
 - Custom screen builder, records list, and record editor surfaces publish bounded active custom screen context: screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, and writable field names.
 - Writable field names are derived only from widget-aware write-capable targets
   (for example `screen-field-value.value`), so legacy fallback widgets and
   read-only screen props do not advertise false editor capability.
-- The assistant plan route rehydrates active surface identity server-side before planning: pages through `pageService`, widget templates through `widgetTemplateService`, and custom screens through `customScreenService`; missing resources clear the active surface instead of trusting stale browser context.
-- Active page hydration revalidates only page identity through `pageService`; Pages
-  no longer hydrate widget-template refs from page canvas data. Reusable template
-  inspection remains scoped to active widget-template/custom-screen surfaces where
-  the persisted data actually owns `WidgetBlock[]`.
+- The assistant plan route rehydrates active surface identity server-side before
+  planning: pages through `pageService`, widget templates through
+  `widgetTemplateService`, and custom screens through `customScreenService`;
+  missing resources clear the active surface instead of trusting stale browser
+  context.
+- Active page hydration revalidates page identity, normalized current
+  `sections[]`, nested block summaries, and selected section/block/path context
+  through `pageService`; stale selected block ids or paths are cleared. Pages no
+  longer hydrate widget-template refs from page canvas data. Reusable template
+  inspection remains scoped to active widget-template/custom-screen surfaces
+  where the persisted data actually owns `WidgetBlock[]`.
 - Page mutations route through `page.upsert` with `sections[]` or metadata-only
   `page.update`. `page.widget.patch` is retired for Pages; reusable-template
   prompts can route to `widget-template.block.patch` only from a hydrated reusable
@@ -560,7 +571,11 @@ Action family contract registry:
 - `seo.document.delete` deletes exact SEO documents without deleting the owning page or entry target.
 - `page.update` edits active page title/slug/draft-published status and page-owned
   settings while preserving unrelated Page v2 sections.
-- `page.upsert` creates/updates Page v2 documents with `sections[]`; fresh
+- `page.upsert` creates/updates Page v2 documents with `sections[]`; strict
+  assistant schema normalization rejects Page section/block types outside the
+  Page capability-aligned assistant vocabulary, except for explicit inert
+  L04-deferred `collection`/`form`/`embed` output and existing static gallery
+  output. Fresh
   widget-style `blocks[]` payloads are rejected for Pages.
 - `widget-template.update` edits reusable template metadata/settings; `widget-template.block.patch` patches selected reusable template block data paths and preserves unrelated blocks/settings.
 - `custom-screen.update` edits custom screen metadata/sidebar/canonical collection-link metadata/binding mode; `custom-screen.widget.patch` patches selected custom screen widget block data paths while preserving unrelated blocks/bindings.
@@ -711,6 +726,14 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Public rendering i runtime preview korzystaja z tego samego pipeline w `core/server/publicSite.tsx`.
 - Pipeline: resolve danych strony (published vs draft) -> normalizacja template key -> resolver theme/plugin/core -> render runtime page shell.
 - Navigation runtime hydration rozstrzyga `linksSource` (manual/menu/pages) przed renderem; tryb `pages` respektuje `settings.showInNav`.
+- Page v2 shell rendering resolves template input through
+  `pageTemplateBoundary`: runtime Page templates receive normalized
+  `PageDocumentV2` `sections[]`, not legacy widget `blocks[]`. Stored legacy
+  Page rows still follow the compatibility reset path to an empty v2 document.
+- Non-Page template surfaces do not share the Page v2 template input contract:
+  widget-template, custom-screen, and detail-page runtimes continue to consume
+  `WidgetBlock[]` until a dedicated migration task changes their storage and
+  preview contracts.
 
 ## SEO Manager (v1)
 

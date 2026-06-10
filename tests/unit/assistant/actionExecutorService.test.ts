@@ -5089,7 +5089,10 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
     const sections = readPageSections(page.publishedData);
     expect(page.status).toBe("published");
     expect(sections.length).toBeGreaterThan(0);
-    expect(sections[0]).toMatchObject({ type: "navigation" });
+    expect(sections[0]).toMatchObject({
+      id: "full-service-primary-navigation",
+      type: "content",
+    });
     expect(sections.at(-1)).toMatchObject({ type: "cta" });
     const footerList = sections.at(-1)?.blocks?.find((block) => block.type === "list") as
       | { props?: { items?: Array<{ href?: string }> } }
@@ -5114,7 +5117,7 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
   ).toBe(true);
   const servicesPage = deps.__state.pages.find((page) => page.slug === "/uslugi");
   expect(readPageSections(servicesPage?.publishedData).map((section) => section.type)).toEqual([
-    "navigation",
+    "content",
     "collection",
     "cta",
   ]);

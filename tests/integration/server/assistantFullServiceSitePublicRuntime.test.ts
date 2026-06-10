@@ -87,7 +87,7 @@ test("full-service assistant plan renders public runtime pages with valid naviga
 
   for (const action of pageActions) {
     const sectionTypes = (action.input.sections ?? []).map((section) => section.type);
-    expect(sectionTypes[0]).toBe("navigation");
+    expect(sectionTypes[0]).toBe("content");
     expect(sectionTypes.at(-1)).toBe("cta");
 
     const html = await renderPlanPage(action);

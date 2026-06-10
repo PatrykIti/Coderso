@@ -89,7 +89,26 @@ Stały pasek. Zawiera tylko akcje globalne strony — żadnych właściwości el
   - klik w puste tło stage / `Esc` → odznaczenie.
 - **Inline „+ dodaj sekcję":** w przerwie między sekcjami; na hover przerwa się rozszerza i pokazuje pigułkę „Dodaj sekcję" → otwiera Command Palette.
 - **Stan pusty sekcji:** przerywana ramka z CTA „Dodaj pierwszy blok".
+- **Bloki** używają tych samych render props co public runtime dla szerokości,
+  wyrównania, koloru tekstu, tła, opacity, border/radius/shadow oraz spacingu;
+  chrome edytora dodaje tylko outline zaznaczenia i badge nadpisania.
+- **Bloki-układy** (`container`, `columns`, `group`) są bounded layout atoms,
+  nie powrotem do jednego wszechmocnego widgetu. Od TASK-418-05-L03 są
+  public-ready `insertable` z rekursywnym runtime renderingiem, ale assistant
+  emission pozostaje wyłączone do czasu TASK-418-06-L02.
+- **Sloty bloków-układów** są nazwane i limitowane przez `pageDocumentV2`:
+  `container`/`group` używają `children`, a `columns` używa `column:1` do
+  `column:4`. Warstwy i inserter operują na ścieżkach bloków, nie tylko na
+  płaskim `selectedBlockId`.
+- **Blok ukryty** pozostaje klikalnym ghostem w canvasie, bez renderowania
+  publicznej treści bloku. Renderer publiczny pomija ukryte wrappery bloków.
 - **Znacznik nadpisania (override):** na breakpoincie innym niż bazowy sekcje ze zmienionymi wartościami pokazują żółtą plakietkę „nadpisane na małym/średnim".
+- **Układ w canvasie** używa aktywnego breakpointu jako kontekstu renderu:
+  na średnim/małym ekranie kolumny wynikają z rozwiązanego modelu sekcji, a nie
+  z szerokości okna przeglądarki.
+- **Sekcja ukryta** pozostaje widoczna w edytorze jako przygaszony ghost z
+  chrome zaznaczenia i plakietką stanu, ale renderer publiczny pomija ją poza
+  adminem.
 
 ---
 
@@ -116,7 +135,7 @@ Każda ikona w pasku rozwija jeden subpanel. Poniżej zawartość każdego.
 
 ### 🔲 Układ (Layout)
 Jak sekcja jest poukładana.
-- **Wariant** — np. `Split / Wyśrodkowany / Pełna szerokość` (warianty zależne od typu sekcji; odpowiednik dzisiejszych „Alternating / Cards / Compact").
+- **Wariant** — np. `Split / Wyśrodkowany / Pełna szerokość` (warianty zależne od typu sekcji; odpowiednik dzisiejszych „Alternating / Cards / Compact"). Wariant jest kontrolką bazową sekcji, nie nadpisaniem per breakpoint.
 - **Kolumny treści** — 1 / 2 / 3 / 4.
 - **Wyrównanie pionowe** — góra / środek / dół.
 - **Maksymalna szerokość** — pole z wartością (np. `1080px`).
@@ -142,6 +161,8 @@ Edycja danych i bloków sekcji.
 ### 🖼 Tło (Background)
 - **Typ** — kolor / gradient / obraz / brak.
 - **Kolor / źródło** — swatche lub wybór z Media.
+- **Obraz tła** — bezpieczne pole źródła/Media bez przenoszenia zaufania poza
+  istniejące reguły mediów.
 
 ### 📱 Responsywność (Responsive)
 - Informacja o aktywnym breakpoincie i modelu kaskady (patrz §8).
@@ -170,6 +191,8 @@ Nie robimy trzech niezależnych kopii ustawień. Stosujemy **dziedziczenie kaska
 - **Średni (744px)** i **Mały (390px)** **dziedziczą** wszystko z bazy.
 - Zmiana czegokolwiek na mniejszym breakpoincie tworzy **nadpisanie (override)** tylko tej jednej wartości. Reszta nadal płynie z bazy.
 - Override jest oznaczony wizualnie (żółta plakietka na sekcji + podświetlone pole w panelu) i można go cofnąć („przywróć dziedziczenie").
+- `variant` sekcji pozostaje wartością bazową. Zmiana wariantu na widoku
+  średnim/małym aktualizuje root sekcji, a nie `responsive.mobile/tablet`.
 
 Dzięki temu wybór breakpointu u góry = wybór „dla jakiego ekranu teraz edytuję", a nie ręczne utrzymywanie trzech osobnych stron. Zmiana w bazie automatycznie propaguje się tam, gdzie nie ma nadpisania.
 
@@ -181,12 +204,28 @@ Główny mechanizm wstawiania po usunięciu lewej biblioteki.
 - Otwierany skrótem **⌘K**, kliknięciem inline „+" między sekcjami, lub „+ dodaj blok" w pustej sekcji.
 - Pole wyszukiwania + lista pogrupowana: **Sekcje** (Hero, Timeline, Galeria produktów, Porównanie, Filtry listingu…) i **Bloki** (Tekst, Obraz, Przycisk/CTA, Formularz…).
 - Filtrowanie na żywo (wpisz „time" → Timeline). Nawigacja klawiaturą, Enter = wstaw.
+- Dla Page editor lista bloków pochodzi z `pageBlockCapabilities.editorInsertable`.
+  `insertable` i `assistantEmittable` pozostają osobnymi sygnałami:
+  `container`, `columns` i `group` są runtime-real insertable, ale nadal nie są
+  assistant-emittable do czasu TASK-418-06-L02.
+- Przy zaznaczonym bloku atomowym wstawienie trafia po nim w tej samej liście
+  root/slot. Przy zaznaczonym bloku-układzie domyślne wstawienie trafia do
+  pierwszego aktywnego, niepełnego slotu; Warstwy pokazują jawne akcje Add per
+  slot.
 
 ---
 
 ## 10. Warstwy (outline strony)
 
-Nakładka w lewym-górnym rogu (toggle z top bara). Lista wszystkich sekcji strony w kolejności. Klik = zaznacz + przewiń do sekcji. Ikona oka = szybkie ukrycie. Pomaga nawigować po długich stronach bez stałego panelu bocznego. (Docelowo: drzewo sekcja → bloki, drag-reorder.)
+Nakładka w lewym-górnym rogu (toggle z top bara). Lista wszystkich sekcji
+strony w kolejności. Klik = zaznacz + przewiń do sekcji. Ikona oka = szybkie
+ukrycie. Pomaga nawigować po długich stronach bez stałego panelu bocznego.
+
+Od TASK-418-05-L02 Warstwy są drzewem `sekcja -> blok -> slot -> blok`.
+Zaznaczenie bloku używa sekcyjnej ścieżki bloku:
+`[{ index: 1 }, { slotKey: "column:2", index: 0 }]`. Akcje Move here/Add w
+slotach respektują maksymalną głębokość drzewa, maksymalną liczbę dzieci slotu i
+zakaz przenoszenia bloku do samego siebie albo własnego potomka.
 
 ---
 
@@ -197,8 +236,11 @@ Nakładka w lewym-górnym rogu (toggle z top bara). Lista wszystkich sekcji stro
 | `⌘K` / `Ctrl+K` | Otwórz Command Palette (wstaw sekcję/blok) |
 | `Esc` | Zamknij paletę / odznacz element |
 | (docelowo) `⌘Z` / `⌘⇧Z` | Cofnij / ponów |
-| (docelowo) `⌘D` | Duplikuj zaznaczoną sekcję |
-| (docelowo) `Del` | Usuń zaznaczoną sekcję |
+| `⌘D` / `Ctrl+D` | Duplikuj zaznaczoną sekcję lub blok |
+| `Del` / `Backspace` | Otwórz potwierdzenie usunięcia zaznaczonej sekcji lub bloku |
+
+Skróty akcji nie uruchamiają się podczas pisania w polach formularzy,
+`textarea`, `select` ani elementach `contenteditable`.
 
 ---
 
@@ -234,15 +276,15 @@ Struktura, która naturalnie obsługuje sekcje, bloki i kaskadę responsywną:
           { "id": "blk_p",  "type": "text",    "props": { "text": "Energooszczędne…" } },
           { "id": "blk_cta","type": "button",  "props": { "label": "Zobacz projekty", "href": "/projekty" } }
         ],
-        "style":   { "bg": "#FFFFFF", "radius": 14, "shadow": "sm", "accent": "#0D9488" },
-        "layout":  { "columns": 2, "align": "center", "maxWidth": "1080px" },
-        "spacing": { "py": 34, "px": 40, "gap": 30 },
+        "style":   { "background": "#FFFFFF", "backgroundType": "color", "radius": 14, "shadow": "sm", "accent": "#0D9488" },
+        "layout":  { "columns": 2, "align": "center", "justify": "start", "maxWidth": 1080 },
+        "spacing": { "paddingTop": 34, "paddingBottom": 34, "paddingLeft": 40, "paddingRight": 40, "gap": 30 },
         "visibility": { "visible": true, "authOnly": false, "anchor": "#hero" },
 
         // kaskada: tylko NADPISANIA względem bazy (desktop)
         "responsive": {
           "tablet": { "layout": { "columns": 1 } },
-          "mobile": { "layout": { "columns": 1 }, "style": { "h1Size": "30px" } }
+          "mobile": { "layout": { "columns": 1 }, "style": { "radius": 10 } }
         }
       }
       // …kolejne sekcje
@@ -256,7 +298,22 @@ Zasady dla agenta:
 - Edycja na breakpoincie ≠ desktop zapisuje wyłącznie do `responsive[bp]` (override), nie do bazy.
 - „Przywróć dziedziczenie" = usuń odpowiedni klucz z `responsive[bp]`.
 - Reorder/duplikuj/usuń operują na tablicy `sections` (i `blocks` wewnątrz).
+- Dla zagnieżdżonych layout atoms reorder/duplikuj/usuń operują przez
+  `PageBlockPath`: pierwszy segment wskazuje `section.blocks[index]`, kolejne
+  segmenty wskazują `slots[slotKey][index]`. Duplikowanie regeneruje id całego
+  poddrzewa, a usunięcie wybiera najbliższy stabilny fallback (sąsiad, rodzic,
+  sekcja).
 - Typy sekcji/bloków są rozszerzalne — nowy typ = nowy renderer + zestaw wariantów + zestaw kontrolek subpaneli.
+- Kontrolki edytora korzystają z `pageEditorControlRegistry`: ścieżki są tablicami
+  (`["style", "background"]`), opcje select/segmented pochodzą z
+  `pageDocumentV2`, a ukrywanie typów opiera się o capabilities ownera. Bloki
+  dostępne w admin inserterze używają `pageBlockCapabilities.editorInsertable`,
+  podczas gdy runtime/assistant używają `insertable` oraz `assistantEmittable`.
+  Kontrolki wybranego bloku zapisują `props`, `style` i `visibility` przez
+  registry paths z zachowaniem kaskady desktop/tablet/mobile.
+- Na tablet/mobile każda kontrolka pokazuje stan `Inherited` albo `Override`, a
+  reset pola usuwa tylko odpowiadającą ścieżkę override bez czyszczenia innych
+  wartości w tym samym breakpoincie.
 
 ---
 

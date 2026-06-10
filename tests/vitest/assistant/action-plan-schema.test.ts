@@ -2444,6 +2444,140 @@ test("normalizeAssistantActionPlan rejects raw media URLs inside page upsert blo
   }
 });
 
+test("normalizeAssistantActionPlan accepts assistant-emittable nested layout page blocks", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-layout",
+        type: "page.upsert",
+        title: "Create layout page",
+        description: "Create a page with nested layout blocks.",
+        input: {
+          title: "Layout",
+          slug: "/layout",
+          status: "published",
+          introTitle: "Layout",
+          introBody: "Nested layout content.",
+          sections: [
+            createPageSectionV2("content", {
+              id: "section-layout",
+              blocks: [
+                createPageBlockV2("container", {
+                  id: "container-1",
+                  slots: {
+                    children: [
+                      createPageBlockV2("heading", {
+                        id: "nested-heading",
+                        props: { text: "Nested heading", level: "h2", align: "left" },
+                      }),
+                    ],
+                  },
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    ],
+  });
+
+  const pageAction = normalized.actions[0];
+  expect(pageAction?.type).toBe("page.upsert");
+  expect(
+    pageAction?.type === "page.upsert" ? pageAction.input.sections?.[0]?.blocks[0] : null
+  ).toMatchObject({
+    type: "container",
+    slots: {
+      children: [{ id: "nested-heading", type: "heading" }],
+    },
+  });
+});
+
+test("normalizeAssistantActionPlan accepts L04-deferred inert form page output", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-form",
+        type: "page.upsert",
+        title: "Create form page",
+        description: "Create a page with an existing form block.",
+        input: {
+          title: "Contact",
+          slug: "/contact",
+          status: "published",
+          introTitle: "Contact",
+          introBody: "Send a message.",
+          sections: [
+            createPageSectionV2("lead-form", {
+              id: "section-form",
+              blocks: [
+                createPageBlockV2("form", {
+                  id: "form-1",
+                  props: { formId: "form-contact", title: "Contact form" },
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    ],
+  });
+
+  const pageAction = normalized.actions[0];
+  expect(
+    pageAction?.type === "page.upsert" ? pageAction.input.sections?.[0]?.blocks[0] : null
+  ).toMatchObject({
+    id: "form-1",
+    type: "form",
+  });
+});
+
+test("normalizeAssistantActionPlan rejects page blocks outside assistant vocabulary", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-icon",
+          type: "page.upsert",
+          title: "Create icon page",
+          description: "Attempt to create a gated icon block.",
+          input: {
+            title: "Icon",
+            slug: "/icon",
+            status: "published",
+            introTitle: "Icon",
+            introBody: "Unsupported block.",
+            sections: [
+              createPageSectionV2("content", {
+                id: "section-icon",
+                blocks: [createPageBlockV2("icon", { id: "icon-1" })],
+              }),
+            ],
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan rejects raw media URLs inside entry media fields", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

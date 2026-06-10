@@ -89,7 +89,7 @@ const navigationItems = pageMap.map((page) => ({
 }));
 
 const buildNavigationSection = (): PageSectionV2 =>
-  createPageSectionV2("navigation", {
+  createPageSectionV2("content", {
     id: "full-service-primary-navigation",
     name: "Primary navigation",
     variant: "compact",

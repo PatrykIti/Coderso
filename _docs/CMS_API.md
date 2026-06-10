@@ -693,6 +693,12 @@ Notes:
 - Fresh Page writes require `schemaVersion: 2` plus `sections[]`, reject
   unknown fields, and reject legacy/versionless `blocks[]`. Stored legacy Page
   rows are reset to an empty v2 document on read/render/preview/revision paths.
+- Page block payloads may include bounded layout blocks `container`, `columns`,
+  and `group` with named `slots`. Writes reject `slots` on non-layout blocks,
+  unknown slot keys, duplicate block ids, cyclic programmatic references,
+  nesting deeper than 4 block levels, and more than 24 children in one slot.
+  Stored-read normalization prunes malformed slot data without resetting the
+  full document.
 
 Preview URL resolution policy (dotyczy pages/content/widget templates):
 - 1) `settings["site.publicBaseUrl"]`
@@ -3762,8 +3768,17 @@ The legacy CMS resource registry has been removed; policy lookup is the source o
 truth for generic CMS planning.
 TASK-188 final validation kept the OpenAI/OpenRouter live assistant matrix green
 after the policy cutover.
-When the active admin surface is `Pages > :id`, `activeSurface` includes a bounded Page v2 canvas summary with page identity, selected section id, optional selected block id, section ids/types/block summaries, and warnings such as unsaved local changes. The server normalizes/redacts this context before planning.
-For active Page surfaces, planning hydration revalidates page identity server-side and does not hydrate widget-template refs from Page data. Page mutations use `page.upsert` sections or `page.update`; `page.widget.patch` is rejected for Pages.
+When the active admin surface is `Pages > :id`, `activeSurface` includes a
+bounded Page v2 canvas summary with `schemaVersion: 2`, page identity, selected
+section id, optional selected block id, server-revalidated `selectedBlockPath`,
+nested section/block summaries, Page capability metadata, and warnings such as
+unsaved local changes. The server normalizes/redacts this context before
+planning.
+For active Page surfaces, planning hydration revalidates page identity,
+normalized current sections, nested block paths, and selected section/block/path
+context server-side and does not hydrate widget-template refs from Page data.
+Page mutations use `page.upsert` sections or `page.update`; `page.widget.patch`
+is rejected for Pages.
 When the active admin surface is `Advanced > Widgets > Templates > :id`, `activeSurface` may include a bounded widget template summary with template identity, selected block id, block id/type/path summaries, slot keys, template-section references, wrapper/section settings summary, and remote-update warnings.
 When the active admin surface is `Advanced > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, canonical `collectionRole` / `compositionKey` metadata, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
 When the active admin surface is
