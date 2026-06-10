@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Pages / Page Editor V2 / QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-431-01
+**Dependencies:** TASK-425, TASK-431-01
 **Status:** ⏳ To Do
 
 ---
@@ -13,7 +13,8 @@
 ## Overview
 
 Close the Gallery family with targeted validation, live variant/runtime proof,
-and docs/board/changelog synchronization.
+explicit Responsive-tab handoff verification from `TASK-425`, and
+docs/board/changelog synchronization.
 
 ---
 
@@ -37,4 +38,3 @@ and docs/board/changelog synchronization.
 
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` entry on completion
-

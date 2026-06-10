@@ -14,8 +14,8 @@
 Remediate the Timeline-section findings from
 `_docs/AUDIT/timeline-2026-06-10.md`. The current section behaves like generic
 heading/text content: variants persist only as markers, the front lacks any
-timeline-specific layout semantics, and the dedicated control surface is still
-missing.
+timeline-specific layout semantics, the audit also calls out an empty
+Responsive tab, and the dedicated control surface is still missing.
 
 ---
 
@@ -42,4 +42,3 @@ missing.
 
 - `_docs/PAGE_MODEL.md`
 - `_docs/_TASKS/README.md`
-

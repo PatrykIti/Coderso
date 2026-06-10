@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Pages / Page Editor V2 / QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-429-01
+**Dependencies:** TASK-425, TASK-429-01
 **Status:** ⏳ To Do
 
 ---
@@ -13,7 +13,8 @@
 ## Overview
 
 Close the Media Split family with targeted validation, live variant/runtime
-proof, and docs/board/changelog sync.
+proof, explicit Responsive-tab handoff verification from `TASK-425`, and
+docs/board/changelog sync.
 
 ---
 
@@ -37,4 +38,3 @@ proof, and docs/board/changelog sync.
 
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` entry on completion
-

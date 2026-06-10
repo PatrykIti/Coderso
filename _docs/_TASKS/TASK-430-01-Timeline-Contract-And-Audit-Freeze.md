@@ -13,8 +13,9 @@
 ## Overview
 
 Freeze the Timeline remediation contract from
-`_docs/AUDIT/timeline-2026-06-10.md`: current timeline variants are marker-only
-and the published section still behaves like generic heading/text content.
+`_docs/AUDIT/timeline-2026-06-10.md`: current timeline variants are marker-only,
+the published section still behaves like generic heading/text content, and this
+subtask explicitly consumes the matching Responsive-tab closure from `TASK-425`.
 
 ---
 
@@ -36,4 +37,3 @@ and the published section still behaves like generic heading/text content.
 ## Documentation Updates Required
 
 - `_docs/PAGE_MODEL.md`
-

@@ -14,8 +14,9 @@
 
 Freeze the Gallery remediation contract from
 `_docs/AUDIT/gallery-2026-06-10.md`: Gallery variants currently persist as
-markers only and the section still renders generic heading/text content instead
-of a truthful gallery/card layout.
+markers only, the section still renders generic heading/text content instead of
+a truthful gallery/card layout, and this subtask explicitly consumes the
+matching Responsive-tab closure from `TASK-425`.
 
 ---
 
@@ -37,4 +38,3 @@ of a truthful gallery/card layout.
 ## Documentation Updates Required
 
 - `_docs/PAGE_MODEL.md`
-

@@ -14,8 +14,8 @@
 Remediate the Gallery-section findings from
 `_docs/AUDIT/gallery-2026-06-10.md`. The section currently renders generic
 heading/text content and stores variant changes only as data markers; it does
-not yet deliver truthful gallery/card runtime layouts or the expected media-led
-control surface.
+not yet deliver truthful gallery/card runtime layouts, the audit also calls out
+an empty Responsive tab, or the expected media-led control surface.
 
 ---
 
@@ -42,4 +42,3 @@ control surface.
 
 - `_docs/PAGE_MODEL.md`
 - `_docs/_TASKS/README.md`
-
