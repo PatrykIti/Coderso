@@ -62,9 +62,11 @@ Expected data flow:
   mapping.
 - Assistant schemas use the same block prop allowlists/capabilities as editor
   and must not advertise blocks whose `assistantEmittable` capability is false.
-- Blueprint emitters produce only runtime-real Page blocks, existing `gallery`
-  static output, or the parent-approved L04-deferred inert
-  `collection`/`form`/`embed` data-bound output.
+- Blueprint emitters produce only runtime-real Page blocks and the existing
+  `gallery` static output exception. The temporary L04 data-bound output
+  allowance was removed at TASK-418 closure; `collection`, `form`, and `embed`
+  stay non-assistant-emittable until a future product-controls task exposes
+  them explicitly.
 - Blueprint emitters produce sparse mobile/tablet deltas where layout requires
   responsive changes instead of copying whole documents.
 - Executor normalizes through `pageDocumentV2` before persistence.
@@ -132,8 +134,8 @@ Regression-test shape:
   current Page document and clears stale selected section/block/path context.
 - Assistant `page.upsert.sections[]` now normalizes through `pageDocumentV2`
   and rejects Page section/block output outside the capability-aligned
-  assistant vocabulary, with explicit staged exceptions for existing static
-  `gallery` output and L04-deferred inert `collection`/`form`/`embed` output.
+  assistant vocabulary. TASK-418 closure removed the temporary L04 data-bound
+  output allowance; only the existing static `gallery` output exception remains.
 - Promoted `container`, `columns`, and `group` to assistant-emittable now that
   recursive runtime rendering and nested path validation are in place.
 - Converted the full-service assistant shell navigation section from the

@@ -354,10 +354,10 @@ const insertableSectionTypes = new Set<PageSectionType>([
 const pageSectionCapabilityReasons: Partial<Record<PageSectionType, string>> = {
   template: "template-section-boundary",
   navigation: "runtime-navigation-boundary",
-  collection: "data-binding-runtime-pending",
-  filters: "listing-runtime-pending",
-  "lead-form": "form-runtime-security-pending",
-  embed: "embed-sanitizer-runtime-pending",
+  collection: "collection-section-boundary",
+  filters: "listing-section-boundary",
+  "lead-form": "form-section-boundary",
+  embed: "embed-section-boundary",
 };
 
 export const pageSectionCapabilities = pageSectionTypes.reduce(

@@ -1342,8 +1342,9 @@ dokumentacji); itd.
 - Assistant `page.upsert.sections[]` now normalizes through `pageDocumentV2`
   and rejects Page section/block output outside the capability-aligned
   assistant vocabulary. `container`, `columns`, and `group` are
-  assistant-emittable; `gallery` remains a static-output exception; and
-  `collection`, `form`, and `embed` remain L04-deferred inert exceptions.
+  assistant-emittable; `gallery` remains a static-output exception. At the
+  time of L02, `collection`, `form`, and `embed` were still gated for the
+  later L04 scoped runtime-binding work.
 - The full-service assistant shell no longer emits the boundary `navigation`
   Page section through `page.upsert`; it uses a static `content` section while
   retaining the same navigation block content and public runtime behavior.
@@ -1377,6 +1378,44 @@ dokumentacji); itd.
 - Claude read-only drift audit found a stale changelog next-number pointer and
   a TASK-420 residual guard-wiring acceptance gap; both were corrected. The
   follow-up Claude pass reported no unresolved drift.
+
+---
+
+### 11.29 TASK-418-07 and TASK-418 closeout, 2026-06-10
+
+- TASK-418-06 parent and TASK-418 parent are closed after all physical
+  descendants reached terminal states. TASK-420 remains a separate Page
+  Templates rewrite follow-up, and TASK-421 remains a separate floating
+  inspector UX redesign follow-up.
+- Closure validation passed: targeted Pages/Admin UI/assistant Vitest suites
+  (11 files, 156 tests), targeted Bun runtime/routes/preview/assistant suites
+  (106 tests), `bun --cwd core lint`, `bun --cwd core lint:types`,
+  `bun run precommit`, and `bun run gates:coderso` (functional, ux,
+  performance, security, reliability PASS).
+- Post-audit drift-fix validation passed for Page domain/runtime, PageEditor UI,
+  and assistant schema/planner/blueprint paths (17 files, 317 tests) after
+  removing the obsolete production `isL04Deferred*` assistant emission
+  allowance.
+- A real browser smoke ran through `coderso-dev-core-host` and direct
+  `playwright-cli`: it created a Page through the admin UI, inserted and edited
+  Page v2 content in PageEditor, verified the command palette remains shorter
+  than the viewport with Close reachable, saved, previewed, published, verified
+  public runtime output including hero split markup and nested layout output,
+  repeated the public marker check at a mobile-sized viewport, and cleaned up
+  smoke pages.
+- The command palette overflow fix tightened the dialog shell to a real
+  viewport-safe height (`calc(100dvh - 8rem)`), kept the result list scrollable,
+  and left the Close action outside the scroll body.
+- TASK-421 was tightened after a read-only Claude UX/contract audit found the
+  floating-inspector task wording still allowed native number fields, native
+  selects, and raw text fallbacks for color/media controls. The accepted
+  follow-up approach is a shared Page Editor control UI-model adapter plus
+  segmented controls, switches, sliders, swatches/pickers, media controls,
+  hover descriptions, and viewport-safe panels reusable by TASK-420 Page
+  Templates.
+- The final TASK-418 closure changelog is entry 1160. A final read-only Claude
+  drift audit is required on the final committed HEAD per the external-audit
+  workflow; any material finding reopens the fix/validation/audit loop.
 
 ---
 

@@ -170,28 +170,18 @@ export const resolveAssistantPageSelection = (
   };
 };
 
-export const isL04DeferredAssistantPageBlockType = (type: string) =>
-  type === "collection" || type === "form" || type === "embed";
-
 export const isExistingStaticAssistantPageBlockType = (type: string) => type === "gallery";
-
-export const isL04DeferredAssistantPageSectionType = (type: string) =>
-  type === "collection" || type === "filters" || type === "lead-form" || type === "embed";
 
 export const isAssistantPageBlockOutputAllowed = (type: string) => {
   if (!(type in pageBlockCapabilities)) return false;
   const blockType = type as keyof typeof pageBlockCapabilities;
   const capabilities = pageBlockCapabilities[blockType];
-  return (
-    capabilities.assistantEmittable ||
-    isExistingStaticAssistantPageBlockType(type) ||
-    isL04DeferredAssistantPageBlockType(type)
-  );
+  return capabilities.assistantEmittable || isExistingStaticAssistantPageBlockType(type);
 };
 
 export const isAssistantPageSectionOutputAllowed = (type: string) => {
   if (!(type in pageSectionCapabilities)) return false;
   const sectionType = type as PageSectionType;
   const capabilities = pageSectionCapabilities[sectionType];
-  return capabilities.assistantEmittable || isL04DeferredAssistantPageSectionType(type);
+  return capabilities.assistantEmittable;
 };

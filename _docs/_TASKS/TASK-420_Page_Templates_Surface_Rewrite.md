@@ -30,6 +30,10 @@ Current frozen boundary:
   task owns the surface.
 - No Page Templates route, editor, preview, assistant context, or public runtime
   may accept `WidgetBlock[]`.
+- When TASK-421 is implemented before or alongside this rewrite, the Page
+  Templates editor must consume the shared Page Editor inspector adapter and
+  control primitives from TASK-421 instead of duplicating a raw-input or
+  widget-template inspector.
 
 ---
 
@@ -50,7 +54,8 @@ function planPageTemplatesSurfaceRewrite(currentAdvancedWidgetsSurface) {
     removeLegacyWidgetTemplateSurface: true,
     deleteObsoleteCode: true,
     documentContract: "page-v2",
-    editorModel: "page-editor-v2"
+    editorModel: "page-editor-v2",
+    inspectorModel: "shared-page-editor-control-primitives"
   });
   return {
     routes: buildAdminRoutePlan(pageTemplatesShape),
@@ -71,6 +76,8 @@ Expected data flow:
   obsolete.
 - Introduce a Page Templates admin surface that uses Page v2 schemas and a Page
   Editor-like section/block authoring workflow.
+- Reuse Page Editor control primitives/adapter when available, including
+  segmented controls, toggles, sliders, swatches/pickers, and media controls.
 - Do not overload existing widget-template rows with mixed document contracts;
   Page Templates storage is Page v2-only.
 - Remove the legacy widget-template editor from the user-facing path.

@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 29 tasks
-- **In Progress:** 7 tasks
-- **Done:** 2356 tasks
+- **To Do:** 25 tasks
+- **In Progress:** 5 tasks
+- **Done:** 2362 tasks
 
 ---
 
@@ -88,10 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-418-07 | Validation Docs Changelog And Live Smoke Closure | High | Large | Close TASK-418 with targeted tests, live server Playwright, docs, changelog, board sync, and final drift audit. |
-| TASK-418-07-L01 | Targeted Lint Type Tests And Gates | High | Medium | Run and record lint, typecheck, targeted Vitest/Bun suites, and release gates. |
-| TASK-418-07-L02 | Real Admin And Front Playwright Smoke | High | Medium | Use `coderso-dev-core-host` and `playwright-cli` to verify admin edit/save/publish and public frontend parity. |
-| TASK-418-07-L03 | Docs Changelog Board And Final Drift Closure | High | Medium | Update docs, changelog, task statuses, board stats, and rerun final read-only drift audit before closing. |
 | TASK-420 | Page Templates Surface Rewrite | Medium | Large | Follow-up from TASK-418-06-L03: delete/replace the obsolete Advanced Widgets/widget-template path with a dedicated Page Templates surface built on Page v2 sections/blocks; requires Claude xhigh drift audits and `coderso-dev-core-host` + `playwright-cli` browser validation when implemented. |
 | TASK-420-01 | Audit Reusable Template IA And Usage | Medium | Medium | Audit obsolete widget-template IA/code and produce the deletion/replacement checklist for Page Templates. |
 | TASK-420-02 | Page Template Storage Preview And Replacement Contract | Medium | Large | Design strict Page-template storage, preview, deletion, and replacement contracts before implementation. |
@@ -123,8 +119,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-418 | Page Editor V2 Authoring Nesting And Runtime Remediation | High | Very Large | In progress: audit/freeze, immediate editor correctness, control registry, canvas/WYSIWYG parity, and nested container runtime are done; implementation continues through TASK-418-06 runtime/assistant/template parity. |
-| TASK-418-06 | Runtime Assistant And Template Parity | High | Large | In progress: public runtime, assistant surface/schema parity, template boundary freeze, and collection/form/embed scoped runtime binding are done; final TASK-418 validation/closure remains. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -136,6 +130,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-418 | Page Editor V2 Authoring Nesting And Runtime Remediation | High | Very Large | Done (2026-06-10): section-first Page Editor v2 remediation closed with nested Page blocks, runtime/assistant/template parity, live Playwright CLI smoke, docs/changelog/board sync, and final drift closure. |
+| TASK-418-06 | Runtime Assistant And Template Parity | High | Large | Done (2026-06-10): public runtime, assistant surface/schema parity, Page template boundary freeze, and collection/form/embed scoped runtime binding are complete. |
+| TASK-418-07 | Validation Docs Changelog And Live Smoke Closure | High | Large | Done (2026-06-10): targeted Vitest/Bun/lint/type/gates, live admin/public Playwright CLI smoke, docs, changelog, board, and final drift workflow are complete. |
+| TASK-418-07-L01 | Targeted Lint Type Tests And Gates | High | Medium | Done (2026-06-10): targeted Pages/Admin UI/assistant Vitest, Bun runtime/routes/preview/assistant suites, lint, typecheck, and Coderso gates passed. |
+| TASK-418-07-L02 | Real Admin And Front Playwright Smoke | High | Medium | Done (2026-06-10): coderso-dev-core-host plus direct playwright-cli verified admin create/edit/save/preview/publish, command palette viewport safety, and public runtime parity. |
+| TASK-418-07-L03 | Docs Changelog Board And Final Drift Closure | High | Medium | Done (2026-06-10): docs, changelog 1160, task statuses, board stats, and final committed-HEAD drift workflow were synchronized. |
 | TASK-418-06-L04 | Collection Form Embed Runtime Data Binding Security | High | Large | Done (2026-06-10): collection/form/embed now have scoped public runtime binding, anonymous section pruning, sanitizer-backed embed output, cache gating, no-leak coverage, Playwright CLI smoke, and release gates. |
 | TASK-418-06-L01 | Public Runtime Real Renderers For Insertable Blocks | High | Large | Done (2026-06-10): gallery now renders real static public markup, exposed Page block capabilities require real renderers, and collection/form/embed render explicit inert public states until L04. |
 | TASK-418-06-L02 | Assistant Surface Schema And Blueprint Alignment | High | Large | Done (2026-06-10): Page active surfaces now include server-revalidated nested paths/capabilities, assistant Page schemas gate emitted vocabulary, and layout blocks are assistant-emittable. |

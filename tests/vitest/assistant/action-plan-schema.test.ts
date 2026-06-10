@@ -2499,49 +2499,77 @@ test("normalizeAssistantActionPlan accepts assistant-emittable nested layout pag
   });
 });
 
-test("normalizeAssistantActionPlan accepts L04-deferred inert form page output", () => {
+test("normalizeAssistantActionPlan rejects data-bound sections outside assistant vocabulary", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
     intentFamily: "product_catalog",
   });
 
-  const normalized = normalizeAssistantActionPlan({
-    ...plan,
-    actions: [
-      {
-        id: "page-form",
-        type: "page.upsert",
-        title: "Create form page",
-        description: "Create a page with an existing form block.",
-        input: {
-          title: "Contact",
-          slug: "/contact",
-          status: "published",
-          introTitle: "Contact",
-          introBody: "Send a message.",
-          sections: [
-            createPageSectionV2("lead-form", {
-              id: "section-form",
-              blocks: [
-                createPageBlockV2("form", {
-                  id: "form-1",
-                  props: { formId: "form-contact", title: "Contact form" },
-                }),
-              ],
-            }),
-          ],
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-form-section",
+          type: "page.upsert",
+          title: "Create form page",
+          description: "Attempt to create an assistant-gated form section.",
+          input: {
+            title: "Contact",
+            slug: "/contact",
+            status: "published",
+            introTitle: "Contact",
+            introBody: "Send a message.",
+            sections: [
+              createPageSectionV2("lead-form", {
+                id: "section-form",
+                blocks: [createPageBlockV2("text", { id: "form-copy" })],
+              }),
+            ],
+          },
         },
-      },
-    ],
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects data-bound blocks outside assistant vocabulary", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
   });
 
-  const pageAction = normalized.actions[0];
-  expect(
-    pageAction?.type === "page.upsert" ? pageAction.input.sections?.[0]?.blocks[0] : null
-  ).toMatchObject({
-    id: "form-1",
-    type: "form",
-  });
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-form-block",
+          type: "page.upsert",
+          title: "Create form block page",
+          description: "Attempt to create an assistant-gated form block.",
+          input: {
+            title: "Contact",
+            slug: "/contact",
+            status: "published",
+            introTitle: "Contact",
+            introBody: "Send a message.",
+            sections: [
+              createPageSectionV2("content", {
+                id: "section-content",
+                blocks: [
+                  createPageBlockV2("form", {
+                    id: "form-1",
+                    props: { formId: "form-contact", title: "Contact form" },
+                  }),
+                ],
+              }),
+            ],
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
 });
 
 test("normalizeAssistantActionPlan rejects page blocks outside assistant vocabulary", () => {

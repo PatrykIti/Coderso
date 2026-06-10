@@ -8,12 +8,9 @@ import {
   normalizeStoredPageDocumentV2ForRead,
   pageBlockCapabilities,
   pageBlockTypes,
-  type PageBlockType,
   type PageBlockV2,
   type PageDocumentV2,
 } from "../../../core/services/pages/pageDocumentV2";
-
-const dataBoundRuntimeDeferrals = new Set<PageBlockType>(["collection", "form", "embed"]);
 
 const collectBlocks = (blocks: readonly PageBlockV2[]): PageBlockV2[] =>
   blocks.flatMap((block) => [
@@ -38,7 +35,7 @@ describe("Page runtime capability parity", () => {
     expect(failures).toEqual([]);
   });
 
-  test("assistant and solution-kit Page emitters use runtime-real or L04-deferred blocks", () => {
+  test("assistant and solution-kit Page emitters use runtime-real blocks", () => {
     const assistantCollectionPage = composeBlueprintPageData({
       introTitle: "Products",
       introBody: "Browse products.",
@@ -81,14 +78,6 @@ describe("Page runtime capability parity", () => {
       collectDocumentBlocks(document).flatMap((block) => {
         const capability = pageBlockCapabilities[block.type];
         if (capability.runtimeRenderer === "real") return [];
-        if (
-          dataBoundRuntimeDeferrals.has(block.type) &&
-          !capability.editorInsertable &&
-          !capability.insertable &&
-          !capability.assistantEmittable
-        ) {
-          return [];
-        }
         return [`${source}:${block.id}:${block.type}:${capability.runtimeRenderer}`];
       })
     );

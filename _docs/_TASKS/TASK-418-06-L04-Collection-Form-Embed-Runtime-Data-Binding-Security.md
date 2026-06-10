@@ -190,8 +190,9 @@ provider keys.
 runtime UI dependency, or wrapped by a small Page-owned adapter if the
 implementation needs a stricter layer boundary. In either case, block props are
 mapped through `normalizeContentListData` into `ContentListData`:
-`queryId/templateId` map to listing mode, otherwise `contentTypeId` maps to
-legacy mode, and public rendering keeps `statusScope:"published"`.
+`queryId` selects listing mode, `templateId` is the optional listing template,
+absent `queryId` falls back to legacy `contentTypeId` mode, and public rendering
+keeps `statusScope:"published"`.
 
 Embed has two safe output paths:
 

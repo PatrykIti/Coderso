@@ -6,8 +6,9 @@
 **Category:** Pages / Runtime / Assistant / Templates
 **Estimated Effort:** Large
 **Dependencies:** TASK-418-03, TASK-418-04, TASK-418-05
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-10
+**Completed:** 2026-06-10
 
 ---
 
@@ -20,6 +21,13 @@ render it honestly. Security-sensitive `collection`, `form`, and `embed`
 outputs may remain before TASK-418-06-L04 only when public runtime rendering is
 explicitly fail-closed and inert; L04 owns the later scoped binding and
 capability flips.
+
+Completed state: insertable/static Page blocks have real public runtime
+renderers, assistant Page output is capability-gated and nested-path validated,
+Page template input resolves through the Page v2 boundary helper, and
+collection/form/embed blocks have scoped read-only public binding plus sanitizer
+and no-leak coverage. TASK-420 carries the separate Page Templates surface
+rewrite, and TASK-421 carries the separate floating-inspector UX redesign.
 
 ---
 
@@ -74,6 +82,15 @@ capability flips.
   runtime-real or be removed/gated before this parent can close.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+## Completion Notes
+
+- Covered by changelog entries 1156, 1157, 1158, 1159, and final closure entry
+  1160.
+- Final TASK-418-07 validation reran the Pages/Admin UI/assistant Vitest lane,
+  Bun runtime/routes/preview/assistant lane, `bun --cwd core lint`,
+  `bun --cwd core lint:types`, `bun run gates:coderso`, and real
+  `coderso-dev-core-host` + `playwright-cli` smoke.
 
 ---
 

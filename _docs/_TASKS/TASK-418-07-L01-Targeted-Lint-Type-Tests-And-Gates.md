@@ -6,7 +6,8 @@
 **Category:** QA / Pages
 **Estimated Effort:** Medium
 **Dependencies:** TASK-418-02, TASK-418-03, TASK-418-04, TASK-418-05, TASK-418-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-10
 
 ---
 
@@ -85,6 +86,27 @@ Regression-test shape:
   cascade, in addition to route-level runtime assertions.
 - Targeted Bun suites for Pages runtime/routes/preview/assistant executor.
 - `bun run gates:coderso`
+
+## Completion Notes
+
+Validation passed:
+
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/pages/page-runtime-capabilities.test.ts tests/vitest/ui/page-editor-v2-flow.test.ts`
+  (2 files, 35 tests)
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-block-paths.test.ts tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/page-runtime-capabilities.test.ts tests/vitest/pages/page-runtime-data-binding.test.ts tests/vitest/pages/page-template-boundary.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-editor.test.tsx tests/vitest/assistant/active-surface-hydration.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+  (11 files, 156 tests)
+- Post-audit drift fix validation: `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-block-paths.test.ts tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/page-runtime-capabilities.test.ts tests/vitest/pages/page-runtime-data-binding.test.ts tests/vitest/pages/page-template-boundary.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-editor.test.tsx tests/vitest/assistant/active-surface-hydration.test.ts tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/catalogBlueprintEngine.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/blueprint-action-assembler.test.ts tests/vitest/assistant/blueprint-capability-registry.test.ts tests/vitest/assistant/blueprint-provider-context.test.ts tests/vitest/assistant/blueprint-page-section-composer.test.ts`
+  (17 files, 317 tests)
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test tests/integration/runtime/pages-runtime.test.ts tests/integration/routes/pages.test.ts tests/unit/pages/previewService.test.ts tests/unit/assistant/siteBuilderExecutor.test.ts tests/unit/assistant/actionExecutorService.test.ts`
+  (106 tests, 0 failures)
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run precommit`
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun run gates:coderso`
+  (functional, ux, performance, security, reliability PASS)
+- After the command palette viewport class was corrected from the browser smoke,
+  `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/page-editor-v2-flow.test.tsx`
+  passed again (1 file, 33 tests).
 
 ---
 

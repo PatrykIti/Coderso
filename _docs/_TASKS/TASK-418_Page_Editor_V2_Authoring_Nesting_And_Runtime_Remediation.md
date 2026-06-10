@@ -5,8 +5,9 @@
 **Category:** Pages / Admin UI / Runtime / Assistant / Templates
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-417, `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`, `_docs/PAGE_MODEL.md`, `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md`
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-09
+**Completed:** 2026-06-10
 
 ---
 
@@ -87,8 +88,8 @@ TASK-418 contract.
 - [x] TASK-418-03: Control registry and floating toolbar parity.
 - [x] TASK-418-04: Canvas preview and WYSIWYG parity.
 - [x] TASK-418-05: Nested container and slot architecture.
-- [ ] TASK-418-06: Runtime, assistant, and template parity.
-- [ ] TASK-418-07: Validation, docs, changelog, and live smoke closure.
+- [x] TASK-418-06: Runtime, assistant, and template parity.
+- [x] TASK-418-07: Validation, docs, changelog, and live smoke closure.
 
 ---
 
@@ -139,13 +140,15 @@ making section visual feedback honest in the canvas.
 feedback, hidden-state parity, and section type/variant templates are done.
 `TASK-418-05` is complete: bounded layout slots, admin nested authoring, and
 recursive public/preview rendering with nested responsive cascade are in place.
-Work continues with `TASK-418-06`: public runtime block parity and assistant
-surface/schema parity are done, including static gallery rendering, explicit
-inert data-bound states, server-revalidated nested assistant paths, and
-capability-gated assistant Page output. Page template boundaries are frozen:
-Page templates now resolve through a Page v2 contract helper, while non-Page
-widget-template/custom-screen/detail-page surfaces remain legacy `WidgetBlock[]`.
-Public data-bound/security-sensitive block contracts remain open.
+`TASK-418-06` is complete: public runtime block parity, assistant
+surface/schema parity, Page template boundaries, and scoped collection/form/embed
+public runtime binding are done. Page templates resolve through a Page v2
+contract helper, while non-Page widget-template/custom-screen/detail-page
+surfaces remain legacy `WidgetBlock[]` until their own follow-up tasks. `TASK-420`
+tracks the Page Templates rewrite/removal of the obsolete widget-template path,
+and `TASK-421` tracks the floating inspector UX redesign. `TASK-418-07`
+completed validation, live Playwright CLI smoke, docs/changelog/board updates,
+and final drift closure.
 
 ---
 

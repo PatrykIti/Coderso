@@ -2017,11 +2017,14 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
         {commandOpen ? (
           <div
-            className="absolute inset-0 z-40 flex items-start justify-center overflow-hidden bg-background/50 p-4 backdrop-blur-sm sm:p-8"
+            className="absolute inset-0 z-40 flex items-start justify-center overflow-hidden bg-background/50 p-4 backdrop-blur-sm sm:p-6"
             role="dialog"
             aria-label="Command palette"
           >
-            <div className="flex max-h-[calc(min(100%,100dvh)_-_4rem)] min-h-0 w-full max-w-xl flex-col rounded-xl border bg-background p-4 shadow-2xl sm:max-h-[calc(min(100%,100dvh)_-_6rem)]">
+            <div
+              className="flex max-h-[calc(100dvh_-_8rem)] min-h-0 w-full max-w-xl flex-col overflow-hidden rounded-xl border bg-background p-4 shadow-2xl sm:max-h-[calc(100dvh_-_9rem)]"
+              data-page-editor-command-dialog="viewport-safe"
+            >
               <div className="flex shrink-0 items-center gap-2 rounded border px-3 py-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <input

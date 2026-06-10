@@ -17,6 +17,12 @@ auditing the reference HTML/spec and mapping it to the current PageEditor and
 control registry. This leaf is read-only/planning plus task-contract updates; no
 production UI code changes.
 
+Preliminary Claude audit on 2026-06-10 found the earlier task wording too loose
+because it still allowed native number inputs, native selects, and text
+fallbacks for colors/media. The task family was tightened from that audit. When
+TASK-421 implementation starts, rerun a fresh read-only audit on the then-current
+HEAD before editing production code.
+
 ---
 
 ## Implementation Pseudocode
@@ -44,11 +50,17 @@ Expected data flow:
   `core/admin/ui/pages/PageEditor.tsx` and
   `core/services/pages/pageEditorControlRegistry.ts`.
 - Output is task acceptance criteria for TASK-421-02 through TASK-421-05.
+- Acceptance criteria must explicitly forbid the rejected UX: typing every
+  value into raw fields, native number up/down arrows as the primary numeric
+  control, native yes/no selects for booleans, and text fallbacks for colors or
+  media/source controls.
 
 Regression-test shape:
 
 - No production tests required unless this leaf changes docs/helpers.
-- Run read-only Claude UX/contract audit and record the summary in this task.
+- Run read-only Claude UX/contract audit and record the summary in this task;
+  implementation-time audit must compare the final task contract against the
+  current PageEditor/control-registry code again.
 
 ---
 

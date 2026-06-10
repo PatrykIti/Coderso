@@ -14,12 +14,12 @@ export const buildEditorialContentHubPlan = (options?: {
     intentFamily: "editorial_content_hub",
     title: "Editorial Content Hub",
     answer:
-      "I can create an editorial hub page that highlights existing published posts without creating or mutating posts.",
-    summary: "Create a public content hub page with intro copy and a posts feed widget.",
+      "I can create an editorial hub page for published posts without creating or mutating post records.",
+    summary: "Create a public content hub page with intro copy and post navigation guidance.",
     confidence: 0.82,
     assumptions: [
-      "This pack creates a page that reads existing posts; it does not create or edit post records.",
-      "The posts feed uses existing posts runtime behavior and remains empty until posts are published.",
+      "This pack creates a static hub page only; it does not create or edit post records.",
+      "Dynamic post feeds require a later Page collection authoring contract before assistant emission is enabled.",
     ],
     questions: [],
     actions: [
@@ -27,7 +27,7 @@ export const buildEditorialContentHubPlan = (options?: {
         id: "page-editorial-content-hub",
         type: "page.upsert",
         title: "Create editorial content hub page",
-        description: "Create a public hub page with intro copy and posts feed.",
+        description: "Create a public hub page with intro copy and post navigation guidance.",
         input: {
           title: "Aktualności i poradniki",
           slug: "/blog",
@@ -53,24 +53,41 @@ export const buildEditorialContentHubPlan = (options?: {
                 }),
               ],
             }),
-            createPageSectionV2("collection", {
-              id: "editorial-hub-posts-feed",
-              name: "Posts feed",
-              variant: "cards",
+            createPageSectionV2("content", {
+              id: "editorial-hub-posts-overview",
+              name: "Posts overview",
               blocks: [
-                createPageBlockV2("collection", {
-                  id: "editorial-hub-posts-feed-block",
+                createPageBlockV2("heading", {
+                  id: "editorial-hub-posts-heading",
+                  props: { text: "Najnowsze wpisy", level: "h2", align: "left" },
+                }),
+                createPageBlockV2("text", {
+                  id: "editorial-hub-posts-copy",
                   props: {
-                    source: {
-                      mode: "latest",
-                      limit: 9,
-                      sort: "published-desc",
-                    },
-                    columns: "3",
-                    cardStyle: "outlined",
-                    ctaLabel: "Read more",
-                    emptyTitle: "No posts yet",
-                    emptyDescription: "Publish posts to populate this hub.",
+                    text: "Dodawaj i publikuj wpisy w panelu Posts, a nastepnie polacz te strone z docelowa lista wpisow po wdrozeniu Page Templates/collection controls.",
+                    format: "plain",
+                    align: "left",
+                  },
+                }),
+                createPageBlockV2("list", {
+                  id: "editorial-hub-posts-steps",
+                  props: {
+                    ordered: false,
+                    items: [
+                      "Publikuj aktualnosci, poradniki i wpisy eksperckie.",
+                      "Grupuj wpisy po kategoriach lub tematach w Posts.",
+                      "Dodaj dynamiczna liste wpisow po udostepnieniu Page collection controls.",
+                    ],
+                  },
+                }),
+                createPageBlockV2("button", {
+                  id: "editorial-hub-posts-button",
+                  props: {
+                    label: "Przejdz do wpisow",
+                    href: "/posts",
+                    target: "self",
+                    variant: "secondary",
+                    size: "md",
                   },
                 }),
               ],
@@ -89,8 +106,8 @@ export const EDITORIAL_CONTENT_HUB_PACK: AssistantBusinessBlueprintPack = {
   surfaces: ["page"],
   actionTypes: ["page.upsert"],
   assumptions: [
-    "This pack creates a page that reads existing posts; it does not create or edit post records.",
-    "The posts feed uses existing posts runtime behavior and remains empty until posts are published.",
+    "This pack creates a static hub page only; it does not create or edit post records.",
+    "Dynamic post feeds require a later Page collection authoring contract before assistant emission is enabled.",
   ],
   buildPlan: (options) => buildEditorialContentHubPlan({ promptKind: options?.promptKind }),
 };

@@ -16,6 +16,12 @@ Implement the section-level preset panels from the reference: layout, style,
 spacing, background, responsive, and visibility. Section controls should feel
 like choosing from curated page-building presets, not editing raw data.
 
+The layout panel must cover the reference baseline with ergonomic controls:
+`Wariant` as segmented options such as Split / Centered / Full width,
+`Content columns` as segmented `1 / 2 / 3 / 4`, `Vertical alignment` as
+Top / Center / Bottom, and `Max width` as a bounded slider/stepper with a
+visible pixel value such as `1080px`.
+
 ---
 
 ## Implementation Pseudocode
@@ -25,8 +31,8 @@ function SectionInspectorPanels({ section, controls }) {
   return (
     <>
       <LayoutPanel controls={["variant", "columns", "align", "justify", "maxWidth"]} />
-      <StylePanel controls={["accent", "radius", "shadow", "cardSurface"]} />
-      <SpacingPanel controls={["paddingY", "paddingX", "gap"]} />
+      <StylePanel controls={["accent", "radius", "shadow", "cardSurface", "typography"]} />
+      <SpacingPanel controls={["paddingY", "paddingX", "margin", "gap"]} />
       <BackgroundPanel controls={["backgroundType", "background", "backgroundImage"]} />
       <ResponsivePanel controls={["breakpointState", "hidden", "resetOverrides"]} />
       <VisibilityPanel controls={["visible", "authOnly", "dateRange", "anchor"]} />
@@ -42,11 +48,23 @@ Expected data flow:
   they are responsive.
 - Padding controls may group top/bottom and left/right visually while writing
   existing individual paths.
+- `backgroundImage`, `anchor`, `startsAt`, and `endsAt` are currently
+  supplemental raw fields in `PageEditor.tsx`; this leaf must either fold them
+  into the registry or render them through explicit ergonomic controls.
+- `visible`, `authOnly`, and "show in date range" use toggles. Date inputs may
+  appear only after the date-range toggle is enabled.
+- `anchor` remains a free-form text field because the target value is an author
+  supplied string, but it must stay in the visibility panel and keep validation.
+- Card mode, shadow, radius, accent/background/text colors, typography, margin,
+  padding, and gap are general section presets, not widget-specific advanced
+  panels.
 
 Regression-test shape:
 
 - Tests cover changing variant, columns, align, radius, shadow, background,
   padding/gap, visibility, auth-only, date range, and anchor.
+- Tests assert the layout controls render as segmented/slider primitives, not
+  native selects or number-arrow inputs.
 
 ---
 

@@ -25,7 +25,9 @@ and closing validation.
 function implementPageTemplatesSurface(contract) {
   const routes = registerAdminRoutes(contract.routes);
   const cache = addTemplateCacheKeys(contract.cacheKeys);
-  const ui = buildPageTemplatesAdminSurface(contract.uiModel);
+  const ui = buildPageTemplatesAdminSurface(contract.uiModel, {
+    inspectorPrimitives: "shared-page-editor-control-primitives"
+  });
   const assistant = updateAssistantSurfaceContext(contract.assistantContext);
   const obsoleteSurface = deleteObsoleteWidgetTemplateSurface(contract.deletion);
   return validateRewrite({ routes, cache, ui, assistant, obsoleteSurface });
@@ -40,6 +42,9 @@ Expected data flow:
   added for any new resource family.
 - Legacy widget-template UI/routes are removed from the Page Templates product
   path according to the approved replacement contract.
+- If TASK-421 has landed, Page Templates reuses the shared Page Editor
+  inspector adapter/primitives rather than defining a separate raw-input
+  inspector.
 - Assistant context advertises only the active surface contract that the current
   editor actually owns.
 

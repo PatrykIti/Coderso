@@ -17,6 +17,12 @@ Blocks keep focused controls: content where needed, layout width/alignment,
 style/typography/background, spacing, responsive, and visibility. Avoid
 recreating legacy widget editor complexity.
 
+The block inspector must expose the same ergonomic primitives as sections:
+segmented choices for small option sets, toggles for booleans, sliders for
+bounded dimensions/opacity/spacing, swatches/pickers for colors, and media
+source controls for media. Raw text remains appropriate only for copy, alt text,
+hrefs, anchors, and similar free-form values.
+
 ---
 
 ## Implementation Pseudocode
@@ -42,11 +48,18 @@ Expected data flow:
   controls already supported by Page v2.
 - Data-bound blocks remain gated until their capability/editor controls allow
   editing.
+- Card/stat/quote/divider/spacer and similar atom style controls use the shared
+  adapter/primitives; they must not define one-off form controls.
+- Button, image, heading, text, list, and media controls preserve their saved
+  Page v2 paths while replacing native select/number/color text surfaces with
+  ergonomic primitives.
 
 Regression-test shape:
 
 - Tests cover representative blocks: heading, button, image, divider, spacer,
   columns, group, quote.
+- Tests assert the representative block controls include segmented, switch,
+  slider, swatch/picker, and media primitives where applicable.
 - Save payloads prove paths are unchanged.
 
 ---

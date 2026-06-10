@@ -6,7 +6,8 @@
 **Category:** QA / Playwright / Pages
 **Estimated Effort:** Medium
 **Dependencies:** TASK-418-07-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-10
 
 ---
 
@@ -96,6 +97,26 @@ Regression-test shape:
 - `coderso-dev-core-host`
 - `playwright-cli`
 - Verify admin edit/save/publish and public frontend parity.
+
+## Completion Notes
+
+- Started the app with `set -a && { [ ! -f .env ] || . ./.env; } && set +a && coderso-dev-core-host`.
+- Ran direct CLI browser smoke with `playwright-cli` through a temporary Bun
+  runner. The runner loaded `.env`, created a real admin session via
+  `/admin/api/auth/login`, loaded Playwright auth state, opened the admin UI,
+  created a Page through the Pages drawer, edited it in PageEditor, saved,
+  previewed, published, checked public runtime output, and closed the browser.
+- Smoke verified command palette viewport behavior after the UI fix:
+  `commandDialogHeight: 676`, `closeBottom: 747` in an 820px-high desktop
+  viewport, with Close outside the scroll body and results `overflow-y-auto`.
+- Smoke verified public runtime contained the authored marker text, hero
+  `data-page-variant="split"` markup, nested layout block/slot output
+  (`nestedBlocks: 3`), no placeholder/inert text, and no collected console/page
+  errors or failed Pages API responses.
+- Smoke repeated the public runtime marker check after resizing to a mobile-ish
+  `390x720` viewport.
+- Cleanup deleted 6 temporary smoke pages with slugs matching
+  `/task-418-07-l02-%`.
 
 ---
 

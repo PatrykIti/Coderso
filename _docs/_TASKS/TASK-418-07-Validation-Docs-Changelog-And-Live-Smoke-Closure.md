@@ -6,7 +6,8 @@
 **Category:** QA / Docs / Changelog / Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-418-02, TASK-418-03, TASK-418-04, TASK-418-05, TASK-418-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-10
 
 ---
 
@@ -35,9 +36,9 @@ Done when every physical child is Done, Superseded, or Cancelled.
 
 ## Sub-Tasks
 
-- [ ] TASK-418-07-L01: Targeted lint, type, tests, and gates.
-- [ ] TASK-418-07-L02: Real admin and front Playwright smoke.
-- [ ] TASK-418-07-L03: Docs, changelog, board, and final drift closure.
+- [x] TASK-418-07-L01: Targeted lint, type, tests, and gates.
+- [x] TASK-418-07-L02: Real admin and front Playwright smoke.
+- [x] TASK-418-07-L03: Docs, changelog, board, and final drift closure.
 
 ---
 
@@ -49,6 +50,17 @@ Done when every physical child is Done, Superseded, or Cancelled.
 - `bun run gates:coderso`
 - `bun run precommit`
 - `coderso-dev-core-host` plus `playwright-cli`.
+
+## Completion Notes
+
+- TASK-418-07-L01, L02, and L03 are complete and recorded in changelog 1160.
+- Validation included targeted Vitest/Bun suites, lint, typecheck,
+  `bun run gates:coderso`, and real browser smoke through
+  `coderso-dev-core-host` plus direct `playwright-cli`.
+- The live smoke created a Page through the admin UI, inserted/edited Page v2
+  sections/blocks, verified command palette viewport-safe scrolling and Close
+  visibility, saved, previewed, published, checked public runtime output, and
+  cleaned up smoke pages.
 
 ---
 

@@ -576,7 +576,7 @@ const currentBlueprintCapabilities = [
       version: 1,
       label: "Editorial Content Hub",
       family: "editorial_content_hub",
-      description: "Published blog hub page backed by existing posts-feed runtime.",
+      description: "Published blog hub page with static post navigation guidance.",
       aliases: ["blog", "posts", "editorial", "content hub", "aktualności"],
       provides: [
         {

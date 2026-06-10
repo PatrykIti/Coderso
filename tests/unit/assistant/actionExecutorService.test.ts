@@ -4641,9 +4641,9 @@ test("executeAssistantActionPlan creates editorial hub page without post mutatio
   expect(result.summary.failed).toBe(0);
   expect(deps.__state.pages).toHaveLength(1);
   expect(deps.__state.pages[0]?.slug).toBe("/blog");
-  expect(readPageBlockTypes(deps.__state.pages[0]?.currentData)).toEqual(
-    expect.arrayContaining(["heading", "text", "collection"])
-  );
+  const blockTypes = readPageBlockTypes(deps.__state.pages[0]?.currentData);
+  expect(blockTypes).toEqual(expect.arrayContaining(["heading", "text", "list", "button"]));
+  expect(blockTypes).not.toContain("collection");
 });
 
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {

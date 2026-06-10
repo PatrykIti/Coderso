@@ -15,6 +15,9 @@
 Polish the floating inspector behavior so it matches the reference interaction:
 single open subpanel, icon tooltips, visible override badges, reset inheritance
 actions, scrollable subpanels, and no panel overflow outside the editor viewport.
+The panel must be slightly shorter than the browser/editor viewport; long
+content scrolls inside the subpanel, while the header/title and any close or
+collapse action remain reachable.
 
 ---
 
@@ -28,8 +31,10 @@ function FloatingInspector({ activePanel, selection }) {
       {activePanel ? (
         <InspectorSubpanel
           panel={activePanel}
-          maxHeight="viewport-safe"
-          overflow="auto"
+          maxHeight="min(72vh, calc(100dvh - toolbarAndChromeOffset))"
+          overflowY="auto"
+          stickyHeader
+          stickyActions
           responsiveState={resolveResponsiveState(selection)}
         />
       ) : null}
@@ -40,16 +45,28 @@ function FloatingInspector({ activePanel, selection }) {
 
 Expected data flow:
 
-- Tooltip labels come from toolbar panel/action metadata.
+- Tooltip labels and hover descriptions come from toolbar panel/action metadata,
+  not from ad hoc button `title` strings.
 - Override badges continue using existing responsive override readers.
-- Subpanels remain visible and scrollable within the browser/editor viewport.
+- Subpanels remain visible and scrollable within the browser/editor viewport;
+  accepted implementation uses a concrete bounded-height class or inline style
+  such as `max-h-[min(72vh,calc(100dvh-8rem))]` plus `overflow-y-auto`.
+- The subpanel title/category header remains visible while scrolling. If the
+  implementation has close/collapse/footer actions, they stay inside the
+  bounded panel and never below the bottom edge.
+- Command palette / add-section-or-block dialogs touched by this work keep the
+  same viewport-safe rule: shell `overflow-hidden`, body `overflow-y-auto`, and
+  Close outside the scroll body.
 - Keyboard shortcuts keep ignoring editable fields.
 
 Regression-test shape:
 
 - Tests assert only one panel is open at a time.
-- Tests assert tooltip labels/title/aria-labels are present.
+- Tests assert tooltip labels/descriptions are present in title/aria or the
+  project tooltip component.
 - Tests assert subpanel has bounded height/overflow contract.
+- Tests assert command palette/add-block dialog keeps Close outside the
+  scrollable results area.
 - Tests assert override/inherited/base states remain correct.
 
 ---

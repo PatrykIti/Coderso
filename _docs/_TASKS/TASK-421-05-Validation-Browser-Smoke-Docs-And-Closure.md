@@ -29,7 +29,7 @@ async function closeFloatingInspectorRedesign() {
   await runPlaywrightCliSmoke({
     admin: "http://coderso-a.localhost:5173/admin",
     front: "http://coderso-a.localhost:3000",
-    flow: "select section, edit inspector presets, save, publish"
+    flow: "select section, edit inspector presets, verify bounded panels, save, publish"
   });
   await runFinalClaudeDriftAudit();
 }
@@ -46,6 +46,17 @@ Regression-test shape:
 
 - Playwright CLI smoke covers desktop and mobile-ish viewport where subpanels
   must remain visible and scrollable.
+- Smoke changes section layout variant, columns, vertical alignment, max width,
+  shadow, color, padding/gap, responsive visibility, and at least one block
+  style through segmented/toggle/slider/swatch/media primitives.
+- Smoke verifies hover descriptions/tooltips are discoverable for category
+  icons.
+- Smoke verifies command palette/add-section-or-block dialog is shorter than the
+  viewport, its list scrolls, and Close remains reachable.
+- DOM/test checks confirm no small finite option set, boolean, bounded number,
+  color, or media control regressed to a bare raw input/select surface.
+- Closure includes a no-legacy-widget-term check for the Page Editor inspector
+  and documents that TASK-420 consumes the shared primitives for Page Templates.
 - Final drift audit checks reference spec parity, tests, docs, and board state.
 
 ---
