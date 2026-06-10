@@ -1,0 +1,69 @@
+# TASK-452-01-L01: Add Source Of Truth Tests For Insertable Page Surfaces
+# FileName: TASK-452-01-L01-Add-Source-Of-Truth-Tests-For-Insertable-Page-Surfaces.md
+
+**Parent Subtask:** TASK-452-01
+**Priority:** Medium
+**Category:** Pages / Contract / Testing
+**Estimated Effort:** Medium
+**Dependencies:** TASK-452-01
+**Status:** ⏳ To Do
+
+---
+
+## Overview
+
+Add explicit owner-level tests that freeze the live-good catalog proven by the
+cross-gating audit and prevent silent drift in insertable sections, insertable
+blocks, or capability reasons.
+
+---
+
+## Implementation Pseudocode
+
+```ts
+expect(insertableSectionTypes).toEqual([
+  "hero", "content", "feature-grid", "media-split", "timeline",
+  "gallery", "comparison", "faq", "testimonials", "cta", "custom",
+]);
+
+expect(editorInsertableBlockTypes).toEqual([
+  "heading", "text", "button", "image", "video", "list", "card",
+  "divider", "spacer", "statistic", "quote", "container", "columns", "group",
+]);
+```
+
+Expected data flow:
+
+- Tests read the owner registries directly.
+- Gated entries remain explicit and documented by reason.
+- Catalog changes require intentional task/doc updates.
+
+Error handling:
+
+- Unexpected entries fail tests rather than leaking into the palette.
+- Placeholder-only block types remain non-insertable unless explicitly promoted.
+
+Regression-test shape:
+
+- Pure Vitest coverage for positive catalog and capability-reason assertions.
+
+---
+
+## Security Contract
+
+- **Endpoint visibility:** no endpoint changes.
+- **Auth model:** not applicable.
+- **RBAC:** not applicable.
+- **CSRF:** not applicable.
+- **Rate-limit bucket:** not applicable.
+- **Validation:** tests must assert both allowed entries and explicit gated
+  reasons.
+
+---
+
+## Testing Requirements
+
+- Relevant pure Vitest coverage for Page owner registries.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+

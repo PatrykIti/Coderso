@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 25 tasks
+- **To Do:** 167 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2362 tasks
 
@@ -102,6 +102,148 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-421-03-L02 | Atomic Block Preset Panels | High | Medium | Implement focused atomic block inspector panels for content, layout, style, spacing, background, responsive, and visibility. |
 | TASK-421-04 | Responsive Override Tooltip And Panel Polish | High | Large | Polish one-panel-at-a-time behavior, tooltips, override badges, reset inheritance, and viewport-safe scroll. |
 | TASK-421-05 | Validation Browser Smoke Docs And Closure | High | Medium | Close the redesign with Vitest, lint/types, `coderso-dev-core-host`, `playwright-cli`, docs, changelog, and final drift audit. |
+| TASK-422 | Page Editor Canvas Inline Text Editing | High | Large | Cross-canvas audit Path A: text-bearing blocks need dblclick/Enter inline editing on the canvas while keeping the current save/autosave contract. |
+| TASK-422-01 | Inline Edit Contract And Text Commit Model | High | Medium | Freeze the editable prop map, empty-value policy, and sanitization helpers before wiring inline editing into the canvas. |
+| TASK-422-01-L01 | Inline Editable Target Map And Sanitization Helpers | High | Medium | Implement the Bun-free target map and text sanitization helpers that define which block props can be edited inline. |
+| TASK-422-02 | Canvas Inline Editing Implementation | High | Large | Add contenteditable entry/commit flow for text-bearing blocks through the shared block-update path. |
+| TASK-422-02-L01 | Shared Canvas Contenteditable Entry And Commit Flow | High | Large | Wire the inline-edit contract into the shared Page canvas renderer and existing block-update path. |
+| TASK-422-03 | Validation Live Smoke And Closure | High | Medium | Replay the audit method in a real browser and close the family with docs, board sync, and changelog. |
+| TASK-423 | Page Runtime Responsive Delivery | High | Large | Public runtime must emit real viewport-responsive output instead of flattening every published page to desktop-only styles. |
+| TASK-423-01 | Responsive CSS Emission Contract | High | Medium | Freeze the document-to-CSS mapping, breakpoint ownership, selector escaping, and unsupported prop-override policy. |
+| TASK-423-01-L01 | Map Responsive Deltas To Scoped Media Rules | High | Medium | Implement the Bun-free CSS builder that converts stored responsive deltas into selector-scoped media rules. |
+| TASK-423-02 | Public Runtime Integration And Preview Compat | High | Large | Inject responsive CSS into public runtime HTML while preserving explicit preview-device flattening. |
+| TASK-423-02-L01 | Inject Responsive Css Into Public Runtime And Preserve Preview Flattening | High | Large | Integrate responsive CSS into public HTML while keeping current preview-device flattening and cache semantics. |
+| TASK-423-03 | Validation Viewport Smoke And Closure | High | Medium | Prove tablet/mobile overrides now reach published front output and keep preview behavior unchanged. |
+| TASK-424 | Page Editor Typography Inspector Controls | High | Large | Cross-canvas Path B: add a real Typography control surface for font family/size/weight/line-height/letter-spacing and shared text styling. |
+| TASK-424-01 | Typography Style Schema And Registry Contract | High | Medium | Freeze Page-owner typography fields, defaults, and registry descriptors before wiring inspector UI. |
+| TASK-424-01-L01 | Add Normalized Typography Fields And Shared Text Control Descriptors | High | Medium | Extend `pageDocumentV2` and the control registry with schema-owned typography fields and descriptors. |
+| TASK-424-02 | Typography Panel Widgets And Text Surface IA | High | Large | Implement the actual Typography inspector surface and its grouping across sections and text-bearing blocks. |
+| TASK-424-02-L01 | Render Dedicated Typography Controls And Shared Text Surface Ux | High | Large | Render dedicated typography widgets for font family/size/weight/line-height/letter-spacing, align, and text color. |
+| TASK-424-03 | Validation Docs And Text Path Closure | High | Medium | Close the typography family with targeted validation, live browser proof, and docs/board/changelog sync. |
+| TASK-425 | Page Editor Responsive Panel UX Parity | High | Large | Build the currently-missing Responsive tab controls, override affordances, and breakpoint readouts on top of the working model. |
+| TASK-425-01 | Responsive Panel Scope Labels And Override State Contract | High | Medium | Freeze which controls belong in the Responsive tab and how inherited vs override state is labeled. |
+| TASK-425-01-L01 | Define Responsive Panel Controls And Override Ownership | High | Medium | Define panel metadata for hide/layout toggles, reset actions, and device readouts on top of the existing override model. |
+| TASK-425-02 | Responsive Panel Widgets And Breakpoint Affordances | High | Large | Render the actual Responsive-panel widgets so the tab stops being an empty informational placeholder. |
+| TASK-425-02-L01 | Implement Hide Layout Toggles Reset Actions And Device Readouts | High | Large | Implement dedicated responsive toggles, reset affordances, and explicit breakpoint width readouts. |
+| TASK-425-03 | Validation Docs And Viewport Authoring Closure | High | Medium | Close the Responsive-panel family with targeted validation, live authoring proof, and docs/board/changelog sync. |
+| TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and finishes hero-specific style/accent verification. |
+| TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for accent truthfulness, variant behavior, and dedicated controls. |
+| TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify that accent/variant behavior stays truthful on the front. |
+| TASK-426-02 | Hero Validation Docs And Closure | High | Medium | Close the Hero family with targeted validation, live browser proof, and docs/board/changelog sync. |
+| TASK-427 | Content Section Audit Remediation | High | Medium | `variant=compact` currently persists as data only; make it affect published layout and remove shared inspector drift. |
+| TASK-427-01 | Content Contract And Audit Freeze | High | Medium | Freeze the Content-section remediation contract around the broken `compact` variant and control-surface adoption. |
+| TASK-427-01-L01 | Content Compact Variant Runtime And Dedicated Controls | High | Medium | Implement a real published-layout effect for `compact` and adopt the shared dedicated inspector widgets. |
+| TASK-427-02 | Content Validation Docs And Closure | High | Medium | Close the Content family with targeted validation, live `compact` proof, and docs/board/changelog sync. |
+| TASK-428 | Feature Grid Section Audit Remediation | Medium | Medium | Preserve working cards/grid runtime behavior while adopting the redesigned control surface. |
+| TASK-428-01 | Feature Grid Contract And Audit Freeze | Medium | Medium | Freeze the Feature Grid remediation contract while preserving the current working cards/grid runtime behavior. |
+| TASK-428-01-L01 | Feature Grid Runtime Guard And Dedicated Controls | Medium | Medium | Keep Feature Grid runtime behavior truthful while migrating its inspector to the dedicated control surface. |
+| TASK-428-02 | Feature Grid Validation Docs And Closure | Medium | Medium | Close the Feature Grid family with targeted validation, live cards/grid proof, and docs/board/changelog sync. |
+| TASK-429 | Media Split Section Audit Remediation | High | Large | Media Split variants currently write markers without changing layout; adopt real variant behavior plus media/responsive controls. |
+| TASK-429-01 | Media Split Contract And Audit Freeze | High | Medium | Freeze the Media Split remediation contract around marker-only variants and missing media/responsive controls. |
+| TASK-429-01-L01 | Media Split Variant Layout And Dedicated Controls | High | Large | Implement real `default`/`split`/`horizontal` layouts and adopt dedicated media/responsive controls. |
+| TASK-429-02 | Media Split Validation Docs And Closure | High | Medium | Close the Media Split family with targeted validation, live variant proof, and docs/board/changelog sync. |
+| TASK-430 | Timeline Section Audit Remediation | High | Large | Timeline still renders like generic text content; add truthful timeline runtime behavior and dedicated controls. |
+| TASK-430-01 | Timeline Contract And Audit Freeze | High | Medium | Freeze the Timeline remediation contract around marker-only variants and generic front rendering. |
+| TASK-430-01-L01 | Timeline Runtime Layout And Dedicated Controls | High | Large | Implement truthful timeline runtime behavior and adopt the shared dedicated control surface. |
+| TASK-430-02 | Timeline Validation Docs And Closure | High | Medium | Close the Timeline family with targeted validation, live runtime proof, and docs/board/changelog sync. |
+| TASK-431 | Gallery Section Audit Remediation | High | Large | Gallery still renders generic heading/text content; add truthful gallery/card runtime behavior and dedicated controls. |
+| TASK-431-01 | Gallery Contract And Audit Freeze | High | Medium | Freeze the Gallery remediation contract around marker-only variants and generic front rendering. |
+| TASK-431-01-L01 | Gallery Runtime Layout And Dedicated Controls | High | Large | Implement truthful Gallery runtime behavior and adopt the shared dedicated media/style controls. |
+| TASK-431-02 | Gallery Validation Docs And Closure | High | Medium | Close the Gallery family with targeted validation, live runtime proof, and docs/board/changelog sync. |
+| TASK-432 | Comparison Section Audit Remediation | Medium | Medium | Preserve working grid/cards runtime behavior while replacing shared native-control drift. |
+| TASK-432-01 | Comparison Contract And Audit Freeze | Medium | Medium | Freeze the Comparison remediation contract while preserving the current working grid/cards runtime behavior. |
+| TASK-432-01-L01 | Comparison Runtime Guard And Dedicated Controls | Medium | Medium | Keep Comparison runtime behavior truthful while migrating its inspector to the dedicated control surface. |
+| TASK-432-02 | Comparison Validation Docs And Closure | Medium | Medium | Close the Comparison family with targeted validation, live grid/cards proof, and docs/board/changelog sync. |
+| TASK-433 | FAQ Section Audit Remediation | Medium | Medium | FAQ compact variant already works; close the remaining dedicated-control drift and guard the truthful runtime path. |
+| TASK-433-01 | FAQ Contract And Audit Freeze | Medium | Medium | Freeze the FAQ remediation contract while preserving the current working compact runtime behavior. |
+| TASK-433-01-L01 | FAQ Compact Runtime And Dedicated Controls | Medium | Medium | Keep FAQ compact behavior truthful while migrating its inspector to the dedicated control surface. |
+| TASK-433-02 | FAQ Validation Docs And Closure | Medium | Medium | Close the FAQ family with targeted validation, live compact proof, and docs/board/changelog sync. |
+| TASK-434 | Testimonials Section Audit Remediation | Medium | Medium | Testimonials already switches runtime marker classes; close the remaining inspector/control drift. |
+| TASK-434-01 | Testimonials Contract And Audit Freeze | Medium | Medium | Freeze the Testimonials remediation contract while preserving the current runtime marker behavior. |
+| TASK-434-01-L01 | Testimonials Variant Guard And Dedicated Controls | Medium | Medium | Keep Testimonials runtime behavior truthful while migrating its inspector to the dedicated control surface. |
+| TASK-434-02 | Testimonials Validation Docs And Closure | Medium | Medium | Close the Testimonials family with targeted validation, live variant proof, and docs/board/changelog sync. |
+| TASK-435 | CTA Section Audit Remediation | High | Medium | `centered` and `full-width` CTA variants are data-only no-ops today; make them affect the published layout. |
+| TASK-435-01 | CTA Contract And Audit Freeze | High | Medium | Freeze the CTA remediation contract around the broken `centered`/`full-width` runtime semantics. |
+| TASK-435-01-L01 | CTA Variant Layout And Dedicated Controls | High | Medium | Implement real CTA variant layouts and adopt the shared dedicated inspector widgets. |
+| TASK-435-02 | CTA Validation Docs And Closure | High | Medium | Close the CTA family with targeted validation, live variant proof, and docs/board/changelog sync. |
+| TASK-436 | Custom Section Audit Remediation | Medium | Medium | Preserve working custom-grid runtime behavior while replacing shared native-control drift. |
+| TASK-436-01 | Custom Contract And Audit Freeze | Medium | Medium | Freeze the Custom remediation contract while preserving the current working `grid` runtime behavior. |
+| TASK-436-01-L01 | Custom Grid Runtime And Dedicated Controls | Medium | Medium | Keep Custom `grid` behavior truthful while migrating its inspector to the dedicated control surface. |
+| TASK-436-02 | Custom Validation Docs And Closure | Medium | Medium | Close the Custom family with targeted validation, live `grid` proof, and docs/board/changelog sync. |
+| TASK-437 | Heading Block Audit Remediation | Medium | Medium | Heading already renders truthfully; adopt inline-edit/typography controls and guard publish/reload parity. |
+| TASK-437-01 | Heading Contract And Audit Freeze | Medium | Medium | Freeze the Heading remediation contract around inline-edit, typography, and dedicated control ownership. |
+| TASK-437-01-L01 | Heading Inline Edit Typography And Dedicated Controls | Medium | Medium | Adopt inline-edit and typography flows for Heading while migrating it to the dedicated control surface. |
+| TASK-437-02 | Heading Validation Docs And Closure | Medium | Medium | Close the Heading family with targeted validation, live proof, and docs/board/changelog sync. |
+| TASK-438 | Text Block Audit Remediation | High | Medium | Text block needs inline-edit/typography closure plus a fix for placeholder copy leaking into the toolbar label. |
+| TASK-438-01 | Text Contract And Audit Freeze | High | Medium | Freeze the Text remediation contract around inline-edit, typography, format truthfulness, and toolbar labeling. |
+| TASK-438-01-L01 | Text Inline Edit Typography Format Truthfulness And Toolbar Labeling | High | Medium | Adopt inline-edit and typography for Text, normalize the toolbar label, and keep `plain`/`rich` behavior truthful. |
+| TASK-438-02 | Text Validation Docs And Closure | High | Medium | Close the Text family with targeted validation, live proof, and docs/board/changelog sync. |
+| TASK-439 | Button Block Audit Remediation | High | Medium | Button already renders for real; close label/control drift and prove variant/size/target/accent behavior stays truthful. |
+| TASK-439-01 | Button Contract And Audit Freeze | High | Medium | Freeze the Button remediation contract around the shared label-edit path and truthful runtime behavior. |
+| TASK-439-01-L01 | Button Label Runtime Truthfulness And Dedicated Controls | High | Medium | Adopt the shared label-edit path for Button and prove variant/size/target/accent behavior stays truthful. |
+| TASK-439-02 | Button Validation Docs And Closure | High | Medium | Close the Button family with targeted validation, live proof, and docs/board/changelog sync. |
+| TASK-440 | Image Block Audit Remediation | Medium | Medium | Replace raw image URL entry with the shared media path and adopt dedicated layout/style controls. |
+| TASK-440-01 | Image Contract And Audit Freeze | Medium | Medium | Freeze the Image remediation contract around the move from raw URL entry to the shared media-picker path. |
+| TASK-440-01-L01 | Image Media Picker And Dedicated Controls | Medium | Medium | Replace raw Image URL entry with the shared media-picker path and adopt the dedicated controls. |
+| TASK-440-02 | Image Validation Docs And Closure | Medium | Medium | Close the Image family with targeted validation, live proof, and docs/board/changelog sync. |
+| TASK-441 | Video Block Audit Remediation | Medium | Medium | Replace raw video URL entry and yes/no selects with the shared media/toggle control surfaces. |
+| TASK-441-01 | Video Contract And Audit Freeze | Medium | Medium | Freeze the Video remediation contract around the shared media-picker path and dedicated toggle controls. |
+| TASK-441-01-L01 | Video Media Picker Toggle Controls And Runtime Guard | Medium | Medium | Replace raw source entry and yes/no selects with the shared media-picker and toggle control surfaces. |
+| TASK-441-02 | Video Validation Docs And Closure | Medium | Medium | Close the Video family with targeted validation, live proof, and docs/board/changelog sync. |
+| TASK-442 | List Block Audit Remediation | High | Medium | A freshly inserted empty list is pruned on save; preserve it through publish and adopt real ordered-state controls. |
+| TASK-442-01 | List Contract And Audit Freeze | High | Medium | Freeze the List remediation contract around disappearing empty lists and the `ordered` toggle path. |
+| TASK-442-01-L01 | Empty List Persistence Ordered Toggle And Shared Editing Surface | High | Medium | Preserve default-empty lists through save/publish and adopt the shared ordered/editing surface. |
+| TASK-442-02 | List Validation Docs And Closure | High | Medium | Close the List family with targeted validation, live proof for empty and populated lists, and docs/board/changelog sync. |
+| TASK-443 | Card Block Audit Remediation | Medium | Medium | Replace raw card-image URL entry with the shared media path and close shared control drift. |
+| TASK-443-01 | Card Contract And Audit Freeze | Medium | Medium | Freeze the Card remediation contract around the move from raw image URL entry to the shared media-picker path. |
+| TASK-443-01-L01 | Card Media Picker And Dedicated Controls | Medium | Medium | Replace raw Card image URL entry with the shared media-picker path and adopt the dedicated controls. |
+| TASK-443-02 | Card Validation Docs And Closure | Medium | Medium | Close the Card family with targeted validation, live proof, and docs/board/changelog sync. |
+| TASK-444 | Divider Block Audit Remediation | Low | Small | Divider already renders a correct `<hr>`; remaining work is low-risk tone/style/visibility control truthfulness. |
+| TASK-444-01 | Divider Contract And Audit Freeze | Low | Small | Freeze the Divider remediation contract around low-risk tone/style/visibility control truthfulness. |
+| TASK-444-01-L01 | Divider Dedicated Controls And Runtime Guard | Low | Small | Adopt the dedicated controls for Divider while preserving the current correct runtime output. |
+| TASK-444-02 | Divider Validation Docs And Closure | Low | Small | Close the Divider family with targeted validation and docs/board/changelog sync. |
+| TASK-445 | Spacer Block Audit Remediation | Low | Small | Spacer already renders correctly; remaining work is low-risk shared style/visibility control truthfulness. |
+| TASK-445-01 | Spacer Contract And Audit Freeze | Low | Small | Freeze the Spacer remediation contract around low-risk shared style/visibility control truthfulness. |
+| TASK-445-01-L01 | Spacer Dedicated Controls And Runtime Guard | Low | Small | Adopt the dedicated controls for Spacer while preserving the current correct runtime output. |
+| TASK-445-02 | Spacer Validation Docs And Closure | Low | Small | Close the Spacer family with targeted validation and docs/board/changelog sync. |
+| TASK-446 | Statistic Block Audit Remediation | Medium | Medium | Statistic already renders value/label/caption truthfully; close toolbar-label polish and dedicated control drift. |
+| TASK-446-01 | Statistic Contract And Audit Freeze | Medium | Medium | Freeze the Statistic remediation contract around inline-edit, toolbar labeling, and dedicated control ownership. |
+| TASK-446-01-L01 | Statistic Inline Edit Toolbar Labeling And Dedicated Controls | Medium | Medium | Adopt inline-edit and dedicated controls for Statistic and normalize the content-derived toolbar label. |
+| TASK-446-02 | Statistic Validation Docs And Closure | Medium | Medium | Close the Statistic family with targeted validation, live proof, and docs/board/changelog sync. |
+| TASK-447 | Quote Block Audit Remediation | Medium | Medium | Quote/citation runtime works; remaining work is dedicated control fidelity and minor toolbar-label polish. |
+| TASK-447-01 | Quote Contract And Audit Freeze | Medium | Medium | Freeze the Quote remediation contract around inline-edit, toolbar labeling, and dedicated control ownership. |
+| TASK-447-01-L01 | Quote Inline Edit Toolbar Labeling And Dedicated Controls | Medium | Medium | Adopt inline-edit and dedicated controls for Quote/Cite and normalize toolbar labeling. |
+| TASK-447-02 | Quote Validation Docs And Closure | Medium | Medium | Close the Quote family with targeted validation, live proof, and docs/board/changelog sync. |
+| TASK-448 | Container Block Audit Remediation | Medium | Medium | Container is the working nested-layout control case; close dedicated-control drift without regressing persistence. |
+| TASK-448-01 | Container Contract And Audit Freeze | Medium | Medium | Freeze the Container remediation contract while preserving the current working nested-layout/runtime path. |
+| TASK-448-01-L01 | Container Dedicated Controls And Nested Runtime Guard | Medium | Medium | Adopt the dedicated controls for Container while preserving current nested persistence and runtime behavior. |
+| TASK-448-02 | Container Validation Docs And Closure | Medium | Medium | Close the Container family with targeted validation, live proof, and docs/board/changelog sync. |
+| TASK-449 | Columns Block Audit Remediation | High | Medium | `columns` currently vanishes after save/reopen/publish; fix the round-trip bug and re-verify nested-slot behavior. |
+| TASK-449-01 | Columns Round-Trip Reproduction And Contract Freeze | High | Medium | Reproduce the disappearing-columns bug deterministically and freeze the owning slot contract before edits. |
+| TASK-449-01-L01 | Reproduce Columns Save Drop Across Write Read And Publish | High | Medium | Build the failing reproduction that proves exactly where `columns` disappears in the round-trip pipeline. |
+| TASK-449-02 | Columns Persistence And Slot Round-Trip Implementation | High | Large | Fix the normalization/persistence root cause and add round-trip coverage for all insertable blocks. |
+| TASK-449-02-L01 | Preserve Empty Column Slots Nested Children And Round Trip Coverage | High | Large | Preserve empty slot arrays and nested children while adding all-insertable-block round-trip coverage. |
+| TASK-449-03 | Validation Nested Slots Controls And Closure | High | Medium | Replay the columns audit in a real browser and re-verify controls after the shared UI work lands. |
+| TASK-450 | Group Block Audit Remediation | Medium | Medium | Group already renders truthfully; close the heaviest remaining segmented/toggle/gap control drift. |
+| TASK-450-01 | Group Contract And Audit Freeze | Medium | Medium | Freeze the Group remediation contract around direction/wrap/gap control truthfulness. |
+| TASK-450-01-L01 | Group Direction Wrap Gap And Dedicated Controls | Medium | Medium | Adopt the dedicated controls for Group direction/wrap/gap while preserving current runtime behavior. |
+| TASK-450-02 | Group Validation Docs And Closure | Medium | Medium | Close the Group family with targeted validation, live proof, and docs/board/changelog sync. |
+| TASK-451 | Page Editor Preview Surface And Toolbar Shell Parity | High | Large | Preview currently 404s and full 3-surface parity remains only 2/3; close the preview/shell gaps from the cross-parity audit. |
+| TASK-451-01 | Preview Route And Dialog Contract Freeze | High | Medium | Freeze preview-route ownership, token protections, and what counts as truthful 3-surface parity before fixing the 404 path. |
+| TASK-451-01-L01 | Restore Preview Surface And Preserve Preview Token Guards | High | Large | Restore a reachable preview route/dialog flow without weakening the preview-token security model. |
+| TASK-451-02 | Toolbar Shell And Parity Polish | High | Medium | Close the remaining shell-level parity gaps after the preview route is restored. |
+| TASK-451-02-L01 | Normalize Preview Dialog Labels And Add Surface Affordances | High | Medium | Normalize toolbar labels and remaining preview/add-surface shell affordances. |
+| TASK-451-03 | Three Surface Validation And Closure | High | Medium | Close the parity family with a fresh canvas/preview/front replay and docs/board/changelog sync. |
+| TASK-452 | Page Editor Command Palette Gating Guard Rails | Medium | Medium | Convert the currently-correct 11-section/14-block catalog and gated-entry behavior into explicit negative coverage. |
+| TASK-452-01 | Insertable Catalog And Capability Freeze | Medium | Medium | Freeze the source-of-truth insertable surface catalog and explicit gated-entry reasons. |
+| TASK-452-01-L01 | Add Source Of Truth Tests For Insertable Page Surfaces | Medium | Medium | Add owner-level tests that lock the 11-section/14-block insertable catalog. |
+| TASK-452-02 | Gated Entry Negative Tests And Placeholder Guard Rails | Medium | Medium | Add negative coverage proving gated entries stay absent and placeholder paths remain unreachable from authoring. |
+| TASK-452-02-L01 | Prove Gated Entries Stay Absent And Placeholder Paths Stay Unreachable | Medium | Medium | Add UI and owner-level tests that keep non-insertable entries out of the palette and runtime placeholder paths unreachable. |
+| TASK-452-03 | Validation Docs And Catalog Closure | Medium | Small | Close the gating-guard family with final validation and docs/board/changelog sync. |
+| TASK-453 | Page Editor V2 Audit Followup Closure Program | High | Medium | Aggregate closure family for `_FOLLOWUP_REPORT_2026-06-10.md`, mapping cross-family acceptance and residual risks. |
+| TASK-453-01 | Followup Report Closure Matrix And Ownership Freeze | High | Medium | Freeze the acceptance matrix that maps each aggregate follow-up finding onto concrete task families. |
+| TASK-453-01-L01 | Map Followup Findings To Task Families And Acceptance Criteria | High | Medium | Build the matrix that links every aggregate finding to concrete task owners and evidence requirements. |
+| TASK-453-02 | Followup Validation Board And Changelog Closure | High | Medium | Close the aggregate follow-up report with final validation and board/changelog synchronization. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |

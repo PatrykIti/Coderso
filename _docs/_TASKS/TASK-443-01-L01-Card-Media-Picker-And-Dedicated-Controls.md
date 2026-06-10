@@ -1,0 +1,62 @@
+# TASK-443-01-L01: Card Media Picker And Dedicated Controls
+# FileName: TASK-443-01-L01-Card-Media-Picker-And-Dedicated-Controls.md
+
+**Parent Subtask:** TASK-443-01
+**Priority:** Medium
+**Category:** Pages / Page Editor V2 / Blocks
+**Estimated Effort:** Medium
+**Dependencies:** TASK-443-01
+**Status:** ⏳ To Do
+
+---
+
+## Overview
+
+Replace raw URL entry with the shared media-picker path for Card image content
+and adopt the shared dedicated layout/style controls without regressing current
+runtime rendering.
+
+---
+
+## Implementation Pseudocode
+
+```tsx
+renderMediaPickerControl("card-image");
+renderBlockControls(getBlockControlsForType("card"));
+```
+
+Expected data flow:
+
+- Card image selection resolves through the shared media picker.
+- Existing title/body/link semantics remain unchanged.
+- Published runtime keeps rendering a real card block.
+
+Error handling:
+
+- Unsupported media types remain rejected.
+- Missing assets degrade to the current safe Card runtime behavior.
+
+Regression-test shape:
+
+- Vitest UI coverage for media picking and runtime coverage for Card rendering.
+
+---
+
+## Security Contract
+
+- **Endpoint visibility:** no endpoint changes.
+- **Auth model:** existing admin session on downstream saves.
+- **RBAC:** existing Pages permissions.
+- **CSRF:** unchanged.
+- **Rate-limit bucket:** unchanged.
+- **Validation:** only schema-owned Card fields may persist.
+
+---
+
+## Testing Requirements
+
+- Relevant Page editor UI Vitest suites.
+- Card runtime/render coverage as needed.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+
