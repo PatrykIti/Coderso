@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
+import { ContentListBlock } from "../../widgets/core/contentList";
+import { FormEmbedBlock, type FormEmbedData } from "../../widgets/core/formEmbed";
 import {
   getPageBlockActiveSlotKeys,
   resolvePageDocumentForBreakpoint,
@@ -14,6 +16,11 @@ import {
   resolvePageSectionTemplate,
   type ResolvedPageSectionTemplate,
 } from "./pageSectionTemplates";
+import type {
+  PageRuntimeDataBinding,
+  PageRuntimeDataByBlockId,
+  PageRuntimeFormBinding,
+} from "./pageRuntimeDataBinding";
 
 export type PageRenderMode = "runtime" | "admin-preview";
 export type PageSectionLayoutMode = "runtime" | "canvas-device";
@@ -69,6 +76,7 @@ type PageBlockRenderContext = {
   depth: number;
   includeHiddenBlocks: boolean;
   renderBlockFrame?: PageBlockFrameRenderer;
+  runtimeDataByBlockId?: PageRuntimeDataByBlockId;
   slotKey?: PageBlockSlotKey;
   parentBlock?: PageBlockV2;
 };
@@ -432,6 +440,108 @@ const renderInertDataBoundBlock = (type: "collection" | "form" | "embed", messag
   </div>
 );
 
+const getRuntimeBinding = <Kind extends PageRuntimeDataBinding["kind"]>(
+  block: PageBlockV2,
+  context: PageBlockRenderContext,
+  kind: Kind
+): Extract<PageRuntimeDataBinding, { kind: Kind }> | null => {
+  const binding = context.runtimeDataByBlockId?.[block.id];
+  return binding?.kind === kind
+    ? (binding as Extract<PageRuntimeDataBinding, { kind: Kind }>)
+    : null;
+};
+
+const renderCollectionBlock = (block: PageBlockV2, context: PageBlockRenderContext) => {
+  const binding = getRuntimeBinding(block, context, "collection");
+  if (!binding || binding.data.resolved?.error) {
+    return renderInertDataBoundBlock("collection", "Collection content is not available yet.");
+  }
+  return <ContentListBlock data={binding.data} variant="grid" blockId={block.id} />;
+};
+
+const mapFormBindingToEmbedData = (
+  block: PageBlockV2,
+  binding: PageRuntimeFormBinding
+): FormEmbedData => {
+  const title =
+    readText(block.props.title) || binding.title || binding.resolution.formName || "Form";
+  return {
+    formId: binding.formId,
+    title,
+    description: binding.resolution.description ?? "",
+    successMessage: binding.resolution.successMessage ?? undefined,
+    resolved: {
+      formId: binding.resolution.formId,
+      formName: binding.resolution.formName,
+      description: binding.resolution.description,
+      status: binding.resolution.status,
+      successMessage: binding.resolution.successMessage,
+      successRedirectUrl: binding.resolution.successRedirectUrl,
+      submissionAccess: binding.resolution.submissionAccess,
+      submissionNonce: binding.resolution.submissionNonce,
+      ...(binding.resolution.botProtection
+        ? { botProtection: binding.resolution.botProtection }
+        : {}),
+      settings: {
+        layoutMode: binding.resolution.settings.layoutMode,
+        saveProgress: binding.resolution.settings.saveProgress,
+        stepTitles: binding.resolution.settings.stepTitles,
+      },
+      fields: binding.resolution.fields,
+      ...(binding.resolution.error ? { error: binding.resolution.error } : {}),
+    },
+  };
+};
+
+const renderFormBlock = (block: PageBlockV2, context: PageBlockRenderContext) => {
+  const binding = getRuntimeBinding(block, context, "form");
+  if (!binding) {
+    const title = readText(block.props.title);
+    return renderInertDataBoundBlock(
+      "form",
+      title ? `${title} is not available yet.` : "Form is not available yet."
+    );
+  }
+  return <FormEmbedBlock data={mapFormBindingToEmbedData(block, binding)} variant="standard" />;
+};
+
+const renderEmbedBlock = (block: PageBlockV2, context: PageBlockRenderContext) => {
+  const binding = getRuntimeBinding(block, context, "embed");
+  if (!binding) {
+    return renderInertDataBoundBlock("embed", "Embed content is not available yet.");
+  }
+  if (binding.iframeSrc) {
+    return (
+      <div
+        className="overflow-hidden rounded-lg border bg-black/5"
+        data-page-embed-provider="youtube"
+      >
+        <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+          <iframe
+            src={binding.iframeSrc}
+            loading="lazy"
+            title={binding.iframeTitle}
+            className="absolute inset-0 h-full w-full border-0"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      </div>
+    );
+  }
+  if (binding.sanitizedHtml) {
+    return (
+      <div
+        className="prose max-w-none"
+        data-page-embed-html="sanitized"
+        dangerouslySetInnerHTML={{ __html: binding.sanitizedHtml }}
+      />
+    );
+  }
+  return renderInertDataBoundBlock("embed", "Embed content is not available yet.");
+};
+
 const isListLinkItem = (value: unknown): value is { label: string; href: string } =>
   typeof value === "object" &&
   value !== null &&
@@ -505,6 +615,7 @@ const renderPageBlockList = (
       depth: context.depth,
       includeHiddenBlocks: context.includeHiddenBlocks,
       renderBlockFrame: context.renderBlockFrame,
+      runtimeDataByBlockId: context.runtimeDataByBlockId,
       slotKey: context.slotKey,
       parentBlock: context.parentBlock,
     })
@@ -560,6 +671,7 @@ const renderPageLayoutBlockContent = (
                 depth: context.depth + 1,
                 includeHiddenBlocks: context.includeHiddenBlocks,
                 renderBlockFrame: context.renderBlockFrame,
+                runtimeDataByBlockId: context.runtimeDataByBlockId,
                 slotKey,
                 parentBlock: block,
               }),
@@ -587,6 +699,7 @@ const renderPageLayoutBlockContent = (
         depth: context.depth + 1,
         includeHiddenBlocks: context.includeHiddenBlocks,
         renderBlockFrame: context.renderBlockFrame,
+        runtimeDataByBlockId: context.runtimeDataByBlockId,
         slotKey,
         parentBlock: block,
       }),
@@ -602,6 +715,7 @@ const renderPageLayoutBlockContent = (
       depth: context.depth + 1,
       includeHiddenBlocks: context.includeHiddenBlocks,
       renderBlockFrame: context.renderBlockFrame,
+      runtimeDataByBlockId: context.runtimeDataByBlockId,
       slotKey,
       parentBlock: block,
     }),
@@ -718,16 +832,12 @@ export const renderPageBlockContent = (
     case "gallery":
       return renderGallery(block);
     case "collection":
-      return renderInertDataBoundBlock("collection", "Collection content is not available yet.");
+      return renderCollectionBlock(block, context);
     case "form": {
-      const title = readText(block.props.title);
-      return renderInertDataBoundBlock(
-        "form",
-        title ? `${title} is not available yet.` : "Form is not available yet."
-      );
+      return renderFormBlock(block, context);
     }
     case "embed":
-      return renderInertDataBoundBlock("embed", "Embed content is not available yet.");
+      return renderEmbedBlock(block, context);
     case "icon":
       return null;
     default:
@@ -791,12 +901,14 @@ export function PageSectionContent({
   renderBlockFrame,
   layoutMode = "runtime",
   includeHiddenBlocks = false,
+  runtimeDataByBlockId,
 }: {
   section: PageSectionV2;
   emptyContent?: ReactNode;
   renderBlockFrame?: PageBlockFrameRenderer;
   layoutMode?: PageSectionLayoutMode;
   includeHiddenBlocks?: boolean;
+  runtimeDataByBlockId?: PageRuntimeDataByBlockId;
 }) {
   const renderProps = toPageSectionRenderProps(section, { layoutMode });
   const blocks = includeHiddenBlocks
@@ -816,6 +928,7 @@ export function PageSectionContent({
               depth: 1,
               includeHiddenBlocks,
               renderBlockFrame,
+              runtimeDataByBlockId,
             })
           )
         : emptyContent}
@@ -830,9 +943,11 @@ function FragmentLike({ children }: { children: ReactNode }) {
 export function PageSectionRender({
   section,
   emptyContent,
+  runtimeDataByBlockId,
 }: {
   section: PageSectionV2;
   emptyContent?: ReactNode;
+  runtimeDataByBlockId?: PageRuntimeDataByBlockId;
 }) {
   if (!section.visibility.visible) return null;
   const renderProps = toPageSectionRenderProps(section);
@@ -842,7 +957,11 @@ export function PageSectionRender({
       className={renderProps.sectionClassName}
       {...renderProps.dataAttributes}
     >
-      <PageSectionContent section={section} emptyContent={emptyContent} />
+      <PageSectionContent
+        section={section}
+        emptyContent={emptyContent}
+        runtimeDataByBlockId={runtimeDataByBlockId}
+      />
     </section>
   );
 }
@@ -858,10 +977,12 @@ export function PageDocumentRender({
   document,
   breakpoint = "desktop",
   emptyContent = emptyDocumentContent,
+  runtimeDataByBlockId,
 }: {
   document: PageDocumentV2;
   breakpoint?: PageBreakpoint;
   emptyContent?: ReactNode;
+  runtimeDataByBlockId?: PageRuntimeDataByBlockId;
 }) {
   const resolved = resolvePageRenderTree(document, breakpoint);
 
@@ -879,7 +1000,11 @@ export function PageDocumentRender({
   return (
     <main className="min-h-screen bg-white text-slate-950" data-page-v2="true">
       {resolved.sections.map((section) => (
-        <PageSectionRender key={section.id} section={section} />
+        <PageSectionRender
+          key={section.id}
+          section={section}
+          runtimeDataByBlockId={runtimeDataByBlockId}
+        />
       ))}
     </main>
   );

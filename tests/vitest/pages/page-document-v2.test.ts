@@ -916,7 +916,24 @@ describe("PageDocumentV2", () => {
     });
     expect("reason" in pageBlockCapabilities.columns).toBe(false);
     expect(pageBlockCapabilities.icon.reason).toBe("icon-runtime-renderer-pending");
-    expect(pageBlockCapabilities.collection.publicDataBinding).toBe("scoped-read-only");
+    expect(pageBlockCapabilities.collection).toMatchObject({
+      editorInsertable: false,
+      insertable: false,
+      assistantEmittable: false,
+      runtimeRenderer: "real",
+      publicDataBinding: "scoped-read-only",
+      reason: "collection-editor-controls-pending",
+    });
+    expect(pageBlockCapabilities.form).toMatchObject({
+      runtimeRenderer: "real",
+      publicDataBinding: "scoped-read-only",
+      reason: "form-editor-controls-pending",
+    });
+    expect(pageBlockCapabilities.embed).toMatchObject({
+      runtimeRenderer: "real",
+      publicDataBinding: "scoped-read-only",
+      reason: "embed-editor-controls-pending",
+    });
     expect(createPageBlockV2("heading").props).toMatchObject({ text: "Heading", level: "h2" });
   });
 

@@ -324,6 +324,17 @@ Rotacja klucza:
   handlers, unsafe URLs, forbidden elements, and malformed unsupported tags are
   stripped before render.
 
+## Pages embed rendering
+
+- Page v2 embed blocks may render sanitized inline embed markup only through
+  `sanitizePageEmbedHtml`, backed by the shared rich-text sanitizer policy.
+- The Pages embed allowlist is intentionally narrow: textual layout tags and
+  safe links only. Script-capable tags, event handlers, unsafe URLs, forms,
+  frames, and unknown attributes are stripped before public render.
+- Provider embeds must use hardened first-party resolver output such as the
+  YouTube iframe URL resolver; arbitrary iframe HTML from page data is not a
+  public runtime contract.
+
 ## Assistant security baseline (v1)
 
 - Konfiguracja limitow asystenta jest trzymana w global settings:

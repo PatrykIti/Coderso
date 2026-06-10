@@ -380,8 +380,11 @@ const realRuntimeBlockTypes = new Set<PageBlockType>([
   "image",
   "video",
   "gallery",
+  "form",
   "list",
   "card",
+  "collection",
+  "embed",
   "divider",
   "spacer",
   "statistic",
@@ -427,9 +430,9 @@ const assistantEmittableBlockTypes = new Set<PageBlockType>([
 ]);
 const pageBlockCapabilityReasons: Partial<Record<PageBlockType, string>> = {
   gallery: "gallery-editor-controls-pending",
-  form: "form-runtime-security-pending",
-  collection: "collection-runtime-data-binding-pending",
-  embed: "embed-sanitizer-runtime-pending",
+  form: "form-editor-controls-pending",
+  collection: "collection-editor-controls-pending",
+  embed: "embed-editor-controls-pending",
   icon: "icon-runtime-renderer-pending",
 };
 

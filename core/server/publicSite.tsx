@@ -102,6 +102,9 @@ import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
 import { handlePublicFormsApi } from "./publicFormsApi";
 import { readBindingPathValue } from "../services/utils/bindingPath";
+import { preparePageRuntimeDocument } from "../services/pages/pageRuntimeDataBinding";
+import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
+import type { PageBreakpoint } from "../services/pages/pageDocumentV2";
 
 export type PublicPageData = {
   id: string;
@@ -787,10 +790,24 @@ const renderPublicPageHtmlInternal = async (
         fallback: fallbackSeo,
       });
   const imageUrl = resolveDetailPageImageUrl(seoRecord.imageUrl ?? seoRecord.socialImage);
+  const contentRoutesSetting = await getSetting("site.contentRoutes");
+  const contentRoutes = Array.isArray(contentRoutesSetting)
+    ? (contentRoutesSetting as ContentRouteSetting[])
+    : [];
+  const pageTemplateInput = resolvePageTemplateInput(sourceData, {
+    renderMode: options?.preview ? "preview-page" : "public-page",
+  });
+  const preparedRuntime = await preparePageRuntimeDocument(pageTemplateInput.document, {
+    preview: options?.preview ?? false,
+    breakpoint: (options?.previewDevice ?? "desktop") as PageBreakpoint,
+    contentRoutes,
+    runtimeSearchParams: options?.runtimeSearchParams,
+  });
+
   return {
     html: renderPublicPageV2RuntimeHtml({
       title: resolvedSeo.title ?? page.title ?? "Page",
-      document: sourceData,
+      document: preparedRuntime.document,
       cssHref,
       inlineCss,
       isPreview: options?.preview ?? false,
@@ -801,8 +818,9 @@ const renderPublicPageHtmlInternal = async (
       robots: resolvedSeo.robots,
       imageUrl,
       templateKey: settingsRecord.template,
+      runtimeDataByBlockId: preparedRuntime.runtimeDataByBlockId,
     }),
-    cacheable: true,
+    cacheable: preparedRuntime.cacheable,
   };
 };
 

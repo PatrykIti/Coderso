@@ -6,8 +6,9 @@
 **Category:** Pages / Runtime / Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-418-06-L01, TASK-418-02-L04
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-10
+**Completed:** 2026-06-10
 
 ---
 
@@ -82,8 +83,10 @@ function assertDataBoundBlockCapability(blockType, capability) {
 Expected data flow:
 
 - Capability metadata flips `collection`, `form`, and `embed` to
-  `runtimeRenderer:"real"` with `publicDataBinding:"scoped-read-only"` while
-  keeping `editorInsertable:false` and `assistantEmittable:false`.
+  `runtimeRenderer:"real"` while preserving their existing
+  `publicDataBinding:"scoped-read-only"` and keeping `editorInsertable:false`
+  and `assistantEmittable:false`. Update stale non-insertable reason strings so
+  they no longer claim runtime binding is pending.
 - Public Page v2 rendering gains an async data-resolution seam before the sync
   React renderer; `renderPublicPageV2RuntimeHtml` should receive a normalized
   document plus bounded `runtimeDataByBlockId` DTOs rather than doing DB reads.
@@ -170,7 +173,7 @@ a sync path: `renderPublicPageV2RuntimeHtml`
 form, and embed states at `pageRendererV2.tsx:720-730` and honors only
 `visibility.visible` in the renderer (`pageRendererV2.tsx:619,739,769,804,837`).
 `PageSectionVisibilityV2` owns `authOnly`, `startsAt`, and `endsAt`
-(`core/services/pages/pageDocumentV2.ts:118-124`), while `PageBlockVisibilityV2`
+(`core/services/pages/pageDocumentV2.ts:139-145`), while `PageBlockVisibilityV2`
 only has `visible` (`pageDocumentV2.ts:168-170`). Therefore L04 must implement
 section-level public gating only; do not extend block visibility in this leaf.
 
@@ -183,7 +186,9 @@ the existing `previewService.validatePreviewToken` boundary and may pass
 leaked error/stack/internal ids); never serialize raw entry `data`, secrets, or
 provider keys.
 
-`ContentListBlock` may be reused for collection markup after the block props are
+`ContentListBlock` may be reused for collection markup as a deliberate shared
+runtime UI dependency, or wrapped by a small Page-owned adapter if the
+implementation needs a stricter layer boundary. In either case, block props are
 mapped through `normalizeContentListData` into `ContentListData`:
 `queryId/templateId` map to listing mode, otherwise `contentTypeId` maps to
 legacy mode, and public rendering keeps `statusScope:"published"`.
@@ -197,10 +202,15 @@ Embed has two safe output paths:
   this leaf must either update that policy with the sanitized exception or avoid
   inline HTML rendering.
 
-Public Page HTML cacheability must be reviewed because the new output can be
-request/query/clock-sensitive. If any bound block depends on runtime search
-params, form nonce/captcha projection, or schedule gating, public cache must be
-disabled or keyed safely for that render.
+Public Page HTML cacheability must be fixed at the real V2 site:
+`renderPublicPageHtmlInternal` currently returns `cacheable:true`
+unconditionally (`core/server/publicSite.tsx:805`) and accepts but does not pass
+`runtimeSearchParams` through the V2 render call (`publicSite.tsx:767,791-804`).
+L04 must thread `runtimeSearchParams` into the V2 pre-pass and either reuse the
+existing `blocksAllowSiteHtmlCache` gate used by legacy runtime pages
+(`publicSite.tsx:1121`) or add an equivalent Page v2 cache decision. If any
+bound block depends on runtime search params, form nonce/captcha projection, or
+schedule gating, public cache must be disabled or keyed safely for that render.
 
 ---
 
@@ -223,3 +233,52 @@ disabled or keyed safely for that render.
 - `_docs/CMS_SPEC.md`
 - `_docs/SECURITY_SPEC.md` if embed/form public security policy changes.
 - `_docs/PAGE_EDITOR_V2_AUDIT_REPORT.md`
+
+---
+
+## Completion Notes
+
+- Added the Page v2 async runtime pre-pass in
+  `pageRuntimeDataBinding.ts`, wired it through `publicSite.tsx`, and kept
+  `renderPublicPageV2RuntimeHtml` synchronous by passing a normalized document
+  plus bounded `runtimeDataByBlockId` DTOs.
+- Public render now prunes invisible, scheduled-out, and anonymous
+  `authOnly` sections before any data-bound resolver is called; preview keeps
+  those sections behind the existing preview-token boundary.
+- `collection` blocks map Page props to `ContentListData`, keep public
+  `statusScope: "published"`, fail closed on missing/invalid resolver input,
+  and disable public HTML cache for dynamic output.
+- `form` blocks reuse `resolveFormRuntimeData`, preserve nonce/captcha/internal
+  submission boundaries, and render bounded unavailable states without exposing
+  invalid ids.
+- `embed` blocks render only hardened YouTube provider iframes or sanitized
+  inline markup through `sanitizePageEmbedHtml`; `_docs/SECURITY_SPEC.md`
+  records that narrow Pages embed exception.
+- `collection`, `form`, and `embed` capabilities are now
+  `runtimeRenderer: "real"` and `publicDataBinding: "scoped-read-only"` while
+  remaining not editor-insertable and not assistant-emittable.
+- Created follow-up TASK-421 for the floating inspector redesign requested
+  during this work; it stays separate from this security/runtime leaf.
+
+## Validation
+
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/pages/page-runtime-data-binding.test.ts tests/vitest/pages/page-document-v2.test.ts`
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test tests/integration/runtime/pages-runtime.test.ts`
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/pages/page-runtime-data-binding.test.ts`
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/page-runtime-capabilities.test.ts tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-template-boundary.test.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx`
+- `set -a && { [ ! -f ../.env ] || . ../.env; } && set +a && bun --cwd core lint`
+- `set -a && { [ ! -f ../.env ] || . ../.env; } && set +a && bun --cwd core lint:types`
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && coderso-dev-core-host`
+- `playwright-cli -s=task418-l04-public-runtime open http://127.0.0.1:3000/task-418-l04-smoke-15c5b816`
+- `playwright-cli -s=task418-l04-public-runtime run-code --filename .tmp/task-418-l04-public-runtime-smoke.js`
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun run gates:coderso`
+
+## Audit Notes
+
+- Claude read-only pre-implementation audit with `--effort xhigh` found real
+  drift in the original L04 contract: missing async seam, stale references,
+  public visibility gaps, resolver/cache gaps, and embed sanitizer policy
+  ambiguity. The task contract was corrected before implementation.
+- A fresh Claude read-only follow-up on HEAD
+  `99c0fbcd68ce0d5199f6fd88fe49699e7f6e03f8` verified the corrected contract
+  and TASK-421 task split before source edits resumed.

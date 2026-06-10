@@ -13,6 +13,7 @@ import {
   resolvePageTemplatePath,
 } from "../services/pages/pageTemplateService";
 import { type PageBreakpoint, type PageDocumentV2 } from "../services/pages/pageDocumentV2";
+import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeDataBinding";
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import { DefaultRuntimePageShell, type PageTemplateProps } from "./pageRuntime";
 import { DefaultRuntimePageShellV2, type PageTemplatePropsV2 } from "./pageRuntimeV2";
@@ -44,6 +45,7 @@ export type PublicPageV2RuntimeRenderOptions = Omit<
   document: PageDocumentV2 | unknown;
   templateKey?: unknown;
   previewDevice?: PageBreakpoint;
+  runtimeDataByBlockId?: PageRuntimeDataByBlockId;
 };
 
 type TemplateComponent<Props> = (props: Props) => ReactNode;
@@ -306,6 +308,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     canonicalUrl,
     robots,
     templateKey,
+    runtimeDataByBlockId,
   } = options;
 
   const templateInput = resolvePageTemplateInput(rawDocument, {
@@ -321,6 +324,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     document,
     isPreview,
     previewDevice: previewDevice ?? "desktop",
+    runtimeDataByBlockId,
   };
 
   const body = (

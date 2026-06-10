@@ -72,9 +72,10 @@ Model:
 - Page block runtime parity is capability-gated. Current runtime-real editor
   blocks include the atomic content blocks plus `container`, `columns`, and
   `group`; `gallery` has a real static public renderer for emitted kit data but
-  remains hidden from author insertion until controls ship. `collection`, `form`,
-  and `embed` stay fail-closed and inert publicly until the scoped binding and
-  sanitizer work in TASK-418-06-L04.
+  remains hidden from author insertion until controls ship. `collection`,
+  `form`, and `embed` now have scoped public runtime rendering and
+  `publicDataBinding: "scoped-read-only"` while staying hidden from editor
+  insertion and assistant emission until focused controls ship.
 
 Przechowywanie:
 - Biezacy stan strony trzymany w `pages.current_data` (JSONB).
@@ -88,8 +89,10 @@ Przechowywanie:
 - `page.data.settings.template` wybiera page template przez resolver theme -> plugin -> core (fallback `landing`).
 - Navigation widget moze zrodlo `linksSource = "pages"` i filtruje po `settings.showInNav` (fallback do manual przy zbyt malej liczbie linkow).
 - Pages v2 public/runtime preview output uses the shared renderer for sections,
-  atomic blocks, nested layout slots, static galleries, and explicit inert states
-  for data-bound blocks that are still waiting on security-reviewed binding.
+  atomic blocks, nested layout slots, static galleries, and scoped data-bound
+  `collection`/`form`/`embed` blocks. Public collection output is published-only,
+  form output reuses the existing forms runtime security projection, and embed
+  output is limited to hardened provider iframes or sanitized inline markup.
 - Advanced Widgets remains the reusable widget-template editor. TASK-420 tracks
   the deferred Page Templates surface migration so Page v2 documents are not
   mixed into existing widget-template rows during TASK-418.

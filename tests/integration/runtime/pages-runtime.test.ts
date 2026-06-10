@@ -12,6 +12,7 @@ import {
   seoDocuments,
   users,
 } from "../../../core/db/schema";
+import { createEntry } from "../../../core/services/content/entryService";
 import { createContentType } from "../../../core/services/content/typeService";
 import {
   pageBlockCapabilities,
@@ -730,7 +731,7 @@ testIfDbWithOptions(
 );
 
 testIfDbWithOptions(
-  "public page runtime renders every insertable block plus emitted gallery and inert data-bound states",
+  "public page runtime renders every insertable block plus emitted gallery and fail-closed data-bound errors",
   async () => {
     resetRateLimitBuckets();
     await setTestSetting("site.cacheTtlSeconds", 0);
@@ -772,14 +773,105 @@ testIfDbWithOptions(
     expect(html).toContain(`Runtime gallery caption ${token}`);
     expect(html).toContain(`https://cdn.example.test/runtime-gallery-${token}.jpg`);
     expect(html).toContain('data-page-block-inert="collection"');
-    expect(html).toContain('data-page-block-inert="form"');
     expect(html).toContain('data-page-block-inert="embed"');
-    expect(html).toContain("Runtime form is not available yet.");
+    expect(html).toContain('data-form-embed-runtime-boundary="error"');
+    expect(html).toContain("This form is not available right now.");
     expect(html).not.toContain("ct-private");
     expect(html).not.toContain("query-private");
     expect(html).not.toContain("form-private");
     expect(html).not.toContain("<script>");
     expect(html).not.toContain("javascript:alert");
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "public page runtime resolves collection blocks with published-only content",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 60);
+    await setTestSetting("site.contentRoutes", []);
+
+    const actor = await createActor();
+    const token = randomUUID().slice(0, 8);
+    const contentType = await createContentType({
+      name: `Runtime Collection ${token}`,
+      slug: `runtime-collection-${token}`,
+      status: "published",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["summary"],
+        properties: {
+          summary: { type: "string" },
+        },
+      },
+    });
+    trackContentType(contentType.id);
+
+    const publishedEntry = await createEntry(contentType.id, {
+      title: `Published collection item ${token}`,
+      slug: `published-collection-item-${token}`,
+      authorId: actor.id,
+      data: { summary: `Published summary ${token}` },
+    });
+    trackContentEntry(publishedEntry?.id);
+    if (!publishedEntry?.id) throw new Error("missing_published_entry");
+    await db
+      .update(contentEntries)
+      .set({ status: "published", publishedAt: new Date("2026-06-01T10:00:00.000Z") })
+      .where(eq(contentEntries.id, publishedEntry.id));
+
+    const draftEntry = await createEntry(contentType.id, {
+      title: `Draft collection item ${token}`,
+      slug: `draft-collection-item-${token}`,
+      authorId: actor.id,
+      data: { summary: `Draft summary ${token}` },
+    });
+    trackContentEntry(draftEntry?.id);
+    if (!draftEntry?.id) throw new Error("missing_draft_entry");
+
+    const slug = `/runtime-collection-page-${token}`;
+    const pageDocument = {
+      ...pageData(`Runtime Collection Page ${token}`),
+      sections: [
+        {
+          ...pageData(`Runtime Collection Page ${token}`).sections[0]!,
+          blocks: [
+            {
+              id: `runtime-collection-block-${token}`,
+              type: "collection",
+              props: {
+                contentTypeId: contentType.id,
+                limit: 6,
+              },
+              visibility: { visible: true },
+            },
+          ],
+        },
+      ],
+    };
+    const created = await createPage({
+      title: `Runtime Collection Page ${token}`,
+      slug,
+      authorId: actor.id,
+      data: pageDocument,
+    });
+    trackPage(created?.id);
+    if (!created?.id) throw new Error("missing_collection_page");
+    await publishPage(created.id, actor.id, pageDocument);
+
+    const firstResponse = await requestPublicPath(slug);
+    expect(firstResponse.status).toBe(200);
+    const firstHtml = await firstResponse.text();
+    expect(firstHtml).toContain('data-content-list-state="ready"');
+    expect(firstHtml).toContain(`Published collection item ${token}`);
+    expect(firstHtml).toContain(`Published summary ${token}`);
+    expect(firstHtml).not.toContain(`Draft collection item ${token}`);
+    expect(firstHtml).not.toContain(`Draft summary ${token}`);
+
+    const statsAfterFirstRender = getSiteCacheStats();
+    expect(statsAfterFirstRender.size).toBe(0);
   },
   { timeout: dbRuntimeTimeout }
 );

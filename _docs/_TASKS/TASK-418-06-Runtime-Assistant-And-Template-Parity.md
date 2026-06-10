@@ -53,9 +53,10 @@ capability flips.
   boundary helper, non-Page widget surfaces remain isolated, and TASK-420 tracks
   the Page Templates surface rewrite/removal of the obsolete widget-template
   path.
-- [ ] TASK-418-06-L04: Collection form embed runtime data binding security.
-  In progress (2026-06-10): closing scoped public binding, visibility gates,
-  sanitizer behavior, and no-leak runtime tests for data-bound Page blocks.
+- [x] TASK-418-06-L04: Collection form embed runtime data binding security.
+  Done (2026-06-10): scoped public binding, anonymous section pruning, published
+  collection reads, form runtime projection, sanitized embed rendering, no-leak
+  tests, direct Playwright CLI smoke, and release gates are complete.
 
 ---
 

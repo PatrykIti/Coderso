@@ -236,8 +236,8 @@ is intentionally staged during TASK-418-05:
   nested active-surface paths and blueprint alignment.
 - L02 completes that assistant alignment: `container`, `columns`, and `group`
   now have `assistantEmittable: true`. Assistant `page.upsert` still gates
-  block and section output through Page capabilities plus the explicit
-  L04-deferred inert data-bound exceptions.
+  block and section output through Page capabilities plus the explicit staged
+  data-bound exceptions.
 
 Runtime/admin-preview slot rendering is intentionally narrower than stored data
 preservation:
@@ -292,11 +292,14 @@ Runtime-renderable and insertable are related but not identical states:
   It remains absent from editor and assistant insertion with
   `reason: "gallery-editor-controls-pending"` until gallery controls and
   authoring tests ship in the same increment.
-- `collection`, `form`, and `embed` remain not editor-insertable and not
-  assistant-emittable until TASK-418-06-L04 adds scoped public data binding and
-  sanitizer coverage. Existing assistant/solution-kit documents render explicit
-  fail-closed inert public states without resolving resources, injecting HTML,
-  or leaking internal ids.
+- `collection`, `form`, and `embed` have real scoped public runtime renderers
+  with `publicDataBinding: "scoped-read-only"` and still remain not
+  editor-insertable or assistant-emittable. The public runtime resolves only
+  visible/authorized sections, maps collection props through the content-list
+  resolver with `statusScope: "published"`, reuses the forms runtime projection
+  without adding a write route, and renders embeds only as hardened provider
+  iframes or sanitized inline markup. Missing or invalid resources fail closed
+  without leaking internal ids or raw errors.
 - `icon` remains gated with `reason: "icon-runtime-renderer-pending"` until a
   real renderer, controls, and tests ship together.
 
@@ -470,6 +473,6 @@ the assistant output vocabulary. Runtime-real `heading`, `text`, `button`,
 `image`, `video`, `list`, `card`, `divider`, `spacer`, `statistic`, `quote`,
 `container`, `columns`, and `group` blocks are assistant-emittable. Existing
 static `gallery` output remains accepted but not broadly advertised until its
-authoring controls ship. `collection`, `form`, and `embed` remain explicit
-L04-deferred inert output exceptions and are not advertised as
-assistant-emittable.
+authoring controls ship. `collection`, `form`, and `embed` are runtime-real
+scoped public data-bound blocks, but they are not advertised as
+assistant-emittable until focused Page controls and assistant policies ship.
