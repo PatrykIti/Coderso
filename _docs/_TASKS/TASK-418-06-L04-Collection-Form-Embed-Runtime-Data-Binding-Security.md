@@ -6,17 +6,18 @@
 **Category:** Pages / Runtime / Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-418-06-L01, TASK-418-02-L04
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-10
 
 ---
 
 ## Overview
 
-Implement or explicitly gate the security-sensitive public runtime binding for
-`collection`, `form`, and `embed` Page blocks. These block types cannot become
-insertable or assistant-emittable until public rendering proves scoped reads,
-safe fallbacks, sanitizer behavior, and no anonymous leakage for protected
-content.
+Implement the security-sensitive public runtime binding for `collection`,
+`form`, and `embed` Page blocks. These block types must gain real public
+runtime rendering and scoped read-only data binding, but they stay hidden from
+the editor inserter and assistant emission until a later controls/product leaf
+explicitly exposes them.
 
 ---
 
@@ -24,54 +25,86 @@ content.
 
 ```ts
 type PageRuntimeDataBindingDeps = {
-  resolvePublishedCollectionItems: (query: CollectionQuery) => Promise<CollectionResult>;
-  resolvePublishedForm: (formId: string) => Promise<PublishedForm | null>;
-  sanitizeEmbedHtml: (html: string) => SanitizedHtml;
-  isPubliclyVisible: (resource: RuntimeResource, context: PageRuntimeContext) => boolean;
+  resolveContentListRuntimeData: typeof import("../content/contentListResolver").resolveContentListRuntimeData;
+  resolveFormRuntimeData: typeof import("../forms/formRuntimeResolver").resolveFormRuntimeData;
+  now: () => Date;
 };
 
-async function resolveDataBoundPageBlock(block, context, deps) {
-  if (block.type === "collection") {
-    const result = await deps.resolvePublishedCollectionItems(buildCollectionQuery(block.props));
-    return filterVisibleResources(result.items, context, deps.isPubliclyVisible);
+async function preparePageV2RuntimeDocument(document, context, deps) {
+  const visibleDocument = pruneAnonymousPublicSections(document, {
+    preview: context.preview,
+    now: deps.now()
+  });
+  const runtimeDataByBlockId = await resolvePageDataBoundBlocks(visibleDocument, {
+    preview: context.preview,
+    contentRoutes: context.contentRoutes,
+    runtimeSearchParams: context.runtimeSearchParams,
+    deps
+  });
+  return { document: visibleDocument, runtimeDataByBlockId };
+}
+
+function pruneAnonymousPublicSections(document, context) {
+  return {
+    ...document,
+    sections: document.sections.filter((section) => {
+      if (!section.visibility.visible) return false;
+      if (!context.preview && section.visibility.authOnly) return false;
+      if (!context.preview && isOutsideSchedule(section.visibility, context.now)) return false;
+      return true;
+    })
+  };
+}
+
+async function resolvePageDataBoundBlocks(document, context) {
+  for (const block of walkVisibleBlocks(document.sections)) {
+    if (block.type === "collection") {
+      runtimeDataByBlockId[block.id] = await resolveCollectionBlock(block, context);
+    } else if (block.type === "form") {
+      runtimeDataByBlockId[block.id] = await resolveFormBlock(block, context);
+    } else if (block.type === "embed") {
+      runtimeDataByBlockId[block.id] = resolveEmbedBlock(block);
+    }
   }
-  if (block.type === "form") {
-    const form = await deps.resolvePublishedForm(readText(block.props.formId));
-    return form && deps.isPubliclyVisible(form, context) ? form : null;
-  }
-  if (block.type === "embed") {
-    return deps.sanitizeEmbedHtml(readText(block.props.html));
-  }
-  return null;
+  return runtimeDataByBlockId;
 }
 
 function assertDataBoundBlockCapability(blockType, capability) {
   if (["collection", "form", "embed"].includes(blockType)) {
     assert(capability.runtimeRenderer === "real");
     assert(capability.publicDataBinding === "scoped-read-only");
+    assert(capability.editorInsertable === false);
+    assert(capability.assistantEmittable === false);
   }
 }
 ```
 
 Expected data flow:
 
-- Capability metadata keeps `collection`, `form`, and `embed` hidden from
-  inserter/assistant until this leaf lands.
+- Capability metadata flips `collection`, `form`, and `embed` to
+  `runtimeRenderer:"real"` with `publicDataBinding:"scoped-read-only"` while
+  keeping `editorInsertable:false` and `assistantEmittable:false`.
+- Public Page v2 rendering gains an async data-resolution seam before the sync
+  React renderer; `renderPublicPageV2RuntimeHtml` should receive a normalized
+  document plus bounded `runtimeDataByBlockId` DTOs rather than doing DB reads.
 - Runtime data resolvers read only published/authorized resources.
 - Public rendering receives sanitized, bounded DTOs rather than raw database
   records or unsafe HTML.
-- Preview can use draft context only through existing preview-token boundaries.
+- Preview can render scheduled/auth-only sections and use draft context only
+  through existing preview-token boundaries.
 
 Error handling:
 
 - Missing collection/form resources render bounded empty states without leaking
   identifiers or internal errors.
-- Unauthorized or `authOnly` resources are omitted for anonymous users.
+- Unauthorized or `authOnly` sections are omitted for anonymous users before any
+  data-bound block resolver runs.
 - Unsafe embed URLs/HTML are rejected or sanitized before render.
 
 Regression-test shape:
 
-- Anonymous public render cannot see protected/auth-only collection entries.
+- Anonymous public render cannot see protected/auth-only sections or collection
+  output from those sections, and resolver spies prove no fetch happens.
 - Missing form id renders a safe fallback and no stack trace.
 - Unsafe embed HTML/URLs are rejected or sanitized.
 - Capability tests fail if these blocks are insertable/emittable without real
@@ -102,10 +135,8 @@ Regression-test shape:
 
 ## Concrete Reuse Map And Enforcement Gap (Merged From TASK-419 Audit)
 
-The abstract `deps` above map to EXISTING runtime helpers — bind to these instead
-of building new primitives (keeps the resolver Bun-free via injected `deps`, per
-`AGENTS.md`; mirror the `ContentListListingRuntimeDeps` pattern at
-`core/services/content/contentListResolver.ts:67-83`):
+The async runtime pre-pass must bind to EXISTING runtime helpers instead of
+building new primitives:
 
 - **collection** → reuse `resolveContentListRuntimeData`
   (`core/services/content/contentListResolver.ts:858-961`). On the public path
@@ -114,9 +145,8 @@ of building new primitives (keeps the resolver Bun-free via injected `deps`, per
   forced (`:582-592`). Do NOT reimplement listing/legacy modes, status scoping,
   or image resolution.
 - **form** → reuse `resolveFormRuntimeData(formId, { preview })`
-  (`core/services/forms/formRuntimeResolver.ts:46-123`), exactly as the
-  `form-embed`/`contact`/`newsletter` widgets already do
-  (`core/server/publicSite.tsx:403-483`). It fail-closes: `form_unpublished`
+  (`core/services/forms/formRuntimeResolver.ts:46-123`). It fail-closes:
+  `form_unpublished`
   (`:69-87`) and `public_submission_disabled` (`:91-106`) — surface these as a
   safe inert state and never leak field definitions for a non-public form. Reuse
   its `submissionNonce`/`botProtection` projection; introduce no new write route.
@@ -132,20 +162,45 @@ of building new primitives (keeps the resolver Bun-free via injected `deps`, per
   `loading="lazy"`). Inject sanitized HTML via `dangerouslySetInnerHTML` ONLY
   after policy sanitization.
 
-**Enforcement gap this leaf MUST close (verified):** the runtime currently honors
-only `block.visibility.visible` (`core/site/pageRuntimeV2.tsx:156`) and
-`section.visibility.visible` (`:264`) and **ignores `authOnly`, `startsAt`,
-`endsAt`** (`core/services/pages/pageDocumentV2.ts:118-122,131`). Because public
-render is anonymous, the binding/gating pass MUST treat `authOnly:true` as
-not-authorized and **omit the section/block entirely (no markup, no resolver
-call, no fetch)**, and evaluate `startsAt`/`endsAt` against the render clock —
-**before** any data fetch, so auth-only collections never query the DB on the
-public path. Published-page gating already lives at `publicSite.tsx:1465-1467`
-with the `public_read` bucket (`:1250-1257`); preview keeps the existing
-`previewService.validatePreviewToken` boundary and may pass `preview:true`.
-Failure mode = **fail-closed inert** (empty, styled-neutral, no leaked
-error/stack/internal ids); never serialize raw entry `data`, secrets, or
-provider keys (preserve `_docs/SECURITY_SPEC.md` redaction).
+**Enforcement gap this leaf MUST close (verified):** the runtime currently uses
+a sync path: `renderPublicPageV2RuntimeHtml`
+(`core/site/renderPublicPage.tsx:296`) → `DefaultRuntimePageShellV2`
+(`core/site/pageRuntimeV2.tsx:12`) → `renderPageBlockContent`
+(`core/services/pages/pageRendererV2.tsx:611-736`). It emits inert collection,
+form, and embed states at `pageRendererV2.tsx:720-730` and honors only
+`visibility.visible` in the renderer (`pageRendererV2.tsx:619,739,769,804,837`).
+`PageSectionVisibilityV2` owns `authOnly`, `startsAt`, and `endsAt`
+(`core/services/pages/pageDocumentV2.ts:118-124`), while `PageBlockVisibilityV2`
+only has `visible` (`pageDocumentV2.ts:168-170`). Therefore L04 must implement
+section-level public gating only; do not extend block visibility in this leaf.
+
+Because public render is anonymous, the async pre-pass MUST treat
+`section.visibility.authOnly === true` as not-authorized and omit the section
+entirely (no markup, no resolver call, no fetch), and evaluate
+`startsAt`/`endsAt` against the render clock before any data fetch. Preview keeps
+the existing `previewService.validatePreviewToken` boundary and may pass
+`preview:true`. Failure mode = **fail-closed inert** (empty, styled-neutral, no
+leaked error/stack/internal ids); never serialize raw entry `data`, secrets, or
+provider keys.
+
+`ContentListBlock` may be reused for collection markup after the block props are
+mapped through `normalizeContentListData` into `ContentListData`:
+`queryId/templateId` map to listing mode, otherwise `contentTypeId` maps to
+legacy mode, and public rendering keeps `statusScope:"published"`.
+
+Embed has two safe output paths:
+
+- provider iframe for allowlisted providers such as YouTube, built from
+  `toYoutubeEmbedUrl` and hardened iframe attributes;
+- sanitized inline HTML through a local `sanitizeHtmlWithPolicy` policy. Because
+  `_docs/SECURITY_SPEC.md` currently forbids public `dangerouslySetInnerHTML`,
+  this leaf must either update that policy with the sanitized exception or avoid
+  inline HTML rendering.
+
+Public Page HTML cacheability must be reviewed because the new output can be
+request/query/clock-sensitive. If any bound block depends on runtime search
+params, form nonce/captcha projection, or schedule gating, public cache must be
+disabled or keyed safely for that render.
 
 ---
 

@@ -16,9 +16,9 @@
 
 Define how the new Pages v2 section/block contract flows into Page templates
 without accidentally breaking non-Page widget-template, custom-screen, or
-detail-page surfaces. This leaf does not migrate the Advanced Widgets section;
-it freezes the boundary and prepares a follow-up task if Page Templates replace
-the old widget-template editing surface.
+detail-page surfaces. This leaf does not rewrite the Advanced Widgets section;
+it freezes the boundary and prepares TASK-420 to delete/replace the obsolete
+widget-template editing surface with Page Templates.
 
 ---
 
@@ -42,8 +42,8 @@ function assertNonPageWidgetBoundary(surface) {
 
 function createFollowupTaskIfNeeded() {
   return {
-    title: "Template Editor Page Templates Contract Migration",
-    scope: "replace Advanced > Widgets page-template editing with Page Templates surface"
+    title: "Page Templates Surface Rewrite",
+    scope: "delete obsolete Advanced > Widgets page-template editing and build Page Templates"
   };
 }
 ```
@@ -51,10 +51,9 @@ function createFollowupTaskIfNeeded() {
 Expected data flow:
 
 - Public Pages use Page v2 templates and section/block documents.
-- Non-Page widget surfaces keep legacy `WidgetBlock[]` until a dedicated
-  migration task changes them.
-- If Advanced Widgets UI needs a Page Templates replacement, create a separate
-  task rather than expanding TASK-418 silently.
+- Non-Page widget surfaces stay isolated from Page v2 Page Templates work.
+- Advanced Widgets UI replacement/removal is TASK-420 scope rather than being
+  silently expanded into TASK-418.
 
 Error handling:
 
@@ -64,14 +63,16 @@ Error handling:
 - Stored legacy Page rows keep the existing compatibility behavior from
   `_docs/PAGE_MODEL.md`: read/render paths non-destructively reset them to an
   empty v2 document instead of hydrating old widget-template blocks.
-- Follow-up scope is documented when migration is intentionally deferred.
+- Follow-up scope is documented when the Page Templates rewrite is intentionally
+  deferred.
 
 Regression-test shape:
 
 - Page template preview consumes v2 documents.
 - Widget-template/custom-screen/detail-page tests still pass on legacy widget
   block data.
-- Follow-up task exists if the Advanced Widgets section must change.
+- Follow-up task exists for deleting/replacing the Advanced Widgets
+  widget-template path.
 
 ---
 
@@ -103,7 +104,7 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - `_docs/PAGE_MODEL.md`
-- Follow-up task under `_docs/_TASKS/` if Page Templates migration is deferred.
+- Follow-up task under `_docs/_TASKS/` if Page Templates rewrite is deferred.
 
 ---
 
@@ -116,19 +117,19 @@ Regression-test shape:
 - Added boundary tests for Page v2 template input, fresh legacy `blocks[]`
   rejection, non-Page `WidgetBlock[]` surfaces, and Page v2 documents rejected
   at widget-template/custom-screen/detail-page boundaries.
-- Created follow-up `TASK-420` with physical child tasks for any future Advanced
-  Widgets to Page Templates surface migration, so TASK-418 does not silently
-  expand into a product/editor replacement.
+- Created follow-up `TASK-420` with physical child tasks for the Advanced
+  Widgets/widget-template to Page Templates surface rewrite, so TASK-418 does
+  not silently expand into a product/editor replacement.
 - Local pre-implementation audit found and corrected one task-contract
   ambiguity: fresh cross-surface boundary failures are required, but stored
   legacy Page rows keep the documented non-destructive read/render reset
   behavior.
 - Claude read-only drift audit ran with `--permission-mode plan --effort xhigh
   --tools Read,Grep,Bash` and a 1500-second command timeout. The first pass
-  found a stale changelog next-number pointer and noted that legacy-surface
-  runtime guard wiring is TASK-420 scope; the pointer was fixed and guard wiring
-  was added to TASK-420-02/TASK-420-03 acceptance. The second pass reported no
-  unresolved drift.
+  found a stale changelog next-number pointer and noted that obsolete-surface
+  removal/replacement is TASK-420 scope; the pointer was fixed and that
+  ownership was added to TASK-420-02/TASK-420-03 acceptance. The second pass
+  reported no unresolved drift.
 
 ## Validation
 

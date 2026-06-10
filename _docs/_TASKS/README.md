@@ -78,8 +78,8 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 20 tasks
-- **In Progress:** 7 tasks
+- **To Do:** 19 tasks
+- **In Progress:** 8 tasks
 - **Done:** 2355 tasks
 
 ---
@@ -88,15 +88,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-418-06-L04 | Collection Form Embed Runtime Data Binding Security | High | Large | Add scoped public read binding and sanitizer/no-leak security for collection, form, and embed Page blocks. |
 | TASK-418-07 | Validation Docs Changelog And Live Smoke Closure | High | Large | Close TASK-418 with targeted tests, live server Playwright, docs, changelog, board sync, and final drift audit. |
 | TASK-418-07-L01 | Targeted Lint Type Tests And Gates | High | Medium | Run and record lint, typecheck, targeted Vitest/Bun suites, and release gates. |
 | TASK-418-07-L02 | Real Admin And Front Playwright Smoke | High | Medium | Use `coderso-dev-core-host` and `playwright-cli` to verify admin edit/save/publish and public frontend parity. |
 | TASK-418-07-L03 | Docs Changelog Board And Final Drift Closure | High | Medium | Update docs, changelog, task statuses, board stats, and rerun final read-only drift audit before closing. |
-| TASK-420 | Page Templates Surface Migration | Medium | Large | Follow-up from TASK-418-06-L03: evaluate/implement a dedicated Page Templates surface without mixing Page v2 documents into legacy widget-template rows; requires Claude xhigh drift audits and `coderso-dev-core-host` + `playwright-cli` browser validation when implemented. |
-| TASK-420-01 | Audit Reusable Template IA And Usage | Medium | Medium | Audit reusable template IA, current widget-template usage, and Page Templates product need before any migration. |
-| TASK-420-02 | Page Template Storage Preview And Migration Contract | Medium | Large | Design strict Page-template storage, preview, migration, and rollback contracts before implementation. |
-| TASK-420-03 | Implement Page Templates Admin Migration Closure | Medium | Large | Implement the selected Page Templates admin migration with server/helper Playwright smoke, cache, docs, and closure validation. |
+| TASK-420 | Page Templates Surface Rewrite | Medium | Large | Follow-up from TASK-418-06-L03: delete/replace the obsolete Advanced Widgets/widget-template path with a dedicated Page Templates surface built on Page v2 sections/blocks; requires Claude xhigh drift audits and `coderso-dev-core-host` + `playwright-cli` browser validation when implemented. |
+| TASK-420-01 | Audit Reusable Template IA And Usage | Medium | Medium | Audit obsolete widget-template IA/code and produce the deletion/replacement checklist for Page Templates. |
+| TASK-420-02 | Page Template Storage Preview And Replacement Contract | Medium | Large | Design strict Page-template storage, preview, deletion, and replacement contracts before implementation. |
+| TASK-420-03 | Implement Page Templates Admin Rewrite Closure | Medium | Large | Implement the Page Templates admin rewrite with obsolete surface removal, server/helper Playwright smoke, cache, docs, and closure validation. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
@@ -116,6 +115,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-418 | Page Editor V2 Authoring Nesting And Runtime Remediation | High | Very Large | In progress: audit/freeze, immediate editor correctness, control registry, canvas/WYSIWYG parity, and nested container runtime are done; implementation continues through TASK-418-06 runtime/assistant/template parity. |
 | TASK-418-06 | Runtime Assistant And Template Parity | High | Large | In progress: public runtime, assistant surface/schema parity, and template boundary freeze are done; collection/form/embed binding remains. |
+| TASK-418-06-L04 | Collection Form Embed Runtime Data Binding Security | High | Large | In progress (2026-06-10): closing scoped public binding, visibility gates, sanitizer behavior, and no-leak runtime tests for data-bound Page blocks. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -129,7 +129,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-418-06-L01 | Public Runtime Real Renderers For Insertable Blocks | High | Large | Done (2026-06-10): gallery now renders real static public markup, exposed Page block capabilities require real renderers, and collection/form/embed render explicit inert public states until L04. |
 | TASK-418-06-L02 | Assistant Surface Schema And Blueprint Alignment | High | Large | Done (2026-06-10): Page active surfaces now include server-revalidated nested paths/capabilities, assistant Page schemas gate emitted vocabulary, and layout blocks are assistant-emittable. |
-| TASK-418-06-L03 | Page Templates And Non Page Widget Boundaries | High | Medium | Done (2026-06-10): Page template input resolves through a Page v2 boundary helper, non-Page widget surfaces remain legacy `WidgetBlock[]`, and TASK-420 tracks any future migration. |
+| TASK-418-06-L03 | Page Templates And Non Page Widget Boundaries | High | Medium | Done (2026-06-10): Page template input resolves through a Page v2 boundary helper, non-Page widget surfaces remain isolated, and TASK-420 now tracks the Page Templates surface rewrite/removal of the obsolete widget-template path. |
 | TASK-418-05 | Nested Container And Slot Architecture | High | Very Large | Done (2026-06-10): bounded layout slots, admin nested authoring, recursive runtime rendering, and nested responsive cascade are complete for `container`, `columns`, and `group`. |
 | TASK-418-05-L03 | Recursive Runtime Renderer And Responsive Cascade | High | Large | Done (2026-06-10): layout blocks now render recursively in public/preview output, nested responsive overrides resolve, and canvas chrome receives recursive frame metadata. |
 | TASK-418-05-L02 | Container Blocks Inserter And Layers Editing | High | Large | Done (2026-06-10): staged `editorInsertable` layout blocks, slot-aware Layers, block-path editing, bounded moves, nested duplicate/delete, and section-copy id regeneration are complete. |

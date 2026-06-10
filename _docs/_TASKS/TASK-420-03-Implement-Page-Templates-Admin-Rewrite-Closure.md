@@ -1,5 +1,5 @@
-# TASK-420-03: Implement Page Templates Admin Migration Closure
-# FileName: TASK-420-03-Implement-Page-Templates-Admin-Migration-Closure.md
+# TASK-420-03: Implement Page Templates Admin Rewrite Closure
+# FileName: TASK-420-03-Implement-Page-Templates-Admin-Rewrite-Closure.md
 
 **Parent Task:** TASK-420
 **Priority:** Medium
@@ -12,9 +12,10 @@
 
 ## Overview
 
-Implement the selected Page Templates admin migration after TASK-420-02 freezes
-the storage and preview contract. This leaf owns UI/routes/cache/docs/changelog
-closure, not the initial product audit or contract design.
+Implement the Page Templates admin rewrite after TASK-420-02 freezes the storage
+and preview contract. This leaf owns deleting/replacing the obsolete
+widget-template admin surface, adding the Page Templates UI/routes/cache/docs,
+and closing validation.
 
 ---
 
@@ -26,7 +27,8 @@ function implementPageTemplatesSurface(contract) {
   const cache = addTemplateCacheKeys(contract.cacheKeys);
   const ui = buildPageTemplatesAdminSurface(contract.uiModel);
   const assistant = updateAssistantSurfaceContext(contract.assistantContext);
-  return validateMigration({ routes, cache, ui, assistant });
+  const obsoleteSurface = deleteObsoleteWidgetTemplateSurface(contract.deletion);
+  return validateRewrite({ routes, cache, ui, assistant, obsoleteSurface });
 }
 ```
 
@@ -36,8 +38,8 @@ Expected data flow:
   `prefetchAdminRoute` helpers.
 - Cached admin client wrappers, cache invalidation, and cache-bus broadcasts are
   added for any new resource family.
-- Legacy widget-template UI remains available or is migrated according to the
-  approved contract.
+- Legacy widget-template UI/routes are removed from the Page Templates product
+  path according to the approved replacement contract.
 - Assistant context advertises only the active surface contract that the current
   editor actually owns.
 
@@ -46,10 +48,8 @@ Error handling:
 - Dirty-state protection must prevent background revalidation from overwriting
   unsaved edits.
 - Route and cache errors map through existing admin error conventions.
-- Migration failures leave legacy widget templates intact and actionable.
-- Wire `pageTemplateBoundary` guards at the actual legacy surface entry points
-  selected by TASK-420-02 so widget-template, custom-screen, and detail-page
-  runtimes reject Page v2 `sections[]` at migration boundaries.
+- Obsolete route hits return explicit not-found or retired-surface responses.
+- Page Templates reject `WidgetBlock[]` payloads at route/service boundaries.
 
 Regression-test shape:
 
@@ -57,8 +57,8 @@ Regression-test shape:
 - Route registration/cache invalidation tests for any new endpoints.
 - Assistant active-surface tests if context changes.
 - Runtime smoke for public/preview output.
-- Runtime boundary tests for legacy surface rejection of Page v2 documents where
-  TASK-420-02 requires migration-time guard wiring.
+- Boundary tests proving Page Templates are Page v2-only and obsolete
+  widget-template paths are gone.
 - Real browser smoke must start the app through `coderso-dev-core-host` and use
   the `playwright-cli` command. Load `.env` first for credentials/runtime
   settings; do not use MCP browser tooling.
@@ -78,8 +78,8 @@ Regression-test shape:
 - **CSRF:** all admin writes require existing CSRF behavior.
 - **Rate-limit bucket:** existing admin and preview buckets unless TASK-420-02
   defines a stricter bucket.
-- **Validation:** strict Page v2 schemas for Page-template payloads and legacy
-  widget schemas for retained widget templates.
+- **Validation:** strict Page v2 schemas for Page-template payloads; reject
+  `WidgetBlock[]` payloads.
 - **Anti-abuse controls:** no public writes, no mixed-contract rendering, no
   secret-bearing settings in browser cache/localStorage/debug payloads, and
   redacted preview target labels.

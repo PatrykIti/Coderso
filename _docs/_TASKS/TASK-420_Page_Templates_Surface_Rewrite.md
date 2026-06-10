@@ -1,8 +1,8 @@
-# TASK-420: Page Templates Surface Migration
-# FileName: TASK-420_Page_Templates_Surface_Migration.md
+# TASK-420: Page Templates Surface Rewrite
+# FileName: TASK-420_Page_Templates_Surface_Rewrite.md
 
 **Priority:** Medium
-**Category:** Pages / Templates / Widgets
+**Category:** Pages / Templates
 **Estimated Effort:** Large
 **Dependencies:** TASK-418-06-L03
 **Status:** ⏳ To Do
@@ -11,73 +11,80 @@
 
 ## Overview
 
-Evaluate and implement the product migration from the legacy Advanced Widgets
-template editor to a dedicated Page Templates surface if reusable Page section
-and Page shell templates should replace widget-template editing. This task is a
-follow-up created by TASK-418-06-L03 so TASK-418 can freeze the current
-boundary without silently expanding into an editor migration.
+Rewrite the old reusable template surface into a dedicated **Page Templates**
+surface. Page Templates are reusable Page v2 templates built from `sections[]`
+and `PageBlockV2` blocks, edited with a Page Editor-like authoring experience,
+and inserted or applied to Pages. The legacy Advanced Widgets/widget-template
+surface and its Page-template-facing code must be removed instead of kept. This
+CMS has no active user data dependency for that surface, so the implementation
+may delete old UI/routes/code and rebuild the feature correctly on Page v2
+contracts.
 
 Current frozen boundary:
 
 - Public Pages use the Page v2 `sections[]` / `PageBlockV2` contract.
-- Widget templates, custom screens, and detail pages keep the legacy
-  `WidgetBlock[]` contract.
-- Advanced Widgets remains the reusable widget-template editor until this task
-  explicitly changes that product surface.
+- Reusable Page templates must also use the Page v2 `sections[]` /
+  `PageBlockV2` contract.
+- The old Advanced Widgets/widget-template UI is not a fallback. Remove it from
+  the Page Templates path and delete the corresponding obsolete code where this
+  task owns the surface.
+- No Page Templates route, editor, preview, assistant context, or public runtime
+  may accept `WidgetBlock[]`.
 
 ---
 
 ## Sub-Tasks
 
 - [ ] TASK-420-01: Audit reusable template IA and current usage.
-- [ ] TASK-420-02: Design Page-template storage preview and migration contract.
-- [ ] TASK-420-03: Implement Page Templates admin migration closure.
+- [ ] TASK-420-02: Design Page-template storage preview and replacement contract.
+- [ ] TASK-420-03: Implement Page Templates admin rewrite closure.
 
 ---
 
 ## Implementation Pseudocode
 
 ```ts
-function planPageTemplatesSurfaceMigration(currentAdvancedWidgetsSurface) {
-  const reusableTemplateNeeds = auditReusableTemplateUseCases();
-  const migrationShape = chooseMigrationShape({
-    keepWidgetTemplates: true,
-    addPageTemplates: reusableTemplateNeeds.requiresPageSections
+function planPageTemplatesSurfaceRewrite(currentAdvancedWidgetsSurface) {
+  const removalPlan = auditObsoleteWidgetTemplateSurface(currentAdvancedWidgetsSurface);
+  const pageTemplatesShape = definePageTemplatesSurface({
+    removeLegacyWidgetTemplateSurface: true,
+    deleteObsoleteCode: true,
+    documentContract: "page-v2",
+    editorModel: "page-editor-v2"
   });
   return {
-    routes: buildAdminRoutePlan(migrationShape),
-    dataContracts: buildStorageAndPreviewContract(migrationShape),
-    migrationSteps: buildNonDestructiveMigrationSteps(migrationShape)
+    routes: buildAdminRoutePlan(pageTemplatesShape),
+    dataContracts: buildStorageAndPreviewContract(pageTemplatesShape),
+    removalPlan
   };
 }
 
-function migrateReusableTemplateIfApproved(template) {
-  if (template.contract === "legacy-widget-block-contract") {
-    return preserveLegacyWidgetTemplate(template);
-  }
+function createPageTemplate(template) {
   return normalizePageTemplateDocument(template.document);
 }
 ```
 
 Expected data flow:
 
-- Audit existing widget-template usage before changing routes, previews, or
-  storage.
-- Keep legacy `WidgetBlock[]` templates renderable and editable unless a
-  migration step creates explicit Page-template replacements.
-- New Page-template storage, if introduced, must use Page v2 schemas and not
-  overload existing widget-template rows with mixed document contracts.
+- Audit existing widget-template routes/code before removal so every deleted
+  entry point has an intentional Page Templates replacement or is proven
+  obsolete.
+- Introduce a Page Templates admin surface that uses Page v2 schemas and a Page
+  Editor-like section/block authoring workflow.
+- Do not overload existing widget-template rows with mixed document contracts;
+  Page Templates storage is Page v2-only.
+- Remove the legacy widget-template editor from the user-facing path.
 - Admin navigation, prefetch, cache keys, preview routes, revisions, assistant
-  context, and release notes must name the chosen surface explicitly.
+  context, and release notes must name Page Templates explicitly.
 
 Error handling:
 
 - Reject mixed contracts in one stored template row.
-- Migration previews fail closed if a Page template references unsupported Page
+- Page Template previews fail closed if a document references unsupported Page
   blocks or if a legacy widget template is accidentally passed into Page v2
   preview.
-- Preserve legacy reads during phased migration; destructive conversion requires
-  an explicit operator action and rollback plan.
+- Obsolete legacy route hits after removal return an explicit not-found or
+  retired-surface error instead of silently rendering old editors.
 
 Mandatory drift and smoke workflow:
 
@@ -101,10 +108,11 @@ Mandatory drift and smoke workflow:
 
 Regression-test shape:
 
-- Existing widget-template create/update/preview/revision tests stay green.
+- Existing widget-template create/update/preview/revision behavior must be
+  removed or explicitly retired for the Page Templates path.
 - New Page-template tests cover strict Page v2 validation, preview rendering,
   route registration, cache invalidation, assistant surface context, and
-  migration/rollback behavior.
+  replacement behavior.
 - Admin navigation and route prefetch tests cover the final IA decision.
 
 ---
@@ -121,18 +129,21 @@ Regression-test shape:
 - **Rate-limit bucket:** existing admin and preview buckets unless a new route
   family needs a stricter bucket.
 - **Validation:** Page-template documents must use Page v2 validation and reject
-  unknown fields; legacy widget templates must keep widget schema validation.
+  unknown fields; legacy widget-template payloads must be rejected by Page
+  Templates routes.
 - **Anti-abuse controls:** no mixed-contract rendering, no public write endpoint,
-  no secret-bearing settings in browser cache or preview payloads, and previews
-  must preserve token redaction.
+  no secret-bearing settings in browser cache or preview payloads, no legacy
+  widget-template editor exposure on the Page Templates path, and previews must
+  preserve token redaction.
 
 ---
 
 ## Testing Requirements
 
-- Existing widget-template Bun route/service/preview/revision suites.
+- Existing widget-template Bun route/service/preview/revision suites, updated or
+  removed to prove the obsolete surface is gone from Page Templates.
 - New Page-template Vitest/Bun suites for pure schema/UI and runtime route
-  behavior if a Page-template surface is introduced.
+  behavior.
 - Admin route/prefetch/cache tests for navigation changes.
 - Real browser smoke through `coderso-dev-core-host` plus `playwright-cli` for
   any admin route, preview route, or public runtime behavior changed by this

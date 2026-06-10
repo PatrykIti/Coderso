@@ -1584,6 +1584,11 @@ test("PageEditor shortcuts open and close overlays, clear selection, and ignore 
     expect(
       view.container.querySelector('[role="dialog"][aria-label="Command palette"]')
     ).toBeTruthy();
+    const commandResults = view.container.querySelector(
+      '[data-page-editor-command-results-scroll="true"]'
+    );
+    expect(commandResults).toBeTruthy();
+    expect(commandResults?.className).toContain("overflow-y-auto");
 
     const commandSearch = view.container.querySelector(
       'input[aria-label="Search sections and blocks"]'

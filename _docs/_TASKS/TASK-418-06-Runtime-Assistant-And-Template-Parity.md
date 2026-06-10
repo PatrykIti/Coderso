@@ -50,9 +50,12 @@ capability flips.
   owner capabilities, and layout blocks are assistant-emittable.
 - [x] TASK-418-06-L03: Page templates and non-Page widget boundaries.
   Done (2026-06-10): Page template input now resolves through a Page v2
-  boundary helper, non-Page widget surfaces remain on `WidgetBlock[]`, and
-  TASK-420 tracks any future Page Templates surface migration.
+  boundary helper, non-Page widget surfaces remain isolated, and TASK-420 tracks
+  the Page Templates surface rewrite/removal of the obsolete widget-template
+  path.
 - [ ] TASK-418-06-L04: Collection form embed runtime data binding security.
+  In progress (2026-06-10): closing scoped public binding, visibility gates,
+  sanitizer behavior, and no-leak runtime tests for data-bound Page blocks.
 
 ---
 

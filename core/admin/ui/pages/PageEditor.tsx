@@ -2017,12 +2017,12 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
         {commandOpen ? (
           <div
-            className="absolute inset-0 z-40 flex items-start justify-center bg-background/50 p-8 backdrop-blur-sm"
+            className="absolute inset-0 z-40 flex items-start justify-center overflow-hidden bg-background/50 p-4 backdrop-blur-sm sm:p-8"
             role="dialog"
             aria-label="Command palette"
           >
-            <div className="w-full max-w-xl rounded-xl border bg-background p-4 shadow-2xl">
-              <div className="flex items-center gap-2 rounded border px-3 py-2">
+            <div className="flex max-h-[calc(min(100%,100dvh)_-_4rem)] min-h-0 w-full max-w-xl flex-col rounded-xl border bg-background p-4 shadow-2xl sm:max-h-[calc(min(100%,100dvh)_-_6rem)]">
+              <div className="flex shrink-0 items-center gap-2 rounded border px-3 py-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <input
                   className="w-full bg-transparent text-sm outline-none"
@@ -2035,34 +2035,40 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                   autoFocus
                 />
               </div>
-              <div id="page-editor-command-results" className="mt-4 grid gap-4 md:grid-cols-2">
-                <CommandGroup title="Sections">
-                  {filteredSections.map((option, index) => (
-                    <CommandButton
-                      key={option.type}
-                      label={option.label}
-                      description={option.description}
-                      active={commandActiveIndex === index}
-                      onClick={() => addSection(option.type)}
-                    />
-                  ))}
-                </CommandGroup>
-                <CommandGroup title="Blocks">
-                  {filteredBlocks.map((option, index) => {
-                    const resultIndex = filteredSections.length + index;
-                    return (
+              <div
+                id="page-editor-command-results"
+                className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
+                data-page-editor-command-results-scroll="true"
+              >
+                <div className="grid gap-4 md:grid-cols-2">
+                  <CommandGroup title="Sections">
+                    {filteredSections.map((option, index) => (
                       <CommandButton
                         key={option.type}
                         label={option.label}
                         description={option.description}
-                        active={commandActiveIndex === resultIndex}
-                        onClick={() => addBlock(option.type)}
+                        active={commandActiveIndex === index}
+                        onClick={() => addSection(option.type)}
                       />
-                    );
-                  })}
-                </CommandGroup>
+                    ))}
+                  </CommandGroup>
+                  <CommandGroup title="Blocks">
+                    {filteredBlocks.map((option, index) => {
+                      const resultIndex = filteredSections.length + index;
+                      return (
+                        <CommandButton
+                          key={option.type}
+                          label={option.label}
+                          description={option.description}
+                          active={commandActiveIndex === resultIndex}
+                          onClick={() => addBlock(option.type)}
+                        />
+                      );
+                    })}
+                  </CommandGroup>
+                </div>
               </div>
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex shrink-0 justify-end">
                 <Button
                   type="button"
                   variant="ghost"

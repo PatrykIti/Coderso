@@ -12,10 +12,11 @@
 
 ## Overview
 
-Audit existing reusable template usage before any Advanced Widgets to Page
-Templates migration. The output must decide whether the product needs a
-dedicated Page Templates surface, a split surface, or only clearer naming while
-legacy widget templates remain.
+Audit the existing reusable template IA before the Page Templates rewrite. The
+output must identify every Advanced Widgets/widget-template route, cache key,
+preview target, assistant surface, and source file that should be deleted or
+replaced by the new Page Templates surface. The result is not a product choice
+between legacy and Page Templates; Page Templates is the target.
 
 ---
 
@@ -23,31 +24,33 @@ legacy widget templates remain.
 
 ```ts
 function auditReusableTemplateUsage() {
-  const widgetTemplateRoutes = scanAdminRoutes("widget-template");
-  const previewContracts = scanPreviewTargets(["widget-template", "page"]);
+  const obsoleteWidgetTemplateRoutes = scanAdminRoutes("widget-template");
+  const previewContracts = scanPreviewTargets(["widget-template", "page-template", "page"]);
   const assistantSurfaces = scanAssistantActiveSurfaces();
   const runtimeReferences = scanRuntimeTemplateReferences();
   return {
-    widgetTemplateRoutes,
+    obsoleteWidgetTemplateRoutes,
     previewContracts,
     assistantSurfaces,
     runtimeReferences,
-    recommendation: chooseIaRecommendation()
+    removalChecklist: buildRemovalChecklist()
   };
 }
 ```
 
 Expected data flow:
 
-- Inventory widget-template routes, preview routes, cache keys, revision flows,
-  assistant actions, and template-section runtime references.
-- Identify every place that assumes `WidgetBlock[]`.
+- Inventory obsolete widget-template routes, preview routes, cache keys, revision
+  flows, assistant actions, and template-section runtime references.
+- Identify every place that assumes `WidgetBlock[]` so TASK-420-02/03 can
+  delete or replace it for Page Templates.
 - Identify Page v2 use cases that need reusable `sections[]` templates.
-- Produce a concrete IA recommendation and acceptance criteria for TASK-420-02.
+- Produce a concrete removal/replacement checklist and acceptance criteria for
+  TASK-420-02.
 
 Error handling:
 
-- Treat unknown or mixed template contracts as blockers, not migration inputs.
+- Treat unknown or mixed template contracts as blockers, not inputs.
 - Record open product questions as explicit follow-up bullets instead of
   assuming an implementation path.
 
@@ -55,7 +58,7 @@ Regression-test shape:
 
 - Add documentation or audit tests only when automated checks can prevent route
   or contract drift.
-- No production migration runs in this audit leaf.
+- No production rewrite runs in this audit leaf.
 - Run read-only Claude drift audit with `--permission-mode plan --effort xhigh
   --tools Read,Grep,Bash`, no artificial budget in the prompt, and up to 25
   minutes of wait time. Do not send `.env` contents or secrets.
@@ -69,7 +72,8 @@ Regression-test shape:
 - **RBAC:** audit existing page/widget/template permissions only.
 - **CSRF:** no writes.
 - **Rate-limit bucket:** no route changes.
-- **Validation:** document current Page v2 and WidgetBlock validation owners.
+- **Validation:** document current Page v2 validation owners and obsolete
+  `WidgetBlock[]` assumptions that must be removed from Page Templates.
 - **Anti-abuse controls:** no production data mutation and no secret-bearing
   payload capture in audit evidence.
 

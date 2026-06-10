@@ -12,11 +12,12 @@
   input and non-Page legacy widget surface contracts.
 - Routed Page v2 public/runtime rendering through the new helper while
   preserving stored legacy Page row reset compatibility.
-- Froze widget-template, custom-screen, and detail-page surfaces on the legacy
-  `WidgetBlock[]` contract until a dedicated migration changes their storage,
-  previews, and assistant surfaces.
-- Created follow-up `TASK-420` plus three physical child tasks for any future
-  Advanced Widgets to Page Templates surface migration.
+- Froze widget-template, custom-screen, and detail-page surfaces outside the
+  Page v2 Page Templates path so TASK-418 does not silently rewrite unrelated
+  editors.
+- Created follow-up `TASK-420` plus three physical child tasks for deleting and
+  replacing the obsolete Advanced Widgets/widget-template path with a dedicated
+  Page Templates surface.
 
 ### QA And Docs
 
@@ -32,8 +33,8 @@
   read/render reset compatibility.
 - Claude read-only drift audit ran with `--effort xhigh` and a 1500-second
   command timeout. The first pass found a stale changelog pointer and the
-  TASK-420 guard-wiring follow-up gap; both were corrected, and the second pass
-  reported no unresolved drift.
+  TASK-420 obsolete-surface ownership gap; both were corrected, and the second
+  pass reported no unresolved drift.
 - TASK-420 now explicitly requires Claude read-only drift audits with
   `--effort xhigh`, no artificial audit budget, up to 25 minutes wait per pass,
   `coderso-dev-core-host` for server smoke, `playwright-cli` browser validation,
