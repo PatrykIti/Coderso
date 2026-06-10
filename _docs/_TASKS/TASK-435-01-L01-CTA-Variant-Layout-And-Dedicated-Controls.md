@@ -18,12 +18,31 @@ widgets.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Implement the scoped owner-file changes described below.
+- [ ] Add or update the targeted regression coverage for this leaf.
+- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+
 ## Implementation Pseudocode
 
 ```tsx
 const templateClass = resolveCtaTemplate(section.layout.variant);
 return <section className={templateClass}>{renderSectionBlocks(section.blocks)}</section>;
 ```
+
+Owner files:
+
+- `core/admin/ui/pages/PageEditor.tsx`
+- `core/services/pages/pageEditorControlRegistry.ts`
+- `core/services/pages/pageRendererV2.tsx`
+- `core/services/pages/pageSectionTemplates.ts`
+
+Validation commands:
+
+- `bun run test:vitest`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 Expected data flow:
 
@@ -60,3 +79,8 @@ Regression-test shape:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
+
+
+## Documentation Updates Required
+
+- None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.

@@ -18,6 +18,12 @@ blocks, or capability reasons.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Implement the scoped owner-file changes described below.
+- [ ] Add or update the targeted regression coverage for this leaf.
+- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+
 ## Implementation Pseudocode
 
 ```ts
@@ -31,6 +37,19 @@ expect(editorInsertableBlockTypes).toEqual([
   "divider", "spacer", "statistic", "quote", "container", "columns", "group",
 ]);
 ```
+
+Owner files:
+
+- `core/services/pages/pageDocumentV2.ts`
+- `core/admin/ui/pages/PageEditor.tsx`
+- `tests/vitest/pages/page-editor-control-registry.test.ts`
+
+Validation commands:
+
+- `bun run test:vitest`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
 
 Expected data flow:
 
@@ -67,3 +86,8 @@ Regression-test shape:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
+
+
+## Documentation Updates Required
+
+- None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.

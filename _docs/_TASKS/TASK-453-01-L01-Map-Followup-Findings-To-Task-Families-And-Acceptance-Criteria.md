@@ -18,6 +18,12 @@ evidence required for closure.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Implement the scoped owner-file changes described below.
+- [ ] Add or update the targeted regression coverage for this leaf.
+- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+
 ## Implementation Pseudocode
 
 ```md
@@ -26,6 +32,15 @@ evidence required for closure.
 | Dedicated controls drift | High | TASK-421, TASK-424, TASK-426..450 | Vitest UI + live panel replay |
 | Runtime responsive delivery | High | TASK-423 | public mobile/tablet computed styles |
 ```
+
+Owner files:
+
+- `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md`
+- `_docs/_TASKS/README.md`
+
+Validation commands:
+
+- `git diff --check`
 
 Expected data flow:
 
@@ -59,3 +74,8 @@ Regression-test shape:
 
 - `git diff --check`
 
+
+
+## Documentation Updates Required
+
+- None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.

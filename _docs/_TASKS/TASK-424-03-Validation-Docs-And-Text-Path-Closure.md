@@ -18,6 +18,25 @@ experience.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Run the targeted validation set and capture final evidence.
+- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+
+## Implementation Pseudocode
+
+```text
+1. Exercise text-bearing targets through both inspector typography controls and canvas inline-edit paths.
+2. Run the targeted Vitest editor suites and lint/type checks.
+3. Replay the browser audit steps for heading/text/quote/statistic/button/list surfaces.
+4. Sync docs, board rows, and changelog evidence before closure.
+Validation commands:
+- `bun run test:vitest`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+```
+
 ## Testing Requirements
 
 - Relevant Page editor UI Vitest suites.

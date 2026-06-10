@@ -21,6 +21,10 @@ a time.
 
 ---
 
+## Sub-Tasks
+
+- [ ] TASK-423-02-L01: Inject responsive CSS into public runtime and preserve preview flattening.
+
 ## Implementation Pseudocode
 
 ```tsx

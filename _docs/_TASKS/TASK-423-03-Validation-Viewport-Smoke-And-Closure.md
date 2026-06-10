@@ -48,6 +48,22 @@ Regression-test shape:
 
 ---
 
+## Sub-Tasks
+
+- [ ] Run the targeted validation set and capture final evidence.
+- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+
+## Security Contract
+
+- **Endpoint visibility:** existing public page GET routes and preview token route only.
+- **Auth model:** published pages remain anonymous; preview remains token-gated.
+- **RBAC:** unchanged.
+- **CSRF:** not applicable.
+- **Rate-limit bucket:** existing public and preview buckets.
+- **Validation:** viewport smoke must verify normalized responsive CSS delivery without exposing raw document values outside the existing render contract.
+- **Anti-abuse controls:** preview-token TTL and target validation remain unchanged.
+
 ## Testing Requirements
 
 - `bun run test:vitest`

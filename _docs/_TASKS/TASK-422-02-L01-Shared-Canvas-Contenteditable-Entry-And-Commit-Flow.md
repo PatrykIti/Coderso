@@ -18,6 +18,12 @@ commit through the same block-update path as the floating inspector.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Implement the scoped owner-file changes described below.
+- [ ] Add or update the targeted regression coverage for this leaf.
+- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+
 ## Implementation Pseudocode
 
 ```tsx
@@ -35,6 +41,17 @@ function InlineEditableCanvasText({ block, propPath, selected }) {
   );
 }
 ```
+
+Owner files:
+
+- `core/admin/ui/pages/PageEditor.tsx`
+- `core/services/pages/pageRendererV2.tsx`
+
+Validation commands:
+
+- `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 Expected data flow:
 
@@ -71,3 +88,8 @@ Regression-test shape:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
+
+
+## Documentation Updates Required
+
+- None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.

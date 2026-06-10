@@ -4,18 +4,18 @@
 **Priority:** High
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
 
 ## Overview
 
-Remediate the Content-section findings from
+Remediation family for the Content section based on
 `_docs/AUDIT/content-2026-06-10.md`. The main section-specific bug is that
 `variant=compact` persists only as data and produces no published-layout change.
-The family also closes the shared dedicated-control drift for this text-led
-section.
+The family also closes the shared dedicated-control drift and the empty
+Responsive-tab finding called out by the audit.
 
 ---
 

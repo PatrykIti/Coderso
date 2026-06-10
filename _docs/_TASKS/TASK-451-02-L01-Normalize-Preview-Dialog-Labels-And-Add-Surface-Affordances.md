@@ -18,6 +18,12 @@ the cross-parity audit.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Implement the scoped owner-file changes described below.
+- [ ] Add or update the targeted regression coverage for this leaf.
+- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+
 ## Implementation Pseudocode
 
 ```tsx
@@ -26,6 +32,19 @@ const toolbarLabel = resolveToolbarTargetLabel(target, {
   preferUserContentOnlyWhenStable: true,
 });
 ```
+
+Owner files:
+
+- `core/server/publicSite.tsx`
+- `core/admin/ui/pages/PageEditor.tsx`
+- `core/site/renderPublicPage.tsx`
+
+Validation commands:
+
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 Expected data flow:
 
@@ -61,3 +80,8 @@ Regression-test shape:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
+
+
+## Documentation Updates Required
+
+- None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.

@@ -4,16 +4,17 @@
 **Priority:** High
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
 
 ## Overview
 
-Remediate the Hero-section findings from `_docs/AUDIT/hero-2026-06-10.md`.
+Remediation family for the Hero section based on `_docs/AUDIT/hero-2026-06-10.md`.
 Hero now inserts and renders real content, but every intended dedicated control
-still collapses into native primitives and the remaining hero-specific style
+still collapses into native primitives, the audit also calls out an empty
+Responsive tab for this section, and the remaining hero-specific style
 bindings need a truthful closure pass.
 
 ---

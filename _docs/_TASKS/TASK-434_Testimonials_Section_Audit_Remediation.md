@@ -4,18 +4,18 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
 
 ## Overview
 
-Remediate the Testimonials-section findings from
+Remediation family for the Testimonials section based on
 `_docs/AUDIT/testimonials-2026-06-10.md`. Testimonials already switches runtime
-marker classes correctly, but the inspector remains entirely native and the
-section still needs an explicit closure pass around the cards/grid/default
-contract.
+marker classes correctly, but the inspector remains entirely native, the audit
+also flags an empty Responsive tab, and the section still needs an explicit
+closure pass around the cards/grid/default contract.
 
 ---
 

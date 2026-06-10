@@ -18,6 +18,22 @@ unassigned or undocumented findings left.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Run the targeted validation set and capture final evidence.
+- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+
+## Implementation Pseudocode
+
+```text
+1. Reconcile the aggregate follow-up matrix against the current family statuses and evidence.
+2. Confirm every high/medium/low finding is either closed or explicitly owned by a still-open family.
+3. Sync the follow-up report, board, and changelog evidence before closure.
+Validation commands:
+- `git diff --check`
+```
+
 ## Testing Requirements
 
 - Evidence audit only.

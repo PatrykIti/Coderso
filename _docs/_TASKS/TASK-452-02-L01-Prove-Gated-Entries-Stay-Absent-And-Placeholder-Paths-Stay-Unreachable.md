@@ -12,25 +12,51 @@
 
 ## Overview
 
-Add the negative UI and contract coverage that keeps template/navigation/
-collection/filter/embed families out of the palette and keeps placeholder-only
-paths like `icon` unreachable from normal Page authoring.
+Add the negative UI and contract coverage that keeps all 6 gated sections (`template`, `navigation`, `collection`, `filters`, `lead-form`, `embed`) and all 5 gated blocks (`gallery`, `form`, `collection`, `embed`, `icon`) out of the palette, while keeping placeholder-only runtime paths unreachable from normal Page authoring.
 
 ---
+
+## Sub-Tasks
+
+- [ ] Implement the scoped owner-file changes described below.
+- [ ] Add or update the targeted regression coverage for this leaf.
+- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
 ```ts
-expect(paletteTitles).not.toContain("Collection");
-expect(paletteTitles).not.toContain("Embed");
+expect(sectionPaletteTitles).not.toContain("Template");
+expect(sectionPaletteTitles).not.toContain("Navigation");
+expect(sectionPaletteTitles).not.toContain("Collection");
+expect(sectionPaletteTitles).not.toContain("Filters");
+expect(sectionPaletteTitles).not.toContain("Lead form");
+expect(sectionPaletteTitles).not.toContain("Embed");
+expect(blockPaletteTitles).not.toContain("Gallery");
+expect(blockPaletteTitles).not.toContain("Form");
+expect(blockPaletteTitles).not.toContain("Collection");
+expect(blockPaletteTitles).not.toContain("Embed");
+expect(blockPaletteTitles).not.toContain("Icon");
 expect(pageBlockCapabilities.icon.insertable).toBe(false);
 expect(pageBlockCapabilities.icon.runtimeRenderer).toBe("placeholder");
 ```
 
+Owner files:
+
+- `core/services/pages/pageDocumentV2.ts`
+- `core/admin/ui/pages/PageEditor.tsx`
+- `tests/vitest/pages/page-editor-control-registry.test.ts`
+
+Validation commands:
+
+- `bun run test:vitest`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+
 Expected data flow:
 
-- UI tests read actual palette entries rather than substring matches.
-- Contract tests assert non-insertable status and explicit reason codes.
+- UI tests read actual palette entry titles rather than substring matches from descriptions.
+- Contract tests assert all 6 gated section reasons and all 5 gated block reasons explicitly.
 - Runtime placeholder paths remain guarded behind non-insertable capabilities.
 
 Error handling:
@@ -62,3 +88,8 @@ Regression-test shape:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
+
+
+## Documentation Updates Required
+
+- None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.

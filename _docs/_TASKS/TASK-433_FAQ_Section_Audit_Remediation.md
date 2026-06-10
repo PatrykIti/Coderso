@@ -4,17 +4,18 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
 
 ## Overview
 
-Remediate the FAQ-section findings from `_docs/AUDIT/faq-2026-06-10.md`. FAQ
-already inserts, renders, and changes compact layout truthfully on the front,
-so the remaining work is to convert its inspector to the dedicated control
-surface and keep that truthful variant behavior guarded.
+Remediation family for the FAQ section based on `_docs/AUDIT/faq-2026-06-10.md`.
+FAQ already inserts, renders, and changes compact layout truthfully on the
+front, so the remaining work is to convert its inspector to the dedicated
+control surface, close the empty Responsive-tab finding from the audit, and
+keep that truthful variant behavior guarded.
 
 ---
 

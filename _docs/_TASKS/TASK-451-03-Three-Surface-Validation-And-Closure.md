@@ -18,6 +18,36 @@ be updated with final evidence.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Run the targeted validation set and capture final evidence.
+- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+
+## Implementation Pseudocode
+
+```text
+1. Exercise canvas, preview, and public front for the same styled Page document.
+2. Run the targeted Bun preview/runtime suites, relevant editor Vitest suites, and lint/type checks.
+3. Replay the preview dialog/browser audit steps and confirm 3-surface parity plus shell polish.
+4. Sync preview docs, board rows, and changelog evidence before closure.
+Validation commands:
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+```
+
+## Security Contract
+
+- **Endpoint visibility:** existing public page and public `/preview` routes only.
+- **Auth model:** published pages remain anonymous; preview remains token-gated.
+- **RBAC:** unchanged.
+- **CSRF:** not applicable to public reads.
+- **Rate-limit bucket:** existing public and preview buckets.
+- **Validation:** the parity replay must use normalized Page documents and keep preview-token protections intact.
+- **Anti-abuse controls:** preview TTL, hashing, and target checks remain unchanged.
+
 ## Testing Requirements
 
 - Relevant Bun preview/runtime suites.

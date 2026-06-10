@@ -17,6 +17,12 @@ and docs/board/changelog synchronization.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Run the targeted validation set and capture final evidence.
+- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+
 ## Testing Requirements
 
 - Relevant Page editor UI Vitest suites.

@@ -20,6 +20,10 @@ normalization, read normalization, or publish.
 
 ---
 
+## Sub-Tasks
+
+- [ ] TASK-449-01-L01: Reproduce columns save drop across write/read/publish.
+
 ## Implementation Pseudocode
 
 ```ts

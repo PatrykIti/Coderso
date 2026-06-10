@@ -41,6 +41,10 @@ Behavior requirements:
 
 ---
 
+## Sub-Tasks
+
+- [ ] TASK-422-02-L01: Shared canvas contenteditable entry and commit flow.
+
 ## Implementation Pseudocode
 
 ```tsx

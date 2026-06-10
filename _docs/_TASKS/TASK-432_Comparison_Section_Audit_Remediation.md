@@ -4,17 +4,18 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
 
 ## Overview
 
-Remediate the Comparison-section findings from
+Remediation family for the Comparison section based on
 `_docs/AUDIT/comparison-2026-06-10.md`. Runtime variant switching already
 produces a truthful grid layout, so this family focuses on locking that
-behavior in tests while removing the remaining dedicated-control drift.
+behavior in tests, closing the empty Responsive-tab finding from the audit,
+and removing the remaining dedicated-control drift.
 
 ---
 

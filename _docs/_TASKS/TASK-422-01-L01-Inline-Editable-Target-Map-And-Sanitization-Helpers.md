@@ -18,6 +18,12 @@ Page document contract.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Implement the scoped owner-file changes described below.
+- [ ] Add or update the targeted regression coverage for this leaf.
+- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+
 ## Implementation Pseudocode
 
 ```ts
@@ -32,6 +38,17 @@ export function commitInlineText(target, previous, raw) {
   return next.length === 0 && !target.allowEmpty ? previous : next;
 }
 ```
+
+Owner files:
+
+- `core/services/pages/pageInlineEditContract.ts`
+- `tests/vitest/services/page-inline-edit-contract.test.ts`
+
+Validation commands:
+
+- `bun run test:vitest -- tests/vitest/services/page-inline-edit-contract.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 Expected data flow:
 
@@ -68,3 +85,8 @@ Regression-test shape:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
+
+
+## Documentation Updates Required
+
+- None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.

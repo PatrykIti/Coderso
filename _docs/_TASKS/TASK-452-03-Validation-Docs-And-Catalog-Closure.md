@@ -18,6 +18,25 @@ guarded by tests.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Run the targeted validation set and capture final evidence.
+- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+
+## Implementation Pseudocode
+
+```text
+1. Run the owner-level and UI palette tests that freeze insertable and gated Page surfaces.
+2. Re-check the README/task-board rows against the final catalog coverage.
+3. Sync docs and changelog evidence before closure.
+Validation commands:
+- `bun run test:vitest`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+```
+
 ## Testing Requirements
 
 - Relevant Vitest owner/palette suites.

@@ -19,6 +19,10 @@ block silently vanishes in the same way.
 
 ---
 
+## Sub-Tasks
+
+- [ ] TASK-449-02-L01: Preserve empty column slots, nested children, and round-trip coverage.
+
 ## Implementation Pseudocode
 
 ```ts

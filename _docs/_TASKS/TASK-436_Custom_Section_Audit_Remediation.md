@@ -4,17 +4,18 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
 
 ## Overview
 
-Remediate the Custom-section findings from
+Remediation family for the Custom section based on
 `_docs/AUDIT/custom-2026-06-10.md`. Runtime grid behavior already works, so the
-remaining job is to preserve that truthful renderer path and replace the native
-inspector drift with the shared dedicated control surface.
+remaining job is to preserve that truthful renderer path, close the empty
+Responsive-tab finding from the audit, and replace the native inspector drift
+with the shared dedicated control surface.
 
 ---
 

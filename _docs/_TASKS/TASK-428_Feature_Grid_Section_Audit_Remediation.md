@@ -4,16 +4,17 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
 
 ## Overview
 
-Remediate the Feature Grid findings from
+Remediation family for the Feature Grid section based on
 `_docs/AUDIT/feature-grid-2026-06-10.md`. Runtime variant switching already
-works, so this family primarily freezes that truthful behavior and replaces the
+works, so this family primarily freezes that truthful behavior, closes the
+empty Responsive-tab finding called out by the audit, and replaces the
 remaining native control drift with the dedicated Page Editor surface.
 
 ---

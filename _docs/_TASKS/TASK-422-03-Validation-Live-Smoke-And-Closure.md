@@ -22,6 +22,14 @@ re-run that probe and flip its result.
 
 ---
 
+## Sub-Tasks
+
+- [ ] Run the targeted validation set and capture final evidence.
+- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+
+---
+
 ## Implementation Pseudocode
 
 ```text

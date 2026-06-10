@@ -24,6 +24,10 @@ stays explicitly unsupported until a separate content-override contract exists.
 
 ---
 
+## Sub-Tasks
+
+- [ ] TASK-423-01-L01: Map responsive deltas to scoped media rules.
+
 ## Implementation Pseudocode
 
 ```ts
