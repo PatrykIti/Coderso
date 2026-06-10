@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
@@ -13,8 +13,9 @@
 ## Overview
 
 Freeze the CTA remediation contract from `_docs/AUDIT/cta-2026-06-10.md`,
-especially the currently-broken `centered`/`full-width` runtime semantics and
-the shared dedicated-control adoption.
+especially the currently-broken `centered`/`full-width` runtime semantics, the
+shared dedicated-control adoption, and the matching Responsive-tab closure
+hand-off to `TASK-425`.
 
 ---
 

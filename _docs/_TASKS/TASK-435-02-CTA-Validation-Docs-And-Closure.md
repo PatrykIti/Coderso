@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Pages / Page Editor V2 / QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-435-01
+**Dependencies:** TASK-425, TASK-435-01
 **Status:** ⏳ To Do
 
 ---
@@ -14,6 +14,8 @@
 
 Close the CTA family with targeted validation, live variant/runtime proof, and
 docs/board/changelog synchronization.
+
+This subtask explicitly consumes the matching responsive-panel closure from `TASK-425` so the audit's empty Responsive-tab finding cannot be dropped from the family.
 
 ---
 

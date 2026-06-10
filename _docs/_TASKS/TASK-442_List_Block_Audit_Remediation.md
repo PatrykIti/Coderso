@@ -14,7 +14,9 @@
 Remediate the List-block findings from `_docs/AUDIT/list-2026-06-10.md`. A
 populated list renders correctly, but the default empty list is pruned on save,
 which turns a freshly inserted list into an empty page. The block also inherits
-the shared `ordered`-toggle control drift.
+the shared dedicated-control drift highlighted by the audit, including but not
+limited to the `ordered` toggle path plus the remaining layout/style/background
+and visibility control collapse owned through `TASK-421`.
 
 ---
 
@@ -40,4 +42,3 @@ the shared `ordered`-toggle control drift.
 
 - `_docs/PAGE_MODEL.md` if empty-state semantics are clarified
 - `_docs/_TASKS/README.md`
-

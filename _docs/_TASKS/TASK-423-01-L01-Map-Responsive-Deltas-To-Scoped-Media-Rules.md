@@ -12,9 +12,9 @@
 
 ## Overview
 
-Implement the Bun-free responsive CSS builder that converts stored Page
-responsive deltas into stable, escaped, selector-scoped `@media` rules for
-public runtime delivery.
+Implement the Bun-free responsive CSS builder module (`pageResponsiveCss.ts`)
+that converts stored Page responsive deltas into stable, escaped,
+selector-scoped `@media` rules for later runtime integration.
 
 ---
 
@@ -42,14 +42,13 @@ function renderBreakpointRules(document, breakpoint) {
 
 Owner files:
 
-- `core/server/publicSite.tsx`
-- `core/services/pages/pageRendererV2.tsx`
-- `core/site/renderPublicPage.tsx`
+- `core/services/pages/pageResponsiveCss.ts`
+- `core/services/pages/pageDocumentV2.ts`
+- `tests/vitest/services/page-responsive-css.test.ts`
 
 Validation commands:
 
-- `bun run test:vitest`
-- `bun run test:bun`
+- `bun run test:vitest -- tests/vitest/services/page-responsive-css.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

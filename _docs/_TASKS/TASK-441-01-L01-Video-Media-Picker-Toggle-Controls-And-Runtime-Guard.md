@@ -12,9 +12,7 @@
 
 ## Overview
 
-Replace raw source entry with the shared media-picker path for Video and replace
-the current yes/no selects for autoplay, muted, and visible with the dedicated
-toggle controls.
+Replace raw source entry with the shared media-picker path for Video, replace the current yes/no selects for autoplay/muted/visible with the dedicated toggle controls, and close the remaining shared dedicated-control drift from the audit for layout/style/background/visibility through the shared `TASK-421` surface work.
 
 ---
 

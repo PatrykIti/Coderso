@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
@@ -14,7 +14,8 @@
 
 Freeze the Content-section remediation contract from
 `_docs/AUDIT/content-2026-06-10.md`, especially the currently-broken
-`compact` variant semantics and the shared dedicated-control adoption.
+`compact` variant semantics, the shared dedicated-control adoption, and the
+matching Responsive-tab closure hand-off to `TASK-425`.
 
 ---
 

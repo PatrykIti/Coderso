@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
@@ -14,7 +14,8 @@
 
 Freeze the Feature Grid remediation contract from
 `_docs/AUDIT/feature-grid-2026-06-10.md`, preserving the currently-working
-cards/grid runtime behavior while replacing the shared native-control drift.
+cards/grid runtime behavior while replacing the shared native-control drift and
+explicitly consuming the matching Responsive-tab closure from `TASK-425`.
 
 ---
 

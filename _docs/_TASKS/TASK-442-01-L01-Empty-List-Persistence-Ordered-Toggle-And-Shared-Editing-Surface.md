@@ -13,8 +13,9 @@
 ## Overview
 
 Preserve a freshly inserted List block through save/publish even when it is
-still empty, and adopt the shared editing/toggle surfaces for items and ordered
-state.
+still empty, adopt the shared editing/toggle surfaces for items and ordered
+state, and close the remaining shared dedicated-control drift from the audit for
+layout/style/background/visibility through the shared `TASK-421` surface work.
 
 ---
 

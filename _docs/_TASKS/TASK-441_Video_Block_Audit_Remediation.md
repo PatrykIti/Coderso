@@ -12,9 +12,7 @@
 ## Overview
 
 Remediate the Video-block findings from `_docs/AUDIT/video-2026-06-10.md`. The
-runtime path is real, but all three toggle-like props (`autoplay`, `muted`,
-`visible`) are still native yes/no selects and the source path remains a raw URL
-instead of a dedicated media surface.
+runtime path is real, but the source path remains a raw URL, all three toggle-like props (`autoplay`, `muted`, `visible`) are still native yes/no selects, and the audit also leaves the remaining shared dedicated-control drift (width/align, colors, radius, background type, visibility) in scope through `TASK-421`.
 
 ---
 
@@ -39,4 +37,3 @@ instead of a dedicated media surface.
 ## Documentation Updates Required
 
 - `_docs/_TASKS/README.md`
-

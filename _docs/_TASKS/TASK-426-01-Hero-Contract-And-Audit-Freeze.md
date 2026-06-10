@@ -5,17 +5,16 @@
 **Priority:** High
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-424
+**Dependencies:** TASK-421, TASK-424, TASK-425
 **Status:** ⏳ To Do
 
 ---
 
 ## Overview
 
-Freeze the Hero-specific remediation contract from `_docs/AUDIT/hero-2026-06-10.md`,
-including dedicated-control adoption, accent truthfulness, and the exact
-published-layout expectations that must remain stable while the control surface
-changes.
+Freeze the Hero-specific remediation contract from `_docs/AUDIT/hero-2026-06-10.md`, including dedicated-control adoption, accent truthfulness, and the exact published-layout expectations that must remain stable while the control surface changes.
+
+This subtask explicitly consumes the matching responsive-panel closure from `TASK-425` so the audit's empty Responsive-tab finding cannot be dropped from the family.
 
 ---
 

@@ -186,11 +186,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-440-01 | Image Contract And Audit Freeze | Medium | Medium | Freeze the Image remediation contract around the move from raw URL entry to the shared media-picker path. |
 | TASK-440-01-L01 | Image Media Picker And Dedicated Controls | Medium | Medium | Replace raw Image URL entry with the shared media-picker path and adopt the dedicated controls. |
 | TASK-440-02 | Image Validation Docs And Closure | Medium | Medium | Close the Image family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-441 | Video Block Audit Remediation | Medium | Medium | Replace raw video URL entry and yes/no selects with the shared media/toggle control surfaces. |
+| TASK-441 | Video Block Audit Remediation | Medium | Medium | Replace raw video URL entry and yes/no selects with the shared media/toggle control surfaces, and explicitly close the remaining shared dedicated-control drift called out by the audit. |
 | TASK-441-01 | Video Contract And Audit Freeze | Medium | Medium | Freeze the Video remediation contract around the shared media-picker path and dedicated toggle controls. |
 | TASK-441-01-L01 | Video Media Picker Toggle Controls And Runtime Guard | Medium | Medium | Replace raw source entry and yes/no selects with the shared media-picker and toggle control surfaces. |
 | TASK-441-02 | Video Validation Docs And Closure | Medium | Medium | Close the Video family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-442 | List Block Audit Remediation | High | Medium | A freshly inserted empty list is pruned on save; preserve it through publish and adopt real ordered-state controls. |
+| TASK-442 | List Block Audit Remediation | High | Medium | A freshly inserted empty list is pruned on save; preserve it through publish, adopt real ordered-state controls, and explicitly close the remaining shared dedicated-control drift called out by the audit. |
 | TASK-442-01 | List Contract And Audit Freeze | High | Medium | Freeze the List remediation contract around disappearing empty lists and the `ordered` toggle path. |
 | TASK-442-01-L01 | Empty List Persistence Ordered Toggle And Shared Editing Surface | High | Medium | Preserve default-empty lists through save/publish and adopt the shared ordered/editing surface. |
 | TASK-442-02 | List Validation Docs And Closure | High | Medium | Close the List family with targeted validation, live proof for empty and populated lists, and docs/board/changelog sync. |

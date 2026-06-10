@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-432-01
+**Dependencies:** TASK-425, TASK-432-01
 **Status:** ⏳ To Do
 
 ---
@@ -14,6 +14,8 @@
 
 Close the Comparison family with targeted validation, live grid/cards proof,
 and docs/board/changelog synchronization.
+
+This subtask explicitly consumes the matching responsive-panel closure from `TASK-425` so the audit's empty Responsive-tab finding cannot be dropped from the family.
 
 ---
 
