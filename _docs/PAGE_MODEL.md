@@ -303,6 +303,16 @@ Runtime-renderable and insertable are related but not identical states:
 - `icon` remains gated with `reason: "icon-runtime-renderer-pending"` until a
   real renderer, controls, and tests ship together.
 
+The insertable catalog is test-frozen: guard tests in
+`tests/vitest/pages/page-editor-control-registry.test.ts` and
+`tests/vitest/ui/page-editor-v2-flow.test.tsx` assert the exact 11 insertable
+sections, 14 insertable blocks, the capability reasons for all 6 gated sections
+and 5 gated blocks, and that the gated entries stay absent from the command
+palette by entry title (`icon` additionally stays the only
+`runtimeRenderer: "placeholder"` type). Promoting or demoting any catalog entry
+is an intentional contract change that must update those tests and this
+document together.
+
 `pageBlockPaths` owns section-scoped editor block paths for nested authoring.
 Paths are arrays of `{ index, slotKey? }` segments rooted in one section:
 `[{ index: 1 }, { slotKey: "column:2", index: 0 }]` identifies a child block in

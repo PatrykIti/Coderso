@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Contract
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -31,7 +33,7 @@ only be written against the layer identified here.
 
 ## Sub-Tasks
 
-- [ ] TASK-449-01-L01: Reproduce columns save drop across write/read/publish.
+- [x] TASK-449-01-L01: Reproduce columns save drop across write/read/publish.
 
 ## Implementation Pseudocode
 
@@ -104,3 +106,22 @@ Regression-test shape:
 
 - `_docs/PAGE_MODEL.md` if slot semantics are clarified
 
+---
+
+## Completion Notes
+
+Reproduction executed live on 2026-06-11 (evidence: `.tmp/phase0/columns-repro.md`,
+`.tmp/phase0/cap-columns-autosave.json`). Verdict: the columns-specific drop is
+**not reproducible at HEAD** on the clean editor path — autosave/save/publish
+payloads, stored `currentData`, reopen, and the published front all keep the
+block; pages source is byte-identical to the audited tree (`git log
+1fb8604a..HEAD -- core/services/pages core/admin/ui/pages core/server` is
+empty), so the audited verdict was a method/environment artifact. The
+reproduction instead captured a real block-agnostic dropper: a stale/empty
+cached `pages:detail` record plus a `pageDetail` cacheBus broadcast replaces
+the live document via the rehydration effect (`PageEditor.tsx:1520-1532`,
+guarded only by `hasUnsavedChanges`), reaching the audit's exact end state
+(editor `s=0/b=0`, published empty front). That layer was recorded as the
+TASK-449-02 fix target. Secondary gaps (autosave revisions never promoted to
+`currentData`, no SPA unsaved-navigation guard, mount-path trust of a
+TTL-fresh poisoned cache) were split to follow-up TASK-454.

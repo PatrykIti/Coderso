@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-442-01
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-11
 
 ---
 
@@ -134,3 +135,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.
+
+---
+
+## Progress Notes
+
+Persistence pins landed 2026-06-11 (round-trip suite) and the live-path dropper was fixed by TASK-449-02 (shared root cause; no list-specific persistence change required). Remaining scope (ordered-toggle adoption, inline items registration) is gated on TASK-421/TASK-422.

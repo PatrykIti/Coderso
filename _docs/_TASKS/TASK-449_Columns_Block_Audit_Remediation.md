@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** None for the persistence fix; TASK-421 (dedicated controls), TASK-423 (responsive runtime) for the closure verification sweep
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-11
 
 ---
 
@@ -76,14 +77,14 @@ Scope of this family:
 
 ## Sub-Tasks
 
-- [ ] TASK-449-01: Columns round-trip reproduction and contract freeze
+- [x] TASK-449-01: Columns round-trip reproduction and contract freeze
       (reproduction-first hard gate).
-- [ ] TASK-449-01-L01: Reproduce the columns save drop across write/read/
+- [x] TASK-449-01-L01: Reproduce the columns save drop across write/read/
       publish and the live admin flow; record the first layer that drops the
       block, or record that it no longer reproduces at HEAD.
-- [ ] TASK-449-02: Columns persistence and slot round-trip implementation
+- [x] TASK-449-02: Columns persistence and slot round-trip implementation
       (fix only the layer identified by TASK-449-01).
-- [ ] TASK-449-02-L01: Fix the identified layer and land the
+- [x] TASK-449-02-L01: Fix the identified layer and land the
       all-insertable-block round-trip guard (green today; pins behavior).
 - [ ] TASK-449-03: Validation, nested slots, controls, and closure.
 
@@ -161,3 +162,9 @@ Regression-test shape:
 - `_docs/PAGE_MODEL.md` if slot normalization semantics are clarified.
 - `_docs/_TASKS/README.md` board + statistics sync.
 - `_docs/_CHANGELOG/` entry on completion referencing the audit file.
+
+---
+
+## Progress Notes
+
+TASK-449-01/-01-L01 (reproduction) and TASK-449-02/-02-L01 (fix + guard) are Done (2026-06-11); TASK-449-03 closure sweep remains blocked on TASK-421 (dedicated controls) and TASK-423 (responsive runtime).

@@ -596,6 +596,7 @@ test("PageEditor loads v2 documents, subscribes to cache updates, and exposes se
     });
 
     pageEditorState.cachedPage = createPage({
+      updatedAt: "2026-03-08T09:05:00.000Z",
       currentData: createDocument({
         sections: [
           createPageSectionV2("content", {
@@ -617,6 +618,49 @@ test("PageEditor loads v2 documents, subscribes to cache updates, and exposes se
     });
 
     expect(view.container.textContent).toContain("Remote headline");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor ignores stale pageDetail cache events instead of wiping the loaded document", async () => {
+  pageEditorState.cachedPage = null;
+  pageEditorState.currentPage = createPage();
+  const view = mount(<PageEditor pageId="page-1" />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Welcome to Coderso");
+
+    // Older cached record with an empty document (the TASK-449/TASK-442 audit
+    // data-loss path): must NOT replace the newer loaded document.
+    pageEditorState.cachedPage = createPage({
+      updatedAt: "2026-03-08T08:00:00.000Z",
+      currentData: createDocument({ sections: [] }),
+    });
+    React.act(() => {
+      pageEditorState.triggerCacheEvent("page-detail:page-1");
+    });
+    expect(view.container.textContent).toContain("Welcome to Coderso");
+
+    // Same-timestamp replays are also ignored (no rehydration churn).
+    pageEditorState.cachedPage = createPage({
+      currentData: createDocument({ sections: [] }),
+    });
+    React.act(() => {
+      pageEditorState.triggerCacheEvent("page-detail:page-1");
+    });
+    expect(view.container.textContent).toContain("Welcome to Coderso");
+
+    // Unparsable timestamps fail closed.
+    pageEditorState.cachedPage = createPage({
+      updatedAt: "not-a-date",
+      currentData: createDocument({ sections: [] }),
+    });
+    React.act(() => {
+      pageEditorState.triggerCacheEvent("page-detail:page-1");
+    });
+    expect(view.container.textContent).toContain("Welcome to Coderso");
   } finally {
     view.cleanup();
   }
@@ -1443,6 +1487,79 @@ test("PageEditor section inserter follows owner insertable section capabilities"
         expect(hasButton).toBe(false);
       }
     }
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor command palette catalog is frozen to 11 sections plus 14 blocks with gated titles absent", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Add section");
+    await flush();
+
+    // Read the per-button title node (first span), never dialog innerText:
+    // gated words like "collection"/"embed" legitimately appear in entry
+    // description copy and would produce substring false positives.
+    const readEntryTitles = (groupTitle: string) =>
+      getCommandGroupButtons(view.container, groupTitle).map(
+        (button) => button.querySelector("span")?.textContent ?? ""
+      );
+    const sectionPaletteTitles = readEntryTitles("Sections");
+    const blockPaletteTitles = readEntryTitles("Blocks");
+
+    expect(sectionPaletteTitles).toEqual([
+      "Hero",
+      "Content",
+      "Feature grid",
+      "Media split",
+      "Timeline",
+      "Gallery",
+      "Comparison",
+      "FAQ",
+      "Testimonials",
+      "CTA",
+      "Custom",
+    ]);
+    expect(blockPaletteTitles).toEqual([
+      "Heading",
+      "Text",
+      "Button",
+      "Image",
+      "Video",
+      "List",
+      "Card",
+      "Divider",
+      "Spacer",
+      "Statistic",
+      "Quote",
+      "Container",
+      "Columns",
+      "Group",
+    ]);
+    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(25);
+
+    expect(sectionPaletteTitles).not.toContain("Template");
+    expect(sectionPaletteTitles).not.toContain("Navigation");
+    expect(sectionPaletteTitles).not.toContain("Collection");
+    expect(sectionPaletteTitles).not.toContain("Filters");
+    expect(sectionPaletteTitles).not.toContain("Lead form");
+    expect(sectionPaletteTitles).not.toContain("Embed");
+
+    expect(blockPaletteTitles).not.toContain("Gallery");
+    expect(blockPaletteTitles).not.toContain("Form");
+    expect(blockPaletteTitles).not.toContain("Collection");
+    expect(blockPaletteTitles).not.toContain("Embed");
+    expect(blockPaletteTitles).not.toContain("Icon");
+
+    // The icon placeholder runtime path stays unreachable from authoring:
+    // it is gated out of the palette above and stays non-insertable here.
+    expect(pageBlockCapabilities.icon.insertable).toBe(false);
+    expect(pageBlockCapabilities.icon.editorInsertable).toBe(false);
+    expect(pageBlockCapabilities.icon.runtimeRenderer).toBe("placeholder");
   } finally {
     view.cleanup();
   }

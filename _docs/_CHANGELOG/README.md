@@ -29,10 +29,11 @@ Ordinary new entries continue at 1161.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1161 for the next changelog entry.
+assistant policy coverage fix. Use 1162 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1161 | 2026-06-11 | TASK-449/442/452 Pages editor Phase 0 closure | Pages/Admin UI/Cache/QA/Docs |
 | 1160 | 2026-06-10 | TASK-418 Page Editor v2 remediation closure | Pages/Admin UI/Runtime/Assistant/Templates/QA/Docs/Drift Audit |
 | 1159 | 2026-06-10 | TASK-418 collection form embed runtime binding | Pages/Runtime/Security/Forms/Content/Embed/Cache/QA/Docs/Drift Audit |
 | 1158 | 2026-06-10 | TASK-418 Page template boundary freeze | Pages/Templates/Widgets/Runtime/QA/Docs/Drift Audit |

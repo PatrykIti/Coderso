@@ -6,7 +6,9 @@
 **Category:** Pages / Editor Catalog / Testing
 **Estimated Effort:** Medium
 **Dependencies:** TASK-452-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -20,7 +22,7 @@ from normal Page authoring.
 
 ## Sub-Tasks
 
-- [ ] TASK-452-02-L01: Prove gated entries stay absent and placeholder paths
+- [x] TASK-452-02-L01: Prove gated entries stay absent and placeholder paths
       stay unreachable.
 
 ---
@@ -37,3 +39,8 @@ from normal Page authoring.
 
 - `_docs/PAGE_MODEL.md`
 
+---
+
+## Completion Notes
+
+See TASK-452-02-L01: UI palette negatives + capability guards landed and green (2026-06-11).

@@ -6,7 +6,9 @@
 **Category:** Pages / Contract / Editor Catalog
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -20,7 +22,7 @@ reasons for every gated entry.
 
 ## Sub-Tasks
 
-- [ ] TASK-452-01-L01: Add source-of-truth tests for the insertable catalog.
+- [x] TASK-452-01-L01: Add source-of-truth tests for the insertable catalog.
 
 ---
 
@@ -36,3 +38,8 @@ reasons for every gated entry.
 
 - `_docs/PAGE_MODEL.md`
 
+---
+
+## Completion Notes
+
+See the family completion notes in TASK-452: owner-level catalog freeze tests landed and green (2026-06-11).

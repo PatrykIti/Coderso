@@ -6,7 +6,9 @@
 **Category:** Pages / Contract / QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-452-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -20,9 +22,9 @@ guarded by tests.
 
 ## Sub-Tasks
 
-- [ ] Run the targeted validation set and capture final evidence.
-- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
-- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+- [x] Run the targeted validation set and capture final evidence.
+- [x] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [x] Split any residual drift into explicit follow-up tasks before closure if needed.
 
 ## Implementation Pseudocode
 
@@ -51,3 +53,8 @@ Validation commands:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` entry on completion
 
+---
+
+## Completion Notes
+
+Closure executed 2026-06-11: targeted Vitest suites green (45 tests), core lint/lint:types clean, git diff --check clean, _docs/PAGE_MODEL.md catalog-freeze note added, board and changelog synchronized (changelog 1161).

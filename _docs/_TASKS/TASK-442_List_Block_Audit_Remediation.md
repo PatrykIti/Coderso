@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-11
 
 ---
 
@@ -35,7 +36,7 @@ and visibility control collapse owned through `TASK-421`.
 
 ## Sub-Tasks
 
-- [ ] TASK-442-01: Reproduction-first empty-list persistence and
+- [x] TASK-442-01: Reproduction-first empty-list persistence and
       ordered-control contract.
 - [ ] TASK-442-01-L01: Reproduce the empty-list drop in the live admin flow
       (or record it no longer reproduces at HEAD), preserve a freshly
@@ -58,3 +59,9 @@ and visibility control collapse owned through `TASK-421`.
 
 - `_docs/PAGE_MODEL.md` if empty-state semantics are clarified
 - `_docs/_TASKS/README.md`
+
+---
+
+## Progress Notes
+
+TASK-442-01 (contract freeze + reproduction) is Done (2026-06-11); persistence pins landed and the shared dropper fix shipped via TASK-449-02. TASK-442-01-L01 surface adoption remains gated on TASK-421/TASK-422.

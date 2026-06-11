@@ -530,6 +530,16 @@ const resolveInlineError = (error: unknown, fallback: string) => {
 const normalizePageData = (data?: Record<string, unknown> | null): PageDocumentV2 =>
   normalizeStoredPageDocumentV2ForRead(data);
 
+// Stale or replayed pageDetail cache events must never replace a newer loaded
+// document: autosave persists only a revision (not currentData), so an older
+// cached record can otherwise wipe live editor content (TASK-449-02).
+const isNewerPageDetailTimestamp = (candidate: string, loaded: string): boolean => {
+  const candidateMs = Date.parse(candidate);
+  const loadedMs = Date.parse(loaded);
+  if (Number.isNaN(candidateMs) || Number.isNaN(loadedMs)) return false;
+  return candidateMs > loadedMs;
+};
+
 const createStarterSection = (type: PageSectionType) => {
   const blocks =
     type === "hero"
@@ -1524,12 +1534,13 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       if (hasUnsavedChanges) return;
       const cached = getCachedPageDetail(pageId);
       if (!cached) return;
+      if (page && !isNewerPageDetailTimestamp(cached.updatedAt, page.updatedAt)) return;
       const cachedDocument = normalizePageData(cached.currentData);
       setPage(cached);
       setPageDocument(cachedDocument);
       selectSection(cachedDocument.sections[0]?.id ?? null);
     });
-  }, [hasUnsavedChanges, pageId, selectSection]);
+  }, [hasUnsavedChanges, page, pageId, selectSection]);
 
   useEffect(() => {
     if (!page || !hasUnsavedChanges) return undefined;

@@ -208,6 +208,12 @@ Contract:
 `core/admin/utils/cacheBus.ts` broadcasts cache events:
 - Primary: `BroadcastChannel`.
 - Fallback: `localStorage` storage event.
+- Consumers must treat broadcasts as hints, not truth: the Page Editor
+  rehydrates from `pages:detail:<id>` events only when the cached record is
+  strictly newer (`updatedAt`) than the loaded page (TASK-449-02). Stale,
+  same-timestamp, or unparsable records are ignored so a replayed/poisoned
+  cache event can never replace newer live editor content; the dirty-state
+  guard is unchanged.
 - Same-tab subscribers are notified directly after broadcast, so assistant
   executions and other mutations can refresh the current admin surface without
   waiting for a cross-tab storage event or full reload.

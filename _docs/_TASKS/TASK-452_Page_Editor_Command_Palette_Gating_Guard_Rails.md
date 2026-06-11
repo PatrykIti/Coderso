@@ -5,7 +5,9 @@
 **Category:** Pages / Admin UI / Contract
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -22,13 +24,13 @@ boundary regressions.
 
 ## Sub-Tasks
 
-- [ ] TASK-452-01: Insertable catalog and capability freeze.
-- [ ] TASK-452-01-L01: Add source-of-truth tests for the 11 section and 14
+- [x] TASK-452-01: Insertable catalog and capability freeze.
+- [x] TASK-452-01-L01: Add source-of-truth tests for the 11 section and 14
       block insertable catalog.
-- [ ] TASK-452-02: Gated-entry negative tests and placeholder guard rails.
-- [ ] TASK-452-02-L01: Prove non-insertable section/block types stay absent and
+- [x] TASK-452-02: Gated-entry negative tests and placeholder guard rails.
+- [x] TASK-452-02-L01: Prove non-insertable section/block types stay absent and
       icon placeholder paths remain unreachable from authoring.
-- [ ] TASK-452-03: Validation, docs, and catalog closure.
+- [x] TASK-452-03: Validation, docs, and catalog closure.
 
 ---
 
@@ -46,3 +48,17 @@ boundary regressions.
 - `_docs/PAGE_MODEL.md`
 - `_docs/_TASKS/README.md`
 
+---
+
+## Completion Notes
+
+Family completed 2026-06-11 (tests-only): owner-level catalog freeze tests in
+`tests/vitest/pages/page-editor-control-registry.test.ts` (exact 11-section +
+14-block insertable catalogs, all 6 gated-section and 5 gated-block reasons,
+icon placeholder state) plus UI palette negatives in
+`tests/vitest/ui/page-editor-v2-flow.test.tsx` (entry-title assertions, no
+description false positives). `_docs/PAGE_MODEL.md` notes the test-frozen
+catalog. Validation: 45 tests green in the touched suites, core lint and
+lint:types clean. Note: the contract pseudocode imported private sets; tests
+derive the catalogs through the exported capability maps instead (equivalent
+freeze, no production change).

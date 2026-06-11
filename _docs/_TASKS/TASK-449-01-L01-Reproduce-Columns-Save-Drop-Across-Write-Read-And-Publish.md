@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-449-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -29,9 +31,9 @@ TASK-449-02: the fix contract may only target the layer recorded here.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -114,3 +116,18 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Live reproduction completed 2026-06-11 with captured fetch payloads at every
+layer (insert -> autosave POST -> save PATCH -> stored `currentData` ->
+reopen -> publish -> front). Columns-specific drop: not reproducible at HEAD.
+Block-agnostic dropper proven with payload evidence in the cache-event
+rehydration path (`PageEditor.tsx:1520-1532`): stale/empty cached detail +
+`pageDetail` broadcast wipes a clean editor (`s=2/b=2 -> s=0/b=0`, no toast)
+and a subsequent publish persists the empty document. Stale CSRF is not a
+dropper (single 403 self-heals via refresh+retry). Evidence:
+`.tmp/phase0/columns-repro.md`, `.tmp/phase0/list-repro.md`. Gate output
+consumed by TASK-449-02.

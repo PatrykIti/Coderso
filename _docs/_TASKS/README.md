@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 167 tasks
-- **In Progress:** 5 tasks
-- **Done:** 2362 tasks
+- **To Do:** 154 tasks
+- **In Progress:** 8 tasks
+- **Done:** 2373 tasks
 
 ---
 
@@ -190,9 +190,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-441-01 | Video Contract And Audit Freeze | Medium | Medium | Freeze the Video remediation contract around the shared media-picker path and dedicated toggle controls. |
 | TASK-441-01-L01 | Video Media Picker Toggle Controls And Runtime Guard | Medium | Medium | Replace raw source entry and yes/no selects with the shared media-picker and toggle control surfaces. |
 | TASK-441-02 | Video Validation Docs And Closure | Medium | Medium | Close the Video family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-442 | List Block Audit Remediation | High | Medium | A freshly inserted empty list vanished on save in the 2026-06-10 audit (schema layer round-trips green at HEAD); reproduce the live-path drop first, preserve empty lists through publish, adopt real ordered-state controls, and close the remaining shared dedicated-control drift. |
-| TASK-442-01 | List Contract And Audit Freeze | High | Medium | Freeze the List remediation contract around disappearing empty lists and the `ordered` toggle path. |
-| TASK-442-01-L01 | Empty List Persistence Ordered Toggle And Shared Editing Surface | High | Medium | Preserve default-empty lists through save/publish and adopt the shared ordered/editing surface. |
 | TASK-442-02 | List Validation Docs And Closure | High | Medium | Close the List family with targeted validation, live proof for empty and populated lists, and docs/board/changelog sync. |
 | TASK-443 | Card Block Audit Remediation | Medium | Medium | Replace raw card-image URL entry with the shared media path and close shared control drift. |
 | TASK-443-01 | Card Contract And Audit Freeze | Medium | Medium | Freeze the Card remediation contract around the move from raw image URL entry to the shared media-picker path. |
@@ -218,11 +215,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-448-01 | Container Contract And Audit Freeze | Medium | Medium | Freeze the Container remediation contract while preserving the current working nested-layout/runtime path. |
 | TASK-448-01-L01 | Container Dedicated Controls And Nested Runtime Guard | Medium | Medium | Adopt the dedicated controls for Container while preserving current nested persistence and runtime behavior. |
 | TASK-448-02 | Container Validation Docs And Closure | Medium | Medium | Close the Container family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-449 | Columns Block Audit Remediation | High | Medium | `columns` vanished after save/reopen/publish in the 2026-06-10 audit (schema layer round-trips green at HEAD); reproduce the live-path drop, fix the identified layer, and re-verify nested-slot behavior. |
-| TASK-449-01 | Columns Round-Trip Reproduction And Contract Freeze | High | Medium | Reproduce the disappearing-columns bug deterministically and freeze the owning slot contract before edits. |
-| TASK-449-01-L01 | Reproduce Columns Save Drop Across Write Read And Publish | High | Medium | Build the reproduction that proves exactly where `columns` disappears across the live admin flow and write/read/publish pipeline, or record that it no longer reproduces at HEAD. |
-| TASK-449-02 | Columns Persistence And Slot Round-Trip Implementation | High | Large | Fix the layer identified by TASK-449-01 and land the all-insertable-block round-trip guard (green today; pins behavior). |
-| TASK-449-02-L01 | Preserve Empty Column Slots Nested Children And Round Trip Coverage | High | Large | Preserve empty slot arrays and nested children while adding all-insertable-block round-trip coverage. |
 | TASK-449-03 | Validation Nested Slots Controls And Closure | High | Medium | Replay the columns audit in a real browser and re-verify controls after the shared UI work lands. |
 | TASK-450 | Group Block Audit Remediation | Medium | Medium | Group already renders truthfully; close the heaviest remaining segmented/toggle/gap control drift. |
 | TASK-450-01 | Group Contract And Audit Freeze | Medium | Medium | Freeze the Group remediation contract around direction/wrap/gap control truthfulness. |
@@ -234,16 +226,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-451-02 | Toolbar Shell And Parity Polish | High | Medium | Close the remaining shell-level parity gaps after the preview surface is reachable. |
 | TASK-451-02-L01 | Normalize Preview Dialog Labels And Add Surface Affordances | High | Medium | Normalize toolbar labels and remaining preview/add-surface shell affordances. |
 | TASK-451-03 | Three Surface Validation And Closure | High | Medium | Close the parity family with a fresh canvas/preview/front replay and docs/board/changelog sync. |
-| TASK-452 | Page Editor Command Palette Gating Guard Rails | Medium | Medium | Convert the currently-correct 11-section/14-block catalog and gated-entry behavior into explicit negative coverage. |
-| TASK-452-01 | Insertable Catalog And Capability Freeze | Medium | Medium | Freeze the source-of-truth insertable surface catalog and explicit gated-entry reasons. |
-| TASK-452-01-L01 | Add Source Of Truth Tests For Insertable Page Surfaces | Medium | Medium | Add owner-level tests that lock the 11-section/14-block insertable catalog. |
-| TASK-452-02 | Gated Entry Negative Tests And Placeholder Guard Rails | Medium | Medium | Add negative coverage proving gated entries stay absent and placeholder paths remain unreachable from authoring. |
-| TASK-452-02-L01 | Prove Gated Entries Stay Absent And Placeholder Paths Stay Unreachable | Medium | Medium | Add UI and owner-level tests that keep non-insertable entries out of the palette and runtime placeholder paths unreachable. |
-| TASK-452-03 | Validation Docs And Catalog Closure | Medium | Small | Close the gating-guard family with final validation and docs/board/changelog sync. |
 | TASK-453 | Page Editor V2 Audit Followup Closure Program | High | Medium | Aggregate closure family for `_FOLLOWUP_REPORT_2026-06-10.md`, mapping cross-family acceptance and residual risks. |
 | TASK-453-01 | Followup Report Closure Matrix And Ownership Freeze | High | Medium | Freeze the acceptance matrix that maps each aggregate follow-up finding onto concrete task families. |
 | TASK-453-01-L01 | Map Followup Findings To Task Families And Acceptance Criteria | High | Medium | Build the matrix that links every aggregate finding to concrete task owners and evidence requirements. |
 | TASK-453-02 | Followup Validation Board And Changelog Closure | High | Medium | Close the aggregate follow-up report with final validation and board/changelog synchronization. |
+| TASK-454 | Page Editor Draft Recovery And Cache Trust Hardening | High | Medium | Follow-up from the TASK-449 reproduction: surface/promote autosaved drafts on reopen, add an SPA unsaved-changes navigation guard, and revalidate mount hydration so a TTL-fresh poisoned cache cannot render a stale document. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
@@ -261,6 +248,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-442 | List Block Audit Remediation | High | Medium | In progress: 442-01 is done (2026-06-11) and persistence pins landed; 442-01-L01 surface adoption is gated on TASK-421/TASK-422. |
+| TASK-442-01-L01 | Empty List Persistence Ordered Toggle And Shared Editing Surface | High | Medium | In progress: schema pins and the shared dropper fix landed (2026-06-11); ordered-toggle adoption and inline items registration remain gated on TASK-421/TASK-422. |
+| TASK-449 | Columns Block Audit Remediation | High | Medium | In progress: reproduction and fix (449-01/-02 with leaves) are done (2026-06-11); the 449-03 closure sweep remains blocked on TASK-421 and TASK-423. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -272,6 +262,17 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-442-01 | List Contract And Audit Freeze | High | Medium | Done (2026-06-11): empty-list prune not reproducible at HEAD; shared dropper fixed via TASK-449-02; list schema pins landed in the round-trip suite. |
+| TASK-449-01 | Columns Round-Trip Reproduction And Contract Freeze | High | Medium | Done (2026-06-11): live reproduction proved the columns-specific drop is not reproducible at HEAD and recorded the real block-agnostic stale-cache rehydration dropper as the TASK-449-02 fix target. |
+| TASK-449-01-L01 | Reproduce Columns Save Drop Across Write Read And Publish | High | Medium | Done (2026-06-11): captured-payload reproduction across insert/autosave/save/store/reopen/publish; dropper localized to the pageDetail cache-event rehydration path (PageEditor.tsx:1520-1532). |
+| TASK-449-02 | Columns Persistence And Slot Round-Trip Implementation | High | Large | Done (2026-06-11): monotonic updatedAt freshness guard landed in the PageEditor cache rehydration; stale/equal/unparsable broadcasts no longer wipe the document; live playwright-cli verification passed. |
+| TASK-449-02-L01 | Preserve Empty Column Slots Nested Children And Round Trip Coverage | High | Large | Done (2026-06-11): freshness guard plus all-insertable-block round-trip guard suite (21 green pins) and UI regressions; lint/types/diff-check clean. |
+| TASK-452 | Page Editor Command Palette Gating Guard Rails | Medium | Medium | Done (2026-06-11): insertable catalog and gated entries are test-frozen (owner-level + UI palette title negatives); PAGE_MODEL.md records the freeze. |
+| TASK-452-01 | Insertable Catalog And Capability Freeze | Medium | Medium | Done (2026-06-11): catalog freeze tests landed via the exported capability maps. |
+| TASK-452-01-L01 | Add Source Of Truth Tests For Insertable Page Surfaces | Medium | Medium | Done (2026-06-11): exact 11-section/14-block freeze plus all gating reasons asserted. |
+| TASK-452-02 | Gated Entry Negative Tests And Placeholder Guard Rails | Medium | Medium | Done (2026-06-11): gated-entry negative coverage landed. |
+| TASK-452-02-L01 | Prove Gated Entries Stay Absent And Placeholder Paths Stay Unreachable | Medium | Medium | Done (2026-06-11): palette title-level negatives and icon placeholder guards landed. |
+| TASK-452-03 | Validation Docs And Catalog Closure | Medium | Small | Done (2026-06-11): validation green (45 tests, lint, types), docs/board/changelog synchronized (changelog 1161). |
 | TASK-418 | Page Editor V2 Authoring Nesting And Runtime Remediation | High | Very Large | Done (2026-06-10): section-first Page Editor v2 remediation closed with nested Page blocks, runtime/assistant/template parity, live Playwright CLI smoke, docs/changelog/board sync, and final drift closure. |
 | TASK-418-06 | Runtime Assistant And Template Parity | High | Large | Done (2026-06-10): public runtime, assistant surface/schema parity, Page template boundary freeze, and collection/form/embed scoped runtime binding are complete. |
 | TASK-418-07 | Validation Docs Changelog And Live Smoke Closure | High | Large | Done (2026-06-10): targeted Vitest/Bun/lint/type/gates, live admin/public Playwright CLI smoke, docs, changelog, board, and final drift workflow are complete. |

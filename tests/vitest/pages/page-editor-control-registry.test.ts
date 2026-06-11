@@ -215,6 +215,122 @@ describe("page editor control registry", () => {
     }
   });
 
+  test("insertable section catalog is frozen to the audited 11 sections", () => {
+    const insertableSections = pageSectionTypes.filter(
+      (type) => pageSectionCapabilities[type].insertable
+    );
+    expect(insertableSections).toEqual([
+      "hero",
+      "content",
+      "feature-grid",
+      "media-split",
+      "timeline",
+      "gallery",
+      "comparison",
+      "faq",
+      "testimonials",
+      "cta",
+      "custom",
+    ]);
+    for (const type of insertableSections) {
+      expect(pageSectionCapabilities[type]).toEqual({
+        insertable: true,
+        assistantEmittable: true,
+      });
+    }
+  });
+
+  test("insertable block catalog is frozen to the audited 14 blocks", () => {
+    const insertableBlocks = pageBlockTypes.filter(
+      (type) => pageBlockCapabilities[type].editorInsertable
+    );
+    expect(insertableBlocks).toEqual([
+      "heading",
+      "text",
+      "button",
+      "image",
+      "video",
+      "list",
+      "card",
+      "divider",
+      "spacer",
+      "statistic",
+      "quote",
+      "container",
+      "columns",
+      "group",
+    ]);
+    for (const type of insertableBlocks) {
+      expect(pageBlockCapabilities[type]).toMatchObject({
+        editorInsertable: true,
+        insertable: true,
+        assistantEmittable: true,
+        runtimeRenderer: "real",
+      });
+      expect("reason" in pageBlockCapabilities[type]).toBe(false);
+    }
+    // Editor-insertable and runtime-insertable gates are intentionally the
+    // same set today; promoting one without the other is a contract change.
+    for (const type of pageBlockTypes) {
+      expect(pageBlockCapabilities[type].insertable).toBe(
+        pageBlockCapabilities[type].editorInsertable
+      );
+    }
+  });
+
+  test("all 6 gated sections stay non-insertable with frozen capability reasons", () => {
+    const gatedSectionReasons = {
+      template: "template-section-boundary",
+      navigation: "runtime-navigation-boundary",
+      collection: "collection-section-boundary",
+      filters: "listing-section-boundary",
+      "lead-form": "form-section-boundary",
+      embed: "embed-section-boundary",
+    } as const;
+
+    expect(pageSectionTypes.filter((type) => !pageSectionCapabilities[type].insertable)).toEqual(
+      Object.keys(gatedSectionReasons)
+    );
+    for (const [type, reason] of Object.entries(gatedSectionReasons)) {
+      expect(pageSectionCapabilities[type as keyof typeof gatedSectionReasons]).toEqual({
+        insertable: false,
+        assistantEmittable: false,
+        reason,
+      });
+    }
+  });
+
+  test("all 5 gated blocks stay non-insertable with frozen capability reasons", () => {
+    const gatedBlockReasons = {
+      gallery: "gallery-editor-controls-pending",
+      form: "form-editor-controls-pending",
+      collection: "collection-editor-controls-pending",
+      embed: "embed-editor-controls-pending",
+      icon: "icon-runtime-renderer-pending",
+    } as const;
+
+    expect(pageBlockTypes.filter((type) => !pageBlockCapabilities[type].editorInsertable)).toEqual(
+      Object.keys(gatedBlockReasons)
+    );
+    for (const [type, reason] of Object.entries(gatedBlockReasons)) {
+      expect(pageBlockCapabilities[type as keyof typeof gatedBlockReasons]).toMatchObject({
+        editorInsertable: false,
+        insertable: false,
+        assistantEmittable: false,
+        reason,
+      });
+    }
+  });
+
+  test("icon stays the only placeholder runtime renderer and remains non-insertable", () => {
+    expect(pageBlockCapabilities.icon.insertable).toBe(false);
+    expect(pageBlockCapabilities.icon.editorInsertable).toBe(false);
+    expect(pageBlockCapabilities.icon.runtimeRenderer).toBe("placeholder");
+    expect(
+      pageBlockTypes.filter((type) => pageBlockCapabilities[type].runtimeRenderer !== "real")
+    ).toEqual(["icon"]);
+  });
+
   test("section variant controls are type-scoped from the template registry", () => {
     for (const [type, definition] of Object.entries(pageSectionTemplateRegistry)) {
       const control = getPageSectionVariantControl(

@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Persistence
 **Estimated Effort:** Large
 **Dependencies:** TASK-449-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -28,7 +30,7 @@ the same way.
 
 ## Sub-Tasks
 
-- [ ] TASK-449-02-L01: Preserve empty column slots, nested children, and round-trip coverage.
+- [x] TASK-449-02-L01: Preserve empty column slots, nested children, and round-trip coverage.
 
 ## Implementation Pseudocode
 
@@ -101,3 +103,20 @@ Regression-test shape:
 
 - `_docs/PAGE_MODEL.md`
 
+---
+
+## Completion Notes
+
+Fix landed 2026-06-11 in the layer recorded by TASK-449-01: the `pageDetail`
+cache-event rehydration in `core/admin/ui/pages/PageEditor.tsx` now ignores
+any cached record that is not strictly newer (`updatedAt`) than the loaded
+page (`isNewerPageDetailTimestamp`; unparsable timestamps fail closed; the
+dirty-state guard is unchanged; legitimate newer-record rehydration is
+preserved and covered by tests). No schema/normalizer changes (verified green
+and explicitly out of scope). All-insertable-block round-trip guard landed in
+`tests/vitest/pages/page-document-v2-block-roundtrip.test.ts` (21 tests,
+green pins). UI regression for stale/equal/unparsable broadcasts added to
+`tests/vitest/ui/page-editor-v2-flow.test.tsx`. Live post-fix verification on
+`coderso-dev-core-host` + `playwright-cli` (2026-06-11): dropper injection no
+longer wipes (3 variants), legitimate rehydration applies, columns and list
+survive Save/reload/Publish end to end (`.tmp/phase0/postfix-verify.md`).

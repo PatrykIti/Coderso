@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -47,3 +49,19 @@ the persistence fix in TASK-442-01-L01.
 
 - `_docs/PAGE_MODEL.md`
 
+---
+
+## Completion Notes
+
+Reproduction executed live on 2026-06-11 (evidence:
+`.tmp/phase0/list-repro.md`). The audited empty-list prune is **not
+reproducible at HEAD**: the default empty list survives send-time payload,
+store, reopen, publish, and renders a real `<ul>` on the front. The data-loss
+end state is reachable only through the block-agnostic stale-cache
+rehydration dropper recorded by TASK-449-01 and fixed by TASK-449-02
+(`PageEditor.tsx` monotonic freshness guard). Schema-layer pins for the list
+contract (empty list survives; non-array `items` coerce to `[]`; populated
+list round-trips) landed in
+`tests/vitest/pages/page-document-v2-block-roundtrip.test.ts`. Remaining
+TASK-442-01-L01 scope (ordered-toggle adoption, inline items registration) is
+gated on TASK-421/TASK-422.
