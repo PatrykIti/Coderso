@@ -46,6 +46,12 @@ export type PublicPageV2RuntimeRenderOptions = Omit<
   templateKey?: unknown;
   previewDevice?: PageBreakpoint;
   runtimeDataByBlockId?: PageRuntimeDataByBlockId;
+  /**
+   * Scoped responsive `@media` overrides (TASK-423-02). Emitted for public
+   * visitors on top of the desktop-resolved base markup; empty/absent on the
+   * explicit `previewDevice` path, which keeps single-breakpoint flattening.
+   */
+  responsiveCss?: string | null;
 };
 
 type TemplateComponent<Props> = (props: Props) => ReactNode;
@@ -82,7 +88,8 @@ const renderDocument = (
   imageUrl?: string | null,
   devModuleScripts?: string[] | null,
   isPreview?: boolean,
-  renderBodyScripts?: () => ReactNode
+  renderBodyScripts?: () => ReactNode,
+  responsiveCss?: string | null
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -108,6 +115,17 @@ const renderDocument = (
 
   if (inlineCss) {
     headTags.push(<style key="inline-css">{inlineCss}</style>);
+  }
+
+  if (responsiveCss) {
+    // The builder contract (`pageResponsiveCss`) escapes ids so the CSS can
+    // never contain `</style>`; React additionally renders style children as
+    // raw text, matching the inline token CSS pattern above.
+    headTags.push(
+      <style key="responsive-css" data-page-responsive="true">
+        {responsiveCss}
+      </style>
+    );
   }
 
   if (isPreview) {
@@ -309,6 +327,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     robots,
     templateKey,
     runtimeDataByBlockId,
+    responsiveCss,
   } = options;
 
   const templateInput = resolvePageTemplateInput(rawDocument, {
@@ -343,6 +362,8 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     robots,
     options.imageUrl,
     devModuleScripts,
-    isPreview
+    isPreview,
+    undefined,
+    responsiveCss
   );
 }

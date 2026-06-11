@@ -13,7 +13,15 @@ import {
 } from "./pageDocumentV2";
 import type { PageBlockPath } from "./pageBlockPaths";
 import {
+  isPageBlockVisualElementType,
+  PAGE_BLOCK_ELEMENT_ATTRIBUTE,
+  PAGE_BLOCK_ID_ATTRIBUTE,
+  PAGE_SECTION_CONTENT_ATTRIBUTE,
+  PAGE_SECTION_ID_ATTRIBUTE,
+} from "./pageResponsiveCss";
+import {
   resolvePageSectionTemplate,
+  resolvePageSectionTemplateColumns,
   type ResolvedPageSectionTemplate,
 } from "./pageSectionTemplates";
 import type {
@@ -38,14 +46,16 @@ export type PageBlockStyleProperties = CSSProperties & {
 
 export type PageSectionDataAttributes = {
   "data-page-section": PageSectionV2["type"];
-  "data-section-id": string;
+  /** Scope hook consumed by the responsive CSS contract (`pageResponsiveCss`). */
+  [PAGE_SECTION_ID_ATTRIBUTE]: string;
   "data-page-variant": PageSectionV2["variant"];
   "data-page-section-template": string;
 };
 
 export type PageBlockDataAttributes = {
   "data-page-block": PageBlockV2["type"];
-  "data-block-id": string;
+  /** Scope hook consumed by the responsive CSS contract (`pageResponsiveCss`). */
+  [PAGE_BLOCK_ID_ATTRIBUTE]: string;
 };
 
 export type PageSectionRenderProps = {
@@ -71,11 +81,25 @@ export type PageBlockFrameRenderer = (input: {
   parentBlock?: PageBlockV2;
 }) => ReactNode;
 
+/**
+ * Admin-canvas hook (TASK-422-02): receives the exact text node a text-bearing
+ * block paints (including renderer fallbacks) so the Page Editor can layer
+ * inline editing on top of the same content the front renders. Runtime render
+ * paths never provide it, so public output is unchanged. `propPath` follows
+ * the `pageInlineEditContract` convention (`"text"`, `"label"`, `"items.0"`).
+ */
+export type PageInlineTextRenderer = (input: {
+  block: PageBlockV2;
+  propPath: string;
+  text: string;
+}) => ReactNode;
+
 type PageBlockRenderContext = {
   blockPath: PageBlockPath;
   depth: number;
   includeHiddenBlocks: boolean;
   renderBlockFrame?: PageBlockFrameRenderer;
+  renderInlineText?: PageInlineTextRenderer;
   runtimeDataByBlockId?: PageRuntimeDataByBlockId;
   slotKey?: PageBlockSlotKey;
   parentBlock?: PageBlockV2;
@@ -174,26 +198,8 @@ export const pageSectionJustifyClass = (justify: PageSectionV2["layout"]["justif
   return "justify-start";
 };
 
-const pageSectionTemplateColumns = (template: ResolvedPageSectionTemplate) => {
-  const columns = template.section.layout.columns;
-  if (template.template === "hero" && template.variant === "split") return 2;
-  if (template.template === "media-split" && template.variant !== "default") return 2;
-  if (
-    (template.template === "feature-grid" ||
-      template.template === "gallery" ||
-      template.template === "testimonials") &&
-    (template.variant === "grid" || template.variant === "cards")
-  ) {
-    return Math.max(columns, 3);
-  }
-  if (
-    (template.template === "comparison" || template.template === "custom") &&
-    (template.variant === "grid" || template.variant === "cards")
-  ) {
-    return Math.max(columns, 2);
-  }
-  return columns;
-};
+const pageSectionTemplateColumns = (template: ResolvedPageSectionTemplate) =>
+  resolvePageSectionTemplateColumns(template);
 
 const pageSectionTemplateClass = (template: ResolvedPageSectionTemplate) => {
   const marker = `page-section-template-${template.template}-${template.variant}`;
@@ -252,14 +258,21 @@ export const toPageSectionRenderProps = (
     style: toPageSectionStyle(section),
     dataAttributes: {
       "data-page-section": section.type,
-      "data-section-id": section.id,
+      [PAGE_SECTION_ID_ATTRIBUTE]: section.id,
       "data-page-variant": template.variant,
       "data-page-section-template": template.template,
     },
   };
 };
 
-export const toPageBlockStyle = (block: PageBlockV2): PageBlockStyleProperties => {
+/**
+ * Visual style surface of `PageBlockStyleV2` (background, text color, border,
+ * radius, shadow, opacity). For most block types it stays on the block frame;
+ * for {@link isPageBlockVisualElementType} types it moves onto the inner
+ * visual element so "block styles" format the element the user sees (the hero
+ * button, the image) instead of painting the area around it.
+ */
+const toPageBlockVisualStyle = (block: PageBlockV2): PageBlockStyleProperties => {
   const style = block.style ?? {};
   const backgroundColor =
     style.backgroundType === "color" && style.background ? style.background : undefined;
@@ -276,11 +289,43 @@ export const toPageBlockStyle = (block: PageBlockV2): PageBlockStyleProperties =
     borderColor: style.borderColor ?? undefined,
     borderStyle: style.borderColor ? "solid" : undefined,
     borderWidth: style.borderColor ? "1px" : undefined,
+  };
+};
+
+/** Layout-affecting style surface that always stays on the block frame. */
+const toPageBlockLayoutStyle = (block: PageBlockV2): PageBlockStyleProperties => {
+  const style = block.style ?? {};
+  return {
     padding: toBoxSpacingValue(style.padding),
     margin: toBoxSpacingValue(style.margin),
     textAlign: style.align,
   };
 };
+
+/**
+ * Inline style for the inner visual element of re-routed block types, carrying
+ * the stable {@link PAGE_BLOCK_ELEMENT_ATTRIBUTE} hook. Inline values beat the
+ * element's variant utility classes (e.g. the button accent background), so
+ * explicit block style always visually wins. A valid gradient additionally
+ * clears `background-color` (mirroring the responsive CSS builder) so variant
+ * background classes cannot bleed through translucent gradient stops.
+ */
+export const toPageBlockElementStyle = (block: PageBlockV2): PageBlockStyleProperties => {
+  const visual = toPageBlockVisualStyle(block);
+  if (visual.backgroundImage && visual.backgroundColor === undefined) {
+    visual.backgroundColor = "transparent";
+  }
+  return visual;
+};
+
+export const pageBlockElementDataAttributes = {
+  [PAGE_BLOCK_ELEMENT_ATTRIBUTE]: "true",
+} as const;
+
+export const toPageBlockStyle = (block: PageBlockV2): PageBlockStyleProperties =>
+  isPageBlockVisualElementType(block.type)
+    ? toPageBlockLayoutStyle(block)
+    : { ...toPageBlockVisualStyle(block), ...toPageBlockLayoutStyle(block) };
 
 export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps => ({
   className: joinPageRenderClasses(
@@ -291,12 +336,24 @@ export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps
   style: toPageBlockStyle(block),
   dataAttributes: {
     "data-page-block": block.type,
-    "data-block-id": block.id,
+    [PAGE_BLOCK_ID_ATTRIBUTE]: block.id,
   },
 });
 
-const renderHeading = (block: PageBlockV2) => {
-  const text = readText(block.props.text, "Heading");
+/**
+ * Wraps the painted text node with the admin inline-edit renderer when one is
+ * provided by the context; runtime rendering returns the raw text unchanged.
+ */
+const renderBlockText = (
+  block: PageBlockV2,
+  propPath: string,
+  text: string,
+  context: PageBlockRenderContext
+): ReactNode =>
+  context.renderInlineText ? context.renderInlineText({ block, propPath, text }) : text;
+
+const renderHeading = (block: PageBlockV2, context: PageBlockRenderContext) => {
+  const text = renderBlockText(block, "text", readText(block.props.text, "Heading"), context);
   const level = readText(block.props.level, "h2");
   const className = joinPageRenderClasses(
     "font-semibold leading-tight text-[var(--coderso-block-text,#020617)]",
@@ -316,16 +373,31 @@ const renderImage = (block: PageBlockV2) => {
   const src = readText(block.props.src);
   const alt = readText(block.props.alt);
   const caption = readText(block.props.caption);
+  // Style-target contract: radius/border/shadow must clip the picture itself,
+  // not the frame around it, so the visual style surface lands on the img
+  // (or its empty-state placeholder), never on the block frame.
+  const elementStyle = toPageBlockElementStyle(block);
   if (!src) {
     return (
-      <div className="flex min-h-48 items-center justify-center rounded border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+      <div
+        className="flex min-h-48 items-center justify-center rounded border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500"
+        style={elementStyle}
+        {...pageBlockElementDataAttributes}
+      >
         Image
       </div>
     );
   }
   return (
     <figure className="space-y-2">
-      <img className="w-full rounded object-cover" src={src} alt={alt} loading="lazy" />
+      <img
+        className="w-full rounded object-cover"
+        style={elementStyle}
+        {...pageBlockElementDataAttributes}
+        src={src}
+        alt={alt}
+        loading="lazy"
+      />
       {caption ? <figcaption className="text-sm text-slate-500">{caption}</figcaption> : null}
     </figure>
   );
@@ -548,7 +620,7 @@ const isListLinkItem = (value: unknown): value is { label: string; href: string 
   typeof (value as { label?: unknown }).label === "string" &&
   typeof (value as { href?: unknown }).href === "string";
 
-const renderList = (block: PageBlockV2) => {
+const renderList = (block: PageBlockV2, context: PageBlockRenderContext) => {
   const items = Array.isArray(block.props.items) ? block.props.items : [];
   const children = items.map((item, index) => {
     const label = isListLinkItem(item) ? item.label : readText(item);
@@ -563,7 +635,9 @@ const renderList = (block: PageBlockV2) => {
             {label}
           </a>
         ) : (
-          label
+          // Link items stay panel-only; only plain string items expose the
+          // inline-edit hook (the contract fails closed for object items).
+          renderBlockText(block, `items.${index}`, label, context)
         )}
       </li>
     );
@@ -615,6 +689,7 @@ const renderPageBlockList = (
       depth: context.depth,
       includeHiddenBlocks: context.includeHiddenBlocks,
       renderBlockFrame: context.renderBlockFrame,
+      renderInlineText: context.renderInlineText,
       runtimeDataByBlockId: context.runtimeDataByBlockId,
       slotKey: context.slotKey,
       parentBlock: context.parentBlock,
@@ -671,6 +746,7 @@ const renderPageLayoutBlockContent = (
                 depth: context.depth + 1,
                 includeHiddenBlocks: context.includeHiddenBlocks,
                 renderBlockFrame: context.renderBlockFrame,
+                renderInlineText: context.renderInlineText,
                 runtimeDataByBlockId: context.runtimeDataByBlockId,
                 slotKey,
                 parentBlock: block,
@@ -699,6 +775,7 @@ const renderPageLayoutBlockContent = (
         depth: context.depth + 1,
         includeHiddenBlocks: context.includeHiddenBlocks,
         renderBlockFrame: context.renderBlockFrame,
+        renderInlineText: context.renderInlineText,
         runtimeDataByBlockId: context.runtimeDataByBlockId,
         slotKey,
         parentBlock: block,
@@ -715,6 +792,7 @@ const renderPageLayoutBlockContent = (
       depth: context.depth + 1,
       includeHiddenBlocks: context.includeHiddenBlocks,
       renderBlockFrame: context.renderBlockFrame,
+      renderInlineText: context.renderInlineText,
       runtimeDataByBlockId: context.runtimeDataByBlockId,
       slotKey,
       parentBlock: block,
@@ -738,7 +816,7 @@ export const renderPageBlockContent = (
     case "group":
       return renderPageLayoutBlockContent(block, context);
     case "heading":
-      return renderHeading(block);
+      return renderHeading(block, context);
     case "text":
       return (
         <p
@@ -747,7 +825,7 @@ export const renderPageBlockContent = (
             pageTextAlignClass(block.props.align)
           )}
         >
-          {readText(block.props.text)}
+          {renderBlockText(block, "text", readText(block.props.text), context)}
         </p>
       );
     case "button": {
@@ -757,11 +835,15 @@ export const renderPageBlockContent = (
           className={joinPageRenderClasses(
             "inline-flex w-fit items-center justify-center rounded bg-[var(--coderso-section-accent,#0d9488)] px-5 py-3 text-sm font-semibold text-[var(--coderso-block-text,#ffffff)] shadow-sm transition hover:opacity-90"
           )}
+          // Style-target contract: the anchor IS the button the user styles,
+          // so the visual style surface lands here, not on the block frame.
+          style={toPageBlockElementStyle(block)}
+          {...pageBlockElementDataAttributes}
           href={href}
           target={toHrefTarget(block.props.target)}
           rel={block.props.target === "blank" ? "noreferrer" : undefined}
         >
-          {readText(block.props.label, "Learn more")}
+          {renderBlockText(block, "label", readText(block.props.label, "Learn more"), context)}
         </a>
       );
     }
@@ -783,7 +865,7 @@ export const renderPageBlockContent = (
       );
     }
     case "list":
-      return renderList(block);
+      return renderList(block, context);
     case "card":
       return (
         <article className="rounded border border-slate-200 bg-[var(--coderso-block-surface,#ffffff)] p-5 shadow-sm">
@@ -808,23 +890,23 @@ export const renderPageBlockContent = (
       return (
         <div className="rounded border border-slate-200 p-5">
           <div className="text-3xl font-semibold text-[var(--coderso-block-text,#020617)]">
-            {readText(block.props.value, "0")}
+            {renderBlockText(block, "value", readText(block.props.value, "0"), context)}
           </div>
           <div className="mt-1 text-sm font-medium text-[var(--coderso-block-text,#334155)]">
-            {readText(block.props.label, "Metric")}
+            {renderBlockText(block, "label", readText(block.props.label, "Metric"), context)}
           </div>
           <div className="mt-1 text-sm text-[var(--coderso-block-text,#64748b)]">
-            {readText(block.props.caption)}
+            {renderBlockText(block, "caption", readText(block.props.caption), context)}
           </div>
         </div>
       );
     case "quote":
       return (
         <blockquote className="border-l-4 border-[var(--coderso-section-accent,#0d9488)] pl-5 text-lg leading-8 text-[var(--coderso-block-text,#334155)]">
-          <p>{readText(block.props.text)}</p>
+          <p>{renderBlockText(block, "text", readText(block.props.text), context)}</p>
           {readText(block.props.cite) ? (
             <cite className="mt-3 block text-sm text-[var(--coderso-block-text,#64748b)]">
-              {readText(block.props.cite)}
+              {renderBlockText(block, "cite", readText(block.props.cite), context)}
             </cite>
           ) : null}
         </blockquote>
@@ -895,10 +977,16 @@ const defaultEmptySectionContent = (
   </div>
 );
 
+/** Scope hook consumed by the responsive CSS contract (`pageResponsiveCss`). */
+const pageSectionContentDataAttributes = {
+  [PAGE_SECTION_CONTENT_ATTRIBUTE]: "true",
+} as const;
+
 export function PageSectionContent({
   section,
   emptyContent = defaultEmptySectionContent,
   renderBlockFrame,
+  renderInlineText,
   layoutMode = "runtime",
   includeHiddenBlocks = false,
   runtimeDataByBlockId,
@@ -906,6 +994,7 @@ export function PageSectionContent({
   section: PageSectionV2;
   emptyContent?: ReactNode;
   renderBlockFrame?: PageBlockFrameRenderer;
+  renderInlineText?: PageInlineTextRenderer;
   layoutMode?: PageSectionLayoutMode;
   includeHiddenBlocks?: boolean;
   runtimeDataByBlockId?: PageRuntimeDataByBlockId;
@@ -918,7 +1007,7 @@ export function PageSectionContent({
     <div
       className={renderProps.contentClassName}
       style={renderProps.style}
-      data-page-section-content="true"
+      {...pageSectionContentDataAttributes}
       data-page-section-layout-mode={layoutMode}
     >
       {blocks.length > 0
@@ -928,6 +1017,7 @@ export function PageSectionContent({
               depth: 1,
               includeHiddenBlocks,
               renderBlockFrame,
+              renderInlineText,
               runtimeDataByBlockId,
             })
           )

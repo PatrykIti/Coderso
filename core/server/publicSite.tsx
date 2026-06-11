@@ -103,6 +103,7 @@ import { handlePublicBookingApi } from "./publicBookingApi";
 import { handlePublicFormsApi } from "./publicFormsApi";
 import { readBindingPathValue } from "../services/utils/bindingPath";
 import { preparePageRuntimeDocument } from "../services/pages/pageRuntimeDataBinding";
+import { buildPageResponsiveCss } from "../services/pages/pageResponsiveCss";
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import type { PageBreakpoint } from "../services/pages/pageDocumentV2";
 
@@ -797,12 +798,27 @@ const renderPublicPageHtmlInternal = async (
   const pageTemplateInput = resolvePageTemplateInput(sourceData, {
     renderMode: options?.preview ? "preview-page" : "public-page",
   });
+  const previewDevice = options?.previewDevice;
   const preparedRuntime = await preparePageRuntimeDocument(pageTemplateInput.document, {
     preview: options?.preview ?? false,
-    breakpoint: (options?.previewDevice ?? "desktop") as PageBreakpoint,
+    breakpoint: (previewDevice ?? "desktop") as PageBreakpoint,
     contentRoutes,
     runtimeSearchParams: options?.runtimeSearchParams,
   });
+
+  // Public visitors receive desktop-resolved base markup plus scoped @media
+  // overrides built from the unflattened document, so one cached HTML serves
+  // every viewport. An explicit previewDevice keeps the current
+  // flatten-to-one-breakpoint semantics and skips public CSS emission.
+  // Builder failures fail closed to desktop-only markup, never malformed HTML.
+  let responsiveCss = "";
+  if (!previewDevice) {
+    try {
+      responsiveCss = buildPageResponsiveCss(pageTemplateInput.document);
+    } catch (error) {
+      console.warn("page_responsive_css_emission_failed", error);
+    }
+  }
 
   return {
     html: renderPublicPageV2RuntimeHtml({
@@ -811,7 +827,7 @@ const renderPublicPageHtmlInternal = async (
       cssHref,
       inlineCss,
       isPreview: options?.preview ?? false,
-      previewDevice: options?.previewDevice,
+      previewDevice,
       devModuleScripts,
       metaDescription: resolvedSeo.description,
       canonicalUrl: resolvedSeo.canonicalUrl,
@@ -819,6 +835,7 @@ const renderPublicPageHtmlInternal = async (
       imageUrl,
       templateKey: settingsRecord.template,
       runtimeDataByBlockId: preparedRuntime.runtimeDataByBlockId,
+      responsiveCss,
     }),
     cacheable: preparedRuntime.cacheable,
   };

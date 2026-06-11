@@ -36,7 +36,7 @@ and visibility control collapse owned through `TASK-421`.
 
 ## Sub-Tasks
 
-- [x] TASK-442-01: Reproduction-first empty-list persistence and
+- [ ] TASK-442-01: Reproduction-first empty-list persistence and
       ordered-control contract.
 - [ ] TASK-442-01-L01: Reproduce the empty-list drop in the live admin flow
       (or record it no longer reproduces at HEAD), preserve a freshly
@@ -64,4 +64,8 @@ and visibility control collapse owned through `TASK-421`.
 
 ## Progress Notes
 
-TASK-442-01 (contract freeze + reproduction) is Done (2026-06-11); persistence pins landed and the shared dropper fix shipped via TASK-449-02. TASK-442-01-L01 surface adoption remains gated on TASK-421/TASK-422.
+TASK-442-01 reproduction and persistence evidence landed on 2026-06-11;
+the shared dropper fix shipped via TASK-449-02. TASK-442-01 remains in
+progress for task-graph consistency while direct child TASK-442-01-L01
+tracks the gated ordered-toggle and inline-items surface adoption
+dependencies on TASK-421/TASK-422.

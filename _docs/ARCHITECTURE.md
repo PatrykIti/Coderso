@@ -730,6 +730,13 @@ Zakres CMS, model danych, auth i security opisane sa w:
   `pageTemplateBoundary`: runtime Page templates receive normalized
   `PageDocumentV2` `sections[]`, not legacy widget `blocks[]`. Stored legacy
   Page rows still follow the compatibility reset path to an empty v2 document.
+- Page v2 public responses contain desktop-resolved base markup plus scoped
+  responsive `@media` overrides emitted by
+  `core/services/pages/pageResponsiveCss.ts` into a dedicated
+  `<style data-page-responsive="true">` element. Explicit `previewDevice`
+  requests (admin preview) keep flatten-to-one-breakpoint semantics and skip
+  that emission. The CSS ships inside the cached page HTML, so site cache keys
+  stay device-agnostic (see `_docs/PAGE_MODEL.md`).
 - Non-Page template surfaces do not share the Page v2 template input contract:
   widget-template, custom-screen, and detail-page runtimes continue to consume
   `WidgetBlock[]` until a dedicated migration task changes their storage and

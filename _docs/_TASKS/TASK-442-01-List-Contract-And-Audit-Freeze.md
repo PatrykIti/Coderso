@@ -6,9 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-06-11
-**Completed:** 2026-06-11
 
 ---
 
@@ -51,7 +50,7 @@ the persistence fix in TASK-442-01-L01.
 
 ---
 
-## Completion Notes
+## Progress Notes
 
 Reproduction executed live on 2026-06-11 (evidence:
 `.tmp/phase0/list-repro.md`). The audited empty-list prune is **not
@@ -64,4 +63,5 @@ contract (empty list survives; non-array `items` coerce to `[]`; populated
 list round-trips) landed in
 `tests/vitest/pages/page-document-v2-block-roundtrip.test.ts`. Remaining
 TASK-442-01-L01 scope (ordered-toggle adoption, inline items registration) is
-gated on TASK-421/TASK-422.
+gated on TASK-421/TASK-422, so TASK-442-01 remains open for task-graph
+consistency until that direct child is closed or explicitly superseded.

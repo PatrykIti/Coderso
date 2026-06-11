@@ -114,6 +114,34 @@ export const getPageSectionVariantOptions = (
 export const getPageSectionFallbackVariant = (type: PageSectionType): PageSectionVariant =>
   getPageSectionTemplateDefinition(type)?.fallbackVariant ?? "default";
 
+/**
+ * Effective grid column count for a resolved section template. Owns the
+ * template-driven column floors used by the renderer grid classes and by the
+ * responsive CSS emission contract (`pageResponsiveCss.ts`); both must agree.
+ */
+export const resolvePageSectionTemplateColumns = (
+  template: ResolvedPageSectionTemplate
+): number => {
+  const columns = template.section.layout.columns;
+  if (template.template === "hero" && template.variant === "split") return 2;
+  if (template.template === "media-split" && template.variant !== "default") return 2;
+  if (
+    (template.template === "feature-grid" ||
+      template.template === "gallery" ||
+      template.template === "testimonials") &&
+    (template.variant === "grid" || template.variant === "cards")
+  ) {
+    return Math.max(columns, 3);
+  }
+  if (
+    (template.template === "comparison" || template.template === "custom") &&
+    (template.variant === "grid" || template.variant === "cards")
+  ) {
+    return Math.max(columns, 2);
+  }
+  return columns;
+};
+
 export const resolvePageSectionTemplate = (section: PageSectionV2): ResolvedPageSectionTemplate => {
   const definition = getPageSectionTemplateDefinition(section.type);
   if (!definition) {

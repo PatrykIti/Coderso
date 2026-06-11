@@ -372,6 +372,74 @@ override records as top-level blocks. `resolvePageDocumentForBreakpoint`
 resolves those overrides recursively through every rendered slot child before
 public runtime or admin preview output is produced.
 
+### Responsive CSS Emission Contract
+
+`core/services/pages/pageResponsiveCss.ts` owns the public delivery contract
+for the cascade (TASK-423-01). It converts stored responsive deltas into
+deterministic, selector-scoped `@media` rules so the public runtime can serve
+desktop-resolved base markup plus media queries instead of flattening the
+document to one breakpoint server-side:
+
+- `buildPageResponsiveCss(document)` returns the stylesheet string;
+  `buildPageResponsiveCssPlan(document)` additionally returns fail-closed
+  diagnostics for deltas that cannot be expressed as CSS. Documents without
+  responsive overrides emit an empty string (no empty `@media` shells).
+- Breakpoint bounds come from the single owned constant
+  `pageResponsiveMediaBounds`: tablet `(min-width: 640px) and
+  (max-width: 1023px)`, mobile `(max-width: 639px)`. The bounds bracket the
+  editor canvas device widths (1080 / 744 / 390). Tablet rules are
+  range-bounded because mobile inherits the DESKTOP base, not tablet; an
+  unbounded tablet `max-width` query would leak tablet overrides into mobile
+  viewports.
+- Rules are scoped through the stable renderer attributes
+  (`data-section-id`, `data-block-id`, `data-page-section-content`; exported
+  as `PAGE_SECTION_ID_ATTRIBUTE`, `PAGE_BLOCK_ID_ATTRIBUTE`,
+  `PAGE_SECTION_CONTENT_ATTRIBUTE`). Section style rules target the section
+  content element; visibility rules target the id node itself. Ids are
+  CSS-string escaped; every declaration carries `!important` because the
+  desktop base values are inline styles.
+- Mapped deltas: section `layout` (`maxWidth`, `align`, `justify`, `columns`
+  via the shared template column floors), section `style`
+  (accent/background/radius/shadow), section `spacing` (padding sides, gap),
+  block `style` (align/width/colors/background/opacity/radius/shadow/border/
+  padding/margin), and `visibility.visible: false` as `display:none`.
+- Only schema-clamped numbers, enum-token lookups, and strictly validated
+  color/gradient strings reach the stylesheet; anything else fails closed
+  into diagnostics, never guessed CSS.
+- Explicitly NOT CSS-expressible (diagnostics-only): block
+  `responsive[bp].props` content overrides (no content-override contract
+  exists yet), non-`visible` section visibility fields
+  (`authOnly`/`anchor`/`startsAt`/`endsAt`), `maxWidth` overrides on
+  `full-width` variants (the renderer pins `max-width: none`), and any
+  override on nodes hidden at the desktop base or in inactive `columns`
+  slots, including `visible: true` restores — that markup is absent from the
+  desktop-resolved base HTML.
+
+### Responsive Delivery In The Public Runtime
+
+The public runtime consumes the emission contract (TASK-423-02):
+
+- `renderPublicPageHtmlInternal` (`core/server/publicSite.tsx`) renders the
+  desktop-resolved base markup as before and, for requests without an
+  explicit `previewDevice`, additionally calls
+  `buildPageResponsiveCss(document)` over the unflattened normalized
+  document. `renderPublicPageV2RuntimeHtml`
+  (`core/site/renderPublicPage.tsx`) injects the result as a dedicated
+  `<style data-page-responsive="true">` head element, so real visitors get
+  one HTML payload whose overrides apply at real viewports.
+- An explicit `previewDevice` (admin preview / editor parity) keeps the
+  current flatten-to-one-breakpoint semantics and skips public CSS emission:
+  preview output contains no `data-page-responsive` style element.
+- Builder failures fail closed to desktop-only markup (no responsive style
+  element), never malformed HTML.
+- The emitted CSS lives inside the page HTML string, so the site HTML cache
+  stays device-agnostic (`profileId|path` keys) and existing invalidation
+  covers responsive delivery without a new cache surface.
+- `pageRendererV2.tsx` binds its emitted scope hooks to the constants
+  exported by `pageResponsiveCss.ts` (`PAGE_SECTION_ID_ATTRIBUTE`,
+  `PAGE_BLOCK_ID_ATTRIBUTE`, `PAGE_SECTION_CONTENT_ATTRIBUTE`), keeping
+  selector scoping and markup emission in lockstep.
+
 ## Settings
 
 `settings.template` resolves the Page v2 shell. Unknown/empty values normalize

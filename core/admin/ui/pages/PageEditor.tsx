@@ -21,6 +21,7 @@ import {
   PaintBucket,
   PanelTop,
   Plus,
+  RotateCcw,
   Save,
   Search,
   Settings2,
@@ -33,8 +34,10 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isApiClientError, isSessionExpiredApiError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
+import { getCachedMedia, listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import {
   discardPageRevision,
   getCachedPageDetail,
@@ -89,6 +92,19 @@ import {
   type PageEditorControlDefinition,
 } from "../../../services/pages/pageEditorControlRegistry";
 import {
+  resolvePageEditorControlUiModel,
+  type PageEditorControlUiModel,
+} from "../../../services/pages/pageEditorControlUiModel";
+import {
+  ColorSwatchControl,
+  MediaPickerControl,
+  SegmentedControl,
+  SliderControl,
+  SliderStepperControl,
+  ToggleSwitch,
+} from "./editorControls";
+import { editorControlFocusClass, editorControlLabelClass } from "./editorControls/controlChrome";
+import {
   deletePageBlockAtPath,
   duplicatePageBlockAtPath,
   duplicatePageBlockTreeWithNewIds,
@@ -107,6 +123,11 @@ import {
   type PageBlockInsertTarget,
   type PageBlockPath,
 } from "../../../services/pages/pageBlockPaths";
+import {
+  commitInlineText,
+  inlineEditableTargets,
+  resolveInlineEditTarget,
+} from "../../../services/pages/pageInlineEditContract";
 import { getPageSectionFallbackVariant } from "../../../services/pages/pageSectionTemplates";
 import { joinPageRenderClasses, PageSectionContent } from "../../../services/pages/pageRendererV2";
 import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
@@ -145,7 +166,14 @@ type BlockOption = {
 type ToolbarPanelOption = {
   panel: ToolbarPanel;
   label: string;
+  /** Hover tooltip description for the panel category icon. */
+  description: string;
   Icon: LucideIcon;
+};
+
+type ToolbarActionTooltip = {
+  label: string;
+  description: string;
 };
 
 type ToolbarDeleteTarget =
@@ -225,14 +253,105 @@ const blockOptions: BlockOption[] = pageBlockTypes.flatMap((type) =>
 );
 
 const toolbarPanelOptions: ToolbarPanelOption[] = [
-  { panel: "layout", label: "Layout", Icon: LayoutPanelTop },
-  { panel: "content", label: "Content", Icon: Type },
-  { panel: "style", label: "Style", Icon: Brush },
-  { panel: "background", label: "Background", Icon: PaintBucket },
-  { panel: "spacing", label: "Spacing", Icon: ListPlus },
-  { panel: "responsive", label: "Responsive", Icon: MonitorSmartphone },
-  { panel: "visibility", label: "Visibility", Icon: Eye },
+  {
+    panel: "layout",
+    label: "Layout",
+    description: "Variant, columns, alignment, and max width presets.",
+    Icon: LayoutPanelTop,
+  },
+  {
+    panel: "content",
+    label: "Content",
+    description: "Copy and content fields for the selected block.",
+    Icon: Type,
+  },
+  {
+    panel: "style",
+    label: "Style",
+    description: "Accent color, radius, and shadow presets.",
+    Icon: Brush,
+  },
+  {
+    panel: "background",
+    label: "Background",
+    description: "Background type, color, and image.",
+    Icon: PaintBucket,
+  },
+  {
+    panel: "spacing",
+    label: "Spacing",
+    description: "Padding and block gap presets.",
+    Icon: ListPlus,
+  },
+  {
+    panel: "responsive",
+    label: "Responsive",
+    description: "Breakpoint override state for this selection.",
+    Icon: MonitorSmartphone,
+  },
+  {
+    panel: "visibility",
+    label: "Visibility",
+    description: "Visibility, anchor, and date range scheduling.",
+    Icon: Eye,
+  },
 ];
+
+/**
+ * Hover tooltip copy for the floating-toolbar action icons. Labels double as
+ * the accessible names so tests and assistive tech read the same metadata the
+ * tooltip shows; no ad hoc `title` strings.
+ */
+const toolbarActionTooltips = {
+  drag: {
+    label: "Drag toolbar",
+    description: "Drag to reposition the toolbar over the canvas.",
+  },
+  collapse: {
+    label: "Collapse toolbar",
+    description: "Hide the panel icons and actions; the selection stays.",
+  },
+  expand: {
+    label: "Expand toolbar",
+    description: "Show the panel icons and actions again.",
+  },
+  closePanel: {
+    label: "Close panel",
+    description: "Close this panel; the toolbar stays open.",
+  },
+  moveSectionUp: {
+    label: "Move section up",
+    description: "Move the selected section one position earlier.",
+  },
+  moveSectionDown: {
+    label: "Move section down",
+    description: "Move the selected section one position later.",
+  },
+  moveBlockUp: {
+    label: "Move block up",
+    description: "Move the selected block one position earlier.",
+  },
+  moveBlockDown: {
+    label: "Move block down",
+    description: "Move the selected block one position later.",
+  },
+  duplicateSection: {
+    label: "Duplicate section",
+    description: "Insert a copy of the selected section below it.",
+  },
+  duplicateBlock: {
+    label: "Duplicate block",
+    description: "Insert a copy of the selected block after it.",
+  },
+  deleteSection: {
+    label: "Delete section",
+    description: "Remove the selected section after confirmation.",
+  },
+  deleteBlock: {
+    label: "Delete block",
+    description: "Remove the selected block after confirmation.",
+  },
+} satisfies Record<string, ToolbarActionTooltip>;
 
 const canvasDeviceFrameClassMap: Record<PageBreakpoint, string> = {
   desktop: "max-w-[1080px]",
@@ -497,6 +616,205 @@ const isEditableShortcutTarget = (target: EventTarget | null) => {
   );
 };
 
+// Enter-to-inline-edit must never hijack keyboard activation of a focused
+// interactive control (toolbar buttons, layer rows, links).
+const isInteractiveActivationTarget = (target: EventTarget | null) => {
+  if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) return false;
+  return Boolean(target.closest("button, a, [role='button'], [role='menuitem'], [role='option']"));
+};
+
+type PageEditorInlineEditTarget = {
+  blockId: string;
+  propPath: string;
+};
+
+type PageEditorInlineEditCommit = {
+  blockId: string;
+  propPath: string;
+  /** Text content of the contenteditable region at blur time. */
+  text: string;
+  /** Text the canvas painted when editing started (includes renderer fallbacks). */
+  renderedText: string;
+};
+
+/** Stable ref callback: focuses a freshly activated inline-edit region with the caret at the end. */
+const focusInlineEditableNode = (node: HTMLElement | null) => {
+  if (!node || typeof document === "undefined" || document.activeElement === node) return;
+  node.focus();
+  const selection = node.ownerDocument.defaultView?.getSelection?.();
+  if (!selection || typeof node.ownerDocument.createRange !== "function") return;
+  const range = node.ownerDocument.createRange();
+  range.selectNodeContents(node);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+};
+
+const readInlineEditableElementText = (element: HTMLElement): string => {
+  // innerText preserves line breaks typed into multiline regions in real
+  // browsers; DOM test environments without it fall back to textContent.
+  const { innerText } = element as HTMLElement & { innerText?: unknown };
+  return typeof innerText === "string" ? innerText : (element.textContent ?? "");
+};
+
+/** First contract target rendered for a block: drives Enter-to-edit on the selected block. */
+const getFirstInlineEditablePropPath = (block: PageBlockV2): string | null => {
+  for (const target of inlineEditableTargets) {
+    if (target.blockType !== block.type) continue;
+    const propPath = target.propPath.endsWith(".*")
+      ? `${target.propPath.slice(0, -1)}0`
+      : target.propPath;
+    if (resolveInlineEditTarget(block, propPath)) return propPath;
+  }
+  return null;
+};
+
+/** Locates a block path by id so inline commits survive path shifts and abort after deletion. */
+const findSectionBlockPathById = (
+  blocks: readonly PageBlockV2[],
+  blockId: string,
+  ownerPath?: PageBlockPath,
+  slotKey?: PageBlockPath[number]["slotKey"]
+): PageBlockPath | null => {
+  for (let index = 0; index < blocks.length; index += 1) {
+    const block = blocks[index]!;
+    const blockPath = (
+      ownerPath ? [...ownerPath, { slotKey, index }] : [{ index }]
+    ) as PageBlockPath;
+    if (block.id === blockId) return blockPath;
+    for (const childSlotKey of getPageBlockEditorSlotKeys(block)) {
+      const found = findSectionBlockPathById(
+        block.slots?.[childSlotKey] ?? [],
+        blockId,
+        blockPath,
+        childSlotKey
+      );
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+const readInlineTextPropValue = (block: PageBlockV2, propPath: string): string | null => {
+  const [rootKey, indexSegment] = propPath.split(".");
+  if (!rootKey) return null;
+  const value = block.props[rootKey];
+  if (indexSegment === undefined) return typeof value === "string" ? value : null;
+  if (!Array.isArray(value)) return null;
+  const item = value[Number(indexSegment)];
+  return typeof item === "string" ? item : null;
+};
+
+// Same device-scoped write path the floating-panel fields drive
+// (patchBlockPropsForDevice); list items patch the resolved array as a whole,
+// mirroring how the panel "items" field writes.
+const patchInlineTextPropForDevice = (
+  block: PageBlockV2,
+  device: PageBreakpoint,
+  resolvedBlock: PageBlockV2,
+  propPath: string,
+  nextText: string
+): PageBlockV2 => {
+  const [rootKey, indexSegment] = propPath.split(".");
+  if (!rootKey) return block;
+  if (indexSegment === undefined) {
+    return patchBlockPropsForDevice(block, device, { [rootKey]: nextText });
+  }
+  const items = resolvedBlock.props[rootKey];
+  if (!Array.isArray(items)) return block;
+  const index = Number(indexSegment);
+  if (!Number.isInteger(index) || index < 0 || index >= items.length) return block;
+  const nextItems = items.slice();
+  nextItems[index] = nextText;
+  return patchBlockPropsForDevice(block, device, { [rootKey]: nextItems });
+};
+
+const InlineEditableCanvasText = ({
+  block,
+  propPath,
+  text,
+  selected,
+  editing,
+  onStartEdit,
+  onCommit,
+}: {
+  block: PageBlockV2;
+  propPath: string;
+  text: string;
+  selected: boolean;
+  editing: boolean;
+  onStartEdit: (target: PageEditorInlineEditTarget) => void;
+  onCommit: (commit: PageEditorInlineEditCommit) => void;
+}) => {
+  const target = resolveInlineEditTarget(block, propPath);
+  // Fail closed: anything outside the inline-edit contract renders the plain
+  // text node with no contentEditable surface at all.
+  if (!target) return <>{text}</>;
+  const { multiline } = target;
+  return (
+    <span
+      // Key by painted text so a commit replaces the DOM node instead of
+      // reconciling text nodes the browser restructured while editing.
+      key={`${propPath}:${text}`}
+      ref={editing ? focusInlineEditableNode : undefined}
+      contentEditable={editing ? true : undefined}
+      suppressContentEditableWarning
+      data-page-editor-inline-edit={editing ? "active" : "idle"}
+      data-page-editor-inline-edit-prop={propPath}
+      className={
+        editing ? "cursor-text outline-none ring-1 ring-primary/60 ring-offset-2" : undefined
+      }
+      onDoubleClick={
+        editing || !selected
+          ? undefined
+          : (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onStartEdit({ blockId: block.id, propPath });
+            }
+      }
+      onClick={
+        editing
+          ? (event) => {
+              event.stopPropagation();
+            }
+          : undefined
+      }
+      onKeyDown={
+        editing
+          ? (event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                event.currentTarget.blur();
+                return;
+              }
+              if (event.key === "Enter" && !multiline) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.currentTarget.blur();
+              }
+            }
+          : undefined
+      }
+      onBlur={
+        editing
+          ? (event) => {
+              onCommit({
+                blockId: block.id,
+                propPath,
+                text: readInlineEditableElementText(event.currentTarget),
+                renderedText: text,
+              });
+            }
+          : undefined
+      }
+    >
+      {text}
+    </span>
+  );
+};
+
 const readSectionBreakpointOverride = (section: PageSectionV2, breakpoint: PageBreakpoint) =>
   breakpoint === "desktop" ? undefined : section.responsive[breakpoint];
 
@@ -606,19 +924,27 @@ const SectionCanvas = ({
   baseSection,
   selected,
   selectedBlockPath,
+  selectedBlockId,
+  inlineEditTarget,
   device,
   onSelect,
   onSelectBlock,
   onAddBlock,
+  onStartInlineEdit,
+  onCommitInlineEdit,
 }: {
   section: PageSectionV2;
   baseSection: PageSectionV2;
   selected: boolean;
   selectedBlockPath: PageBlockPath | null;
+  selectedBlockId: string | null;
+  inlineEditTarget: PageEditorInlineEditTarget | null;
   device: PageBreakpoint;
   onSelect: () => void;
   onSelectBlock: (blockPath: PageBlockPath) => void;
   onAddBlock: () => void;
+  onStartInlineEdit: (target: PageEditorInlineEditTarget) => void;
+  onCommitInlineEdit: (commit: PageEditorInlineEditCommit) => void;
 }) => {
   const sectionHasOverride = hasAnyResponsiveOverride(
     device,
@@ -684,6 +1010,21 @@ const SectionCanvas = ({
             Add the first block
           </button>
         }
+        renderInlineText={({ block, propPath, text }) => (
+          <InlineEditableCanvasText
+            block={block}
+            propPath={propPath}
+            text={text}
+            selected={block.id === selectedBlockId}
+            editing={Boolean(
+              inlineEditTarget &&
+              inlineEditTarget.blockId === block.id &&
+              inlineEditTarget.propPath === propPath
+            )}
+            onStartEdit={onStartInlineEdit}
+            onCommit={onCommitInlineEdit}
+          />
+        )}
         renderBlockFrame={({
           block,
           content,
@@ -906,6 +1247,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     () => pageDocument.sections[0]?.id ?? null
   );
   const [selectedBlockPath, setSelectedBlockPath] = useState<PageBlockPath | null>(null);
+  const [inlineEditTarget, setInlineEditTarget] = useState<PageEditorInlineEditTarget | null>(null);
   const [device, setDevice] = useState<PageBreakpoint>("desktop");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(!initialPageDetail && Boolean(pageId));
@@ -919,7 +1261,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [pendingBlockInsertTarget, setPendingBlockInsertTarget] =
     useState<PageBlockInsertTarget | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState<ToolbarPanel>("content");
+  const [activePanel, setActivePanel] = useState<ToolbarPanel | null>("content");
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [toolbarDragging, setToolbarDragging] = useState(false);
   const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
@@ -1084,6 +1426,47 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       );
     },
     [device, updateSelectedSection]
+  );
+
+  const startInlineEdit = useCallback((target: PageEditorInlineEditTarget) => {
+    setInlineEditTarget(target);
+  }, []);
+
+  const commitInlineEdit = useCallback(
+    (commit: PageEditorInlineEditCommit) => {
+      setInlineEditTarget(null);
+      // Unchanged canvas text is a strict no-op: no document write, no
+      // dirty-state churn, and renderer fallback text (e.g. "Heading" for an
+      // empty prop) is never promoted into stored props.
+      if (commit.text === commit.renderedText) return;
+      for (const section of pageDocument.sections) {
+        const blockPath = findSectionBlockPathById(section.blocks, commit.blockId);
+        if (!blockPath) continue;
+        const resolvedBlock =
+          getPageBlockAtPath(resolvePageSectionForBreakpoint(section, device), blockPath) ??
+          getPageBlockAtPath(section, blockPath);
+        if (!resolvedBlock) return;
+        const target = resolveInlineEditTarget(resolvedBlock, commit.propPath);
+        if (!target) return;
+        const previous = readInlineTextPropValue(resolvedBlock, commit.propPath);
+        if (previous === null) return;
+        const next = commitInlineText(target, previous, commit.text);
+        if (next === previous) return;
+        setDocumentDraft((current) => ({
+          ...current,
+          sections: current.sections.map((entry) =>
+            entry.id === section.id
+              ? updatePageBlockAtPath(entry, blockPath, (block) =>
+                  patchInlineTextPropForDevice(block, device, resolvedBlock, commit.propPath, next)
+                ).section
+              : entry
+          ),
+        }));
+        return;
+      }
+      // The edited block no longer exists (deleted while editing): never write.
+    },
+    [device, pageDocument, setDocumentDraft]
   );
 
   const updateSelectedSectionVariant = useCallback(
@@ -1446,6 +1829,26 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         }
         return;
       }
+      if (
+        event.key === "Enter" &&
+        !hasModifier &&
+        selectedSection &&
+        selectedBlockPath &&
+        selectedBlock &&
+        !isInteractiveActivationTarget(event.target)
+      ) {
+        const resolvedBlock =
+          getPageBlockAtPath(
+            resolvePageSectionForBreakpoint(selectedSection, device),
+            selectedBlockPath
+          ) ?? selectedBlock;
+        const firstPropPath = getFirstInlineEditablePropPath(resolvedBlock);
+        if (firstPropPath) {
+          event.preventDefault();
+          setInlineEditTarget({ blockId: selectedBlock.id, propPath: firstPropPath });
+        }
+        return;
+      }
       if ((event.key === "Delete" || event.key === "Backspace") && selectedSection) {
         event.preventDefault();
         requestDeleteSelection();
@@ -1456,6 +1859,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   }, [
     commandOpen,
     deleteSelectionTarget,
+    device,
     duplicateSelectedBlock,
     duplicateSelectedSection,
     layersOpen,
@@ -1465,6 +1869,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     revisionsOpen,
     selectSection,
     selectedBlock,
+    selectedBlockPath,
     selectedSection,
     selectedSectionId,
     settingsOpen,
@@ -1818,10 +2223,14 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                     baseSection={section}
                     selected={section.id === selectedSectionId}
                     selectedBlockPath={section.id === selectedSectionId ? selectedBlockPath : null}
+                    selectedBlockId={section.id === selectedSectionId ? selectedBlockId : null}
+                    inlineEditTarget={inlineEditTarget}
                     device={device}
                     onSelect={() => selectSection(section.id)}
                     onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
                     onAddBlock={openCommandPalette}
+                    onStartInlineEdit={startInlineEdit}
+                    onCommitInlineEdit={commitInlineEdit}
                   />
                 ))}
               </div>
@@ -1906,16 +2315,12 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             data-page-editor-toolbar-dragging={toolbarDragging ? "true" : "false"}
           >
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                title="Drag toolbar"
-                aria-label="Drag toolbar"
+              <ToolbarIconButton
+                tooltip={toolbarActionTooltips.drag}
                 onPointerDown={startToolbarDrag}
               >
                 <GripVertical className="h-4 w-4" />
-              </Button>
+              </ToolbarIconButton>
               <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
                 <PanelTop className="h-4 w-4 text-slate-400" />
                 <span className="truncate text-sm font-semibold">{toolbarSelectionLabel}</span>
@@ -1923,12 +2328,10 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                   {toolbarSelectionMeta}
                 </span>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                title={toolbarCollapsed ? "Expand toolbar" : "Collapse toolbar"}
-                aria-label={toolbarCollapsed ? "Expand toolbar" : "Collapse toolbar"}
+              <ToolbarIconButton
+                tooltip={
+                  toolbarCollapsed ? toolbarActionTooltips.expand : toolbarActionTooltips.collapse
+                }
                 onClick={() => setToolbarCollapsed((collapsed) => !collapsed)}
               >
                 {toolbarCollapsed ? (
@@ -1936,70 +2339,71 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 ) : (
                   <Minimize2 className="h-4 w-4" />
                 )}
-              </Button>
+              </ToolbarIconButton>
               {!toolbarCollapsed
-                ? toolbarPanelOptions.map(({ panel, label, Icon }) => (
-                    <Button
+                ? toolbarPanelOptions.map(({ panel, label, description, Icon }) => (
+                    <ToolbarIconButton
                       key={panel}
-                      type="button"
-                      variant={activePanel === panel ? "secondary" : "ghost"}
-                      size="icon-sm"
-                      title={`${label} panel`}
-                      aria-label={`${label} panel`}
-                      onClick={() => setActivePanel(panel)}
+                      tooltip={{ label: `${label} panel`, description }}
+                      active={activePanel === panel}
+                      expanded={activePanel === panel}
+                      panelId={panel}
+                      onClick={() =>
+                        setActivePanel((current) => (current === panel ? null : panel))
+                      }
                     >
                       <Icon className="h-4 w-4" />
-                    </Button>
+                    </ToolbarIconButton>
                   ))
                 : null}
               {!toolbarCollapsed ? (
                 <>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    title={selectedBlock ? "Move block up" : "Move section up"}
-                    aria-label={selectedBlock ? "Move block up" : "Move section up"}
+                  <ToolbarIconButton
+                    tooltip={
+                      selectedBlock
+                        ? toolbarActionTooltips.moveBlockUp
+                        : toolbarActionTooltips.moveSectionUp
+                    }
                     onClick={() =>
                       selectedBlock ? moveSelectedBlock(-1) : moveSelectedSection(-1)
                     }
                   >
                     <ArrowUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    title={selectedBlock ? "Move block down" : "Move section down"}
-                    aria-label={selectedBlock ? "Move block down" : "Move section down"}
+                  </ToolbarIconButton>
+                  <ToolbarIconButton
+                    tooltip={
+                      selectedBlock
+                        ? toolbarActionTooltips.moveBlockDown
+                        : toolbarActionTooltips.moveSectionDown
+                    }
                     onClick={() => (selectedBlock ? moveSelectedBlock(1) : moveSelectedSection(1))}
                   >
                     <ArrowDown className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    title={selectedBlock ? "Duplicate block" : "Duplicate section"}
-                    aria-label={selectedBlock ? "Duplicate block" : "Duplicate section"}
+                  </ToolbarIconButton>
+                  <ToolbarIconButton
+                    tooltip={
+                      selectedBlock
+                        ? toolbarActionTooltips.duplicateBlock
+                        : toolbarActionTooltips.duplicateSection
+                    }
                     onClick={selectedBlock ? duplicateSelectedBlock : duplicateSelectedSection}
                   >
                     <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    title={selectedBlock ? "Delete block" : "Delete section"}
-                    aria-label={selectedBlock ? "Delete block" : "Delete section"}
+                  </ToolbarIconButton>
+                  <ToolbarIconButton
+                    tooltip={
+                      selectedBlock
+                        ? toolbarActionTooltips.deleteBlock
+                        : toolbarActionTooltips.deleteSection
+                    }
                     onClick={requestDeleteSelection}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </Button>
+                  </ToolbarIconButton>
                 </>
               ) : null}
             </div>
-            {!toolbarCollapsed ? (
+            {!toolbarCollapsed && activePanel ? (
               <ToolbarSubpanel
                 panel={activePanel}
                 device={device}
@@ -2021,6 +2425,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 }}
                 onClearBlockOverride={clearSelectedBlockOverride}
                 onAddBlock={openCommandPalette}
+                onClose={() => setActivePanel(null)}
               />
             ) : null}
           </div>
@@ -2213,6 +2618,7 @@ const ToolbarSubpanel = ({
   onClearOverride,
   onClearBlockOverride,
   onAddBlock,
+  onClose,
 }: {
   panel: ToolbarPanel;
   device: PageBreakpoint;
@@ -2229,6 +2635,7 @@ const ToolbarSubpanel = ({
   onClearOverride: (path: readonly string[]) => void;
   onClearBlockOverride: (path: readonly string[]) => void;
   onAddBlock: () => void;
+  onClose: () => void;
 }) => {
   const primaryBlock = block ?? (hasBlockSelection ? undefined : section.blocks[0]);
   const primaryBaseBlock = baseBlock ?? (hasBlockSelection ? undefined : baseSection.blocks[0]);
@@ -2248,144 +2655,209 @@ const ToolbarSubpanel = ({
   const hasTargetOverride =
     hasAnyResponsiveOverride(device, sectionOverride) ||
     hasAnyResponsiveOverride(device, readBlockBreakpointOverride(primaryBaseBlock, device));
+  const panelMeta = toolbarPanelOptions.find((option) => option.panel === panel);
   return (
     <div
-      className="mt-2 rounded-lg bg-white p-3 text-slate-950"
+      className="mt-2 flex max-h-[min(72vh,calc(100dvh-8rem))] flex-col overflow-hidden rounded-lg bg-white/5 text-slate-100"
       data-page-editor-toolbar-panel={panel}
+      data-page-editor-subpanel="viewport-safe"
       role="region"
       aria-label={`${panel} toolbar panel`}
     >
-      {shouldRenderBlockControls ? (
-        <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
-          {primaryBlock
-            ? blockPanelControls.map((control) => (
-                <RegistryControlField
-                  key={control.id}
-                  block={primaryBlock}
-                  baseBlock={primaryBaseBlock}
-                  device={device}
-                  control={control}
-                  onChange={onBlockControlChange}
-                  onReset={onClearBlockOverride}
+      <div
+        className="flex shrink-0 items-start justify-between gap-2 border-b border-white/10 px-3 py-2"
+        data-page-editor-subpanel-header="true"
+      >
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">
+            {panelMeta?.label ?? panel}
+          </p>
+          {panelMeta ? (
+            <p className="truncate text-[11px] text-slate-400">{panelMeta.description}</p>
+          ) : null}
+        </div>
+        <ToolbarIconButton tooltip={toolbarActionTooltips.closePanel} onClick={onClose}>
+          <X className="h-4 w-4" />
+        </ToolbarIconButton>
+      </div>
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3"
+        data-page-editor-subpanel-scroll="true"
+      >
+        {shouldRenderBlockControls ? (
+          <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
+            {primaryBlock
+              ? blockPanelControls.map((control) => (
+                  <RegistryControlField
+                    key={control.id}
+                    block={primaryBlock}
+                    baseBlock={primaryBaseBlock}
+                    device={device}
+                    control={control}
+                    onChange={onBlockControlChange}
+                    onReset={onClearBlockOverride}
+                  />
+                ))
+              : null}
+            {panel === "content" ? (
+              <div className="flex items-end">
+                <Button type="button" variant="outline" onClick={onAddBlock}>
+                  <Plus className="h-4 w-4" />
+                  Add block
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {!shouldRenderBlockControls &&
+        (panel === "layout" ||
+          panel === "style" ||
+          panel === "background" ||
+          panel === "spacing" ||
+          panel === "visibility") ? (
+          <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
+            {sectionPanelControls.map((control) => (
+              <SectionRegistryControlField
+                key={control.id}
+                section={section}
+                baseSection={baseSection}
+                device={device}
+                control={control}
+                onChange={onSectionControlChange}
+                onReset={onClearOverride}
+              />
+            ))}
+            {sectionVariantControl ? (
+              <SectionVariantControlField
+                section={section}
+                control={sectionVariantControl}
+                onChange={onSectionVariantChange}
+              />
+            ) : null}
+            {panel === "background" ? (
+              <ResponsiveControlShell
+                device={device}
+                override={hasResponsiveOverride(device, sectionOverride, [
+                  "style",
+                  "backgroundImage",
+                ])}
+                label="Background image"
+                onReset={() => onClearOverride(["style", "backgroundImage"])}
+              >
+                <ToolbarMediaUrlField
+                  label="Background image"
+                  value={section.style.backgroundImage ?? ""}
+                  accept={["image/*"]}
+                  onChange={(backgroundImage) => onSectionStyle({ backgroundImage })}
                 />
-              ))
-            : null}
-          {panel === "content" ? (
+              </ResponsiveControlShell>
+            ) : null}
+            {panel === "visibility" ? (
+              <>
+                <SupplementalSectionField
+                  label="Anchor"
+                  value={section.visibility.anchor ?? ""}
+                  device={device}
+                  override={hasResponsiveOverride(device, sectionOverride, [
+                    "visibility",
+                    "anchor",
+                  ])}
+                  onReset={() => onClearOverride(["visibility", "anchor"])}
+                  onChange={(anchor) => onSectionVisibility({ anchor: anchor.trim() || null })}
+                />
+                <SectionDateRangeFields
+                  key={section.id}
+                  section={section}
+                  device={device}
+                  sectionOverride={sectionOverride}
+                  onClearOverride={onClearOverride}
+                  onSectionVisibility={onSectionVisibility}
+                />
+              </>
+            ) : null}
+          </div>
+        ) : null}
+        {!shouldRenderBlockControls && panel === "content" ? (
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <p className="flex items-center text-sm text-slate-400">
+              {primaryBlock ? getBlockDisplayLabel(primaryBlock) : "No block selected"}
+            </p>
             <div className="flex items-end">
               <Button type="button" variant="outline" onClick={onAddBlock}>
                 <Plus className="h-4 w-4" />
                 Add block
               </Button>
             </div>
-          ) : null}
-        </div>
-      ) : null}
-      {!shouldRenderBlockControls &&
-      (panel === "layout" ||
-        panel === "style" ||
-        panel === "background" ||
-        panel === "spacing" ||
-        panel === "visibility") ? (
-        <div className="grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
-          {sectionPanelControls.map((control) => (
-            <SectionRegistryControlField
-              key={control.id}
-              section={section}
-              baseSection={baseSection}
-              device={device}
-              control={control}
-              onChange={onSectionControlChange}
-              onReset={onClearOverride}
-            />
-          ))}
-          {sectionVariantControl ? (
-            <SectionVariantControlField
-              section={section}
-              control={sectionVariantControl}
-              onChange={onSectionVariantChange}
-            />
-          ) : null}
-          {panel === "background" ? (
-            <SupplementalSectionField
-              label="Background image"
-              value={section.style.backgroundImage ?? ""}
-              device={device}
-              override={hasResponsiveOverride(device, sectionOverride, [
-                "style",
-                "backgroundImage",
-              ])}
-              onReset={() => onClearOverride(["style", "backgroundImage"])}
-              onChange={(backgroundImage) =>
-                onSectionStyle({ backgroundImage: backgroundImage.trim() || null })
-              }
-            />
-          ) : null}
-          {panel === "visibility" ? (
-            <>
-              <SupplementalSectionField
-                label="Anchor"
-                value={section.visibility.anchor ?? ""}
-                device={device}
-                override={hasResponsiveOverride(device, sectionOverride, ["visibility", "anchor"])}
-                onReset={() => onClearOverride(["visibility", "anchor"])}
-                onChange={(anchor) => onSectionVisibility({ anchor: anchor.trim() || null })}
-              />
-              <SupplementalSectionField
-                label="Starts at"
-                value={section.visibility.startsAt ?? ""}
-                device={device}
-                override={hasResponsiveOverride(device, sectionOverride, [
-                  "visibility",
-                  "startsAt",
-                ])}
-                onReset={() => onClearOverride(["visibility", "startsAt"])}
-                onChange={(startsAt) => onSectionVisibility({ startsAt: startsAt.trim() || null })}
-              />
-              <SupplementalSectionField
-                label="Ends at"
-                value={section.visibility.endsAt ?? ""}
-                device={device}
-                override={hasResponsiveOverride(device, sectionOverride, ["visibility", "endsAt"])}
-                onReset={() => onClearOverride(["visibility", "endsAt"])}
-                onChange={(endsAt) => onSectionVisibility({ endsAt: endsAt.trim() || null })}
-              />
-            </>
-          ) : null}
-        </div>
-      ) : null}
-      {!shouldRenderBlockControls && panel === "content" ? (
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-          <p className="flex items-center text-sm text-muted-foreground">
-            {primaryBlock ? getBlockDisplayLabel(primaryBlock) : "No block selected"}
-          </p>
-          <div className="flex items-end">
-            <Button type="button" variant="outline" onClick={onAddBlock}>
-              <Plus className="h-4 w-4" />
-              Add block
-            </Button>
           </div>
-        </div>
-      ) : null}
-      {panel === "responsive" ? (
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            {device === "desktop"
-              ? "Desktop is the base cascade."
-              : `${device} edits create overrides.`}
-          </p>
-          <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-              hasTargetOverride ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-            }`}
-            data-page-editor-responsive-target-state={hasTargetOverride ? "override" : "inherited"}
-          >
-            {device === "desktop" ? "base" : hasTargetOverride ? "override" : "inherited"}
-          </span>
-        </div>
-      ) : null}
+        ) : null}
+        {panel === "responsive" ? (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-400">
+              {device === "desktop"
+                ? "Desktop is the base cascade."
+                : `${device} edits create overrides.`}
+            </p>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                hasTargetOverride ? "bg-sky-400/20 text-sky-200" : "bg-white/10 text-slate-400"
+              }`}
+              data-page-editor-responsive-target-state={
+                hasTargetOverride ? "override" : "inherited"
+              }
+            >
+              {device === "desktop" ? "base" : hasTargetOverride ? "override" : "inherited"}
+            </span>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 };
+
+/**
+ * Icon button for the dark floating toolbar. The accessible name and the
+ * hover description both come from toolbar panel/action metadata and render
+ * through the shared tooltip component instead of native `title` strings.
+ */
+const ToolbarIconButton = ({
+  tooltip,
+  active = false,
+  expanded,
+  panelId,
+  onClick,
+  onPointerDown,
+  children,
+}: {
+  tooltip: ToolbarActionTooltip;
+  active?: boolean;
+  expanded?: boolean;
+  panelId?: ToolbarPanel;
+  onClick?: () => void;
+  onPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  children: ReactNode;
+}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        type="button"
+        aria-label={tooltip.label}
+        aria-expanded={expanded}
+        data-page-editor-toolbar-icon={panelId}
+        className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${editorControlFocusClass} ${
+          active ? "bg-white/15 text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
+        }`}
+        onClick={onClick}
+        onPointerDown={onPointerDown}
+      >
+        {children}
+      </button>
+    </TooltipTrigger>
+    <TooltipContent side="top" sideOffset={8} className="max-w-[240px]">
+      <p className="text-xs font-semibold">{tooltip.label}</p>
+      <p className="text-xs opacity-80">{tooltip.description}</p>
+    </TooltipContent>
+  </Tooltip>
+);
 
 const SectionRegistryControlField = ({
   section,
@@ -2403,78 +2875,23 @@ const SectionRegistryControlField = ({
   onReset: (path: readonly string[]) => void;
 }) => {
   const value = readPathValue(section, control.path);
-  const fieldValue = fieldValueFromControlValue(control, value);
   const override = hasResponsiveOverride(
     device,
     readSectionBreakpointOverride(baseSection, device),
     control.overridePath
   );
-  const handleChange = (nextValue: string) => {
-    onChange(control, coerceControlFieldValue(control, nextValue));
-  };
-
-  if (control.input === "number") {
-    const parsed = Number(fieldValue);
-    return (
-      <ResponsiveControlShell
-        device={device}
-        override={override}
-        onReset={() => onReset(control.overridePath)}
-      >
-        <NumberField
-          label={control.label}
-          value={Number.isFinite(parsed) ? parsed : (control.clamp?.min ?? 0)}
-          min={control.clamp?.min ?? 0}
-          max={control.clamp?.max ?? 10_000}
-          onChange={(nextValue) =>
-            onChange(control, coerceControlFieldValue(control, String(nextValue)))
-          }
-        />
-      </ResponsiveControlShell>
-    );
-  }
-
-  if (control.input === "select" || control.input === "segmented") {
-    return (
-      <ResponsiveControlShell
-        device={device}
-        override={override}
-        onReset={() => onReset(control.overridePath)}
-      >
-        <SelectField
-          label={control.label}
-          value={fieldValue}
-          options={control.options ?? []}
-          onChange={handleChange}
-        />
-      </ResponsiveControlShell>
-    );
-  }
-
-  if (control.input === "switch") {
-    return (
-      <ResponsiveControlShell
-        device={device}
-        override={override}
-        onReset={() => onReset(control.overridePath)}
-      >
-        <SelectField
-          label={control.label}
-          value={fieldValue}
-          options={["yes", "no"]}
-          onChange={handleChange}
-        />
-      </ResponsiveControlShell>
-    );
-  }
-
   return (
     <ResponsiveControlShell
       device={device}
       override={override}
+      label={control.label}
       onReset={() => onReset(control.overridePath)}
     >
-      <TextField label={control.label} value={fieldValue} onChange={handleChange} />
+      <RegistryControlWidget
+        control={control}
+        rawValue={value}
+        onCommit={(nextValue) => onChange(control, nextValue)}
+      />
     </ResponsiveControlShell>
   );
 };
@@ -2491,22 +2908,37 @@ const SectionVariantControlField = ({
   const options = control.options ?? [];
   const fallback = options[0] ?? "default";
   const value = options.includes(section.variant) ? section.variant : fallback;
+  const model = resolvePageEditorControlUiModel(control);
+  const handleChange = (nextValue: string) => {
+    if (isPageSectionVariantOption(section.type, nextValue)) {
+      onChange(nextValue);
+    }
+  };
   return (
-    <div className="grid gap-1" data-page-editor-section-variant-control="base">
-      <SelectField
-        label={control.label}
-        value={value}
-        options={options}
-        onChange={(nextValue) => {
-          if (isPageSectionVariantOption(section.type, nextValue)) {
-            onChange(nextValue);
-          }
-        }}
-      />
+    <div className="grid min-w-0 gap-1" data-page-editor-section-variant-control="base">
+      {model.kind === "segmented" ? (
+        <SegmentedControl
+          label={control.label}
+          value={value}
+          options={model.options}
+          optionLabels={model.labels}
+          onChange={handleChange}
+        />
+      ) : (
+        <ToolbarSelectField
+          label={control.label}
+          value={value}
+          options={options}
+          optionLabels={model.kind === "select" ? model.labels : undefined}
+          onChange={handleChange}
+        />
+      )}
       <div className="flex min-h-6 items-center justify-between gap-2">
-        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
-          Base
-        </span>
+        <ResponsiveStateBadge
+          state="base"
+          device="desktop"
+          description="Base-only control. The section variant applies to every breakpoint."
+        />
       </div>
     </div>
   );
@@ -2527,10 +2959,70 @@ const SupplementalSectionField = ({
   onReset: () => void;
   onChange: (value: string) => void;
 }) => (
-  <ResponsiveControlShell device={device} override={override} onReset={onReset}>
-    <TextField label={label} value={value} onChange={onChange} />
+  <ResponsiveControlShell device={device} override={override} label={label} onReset={onReset}>
+    <ToolbarTextField label={label} value={value} onChange={onChange} />
   </ResponsiveControlShell>
 );
+
+/**
+ * Visibility date-range preset: a toggle gates the free-form date inputs so
+ * the panel reads as "show in date range" instead of two raw text fields.
+ * Dates are written through the existing visibility paths; turning the toggle
+ * off clears both stored values.
+ */
+const SectionDateRangeFields = ({
+  section,
+  device,
+  sectionOverride,
+  onClearOverride,
+  onSectionVisibility,
+}: {
+  section: PageSectionV2;
+  device: PageBreakpoint;
+  sectionOverride: unknown;
+  onClearOverride: (path: readonly string[]) => void;
+  onSectionVisibility: (patch: Partial<PageSectionV2["visibility"]>) => void;
+}) => {
+  const hasStoredDates = Boolean(section.visibility.startsAt || section.visibility.endsAt);
+  const [enabled, setEnabled] = useState(hasStoredDates);
+  const open = enabled || hasStoredDates;
+  return (
+    <>
+      <div className="flex items-end" data-page-editor-date-range-toggle={open ? "on" : "off"}>
+        <ToggleSwitch
+          label="Date range"
+          value={open}
+          onChange={(next) => {
+            setEnabled(next);
+            if (!next && hasStoredDates) {
+              onSectionVisibility({ startsAt: null, endsAt: null });
+            }
+          }}
+        />
+      </div>
+      {open ? (
+        <>
+          <SupplementalSectionField
+            label="Starts at"
+            value={section.visibility.startsAt ?? ""}
+            device={device}
+            override={hasResponsiveOverride(device, sectionOverride, ["visibility", "startsAt"])}
+            onReset={() => onClearOverride(["visibility", "startsAt"])}
+            onChange={(startsAt) => onSectionVisibility({ startsAt: startsAt.trim() || null })}
+          />
+          <SupplementalSectionField
+            label="Ends at"
+            value={section.visibility.endsAt ?? ""}
+            device={device}
+            override={hasResponsiveOverride(device, sectionOverride, ["visibility", "endsAt"])}
+            onReset={() => onClearOverride(["visibility", "endsAt"])}
+            onChange={(endsAt) => onSectionVisibility({ endsAt: endsAt.trim() || null })}
+          />
+        </>
+      ) : null}
+    </>
+  );
+};
 
 const RegistryControlField = ({
   block,
@@ -2548,114 +3040,372 @@ const RegistryControlField = ({
   onReset: (path: readonly string[]) => void;
 }) => {
   const value = readPathValue(block, control.path);
-  const fieldValue = fieldValueFromControlValue(control, value);
   const override = hasResponsiveOverride(
     device,
     readBlockBreakpointOverride(baseBlock, device),
     control.overridePath
   );
-  const handleChange = (nextValue: string) => {
-    onChange(control, coerceControlFieldValue(control, nextValue));
-  };
-
-  if (control.input === "number") {
-    const parsed = Number(fieldValue);
-    return (
-      <ResponsiveControlShell
-        device={device}
-        override={override}
-        onReset={() => onReset(control.overridePath)}
-      >
-        <NumberField
-          label={control.label}
-          value={Number.isFinite(parsed) ? parsed : (control.clamp?.min ?? 0)}
-          min={control.clamp?.min ?? 0}
-          max={control.clamp?.max ?? 10_000}
-          onChange={(nextValue) =>
-            onChange(control, coerceControlFieldValue(control, String(nextValue)))
-          }
-        />
-      </ResponsiveControlShell>
-    );
-  }
-
-  if (control.input === "select" || control.input === "segmented") {
-    return (
-      <ResponsiveControlShell
-        device={device}
-        override={override}
-        onReset={() => onReset(control.overridePath)}
-      >
-        <SelectField
-          label={control.label}
-          value={fieldValue}
-          options={control.options ?? []}
-          onChange={handleChange}
-        />
-      </ResponsiveControlShell>
-    );
-  }
-
-  if (control.input === "switch") {
-    return (
-      <ResponsiveControlShell
-        device={device}
-        override={override}
-        onReset={() => onReset(control.overridePath)}
-      >
-        <SelectField
-          label={control.label}
-          value={fieldValue}
-          options={["yes", "no"]}
-          onChange={handleChange}
-        />
-      </ResponsiveControlShell>
-    );
-  }
-
   return (
     <ResponsiveControlShell
       device={device}
       override={override}
+      label={control.label}
       onReset={() => onReset(control.overridePath)}
     >
-      <TextField label={control.label} value={fieldValue} onChange={handleChange} />
+      <RegistryControlWidget
+        control={control}
+        rawValue={value}
+        onCommit={(nextValue) => onChange(control, nextValue)}
+      />
     </ResponsiveControlShell>
   );
 };
 
+/** Mime accept hints for registry media controls, keyed by control id. */
+const mediaControlAccept: Record<string, readonly string[]> = {
+  "block.image.props.src": ["image/*"],
+  "block.video.props.src": ["video/*"],
+  "block.card.props.image": ["image/*"],
+};
+
+/**
+ * Maps a registry control through the pure UI-model adapter onto the dedicated
+ * floating-inspector primitives. Stored value shapes are preserved: segmented
+ * and select emit the stored option token, toggles emit booleans, sliders emit
+ * clamped numbers, swatches emit color strings, and media emits the resolved
+ * library URL (or null). Raw text inputs remain only for free-form strings.
+ */
+const RegistryControlWidget = ({
+  control,
+  rawValue,
+  onCommit,
+}: {
+  control: PageEditorControlDefinition;
+  rawValue: unknown;
+  onCommit: (value: unknown) => void;
+}) => {
+  const model = resolvePageEditorControlUiModel(control);
+  const fieldValue = fieldValueFromControlValue(control, rawValue);
+  switch (model.kind) {
+    case "segmented":
+      return (
+        <SegmentedControl
+          label={control.label}
+          value={fieldValue}
+          options={model.options}
+          optionLabels={model.labels}
+          onChange={(nextValue) => onCommit(coerceControlFieldValue(control, nextValue))}
+        />
+      );
+    case "select":
+      return (
+        <ToolbarSelectField
+          label={control.label}
+          value={fieldValue}
+          options={model.options}
+          optionLabels={model.labels}
+          onChange={(nextValue) => onCommit(coerceControlFieldValue(control, nextValue))}
+        />
+      );
+    case "toggle":
+      return (
+        <ToggleSwitch
+          label={control.label}
+          value={rawValue === true}
+          onChange={(nextValue) => onCommit(nextValue)}
+        />
+      );
+    case "slider":
+    case "sliderStepper": {
+      const parsed = Number(fieldValue);
+      const sliderValue = Number.isFinite(parsed) ? parsed : model.min;
+      const sliderProps = {
+        label: control.label,
+        value: sliderValue,
+        min: model.min,
+        max: model.max,
+        step: model.step,
+        unit: model.unit,
+        onChange: (nextValue: number) =>
+          onCommit(coerceControlFieldValue(control, String(nextValue))),
+      };
+      return model.kind === "slider" ? (
+        <SliderControl {...sliderProps} />
+      ) : (
+        <SliderStepperControl {...sliderProps} />
+      );
+    }
+    case "swatch":
+      return (
+        <ColorSwatchControl
+          label={control.label}
+          value={typeof rawValue === "string" ? rawValue : ""}
+          allowCustom={model.allowCustom}
+          allowTransparent={model.allowTransparent}
+          // "Transparent" commits the explicit cleared value (null) that the
+          // pageDocumentV2 nullable block color normalizers store.
+          onChange={(nextValue) => onCommit(nextValue)}
+        />
+      );
+    case "media":
+      return (
+        <ToolbarMediaUrlField
+          label={control.label}
+          value={typeof rawValue === "string" ? rawValue : ""}
+          accept={mediaControlAccept[control.id]}
+          onChange={(nextValue) => onCommit(nextValue)}
+        />
+      );
+    case "text":
+      return (
+        <ToolbarTextField
+          label={control.label}
+          value={fieldValue}
+          onChange={(nextValue) => onCommit(coerceControlFieldValue(control, nextValue))}
+        />
+      );
+    default:
+      return <UnsupportedControlNotice label={control.label} model={model} />;
+  }
+};
+
+const UnsupportedControlNotice = ({
+  label,
+  model,
+}: {
+  label: string;
+  model: Extract<PageEditorControlUiModel, { kind: "unsupported" }>;
+}) => (
+  <div
+    className="grid gap-1"
+    data-page-editor-control="unsupported"
+    data-page-editor-control-reason={model.reason}
+  >
+    <span className={editorControlLabelClass}>{label}</span>
+    <p className="text-xs text-slate-400">This value cannot be edited here.</p>
+  </div>
+);
+
+/**
+ * Bridges URL-valued Page v2 media fields (image/video sources, card image,
+ * section background image) onto the shared media library picker. The stored
+ * contract stays a URL string: picking a library asset resolves and writes the
+ * asset URL, never the asset id. Stored URLs that match a library asset show
+ * as that selection; other stored URLs surface as a clearable readout.
+ */
+const ToolbarMediaUrlField = ({
+  label,
+  value,
+  accept,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  accept?: readonly string[];
+  onChange: (url: string | null) => void;
+}) => {
+  const [assets, setAssets] = useState<readonly MediaRecord[] | null>(() => getCachedMedia());
+  const requestRef = useRef(0);
+  const selectedAssetId = value ? (assets?.find((asset) => asset.url === value)?.id ?? null) : null;
+
+  useEffect(() => {
+    if (!value || assets) return;
+    let active = true;
+    listMediaCached()
+      .then((items) => {
+        if (active) setAssets(items);
+      })
+      .catch(() => {
+        // The picker dialog owns media load errors; the stored value is kept.
+      });
+    return () => {
+      active = false;
+    };
+  }, [assets, value]);
+
+  const handlePickerChange = (next: unknown) => {
+    if (typeof next !== "string" || next.length === 0) {
+      onChange(null);
+      return;
+    }
+    requestRef.current += 1;
+    const requestId = requestRef.current;
+    void listMediaCached()
+      .then((items) => {
+        if (requestId !== requestRef.current) return;
+        setAssets(items);
+        const match = items.find((item) => item.id === next);
+        if (match) onChange(match.url);
+      })
+      .catch(() => {
+        // Resolution failed: never write an asset id into a URL path.
+      });
+  };
+
+  const showsExternalValue = Boolean(value) && assets !== null && !selectedAssetId;
+  return (
+    <div className="grid gap-1">
+      <MediaPickerControl
+        label={label}
+        value={selectedAssetId}
+        accept={accept ? [...accept] : undefined}
+        onChange={handlePickerChange}
+      />
+      {showsExternalValue ? (
+        <div
+          className="flex items-center justify-between gap-2 rounded-md bg-white/10 px-2 py-1"
+          data-page-editor-media-external={label}
+        >
+          <span className="truncate text-xs text-slate-300">{value}</span>
+          <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>
+            Clear
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const ToolbarTextField = ({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) => (
+  <label className={`grid gap-1 ${editorControlLabelClass}`} data-page-editor-control="text">
+    {label}
+    <input
+      className={`rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-slate-100 placeholder:text-slate-500 ${editorControlFocusClass}`}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  </label>
+);
+
+const ToolbarSelectField = ({
+  label,
+  value,
+  options,
+  optionLabels,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly string[];
+  optionLabels?: Readonly<Record<string, string>>;
+  onChange: (value: string) => void;
+}) => (
+  <label className={`grid gap-1 ${editorControlLabelClass}`} data-page-editor-control="select">
+    {label}
+    <select
+      className={`rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-slate-100 ${editorControlFocusClass}`}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {optionLabels?.[option] ?? option}
+        </option>
+      ))}
+    </select>
+  </label>
+);
+
+type ResponsiveBadgeState = "base" | "override" | "inherited";
+
+const responsiveBadgeDescription = (state: ResponsiveBadgeState, device: PageBreakpoint) => {
+  if (state === "base") {
+    return "Base value. Desktop edits apply to every breakpoint without an override.";
+  }
+  if (state === "override") {
+    return `Overridden on ${device}. This field no longer follows the desktop value.`;
+  }
+  return `Inherited from desktop. Editing on ${device} creates a ${device}-only override.`;
+};
+
+/**
+ * Inline responsive-state badge with a hover/focus tooltip explaining the
+ * Base / Override / Inherited cascade for the individual control.
+ */
+const ResponsiveStateBadge = ({
+  state,
+  device,
+  description,
+}: {
+  state: ResponsiveBadgeState;
+  device: PageBreakpoint;
+  description?: string;
+}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <span
+        tabIndex={0}
+        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${editorControlFocusClass} ${
+          state === "override" ? "bg-sky-400/20 text-sky-200" : "bg-white/10 text-slate-400"
+        }`}
+        data-page-editor-responsive-badge={state}
+      >
+        {state === "base" ? "Base" : state === "override" ? "Override" : "Inherited"}
+      </span>
+    </TooltipTrigger>
+    <TooltipContent side="top" sideOffset={6} className="max-w-[240px]">
+      {description ?? responsiveBadgeDescription(state, device)}
+    </TooltipContent>
+  </Tooltip>
+);
+
 const ResponsiveControlShell = ({
   device,
   override,
+  label,
   onReset,
   children,
 }: {
   device: PageBreakpoint;
   override: boolean;
+  /** Control label used in the reset affordance accessible name. */
+  label?: string;
   onReset: () => void;
   children: ReactNode;
-}) => (
-  <div
-    className="grid gap-1"
-    data-page-editor-responsive-field={override ? "override" : "inherited"}
-  >
-    {children}
-    <div className="flex min-h-6 items-center justify-between gap-2">
-      <span
-        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-          override ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-        }`}
-      >
-        {device === "desktop" ? "Base" : override ? "Override" : "Inherited"}
-      </span>
-      {device !== "desktop" && override ? (
-        <Button type="button" variant="ghost" size="sm" onClick={onReset}>
-          Reset
-        </Button>
-      ) : null}
+}) => {
+  const state: ResponsiveBadgeState =
+    device === "desktop" ? "base" : override ? "override" : "inherited";
+  return (
+    <div
+      // `min-w-0` keeps wide controls (segmented strips) scrolling inside the
+      // auto-fit panel grid cell instead of overlapping the neighbor column.
+      className="grid min-w-0 gap-1"
+      data-page-editor-responsive-field={override ? "override" : "inherited"}
+    >
+      {children}
+      <div className="flex min-h-6 items-center justify-between gap-2">
+        <ResponsiveStateBadge state={state} device={device} />
+        {device !== "desktop" && override ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={label ? `Reset ${label} to inherited` : "Reset to inherited"}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${editorControlFocusClass}`}
+                data-page-editor-responsive-reset={label ?? "field"}
+                onClick={onReset}
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6} className="max-w-[240px]">
+              {`Remove the ${device} override and inherit the desktop value.`}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const TextField = ({
   label,

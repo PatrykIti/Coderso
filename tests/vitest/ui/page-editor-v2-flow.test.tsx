@@ -160,6 +160,13 @@ const previewDialogState = vi.hoisted(() => ({
   },
 }));
 
+const mediaLibraryState = vi.hoisted(() => ({
+  items: [
+    { id: "asset-hero", url: "/hero.jpg", type: "image", mimeType: "image/jpeg" },
+    { id: "asset-card", url: "/card.jpg", type: "image", mimeType: "image/jpeg" },
+  ],
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     success: toastState.success,
@@ -321,6 +328,34 @@ vi.mock("@/utils/cacheBus", () => ({
   subscribeCacheEvents: pageEditorState.subscribeCacheEvents,
 }));
 
+vi.mock("@/services/mediaClient", () => ({
+  getCachedMedia: () => mediaLibraryState.items,
+  listMediaCached: async () => mediaLibraryState.items,
+}));
+
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({ value, onChange }: { value: unknown; onChange: (next: unknown) => void }) => (
+    <div
+      data-shared-media-picker="true"
+      data-media-picker-value={value == null ? "" : String(value)}
+    >
+      {mediaLibraryState.items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          data-media-picker-option={item.id}
+          onClick={() => onChange(item.id)}
+        >
+          {item.id}
+        </button>
+      ))}
+      <button type="button" data-media-picker-clear="true" onClick={() => onChange(null)}>
+        Clear media
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
   RuntimePreviewDialog: (props: {
     open: boolean;
@@ -418,8 +453,12 @@ const clickButton = (container: ParentNode, text: string) => {
   });
 };
 
-const clickButtonByTitle = (container: ParentNode, title: string) => {
-  const button = container.querySelector(`button[title="${title}"]`);
+/**
+ * Toolbar icon buttons carry their metadata label as `aria-label`; the hover
+ * description renders through the shared tooltip component, not `title`.
+ */
+const clickButtonByLabel = (container: ParentNode, label: string) => {
+  const button = container.querySelector(`button[aria-label="${label}"]`);
   expect(button).toBeTruthy();
   React.act(() => {
     button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -524,12 +563,96 @@ const findFieldControl = (container: ParentNode, labelText: string) => {
 };
 
 const findResponsiveField = (container: ParentNode, labelText: string) => {
-  const label = Array.from(container.querySelectorAll("label")).find((entry) =>
-    entry.textContent?.includes(labelText)
+  const field = Array.from(container.querySelectorAll("[data-page-editor-responsive-field]")).find(
+    (entry) =>
+      entry.querySelector(`[aria-label="${labelText}"]`) ||
+      Array.from(entry.querySelectorAll("label, span")).some(
+        (node) => node.textContent === labelText
+      )
   );
-  const field = label?.closest("[data-page-editor-responsive-field]");
   expect(field).toBeTruthy();
   return field as HTMLElement;
+};
+
+const findSegmentedGroup = (container: ParentNode, label: string) => {
+  const group = Array.from(
+    container.querySelectorAll('[data-page-editor-control="segmented"] [role="group"]')
+  ).find((entry) => entry.getAttribute("aria-label") === label);
+  expect(group).toBeTruthy();
+  return group as HTMLElement;
+};
+
+const clickSegmentedOption = (container: ParentNode, label: string, option: string) => {
+  const group = findSegmentedGroup(container, label);
+  const button = group.querySelector(`[data-page-editor-segmented-option="${option}"]`);
+  expect(button).toBeTruthy();
+  React.act(() => {
+    button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const findColorSwatchGroup = (container: ParentNode, label: string) => {
+  const group = Array.from(
+    container.querySelectorAll('[data-page-editor-control="color-swatch"] [role="group"]')
+  ).find((entry) => entry.getAttribute("aria-label") === label);
+  expect(group).toBeTruthy();
+  return group as HTMLElement;
+};
+
+const clickColorSwatch = (container: ParentNode, label: string, swatchId: string) => {
+  const swatch = findColorSwatchGroup(container, label).querySelector(
+    `[data-page-editor-color-swatch="${swatchId}"]`
+  );
+  expect(swatch).toBeTruthy();
+  React.act(() => {
+    swatch?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const setToggleField = (container: ParentNode, label: string, next: boolean) => {
+  const toggle = Array.from(container.querySelectorAll('[role="switch"]')).find(
+    (entry) => entry.getAttribute("aria-label") === label
+  );
+  expect(toggle).toBeTruthy();
+  if (toggle?.getAttribute("aria-checked") === String(next)) return;
+  React.act(() => {
+    toggle?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const setSliderField = (container: ParentNode, label: string, value: string) => {
+  const slider = container.querySelector(
+    `input[type="range"][data-page-editor-slider="${label}"]`
+  ) as HTMLInputElement | null;
+  expect(slider).toBeTruthy();
+  React.act(() => {
+    if (!slider) return;
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    valueSetter?.call(slider, value);
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    slider.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
+const commitColorHex = (container: ParentNode, label: string, hex: string) => {
+  const input = container.querySelector(
+    `input[data-page-editor-color-hex="${label}"]`
+  ) as HTMLInputElement | null;
+  expect(input).toBeTruthy();
+  React.act(() => {
+    if (!input) return;
+    input.value = hex;
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+  });
+};
+
+const selectMediaAsset = (container: ParentNode, label: string, assetId: string) => {
+  const control = container.querySelector(`[data-page-editor-media-control="${label}"]`);
+  const option = control?.querySelector(`[data-media-picker-option="${assetId}"]`);
+  expect(option).toBeTruthy();
+  React.act(() => {
+    option?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
 };
 
 const clickResponsiveReset = (container: ParentNode, labelText: string) => {
@@ -690,8 +813,8 @@ test("PageEditor adds sections and atomic blocks, stores responsive overrides, a
       mobileButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     await flush();
-    clickButtonByTitle(view.container, "Layout panel");
-    changeField(view.container, "Columns", "2");
+    clickButtonByLabel(view.container, "Layout panel");
+    clickSegmentedOption(view.container, "Columns", "2");
     await flush();
 
     clickButton(view.container, "Save");
@@ -792,14 +915,13 @@ test("PageEditor marks and resets section responsive overrides per field", async
     });
     await flush();
 
-    clickButtonByTitle(view.container, "Layout panel");
-    changeField(view.container, "Columns", "2");
-    changeField(view.container, "Max width", "900");
+    clickButtonByLabel(view.container, "Layout panel");
+    clickSegmentedOption(view.container, "Columns", "2");
+    setSliderField(view.container, "Max width", "900");
     await flush();
 
-    expect(findResponsiveField(view.container, "Columns").dataset.pageEditorResponsiveField).toBe(
-      "override"
-    );
+    const columnsField = findResponsiveField(view.container, "Columns");
+    expect(columnsField.dataset.pageEditorResponsiveField).toBe("override");
     expect(findResponsiveField(view.container, "Max width").dataset.pageEditorResponsiveField).toBe(
       "override"
     );
@@ -809,12 +931,31 @@ test("PageEditor marks and resets section responsive overrides per field", async
         ?.getAttribute("data-page-editor-responsive-target")
     ).toBe("override");
 
+    // The override badge and per-control reset affordance carry tooltip
+    // metadata and an accessible reset-to-inherited name.
+    const overrideBadge = columnsField.querySelector(
+      '[data-page-editor-responsive-badge="override"]'
+    );
+    expect(overrideBadge?.textContent).toBe("Override");
+    expect(overrideBadge?.getAttribute("data-slot")).toBe("tooltip-trigger");
+    const resetButton = columnsField.querySelector(
+      'button[aria-label="Reset Columns to inherited"]'
+    );
+    expect(resetButton?.getAttribute("data-slot")).toBe("tooltip-trigger");
+    expect(resetButton?.textContent).toContain("Reset");
+
     clickResponsiveReset(view.container, "Columns");
     await flush();
 
-    expect(findResponsiveField(view.container, "Columns").dataset.pageEditorResponsiveField).toBe(
-      "inherited"
-    );
+    const resetColumnsField = findResponsiveField(view.container, "Columns");
+    expect(resetColumnsField.dataset.pageEditorResponsiveField).toBe("inherited");
+    expect(
+      resetColumnsField.querySelector('[data-page-editor-responsive-badge="inherited"]')
+        ?.textContent
+    ).toBe("Inherited");
+    expect(
+      resetColumnsField.querySelector('button[aria-label="Reset Columns to inherited"]')
+    ).toBeNull();
     expect(findResponsiveField(view.container, "Max width").dataset.pageEditorResponsiveField).toBe(
       "override"
     );
@@ -836,9 +977,9 @@ test("PageEditor section registry controls update visible canvas style and saved
   try {
     await flush();
 
-    clickButtonByTitle(view.container, "Layout panel");
-    changeField(view.container, "Columns", "3");
-    changeField(view.container, "Justify", "between");
+    clickButtonByLabel(view.container, "Layout panel");
+    clickSegmentedOption(view.container, "Columns", "3");
+    clickSegmentedOption(view.container, "Justify", "between");
     await flush();
 
     let content = findEditorSectionContent(view.container, "sec-hero");
@@ -847,24 +988,26 @@ test("PageEditor section registry controls update visible canvas style and saved
     expect(content.className).not.toContain("md:grid-cols-3");
     expect(content.className).toContain("justify-between");
 
-    clickButtonByTitle(view.container, "Style panel");
-    changeField(view.container, "Shadow", "lg");
+    clickButtonByLabel(view.container, "Style panel");
+    clickSegmentedOption(view.container, "Shadow", "lg");
     await flush();
 
     content = findEditorSectionContent(view.container, "sec-hero");
     expect(content.style.boxShadow).toBe("0 22px 60px rgba(15, 23, 42, 0.16)");
 
-    clickButtonByTitle(view.container, "Background panel");
-    changeField(view.container, "Background type", "image");
-    changeField(view.container, "Background image", "/hero.jpg");
+    clickButtonByLabel(view.container, "Background panel");
+    clickSegmentedOption(view.container, "Background type", "image");
+    selectMediaAsset(view.container, "Background image", "asset-hero");
     await flush();
 
     content = findEditorSectionContent(view.container, "sec-hero");
     expect(content.style.backgroundImage).toContain("/hero.jpg");
 
-    clickButtonByTitle(view.container, "Visibility panel");
-    changeField(view.container, "Auth only", "yes");
+    clickButtonByLabel(view.container, "Visibility panel");
+    setToggleField(view.container, "Auth only", true);
     changeField(view.container, "Anchor", "hero-top");
+    setToggleField(view.container, "Date range", true);
+    await flush();
     changeField(view.container, "Starts at", "2026-06-10T10:00:00Z");
     changeField(view.container, "Ends at", "2026-06-11T10:00:00Z");
     await flush();
@@ -910,8 +1053,8 @@ test("PageEditor keeps universal section controls for stored non-insertable sect
   try {
     await flush();
 
-    clickButtonByTitle(view.container, "Layout panel");
-    changeField(view.container, "Justify", "between");
+    clickButtonByLabel(view.container, "Layout panel");
+    clickSegmentedOption(view.container, "Justify", "between");
     await flush();
     clickButton(view.container, "Save");
     await flush();
@@ -931,8 +1074,8 @@ test("PageEditor hidden sections render editor ghost state while saving visibili
   try {
     await flush();
 
-    clickButtonByTitle(view.container, "Visibility panel");
-    changeField(view.container, "Visible", "no");
+    clickButtonByLabel(view.container, "Visibility panel");
+    setToggleField(view.container, "Visible", false);
     await flush();
 
     const section = view.container.querySelector('[data-page-editor-section="hero"]');
@@ -962,28 +1105,28 @@ test("PageEditor block style controls update visible canvas style and saved data
     clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
     await flush();
 
-    clickButtonByTitle(view.container, "Layout panel");
-    changeField(view.container, "Width", "full");
-    changeField(view.container, "Align", "center");
+    clickButtonByLabel(view.container, "Layout panel");
+    clickSegmentedOption(view.container, "Width", "full");
+    clickSegmentedOption(view.container, "Align", "center");
     await flush();
 
-    clickButtonByTitle(view.container, "Style panel");
-    changeField(view.container, "Text color", "#123456");
-    changeField(view.container, "Opacity", "0.5");
-    changeField(view.container, "Radius", "18");
-    changeField(view.container, "Shadow", "md");
-    changeField(view.container, "Border color", "#334155");
+    clickButtonByLabel(view.container, "Style panel");
+    commitColorHex(view.container, "Text color", "#123456");
+    setSliderField(view.container, "Opacity", "0.5");
+    setSliderField(view.container, "Radius", "18");
+    clickSegmentedOption(view.container, "Shadow", "md");
+    commitColorHex(view.container, "Border color", "#334155");
     await flush();
 
-    clickButtonByTitle(view.container, "Background panel");
-    changeField(view.container, "Background type", "color");
-    changeField(view.container, "Background", "#fef3c7");
+    clickButtonByLabel(view.container, "Background panel");
+    clickSegmentedOption(view.container, "Background type", "color");
+    commitColorHex(view.container, "Background", "#fef3c7");
     await flush();
 
-    clickButtonByTitle(view.container, "Spacing panel");
-    changeField(view.container, "Padding top", "12");
-    changeField(view.container, "Padding right", "14");
-    changeField(view.container, "Margin bottom", "10");
+    clickButtonByLabel(view.container, "Spacing panel");
+    setSliderField(view.container, "Padding top", "12");
+    setSliderField(view.container, "Padding right", "14");
+    setSliderField(view.container, "Margin bottom", "10");
     await flush();
 
     const block = findEditorBlock(view.container, "blk-copy");
@@ -1021,6 +1164,97 @@ test("PageEditor block style controls update visible canvas style and saved data
   }
 });
 
+test("PageEditor wide segmented option sets scroll inside their panel cell", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // Section Layout panel: Align/Justify strips must scroll horizontally
+    // instead of widening the auto-fit grid cell over the neighbor column.
+    clickButtonByLabel(view.container, "Layout panel");
+    for (const label of ["Align", "Justify"]) {
+      const group = findSegmentedGroup(view.container, label);
+      expect(group.className, label).toContain("overflow-x-auto");
+      expect(group.className, label).toContain("flex-nowrap");
+      expect(group.className, label).toContain("snap-x");
+      const cell = group.closest("[data-page-editor-responsive-field]");
+      expect(cell?.className, label).toContain("min-w-0");
+    }
+
+    // Heading Content panel: the Level set (h1-h6) renders as the same
+    // scrollable segmented strip with every option reachable.
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    clickButtonByLabel(view.container, "Content panel");
+    const level = findSegmentedGroup(view.container, "Level");
+    expect(
+      Array.from(level.querySelectorAll("[data-page-editor-segmented-option]")).map(
+        (option) => (option as HTMLElement).dataset.pageEditorSegmentedOption
+      )
+    ).toEqual(["h1", "h2", "h3", "h4", "h5", "h6"]);
+    expect(level.className).toContain("overflow-x-auto");
+    expect(level.className).toContain("flex-nowrap");
+    expect(level.closest("[data-page-editor-responsive-field]")?.className).toContain("min-w-0");
+    for (const option of Array.from(
+      level.querySelectorAll<HTMLButtonElement>("[data-page-editor-segmented-option]")
+    )) {
+      expect(option.className).toContain("shrink-0");
+      expect(option.className).toContain("snap-start");
+    }
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor transparent swatch clears stored block colors but stays off for sections", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // Base section colors are non-nullable in pageDocumentV2, so section
+    // color controls must not offer the transparent swatch.
+    clickButtonByLabel(view.container, "Style panel");
+    expect(
+      findColorSwatchGroup(view.container, "Accent").querySelector(
+        '[data-page-editor-color-swatch="transparent"]'
+      )
+    ).toBeNull();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
+    await flush();
+    commitColorHex(view.container, "Text color", "#123456");
+    await flush();
+    expect(
+      findEditorBlock(view.container, "blk-copy").style.getPropertyValue("--coderso-block-text")
+    ).toBe("#123456");
+
+    clickColorSwatch(view.container, "Text color", "transparent");
+    await flush();
+
+    const block = findEditorBlock(view.container, "blk-copy");
+    expect(block.style.getPropertyValue("--coderso-block-text")).toBe("");
+    expect(block.style.color).toBe("");
+    expect(
+      findColorSwatchGroup(view.container, "Text color")
+        .querySelector('[data-page-editor-color-swatch="transparent"]')
+        ?.getAttribute("aria-pressed")
+    ).toBe("true");
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const savedBlock = savedDocument.sections[0]?.blocks.find((entry) => entry.id === "blk-copy");
+    // The cleared color is stored as the explicit null the normalizer keeps.
+    expect(savedBlock?.style?.textColor).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageEditor hidden blocks render selectable ghost state while saving visibility", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
@@ -1029,8 +1263,8 @@ test("PageEditor hidden blocks render selectable ghost state while saving visibi
 
     clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
     await flush();
-    clickButtonByTitle(view.container, "Visibility panel");
-    changeField(view.container, "Visible", "no");
+    clickButtonByLabel(view.container, "Visibility panel");
+    setToggleField(view.container, "Visible", false);
     await flush();
 
     const block = findEditorBlock(view.container, "blk-copy");
@@ -1277,7 +1511,7 @@ test("PageEditor inserts and edits nested layout block slots from Layers", async
       view.container.querySelector('[data-page-editor-layer-block-path="root:2"]')
     ).toBeTruthy();
 
-    clickButtonByTitle(view.container, "Add block to Column 1");
+    clickButtonByLabel(view.container, "Add block to Column 1");
     await flush();
     clickButton(view.container, "Heading");
     await flush();
@@ -1360,7 +1594,7 @@ test("PageEditor moves nested blocks between slots and duplicates sections with 
     await flush();
     clickSelector(view.container, '[data-page-editor-layer-block-path="root:0/column:1:0"]');
     await flush();
-    clickButtonByTitle(view.container, "Move selected block to Column 2");
+    clickButtonByLabel(view.container, "Move selected block to Column 2");
     await flush();
     clickButton(view.container, "Save");
     await flush();
@@ -1376,7 +1610,7 @@ test("PageEditor moves nested blocks between slots and duplicates sections with 
 
     clickSelector(view.container, '[data-page-editor-layer-section-id="sec-nested"]');
     await flush();
-    clickButtonByTitle(view.container, "Duplicate section");
+    clickButtonByLabel(view.container, "Duplicate section");
     await flush();
     clickButton(view.container, "Save");
     await flush();
@@ -1577,21 +1811,22 @@ test("PageEditor section variant control is type-scoped and base-only", async ()
     });
     await flush();
 
-    clickButtonByTitle(view.container, "Layout panel");
-    const variantField = findFieldControl(view.container, "Variant") as HTMLSelectElement;
-    expect(Array.from(variantField.options).map((option) => option.value)).toEqual([
-      "default",
-      "split",
-      "centered",
-      "full-width",
-    ]);
+    clickButtonByLabel(view.container, "Layout panel");
+    const variantControl = view.container.querySelector(
+      '[data-page-editor-section-variant-control="base"]'
+    );
+    expect(variantControl).toBeTruthy();
+    // The variant preset renders segmented pills, never a native select.
+    expect(variantControl?.querySelector("select")).toBeNull();
     expect(
-      variantField
-        .closest("[data-page-editor-section-variant-control]")
-        ?.getAttribute("data-page-editor-section-variant-control")
-    ).toBe("base");
+      Array.from(
+        variantControl?.querySelectorAll<HTMLButtonElement>(
+          "[data-page-editor-segmented-option]"
+        ) ?? []
+      ).map((button) => button.dataset.pageEditorSegmentedOption)
+    ).toEqual(["default", "split", "centered", "full-width"]);
 
-    changeField(view.container, "Variant", "split");
+    clickSegmentedOption(view.container, "Variant", "split");
     await flush();
 
     const content = findEditorSectionContent(view.container, "sec-hero");
@@ -1605,6 +1840,98 @@ test("PageEditor section variant control is type-scoped and base-only", async ()
     const savedDocument = savedPayload?.data as PageDocumentV2;
     expect(savedDocument.sections[0]?.variant).toBe("split");
     expect(savedDocument.sections[0]?.responsive.mobile).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor hero and button inspector panels render dedicated widgets with no native selects", async () => {
+  const buttonPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("hero", {
+          id: "sec-hero",
+          name: "Hero",
+          variant: "centered",
+          blocks: [
+            createPageBlockV2("button", {
+              id: "blk-button",
+              props: { label: "Go", href: "/go", target: "self", variant: "primary", size: "md" },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = buttonPage;
+  pageEditorState.currentPage = buttonPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={buttonPage} />);
+
+  try {
+    await flush();
+
+    const panelEl = () => {
+      const panel = view.container.querySelector("[data-page-editor-toolbar-panel]");
+      expect(panel).toBeTruthy();
+      return panel as HTMLElement;
+    };
+    const countWidgets = (kind: string) =>
+      panelEl().querySelectorAll(`[data-page-editor-control="${kind}"]`).length;
+
+    // Section panels (hero selected, no block selection).
+    clickButtonByLabel(view.container, "Layout panel");
+    expect(panelEl().querySelectorAll("select")).toHaveLength(0);
+    expect(panelEl().querySelectorAll('input[type="number"]')).toHaveLength(0);
+    expect(countWidgets("segmented")).toBeGreaterThan(0); // columns, align, justify, variant
+    expect(countWidgets("slider-stepper")).toBeGreaterThan(0); // max width
+
+    clickButtonByLabel(view.container, "Style panel");
+    expect(panelEl().querySelectorAll("select")).toHaveLength(0);
+    expect(panelEl().querySelectorAll('input[type="number"]')).toHaveLength(0);
+    expect(countWidgets("color-swatch")).toBeGreaterThan(0); // accent
+    expect(countWidgets("slider")).toBeGreaterThan(0); // radius
+    expect(countWidgets("segmented")).toBeGreaterThan(0); // shadow
+
+    clickButtonByLabel(view.container, "Background panel");
+    expect(panelEl().querySelectorAll("select")).toHaveLength(0);
+    expect(countWidgets("segmented")).toBeGreaterThan(0); // background type
+    expect(countWidgets("color-swatch")).toBeGreaterThan(0); // background color
+    expect(countWidgets("media")).toBeGreaterThan(0); // background image
+
+    clickButtonByLabel(view.container, "Spacing panel");
+    expect(panelEl().querySelectorAll("select")).toHaveLength(0);
+    expect(panelEl().querySelectorAll('input[type="number"]')).toHaveLength(0);
+    expect(countWidgets("slider-stepper")).toBeGreaterThan(0); // paddings, gap
+
+    clickButtonByLabel(view.container, "Visibility panel");
+    expect(panelEl().querySelectorAll("select")).toHaveLength(0);
+    expect(countWidgets("toggle")).toBeGreaterThan(0); // visible, auth only, date range
+
+    // The Responsive panel is a category shell with the breakpoint-state
+    // readout only; its control content is owned by TASK-425.
+    clickButtonByLabel(view.container, "Responsive panel");
+    expect(panelEl().querySelector("[data-page-editor-responsive-target-state]")).toBeTruthy();
+    expect(panelEl().querySelectorAll("[data-page-editor-control]")).toHaveLength(0);
+    expect(panelEl().querySelectorAll("input, select")).toHaveLength(0);
+
+    // Button block panels.
+    clickSelector(view.container, '[data-page-editor-block-id="blk-button"]');
+    await flush();
+    clickButtonByLabel(view.container, "Content panel");
+    expect(panelEl().querySelectorAll("select")).toHaveLength(0);
+    expect(countWidgets("segmented")).toBeGreaterThan(0); // target, variant, size
+    expect(countWidgets("text")).toBeGreaterThan(0); // label and href stay free-form text
+
+    clickButtonByLabel(view.container, "Style panel");
+    expect(panelEl().querySelectorAll("select")).toHaveLength(0);
+    expect(panelEl().querySelectorAll('input[type="number"]')).toHaveLength(0);
+    expect(countWidgets("color-swatch")).toBeGreaterThan(0); // text color, border color
+    expect(countWidgets("slider")).toBeGreaterThan(0); // opacity, radius
+    expect(countWidgets("segmented")).toBeGreaterThan(0); // shadow
+
+    clickButtonByLabel(view.container, "Visibility panel");
+    expect(panelEl().querySelectorAll("select")).toHaveLength(0);
+    expect(countWidgets("toggle")).toBeGreaterThan(0); // visible
   } finally {
     view.cleanup();
   }
@@ -1628,7 +1955,7 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
         ?.getAttribute("data-page-editor-toolbar-panel")
     ).toBe("content");
 
-    clickButtonByTitle(view.container, "Style panel");
+    clickButtonByLabel(view.container, "Style panel");
     await flush();
     expect(view.container.querySelectorAll("[data-page-editor-toolbar-panel]")).toHaveLength(1);
     expect(
@@ -1642,20 +1969,20 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
     toolbar = view.container.querySelector('[data-page-editor-floating-toolbar="true"]');
     expect(toolbar?.getAttribute("aria-label")).toBe("Existing page copy. tools");
 
-    clickButtonByTitle(view.container, "Collapse toolbar");
+    clickButtonByLabel(view.container, "Collapse toolbar");
     await flush();
     toolbar = view.container.querySelector('[data-page-editor-floating-toolbar="true"]');
     expect(toolbar?.getAttribute("data-page-editor-toolbar-collapsed")).toBe("true");
     expect(view.container.querySelector("[data-page-editor-toolbar-panel]")).toBeNull();
 
-    clickButtonByTitle(view.container, "Expand toolbar");
+    clickButtonByLabel(view.container, "Expand toolbar");
     await flush();
     toolbar = view.container.querySelector(
       '[data-page-editor-floating-toolbar="true"]'
     ) as HTMLElement | null;
     expect(toolbar?.getAttribute("data-page-editor-toolbar-collapsed")).toBe("false");
 
-    const dragHandle = view.container.querySelector('button[title="Drag toolbar"]');
+    const dragHandle = view.container.querySelector('button[aria-label="Drag toolbar"]');
     React.act(() => {
       dragHandle?.dispatchEvent(
         new MouseEvent("pointerdown", { bubbles: true, clientX: 20, clientY: 20 })
@@ -1685,6 +2012,113 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
         .querySelector('[data-page-editor-floating-toolbar="true"]')
         ?.getAttribute("data-page-editor-toolbar-dragging")
     ).toBe("false");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor toolbar panel icons expose metadata tooltips and toggle a single subpanel", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // Every category icon renders through the shared tooltip component with a
+    // metadata-driven accessible name; no ad hoc `title` strings remain.
+    const panelLabels = [
+      "Layout panel",
+      "Content panel",
+      "Style panel",
+      "Background panel",
+      "Spacing panel",
+      "Responsive panel",
+      "Visibility panel",
+    ];
+    for (const label of panelLabels) {
+      const button = view.container.querySelector(`button[aria-label="${label}"]`);
+      expect(button).toBeTruthy();
+      expect(button?.getAttribute("data-slot")).toBe("tooltip-trigger");
+      expect(button?.hasAttribute("title")).toBe(false);
+    }
+    for (const label of ["Drag toolbar", "Collapse toolbar", "Duplicate section"]) {
+      expect(
+        view.container.querySelector(`button[aria-label="${label}"]`)?.getAttribute("data-slot")
+      ).toBe("tooltip-trigger");
+    }
+
+    // Focus (keyboard hover) reveals the metadata description in the tooltip.
+    const layoutButton = view.container.querySelector('button[aria-label="Layout panel"]');
+    React.act(() => {
+      (layoutButton as HTMLButtonElement).focus();
+      layoutButton?.dispatchEvent(new FocusEvent("focus"));
+    });
+    await flush();
+    const tooltipContent = document.querySelector('[data-slot="tooltip-content"]');
+    expect(tooltipContent?.textContent).toContain(
+      "Variant, columns, alignment, and max width presets."
+    );
+
+    // Content opens by default and only one subpanel exists at a time.
+    expect(view.container.querySelectorAll("[data-page-editor-toolbar-panel]")).toHaveLength(1);
+    const panelExpanded = (label: string) =>
+      view.container.querySelector(`button[aria-label="${label}"]`)?.getAttribute("aria-expanded");
+    expect(panelExpanded("Content panel")).toBe("true");
+    expect(panelExpanded("Layout panel")).toBe("false");
+
+    // Clicking the active icon closes its subpanel.
+    clickButtonByLabel(view.container, "Content panel");
+    await flush();
+    expect(view.container.querySelector("[data-page-editor-toolbar-panel]")).toBeNull();
+    expect(panelExpanded("Content panel")).toBe("false");
+
+    // Clicking another icon opens exactly one subpanel for that category.
+    clickButtonByLabel(view.container, "Visibility panel");
+    await flush();
+    expect(view.container.querySelectorAll("[data-page-editor-toolbar-panel]")).toHaveLength(1);
+    expect(
+      view.container
+        .querySelector("[data-page-editor-toolbar-panel]")
+        ?.getAttribute("data-page-editor-toolbar-panel")
+    ).toBe("visibility");
+    expect(panelExpanded("Visibility panel")).toBe("true");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor subpanel stays viewport-bounded with a sticky header and close action", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickButtonByLabel(view.container, "Layout panel");
+    await flush();
+
+    const subpanel = view.container.querySelector('[data-page-editor-subpanel="viewport-safe"]');
+    expect(subpanel).toBeTruthy();
+    expect(subpanel?.className).toContain("max-h-[min(72vh,calc(100dvh-8rem))]");
+    expect(subpanel?.className).toContain("overflow-hidden");
+
+    const header = subpanel?.querySelector('[data-page-editor-subpanel-header="true"]');
+    expect(header?.className).toContain("shrink-0");
+    expect(header?.textContent).toContain("Layout");
+    expect(header?.textContent).toContain("Variant, columns, alignment, and max width presets.");
+
+    const scrollBody = subpanel?.querySelector('[data-page-editor-subpanel-scroll="true"]');
+    expect(scrollBody?.className).toContain("overflow-y-auto");
+    expect(scrollBody?.querySelectorAll("[data-page-editor-control]").length).toBeGreaterThan(0);
+
+    // The close action lives in the sticky header, outside the scroll body.
+    const closeButton = subpanel?.querySelector('button[aria-label="Close panel"]');
+    expect(closeButton).toBeTruthy();
+    expect(header?.contains(closeButton ?? null)).toBe(true);
+    expect(scrollBody?.contains(closeButton ?? null)).toBe(false);
+
+    clickButtonByLabel(view.container, "Close panel");
+    await flush();
+    expect(view.container.querySelector("[data-page-editor-toolbar-panel]")).toBeNull();
+    expect(view.container.querySelector('[data-page-editor-floating-toolbar="true"]')).toBeTruthy();
   } finally {
     view.cleanup();
   }
@@ -1812,9 +2246,9 @@ test("PageEditor selected block actions insert, move, duplicate, and delete only
     await flush();
     clickButton(view.container, "Button");
     await flush();
-    clickButtonByTitle(view.container, "Move block up");
+    clickButtonByLabel(view.container, "Move block up");
     await flush();
-    clickButtonByTitle(view.container, "Duplicate block");
+    clickButtonByLabel(view.container, "Duplicate block");
     await flush();
     clickButton(view.container, "Save");
     await flush();
@@ -1831,7 +2265,7 @@ test("PageEditor selected block actions insert, move, duplicate, and delete only
       savedDocument.sections[0]?.blocks[2]?.id
     );
 
-    clickButtonByTitle(view.container, "Delete block");
+    clickButtonByLabel(view.container, "Delete block");
     await flush();
     clickButton(view.container, "Delete block");
     await flush();
@@ -1883,9 +2317,9 @@ test("PageEditor button content edits write button props only", async () => {
 
     changeField(view.container, "Primary text", "Start now");
     changeField(view.container, "Button URL", "/start");
-    changeField(view.container, "Target", "blank");
-    changeField(view.container, "Variant", "secondary");
-    changeField(view.container, "Size", "lg");
+    clickSegmentedOption(view.container, "Target", "blank");
+    clickSegmentedOption(view.container, "Variant", "secondary");
+    clickSegmentedOption(view.container, "Size", "lg");
     await flush();
     clickButton(view.container, "Save");
     await flush();
@@ -1990,10 +2424,11 @@ test("PageEditor image controls round-trip selected block props", async () => {
   try {
     await flush();
 
-    changeField(view.container, "Source", "/hero.jpg");
+    selectMediaAsset(view.container, "Source", "asset-hero");
+    await flush();
     changeField(view.container, "Alt text", "Hero image");
     changeField(view.container, "Caption", "Hero caption");
-    changeField(view.container, "Fit", "contain");
+    clickSegmentedOption(view.container, "Fit", "contain");
     await flush();
     clickButton(view.container, "Save");
     await flush();
@@ -2038,7 +2473,7 @@ test("PageEditor list controls round-trip items and ordered mode", async () => {
     await flush();
 
     changeField(view.container, "Items", "Discovery, Build, Launch");
-    changeField(view.container, "Ordered", "yes");
+    setToggleField(view.container, "Ordered", true);
     await flush();
     clickButton(view.container, "Save");
     await flush();
@@ -2100,7 +2535,7 @@ test("PageEditor card, statistic, quote, divider, and spacer controls round-trip
     await flush();
     changeField(view.container, "Title", "Launch card");
     changeField(view.container, "Body", "Launch body");
-    changeField(view.container, "Image", "/card.jpg");
+    selectMediaAsset(view.container, "Image", "asset-card");
     changeField(view.container, "Link URL", "/card");
     await flush();
 
@@ -2119,13 +2554,13 @@ test("PageEditor card, statistic, quote, divider, and spacer controls round-trip
 
     clickSelector(view.container, '[data-page-editor-block-id="blk-divider"]');
     await flush();
-    changeField(view.container, "Tone", "accent");
-    changeField(view.container, "Thickness", "4");
+    clickSegmentedOption(view.container, "Tone", "accent");
+    setSliderField(view.container, "Thickness", "4");
     await flush();
 
     clickSelector(view.container, '[data-page-editor-block-id="blk-spacer"]');
     await flush();
-    changeField(view.container, "Size", "72");
+    setSliderField(view.container, "Size", "72");
     await flush();
 
     clickButton(view.container, "Save");
@@ -2319,6 +2754,471 @@ test("PageEditor resets legacy widget page data to an empty v2 document before s
         showInNav: true,
       },
       sections: [],
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+const findInlineEditRegion = (container: ParentNode, blockId: string, propPath: string) => {
+  const region = container.querySelector(
+    `[data-page-editor-block-id="${blockId}"] [data-page-editor-inline-edit-prop="${propPath}"]`
+  );
+  expect(region).toBeTruthy();
+  return region as HTMLElement;
+};
+
+const dblClickElement = (element: Element | null) => {
+  expect(element).toBeTruthy();
+  React.act(() => {
+    element?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+  });
+};
+
+const blurElement = (element: HTMLElement) => {
+  React.act(() => {
+    element.blur();
+  });
+};
+
+const setInlineRegionText = (element: HTMLElement, value: string) => {
+  React.act(() => {
+    element.textContent = value;
+  });
+};
+
+test("PageEditor canvas dblclick enters inline edit and typing plus blur updates the panel field", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // Without a selection, double-click stays idle: single click only selects.
+    const idleRegion = findInlineEditRegion(view.container, "blk-heading", "text");
+    expect(idleRegion.getAttribute("data-page-editor-inline-edit")).toBe("idle");
+    expect(idleRegion.getAttribute("contenteditable")).toBeNull();
+    dblClickElement(idleRegion);
+    await flush();
+    expect(
+      findInlineEditRegion(view.container, "blk-heading", "text").getAttribute(
+        "data-page-editor-inline-edit"
+      )
+    ).toBe("idle");
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-heading", "text"));
+    await flush();
+
+    const activeRegion = findInlineEditRegion(view.container, "blk-heading", "text");
+    expect(activeRegion.getAttribute("data-page-editor-inline-edit")).toBe("active");
+    expect(activeRegion.getAttribute("contenteditable")).toBe("true");
+    expect(document.activeElement).toBe(activeRegion);
+
+    setInlineRegionText(activeRegion, "Inline headline");
+    blurElement(activeRegion);
+    await flush();
+
+    // Panel and canvas re-render from the same document state: no refetch.
+    expect(findFieldControl(view.container, "Primary text").value).toBe("Inline headline");
+    expect(
+      view.container.querySelector('[data-page-editor-block-id="blk-heading"]')?.textContent
+    ).toContain("Inline headline");
+    expect(
+      findInlineEditRegion(view.container, "blk-heading", "text").getAttribute(
+        "data-page-editor-inline-edit"
+      )
+    ).toBe("idle");
+    expect(view.container.textContent).toContain("Unsaved");
+
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections[0]?.blocks[0]?.props).toMatchObject({
+      text: "Inline headline",
+      level: "h1",
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor inline edit commits on Escape and keeps the block selected", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-copy", "text"));
+    await flush();
+
+    const region = findInlineEditRegion(view.container, "blk-copy", "text");
+    setInlineRegionText(region, "Escape committed copy");
+    dispatchElementKey(region, "Escape");
+    await flush();
+
+    const committedRegion = findInlineEditRegion(view.container, "blk-copy", "text");
+    expect(committedRegion.getAttribute("data-page-editor-inline-edit")).toBe("idle");
+    expect(committedRegion.textContent).toBe("Escape committed copy");
+    expect(findFieldControl(view.container, "Primary text").value).toBe("Escape committed copy");
+
+    // Escape inside the region commits only: block stays selected, toolbar open.
+    expect(
+      view.container
+        .querySelector('[data-page-editor-block-id="blk-copy"]')
+        ?.getAttribute("data-selected")
+    ).toBe("true");
+    expect(view.container.querySelector('[data-page-editor-floating-toolbar="true"]')).toBeTruthy();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor single-line inline edit commits on Enter without inserting newlines", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-heading", "text"));
+    await flush();
+
+    const region = findInlineEditRegion(view.container, "blk-heading", "text");
+    setInlineRegionText(region, "Enter committed headline");
+    dispatchElementKey(region, "Enter");
+    await flush();
+
+    expect(
+      findInlineEditRegion(view.container, "blk-heading", "text").getAttribute(
+        "data-page-editor-inline-edit"
+      )
+    ).toBe("idle");
+
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections[0]?.blocks[0]?.props.text).toBe("Enter committed headline");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor Enter on a selected block opens inline edit on its first text target", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    dispatchDocumentKey("Enter");
+    await flush();
+
+    const region = findInlineEditRegion(view.container, "blk-heading", "text");
+    expect(region.getAttribute("data-page-editor-inline-edit")).toBe("active");
+    expect(region.getAttribute("contenteditable")).toBe("true");
+    expect(document.activeElement).toBe(region);
+
+    setInlineRegionText(region, "Keyboard entered headline");
+    blurElement(region);
+    await flush();
+    expect(findFieldControl(view.container, "Primary text").value).toBe(
+      "Keyboard entered headline"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor suppresses Delete, Backspace, and Ctrl+K hotkeys while inline editing", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-heading", "text"));
+    await flush();
+
+    const region = findInlineEditRegion(view.container, "blk-heading", "text");
+    dispatchElementKey(region, "Delete");
+    await flush();
+    expect(
+      view.container.querySelector('[role="dialog"][aria-label="Delete selected block"]')
+    ).toBeNull();
+
+    dispatchElementKey(region, "Backspace");
+    await flush();
+    expect(
+      view.container.querySelector('[role="dialog"][aria-label="Delete selected block"]')
+    ).toBeNull();
+
+    dispatchElementKey(region, "k", { ctrlKey: true });
+    await flush();
+    expect(
+      view.container.querySelector('[role="dialog"][aria-label="Command palette"]')
+    ).toBeNull();
+
+    expect(
+      findInlineEditRegion(view.container, "blk-heading", "text").getAttribute(
+        "data-page-editor-inline-edit"
+      )
+    ).toBe("active");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor never renders contentEditable for image, divider, or spacer blocks", async () => {
+  const mediaPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-media",
+          name: "Media",
+          blocks: [
+            createPageBlockV2("image", {
+              id: "blk-image",
+              props: { src: "https://cdn.test/a.jpg", alt: "Alt", caption: "Caption" },
+            }),
+            createPageBlockV2("divider", { id: "blk-divider" }),
+            createPageBlockV2("spacer", { id: "blk-spacer" }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = mediaPage;
+  pageEditorState.currentPage = mediaPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={mediaPage} />);
+
+  try {
+    await flush();
+
+    for (const blockId of ["blk-image", "blk-divider", "blk-spacer"]) {
+      clickSelector(view.container, `[data-page-editor-block-id="${blockId}"]`);
+      await flush();
+
+      const frame = findEditorBlock(view.container, blockId);
+      expect(frame.querySelector("[contenteditable]")).toBeNull();
+      expect(frame.querySelector("[data-page-editor-inline-edit]")).toBeNull();
+
+      dispatchDocumentKey("Enter");
+      await flush();
+      expect(view.container.querySelector('[data-page-editor-inline-edit="active"]')).toBeNull();
+      expect(view.container.querySelector("[contenteditable='true']")).toBeNull();
+    }
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor inline edit blur without changes is a no-op for dirty state", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-heading", "text"));
+    await flush();
+
+    const region = findInlineEditRegion(view.container, "blk-heading", "text");
+    blurElement(region);
+    await flush();
+
+    expect(
+      findInlineEditRegion(view.container, "blk-heading", "text").getAttribute(
+        "data-page-editor-inline-edit"
+      )
+    ).toBe("idle");
+    expect(view.container.textContent).not.toContain("Unsaved");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor inline edit commits sanitized plain text and never writes markup", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-copy", "text"));
+    await flush();
+
+    const region = findInlineEditRegion(view.container, "blk-copy", "text");
+    React.act(() => {
+      region.innerHTML = "Pasted <b>rich</b> content";
+    });
+    blurElement(region);
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const committed = savedDocument.sections[0]?.blocks[1]?.props.text;
+    expect(committed).toBe("Pasted rich content");
+    expect(String(committed)).not.toContain("<");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor inline edit commit follows moved blocks by id and skips deleted blocks", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-copy", "text"));
+    await flush();
+
+    const region = findInlineEditRegion(view.container, "blk-copy", "text");
+    setInlineRegionText(region, "Moved inline copy");
+    // Programmatic click does not blur, so the block moves while still editing.
+    clickButtonByLabel(view.container, "Move block up");
+    await flush();
+
+    const movedRegion = findInlineEditRegion(view.container, "blk-copy", "text");
+    expect(movedRegion.getAttribute("data-page-editor-inline-edit")).toBe("active");
+    blurElement(movedRegion);
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+    let savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    let savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections[0]?.blocks[0]?.id).toBe("blk-copy");
+    expect(savedDocument.sections[0]?.blocks[0]?.props.text).toBe("Moved inline copy");
+    expect(savedDocument.sections[0]?.blocks[1]?.props.text).toBe("Welcome to Coderso");
+
+    // Delete the heading while an inline edit on it is still open: the commit
+    // path must fail closed on the missing block id and never write.
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-heading", "text"));
+    await flush();
+    const headingRegion = findInlineEditRegion(view.container, "blk-heading", "text");
+    setInlineRegionText(headingRegion, "Half typed heading");
+    clickButtonByLabel(view.container, "Delete block");
+    await flush();
+    clickButton(view.container, "Delete block");
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+    savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections[0]?.blocks.map((block) => block.id)).toEqual(["blk-copy"]);
+    expect(JSON.stringify(savedDocument)).not.toContain("Half typed heading");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor inline edits write device-scoped overrides off desktop", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    const mobileButton = view.container.querySelector('button[aria-label="Mobile"]');
+    React.act(() => {
+      mobileButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-heading", "text"));
+    await flush();
+
+    const region = findInlineEditRegion(view.container, "blk-heading", "text");
+    setInlineRegionText(region, "Mobile inline headline");
+    blurElement(region);
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const heading = savedDocument.sections[0]?.blocks[0];
+    expect(heading?.props).toMatchObject({ text: "Welcome to Coderso", level: "h1" });
+    expect(heading?.responsive?.mobile?.props).toEqual({ text: "Mobile inline headline" });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor inline edits list items and statistic fields through their prop paths", async () => {
+  const richPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-rich",
+          name: "Rich",
+          blocks: [
+            createPageBlockV2("list", {
+              id: "blk-list",
+              props: { items: ["First", "Second"], ordered: false },
+            }),
+            createPageBlockV2("statistic", {
+              id: "blk-stat",
+              props: { value: "42", label: "Answers", caption: "" },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = richPage;
+  pageEditorState.currentPage = richPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={richPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-list"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-list", "items.1"));
+    await flush();
+    const itemRegion = findInlineEditRegion(view.container, "blk-list", "items.1");
+    expect(itemRegion.getAttribute("data-page-editor-inline-edit")).toBe("active");
+    setInlineRegionText(itemRegion, "Second updated");
+    blurElement(itemRegion);
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-stat"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-stat", "value"));
+    await flush();
+    const valueRegion = findInlineEditRegion(view.container, "blk-stat", "value");
+    setInlineRegionText(valueRegion, "1337");
+    blurElement(valueRegion);
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections[0]?.blocks[0]?.props.items).toEqual(["First", "Second updated"]);
+    expect(savedDocument.sections[0]?.blocks[1]?.props).toMatchObject({
+      value: "1337",
+      label: "Answers",
     });
   } finally {
     view.cleanup();

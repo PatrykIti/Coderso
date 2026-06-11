@@ -319,6 +319,61 @@ const insertablePageBlockTypes = pageBlockTypes.filter(
   (type): type is PageBlockType => pageBlockCapabilities[type].insertable
 );
 
+const responsivePageData = (token: string, responsive: Record<string, unknown>) => ({
+  schemaVersion: 2,
+  breakpoints: ["desktop", "tablet", "mobile"],
+  sections: [
+    {
+      id: `sec-responsive-${token}`,
+      type: "content",
+      name: "Responsive Runtime",
+      variant: "default",
+      layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+      spacing: {
+        paddingTop: 48,
+        paddingBottom: 48,
+        paddingLeft: 32,
+        paddingRight: 32,
+        gap: 24,
+      },
+      visibility: {
+        visible: true,
+        authOnly: false,
+        anchor: "responsive-runtime",
+        startsAt: null,
+        endsAt: null,
+      },
+      responsive,
+      blocks: [
+        {
+          id: `responsive-heading-${token}`,
+          type: "heading",
+          props: { text: `Responsive runtime ${token}`, level: "h2", align: "left" },
+          visibility: { visible: true },
+        },
+      ],
+    },
+  ],
+  settings: {
+    template: "page-v2",
+    showInNav: true,
+  },
+  seo: {
+    description: `Responsive runtime ${token}`,
+  },
+});
+
+const responsiveSectionContentSelector = (token: string) =>
+  `[data-section-id="sec-responsive-${token}"] > [data-page-section-content="true"]`;
+
 const runtimeParityPageData = (token: string) => ({
   schemaVersion: 2,
   breakpoints: ["desktop", "tablet", "mobile"],
@@ -1185,6 +1240,108 @@ testIfDb(
     expect(pageResponse.status).toBe(200);
     expect(await pageResponse.text()).toContain(fixture.publishedHeadline);
   }
+);
+
+testIfDbWithOptions(
+  "public page runtime emits scoped responsive media rules inside cached HTML while preview stays flattened",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 60);
+    await setTestSetting("site.contentRoutes", []);
+    await setTestSetting("site.previewEnabled", true);
+
+    const actor = await createActor();
+    const token = randomUUID().slice(0, 8);
+    const slug = `/runtime-responsive-${token}`;
+    const data = responsivePageData(token, {
+      tablet: { layout: { maxWidth: 640 } },
+      mobile: { layout: { maxWidth: 360 } },
+    });
+    const created = await createPage({
+      title: `Runtime Responsive ${token}`,
+      slug,
+      authorId: actor.id,
+      data,
+    });
+    trackPage(created?.id);
+    if (!created?.id) throw new Error("missing_responsive_page");
+    await publishPage(created.id, actor.id, data);
+
+    const publicResponse = await requestPublicPath(slug);
+    expect(publicResponse.status).toBe(200);
+    const publicHtml = await publicResponse.text();
+
+    // Base markup stays desktop-resolved.
+    expect(publicHtml).toContain("max-width:1080px");
+    // Dedicated responsive style element with both scoped @media blocks.
+    expect(publicHtml).toContain('<style data-page-responsive="true">');
+    expect(publicHtml).toContain("@media (min-width: 640px) and (max-width: 1023px){");
+    expect(publicHtml).toContain(
+      `${responsiveSectionContentSelector(token)}{max-width:640px !important}`
+    );
+    expect(publicHtml).toContain("@media (max-width: 639px){");
+    expect(publicHtml).toContain(
+      `${responsiveSectionContentSelector(token)}{max-width:360px !important}`
+    );
+
+    // The CSS lives inside the cached page HTML: one device-agnostic entry.
+    expect(getSiteCacheStats().size).toBe(1);
+    const cachedResponse = await requestPublicPath(slug);
+    expect(cachedResponse.status).toBe(200);
+    expect(await cachedResponse.text()).toBe(publicHtml);
+    expect(getSiteCacheStats().size).toBe(1);
+
+    // Explicit previewDevice keeps flattened single-breakpoint semantics.
+    const { token: previewToken } = await createPreviewToken({
+      targetType: "page",
+      targetId: created.id,
+      ttlMinutes: 5,
+    });
+    const previewResponse = await requestPublicPath(
+      `/preview?type=page&token=${encodeURIComponent(previewToken)}&device=mobile`
+    );
+    expect(previewResponse.status).toBe(200);
+    const previewHtml = await previewResponse.text();
+    expect(previewHtml).toContain("Preview mode");
+    expect(previewHtml).not.toContain("data-page-responsive");
+    expect(previewHtml).not.toContain("@media (max-width: 639px)");
+    // The mobile override is flattened into the markup instead.
+    expect(previewHtml).toContain("max-width:360px");
+    expect(previewHtml).not.toContain("max-width:1080px");
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "public page runtime emits no responsive style element for override-free documents",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const actor = await createActor();
+    const token = randomUUID().slice(0, 8);
+    const slug = `/runtime-static-${token}`;
+    const data = responsivePageData(token, {});
+    const created = await createPage({
+      title: `Runtime Static ${token}`,
+      slug,
+      authorId: actor.id,
+      data,
+    });
+    trackPage(created?.id);
+    if (!created?.id) throw new Error("missing_static_page");
+    await publishPage(created.id, actor.id, data);
+
+    const response = await requestPublicPath(slug);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain(`Responsive runtime ${token}`);
+    expect(html).not.toContain("data-page-responsive");
+    expect(html).not.toContain("@media (min-width: 640px) and (max-width: 1023px)");
+    expect(html).not.toContain("@media (max-width: 639px)");
+  },
+  { timeout: dbRuntimeTimeout }
 );
 
 testIfDbWithOptions(

@@ -79,8 +79,8 @@ Task board for project work. Keep task files and this board in sync.
   exists or the family changelog records that leaf.
 
 - **To Do:** 154 tasks
-- **In Progress:** 8 tasks
-- **Done:** 2373 tasks
+- **In Progress:** 9 tasks
+- **Done:** 2372 tasks
 
 ---
 
@@ -248,7 +248,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-442 | List Block Audit Remediation | High | Medium | In progress: 442-01 is done (2026-06-11) and persistence pins landed; 442-01-L01 surface adoption is gated on TASK-421/TASK-422. |
+| TASK-442 | List Block Audit Remediation | High | Medium | In progress: 442-01 reproduction and persistence evidence landed (2026-06-11), while 442-01-L01 surface adoption remains gated on TASK-421/TASK-422. |
+| TASK-442-01 | List Contract And Audit Freeze | High | Medium | In progress: reproduction and schema pins landed (2026-06-11), but direct child 442-01-L01 remains open for the gated ordered-toggle and inline-items surface work. |
 | TASK-442-01-L01 | Empty List Persistence Ordered Toggle And Shared Editing Surface | High | Medium | In progress: schema pins and the shared dropper fix landed (2026-06-11); ordered-toggle adoption and inline items registration remain gated on TASK-421/TASK-422. |
 | TASK-449 | Columns Block Audit Remediation | High | Medium | In progress: reproduction and fix (449-01/-02 with leaves) are done (2026-06-11); the 449-03 closure sweep remains blocked on TASK-421 and TASK-423. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
@@ -262,7 +263,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-442-01 | List Contract And Audit Freeze | High | Medium | Done (2026-06-11): empty-list prune not reproducible at HEAD; shared dropper fixed via TASK-449-02; list schema pins landed in the round-trip suite. |
 | TASK-449-01 | Columns Round-Trip Reproduction And Contract Freeze | High | Medium | Done (2026-06-11): live reproduction proved the columns-specific drop is not reproducible at HEAD and recorded the real block-agnostic stale-cache rehydration dropper as the TASK-449-02 fix target. |
 | TASK-449-01-L01 | Reproduce Columns Save Drop Across Write Read And Publish | High | Medium | Done (2026-06-11): captured-payload reproduction across insert/autosave/save/store/reopen/publish; dropper localized to the pageDetail cache-event rehydration path (PageEditor.tsx:1520-1532). |
 | TASK-449-02 | Columns Persistence And Slot Round-Trip Implementation | High | Large | Done (2026-06-11): monotonic updatedAt freshness guard landed in the PageEditor cache rehydration; stale/equal/unparsable broadcasts no longer wipe the document; live playwright-cli verification passed. |
