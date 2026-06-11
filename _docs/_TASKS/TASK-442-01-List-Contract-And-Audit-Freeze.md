@@ -6,8 +6,9 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -30,7 +31,7 @@ the persistence fix in TASK-442-01-L01.
 
 ## Sub-Tasks
 
-- [ ] TASK-442-01-L01: Empty-list persistence, ordered toggle, and shared
+- [x] TASK-442-01-L01: Empty-list persistence, ordered toggle, and shared
       editing surface.
 
 ---
@@ -65,3 +66,7 @@ list round-trips) landed in
 TASK-442-01-L01 scope (ordered-toggle adoption, inline items registration) is
 gated on TASK-421/TASK-422, so TASK-442-01 remains open for task-graph
 consistency until that direct child is closed or explicitly superseded.
+
+## Re-Closure Note
+
+Re-closed 2026-06-11: this subtask was deliberately reopened during the owner review while TASK-442-01-L01 was still gated on TASK-421/422. TASK-442-01-L01 completed in Phase 2 (changelog 1163), so the contract-freeze subtask is terminal again. Changelog coverage: 1161 (original closure) + 1164 (re-closure correction).

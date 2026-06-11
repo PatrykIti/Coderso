@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 109 tasks
-- **In Progress:** 6 tasks
-- **Done:** 2420 tasks
+- **To Do:** 107 tasks
+- **In Progress:** 5 tasks
+- **Done:** 2422 tasks
 
 ---
 
@@ -152,7 +152,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-441-01 | Video Contract And Audit Freeze | Medium | Medium | Freeze the Video remediation contract around the shared media-picker path and dedicated toggle controls. |
 | TASK-441-01-L01 | Video Media Picker Toggle Controls And Runtime Guard | Medium | Medium | Replace raw source entry and yes/no selects with the shared media-picker and toggle control surfaces. |
 | TASK-441-02 | Video Validation Docs And Closure | Medium | Medium | Close the Video family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-442-02 | List Validation Docs And Closure | High | Medium | Close the List family with targeted validation, live proof for empty and populated lists, and docs/board/changelog sync. |
 | TASK-443 | Card Block Audit Remediation | Medium | Medium | Replace raw card-image URL entry with the shared media path and close shared control drift. |
 | TASK-443-01 | Card Contract And Audit Freeze | Medium | Medium | Freeze the Card remediation contract around the move from raw image URL entry to the shared media-picker path. |
 | TASK-443-01-L01 | Card Media Picker And Dedicated Controls | Medium | Medium | Replace raw Card image URL entry with the shared media-picker path and adopt the dedicated controls. |
@@ -193,7 +192,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
-| TASK-105-11-03-05 | Server Cluster Bun Ownership Freeze | Medium | Medium | Document and freeze remaining `tests/unit/server/*` Bun ownership so future migrations do not reopen runner ambiguity |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -203,7 +201,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-442-01 | List Contract And Audit Freeze | High | Medium | In progress: reproduction and schema pins landed (2026-06-11), but direct child 442-01-L01 remains open for the gated ordered-toggle and inline-items surface work. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -215,6 +212,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-442-02 | List Validation Docs And Closure | High | Medium | Done (2026-06-11): family validation/docs closure executed with Phase 0-2 evidence (live flows, schema pins, flow suite); changelog 1161/1163/1164. |
+| TASK-442-01 | List Contract And Audit Freeze | High | Medium | Done (2026-06-11): contract freeze + live reproduction closed in Phase 0; re-closed after the owner-review reopen once TASK-442-01-L01 completed in Phase 2. |
 | TASK-420 | Page Templates Surface Rewrite | Medium | Large | Done (2026-06-11): Page Templates surface on Page v2 (schema/service/routes/cache/UI reusing the shared editor) replaced the obsolete widget-template path; migration 0058; live author->preview->publish->insert proof. |
 | TASK-420-01 | Audit Reusable Template IA And Usage | Medium | Medium | Done (2026-06-11): DELETE/REWRITE/KEEP inventory of the obsolete surface. |
 | TASK-420-02 | Page Template Storage Preview And Replacement Contract | Medium | Large | Done (2026-06-11): frozen storage/preview/replacement contract in PAGE_MODEL.md, verified against landed owners. |

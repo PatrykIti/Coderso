@@ -168,7 +168,7 @@ Regression-test shape:
 
 ## Progress Notes
 
-TASK-449-01/-01-L01 (reproduction) and TASK-449-02/-02-L01 (fix + guard) are Done (2026-06-11); TASK-449-03 closure sweep remains blocked on TASK-421 (dedicated controls) and TASK-423 (responsive runtime).
+TASK-449-01/-01-L01 (reproduction) and TASK-449-02/-02-L01 (fix + guard) are Done (2026-06-11); TASK-449-03 closure sweep was blocked on TASK-421/TASK-423 at the time of this note; both landed in Phase 1 and the sweep completed 2026-06-11 (see Family Completion below).
 
 ## Family Completion
 
