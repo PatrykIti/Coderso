@@ -1072,14 +1072,17 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
       key: "pages.openAfterCreate",
       value: false,
     });
+    // New pages scaffold an empty Page v2 document (sections model), not the
+    // legacy blocks array.
     expect(pagePostState.createPageCalls).toEqual([
       {
         title: "Support",
         slug: "/support",
         template: "landing",
         data: {
-          blocks: [],
-          settings: { template: "landing" },
+          schemaVersion: 2,
+          sections: [],
+          settings: { template: "landing", showInNav: true },
         },
       },
     ]);

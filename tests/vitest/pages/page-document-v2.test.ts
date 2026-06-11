@@ -148,68 +148,82 @@ describe("PageDocumentV2", () => {
     expect("blocks" in normalized).toBe(false);
   });
 
-  test("exposes a JSON schema that accepts v2 and rejects v1 blocks payloads", () => {
-    const ajv = new Ajv({ allErrors: true, strict: true });
-    const validate = ajv.compile(pageDocumentV2JsonSchema);
+  // Ajv compilation of the recursive document schema takes seconds under
+  // parallel suite load, so the schema tests carry an explicit timeout.
+  const AJV_COMPILE_TEST_TIMEOUT_MS = 30_000;
 
-    expect(validate(buildDocument())).toBe(true);
-    expect(validate({ blocks: [] })).toBe(false);
-    expect(validate({ schemaVersion: 2, sections: [], extra: true })).toBe(false);
-  });
+  test(
+    "exposes a JSON schema that accepts v2 and rejects v1 blocks payloads",
+    { timeout: AJV_COMPILE_TEST_TIMEOUT_MS },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
 
-  test("keeps JSON schema parity for strict block props, style, and responsive fields", () => {
-    const ajv = new Ajv({ allErrors: true, strict: true });
-    const validate = ajv.compile(pageDocumentV2JsonSchema);
+      expect(validate(buildDocument())).toBe(true);
+      expect(validate({ blocks: [] })).toBe(false);
+      expect(validate({ schemaVersion: 2, sections: [], extra: true })).toBe(false);
+    }
+  );
 
-    const unknownBlockProp = buildDocument();
-    unknownBlockProp.sections[0]!.blocks[0]!.props = {
-      ...unknownBlockProp.sections[0]!.blocks[0]!.props,
-      trackingPixel: "nope",
-    };
-    expect(validate(unknownBlockProp)).toBe(false);
+  test(
+    "keeps JSON schema parity for strict block props, style, and responsive fields",
+    {
+      timeout: AJV_COMPILE_TEST_TIMEOUT_MS,
+    },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
 
-    const unknownBlockStyle = buildDocument();
-    unknownBlockStyle.sections[0]!.blocks[0]!.style = {
-      align: "center",
-      debugBorder: "nope",
-    } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
-    expect(validate(unknownBlockStyle)).toBe(false);
+      const unknownBlockProp = buildDocument();
+      unknownBlockProp.sections[0]!.blocks[0]!.props = {
+        ...unknownBlockProp.sections[0]!.blocks[0]!.props,
+        trackingPixel: "nope",
+      };
+      expect(validate(unknownBlockProp)).toBe(false);
 
-    const unknownBlockResponsive = buildDocument();
-    unknownBlockResponsive.sections[0]!.blocks[0]!.responsive = {
-      mobile: {
-        props: { text: "Mobile", trackingPixel: "nope" },
-      },
-    };
-    expect(validate(unknownBlockResponsive)).toBe(false);
+      const unknownBlockStyle = buildDocument();
+      unknownBlockStyle.sections[0]!.blocks[0]!.style = {
+        align: "center",
+        debugBorder: "nope",
+      } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+      expect(validate(unknownBlockStyle)).toBe(false);
 
-    const unknownSectionResponsive = buildDocument();
-    unknownSectionResponsive.sections[0]!.responsive = {
-      mobile: {
-        layout: { columns: 1 },
-        debug: true,
-      } as PageDocumentV2["sections"][number]["responsive"]["mobile"],
-    };
-    expect(validate(unknownSectionResponsive)).toBe(false);
+      const unknownBlockResponsive = buildDocument();
+      unknownBlockResponsive.sections[0]!.blocks[0]!.responsive = {
+        mobile: {
+          props: { text: "Mobile", trackingPixel: "nope" },
+        },
+      };
+      expect(validate(unknownBlockResponsive)).toBe(false);
 
-    const invalidBlockPropEnum = buildDocument();
-    invalidBlockPropEnum.sections[0]!.blocks[0] = {
-      id: "blk_image",
-      type: "image",
-      props: { src: "/hero.jpg", alt: "Hero", caption: "", fit: "stretch" },
-      visibility: { visible: true },
-    };
-    expect(validate(invalidBlockPropEnum)).toBe(false);
+      const unknownSectionResponsive = buildDocument();
+      unknownSectionResponsive.sections[0]!.responsive = {
+        mobile: {
+          layout: { columns: 1 },
+          debug: true,
+        } as PageDocumentV2["sections"][number]["responsive"]["mobile"],
+      };
+      expect(validate(unknownSectionResponsive)).toBe(false);
 
-    const invalidBlockPropNumber = buildDocument();
-    invalidBlockPropNumber.sections[0]!.blocks[0] = {
-      id: "blk_divider",
-      type: "divider",
-      props: { tone: "neutral", thickness: 99 },
-      visibility: { visible: true },
-    };
-    expect(validate(invalidBlockPropNumber)).toBe(false);
-  });
+      const invalidBlockPropEnum = buildDocument();
+      invalidBlockPropEnum.sections[0]!.blocks[0] = {
+        id: "blk_image",
+        type: "image",
+        props: { src: "/hero.jpg", alt: "Hero", caption: "", fit: "stretch" },
+        visibility: { visible: true },
+      };
+      expect(validate(invalidBlockPropEnum)).toBe(false);
+
+      const invalidBlockPropNumber = buildDocument();
+      invalidBlockPropNumber.sections[0]!.blocks[0] = {
+        id: "blk_divider",
+        type: "divider",
+        props: { tone: "neutral", thickness: 99 },
+        visibility: { visible: true },
+      };
+      expect(validate(invalidBlockPropNumber)).toBe(false);
+    }
+  );
 
   test("rejects unknown root, section, block, and block prop fields on fresh writes", () => {
     expect(() =>
@@ -650,105 +664,111 @@ describe("PageDocumentV2", () => {
     expect(depthFour?.slots).toBeUndefined();
   });
 
-  test("JSON schema validates bounded recursive slots without permissive nested fields", () => {
-    const ajv = new Ajv({ allErrors: true, strict: true });
-    const validate = ajv.compile(pageDocumentV2JsonSchema);
-    const document = buildDocument();
-    document.sections[0]!.blocks = [
-      {
-        id: "blk_container",
-        type: "container",
-        props: {},
-        visibility: { visible: true },
-        slots: {
-          children: [
-            {
-              id: "blk_columns",
-              type: "columns",
-              props: { count: 2, gap: 24, distribution: "equal" },
-              visibility: { visible: true },
-              slots: {
-                "column:1": [createHeadingBlock("blk_nested_heading")],
-                "column:2": [],
+  test(
+    "JSON schema validates bounded recursive slots without permissive nested fields",
+    {
+      timeout: AJV_COMPILE_TEST_TIMEOUT_MS,
+    },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      const document = buildDocument();
+      document.sections[0]!.blocks = [
+        {
+          id: "blk_container",
+          type: "container",
+          props: {},
+          visibility: { visible: true },
+          slots: {
+            children: [
+              {
+                id: "blk_columns",
+                type: "columns",
+                props: { count: 2, gap: 24, distribution: "equal" },
+                visibility: { visible: true },
+                slots: {
+                  "column:1": [createHeadingBlock("blk_nested_heading")],
+                  "column:2": [],
+                },
               },
-            },
-          ],
+            ],
+          },
         },
-      },
-    ];
+      ];
 
-    expect(validate(document)).toBe(true);
+      expect(validate(document)).toBe(true);
 
-    const unknownSlot = cloneDocument(document);
-    unknownSlot.sections[0]!.blocks[0]!.slots = {
-      ...unknownSlot.sections[0]!.blocks[0]!.slots,
-      header: [createHeadingBlock("blk_header")],
-    } as PageDocumentV2["sections"][number]["blocks"][number]["slots"];
-    expect(validate(unknownSlot)).toBe(false);
+      const unknownSlot = cloneDocument(document);
+      unknownSlot.sections[0]!.blocks[0]!.slots = {
+        ...unknownSlot.sections[0]!.blocks[0]!.slots,
+        header: [createHeadingBlock("blk_header")],
+      } as PageDocumentV2["sections"][number]["blocks"][number]["slots"];
+      expect(validate(unknownSlot)).toBe(false);
 
-    const slotsOnAtom = cloneDocument(document);
-    slotsOnAtom.sections[0]!.blocks[0]!.slots!.children![0]!.slots!["column:1"]![0] = {
-      ...createHeadingBlock("blk_atom_slots"),
-      slots: { children: [createHeadingBlock("blk_atom_child")] },
-    } as PageDocumentV2["sections"][number]["blocks"][number];
-    expect(validate(slotsOnAtom)).toBe(false);
+      const slotsOnAtom = cloneDocument(document);
+      slotsOnAtom.sections[0]!.blocks[0]!.slots!.children![0]!.slots!["column:1"]![0] = {
+        ...createHeadingBlock("blk_atom_slots"),
+        slots: { children: [createHeadingBlock("blk_atom_child")] },
+      } as PageDocumentV2["sections"][number]["blocks"][number];
+      expect(validate(slotsOnAtom)).toBe(false);
 
-    const nestedUnknown = cloneDocument(document);
-    nestedUnknown.sections[0]!.blocks[0]!.slots!.children![0]!.slots!["column:1"]![0] = {
-      ...createHeadingBlock("blk_unknown_nested"),
-      debug: true,
-    } as PageDocumentV2["sections"][number]["blocks"][number];
-    expect(validate(nestedUnknown)).toBe(false);
+      const nestedUnknown = cloneDocument(document);
+      nestedUnknown.sections[0]!.blocks[0]!.slots!.children![0]!.slots!["column:1"]![0] = {
+        ...createHeadingBlock("blk_unknown_nested"),
+        debug: true,
+      } as PageDocumentV2["sections"][number]["blocks"][number];
+      expect(validate(nestedUnknown)).toBe(false);
 
-    const tooManyChildren = cloneDocument(document);
-    tooManyChildren.sections[0]!.blocks[0]!.slots!.children = Array.from(
-      { length: PAGE_BLOCK_MAX_CHILDREN_PER_SLOT + 1 },
-      (_, index) => createHeadingBlock(`blk_many_${index}`)
-    ) as PageDocumentV2["sections"][number]["blocks"];
-    expect(validate(tooManyChildren)).toBe(false);
+      const tooManyChildren = cloneDocument(document);
+      tooManyChildren.sections[0]!.blocks[0]!.slots!.children = Array.from(
+        { length: PAGE_BLOCK_MAX_CHILDREN_PER_SLOT + 1 },
+        (_, index) => createHeadingBlock(`blk_many_${index}`)
+      ) as PageDocumentV2["sections"][number]["blocks"];
+      expect(validate(tooManyChildren)).toBe(false);
 
-    const tooDeep = cloneDocument(document);
-    tooDeep.sections[0]!.blocks = [
-      {
-        id: "blk_depth_1",
-        type: "container",
-        props: {},
-        visibility: { visible: true },
-        slots: {
-          children: [
-            {
-              id: "blk_depth_2",
-              type: "container",
-              props: {},
-              visibility: { visible: true },
-              slots: {
-                children: [
-                  {
-                    id: "blk_depth_3",
-                    type: "container",
-                    props: {},
-                    visibility: { visible: true },
-                    slots: {
-                      children: [
-                        {
-                          id: "blk_depth_4",
-                          type: "container",
-                          props: {},
-                          visibility: { visible: true },
-                          slots: { children: [createHeadingBlock("blk_depth_5")] },
-                        },
-                      ],
+      const tooDeep = cloneDocument(document);
+      tooDeep.sections[0]!.blocks = [
+        {
+          id: "blk_depth_1",
+          type: "container",
+          props: {},
+          visibility: { visible: true },
+          slots: {
+            children: [
+              {
+                id: "blk_depth_2",
+                type: "container",
+                props: {},
+                visibility: { visible: true },
+                slots: {
+                  children: [
+                    {
+                      id: "blk_depth_3",
+                      type: "container",
+                      props: {},
+                      visibility: { visible: true },
+                      slots: {
+                        children: [
+                          {
+                            id: "blk_depth_4",
+                            type: "container",
+                            props: {},
+                            visibility: { visible: true },
+                            slots: { children: [createHeadingBlock("blk_depth_5")] },
+                          },
+                        ],
+                      },
                     },
-                  },
-                ],
+                  ],
+                },
               },
-            },
-          ],
+            ],
+          },
         },
-      },
-    ];
-    expect(validate(tooDeep)).toBe(false);
-  });
+      ];
+      expect(validate(tooDeep)).toBe(false);
+    }
+  );
 
   test("resolves sparse block responsive overrides without changing desktop base", () => {
     const document = buildDocument();

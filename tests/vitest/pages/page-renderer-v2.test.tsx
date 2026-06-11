@@ -218,6 +218,121 @@ test("block render props expose shared classes, styles, and data attributes", ()
   expect(html).toContain("--coderso-block-text:#111827");
 });
 
+test("button visual styles land on the anchor element, never the block frame", () => {
+  const section = createPageSectionV2("cta", {
+    id: "sec-style-target",
+    blocks: [
+      createPageBlockV2("button", {
+        id: "blk-styled-button",
+        props: { label: "Buy now", href: "/buy" },
+        style: {
+          align: "center",
+          textColor: "#111827",
+          background: "#fef3c7",
+          backgroundType: "color",
+          opacity: 0.8,
+          radius: 12,
+          shadow: "md",
+          borderColor: "#334155",
+          padding: { top: 4 },
+          margin: { bottom: 6 },
+        },
+      }),
+    ],
+  });
+  const block = section.blocks[0]!;
+
+  // Frame keeps ONLY layout-affecting style (spacing + text alignment).
+  expect(toPageBlockRenderProps(block).style).toEqual({
+    padding: "4px 0px 0px 0px",
+    margin: "0px 0px 6px 0px",
+    textAlign: "center",
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const frameTag = html.match(/<div[^>]*data-block-id="blk-styled-button"[^>]*>/)?.[0] ?? "";
+  const anchorTag = html.match(/<a[^>]*>/)?.[0] ?? "";
+
+  // The anchor is the visual element: inline values (which beat the variant
+  // utility classes) carry the full visual surface plus the stable hook.
+  expect(anchorTag).toContain('data-page-block-element="true"');
+  expect(anchorTag).toContain("background-color:#fef3c7");
+  expect(anchorTag).toContain("color:#111827");
+  expect(anchorTag).toContain("opacity:0.8");
+  expect(anchorTag).toContain("border-radius:12px");
+  expect(anchorTag).toContain("box-shadow:0 14px 40px rgba(15, 23, 42, 0.12)");
+  expect(anchorTag).toContain("border-color:#334155");
+  expect(anchorTag).toContain("border-style:solid");
+  expect(anchorTag).toContain("border-width:1px");
+  expect(anchorTag).toContain("--coderso-block-text:#111827");
+
+  // The frame keeps the layout surface and never paints the visual one.
+  expect(frameTag).toContain("padding:4px 0px 0px 0px");
+  expect(frameTag).toContain("margin:0px 0px 6px 0px");
+  expect(frameTag).toContain("text-align:center");
+  expect(frameTag).not.toContain("background-color");
+  expect(frameTag).not.toContain("border-radius");
+  expect(frameTag).not.toContain("box-shadow");
+  expect(frameTag).not.toContain("opacity");
+  expect(frameTag).not.toContain("color:#111827");
+});
+
+test("image visual styles land on the img element (or empty placeholder)", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-image-style-target",
+    blocks: [
+      createPageBlockV2("image", {
+        id: "blk-styled-image",
+        props: { src: "/pic.jpg", alt: "Pic", caption: "A caption" },
+        style: { radius: 18, borderColor: "#0f172a", shadow: "sm" },
+      }),
+      createPageBlockV2("image", {
+        id: "blk-empty-styled-image",
+        props: { src: "", alt: "" },
+        style: { radius: 18 },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const imgTag = html.match(/<img[^>]*>/)?.[0] ?? "";
+  const frameTag = html.match(/<div[^>]*data-block-id="blk-styled-image"[^>]*>/)?.[0] ?? "";
+
+  expect(imgTag).toContain('data-page-block-element="true"');
+  expect(imgTag).toContain("border-radius:18px");
+  expect(imgTag).toContain("border-color:#0f172a");
+  expect(imgTag).toContain("box-shadow:0 6px 20px rgba(15, 23, 42, 0.08)");
+  expect(frameTag).not.toContain("border-radius");
+  expect(frameTag).not.toContain("box-shadow");
+
+  // The empty-state placeholder stands in for the missing img element.
+  const placeholderTag =
+    html.match(/<div[^>]*data-page-block-element="true"[^>]*>Image<\/div>/)?.[0] ?? "";
+  expect(placeholderTag).toContain("border-radius:18px");
+});
+
+test("gradient button backgrounds clear the variant background color inline", () => {
+  const section = createPageSectionV2("cta", {
+    id: "sec-gradient-button",
+    blocks: [
+      createPageBlockV2("button", {
+        id: "blk-gradient-button",
+        props: { label: "Go", href: "/go" },
+        style: {
+          background: "linear-gradient(90deg, #000000, #ffffff)",
+          backgroundType: "gradient",
+        },
+      }),
+    ],
+  });
+  const anchorTag =
+    renderToStaticMarkup(<PageSectionContent section={section} />).match(/<a[^>]*>/)?.[0] ?? "";
+  expect(anchorTag).toContain("background-image:linear-gradient(90deg, #000000, #ffffff)");
+  // Inline transparent background-color keeps the variant accent class from
+  // bleeding through translucent gradient stops.
+  expect(anchorTag).toContain("background-color:transparent");
+});
+
 test("shared renderer omits hidden block frames unless admin opts in", () => {
   const section = createPageSectionV2("content", {
     id: "sec-hidden-block-renderer",
