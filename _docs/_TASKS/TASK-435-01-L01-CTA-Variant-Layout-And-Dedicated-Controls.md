@@ -12,9 +12,12 @@
 
 ## Overview
 
-Implement real published-layout behavior for CTA `centered` and `full-width`
-variants and replace the current native control drift with the shared dedicated
-widgets.
+Implement a visible published-front layout difference for the CTA `centered` and
+`full-width` variants — reconciling the already-shipped `full-width` inline
+`maxWidth: "none"` special-case at `core/services/pages/pageRendererV2.tsx:143`
+and the hero/CTA class collapse in `pageSectionTemplateClass`
+(`pageRendererV2.tsx:206-207`) — and replace the current native control drift
+with the shared dedicated widgets.
 
 ---
 
@@ -27,8 +30,27 @@ widgets.
 ## Implementation Pseudocode
 
 ```tsx
-const templateClass = resolveCtaTemplate(section.layout.variant);
-return <section className={templateClass}>{renderSectionBlocks(section.blocks)}</section>;
+// Variant is a top-level section field (`section.variant`, PageSectionV2 in
+// core/services/pages/pageDocumentV2.ts:199 — NOT section.layout.variant); resolve it via:
+const template = resolvePageSectionTemplate(section); // pageSectionTemplates.ts:117; fallbackVariant "centered", so centered === default today
+// Extend pageSectionTemplateClass (pageRendererV2.tsx:198-214): its hero/cta branch at
+// :206-207 currently collapses every CTA variant to the same `place-items-center text-center`
+// classes. Add per-variant CTA branches, and if full-width semantics change, adjust
+// toPageSectionStyle while reconciling the existing special-case at :143
+// (maxWidth: template.variant === "full-width" ? "none" : `${section.layout.maxWidth}px`).
+// Classes land on the inner content div (contentClassName from toPageSectionRenderProps,
+// pageRendererV2.tsx:235-258), not on the outer <section> shell, whose classes are static
+// ("w-full px-4 py-6" at :242).
+// Compare with the inert marker stripped, so the guard targets real layout classes and
+// cannot pass on the always-different marker string alone:
+const surface = (variant: PageSectionVariant) =>
+  toPageSectionRenderProps({ ...section, variant })
+    .contentClassName.replace(/page-section-template-\S+/g, "")
+    .trim();
+expect(surface("centered")).not.toEqual(surface("default"));
+// identical today apart from the marker — must diverge once centered is visible
+expect(toPageSectionRenderProps({ ...section, variant: "full-width" }).style.maxWidth).toBe("none");
+// preserve the existing :143 special-case while adding the visible full-bleed treatment
 ```
 
 Owner files:
@@ -46,18 +68,27 @@ Validation commands:
 
 Expected data flow:
 
-- CTA variant edits produce real runtime layout differences on the front.
+- CTA variant edits produce a VISIBLE published-front layout difference, not a
+  class-string or marker-only change: `centered` shows a real
+  alignment/centering difference versus `default`, and `full-width` a true
+  full-bleed treatment (beyond the existing inline `maxWidth: "none"` removal
+  at `pageRendererV2.tsx:143` if that alone is not visibly sufficient).
 - Inspector controls use the shared dedicated widgets.
 - Existing content blocks remain valid inside the updated layout shells.
 
 Error handling:
 
-- Unknown variants fall back to `default`.
+- Unknown variants fall back to the registry `fallbackVariant` (`centered` for
+  CTA, `core/services/pages/pageSectionTemplates.ts:92-97`) via
+  `resolvePageSectionTemplate`.
 - Control migration must not change CTA content persistence semantics.
 
 Regression-test shape:
 
-- Runtime coverage for CTA variants and UI coverage for dedicated controls.
+- Runtime coverage asserting `default`/`centered`/`full-width` produce distinct
+  published render props (contentClassName/style via
+  `toPageSectionRenderProps`), a live published-front check of the visible
+  difference, and UI coverage for dedicated controls.
 
 ---
 

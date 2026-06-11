@@ -17,9 +17,22 @@ floating inspector exposes only scattered `level`, `textAlign`, and raw-hex
 color fields; there is no coherent Typography surface and no contract for
 `fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, or `letterSpacing`.
 
-This family owns the shared text-style contract used by section text content and
-text-bearing blocks so TASK-422 canvas inline editing and TASK-421 dedicated
-widgets write through the same style fields.
+This family owns the shared text-style contract used by section text content
+and text-bearing blocks. TASK-422 canvas inline editing writes block props
+(text content) through its own commit path and does not write these style
+fields; the typography style fields defined here are written only by this
+family's inspector controls, rendered with the dedicated widgets owned by
+TASK-421. The TASK-421/TASK-422 entries in Dependencies express sequencing
+only (the widget primitives and the inline-edit text path land first), not a
+claim that TASK-422 writes through this family's style fields.
+
+Per the 4-layer rule (`_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md:175-182`:
+registry descriptor + schema/normalizer + renderer + panel widget), every typography
+control in this family must land with its renderer mapping in
+`core/services/pages/pageRendererV2.tsx` (`toPageBlockStyle`,
+`renderPageBlockContent`), a mandatory owner file: the fields are painted on
+the same rendered node on the editor canvas (`PageSectionContent`) and the
+published front (`PageDocumentRender`), otherwise the controls are dummies.
 
 ---
 
@@ -38,6 +51,9 @@ widgets write through the same style fields.
 ## Testing Requirements
 
 - New Vitest coverage for typography schema/registry ownership.
+- Renderer regression coverage: typography style fields emit the expected CSS
+  through `core/services/pages/pageRendererV2.tsx` on both the editor canvas
+  and the published front.
 - Relevant Page editor UI Vitest suites.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

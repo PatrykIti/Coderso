@@ -1,5 +1,18 @@
 # Audyt driftu tasków TASK-420..453 (Pages Editor V2) — raport zbiorczy
 
+> **STATUS REMEDIACJI (2026-06-11):** ✅ **Wszystkie znaleziska HIGH/MEDIUM/LOW naprawione.**
+> Wykonano workflow naprawczy (10 rozłącznych klastrów plików + niezależny checker per klaster,
+> 20 agentów) zgodnie z decyzjami własności z §8: etykieta toolbara → TASK-451-02-L01
+> (`resolveToolbarTargetLabel`), accent→button → TASK-439, zawartość zakładki Responsive →
+> TASK-425, maszyneria inline-edit → TASK-422, widgety → TASK-421; przesłanki TASK-449/442/451/
+> 427/429/435 przepisane na zweryfikowany mechanizm z bramką reproduce-first; TASK-441
+> przeskopowane z „preserve" na „fix" (binding `autoPlay`); TASK-424 dostał obowiązkową warstwę
+> renderera; fikcyjne symbole pseudokodu zastąpione realnymi kotwicami; zdania delegacji i cytaty
+> źródłowe poprawione; wiersze tablicy `_docs/_TASKS/README.md` zsynchronizowane z poprawionymi
+> kontraktami. Znaleziska z sekcji „Obalone" celowo pozostawione bez zmian. Zweryfikowano:
+> rezydua checkerów domknięte, `git diff --check` czysty, format wszystkich 82 zmodyfikowanych
+> plików (H1/FileName/Status/sekcje) nienaruszony.
+
 > **Cel:** weryfikacja, czy rodziny tasków TASK-420..TASK-453 (remediacja audytów Pages Editor V2
 > z 2026-06-10) są poprawnie rozpisane **względem audytów** (`_docs/AUDIT/*-2026-06-10.md`)
 > **i względem kodu** (HEAD `ae9dcc44`).

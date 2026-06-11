@@ -12,7 +12,7 @@
 
 ## Overview
 
-Replace raw source entry with the shared media-picker path for Video, replace the current yes/no selects for autoplay/muted/visible with the dedicated toggle controls, and close the remaining shared dedicated-control drift from the audit for layout/style/background/visibility through the shared `TASK-421` surface work.
+Replace raw source entry with the shared media-picker path for Video, replace the current yes/no selects for autoplay/muted/visible with the dedicated toggle controls, and close the remaining shared dedicated-control drift from the audit for layout/style/background/visibility through the shared `TASK-421` surface work. This leaf also owns a runtime fix, not just preservation: `block.props.autoplay` is currently a dead prop — the `case "video"` branch of `core/services/pages/pageRendererV2.tsx` (~lines 770-784) binds only `src`/`controls`/`muted`, so toggling Autoplay has zero effect on the published page. The leaf must bind autoplay to the rendered `<video>` element with the standard autoplay-policy companions.
 
 ---
 
@@ -25,9 +25,27 @@ Replace raw source entry with the shared media-picker path for Video, replace th
 ## Implementation Pseudocode
 
 ```tsx
-renderMediaPickerControl("video");
-renderToggleControl("autoplay");
-renderToggleControl("muted");
+// Editor surface: the registry already declares the right inputs
+// (core/services/pages/pageEditorControlRegistry.ts:418-421 — src: "media",
+// autoplay/muted: "switch"); verify they resolve through
+// getPageEditorControlsForTarget({ kind: "block", type: "video" })
+// (pageEditorControlRegistry.ts:508) and render via the shared TASK-421
+// media-picker/toggle widgets in RegistryControlField (PageEditor.tsx ~2524-2614).
+const videoControls = getPageEditorControlsForTarget({ kind: "block", type: "video" });
+
+// Runtime fix in the `case "video"` branch of renderPageBlockContent
+// (core/services/pages/pageRendererV2.tsx ~770-784) — bind the dead autoplay prop:
+const autoplay = readBoolean(block.props.autoplay, false);
+<video
+  className="w-full rounded"
+  src={src}
+  controls
+  autoPlay={autoplay}
+  // Autoplay-policy companions: browsers only honor autoplay when muted;
+  // playsInline avoids forced fullscreen on mobile.
+  muted={readBoolean(block.props.muted, true) || autoplay}
+  playsInline={autoplay || undefined}
+/>;
 ```
 
 Owner files:
@@ -47,6 +65,11 @@ Expected data flow:
 
 - Video source selection resolves through the shared media picker.
 - Autoplay/muted/visible write through boolean owner fields, not select strings.
+- `autoPlay={readBoolean(block.props.autoplay, false)}` reaches the rendered
+  `<video>` element in the `case "video"` branch of
+  `core/services/pages/pageRendererV2.tsx`, with `muted`/`playsInline` forced on
+  while autoplay is enabled so browser autoplay policies allow playback; the
+  toggle must have a visible published-front effect, not stay a dead prop.
 - Published runtime keeps rendering a real video block.
 
 Error handling:
@@ -56,8 +79,12 @@ Error handling:
 
 Regression-test shape:
 
-- Vitest UI coverage for media/toggle controls and runtime coverage for Video
-  rendering.
+- Vitest UI coverage for media/toggle controls.
+- Vitest renderer regression (extend `tests/vitest/pages/page-renderer-v2.test.tsx`,
+  which today only exercises an empty-src video placeholder) asserting that
+  `autoplay` and `muted` reach the rendered `<video>` element: autoplay=true
+  emits `autoplay` plus the muted/playsinline companions, autoplay=false emits
+  no `autoplay` attribute.
 
 ---
 

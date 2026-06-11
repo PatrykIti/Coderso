@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Pages / Templates
 **Estimated Effort:** Large
-**Dependencies:** TASK-420-02
+**Dependencies:** TASK-420-02, TASK-421-02 (the shared Page Editor inspector control primitives must land before this rewrite consumes them)
 **Status:** ⏳ To Do
 
 ---
@@ -42,9 +42,10 @@ Expected data flow:
   added for any new resource family.
 - Legacy widget-template UI/routes are removed from the Page Templates product
   path according to the approved replacement contract.
-- If TASK-421 has landed, Page Templates reuses the shared Page Editor
-  inspector adapter/primitives rather than defining a separate raw-input
-  inspector.
+- Page Templates consumes the shared Page Editor inspector adapter/primitives
+  from TASK-421-02 and must not define a separate raw-input inspector; the
+  TASK-421-02 dependency above enforces this ordering, so this leaf is blocked
+  until those primitives land.
 - Assistant context advertises only the active surface contract that the current
   editor actually owns.
 

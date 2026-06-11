@@ -26,8 +26,20 @@ dedicated inspector controls without regressing grid/cards/default output.
 ## Implementation Pseudocode
 
 ```tsx
-expect(resolveComparisonTemplate("grid")).not.toEqual(resolveComparisonTemplate("default"));
-renderSectionPanels(getSectionControlsForType("comparison"));
+// Real symbols: resolvePageSectionTemplate (core/services/pages/pageSectionTemplates.ts:117)
+// takes a full PageSectionV2 object, not a variant string; controls come from
+// getPageEditorControlsForTarget / getPageSectionVariantControl
+// (core/services/pages/pageEditorControlRegistry.ts:508 / :334) and are rendered in
+// PageEditor.tsx via SectionRegistryControlField / RegistryControlField (~:2379 / :2524).
+// Freeze the existing grid-vs-default geometry (md:grid-cols-2 + auto-rows-fr via
+// pageRendererV2.tsx:189-194/:212 vs grid-cols-1), stripping the inert marker class so
+// the guard targets real geometry rather than the always-different marker string:
+const surface = (variant: PageSectionVariant) =>
+  toPageSectionRenderProps({ ...section, variant })
+    .contentClassName.replace(/page-section-template-\S+/g, "")
+    .trim();
+expect(surface("grid")).not.toEqual(surface("default"));
+const controls = getPageEditorControlsForTarget({ kind: "section", type: "comparison" });
 ```
 
 Owner files:

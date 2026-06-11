@@ -16,6 +16,14 @@ Render the dedicated Responsive-panel controls, device labels, and reset
 affordances described by the contract so authors can manage overrides directly
 instead of hunting for inline badges across unrelated panels.
 
+This leaf is the explicit implementation owner of the Responsive panel's
+control content (hide-on-screen toggles, vertical-layout toggle, per-field
+override list, reset actions, device readouts), per the TASK-425-01-L01
+contract. TASK-421 provides only the shared widget primitives
+(TASK-421-02-L01/L02) and the panel category shell with its breakpoint-state
+readout (TASK-421-03-L01); TASK-421-04 covers only inline badge/tooltip/reset
+polish on individual controls, not this panel's content.
+
 ---
 
 ## Sub-Tasks
@@ -27,12 +35,14 @@ instead of hunting for inline badges across unrelated panels.
 ## Implementation Pseudocode
 
 ```tsx
+// Fills the Responsive panel category shell from TASK-421-03-L01; the
+// toggles render via the shared TASK-421-02 widget primitives.
 function ResponsivePanel({ target, device }) {
   return (
     <>
       <DeviceReadout device={device} />
       <ResponsiveToggle control="visible" />
-      <ResponsiveToggle control="stackOnMobile" />
+      <ResponsiveToggle control="layout.stackVertical" />
       <ResponsiveResetList target={target} device={device} />
     </>
   );
@@ -44,6 +54,8 @@ Owner files:
 - `core/admin/ui/pages/PageEditor.tsx`
 - `core/services/pages/pageEditorControlRegistry.ts`
 - `core/services/pages/pageDocumentV2.ts`
+- `core/services/pages/pageRendererV2.tsx` (visible stacking output for the
+  new `stackVertical` field, per the TASK-425-01-L01 4-layer plan)
 
 Validation commands:
 
@@ -55,7 +67,12 @@ Expected data flow:
 
 - Device switcher shows explicit width labels and active scope copy.
 - Responsive panel renders real toggles and reset actions per target/device.
-- Changes keep using the current override-write path.
+- Hide toggles keep using the current override-write path
+  (`responsive[bp].visibility.visible`); the vertical-layout toggle writes the
+  new `layout.stackVertical` field declared by TASK-425-01-L01 through the
+  existing `responsive[bp].layout` override container, and must not ship
+  before the schema/normalizer, renderer, and TASK-423 runtime-delivery layers
+  of that plan are in place.
 
 Error handling:
 

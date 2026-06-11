@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-422, TASK-424
+**Dependencies:** TASK-421, TASK-422, TASK-424, TASK-451-02
 **Status:** ⏳ To Do
 
 ---
@@ -14,7 +14,10 @@
 
 Freeze the Quote-block remediation contract from
 `_docs/AUDIT/quote-2026-06-10.md`, especially the shared inline-edit/typography
-paths and the small toolbar-label polish gap.
+paths and the small toolbar-label casing gap (lowercase `quote tools`).
+Toolbar-label derivation is owned by TASK-451-02-L01
+(`resolveToolbarTargetLabel`); this family only verifies the capitalized
+`Quote tools` fallback once the owner lands.
 
 ---
 

@@ -27,8 +27,16 @@ runtime rendering.
 ## Implementation Pseudocode
 
 ```tsx
-renderMediaPickerControl("card-image");
-renderBlockControls(getBlockControlsForType("card"));
+// Registry already declares card.image as `input: "media"`
+// (core/services/pages/pageEditorControlRegistry.ts:429-433); the media-picker
+// primitive is TASK-421-02-L02's. The real registry accessor is
+// getPageEditorControlsForTarget (pageEditorControlRegistry.ts:508).
+const cardControls = getPageEditorControlsForTarget({ kind: "block", type: "card" });
+// Verify RegistryControlField (core/admin/ui/pages/PageEditor.tsx ~2524-2614)
+// resolves the card image through the shared picker (today `input: "media"`
+// falls through to the raw TextField) and renders the card layout/style
+// controls through the shared TASK-421 widgets, including the Visible switch
+// as a toggle.
 ```
 
 Owner files:

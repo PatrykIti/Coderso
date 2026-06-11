@@ -29,7 +29,8 @@ docs/board/changelog synchronization.
 1. Exercise the Video block through the final targeted validation set.
 2. Run the lane-owned tests plus lint/type checks for the video contract.
 3. Replay the browser audit steps and confirm the published front still renders a real `video` block with no unresolved dedicated-control drift.
-4. Sync docs, board rows, and changelog evidence before closure.
+4. Closure gate: toggling Autoplay in the editor must change the published `<video>` element (`autoplay` plus the muted/playsinline companions present when on, no `autoplay` attribute when off). The family must not close while `block.props.autoplay` remains a dead prop that never reaches the rendered element.
+5. Sync docs, board rows, and changelog evidence before closure.
 Validation commands:
 - `bun run test:vitest`
 - `bun --cwd core lint`

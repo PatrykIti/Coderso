@@ -26,8 +26,17 @@ preserving the currently-correct fixed-height runtime output.
 ## Implementation Pseudocode
 
 ```tsx
-renderBlockControls(getBlockControlsForType("spacer"));
-expect(renderPublishedSpacer(block)).toContain("height");
+// Controls: the real registry accessor is getPageEditorControlsForTarget
+// (core/services/pages/pageEditorControlRegistry.ts:508); the spacer Size row
+// (input "number", clamp 0..240) lives at pageEditorControlRegistry.ts:449-455.
+const spacerControls = getPageEditorControlsForTarget({ kind: "block", type: "spacer" });
+
+// Runtime guard: published spacer output comes from the `case "spacer"` branch
+// of renderPageBlockContent (core/services/pages/pageRendererV2.tsx ~:805-806,
+// `<div aria-hidden="true" style={{ height: `${size}px` }} />`); assert against
+// PageDocumentRender output in tests/vitest/pages/page-renderer-v2.test.tsx:
+expect(html).toContain('aria-hidden="true"');
+expect(html).toContain("height:32px"); // default size reaches the style attribute
 ```
 
 Owner files:

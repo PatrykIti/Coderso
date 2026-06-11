@@ -12,9 +12,22 @@
 ## Overview
 
 Remediate the List-block findings from `_docs/AUDIT/list-2026-06-10.md`. A
-populated list renders correctly, but the default empty list is pruned on save,
-which turns a freshly inserted list into an empty page. The block also inherits
-the shared dedicated-control drift highlighted by the audit, including but not
+populated list renders correctly. The audit observed live (2026-06-10) that a
+freshly inserted default empty list turned into an empty page after save, but
+at HEAD `ae9dcc44` (2026-06-11 drift audit) that drop is **not** reproducible
+at the pure schema layer: an empirical bun round trip of a default empty list
+(`items: []`, `ordered: false`) through `normalizePageDocumentV2ForWrite` →
+`normalizeStoredPageDocumentV2ForRead` → `toPublishedPageDocumentV2` preserves
+the section and block. The audited symptom therefore sits in the live editor
+path — save/autosave payload, the stale-CSRF save-failure + cache-event
+rehydration path (`PageEditor.tsx:1520-1554`), or the publish flow — or is
+already fixed and needs fresh live reproduction at HEAD. Reproduction-first is
+a hard gate: the persistence fix may only be written against the layer the
+reproduction identifies. The catalog-wide all-insertable-types round-trip
+guard (which includes `list` and passes today) is owned by TASK-449-02-L01;
+this family owns the list-specific empty-state contract, the live-flow
+reproduction, and the list editing surfaces. The block also inherits the
+shared dedicated-control drift highlighted by the audit, including but not
 limited to the `ordered` toggle path plus the remaining layout/style/background
 and visibility control collapse owned through `TASK-421`.
 
@@ -22,9 +35,12 @@ and visibility control collapse owned through `TASK-421`.
 
 ## Sub-Tasks
 
-- [ ] TASK-442-01: Empty-list persistence and ordered-control contract.
-- [ ] TASK-442-01-L01: Preserve a freshly inserted list through save/publish
-      and adopt inline/dedicated controls for items and ordered state.
+- [ ] TASK-442-01: Reproduction-first empty-list persistence and
+      ordered-control contract.
+- [ ] TASK-442-01-L01: Reproduce the empty-list drop in the live admin flow
+      (or record it no longer reproduces at HEAD), preserve a freshly
+      inserted list through save/publish, and adopt inline/dedicated controls
+      for items and ordered state.
 - [ ] TASK-442-02: Validation, docs, and closure.
 
 ---

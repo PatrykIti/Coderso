@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-422, TASK-424
+**Dependencies:** TASK-421, TASK-422, TASK-424, TASK-451-02
 **Status:** ⏳ To Do
 
 ---
@@ -14,7 +14,9 @@
 
 Freeze the Statistic-block remediation contract from
 `_docs/AUDIT/statistic-2026-06-10.md`, especially the content-derived toolbar
-label and the shared inline-edit/typography control paths.
+label and the shared inline-edit/typography control paths. Toolbar-label
+derivation is owned by TASK-451-02-L01 (`resolveToolbarTargetLabel`); this
+family only verifies the `Statistic tools` fallback once the owner lands.
 
 ---
 

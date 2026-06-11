@@ -16,7 +16,12 @@ Freeze the Page-owner contract for typography fields and their registry
 descriptors before wiring any new inspector UI. This subtask owns the
 schema/normalizer/defaults layer for `fontFamily`, `fontSize`, `fontWeight`,
 `lineHeight`, `letterSpacing`, and the shared organization of text-style
-controls across sections and text-bearing blocks.
+controls across sections and text-bearing blocks. Per the audit's same-leaf
+rule and the 4-layer rule (`_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md:175-182`)
+it also owns the renderer mapping for those fields in
+`core/services/pages/pageRendererV2.tsx` (`toPageBlockStyle`,
+pageRendererV2.tsx:262), so the fields paint on both the editor canvas and the
+published front instead of becoming dead controls.
 
 ---
 
@@ -30,6 +35,8 @@ controls across sections and text-bearing blocks.
 ## Testing Requirements
 
 - New Vitest coverage for typography style ownership and registry metadata.
+- Renderer regression coverage for the typography style-to-CSS emission in
+  `core/services/pages/pageRendererV2.tsx`.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

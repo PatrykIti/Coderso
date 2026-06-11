@@ -13,17 +13,20 @@
 
 Remediation family for the Feature Grid section based on
 `_docs/AUDIT/feature-grid-2026-06-10.md`. Runtime variant switching already
-works, so this family primarily freezes that truthful behavior, closes the
-empty Responsive-tab finding called out by the audit, and replaces the
-remaining native control drift with the dedicated Page Editor surface.
+works, so this family primarily freezes that truthful behavior and closes the
+empty Responsive-tab finding called out by the audit. The remaining native
+control drift is NOT implemented here: the dedicated widget rendering is
+owned by TASK-421 (TASK-421-02 control primitives, TASK-421-03-L01 section
+preset panels); this family only verifies that the Feature Grid panels render
+the shared TASK-421 widgets once they land.
 
 ---
 
 ## Sub-Tasks
 
 - [ ] TASK-428-01: Feature Grid variant/control contract freeze.
-- [ ] TASK-428-01-L01: Preserve working `cards`/`grid` runtime behavior while
-      adopting the shared dedicated controls.
+- [ ] TASK-428-01-L01: Preserve working `cards`/`grid` runtime behavior and
+      verify the Feature Grid panels render the shared TASK-421 widgets.
 - [ ] TASK-428-02: Validation, docs, and closure.
 
 ---

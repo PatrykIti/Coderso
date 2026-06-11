@@ -12,18 +12,22 @@
 ## Overview
 
 Close the remaining issues from `_docs/AUDIT/_cross-parity-2026-06-10.md` that
-are not already owned by the shared control-widget work: the preview route is
-404ing, the editor achieves only 2/3 surface parity, and the remaining shell
-polish gaps (toolbar labels, preview dialog behavior, inline add affordances)
-need a dedicated closure family instead of staying as loose notes.
+are not already owned by the shared control-widget work: the preview dialog is
+unreachable in the audited environment even though the public `/preview` route
+IS registered and 404s by design without a valid token/type
+(`core/server/publicSite.tsx:1312-1319`) — the failure is environmental
+(preview URL/environment composition), not a missing route — the editor
+achieves only 2/3 surface parity, and the remaining shell polish gaps (toolbar
+labels, preview dialog behavior, inline add affordances) need a dedicated
+closure family instead of staying as loose notes.
 
 ---
 
 ## Sub-Tasks
 
 - [ ] TASK-451-01: Preview route and dialog contract freeze.
-- [ ] TASK-451-01-L01: Restore a working runtime preview surface without
-      weakening preview-token rules.
+- [ ] TASK-451-01-L01: Diagnose and fix the preview URL/environment composition
+      so the dialog renders, without weakening preview-token rules.
 - [ ] TASK-451-02: Toolbar shell and parity polish.
 - [ ] TASK-451-02-L01: Normalize toolbar labels, add-surface affordances, and
       remaining shell parity behaviors.
@@ -41,8 +45,9 @@ need a dedicated closure family instead of staying as loose notes.
 - **Rate-limit bucket:** existing preview bucket.
 - **Validation:** preview must keep using normalized page documents and current
   preview-token ownership checks.
-- **Anti-abuse controls:** keep TTL, target validation, and sanitized preview
-  diagnostics.
+- **Anti-abuse controls:** keep TTL, target validation, sanitized preview
+  diagnostics, and the `site.previewEnabled` kill-switch
+  (`core/server/publicSite.tsx:1318-1319`).
 
 ---
 

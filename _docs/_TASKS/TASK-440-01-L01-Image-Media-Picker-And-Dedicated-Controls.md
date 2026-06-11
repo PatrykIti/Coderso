@@ -12,31 +12,49 @@
 
 ## Overview
 
-Replace raw URL entry with the shared media-picker path for Image and adopt the
-shared dedicated layout/style controls without regressing current runtime
-rendering.
+Verify that Image source entry resolves through the shared media-picker path
+and that the image panels render the shared TASK-421 widgets, without
+regressing current runtime rendering. Ownership boundary: TASK-421-02-L02
+implements the media-picker primitive, TASK-421-02-L01/L02 the dedicated
+segmented/toggle/slider/swatch widgets, and TASK-421-03-L02 the image block
+panel adoption — this leaf only verifies/wires the Image target after those
+land and owns image-specific residual gaps.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
+- [ ] Verify the scoped owner-file behavior described below and land any
+      image-specific residue.
 - [ ] Add or update the targeted regression coverage for this leaf.
 - [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
 ```tsx
-renderMediaPickerControl("image");
-renderBlockControls(getBlockControlsForType("image"));
+// Registry already declares image.src as `input: "media"`
+// (core/services/pages/pageEditorControlRegistry.ts:408); no registry change is
+// expected unless verification surfaces image-specific media-type metadata.
+const imageControls = getPageEditorControlsForTarget({ kind: "block", type: "image" });
+// (real accessor at core/services/pages/pageEditorControlRegistry.ts:508)
+
+// Verify that RegistryControlField (core/admin/ui/pages/PageEditor.tsx
+// ~2524-2614) stops falling through to the raw TextField for `input: "media"`
+// once the shared TASK-421 picker lands, and that image source selection
+// resolves through the shared picker into the saved `src` value.
 ```
 
 Owner files:
 
-- `core/admin/ui/pages/PageEditor.tsx`
-- `core/services/pages/pageEditorControlRegistry.ts`
-- `core/services/pages/pageRendererV2.tsx`
-- `core/services/pages/pageDocumentV2.ts`
+- `core/admin/ui/pages/PageEditor.tsx` (verification surface for the shared
+  picker/widget adoption)
+- `core/services/pages/pageEditorControlRegistry.ts` (only if image-specific
+  media metadata is needed)
+
+The leaf's own data flow keeps alt/caption/fit semantics and published runtime
+rendering unchanged, so `core/services/pages/pageRendererV2.tsx` and
+`core/services/pages/pageDocumentV2.ts` are not owner files here — they are
+covered read-only by the regression assertions.
 
 Validation commands:
 

@@ -14,7 +14,8 @@
 
 Close the remaining shell-level gaps from the cross-parity audit: toolbar-label
 truthfulness, add-surface affordances, and preview-dialog parity polish after
-the preview route itself is restored.
+the preview URL/environment composition fix from TASK-451-01 lands (the
+`/preview` route itself is registered and gated by design).
 
 ---
 

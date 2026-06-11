@@ -26,8 +26,17 @@ preserving the current working nested-runtime behavior.
 ## Implementation Pseudocode
 
 ```tsx
-renderBlockControls(getBlockControlsForType("group"));
-expect(renderPublishedGroup(block)).toContain('data-page-block="group"');
+// Controls: the real registry accessor is getPageEditorControlsForTarget
+// (core/services/pages/pageEditorControlRegistry.ts:508); group rows
+// (direction segmented, wrap switch, gap number) live at
+// pageEditorControlRegistry.ts:487-505.
+const groupControls = getPageEditorControlsForTarget({ kind: "block", type: "group" });
+
+// Runtime guard: published group output flows through renderPageBlockContent /
+// PageDocumentRender (core/services/pages/pageRendererV2.tsx); the
+// `data-page-block` attribute is emitted at pageRendererV2.tsx:293. Assert
+// against PageDocumentRender output in tests/vitest/pages/page-renderer-v2.test.tsx:
+expect(html).toContain('data-page-block="group"');
 ```
 
 Owner files:

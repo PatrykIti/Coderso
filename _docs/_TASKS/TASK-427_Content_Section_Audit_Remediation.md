@@ -13,7 +13,13 @@
 
 Remediation family for the Content section based on
 `_docs/AUDIT/content-2026-06-10.md`. The main section-specific bug is that
-`variant=compact` persists only as data and produces no published-layout change.
+`variant=compact` produces no visible published-layout change. At HEAD the
+renderer ALREADY emits a per-variant marker class plus `content-start` on the
+inner content node (`pageSectionTemplateClass` in
+`core/services/pages/pageRendererV2.tsx`), but `content-start` is visually
+inert on this auto-height grid and the outer `<section>` stays
+variant-invariant — that outer node is what the audit measured. So compact
+persists and emits an inert class, yet yields no visible layout difference.
 The family also closes the shared dedicated-control drift and the empty
 Responsive-tab finding called out by the audit.
 

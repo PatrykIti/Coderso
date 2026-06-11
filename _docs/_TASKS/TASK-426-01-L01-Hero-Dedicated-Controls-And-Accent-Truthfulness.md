@@ -13,8 +13,15 @@
 ## Overview
 
 Adopt the shared dedicated inspector controls for Hero and verify that variant,
-accent, alignment, and background behavior remain truthful on the published
-front instead of regressing into marker-only state.
+alignment, and background behavior remain truthful on the published front
+instead of regressing into marker-only state. For accent, this leaf only
+re-verifies the hero-side flow — the section truthfully emits
+`--coderso-section-accent` from `section.style.accent`
+(`core/services/pages/pageRendererV2.tsx:126`) — after the TASK-439-owned
+accent->button binding fix (TASK-439-01-L01, consumption site
+`pageRendererV2.tsx:758`) lands; the investigation and fix of the
+not-visibly-applied accent on the published front belong to TASK-439, not this
+leaf.
 
 ---
 
@@ -27,12 +34,16 @@ front instead of regressing into marker-only state.
 ## Implementation Pseudocode
 
 ```tsx
-const heroControls = getSectionControlsForType("hero");
-renderSectionPanels(heroControls);
-renderHeroSectionTemplate({
-  variant: section.layout.variant,
-  accent: section.style.accent,
-});
+const heroControls = getPageEditorControlsForTarget({ kind: "section", type: "hero" });
+// core/services/pages/pageEditorControlRegistry.ts:508
+// Editor surface: section controls render through SectionRegistryControlField
+// (core/admin/ui/pages/PageEditor.tsx ~2379-2523) using the shared TASK-421
+// widgets; this leaf verifies the hero panels render them, it does not
+// re-implement them.
+// Published front: variant is top-level `section.variant`, resolved via
+// resolvePageSectionTemplate(section) (core/services/pages/pageRendererV2.tsx:239);
+// hero-side accent emission via toPageSectionStyle
+// ("--coderso-section-accent": section.style.accent, pageRendererV2.tsx:126).
 ```
 
 Owner files:
@@ -50,8 +61,12 @@ Validation commands:
 
 Expected data flow:
 
-- Hero inspector swaps native selects/text boxes for dedicated widgets.
-- Accent/variant edits flow through the shared section update path.
+- Hero inspector swaps native selects/text boxes for the shared TASK-421
+  dedicated widgets.
+- Accent/variant edits flow through the shared section update path; accent
+  verification stays hero-side only (the section emits
+  `--coderso-section-accent` from `section.style.accent`), while the visible
+  accent-on-button application fix is owned by TASK-439-01-L01.
 - Published front preserves real Hero-specific layout and styling behavior.
 
 Error handling:
@@ -61,7 +76,9 @@ Error handling:
 
 Regression-test shape:
 
-- Vitest UI coverage for Hero panels and runtime tests for variant/accent output.
+- Vitest UI coverage for Hero panels and runtime tests for variant output and
+  hero-side accent emission (`--coderso-section-accent` present in the section
+  style); visible accent-on-button assertions belong to TASK-439-01-L01.
 
 ---
 

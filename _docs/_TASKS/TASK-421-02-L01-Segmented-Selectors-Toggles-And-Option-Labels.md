@@ -105,3 +105,9 @@ Regression-test shape:
 - `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+---
+
+## Documentation Updates Required
+
+- None beyond the parent family docs; TASK-421-05 owns board/changelog sync.

@@ -34,7 +34,8 @@ function SectionInspectorPanels({ section, controls }) {
       <StylePanel controls={["accent", "radius", "shadow", "cardSurface", "typography"]} />
       <SpacingPanel controls={["paddingY", "paddingX", "margin", "gap"]} />
       <BackgroundPanel controls={["backgroundType", "background", "backgroundImage"]} />
-      <ResponsivePanel controls={["breakpointState", "hidden", "resetOverrides"]} />
+      {/* Shell + breakpoint-state readout only; panel content is owned by TASK-425. */}
+      <ResponsivePanel controls={["breakpointState"]} />
       <VisibilityPanel controls={["visible", "authOnly", "dateRange", "anchor"]} />
     </>
   );
@@ -43,6 +44,12 @@ function SectionInspectorPanels({ section, controls }) {
 
 Expected data flow:
 
+- `ResponsivePanel` here is only a category shell with the breakpoint-state
+  readout (base/override/inherited). Panel content is owned by TASK-425: the
+  hide-on-screen toggles, vertical-layout toggle, per-field override list,
+  reset actions, and device readouts are defined by TASK-425-01-L01 and
+  implemented by TASK-425-02-L01. This leaf must not add Responsive-panel
+  controls.
 - `variant` remains a base section value, not a responsive override.
 - Columns/alignment/maxWidth remain responsive where the current registry says
   they are responsive.
@@ -85,3 +92,9 @@ Regression-test shape:
 - `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+---
+
+## Documentation Updates Required
+
+- None beyond the parent family docs; TASK-421-05 owns board/changelog sync.

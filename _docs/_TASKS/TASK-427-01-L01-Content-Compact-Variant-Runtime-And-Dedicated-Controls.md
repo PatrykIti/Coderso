@@ -27,8 +27,21 @@ section surface.
 ## Implementation Pseudocode
 
 ```tsx
-const templateClass = resolveContentSectionTemplate(section.layout.variant);
-return <section className={templateClass}>{renderSectionBlocks(section.blocks)}</section>;
+// Real contract anchors (verified): the variant lives at section.variant
+// (top-level on PageSectionV2 in core/services/pages/pageDocumentV2.ts),
+// NOT section.layout.variant, and is resolved via the shared resolver.
+const template = resolvePageSectionTemplate(section); // core/services/pages/pageSectionTemplates.ts
+
+// The variant/template class lands on the INNER content div via
+// contentClassName (toPageSectionRenderProps -> PageSectionContent in
+// core/services/pages/pageRendererV2.tsx); the outer <section> keeps the
+// static sectionClassName "w-full px-4 py-6". The compact branch of
+// pageSectionTemplateClass already emits `${marker} content-start`, which is
+// visually inert. Extend pageSectionTemplateClass(template) and/or
+// toPageSectionStyle(section) so:
+//   template.template === "content" && template.variant === "compact"
+// yields a VISIBLE spacing change (e.g. reduced padding/gap scale) on the
+// content node of the published front.
 ```
 
 Owner files:
@@ -46,7 +59,12 @@ Validation commands:
 
 Expected data flow:
 
-- `compact` changes real runtime classes/layout, not only `data-page-variant`.
+- `compact` must produce a MEASURABLE published-front spacing/layout
+  difference versus `default` — e.g. a reduced section padding/gap scale via
+  `toPageSectionStyle` / `pageSectionTemplateClass` — not merely a
+  class-string difference. Note: the `content-start` + marker class on the
+  inner content node is ALREADY emitted at HEAD and is visually inert, so a
+  pure class-diff cannot satisfy this leaf.
 - Content inspector uses shared segmented/swatch/slider/toggle widgets.
 - Section updates keep using the shared section patch path.
 
@@ -57,8 +75,10 @@ Error handling:
 
 Regression-test shape:
 
-- Runtime coverage for default vs compact output and UI coverage for control
-  widgets.
+- Runtime coverage asserting a VISIBLE spacing/layout difference between
+  default and compact published output (computed spacing/style values or
+  rendered structure) — a pure class-string assertion would already pass at
+  HEAD and is not acceptable — plus UI coverage for control widgets.
 
 ---
 

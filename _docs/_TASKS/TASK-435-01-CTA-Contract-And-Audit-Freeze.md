@@ -13,9 +13,17 @@
 ## Overview
 
 Freeze the CTA remediation contract from `_docs/AUDIT/cta-2026-06-10.md`,
-especially the currently-broken `centered`/`full-width` runtime semantics, the
-shared dedicated-control adoption, and the matching Responsive-tab closure
-hand-off to `TASK-425`.
+recording the real no-op mechanism: `full-width` already resolves to inline
+`maxWidth: "none"` via the special-case at
+`core/services/pages/pageRendererV2.tsx:143`, while `pageSectionTemplateClass`
+(`pageRendererV2.tsx:206-207`) collapses all CTA variant classes and
+`fallbackVariant: "centered"` (`core/services/pages/pageSectionTemplates.ts:92-97`)
+makes `centered` render identically to `default`. Define the target published
+rendering for each of `default`/`centered`/`full-width` — `centered` must show a
+visible alignment/centering difference and `full-width` a true full-bleed
+treatment that reconciles (not duplicates or contradicts) the existing line-143
+special-case — plus the shared dedicated-control adoption and the matching
+Responsive-tab closure hand-off to `TASK-425`.
 
 ---
 

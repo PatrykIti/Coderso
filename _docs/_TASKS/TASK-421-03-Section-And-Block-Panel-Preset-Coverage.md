@@ -35,7 +35,7 @@ function buildSectionPanelPresetModel(type) {
     style: ["accent", "radius", "shadow", "cardSurface"],
     spacing: ["paddingY", "paddingX", "gap"],
     background: ["backgroundType", "background", "backgroundImage"],
-    responsive: ["hiddenAtBreakpoint", "resetOverrides"],
+    responsive: ["breakpointState"], // category shell + readout only; control content owned by TASK-425
     visibility: ["visible", "authOnly", "dateRange", "anchor"]
   };
 }
@@ -46,6 +46,11 @@ Expected data flow:
 - Preserve existing Page v2 document paths.
 - Group related controls in the same category order as the reference.
 - Do not reintroduce large widget-specific panels.
+- The Responsive category ships only as a panel shell with the breakpoint-state
+  readout. Its control content (hide-on-screen toggles, vertical-layout toggle,
+  per-field override list, reset actions, device readouts) is owned by TASK-425
+  (TASK-425-01-L01 contract, TASK-425-02-L01 implementation); this subtask must
+  not add Responsive-panel controls.
 
 Regression-test shape:
 
@@ -71,3 +76,9 @@ Regression-test shape:
 - `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+---
+
+## Documentation Updates Required
+
+- None beyond the parent family docs; TASK-421-05 owns board/changelog sync.

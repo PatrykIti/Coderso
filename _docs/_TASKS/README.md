@@ -126,24 +126,24 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-425-02 | Responsive Panel Widgets And Breakpoint Affordances | High | Large | Render the actual Responsive-panel widgets so the tab stops being an empty informational placeholder. |
 | TASK-425-02-L01 | Implement Hide Layout Toggles Reset Actions And Device Readouts | High | Large | Implement dedicated responsive toggles, reset affordances, and explicit breakpoint width readouts. |
 | TASK-425-03 | Validation Docs And Viewport Authoring Closure | High | Medium | Close the Responsive-panel family with targeted validation, live authoring proof, and docs/board/changelog sync. |
-| TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and finishes hero-specific style/accent verification. |
-| TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for accent truthfulness, variant behavior, and dedicated controls. |
-| TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify that accent/variant behavior stays truthful on the front. |
+| TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
+| TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
+| TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
 | TASK-426-02 | Hero Validation Docs And Closure | High | Medium | Close the Hero family with targeted validation, live browser proof, and docs/board/changelog sync. |
-| TASK-427 | Content Section Audit Remediation | High | Medium | `variant=compact` currently persists as data only; make it affect published layout and remove shared inspector drift. |
-| TASK-427-01 | Content Contract And Audit Freeze | High | Medium | Freeze the Content-section remediation contract around the broken `compact` variant and control-surface adoption. |
+| TASK-427 | Content Section Audit Remediation | High | Medium | `variant=compact` emits only a visually inert marker class today; give it a visible published-layout effect and remove shared inspector drift. |
+| TASK-427-01 | Content Contract And Audit Freeze | High | Medium | Freeze the Content-section remediation contract around the visually inert `compact` variant and control-surface adoption. |
 | TASK-427-01-L01 | Content Compact Variant Runtime And Dedicated Controls | High | Medium | Implement a real published-layout effect for `compact` and adopt the shared dedicated inspector widgets. |
 | TASK-427-02 | Content Validation Docs And Closure | High | Medium | Close the Content family with targeted validation, live `compact` proof, and docs/board/changelog sync. |
 | TASK-428 | Feature Grid Section Audit Remediation | Medium | Medium | Preserve working cards/grid runtime behavior while adopting the redesigned control surface. |
 | TASK-428-01 | Feature Grid Contract And Audit Freeze | Medium | Medium | Freeze the Feature Grid remediation contract while preserving the current working cards/grid runtime behavior. |
 | TASK-428-01-L01 | Feature Grid Runtime Guard And Dedicated Controls | Medium | Medium | Keep Feature Grid runtime behavior truthful while migrating its inspector to the dedicated control surface. |
 | TASK-428-02 | Feature Grid Validation Docs And Closure | Medium | Medium | Close the Feature Grid family with targeted validation, live cards/grid proof, and docs/board/changelog sync. |
-| TASK-429 | Media Split Section Audit Remediation | High | Large | Media Split variants currently write markers without changing layout; adopt real variant behavior plus media/responsive controls. |
-| TASK-429-01 | Media Split Contract And Audit Freeze | High | Medium | Freeze the Media Split remediation contract around marker-only variants and missing media/responsive controls. |
-| TASK-429-01-L01 | Media Split Variant Layout And Dedicated Controls | High | Large | Implement real `default`/`split`/`horizontal` layouts and adopt dedicated media/responsive controls. |
+| TASK-429 | Media Split Section Audit Remediation | High | Large | Media Split variants already switch column geometry but lack a media-beside-content presentation; implement the real split/horizontal layouts plus media/responsive controls. |
+| TASK-429-01 | Media Split Contract And Audit Freeze | High | Medium | Freeze the Media Split remediation contract around the missing media-beside-content presentation and media/responsive controls. |
+| TASK-429-01-L01 | Media Split Variant Layout And Dedicated Controls | High | Large | Implement a real media-beside-content `split`/`horizontal` presentation and adopt dedicated media/responsive controls. |
 | TASK-429-02 | Media Split Validation Docs And Closure | High | Medium | Close the Media Split family with targeted validation, live variant proof, and docs/board/changelog sync. |
 | TASK-430 | Timeline Section Audit Remediation | High | Large | Timeline still renders like generic text content; add truthful timeline runtime behavior and dedicated controls. |
-| TASK-430-01 | Timeline Contract And Audit Freeze | High | Medium | Freeze the Timeline remediation contract around marker-only variants and generic front rendering. |
+| TASK-430-01 | Timeline Contract And Audit Freeze | High | Medium | Freeze the Timeline remediation contract around visually inert variants and generic front rendering. |
 | TASK-430-01-L01 | Timeline Runtime Layout And Dedicated Controls | High | Large | Implement truthful timeline runtime behavior and adopt the shared dedicated control surface. |
 | TASK-430-02 | Timeline Validation Docs And Closure | High | Medium | Close the Timeline family with targeted validation, live runtime proof, and docs/board/changelog sync. |
 | TASK-431 | Gallery Section Audit Remediation | High | Large | Gallery still renders generic heading/text content; add truthful gallery/card runtime behavior and dedicated controls. |
@@ -162,8 +162,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-434-01 | Testimonials Contract And Audit Freeze | Medium | Medium | Freeze the Testimonials remediation contract while preserving the current runtime marker behavior. |
 | TASK-434-01-L01 | Testimonials Variant Guard And Dedicated Controls | Medium | Medium | Keep Testimonials runtime behavior truthful while migrating its inspector to the dedicated control surface. |
 | TASK-434-02 | Testimonials Validation Docs And Closure | Medium | Medium | Close the Testimonials family with targeted validation, live variant proof, and docs/board/changelog sync. |
-| TASK-435 | CTA Section Audit Remediation | High | Medium | `centered` and `full-width` CTA variants are data-only no-ops today; make them affect the published layout. |
-| TASK-435-01 | CTA Contract And Audit Freeze | High | Medium | Freeze the CTA remediation contract around the broken `centered`/`full-width` runtime semantics. |
+| TASK-435 | CTA Section Audit Remediation | High | Medium | CTA variant classes collapse so `centered` renders like `default` (only full-width's inline max-width differs); give both variants a visible published-layout effect. |
+| TASK-435-01 | CTA Contract And Audit Freeze | High | Medium | Freeze the CTA remediation contract around the visually identical `centered`/`full-width` runtime semantics. |
 | TASK-435-01-L01 | CTA Variant Layout And Dedicated Controls | High | Medium | Implement real CTA variant layouts and adopt the shared dedicated inspector widgets. |
 | TASK-435-02 | CTA Validation Docs And Closure | High | Medium | Close the CTA family with targeted validation, live variant proof, and docs/board/changelog sync. |
 | TASK-436 | Custom Section Audit Remediation | Medium | Medium | Preserve working custom-grid runtime behavior while replacing shared native-control drift. |
@@ -178,9 +178,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-438-01 | Text Contract And Audit Freeze | High | Medium | Freeze the Text remediation contract around inline-edit, typography, format truthfulness, and toolbar labeling. |
 | TASK-438-01-L01 | Text Inline Edit Typography Format Truthfulness And Toolbar Labeling | High | Medium | Adopt inline-edit and typography for Text, normalize the toolbar label, and keep `plain`/`rich` behavior truthful. |
 | TASK-438-02 | Text Validation Docs And Closure | High | Medium | Close the Text family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-439 | Button Block Audit Remediation | High | Medium | Button already renders for real; close label/control drift and prove variant/size/target/accent behavior stays truthful. |
+| TASK-439 | Button Block Audit Remediation | High | Medium | Button already renders for real; close label/control drift and fix the section-accent application on the published button (single accent-fix owner). |
 | TASK-439-01 | Button Contract And Audit Freeze | High | Medium | Freeze the Button remediation contract around the shared label-edit path and truthful runtime behavior. |
-| TASK-439-01-L01 | Button Label Runtime Truthfulness And Dedicated Controls | High | Medium | Adopt the shared label-edit path for Button and prove variant/size/target/accent behavior stays truthful. |
+| TASK-439-01-L01 | Button Label Runtime Truthfulness And Dedicated Controls | High | Medium | Adopt the shared label-edit path for Button, fix the section-accent application on the published front, and verify variant/size/target behavior. |
 | TASK-439-02 | Button Validation Docs And Closure | High | Medium | Close the Button family with targeted validation, live proof, and docs/board/changelog sync. |
 | TASK-440 | Image Block Audit Remediation | Medium | Medium | Replace raw image URL entry with the shared media path and adopt dedicated layout/style controls. |
 | TASK-440-01 | Image Contract And Audit Freeze | Medium | Medium | Freeze the Image remediation contract around the move from raw URL entry to the shared media-picker path. |
@@ -190,7 +190,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-441-01 | Video Contract And Audit Freeze | Medium | Medium | Freeze the Video remediation contract around the shared media-picker path and dedicated toggle controls. |
 | TASK-441-01-L01 | Video Media Picker Toggle Controls And Runtime Guard | Medium | Medium | Replace raw source entry and yes/no selects with the shared media-picker and toggle control surfaces. |
 | TASK-441-02 | Video Validation Docs And Closure | Medium | Medium | Close the Video family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-442 | List Block Audit Remediation | High | Medium | A freshly inserted empty list is pruned on save; preserve it through publish, adopt real ordered-state controls, and explicitly close the remaining shared dedicated-control drift called out by the audit. |
+| TASK-442 | List Block Audit Remediation | High | Medium | A freshly inserted empty list vanished on save in the 2026-06-10 audit (schema layer round-trips green at HEAD); reproduce the live-path drop first, preserve empty lists through publish, adopt real ordered-state controls, and close the remaining shared dedicated-control drift. |
 | TASK-442-01 | List Contract And Audit Freeze | High | Medium | Freeze the List remediation contract around disappearing empty lists and the `ordered` toggle path. |
 | TASK-442-01-L01 | Empty List Persistence Ordered Toggle And Shared Editing Surface | High | Medium | Preserve default-empty lists through save/publish and adopt the shared ordered/editing surface. |
 | TASK-442-02 | List Validation Docs And Closure | High | Medium | Close the List family with targeted validation, live proof for empty and populated lists, and docs/board/changelog sync. |
@@ -218,20 +218,20 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-448-01 | Container Contract And Audit Freeze | Medium | Medium | Freeze the Container remediation contract while preserving the current working nested-layout/runtime path. |
 | TASK-448-01-L01 | Container Dedicated Controls And Nested Runtime Guard | Medium | Medium | Adopt the dedicated controls for Container while preserving current nested persistence and runtime behavior. |
 | TASK-448-02 | Container Validation Docs And Closure | Medium | Medium | Close the Container family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-449 | Columns Block Audit Remediation | High | Medium | `columns` currently vanishes after save/reopen/publish; fix the round-trip bug and re-verify nested-slot behavior. |
+| TASK-449 | Columns Block Audit Remediation | High | Medium | `columns` vanished after save/reopen/publish in the 2026-06-10 audit (schema layer round-trips green at HEAD); reproduce the live-path drop, fix the identified layer, and re-verify nested-slot behavior. |
 | TASK-449-01 | Columns Round-Trip Reproduction And Contract Freeze | High | Medium | Reproduce the disappearing-columns bug deterministically and freeze the owning slot contract before edits. |
-| TASK-449-01-L01 | Reproduce Columns Save Drop Across Write Read And Publish | High | Medium | Build the failing reproduction that proves exactly where `columns` disappears in the round-trip pipeline. |
-| TASK-449-02 | Columns Persistence And Slot Round-Trip Implementation | High | Large | Fix the normalization/persistence root cause and add round-trip coverage for all insertable blocks. |
+| TASK-449-01-L01 | Reproduce Columns Save Drop Across Write Read And Publish | High | Medium | Build the reproduction that proves exactly where `columns` disappears across the live admin flow and write/read/publish pipeline, or record that it no longer reproduces at HEAD. |
+| TASK-449-02 | Columns Persistence And Slot Round-Trip Implementation | High | Large | Fix the layer identified by TASK-449-01 and land the all-insertable-block round-trip guard (green today; pins behavior). |
 | TASK-449-02-L01 | Preserve Empty Column Slots Nested Children And Round Trip Coverage | High | Large | Preserve empty slot arrays and nested children while adding all-insertable-block round-trip coverage. |
 | TASK-449-03 | Validation Nested Slots Controls And Closure | High | Medium | Replay the columns audit in a real browser and re-verify controls after the shared UI work lands. |
 | TASK-450 | Group Block Audit Remediation | Medium | Medium | Group already renders truthfully; close the heaviest remaining segmented/toggle/gap control drift. |
 | TASK-450-01 | Group Contract And Audit Freeze | Medium | Medium | Freeze the Group remediation contract around direction/wrap/gap control truthfulness. |
 | TASK-450-01-L01 | Group Direction Wrap Gap And Dedicated Controls | Medium | Medium | Adopt the dedicated controls for Group direction/wrap/gap while preserving current runtime behavior. |
 | TASK-450-02 | Group Validation Docs And Closure | Medium | Medium | Close the Group family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-451 | Page Editor Preview Surface And Toolbar Shell Parity | High | Large | Preview currently 404s and full 3-surface parity remains only 2/3; close the preview/shell gaps from the cross-parity audit. |
-| TASK-451-01 | Preview Route And Dialog Contract Freeze | High | Medium | Freeze preview-route ownership, token protections, and what counts as truthful 3-surface parity before fixing the 404 path. |
-| TASK-451-01-L01 | Restore Preview Surface And Preserve Preview Token Guards | High | Large | Restore a reachable preview route/dialog flow without weakening the preview-token security model. |
-| TASK-451-02 | Toolbar Shell And Parity Polish | High | Medium | Close the remaining shell-level parity gaps after the preview route is restored. |
+| TASK-451 | Page Editor Preview Surface And Toolbar Shell Parity | High | Large | The preview dialog is unreachable in the audited environment (the `/preview` route exists; tokenless requests 404 by design), leaving 3-surface parity at 2/3; diagnose the preview URL/environment composition and close the shell gaps from the cross-parity audit. |
+| TASK-451-01 | Preview Route And Dialog Contract Freeze | High | Medium | Freeze preview-route ownership, token protections, and what counts as truthful 3-surface parity before fixing the preview reachability path. |
+| TASK-451-01-L01 | Restore Preview Surface And Preserve Preview Token Guards | High | Large | Diagnose and fix preview reachability (URL/environment composition) without weakening the preview-token security model. |
+| TASK-451-02 | Toolbar Shell And Parity Polish | High | Medium | Close the remaining shell-level parity gaps after the preview surface is reachable. |
 | TASK-451-02-L01 | Normalize Preview Dialog Labels And Add Surface Affordances | High | Medium | Normalize toolbar labels and remaining preview/add-surface shell affordances. |
 | TASK-451-03 | Three Surface Validation And Closure | High | Medium | Close the parity family with a fresh canvas/preview/front replay and docs/board/changelog sync. |
 | TASK-452 | Page Editor Command Palette Gating Guard Rails | Medium | Medium | Convert the currently-correct 11-section/14-block catalog and gated-entry behavior into explicit negative coverage. |

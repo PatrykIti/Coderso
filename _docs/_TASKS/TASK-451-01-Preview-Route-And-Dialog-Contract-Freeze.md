@@ -12,9 +12,13 @@
 
 ## Overview
 
-Freeze the actual preview contract before restoring the 404ing preview surface:
-route ownership, preview-token protections, dialog behavior, and what counts as
-truthful 3-surface parity for the Page editor.
+Freeze the actual preview contract before fixing the preview surface: route
+ownership, preview-token protections, dialog behavior, and what counts as
+truthful 3-surface parity for the Page editor. The public `/preview` route IS
+registered and 404s by design without a valid token/type
+(`core/server/publicSite.tsx:1312-1319`); the audited failure is environmental
+(preview URL/environment composition), so the leaf work is diagnose-and-fix,
+not route restoration.
 
 ---
 

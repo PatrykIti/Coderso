@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
-**Dependencies:** TASK-421, TASK-422, TASK-424
+**Dependencies:** TASK-421, TASK-422, TASK-424, TASK-451-02
 **Status:** ⏳ To Do
 
 ---
@@ -14,7 +14,9 @@
 Remediate the Quote-block findings from `_docs/AUDIT/quote-2026-06-10.md`. The
 block already persists and renders quote/citation content correctly, so the work
 centers on dedicated text/style controls and a small polish pass on toolbar
-label truthfulness.
+label casing (the audit observed lowercase `quote tools`). The toolbar-label
+derivation fix is owned by TASK-451-02-L01; this family only verifies the
+capitalized `Quote tools` fallback after that owner lands.
 
 ---
 
@@ -22,7 +24,8 @@ label truthfulness.
 
 - [ ] TASK-447-01: Quote text/control contract freeze.
 - [ ] TASK-447-01-L01: Adopt inline-edit and dedicated controls for quote/cite
-      content while normalizing toolbar labeling.
+      content and verify the toolbar-label fallback (owned by
+      TASK-451-02-L01).
 - [ ] TASK-447-02: Validation, docs, and closure.
 
 ---

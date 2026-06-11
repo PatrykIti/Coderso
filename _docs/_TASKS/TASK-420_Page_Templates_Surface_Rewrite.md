@@ -30,10 +30,10 @@ Current frozen boundary:
   task owns the surface.
 - No Page Templates route, editor, preview, assistant context, or public runtime
   may accept `WidgetBlock[]`.
-- When TASK-421 is implemented before or alongside this rewrite, the Page
-  Templates editor must consume the shared Page Editor inspector adapter and
-  control primitives from TASK-421 instead of duplicating a raw-input or
-  widget-template inspector.
+- The Page Templates editor must consume the shared Page Editor inspector
+  adapter and control primitives from TASK-421 instead of duplicating a
+  raw-input or widget-template inspector. TASK-420-03 depends on TASK-421-02 so
+  the shared primitives land before the rewrite consumes them.
 
 ---
 

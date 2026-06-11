@@ -33,11 +33,25 @@ function TypographyPanel({ target }) {
 }
 ```
 
+Symbol anchors: `getTypographyControlsForTarget` and `renderRegistryControl`
+above are pseudocode stand-ins. The real registry accessor is
+`getPageEditorControlsForTarget`
+(`core/services/pages/pageEditorControlRegistry.ts:508`), and the real editor
+control renderers are `RegistryControlField` / `SectionRegistryControlField`
+(`core/admin/ui/pages/PageEditor.tsx:2379-2614`); any typography-group
+filtering helper is a new helper, to be created in
+`core/admin/ui/pages/PageEditor.tsx`.
+
 Owner files:
 
 - `core/admin/ui/pages/PageEditor.tsx`
 - `core/services/pages/pageEditorControlRegistry.ts`
 - `core/services/pages/pageDocumentV2.ts`
+- `core/services/pages/pageRendererV2.tsx` (mandatory renderer layer per the
+  4-layer rule, `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md:175-182`:
+  registry descriptor + schema/normalizer + renderer + panel widget — verify the
+  typography mapping introduced in TASK-424-01-L01 paints the panel's writes,
+  otherwise the controls are dummies)
 
 Validation commands:
 
@@ -49,7 +63,12 @@ Expected data flow:
 
 - Text-bearing blocks and sections read/write the same typography fields.
 - `textAlign` and `textColor` move into a coherent typography surface.
-- Inspector changes immediately re-render canvas and front-preview content.
+- Inspector changes immediately re-render canvas and front-preview content:
+  the typography fields are painted on the same rendered node by
+  `toPageBlockStyle` / `renderPageBlockContent` in
+  `core/services/pages/pageRendererV2.tsx`, consumed by the editor canvas
+  (`PageSectionContent`, PageEditor.tsx:111/660) and the published front
+  (`PageDocumentRender`, core/site/pageRuntimeV2.tsx:1).
 
 Error handling:
 
@@ -59,6 +78,9 @@ Error handling:
 Regression-test shape:
 
 - Vitest UI coverage for typography panel rendering and value propagation.
+- Renderer regression: Vitest asserts that typography values written from the
+  panel emit the expected CSS through `core/services/pages/pageRendererV2.tsx`
+  on both the canvas and published-front render surfaces.
 
 ---
 

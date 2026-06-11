@@ -27,8 +27,14 @@ surface for timeline-specific options.
 ## Implementation Pseudocode
 
 ```tsx
-const timelineModel = resolveTimelineSectionModel(section);
-return <TimelineSectionRenderer model={timelineModel} variant={section.layout.variant} />;
+// Real contract anchors (verified): the variant lives at section.variant
+// (top-level on PageSectionV2 in core/services/pages/pageDocumentV2.ts),
+// NOT section.layout.variant; resolve it via resolvePageSectionTemplate
+// (core/services/pages/pageSectionTemplates.ts) to inherit the existing
+// fallback/normalization path.
+const template = resolvePageSectionTemplate(section);
+const timelineModel = resolveTimelineSectionModel(section); // (new helper, to be created in core/services/pages/pageRendererV2.tsx)
+return <TimelineSectionRenderer model={timelineModel} variant={template.variant} />; // (new renderer, to be created in core/services/pages/pageRendererV2.tsx)
 ```
 
 Owner files:

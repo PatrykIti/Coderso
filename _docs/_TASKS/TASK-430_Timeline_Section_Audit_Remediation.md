@@ -13,8 +13,14 @@
 
 Remediate the Timeline-section findings from
 `_docs/AUDIT/timeline-2026-06-10.md`. The current section behaves like generic
-heading/text content: variants persist only as markers, the front lacks any
-timeline-specific layout semantics, the audit also calls out an empty
+heading/text content: variants currently resolve only to a per-variant marker
+class plus generic single-utility tweaks (`items-center` for `horizontal`,
+`content-start` for `compact`) emitted by `pageSectionTemplateClass` on the
+inner content node (`core/services/pages/pageRendererV2.tsx`), with no
+timeline-specific structure or column semantics on the front — that missing
+timeline/milestone layout remains the real gap this family fixes, and the
+remediation extends/replaces the existing generic variant-class mapping rather
+than adding variant handling from zero. The audit also calls out an empty
 Responsive tab, and the dedicated control surface is still missing.
 
 ---

@@ -56,7 +56,9 @@ Validation commands:
 Expected data flow:
 
 - Dblclick or Enter on a selected target enables inline editing.
-- Blur/Escape commits through the existing `updateBlock` path.
+- Blur/Escape commits through the existing `updateSelectedBlockControl` →
+  `updatePageBlockAtPath` + `patchBlockPropsForDevice` path (PageEditor.tsx
+  ~1051–1068, device-scoped).
 - The existing contenteditable hotkey guard remains the single suppression path.
 
 Error handling:

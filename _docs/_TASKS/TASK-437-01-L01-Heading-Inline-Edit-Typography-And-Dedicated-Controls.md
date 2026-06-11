@@ -12,8 +12,16 @@
 
 ## Overview
 
-Adopt the inline-edit and typography flows for Heading while replacing the
-remaining native inspector drift with the shared dedicated control widgets.
+Adopt the inline-edit and typography flows for Heading and verify the heading
+panels render the shared dedicated control widgets. Ownership boundary:
+TASK-421 owns the widget primitives and block preset panels, TASK-422 owns the
+inline-edit mechanism (including the `heading.text` target), and TASK-424 owns
+typography — this leaf only wires and verifies Heading adoption and closes any
+heading-specific residue after those land. Inline-edit entry/commit machinery
+is owned by TASK-422 (the `inlineEditableTargets` map in
+`core/services/pages/pageInlineEditContract.ts` — new module owned by
+TASK-422-01-L01 — plus the shared canvas contenteditable flow); this leaf only
+registers the heading targets in that map and verifies behavior.
 
 ---
 
@@ -26,8 +34,22 @@ remaining native inspector drift with the shared dedicated control widgets.
 ## Implementation Pseudocode
 
 ```tsx
-renderInlineEditableHeading(block.props.text);
-renderTypographyControls(getBlockControlsForType("heading"));
+// Inline edit: the heading target ({ blockType: "heading", propPath: "text" })
+// is an entry in the TASK-422-owned static inlineEditableTargets literal
+// (core/services/pages/pageInlineEditContract.ts — new module owned by
+// TASK-422-01-L01); the shared canvas contenteditable entry/commit flow is
+// TASK-422-02-L01's. This leaf only verifies the heading entry resolves and
+// commits — it implements no registration API of its own.
+const headingTarget = resolveInlineEditTarget(headingBlock, "text"); // must be non-null
+
+// Controls: the real registry accessor is getPageEditorControlsForTarget
+// (core/services/pages/pageEditorControlRegistry.ts:508); heading rows live at
+// pageEditorControlRegistry.ts:362-374 (text/level/align, align already
+// `input: "segmented"`).
+const headingControls = getPageEditorControlsForTarget({ kind: "block", type: "heading" });
+// Verify RegistryControlField (core/admin/ui/pages/PageEditor.tsx ~2524-2614)
+// renders them through the shared TASK-421 widgets and the TASK-424 typography
+// descriptors once those families land.
 ```
 
 Owner files:

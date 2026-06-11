@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Pages / Page Editor V2 / QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-449-02, TASK-421
+**Dependencies:** TASK-449-02, TASK-421, TASK-423
 **Status:** ⏳ To Do
 
 ---

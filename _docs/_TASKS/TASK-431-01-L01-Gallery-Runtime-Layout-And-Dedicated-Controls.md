@@ -27,8 +27,12 @@ controls.
 ## Implementation Pseudocode
 
 ```tsx
-const galleryModel = resolveGallerySectionModel(section);
-return <GallerySectionRenderer model={galleryModel} variant={section.layout.variant} />;
+// Variant is a top-level section field (`section.variant`, PageSectionV2 in
+// core/services/pages/pageDocumentV2.ts:199); `section.layout` holds only
+// columns/align/justify/maxWidth. Resolve it through the existing contract:
+const template = resolvePageSectionTemplate(section); // pageSectionTemplates.ts:117
+const galleryModel = resolveGallerySectionModel(template.section); // (new helper, to be created in core/services/pages/pageRendererV2.tsx)
+return <GallerySectionRenderer model={galleryModel} variant={template.variant} />; // (new component, to be created in core/services/pages/pageRendererV2.tsx)
 ```
 
 Owner files:
@@ -53,7 +57,9 @@ Expected data flow:
 
 Error handling:
 
-- Unknown variants fall back to `default`.
+- Unknown variants fall back to the registry `fallbackVariant` (`grid` for
+  gallery, `core/services/pages/pageSectionTemplates.ts:70-73`) via
+  `resolvePageSectionTemplate`.
 - Missing gallery assets degrade to deterministic empty states.
 
 Regression-test shape:

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Pages / Page Editor V2 / QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-425, TASK-426-01
+**Dependencies:** TASK-425, TASK-426-01, TASK-439-01-L01
 **Status:** ⏳ To Do
 
 ---
@@ -16,6 +16,8 @@ Close the Hero family with targeted validation, a live browser replay of the
 audit expectations, and docs/board/changelog synchronization.
 
 This subtask explicitly consumes the matching responsive-panel closure from `TASK-425` so the audit's empty Responsive-tab finding cannot be dropped from the family.
+
+It also depends on `TASK-439-01-L01`: closure replays the hero-side accent verification (the section emits `--coderso-section-accent` and the published hero button visibly reflects it) only after the TASK-439-owned accent->button binding fix lands, so the two families cannot both implement the same change in `core/services/pages/pageRendererV2.tsx`.
 
 ---
 

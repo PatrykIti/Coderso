@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
-**Dependencies:** TASK-446-01
+**Dependencies:** TASK-446-01, TASK-451-02
 **Status:** ⏳ To Do
 
 ---
@@ -13,7 +13,15 @@
 ## Overview
 
 Adopt the shared inline-edit and dedicated control paths for Statistic and
-normalize the toolbar label away from transient default content like `0 tools`.
+verify the toolbar label reads `Statistic tools` instead of transient default
+content like `0 tools`. Toolbar-label derivation is owned by TASK-451-02-L01
+via `resolveToolbarTargetLabel(target, { fallbackToTypeName: true })` (new
+helper, to be created in `core/admin/ui/pages/PageEditor.tsx`); this leaf only
+verifies the statistic fallback after that owner lands. Inline-edit
+entry/commit machinery is owned by TASK-422
+(`core/services/pages/pageInlineEditContract.ts` targets map plus the shared
+canvas contenteditable flow); this leaf only registers the statistic
+value/label/caption targets in `inlineEditableTargets` and verifies behavior.
 
 ---
 
@@ -26,17 +34,32 @@ normalize the toolbar label away from transient default content like `0 tools`.
 ## Implementation Pseudocode
 
 ```tsx
-const toolbarLabel = resolveBlockToolbarLabel(block, { fallback: "Statistic" });
-renderInlineEditableStatisticFields(block.props);
-renderTypographyControls(getBlockControlsForType("statistic"));
+// Toolbar label: derivation owned by TASK-451-02-L01
+// (resolveToolbarTargetLabel(target, { fallbackToTypeName: true }) in
+// core/admin/ui/pages/PageEditor.tsx). This leaf only verifies the fallback
+// once the owner lands:
+expect(floatingToolbar.getAttribute("aria-label")).toBe("Statistic tools");
+
+// Inline edit: machinery owned by TASK-422. Register/verify the statistic
+// value/label/caption targets in the TASK-422-owned inlineEditableTargets map
+// (core/services/pages/pageInlineEditContract.ts).
+
+// Dedicated controls: verify the statistic panels render the shared TASK-421
+// widgets resolved via getPageEditorControlsForTarget(...)
+// (core/services/pages/pageEditorControlRegistry.ts:508) and rendered through
+// RegistryControlField in core/admin/ui/pages/PageEditor.tsx.
 ```
 
 Owner files:
 
-- `core/admin/ui/pages/PageEditor.tsx`
-- `core/services/pages/pageEditorControlRegistry.ts`
-- `core/services/pages/pageRendererV2.tsx`
-- `core/services/pages/pageDocumentV2.ts`
+- `core/admin/ui/pages/PageEditor.tsx` (verify-only: toolbar-label fallback is
+  owned by TASK-451-02-L01; inline-edit machinery is owned by TASK-422)
+- `core/services/pages/pageEditorControlRegistry.ts` (verify-only: statistic
+  control entries resolved through `getPageEditorControlsForTarget`)
+- `core/services/pages/pageRendererV2.tsx` (verify-only: published statistic
+  output stays truthful)
+- `core/services/pages/pageDocumentV2.ts` (verify-only: statistic
+  schema/defaults stay the contract source)
 
 Validation commands:
 
@@ -46,9 +69,11 @@ Validation commands:
 
 Expected data flow:
 
-- Value/label/caption edits share one owner path across canvas and inspector.
-- Toolbar labels prefer stable block names over transient content defaults.
-- Shared style controls adopt the dedicated widgets.
+- Value/label/caption edits share the one owner path registered in the
+  TASK-422 inline-edit contract across canvas and inspector.
+- After TASK-451-02-L01 lands, the floating toolbar reads `Statistic tools`
+  instead of `0 tools` (verified here, not implemented here).
+- The statistic panels render the shared TASK-421 widgets.
 
 Error handling:
 
@@ -57,7 +82,8 @@ Error handling:
 
 Regression-test shape:
 
-- Vitest UI coverage for inline edits, toolbar labels, and runtime output.
+- Vitest UI coverage for inline edits, the `Statistic tools` toolbar-label
+  verification, and runtime output.
 
 ---
 

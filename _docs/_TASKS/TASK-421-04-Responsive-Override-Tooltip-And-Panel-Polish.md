@@ -13,8 +13,13 @@
 ## Overview
 
 Polish the floating inspector behavior so it matches the reference interaction:
-single open subpanel, icon tooltips, visible override badges, reset inheritance
-actions, scrollable subpanels, and no panel overflow outside the editor viewport.
+single open subpanel, icon tooltips, inline override badges with tooltip and
+per-control reset-to-inherited polish on the controls themselves, scrollable
+subpanels, and no panel overflow outside the editor viewport. This leaf does
+not add content to the dedicated Responsive tab: its control content
+(hide-on-screen toggles, vertical-layout toggle, per-field override list,
+reset actions, device readouts) is owned by TASK-425 (TASK-425-01-L01
+contract, TASK-425-02-L01 implementation).
 The panel must be slightly shorter than the browser/editor viewport; long
 content scrolls inside the subpanel, while the header/title and any close or
 collapse action remain reachable.
@@ -47,7 +52,10 @@ Expected data flow:
 
 - Tooltip labels and hover descriptions come from toolbar panel/action metadata,
   not from ad hoc button `title` strings.
-- Override badges continue using existing responsive override readers.
+- Override badges continue using existing responsive override readers. Badge,
+  tooltip, and reset polish stays inline on the individual controls; the
+  Responsive tab's own controls and reset list are out of scope here and owned
+  by TASK-425.
 - Subpanels remain visible and scrollable within the browser/editor viewport;
   accepted implementation uses a concrete bounded-height class or inline style
   such as `max-h-[min(72vh,calc(100dvh-8rem))]` plus `overflow-y-auto`.
@@ -89,3 +97,9 @@ Regression-test shape:
 - Playwright CLI smoke for real viewport overflow/scroll behavior.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+---
+
+## Documentation Updates Required
+
+- None beyond the parent family docs; TASK-421-05 owns board/changelog sync.

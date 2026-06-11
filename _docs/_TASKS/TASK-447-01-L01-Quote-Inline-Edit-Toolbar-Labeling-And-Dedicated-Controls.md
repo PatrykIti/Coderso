@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
-**Dependencies:** TASK-447-01
+**Dependencies:** TASK-447-01, TASK-451-02
 **Status:** ⏳ To Do
 
 ---
@@ -13,7 +13,15 @@
 ## Overview
 
 Adopt the shared inline-edit and dedicated control paths for Quote/Cite and
-normalize the toolbar label so it stays human and stable across states.
+verify the toolbar label stays human and stable across states — specifically
+that it reads capitalized `Quote tools`, not the audited lowercase
+`quote tools`. Toolbar-label derivation is owned by TASK-451-02-L01 via
+`resolveToolbarTargetLabel(target, { fallbackToTypeName: true })` (new helper,
+to be created in `core/admin/ui/pages/PageEditor.tsx`); this leaf only verifies
+the quote fallback after that owner lands. Inline-edit entry/commit machinery
+is owned by TASK-422 (`core/services/pages/pageInlineEditContract.ts` targets
+map plus the shared canvas contenteditable flow); this leaf only registers the
+quote text/cite targets in `inlineEditableTargets` and verifies behavior.
 
 ---
 
@@ -26,17 +34,33 @@ normalize the toolbar label so it stays human and stable across states.
 ## Implementation Pseudocode
 
 ```tsx
-const toolbarLabel = resolveBlockToolbarLabel(block, { fallback: "Quote" });
-renderInlineEditableQuote(block.props);
-renderTypographyControls(getBlockControlsForType("quote"));
+// Toolbar label: derivation owned by TASK-451-02-L01
+// (resolveToolbarTargetLabel(target, { fallbackToTypeName: true }) in
+// core/admin/ui/pages/PageEditor.tsx). This leaf only verifies the fallback
+// once the owner lands — capitalization is part of the assertion:
+expect(floatingToolbar.getAttribute("aria-label")).toBe("Quote tools");
+expect(floatingToolbar.getAttribute("aria-label")).not.toBe("quote tools");
+
+// Inline edit: machinery owned by TASK-422. Register/verify the quote
+// text/cite targets in the TASK-422-owned inlineEditableTargets map
+// (core/services/pages/pageInlineEditContract.ts).
+
+// Dedicated controls: verify the quote panels render the shared TASK-421
+// widgets resolved via getPageEditorControlsForTarget(...)
+// (core/services/pages/pageEditorControlRegistry.ts:508) and rendered through
+// RegistryControlField in core/admin/ui/pages/PageEditor.tsx.
 ```
 
 Owner files:
 
-- `core/admin/ui/pages/PageEditor.tsx`
-- `core/services/pages/pageEditorControlRegistry.ts`
-- `core/services/pages/pageRendererV2.tsx`
-- `core/services/pages/pageDocumentV2.ts`
+- `core/admin/ui/pages/PageEditor.tsx` (verify-only: toolbar-label fallback is
+  owned by TASK-451-02-L01; inline-edit machinery is owned by TASK-422)
+- `core/services/pages/pageEditorControlRegistry.ts` (verify-only: quote
+  control entries resolved through `getPageEditorControlsForTarget`)
+- `core/services/pages/pageRendererV2.tsx` (verify-only: published quote/cite
+  output stays truthful)
+- `core/services/pages/pageDocumentV2.ts` (verify-only: quote schema/defaults
+  stay the contract source)
 
 Validation commands:
 
@@ -46,10 +70,12 @@ Validation commands:
 
 Expected data flow:
 
-- Quote and cite edits share one owner path across canvas and inspector.
-- Toolbar labels prefer stable type names over inconsistent content-derived
-  labels.
-- Shared style controls adopt the dedicated widgets.
+- Quote and cite edits share the one owner path registered in the TASK-422
+  inline-edit contract across canvas and inspector.
+- After TASK-451-02-L01 lands, the floating toolbar reads capitalized
+  `Quote tools` instead of the content-derived lowercase `quote tools`
+  (verified here, not implemented here).
+- The quote panels render the shared TASK-421 widgets.
 
 Error handling:
 
@@ -58,7 +84,8 @@ Error handling:
 
 Regression-test shape:
 
-- Vitest UI coverage for inline edits, toolbar labels, and runtime output.
+- Vitest UI coverage for inline edits, the capitalized `Quote tools`
+  toolbar-label verification, and runtime output.
 
 ---
 

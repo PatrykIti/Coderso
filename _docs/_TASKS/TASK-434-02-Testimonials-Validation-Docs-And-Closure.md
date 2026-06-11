@@ -22,6 +22,10 @@ This subtask explicitly consumes the matching responsive-panel closure from `TAS
 ## Sub-Tasks
 
 - [ ] Run the targeted validation set and capture final evidence.
+- [ ] Capture live published-front proof that `cards` renders a visibly
+      distinct per-item card surface versus `grid` (closing the follow-up
+      report's testimonials variant-to-front warning), and cite the
+      cards-vs-grid decision recorded in TASK-434-01.
 - [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
 - [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
 

@@ -14,8 +14,10 @@
 
 Freeze the Feature Grid remediation contract from
 `_docs/AUDIT/feature-grid-2026-06-10.md`, preserving the currently-working
-cards/grid runtime behavior while replacing the shared native-control drift and
-explicitly consuming the matching Responsive-tab closure from `TASK-425`.
+cards/grid runtime behavior while consuming the shared dedicated-control
+closure owned by `TASK-421` (TASK-421-02 primitives, TASK-421-03-L01 section
+panels) and explicitly consuming the matching Responsive-tab closure from
+`TASK-425`.
 
 ---
 

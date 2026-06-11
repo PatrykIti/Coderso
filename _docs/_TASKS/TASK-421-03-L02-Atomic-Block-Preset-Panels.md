@@ -14,8 +14,9 @@
 
 Implement the block-level inspector preset surface for atomic Page blocks.
 Blocks keep focused controls: content where needed, layout width/alignment,
-style/typography/background, spacing, responsive, and visibility. Avoid
-recreating legacy widget editor complexity.
+style/typography/background, spacing, responsive, and visibility (the
+Responsive tab's control content is owned by TASK-425; this leaf renders only
+the category shell for it). Avoid recreating legacy widget editor complexity.
 
 The block inspector must expose the same ergonomic primitives as sections:
 segmented choices for small option sets, toggles for booleans, sliders for
@@ -82,3 +83,9 @@ Regression-test shape:
 - `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+---
+
+## Documentation Updates Required
+
+- None beyond the parent family docs; TASK-421-05 owns board/changelog sync.

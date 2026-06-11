@@ -32,8 +32,10 @@ Behavior requirements:
 - While editing: Delete/Ctrl+K/Escape-to-deselect and other editor hotkeys are
   suppressed (extend the existing guard, do not add a parallel one).
 - Blur/Escape: commit via `commitInlineText`; update flows through the same
-  `updateBlock(blockId, "props", …)` path as the panel field; the panel field
-  shows the new value without refetch.
+  `updateSelectedBlockControl` → `updatePageBlockAtPath` →
+  `patchBlockControlForDevice`/`patchBlockPropsForDevice` path
+  (PageEditor.tsx ~1051–1068, device-scoped) as the panel field; the panel
+  field shows the new value without refetch.
 - Edit mode is visually distinct from selection (caret + subtle outline);
   `data-page-editor-inline-edit` attribute exposed for tests.
 - React Hooks Compiler rules: no synchronous `setState` in effect bodies; use
@@ -62,6 +64,9 @@ function CanvasBlockText({ block, propPath, selected }) {
         setEditing(false);
         const next = commitInlineText(target, readProp(block, propPath),
           event.currentTarget.textContent ?? "");
+        // updateBlockProp = new thin helper, to be created in PageEditor.tsx,
+        // delegating to updatePageBlockAtPath + patchBlockPropsForDevice — the
+        // same device-scoped path updateSelectedBlockControl drives.
         if (next !== readProp(block, propPath)) updateBlockProp(block.id, propPath, next);
       }}
       onKeyDown={(event) => {
@@ -78,7 +83,9 @@ function CanvasBlockText({ block, propPath, selected }) {
 Expected data flow:
 
 - Selection state → dblclick → editing → blur → sanitize/commit →
-  `updateBlockProp` → document state → both canvas and panel re-render.
+  `updateBlockProp` (delegating to `updatePageBlockAtPath` +
+  `patchBlockPropsForDevice`) → document state → both canvas and panel
+  re-render.
 - Enter on a selected block (keyboard path) focuses the first inline target.
 
 Error handling:

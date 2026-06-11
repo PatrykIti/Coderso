@@ -34,8 +34,11 @@ Target behavior:
 - Double-click on a selected text-bearing block (or Enter while it is
   selected) enters inline edit mode with a focused caret.
 - Inline edits write through the **same** block-prop update cycle the floating
-  panel uses (`updateBlock`-style path), so canvas and panel edits share one
-  source of truth and the dirty-state/autosave behavior is unchanged.
+  panel uses (`updateSelectedBlockControl` → `updatePageBlockAtPath` →
+  `patchBlockControlForDevice`/`patchBlockPropsForDevice` in
+  `core/admin/ui/pages/PageEditor.tsx`, device-scoped), so canvas and panel
+  edits share one source of truth and the dirty-state/autosave behavior is
+  unchanged.
 - Escape or blur commits; editor hotkeys must not fire while typing (reuse the
   existing `contenteditable` keyboard guard).
 - Committed text is sanitized to the block contract (plain text for
@@ -113,8 +116,10 @@ Expected data flow:
 - Entry: dblclick or Enter on the selected block → `editing=true`, caret focus.
 - While editing: editor keyboard shortcuts are suppressed via the existing
   guard (`target.closest("[contenteditable='true']")`, PageEditor.tsx ~492).
-- Commit: blur/Escape → sanitize → the same `updateBlock(blockId, "props", …)`
-  path the "Primary text" panel field drives → dirty state + autosave as today.
+- Commit: blur/Escape → sanitize → the same `updateSelectedBlockControl` →
+  `updatePageBlockAtPath` + `patchBlockPropsForDevice` path (PageEditor.tsx
+  ~1051–1068, device-scoped) the "Primary text" panel field drives → dirty
+  state + autosave as today.
 - The floating panel field re-renders from the same document state, so panel
   and canvas can never diverge.
 

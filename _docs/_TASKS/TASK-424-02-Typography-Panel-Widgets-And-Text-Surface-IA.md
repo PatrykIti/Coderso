@@ -14,7 +14,10 @@
 
 Implement the actual Typography surface in the floating inspector and define how
 text-style controls are grouped for sections and text-bearing blocks without
-reverting to raw form-field sprawl.
+reverting to raw form-field sprawl. Panel writes must paint through the
+renderer layer (`core/services/pages/pageRendererV2.tsx`, mandatory per the
+4-layer rule in `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md:175-182`) on the
+same rendered node on both the editor canvas and the published front.
 
 ---
 

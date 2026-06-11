@@ -4,7 +4,12 @@ Katalog na audyty driftu **kontraktów zadań** (`_docs/_TASKS/*`) względem aud
 produktowych (`_docs/AUDIT/*`) i kodu. Konwencja nazw plików:
 `<obszar>-<czego-dotyczy>-<data>.md`; raporty zbiorcze z prefiksem `_`.
 
-## 2026-06-11 — drift tasków TASK-420..453 (Pages Editor V2)
+## 2026-06-11 — drift tasków TASK-420..453 (Pages Editor V2) — ✅ wyremediowane
+
+**Remediacja 2026-06-11:** wszystkie znaleziska HIGH/MEDIUM/LOW z tego audytu zostały
+naprawione w plikach `_docs/_TASKS/*` (workflow 10 klastrów + checkery; szczegóły w nagłówku
+raportu zbiorczego). Znaleziska „Obalone" pozostały bez zmian — zgodnie z uzasadnieniami
+weryfikatorów.
 
 Weryfikacja, czy rodziny remediacyjne TASK-420..TASK-453 są poprawnie rozpisane względem
 audytów z 2026-06-10 i kodu (HEAD `ae9dcc44`). Workflow 73 agentów: 34 audytorów per rodzina

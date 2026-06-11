@@ -104,3 +104,9 @@ Regression-test shape:
 - Targeted renderer helper tests if introduced.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+---
+
+## Documentation Updates Required
+
+- None beyond the parent family docs; TASK-421-05 owns board/changelog sync.

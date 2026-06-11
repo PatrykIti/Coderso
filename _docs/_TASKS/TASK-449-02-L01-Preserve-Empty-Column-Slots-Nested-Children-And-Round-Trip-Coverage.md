@@ -12,9 +12,13 @@
 
 ## Overview
 
-Implement the actual persistence fix for `columns`, preserving empty slot arrays
-and nested child blocks while adding the all-insertable-block round-trip guard
-requested by the audit.
+Implement the persistence fix for `columns` in the layer identified by
+TASK-449-01-L01 (hard gate: a fresh failing live reproduction is a
+precondition). The schema layer already preserves empty slot arrays and
+nested children at HEAD `ae9dcc44`, so this leaf must not rewrite
+`normalizeBlockSlots`; if the reproduction records "not reproducible at
+HEAD", this leaf lands only the all-insertable-block round-trip guard
+requested by the audit (the guard passes today and pins current behavior).
 
 ---
 
@@ -27,14 +31,16 @@ requested by the audit.
 ## Implementation Pseudocode
 
 ```ts
-function normalizeColumnSlots(input, block) {
-  return preserveKnownSlots(input, getPageBlockActiveSlotKeys(block), {
-    keepEmptyArrays: true,
-    preserveOverflowChildren: true,
-  });
-}
+// Schema layer verified green at HEAD ae9dcc44: normalizeBlockSlots
+// (core/services/pages/pageDocumentV2.ts:1425-1503) keeps empty slot arrays
+// and preserves overflow children; do not rewrite it. Implement the fix only
+// in the layer recorded by TASK-449-01-L01 (editor save/autosave payload at
+// PageEditor.tsx:1537/:1550, stale-CSRF save failure + cache-event
+// rehydration around PageEditor.tsx:1520-1554, or publish flow); if no layer
+// reproduces the drop, land only the guard below.
 
 test("all insertable blocks survive round-trip", () => {
+  // green today — permanent pin of current schema-layer behavior
   for (const type of editorInsertableBlockTypes) expect(roundTrip(type)).toContain(type);
 });
 ```
@@ -54,9 +60,12 @@ Validation commands:
 
 Expected data flow:
 
-- Empty column slots remain persisted state.
-- Nested child blocks survive write/read/publish.
-- Count changes clamp active slots non-destructively.
+- Empty column slots remain persisted state (current behavior, pinned).
+- Nested child blocks survive write/read/publish (current behavior, pinned).
+- Count changes clamp active slots non-destructively (current behavior,
+  pinned).
+- The live save → reopen → publish flow keeps the columns block once the
+  layer identified by TASK-449-01-L01 is fixed.
 
 Error handling:
 

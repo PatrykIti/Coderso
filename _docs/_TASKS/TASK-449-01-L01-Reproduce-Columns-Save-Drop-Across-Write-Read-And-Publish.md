@@ -12,9 +12,18 @@
 
 ## Overview
 
-Build the failing reproduction that proves exactly where `columns` is lost
-between editor insert, write normalization, stored read normalization, and
-published runtime output.
+Build the reproduction that proves exactly where `columns` is lost in the
+live editor flow. The pure schema layer (`normalizePageDocumentV2ForWrite` →
+`normalizeStoredPageDocumentV2ForRead` → `toPublishedPageDocumentV2`) and
+route Ajv validation are verified green at HEAD `ae9dcc44` (empirical bun
+round trip, 2026-06-11 drift audit), so the reproduction must exercise the
+real save path: editor document state → `autosavePage`/`updatePage`
+(`PageEditor.tsx:1537`/`:1550`) → route validation →
+`pageService.preparePageData` → DB → reopen via cache/detail fetch, including
+the stale-CSRF save-failure + cache-event rehydration path
+(`PageEditor.tsx:1520-1554`) → publish. If the drop does not reproduce at
+HEAD, record that result explicitly. Either way the recorded outcome gates
+TASK-449-02: the fix contract may only target the layer recorded here.
 
 ---
 
@@ -27,13 +36,22 @@ published runtime output.
 ## Implementation Pseudocode
 
 ```ts
+// Schema-layer pin (verified green at HEAD ae9dcc44; NOT the failing
+// reproduction — keep as a regression pin):
 const document = buildMinimalPageWithColumns();
 const written = normalizePageDocumentV2ForWrite(document);
 const stored = normalizeStoredPageDocumentV2ForRead(written);
 const published = toPublishedPageDocumentV2(written);
 
-expect(findBlockTypes(stored)).toContain("columns");
-expect(findBlockTypes(published)).toContain("columns");
+expect(findBlockTypes(stored)).toContain("columns");   // passes today
+expect(findBlockTypes(published)).toContain("columns"); // passes today
+
+// Live-path reproduction (the deliverable): replay insert → autosavePage/
+// updatePage (PageEditor.tsx:1537/:1550) → route Ajv validation →
+// pageService.preparePageData → DB → reopen via cache/detail fetch,
+// including the stale-CSRF save-failure + cache-event rehydration path
+// (PageEditor.tsx:1520-1554) → publish. Record the first layer that drops
+// the block, or record "not reproducible at HEAD".
 ```
 
 Owner files:
@@ -52,8 +70,12 @@ Validation commands:
 Expected data flow:
 
 - Capture exact editor-produced default slots.
-- Compare behavior with `container` and `group`.
-- Record the first layer that drops the block.
+- Compare behavior with `container` and `group` (both persisted in the same
+  audited session, so block-type-agnostic layers alone cannot explain the
+  columns-specific drop).
+- Record the first layer that drops the block, or record explicitly that the
+  drop no longer reproduces at HEAD; this record is the hard gate for the
+  TASK-449-02 fix contract.
 
 Error handling:
 
@@ -62,7 +84,9 @@ Error handling:
 
 Regression-test shape:
 
-- Vitest round-trip reproduction for default and nested-child columns cases.
+- Vitest round-trip pin for default and nested-child columns cases (green
+  today — pins schema-layer behavior), plus recorded live-path reproduction
+  evidence.
 
 ---
 
@@ -79,7 +103,9 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- New Vitest coverage for the failing columns round trip.
+- New Vitest coverage pinning the green columns round trip (schema layer),
+  plus recorded live-path reproduction evidence or an explicit "not
+  reproducible at HEAD" record.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 
