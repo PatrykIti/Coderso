@@ -420,7 +420,7 @@ testIfDb(
     expect(autosave.revision.kind).toBe("autosave");
     expect(autosave.reusedRevision).toBe(false);
 
-    const publish = await runRoute(routes, "POST", "/pages/:id/publish", {
+    const publish = (await runRoute(routes, "POST", "/pages/:id/publish", {
       params: { id: created.id },
       user: { id: actor.id },
       body: {
@@ -434,8 +434,25 @@ testIfDb(
           },
         }),
       },
+    })) as { ok: boolean; page: typeof pages.$inferSelect };
+    expect(publish.ok).toBe(true);
+    // The route returns the post-publish detail so admin clients can keep
+    // the cached draft coherent with the published state: the published
+    // document is also persisted as `currentData`.
+    expect(publish.page.id).toBe(created.id);
+    expect(publish.page.status).toBe("published");
+    expect(
+      (
+        publish.page.currentData as {
+          settings?: { collectionLink?: Record<string, unknown> };
+        }
+      ).settings?.collectionLink
+    ).toEqual({
+      contentTypeId: "content-type-1",
+      pageRole: "canonical-list-page",
+      listingQueryId: "query-2",
+      listingTemplateId: "template-2",
     });
-    expect(publish).toEqual({ ok: true });
 
     const preview = (await runRoute(routes, "POST", "/pages/:id/preview", {
       params: { id: created.id },

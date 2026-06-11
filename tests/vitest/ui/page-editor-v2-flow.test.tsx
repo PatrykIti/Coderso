@@ -18,6 +18,17 @@ import {
   type PageDocumentV2,
   type PageSectionType,
 } from "../../../core/services/pages/pageDocumentV2";
+import {
+  getPageEditorControlsForTarget,
+  type PageEditorControlDefinition,
+  type PageEditorControlPanel,
+} from "../../../core/services/pages/pageEditorControlRegistry";
+import {
+  editorCanvasCtaButtonClass,
+  editorDarkButtonClass,
+  editorDarkGhostButtonClass,
+} from "../../../core/admin/ui/pages/editorControls/controlChrome";
+import { resolvePageEditorControlUiModel } from "../../../core/services/pages/pageEditorControlUiModel";
 import { DEFAULT_TOKENS } from "../../../core/services/theme/tokenTypes";
 import { toPageTypographyCssVariableMap } from "../../../core/ui/theme/tokenCss";
 
@@ -73,11 +84,18 @@ const pageEditorState = vi.hoisted(() => {
     autosavePage: vi.fn(async () => ({ ok: true })),
     publishPage: vi.fn(async (id: string, data: Record<string, unknown>) => {
       const current = state.currentPage ?? createPage({ id });
-      state.currentPage = {
+      // Mirror the real pagesClient/route contract: publish persists the
+      // published document as the draft too, merges the post-publish detail
+      // into the cached detail, and returns it alongside `ok`.
+      const published: PageDetail = {
         ...current,
         status: "published",
         currentData: data,
+        updatedAt: "2026-03-08T09:30:00.000Z",
       };
+      state.currentPage = published;
+      state.cachedPage = published;
+      return { ok: true, page: published };
     }),
     restorePageRevision: vi.fn(async (_pageId: string, revisionId: string) => {
       const restored = createPage({
@@ -1335,6 +1353,11 @@ test("PageEditor empty section placeholder opens the block inserter", async () =
   try {
     await flush();
 
+    // Empty-state CTA keeps the dashed affordance on the shared canvas chrome.
+    const firstBlockCta = findButton(view.container, "Add the first block");
+    expect(firstBlockCta?.className).toContain(editorCanvasCtaButtonClass);
+    expect(firstBlockCta?.className).toContain("border-dashed");
+
     clickButton(view.container, "Add the first block");
     await flush();
 
@@ -2250,6 +2273,39 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
     ) as HTMLElement | null;
     expect(toolbar?.getAttribute("aria-label")).toBe("Hero tools");
     expect(toolbar?.getAttribute("data-page-editor-toolbar-collapsed")).toBe("false");
+
+    // Owner finding #3: two-row head structure. Row 1 = identity + editing
+    // scope pill on the left with the right-aligned action cluster; row 2 =
+    // the panel category icons on their own line so they never collide with
+    // the scope pill.
+    const headRow = toolbar?.querySelector('[data-page-editor-toolbar-row="head"]');
+    const panelsRow = toolbar?.querySelector('[data-page-editor-toolbar-row="panels"]');
+    expect(headRow).toBeTruthy();
+    expect(panelsRow).toBeTruthy();
+    expect(headRow?.querySelector("[data-page-editor-editing-scope]")).toBeTruthy();
+    expect(headRow?.querySelector("[data-page-editor-toolbar-icon]")).toBeNull();
+    expect(panelsRow?.querySelector("[data-page-editor-editing-scope]")).toBeNull();
+    const panelIcons = Array.from(
+      toolbar?.querySelectorAll("[data-page-editor-toolbar-icon]") ?? []
+    );
+    expect(panelIcons.length).toBeGreaterThan(0);
+    for (const icon of panelIcons) {
+      expect(icon.closest('[data-page-editor-toolbar-row="panels"]')).toBe(panelsRow);
+    }
+    const actionCluster = headRow?.querySelector('[data-page-editor-toolbar-actions="true"]');
+    expect(actionCluster).toBeTruthy();
+    expect(actionCluster?.className).toContain("ml-auto");
+    for (const label of [
+      "Collapse toolbar",
+      "Move section up",
+      "Move section down",
+      "Duplicate section",
+      "Delete section",
+    ]) {
+      expect(actionCluster?.querySelector(`button[aria-label="${label}"]`)).toBeTruthy();
+    }
+    expect(panelsRow?.querySelector('button[aria-label="Duplicate section"]')).toBeNull();
+
     expect(view.container.querySelectorAll("[data-page-editor-toolbar-panel]")).toHaveLength(1);
     expect(
       view.container
@@ -2278,6 +2334,13 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
     toolbar = view.container.querySelector('[data-page-editor-floating-toolbar="true"]');
     expect(toolbar?.getAttribute("data-page-editor-toolbar-collapsed")).toBe("true");
     expect(view.container.querySelector("[data-page-editor-toolbar-panel]")).toBeNull();
+    // Collapsed: the panels row disappears entirely; the action cluster keeps
+    // only the expand control.
+    expect(toolbar?.querySelector('[data-page-editor-toolbar-row="panels"]')).toBeNull();
+    const collapsedActions = toolbar?.querySelector('[data-page-editor-toolbar-actions="true"]');
+    expect(collapsedActions?.querySelector('button[aria-label="Expand toolbar"]')).toBeTruthy();
+    expect(collapsedActions?.querySelector('button[aria-label="Duplicate block"]')).toBeNull();
+    expect(collapsedActions?.querySelector('button[aria-label="Delete block"]')).toBeNull();
 
     clickButtonByLabel(view.container, "Expand toolbar");
     await flush();
@@ -2316,6 +2379,76 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
         .querySelector('[data-page-editor-floating-toolbar="true"]')
         ?.getAttribute("data-page-editor-toolbar-dragging")
     ).toBe("false");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor dark-toolbar buttons and canvas CTAs use the shared non-inverting chrome", async () => {
+  const chromePage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("hero", {
+          id: "sec-hero",
+          name: "Hero",
+          variant: "centered",
+          // External background URL (not in the media library) so the
+          // Background panel renders the clearable readout.
+          style: {
+            background: "#ffffff",
+            backgroundType: "image",
+            backgroundImage: "https://cdn.example.com/external-bg.png",
+            accent: "#0d9488",
+            radius: 0,
+            shadow: "none",
+          },
+          blocks: [
+            createPageBlockV2("heading", {
+              id: "blk-heading",
+              props: { text: "Welcome to Coderso", level: "h1", align: "center" },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = chromePage;
+  pageEditorState.currentPage = chromePage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={chromePage} />);
+
+  try {
+    await flush();
+
+    // Canvas CTAs use the explicit neutral light chrome (always-white canvas)
+    // instead of admin-theme outline variables that can invert.
+    const addSection = findButton(view.container, "Add section");
+    expect(addSection?.className).toContain(editorCanvasCtaButtonClass);
+    const gapCta = view.container.querySelector('button[aria-label="Add section at position 1"]');
+    expect(gapCta?.className).toContain(editorCanvasCtaButtonClass);
+
+    // Owner finding #4 contract tokens: idle subtle light fill, hover only a
+    // slightly lighter fill — never the inverted white-bg/black-text jump.
+    expect(editorDarkButtonClass).toContain("bg-white/10");
+    expect(editorDarkButtonClass).toContain("hover:bg-white/20");
+    expect(editorCanvasCtaButtonClass).toContain("bg-white");
+    expect(editorCanvasCtaButtonClass).toContain("hover:bg-slate-100");
+
+    // "Add block" inside the (default-open) Content panel carries the dark
+    // toolbar chrome.
+    const addBlock = findButton(view.container, "Add block");
+    expect(addBlock?.className).toContain(editorDarkButtonClass);
+
+    // The Background panel's external URL readout "Clear" keeps the quiet
+    // dark-ghost chrome instead of the admin ghost hover inversion.
+    clickButtonByLabel(view.container, "Background panel");
+    await flush();
+    const externalReadout = view.container.querySelector(
+      '[data-page-editor-media-external="Background image"]'
+    );
+    expect(externalReadout).toBeTruthy();
+    expect(externalReadout?.querySelector("button")?.className).toContain(
+      editorDarkGhostButtonClass
+    );
   } finally {
     view.cleanup();
   }
@@ -3209,6 +3342,134 @@ test("PageEditor previews, publishes, updates settings, and manages revisions wi
   }
 });
 
+const readCanvasSectionTypes = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("[data-page-editor-section]")).map((element) =>
+    element.getAttribute("data-page-editor-section")
+  );
+
+test("Publish persists unsaved sections through the draft-save path so an editor reload keeps them", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Add section");
+    await flush();
+    clickButton(view.container, "Content");
+    await flush();
+    expect(activeSurfaceState.contexts.at(-1)).toMatchObject({
+      warnings: ["page_has_unsaved_changes"],
+    });
+
+    clickButton(view.container, "Publish");
+    await flush();
+
+    // Draft/published coherence: the unsaved document is saved through the
+    // same draft-save path as Save/Preview, strictly before publishing.
+    expect(pageEditorState.updatePage).toHaveBeenCalledTimes(1);
+    expect(pageEditorState.updatePage.mock.invocationCallOrder[0]).toBeLessThan(
+      pageEditorState.publishPage.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER
+    );
+    const savedDocument = pageEditorState.updatePage.mock.calls.at(-1)?.[1]?.data as
+      | PageDocumentV2
+      | undefined;
+    expect(savedDocument?.sections.map((section) => section.type)).toEqual(["hero", "content"]);
+    const publishedDocument = pageEditorState.publishPage.mock.calls.at(-1)?.[1] as
+      | PageDocumentV2
+      | undefined;
+    expect(publishedDocument?.sections.map((section) => section.type)).toEqual(["hero", "content"]);
+
+    // The dirty flag is cleared by the draft save, not by publish.
+    expect(activeSurfaceState.contexts.at(-1)).toMatchObject({ warnings: [] });
+    expect(toastState.success).toHaveBeenCalledWith("Page published.");
+  } finally {
+    view.cleanup();
+  }
+
+  // Owner gesture: reload the editor. The stored draft is whatever the save
+  // produced, so the canvas must still contain the published section.
+  expect(pageEditorState.cachedPage?.status).toBe("published");
+  const reloaded = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+  try {
+    await flush();
+    expect(readCanvasSectionTypes(reloaded.container)).toEqual(["hero", "content"]);
+  } finally {
+    reloaded.cleanup();
+  }
+});
+
+test("Publish failure after a successful draft save keeps the saved draft and shows the publish error", async () => {
+  pageEditorState.publishPage.mockRejectedValueOnce(new Error("publish_failed"));
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Add section");
+    await flush();
+    clickButton(view.container, "Content");
+    await flush();
+
+    clickButton(view.container, "Publish");
+    await flush();
+
+    // The draft save committed before the publish failure...
+    expect(pageEditorState.updatePage).toHaveBeenCalledTimes(1);
+    const savedDocument = pageEditorState.updatePage.mock.calls.at(-1)?.[1]?.data as
+      | PageDocumentV2
+      | undefined;
+    expect(savedDocument?.sections.map((section) => section.type)).toEqual(["hero", "content"]);
+
+    // ...the publish failure is surfaced (no silent state)...
+    expect(view.container.textContent).toContain("Failed to publish page.");
+    expect(toastState.error).toHaveBeenCalledWith("Failed to publish page.");
+    expect(toastState.success).not.toHaveBeenCalledWith("Page published.");
+
+    // ...and the saved draft is kept: no unsaved-changes warning, canvas intact.
+    expect(activeSurfaceState.contexts.at(-1)).toMatchObject({ warnings: [] });
+    expect(readCanvasSectionTypes(view.container)).toEqual(["hero", "content"]);
+  } finally {
+    view.cleanup();
+  }
+
+  // The saved draft also survives an editor reload even though publish failed.
+  expect(pageEditorState.cachedPage?.status).toBe("draft");
+  const reloaded = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+  try {
+    await flush();
+    expect(readCanvasSectionTypes(reloaded.container)).toEqual(["hero", "content"]);
+  } finally {
+    reloaded.cleanup();
+  }
+});
+
+test("Publish aborts when the pre-publish draft save fails and keeps the unsaved state visible", async () => {
+  pageEditorState.updatePage.mockRejectedValueOnce(new Error("save_failed"));
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Add section");
+    await flush();
+    clickButton(view.container, "Content");
+    await flush();
+
+    clickButton(view.container, "Publish");
+    await flush();
+
+    // Failure ordering: the published site never gets ahead of a draft that
+    // could not be persisted.
+    expect(pageEditorState.publishPage).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Failed to save draft.");
+    expect(activeSurfaceState.contexts.at(-1)).toMatchObject({
+      warnings: ["page_has_unsaved_changes"],
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageEditor resets legacy widget page data to an empty v2 document before saving", async () => {
   const legacyPage = createPage({
     currentData: {
@@ -3957,6 +4218,871 @@ test("PageEditor breakpoint switcher shows labels with width readouts and the ed
     expect(
       view.container.querySelector('[data-page-editor-editing-scope="mobile"]')?.textContent
     ).toBe("Editing: Mobile · 390px (overrides)");
+  } finally {
+    view.cleanup();
+  }
+});
+
+/**
+ * Effective-value display contract (TASK-449 owner bug #9): every floating-
+ * panel control must PRESENT the document's effective value for the active
+ * breakpoint — the stored value, the registry schema fallback when unset,
+ * and an honest empty state (no active option / slider at minimum) when an
+ * unset field has no render-equivalent token. The helpers below are shared
+ * by the targeted tests and the full panel sweep.
+ */
+
+const floatingPanelButtonLabels: Partial<Record<PageEditorControlPanel, string>> = {
+  layout: "Layout panel",
+  content: "Content panel",
+  typography: "Typography panel",
+  style: "Style panel",
+  spacing: "Spacing panel",
+  background: "Background panel",
+  responsive: "Responsive panel",
+  visibility: "Visibility panel",
+};
+
+const openFloatingPanel = async (container: ParentNode, panel: PageEditorControlPanel) => {
+  if (container.querySelector(`[data-page-editor-toolbar-panel="${panel}"]`)) return;
+  clickButtonByLabel(container, floatingPanelButtonLabels[panel] ?? `${panel} panel`);
+  await flush();
+};
+
+/** Reads the value a rendered floating-panel control currently presents. */
+const readControlDisplayValue = (
+  container: ParentNode,
+  control: PageEditorControlDefinition
+): string => {
+  const model = resolvePageEditorControlUiModel(control);
+  if (model.kind === "segmented") {
+    const group = findSegmentedGroup(container, control.label);
+    const active = group.querySelector(
+      '[data-page-editor-segmented-option][aria-pressed="true"]'
+    ) as HTMLElement | null;
+    return active?.dataset.pageEditorSegmentedOption ?? "";
+  }
+  if (model.kind === "select") {
+    const select = Array.from(container.querySelectorAll('[data-page-editor-control="select"]'))
+      .find((entry) => entry.textContent?.includes(control.label))
+      ?.querySelector("select");
+    expect(select, control.id).toBeTruthy();
+    return (select as HTMLSelectElement).value;
+  }
+  if (model.kind === "slider" || model.kind === "sliderStepper") {
+    const slider = container.querySelector(
+      `input[type="range"][data-page-editor-slider="${control.label}"]`
+    );
+    expect(slider, control.id).toBeTruthy();
+    return (slider as HTMLInputElement).value;
+  }
+  if (model.kind === "toggle") {
+    const toggle = Array.from(container.querySelectorAll('[role="switch"]')).find(
+      (entry) => entry.getAttribute("aria-label") === control.label
+    );
+    expect(toggle, control.id).toBeTruthy();
+    return toggle?.getAttribute("aria-checked") === "true" ? "yes" : "no";
+  }
+  if (model.kind === "swatch") {
+    const group = findColorSwatchGroup(container, control.label);
+    const transparent = group.querySelector('[data-page-editor-color-swatch="transparent"]');
+    if (transparent?.getAttribute("aria-pressed") === "true") return "";
+    const hex = group.querySelector(`input[data-page-editor-color-hex="${control.label}"]`);
+    expect(hex, control.id).toBeTruthy();
+    return (hex as HTMLInputElement).value;
+  }
+  if (model.kind === "media") {
+    const host = container.querySelector(
+      `[data-page-editor-media-control="${control.label}"] [data-media-picker-value]`
+    );
+    expect(host, control.id).toBeTruthy();
+    return host?.getAttribute("data-media-picker-value") ?? "";
+  }
+  const field = Array.from(container.querySelectorAll('[data-page-editor-control="text"]'))
+    .find((entry) => entry.textContent?.includes(control.label))
+    ?.querySelector("input");
+  expect(field, control.id).toBeTruthy();
+  return (field as HTMLInputElement).value;
+};
+
+const readDocumentPath = (source: unknown, path: readonly string[]): unknown =>
+  path.reduce<unknown>(
+    (current, key) =>
+      current && typeof current === "object" && !Array.isArray(current)
+        ? (current as Record<string, unknown>)[key]
+        : undefined,
+    source
+  );
+
+/**
+ * The expected display: the document's stored value at the control path,
+ * falling back to the registry schema default, with the per-widget honest
+ * empty states (no pressed option, slider at clamp minimum, transparent
+ * swatch for null colors).
+ */
+const expectedControlDisplayValue = (
+  target: unknown,
+  control: PageEditorControlDefinition
+): string => {
+  const stored = readDocumentPath(target, control.path);
+  const model = resolvePageEditorControlUiModel(control);
+  if (model.kind === "toggle") {
+    const effective = typeof stored === "boolean" ? stored : control.fallback === true;
+    return effective ? "yes" : "no";
+  }
+  if (model.kind === "slider" || model.kind === "sliderStepper") {
+    const effective =
+      typeof stored === "number"
+        ? stored
+        : typeof control.fallback === "number"
+          ? control.fallback
+          : model.min;
+    return String(Math.min(model.max, Math.max(model.min, effective)));
+  }
+  if (model.kind === "swatch") return typeof stored === "string" ? stored : "";
+  if (model.kind === "media") {
+    if (typeof stored !== "string" || stored.length === 0) return "";
+    return mediaLibraryState.items.find((item) => item.url === stored)?.id ?? "";
+  }
+  if (typeof stored === "string") return stored;
+  if (typeof stored === "number" || typeof stored === "boolean") return String(stored);
+  return typeof control.fallback === "string" ? control.fallback : "";
+};
+
+test("PageEditor floating panel marks the stored heading level and shows schema-default style values", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // Stored level h1 must be the pressed Level option (owner bug #9).
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    await openFloatingPanel(view.container, "content");
+    const level = findSegmentedGroup(view.container, "Level");
+    expect(
+      (
+        level.querySelector(
+          '[data-page-editor-segmented-option][aria-pressed="true"]'
+        ) as HTMLElement | null
+      )?.dataset.pageEditorSegmentedOption
+    ).toBe("h1");
+
+    // Unset opacity renders fully opaque: the slider must present the schema
+    // default 1, never the zero-value lie.
+    await openFloatingPanel(view.container, "style");
+    const opacity = view.container.querySelector(
+      'input[type="range"][data-page-editor-slider="Opacity"]'
+    ) as HTMLInputElement;
+    expect(opacity.value).toBe("1");
+    expect(
+      opacity.closest('[data-page-editor-control="slider"]')?.querySelector("output")?.textContent
+    ).toBe("1");
+    // Unset radius/shadow display their schema defaults.
+    expect(
+      (
+        view.container.querySelector(
+          'input[type="range"][data-page-editor-slider="Radius"]'
+        ) as HTMLInputElement
+      ).value
+    ).toBe("0");
+    expect(
+      (
+        findSegmentedGroup(view.container, "Shadow").querySelector(
+          '[data-page-editor-segmented-option][aria-pressed="true"]'
+        ) as HTMLElement | null
+      )?.dataset.pageEditorSegmentedOption
+    ).toBe("none");
+
+    // Unset block width/align have no render-equivalent token: the honest
+    // display is NO active option, never a guessed first option.
+    await openFloatingPanel(view.container, "layout");
+    for (const label of ["Width", "Align"]) {
+      expect(
+        findSegmentedGroup(view.container, label).querySelector(
+          '[data-page-editor-segmented-option][aria-pressed="true"]'
+        ),
+        label
+      ).toBeNull();
+    }
+
+    // Unset typography tokens mean "baked styling": no pressed option.
+    await openFloatingPanel(view.container, "typography");
+    for (const label of ["Font family", "Font size", "Font weight"]) {
+      expect(
+        findSegmentedGroup(view.container, label).querySelector(
+          '[data-page-editor-segmented-option][aria-pressed="true"]'
+        ),
+        label
+      ).toBeNull();
+    }
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor floating panel presents stored values and tablet overrides per breakpoint", async () => {
+  const page = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("hero", {
+          id: "sec-hero",
+          name: "Hero",
+          blocks: [
+            createPageBlockV2("heading", {
+              id: "blk-heading",
+              props: { text: "Breakpoint heading", level: "h1", align: "center" },
+              style: { opacity: 0.4 },
+              responsive: {
+                tablet: { props: { level: "h3" }, style: { opacity: 0.6 } },
+              },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = page;
+  pageEditorState.currentPage = page;
+  const view = mount(<PageEditor pageId="page-1" initialPage={page} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+
+    const pressedLevel = () =>
+      (
+        findSegmentedGroup(view.container, "Level").querySelector(
+          '[data-page-editor-segmented-option][aria-pressed="true"]'
+        ) as HTMLElement | null
+      )?.dataset.pageEditorSegmentedOption;
+    const opacityValue = () =>
+      (
+        view.container.querySelector(
+          'input[type="range"][data-page-editor-slider="Opacity"]'
+        ) as HTMLInputElement
+      ).value;
+
+    // Desktop presents the base values.
+    await openFloatingPanel(view.container, "content");
+    expect(pressedLevel()).toBe("h1");
+    await openFloatingPanel(view.container, "style");
+    expect(opacityValue()).toBe("0.4");
+
+    // Tablet presents the override values.
+    clickButtonByLabel(view.container, "Tablet");
+    await flush();
+    expect(opacityValue()).toBe("0.6");
+    await openFloatingPanel(view.container, "content");
+    expect(pressedLevel()).toBe("h3");
+
+    // Mobile has no override: it presents the inherited base values.
+    clickButtonByLabel(view.container, "Mobile");
+    await flush();
+    expect(pressedLevel()).toBe("h1");
+    await openFloatingPanel(view.container, "style");
+    expect(opacityValue()).toBe("0.4");
+
+    // Back on desktop the base values are untouched.
+    clickButtonByLabel(view.container, "Desktop");
+    await flush();
+    expect(opacityValue()).toBe("0.4");
+    await openFloatingPanel(view.container, "content");
+    expect(pressedLevel()).toBe("h1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor floating-panel sweep: every rendered control presents the document's effective value", async () => {
+  const sweepSection = createPageSectionV2("hero", {
+    id: "sec-sweep",
+    name: "Sweep hero",
+    variant: "centered",
+    layout: { columns: 2, align: "center", justify: "between", maxWidth: 960 },
+    style: {
+      background: "#fef3c7",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#123456",
+      radius: 12,
+      shadow: "md",
+    },
+    spacing: { paddingTop: 32, paddingBottom: 48, paddingLeft: 24, paddingRight: 16, gap: 12 },
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-sweep",
+        props: { text: "Sweep copy.", format: "plain", align: "center" },
+        style: {
+          width: "full",
+          textColor: "#123456",
+          opacity: 0.4,
+          padding: { top: 8 },
+          fontWeight: "bold",
+          letterSpacing: 1.5,
+        },
+      }),
+    ],
+  });
+  const page = createPage({
+    currentData: createDocument({ sections: [sweepSection] }),
+  });
+  pageEditorState.cachedPage = page;
+  pageEditorState.currentPage = page;
+  const view = mount(<PageEditor pageId="page-1" initialPage={page} />);
+
+  try {
+    await flush();
+
+    const sweptControlIds: string[] = [];
+    const sweepTarget = async (
+      target: unknown,
+      controls: readonly PageEditorControlDefinition[],
+      panels: readonly PageEditorControlPanel[]
+    ) => {
+      for (const panel of panels) {
+        await openFloatingPanel(view.container, panel);
+        for (const control of controls.filter((entry) => entry.panel === panel)) {
+          expect(readControlDisplayValue(view.container, control), control.id).toBe(
+            expectedControlDisplayValue(target, control)
+          );
+          sweptControlIds.push(control.id);
+        }
+      }
+    };
+
+    // Section sweep: the first section is selected by default.
+    await sweepTarget(
+      sweepSection,
+      getPageEditorControlsForTarget({ kind: "section", type: "hero" }),
+      ["layout", "style", "background", "spacing", "visibility", "responsive"]
+    );
+
+    // Block sweep: a text block with a partial style (stored + unset fields).
+    clickSelector(view.container, '[data-page-editor-block-id="blk-sweep"]');
+    await flush();
+    await sweepTarget(
+      sweepSection.blocks[0],
+      getPageEditorControlsForTarget({ kind: "block", type: "text" }),
+      ["content", "typography", "layout", "style", "background", "spacing", "visibility"]
+    );
+
+    // The sweep must have exercised the full registry surface of both targets.
+    expect(sweptControlIds.length).toBeGreaterThanOrEqual(40);
+    expect(new Set(sweptControlIds).size).toBe(sweptControlIds.length);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// --- Multi-column canvas authoring UX (owner findings #5 #6 #7 #8) ---
+
+const clickPaletteBlock = (container: ParentNode, label: string) => {
+  const button = getCommandGroupButtons(container, "Blocks").find((entry) =>
+    entry.textContent?.includes(label)
+  );
+  expect(button).toBeTruthy();
+  React.act(() => {
+    button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const canvasBlockIdOrder = (container: ParentNode, sectionId: string) =>
+  Array.from(
+    container.querySelectorAll(`[data-section-id="${sectionId}"] [data-page-editor-block-id]`)
+  ).map((element) => element.getAttribute("data-page-editor-block-id"));
+
+test("PageEditor empty multi-column section paints one ghost tile per column and tiles append through the palette", async () => {
+  const gridPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-grid",
+          name: "Grid",
+          layout: { columns: 3, align: "start", justify: "start", maxWidth: 1100 },
+          blocks: [],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = gridPage;
+  pageEditorState.currentPage = gridPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={gridPage} />);
+
+  try {
+    await flush();
+
+    // Owner finding #5: empty 3-column section paints exactly three tiles.
+    const emptyTiles = view.container.querySelectorAll('[data-page-editor-ghost="section-column"]');
+    expect(emptyTiles).toHaveLength(3);
+    expect(view.container.querySelector('button[aria-label="Add block to column 1"]')).toBeTruthy();
+    expect(view.container.querySelector('button[aria-label="Add block to column 3"]')).toBeTruthy();
+    expect(findButton(view.container, "Add the first block")).toBeFalsy();
+
+    clickSelector(view.container, '[data-page-editor-ghost="section-column"]');
+    await flush();
+    clickPaletteBlock(view.container, "Heading");
+    await flush();
+
+    expect(view.container.querySelector('[data-page-editor-block-path="root:0"]')).toBeTruthy();
+    // Non-empty multi-column section: column tiles collapse into ONE trailing
+    // ghost tile in the next free grid cell.
+    expect(
+      view.container.querySelectorAll('[data-page-editor-ghost="section-column"]')
+    ).toHaveLength(0);
+    const trailingTiles = view.container.querySelectorAll(
+      '[data-page-editor-ghost="section-append"]'
+    );
+    expect(trailingTiles).toHaveLength(1);
+
+    clickSelector(view.container, '[data-page-editor-ghost="section-append"]');
+    await flush();
+    clickPaletteBlock(view.container, "Text");
+    await flush();
+
+    expect(view.container.querySelector('[data-page-editor-block-path="root:1"]')).toBeTruthy();
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections[0]?.blocks.map((block) => block.type)).toEqual([
+      "heading",
+      "text",
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor multi-column grid shows left/right movers and steps up/down by the column count", async () => {
+  const gridPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-grid",
+          name: "Grid",
+          layout: { columns: 2, align: "start", justify: "start", maxWidth: 1100 },
+          blocks: ["blk-b1", "blk-b2", "blk-b3", "blk-b4"].map((id, index) =>
+            createPageBlockV2("heading", {
+              id,
+              props: { text: `Block ${index + 1}`, level: "h2", align: "left" },
+            })
+          ),
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = gridPage;
+  pageEditorState.currentPage = gridPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={gridPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-b1"]');
+    await flush();
+
+    expect(view.container.querySelector('button[aria-label="Move block left"]')).toBeTruthy();
+    expect(view.container.querySelector('button[aria-label="Move block right"]')).toBeTruthy();
+
+    // Right = +1 (next grid cell).
+    clickButtonByLabel(view.container, "Move block right");
+    await flush();
+    expect(canvasBlockIdOrder(view.container, "sec-grid")).toEqual([
+      "blk-b2",
+      "blk-b1",
+      "blk-b3",
+      "blk-b4",
+    ]);
+
+    // Down = +columns (one visual row) in a 2-column grid.
+    clickButtonByLabel(view.container, "Move block down");
+    await flush();
+    expect(canvasBlockIdOrder(view.container, "sec-grid")).toEqual([
+      "blk-b2",
+      "blk-b3",
+      "blk-b4",
+      "blk-b1",
+    ]);
+
+    // Up = -columns back to the first row.
+    clickButtonByLabel(view.container, "Move block up");
+    await flush();
+    expect(canvasBlockIdOrder(view.container, "sec-grid")).toEqual([
+      "blk-b2",
+      "blk-b1",
+      "blk-b3",
+      "blk-b4",
+    ]);
+
+    // Out-of-range row move is a strict no-op, never a clamp to index 0.
+    clickButtonByLabel(view.container, "Move block up");
+    await flush();
+    expect(canvasBlockIdOrder(view.container, "sec-grid")).toEqual([
+      "blk-b2",
+      "blk-b1",
+      "blk-b3",
+      "blk-b4",
+    ]);
+
+    // Left = -1 within the row.
+    clickButtonByLabel(view.container, "Move block left");
+    await flush();
+    expect(canvasBlockIdOrder(view.container, "sec-grid")).toEqual([
+      "blk-b1",
+      "blk-b2",
+      "blk-b3",
+      "blk-b4",
+    ]);
+
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections[0]?.blocks.map((block) => block.id)).toEqual([
+      "blk-b1",
+      "blk-b2",
+      "blk-b3",
+      "blk-b4",
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor hides left/right movers in single-column contexts and up/down inside row groups", async () => {
+  const mixedPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-mixed",
+          name: "Mixed",
+          blocks: [
+            createPageBlockV2("heading", {
+              id: "blk-single",
+              props: { text: "Single column", level: "h2", align: "left" },
+            }),
+            createPageBlockV2("group", {
+              id: "blk-row",
+              props: { direction: "row", wrap: false, gap: 16 },
+              slots: {
+                children: [
+                  createPageBlockV2("button", {
+                    id: "blk-row-first",
+                    props: {
+                      label: "First",
+                      href: "/a",
+                      target: "self",
+                      variant: "primary",
+                      size: "md",
+                    },
+                  }),
+                  createPageBlockV2("button", {
+                    id: "blk-row-second",
+                    props: {
+                      label: "Second",
+                      href: "/b",
+                      target: "self",
+                      variant: "primary",
+                      size: "md",
+                    },
+                  }),
+                ],
+              },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = mixedPage;
+  pageEditorState.currentPage = mixedPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={mixedPage} />);
+
+  try {
+    await flush();
+
+    // Single-column section root: vertical movers only.
+    clickSelector(view.container, '[data-page-editor-block-id="blk-single"]');
+    await flush();
+    expect(view.container.querySelector('button[aria-label="Move block up"]')).toBeTruthy();
+    expect(view.container.querySelector('button[aria-label="Move block left"]')).toBeFalsy();
+    expect(view.container.querySelector('button[aria-label="Move block right"]')).toBeFalsy();
+
+    // Row-direction group child: horizontal movers only (a single row has no
+    // vertical axis).
+    clickSelector(view.container, '[data-page-editor-block-id="blk-row-first"]');
+    await flush();
+    expect(view.container.querySelector('button[aria-label="Move block left"]')).toBeTruthy();
+    expect(view.container.querySelector('button[aria-label="Move block right"]')).toBeTruthy();
+    expect(view.container.querySelector('button[aria-label="Move block up"]')).toBeFalsy();
+    expect(view.container.querySelector('button[aria-label="Move block down"]')).toBeFalsy();
+
+    clickButtonByLabel(view.container, "Move block right");
+    await flush();
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections[0]?.blocks[1]?.slots?.children?.map((child) => child.id)).toEqual(
+      ["blk-row-second", "blk-row-first"]
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor Add block beside wraps the selection into a row group, then appends inside it", async () => {
+  const ctaPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-cta",
+          name: "CTA",
+          blocks: [
+            createPageBlockV2("button", {
+              id: "blk-cta",
+              props: {
+                label: "Primary action",
+                href: "/",
+                target: "self",
+                variant: "primary",
+                size: "md",
+              },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = ctaPage;
+  pageEditorState.currentPage = ctaPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={ctaPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-cta"]');
+    await flush();
+    clickButtonByLabel(view.container, "Add block beside");
+    await flush();
+    clickPaletteBlock(view.container, "Button");
+    await flush();
+
+    // Non-destructive wrap: the original block keeps its id/props as the row
+    // group's first child; the new block lands beside it and gets selected.
+    const wrappedFirst = view.container.querySelector(
+      '[data-page-editor-block-path="root:0/children:0"]'
+    );
+    const insertedSecond = view.container.querySelector(
+      '[data-page-editor-block-path="root:0/children:1"]'
+    );
+    expect(wrappedFirst?.getAttribute("data-page-editor-block-id")).toBe("blk-cta");
+    expect(insertedSecond?.getAttribute("data-page-editor-block")).toBe("button");
+    expect(insertedSecond?.getAttribute("data-selected")).toBe("true");
+
+    // Canvas renders both buttons side by side inside the row-group slot.
+    const rowSlot = view.container.querySelector('[data-page-block-slot="children"]');
+    expect(rowSlot?.className).toContain("flex-row");
+    expect(rowSlot?.querySelectorAll("[data-page-editor-block-id]")).toHaveLength(2);
+
+    // Add beside again with the row group as parent: append, never re-wrap.
+    clickButtonByLabel(view.container, "Add block beside");
+    await flush();
+    clickPaletteBlock(view.container, "Button");
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const rootBlocks = savedDocument.sections[0]?.blocks ?? [];
+    expect(rootBlocks).toHaveLength(1);
+    expect(rootBlocks[0]).toMatchObject({
+      type: "group",
+      props: { direction: "row", wrap: false, gap: 16 },
+    });
+    const children = rootBlocks[0]?.slots?.children ?? [];
+    expect(children.map((child) => child.type)).toEqual(["button", "button", "button"]);
+    expect(children[0]?.id).toBe("blk-cta");
+    expect(children[0]?.props.label).toBe("Primary action");
+
+    // The Layers panel surfaces the same action for the selected block.
+    clickButton(view.container, "Layers");
+    await flush();
+    expect(
+      view.container.querySelectorAll('button[aria-label="Add block beside"]').length
+    ).toBeGreaterThanOrEqual(2);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor cancelling the Add block beside palette never wraps or dirties the document", async () => {
+  const ctaPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-cta",
+          name: "CTA",
+          blocks: [
+            createPageBlockV2("button", {
+              id: "blk-cta",
+              props: {
+                label: "Primary action",
+                href: "/",
+                target: "self",
+                variant: "primary",
+                size: "md",
+              },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = ctaPage;
+  pageEditorState.currentPage = ctaPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={ctaPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-cta"]');
+    await flush();
+    clickButtonByLabel(view.container, "Add block beside");
+    await flush();
+    clickButton(view.container, "Close");
+    await flush();
+
+    expect(
+      view.container
+        .querySelector('[data-page-editor-block-path="root:0"]')
+        ?.getAttribute("data-page-editor-block")
+    ).toBe("button");
+    // No document write happened, so the dirty-state badge must stay absent.
+    expect(view.container.textContent).not.toContain("Unsaved");
+
+    // A later plain insert must not consume the stale beside target.
+    clickButtonByLabel(view.container, "Add block beside");
+    await flush();
+    dispatchDocumentKey("Escape");
+    await flush();
+    expect(view.container.querySelector('[data-page-block-slot="children"]')).toBeFalsy();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor columns slot ghost tiles insert into the exact slot like Layers does", async () => {
+  const columnsPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-columns",
+          name: "Columns",
+          blocks: [
+            createPageBlockV2("columns", {
+              id: "blk-columns",
+              props: { count: 2, gap: 24, distribution: "equal" },
+              slots: {
+                "column:1": [
+                  createPageBlockV2("heading", {
+                    id: "blk-col-head",
+                    props: { text: "Left heading", level: "h2", align: "left" },
+                  }),
+                ],
+              },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = columnsPage;
+  pageEditorState.currentPage = columnsPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={columnsPage} />);
+
+  try {
+    await flush();
+
+    // Empty slot gets a full ghost tile; the non-empty slot gets the compact
+    // trailing affordance — both labelled like the Layers insert path.
+    expect(view.container.querySelectorAll('[data-page-editor-ghost="columns-slot"]')).toHaveLength(
+      1
+    );
+    expect(
+      view.container.querySelectorAll('[data-page-editor-ghost="columns-slot-append"]')
+    ).toHaveLength(1);
+
+    clickButtonByLabel(view.container, "Add block to Column 2");
+    await flush();
+    clickPaletteBlock(view.container, "Text");
+    await flush();
+
+    const insertedNested = view.container.querySelector(
+      '[data-page-editor-block-path="root:0/column:2:0"]'
+    );
+    expect(insertedNested).toBeTruthy();
+    expect(insertedNested?.getAttribute("data-page-editor-block")).toBe("text");
+    expect(insertedNested?.getAttribute("data-page-editor-block-slot-key")).toBe("column:2");
+
+    clickSelector(view.container, '[data-page-editor-ghost="columns-slot-append"]');
+    await flush();
+    clickPaletteBlock(view.container, "Heading");
+    await flush();
+
+    expect(
+      view.container.querySelector('[data-page-editor-block-path="root:0/column:1:1"]')
+    ).toBeTruthy();
+
+    // Columns-slot children expose BOTH axes: up/down move ±1 inside the
+    // vertical slot stack, left/right move across the adjacent column slot.
+    clickSelector(view.container, '[data-page-editor-block-id="blk-col-head"]');
+    await flush();
+    expect(view.container.querySelector('button[aria-label="Move block up"]')).toBeTruthy();
+    expect(view.container.querySelector('button[aria-label="Move block left"]')).toBeTruthy();
+
+    clickButtonByLabel(view.container, "Move block right");
+    await flush();
+    expect(
+      view.container
+        .querySelector('[data-page-editor-block-path="root:0/column:2:0"]')
+        ?.getAttribute("data-page-editor-block-id")
+    ).toBe("blk-col-head");
+
+    clickButtonByLabel(view.container, "Move block left");
+    await flush();
+    expect(
+      view.container
+        .querySelector('[data-page-editor-block-path="root:0/column:1:0"]')
+        ?.getAttribute("data-page-editor-block-id")
+    ).toBe("blk-col-head");
+
+    // Left at the first column is a strict no-op.
+    clickButtonByLabel(view.container, "Move block left");
+    await flush();
+    expect(
+      view.container
+        .querySelector('[data-page-editor-block-path="root:0/column:1:0"]')
+        ?.getAttribute("data-page-editor-block-id")
+    ).toBe("blk-col-head");
+
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const columnsBlock = savedDocument.sections[0]?.blocks[0];
+    expect(columnsBlock?.slots?.["column:1"]?.map((child) => child.type)).toEqual([
+      "heading",
+      "heading",
+    ]);
+    expect(columnsBlock?.slots?.["column:1"]?.[0]?.id).toBe("blk-col-head");
+    expect(columnsBlock?.slots?.["column:2"]?.map((child) => child.type)).toEqual(["text"]);
   } finally {
     view.cleanup();
   }

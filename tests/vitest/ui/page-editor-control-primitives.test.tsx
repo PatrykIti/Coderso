@@ -16,6 +16,10 @@ vi.mock("@/ui/media/MediaPicker", () => ({
 }));
 
 import { ColorSwatchControl } from "../../../core/admin/ui/pages/editorControls/ColorSwatchControl";
+import {
+  editorDarkButtonClass,
+  editorDarkGhostButtonClass,
+} from "../../../core/admin/ui/pages/editorControls/controlChrome";
 import { MediaPickerControl } from "../../../core/admin/ui/pages/editorControls/MediaPickerControl";
 import { SegmentedControl } from "../../../core/admin/ui/pages/editorControls/SegmentedControl";
 import { SliderControl } from "../../../core/admin/ui/pages/editorControls/SliderControl";
@@ -468,10 +472,15 @@ test("MediaPickerControl wraps the shared MediaPicker and never offers a bare UR
   expect(container.querySelector('input[type="text"]')).toBeNull();
   expect(container.querySelector('input[type="url"]')).toBeNull();
 
+  // The dark floating-toolbar surface forwards the shared dark chrome so the
+  // "Browse media" trigger and remove action never use the inverted
+  // admin-theme hover (owner finding #4).
   expect(mediaPickerState.lastProps).toMatchObject({
     value: "asset-123",
     multiple: false,
     accept: ["image/*"],
+    triggerButtonClassName: editorDarkButtonClass,
+    removeButtonClassName: editorDarkGhostButtonClass,
   });
   expect(typeof mediaPickerState.lastProps?.onChange).toBe("function");
   (mediaPickerState.lastProps?.onChange as (value: unknown) => void)("asset-456");

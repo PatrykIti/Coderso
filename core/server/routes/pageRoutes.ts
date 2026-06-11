@@ -202,7 +202,9 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
         targetId: page.id,
         metadata: { slug: page.slug },
       });
-      return { ok: true };
+      // Return the post-publish detail so admin clients can keep the cached
+      // draft coherent with the published state without an extra fetch.
+      return { ok: true, page };
     });
   });
 

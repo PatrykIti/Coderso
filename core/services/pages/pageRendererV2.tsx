@@ -25,8 +25,8 @@ import {
   PAGE_SECTION_ID_ATTRIBUTE,
 } from "./pageResponsiveCss";
 import {
+  getPageSectionEffectiveColumns,
   resolvePageSectionTemplate,
-  resolvePageSectionTemplateColumns,
   type ResolvedPageSectionTemplate,
 } from "./pageSectionTemplates";
 import type {
@@ -99,12 +99,27 @@ export type PageInlineTextRenderer = (input: {
   text: string;
 }) => ReactNode;
 
+/**
+ * Admin-canvas hook (owner finding #8): invoked once per active columns-block
+ * slot AFTER the slot's children so the Page Editor can paint ghost
+ * "Add block" tiles inside empty column slots (and a trailing add affordance
+ * in non-empty ones). Runtime render paths never provide it, so public output
+ * is unchanged — the same parity contract as {@link PageInlineTextRenderer}.
+ */
+export type PageColumnsSlotTrailingRenderer = (input: {
+  block: PageBlockV2;
+  slotKey: PageBlockSlotKey;
+  ownerPath: PageBlockPath;
+  childCount: number;
+}) => ReactNode;
+
 type PageBlockRenderContext = {
   blockPath: PageBlockPath;
   depth: number;
   includeHiddenBlocks: boolean;
   renderBlockFrame?: PageBlockFrameRenderer;
   renderInlineText?: PageInlineTextRenderer;
+  renderColumnsSlotTrailing?: PageColumnsSlotTrailingRenderer;
   runtimeDataByBlockId?: PageRuntimeDataByBlockId;
   slotKey?: PageBlockSlotKey;
   parentBlock?: PageBlockV2;
@@ -203,9 +218,6 @@ export const pageSectionJustifyClass = (justify: PageSectionV2["layout"]["justif
   return "justify-start";
 };
 
-const pageSectionTemplateColumns = (template: ResolvedPageSectionTemplate) =>
-  resolvePageSectionTemplateColumns(template);
-
 const pageSectionTemplateClass = (template: ResolvedPageSectionTemplate) => {
   const marker = `page-section-template-${template.template}-${template.variant}`;
   if (template.template === "hero" && template.variant === "split") {
@@ -254,7 +266,9 @@ export const toPageSectionRenderProps = (
   // (editor canvas, flattened previews), so the override cascade is already
   // merged here; the public base markup uses the desktop-resolved value and
   // pageResponsiveCss.ts emits the tablet/mobile delta.
-  const columns = section.layout.stackVertical === true ? 1 : pageSectionTemplateColumns(template);
+  // `getPageSectionEffectiveColumns` owns this math so editor grid affordances
+  // (ghost tiles, left/right move steps) always agree with the painted grid.
+  const columns = getPageSectionEffectiveColumns(section);
   return {
     sectionClassName: "w-full px-4 py-6",
     contentClassName: joinPageRenderClasses(
@@ -755,6 +769,7 @@ const renderPageBlockList = (
       includeHiddenBlocks: context.includeHiddenBlocks,
       renderBlockFrame: context.renderBlockFrame,
       renderInlineText: context.renderInlineText,
+      renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
       runtimeDataByBlockId: context.runtimeDataByBlockId,
       slotKey: context.slotKey,
       parentBlock: context.parentBlock,
@@ -800,25 +815,39 @@ const renderPageLayoutBlockContent = (
         data-page-layout-block="columns"
         data-page-layout-columns-count={slotKeys.length}
       >
-        {slotKeys.map((slotKey) => (
-          <FragmentLike key={slotKey}>
-            {renderSlotWrapper({
-              block,
-              slotKey,
-              className: "min-w-0 space-y-4",
-              children: renderPageBlockList(block.slots?.[slotKey] ?? [], {
-                parentPath: context.blockPath,
-                depth: context.depth + 1,
-                includeHiddenBlocks: context.includeHiddenBlocks,
-                renderBlockFrame: context.renderBlockFrame,
-                renderInlineText: context.renderInlineText,
-                runtimeDataByBlockId: context.runtimeDataByBlockId,
+        {slotKeys.map((slotKey) => {
+          const slotChildren = block.slots?.[slotKey] ?? [];
+          return (
+            <FragmentLike key={slotKey}>
+              {renderSlotWrapper({
+                block,
                 slotKey,
-                parentBlock: block,
-              }),
-            })}
-          </FragmentLike>
-        ))}
+                className: "min-w-0 space-y-4",
+                children: (
+                  <>
+                    {renderPageBlockList(slotChildren, {
+                      parentPath: context.blockPath,
+                      depth: context.depth + 1,
+                      includeHiddenBlocks: context.includeHiddenBlocks,
+                      renderBlockFrame: context.renderBlockFrame,
+                      renderInlineText: context.renderInlineText,
+                      renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
+                      runtimeDataByBlockId: context.runtimeDataByBlockId,
+                      slotKey,
+                      parentBlock: block,
+                    })}
+                    {context.renderColumnsSlotTrailing?.({
+                      block,
+                      slotKey,
+                      ownerPath: context.blockPath,
+                      childCount: slotChildren.length,
+                    })}
+                  </>
+                ),
+              })}
+            </FragmentLike>
+          );
+        })}
       </div>
     );
   }
@@ -841,6 +870,7 @@ const renderPageLayoutBlockContent = (
         includeHiddenBlocks: context.includeHiddenBlocks,
         renderBlockFrame: context.renderBlockFrame,
         renderInlineText: context.renderInlineText,
+        renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
         runtimeDataByBlockId: context.runtimeDataByBlockId,
         slotKey,
         parentBlock: block,
@@ -858,6 +888,7 @@ const renderPageLayoutBlockContent = (
       includeHiddenBlocks: context.includeHiddenBlocks,
       renderBlockFrame: context.renderBlockFrame,
       renderInlineText: context.renderInlineText,
+      renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
       runtimeDataByBlockId: context.runtimeDataByBlockId,
       slotKey,
       parentBlock: block,
@@ -1086,6 +1117,8 @@ export function PageSectionContent({
   emptyContent = defaultEmptySectionContent,
   renderBlockFrame,
   renderInlineText,
+  renderColumnsSlotTrailing,
+  trailingContent,
   layoutMode = "runtime",
   includeHiddenBlocks = false,
   runtimeDataByBlockId,
@@ -1094,6 +1127,13 @@ export function PageSectionContent({
   emptyContent?: ReactNode;
   renderBlockFrame?: PageBlockFrameRenderer;
   renderInlineText?: PageInlineTextRenderer;
+  renderColumnsSlotTrailing?: PageColumnsSlotTrailingRenderer;
+  /**
+   * Admin-canvas hook (owner finding #5): rendered as an extra grid child
+   * AFTER the last block, so in a multi-column auto-flow grid it lands in the
+   * next free cell. Runtime render paths never provide it (front parity).
+   */
+  trailingContent?: ReactNode;
   layoutMode?: PageSectionLayoutMode;
   includeHiddenBlocks?: boolean;
   runtimeDataByBlockId?: PageRuntimeDataByBlockId;
@@ -1109,18 +1149,24 @@ export function PageSectionContent({
       {...pageSectionContentDataAttributes}
       data-page-section-layout-mode={layoutMode}
     >
-      {blocks.length > 0
-        ? blocks.map((block, index) =>
+      {blocks.length > 0 ? (
+        <>
+          {blocks.map((block, index) =>
             renderPageBlockWithFrame(block, {
               blockPath: [{ index }] as PageBlockPath,
               depth: 1,
               includeHiddenBlocks,
               renderBlockFrame,
               renderInlineText,
+              renderColumnsSlotTrailing,
               runtimeDataByBlockId,
             })
-          )
-        : emptyContent}
+          )}
+          {trailingContent}
+        </>
+      ) : (
+        emptyContent
+      )}
     </div>
   );
 }

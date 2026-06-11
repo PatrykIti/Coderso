@@ -22,6 +22,7 @@ import {
   isPageTypographyCapableBlockType,
   pageBackgroundTypes,
   pageBlockCapabilities,
+  pageBlockDefaultProps,
   pageBlockPropKeys,
   pageBlockTypes,
   pageBlockWidths,
@@ -615,5 +616,59 @@ describe("page editor control registry", () => {
       expect(control.options).toBeTruthy();
       expect(ownerOptionSets.has(control.options!)).toBe(true);
     }
+  });
+
+  test("display fallbacks mirror the pageDocumentV2 schema defaults (TASK-449 bug #9)", () => {
+    // Block style fields whose unset state renders exactly like the schema
+    // default carry that default as the display fallback.
+    const universalById = new Map(pageUniversalBlockControls.map((entry) => [entry.id, entry]));
+    expect(universalById.get("block.style.opacity")?.fallback).toBe(1);
+    expect(universalById.get("block.style.radius")?.fallback).toBe(0);
+    expect(universalById.get("block.style.shadow")?.fallback).toBe("none");
+    expect(universalById.get("block.style.backgroundType")?.fallback).toBe("none");
+    expect(universalById.get("block.visibility.visible")?.fallback).toBe(true);
+    for (const side of ["top", "right", "bottom", "left"]) {
+      expect(universalById.get(`block.style.padding.${side}`)?.fallback).toBe(0);
+      expect(universalById.get(`block.style.margin.${side}`)?.fallback).toBe(0);
+    }
+
+    // Unset typography tokens and block width/align mean "inherit the baked
+    // styling": no token is render-equivalent, so they must NOT lie with a
+    // fallback. Letter spacing is the exception (baked classes set no
+    // tracking, so unset renders as 0px).
+    const typographyById = new Map(pageTypographyBlockControls.map((entry) => [entry.id, entry]));
+    expect(typographyById.get("block.style.fontFamily")?.fallback).toBeUndefined();
+    expect(typographyById.get("block.style.fontSize")?.fallback).toBeUndefined();
+    expect(typographyById.get("block.style.fontWeight")?.fallback).toBeUndefined();
+    expect(typographyById.get("block.style.lineHeight")?.fallback).toBeUndefined();
+    expect(typographyById.get("block.style.letterSpacing")?.fallback).toBe(0);
+    expect(universalById.get("block.style.width")?.fallback).toBeUndefined();
+    expect(universalById.get("block.style.align")?.fallback).toBeUndefined();
+    expect(universalById.get("block.style.textColor")?.fallback).toBeUndefined();
+    expect(universalById.get("block.style.background")?.fallback).toBeUndefined();
+    expect(universalById.get("block.style.borderColor")?.fallback).toBeUndefined();
+
+    // Block prop fallbacks come straight from the owner default props, so a
+    // degenerate document still presents the schema default (heading level
+    // h2), never a lying first option.
+    for (const type of pageBlockTypes) {
+      for (const control of pageBlockControlRegistry[type]) {
+        if (control.path[0] !== "props") continue;
+        const schemaDefault = pageBlockDefaultProps[type][control.path[1]!];
+        if (
+          typeof schemaDefault === "string" ||
+          typeof schemaDefault === "number" ||
+          typeof schemaDefault === "boolean"
+        ) {
+          expect(control.fallback, control.id).toBe(schemaDefault);
+        } else {
+          expect(control.fallback, control.id).toBeUndefined();
+        }
+      }
+    }
+    const headingLevel = pageBlockControlRegistry.heading.find(
+      (entry) => entry.id === "block.heading.props.level"
+    );
+    expect(headingLevel?.fallback).toBe("h2");
   });
 });

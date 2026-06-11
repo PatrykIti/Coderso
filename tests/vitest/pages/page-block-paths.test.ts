@@ -13,11 +13,16 @@ import {
   duplicatePageBlockAtPath,
   duplicatePageBlockTreeWithNewIds,
   getDefaultPageBlockInsertTarget,
+  getPageBlockAdjacentColumnMoveTarget,
   getPageBlockAtPath,
+  getPageBlockBesideInsertStatus,
+  getPageBlockContainerLayout,
   getPageBlockEditorSlotKeys,
   getPageBlockInsertTargetStatus,
   getPageBlockListAtPath,
+  getPageBlockSiblingMoveTarget,
   insertPageBlockAtTarget,
+  insertPageBlockBeside,
   movePageBlockToTarget,
   serializePageBlockPath,
   updatePageBlockAtPath,
@@ -255,5 +260,185 @@ describe("page block paths", () => {
 
     const selectedLayoutTarget = getDefaultPageBlockInsertTarget(section, [{ index: 0 }]);
     expect(selectedLayoutTarget.listPath.slotKey).toBe("column:1");
+  });
+});
+
+describe("multi-column container layout (owner finding #6)", () => {
+  const rowGroup = (id: string, children: PageBlockV2[]) =>
+    createPageBlockV2("group", {
+      id,
+      props: { direction: "row", wrap: false, gap: 16 },
+      slots: { children },
+    });
+
+  test("resolves grid, row, and stack container kinds per the rendered geometry", () => {
+    const gridSection = createPageSectionV2("content", {
+      layout: { columns: 3, align: "start", justify: "start", maxWidth: 1100 },
+      blocks: [heading("blk-a"), heading("blk-b")],
+    });
+    expect(getPageBlockContainerLayout(gridSection, [{ index: 0 }])).toEqual({
+      kind: "grid",
+      columns: 3,
+    });
+
+    const stackedSection = createPageSectionV2("content", {
+      layout: { columns: 3, align: "start", justify: "start", maxWidth: 1100, stackVertical: true },
+      blocks: [heading("blk-a")],
+    });
+    expect(getPageBlockContainerLayout(stackedSection, [{ index: 0 }])).toEqual({ kind: "stack" });
+
+    const singleColumnSection = createPageSectionV2("content", {
+      blocks: [heading("blk-a")],
+    });
+    expect(getPageBlockContainerLayout(singleColumnSection, [{ index: 0 }])).toEqual({
+      kind: "stack",
+    });
+
+    const nestedSection = createPageSectionV2("content", {
+      blocks: [rowGroup("blk-row", [heading("blk-in-row")]), columns("blk-cols")],
+    });
+    expect(
+      getPageBlockContainerLayout(nestedSection, [{ index: 0 }, { slotKey: "children", index: 0 }])
+    ).toEqual({ kind: "row" });
+    // Columns-block slot row: the slot itself stacks vertically while
+    // left/right travel across the adjacent active slots.
+    expect(
+      getPageBlockContainerLayout(nestedSection, [{ index: 1 }, { slotKey: "column:1", index: 0 }])
+    ).toEqual({ kind: "columns-slot", slotKeys: ["column:1", "column:2"], slotIndex: 0 });
+
+    const columnGroupSection = createPageSectionV2("content", {
+      blocks: [group("blk-column-group", [heading("blk-in-column-group")])],
+    });
+    expect(
+      getPageBlockContainerLayout(columnGroupSection, [
+        { index: 0 },
+        { slotKey: "children", index: 0 },
+      ])
+    ).toEqual({ kind: "stack" });
+  });
+
+  test("adjacent column move targets land in the next slot and stop at the edges", () => {
+    const section = createPageSectionV2("content", {
+      blocks: [columns("blk-cols")],
+    });
+    const leftChildPath: PageBlockPath = [{ index: 0 }, { slotKey: "column:1", index: 0 }];
+
+    const rightTarget = getPageBlockAdjacentColumnMoveTarget(section, leftChildPath, 1);
+    expect(rightTarget).toMatchObject({
+      listPath: { slotKey: "column:2" },
+      index: 0,
+    });
+    expect(getPageBlockAdjacentColumnMoveTarget(section, leftChildPath, -1)).toBeNull();
+
+    const moved = movePageBlockToTarget(section, leftChildPath, rightTarget!);
+    expect(moved.status).toBe("ok");
+    expect(moved.path ? serializePageBlockPath(moved.path) : null).toBe("root:0/column:2:0");
+    expect(
+      getPageBlockListAtPath(moved.section, {
+        ownerPath: [{ index: 0 }] as PageBlockPath,
+        slotKey: "column:2",
+      })
+    ).toMatchObject({
+      status: "ok",
+      blocks: [
+        expect.objectContaining({ id: "blk-left" }),
+        expect.objectContaining({ id: "blk-group" }),
+      ],
+    });
+
+    // Non-columns containers never produce an adjacent-column target.
+    const rowSection = createPageSectionV2("content", {
+      blocks: [rowGroup("blk-row", [heading("blk-in-row")])],
+    });
+    expect(
+      getPageBlockAdjacentColumnMoveTarget(
+        rowSection,
+        [{ index: 0 }, { slotKey: "children", index: 0 }],
+        1
+      )
+    ).toBeNull();
+  });
+
+  test("sibling move targets accept arbitrary signed offsets for grid row moves", () => {
+    expect(getPageBlockSiblingMoveTarget([{ index: 4 }], -3)).toMatchObject({ index: 1 });
+    expect(getPageBlockSiblingMoveTarget([{ index: 1 }], 3)).toMatchObject({ index: 4 });
+    expect(getPageBlockSiblingMoveTarget([{ index: 1 }], 0)).toBeNull();
+    expect(getPageBlockSiblingMoveTarget([{ index: 1 }], 1.5)).toBeNull();
+  });
+});
+
+describe("insert block beside (owner finding #7)", () => {
+  const rowGroup = (id: string, children: PageBlockV2[]) =>
+    createPageBlockV2("group", {
+      id,
+      props: { direction: "row", wrap: false, gap: 16 },
+      slots: { children },
+    });
+  const button = (id: string) =>
+    createPageBlockV2("button", {
+      id,
+      props: { label: "CTA", href: "/", target: "self", variant: "primary", size: "md" },
+    });
+
+  test("wraps a block without a row-group parent into a new row group, preserving its id and props", () => {
+    const section = createPageSectionV2("content", {
+      blocks: [button("blk-cta")],
+    });
+    const result = insertPageBlockBeside(section, [{ index: 0 }], button("blk-second"));
+
+    expect(result.status).toBe("ok");
+    expect(result.path ? serializePageBlockPath(result.path) : null).toBe("root:0/children:1");
+    const wrapper = getPageBlockAtPath(result.section, [{ index: 0 }]);
+    expect(wrapper).toMatchObject({
+      type: "group",
+      props: { direction: "row", wrap: false, gap: 16 },
+    });
+    expect(wrapper?.slots?.children?.map((child) => child.id)).toEqual(["blk-cta", "blk-second"]);
+    expect(wrapper?.slots?.children?.[0]).toMatchObject({
+      type: "button",
+      props: { label: "CTA", href: "/" },
+    });
+  });
+
+  test("appends after the selected block when the parent is already a row group", () => {
+    const section = createPageSectionV2("content", {
+      blocks: [rowGroup("blk-row", [button("blk-first"), button("blk-third")])],
+    });
+    const result = insertPageBlockBeside(
+      section,
+      [{ index: 0 }, { slotKey: "children", index: 0 }],
+      button("blk-between")
+    );
+
+    expect(result.status).toBe("ok");
+    expect(result.path ? serializePageBlockPath(result.path) : null).toBe("root:0/children:1");
+    const row = getPageBlockAtPath(result.section, [{ index: 0 }]);
+    expect(row?.id).toBe("blk-row");
+    expect(row?.slots?.children?.map((child) => child.id)).toEqual([
+      "blk-first",
+      "blk-between",
+      "blk-third",
+    ]);
+  });
+
+  test("rejects wraps that would push the subtree past the depth budget", () => {
+    const deepSection = createPageSectionV2("content", {
+      blocks: [
+        group("blk-depth-1", [group("blk-depth-2", [group("blk-depth-3", [heading("blk-leaf")])])]),
+      ],
+    });
+    const leafPath: PageBlockPath = [
+      { index: 0 },
+      { slotKey: "children", index: 0 },
+      { slotKey: "children", index: 0 },
+      { slotKey: "children", index: 0 },
+    ];
+    expect(getPageBlockBesideInsertStatus(deepSection, leafPath)).toBe("max-depth-exceeded");
+    const rejected = insertPageBlockBeside(deepSection, leafPath, heading("blk-no"));
+    expect(rejected.status).toBe("max-depth-exceeded");
+    expect(rejected.section).toBe(deepSection);
+
+    const shallowSection = createPageSectionV2("content", { blocks: [heading("blk-ok")] });
+    expect(getPageBlockBesideInsertStatus(shallowSection, [{ index: 0 }])).toBe("ok");
   });
 });

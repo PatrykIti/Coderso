@@ -7,9 +7,12 @@ import type {
 } from "react";
 import {
   ArrowDown,
+  ArrowLeft,
+  ArrowRight,
   ArrowUp,
   Baseline,
   Brush,
+  Columns2,
   Copy,
   Eye,
   GripVertical,
@@ -117,18 +120,30 @@ import {
   SliderStepperControl,
   ToggleSwitch,
 } from "./editorControls";
-import { editorControlFocusClass, editorControlLabelClass } from "./editorControls/controlChrome";
+import {
+  editorCanvasCtaButtonClass,
+  editorCanvasGhostTileClass,
+  editorCanvasGhostTileCompactClass,
+  editorControlFocusClass,
+  editorControlLabelClass,
+  editorDarkButtonClass,
+  editorDarkGhostButtonClass,
+} from "./editorControls/controlChrome";
 import {
   deletePageBlockAtPath,
   duplicatePageBlockAtPath,
   duplicatePageBlockTreeWithNewIds,
   getDefaultPageBlockInsertTarget,
+  getPageBlockAdjacentColumnMoveTarget,
   getPageBlockAtPath,
+  getPageBlockBesideInsertStatus,
+  getPageBlockContainerLayout,
   getPageBlockEditorSlotKeys,
   getPageBlockInsertTargetStatus,
   getPageBlockListAtPath,
   getPageBlockSiblingMoveTarget,
   insertPageBlockAtTarget,
+  insertPageBlockBeside,
   isPageBlockPathDescendant,
   isSamePageBlockPath,
   movePageBlockToTarget,
@@ -146,7 +161,10 @@ import {
   instantiatePageTemplateSections,
   normalizeStoredPageTemplateDocument,
 } from "../../../services/pages/pageTemplateLibrarySchema";
-import { getPageSectionFallbackVariant } from "../../../services/pages/pageSectionTemplates";
+import {
+  getPageSectionEffectiveColumns,
+  getPageSectionFallbackVariant,
+} from "../../../services/pages/pageSectionTemplates";
 import { joinPageRenderClasses, PageSectionContent } from "../../../services/pages/pageRendererV2";
 import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
 import {
@@ -167,6 +185,15 @@ export type PageEditorHostRevisions = {
 export type PageEditorHostPreviewResponse = {
   previewUrl: string;
   probe?: PreviewProbeResult;
+};
+
+/**
+ * Hosts that return the post-publish detail let the editor adopt the
+ * authoritative status/timestamps instead of hand-building a page object.
+ */
+export type PageEditorHostPublishResult = {
+  ok?: boolean;
+  page?: PageDetail | null;
 };
 
 export type PageEditorHostSettingsRenderProps = {
@@ -196,7 +223,10 @@ export type PageEditorHost = {
   loadDetail: (id: string) => Promise<PageDetail | null>;
   saveDocument: (id: string, document: PageDocumentV2) => Promise<PageDetail>;
   autosaveDocument?: (id: string, document: PageDocumentV2) => Promise<unknown>;
-  publish?: (id: string, document: PageDocumentV2) => Promise<unknown>;
+  publish?: (
+    id: string,
+    document: PageDocumentV2
+  ) => Promise<PageEditorHostPublishResult | null | undefined>;
   preview: (id: string) => Promise<PageEditorHostPreviewResponse>;
   revisions?: PageEditorHostRevisions;
   /** Page-chrome settings: defaults to the page settings sheet when omitted. */
@@ -449,6 +479,26 @@ const toolbarActionTooltips = {
   moveBlockDown: {
     label: "Move block down",
     description: "Move the selected block one position later.",
+  },
+  moveBlockUpRow: {
+    label: "Move block up",
+    description: "Move the selected block one grid row earlier.",
+  },
+  moveBlockDownRow: {
+    label: "Move block down",
+    description: "Move the selected block one grid row later.",
+  },
+  moveBlockLeft: {
+    label: "Move block left",
+    description: "Move the selected block one position left in its row.",
+  },
+  moveBlockRight: {
+    label: "Move block right",
+    description: "Move the selected block one position right in its row.",
+  },
+  addBlockBeside: {
+    label: "Add block beside",
+    description: "Insert a new block next to the selected block in a row.",
   },
   duplicateSection: {
     label: "Duplicate section",
@@ -823,14 +873,30 @@ const listItemsFromFieldValue = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+/**
+ * EFFECTIVE display value of a control (TASK-449 owner bug #9): the stored
+ * value when present, otherwise the registry `fallback` (the schema default
+ * that an unset field actually renders as). Unset fields without a fallback
+ * resolve to "" — segmented strips then mark NO option active (honest
+ * "inherit" state) instead of lying with the first option, and sliders rest
+ * at their minimum. This must never show a zero-value lie (e.g. Opacity 0
+ * for an unset value that renders as 1).
+ */
 const fieldValueFromControlValue = (
   control: PageEditorControlDefinition,
   value: unknown
 ): string => {
-  if (control.input === "switch") return value === true ? "yes" : "no";
-  if (control.input === "number") return typeof value === "number" ? String(value) : "";
+  if (control.input === "switch") {
+    if (typeof value === "boolean") return value ? "yes" : "no";
+    return control.fallback === true ? "yes" : "no";
+  }
+  if (control.input === "number") {
+    if (typeof value === "number") return String(value);
+    return typeof control.fallback === "number" ? String(control.fallback) : "";
+  }
   if (control.input === "select" || control.input === "segmented") {
-    return typeof value === "string" ? value : (control.options?.[0] ?? "");
+    if (typeof value === "string") return value;
+    return typeof control.fallback === "string" ? control.fallback : "";
   }
   if (control.path[0] === "props" && control.path[1] === "items") {
     if (!Array.isArray(value)) return "";
@@ -1219,7 +1285,7 @@ const SectionGapInsertZone = ({
       type="button"
       variant="outline"
       size="sm"
-      className="relative z-10 h-6 gap-1 rounded-full px-2 text-xs opacity-0 shadow-sm transition-opacity focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100"
+      className={`${editorCanvasCtaButtonClass} relative z-10 h-6 gap-1 rounded-full px-2 text-xs opacity-0 transition-opacity focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100`}
       aria-label={`Add section at position ${index + 1}`}
       onClick={() => onInsert(index)}
     >
@@ -1227,6 +1293,38 @@ const SectionGapInsertZone = ({
       Add section
     </Button>
   </div>
+);
+
+/**
+ * Canvas-only ghost "Add block" tile (owner findings #5/#8). Always stops
+ * propagation so activating it never changes the selection through bubbling;
+ * the insert path itself is explicit via the pre-targeted command palette.
+ */
+const CanvasGhostAddTile = ({
+  ghostKind,
+  ariaLabel,
+  compact = false,
+  onAdd,
+}: {
+  ghostKind: string;
+  ariaLabel: string;
+  compact?: boolean;
+  onAdd: () => void;
+}) => (
+  <button
+    type="button"
+    className={compact ? editorCanvasGhostTileCompactClass : editorCanvasGhostTileClass}
+    data-page-editor-ghost={ghostKind}
+    aria-label={ariaLabel}
+    onClick={(event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onAdd();
+    }}
+  >
+    <Plus className={compact ? "h-3 w-3" : "h-4 w-4"} />
+    Add block
+  </button>
 );
 
 const SectionCanvas = ({
@@ -1240,6 +1338,7 @@ const SectionCanvas = ({
   onSelect,
   onSelectBlock,
   onAddBlock,
+  onAddBlockToTarget,
   onStartInlineEdit,
   onCommitInlineEdit,
 }: {
@@ -1253,6 +1352,7 @@ const SectionCanvas = ({
   onSelect: () => void;
   onSelectBlock: (blockPath: PageBlockPath) => void;
   onAddBlock: () => void;
+  onAddBlockToTarget: (target: PageBlockInsertTarget) => void;
   onStartInlineEdit: (target: PageEditorInlineEditTarget) => void;
   onCommitInlineEdit: (commit: PageEditorInlineEditCommit) => void;
 }) => {
@@ -1266,6 +1366,19 @@ const SectionCanvas = ({
     section.visibility.startsAt ? `Starts ${section.visibility.startsAt}` : null,
     section.visibility.endsAt ? `Ends ${section.visibility.endsAt}` : null,
   ].filter((badge): badge is string => Boolean(badge));
+  // The painted grid column count (template floors + stackVertical), NOT the
+  // raw layout.columns value — ghost tiles must map onto real grid cells.
+  const effectiveColumns = getPageSectionEffectiveColumns(section);
+  // Section root inserts append at the end of the block list: the auto-flow
+  // grid places the new block in the next free cell (column = index % N).
+  const sectionAppendTarget: PageBlockInsertTarget = {
+    listPath: {},
+    index: section.blocks.length,
+  };
+  const addBlockAppending = () => {
+    onSelect();
+    onAddBlockToTarget(sectionAppendTarget);
+  };
   return (
     <section
       className={`group relative transition ${
@@ -1308,18 +1421,68 @@ const SectionCanvas = ({
         layoutMode="canvas-device"
         includeHiddenBlocks
         emptyContent={
-          <button
-            type="button"
-            className="rounded border border-dashed p-6 text-center text-sm text-muted-foreground hover:border-primary/40 hover:text-primary"
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect();
-              onAddBlock();
-            }}
-          >
-            Add the first block
-          </button>
+          effectiveColumns >= 2 ? (
+            // Owner finding #5: an empty multi-column section paints one ghost
+            // tile per column cell. Every tile appends (auto-flow fills the
+            // columns in order), so they share the same explicit append target.
+            <>
+              {Array.from({ length: effectiveColumns }, (_, columnIndex) => (
+                <CanvasGhostAddTile
+                  key={`section-column-ghost-${columnIndex + 1}`}
+                  ghostKind="section-column"
+                  ariaLabel={`Add block to column ${columnIndex + 1}`}
+                  onAdd={addBlockAppending}
+                />
+              ))}
+            </>
+          ) : (
+            <button
+              type="button"
+              className={`rounded border-dashed p-6 text-center text-sm ${editorCanvasCtaButtonClass}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect();
+                onAddBlock();
+              }}
+            >
+              Add the first block
+            </button>
+          )
         }
+        trailingContent={
+          effectiveColumns >= 2 && section.blocks.length > 0 ? (
+            // Owner finding #5: non-empty multi-column sections keep a single
+            // trailing ghost tile in the next free grid cell.
+            <CanvasGhostAddTile
+              ghostKind="section-append"
+              ariaLabel="Add block at end of section"
+              onAdd={addBlockAppending}
+            />
+          ) : null
+        }
+        renderColumnsSlotTrailing={({ slotKey, ownerPath, childCount }) => {
+          // Owner finding #8: per-slot add affordances on the canvas, wired to
+          // the same insert path the Layers panel uses ("Add block to Column N").
+          const canAdd =
+            ownerPath.length + 1 <= PAGE_BLOCK_MAX_TREE_DEPTH &&
+            childCount < PAGE_BLOCK_MAX_CHILDREN_PER_SLOT;
+          if (!canAdd) return null;
+          const slotLabel = formatSlotLabel(slotKey);
+          return (
+            <CanvasGhostAddTile
+              ghostKind={childCount === 0 ? "columns-slot" : "columns-slot-append"}
+              ariaLabel={`Add block to ${slotLabel}`}
+              compact={childCount > 0}
+              onAdd={() => {
+                onSelect();
+                onAddBlockToTarget({
+                  listPath: { ownerPath, slotKey },
+                  index: childCount,
+                });
+              }}
+            />
+          );
+        }}
         renderInlineText={({ block, propPath, text }) => (
           <InlineEditableCanvasText
             block={block}
@@ -1409,20 +1572,24 @@ const LayerBlockRows = ({
   ownerPath,
   slotKey,
   selectedBlockPath,
+  canAddBeside,
   device,
   onSelectBlock,
   onAddToTarget,
   onMoveToTarget,
+  onAddBeside,
 }: {
   section: PageSectionV2;
   blocks: readonly PageBlockV2[];
   ownerPath: PageBlockPath | null;
   slotKey?: PageBlockPath[number]["slotKey"];
   selectedBlockPath: PageBlockPath | null;
+  canAddBeside: boolean;
   device: PageBreakpoint;
   onSelectBlock: (blockPath: PageBlockPath) => void;
   onAddToTarget: (target: PageBlockInsertTarget) => void;
   onMoveToTarget: (target: PageBlockInsertTarget) => void;
+  onAddBeside: () => void;
 }) => (
   <div className="space-y-1">
     {blocks.map((block, index) => {
@@ -1432,28 +1599,44 @@ const LayerBlockRows = ({
       const blockSelected = isSamePageBlockPath(blockPath, selectedBlockPath);
       return (
         <div key={block.id} className="space-y-1">
-          <button
-            type="button"
-            className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs ${
-              blockSelected ? "bg-primary/10 text-primary" : "hover:bg-muted"
-            }`}
-            data-page-editor-layer-block-id={block.id}
-            data-page-editor-layer-block-path={serializedPath}
-            data-page-editor-responsive-target={
-              hasAnyResponsiveOverride(device, readBlockBreakpointOverride(block, device))
-                ? "override"
-                : "inherited"
-            }
-            onClick={() => onSelectBlock(blockPath)}
-          >
-            <span className="truncate">{getBlockDisplayLabel(block)}</span>
-            <span className="ml-2 shrink-0 uppercase text-muted-foreground">
-              {hasAnyResponsiveOverride(device, readBlockBreakpointOverride(block, device))
-                ? `${device} `
-                : ""}
-              {block.type}
-            </span>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className={`flex min-w-0 flex-1 items-center justify-between rounded px-2 py-1.5 text-left text-xs ${
+                blockSelected ? "bg-primary/10 text-primary" : "hover:bg-muted"
+              }`}
+              data-page-editor-layer-block-id={block.id}
+              data-page-editor-layer-block-path={serializedPath}
+              data-page-editor-responsive-target={
+                hasAnyResponsiveOverride(device, readBlockBreakpointOverride(block, device))
+                  ? "override"
+                  : "inherited"
+              }
+              onClick={() => onSelectBlock(blockPath)}
+            >
+              <span className="truncate">{getBlockDisplayLabel(block)}</span>
+              <span className="ml-2 shrink-0 uppercase text-muted-foreground">
+                {hasAnyResponsiveOverride(device, readBlockBreakpointOverride(block, device))
+                  ? `${device} `
+                  : ""}
+                {block.type}
+              </span>
+            </button>
+            {blockSelected ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                className="shrink-0"
+                title="Add block beside"
+                aria-label="Add block beside"
+                disabled={!canAddBeside}
+                onClick={onAddBeside}
+              >
+                Beside
+              </Button>
+            ) : null}
+          </div>
           {slotKeys.length > 0 ? (
             <div className="space-y-1 border-l pl-3">
               {slotKeys.map((childSlotKey) => {
@@ -1519,10 +1702,12 @@ const LayerBlockRows = ({
                         ownerPath={blockPath}
                         slotKey={childSlotKey}
                         selectedBlockPath={selectedBlockPath}
+                        canAddBeside={canAddBeside}
                         device={device}
                         onSelectBlock={onSelectBlock}
                         onAddToTarget={onAddToTarget}
                         onMoveToTarget={onMoveToTarget}
+                        onAddBeside={onAddBeside}
                       />
                     ) : (
                       <p className="px-2 py-1 text-[11px] text-muted-foreground">Empty</p>
@@ -1575,6 +1760,11 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   // Gap index pre-targeted by the inline per-gap "+" zones: a chosen section
   // is spliced at this index instead of being appended.
   const [pendingSectionInsertIndex, setPendingSectionInsertIndex] = useState<number | null>(null);
+  // "Add block beside" pre-target (owner finding #7): the chosen block is
+  // inserted beside this path via `insertPageBlockBeside` (append in an
+  // existing row group, otherwise wrap into a new row group). Deferred to
+  // pick-time so cancelling the palette never mutates the document.
+  const [pendingBesideBlockPath, setPendingBesideBlockPath] = useState<PageBlockPath | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<ToolbarPanel | null>("content");
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
@@ -1634,6 +1824,33 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const toolbarSelectionMeta = resolvedSelectedBlock
     ? resolvedSelectedBlock.type
     : (selectedSection?.variant ?? "section");
+  // Owner finding #6: how the selected block's container lays out its
+  // children, resolved against the active breakpoint so responsive
+  // stackVertical/columns overrides steer the visible move axes.
+  const selectedBlockContainerLayout =
+    selectedBlock && selectedBlockPath && resolvedSelectedSection
+      ? getPageBlockContainerLayout(resolvedSelectedSection, selectedBlockPath)
+      : null;
+  // Left/Right exist only where the block renders beside siblings (section
+  // grid with 2+ columns, a row-direction group, or a columns-block slot row);
+  // single-column contexts hide them entirely.
+  const horizontalBlockMoveAvailable = Boolean(
+    selectedBlockContainerLayout && selectedBlockContainerLayout.kind !== "stack"
+  );
+  // Up/Down move by one visual row: ±columns inside a multi-column grid,
+  // plain ±1 in single-column stacks and columns-block slots (each slot is a
+  // vertical stack). A row-direction group has no vertical axis, so Up/Down
+  // hide there.
+  const verticalBlockMoveAvailable = selectedBlockContainerLayout?.kind !== "row";
+  const verticalBlockMoveStep =
+    selectedBlockContainerLayout?.kind === "grid" ? selectedBlockContainerLayout.columns : 1;
+  // Owner finding #7: availability of the "Add block beside" action (depth
+  // and slot-capacity guarded; palette blocks always start at tree height 1).
+  const canAddBlockBeside = Boolean(
+    selectedSection &&
+    selectedBlockPath &&
+    getPageBlockBesideInsertStatus(selectedSection, selectedBlockPath) === "ok"
+  );
   // Typography is a block-only panel: it surfaces only for selected
   // typography-capable blocks, never for section selections (the owner
   // contract has no consolidated all-section-texts surface).
@@ -1679,6 +1896,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const openCommandPalette = useCallback(() => {
     setPendingBlockInsertTarget(null);
     setPendingSectionInsertIndex(null);
+    setPendingBesideBlockPath(null);
     setCommandOpen(true);
     setCommandQuery("");
     setCommandActiveIndex(0);
@@ -1687,6 +1905,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const openCommandPaletteForTarget = useCallback((target: PageBlockInsertTarget) => {
     setPendingBlockInsertTarget(target);
     setPendingSectionInsertIndex(null);
+    setPendingBesideBlockPath(null);
     setCommandOpen(true);
     setCommandQuery("");
     setCommandActiveIndex(0);
@@ -1697,10 +1916,23 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const openCommandPaletteAtGap = useCallback((gapIndex: number) => {
     setPendingBlockInsertTarget(null);
     setPendingSectionInsertIndex(gapIndex);
+    setPendingBesideBlockPath(null);
     setCommandOpen(true);
     setCommandQuery("");
     setCommandActiveIndex(0);
   }, []);
+
+  // Opens the palette pre-targeted beside the currently selected block
+  // (owner finding #7); the actual wrap/append happens when a block is picked.
+  const openCommandPaletteBesideSelected = useCallback(() => {
+    if (!selectedBlockPath) return;
+    setPendingBlockInsertTarget(null);
+    setPendingSectionInsertIndex(null);
+    setPendingBesideBlockPath(selectedBlockPath);
+    setCommandOpen(true);
+    setCommandQuery("");
+    setCommandActiveIndex(0);
+  }, [selectedBlockPath]);
 
   const setDocumentDraft = useCallback((updater: (current: PageDocumentV2) => PageDocumentV2) => {
     setPageDocument((current) => updater(cloneDocument(current)));
@@ -1904,6 +2136,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       setCommandActiveIndex(0);
       setPendingBlockInsertTarget(null);
       setPendingSectionInsertIndex(null);
+      setPendingBesideBlockPath(null);
     },
     [pendingSectionInsertIndex, selectSection, setDocumentDraft]
   );
@@ -1920,13 +2153,20 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         setCommandActiveIndex(0);
         setPendingBlockInsertTarget(null);
         setPendingSectionInsertIndex(null);
+        setPendingBesideBlockPath(null);
         return;
       }
       if (!selectedSection) return;
-      const target =
-        pendingBlockInsertTarget ??
-        getDefaultPageBlockInsertTarget(selectedSection, selectedBlockPath);
-      const result = insertPageBlockAtTarget(selectedSection, target, block);
+      // "Add block beside" defers the row-group wrap/append to pick-time so a
+      // cancelled palette never mutates the document (owner finding #7).
+      const result = pendingBesideBlockPath
+        ? insertPageBlockBeside(selectedSection, pendingBesideBlockPath, block)
+        : insertPageBlockAtTarget(
+            selectedSection,
+            pendingBlockInsertTarget ??
+              getDefaultPageBlockInsertTarget(selectedSection, selectedBlockPath),
+            block
+          );
       if (result.status !== "ok" || !result.path) return;
       setDocumentDraft((current) => {
         const sections = current.sections.map((section) =>
@@ -1940,8 +2180,10 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       setCommandActiveIndex(0);
       setPendingBlockInsertTarget(null);
       setPendingSectionInsertIndex(null);
+      setPendingBesideBlockPath(null);
     },
     [
+      pendingBesideBlockPath,
       pendingBlockInsertTarget,
       selectBlock,
       selectedBlockPath,
@@ -1980,6 +2222,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       setCommandActiveIndex(0);
       setPendingBlockInsertTarget(null);
       setPendingSectionInsertIndex(null);
+      setPendingBesideBlockPath(null);
       try {
         const sections = await templateLibrary.instantiateSections(templateId);
         if (sections.length === 0) return;
@@ -2061,11 +2304,19 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     [selectedSectionId, setDocumentDraft]
   );
 
-  const moveSelectedBlock = useCallback(
-    (direction: -1 | 1) => {
+  // Sibling move by an arbitrary signed offset (owner finding #6): ±1 for
+  // left/right (and single-column up/down), ±effectiveColumns for vertical
+  // moves inside a multi-column section grid. Out-of-range targets are strict
+  // no-ops — clamping would teleport the block into a different grid column.
+  const moveSelectedBlockBy = useCallback(
+    (offset: number) => {
       if (!selectedSectionId || !selectedSection || !selectedBlockPath) return;
-      const target = getPageBlockSiblingMoveTarget(selectedBlockPath, direction);
+      const target = getPageBlockSiblingMoveTarget(selectedBlockPath, offset);
       if (!target) return;
+      const listResult = getPageBlockListAtPath(selectedSection, target.listPath);
+      if (listResult.status !== "ok") return;
+      const targetIndex = target.index ?? 0;
+      if (targetIndex < 0 || targetIndex > listResult.blocks.length - 1) return;
       const result = movePageBlockToTarget(selectedSection, selectedBlockPath, target);
       if (result.status !== "ok" || !result.path) return;
       setDocumentDraft((current) => ({
@@ -2093,6 +2344,35 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       selectBlock(selectedSectionId, result.path);
     },
     [selectBlock, selectedBlockPath, selectedSection, selectedSectionId, setDocumentDraft]
+  );
+
+  // Horizontal Left/Right move (owner finding #6): ±1 sibling move inside a
+  // section grid or row group, adjacent-slot move inside a columns block (the
+  // geometry the user actually sees). Out-of-range moves are strict no-ops.
+  const moveSelectedBlockHorizontally = useCallback(
+    (direction: -1 | 1) => {
+      if (!selectedSection || !selectedBlockPath || !resolvedSelectedSection) return;
+      const layout = getPageBlockContainerLayout(resolvedSelectedSection, selectedBlockPath);
+      if (layout.kind === "columns-slot") {
+        const target = getPageBlockAdjacentColumnMoveTarget(
+          resolvedSelectedSection,
+          selectedBlockPath,
+          direction
+        );
+        if (!target) return;
+        moveSelectedBlockToTarget(target);
+        return;
+      }
+      if (layout.kind === "stack") return;
+      moveSelectedBlockBy(direction);
+    },
+    [
+      moveSelectedBlockBy,
+      moveSelectedBlockToTarget,
+      resolvedSelectedSection,
+      selectedBlockPath,
+      selectedSection,
+    ]
   );
 
   const duplicateSelectedSection = useCallback(() => {
@@ -2228,6 +2508,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
           setCommandOpen(false);
           setPendingBlockInsertTarget(null);
           setPendingSectionInsertIndex(null);
+          setPendingBesideBlockPath(null);
           return;
         }
         if (layersOpen) {
@@ -2445,12 +2726,40 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     if (!page || !editorHost.publish) return;
     setIsPublishing(true);
     setError(null);
+    // Draft/published coherence: publishing unsaved edits must persist them
+    // through the same draft-save path as Save/Preview first, otherwise a
+    // reload would resurrect the stale draft while the public site renders
+    // the published document.
+    let publishTarget = page;
+    let publishDocument = pageDocument;
+    if (hasUnsavedChanges) {
+      try {
+        const saved = await saveCurrentDraft();
+        if (!saved) {
+          setIsPublishing(false);
+          return;
+        }
+        publishTarget = saved;
+        publishDocument = normalizePageData(saved.currentData);
+      } catch (saveError) {
+        // Failure ordering: a failed draft save aborts the publish so the
+        // published site never gets ahead of a draft we could not persist.
+        setError(resolvePageEditorMutationError("saveDraft", saveError));
+        setIsPublishing(false);
+        return;
+      }
+    }
     try {
-      await editorHost.publish(page.id, pageDocument);
-      setPage({ ...page, status: "published" });
-      setHasUnsavedChanges(false);
+      const result = await editorHost.publish(publishTarget.id, publishDocument);
+      // Prefer the authoritative post-publish detail over a hand-built page
+      // object; keep the fallback for hosts that do not return the detail.
+      // The dirty flag is owned by saveCurrentDraft above, so edits made
+      // while the publish request was in flight keep their unsaved state.
+      setPage(result?.page ?? { ...publishTarget, status: "published" });
       pageEditorActionToasts.success("publish");
     } catch (publishError) {
+      // Failure ordering: the draft save above already committed; surface the
+      // publish failure without hiding or rolling back the saved draft.
       setError(resolvePageEditorMutationError("publish", publishError));
     } finally {
       setIsPublishing(false);
@@ -2691,7 +3000,13 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
             ) : (
               <div className="space-y-4">
                 <div className="flex justify-center">
-                  <Button type="button" variant="outline" size="sm" onClick={openCommandPalette}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={editorCanvasCtaButtonClass}
+                    onClick={openCommandPalette}
+                  >
                     <Plus className="h-4 w-4" />
                     Add section
                   </Button>
@@ -2712,6 +3027,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                       onSelect={() => selectSection(section.id)}
                       onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
                       onAddBlock={openCommandPalette}
+                      onAddBlockToTarget={openCommandPaletteForTarget}
                       onStartInlineEdit={startInlineEdit}
                       onCommitInlineEdit={commitInlineEdit}
                     />
@@ -2779,10 +3095,12 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                       selectedBlockPath={
                         section.id === selectedSectionId ? selectedBlockPath : null
                       }
+                      canAddBeside={canAddBlockBeside}
                       device={device}
                       onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
                       onAddToTarget={openCommandPaletteForTarget}
                       onMoveToTarget={moveSelectedBlockToTarget}
+                      onAddBeside={openCommandPaletteBesideSelected}
                     />
                   </div>
                 </div>
@@ -2802,7 +3120,13 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
             data-page-editor-toolbar-collapsed={toolbarCollapsed ? "true" : "false"}
             data-page-editor-toolbar-dragging={toolbarDragging ? "true" : "false"}
           >
-            <div className="flex flex-wrap items-center gap-2">
+            {/*
+              Head row owns identity (name + variant chip + editing-scope
+              pill) on the left and the right-aligned action cluster; the
+              panel category icons live on their own second row so they can
+              never collide with the scope pill (owner finding #3).
+            */}
+            <div className="flex flex-wrap items-center gap-2" data-page-editor-toolbar-row="head">
               <ToolbarIconButton
                 tooltip={toolbarActionTooltips.drag}
                 onPointerDown={startToolbarDrag}
@@ -2824,81 +3148,128 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                     : `Editing: ${deviceScopeReadout(device)} (overrides)`}
                 </span>
               </div>
-              <ToolbarIconButton
-                tooltip={
-                  toolbarCollapsed ? toolbarActionTooltips.expand : toolbarActionTooltips.collapse
-                }
-                onClick={() => setToolbarCollapsed((collapsed) => !collapsed)}
+              <div
+                className="ml-auto flex shrink-0 items-center gap-1"
+                data-page-editor-toolbar-actions="true"
               >
-                {toolbarCollapsed ? (
-                  <Maximize2 className="h-4 w-4" />
-                ) : (
-                  <Minimize2 className="h-4 w-4" />
-                )}
-              </ToolbarIconButton>
-              {!toolbarCollapsed
-                ? visibleToolbarPanelOptions.map(({ panel, label, description, Icon }) => (
+                <ToolbarIconButton
+                  tooltip={
+                    toolbarCollapsed ? toolbarActionTooltips.expand : toolbarActionTooltips.collapse
+                  }
+                  onClick={() => setToolbarCollapsed((collapsed) => !collapsed)}
+                >
+                  {toolbarCollapsed ? (
+                    <Maximize2 className="h-4 w-4" />
+                  ) : (
+                    <Minimize2 className="h-4 w-4" />
+                  )}
+                </ToolbarIconButton>
+                {!toolbarCollapsed ? (
+                  <>
+                    {verticalBlockMoveAvailable ? (
+                      <>
+                        <ToolbarIconButton
+                          tooltip={
+                            selectedBlock
+                              ? verticalBlockMoveStep > 1
+                                ? toolbarActionTooltips.moveBlockUpRow
+                                : toolbarActionTooltips.moveBlockUp
+                              : toolbarActionTooltips.moveSectionUp
+                          }
+                          onClick={() =>
+                            selectedBlock
+                              ? moveSelectedBlockBy(-verticalBlockMoveStep)
+                              : moveSelectedSection(-1)
+                          }
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </ToolbarIconButton>
+                        <ToolbarIconButton
+                          tooltip={
+                            selectedBlock
+                              ? verticalBlockMoveStep > 1
+                                ? toolbarActionTooltips.moveBlockDownRow
+                                : toolbarActionTooltips.moveBlockDown
+                              : toolbarActionTooltips.moveSectionDown
+                          }
+                          onClick={() =>
+                            selectedBlock
+                              ? moveSelectedBlockBy(verticalBlockMoveStep)
+                              : moveSelectedSection(1)
+                          }
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </ToolbarIconButton>
+                      </>
+                    ) : null}
+                    {selectedBlock && horizontalBlockMoveAvailable ? (
+                      <>
+                        <ToolbarIconButton
+                          tooltip={toolbarActionTooltips.moveBlockLeft}
+                          onClick={() => moveSelectedBlockHorizontally(-1)}
+                        >
+                          <ArrowLeft className="h-4 w-4" />
+                        </ToolbarIconButton>
+                        <ToolbarIconButton
+                          tooltip={toolbarActionTooltips.moveBlockRight}
+                          onClick={() => moveSelectedBlockHorizontally(1)}
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                        </ToolbarIconButton>
+                      </>
+                    ) : null}
+                    {selectedBlock ? (
+                      <ToolbarIconButton
+                        tooltip={toolbarActionTooltips.addBlockBeside}
+                        disabled={!canAddBlockBeside}
+                        onClick={openCommandPaletteBesideSelected}
+                      >
+                        <Columns2 className="h-4 w-4" />
+                      </ToolbarIconButton>
+                    ) : null}
                     <ToolbarIconButton
-                      key={panel}
-                      tooltip={{ label: `${label} panel`, description }}
-                      active={activeToolbarPanel === panel}
-                      expanded={activeToolbarPanel === panel}
-                      panelId={panel}
-                      onClick={() =>
-                        setActivePanel((current) => (current === panel ? null : panel))
+                      tooltip={
+                        selectedBlock
+                          ? toolbarActionTooltips.duplicateBlock
+                          : toolbarActionTooltips.duplicateSection
                       }
+                      onClick={selectedBlock ? duplicateSelectedBlock : duplicateSelectedSection}
                     >
-                      <Icon className="h-4 w-4" />
+                      <Copy className="h-4 w-4" />
                     </ToolbarIconButton>
-                  ))
-                : null}
-              {!toolbarCollapsed ? (
-                <>
-                  <ToolbarIconButton
-                    tooltip={
-                      selectedBlock
-                        ? toolbarActionTooltips.moveBlockUp
-                        : toolbarActionTooltips.moveSectionUp
-                    }
-                    onClick={() =>
-                      selectedBlock ? moveSelectedBlock(-1) : moveSelectedSection(-1)
-                    }
-                  >
-                    <ArrowUp className="h-4 w-4" />
-                  </ToolbarIconButton>
-                  <ToolbarIconButton
-                    tooltip={
-                      selectedBlock
-                        ? toolbarActionTooltips.moveBlockDown
-                        : toolbarActionTooltips.moveSectionDown
-                    }
-                    onClick={() => (selectedBlock ? moveSelectedBlock(1) : moveSelectedSection(1))}
-                  >
-                    <ArrowDown className="h-4 w-4" />
-                  </ToolbarIconButton>
-                  <ToolbarIconButton
-                    tooltip={
-                      selectedBlock
-                        ? toolbarActionTooltips.duplicateBlock
-                        : toolbarActionTooltips.duplicateSection
-                    }
-                    onClick={selectedBlock ? duplicateSelectedBlock : duplicateSelectedSection}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </ToolbarIconButton>
-                  <ToolbarIconButton
-                    tooltip={
-                      selectedBlock
-                        ? toolbarActionTooltips.deleteBlock
-                        : toolbarActionTooltips.deleteSection
-                    }
-                    onClick={requestDeleteSelection}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </ToolbarIconButton>
-                </>
-              ) : null}
+                    <ToolbarIconButton
+                      tooltip={
+                        selectedBlock
+                          ? toolbarActionTooltips.deleteBlock
+                          : toolbarActionTooltips.deleteSection
+                      }
+                      onClick={requestDeleteSelection}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </ToolbarIconButton>
+                  </>
+                ) : null}
+              </div>
             </div>
+            {!toolbarCollapsed ? (
+              <div
+                className="mt-1 flex flex-wrap items-center gap-1 border-t border-white/10 pt-1"
+                data-page-editor-toolbar-row="panels"
+              >
+                {visibleToolbarPanelOptions.map(({ panel, label, description, Icon }) => (
+                  <ToolbarIconButton
+                    key={panel}
+                    tooltip={{ label: `${label} panel`, description }}
+                    active={activeToolbarPanel === panel}
+                    expanded={activeToolbarPanel === panel}
+                    panelId={panel}
+                    onClick={() => setActivePanel((current) => (current === panel ? null : panel))}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </ToolbarIconButton>
+                ))}
+              </div>
+            ) : null}
             {!toolbarCollapsed && activeToolbarPanel ? (
               <ToolbarSubpanel
                 panel={activeToolbarPanel}
@@ -3010,6 +3381,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                     setCommandActiveIndex(0);
                     setPendingBlockInsertTarget(null);
                     setPendingSectionInsertIndex(null);
+                    setPendingBesideBlockPath(null);
                   }}
                 >
                   Close
@@ -3231,7 +3603,12 @@ const ToolbarSubpanel = ({
               : null}
             {panel === "content" ? (
               <div className="flex items-end">
-                <Button type="button" variant="outline" onClick={onAddBlock}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={editorDarkButtonClass}
+                  onClick={onAddBlock}
+                >
                   <Plus className="h-4 w-4" />
                   Add block
                 </Button>
@@ -3313,7 +3690,12 @@ const ToolbarSubpanel = ({
               {primaryBlock ? getBlockDisplayLabel(primaryBlock) : "No block selected"}
             </p>
             <div className="flex items-end">
-              <Button type="button" variant="outline" onClick={onAddBlock}>
+              <Button
+                type="button"
+                variant="outline"
+                className={editorDarkButtonClass}
+                onClick={onAddBlock}
+              >
                 <Plus className="h-4 w-4" />
                 Add block
               </Button>
@@ -3523,6 +3905,7 @@ const ToolbarIconButton = ({
   active = false,
   expanded,
   panelId,
+  disabled = false,
   onClick,
   onPointerDown,
   children,
@@ -3531,6 +3914,7 @@ const ToolbarIconButton = ({
   active?: boolean;
   expanded?: boolean;
   panelId?: ToolbarPanel;
+  disabled?: boolean;
   onClick?: () => void;
   onPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   children: ReactNode;
@@ -3542,9 +3926,10 @@ const ToolbarIconButton = ({
         aria-label={tooltip.label}
         aria-expanded={expanded}
         data-page-editor-toolbar-icon={panelId}
+        disabled={disabled}
         className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${editorControlFocusClass} ${
           active ? "bg-white/15 text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
-        }`}
+        } disabled:pointer-events-none disabled:opacity-40`}
         onClick={onClick}
         onPointerDown={onPointerDown}
       >
@@ -3817,16 +4202,22 @@ const RegistryControlWidget = ({
         />
       );
     case "toggle":
+      // fieldValue carries the effective boolean (stored value or the schema
+      // fallback for unset fields), so the switch never lies "off" for an
+      // unset field that renders as enabled.
       return (
         <ToggleSwitch
           label={control.label}
-          value={rawValue === true}
+          value={fieldValue === "yes"}
           onChange={(nextValue) => onCommit(nextValue)}
         />
       );
     case "slider":
     case "sliderStepper": {
-      const parsed = Number(fieldValue);
+      // An empty field value means "unset without a schema fallback": rest at
+      // the model minimum explicitly. `Number("")` is 0, which would otherwise
+      // silently display 0 for values that render differently when unset.
+      const parsed = fieldValue.length > 0 ? Number(fieldValue) : Number.NaN;
       const sliderValue = Number.isFinite(parsed) ? parsed : model.min;
       const sliderProps = {
         label: control.label,
@@ -3966,7 +4357,13 @@ const ToolbarMediaUrlField = ({
           data-page-editor-media-external={label}
         >
           <span className="truncate text-xs text-slate-300">{value}</span>
-          <Button type="button" variant="ghost" size="sm" onClick={() => onChange(null)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={editorDarkGhostButtonClass}
+            onClick={() => onChange(null)}
+          >
             Clear
           </Button>
         </div>

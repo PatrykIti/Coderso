@@ -182,6 +182,43 @@ test("MediaPicker dialog has a shared description without Radix warnings across 
   }
 });
 
+test("MediaPicker applies trigger/remove chrome overrides so dark surfaces never invert", async () => {
+  const originalFetch = globalThis.fetch;
+  writeMediaCache([mediaRecord({ title: "Removable asset" })]);
+  globalThis.fetch = async () => jsonResponse([]);
+
+  const view = mountPicker(
+    <MediaPicker
+      value="asset-1"
+      onChange={() => undefined}
+      triggerButtonClassName="bg-white/10 text-slate-100 hover:bg-white/20"
+      removeButtonClassName="text-slate-200 hover:bg-white/10"
+    />
+  );
+  try {
+    await flushEffects();
+
+    const browse = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Browse media")
+    );
+    expect(browse).toBeTruthy();
+    // tailwind-merge drops the conflicting admin-theme outline idle/hover
+    // classes in favor of the dark-surface chrome.
+    expect(browse?.className).toContain("bg-white/10");
+    expect(browse?.className).toContain("hover:bg-white/20");
+    expect(browse?.className).not.toContain("bg-transparent");
+    expect(browse?.className).not.toContain("--admin-button-outline-hover-bg");
+
+    const remove = view.container.querySelector('button[data-size="icon"]');
+    expect(remove).toBeTruthy();
+    expect(remove?.className).toContain("hover:bg-white/10");
+    expect(remove?.className).not.toContain("--admin-button-ghost-hover-bg");
+  } finally {
+    view.cleanup();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("MediaPicker resolves selected media from cache without fetching media", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];

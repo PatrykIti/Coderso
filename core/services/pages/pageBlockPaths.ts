@@ -1,6 +1,7 @@
 import {
   PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
   PAGE_BLOCK_MAX_TREE_DEPTH,
+  createPageBlockV2,
   createPageDocumentId,
   getPageBlockActiveSlotKeys,
   pageBlockCapabilities,
@@ -8,6 +9,7 @@ import {
   type PageBlockV2,
   type PageSectionV2,
 } from "./pageDocumentV2";
+import { getPageSectionEffectiveColumns } from "./pageSectionTemplates";
 
 export type PageBlockPathSegment = {
   slotKey?: PageBlockSlotKey;
@@ -312,11 +314,157 @@ const getParentListPath = (path: PageBlockPath) => {
 
 export const getPageBlockSiblingMoveTarget = (
   path: PageBlockPath,
-  direction: -1 | 1
+  offset: number
 ): PageBlockInsertTarget | null => {
   const parent = getParentListPath(path);
-  if (!parent.listPath) return null;
-  return { listPath: parent.listPath, index: parent.index + direction };
+  if (!parent.listPath || !Number.isInteger(offset) || offset === 0) return null;
+  return { listPath: parent.listPath, index: parent.index + offset };
+};
+
+/**
+ * How the siblings of the block at `path` are laid out by the shared renderer
+ * (owner finding #6). Pass a breakpoint-resolved section so responsive
+ * `stackVertical`/`layout.columns`/`count` overrides are already merged.
+ *
+ * - `grid`: section root list painted as a CSS auto-flow grid with 2+ columns
+ *   (column = index % columns) — left/right move ±1, up/down move ±columns.
+ * - `row`: children of a row-direction group — horizontal flex, left/right ±1,
+ *   no vertical axis inside the single row.
+ * - `columns-slot`: direct child of a columns block with 2+ active slots —
+ *   the slot list itself stacks vertically (up/down ±1) while left/right
+ *   moves the block into the adjacent column slot.
+ * - `stack`: every other container (single-column section, single-slot
+ *   columns block, column group, container) — vertical only.
+ */
+export type PageBlockContainerLayout =
+  | { kind: "grid"; columns: number }
+  | { kind: "row" }
+  | { kind: "columns-slot"; slotKeys: readonly PageBlockSlotKey[]; slotIndex: number }
+  | { kind: "stack" };
+
+export const getPageBlockContainerLayout = (
+  section: PageSectionV2,
+  path: PageBlockPath
+): PageBlockContainerLayout => {
+  if (path.length === 1) {
+    const columns = getPageSectionEffectiveColumns(section);
+    return columns >= 2 ? { kind: "grid", columns } : { kind: "stack" };
+  }
+  const parentPath = toPageBlockPath(path.slice(0, -1));
+  const parent = parentPath ? getPageBlockAtPath(section, parentPath) : null;
+  if (!parent) return { kind: "stack" };
+  if (parent.type === "group" && parent.props.direction === "row") return { kind: "row" };
+  if (parent.type === "columns") {
+    const slotKeys = getPageBlockActiveSlotKeys(parent);
+    const slotIndex = slotKeys.indexOf(path[path.length - 1]!.slotKey as PageBlockSlotKey);
+    if (slotKeys.length >= 2 && slotIndex >= 0) {
+      return { kind: "columns-slot", slotKeys, slotIndex };
+    }
+  }
+  return { kind: "stack" };
+};
+
+/**
+ * Insert target for moving a columns-slot child into the adjacent column slot
+ * (owner finding #6: left/right inside a columns block move across slots, the
+ * visually horizontal axis). Keeps the block's vertical position where
+ * possible by clamping its index to the target slot length. Returns null at
+ * the first/last column (strict no-op, mirroring sibling-move bounds).
+ */
+export const getPageBlockAdjacentColumnMoveTarget = (
+  section: PageSectionV2,
+  path: PageBlockPath,
+  direction: -1 | 1
+): PageBlockInsertTarget | null => {
+  const layout = getPageBlockContainerLayout(section, path);
+  if (layout.kind !== "columns-slot") return null;
+  const targetSlotKey = layout.slotKeys[layout.slotIndex + direction];
+  if (!targetSlotKey) return null;
+  const ownerPath = toPageBlockPath(path.slice(0, -1));
+  if (!ownerPath) return null;
+  const listResult = getPageBlockListAtPath(section, { ownerPath, slotKey: targetSlotKey });
+  if (listResult.status !== "ok") return null;
+  return {
+    listPath: { ownerPath, slotKey: targetSlotKey },
+    index: Math.min(path[path.length - 1]!.index, listResult.blocks.length),
+  };
+};
+
+/**
+ * Availability probe for {@link insertPageBlockBeside} with a not-yet-created
+ * atomic block (palette blocks always start with tree height 1). Lets the
+ * editor disable the "Add block beside" affordance without mutating anything.
+ */
+export const getPageBlockBesideInsertStatus = (
+  section: PageSectionV2,
+  path: PageBlockPath
+): PageBlockPathMutationStatus => {
+  const selected = getPageBlockAtPath(section, path);
+  if (!selected) return "invalid-path";
+  const parent = getParentListPath(path);
+  if (!parent.listPath) return "invalid-path";
+  const parentOwnerPath = parent.listPath.ownerPath;
+  const parentBlock = parentOwnerPath ? getPageBlockAtPath(section, parentOwnerPath) : null;
+  if (parentBlock?.type === "group" && parentBlock.props.direction === "row") {
+    const listResult = getPageBlockListAtPath(section, parent.listPath);
+    if (listResult.status !== "ok") return listResult.status;
+    return listResult.blocks.length >= PAGE_BLOCK_MAX_CHILDREN_PER_SLOT
+      ? "max-children-exceeded"
+      : "ok";
+  }
+  return path.length + getPageBlockTreeHeight(selected) > PAGE_BLOCK_MAX_TREE_DEPTH
+    ? "max-depth-exceeded"
+    : "ok";
+};
+
+/**
+ * "Add block beside" contract (owner finding #7). If the selected block's
+ * parent container is already a row-direction group, the new block is
+ * appended right after it in the same slot. Otherwise the selected block is
+ * wrapped — non-destructively, keeping its id/props/subtree — into a NEW
+ * `group` block (`direction: "row"`, `wrap: false`, default gap) and the new
+ * block becomes the second child. Returns the inserted block's path so the
+ * caller can select it. Schema-compatible by construction: it only composes
+ * the existing group contract.
+ */
+export const insertPageBlockBeside = (
+  section: PageSectionV2,
+  path: PageBlockPath,
+  block: PageBlockV2
+): PageBlockPathMutationResult => {
+  const selected = getPageBlockAtPath(section, path);
+  if (!selected) return { status: "invalid-path", section };
+
+  const parent = getParentListPath(path);
+  if (!parent.listPath) return { status: "invalid-path", section };
+  const parentOwnerPath = parent.listPath.ownerPath;
+  const parentBlock = parentOwnerPath ? getPageBlockAtPath(section, parentOwnerPath) : null;
+  if (parentBlock?.type === "group" && parentBlock.props.direction === "row") {
+    return insertPageBlockAtTarget(
+      section,
+      { listPath: parent.listPath, index: parent.index + 1 },
+      block
+    );
+  }
+
+  // Wrapping adds one tree level above the selected block, so the deepest
+  // descendant of either child must still fit within the depth budget.
+  const wrappedHeight = Math.max(getPageBlockTreeHeight(selected), getPageBlockTreeHeight(block));
+  if (path.length + wrappedHeight > PAGE_BLOCK_MAX_TREE_DEPTH) {
+    return { status: "max-depth-exceeded", section };
+  }
+
+  const group = createPageBlockV2("group", {
+    props: { direction: "row", wrap: false, gap: 16 },
+    slots: { children: [selected, block] },
+  });
+  const result = updatePageBlockAtPath(section, path, () => group);
+  if (result.status !== "ok") return result;
+  return {
+    status: "ok",
+    section: result.section,
+    path: [...path, { slotKey: "children", index: 1 }] as PageBlockPath,
+  };
 };
 
 const removePageBlockAtPath = (

@@ -583,6 +583,10 @@ Create/Update payload (summary):
 }
 ```
 
+Publishing persists the published document as the draft too (`currentData` and
+`publishedData` stay coherent) and responds with `{ "ok": true, "page": { ... } }`
+where `page` is the post-publish page detail.
+
 `POST /pages/:id/autosave` payload (summary):
 
 ```json

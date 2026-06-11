@@ -1,6 +1,10 @@
 import { MediaPicker } from "@/ui/media/MediaPicker";
 
-import { editorControlLabelClass } from "./controlChrome";
+import {
+  editorControlLabelClass,
+  editorDarkButtonClass,
+  editorDarkGhostButtonClass,
+} from "./controlChrome";
 
 export type MediaPickerControlProps = {
   label: string;
@@ -32,7 +36,14 @@ export const MediaPickerControl = ({
   >
     <span className={editorControlLabelClass}>{label}</span>
     <div className={disabled ? "pointer-events-none opacity-50" : undefined}>
-      <MediaPicker value={value} onChange={onChange} multiple={false} accept={accept} />
+      <MediaPicker
+        value={value}
+        onChange={onChange}
+        multiple={false}
+        accept={accept}
+        triggerButtonClassName={editorDarkButtonClass}
+        removeButtonClassName={editorDarkGhostButtonClass}
+      />
     </div>
   </div>
 );

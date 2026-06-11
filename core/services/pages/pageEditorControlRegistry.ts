@@ -18,6 +18,7 @@ import {
   pageShadowTokens,
   pageTextAlignments,
   pageTextFormats,
+  pageBlockDefaultProps,
   pageBreakpoints,
   pageTypographyFontFamilies,
   pageTypographyFontSizes,
@@ -64,6 +65,18 @@ export type PageEditorControlDefinition = {
   step?: number;
   /** Explicit readout unit; overrides the adapter's px default (use "" for unitless). */
   unit?: string;
+  /**
+   * Effective value the editor must DISPLAY when the stored field is unset
+   * (sparse block style / defensive prop reads). It is the `pageDocumentV2`
+   * schema default only where that default is render-equivalent to "unset"
+   * (e.g. unset `style.opacity` renders exactly like the schema default `1`).
+   * Controls whose unset state means "inherit baked styling" with no
+   * equivalent option token (block width/align, typography tokens, nullable
+   * colors) deliberately omit it: the honest display is "no active option",
+   * never a guessed token. Widgets must never show a zero-value lie (e.g.
+   * Opacity `0` for an unset value that renders as `1`).
+   */
+  fallback?: string | number | boolean;
 };
 
 const control = (
@@ -75,13 +88,28 @@ const control = (
   overridePath: definition.overridePath ?? definition.path,
 });
 
+/**
+ * Display fallback for a block prop: the owner schema default from
+ * `pageBlockDefaultProps`. Props are filled with these defaults on normalize,
+ * so this is purely defensive — but it keeps a degenerate document honest
+ * (e.g. a heading without `level` displays the schema default `h2`, never a
+ * lying first option). Non-scalar defaults (arrays, null) have no fallback.
+ */
+const blockPropFallback = (type: PageBlockType, key: string): string | number | boolean | null => {
+  const value = pageBlockDefaultProps[type][key];
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+    ? value
+    : null;
+};
+
 const blockPropControl = (
   type: PageBlockType,
   key: string,
   definition: Pick<PageEditorControlDefinition, "label" | "input"> &
     Partial<Pick<PageEditorControlDefinition, "panel" | "options" | "clamp">>
-) =>
-  control({
+) => {
+  const fallback = blockPropFallback(type, key);
+  return control({
     id: `block.${type}.props.${key}`,
     panel: definition.panel ?? "content",
     target: "block",
@@ -91,7 +119,9 @@ const blockPropControl = (
     responsive: true,
     ...(definition.options ? { options: definition.options } : {}),
     ...(definition.clamp ? { clamp: definition.clamp } : {}),
+    ...(fallback === null ? {} : { fallback }),
   });
+};
 
 export const pageUniversalSectionControls: readonly PageEditorControlDefinition[] = [
   control({
@@ -291,6 +321,8 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     input: "select",
     responsive: true,
     options: pageBackgroundTypes,
+    // Unset renders no background — exactly the schema default "none".
+    fallback: "none",
   }),
   control({
     id: "block.style.opacity",
@@ -301,6 +333,9 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     input: "number",
     responsive: true,
     clamp: { min: 0, max: 1 },
+    // Unset opacity renders fully opaque; the schema default is 1 (see
+    // normalizeBlockStyle). Displaying 0 for unset was the owner-reported lie.
+    fallback: 1,
   }),
   control({
     id: "block.style.radius",
@@ -311,6 +346,8 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     input: "number",
     responsive: true,
     clamp: { min: 0, max: 64 },
+    // Unset renders no border-radius — the schema default 0.
+    fallback: 0,
   }),
   control({
     id: "block.style.shadow",
@@ -321,6 +358,8 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     input: "select",
     responsive: true,
     options: pageShadowTokens,
+    // Unset renders no box-shadow — the schema default "none".
+    fallback: "none",
   }),
   control({
     id: "block.style.borderColor",
@@ -341,6 +380,8 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
       input: "number",
       responsive: true,
       clamp: { min: 0, max: 240 },
+      // Unset sides render no padding — the schema default 0.
+      fallback: 0,
     }),
     control({
       id: `block.style.margin.${side}`,
@@ -351,6 +392,8 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
       input: "number",
       responsive: true,
       clamp: { min: 0, max: 240 },
+      // Unset sides render no margin — the schema default 0.
+      fallback: 0,
     }),
   ]),
   control({
@@ -361,6 +404,8 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     path: ["visibility", "visible"],
     input: "switch",
     responsive: true,
+    // Blocks are visible unless explicitly hidden (defaultBlockVisibility).
+    fallback: true,
   }),
 ] as const;
 
@@ -426,6 +471,11 @@ export const pageTypographyBlockControls: readonly PageEditorControlDefinition[]
     clamp: PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
     step: 0.5,
     unit: "px",
+    // The baked text classes set no tracking, so unset/null renders as the
+    // CSS default `normal` (0px). Family/size/weight/line-height stay
+    // fallback-less: their unset state is the baked per-type styling, which
+    // no token represents — those controls show no active option instead.
+    fallback: 0,
   }),
 ] as const;
 

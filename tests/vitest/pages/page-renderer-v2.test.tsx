@@ -856,3 +856,144 @@ test("shared renderer remains inside the Bun-free Pages service boundary", () =>
   expect(source).toContain('from "./pageDocumentV2"');
   expect(source).not.toMatch(/@\/|db\/client|settingsService|pagesClient|server\/|core\/site/);
 });
+
+test("front render of multi-column grids keeps editor ghost affordances out of the markup", () => {
+  const emptyGridSection = createPageSectionV2("content", {
+    id: "sec-empty-grid",
+    layout: { columns: 3, align: "start", justify: "start", maxWidth: 1100 },
+    blocks: [],
+  });
+  const gridSection = createPageSectionV2("content", {
+    id: "sec-grid",
+    layout: { columns: 2, align: "start", justify: "start", maxWidth: 1100 },
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-grid-heading",
+        props: { text: "Grid heading", level: "h2", align: "left" },
+      }),
+      createPageBlockV2("columns", {
+        id: "blk-grid-columns",
+        props: { count: 2, gap: 24, distribution: "equal" },
+        slots: {
+          "column:1": [
+            createPageBlockV2("text", {
+              id: "blk-grid-copy",
+              props: { text: "Column copy", format: "plain", align: "left" },
+            }),
+          ],
+        },
+      }),
+    ],
+  });
+  const html = renderToStaticMarkup(
+    <PageDocumentRender document={createDocument([emptyGridSection, gridSection])} />
+  );
+
+  expect(html).toContain('data-section-id="sec-grid"');
+  expect(html).toContain('data-page-block-slot="column:1"');
+  expect(html).toContain('data-page-block-slot="column:2"');
+  // Front parity guard: ghost add tiles are editor-only chrome and must never
+  // serialize into public markup, even for empty grids and empty column slots.
+  expect(html).not.toContain("data-page-editor");
+  expect(html).not.toContain("Add block");
+  expect(html).not.toContain("Add the first block");
+});
+
+test("row-direction group renders two buttons side by side on front and canvas (owner finding #7)", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-row-group",
+    blocks: [
+      createPageBlockV2("group", {
+        id: "blk-row-group",
+        props: { direction: "row", wrap: false, gap: 16 },
+        slots: {
+          children: [
+            createPageBlockV2("button", {
+              id: "blk-cta-first",
+              props: {
+                label: "First action",
+                href: "/a",
+                target: "self",
+                variant: "primary",
+                size: "md",
+              },
+            }),
+            createPageBlockV2("button", {
+              id: "blk-cta-second",
+              props: {
+                label: "Second action",
+                href: "/b",
+                target: "self",
+                variant: "primary",
+                size: "md",
+              },
+            }),
+          ],
+        },
+      }),
+    ],
+  });
+
+  const front = renderToStaticMarkup(<PageSectionRender section={section} />);
+  expect(front).toContain('data-page-block-slot="children"');
+  expect(front).toContain("flex flex-row");
+  expect(front.match(/<a\s/g) ?? []).toHaveLength(2);
+  expect(front.indexOf("First action")).toBeLessThan(front.indexOf("Second action"));
+
+  const canvas = renderToStaticMarkup(
+    <PageSectionContent section={section} layoutMode="canvas-device" />
+  );
+  expect(canvas).toContain("flex flex-row");
+  expect(canvas.match(/<a\s/g) ?? []).toHaveLength(2);
+});
+
+test("admin columns-slot trailing hook renders per active slot and never on runtime paths", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-slot-hook",
+    blocks: [
+      createPageBlockV2("columns", {
+        id: "blk-hook-columns",
+        props: { count: 2, gap: 24, distribution: "equal" },
+        slots: {
+          "column:1": [
+            createPageBlockV2("heading", {
+              id: "blk-hook-heading",
+              props: { text: "Slot child", level: "h2", align: "left" },
+            }),
+          ],
+        },
+      }),
+    ],
+  });
+
+  const calls: Array<{ slotKey: string; childCount: number; ownerPath: string }> = [];
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      layoutMode="canvas-device"
+      renderColumnsSlotTrailing={({ slotKey, ownerPath, childCount }) => {
+        calls.push({ slotKey, childCount, ownerPath: serializePageBlockPath(ownerPath) });
+        return (
+          <button type="button" data-page-editor-ghost="columns-slot">
+            Add block
+          </button>
+        );
+      }}
+      trailingContent={
+        <button type="button" data-page-editor-ghost="section-append">
+          Add block
+        </button>
+      }
+    />
+  );
+
+  expect(calls).toEqual([
+    { slotKey: "column:1", childCount: 1, ownerPath: "root:0" },
+    { slotKey: "column:2", childCount: 0, ownerPath: "root:0" },
+  ]);
+  expect(html.match(/data-page-editor-ghost="columns-slot"/g)).toHaveLength(2);
+  expect(html).toContain('data-page-editor-ghost="section-append"');
+
+  const runtime = renderToStaticMarkup(<PageSectionRender section={section} />);
+  expect(runtime).not.toContain("data-page-editor-ghost");
+});

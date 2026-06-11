@@ -572,7 +572,7 @@ export const getPageBlockActiveSlotKeys = (block: PageBlockV2): readonly PageBlo
   return slots.slice(0, count);
 };
 
-const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown>> = {
+export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown>> = {
   heading: { text: "Heading", level: "h2", align: "left" },
   text: { text: "Write the section copy here.", format: "plain", align: "left" },
   button: { label: "Learn more", href: "/", target: "self", variant: "primary", size: "md" },

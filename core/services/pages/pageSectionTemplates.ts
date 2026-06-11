@@ -142,6 +142,18 @@ export const resolvePageSectionTemplateColumns = (
   return columns;
 };
 
+/**
+ * Effective rendered grid column count for a section (template floors plus the
+ * `stackVertical` single-column override). This is the exact column count the
+ * shared renderer paints (`toPageSectionRenderProps`), so editor affordances
+ * that map onto grid cells (ghost add tiles, left/right move math) must use
+ * it instead of reading `layout.columns` directly.
+ */
+export const getPageSectionEffectiveColumns = (section: PageSectionV2): number =>
+  section.layout.stackVertical === true
+    ? 1
+    : resolvePageSectionTemplateColumns(resolvePageSectionTemplate(section));
+
 export const resolvePageSectionTemplate = (section: PageSectionV2): ResolvedPageSectionTemplate => {
   const definition = getPageSectionTemplateDefinition(section.type);
   if (!definition) {
