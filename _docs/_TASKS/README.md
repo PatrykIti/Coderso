@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 154 tasks
+- **To Do:** 132 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2372 tasks
+- **Done:** 2394 tasks
 
 ---
 
@@ -92,28 +92,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-420-01 | Audit Reusable Template IA And Usage | Medium | Medium | Audit obsolete widget-template IA/code and produce the deletion/replacement checklist for Page Templates. |
 | TASK-420-02 | Page Template Storage Preview And Replacement Contract | Medium | Large | Design strict Page-template storage, preview, deletion, and replacement contracts before implementation. |
 | TASK-420-03 | Implement Page Templates Admin Rewrite Closure | Medium | Large | Implement the Page Templates admin rewrite with obsolete surface removal, server/helper Playwright smoke, cache, docs, and closure validation. |
-| TASK-421 | Page Editor Floating Inspector UX Redesign | High | Very Large | Redesign the current Page Editor floating inspector from the reference HTML/spec: icon subpanels, tooltips, segmented presets, toggles, sliders, swatches, color pickers, and focused section/block controls. |
-| TASK-421-01 | Reference Audit And Inspector Contract | High | Medium | Run the read-only Claude/reference audit and freeze the floating inspector implementation contract before code changes. |
-| TASK-421-02 | Control Primitives And Preset Inputs | High | Large | Replace raw number/select-heavy inspector controls with reusable segmented, toggle, slider, swatch, picker, and media primitives. |
-| TASK-421-02-L01 | Segmented Selectors Toggles And Option Labels | High | Medium | Implement segmented option buttons, toggle switches, and human labels for small finite control sets. |
-| TASK-421-02-L02 | Sliders Swatches Color Pickers And Media Controls | High | Medium | Implement bounded sliders, color swatches/pickers, and media controls for inspector values. |
-| TASK-421-03 | Section And Block Panel Preset Coverage | High | Large | Group section and block controls into focused Page Editor panels without recreating old advanced widget editors. |
-| TASK-421-03-L01 | Section General Preset Panels | High | Medium | Implement section-level layout, style, spacing, background, responsive, and visibility preset panels. |
-| TASK-421-03-L02 | Atomic Block Preset Panels | High | Medium | Implement focused atomic block inspector panels for content, layout, style, spacing, background, responsive, and visibility. |
-| TASK-421-04 | Responsive Override Tooltip And Panel Polish | High | Large | Polish one-panel-at-a-time behavior, tooltips, override badges, reset inheritance, and viewport-safe scroll. |
-| TASK-421-05 | Validation Browser Smoke Docs And Closure | High | Medium | Close the redesign with Vitest, lint/types, `coderso-dev-core-host`, `playwright-cli`, docs, changelog, and final drift audit. |
-| TASK-422 | Page Editor Canvas Inline Text Editing | High | Large | Cross-canvas audit Path A: text-bearing blocks need dblclick/Enter inline editing on the canvas while keeping the current save/autosave contract. |
-| TASK-422-01 | Inline Edit Contract And Text Commit Model | High | Medium | Freeze the editable prop map, empty-value policy, and sanitization helpers before wiring inline editing into the canvas. |
-| TASK-422-01-L01 | Inline Editable Target Map And Sanitization Helpers | High | Medium | Implement the Bun-free target map and text sanitization helpers that define which block props can be edited inline. |
-| TASK-422-02 | Canvas Inline Editing Implementation | High | Large | Add contenteditable entry/commit flow for text-bearing blocks through the shared block-update path. |
-| TASK-422-02-L01 | Shared Canvas Contenteditable Entry And Commit Flow | High | Large | Wire the inline-edit contract into the shared Page canvas renderer and existing block-update path. |
-| TASK-422-03 | Validation Live Smoke And Closure | High | Medium | Replay the audit method in a real browser and close the family with docs, board sync, and changelog. |
-| TASK-423 | Page Runtime Responsive Delivery | High | Large | Public runtime must emit real viewport-responsive output instead of flattening every published page to desktop-only styles. |
-| TASK-423-01 | Responsive CSS Emission Contract | High | Medium | Freeze the document-to-CSS mapping, breakpoint ownership, selector escaping, and unsupported prop-override policy. |
-| TASK-423-01-L01 | Map Responsive Deltas To Scoped Media Rules | High | Medium | Implement the Bun-free CSS builder that converts stored responsive deltas into selector-scoped media rules. |
-| TASK-423-02 | Public Runtime Integration And Preview Compat | High | Large | Inject responsive CSS into public runtime HTML while preserving explicit preview-device flattening. |
-| TASK-423-02-L01 | Inject Responsive Css Into Public Runtime And Preserve Preview Flattening | High | Large | Integrate responsive CSS into public HTML while keeping current preview-device flattening and cache semantics. |
-| TASK-423-03 | Validation Viewport Smoke And Closure | High | Medium | Prove tablet/mobile overrides now reach published front output and keep preview behavior unchanged. |
 | TASK-424 | Page Editor Typography Inspector Controls | High | Large | Cross-canvas Path B: add a real Typography control surface for font family/size/weight/line-height/letter-spacing and shared text styling. |
 | TASK-424-01 | Typography Style Schema And Registry Contract | High | Medium | Freeze Page-owner typography fields, defaults, and registry descriptors before wiring inspector UI. |
 | TASK-424-01-L01 | Add Normalized Typography Fields And Shared Text Control Descriptors | High | Medium | Extend `pageDocumentV2` and the control registry with schema-owned typography fields and descriptors. |
@@ -263,6 +241,28 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-421 | Page Editor Floating Inspector UX Redesign | High | Very Large | Done (2026-06-11): floating inspector fully on dedicated widgets (adapter + primitives, all section/block panels, tooltips, scrollable segmented strips, transparent swatch, element-level block styling); live classifier shows zero native selects/numbers. |
+| TASK-421-01 | Reference Audit And Inspector Contract | High | Medium | Done (2026-06-11): read-only reference audit froze the control->widget mapping, ranges, wiring sites, and test risks. |
+| TASK-421-02 | Control Primitives And Preset Inputs | High | Large | Done (2026-06-11): pageEditorControlUiModel adapter + six editorControls primitives with tests. |
+| TASK-421-02-L01 | Segmented Selectors Toggles And Option Labels | High | Medium | Done (2026-06-11): segmented strips (horizontally scrollable, keyboard-navigable) and role=switch toggles with label catalog. |
+| TASK-421-02-L02 | Sliders Swatches Color Pickers And Media Controls | High | Medium | Done (2026-06-11): sliders/stepper, token swatches + picker + transparent option, shared MediaPicker control. |
+| TASK-421-03 | Section And Block Panel Preset Coverage | High | Large | Done (2026-06-11): every registry control routed through the adapter into dedicated widgets; color/media no longer fall back to text. |
+| TASK-421-03-L01 | Section General Preset Panels | High | Medium | Done (2026-06-11): section panels verified live — zero native selects/numbers across all 7 hero panels. |
+| TASK-421-03-L02 | Atomic Block Preset Panels | High | Medium | Done (2026-06-11): block panels verified live on button — segmented variant/size/target, swatches, sliders, switch. |
+| TASK-421-04 | Responsive Override Tooltip And Panel Polish | High | Large | Done (2026-06-11): metadata-driven tooltips, one-panel-at-a-time, override badge/reset polish, viewport-safe scroll. |
+| TASK-421-05 | Validation Browser Smoke Docs And Closure | High | Medium | Done (2026-06-11): full lanes + live playwright-cli smoke green; docs/board/changelog synced (changelog 1162). |
+| TASK-422 | Page Editor Canvas Inline Text Editing | High | Large | Done (2026-06-11): inline canvas editing live end to end — dblclick edit, panel sync, hotkey suppression, published front shows typed text. |
+| TASK-422-01 | Inline Edit Contract And Text Commit Model | High | Medium | Done (2026-06-11): pageInlineEditContract module (targets map + sanitize/commit) with 31 tests. |
+| TASK-422-01-L01 | Inline Editable Target Map And Sanitization Helpers | High | Medium | Done (2026-06-11): target map and sanitization helpers landed in the Bun-free lane. |
+| TASK-422-02 | Canvas Inline Editing Implementation | High | Large | Done (2026-06-11): shared-renderer inline text hook + fail-closed canvas contenteditable wired to the panel update path. |
+| TASK-422-02-L01 | Shared Canvas Contenteditable Entry And Commit Flow | High | Large | Done (2026-06-11): dblclick/Enter entry, Escape/blur commit, deletion guard, no-op on unchanged text. |
+| TASK-422-03 | Validation Live Smoke And Closure | High | Medium | Done (2026-06-11): suites green, live probe flipped the audit result; docs/board/changelog synced (changelog 1162). |
+| TASK-423 | Page Runtime Responsive Delivery | High | Large | Done (2026-06-11): public front now applies tablet/mobile overrides via scoped @media (360px at 390px viewport verified live); preview flattening preserved. |
+| TASK-423-01 | Responsive CSS Emission Contract | High | Medium | Done (2026-06-11): deterministic pageResponsiveCss builder with diagnostics and scope-attribute constants. |
+| TASK-423-01-L01 | Map Responsive Deltas To Scoped Media Rules | High | Medium | Done (2026-06-11): per-property delta mapping with schema-clamped values and id escaping. |
+| TASK-423-02 | Public Runtime Integration And Preview Compat | High | Large | Done (2026-06-11): renderer consumes builder constants; publicSite emits responsive CSS for real visitors; failures degrade safely. |
+| TASK-423-02-L01 | Inject Responsive Css Into Public Runtime And Preserve Preview Flattening | High | Large | Done (2026-06-11): style injection + preview compatibility with Bun runtime coverage. |
+| TASK-423-03 | Validation Viewport Smoke And Closure | High | Medium | Done (2026-06-11): Bun 15/15 + builder suite green; live viewport replay PASS; docs/board/changelog synced (changelog 1162). |
 | TASK-449-01 | Columns Round-Trip Reproduction And Contract Freeze | High | Medium | Done (2026-06-11): live reproduction proved the columns-specific drop is not reproducible at HEAD and recorded the real block-agnostic stale-cache rehydration dropper as the TASK-449-02 fix target. |
 | TASK-449-01-L01 | Reproduce Columns Save Drop Across Write Read And Publish | High | Medium | Done (2026-06-11): captured-payload reproduction across insert/autosave/save/store/reopen/publish; dropper localized to the pageDetail cache-event rehydration path (PageEditor.tsx:1520-1532). |
 | TASK-449-02 | Columns Persistence And Slot Round-Trip Implementation | High | Large | Done (2026-06-11): monotonic updatedAt freshness guard landed in the PageEditor cache rehydration; stale/equal/unparsable broadcasts no longer wipe the document; live playwright-cli verification passed. |

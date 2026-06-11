@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -110,3 +112,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs; TASK-421-05 owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11: SliderControl/SliderStepperControl with visible values, ColorSwatchControl (token swatches + picker + hex fallback + leading Transparent swatch writing null), MediaPickerControl wrapping the shared MediaPicker.

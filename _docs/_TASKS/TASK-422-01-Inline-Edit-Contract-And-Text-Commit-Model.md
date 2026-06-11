@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -38,7 +40,7 @@ Contract to decide and record in this file when work starts:
 
 ## Sub-Tasks
 
-- [ ] TASK-422-01-L01: Inline editable target map and sanitization helpers.
+- [x] TASK-422-01-L01: Inline editable target map and sanitization helpers.
 
 ## Implementation Pseudocode
 
@@ -112,3 +114,9 @@ Regression-test shape:
 
 - `_docs/PAGE_MODEL.md` note on the inline-editable prop map if it becomes a
   contract surface.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11: core/services/pages/pageInlineEditContract.ts (Bun-free) with the inlineEditableTargets literal (heading/text/quote/statistic/button/list items), resolveInlineEditTarget, sanitizeInlineText, commitInlineText with the empty-commit policy; 31 Vitest tests.

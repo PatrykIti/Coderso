@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-422-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -45,7 +47,7 @@ Behavior requirements:
 
 ## Sub-Tasks
 
-- [ ] TASK-422-02-L01: Shared canvas contenteditable entry and commit flow.
+- [x] TASK-422-02-L01: Shared canvas contenteditable entry and commit flow.
 
 ## Implementation Pseudocode
 
@@ -127,3 +129,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs (TASK-422-03 owns docs/changelog).
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11: shared-renderer inline text hook (PageInlineTextRenderer wrapping the exact painted text node, identity fallback keeps the front byte-identical) + InlineEditableCanvasText in PageEditor (fail-closed, keyed remount on commit, device-scoped commit path); 11 new flow tests.

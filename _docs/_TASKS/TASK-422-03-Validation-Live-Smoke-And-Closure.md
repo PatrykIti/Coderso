@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX / QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-422-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -24,9 +26,9 @@ re-run that probe and flip its result.
 
 ## Sub-Tasks
 
-- [ ] Run the targeted validation set and capture final evidence.
-- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
-- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+- [x] Run the targeted validation set and capture final evidence.
+- [x] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [x] Split any residual drift into explicit follow-up tasks before closure if needed.
 
 ---
 
@@ -91,3 +93,9 @@ Regression-test shape:
 - `_docs/PAGE_MODEL.md` if contract surfaces changed.
 - `_docs/_TASKS/README.md` board + statistics sync for the family.
 - `_docs/_CHANGELOG/` family entry listing all closed TASK-422 leaves.
+
+---
+
+## Completion Notes
+
+Closure executed 2026-06-11: contract + UI suites green, lint/types clean, live playwright-cli probe flipped the audit result (contenteditable active on dblclick, panel sync, front shows typed text), docs/board/changelog synchronized (changelog 1162).

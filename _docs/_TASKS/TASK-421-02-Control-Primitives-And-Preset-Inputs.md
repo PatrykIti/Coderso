@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-421-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -117,3 +119,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - TASK-421 implementation notes.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11: pageEditorControlUiModel.ts adapter (pure, Vitest-owned; segmented threshold, slider ranges, label catalog, fail-closed unsupported model, allowTransparent for nullable block colors) + six editorControls primitives with shared dark-toolbar chrome. Tests: adapter (18) + primitives DOM suites.

@@ -5,7 +5,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Large
 **Dependencies:** None (coordinates with TASK-421 on the shared floating-panel text path and with TASK-424 on the typography group)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -70,9 +72,9 @@ TASK-437..TASK-450.
 
 ## Sub-Tasks
 
-- [ ] TASK-422-01: Inline edit contract and text commit model.
-- [ ] TASK-422-02: Canvas inline editing implementation.
-- [ ] TASK-422-03: Validation live smoke and closure.
+- [x] TASK-422-01: Inline edit contract and text commit model.
+- [x] TASK-422-02: Canvas inline editing implementation.
+- [x] TASK-422-03: Validation live smoke and closure.
 
 ---
 
@@ -154,3 +156,9 @@ Regression-test shape:
 - `_docs/PAGE_MODEL.md` if the editing contract description changes.
 - `docs/guide/` page editor docs (inline editing is user-facing).
 - `_docs/_TASKS/README.md` board sync, `_docs/_CHANGELOG/` entry on completion.
+
+---
+
+## Completion Notes
+
+Family completed 2026-06-11. Inline canvas editing works end to end: dblclick/Enter on a selected text-bearing block enters contenteditable edit, commit flows through the same panel update path (single source of truth), hotkeys suppressed while editing, fail-closed target map (no contentEditable on image/divider/spacer). Live smoke: typed heading text reached the panel field, survived Delete-while-editing, and rendered on the published front. Evidence: .tmp/phase1/phase1-smoke.md scenario B.

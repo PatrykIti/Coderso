@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-421-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -103,3 +105,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs; TASK-421-05 owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11: metadata-driven tooltips on all category/action buttons (shared Tooltip component, aria-labels from the same map), one-panel-at-a-time toggling, inline override badge/reset polish, viewport-safe panel scroll.

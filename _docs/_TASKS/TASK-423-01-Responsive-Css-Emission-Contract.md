@@ -6,7 +6,9 @@
 **Category:** Pages / Public Runtime / Rendering
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -26,7 +28,7 @@ stays explicitly unsupported until a separate content-override contract exists.
 
 ## Sub-Tasks
 
-- [ ] TASK-423-01-L01: Map responsive deltas to scoped media rules.
+- [x] TASK-423-01-L01: Map responsive deltas to scoped media rules.
 
 ## Implementation Pseudocode
 
@@ -98,3 +100,8 @@ Regression-test shape:
 
 - `_docs/PAGE_MODEL.md`
 
+---
+
+## Completion Notes
+
+Completed 2026-06-11: core/services/pages/pageResponsiveCss.ts (pure, deterministic, fail-closed diagnostics, exported scope-attribute constants incl. the block visual-element hook) with snapshot-stable Vitest coverage.

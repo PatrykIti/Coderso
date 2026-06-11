@@ -6,7 +6,9 @@
 **Category:** Pages / Public Runtime / QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-423-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -50,9 +52,9 @@ Regression-test shape:
 
 ## Sub-Tasks
 
-- [ ] Run the targeted validation set and capture final evidence.
-- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
-- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+- [x] Run the targeted validation set and capture final evidence.
+- [x] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [x] Split any residual drift into explicit follow-up tasks before closure if needed.
 
 ## Security Contract
 
@@ -79,3 +81,8 @@ Regression-test shape:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` entry on completion
 
+---
+
+## Completion Notes
+
+Closure executed 2026-06-11: Bun runtime suite 15/15 green (responsive emission + override application + previewDevice unchanged), Vitest builder suite green, live viewport replay of the audit scenario PASS (390px -> 360px computed), docs/board/changelog synchronized (changelog 1162). Note: front Bun process requires a helper restart to pick up renderer changes (documented in the smoke evidence).

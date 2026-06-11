@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -98,3 +100,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs; TASK-421-05 owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11 (see TASK-421-03): all universal section panels render dedicated widgets; live classifier on hero confirms zero native selects/numbers across the 7 panels.

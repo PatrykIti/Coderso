@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -86,3 +88,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - TASK-421 child task acceptance criteria if the audit finds drift.
+
+---
+
+## Completion Notes
+
+Read-only reference audit executed 2026-06-11 at HEAD e53c4317: full registry inventory mapped to the frozen widget vocabulary (segmented/toggle/slider/slider+stepper/swatch+picker/media/text), bounded ranges from registry clamps, PageEditor wiring sites and flow-test risks enumerated. Consumed verbatim by TASK-421-02/-03.

@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421-04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -90,3 +92,9 @@ Regression-test shape:
 - `_docs/_TASKS/README.md`
 - `_docs/UI/pages-editor-new-approach/coderso-editor-spec.md` if behavior
   intentionally differs from the reference.
+
+---
+
+## Completion Notes
+
+Closure executed 2026-06-11: full Vitest lane green for the touched suites (flow/primitives/adapter/pages), core lint + lint:types clean, live coderso-dev-core-host + playwright-cli smoke PASS (.tmp/phase1/phase1-smoke.md, panel dumps A-hero/A-button), docs (PAGE_MODEL/ARCHITECTURE) and board/changelog synchronized (changelog 1162). Known pre-existing failures documented there are unrelated to this family.

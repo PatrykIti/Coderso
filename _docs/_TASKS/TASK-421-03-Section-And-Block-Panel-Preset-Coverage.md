@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-421-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -82,3 +84,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs; TASK-421-05 owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11: RegistryControlField/SectionRegistryControlField route every control through the adapter into the primitives; color/media no longer fall through to text; supplemental background-image field uses the media path; section variant control is segmented; Visibility gains the date-range toggle; Responsive panel stays shell-only per TASK-425 ownership.

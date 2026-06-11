@@ -6,7 +6,9 @@
 **Category:** Pages / Public Runtime / Preview
 **Estimated Effort:** Large
 **Dependencies:** TASK-423-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -23,7 +25,7 @@ a time.
 
 ## Sub-Tasks
 
-- [ ] TASK-423-02-L01: Inject responsive CSS into public runtime and preserve preview flattening.
+- [x] TASK-423-02-L01: Inject responsive CSS into public runtime and preserve preview flattening.
 
 ## Implementation Pseudocode
 
@@ -93,3 +95,8 @@ Regression-test shape:
 - `_docs/ARCHITECTURE.md`
 - `_docs/PAGE_MODEL.md`
 
+---
+
+## Completion Notes
+
+Completed 2026-06-11: renderer consumes the builder attribute constants (markup byte-identical), publicSite emits responsive CSS for real visitors over the unflattened document, previewDevice path unchanged, emission failures degrade to desktop-only with a warning; CSS ships inside cached page HTML (no new cache surface).

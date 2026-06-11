@@ -5,7 +5,9 @@
 **Category:** Pages / Public Runtime / Rendering
 **Estimated Effort:** Large
 **Dependencies:** None (TASK-425-02 responsive-panel toggles will consume this work)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -77,9 +79,9 @@ overrides (content deltas) cannot be expressed as CSS; the contract child
 
 ## Sub-Tasks
 
-- [ ] TASK-423-01: Responsive CSS emission contract.
-- [ ] TASK-423-02: Public runtime integration and preview compat.
-- [ ] TASK-423-03: Validation viewport smoke and closure.
+- [x] TASK-423-01: Responsive CSS emission contract.
+- [x] TASK-423-02: Public runtime integration and preview compat.
+- [x] TASK-423-03: Validation viewport smoke and closure.
 
 ---
 
@@ -173,3 +175,9 @@ Regression-test shape:
 - `_docs/ARCHITECTURE.md` if the public render pipeline description changes.
 - `_docs/_TASKS/README.md` board sync, `_docs/_CHANGELOG/` entry on
   completion.
+
+---
+
+## Completion Notes
+
+Family completed 2026-06-11. Public runtime now emits desktop-resolved markup plus scoped @media deltas built from responsive overrides (pageResponsiveCss builder; <style data-page-responsive>), previewDevice flattening preserved. Live verification: tablet 640 / mobile 360 overrides on hero -> front computes max-width 360 at 390px viewport, 640 at 800px, 1080 at desktop. Evidence: .tmp/phase1/phase1-smoke.md scenario C, .tmp/phase1/front-c.html.

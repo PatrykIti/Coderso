@@ -5,7 +5,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-418
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -52,15 +54,15 @@ legacy widget-template panels or duplicate a separate raw-input inspector.
 
 ## Sub-Tasks
 
-- [ ] TASK-421-01: Reference audit and floating inspector contract.
-- [ ] TASK-421-02: Control primitives and preset input renderers.
-- [ ] TASK-421-02-L01: Segmented selectors toggles and option labels.
-- [ ] TASK-421-02-L02: Sliders swatches color pickers and media controls.
-- [ ] TASK-421-03: Section and block panel preset coverage.
-- [ ] TASK-421-03-L01: Section general preset panels.
-- [ ] TASK-421-03-L02: Atomic block preset panels.
-- [ ] TASK-421-04: Responsive override tooltip and panel polish.
-- [ ] TASK-421-05: Validation browser smoke docs and closure.
+- [x] TASK-421-01: Reference audit and floating inspector contract.
+- [x] TASK-421-02: Control primitives and preset input renderers.
+- [x] TASK-421-02-L01: Segmented selectors toggles and option labels.
+- [x] TASK-421-02-L02: Sliders swatches color pickers and media controls.
+- [x] TASK-421-03: Section and block panel preset coverage.
+- [x] TASK-421-03-L01: Section general preset panels.
+- [x] TASK-421-03-L02: Atomic block preset panels.
+- [x] TASK-421-04: Responsive override tooltip and panel polish.
+- [x] TASK-421-05: Validation browser smoke docs and closure.
 
 ---
 
@@ -190,3 +192,9 @@ TASK-421 starts.
   contract changes.
 - `_docs/PAGE_MODEL.md` if Page v2 editor/control behavior changes.
 - `_docs/_CHANGELOG/` entry on completion.
+
+---
+
+## Completion Notes
+
+Family completed 2026-06-11. The floating inspector renders dedicated widgets end to end: pageEditorControlUiModel adapter + editorControls primitives (SegmentedControl/ToggleSwitch/SliderControl/SliderStepperControl/ColorSwatchControl/MediaPickerControl), all section and block panels wired through them (zero native selects/number-arrow fields for upgraded kinds, confirmed live by the audit-style classifier on hero + button: switch/swatch/range/segmented > 0 in every panel), metadata-driven tooltips, one-panel-at-a-time, viewport-safe scroll. Owner live-feedback folded in: segmented strips scroll horizontally (no overlap), transparent is a first-class swatch option for nullable block colors, block visual styles land on the element (button/image) instead of the frame. Responsive tab stays shell + readout (content owned by TASK-425). Evidence: .tmp/phase1/phase1-smoke.md; commits b6612c19 + 4dfdba0d.

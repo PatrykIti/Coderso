@@ -6,7 +6,9 @@
 **Category:** Pages / Public Runtime / Preview
 **Estimated Effort:** Large
 **Dependencies:** TASK-423-02, TASK-423-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -19,9 +21,9 @@ the current preview-device flattening behavior and cache semantics.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -89,3 +91,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11 (see TASK-423-02): style element injection + flattening compatibility landed with Bun runtime coverage in tests/integration/runtime/pages-runtime.test.ts.
